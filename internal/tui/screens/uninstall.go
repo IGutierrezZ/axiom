@@ -342,8 +342,6 @@ func RenderUninstallConfirm(mode model.UninstallMode, selected []model.AgentID, 
 		b.WriteString("\n")
 		b.WriteString(styles.SubtextStyle.Render("  Removing SDD or Skills will delete workspace-scoped files like:"))
 		b.WriteString("\n")
-		b.WriteString(styles.SubtextStyle.Render("  • .windsurf/workflows/ (SDD workflows)"))
-		b.WriteString("\n")
 		b.WriteString(styles.SubtextStyle.Render("  • .engram/ (persistent memory context)"))
 		b.WriteString("\n")
 		b.WriteString(styles.SubtextStyle.Render("  • Skills directories"))

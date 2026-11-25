@@ -23,13 +23,6 @@ type InjectionResult struct {
 	Files   []string
 }
 
-// bootstrapper is an optional adapter capability: if an adapter implements
-// this interface, any injector that writes Jinja modules will first ensure
-// the base template (entry point) exists.
-type bootstrapper interface {
-	BootstrapTemplate(homeDir string) error
-}
-
 type piEngramProvisioner interface {
 	ProvisionEngramMCP(homeDir string) (changed bool, files []string, err error)
 }
@@ -64,7 +57,7 @@ func SetLookPathForTest(t interface {
 // If not found (e.g. binary not yet installed), it returns "engram" and false.
 // This is used to write the most stable command possible into MCP configs:
 // an absolute path survives across environments where PATH is not fully
-// inherited (e.g. Windsurf, IDEs that launch without a login shell).
+// inherited (e.g. IDEs that launch without a login shell).
 func resolveEngramCommand() (string, bool) {
 	p, err := EngramLookPath("engram")
 	if err != nil || p == "" {
@@ -98,7 +91,7 @@ func engramServerJSONWithCmd(cmd string) []byte {
 // and MCPConfigFile strategies), with the resolved engram command.
 func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 	var cfg map[string]any
-	if agentID == model.AgentOpenCode || agentID == model.AgentKilocode {
+	if agentID == model.AgentOpenCode {
 		// OpenCode 1.3.3+ requires command as an array for type:local servers.
 		// The separate "args" field is not accepted; all args must be in the
 		// command array itself.
@@ -114,19 +107,6 @@ func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 					"__replace__": map[string]any{
 						"command": []string{cmd, "mcp", "--tools=agent"},
 						"type":    "local",
-					},
-				},
-			},
-		}
-	} else if agentID == model.AgentOpenClaw {
-		cfg = map[string]any{
-			"mcp": map[string]any{
-				"servers": map[string]any{
-					"engram": map[string]any{
-						"__replace__": map[string]any{
-							"command": cmd,
-							"args":    []string{"mcp", "--tools=agent"},
-						},
 					},
 				},
 			},
@@ -236,14 +216,6 @@ func InjectWorkspaceWithOptions(workspaceDir string, adapter agents.Adapter, opt
 	return injectWithOptions(workspaceDir, workspaceDir, adapter, opts, false)
 }
 
-// InjectWithPromptDir writes Engram's MCP configuration using configHomeDir and
-// writes prompt protocol files using promptDir. This is needed for agents such
-// as OpenClaw where MCP is loaded from the global config but instructions are
-// read from an active workspace.
-func InjectWithPromptDir(configHomeDir, promptDir string, adapter agents.Adapter) (InjectionResult, error) {
-	return injectWithOptions(configHomeDir, promptDir, adapter, InjectOptions{}, true)
-}
-
 const antigravityEngramPluginJSON = `{
   "name": "gentle-ai-engram",
   "description": "Loads Engram MCP memory tools for Antigravity sessions.",
@@ -332,9 +304,6 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 
 	if !adapter.SupportsMCP() {
 		return InjectionResult{}, nil
-	}
-	if err := validateOpenClawWorkspacePath(promptDir, adapter); err != nil {
-		return InjectionResult{}, err
 	}
 
 	files := make([]string, 0, 2)
@@ -436,23 +405,6 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			changed = changed || pluginChanged
 			files = append(files, pluginFiles...)
 		}
-
-	case model.StrategyMergeIntoYAML:
-		// Hermes: upsert the engram MCP server block under mcp_servers: in
-		// ~/.hermes/config.yaml via the comment-preserving YAML string helpers.
-		configPath := adapter.MCPConfigPath(configHomeDir, "engram")
-		existing, readErr := readFileOrEmpty(configPath)
-		if readErr != nil {
-			return InjectionResult{}, readErr
-		}
-		engramCmd := stableEngramCommandForMergedConfig(configPath, adapter.Agent())
-		updated := filemerge.UpsertHermesEngramBlock(existing, engramCmd)
-		yamlWrite, writeErr := filemerge.WriteFileAtomic(configPath, []byte(updated), 0o644)
-		if writeErr != nil {
-			return InjectionResult{}, fmt.Errorf("write Hermes engram YAML %q: %w", configPath, writeErr)
-		}
-		changed = changed || yamlWrite.Changed
-		files = append(files, configPath)
 
 	case model.StrategyTOMLFile:
 		// Codex: upsert [mcp_servers.engram] block and instruction-file keys
@@ -574,26 +526,6 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			}
 			changed = changed || mdWrite.Changed
 			files = append(files, promptPath)
-
-		case model.StrategyJinjaModules:
-			// Ensure the base template exists for Jinja-based agents.
-			if bs, ok := adapter.(bootstrapper); ok {
-				if err := bs.BootstrapTemplate(promptDir); err != nil {
-					return InjectionResult{}, fmt.Errorf("bootstrap template: %w", err)
-				}
-			}
-
-			// Write the Engram protocol as a standalone Jinja include module.
-			// The static KIMI.md template references it via {% include "engram-protocol.md" %}.
-			configDir := adapter.GlobalConfigDir(promptDir)
-			protocolContent := protocolFor(adapter.Agent(), opts)
-			modulePath := filepath.Join(configDir, "engram-protocol.md")
-			mdWrite, err := filemerge.WriteFileAtomic(modulePath, []byte(protocolContent), 0o644)
-			if err != nil {
-				return InjectionResult{}, err
-			}
-			changed = changed || mdWrite.Changed
-			files = append(files, modulePath)
 
 		default:
 			promptPath := adapter.SystemPromptFile(promptDir)
@@ -767,13 +699,6 @@ func claudeEngramPluginEnabled(homeDir string) bool {
 	return settings.EnabledPlugins["engram@engram"]
 }
 
-func validateOpenClawWorkspacePath(workspaceDir string, adapter agents.Adapter) error {
-	if adapter.Agent() == model.AgentOpenClaw && strings.TrimSpace(workspaceDir) == "" {
-		return fmt.Errorf("openclaw workspace path is required for workspace-first injection")
-	}
-	return nil
-}
-
 type settingsBootstrapResult struct {
 	Changed bool
 	Path    string
@@ -911,14 +836,6 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 		return "", false
 	}
 
-	// YAML recovery early branch for Hermes: placed before MergeJSONObjects
-	// (which would fail on YAML input). ReadYAMLMCPServerCommand scans the
-	// ~/.hermes/config.yaml content for the named server's command — no
-	// external YAML dependency, read-only. (Decision 9)
-	if agentID == model.AgentHermes {
-		return filemerge.ReadYAMLMCPServerCommand(string(raw), "engram")
-	}
-
 	normalized, err := filemerge.MergeJSONObjects(raw, []byte("{}"))
 	if err != nil {
 		return "", false
@@ -933,16 +850,6 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 	switch agentID {
 	case model.AgentOpenCode:
 		server, _ = opencode.MCPEntry(root, "engram")
-	case model.AgentOpenClaw:
-		mcp, ok := root["mcp"].(map[string]any)
-		if !ok {
-			return "", false
-		}
-		servers, ok := mcp["servers"].(map[string]any)
-		if !ok {
-			return "", false
-		}
-		server = servers["engram"]
 	case model.AgentVSCodeCopilot:
 		servers, ok := root["servers"].(map[string]any)
 		if !ok {
@@ -988,7 +895,7 @@ func executableFromCommandValue(command any) (string, bool) {
 
 func isStandardAgent(id model.AgentID) bool {
 	switch id {
-	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode, model.AgentOpenClaw, model.AgentHermes,
+	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode,
 		// Copilot CLI arranca el servidor desde la terminal y hereda su PATH, como Gemini
 		// o Claude: basta el nombre del binario. VS Code, al ser una aplicación gráfica,
 		// puede no verlo y por eso guarda la ruta absoluta.

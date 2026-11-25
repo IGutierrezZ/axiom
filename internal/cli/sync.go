@@ -551,7 +551,7 @@ func DiscoverAgents(store state.Store) []model.AgentID {
 	installed := agents.DiscoverInstalled(reg, homeDir)
 	ids := make([]model.AgentID, 0, len(installed))
 	for _, a := range installed {
-		// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) no se adoptan
+		// Los agentes no seleccionables (Qwen Code) no se adoptan
 		// por tener carpeta en HOME: solo se sincronizan si ya están en el estado.
 		if !isSelectableAgent(a.ID) {
 			continue
@@ -697,7 +697,7 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	}
 
 	// Managed OpenCode-compatible plugins are versioned runtime artifacts tied
-	// to the installed binary (OpenCode and Kilocode receive them). When the
+	// to the installed binary (OpenCode receive them). When the
 	// persisted selection lacks the SDD component, no SDD step is planned and
 	// already-installed plugins would silently stay stale after upgrades
 	// (issue #1440). Refresh installed copies explicitly; the step never
@@ -805,7 +805,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 						paths[adapter.SystemPromptFile(rootDir)] = struct{}{}
 					}
 				}
-				if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+				if adapter.Agent() == model.AgentOpenCode {
 					// Persona sync can remove stale managed agent state from settings.
 					// This target is backup-only: syncPersonaPaths intentionally does
 					// not make best-effort cleanup a post-sync verification target.
@@ -829,7 +829,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
-	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// El registro de instrucciones de OpenCode reescribe su configuración de
 	// proyecto aunque ningún componente seleccionado la toque.
 	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
@@ -850,8 +850,8 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 		}
 	}
 	// Managed OpenCode-compatible plugin paths are part of sync's
-	// backup/snapshot contract whenever a plugin-receiving agent (OpenCode,
-	// Kilocode) is synced, independent of the SDD component: the
+	// backup/snapshot contract whenever a plugin-receiving agent (OpenCode)
+	// is synced, independent of the SDD component: the
 	// openCodePluginRefreshSyncStep may rewrite installed copies (issue #1440).
 	if scope != ScopeWorkspace {
 		for _, adapter := range adapters {
@@ -978,7 +978,7 @@ func syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope I
 //   - Step 3: managed output-style overlay (only when the agent supports it).
 //   - Pi: the project-local gentle-pi persona state file.
 //
-// Step 2 does not merge OpenCode/Kilocode persona definitions during sync. A
+// Step 2 does not merge OpenCode persona definitions during sync. A
 // narrow stale-state cleanup is tracked separately as a backup-only target.
 func syncPersonaPaths(homeDir string, selection model.Selection, adapters []agents.Adapter) []string {
 	return syncPersonaPathsWithWorkspaceScoped(homeDir, "", ScopeGlobal, selection, adapters)
@@ -1001,16 +1001,10 @@ func syncPersonaPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Ins
 			continue
 		}
 		targetDir := componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)
-		if adapter.Agent() == model.AgentOpenClaw {
-			paths = append(paths, filepath.Join(targetDir, "SOUL.md"))
-			continue
-		}
 		if !adapter.SupportsSystemPrompt() {
 			continue
 		}
-		if adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
-			paths = append(paths, adapter.SystemPromptFile(targetDir))
-		}
+		paths = append(paths, adapter.SystemPromptFile(targetDir))
 		if adapter.SupportsOutputStyles() {
 			if stylePaths := persona.ResourcePlanFor(selection.Persona).OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
 				paths = append(paths, stylePaths.Write)
@@ -1145,7 +1139,7 @@ type piCodeGraphSyncStep struct {
 }
 
 // openCodePluginRefreshSyncStep refreshes already-installed managed
-// OpenCode-compatible plugins (OpenCode, Kilocode) from the embedded assets
+// OpenCode-compatible plugins (OpenCode) from the embedded assets
 // when the SDD component is not part of the sync selection (issue #1440).
 // It never creates plugins that were never installed.
 type openCodePluginRefreshSyncStep struct {
@@ -1329,15 +1323,11 @@ func (s componentSyncStep) Run() error {
 		for _, adapter := range adapters {
 			var res engram.InjectionResult
 			var err error
-			if adapter.Agent() == model.AgentOpenClaw {
-				res, err = engram.InjectWithPromptDir(s.homeDir, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter)
+			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if s.scope == ScopeWorkspace {
+				res, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
 			} else {
-				targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-				if s.scope == ScopeWorkspace {
-					res, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
-				} else {
-					res, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
-				}
+				res, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
 			}
 			if err != nil {
 				return fmt.Errorf("sync engram for %q: %w", adapter.Agent(), err)
@@ -1400,7 +1390,6 @@ func (s componentSyncStep) Run() error {
 				OpenCodeSettingsPath:               effectiveOpenCodeSettingsPath(s.homeDir, s.workspaceDir, s.scope, adapter),
 				ClaudeModelAssignments:             s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:             s.selection.ClaudePhaseAssignments,
-				KiroModelAssignments:               s.selection.KiroModelAssignments,
 				CopilotPhaseAssignments:            s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:              s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments:        s.selection.CodexCarrilModelAssignments,
@@ -1500,7 +1489,7 @@ func (s componentSyncStep) Run() error {
 		// Sync regenerates the persona block between
 		// <!-- gentle-ai:persona --> markers and (when supported) refreshes
 		// the Gentleman output-style overlay. We deliberately skip the
-		// OpenCode/Kilocode agent definition in opencode.json — that JSON
+		// OpenCode agent definition in opencode.json — that JSON
 		// merge conflicts with SDD's writes to the same settings file and
 		// remains an install-only concern.
 		for _, adapter := range adapters {
@@ -2186,6 +2175,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	// A missing state file is treated as a fresh home; other read/validation
 	// errors stop sync before any persona mutation or asset write.
 	persistedState, persistedStateErr := syncStateStore.Read()
+	noteIgnoredStateAgents(persistedState.IgnoredAgents)
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
@@ -2237,13 +2227,6 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 			return SyncResult{Agents: agentIDs, Selection: selection}, fmt.Errorf("copilot_phase_assignments del estado del proyecto: %w; corrígelo en .axiom/state.json o bórralo y vuelve a ejecutar `axiom sync`", err)
 		}
 		selection.CopilotPhaseAssignments = assignments
-	}
-	if len(selection.KiroModelAssignments) == 0 && len(persistedState.KiroModelAssignments) > 0 {
-		m := make(map[string]model.KiroModelAlias, len(persistedState.KiroModelAssignments))
-		for k, v := range persistedState.KiroModelAssignments {
-			m[k] = model.KiroModelAlias(v)
-		}
-		selection.KiroModelAssignments = m
 	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)

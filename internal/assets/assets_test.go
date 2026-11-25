@@ -35,8 +35,8 @@ var retiredWorkRunCeremonyTokens = []string{
 
 func TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony(t *testing.T) {
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("WorkRun-removal coverage sees %d orchestrators, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("WorkRun-removal coverage sees %d orchestrators, want %d", len(paths), orchestratorTemplateCount)
 	}
 
 	for _, path := range paths {
@@ -55,8 +55,8 @@ func TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony(t *testing.T) {
 
 func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("organic routing coverage sees %d orchestrators, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("organic routing coverage sees %d orchestrators, want %d", len(paths), orchestratorTemplateCount)
 	}
 
 	for _, path := range paths {
@@ -112,7 +112,7 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 }
 
 // TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker is task 23.1:
-// each of the twelve SDD-orchestrator assets carries the shared-section
+// each of the every SDD-orchestrator assets carries the shared-section
 // placeholder that resolves to INC-21's per-change kickoff and block-gates
 // doctrine (REQ-21.5, REQ-21.6, REQ-21.10). internal/components/sdd owns
 // substitution and cannot be imported here without a cycle; its own
@@ -121,8 +121,8 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 func TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker(t *testing.T) {
 	const marker = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("orchestrator coverage sees %d assets, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("orchestrator coverage sees %d assets, want %d", len(paths), orchestratorTemplateCount)
 	}
 	for _, path := range paths {
 		if content := MustRead(path); !strings.Contains(content, marker) {
@@ -296,38 +296,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"cursor/agents/sdd-verify.md",
 		"cursor/agents/sdd-archive.md",
 
-		// Kiro agent files
-
-		// Kimi agent files
-		"kimi/persona-gentleman.md",
-		"kimi/output-style-gentleman.md",
-		"kimi/output-style-neutral.md",
-		"kimi/sdd-orchestrator.md",
-		"kimi/KIMI.md",
-		"kimi/agents/gentleman.yaml",
-		"kimi/agents/sdd-init.yaml",
-		"kimi/agents/sdd-explore.yaml",
-		"kimi/agents/sdd-propose.yaml",
-		"kimi/agents/sdd-research.yaml",
-		"kimi/agents/sdd-spec.yaml",
-		"kimi/agents/sdd-design.yaml",
-		"kimi/agents/sdd-tasks.yaml",
-		"kimi/agents/sdd-apply.yaml",
-		"kimi/agents/sdd-verify.yaml",
-		"kimi/agents/sdd-archive.yaml",
-		"kimi/agents/sdd-onboard.yaml",
-		"kimi/agents/sdd-init.md",
-		"kimi/agents/sdd-explore.md",
-		"kimi/agents/sdd-propose.md",
-		"kimi/agents/sdd-research.md",
-		"kimi/agents/sdd-spec.md",
-		"kimi/agents/sdd-design.md",
-		"kimi/agents/sdd-tasks.md",
-		"kimi/agents/sdd-apply.md",
-		"kimi/agents/sdd-verify.md",
-		"kimi/agents/sdd-archive.md",
-		"kimi/agents/sdd-onboard.md",
-
 		// SDD skills
 		"skills/sdd-init/SKILL.md",
 		"skills/sdd-init/references/init-details.md",
@@ -354,12 +322,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/_shared/sdd-status-contract.md",
 		"skills/_shared/research-lifecycle.md",
 		"skills/_shared/project-baseline-convention.md",
-		"kiro/agents/sdd-research.md",
-
-		// Hermes agent files
-		"hermes/sdd-orchestrator.md",
-		"hermes/persona-gentleman.md",
-		"hermes/persona-neutral.md",
 
 		// Foundation skills
 		"skills/go-testing/SKILL.md",
@@ -846,12 +808,7 @@ func TestSDDResearchRuntimeAssetsDeclareExactEvidenceGrants(t *testing.T) {
 			forbidden: []string{"Read", "Edit", "Write", "mcp__plugin_engram_engram__"},
 			required:  []string{"Do not read or mutate repository or Engram state", "The orchestrator supplies relevant context and handles any authorized persistence", "never invent access or unsupported claims"},
 		},
-		{
-			path: "kiro/agents/sdd-research.md", declaration: "Use only actually available and authorized external tools",
-			toolLine: "tools:", evidence: []string{"@context7"},
-		},
 		{path: "cursor/agents/sdd-research.md", declaration: "Use only actually available and authorized external tools"},
-		{path: "kimi/agents/sdd-research.md", declaration: "Use only actually available and authorized external tools"},
 	}
 
 	for _, tt := range tests {
@@ -960,9 +917,6 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 		path     string
 		required []string
 	}{
-		{path: "kimi/sdd-orchestrator.md", required: []string{"/skill:sdd-*", "multiagent:Task", "custom-agent prompt"}},
-		{path: "kiro/sdd-orchestrator.md", required: []string{"Kiro phase context", "native Kiro subagent context", "approval"}},
-		{path: "windsurf/sdd-orchestrator.md", required: []string{"solo-agent", "inline phase context", "There are no sub-agents"}},
 		{path: "antigravity/sdd-orchestrator.md", required: []string{"define_subagent", "invoke_subagent", "dynamic subagent context", "enable_mcp_tools: true"}},
 	}
 
@@ -992,7 +946,7 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 }
 
 func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
-	// Claude and Kimi have an active output-style channel — their persona
+	// Claude has an active output-style channel — their persona
 	// section is a residual and no longer carries language content on its
 	// own; the guardrail contract must be evaluated over the COMBINED
 	// persona-residual + output-style channel (design.md Decision 1;
@@ -1003,13 +957,11 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 		combineWith    string // "" when the persona file alone still carries language content
 		languagePhrase string // exact per-path phrase asserting the "match current language" guardrail
 	}{
-		// Claude/Kimi no longer carry "REPLY ONLY" in the persona residual —
+		// Claude no longer carries "REPLY ONLY" in the persona residual —
 		// their combined channel exposes the output style's own Language
 		// Rules opener instead (JD-019).
 		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md", languagePhrase: "Always match the user's current language in your reply."},
 		{path: "generic/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
-		{path: "kiro/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
-		{path: "kimi/persona-gentleman.md", combineWith: "kimi/output-style-gentleman.md", languagePhrase: "Always match the user's current language in your reply."},
 		{path: "opencode/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
 	}
 
@@ -1044,7 +996,6 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 
 	for _, path := range []string{
 		"claude/output-style-gentleman.md",
-		"kimi/output-style-gentleman.md",
 	} {
 		t.Run(path, func(t *testing.T) {
 			content := mustReadResolved(path)
@@ -1231,8 +1182,6 @@ func TestPersonasContainContextualSkillLoadingDirective(t *testing.T) {
 		{path: "opencode/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 		{path: "generic/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 		{path: "generic/persona-neutral.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
-		{path: "kiro/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
-		{path: "kimi/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 	}
 
 	for _, tc := range tests {
@@ -1308,9 +1257,9 @@ func TestEmbeddedAssetCount(t *testing.T) {
 		}
 	}
 
-	// We expect 24 skill directories (11 SDD + judgment-day + 10 foundation + hermes-ephemeral-delegation + _shared).
-	if skillDirs != 24 {
-		t.Fatalf("expected 24 skill directories, got %d", skillDirs)
+	// We expect 23 skill directories (11 SDD + judgment-day + 10 foundation + _shared).
+	if skillDirs != 23 {
+		t.Fatalf("expected 23 skill directories, got %d", skillDirs)
 	}
 
 	// Verify each skill directory has a SKILL.md.
@@ -1859,7 +1808,7 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 		"## 7. Model for `sdd-archive` with a maintained context",
 		"Claude Code launches `sdd-archive` with the model assigned to `sdd-apply`",
 		`"Archive Directed Integration Model (MANDATORY)"`,
-		"In runtimes where the model is fixed per agent (OpenCode, Kiro, and others)",
+		"In runtimes where the model is fixed per agent (OpenCode and others)",
 		"assign `sdd-archive` an implementation-level model with the existing model selector",
 		"Never block archive on this",
 	} {
@@ -1870,7 +1819,7 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 }
 
 // REQ-21.9, REQ-21.11, REQ-24.36 y D-18: la sección compartida de compuertas, que
-// se compone en las 12 plantillas de orquestador, presenta el delta de contexto en
+// se compone en todas las plantillas de orquestador, presenta el delta de contexto en
 // las compuertas `design` y `role-apply` y documenta la remediación con la línea
 // fechada. El sobre nativo `gateQuestion` no cambia: la sección no nombra sus campos.
 func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
@@ -2276,12 +2225,8 @@ func TestOrchestratorsRequireAutomaticGatekeeper(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"hermes/sdd-orchestrator.md",
-		"kimi/sdd-orchestrator.md",
-		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
-		"windsurf/sdd-orchestrator.md",
 	}
 	anchors := []string{
 		"Automatic Mode Gatekeeper",
@@ -2408,7 +2353,6 @@ func TestSDDOrchestratorAssetsScopedToDedicatedAgent(t *testing.T) {
 		"gemini/sdd-orchestrator.md",
 		"codex/sdd-orchestrator.md",
 		"cursor/sdd-orchestrator.md",
-		"kimi/sdd-orchestrator.md",
 	} {
 		t.Run(assetPath, func(t *testing.T) {
 			content := mustReadResolved(assetPath)
@@ -2471,12 +2415,8 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"hermes/sdd-orchestrator.md",
-		"kimi/sdd-orchestrator.md",
-		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
 		"qwen/sdd-orchestrator.md",
-		"windsurf/sdd-orchestrator.md",
 	}
 	for _, path := range orchestratorSurfaces {
 		content := mustReadResolved(path)
@@ -2497,8 +2437,6 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 	for _, path := range []string{
 		"claude/agents/sdd-archive.md",
 		"cursor/agents/sdd-archive.md",
-		"kiro/agents/sdd-archive.md",
-		"kimi/agents/sdd-archive.md",
 		"claude/commands/sdd-archive.md",
 		"opencode/commands/sdd-archive.md",
 	} {
@@ -3175,9 +3113,6 @@ func axiomPersonaAssetPaths() []string {
 		"claude/persona-axiom.md",
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
-		"kiro/persona-axiom.md",
-		"hermes/persona-axiom.md",
-		"kimi/output-style-axiom.md",
 	}
 }
 
@@ -3224,7 +3159,7 @@ func TestSDDOptionalVerificationConsumersPreserveDiagnosticSemantics(t *testing.
 			}
 		}
 	})
-	for _, runtime := range []string{"cursor", "kimi", "kiro"} {
+	for _, runtime := range []string{"cursor"} {
 		t.Run(runtime, func(t *testing.T) {
 			content := mustReadResolved(runtime + "/agents/sdd-verify.md")
 			for _, want := range []string{"Read design artifact (when available)", "Missing inputs limit conclusions", "never invent passing checks or completed tasks", "refreshed native task-progress routing", "independent of diagnostic findings"} {
@@ -3326,7 +3261,7 @@ func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
 // inc-25 (REQ-25.35, REQ-25.23 punto 4, D-19): the shared kickoff section orders
 // `axiom branch ensure` after the lane is chosen and the change is named, and
 // before the pre-flight questionnaire and `kickoff seal`. It stays in the shared
-// source, so the twelve orchestrators pick it up through their marker.
+// source, so the every orchestrators pick it up through their marker.
 func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
 	shared := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
 	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
@@ -3792,7 +3727,7 @@ func TestSDDSpecAndProposePointToTheAdoptionReference(t *testing.T) {
 		}
 	}
 	propose := mustReadResolved("skills/sdd-propose/SKILL.md")
-	for _, want := range []string{"`axiom archive adopt scan`", "`sdd-spec` `references/openspec-adoption.md`", "`spec` gate"} {
+	for _, want := range []string{"`axiom archive adopt scan`", "`sdd-spec/references/openspec-adoption.md`", "`spec` gate"} {
 		if !strings.Contains(propose, want) {
 			t.Errorf("sdd-propose/SKILL.md is missing %q", want)
 		}
@@ -4003,7 +3938,7 @@ func TestWorkUnitCommitsCarriesReviewAndFixups(t *testing.T) {
 	}
 }
 
-// REQ-33.8: the twelve orchestrators reference the section right after Chain Strategy, with the
+// REQ-33.8: the every orchestrators reference the section right after Chain Strategy, with the
 // placeholder and no inline copy, and Block Gates links the tasks gate interaction (REQ-33.5).
 func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 	// claude/sdd-orchestrator.md is the bootstrap that points to the workflow: it carries no sections.
@@ -4014,8 +3949,8 @@ func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 		}
 	}
 	paths = append(paths, "claude/sdd-orchestrator-workflow.md")
-	if len(paths) != 12 {
-		t.Fatalf("expected twelve orchestrators, got %d: %v", len(paths), paths)
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("expected %d orchestrators, got %d: %v", orchestratorTemplateCount, len(paths), paths)
 	}
 	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
 	for _, path := range paths {

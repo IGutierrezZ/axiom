@@ -74,9 +74,9 @@ func TestIssueCreationAuthorityBoundary(t *testing.T) {
 		t.Fatal("embedded issue-creation authority must retain canonical frontmatter identity name: issue-creation")
 	}
 
-	branch, err := os.ReadFile(filepath.Join(repositoryRoot, "skills", "branch-pr", "SKILL.md"))
+	branch, err := os.ReadFile(filepath.Join(repositoryRoot, "skills", "axiom-branch-pr", "SKILL.md"))
 	if err != nil {
-		t.Fatalf("read branch-pr skill: %v", err)
+		t.Fatalf("read axiom-branch-pr skill: %v", err)
 	}
 	if strings.Contains(string(branch), "Wait for maintainer to add `status:approved` to the issue") {
 		t.Fatal("branch-pr skill retains stale maintainer-only approval instruction")
@@ -116,7 +116,7 @@ func TestSkillsIndexRowPathsAcceptsEveryPathFormat(t *testing.T) {
 func TestPRLabelMutationsUseCanonicalIssueCreationAuthority(t *testing.T) {
 	repositoryRoot := filepath.Join("..", "..")
 	for _, path := range []string{
-		filepath.Join(repositoryRoot, "skills", "branch-pr", "SKILL.md"),
+		filepath.Join(repositoryRoot, "skills", "axiom-branch-pr", "SKILL.md"),
 	} {
 		content, err := os.ReadFile(path)
 		if err != nil {

@@ -13,7 +13,7 @@ import (
 )
 
 // retiredFileCountDelegationRule matches every delegation rule keyed to a number
-// of files, in any wording the twelve orchestrators ever used: "4+ files",
+// of files, in any wording the every orchestrators ever used: "4+ files",
 // "1–3 files", "1-3 files", "2+ non-trivial files", "4-file rule", the old rule
 // names and the old table rows. Delegation decides by evidence cost instead.
 var retiredFileCountDelegationRule = regexp.MustCompile(`(?i)\d\s*\+\s*(non-trivial\s+)?files|\d\s*[–-]\s*\d\s+files|up to \d+ files|\d+\s+or\s+more\s+(non-trivial\s+)?files|\d+-file rule|Bounded read rule|\*\*Write rule\*\*|\*\*Context rule\*\*|Multiple files, new logic`)

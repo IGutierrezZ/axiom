@@ -46,7 +46,7 @@ func TestRemoteAuthorizationRetainsExistingPermissionMergeBehavior(t *testing.T)
 		}
 		return string(root["permission"]) + string(agents["gentle-orchestrator"]["permission"])
 	}
-	for _, agent := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, agent := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(agent), func(t *testing.T) {
 			home := t.TempDir()
 			paths, err := RoutingPaths(home, agent)
@@ -104,8 +104,8 @@ func TestRemoteAuthorizationPrimaryCarriers(t *testing.T) {
 			}
 		})
 	}
-	if covered != 16 {
-		t.Fatalf("covered %d non-Pi clients, want 16", covered)
+	if covered != 10 {
+		t.Fatalf("covered %d non-Pi clients, want 10", covered)
 	}
 }
 
@@ -323,67 +323,10 @@ func TestInjectRoutingRejectsBlankTargetDir(t *testing.T) {
 	}
 }
 
-// jinjaBootstrapper mirrors the optional adapter capability that rewrites a
-// Jinja router template from its embedded asset on every install.
-type jinjaBootstrapper interface {
-	BootstrapTemplate(homeDir string) error
-}
-
-func TestInjectRoutingSurvivesJinjaTemplateBootstrap(t *testing.T) {
-	t.Parallel()
-
-	targetDir := t.TempDir()
-
-	adapter, err := agents.NewAdapter(model.AgentKimi)
-	if err != nil {
-		t.Fatalf("NewAdapter error = %v", err)
-	}
-	if adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
-		t.Fatalf("kimi no longer uses StrategyJinjaModules; this regression guard needs a new subject")
-	}
-	bootstrapper, ok := adapter.(jinjaBootstrapper)
-	if !ok {
-		t.Fatalf("kimi adapter no longer exposes BootstrapTemplate")
-	}
-
-	result, err := InjectRouting(targetDir, model.AgentKimi)
-	if err != nil {
-		t.Fatalf("InjectRouting error = %v", err)
-	}
-	if len(result.Files) != 1 {
-		t.Fatalf("InjectRouting touched %v, want exactly one file", result.Files)
-	}
-	guidancePath := result.Files[0]
-
-	rendered, err := RenderRouting(model.AgentKimi)
-	if err != nil {
-		t.Fatalf("RenderRouting error = %v", err)
-	}
-
-	// A Jinja router template is rewritten from its embedded asset on every
-	// install, so guidance stored inside it is destroyed by the next sync.
-	if err := bootstrapper.BootstrapTemplate(targetDir); err != nil {
-		t.Fatalf("BootstrapTemplate error = %v", err)
-	}
-
-	after := readFile(t, guidancePath)
-	if !strings.Contains(after, rendered) {
-		t.Fatalf("BootstrapTemplate destroyed the routing guidance in %q:\n%s", guidancePath, after)
-	}
-
-	// Surviving on disk is not enough: the router template must still pull the
-	// module in, otherwise the agent never loads the guidance.
-	entry := readFile(t, adapter.SystemPromptFile(targetDir))
-	include := `{% include "` + filepath.Base(guidancePath) + `"`
-	if !strings.Contains(entry, include) {
-		t.Fatalf("router template %q does not include %q:\n%s", adapter.SystemPromptFile(targetDir), filepath.Base(guidancePath), entry)
-	}
-}
-
 func TestInjectRoutingUsesAlwaysLoadedOrchestratorScope(t *testing.T) {
 	t.Parallel()
 
-	for _, agent := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, agent := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(agent), func(t *testing.T) {
 			t.Parallel()
 
@@ -644,26 +587,19 @@ func TestInjectRoutingDeliversNoRetiredControlPlaneVocabulary(t *testing.T) {
 
 // markdownSectionAgents lists every supported agent whose guidance is delivered
 // as a marker section inside its own system prompt file — that is, everything
-// except the Jinja router and the orchestrator-scoped OpenCode family.
+// except the orchestrator-scoped OpenCode.
 func markdownSectionAgents(t *testing.T) []model.AgentID {
 	t.Helper()
 
 	var selected []model.AgentID
 	for _, agent := range catalog.AllAgents() {
-		if agent.ID == model.AgentOpenCode || agent.ID == model.AgentKilocode {
-			continue
-		}
-		adapter, err := agents.NewAdapter(agent.ID)
-		if err != nil {
-			t.Fatalf("NewAdapter(%q) error = %v", agent.ID, err)
-		}
-		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
+		if agent.ID == model.AgentOpenCode {
 			continue
 		}
 		selected = append(selected, agent.ID)
 	}
-	if len(selected) != supportedAgentCount-3 {
-		t.Fatalf("selected %d markdown-section agents, want %d", len(selected), supportedAgentCount-3)
+	if len(selected) != supportedAgentCount-1 {
+		t.Fatalf("selected %d markdown-section agents, want %d", len(selected), supportedAgentCount-1)
 	}
 	return selected
 }

@@ -153,7 +153,7 @@ func TestRenderUninstallResultIncludesEngramScopeSummary(t *testing.T) {
 }
 
 func TestRenderUninstallResultCleanInstallShowsSyncWarnings(t *testing.T) {
-	warnings := []string{"The legacy prompt file /tmp/kiro/gentle-ai.md was kept (it has content Axiom did not write)."}
+	warnings := []string{"The legacy prompt file /tmp/cursor/gentle-ai.mdc was kept (it has content Axiom did not write)."}
 	out := RenderUninstallResult(componentuninstall.Result{}, nil, model.UninstallModeCleanInstall, nil, model.EngramUninstallScopeGlobal, false, []string{"a"}, warnings, nil)
 
 	for _, want := range []string{"Clean install sync complete", "1 warning(s)", warnings[0]} {

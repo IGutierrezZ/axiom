@@ -105,7 +105,6 @@ func (d *Detector) DetectAgents(projectRoots ...string) []AgentToolStatus {
 			{AgentName: "Google Antigravity Global", RelPath: filepath.Join(".gemini", "config", "mcp_config.json")},
 			{AgentName: "Claude Code", RelPath: ".claude.json"},
 			{AgentName: "OpenCode Global", RelPath: filepath.Join(".config", "opencode", "opencode.json")},
-			{AgentName: "Kiro IDE", RelPath: filepath.Join(".kiro", "settings", "mcp.json")},
 			{AgentName: "Cursor IDE", RelPath: filepath.Join(".cursor", "mcp.json")},
 		}
 

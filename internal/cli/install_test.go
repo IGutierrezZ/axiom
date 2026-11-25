@@ -70,7 +70,7 @@ func TestNormalizeInstallFlagsDefaults(t *testing.T) {
 	}
 
 	want := model.Selection{
-		Agents:  []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentWindsurf, model.AgentKiroIDE, model.AgentOpenClaw, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI},
+		Agents:  []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI},
 		Persona: model.PersonaAxiom,
 		Preset:  model.PresetFullGentleman,
 		Components: []model.ComponentID{
@@ -316,7 +316,7 @@ func TestRunInstallDryRunSkipsExecution(t *testing.T) {
 func makeDetectionWithAgents(present ...string) system.DetectionResult {
 	var configs []system.ConfigState
 	// Full canonical agent set — mirrors knownAgentConfigDirs in config_scan.go.
-	known := []string{"claude-code", "opencode", "kilocode", "gemini-cli", "cursor", "vscode-copilot", "codex", "antigravity", "windsurf", "kimi", "qwen-code", "kiro-ide", "openclaw", "pi", "trae-ide", "hermes", "github-copilot-cli"}
+	known := []string{"claude-code", "opencode", "gemini-cli", "cursor", "vscode-copilot", "codex", "antigravity", "qwen-code", "pi", "trae-ide", "github-copilot-cli"}
 	presentSet := make(map[string]bool, len(present))
 	for _, p := range present {
 		presentSet[p] = true
@@ -356,7 +356,7 @@ func TestDefaultAgentsFromDetection_CodexIsIncludedWhenPresent(t *testing.T) {
 // canonical agent string maps to its model.AgentID constant. This prevents
 // silent drops when new agents are added to ScanConfigs without updating the
 // consumer switch.
-// Qwen Code, Hermes y Kimi ya no se mapean: no son seleccionables (véase
+// Qwen Code ya no se mapean: no son seleccionables (véase
 // TestDefaultAgentsFromDetectionIgnoresRetiredAgents).
 func TestDefaultAgentsFromDetection_AllAgentsMappedCorrectly(t *testing.T) {
 	tests := []struct {
@@ -365,15 +365,11 @@ func TestDefaultAgentsFromDetection_AllAgentsMappedCorrectly(t *testing.T) {
 	}{
 		{"claude-code", model.AgentClaudeCode},
 		{"opencode", model.AgentOpenCode},
-		{"kilocode", model.AgentKilocode},
 		{"gemini-cli", model.AgentGeminiCLI},
 		{"cursor", model.AgentCursor},
 		{"vscode-copilot", model.AgentVSCodeCopilot},
 		{"codex", model.AgentCodex},
 		{"antigravity", model.AgentAntigravity},
-		{"windsurf", model.AgentWindsurf},
-		{"kiro-ide", model.AgentKiroIDE},
-		{"openclaw", model.AgentOpenClaw},
 		{"pi", model.AgentPi},
 		{"trae-ide", model.AgentTrae},
 	}

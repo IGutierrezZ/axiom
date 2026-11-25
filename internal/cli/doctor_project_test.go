@@ -59,10 +59,10 @@ func TestProjectAdaptersCheckLooksAtTheProjectRoot(t *testing.T) {
 	stubDoctorWorld(t)
 	home, root := t.TempDir(), t.TempDir()
 	t.Chdir(t.TempDir())
-	writeProjectState(t, home, root, state.InstallState{InstalledAgents: []string{"claude-code", "agente-fantasma"}})
+	writeProjectState(t, home, root, state.InstallState{InstalledAgents: []string{"claude-code", "codex"}})
 
 	got := runDoctorChecks(t, doctor.Options{Home: home, Root: root})[doctor.CheckProjectAdapters]
-	if got.Status != doctor.StatusWarn || !strings.Contains(got.Detail, "claude-code") || !strings.Contains(got.Detail, "agente-fantasma") {
+	if got.Status != doctor.StatusWarn || !strings.Contains(got.Detail, "claude-code") || !strings.Contains(got.Detail, "codex") {
 		t.Fatalf("agentes ausentes = %+v, want warn que nombra ambos", got)
 	}
 	if got.Remedy == nil || !strings.Contains(got.Remedy.Description, "--scope workspace") {

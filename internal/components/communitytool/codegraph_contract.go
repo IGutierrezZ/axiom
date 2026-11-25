@@ -35,20 +35,14 @@ type codeGraphCompatibility struct {
 var codeGraphCompatibilityTable = map[model.AgentID]codeGraphCompatibility{
 	model.AgentClaudeCode:    nativeCompatibility(model.AgentClaudeCode, "claude"),
 	model.AgentOpenCode:      reconciledCompatibility(model.AgentOpenCode, "opencode"),
-	model.AgentKilocode:      excludedCompatibility(model.AgentKilocode),
 	model.AgentGeminiCLI:     nativeCompatibility(model.AgentGeminiCLI, "gemini"),
 	model.AgentCursor:        nativeCompatibility(model.AgentCursor, "cursor"),
 	model.AgentVSCodeCopilot: excludedCompatibility(model.AgentVSCodeCopilot),
 	model.AgentCodex:         nativeCompatibility(model.AgentCodex, "codex"),
 	model.AgentAntigravity:   nativeCompatibility(model.AgentAntigravity, "antigravity"),
-	model.AgentWindsurf:      excludedCompatibility(model.AgentWindsurf),
-	model.AgentKimi:          excludedCompatibility(model.AgentKimi),
 	model.AgentQwenCode:      excludedCompatibility(model.AgentQwenCode),
-	model.AgentKiroIDE:       nativeCompatibility(model.AgentKiroIDE, "kiro"),
-	model.AgentOpenClaw:      excludedCompatibility(model.AgentOpenClaw),
 	model.AgentPi:            reconciledCompatibility(model.AgentPi, ""),
 	model.AgentTrae:          excludedCompatibility(model.AgentTrae),
-	model.AgentHermes:        nativeCompatibility(model.AgentHermes, "hermes"),
 	// CodeGraph tiene el destino `copilot-cli` (comprobado con `codegraph install
 	// --print-config copilot-cli`, 1.6.2): escribe <COPILOT_HOME|~/.copilot>/mcp-config.json.
 	model.AgentGitHubCopilotCLI: nativeCompatibility(model.AgentGitHubCopilotCLI, "copilot-cli"),
@@ -97,8 +91,6 @@ func codeGraphToolWiringPaths(homeDir string, adapter agents.Adapter) []string {
 			filepath.Join(homeDir, ".gemini", "config", "mcp_config.json"),
 			filepath.Join(homeDir, ".gemini", "antigravity", "mcp_config.json"),
 		}
-	case model.AgentKiroIDE:
-		return []string{filepath.Join(homeDir, ".kiro", "settings", "mcp.json")}
 	default:
 		paths := []string{adapter.MCPConfigPath(homeDir, "codegraph"), adapter.SettingsPath(homeDir)}
 		if _, ok := adapter.(agents.EffectiveCodeGraphWiringDetector); ok && strings.HasSuffix(adapter.SettingsPath(homeDir), ".json") {

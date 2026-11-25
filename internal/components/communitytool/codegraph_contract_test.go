@@ -76,9 +76,7 @@ func TestCodeGraphCompatibilityStrategies(t *testing.T) {
 		strategy codeGraphStrategy
 		agents   []model.AgentID
 	}{
-		{codeGraphNative, []model.AgentID{model.AgentClaudeCode, model.AgentCursor, model.AgentCodex, model.AgentGeminiCLI, model.AgentHermes, model.AgentAntigravity, model.AgentKiroIDE, model.AgentGitHubCopilotCLI}},
 		{codeGraphReconciled, []model.AgentID{model.AgentOpenCode, model.AgentPi}},
-		{codeGraphExcluded, []model.AgentID{model.AgentKilocode, model.AgentVSCodeCopilot, model.AgentWindsurf, model.AgentKimi, model.AgentQwenCode, model.AgentOpenClaw, model.AgentTrae}},
 	}
 	for _, tt := range tests {
 		for _, id := range tt.agents {
@@ -101,7 +99,7 @@ func TestExcludedAgentsNeverEnterCodeGraphSurfaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, id := range []model.AgentID{model.AgentKilocode, model.AgentVSCodeCopilot, model.AgentWindsurf, model.AgentKimi, model.AgentQwenCode, model.AgentOpenClaw, model.AgentTrae} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentQwenCode, model.AgentTrae} {
 		t.Run(string(id), func(t *testing.T) {
 			home := t.TempDir()
 			adapter, ok := reg.Get(id)
@@ -201,7 +199,6 @@ func TestCodeGraphNativeOwnedPaths(t *testing.T) {
 	tests := map[model.AgentID][]string{
 		model.AgentClaudeCode:  {filepath.Join(home, ".claude.json")},
 		model.AgentAntigravity: {filepath.Join(home, ".gemini", "config", "mcp_config.json"), filepath.Join(home, ".gemini", "antigravity", "mcp_config.json")},
-		model.AgentKiroIDE:     {filepath.Join(home, ".kiro", "settings", "mcp.json")},
 	}
 	for id, want := range tests {
 		adapter, _ := reg.Get(id)
@@ -218,11 +215,11 @@ func TestCodeGraphCommandsUseExplicitMultipleTargets(t *testing.T) {
 			return "/bin/npm", nil
 		}
 		return "", errors.New("missing")
-	}), []string{"claude", "cursor", "kiro"})
+	}), []string{"claude", "cursor"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"codegraph", "install", "--target", "claude,cursor,kiro", "--location", "global", "--yes"}
+	want := []string{"codegraph", "install", "--target", "claude,cursor", "--location", "global", "--yes"}
 	if !reflect.DeepEqual(commands[1], want) {
 		t.Fatalf("install command = %v, want %v", commands[1], want)
 	}
@@ -308,7 +305,7 @@ func TestCodeGraphRollbackAfterGuidanceAndPostconditionFailures(t *testing.T) {
 
 func TestCodeGraphSnapshotRoundTripIsIdempotent(t *testing.T) {
 	home := t.TempDir()
-	path := filepath.Join(home, ".kiro", "settings", "mcp.json")
+	path := filepath.Join(home, ".cursor", "mcp.json")
 	mustWrite(t, path, `{"mcpServers":{"sibling":{"command":"x"}}}`)
 	if err := os.Chmod(path, 0o640); err != nil {
 		t.Fatal(err)

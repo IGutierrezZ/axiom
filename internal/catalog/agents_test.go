@@ -64,38 +64,6 @@ func TestIsSupportedAgentAcceptsPi(t *testing.T) {
 	}
 }
 
-func TestAllAgentsIncludesHermes(t *testing.T) {
-	agents := AllAgents()
-
-	for _, agent := range agents {
-		if agent.ID != model.AgentHermes {
-			continue
-		}
-
-		if agent.Name != "Hermes" {
-			t.Fatalf("Hermes Name = %q, want Hermes", agent.Name)
-		}
-
-		if agent.Tier != model.TierFull {
-			t.Fatalf("Hermes Tier = %q, want %q", agent.Tier, model.TierFull)
-		}
-
-		if agent.ConfigPath != "~/.hermes" {
-			t.Fatalf("Hermes ConfigPath = %q, want ~/.hermes", agent.ConfigPath)
-		}
-
-		return
-	}
-
-	t.Fatalf("AllAgents() missing %s", model.AgentHermes)
-}
-
-func TestIsSupportedAgentAcceptsHermes(t *testing.T) {
-	if !IsSupportedAgent(model.AgentHermes) {
-		t.Fatalf("IsSupportedAgent(%q) = false, want true", model.AgentHermes)
-	}
-}
-
 func TestAllAgentsIncludesGitHubCopilotCLIAsDistinctFromVSCode(t *testing.T) {
 	var cli, vscode *Agent
 	for _, agent := range AllAgents() {
@@ -118,5 +86,29 @@ func TestAllAgentsIncludesGitHubCopilotCLIAsDistinctFromVSCode(t *testing.T) {
 	}
 	if !IsSupportedAgent(model.AgentGitHubCopilotCLI) {
 		t.Fatal("IsSupportedAgent(github-copilot-cli) = false, want true")
+	}
+}
+
+// El estado filtra los agentes retirados con model.IsKnownAgentID: su lista debe
+// coincidir con la del catálogo.
+func TestModelKnownAgentsMatchCatalog(t *testing.T) {
+	for _, agent := range AllAgents() {
+		if !model.IsKnownAgentID(agent.ID) {
+			t.Errorf("model.IsKnownAgentID(%q) = false, pero el catálogo lo admite", agent.ID)
+		}
+	}
+	for _, id := range []model.AgentID{"kiro-ide", "windsurf", "kimi", "hermes", "openclaw", "kilocode", "no-existe"} {
+		if model.IsKnownAgentID(id) || IsSupportedAgent(id) {
+			t.Errorf("%q no debe ser un agente admitido", id)
+		}
+	}
+	known := 0
+	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentGeminiCLI, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentCodex, model.AgentAntigravity, model.AgentQwenCode, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI} {
+		if model.IsKnownAgentID(id) {
+			known++
+		}
+	}
+	if known != len(AllAgents()) {
+		t.Errorf("model conoce %d agentes y el catálogo %d", known, len(AllAgents()))
 	}
 }

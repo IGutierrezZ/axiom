@@ -407,7 +407,6 @@ func TestUserSkillDirsIncludesSupportedAgentSkillLocations(t *testing.T) {
 
 	for _, want := range []string{
 		filepath.Join(home, ".config", "opencode", "skills"),
-		filepath.Join(home, ".config", "kilo", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".gemini", "skills"),
 		filepath.Join(home, ".gemini", "antigravity", "skills"),
@@ -416,28 +415,14 @@ func TestUserSkillDirsIncludesSupportedAgentSkillLocations(t *testing.T) {
 		filepath.Join(home, ".cursor", "skills"),
 		filepath.Join(home, ".copilot", "skills"),
 		filepath.Join(home, ".codex", "skills"),
-		filepath.Join(home, ".codeium", "windsurf", "skills"),
 		filepath.Join(home, ".config", "agents", "skills"),
-		filepath.Join(home, ".kimi", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
-		filepath.Join(home, ".kiro", "skills"),
-		filepath.Join(home, ".openclaw", "skills"),
 		filepath.Join(home, ".pi", "agent", "skills"),
 		filepath.Join(home, ".agents", "skills"),
-		filepath.Join(home, ".hermes", "skills"),
 	} {
 		if !containsPath(dirs, want) {
 			t.Fatalf("UserSkillDirs() missing %q in %#v", want, dirs)
 		}
-	}
-}
-
-func TestProjectSkillDirsIncludesHermesSkillLocation(t *testing.T) {
-	cwd := t.TempDir()
-	dirs := ProjectSkillDirs(cwd)
-	want := filepath.Join(cwd, ".hermes", "skills")
-	if !containsPath(dirs, want) {
-		t.Fatalf("ProjectSkillDirs() missing Hermes skill location %q", want)
 	}
 }
 
@@ -454,8 +439,6 @@ func TestProjectSkillDirsIncludesWorkspaceSkillLocations(t *testing.T) {
 		filepath.Join(cwd, ".github", "skills"),
 		filepath.Join(cwd, ".codex", "skills"),
 		filepath.Join(cwd, ".qwen", "skills"),
-		filepath.Join(cwd, ".kiro", "skills"),
-		filepath.Join(cwd, ".openclaw", "skills"),
 		filepath.Join(cwd, ".pi", "skills"),
 		filepath.Join(cwd, ".agent", "skills"),
 		filepath.Join(cwd, ".agents", "skills"),

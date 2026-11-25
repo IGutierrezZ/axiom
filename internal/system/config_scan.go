@@ -23,9 +23,7 @@ type ConfigState struct {
 // that mirrors the adapter registry's full set without importing the agents
 // package (which would create an import cycle: system ← agents ← system).
 //
-// Most entries mirror Adapter.GlobalConfigDir(). Kiro is an intentional
-// exception: we scan `~/.kiro` (managed artifacts root) instead of
-// `%APPDATA%/kiro/User` (settings root) due to Kiro's split-root layout.
+// Entries mirror Adapter.GlobalConfigDir().
 //
 // When a new agent is added to the registry, its entry must also be added here
 // until the import cycle is resolved and ScanConfigs can delegate directly to
@@ -34,20 +32,14 @@ func knownAgentConfigDirs(homeDir string) []ConfigState {
 	return []ConfigState{
 		{Agent: "claude-code", Path: filepath.Join(homeDir, ".claude")},
 		{Agent: "opencode", Path: filepath.Join(homeDir, ".config", "opencode")},
-		{Agent: "kilocode", Path: filepath.Join(homeDir, ".config", "kilo")},
 		{Agent: "gemini-cli", Path: filepath.Join(homeDir, ".gemini")},
 		{Agent: "cursor", Path: filepath.Join(homeDir, ".cursor")},
 		{Agent: "vscode-copilot", Path: vscodeCopilotGlobalConfigDir(homeDir)},
 		{Agent: "codex", Path: filepath.Join(homeDir, ".codex")},
 		{Agent: "antigravity", Path: filepath.Join(homeDir, ".gemini", "antigravity-cli")},
-		{Agent: "windsurf", Path: filepath.Join(homeDir, ".codeium", "windsurf")},
-		{Agent: "kimi", Path: filepath.Join(homeDir, ".kimi")},
 		{Agent: "qwen-code", Path: filepath.Join(homeDir, ".qwen")},
-		{Agent: "kiro-ide", Path: filepath.Join(homeDir, ".kiro")},
-		{Agent: "openclaw", Path: filepath.Join(homeDir, ".openclaw")},
 		{Agent: "pi", Path: filepath.Join(homeDir, ".pi")},
 		{Agent: "trae-ide", Path: filepath.Join(homeDir, ".trae")},
-		{Agent: "hermes", Path: filepath.Join(homeDir, ".hermes")},
 		{Agent: "github-copilot-cli", Path: copilotconfig.Root(homeDir)},
 	}
 }

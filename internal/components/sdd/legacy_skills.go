@@ -18,7 +18,7 @@ import (
 // Migración de las skills de proyecto de las instalaciones workspace anteriores.
 //
 // Hasta ahora, con --scope workspace cada agente recibía su propia copia de las
-// skills (.opencode/skills, .kilo/skills, .gemini/skills, .cursor/skills,
+// skills (.opencode/skills, .gemini/skills, .cursor/skills,
 // .github/skills, .codex/skills). Esos agentes leen además .agents/skills, donde
 // Axiom escribe ahora una única copia compartida, así que las carpetas antiguas
 // harían aparecer cada skill dos veces (en OpenCode, avisos «duplicate skill name»).

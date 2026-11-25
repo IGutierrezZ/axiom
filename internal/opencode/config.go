@@ -385,7 +385,7 @@ func IsManagedAgentShape(name string, def map[string]any) bool {
 	if _, ok := def["prompt"].(string); !ok {
 		return false
 	}
-	// Kilo declara tools en lugar de permission en algunos agentes, así que
+	// Un agente puede declarar tools en lugar de permission, así que
 	// cualquiera de los dos mapas cuenta como forma del overlay.
 	if _, ok := def["permission"].(map[string]any); ok {
 		return true

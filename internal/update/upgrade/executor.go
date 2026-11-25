@@ -209,16 +209,6 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 	}
 	add(adapter.SettingsPath(homeDir))
 
-	if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-		configDir := adapter.GlobalConfigDir(homeDir)
-		add(
-			filepath.Join(configDir, "persona.md"),
-			filepath.Join(configDir, "output-style.md"),
-			filepath.Join(configDir, "sdd-orchestrator.md"),
-			filepath.Join(configDir, "strict-tdd-mode.md"),
-		)
-	}
-
 	if adapter.SupportsMCP() {
 		add(adapter.MCPConfigPath(homeDir, "engram"), adapter.MCPConfigPath(homeDir, "context7"))
 	}

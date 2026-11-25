@@ -29,9 +29,6 @@ func agentForAssetPath(t *testing.T, path string) model.AgentID {
 		"copilot":     model.AgentVSCodeCopilot,
 		"cursor":      model.AgentCursor,
 		"gemini":      model.AgentGeminiCLI,
-		"hermes":      model.AgentHermes,
-		"kimi":        model.AgentKimi,
-		"kiro":        model.AgentKiroIDE,
 		"opencode":    model.AgentOpenCode,
 		"qwen":        model.AgentQwenCode,
 	}[family]

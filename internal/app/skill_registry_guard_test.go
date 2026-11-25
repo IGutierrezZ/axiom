@@ -133,8 +133,8 @@ func TestSkillRegistryRefreshProceedsInGitProject(t *testing.T) {
 	}
 }
 
-// TestSkillRegistryRefreshProceedsWithRelativeCwdDot covers the Kiro
-// SessionStart hook, which runs `--cwd .` from the workspace root.
+// TestSkillRegistryRefreshProceedsWithRelativeCwdDot covers a hook that runs
+// `--cwd .` from the workspace root.
 func TestSkillRegistryRefreshProceedsWithRelativeCwdDot(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)

@@ -127,7 +127,7 @@ type WorkspaceScopedProvider interface {
 
 // LegacySkillsDirProvider es una capacidad opcional de los adaptadores ligados a la
 // raíz de un proyecto cuyas skills iban antes a una carpeta propia (.opencode/skills,
-// .kilo/skills, .gemini/skills, .cursor/skills, .github/skills, .codex/skills) y ahora
+// .gemini/skills, .cursor/skills, .github/skills, .codex/skills) y ahora
 // van a la carpeta compartida .agents/skills. Devuelve las
 // carpetas anteriores de la raíz del proyecto dir, o nada fuera de ella. Sirve para
 // migrar las instalaciones previas: una copia solo se retira si se prueba que es de Axiom.

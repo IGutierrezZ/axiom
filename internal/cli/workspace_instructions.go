@@ -27,7 +27,7 @@ var workspaceInstructionsNoticeWriter io.Writer = os.Stderr
 // registerWorkspaceInstructions declara el fichero de instrucciones propio de
 // Axiom en la lista instructions de la configuración del proyecto.
 //
-// En workspace, OpenCode y Kilo no cargan solos un fichero suelto de su carpeta de
+// En workspace, OpenCode no carga solo un fichero suelto de su carpeta de
 // recursos: leen AGENTS.md (que es del equipo y Axiom no toca) y los ficheros que
 // enumera instructions. Esta función añade la entrada de Axiom a esa lista sin
 // duplicarla y conservando las del usuario, y deja el resto del documento como
@@ -278,11 +278,10 @@ func workspaceInstructionsSettingsFile(adapter agents.Adapter, workspaceDir stri
 
 // registersWorkspaceInstructions indica si alguno de los agentes seleccionados
 // necesita que el fichero de instrucciones de Axiom se registre en su
-// configuración de proyecto: OpenCode y Kilo en instructions, Gemini en
+// configuración de proyecto: OpenCode en instructions, Gemini en
 // context.fileName y Codex en developer_instructions.
 func registersWorkspaceInstructions(agentIDs []model.AgentID) bool {
 	return containsAgent(agentIDs, model.AgentOpenCode) ||
-		containsAgent(agentIDs, model.AgentKilocode) ||
 		containsAgent(agentIDs, model.AgentGeminiCLI) ||
 		containsAgent(agentIDs, model.AgentCodex)
 }
@@ -329,7 +328,7 @@ func workspaceTrustNotes(scope InstallScope, agentIDs []model.AgentID) []string 
 }
 
 // workspaceInstructionsStep registra el fichero de instrucciones de Axiom de
-// cada agente del proyecto que lo necesita (OpenCode, Kilo, Gemini y Codex). Va después de los componentes
+// cada agente del proyecto que lo necesita (OpenCode, Gemini y Codex). Va después de los componentes
 // y de la guía de enrutado, que son quienes escriben ese fichero.
 type workspaceInstructionsStep struct {
 	id           string
@@ -356,7 +355,7 @@ func (s workspaceInstructionsStep) Run() error {
 }
 
 // workspaceSettingsPreflightStep rechaza, antes de escribir nada, una
-// configuración de proyecto de OpenCode, Kilo, Gemini, VS Code Copilot (JSON) o
+// configuración de proyecto de OpenCode, Gemini, VS Code Copilot (JSON) o
 // Codex (TOML) que no se puede leer.
 //
 // El resto de fusiones sustituyen una base ilegible por una vacía: en la
@@ -431,7 +430,7 @@ func needsWorkspaceSettingsPreflight(agentIDs []model.AgentID) bool {
 }
 
 // withWorkspaceSettingsPreflight antepone la comprobación de la configuración de
-// proyecto a los pasos de preparación cuando hay OpenCode, Kilo, Gemini, Codex o VS
+// proyecto a los pasos de preparación cuando hay OpenCode, Gemini, Codex o VS
 // Code Copilot en workspace.
 func withWorkspaceSettingsPreflight(prepare []pipeline.Step, scope InstallScope, workspaceDir string, agentIDs []model.AgentID) []pipeline.Step {
 	if scope != ScopeWorkspace || !needsWorkspaceSettingsPreflight(agentIDs) {
@@ -452,21 +451,20 @@ var staleWorkspaceConfigSignals = []string{
 	filepath.Join("plugins", "sdd-task-result-artifacts.ts"),
 }
 
-// staleWorkspaceConfigDirs devuelve las carpetas <proyecto>/.config/opencode y
-// <proyecto>/.config/kilo que contienen restos de una instalación anterior.
+// staleWorkspaceConfigDirs devuelve la carpeta <proyecto>/.config/opencode si
+// contiene restos de una instalación anterior.
 //
-// No se borra nada: ninguno de los dos agentes lee esas carpetas, pero los
-// ficheros que contienen (opencode.json, AGENTS.md, skills y comandos) pueden
+// No se borra nada: OpenCode no lee esa carpeta, pero los
+// ficheros que contiene (opencode.json, AGENTS.md, skills y comandos) pueden
 // mezclar contenido del usuario con el de Axiom, y no hay forma de probar cuál es
 // cuál. A diferencia de .claude/mcp/engram.json, que tiene una forma exacta y
 // única, aquí lo seguro es avisar y dejar la decisión al usuario.
 func staleWorkspaceConfigDirs(workspaceDir string, agentIDs []model.AgentID) []string {
 	candidates := map[model.AgentID]string{
 		model.AgentOpenCode: filepath.Join(workspaceDir, ".config", "opencode"),
-		model.AgentKilocode: filepath.Join(workspaceDir, ".config", "kilo"),
 	}
 	var stale []string
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, id := range []model.AgentID{model.AgentOpenCode} {
 		dir, selected := candidates[id], containsAgent(agentIDs, id)
 		if !selected {
 			continue

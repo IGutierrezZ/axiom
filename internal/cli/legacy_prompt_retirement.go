@@ -6,8 +6,8 @@ import (
 )
 
 // legacyPromptRetirementStep retires the prompt files that earlier releases
-// wrote under a name an adapter no longer uses (Kiro's gentle-ai.md, VS Code's
-// gentle-ai.instructions.md, Cursor's gentle-ai.mdc), which otherwise sit next to
+// wrote under a name an adapter no longer uses (VS Code's gentle-ai.instructions.md,
+// Cursor's gentle-ai.mdc), which otherwise sit next to
 // the renamed file and deliver the prompt twice. It never fails the run and has
 // no rollback: only a file Axiom provably wrote is removed, and anything else is
 // kept and reported as a warning for the user to act on.

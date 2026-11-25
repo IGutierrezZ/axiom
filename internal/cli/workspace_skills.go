@@ -9,7 +9,7 @@ import (
 
 // workspaceSkillsDirs lleva la cuenta de las carpetas de skills que una ejecución
 // ya ha escrito. Con --scope workspace varios agentes comparten .agents/skills
-// (Codex, VS Code, OpenCode, Kilo, Gemini y Cursor): se escribe una sola vez, con el
+// (Codex, VS Code, OpenCode, Gemini y Cursor): se escribe una sola vez, con el
 // mismo contenido para todos, y el resto de agentes de esa carpeta no la repiten.
 //
 // Con el ámbito global no deduplica nada: cada agente escribe en su carpeta de
@@ -75,7 +75,7 @@ func legacySkillsAdapters(scope InstallScope, adapters []agents.Adapter) []agent
 
 // legacySkillsRetirementStep migra las instalaciones workspace anteriores, que
 // dejaron una copia de las skills en la carpeta propia de cada agente
-// (.opencode/skills, .kilo/skills, .gemini/skills, .cursor/skills, .github/skills,
+// (.opencode/skills, .gemini/skills, .cursor/skills, .github/skills,
 // .codex/skills). Ahora hay una sola copia compartida en .agents/skills y esas
 // carpetas harían ver cada skill dos veces. Solo retira una carpeta de skill cuando
 // prueba que es de Axiom (nombre de skill gestionada y contenido byte a byte igual a lo

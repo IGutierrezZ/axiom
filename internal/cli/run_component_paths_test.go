@@ -39,11 +39,11 @@ func TestComponentPathsSDDIncludesSystemPromptForPromptFileAdapters(t *testing.T
 
 // TestComponentPathsSDDExcludesSystemPromptForManagedOpenCodeAgents pins issue
 // #3975: the SDD injector scopes the orchestrator to the gentle-orchestrator
-// agent in the settings file for OpenCode and Kilocode in every mode, so SDD
+// agent in the settings file for OpenCode in every mode, so SDD
 // must not require, back up, or verify the AGENTS.md it never writes.
 func TestComponentPathsSDDExcludesSystemPromptForManagedOpenCodeAgents(t *testing.T) {
 	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentKilocode})
+	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode})
 
 	for _, mode := range []model.SDDModeID{"", model.SDDModeSingle, model.SDDModeMulti} {
 		paths := componentPaths(home, model.Selection{SDDMode: mode}, adapters, model.ComponentSDD)
@@ -302,63 +302,6 @@ func TestComponentPathsSDDIncludesSkillsAndSharedConventions(t *testing.T) {
 	}
 }
 
-func TestComponentPathsWithWorkspaceOpenClawSDDUsesWorkspaceScopedSkills(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-
-	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentSDD)
-
-	for _, want := range []string{
-		filepath.Join(workspace, ".openclaw", "skills", "_shared", "sdd-phase-common.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-verify", "SKILL.md"),
-	} {
-		if !containsPath(paths, want) {
-			t.Fatalf("componentPathsWithWorkspace(sdd,openclaw) missing workspace-scoped skill path %q\npaths=%v", want, paths)
-		}
-	}
-
-	for _, unwanted := range []string{
-		filepath.Join(home, ".openclaw", "skills", "_shared", "sdd-phase-common.md"),
-		filepath.Join(home, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".openclaw", "skills", "sdd-verify", "SKILL.md"),
-	} {
-		if containsPath(paths, unwanted) {
-			t.Fatalf("componentPathsWithWorkspace(sdd,openclaw) must not include home-scoped SDD skill path %q\npaths=%v", unwanted, paths)
-		}
-	}
-}
-
-func TestComponentPathsOpenClawSkillsSkipsSDDPhaseSkills(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-	selection := model.Selection{
-		Skills: []model.SkillID{
-			model.SkillSDDInit,
-			model.SkillGoTesting,
-			model.SkillSDDOnboard,
-		},
-	}
-
-	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, model.ComponentSkills)
-
-	want := filepath.Join(workspace, ".openclaw", "skills", "go-testing", "SKILL.md")
-	if !containsPath(paths, want) {
-		t.Fatalf("componentPaths(skills,openclaw) missing portable skill path %q\npaths=%v", want, paths)
-	}
-
-	for _, unwanted := range []string{
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-onboard", "SKILL.md"),
-	} {
-		if containsPath(paths, unwanted) {
-			t.Fatalf("componentPaths(skills,openclaw) must not verify SDD phase skill path %q\npaths=%v", unwanted, paths)
-		}
-	}
-}
-
 func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
@@ -388,115 +331,6 @@ func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("componentPathsWithWorkspaceScoped(skills,claude-code,workspace) must not include home-scoped path %q\npaths=%v", unwanted, paths)
 		}
-	}
-}
-
-// TestComponentPathsWorkspaceScopedKiroStaysInWorkspace comprueba que, en
-// ámbito workspace, todas las rutas de Kiro cuelgan del workspace. APPDATA y
-// XDG_CONFIG_HOME apuntan bajo home para que una fuga de SettingsPath se detecte.
-func TestComponentPathsWorkspaceScopedKiroStaysInWorkspace(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	adapters := resolveAdapters([]model.AgentID{model.AgentKiroIDE})
-	selection := model.Selection{Skills: []model.SkillID{model.SkillGoTesting}, Persona: model.PersonaNeutral}
-	kiro := filepath.Join(workspace, ".kiro")
-
-	tests := []struct {
-		name      string
-		component model.ComponentID
-		want      []string
-	}{
-		{
-			name:      "sdd",
-			component: model.ComponentSDD,
-			want: []string{
-				filepath.Join(kiro, "steering", "axiom.md"),
-				filepath.Join(kiro, "skills", "sdd-init", "SKILL.md"),
-				filepath.Join(kiro, "skills", "_shared", "sdd-phase-common.md"),
-				filepath.Join(kiro, "agents", "sdd-init.md"),
-				filepath.Join(kiro, "hooks", "axiom-skill-registry.json"),
-			},
-		},
-		{
-			name:      "skills",
-			component: model.ComponentSkills,
-			want:      []string{filepath.Join(kiro, "skills", "go-testing", "SKILL.md")},
-		},
-		{
-			name:      "engram",
-			component: model.ComponentEngram,
-			want:      []string{filepath.Join(kiro, "settings", "mcp.json")},
-		},
-		{
-			name:      "context7",
-			component: model.ComponentContext7,
-			want:      []string{filepath.Join(kiro, "settings", "mcp.json")},
-		},
-		{
-			name:      "persona",
-			component: model.ComponentPersona,
-			want:      []string{filepath.Join(kiro, "steering", "axiom.md")},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, tt.component)
-
-			for _, want := range tt.want {
-				if !containsPath(paths, want) {
-					t.Errorf("componentPathsWithWorkspaceScoped(%s,kiro-ide,workspace) falta la ruta %q\npaths=%v", tt.component, want, paths)
-				}
-			}
-			for _, p := range paths {
-				if strings.HasPrefix(p, home+string(filepath.Separator)) {
-					t.Errorf("componentPathsWithWorkspaceScoped(%s,kiro-ide,workspace) devuelve una ruta bajo home %q\npaths=%v", tt.component, p, paths)
-				}
-			}
-		})
-	}
-}
-
-// TestComponentPathsSDDKiroIncludesSkillRegistryHook comprueba que el hook de
-// skill-registry de Kiro entra en las rutas de backup y verificación de sdd
-// bajo la raíz de su ámbito, y que otros agentes no lo declaran.
-func TestComponentPathsSDDKiroIncludesSkillRegistryHook(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	hookRel := filepath.Join(".kiro", "hooks", "axiom-skill-registry.json")
-
-	tests := []struct {
-		name  string
-		agent model.AgentID
-		scope InstallScope
-		want  string
-	}{
-		{name: "kiro global cuelga de home", agent: model.AgentKiroIDE, scope: ScopeGlobal, want: filepath.Join(home, hookRel)},
-		{name: "kiro workspace cuelga del workspace", agent: model.AgentKiroIDE, scope: ScopeWorkspace, want: filepath.Join(workspace, hookRel)},
-		{name: "claude no declara hook de Kiro", agent: model.AgentClaudeCode, scope: ScopeWorkspace, want: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapters := resolveAdapters([]model.AgentID{tt.agent})
-			paths := componentPathsWithWorkspaceScoped(home, workspace, tt.scope, model.Selection{}, adapters, model.ComponentSDD)
-
-			var hooks []string
-			for _, p := range paths {
-				if strings.Contains(p, filepath.Join(".kiro", "hooks")) {
-					hooks = append(hooks, p)
-				}
-			}
-			switch {
-			case tt.want == "" && len(hooks) != 0:
-				t.Fatalf("%s no debe declarar rutas .kiro/hooks, got %v", tt.agent, hooks)
-			case tt.want != "" && (len(hooks) != 1 || hooks[0] != tt.want):
-				t.Fatalf("rutas .kiro/hooks = %v, want [%s]", hooks, tt.want)
-			}
-		})
 	}
 }
 
@@ -539,41 +373,6 @@ func TestInstallWorkspaceScopeVerificationWithNoGlobalSkills(t *testing.T) {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("workspace-scoped verification must not check home path %q when scope=workspace\npaths=%v", unwanted, paths)
 		}
-	}
-}
-
-func TestComponentPathsSDDKimiIncludesAgentFilesAndGlobalSkills(t *testing.T) {
-	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentKimi})
-
-	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentSDD)
-
-	for _, want := range []string{
-		filepath.Join(home, ".kimi", "KIMI.md"),
-		filepath.Join(home, ".kimi", "agents", "gentleman.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-init.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-propose.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-apply.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-verify.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-archive.yaml"),
-		filepath.Join(home, ".config", "agents", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".config", "agents", "skills", "_shared", "engram-convention.md"),
-	} {
-		if !containsPath(paths, want) {
-			t.Fatalf("componentPaths(sdd,kimi) missing %q\npaths=%v", want, paths)
-		}
-	}
-}
-
-func TestComponentPathsContext7KimiIncludesMCPConfig(t *testing.T) {
-	home := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentKimi})
-
-	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentContext7)
-
-	want := filepath.Join(home, ".kimi", "mcp.json")
-	if !containsPath(paths, want) {
-		t.Fatalf("componentPaths(context7,kimi) missing %q\npaths=%v", want, paths)
 	}
 }
 
@@ -742,7 +541,6 @@ func TestComponentPathsPermissionsSkipsAgentsWithoutInjectionTarget(t *testing.T
 	adapters := resolveAdapters([]model.AgentID{
 		model.AgentCursor,
 		model.AgentAntigravity,
-		model.AgentHermes,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)
@@ -763,7 +561,6 @@ func TestComponentPathsPermissionsIncludesAgentsWithInjectionTarget(t *testing.T
 	adapters := resolveAdapters([]model.AgentID{
 		model.AgentClaudeCode,
 		model.AgentOpenCode,
-		model.AgentKilocode,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)
@@ -788,32 +585,6 @@ func TestComponentPathsPermissionsSkipsAgentsWithoutOverlay(t *testing.T) {
 
 	if paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission); len(paths) != 0 {
 		t.Fatalf("componentPaths(permissions) = %v, want none", paths)
-	}
-}
-
-// TestComponentPathsEngramOpenClawUsesCanonicalSettingsPath asserts that the
-// engram component path for OpenClaw always resolves to the canonical
-// ~/.openclaw/openclaw.json and never to a workspace-scoped copy.
-//
-// This is a regression test for issue #522: the verifier used to call
-// SettingsPath(workspaceDir) which produced
-// <workspace>/.openclaw/openclaw.json, causing post-sync verification to
-// fail even when the file at the canonical path existed.
-func TestComponentPathsEngramOpenClawUsesCanonicalSettingsPath(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-
-	paths := componentPathsWithWorkspace(home, workspace, model.Selection{}, adapters, model.ComponentEngram)
-
-	canonical := filepath.Join(home, ".openclaw", "openclaw.json")
-	if !containsPath(paths, canonical) {
-		t.Fatalf("componentPathsWithWorkspace(engram,openclaw) missing canonical path %q\npaths=%v", canonical, paths)
-	}
-
-	wrongPath := filepath.Join(workspace, ".openclaw", "openclaw.json")
-	if containsPath(paths, wrongPath) {
-		t.Fatalf("componentPathsWithWorkspace(engram,openclaw) must not include workspace-scoped path %q\npaths=%v", wrongPath, paths)
 	}
 }
 
@@ -1212,13 +983,12 @@ func TestAgentRoutingGuidanceStepRetiresPiManagedBlocks(t *testing.T) {
 func TestRoutingGuidancePathsWorkspaceScopeReportOrchestratorPromptAgentsAtHome(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentKilocode, model.AgentClaudeCode})
+	adapters := resolveAdapters([]model.AgentID{model.AgentOpenCode, model.AgentClaudeCode})
 
 	paths := routingGuidancePaths(home, workspace, ScopeWorkspace, adapters)
 
 	for _, want := range []string{
 		filepath.Join(workspace, ".config", "opencode", "opencode.json"),
-		filepath.Join(workspace, ".config", "kilo", "opencode.json"),
 	} {
 		if !containsPath(paths, want) {
 			t.Fatalf("routingGuidancePaths(workspace) missing workspace settings path %q\npaths=%v", want, paths)
@@ -1226,7 +996,6 @@ func TestRoutingGuidancePathsWorkspaceScopeReportOrchestratorPromptAgentsAtHome(
 	}
 	for _, unwanted := range []string{
 		filepath.Join(home, ".config", "opencode", "opencode.json"),
-		filepath.Join(home, ".config", "kilo", "opencode.json"),
 	} {
 		if containsPath(paths, unwanted) {
 			t.Fatalf("routingGuidancePaths(workspace) reported home path %q under workspace scope\npaths=%v", unwanted, paths)
@@ -1439,7 +1208,7 @@ func TestComponentPathsOpenCodeGentleLogoMatchesSelectedAdapter(t *testing.T) {
 
 func TestBackupTargetsContainNoDuplicatePaths(t *testing.T) {
 	home := t.TempDir()
-	agentIDs := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKimi}
+	agentIDs := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode}
 	selection := model.Selection{
 		Agents:     agentIDs,
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentPersona},
@@ -1479,7 +1248,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	// Los agentes sin modo workspace ya no vuelven a HOME: install y sync los omiten
 	// antes de planificar (TestSplitAgentsForScope) y, si uno se colara, la ruta
 	// queda confinada al proyecto (TestComponentInjectionDirScopedNeverResolvesHomeInWorkspace).
-	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentCodex} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentTrae, model.AgentAntigravity, model.AgentCodex} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue
@@ -1490,7 +1259,7 @@ func TestComponentInjectionDirScopedWorkspaceSafeguard(t *testing.T) {
 	}
 
 	// CLI agents with workspace support must use workspaceDir
-	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI, model.AgentCursor, model.AgentKiroIDE} {
+	for _, id := range []model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI, model.AgentCursor} {
 		adapter, ok := reg.Get(id)
 		if !ok {
 			continue

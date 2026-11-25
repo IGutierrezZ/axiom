@@ -416,7 +416,6 @@ Custom agent skills follow the SAME installation pattern as built-in skills. The
 | Cursor | `~/.cursor/skills/` | `~/.cursor/skills/{name}/SKILL.md` |
 | VSCode | `~/.vscode/skills/` | `~/.vscode/skills/{name}/SKILL.md` |
 | Codex | `~/.codex/skills/` | `~/.codex/skills/{name}/SKILL.md` |
-| Windsurf | `~/.windsurf/skills/` | `~/.windsurf/skills/{name}/SKILL.md` |
 | Antigravity | `~/.antigravity/skills/` | `~/.antigravity/skills/{name}/SKILL.md` |
 
 The installer writes the SAME `SKILL.md` to ALL agents that were configured during the initial setup (detected via the ecosystem's state file or by scanning which agent skill directories exist).
