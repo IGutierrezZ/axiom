@@ -174,7 +174,7 @@ try {
         Write-Reason ("La rama main del checkout principal '$primary' tiene $aheadCount commit(s) que no están en origin/main. " +
             "Está prohibido commitear directamente en main: mueve esos commits a una rama de un worktree que prepare " +
             "axiom branch ensure --cwd `"$primary`" --change <slug> --mode worktree (y después restablece main a origin/main " +
-            "cuando los commits estén a salvo) y abre el PR con scripts/axiom-worktree.ps1 pr <slug>.")
+            "cuando los commits estén a salvo) y abre el PR con scripts/axiom-worktree.ps1 pr <slug> -Label <tipo>.")
         exit 2
     }
     exit 0
