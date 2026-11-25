@@ -45,7 +45,6 @@ Naming convention: `axiom-*` skills are repo-specific workflow skills. Unprefixe
 
 | Skill | Trigger / description | Scope | Path |
 | --- | --- | --- | --- |
-| `axiom-bench` | Trigger: bench, journey, journeys, driven mode, axiom-bench, journey corpus, j-numbers, bench axis. Author and verify axiom bench journeys; go test ./bench never proves driven execution. | project | `skills/axiom-bench/SKILL.md` |
 | `axiom-branch-pr` | Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/branch-pr/SKILL.md` |
 | `axiom-go-table-tests` | Pruebas unitarias tabulares en Go con structs anónimos y subpruebas t.Run. Trigger: Al crear o modificar suites *_test.go en paquetes Go. | project | `skills/axiom-go-table-tests/SKILL.md` |
 | `axiom-idiomatic-error-wrapping` | Errores envueltos con fmt.Errorf y %w para conservar la causa raíz. Trigger: Al capturar, propagar o formatear errores en paquetes Go. | project | `skills/axiom-idiomatic-error-wrapping/SKILL.md` |
