@@ -4,12 +4,12 @@ import (
 	"errors"
 	"os"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 // acquireCooperativeLock backs the cooperative contract with the hardened
 // authority-lock primitive instead of a second platform implementation:
-// reviewtransaction.AcquireAuthorityFileLock owns the secure no-follow open
+// fileprim.AcquireLock owns the secure no-follow open
 // walk (O_NOFOLLOW per component on POSIX, reparse-safe NtCreateFile on
 // Windows) and kernel advisory locking (flock / LockFileEx), and never treats
 // lock-file residue as ownership. Symlinked roots and lock paths are rejected
@@ -17,9 +17,9 @@ import (
 // may move the primitive into this package and flip the dependency; reusing
 // it in place keeps one lock mechanism in the product (#3632).
 func acquireCooperativeLock(path string) (*Lease, error) {
-	authority, err := reviewtransaction.AcquireAuthorityFileLock(path)
+	authority, err := fileprim.AcquireLock(path)
 	if err != nil {
-		if errors.Is(err, reviewtransaction.ErrStoreLockContended) {
+		if errors.Is(err, fileprim.ErrLockContended) {
 			return nil, &BusyError{Cause: err}
 		}
 		return nil, &OperationalError{Cause: err}

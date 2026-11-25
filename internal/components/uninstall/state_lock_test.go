@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -19,7 +20,7 @@ func TestUpdateStateAfterUninstallReReadsLatestStateAfterLockContention(t *testi
 	if err != nil {
 		t.Fatalf("install state lock path: %v", err)
 	}
-	held, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	held, err := fileprim.AcquireLock(lockPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,6 @@
 //go:build unix
 
-package reviewtransaction
+package fileprim
 
 import (
 	"fmt"
@@ -11,14 +11,21 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func secureOpenLocalStoreLock(path string) (*os.File, error) {
+// SecureOpenLock opens (creating it when absent) the lock file at path without
+// following links. On POSIX the directory walk starts at the root the anchor
+// resolver names for the absolute path, or at the filesystem root when anchor is
+// nil or reports no root; on Windows the open is atomic and the anchor is unused.
+func SecureOpenLock(path string, anchor AnchorResolver) (*os.File, error) {
 	runSecureOpenLocalStoreLockBeforeOpen(path)
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	root, ok := secureLockRoot(absPath)
+	root, ok := "", false
+	if anchor != nil {
+		root, ok = anchor(absPath)
+	}
 	if !ok {
 		root = string(filepath.Separator)
 	}

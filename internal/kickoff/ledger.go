@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"gopkg.in/yaml.v3"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 // GatesFileName is the append-only gate ledger's file name inside a change root.
@@ -38,12 +39,12 @@ const (
 	gateLockMaxRetryDelay   = 100 * time.Millisecond
 )
 
-// Test seams over the reviewtransaction primitives, mirroring the pattern
+// Test seams over the fileprim primitives, mirroring the pattern
 // seal.go (publishKickoff) and sddstatus/runtime_ledger.go already use.
 var (
-	acquireGateLedgerLock = reviewtransaction.AcquireAuthorityFileLock
-	replaceGateLedgerFile = reviewtransaction.ReplaceFileAtomic
-	syncGateLedgerDir     = reviewtransaction.SyncReviewDirectory
+	acquireGateLedgerLock = fileprim.AcquireLock
+	replaceGateLedgerFile = fileprim.ReplaceAtomic
+	syncGateLedgerDir     = fileprim.SyncDirectory
 	sleepBeforeLockRetry  = time.Sleep
 	// randomInt63n is a seam so the jitter in gateLockRetryBackoff can be
 	// pinned in tests; production uses the runtime's own source.
@@ -153,14 +154,14 @@ func AppendGateChecked(changeRoot string, rec GateRecord, check func(GateLedger)
 // advisory lock a bounded number of times. Any error other than contention
 // is returned immediately: contention is the only condition this function
 // treats as "try again shortly".
-func acquireGateLedgerLockWithRetry(lockPath string) (*reviewtransaction.AuthorityFileLock, error) {
+func acquireGateLedgerLockWithRetry(lockPath string) (*fileprim.Lock, error) {
 	var lastErr error
 	for attempt := 0; attempt < gateLockAcquireAttempts; attempt++ {
 		lock, err := acquireGateLedgerLock(lockPath)
 		if err == nil {
 			return lock, nil
 		}
-		if !errors.Is(err, reviewtransaction.ErrStoreLockContended) {
+		if !errors.Is(err, fileprim.ErrLockContended) {
 			return nil, err
 		}
 		lastErr = err

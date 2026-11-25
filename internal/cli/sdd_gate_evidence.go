@@ -3,21 +3,20 @@ package cli
 import (
 	"context"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
-// gateAncestryChecker adapts
-// (reviewtransaction.SnapshotBuilder).RevisionIsAncestor (phase 19) to
-// kickoff.AncestryChecker's one-method port, so internal/kickoff never
-// imports internal/reviewtransaction for a single boolean question
-// (design.md S4.6, S5.6).
+// gateAncestryChecker adapts gitcommon.IsAncestor to
+// kickoff.AncestryChecker's one-method port, so internal/kickoff never runs
+// git itself for a single boolean question (design.md S4.6, S5.6). It asks
+// the local commit graph of repo.
 type gateAncestryChecker struct {
-	builder reviewtransaction.SnapshotBuilder
+	repo string
 }
 
 func (c gateAncestryChecker) IsAncestor(ctx context.Context, ancestor, descendant string) (bool, error) {
-	return c.builder.RevisionIsAncestor(ctx, ancestor, descendant)
+	return gitcommon.IsAncestor(ctx, c.repo, ancestor, descendant)
 }
 
 // evidenceRefFromArgs resolves the reference kickoff.VerifyIntegrationEvidence
@@ -40,7 +39,7 @@ func evidenceRefFromArgs(parsed kickoff.GateRecordArgs) string {
 // themselves live in internal/kickoff (task 20.2); this function decides
 // none of them.
 func verifyGateEvidence(workspaceRoot string, parsed kickoff.GateRecordArgs) (kickoff.Evidence, error) {
-	checker := gateAncestryChecker{builder: reviewtransaction.SnapshotBuilder{Repo: workspaceRoot}}
+	checker := gateAncestryChecker{repo: workspaceRoot}
 	return kickoff.VerifyIntegrationEvidence(context.Background(), kickoff.Evidence{
 		Kind: parsed.EvidenceKind, Ref: evidenceRefFromArgs(parsed), BaseRef: parsed.BaseRef,
 	}, checker)

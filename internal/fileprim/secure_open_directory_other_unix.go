@@ -1,6 +1,6 @@
 //go:build unix && !linux && !darwin && !aix && !freebsd && !solaris
 
-package reviewtransaction
+package fileprim
 
 import "golang.org/x/sys/unix"
 

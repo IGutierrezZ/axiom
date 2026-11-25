@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 func TestInventoryAuthorityReportsActiveMalformedAndMixedCollisionWithoutMutation(t *testing.T) {
@@ -141,11 +143,11 @@ func TestInventoryAuthorityDistinguishesReleasedBusyAndMalformedLockTruth(t *tes
 					if openErr != nil {
 						t.Fatal(openErr)
 					}
-					locked, lockErr := tryLockFile(file)
+					locked, lockErr := fileprim.TryLock(file)
 					if lockErr != nil || !locked {
 						t.Fatalf("hold advisory lock = %t, %v", locked, lockErr)
 					}
-					release = func() error { return errors.Join(unlockFile(file), file.Close()) }
+					release = func() error { return errors.Join(fileprim.Unlock(file), file.Close()) }
 					// Windows byte-range locks are mandatory: the held coordination
 					// byte is unreadable from any other handle, so the held LOCK is
 					// read through the holder's own handle.

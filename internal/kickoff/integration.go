@@ -9,9 +9,8 @@ import (
 // to confirm a pr_merged commit is a real local ancestor of the branch it
 // claims to have merged into. It exists so this leaf package never imports
 // internal/reviewtransaction for a single boolean question: the real
-// implementation is backed by
-// (reviewtransaction.SnapshotBuilder).RevisionIsAncestor (phase 19),
-// injected by the CLI adapter (phase 21). This package's own tests exercise
+// implementation is backed by gitcommon.IsAncestor, injected by the CLI
+// adapter (phase 21). This package's own tests exercise
 // the four evidence rules against a double instead of the real executor.
 type AncestryChecker interface {
 	IsAncestor(ctx context.Context, ancestor, descendant string) (bool, error)

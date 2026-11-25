@@ -16,6 +16,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
@@ -38,10 +40,10 @@ var (
 	ErrRuntimeRevisionConflict      = errors.New("SDD runtime ledger revision conflict")
 	ErrRuntimeConcurrentUpdate      = errors.New("SDD runtime ledger is concurrently updated")
 	ErrRuntimeRequestConflict       = errors.New("SDD runtime request identifier was reused with different inputs")
-	runtimePublishRecord            = reviewtransaction.PublishFileNoReplace
-	runtimeReplaceHead              = reviewtransaction.ReplaceFileAtomic
-	runtimeSyncDirectory            = reviewtransaction.SyncReviewDirectory
-	runtimeAcquireAuthorityFileLock = reviewtransaction.AcquireAuthorityFileLock
+	runtimePublishRecord            = fileprim.PublishNoReplace
+	runtimeReplaceHead              = fileprim.ReplaceAtomic
+	runtimeSyncDirectory            = fileprim.SyncDirectory
+	runtimeAcquireAuthorityFileLock = fileprim.AcquireLock
 	runtimeGrantClock               = func() string { return time.Now().UTC().Format(time.RFC3339Nano) }
 	runtimeRevisionPattern          = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
 	runtimeRequestIDPattern         = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,127}$`)
@@ -209,7 +211,7 @@ func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, e
 	if !validRuntimeChange(change) {
 		return RuntimeStore{}, fmt.Errorf("invalid SDD change name %q; want a non-empty identity of at most 96 characters with no control characters, backslash, colon, or \".\"/\"..\" path segment; run `axiom sdd-status --cwd <repo> --json` to read the resolved changeName", change)
 	}
-	root, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).ResolveRepositoryRoot(ctx)
+	root, err := gitcommon.RepositoryRoot(ctx, repo)
 	if err != nil {
 		if abs, absErr := filepath.Abs(repo); absErr == nil && !workspaceHasGitMetadata(abs) {
 			return RuntimeStore{}, &RuntimeRepositoryRequiredError{Workspace: abs, Cause: err}
@@ -369,7 +371,7 @@ func (store RuntimeStore) mutate(
 	return store.commitRecordLocked(record)
 }
 
-func (store RuntimeStore) acquireLock() (*reviewtransaction.AuthorityFileLock, error) {
+func (store RuntimeStore) acquireLock() (*fileprim.Lock, error) {
 	lockPath := filepath.Join(store.Dir, "LOCK")
 	var lastErr error
 	for attempt := 0; attempt < runtimeLockAcquireAttempts; attempt++ {
@@ -377,7 +379,7 @@ func (store RuntimeStore) acquireLock() (*reviewtransaction.AuthorityFileLock, e
 		if err == nil {
 			return lock, nil
 		}
-		if errors.Is(err, reviewtransaction.ErrConcurrentUpdate) {
+		if errors.Is(err, fileprim.ErrLockContended) {
 			// Wrapped rather than flattened so the contention proof survives
 			// (1861). Both callers of acquireLock -- RepairConsecutiveRescope and
 			// mutate -- refuse here strictly before commitRecordLocked, so a

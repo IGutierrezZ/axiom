@@ -13,6 +13,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 func rarPathUnsafe(path string, info fs.FileInfo) bool {
@@ -60,7 +62,7 @@ func repairPrivateRARDirectoryNoFollow(path string, _ fs.FileMode) error {
 		return rarWindowsRepairRefusal(path,
 			"the owner-only descriptor to apply is missing its owner or its DACL")
 	}
-	handle, err := openWindowsRARObject(ntPath(path), rarDirectoryRepairAccess, true)
+	handle, err := fileprim.OpenWindowsObject(fileprim.NTPath(path), rarDirectoryRepairAccess, true)
 	if err != nil {
 		return err
 	}
@@ -371,82 +373,17 @@ func rarRepositoryOpenDirectorySafe(file *os.File, info fs.FileInfo) bool {
 	return rarSharedSecurityDescriptorOwnedByCurrentProcess(descriptor)
 }
 
+// openRARPathNoFollow traduce el rechazo genérico de fileprim al error RDD.
 func openRARPathNoFollow(path string, directory bool) (*os.File, error) {
-	handle, err := openWindowsRARObject(ntPath(path), windows.FILE_GENERIC_READ|windows.READ_CONTROL, directory)
-	if err != nil {
-		return nil, err
-	}
-	file := os.NewFile(uintptr(handle), path)
-	if openWindowsRARFileUnsafe(file) {
-		_ = file.Close()
+	file, err := fileprim.OpenNoFollow(path, directory)
+	if errors.Is(err, fileprim.ErrReparsePoint) {
 		return nil, errUnsafeRARAuthorityPath
 	}
-	return file, nil
-}
-
-// OpenPhysicalPath opens a file or directory without traversing reparse points.
-func OpenPhysicalPath(path string, directory bool) (*os.File, error) {
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	return openRARPathNoFollow(absPath, directory)
-}
-
-func openWindowsRARObject(objectPath string, access uint32, directory bool) (windows.Handle, error) {
-	open := func(path string) (windows.Handle, error) {
-		objectName, err := windows.NewNTUnicodeString(path)
-		if err != nil {
-			return 0, err
-		}
-		attributes := &windows.OBJECT_ATTRIBUTES{
-			Length:     uint32(unsafe.Sizeof(windows.OBJECT_ATTRIBUTES{})),
-			ObjectName: objectName,
-			Attributes: windows.OBJ_CASE_INSENSITIVE | windows.OBJ_DONT_REPARSE,
-		}
-		options := uint32(windows.FILE_SYNCHRONOUS_IO_NONALERT | windows.FILE_OPEN_REPARSE_POINT)
-		if directory {
-			options |= windows.FILE_DIRECTORY_FILE
-		} else {
-			options |= windows.FILE_NON_DIRECTORY_FILE
-		}
-		var handle windows.Handle
-		var status windows.IO_STATUS_BLOCK
-		err = windows.NtCreateFile(
-			&handle,
-			access,
-			attributes,
-			&status,
-			nil,
-			windows.FILE_ATTRIBUTE_NORMAL,
-			windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
-			windows.FILE_OPEN,
-			options,
-			0,
-			0,
-		)
-		return handle, err
-	}
-	handle, err := open(objectPath)
-	if !errors.Is(err, windows.STATUS_REPARSE_POINT_ENCOUNTERED) {
-		return handle, err
-	}
-	directPath, resolveErr := directLocalDriveObjectPath(objectPath, queryWindowsDosDevice)
-	if resolveErr != nil {
-		return 0, fmt.Errorf("resolve secure Windows RAR path after %w: %v", err, resolveErr)
-	}
-	return open(directPath)
+	return file, err
 }
 
 func openWindowsRARFileUnsafe(file *os.File) bool {
-	if file == nil {
-		return true
-	}
-	var info windows.ByHandleFileInformation
-	if err := windows.GetFileInformationByHandle(windows.Handle(file.Fd()), &info); err != nil {
-		return true
-	}
-	return info.FileAttributes&windows.FILE_ATTRIBUTE_REPARSE_POINT != 0
+	return fileprim.IsReparsePoint(file)
 }
 
 func privateRARSecurityDescriptorSafe(

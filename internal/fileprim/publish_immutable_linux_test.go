@@ -1,6 +1,6 @@
 //go:build linux
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -77,8 +77,8 @@ func TestPublishNoReplaceLinuxFallsBackToExclusiveCopy(t *testing.T) {
 			dir := t.TempDir()
 			source := writeImmutablePublicationSource(t, dir)
 			destination := filepath.Join(dir, "receipt.json")
-			if err := publishNoReplace(source, destination); err != nil {
-				t.Fatalf("publishNoReplace(%s fallback) error = %v", tt.name, err)
+			if err := PublishNoReplace(source, destination); err != nil {
+				t.Fatalf("PublishNoReplace(%s fallback) error = %v", tt.name, err)
 			}
 			payload, err := os.ReadFile(destination)
 			if err != nil {
@@ -111,8 +111,8 @@ func TestPublishNoReplaceLinuxCopyFallbackNeverReplacesDestination(t *testing.T)
 		t.Fatal(err)
 	}
 
-	if err := publishNoReplace(source, destination); !os.IsExist(err) {
-		t.Fatalf("publishNoReplace(existing destination) error = %v, want exists", err)
+	if err := PublishNoReplace(source, destination); !os.IsExist(err) {
+		t.Fatalf("PublishNoReplace(existing destination) error = %v, want exists", err)
 	}
 	payload, err := os.ReadFile(destination)
 	if err != nil {
@@ -136,8 +136,8 @@ func TestPublishNoReplaceLinuxCopyFallbackCleansUpCopyFailure(t *testing.T) {
 	dir := t.TempDir()
 	source := writeImmutablePublicationSource(t, dir)
 	destination := filepath.Join(dir, "receipt.json")
-	if err := publishNoReplace(source, destination); !errors.Is(err, want) {
-		t.Fatalf("publishNoReplace(copy failure) error = %v, want %v", err, want)
+	if err := PublishNoReplace(source, destination); !errors.Is(err, want) {
+		t.Fatalf("PublishNoReplace(copy failure) error = %v, want %v", err, want)
 	}
 	if _, err := os.Stat(destination); !os.IsNotExist(err) {
 		t.Fatalf("partial destination remains after copy failure: %v", err)
@@ -173,8 +173,8 @@ func TestPublishNoReplaceLinuxCopyFallbackCleansUpSyncAndCloseFailures(t *testin
 			dir := t.TempDir()
 			source := writeImmutablePublicationSource(t, dir)
 			destination := filepath.Join(dir, "receipt.json")
-			if err := publishNoReplace(source, destination); !errors.Is(err, tt.syncErr) && !errors.Is(err, tt.closeErr) {
-				t.Fatalf("publishNoReplace(%s failure) error = %v", tt.name, err)
+			if err := PublishNoReplace(source, destination); !errors.Is(err, tt.syncErr) && !errors.Is(err, tt.closeErr) {
+				t.Fatalf("PublishNoReplace(%s failure) error = %v", tt.name, err)
 			}
 			if destinationFile == nil || !destinationFile.closed {
 				t.Fatal("destination file was not closed on publication failure")
@@ -233,9 +233,9 @@ func TestPublishNoReplaceLinuxCopyFallbackJoinsDestinationCleanupFailure(t *test
 				return os.Remove(path)
 			}
 
-			err := publishNoReplace(source, destination)
+			err := PublishNoReplace(source, destination)
 			if !errors.Is(err, primary) || !errors.Is(err, cleanup) {
-				t.Fatalf("publishNoReplace(%s) error = %v, want both primary and cleanup causes", stage, err)
+				t.Fatalf("PublishNoReplace(%s) error = %v, want both primary and cleanup causes", stage, err)
 			}
 			if sourceRemoved {
 				t.Fatal("source was removed after failed destination cleanup")
@@ -282,8 +282,8 @@ func TestPublishNoReplaceLinuxCopyFallbackRemovesSourceOnlyAfterDurableDestinati
 	}
 	t.Cleanup(func() { removeImmutablePublication = originalRemove })
 
-	if err := publishNoReplace(source, destination); err != nil {
-		t.Fatalf("publishNoReplace(copy fallback) error = %v", err)
+	if err := PublishNoReplace(source, destination); err != nil {
+		t.Fatalf("PublishNoReplace(copy fallback) error = %v", err)
 	}
 	if _, err := os.Stat(source); !os.IsNotExist(err) {
 		t.Fatalf("source remains after durable publication: %v", err)

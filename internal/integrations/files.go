@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
-// Costuras de prueba sobre las primitivas de reviewtransaction, con el mismo patrón que
+// Costuras de prueba sobre las primitivas de fileprim, con el mismo patrón que
 // internal/kickoff/ledger.go. C-01-e consolidará ambas copias al extraer las primitivas.
 var (
-	acquireIntegrationsLock = reviewtransaction.AcquireAuthorityFileLock
-	replaceIntegrationsFile = reviewtransaction.ReplaceFileAtomic
-	syncIntegrationsDir     = reviewtransaction.SyncReviewDirectory
+	acquireIntegrationsLock = fileprim.AcquireLock
+	replaceIntegrationsFile = fileprim.ReplaceAtomic
+	syncIntegrationsDir     = fileprim.SyncDirectory
 	sleepBeforeLockRetry    = time.Sleep
 	// randomInt63n es una costura para fijar el jitter del retroceso en las pruebas.
 	randomInt63n = rand.Int63n
@@ -121,7 +121,7 @@ func (f Folder) acquire() (release func(), err error) {
 		if err == nil {
 			return func() { _ = lock.Release() }, nil
 		}
-		if !errors.Is(err, reviewtransaction.ErrStoreLockContended) {
+		if !errors.Is(err, fileprim.ErrLockContended) {
 			return nil, fmt.Errorf("adquirir el cerrojo de integraciones %q: %w", lockPath, err)
 		}
 		lastErr = err

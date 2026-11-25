@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"gopkg.in/yaml.v3"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 // KickoffFileName is the sealed document's file name inside a change root.
@@ -19,10 +20,10 @@ const KickoffFileName = "kickoff.yaml"
 // timestamp without depending on wall-clock time.
 var nowFunc = func() time.Time { return time.Now().UTC() }
 
-// publishKickoff is a test seam over reviewtransaction.PublishFileNoReplace,
+// publishKickoff is a test seam over fileprim.PublishNoReplace,
 // mirroring the seam sddstatus.ensureChangeInstanceMarker already uses for
 // its own single-write publication (edit_authority_consent.go:91).
-var publishKickoff = reviewtransaction.PublishFileNoReplace
+var publishKickoff = fileprim.PublishNoReplace
 
 func kickoffPath(changeRoot string) string {
 	return filepath.Join(changeRoot, KickoffFileName)

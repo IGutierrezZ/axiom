@@ -16,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 const RecordSchema = "gentle-ai.review-record/v1"
@@ -24,17 +26,7 @@ var ErrConcurrentUpdate = errors.New("review transaction changed concurrently")
 var ErrInvalidSuccessor = errors.New("review transaction successor is invalid")
 
 var reviewRuntimeGOOS = func() string { return runtime.GOOS }
-var syncReviewDirectory = func(path string) error {
-	directory, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	if err := directory.Sync(); err != nil {
-		_ = directory.Close()
-		return err
-	}
-	return directory.Close()
-}
+var syncReviewDirectory = fileprim.SyncDirectoryStrict
 
 // mkdirAllSync creates the directory chain for path, like os.MkdirAll, but
 // synchronizes the parent of every directory it actually creates (#1721): a
@@ -91,14 +83,7 @@ func (err *directorySyncError) Unwrap() error { return err.cause }
 // Windows filesystems may reject directory handles; in that case the file rename
 // remains atomic, but power-loss durability of the directory entry is not claimed.
 func SyncReviewDirectory(path string) error {
-	if err := syncReviewDirectory(path); err != nil {
-		unsupported := errors.Is(err, syscall.EINVAL) || errors.Is(err, errors.ErrUnsupported) ||
-			reviewRuntimeGOOS() == "windows" && errors.Is(err, os.ErrPermission)
-		if !unsupported {
-			return err
-		}
-	}
-	return nil
+	return fileprim.TolerateUnsupportedDirectorySync(syncReviewDirectory(path), reviewRuntimeGOOS())
 }
 
 type Record struct {
@@ -306,7 +291,7 @@ func (store Store) append(expectedRevision string, record Record) (string, error
 		return "", err
 	}
 	eventPath := filepath.Join(store.Dir, "events", strings.TrimPrefix(revision, "sha256:")+".json")
-	if err := publishNoReplace(tempPath, eventPath); err != nil {
+	if err := fileprim.PublishNoReplace(tempPath, eventPath); err != nil {
 		if os.IsExist(err) {
 			existing, readErr := os.ReadFile(eventPath)
 			if readErr != nil {
@@ -909,16 +894,6 @@ func WriteTransactionAtomic(path string, transaction Transaction) error {
 	return writeAtomic(path, append(payload, '\n'), 0o644)
 }
 
-// PublishFileNoReplace atomically publishes source only when destination is absent.
-func PublishFileNoReplace(source, destination string) error {
-	return publishNoReplace(source, destination)
-}
-
-// ReplaceFileAtomic atomically replaces destination with source.
-func ReplaceFileAtomic(source, destination string) error {
-	return replaceFileAtomic(source, destination)
-}
-
 func readRevision(path string) (string, error) {
 	payload, err := os.ReadFile(path)
 	if err != nil {
@@ -959,7 +934,7 @@ func writeAtomic(path string, payload []byte, mode os.FileMode) error {
 	if err := temp.Close(); err != nil {
 		return err
 	}
-	if err := replaceFileAtomic(tempPath, path); err != nil {
+	if err := fileprim.ReplaceAtomic(tempPath, path); err != nil {
 		return err
 	}
 	if err := SyncReviewDirectory(filepath.Dir(path)); err != nil {

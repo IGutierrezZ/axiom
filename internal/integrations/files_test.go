@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func TestLockPathLivesInTheGitCommonDir(t *testing.T) {
@@ -136,7 +136,7 @@ func TestAcquireGivesUpAfterTheAttemptBudget(t *testing.T) {
 	t.Cleanup(func() { sleepBeforeLockRetry = original })
 
 	_, err = f.Folder().acquire()
-	if err == nil || !errors.Is(err, reviewtransaction.ErrStoreLockContended) {
+	if err == nil || !errors.Is(err, fileprim.ErrLockContended) {
 		t.Fatalf("con el cerrojo ocupado debe agotar los intentos: %v", err)
 	}
 	if slept.Load() != lockAcquireAttempts {
@@ -148,7 +148,7 @@ func TestAcquireReturnsNonContentionErrorsImmediately(t *testing.T) {
 	f := newGitWorkspace(t)
 	boom := errors.New("fallo del sistema de ficheros")
 	original := acquireIntegrationsLock
-	acquireIntegrationsLock = func(string) (*reviewtransaction.AuthorityFileLock, error) { return nil, boom }
+	acquireIntegrationsLock = func(string) (*fileprim.Lock, error) { return nil, boom }
 	t.Cleanup(func() { acquireIntegrationsLock = original })
 
 	if _, err := f.Folder().acquire(); !errors.Is(err, boom) {

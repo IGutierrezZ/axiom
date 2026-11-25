@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 const ChainBundleSchema = "gentle-ai.review-chain-bundle/v1"
@@ -307,7 +309,7 @@ func installContentAddressedFile(path string, payload []byte) error {
 	if err := temp.Close(); err != nil {
 		return err
 	}
-	if err := publishNoReplace(tempPath, path); err != nil {
+	if err := fileprim.PublishNoReplace(tempPath, path); err != nil {
 		if !os.IsExist(err) {
 			return err
 		}

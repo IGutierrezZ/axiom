@@ -1,6 +1,6 @@
 //go:build darwin
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -23,8 +23,8 @@ func TestPublishNoReplaceDarwinRealRenameSucceeds(t *testing.T) {
 	if err := os.WriteFile(source, []byte("receipt\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := publishNoReplace(source, destination); err != nil {
-		t.Fatalf("publishNoReplace(real rename) error = %v", err)
+	if err := PublishNoReplace(source, destination); err != nil {
+		t.Fatalf("PublishNoReplace(real rename) error = %v", err)
 	}
 	if _, err := os.Stat(source); !os.IsNotExist(err) {
 		t.Fatalf("source still exists after real rename: %v", err)
@@ -41,8 +41,8 @@ func TestPublishNoReplaceDarwinRealRenameSucceeds(t *testing.T) {
 	if err := os.WriteFile(second, []byte("conflict\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := publishNoReplace(second, destination); err == nil {
-		t.Fatal("publishNoReplace(existing destination) unexpectedly succeeded")
+	if err := PublishNoReplace(second, destination); err == nil {
+		t.Fatal("PublishNoReplace(existing destination) unexpectedly succeeded")
 	}
 }
 
@@ -71,8 +71,8 @@ func TestPublishNoReplaceDarwinENOTSUPFallsBackToCopy(t *testing.T) {
 			if err := os.WriteFile(source, []byte("receipt\n"), 0o640); err != nil {
 				t.Fatal(err)
 			}
-			if err := publishNoReplace(source, destination); err != nil {
-				t.Fatalf("publishNoReplace(%s fallback) error = %v", tt.name, err)
+			if err := PublishNoReplace(source, destination); err != nil {
+				t.Fatalf("PublishNoReplace(%s fallback) error = %v", tt.name, err)
 			}
 			payload, err := os.ReadFile(destination)
 			if err != nil {
@@ -114,8 +114,8 @@ func TestPublishNoReplaceDarwinENOTSUPFallbackNeverReplaces(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := publishNoReplace(source, destination); err == nil {
-		t.Fatal("publishNoReplace(ENOTSUP fallback, existing destination) unexpectedly succeeded")
+	if err := PublishNoReplace(source, destination); err == nil {
+		t.Fatal("PublishNoReplace(ENOTSUP fallback, existing destination) unexpectedly succeeded")
 	}
 	payload, err := os.ReadFile(destination)
 	if err != nil {
@@ -143,8 +143,8 @@ func TestPublishNoReplaceDarwinOtherErrnoPropagatesUnchanged(t *testing.T) {
 	if err := os.WriteFile(source, []byte("receipt\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := publishNoReplace(source, destination); !errors.Is(err, sentinel) {
-		t.Fatalf("publishNoReplace(other errno) = %v, want the unchanged sentinel", err)
+	if err := PublishNoReplace(source, destination); !errors.Is(err, sentinel) {
+		t.Fatalf("PublishNoReplace(other errno) = %v, want the unchanged sentinel", err)
 	}
 	if _, err := os.Stat(destination); !os.IsNotExist(err) {
 		t.Fatalf("destination was created for a non-ENOTSUP rename failure: %v", err)

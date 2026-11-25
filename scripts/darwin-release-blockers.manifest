@@ -47,28 +47,28 @@
 # --- #1781: START EPERM under managed macOS profiles --------------------------
 # Fixed by 8fb1c2c1 (anchored lock walk); managed profiles surface as
 # restricted-permission ancestors and Darwin-specific openat/O_NOFOLLOW errnos.
-./internal/reviewtransaction TestSecureOpenLockParentAnchor                     # the 8fb1c2c1 fix itself: the lock walk anchors instead of walking to /
-./internal/reviewtransaction TestAcquireLocalStoreLockAllowsSearchOnlyAncestor  # search-only (managed-profile-shaped) ancestor must not EPERM the lock
-./internal/reviewtransaction TestAcquireLocalStoreLockCreatesAndReopensWithoutChangingPermissions  # Darwin permission-bit semantics on create/reopen
-./internal/reviewtransaction TestAcquireLocalStoreLockRejectsSymlinkAndPreservesTarget         # O_NOFOLLOW errno differs per platform (ELOOP vs EMLINK shapes)
-./internal/reviewtransaction TestAcquireLocalStoreLockRejectsSymlinkedParentAndPreservesTarget # openat walk vs symlinked parent, Darwin syscall semantics
-./internal/reviewtransaction TestAcquireLocalStoreLockRejectsSymlinkSwapAtOpenBoundary         # TOCTOU at the open boundary is filesystem-timing dependent
-./internal/reviewtransaction TestAcquireLocalStoreLockRejectsNonRegularUnixObject              # non-regular-object errnos differ on Darwin
+./internal/fileprim TestSecureOpenLockParentAnchor                     # the 8fb1c2c1 fix itself: the lock walk anchors instead of walking to /
+./internal/fileprim TestAcquireLocalStoreLockAllowsSearchOnlyAncestor  # search-only (managed-profile-shaped) ancestor must not EPERM the lock
+./internal/fileprim TestAcquireLocalStoreLockCreatesAndReopensWithoutChangingPermissions  # Darwin permission-bit semantics on create/reopen
+./internal/fileprim TestAcquireLocalStoreLockRejectsSymlinkAndPreservesTarget         # O_NOFOLLOW errno differs per platform (ELOOP vs EMLINK shapes)
+./internal/fileprim TestAcquireLocalStoreLockRejectsSymlinkedParentAndPreservesTarget # openat walk vs symlinked parent, Darwin syscall semantics
+./internal/fileprim TestAcquireLocalStoreLockRejectsSymlinkSwapAtOpenBoundary         # TOCTOU at the open boundary is filesystem-timing dependent
+./internal/fileprim TestAcquireLocalStoreLockRejectsNonRegularUnixObject              # non-regular-object errnos differ on Darwin
 ./internal/reviewtransaction TestBusyStoreLockProbePreservesExistingUnixInodeAndMetadata       # inode identity of a live lock under Darwin stat semantics
 
 # --- #4276: local store lock leaf first-create ENOENT -------------------------
-./internal/reviewtransaction TestSecureOpenLocalStoreLockLeafRetriesENOENT
-./internal/reviewtransaction TestSecureOpenLocalStoreLockLeafConcurrentFirstCreate
-./internal/reviewtransaction TestSecureOpenLocalStoreLockLeafConcurrentPersistentENOENT
+./internal/fileprim TestSecureOpenLocalStoreLockLeafRetriesENOENT
+./internal/fileprim TestSecureOpenLocalStoreLockLeafConcurrentFirstCreate
+./internal/fileprim TestSecureOpenLocalStoreLockLeafConcurrentPersistentENOENT
 
 # --- #1804: reviewer-result publication on macOS ExFAT ------------------------
 # These are //go:build darwin — no CI lane has EVER executed them. On ExFAT the
 # exclusive-rename primitive is missing (ENOTSUP) and publication falls back to
 # exclusive-create copy.
-./internal/reviewtransaction TestPublishNoReplaceDarwinRealRenameSucceeds       # the native no-replace rename path on APFS
-./internal/reviewtransaction TestPublishNoReplaceDarwinENOTSUPFallsBackToCopy   # #1804 defect shape: ENOTSUP must fall back, not fail
-./internal/reviewtransaction TestPublishNoReplaceDarwinENOTSUPFallbackNeverReplaces  # the fallback keeps the immutability contract
-./internal/reviewtransaction TestPublishNoReplaceDarwinOtherErrnoPropagatesUnchanged # fallback is ENOTSUP-only; other errnos stay typed
+./internal/fileprim TestPublishNoReplaceDarwinRealRenameSucceeds       # the native no-replace rename path on APFS
+./internal/fileprim TestPublishNoReplaceDarwinENOTSUPFallsBackToCopy   # #1804 defect shape: ENOTSUP must fall back, not fail
+./internal/fileprim TestPublishNoReplaceDarwinENOTSUPFallbackNeverReplaces  # the fallback keeps the immutability contract
+./internal/fileprim TestPublishNoReplaceDarwinOtherErrnoPropagatesUnchanged # fallback is ENOTSUP-only; other errnos stay typed
 
 # --- #1850: first-use RuntimeStore contention leaked raw ENOENT ---------------
 # Reporter's Darwin oracle: 181/200 failures pre-fix, 200/200 post-0bcff694.

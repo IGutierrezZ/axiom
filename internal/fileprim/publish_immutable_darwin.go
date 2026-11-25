@@ -1,6 +1,6 @@
 //go:build darwin
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ import (
 // in CI (1804).
 var renameNoReplace = unix.RenameatxNp
 
-func publishNoReplace(source, destination string) error {
+func PublishNoReplace(source, destination string) error {
 	err := renameNoReplace(unix.AT_FDCWD, source, unix.AT_FDCWD, destination, unix.RENAME_EXCL)
 	if errors.Is(err, unix.ENOTSUP) || errors.Is(err, unix.EINVAL) || errors.Is(err, unix.ENOSYS) {
 		return publishNoReplaceByCopy(source, destination)
@@ -63,6 +63,6 @@ func publishNoReplaceByCopy(source, destination string) error {
 	return os.Remove(source)
 }
 
-func replaceFileAtomic(source, destination string) error {
+func ReplaceAtomic(source, destination string) error {
 	return os.Rename(source, destination)
 }

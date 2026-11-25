@@ -19,8 +19,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"golang.org/x/sys/windows"
 )
 
@@ -215,7 +215,7 @@ type windowsCompatibilityDirectoryWriter struct {
 // Windows compatibility transaction. Every child open is handle-relative and
 // refuses reparse points before it can resolve through them.
 func openWindowsCompatibilityDirectoryWriter(homeDir, skillDir string) (*windowsCompatibilityDirectoryWriter, bool, error) {
-	home, err := reviewtransaction.OpenPhysicalPath(homeDir, true)
+	home, err := fileprim.OpenPhysicalPath(homeDir, true)
 	if err != nil {
 		return nil, false, fmt.Errorf("open compatibility home directory %q: %w", homeDir, err)
 	}
