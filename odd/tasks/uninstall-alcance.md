@@ -61,7 +61,11 @@ Modo: desactivado (sin configuración en `axiom.yaml` ni petición). Aun así, c
   - Pruebas (`engram_registration_test.go`): `TestPartialUninstallGlobalKeepsTheUserEngramRegistrationUnlessNamed` (Claude Code: sin `--components` conserva `mcpServers.engram` y avisa; con `--components engram` lo retira; en ambos casos retira la sección `engram-protocol` de `CLAUDE.md` y respeta otros servidores) y `TestPartialUninstallGlobalCodexKeepsTheEngramServerAndRetiresItsInstructions` (Codex: conserva `[mcp_servers.engram]`, retira las claves y ficheros de instrucciones). RED observado en el caso por defecto de ambas.
   - Arreglo: campo `keepEngramRegistration` (parcial, global, sin `engram` nombrado); `engramOperationsKeepingRegistration` sustituye a `engramOperations` / `managedMCPOperations` en ese caso; `cleanCodexTOMLKeepingEngramServer`; nota `keptEngramRegistrationNote` en `ManualActions`, que lee lo que queda en disco y nombra el fichero. `--all` (y por tanto `--purge-state`) no cambia.
   - Evidencia: `go test ./internal/components/uninstall/ -count=1` → `ok`; `go test ./internal/cli -count=1 -run 'Uninstall'` → `ok`; `gofmt -l` y `go vet` limpios.
-- [ ] T3. Aviso de `engram:reachable` por `.mcp.json` sin aprobar. Ruta: inline.
+- [x] T3. Aviso de `engram:reachable` por `.mcp.json` sin aprobar. Ruta: inline.
+  - Pruebas (`doctor_engram_approval_test.go`): `TestCheckEngramReachable_ProjectMCPApproval`, tabla de siete casos (sin aprobación, solo `context7` como en el caso real, `engram` aprobado en `settings.local.json`, `enableAllProjectMcpServers` en el `settings.json` del proyecto, aprobado en el `settings.json` de usuario, rechazo que gana a la aprobación, registro de usuario presente); comprueba además que `settings.local.json` no cambia. `TestCheckEngramReachable_ProjectMCPPendingApprovalOnlyForClaude`: otro agente no provoca el aviso. RED observado en los tres casos de aviso.
+  - `TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP` siembra ahora la aprobación: sigue probando que se lee el `.mcp.json` del proyecto, y el caso sin aprobar pasa a la tabla nueva.
+  - Arreglo: `claudeProjectEngramPendingApproval` (`internal/cli/doctor_engram_approval.go`); `checkEngramReachable` devuelve `warn` con la ruta del `.mcp.json` y un remedio que indica cómo aprobarlo, solo cuando la sonda ha pasado. Un fallo de la sonda sigue siendo `fail`.
+  - Evidencia: `go test ./internal/cli -count=1 -run 'Doctor|EngramReachable|Footprint|Uninstall'` → `ok` (52 s); `go vet ./internal/cli` y `gofmt -l` limpios.
 
 ## Criterios de aceptación
 
@@ -76,4 +80,15 @@ Motivo: ninguna capacidad de `openspec/specs/` describe el alcance de `uninstall
 
 ## Progreso
 
-- Exploración hecha; documento creado. Siguiente: T1.
+- T1, T2 y T3 cerradas, un commit por tarea (`a7d995cf`, `4f6788f1` y el de T3).
+- Comprobaciones: `go test -count=1` de `./internal/components/uninstall/` en `ok`; `./internal/cli` troceado con `-run 'Doctor|EngramReachable|Footprint|Uninstall'` en `ok`. No se ha lanzado la suite completa de `internal/cli` (ronda los 60 min en Windows) ni los paquetes excluidos por las restricciones.
+- No verificado en real: no se puede compilar `axiom` en local (EDR), así que el comportamiento se ha comprobado solo con pruebas en proceso.
+
+## Seguimientos
+
+- TUI: la pantalla de componentes de la desinstalación preselecciona GGA y Engram (`catalog.MVPComponents()`); con la selección por defecto, el TUI sigue retirando los dos.
+- Aislamiento de `%APPDATA%` fuera de este paquete: `internal/cli/gga_missing_homebrew_test.go` e `internal/update/upgrade/executor_test.go` usan `gga.ConfigPath` y no se ha comprobado si fijan `APPDATA`.
+
+## Siguiente paso
+
+PR desde `fix/uninstall-alcance` cuando la persona lo decida (`scripts/axiom-worktree.ps1 pr uninstall-alcance -Lane odd`).

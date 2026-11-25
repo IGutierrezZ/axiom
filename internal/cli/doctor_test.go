@@ -849,7 +849,9 @@ func TestCheckEngramReachable_StdioUsesPersistedConfiguration(t *testing.T) {
 }
 
 // TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP cubre la instalación
-// solo workspace: el MCP de Engram está en <raíz>/.mcp.json y HOME no tiene nada.
+// solo workspace: el MCP de Engram está en <raíz>/.mcp.json, aprobado en Claude
+// Code, y HOME no tiene nada. Sin aprobación el resultado es un aviso
+// (TestCheckEngramReachable_ProjectMCPApproval).
 func TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP(t *testing.T) {
 	t.Setenv(engramHealthEnvVar, "")
 	setStdioProbeForTest(t, nil)
@@ -859,6 +861,7 @@ func TestCheckEngramReachable_WorkspaceOnlyInstallReadsProjectMCP(t *testing.T) 
 	if err := os.WriteFile(mcpPath, []byte(`{"mcpServers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]}}}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	writeApprovalFixture(t, filepath.Join(workspaceDir, ".claude", "settings.local.json"), `{"enabledMcpjsonServers":["engram"]}`)
 
 	got := checkEngramReachable(context.Background(), homeDir, workspaceDir, []string{"claude-code"})
 

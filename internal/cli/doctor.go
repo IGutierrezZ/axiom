@@ -660,10 +660,21 @@ func checkEngramReachable(ctx context.Context, homeDir, workspaceDir string, ins
 		sources = append(sources, command.Source)
 	}
 
+	detail := "engram MCP (stdio) answered the initialize handshake for persisted configuration: " + strings.Join(sources, ", ")
+	if mcpPath, pending := claudeProjectEngramPendingApproval(homeDir, workspaceDir, installedAgents); pending {
+		return CheckResult{
+			Name:   id,
+			Status: CheckStatusWarn,
+			Detail: detail + "; but Claude Code has only the project server in " + mcpPath +
+				" and it is not approved (enabledMcpjsonServers in .claude/settings.local.json), so Claude Code sessions start without Engram",
+			Remedy: doctor.NewRemedy(doctor.RemedyInspectEngram,
+				"Approve the 'engram' server in Claude Code (run /mcp in a session of this project), or register Engram at user scope with 'claude mcp add --scope user'"),
+		}
+	}
 	return CheckResult{
 		Name:   id,
 		Status: CheckStatusPass,
-		Detail: "engram MCP (stdio) answered the initialize handshake for persisted configuration: " + strings.Join(sources, ", "),
+		Detail: detail,
 	}
 }
 
