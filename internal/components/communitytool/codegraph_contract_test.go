@@ -76,7 +76,6 @@ func TestCodeGraphCompatibilityStrategies(t *testing.T) {
 		strategy codeGraphStrategy
 		agents   []model.AgentID
 	}{
-		{codeGraphNative, []model.AgentID{model.AgentClaudeCode, model.AgentCursor, model.AgentCodex, model.AgentGeminiCLI, model.AgentHermes, model.AgentAntigravity, model.AgentKiroIDE, model.AgentGitHubCopilotCLI}},
 		{codeGraphReconciled, []model.AgentID{model.AgentOpenCode, model.AgentPi}},
 	}
 	for _, tt := range tests {

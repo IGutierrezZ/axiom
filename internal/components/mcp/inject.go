@@ -47,8 +47,6 @@ func Inject(homeDir, targetDir string, adapter agents.Adapter) (InjectionResult,
 		return injectMCPConfigFile(targetDir, adapter)
 	case model.StrategyTOMLFile:
 		return injectTOMLFile(targetDir, adapter)
-	case model.StrategyMergeIntoYAML:
-		return injectYAMLFile(targetDir, adapter)
 	default:
 		return InjectionResult{}, fmt.Errorf("mcp injector does not support MCP strategy %d for agent %q", adapter.MCPStrategy(), adapter.Agent())
 	}
@@ -76,35 +74,6 @@ func injectTOMLFile(homeDir string, adapter agents.Adapter) (InjectionResult, er
 	writeResult, err := filemerge.WriteFileAtomic(configPath, []byte(updated), 0o644)
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("write TOML config %q: %w", configPath, err)
-	}
-
-	return InjectionResult{Changed: writeResult.Changed, Files: []string{configPath}}, nil
-}
-
-// injectYAMLFile upserts the context7 MCP server block into a YAML-based agent
-// config file (e.g. ~/.hermes/config.yaml) via the filemerge YAML helpers.
-// The file is created if it does not yet exist. The upsert is idempotent and
-// comment-preserving — user content outside the managed block is untouched.
-func injectYAMLFile(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
-	configPath := adapter.MCPConfigPath(homeDir, "context7")
-
-	raw, err := os.ReadFile(configPath)
-	var existingBytes []byte
-	switch {
-	case err == nil:
-		existingBytes = raw
-	case os.IsNotExist(err):
-		existingBytes = nil
-	default:
-		return InjectionResult{}, fmt.Errorf("read YAML config %q: %w", configPath, err)
-	}
-
-	existing := string(existingBytes)
-	updated := filemerge.UpsertHermesContext7Block(existing)
-
-	writeResult, err := filemerge.WriteFileAtomic(configPath, []byte(updated), 0o644)
-	if err != nil {
-		return InjectionResult{}, fmt.Errorf("write YAML config %q: %w", configPath, err)
 	}
 
 	return InjectionResult{Changed: writeResult.Changed, Files: []string{configPath}}, nil

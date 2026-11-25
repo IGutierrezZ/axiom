@@ -69,7 +69,6 @@ func UserSkillDirs(home string) []string {
 		filepath.Join(home, ".codeium", "windsurf", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
 		filepath.Join(home, ".kiro", "skills"),
-		filepath.Join(home, ".hermes", "skills"),
 	}
 }
 
@@ -112,7 +111,6 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".agent", "skills"),
 		filepath.Join(cwd, ".agents", "skills"),
 		filepath.Join(cwd, ".atl", "skills"),
-		filepath.Join(cwd, ".hermes", "skills"),
 	)
 
 	// Multirrepo: repositorio de especificaciones y repositorios de los roles.
@@ -594,7 +592,6 @@ var perAgentSkillsPrefixes = []string{
 	".qwen/skills/",
 	".kiro/skills/",
 	".pi/skills/",
-	".hermes/skills/",
 }
 
 const sharedSkillsPrefix = ".agents/skills/"

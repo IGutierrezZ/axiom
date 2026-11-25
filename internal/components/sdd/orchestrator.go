@@ -123,7 +123,7 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {
 	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI,
-		model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
+		model.AgentAntigravity, model.AgentQwenCode, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
 		return true
 	default:
 		return false
@@ -198,7 +198,7 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	legacyInitAction := "run `sdd-init` FIRST (delegate to sdd-init sub-agent)"
 	initAction := "delegate to `sdd-init`"
 	switch agent {
-	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentHermes, model.AgentCodex:
+	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentCodex:
 	case model.AgentWindsurf:
 		legacyInitAction = "run the `sdd-init` phase inline FIRST"
 		initAction = "run the `sdd-init` phase inline"
@@ -326,8 +326,6 @@ func sddOrchestratorAsset(agent model.AgentID) string {
 		return "qwen/sdd-orchestrator.md"
 	case model.AgentKiroIDE:
 		return "kiro/sdd-orchestrator.md"
-	case model.AgentHermes:
-		return "hermes/sdd-orchestrator.md"
 	case model.AgentOpenCode:
 		return "opencode/sdd-orchestrator.md"
 	default:

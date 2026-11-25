@@ -68,7 +68,6 @@ const (
 	AgentKiroIDE       AgentID = "kiro-ide"
 	AgentPi            AgentID = "pi"
 	AgentTrae          AgentID = "trae-ide"
-	AgentHermes        AgentID = "hermes"
 )
 
 // AgentGitHubCopilotCLI es el agente de terminal de GitHub (binario `copilot`).
@@ -192,9 +191,6 @@ const (
 	StrategyMCPConfigFile
 	// StrategyTOMLFile writes MCP config to a TOML file (e.g., Codex ~/.codex/config.toml).
 	StrategyTOMLFile
-	// StrategyMergeIntoYAML merges MCP server blocks into a YAML config file using
-	// comment-preserving hand-rolled helpers (e.g., Hermes ~/.hermes/config.yaml).
-	StrategyMergeIntoYAML
 )
 
 type PresetID string

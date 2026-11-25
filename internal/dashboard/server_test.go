@@ -757,7 +757,7 @@ func TestAdaptersCatalogListsSelectableAgentsWithWorkspaceSupport(t *testing.T) 
 			t.Errorf("%s debe aparecer sin modo workspace y con motivo: %+v (ok=%v)", id, a, ok)
 		}
 	}
-	for _, id := range []string{"kimi", "qwen-code", "hermes"} {
+	for _, id := range []string{"kimi", "qwen-code"} {
 		if _, ok := byID[id]; ok {
 			t.Errorf("%s no es seleccionable y no debe listarse", id)
 		}

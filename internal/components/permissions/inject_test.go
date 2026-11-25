@@ -15,7 +15,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
@@ -126,7 +125,6 @@ func qwenAdapter() agents.Adapter        { return qwen.NewAdapter() }
 func vscodeAdapter() agents.Adapter      { return vscode.NewAdapter() }
 func codexAdapter() agents.Adapter       { return codex.NewAdapter() }
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
-func hermesAdapter() agents.Adapter      { return hermes.NewAdapter() }
 
 // codexInjectedLegacyConfig mirrors a config.toml produced by the retired
 // gentle-dev permission profile injection, wrapped in user-authored content.
@@ -182,29 +180,6 @@ func writeCodexConfig(t *testing.T, home, content string) string {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	return configPath
-}
-
-// TestInjectHermesSkipsPermissions verifies that Hermes returns nil (no file written)
-// because Hermes permission format is undocumented — §14 of spec.
-func TestInjectHermesSkipsPermissions(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-	if result.Changed {
-		t.Fatal("Inject(hermes) changed = true, want false (no file should be written)")
-	}
-	if len(result.Files) != 0 {
-		t.Fatalf("Inject(hermes) files = %v, want [] (no file should be written)", result.Files)
-	}
-
-	// Confirm no config.yaml or settings file was created.
-	hermesDir := filepath.Join(home, ".hermes")
-	if _, err := os.Stat(hermesDir); err == nil {
-		t.Fatal("Inject(hermes) created ~/.hermes directory, want no files written")
-	}
 }
 
 func TestInjectOpenCodeIsIdempotent(t *testing.T) {

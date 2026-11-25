@@ -100,7 +100,6 @@ func TestProjectSkillDirsEmptyCwdUnchanged(t *testing.T) {
 		filepath.Join(".agent", "skills"),
 		filepath.Join(".agents", "skills"),
 		filepath.Join(".atl", "skills"),
-		filepath.Join(".hermes", "skills"),
 	}
 	if got := ProjectSkillDirs(""); !reflect.DeepEqual(got, want) {
 		t.Fatalf("ProjectSkillDirs(\"\") =\n%v\nwant\n%v", got, want)

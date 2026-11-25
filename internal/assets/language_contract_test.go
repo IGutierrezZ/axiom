@@ -41,6 +41,10 @@ var directReplyEnglishNoCodeSwitchRequired = []string{
 	"Prompts starting with or dominated by hi, hello, hey, or similar English greetings are English prompts unless the user explicitly asks for another language.",
 }
 
+// orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
+// (más la genérica) que se embeben.
+const orchestratorTemplateCount = 11
+
 func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -50,7 +54,6 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude axiom output style", path: "claude/output-style-axiom.md"},
 		{name: "claude axiom persona", path: "claude/persona-axiom.md", combineWith: "claude/output-style-axiom.md"},
 		{name: "generic axiom persona", path: "generic/persona-axiom.md"},
-		{name: "hermes axiom persona", path: "hermes/persona-axiom.md"},
 		{name: "kiro axiom persona", path: "kiro/persona-axiom.md"},
 		{name: "kimi axiom output style", path: "kimi/output-style-axiom.md"},
 		{name: "opencode axiom persona", path: "opencode/persona-axiom.md"},
@@ -62,8 +65,6 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude gentleman persona", path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
 		{name: "generic gentleman persona", path: "generic/persona-gentleman.md"},
 		{name: "generic neutral persona", path: "generic/persona-neutral.md"},
-		{name: "hermes gentleman persona", path: "hermes/persona-gentleman.md"},
-		{name: "hermes neutral persona", path: "hermes/persona-neutral.md"},
 		{name: "kiro gentleman persona", path: "kiro/persona-gentleman.md"},
 		{name: "kimi gentleman output style", path: "kimi/output-style-gentleman.md"},
 		{name: "kimi neutral output style", path: "kimi/output-style-neutral.md"},
@@ -152,7 +153,6 @@ func TestSupportedAgentSDDLanguageMatrix(t *testing.T) {
 		{agent: "kiro-ide", path: "kiro/sdd-orchestrator.md"},
 		{agent: "pi", path: "generic/sdd-orchestrator.md"},
 		{agent: "trae-ide", path: "generic/sdd-orchestrator.md"},
-		{agent: "hermes", path: "hermes/sdd-orchestrator.md"},
 	}
 
 	for _, tc := range tests {
@@ -191,8 +191,8 @@ func TestShippedReviewAssetsDoNotInstructFixTouchedLineDiscovery(t *testing.T) {
 
 func TestSDDOrchestratorAssetsUseCanonicalResearchGate(t *testing.T) {
 	assetPaths := allSDDOrchestratorAssetPaths(t)
-	if len(assetPaths) != 12 {
-		t.Fatalf("SDD orchestrator family count = %d, want 12", len(assetPaths))
+	if len(assetPaths) != orchestratorTemplateCount {
+		t.Fatalf("SDD orchestrator family count = %d, want %d", len(assetPaths), orchestratorTemplateCount)
 	}
 
 	for _, path := range assetPaths {
@@ -310,7 +310,6 @@ func TestGentlemanPersonaKeepsDirectConversationVoice(t *testing.T) {
 func TestNeutralPersonaAssetsProvideMentorParityWithoutRegionalVoice(t *testing.T) {
 	for _, path := range []string{
 		"generic/persona-neutral.md",
-		"hermes/persona-neutral.md",
 	} {
 		t.Run(path, func(t *testing.T) {
 			content := resolveSharedOrchestratorSections(MustRead(path))
@@ -460,8 +459,6 @@ func TestPersonaChannelsCarryPreWriteArtifactSelfCheck(t *testing.T) {
 		"kimi/output-style-neutral.md",
 		"generic/persona-gentleman.md",
 		"generic/persona-neutral.md",
-		"hermes/persona-gentleman.md",
-		"hermes/persona-neutral.md",
 		"kiro/persona-gentleman.md",
 		"opencode/persona-gentleman.md",
 	}
@@ -480,7 +477,6 @@ func TestNeutralChannelsExtendAntiDriftToToneAndDialect(t *testing.T) {
 		"claude/output-style-neutral.md",
 		"kimi/output-style-neutral.md",
 		"generic/persona-neutral.md",
-		"hermes/persona-neutral.md",
 	}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
@@ -499,7 +495,6 @@ func TestPersonaAxiomAssetsContract(t *testing.T) {
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
 		"kiro/persona-axiom.md",
-		"hermes/persona-axiom.md",
 		"kimi/output-style-axiom.md",
 	}
 

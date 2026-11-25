@@ -16,14 +16,14 @@ import (
 var workspaceAgentsNoticeWriter io.Writer = os.Stderr
 
 // isSelectableAgent indica si el agente se puede elegir al instalar. Es una
-// variable para que las pruebas de los adaptadores retirados (Qwen Code, Hermes y
+// variable para que las pruebas de los adaptadores retirados (Qwen Code y
 // Kimi) puedan seguir ejerciendo sus flujos.
 var isSelectableAgent = catalog.IsSelectableAgent
 
 // agentSupportsWorkspace indica si el agente puede alojar su configuración en la
 // raíz del proyecto. Los demás solo tienen configuración global: con
 // --scope workspace se omiten enteros en lugar de escribir en la carpeta de usuario.
-// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) cuentan como sin modo
+// Los agentes no seleccionables (Qwen Code y Kimi) cuentan como sin modo
 // workspace: un estado de proyecto que los conserve no escribe nada por ellos.
 //
 // Pi también se omite, porque lo que Axiom le escribe no cabe del todo en el

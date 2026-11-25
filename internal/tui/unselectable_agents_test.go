@@ -10,9 +10,9 @@ import (
 )
 
 // retiredAgents se conservan en el código pero no se pueden elegir al instalar.
-var retiredAgents = []model.AgentID{model.AgentQwenCode, model.AgentHermes, model.AgentKimi}
+var retiredAgents = []model.AgentID{model.AgentQwenCode, model.AgentKimi}
 
-// La pantalla de selección de agentes no lista Qwen Code, Hermes ni Kimi, y sí el
+// La pantalla de selección de agentes no lista Qwen Code ni Kimi, y sí el
 // resto; la de desinstalación los sigue listando.
 func TestAgentSelectionScreenOmitsRetiredAgents(t *testing.T) {
 	options := screens.AgentOptions()
@@ -39,13 +39,13 @@ func TestAgentSelectionScreenOmitsRetiredAgents(t *testing.T) {
 // Ni la detección por carpetas ni el estado persistido preseleccionan un agente
 // retirado: la pantalla no lo muestra y no debe instalarse a escondidas.
 func TestPreselectedAgentsExcludesRetiredAgents(t *testing.T) {
-	detected := preselectedAgents(makeDetectionWithAgents("qwen-code", "hermes", "claude-code"), state.InstallState{})
+	detected := preselectedAgents(makeDetectionWithAgents("qwen-code", "claude-code"), state.InstallState{})
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(detected, want) {
 		t.Errorf("preselectedAgents(detección) = %v, want %v", detected, want)
 	}
 
 	// Solo agentes retirados detectados: se cae al catálogo seleccionable.
-	fallback := preselectedAgents(makeDetectionWithAgents("qwen-code", "hermes"), state.InstallState{})
+	fallback := preselectedAgents(makeDetectionWithAgents("qwen-code"), state.InstallState{})
 	if len(fallback) == 0 {
 		t.Fatal("sin agentes seleccionables detectados debe usarse el catálogo seleccionable")
 	}
@@ -55,7 +55,7 @@ func TestPreselectedAgentsExcludesRetiredAgents(t *testing.T) {
 		}
 	}
 
-	persisted := state.InstallState{InstalledAgents: []string{"kimi", "claude-code", "qwen-code", "hermes"}, SelectionConfigured: true}
+	persisted := state.InstallState{InstalledAgents: []string{"kimi", "claude-code", "qwen-code"}, SelectionConfigured: true}
 	got := preselectedAgents(makeDetectionWithAgents(), persisted)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(got, want) {
 		t.Errorf("preselectedAgents(estado) = %v, want %v", got, want)

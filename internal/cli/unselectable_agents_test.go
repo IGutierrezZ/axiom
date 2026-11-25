@@ -15,9 +15,9 @@ import (
 
 // retiredAgents son los agentes que se conservan en el código pero no se pueden
 // elegir al instalar (decisión de producto, 2026-10-30).
-var retiredAgents = []model.AgentID{model.AgentQwenCode, model.AgentHermes, model.AgentKimi}
+var retiredAgents = []model.AgentID{model.AgentQwenCode, model.AgentKimi}
 
-// allowUnselectableAgentsForTest vuelve a admitir Qwen Code, Hermes y Kimi durante
+// allowUnselectableAgentsForTest vuelve a admitir Qwen Code y Kimi durante
 // la prueba. Solo lo usan las pruebas que ejercen el código de esos adaptadores
 // (hub de Kimi, ajustes de Qwen): el código sigue ahí para retomarlos.
 func allowUnselectableAgentsForTest(t *testing.T) {
@@ -28,10 +28,10 @@ func allowUnselectableAgentsForTest(t *testing.T) {
 }
 
 // seedRetiredAgentsHome siembra en HOME las carpetas que el descubrimiento por
-// ficheros reconocería de Qwen Code, Hermes y Kimi.
+// ficheros reconocería de Qwen Code y Kimi.
 func seedRetiredAgentsHome(t *testing.T, home string) {
 	t.Helper()
-	for _, dir := range []string{".qwen", ".hermes", ".kimi"} {
+	for _, dir := range []string{".qwen", ".kimi"} {
 		mustWriteFile(t, filepath.Join(home, dir, "usuario.txt"), []byte("del usuario\n"))
 	}
 }
@@ -69,14 +69,14 @@ func TestNormalizeInstallFlagsDefaultsExcludeRetiredAgents(t *testing.T) {
 // Con las carpetas de los agentes retirados detectadas, la selección por defecto
 // tampoco las adopta.
 func TestDefaultAgentsFromDetectionIgnoresRetiredAgents(t *testing.T) {
-	detection := makeDetectionWithAgents("kimi", "qwen-code", "hermes", "claude-code")
+	detection := makeDetectionWithAgents("kimi", "qwen-code", "claude-code")
 	got := defaultAgentsFromDetection(detection)
 	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(got, want) {
 		t.Errorf("defaultAgentsFromDetection() = %v, want %v", got, want)
 	}
 
 	// Si solo hay agentes retirados detectados se cae al catálogo seleccionable.
-	got = defaultAgentsFromDetection(makeDetectionWithAgents("kimi", "qwen-code", "hermes"))
+	got = defaultAgentsFromDetection(makeDetectionWithAgents("kimi", "qwen-code"))
 	if len(got) == 0 {
 		t.Fatal("sin agentes seleccionables detectados debe usarse el catálogo seleccionable")
 	}

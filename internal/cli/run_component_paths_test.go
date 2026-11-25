@@ -685,7 +685,6 @@ func TestComponentPathsPermissionsSkipsAgentsWithoutInjectionTarget(t *testing.T
 	adapters := resolveAdapters([]model.AgentID{
 		model.AgentCursor,
 		model.AgentAntigravity,
-		model.AgentHermes,
 	})
 
 	paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission)

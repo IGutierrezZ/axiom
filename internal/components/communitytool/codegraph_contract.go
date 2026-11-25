@@ -46,7 +46,6 @@ var codeGraphCompatibilityTable = map[model.AgentID]codeGraphCompatibility{
 	model.AgentKiroIDE:       nativeCompatibility(model.AgentKiroIDE, "kiro"),
 	model.AgentPi:            reconciledCompatibility(model.AgentPi, ""),
 	model.AgentTrae:          excludedCompatibility(model.AgentTrae),
-	model.AgentHermes:        nativeCompatibility(model.AgentHermes, "hermes"),
 	// CodeGraph tiene el destino `copilot-cli` (comprobado con `codegraph install
 	// --print-config copilot-cli`, 1.6.2): escribe <COPILOT_HOME|~/.copilot>/mcp-config.json.
 	model.AgentGitHubCopilotCLI: nativeCompatibility(model.AgentGitHubCopilotCLI, "copilot-cli"),

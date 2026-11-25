@@ -23,7 +23,6 @@ var allAgents = []Agent{
 	{ID: model.AgentKiroIDE, Name: "Kiro IDE", Tier: model.TierFull, ConfigPath: "~/.kiro"},
 	{ID: model.AgentPi, Name: "Pi", Tier: model.TierFull, ConfigPath: "~/.pi"},
 	{ID: model.AgentTrae, Name: "Trae IDE", Tier: model.TierFull, ConfigPath: "~/.trae"},
-	{ID: model.AgentHermes, Name: "Hermes", Tier: model.TierFull, ConfigPath: "~/.hermes"},
 	{ID: model.AgentGitHubCopilotCLI, Name: "GitHub Copilot CLI", Tier: model.TierFull, ConfigPath: "~/.copilot"},
 }
 
@@ -62,7 +61,7 @@ func IsMVPAgent(agent model.AgentID) bool {
 // Motivo (decisión de producto, 2026-10-30): hoy no son utilizables con Axiom. En el
 // ámbito workspace escriben en rutas que el agente no lee (Qwen Code solo lee
 // QWEN.md en la raíz, Kimi no lee las skills de .config/agents/skills) y su MCP
-// solo es global (Kimi y Hermes).
+// solo es global (Kimi).
 //
 // Para reactivar uno basta con quitarlo de este mapa: el adaptador, sus
 // componentes y sus pruebas siguen ahí. Una instalación global existente que ya
@@ -70,7 +69,6 @@ func IsMVPAgent(agent model.AgentID) bool {
 // cambian.
 var unselectableAgents = map[model.AgentID]struct{}{
 	model.AgentQwenCode: {},
-	model.AgentHermes:   {},
 	model.AgentKimi:     {},
 }
 

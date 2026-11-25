@@ -23,6 +23,10 @@ var anyOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_[A-Z_]
 // sections expanded and nothing else applied. Tests that assert over the text a
 // runtime states, rather than over the template, read it through here: most of
 // that text now lives once in the shared asset.
+// orchestratorTemplateCount es el número de plantillas de orquestador SDD por agente
+// (más la genérica) que se embeben.
+const orchestratorTemplateCount = 11
+
 func resolvedOrchestratorSource(assetPath string) string {
 	return substituteSharedOrchestratorSections(assets.MustRead(assetPath))
 }
@@ -34,8 +38,8 @@ func orchestratorTemplatePaths(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("glob orchestrator templates: %v", err)
 	}
-	if len(paths) != 12 {
-		t.Fatalf("orchestrator templates = %d (%v), want 12", len(paths), paths)
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("orchestrator templates = %d (%v), want %d", len(paths), paths, orchestratorTemplateCount)
 	}
 	return paths
 }
@@ -64,7 +68,7 @@ func sharedSectionNamesInAsset(t *testing.T) []string {
 
 // TestOrchestratorTemplatesRenderWithoutUnresolvedSectionPlaceholders pins that
 // no template reaches a runtime carrying a literal section token, for all
-// twelve templates.
+// every templates.
 func TestOrchestratorTemplatesRenderWithoutUnresolvedSectionPlaceholders(t *testing.T) {
 	for _, templatePath := range orchestratorTemplatePaths(t) {
 		t.Run(path.Dir(templatePath), func(t *testing.T) {

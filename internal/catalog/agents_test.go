@@ -64,38 +64,6 @@ func TestIsSupportedAgentAcceptsPi(t *testing.T) {
 	}
 }
 
-func TestAllAgentsIncludesHermes(t *testing.T) {
-	agents := AllAgents()
-
-	for _, agent := range agents {
-		if agent.ID != model.AgentHermes {
-			continue
-		}
-
-		if agent.Name != "Hermes" {
-			t.Fatalf("Hermes Name = %q, want Hermes", agent.Name)
-		}
-
-		if agent.Tier != model.TierFull {
-			t.Fatalf("Hermes Tier = %q, want %q", agent.Tier, model.TierFull)
-		}
-
-		if agent.ConfigPath != "~/.hermes" {
-			t.Fatalf("Hermes ConfigPath = %q, want ~/.hermes", agent.ConfigPath)
-		}
-
-		return
-	}
-
-	t.Fatalf("AllAgents() missing %s", model.AgentHermes)
-}
-
-func TestIsSupportedAgentAcceptsHermes(t *testing.T) {
-	if !IsSupportedAgent(model.AgentHermes) {
-		t.Fatalf("IsSupportedAgent(%q) = false, want true", model.AgentHermes)
-	}
-}
-
 func TestAllAgentsIncludesGitHubCopilotCLIAsDistinctFromVSCode(t *testing.T) {
 	var cli, vscode *Agent
 	for _, agent := range AllAgents() {

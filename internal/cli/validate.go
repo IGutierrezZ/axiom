@@ -217,7 +217,7 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 		}
 	}
 
-	// Qwen Code, Hermes y Kimi no se detectan aquí: no son seleccionables (véase
+	// Qwen Code y Kimi no se detectan aquí: no son seleccionables (véase
 	// catalog.IsSelectableAgent), aunque tengan carpeta en HOME.
 	if len(agents) > 0 {
 		return agents
@@ -263,7 +263,7 @@ func asAgentIDs(values []string) ([]model.AgentID, error) {
 }
 
 // asInstallAgentIDs es asAgentIDs para install: además rechaza los agentes que
-// existen pero no se pueden elegir de momento (Qwen Code, Hermes y Kimi; véase
+// existen pero no se pueden elegir de momento (Qwen Code y Kimi; véase
 // catalog.IsSelectableAgent). Si la lista mezcla uno de ellos con otros agentes, la
 // instalación entera falla igualmente: un --agent explícito no se recorta en
 // silencio. sync sigue usando asAgentIDs para no romper instalaciones existentes.

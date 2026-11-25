@@ -551,7 +551,7 @@ func DiscoverAgents(store state.Store) []model.AgentID {
 	installed := agents.DiscoverInstalled(reg, homeDir)
 	ids := make([]model.AgentID, 0, len(installed))
 	for _, a := range installed {
-		// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) no se adoptan
+		// Los agentes no seleccionables (Qwen Code y Kimi) no se adoptan
 		// por tener carpeta en HOME: solo se sincronizan si ya están en el estado.
 		if !isSelectableAgent(a.ID) {
 			continue

@@ -164,9 +164,6 @@ func agentOverlay(id model.AgentID) []byte {
 		// Codex unable to start (#1794). An old gentle-dev profile stays until
 		// its owner removes it.
 		return nil
-	case model.AgentHermes:
-		// Hermes permission format is undocumented — no overlay is injected (§14).
-		return nil
 	default:
 		return nil
 	}

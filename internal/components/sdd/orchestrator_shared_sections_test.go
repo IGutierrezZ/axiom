@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// #3817: the SDD orchestrator contract is maintained as twelve hand-written
+// #3817: the SDD orchestrator contract is maintained as every hand-written
 // near-duplicates. Measured across them, 19 of 21 shared subsections have
 // drifted -- Delegation Rules alone has eleven variants across eleven runtimes
 // -- so reconciling those is a decision per section, not a refactor.
@@ -67,7 +67,7 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.SupportedAgents()
-	if len(ids) != 15 {
+	if len(ids) != 14 {
 		t.Fatalf("registered cohort changed: %v", ids)
 	}
 	templates := map[string]bool{}
@@ -88,8 +88,8 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 			assertStatusContinuationContract(t, content)
 		})
 	}
-	if len(templates) != 12 {
-		t.Fatalf("effective template coverage = %d, want 12", len(templates))
+	if len(templates) != orchestratorTemplateCount {
+		t.Fatalf("effective template coverage = %d, want %d", len(templates), orchestratorTemplateCount)
 	}
 	t.Run("claude-lazy-workflow", func(t *testing.T) {
 		content, err := renderClaudeSessionPreflight()
@@ -108,7 +108,7 @@ var sharedOrchestratorSectionNames = []string{
 	// #4296: the RDD-aware, risk-gated delegated-verification rule. Every
 	// runtime that names a concrete delegation mechanism in its own
 	// Delegation Rules body (claude, codex, opencode, cursor, gemini,
-	// antigravity, generic, hermes, kimi, kiro, qwen) carries the full form
+	// antigravity, generic, kimi, kiro, qwen) carries the full form
 	// under "Delegated Verification Gate (MANDATORY)". Windsurf ("Windsurf
 	// has no subagents" in its own Delegation Rules body) is the only
 	// runtime with no delegation mechanism, so it carries the reduced form
@@ -120,7 +120,7 @@ var sharedOrchestratorSectionNames = []string{
 	// the four block-review gates, plus their normative boundary against
 	// RDD (design.md S1.3). Registered here, in Phase 22, ahead of Phase
 	// 23 inserting the {{GENTLE_AI_SDD_SECTION:...}} marker into the
-	// twelve per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
+	// every per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
 	"SDD Change Kickoff and Block Gates",
@@ -198,7 +198,7 @@ func TestSharedOrchestratorSectionsHaveOneSource(t *testing.T) {
 func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
+		model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
 		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		rendered := renderSDDOrchestratorAsset(agent)
@@ -263,7 +263,7 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
+		model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
 		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{GENTLE_AI_SDD_SECTION:") {

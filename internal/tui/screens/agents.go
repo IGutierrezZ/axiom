@@ -10,7 +10,7 @@ import (
 )
 
 // AgentOptions son los agentes que la pantalla de instalación permite elegir: los
-// seleccionables del catálogo. Qwen Code, Hermes y Kimi no aparecen de momento
+// seleccionables del catálogo. Qwen Code y Kimi no aparecen de momento
 // (véase catalog.IsSelectableAgent); la desinstalación sí los lista.
 func AgentOptions() []model.AgentID {
 	agents := catalog.SelectableAgents()

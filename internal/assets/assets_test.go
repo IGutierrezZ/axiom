@@ -35,8 +35,8 @@ var retiredWorkRunCeremonyTokens = []string{
 
 func TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony(t *testing.T) {
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("WorkRun-removal coverage sees %d orchestrators, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("WorkRun-removal coverage sees %d orchestrators, want %d", len(paths), orchestratorTemplateCount)
 	}
 
 	for _, path := range paths {
@@ -55,8 +55,8 @@ func TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony(t *testing.T) {
 
 func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("organic routing coverage sees %d orchestrators, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("organic routing coverage sees %d orchestrators, want %d", len(paths), orchestratorTemplateCount)
 	}
 
 	for _, path := range paths {
@@ -112,7 +112,7 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 }
 
 // TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker is task 23.1:
-// each of the twelve SDD-orchestrator assets carries the shared-section
+// each of the every SDD-orchestrator assets carries the shared-section
 // placeholder that resolves to INC-21's per-change kickoff and block-gates
 // doctrine (REQ-21.5, REQ-21.6, REQ-21.10). internal/components/sdd owns
 // substitution and cannot be imported here without a cycle; its own
@@ -121,8 +121,8 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 func TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker(t *testing.T) {
 	const marker = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
 	paths := allSDDOrchestratorAssetPaths(t)
-	if len(paths) != 12 {
-		t.Fatalf("orchestrator coverage sees %d assets, want 12", len(paths))
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("orchestrator coverage sees %d assets, want %d", len(paths), orchestratorTemplateCount)
 	}
 	for _, path := range paths {
 		if content := MustRead(path); !strings.Contains(content, marker) {
@@ -355,11 +355,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/_shared/research-lifecycle.md",
 		"skills/_shared/project-baseline-convention.md",
 		"kiro/agents/sdd-research.md",
-
-		// Hermes agent files
-		"hermes/sdd-orchestrator.md",
-		"hermes/persona-gentleman.md",
-		"hermes/persona-neutral.md",
 
 		// Foundation skills
 		"skills/go-testing/SKILL.md",
@@ -1308,9 +1303,9 @@ func TestEmbeddedAssetCount(t *testing.T) {
 		}
 	}
 
-	// We expect 24 skill directories (11 SDD + judgment-day + 10 foundation + hermes-ephemeral-delegation + _shared).
-	if skillDirs != 24 {
-		t.Fatalf("expected 24 skill directories, got %d", skillDirs)
+	// We expect 23 skill directories (11 SDD + judgment-day + 10 foundation + _shared).
+	if skillDirs != 23 {
+		t.Fatalf("expected 23 skill directories, got %d", skillDirs)
 	}
 
 	// Verify each skill directory has a SKILL.md.
@@ -1870,7 +1865,7 @@ func TestProjectBaselineConventionCoversTheContextDeltaGatesAndModel(t *testing.
 }
 
 // REQ-21.9, REQ-21.11, REQ-24.36 y D-18: la sección compartida de compuertas, que
-// se compone en las 12 plantillas de orquestador, presenta el delta de contexto en
+// se compone en todas las plantillas de orquestador, presenta el delta de contexto en
 // las compuertas `design` y `role-apply` y documenta la remediación con la línea
 // fechada. El sobre nativo `gateQuestion` no cambia: la sección no nombra sus campos.
 func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
@@ -2272,7 +2267,6 @@ func TestOrchestratorsRequireAutomaticGatekeeper(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"hermes/sdd-orchestrator.md",
 		"kimi/sdd-orchestrator.md",
 		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
@@ -2467,7 +2461,6 @@ func TestSDDArchiveFinalStateAuthorityContract(t *testing.T) {
 		"cursor/sdd-orchestrator.md",
 		"gemini/sdd-orchestrator.md",
 		"generic/sdd-orchestrator.md",
-		"hermes/sdd-orchestrator.md",
 		"kimi/sdd-orchestrator.md",
 		"kiro/sdd-orchestrator.md",
 		"opencode/sdd-orchestrator.md",
@@ -3172,7 +3165,6 @@ func axiomPersonaAssetPaths() []string {
 		"claude/output-style-axiom.md",
 		"opencode/persona-axiom.md",
 		"kiro/persona-axiom.md",
-		"hermes/persona-axiom.md",
 		"kimi/output-style-axiom.md",
 	}
 }
@@ -3322,7 +3314,7 @@ func TestWorktreePrimitiveNamesLiveOnlyInTheRoutingDoctrineLine(t *testing.T) {
 // inc-25 (REQ-25.35, REQ-25.23 punto 4, D-19): the shared kickoff section orders
 // `axiom branch ensure` after the lane is chosen and the change is named, and
 // before the pre-flight questionnaire and `kickoff seal`. It stays in the shared
-// source, so the twelve orchestrators pick it up through their marker.
+// source, so the every orchestrators pick it up through their marker.
 func TestSharedKickoffSectionRunsBranchEnsureBeforeThePreflight(t *testing.T) {
 	shared := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
 	const start = "<!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->"
@@ -3999,7 +3991,7 @@ func TestWorkUnitCommitsCarriesReviewAndFixups(t *testing.T) {
 	}
 }
 
-// REQ-33.8: the twelve orchestrators reference the section right after Chain Strategy, with the
+// REQ-33.8: the every orchestrators reference the section right after Chain Strategy, with the
 // placeholder and no inline copy, and Block Gates links the tasks gate interaction (REQ-33.5).
 func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 	// claude/sdd-orchestrator.md is the bootstrap that points to the workflow: it carries no sections.
@@ -4010,8 +4002,8 @@ func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 		}
 	}
 	paths = append(paths, "claude/sdd-orchestrator-workflow.md")
-	if len(paths) != 12 {
-		t.Fatalf("expected twelve orchestrators, got %d: %v", len(paths), paths)
+	if len(paths) != orchestratorTemplateCount {
+		t.Fatalf("expected %d orchestrators, got %d: %v", orchestratorTemplateCount, len(paths), paths)
 	}
 	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
 	for _, path := range paths {

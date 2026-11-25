@@ -519,9 +519,6 @@ func personaContent(agent model.AgentID, persona model.PersonaID, residualConten
 }
 
 func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
-	if agent == model.AgentHermes {
-		return assets.MustRead("hermes/persona-axiom.md")
-	}
 	if residualContentAvailable {
 		switch agent {
 		case model.AgentClaudeCode:
@@ -539,9 +536,6 @@ func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) str
 }
 
 func neutralPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
-	if agent == model.AgentHermes {
-		return assets.MustRead("hermes/persona-neutral.md")
-	}
 	if residualContentAvailable {
 		switch agent {
 		case model.AgentClaudeCode:
@@ -565,8 +559,6 @@ func gentlemanPersonaContent(agent model.AgentID) string {
 		return assets.MustRead("kimi/persona-gentleman.md")
 	case model.AgentKiroIDE:
 		return assets.MustRead("kiro/persona-gentleman.md")
-	case model.AgentHermes:
-		return assets.MustRead("hermes/persona-gentleman.md")
 	default:
 		return assets.MustRead("generic/persona-gentleman.md")
 	}

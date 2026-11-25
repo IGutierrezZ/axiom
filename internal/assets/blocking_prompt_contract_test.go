@@ -20,7 +20,6 @@ var blockingPromptRoutes = map[string]blockingPromptRoute{
 	"cursor/sdd-orchestrator.md":      {},
 	"gemini/sdd-orchestrator.md":      {},
 	"generic/sdd-orchestrator.md":     {},
-	"hermes/sdd-orchestrator.md":      {},
 	"kimi/sdd-orchestrator.md":        {},
 	"kiro/sdd-orchestrator.md":        {},
 	"opencode/sdd-orchestrator.md":    {nativeTool: "`question`"},

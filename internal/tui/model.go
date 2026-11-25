@@ -4789,8 +4789,6 @@ func detectedAgentIDs(detection system.DetectionResult) []model.AgentID {
 			selected = append(selected, model.AgentQwenCode)
 		case string(model.AgentPi):
 			selected = append(selected, model.AgentPi)
-		case string(model.AgentHermes):
-			selected = append(selected, model.AgentHermes)
 		case string(model.AgentKiroIDE):
 			selected = append(selected, model.AgentKiroIDE)
 		}
@@ -4801,7 +4799,7 @@ func detectedAgentIDs(detection system.DetectionResult) []model.AgentID {
 // preselectedAgents returns the agents that should be pre-selected in the TUI.
 // It delegates to agentsToManage so that persisted state always wins over filesystem detection.
 //
-// Los agentes no seleccionables (Qwen Code, Hermes y Kimi; véase
+// Los agentes no seleccionables (Qwen Code y Kimi; véase
 // catalog.IsSelectableAgent) no se preseleccionan aunque estén detectados o en el
 // estado: la pantalla no los lista y no deben instalarse sin que se vean. La
 // detección para desinstalar (detectedAgentIDs) no se filtra.
