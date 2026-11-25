@@ -108,7 +108,7 @@ func TestRunStrategy_GoInstallUpgrade(t *testing.T) {
 	}
 }
 
-func TestRunStrategy_BetaGentleAISelfUpgradeUsesGoInstallMain(t *testing.T) {
+func TestRunStrategy_BetaAxiomSelfUpgradeUsesGoInstallMain(t *testing.T) {
 	origExecCommand := execCommand
 	t.Cleanup(func() { execCommand = origExecCommand })
 
@@ -124,7 +124,7 @@ func TestRunStrategy_BetaGentleAISelfUpgradeUsesGoInstallMain(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gentle-ai",
+			Name:          "axiom",
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,
@@ -278,23 +278,23 @@ func TestRunStrategy_GoInstallFailure(t *testing.T) {
 	}
 }
 
-// TestEffectiveMethodGentleAIOnWindowsUsesFailClosedBinaryPolicy verifies that
+// TestEffectiveMethodAxiomOnWindowsUsesFailClosedBinaryPolicy verifies that
 // Windows never routes gentle-ai through a remote installer, and that when no
 // usable `go install` target is declared it falls back to the binary strategy —
 // which on Windows is an explicit refusal naming a runnable source-install
 // command, not a download.
-func TestEffectiveMethodGentleAIOnWindowsUsesFailClosedBinaryPolicy(t *testing.T) {
+func TestEffectiveMethodAxiomOnWindowsUsesFailClosedBinaryPolicy(t *testing.T) {
 	tests := []struct {
 		name string
 		tool update.ToolInfo
 	}{
 		{
 			name: "binary remains policy boundary",
-			tool: update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+			tool: update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 		},
 		{
 			name: "legacy script declaration is disabled",
-			tool: update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallScript},
+			tool: update.ToolInfo{Name: "axiom", InstallMethod: update.InstallScript},
 		},
 	}
 
@@ -316,7 +316,7 @@ func TestEffectiveMethodGentleAIOnWindowsUsesFailClosedBinaryPolicy(t *testing.T
 	// against the Go checksum database, since goInstallUpgrade does not touch
 	// cmd.Env — is the only automatic upgrade path Windows has.
 	t.Run("Go availability upgrades through a pinned go install", func(t *testing.T) {
-		tool := update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom", GoModulePath: "github.com/IGutierrezZ/axiom/v3"}
+		tool := update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom", GoModulePath: "github.com/IGutierrezZ/axiom/v3"}
 		profile := system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: true}
 		method := effectiveMethod(tool, profile)
 		if method != update.InstallGoInstall {
@@ -325,12 +325,12 @@ func TestEffectiveMethodGentleAIOnWindowsUsesFailClosedBinaryPolicy(t *testing.T
 	})
 }
 
-// --- TestEffectiveMethod_NonGentleAIToolsOnWindowsUseBinary ---
+// --- TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary ---
 
-// TestEffectiveMethod_NonGentleAIToolsOnWindowsUseBinary verifies that tools
+// TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary verifies that tools
 // OTHER than gentle-ai on Windows still use their declared install method
 // (binary, script, etc.).
-func TestEffectiveMethod_NonGentleAIToolsOnWindowsUseBinary(t *testing.T) {
+func TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary(t *testing.T) {
 	tests := []struct {
 		name string
 		tool update.ToolInfo
@@ -400,7 +400,7 @@ func TestEffectiveMethod(t *testing.T) {
 		},
 		{
 			name:    "brew profile without package ownership respects declared method",
-			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+			tool:    update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 			profile: system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
 			want:    update.InstallBinary,
 		},
@@ -478,33 +478,33 @@ func TestEffectiveMethod(t *testing.T) {
 }
 
 func TestHomebrewPackageInstalledWithRequiresActiveBrewPath(t *testing.T) {
-	brewPrefix := filepath.Join(t.TempDir(), "opt", "gentle-ai")
-	brewBin := filepath.Join(brewPrefix, "bin", "gentle-ai")
-	nonBrewBin := filepath.Join(t.TempDir(), "gentle-ai")
+	brewPrefix := filepath.Join(t.TempDir(), "opt", "axiom")
+	brewBin := filepath.Join(brewPrefix, "bin", "axiom")
+	nonBrewBin := filepath.Join(t.TempDir(), "axiom")
 
 	run := func(name string, args ...string) *exec.Cmd {
 		if name != "brew" {
 			return mockCmd("false")
 		}
-		if len(args) >= 3 && args[0] == "list" && args[1] == "--formula" && args[2] == "gentle-ai" {
+		if len(args) >= 3 && args[0] == "list" && args[1] == "--formula" && args[2] == "axiom" {
 			return mockCmd("true")
 		}
-		if len(args) == 2 && args[0] == "--prefix" && args[1] == "gentle-ai" {
+		if len(args) == 2 && args[0] == "--prefix" && args[1] == "axiom" {
 			return mockCmd("echo", brewPrefix)
 		}
 		return mockCmd("false")
 	}
 
-	if !homebrewPackageInstalledWith(run, func(string) (string, error) { return brewBin, nil }, "gentle-ai") {
+	if !homebrewPackageInstalledWith(run, func(string) (string, error) { return brewBin, nil }, "axiom") {
 		t.Fatal("expected brew-owned active path to be treated as Homebrew installed")
 	}
-	if homebrewPackageInstalledWith(run, func(string) (string, error) { return nonBrewBin, nil }, "gentle-ai") {
+	if homebrewPackageInstalledWith(run, func(string) (string, error) { return nonBrewBin, nil }, "axiom") {
 		t.Fatal("expected shadowing non-brew active path to avoid Homebrew")
 	}
-	if homebrewPackageInstalledWith(func(string, ...string) *exec.Cmd { return mockCmd("false") }, func(string) (string, error) { return brewBin, nil }, "gentle-ai") {
+	if homebrewPackageInstalledWith(func(string, ...string) *exec.Cmd { return mockCmd("false") }, func(string) (string, error) { return brewBin, nil }, "axiom") {
 		t.Fatal("expected brew list failure to avoid Homebrew")
 	}
-	if homebrewPackageInstalledWith(func(string, ...string) *exec.Cmd { return mockCmd("true") }, func(string) (string, error) { return "", errors.New("not found") }, "gentle-ai") {
+	if homebrewPackageInstalledWith(func(string, ...string) *exec.Cmd { return mockCmd("true") }, func(string) (string, error) { return "", errors.New("not found") }, "axiom") {
 		t.Fatal("expected active path lookup failure to avoid Homebrew")
 	}
 }
@@ -594,10 +594,10 @@ func TestRunStrategyOpenCodePluginUpgradesMaterializedPackage(t *testing.T) {
 		gotArgs = append([]string(nil), args...)
 		cmd := exec.Command(os.Args[0], "-test.run=TestOpenCodePluginUpgradeHelperProcess", "--")
 		cmd.Env = append(os.Environ(),
-			"GENTLE_AI_UPGRADE_HELPER=1",
-			"GENTLE_AI_UPGRADE_HELPER_CWD_FILE="+cwdFile,
-			"GENTLE_AI_UPGRADE_HELPER_MANIFEST_PATH="+filepath.Join(pkgDir, "package.json"),
-			"GENTLE_AI_UPGRADE_HELPER_MANIFEST_VERSION=0.2.0",
+			"AXIOM_UPGRADE_HELPER=1",
+			"AXIOM_UPGRADE_HELPER_CWD_FILE="+cwdFile,
+			"AXIOM_UPGRADE_HELPER_MANIFEST_PATH="+filepath.Join(pkgDir, "package.json"),
+			"AXIOM_UPGRADE_HELPER_MANIFEST_VERSION=0.2.0",
 		)
 		return cmd
 	}
@@ -1049,7 +1049,7 @@ func TestSelectOpenCodePackageManagerPrefersPackageMetadata(t *testing.T) {
 }
 
 func TestOpenCodePluginUpgradeHelperProcess(t *testing.T) {
-	if os.Getenv("GENTLE_AI_UPGRADE_HELPER") != "1" {
+	if os.Getenv("AXIOM_UPGRADE_HELPER") != "1" {
 		return
 	}
 	cwd, err := os.Getwd()
@@ -1057,12 +1057,12 @@ func TestOpenCodePluginUpgradeHelperProcess(t *testing.T) {
 		_, _ = os.Stderr.WriteString(err.Error())
 		os.Exit(2)
 	}
-	if err := os.WriteFile(os.Getenv("GENTLE_AI_UPGRADE_HELPER_CWD_FILE"), []byte(cwd), 0o644); err != nil {
+	if err := os.WriteFile(os.Getenv("AXIOM_UPGRADE_HELPER_CWD_FILE"), []byte(cwd), 0o644); err != nil {
 		_, _ = os.Stderr.WriteString(err.Error())
 		os.Exit(2)
 	}
-	if manifestPath := os.Getenv("GENTLE_AI_UPGRADE_HELPER_MANIFEST_PATH"); manifestPath != "" {
-		version := os.Getenv("GENTLE_AI_UPGRADE_HELPER_MANIFEST_VERSION")
+	if manifestPath := os.Getenv("AXIOM_UPGRADE_HELPER_MANIFEST_PATH"); manifestPath != "" {
+		version := os.Getenv("AXIOM_UPGRADE_HELPER_MANIFEST_VERSION")
 		if err := os.WriteFile(manifestPath, []byte(`{"version":"`+version+`"}`), 0o644); err != nil {
 			_, _ = os.Stderr.WriteString(err.Error())
 			os.Exit(2)
@@ -1138,7 +1138,7 @@ func TestBrewUpgrade_UpdateFailureIsNonFatal(t *testing.T) {
 			}
 		}
 		// brew upgrade succeeds.
-		return mockCmd("echo", "Upgraded gentle-ai")
+		return mockCmd("echo", "Upgraded axiom")
 	}
 
 	err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "engram"}}, update.HomebrewFormula)
@@ -1251,7 +1251,7 @@ func TestBrewUpgrade_SelfToolSkipsForeignTap(t *testing.T) {
 		return mockCmd("echo", "ok")
 	}
 
-	if err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "gentle-ai"}}, update.HomebrewFormula); err != nil {
+	if err := brewUpgrade(context.Background(), update.UpdateResult{Tool: update.ToolInfo{Name: "axiom"}}, update.HomebrewFormula); err != nil {
 		t.Fatalf("brewUpgrade: unexpected error: %v", err)
 	}
 	for _, sub := range subcommands {
@@ -1261,12 +1261,12 @@ func TestBrewUpgrade_SelfToolSkipsForeignTap(t *testing.T) {
 	}
 }
 func TestHomebrewFailureAdviceTapTrust(t *testing.T) {
-	output := `Error: Refusing to load formula gentleman-programming/tap/gentle-ai from untrusted tap.
-Run brew trust --formula gentleman-programming/tap/gentle-ai to trust it.`
-	advice := homebrewFailureAdvice("gentle-ai", output)
+	output := `Error: Refusing to load formula gentleman-programming/tap/axiom from untrusted tap.
+Run brew trust --formula gentleman-programming/tap/axiom to trust it.`
+	advice := homebrewFailureAdvice("axiom", output)
 	for _, want := range []string{
-		"brew trust --formula gentleman-programming/tap/gentle-ai",
-		"brew upgrade --formula gentle-ai",
+		"brew trust --formula gentleman-programming/tap/axiom",
+		"brew upgrade --formula axiom",
 	} {
 		if !strings.Contains(advice, want) {
 			t.Fatalf("tap trust advice missing %q:\n%s", want, advice)
@@ -1294,7 +1294,7 @@ Run brew trust --cask gentleman-programming/tap/engram to trust it.`
 func TestHomebrewFailureAdviceBubblewrap(t *testing.T) {
 	output := `Error: Bubblewrap is installed but cannot create a rootless sandbox.
 Homebrew's Linux sandbox requires rootless Bubblewrap and unprivileged user namespaces.`
-	advice := homebrewFailureAdvice("gentle-ai", output)
+	advice := homebrewFailureAdvice("axiom", output)
 	if strings.Contains(strings.ToLower(advice), "preferred fix") {
 		t.Fatalf("bubblewrap advice must not frame host policy changes as preferred defaults:\n%s", advice)
 	}
@@ -1303,7 +1303,7 @@ Homebrew's Linux sandbox requires rootless Bubblewrap and unprivileged user name
 		"sudo sysctl -w kernel.unprivileged_userns_clone=1",
 		"sudo sysctl -w user.max_user_namespaces=28633",
 		"sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true",
-		"HOMEBREW_NO_SANDBOX_LINUX=1 brew upgrade --formula gentle-ai",
+		"HOMEBREW_NO_SANDBOX_LINUX=1 brew upgrade --formula axiom",
 	} {
 		if !strings.Contains(advice, want) {
 			t.Fatalf("bubblewrap advice missing %q:\n%s", want, advice)

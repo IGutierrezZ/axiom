@@ -143,7 +143,7 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 		{
 			name: "unexpected resolved Windows artifact",
 			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {"+`"name":"gentle-ai","path":"dist/gentle-ai_windows_amd64_v1/gentle-ai.exe","goos":"windows","goarch":"amd64","target":"windows_amd64_v1","type":"Binary","extra":{"Binary":"gentle-ai","ID":"gentle-ai"}`+"}\n]")
+				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {"+`"name":"axiom","path":"dist/gentle-ai_windows_amd64_v1/gentle-ai.exe","goos":"windows","goarch":"amd64","target":"windows_amd64_v1","type":"Binary","extra":{"Binary":"axiom","ID":"axiom"}`+"}\n]")
 			},
 		},
 		{

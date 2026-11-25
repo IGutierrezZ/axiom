@@ -1861,18 +1861,18 @@ func TestUpgradePhaseCompletedClearsUpdateResults(t *testing.T) {
 	}
 }
 
-func TestReportUpgradedGentleAI(t *testing.T) {
+func TestReportUpgradedAxiom(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
 		{ToolName: "engram", Status: upgrade.UpgradeSucceeded},
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded},
 	}}
-	if !reportUpgradedGentleAI(report) {
-		t.Fatal("reportUpgradedGentleAI() = false, want true")
+	if !reportUpgradedSelf(report) {
+		t.Fatal("reportUpgradedSelf() = false, want true")
 	}
 
 	report.Results[1].Status = upgrade.UpgradeFailed
-	if reportUpgradedGentleAI(report) {
-		t.Fatal("reportUpgradedGentleAI() = true for failed gentle-ai upgrade")
+	if reportUpgradedSelf(report) {
+		t.Fatal("reportUpgradedSelf() = true for failed gentle-ai upgrade")
 	}
 }
 
@@ -6065,24 +6065,24 @@ func TestCodexModelPickerCustomModeEscResetsCursor(t *testing.T) {
 	}
 }
 
-func TestGentleAIUpgradeVersionDetectsSucceededGentleAI(t *testing.T) {
+func TestSelfUpgradeVersionDetectsSucceededAxiom(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
 		{ToolName: "engram", Status: upgrade.UpgradeSucceeded, NewVersion: "1.0.0"},
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{UpgradeReport: &report}
-	got, ok := m.GentleAIUpgradeVersion()
+	got, ok := m.SelfUpgradeVersion()
 	if !ok {
-		t.Fatal("GentleAIUpgradeVersion() ok = false, want true")
+		t.Fatal("SelfUpgradeVersion() ok = false, want true")
 	}
 	if got != "1.40.0" {
-		t.Fatalf("GentleAIUpgradeVersion() = %q, want %q", got, "1.40.0")
+		t.Fatalf("SelfUpgradeVersion() = %q, want %q", got, "1.40.0")
 	}
 }
 
-func TestUpgradeResultEnterQuitsWhenGentleAIWasUpgraded(t *testing.T) {
+func TestUpgradeResultEnterQuitsWhenAxiomWasUpgraded(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{Screen: ScreenUpgrade, UpgradeReport: &report}
 	_, cmd := m.confirmSelection()
@@ -6094,9 +6094,9 @@ func TestUpgradeResultEnterQuitsWhenGentleAIWasUpgraded(t *testing.T) {
 	}
 }
 
-func TestUpgradeSyncResultEscQuitsWhenGentleAIWasUpgraded(t *testing.T) {
+func TestUpgradeSyncResultEscQuitsWhenAxiomWasUpgraded(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{Screen: ScreenUpgradeSync, UpgradeReport: &report, HasSyncRun: true}
 	_, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEsc})
@@ -6155,12 +6155,12 @@ func executeUpgradeSyncSequence(t *testing.T, m Model) []tea.Msg {
 	return msgs
 }
 
-// TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded verifies that when
+// TestStartUpgradeSync_SetsPendingSyncWhenAxiomUpgraded verifies that when
 // the UpgradeFn reports gentle-ai as upgraded, the syncCmd branch of
 // startUpgradeSync writes PendingSync=true to state.json before returning
 // SyncDoneMsg. This is the TUI-path equivalent of the selfupdate.go path tested
 // in TestSelfUpdate_SetsPendingSyncOnSuccess.
-func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
+func TestStartUpgradeSync_SetsPendingSyncWhenAxiomUpgraded(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -6173,7 +6173,7 @@ func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
 	m.UpgradeFn = func(_ context.Context, _ []update.UpdateResult) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 			},
 		}
 	}
@@ -6208,10 +6208,10 @@ func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
 	}
 }
 
-// TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded verifies
+// TestStartUpgradeSync_DoesNotSetPendingSyncWhenAxiomNotUpgraded verifies
 // that when gentle-ai was NOT upgraded (e.g. only engram was upgraded), the
 // syncCmd branch does NOT set PendingSync, and sync proceeds normally via SyncFn.
-func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testing.T) {
+func TestStartUpgradeSync_DoesNotSetPendingSyncWhenAxiomNotUpgraded(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -6299,7 +6299,7 @@ func TestStartUpgradeSync_NoClobberOnCorruptStateFile(t *testing.T) {
 	m.UpgradeFn = func(_ context.Context, _ []update.UpdateResult) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 			},
 		}
 	}
@@ -6813,7 +6813,7 @@ func TestAdvisoryMsg_SanitizesOnStore(t *testing.T) {
 // makeUpdateResult returns a minimal UpdateResult with the given status and release URL.
 func makeUpdateResult(status update.UpdateStatus, releaseURL string) update.UpdateResult {
 	return update.UpdateResult{
-		Tool:             update.ToolInfo{Name: "gentle-ai"},
+		Tool:             update.ToolInfo{Name: "axiom"},
 		Status:           status,
 		InstalledVersion: "1.0.0",
 		LatestVersion:    "2.0.0",

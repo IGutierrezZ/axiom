@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-// A tester reported `gentle-ai --version` saying 2.2.0-rc.1 while `doctor` on
+// A tester reported `axiom --version` saying 2.2.0-rc.1 while `doctor` on
 // the same binary reported 1.49.1-0.2026...+dirty. Two version strings for one
 // build is not a cosmetic inconsistency: doctor's whole purpose here is to say
 // WHICH build is running, and the defect report carries the same value to
 // whoever has to reproduce it. AppVersion is already handed to this package by
 // internal/app; it was simply never consulted.
-func TestGentleAIVersionMatchesTheStampedAppVersion(t *testing.T) {
+func TestAxiomVersionMatchesTheStampedAppVersion(t *testing.T) {
 	original := AppVersion
 	t.Cleanup(func() { AppVersion = original })
 
@@ -21,7 +21,7 @@ func TestGentleAIVersionMatchesTheStampedAppVersion(t *testing.T) {
 		t.Fatalf("resolved version = %q, want the stamped %q", version, "2.2.0-rc.1")
 	}
 
-	clause := doctorInvokedGentleAIClause("")
+	clause := doctorInvokedAxiomClause("")
 	if clause != "" && !strings.Contains(clause, "2.2.0-rc.1") {
 		t.Fatalf("doctor names a different version than --version: %s", clause)
 	}
@@ -29,7 +29,7 @@ func TestGentleAIVersionMatchesTheStampedAppVersion(t *testing.T) {
 
 // An unstamped build must still fall back to build info rather than reporting
 // a literal "dev" that hides which commit is running.
-func TestGentleAIVersionFallsBackWhenNotStamped(t *testing.T) {
+func TestAxiomVersionFallsBackWhenNotStamped(t *testing.T) {
 	original := AppVersion
 	t.Cleanup(func() { AppVersion = original })
 

@@ -1821,7 +1821,7 @@ func (m Model) handleKeyPress(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if (m.Screen == ScreenInstalling && m.pipelineRunning) || m.Screen == ScreenCommunityToolInstalling {
 			return m, nil
 		}
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		var cmd tea.Cmd
@@ -2194,7 +2194,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		}
 		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		// If showing results (UpgradeReport != nil or UpgradeErr != nil), return to welcome.
@@ -2238,7 +2238,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		}
 		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		// If operations are done, return to welcome.
@@ -3517,7 +3517,7 @@ func (m Model) startUpgradeSync() tea.Cmd {
 	upgradeFn := m.UpgradeFn
 	syncFn := m.SyncFn
 	updateResults := m.UpdateResults
-	gentleAIUpdated := false
+	selfUpdated := false
 
 	upgradeCmd := func() tea.Msg {
 		if upgradeFn == nil {
@@ -3525,12 +3525,12 @@ func (m Model) startUpgradeSync() tea.Cmd {
 		}
 		ctx := context.Background()
 		report := upgradeFn(ctx, updateResults)
-		gentleAIUpdated = reportUpgradedGentleAI(report)
+		selfUpdated = reportUpgradedSelf(report)
 		return UpgradePhaseCompletedMsg{Report: report}
 	}
 
 	syncCmd := func() tea.Msg {
-		if gentleAIUpdated {
+		if selfUpdated {
 			// Deferred sync (task 4.8): gentle-ai was upgraded in this session.
 			// Set PendingSync=true so the new binary runs sync on next launch
 			// instead of silently skipping it. Non-fatal if state write fails.
@@ -3575,7 +3575,7 @@ func markPendingSyncUnderLock(h string) {
 	})
 }
 
-func reportUpgradedGentleAI(report upgrade.UpgradeReport) bool {
+func reportUpgradedSelf(report upgrade.UpgradeReport) bool {
 	for _, result := range report.Results {
 		if update.IsSelfToolName(result.ToolName) && result.Status == upgrade.UpgradeSucceeded {
 			return true
@@ -3584,9 +3584,9 @@ func reportUpgradedGentleAI(report upgrade.UpgradeReport) bool {
 	return false
 }
 
-// GentleAIUpgradeVersion returns the upgraded gentle-ai version when the current
+// SelfUpgradeVersion returns the upgraded axiom version when the current
 // TUI result requires restarting the app before continuing with config sync.
-func (m Model) GentleAIUpgradeVersion() (string, bool) {
+func (m Model) SelfUpgradeVersion() (string, bool) {
 	if m.UpgradeReport == nil {
 		return "", false
 	}

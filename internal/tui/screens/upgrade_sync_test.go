@@ -125,9 +125,9 @@ func TestRenderUpgradeSync_LongManualHintUsesWidth(t *testing.T) {
 	t.Fatalf("hint preamble should appear in output; got:\n%s", out)
 }
 
-func TestRenderUpgradeSync_SkipsSyncWhenGentleAIUpgraded(t *testing.T) {
+func TestRenderUpgradeSync_SkipsSyncWhenAxiomUpgraded(t *testing.T) {
 	report := &upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", OldVersion: "v1.36.1", NewVersion: "v1.36.2", Status: upgrade.UpgradeSucceeded},
+		{ToolName: "axiom", OldVersion: "v1.36.1", NewVersion: "v1.36.2", Status: upgrade.UpgradeSucceeded},
 	}}
 
 	out := RenderUpgradeSync(nil, report, nil, nil, nil, false, true, 0, 0)
@@ -143,9 +143,9 @@ func TestRenderUpgradeSync_SkipsSyncWhenGentleAIUpgraded(t *testing.T) {
 	}
 }
 
-func TestRenderUpgrade_ShowsRestartNoticeWhenGentleAIUpgraded(t *testing.T) {
+func TestRenderUpgrade_ShowsRestartNoticeWhenAxiomUpgraded(t *testing.T) {
 	report := &upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", OldVersion: "v1.36.1", NewVersion: "v1.36.2", Status: upgrade.UpgradeSucceeded},
+		{ToolName: "axiom", OldVersion: "v1.36.1", NewVersion: "v1.36.2", Status: upgrade.UpgradeSucceeded},
 	}}
 
 	out := RenderUpgrade(nil, report, nil, false, true, 0, 0)

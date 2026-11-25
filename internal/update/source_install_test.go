@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// forkSourceTool mirrors the self-tool entry after cmd/axiom init() rewrites it
+// forkSourceTool mirrors the self-tool entry
 // (REQ-22.3): fork coordinates with the upstream module still declared in go.mod.
 var forkSourceTool = ToolInfo{
 	Name:         "axiom",
@@ -17,7 +17,7 @@ var forkSourceTool = ToolInfo{
 
 // upstreamSourceTool mirrors the shipped self-tool entry before the fork rename.
 var upstreamSourceTool = ToolInfo{
-	Name:         "gentle-ai",
+	Name:         "axiom",
 	Owner:        "Gentleman-Programming",
 	Repo:         "gentle-ai",
 	GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom",

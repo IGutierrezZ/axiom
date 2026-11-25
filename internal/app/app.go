@@ -87,11 +87,11 @@ func RunArgs(args []string, stdout io.Writer) error {
 	}
 
 	// Propagate the build-time version to the CLI and upgrade layers so backup
-	// manifests record which version of gentle-ai created them.
+	// manifests record which version of axiom created them.
 	cli.AppVersion = Version
 	upgrade.AppVersion = Version
 
-	// --yes as a global CLI flag for self-update is handled via GENTLE_AI_YES=1.
+	// --yes as a global CLI flag for self-update is handled via AXIOM_YES=1.
 	// Per-subcommand --yes flags (e.g. restore --yes) are parsed by each subcommand.
 
 	// Platform-independent commands: no system detection, self-update, or
@@ -184,7 +184,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 		return profile
 	}
 
-	// Self-update: check for a newer gentle-ai release and apply it before
+	// Self-update: check for a newer axiom release and apply it before
 	// CLI/TUI dispatch. Errors are non-fatal — logged and swallowed.
 	// Skip auto-upgrade on TUI entry (len(args) == 0) to avoid silently
 	// replacing the binary while the user expects a clean TUI launch (#696).
@@ -222,7 +222,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 			}
 		}
 
-		// Deferred sync: if a previous gentle-ai self-upgrade set PendingSync=true,
+		// Deferred sync: if a previous axiom self-upgrade set PendingSync=true,
 		// run sync now with the new binary before entering the TUI. On success,
 		// clear the flag. On failure, log and leave the flag set for idempotent
 		// retry on the next launch (per spec scenario "deferred sync fails → retry").
@@ -240,7 +240,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 					_, _ = fmt.Fprintf(stdout, "Warning: failed to clear PendingSync flag: %v\n", writeErr)
 				}
 			}
-			// TUI self-update path: the previous launch completed a gentle-ai
+			// TUI self-update path: the previous launch completed an axiom
 			// self-upgrade under the old binary and set PendingSync=true. We are
 			// now running under the new binary; print the doctor advisory so the
 			// user can verify ecosystem health against the post-upgrade state.
@@ -276,8 +276,8 @@ func RunArgs(args []string, stdout io.Writer) error {
 		if err != nil {
 			return err
 		}
-		if latestVersion, ok := gentleAIUpgradeVersionFromTUI(finalModel); ok {
-			return restartAfterGentleAIUpgrade(latestVersion, stdout)
+		if latestVersion, ok := selfUpgradeVersionFromTUI(finalModel); ok {
+			return restartAfterSelfUpgrade(latestVersion, stdout)
 		}
 		return nil
 	}
@@ -351,15 +351,15 @@ func hasHelpFlag(args []string) bool {
 	return false
 }
 
-func gentleAIUpgradeVersionFromTUI(finalModel tea.Model) (string, bool) {
+func selfUpgradeVersionFromTUI(finalModel tea.Model) (string, bool) {
 	switch m := finalModel.(type) {
 	case tui.Model:
-		return m.GentleAIUpgradeVersion()
+		return m.SelfUpgradeVersion()
 	case *tui.Model:
 		if m == nil {
 			return "", false
 		}
-		return m.GentleAIUpgradeVersion()
+		return m.SelfUpgradeVersion()
 	default:
 		return "", false
 	}
@@ -448,13 +448,13 @@ func runUpdate(ctx context.Context, currentVersion string, profile system.Platfo
 	return nil
 }
 
-// runUpgrade handles the `gentle-ai upgrade [--dry-run] [tool...]` command.
+// runUpgrade handles the `axiom upgrade [--dry-run] [tool...]` command.
 //
 // This command:
-//   - Checks for available updates for managed tools (gentle-ai, engram, gga)
+//   - Checks for available updates for managed tools (axiom, engram, gga)
 //   - Snapshots agent config paths before execution (config preservation by design)
 //   - Executes binary-only upgrades; does NOT invoke install or sync pipelines
-//   - Skips gentle-ai itself when running as a dev build (version="dev")
+//   - Skips axiom itself when running as a dev build (version="dev")
 //   - Falls back to source-install guidance where official binaries are unavailable
 //
 // Issue #535: runUpgrade consumes a structured upgradeArgs value parsed once
@@ -972,7 +972,7 @@ func claudeAliasesToStrings(m map[string]model.ClaudeModelAlias) map[string]stri
 	out := make(map[string]string, len(m))
 	for k, v := range m {
 		// Claude Code owns the main session/orchestrator model; do not persist it
-		// as a Gentle AI model assignment.
+		// as an Axiom model assignment.
 		if k == "orchestrator" {
 			continue
 		}

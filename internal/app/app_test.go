@@ -1437,7 +1437,7 @@ func TestVersionBeforeSystemGuards(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version should not fail: %v", err)
 	}
-	if !strings.Contains(buf.String(), "gentle-ai") && !strings.Contains(buf.String(), "axiom") {
+	if !strings.Contains(buf.String(), "axiom") && !strings.Contains(buf.String(), "axiom") {
 		t.Error("version output should contain 'axiom' or 'gentle-ai'")
 	}
 }
@@ -1537,7 +1537,7 @@ func TestRunArgs_UpdateSkipsSelfUpdate(t *testing.T) {
 	updateCheckAll = func(context.Context, string, system.PlatformProfile) []update.UpdateResult {
 		return []update.UpdateResult{
 			{
-				Tool:             update.ToolInfo{Name: "gentle-ai"},
+				Tool:             update.ToolInfo{Name: "axiom"},
 				InstalledVersion: "1.0.0",
 				LatestVersion:    "1.0.0",
 				Status:           update.UpToDate,
@@ -1583,7 +1583,7 @@ func TestRunArgs_UpgradeSkipsSelfUpdate(t *testing.T) {
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
 		return []update.UpdateResult{
 			{
-				Tool:             update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+				Tool:             update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 				InstalledVersion: "1.0.0",
 				LatestVersion:    "1.0.0",
 				Status:           update.UpToDate,
@@ -2126,10 +2126,10 @@ func writeAppSDDStatusFile(t *testing.T, path string, content string) {
 	}
 }
 
-// TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult verifies that when the TUI
-// reports a successful gentle-ai upgrade, RunArgs calls restartAfterGentleAIUpgrade
+// TestRunArgs_TUIRestartsAfterAxiomUpgradeResult verifies that when the TUI
+// reports a successful gentle-ai upgrade, RunArgs calls restartAfterSelfUpgrade
 // which (after task 4.6) prints the restart guidance message instead of re-execing.
-func TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult(t *testing.T) {
+func TestRunArgs_TUIRestartsAfterAxiomUpgradeResult(t *testing.T) {
 	assumeInteractiveTTY(t)
 	origDetect := detectSystem
 	origEnsure := ensureCurrentOSSupported
@@ -2148,7 +2148,7 @@ func TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult(t *testing.T) {
 	}
 
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	runTUI = func(m tea.Model, _ ...tea.ProgramOption) (tea.Model, error) {
 		model := m.(tui.Model)

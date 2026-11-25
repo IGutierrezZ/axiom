@@ -261,18 +261,16 @@ La acción solo se acepta desde el propio dashboard (`127.0.0.1` o `localhost` e
 
 Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que documenta la instalación. El método habitual son los dos comandos de una línea (`install.sh` en Linux/macOS, `install.ps1` en Windows); Axiom no se distribuye por Homebrew.
 
-**Self-update prompt behavior** (changed in v1.x slice 5 — `GENTLE_AI_CONFIRM_UPDATE` removed):
+**Comportamiento del aviso de autoactualización:**
 
 | Situation | Behavior |
 |-----------|----------|
 | Interactive terminal (TTY) | Always prompts `Apply now? [Y/n]`. Empty Enter accepts. |
 | Non-TTY (CI, pipe, script) | Auto-declines — never hangs. |
-| `GENTLE_AI_YES=1` | Variable heredada que acepta sin preguntar (para actualizaciones mediante scripts). Se hereda en los subprocesos; si es necesario, limítala a una invocación (por ejemplo, `GENTLE_AI_YES=1 axiom upgrade …`). |
-| `GENTLE_AI_NO_SELF_UPDATE=1` | Variable heredada que omite por completo la comprobación de actualización automática. |
+| `AXIOM_YES=1` | Variable que acepta sin preguntar (para actualizaciones mediante scripts). Se hereda en los subprocesos; si es necesario, limítala a una invocación (por ejemplo, `AXIOM_YES=1 axiom upgrade …`). |
+| `AXIOM_NO_SELF_UPDATE=1` | Variable que omite por completo la comprobación de actualización automática. |
 
-`GENTLE_AI_CONFIRM_UPDATE` was removed in slice 5. It is now ignored if set.
-
-`GENTLE_AI_SELF_UPDATE_DONE` es un control interno del bucle de actualización y no debe definirse manualmente.
+`AXIOM_SELF_UPDATE_DONE` es un control interno del bucle de actualización y no debe definirse manualmente.
 
 ### model assignment
 

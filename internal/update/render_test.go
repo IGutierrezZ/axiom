@@ -8,7 +8,7 @@ import (
 
 func TestRenderCLI_IncompleteCheckDoesNotClaimUpToDate(t *testing.T) {
 	results := []UpdateResult{
-		{Tool: ToolInfo{Name: "gentle-ai"}, InstalledVersion: "1.0.0", LatestVersion: "1.0.0", Status: UpToDate},
+		{Tool: ToolInfo{Name: "axiom"}, InstalledVersion: "1.0.0", LatestVersion: "1.0.0", Status: UpToDate},
 		{Tool: ToolInfo{Name: "engram"}, Status: CheckFailed, Err: fmt.Errorf("timeout")},
 	}
 
@@ -48,7 +48,7 @@ func TestRenderCLI_OpenCodeRegisteredNotMaterialized(t *testing.T) {
 
 func TestCheckFailures(t *testing.T) {
 	results := []UpdateResult{
-		{Tool: ToolInfo{Name: "gentle-ai"}, Status: UpToDate},
+		{Tool: ToolInfo{Name: "axiom"}, Status: UpToDate},
 		{Tool: ToolInfo{Name: "engram"}, Status: CheckFailed},
 		{Tool: ToolInfo{Name: "gga"}, Status: CheckFailed},
 	}

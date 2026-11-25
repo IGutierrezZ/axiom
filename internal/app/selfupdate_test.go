@@ -51,7 +51,7 @@ func unsetEnv(t *testing.T, key string) {
 
 // swapSelfUpdateDeps replaces all package-level dependency vars used by selfUpdate
 // and registers cleanup to restore them. Returns pointers to track call counts.
-// Note: reExec and goOS were removed in task 4.6 — restartAfterGentleAIUpgrade
+// Note: reExec and goOS were removed in task 4.6 — restartAfterSelfUpgrade
 // now always prints the restart message and returns; no re-exec on any OS.
 type selfUpdateStubs struct {
 	checkCalled   int
@@ -164,7 +164,7 @@ func TestSelfUpdate_UpdateAvailable_CallsUpgradeAndRestart(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -172,7 +172,7 @@ func TestSelfUpdate_UpdateAvailable_CallsUpgradeAndRestart(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -208,7 +208,7 @@ func TestSelfUpdate_UpToDate_NoUpgradeCall(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.8.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpToDate,
@@ -235,7 +235,7 @@ func TestSelfUpdate_CheckError_ReturnsNil(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:   update.ToolInfo{Name: "gentle-ai"},
+			Tool:   update.ToolInfo{Name: "axiom"},
 			Status: update.CheckFailed,
 			Err:    context.DeadlineExceeded,
 		},
@@ -258,7 +258,7 @@ func TestSelfUpdate_UpgradeError_ReturnsNil(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -267,7 +267,7 @@ func TestSelfUpdate_UpgradeError_ReturnsNil(t *testing.T) {
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
 			{
-				ToolName: "gentle-ai",
+				ToolName: "axiom",
 				Status:   upgrade.UpgradeFailed,
 				Err:      os.ErrPermission,
 			},
@@ -283,7 +283,7 @@ func TestSelfUpdate_UpgradeError_ReturnsNil(t *testing.T) {
 }
 
 // TestSelfUpdate_PrintsRestartMessage verifies that after a successful upgrade
-// on any OS, restartAfterGentleAIUpgrade prints a restart-guidance message and
+// on any OS, restartAfterSelfUpgrade prints a restart-guidance message and
 // does NOT re-exec (converged behavior — task 4.6).
 func TestSelfUpdate_PrintsRestartMessage(t *testing.T) {
 	unsetEnv(t, envNoSelfUpdate)
@@ -291,7 +291,7 @@ func TestSelfUpdate_PrintsRestartMessage(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -299,11 +299,11 @@ func TestSelfUpdate_PrintsRestartMessage(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
-	// restartAfterGentleAIUpgrade is OS-agnostic after task 4.6 — prints and returns.
+	// restartAfterSelfUpgrade is OS-agnostic after task 4.6 — prints and returns.
 	// No goOS swap needed; the behavior is identical on all platforms.
 	for _, osName := range []string{"darwin", "windows", "linux"} {
 		t.Run("os="+osName, func(t *testing.T) {
@@ -338,7 +338,7 @@ func TestSelfUpdate_BrewInstallMethod_PassedToUpgradeExecutor(t *testing.T) {
 	checkResults := []update.UpdateResult{
 		{
 			Tool: update.ToolInfo{
-				Name:          "gentle-ai",
+				Name:          "axiom",
 				InstallMethod: update.InstallBrew,
 			},
 			InstalledVersion: "1.7.0",
@@ -376,7 +376,7 @@ func TestSelfUpdate_BrewInstallMethod_PassedToUpgradeExecutor(t *testing.T) {
 		capturedProfile = profile
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 			},
 		}
 	}
@@ -413,7 +413,7 @@ func TestSelfUpdate_ConfirmUpdate_UserAccepts(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -421,7 +421,7 @@ func TestSelfUpdate_ConfirmUpdate_UserAccepts(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -457,7 +457,7 @@ func TestSelfUpdate_ConfirmUpdate_UserDeclines(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -496,7 +496,7 @@ func TestSelfUpdate_PromptAlwaysShown(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -504,7 +504,7 @@ func TestSelfUpdate_PromptAlwaysShown(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -538,7 +538,7 @@ func TestSelfUpdate_PromptAlwaysShown(t *testing.T) {
 func TestSelfUpdate_ConfirmUpdateTable(t *testing.T) {
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -546,11 +546,11 @@ func TestSelfUpdate_ConfirmUpdateTable(t *testing.T) {
 	}
 	successReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
-	// wantReExec removed: restartAfterGentleAIUpgrade always prints and returns (task 4.6).
+	// wantReExec removed: restartAfterSelfUpgrade always prints and returns (task 4.6).
 	tests := []struct {
 		name            string
 		promptReply     bool
@@ -613,7 +613,7 @@ func TestSelfUpdate_SetsPendingSyncOnSuccess(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -621,7 +621,7 @@ func TestSelfUpdate_SetsPendingSyncOnSuccess(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -663,7 +663,7 @@ func TestSelfUpdate_DoesNotSetPendingSyncOnFailure(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -671,7 +671,7 @@ func TestSelfUpdate_DoesNotSetPendingSyncOnFailure(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeFailed, Err: os.ErrPermission},
+			{ToolName: "axiom", Status: upgrade.UpgradeFailed, Err: os.ErrPermission},
 		},
 	}
 
@@ -706,7 +706,7 @@ func TestSelfUpdate_NoClobberOnCorruptStateFile(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -714,7 +714,7 @@ func TestSelfUpdate_NoClobberOnCorruptStateFile(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -766,7 +766,7 @@ func TestSelfUpdate_PromptCalledWithoutEnvVar(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -774,7 +774,7 @@ func TestSelfUpdate_PromptCalledWithoutEnvVar(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -807,7 +807,7 @@ func TestSelfUpdate_ConfirmUpdateEnvIgnored(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -815,7 +815,7 @@ func TestSelfUpdate_ConfirmUpdateEnvIgnored(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -847,7 +847,7 @@ func TestSelfUpdate_UserDeclines_NoUpgrade(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -975,7 +975,7 @@ func TestSelfUpdate_YesFlag_AutoAccepts(t *testing.T) {
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -983,7 +983,7 @@ func TestSelfUpdate_YesFlag_AutoAccepts(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -1017,18 +1017,18 @@ func TestSelfUpdate_YesFlag_AutoAccepts(t *testing.T) {
 	}
 }
 
-// TestSelfUpdate_YesEnvVar_AutoAccepts verifies the GENTLE_AI_YES=1 env-var
+// TestSelfUpdate_YesEnvVar_AutoAccepts verifies the AXIOM_YES=1 env-var
 // contract end-to-end using the real selfUpdateYesFn (not an injected stub).
 // When the env var is set, the upgrade must proceed without calling the
 // interactive promptFn. Task 5.3 / 5.5 env-var path.
 func TestSelfUpdate_YesEnvVar_AutoAccepts(t *testing.T) {
-	t.Setenv("GENTLE_AI_YES", "1")
+	t.Setenv("AXIOM_YES", "1")
 	unsetEnv(t, envNoSelfUpdate)
 	unsetEnv(t, envSelfUpdateDone)
 
 	checkResults := []update.UpdateResult{
 		{
-			Tool:             update.ToolInfo{Name: "gentle-ai"},
+			Tool:             update.ToolInfo{Name: "axiom"},
 			InstalledVersion: "1.7.0",
 			LatestVersion:    "1.8.0",
 			Status:           update.UpdateAvailable,
@@ -1036,7 +1036,7 @@ func TestSelfUpdate_YesEnvVar_AutoAccepts(t *testing.T) {
 	}
 	upgradeReport := upgrade.UpgradeReport{
 		Results: []upgrade.ToolUpgradeResult{
-			{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+			{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 		},
 	}
 
@@ -1047,7 +1047,7 @@ func TestSelfUpdate_YesEnvVar_AutoAccepts(t *testing.T) {
 	t.Cleanup(func() { selfUpdateYesFn = origYes })
 	selfUpdateYesFn = func() bool { return os.Getenv(envYesUpdate) == "1" }
 
-	// A promptFn that declines — it must NOT be called when GENTLE_AI_YES=1.
+	// A promptFn that declines — it must NOT be called when AXIOM_YES=1.
 	origPrompt := promptFn
 	t.Cleanup(func() { promptFn = origPrompt })
 	promptCalled := 0
@@ -1061,14 +1061,14 @@ func TestSelfUpdate_YesEnvVar_AutoAccepts(t *testing.T) {
 		t.Fatalf("selfUpdate returned error: %v", err)
 	}
 	if stubs.upgradeCalled != 1 {
-		t.Errorf("upgradeCalled = %d, want 1 (GENTLE_AI_YES=1 auto-accepts)", stubs.upgradeCalled)
+		t.Errorf("upgradeCalled = %d, want 1 (AXIOM_YES=1 auto-accepts)", stubs.upgradeCalled)
 	}
 	if promptCalled != 0 {
-		t.Errorf("promptCalled = %d, want 0 (GENTLE_AI_YES=1 bypasses interactive prompt)", promptCalled)
+		t.Errorf("promptCalled = %d, want 0 (AXIOM_YES=1 bypasses interactive prompt)", promptCalled)
 	}
 }
 
-// TestSelfUpdate_NoSelfUpdate_StillSkips_Slice5 verifies that GENTLE_AI_NO_SELF_UPDATE
+// TestSelfUpdate_NoSelfUpdate_StillSkips_Slice5 verifies that AXIOM_NO_SELF_UPDATE
 // continues to work after slice 5 changes. Task 5.7 guard.
 func TestSelfUpdate_NoSelfUpdate_StillSkips_Slice5(t *testing.T) {
 	setEnv(t, envNoSelfUpdate, "1")
@@ -1081,7 +1081,7 @@ func TestSelfUpdate_NoSelfUpdate_StillSkips_Slice5(t *testing.T) {
 		t.Fatalf("selfUpdate returned error: %v", err)
 	}
 	if stubs.checkCalled != 0 {
-		t.Errorf("checkCalled = %d, want 0 (GENTLE_AI_NO_SELF_UPDATE must still skip)", stubs.checkCalled)
+		t.Errorf("checkCalled = %d, want 0 (AXIOM_NO_SELF_UPDATE must still skip)", stubs.checkCalled)
 	}
 }
 

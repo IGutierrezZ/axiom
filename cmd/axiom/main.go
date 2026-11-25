@@ -28,36 +28,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
-	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 	"github.com/mattn/go-isatty"
 )
-
-func init() {
-	// Safety net: the registry already points at IGutierrezZ/axiom. Re-assert the
-	// coordinates so a future registry edit can never compare against upstream:
-	// Axiom is an independent fork (IGutierrezZ/axiom) and must not compare
-	// its version against Gentleman-Programming/gentle-ai nor force foreign upgrades.
-	//
-	// Invariant: mutate field by field — never replace the whole ToolInfo
-	// struct — so that GoModulePath and any future registry fields survive
-	// the rename (D-01).
-	for i := range update.Tools {
-		if update.IsSelfToolName(update.Tools[i].Name) {
-			update.Tools[i].Name = "axiom"
-			update.Tools[i].Owner = "IGutierrezZ"
-			update.Tools[i].Repo = "axiom"
-			update.Tools[i].DetectCmd = nil // version resolved from build-time (app.Version)
-			update.Tools[i].VersionPrefix = "v"
-			update.Tools[i].InstallMethod = update.InstallBinary
-			// GoImportPath and GoModulePath are intentionally preserved: the
-			// registry already declares the module's real major-version path
-			// (.../v3/cmd/axiom). Rewriting it without /v3 made
-			// GoInstallResolvable false and silently disabled the go install
-			// self-upgrade (D-01).
-		}
-	}
-}
 
 // fallbackVersion is the last-resort version, reported only when the binary
 // was neither stamped by ldflags nor built from a tagged module (O-1, D-05).

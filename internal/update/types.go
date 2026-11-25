@@ -2,16 +2,15 @@ package update
 
 import "strings"
 
-// selfToolNames is the closed set of on-disk/registry names that identify the
-// primary CLI product across its rename. `init()` in cmd/axiom/main.go rewrites
-// the shipped "gentle-ai" registry entry to "axiom"; every upgrade safeguard
-// MUST route through IsSelfToolName so that rename can never disable one (REQ-22.3).
-var selfToolNames = map[string]bool{"axiom": true, "gentle-ai": true}
+// SelfToolName is the registry name of the primary CLI product (this binary).
+// Every upgrade safeguard MUST route through IsSelfToolName instead of comparing
+// against a literal (REQ-22.3).
+const SelfToolName = "axiom"
 
 // IsSelfToolName reports whether name identifies the primary CLI product.
 // Matching is case- and edge-whitespace-insensitive.
 func IsSelfToolName(name string) bool {
-	return selfToolNames[strings.ToLower(strings.TrimSpace(name))]
+	return strings.ToLower(strings.TrimSpace(name)) == SelfToolName
 }
 
 // IsSelfTool reports whether tool is the primary CLI product (D-01).
@@ -47,7 +46,7 @@ const (
 	// Used for tools that distribute via shell scripts rather than pre-built binaries
 	// (e.g., GGA which has no release binary assets).
 	InstallScript InstallMethod = "script"
-	// InstallOpenCodePlugin is a manual upgrade method: Gentle AI registers the
+	// InstallOpenCodePlugin is a manual upgrade method: Axiom registers the
 	// package in tui.json, and OpenCode owns package resolution on restart/reload.
 	InstallOpenCodePlugin InstallMethod = "opencode-plugin"
 	// InstallSourceBuild compiles the tool from a controlled source clone
@@ -58,7 +57,7 @@ const (
 
 // ToolInfo describes a managed tool that can be checked for updates.
 type ToolInfo struct {
-	Name              string        // human-readable name (e.g., "gentle-ai")
+	Name              string        // human-readable name (e.g., "axiom")
 	Owner             string        // GitHub repository owner
 	Repo              string        // GitHub repository name
 	DetectCmd         []string      // command to detect installed version; nil = use build var
@@ -103,7 +102,7 @@ func (t ToolInfo) GoInstallResolvable() bool {
 	}
 	// A major-version suffix (v2, v3, ...) immediately after the declared
 	// module makes `go install` resolve a DIFFERENT module (m + "/" + suffix).
-	// `.../gentle-ai` therefore does not make `.../gentle-ai/v3/...` resolvable.
+	// `.../axiom` therefore does not make `.../axiom/v3/...` resolvable.
 	rest := p[len(m)+1:]
 	seg, _, _ := strings.Cut(rest, "/")
 	return !isGoMajorVersionSuffix(seg)
@@ -132,4 +131,17 @@ type UpdateResult struct {
 	ReleaseURL       string
 	UpdateHint       string
 	Err              error
+}
+
+// SelectSelfToolResult returns the update result of the self-tool (this binary),
+// or nil when results holds none. It matches through IsSelfTool so the lookup
+// follows the registry name instead of a literal: a literal that drifted from the
+// registry once left the start-up self-update without its own tool.
+func SelectSelfToolResult(results []UpdateResult) *UpdateResult {
+	for i := range results {
+		if IsSelfTool(results[i].Tool) {
+			return &results[i]
+		}
+	}
+	return nil
 }

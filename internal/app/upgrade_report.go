@@ -43,8 +43,7 @@ type UpgradeToolOutcome struct {
 // and "succeeded" otherwise.
 type UpgradeRunReport struct {
 	PerTool []UpgradeToolOutcome
-	// SelfToolName is the registry name of the self-tool after init()
-	// ("axiom" in cmd/axiom, "gentle-ai" before the rename mutates it).
+	// SelfToolName is the registry name of the self-tool ("axiom").
 	SelfToolName string
 	// RestartRequired is true only when the self-tool terminated in
 	// UpgradeSucceeded, i.e. the running binary was replaced (REQ-22.6).
@@ -157,8 +156,8 @@ func runUpgradeReport(ctx context.Context, args upgradeArgs, detection system.De
 		return structured, err
 	}
 	if !dryRun {
-		if latestVersion, ok := gentleAIUpgradeSucceeded(execReport); ok {
-			if err := restartAfterGentleAIUpgrade(latestVersion, stdout); err != nil {
+		if latestVersion, ok := selfUpgradeSucceeded(execReport); ok {
+			if err := restartAfterSelfUpgrade(latestVersion, stdout); err != nil {
 				return structured, err
 			}
 			// CLI upgrade path: print the doctor advisory so the user can verify
@@ -216,8 +215,7 @@ func classifyUpgradeRun(report upgrade.UpgradeReport) UpgradeRunReport {
 }
 
 // selfToolRegistryName returns the registry name of the self-tool as the
-// running binary knows it ("axiom" once cmd/axiom init() has mutated the
-// registry entry).
+// running binary knows it ("axiom").
 func selfToolRegistryName() string {
 	for _, tool := range update.Tools {
 		if update.IsSelfToolName(tool.Name) {
