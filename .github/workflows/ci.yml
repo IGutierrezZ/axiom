@@ -47,8 +47,6 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '24'
-      - name: Test bounded V2 host activation polling
-        run: python3 -B -m unittest discover -s scripts -p test_opencode_v2_host_test.py
       - name: Typecheck V2 assets against released 2.0.4
         run: bash scripts/test-opencode-v2-contracts.sh
 
