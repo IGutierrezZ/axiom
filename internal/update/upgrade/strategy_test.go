@@ -342,8 +342,8 @@ func TestEffectiveMethod_NonGentleAIToolsOnWindowsUseBinary(t *testing.T) {
 			want: update.InstallBinary,
 		},
 		{
-			name: "gga uses script",
-			tool: update.ToolInfo{Name: "gga", InstallMethod: update.InstallScript},
+			name: "script tool uses script",
+			tool: update.ToolInfo{Name: "mytool", InstallMethod: update.InstallScript},
 			want: update.InstallScript,
 		},
 		{
@@ -386,14 +386,14 @@ func TestEffectiveMethod(t *testing.T) {
 		},
 		{
 			name:          "brew-owned package overrides binary",
-			tool:          update.ToolInfo{Name: "gga", InstallMethod: update.InstallBinary},
+			tool:          update.ToolInfo{Name: "mytool", InstallMethod: update.InstallBinary},
 			profile:       system.PlatformProfile{PackageManager: "brew"},
 			brewInstalled: true,
 			want:          update.InstallBrew,
 		},
 		{
 			name:          "brew-owned package overrides script",
-			tool:          update.ToolInfo{Name: "gga", InstallMethod: update.InstallScript},
+			tool:          update.ToolInfo{Name: "mytool", InstallMethod: update.InstallScript},
 			profile:       system.PlatformProfile{PackageManager: "brew"},
 			brewInstalled: true,
 			want:          update.InstallBrew,
@@ -418,13 +418,13 @@ func TestEffectiveMethod(t *testing.T) {
 		},
 		{
 			name:    "apt profile respects declared method (binary)",
-			tool:    update.ToolInfo{Name: "gga", InstallMethod: update.InstallBinary},
+			tool:    update.ToolInfo{Name: "mytool", InstallMethod: update.InstallBinary},
 			profile: system.PlatformProfile{PackageManager: "apt"},
 			want:    update.InstallBinary,
 		},
 		{
 			name:    "apt profile respects declared method (script)",
-			tool:    update.ToolInfo{Name: "gga", InstallMethod: update.InstallScript},
+			tool:    update.ToolInfo{Name: "mytool", InstallMethod: update.InstallScript},
 			profile: system.PlatformProfile{PackageManager: "apt"},
 			want:    update.InstallScript,
 		},
@@ -1237,8 +1237,8 @@ func TestBrewUpgrade_FormulaToolUsesFormulaTrust(t *testing.T) {
 }
 
 // TestBrewUpgrade_SelfToolSkipsForeignTap pins that Axiom's own upgrade never
-// taps nor trusts Gentleman-Programming's Homebrew tap: only engram and gga,
-// whose formulas live there, do.
+// taps nor trusts Gentleman-Programming's Homebrew tap: only engram,
+// whose formula lives there, does.
 func TestBrewUpgrade_SelfToolSkipsForeignTap(t *testing.T) {
 	origExecCommand := execCommand
 	t.Cleanup(func() { execCommand = origExecCommand })
@@ -1384,9 +1384,9 @@ func TestRunStrategy_ScriptUpgradeSuccess(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gga",
+			Name:          "mytool",
 			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
+			Repo:          "mytool",
 			InstallMethod: update.InstallScript,
 		},
 		LatestVersion: "2.8.0",
@@ -1425,9 +1425,9 @@ func TestRunStrategy_ScriptUpgradeDownloadFailure(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gga",
+			Name:          "mytool",
 			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
+			Repo:          "mytool",
 			InstallMethod: update.InstallScript,
 		},
 		LatestVersion: "2.8.0",
@@ -1454,9 +1454,9 @@ func TestRunStrategy_ScriptUpgradeWindowsManualFallback(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gga",
+			Name:          "mytool",
 			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
+			Repo:          "mytool",
 			InstallMethod: update.InstallScript,
 		},
 		LatestVersion: "2.8.0",
@@ -1470,194 +1470,6 @@ func TestRunStrategy_ScriptUpgradeWindowsManualFallback(t *testing.T) {
 
 	if execCalled {
 		t.Errorf("exec should NOT be called for Windows script manual fallback")
-	}
-}
-
-// --- TestGGAScriptUpgradeUsesGitClone ---
-
-// TestGGAScriptUpgradeUsesGitClone verifies that ggaScriptUpgrade:
-// 1. First calls `git clone --depth=1 --branch v<version> <repo-url> <tmpDir>`
-// 2. Then calls `bash <path-to-install.sh>`
-// — not `bash -c <script-content>` like the generic scriptUpgrade.
-// The clone is pinned to the target release tag so that install.sh matches the
-// version being upgraded to, not whatever is on main at upgrade time.
-func TestGGAScriptUpgradeUsesGitClone(t *testing.T) {
-	origExecCommand := execCommand
-	origDetectOS := detectOS
-	t.Cleanup(func() {
-		execCommand = origExecCommand
-		detectOS = origDetectOS
-	})
-	detectOS = func() string { return "linux" }
-
-	type call struct {
-		name string
-		args []string
-	}
-	var calls []call
-
-	execCommand = func(name string, args ...string) *exec.Cmd {
-		calls = append(calls, call{name: name, args: args})
-		return mockCmd("echo", "ok")
-	}
-
-	r := update.UpdateResult{
-		Tool: update.ToolInfo{
-			Name:          "gga",
-			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
-			InstallMethod: update.InstallScript,
-		},
-		LatestVersion: "2.8.0",
-	}
-
-	err := ggaScriptUpgrade(context.Background(), r)
-	if err != nil {
-		t.Fatalf("ggaScriptUpgrade: unexpected error: %v", err)
-	}
-
-	// Must have at least 4 exec calls (git init, git fetch, git checkout, bash install.sh).
-	if len(calls) < 4 {
-		t.Fatalf("expected at least 4 exec calls (git init + fetch + checkout + bash install.sh), got %d: %v", len(calls), calls)
-	}
-
-	// First call: git init
-	if calls[0].name != "git" || len(calls[0].args) == 0 || calls[0].args[0] != "init" {
-		t.Errorf("first exec call = %v, want git init", calls[0])
-	}
-
-	// Second call: git -C <dir> fetch --depth=1 <repoURL> refs/tags/v2.8.0:refs/tags/v2.8.0
-	fetchArgs := calls[1].args
-	foundRepoURL := false
-	foundTagRef := false
-	for _, a := range fetchArgs {
-		if containsAny(a, "gentleman-guardian-angel") {
-			foundRepoURL = true
-		}
-		if a == "refs/tags/v2.8.0:refs/tags/v2.8.0" {
-			foundTagRef = true
-		}
-	}
-	if !foundRepoURL {
-		t.Errorf("git fetch args %v should include the repo URL (gentleman-guardian-angel)", fetchArgs)
-	}
-	if !foundTagRef {
-		t.Errorf("git fetch args %v should include refs/tags/v2.8.0:refs/tags/v2.8.0 to pin to the release tag", fetchArgs)
-	}
-
-	// Third call: git -C <dir> checkout -f refs/tags/v2.8.0
-	checkoutArgs := calls[2].args
-	foundCheckoutTag := false
-	for _, a := range checkoutArgs {
-		if a == "refs/tags/v2.8.0" {
-			foundCheckoutTag = true
-		}
-	}
-	if !foundCheckoutTag {
-		t.Errorf("git checkout args %v should include refs/tags/v2.8.0", checkoutArgs)
-	}
-
-	// Fourth call must be `bash <path-to-install.sh>` (not bash -c <content>).
-	if calls[3].name != "bash" {
-		t.Errorf("fourth exec call name = %q, want %q", calls[3].name, "bash")
-	}
-	if len(calls[3].args) == 0 {
-		t.Fatalf("fourth exec call has no args")
-	}
-	installScriptArg := calls[3].args[0]
-	if !containsAny(installScriptArg, "install.sh") {
-		t.Errorf("bash arg = %q, want path containing install.sh", installScriptArg)
-	}
-	// Must NOT be bash -c (inline script content) — must be a file path.
-	if installScriptArg == "-c" {
-		t.Errorf("bash was called with -c (inline script), expected a file path to install.sh")
-	}
-}
-
-// --- TestGGAScriptUpgradeWindowsManualFallback ---
-
-// TestGGAScriptUpgradeWindowsManualFallback verifies that on Windows,
-// ggaScriptUpgrade returns a ManualFallbackError without calling exec.
-func TestGGAScriptUpgradeWindowsManualFallback(t *testing.T) {
-	origExecCommand := execCommand
-	t.Cleanup(func() { execCommand = origExecCommand })
-
-	execCalled := false
-	execCommand = func(name string, args ...string) *exec.Cmd {
-		execCalled = true
-		return mockCmd("echo", "should not run")
-	}
-
-	r := update.UpdateResult{
-		Tool: update.ToolInfo{
-			Name:          "gga",
-			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
-			InstallMethod: update.InstallScript,
-		},
-		LatestVersion: "2.8.0",
-	}
-
-	err := ggaScriptUpgradeForOS(context.Background(), r, "windows")
-	if err == nil {
-		t.Errorf("expected ManualFallbackError for Windows, got nil")
-	}
-	var mfe *ManualFallbackError
-	if !errors.As(err, &mfe) {
-		t.Errorf("expected *ManualFallbackError, got %T: %v", err, err)
-	}
-	if execCalled {
-		t.Errorf("exec should NOT be called on Windows for ggaScriptUpgrade")
-	}
-}
-
-// --- TestRunStrategy_GGAUsesGitClone ---
-
-// TestRunStrategy_GGAUsesGitClone verifies that when runStrategy is called with
-// a GGA tool (InstallScript), it routes to ggaScriptUpgrade (git clone approach)
-// rather than the generic scriptUpgrade (bash -c <content>).
-func TestRunStrategy_GGAUsesGitClone(t *testing.T) {
-	origExecCommand := execCommand
-	origDetectOS := detectOS
-	t.Cleanup(func() {
-		execCommand = origExecCommand
-		detectOS = origDetectOS
-	})
-	detectOS = func() string { return "linux" }
-
-	type call struct {
-		name string
-		args []string
-	}
-	var calls []call
-
-	execCommand = func(name string, args ...string) *exec.Cmd {
-		calls = append(calls, call{name: name, args: args})
-		return mockCmd("echo", "ok")
-	}
-
-	r := update.UpdateResult{
-		Tool: update.ToolInfo{
-			Name:          "gga",
-			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
-			InstallMethod: update.InstallScript,
-		},
-		LatestVersion: "2.8.0",
-	}
-	profile := system.PlatformProfile{OS: "linux", PackageManager: "apt"}
-
-	_, err := runStrategy(context.Background(), r, profile)
-	if err != nil {
-		t.Fatalf("runStrategy GGA: unexpected error: %v", err)
-	}
-
-	// Must have used git init + fetch (not bash -c).
-	if len(calls) < 4 {
-		t.Fatalf("expected at least 4 calls (git init + fetch + checkout + bash), got %d: %v", len(calls), calls)
-	}
-	if calls[0].name != "git" || (len(calls[0].args) > 0 && calls[0].args[0] != "init") {
-		t.Errorf("expected first call to be `git init`, got: %q %v", calls[0].name, calls[0].args)
 	}
 }
 
@@ -1676,9 +1488,9 @@ func TestInstallScriptURL(t *testing.T) {
 		{
 			name:        "pins to release tag",
 			owner:       "Gentleman-Programming",
-			repo:        "gentleman-guardian-angel",
+			repo:        "mytool",
 			version:     "1.31.0",
-			wantURL:     "https://raw.githubusercontent.com/Gentleman-Programming/gentleman-guardian-angel/v1.31.0/install.sh",
+			wantURL:     "https://raw.githubusercontent.com/Gentleman-Programming/mytool/v1.31.0/install.sh",
 			wantContain: "v1.31.0",
 		},
 		{
@@ -1854,9 +1666,9 @@ func TestRunStrategy_ScriptUpgradeExecFailure(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gga",
+			Name:          "mytool",
 			Owner:         "Gentleman-Programming",
-			Repo:          "gentleman-guardian-angel",
+			Repo:          "mytool",
 			InstallMethod: update.InstallScript,
 		},
 		LatestVersion: "2.8.0",

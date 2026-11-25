@@ -1459,7 +1459,6 @@ func (m Model) View() string {
 		return screens.RenderComplete(screens.CompletePayload{
 			ConfiguredAgents:    len(m.Selection.Agents),
 			InstalledComponents: len(m.Selection.Components),
-			GGAInstalled:        hasSelectedComponent(m.Selection.Components, model.ComponentGGA),
 			FailedSteps:         extractFailedSteps(m.Execution),
 			RollbackPerformed:   len(m.Execution.Rollback.Steps) > 0,
 			RollbackComplete:    m.Execution.Rollback.Success,
@@ -4753,16 +4752,12 @@ func piOnlyComponents() []model.ComponentID {
 }
 
 // defaultUninstallComponents es la selección inicial de la desinstalación
-// parcial: todo el catálogo menos GGA, que es huella de máquina y solo se retira
-// si se marca (como `--components gga` en el CLI). Engram sigue marcado: sin él
-// el agente no saldría de state.json (stateAgentsToRemove).
+// parcial: todo el catálogo. Engram sigue marcado: sin él el agente no saldría de
+// state.json (stateAgentsToRemove).
 func defaultUninstallComponents() []model.ComponentID {
 	options := screens.UninstallComponentOptions()
 	selected := make([]model.ComponentID, 0, len(options))
 	for _, component := range options {
-		if component.ID == model.ComponentGGA {
-			continue
-		}
 		selected = append(selected, component.ID)
 	}
 	return selected

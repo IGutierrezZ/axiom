@@ -10,7 +10,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
-	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
 // cmdLookPath, osStat, osGetenv, and cmdGoVersion are package-level vars for testability.
@@ -154,8 +153,6 @@ func (profileResolver) ResolveComponentInstall(profile system.PlatformProfile, c
 	switch component {
 	case model.ComponentEngram:
 		return resolveEngramInstall(profile)
-	case model.ComponentGGA:
-		return resolveGGAInstall(profile)
 	default:
 		return nil, fmt.Errorf("install command is not supported for component %q", component)
 	}
@@ -217,52 +214,6 @@ func resolveOpenCodeInstall(profile system.PlatformProfile) (CommandSequence, er
 		}
 		return nil, fmt.Errorf(
 			"unsupported platform for opencode: os=%q distro=%q pm=%q",
-			profile.OS, profile.LinuxDistro, profile.PackageManager,
-		)
-	}
-}
-
-// resolveGGAInstall returns the correct install command sequence for GGA per platform.
-// - darwin: brew tap + brew install (via Gentleman-Programming/homebrew-tap)
-// - linux: git clone + install.sh (GGA is a pure Bash project, NOT a Go module)
-func resolveGGAInstall(profile system.PlatformProfile) (CommandSequence, error) {
-	switch profile.PackageManager {
-	case "brew":
-		return CommandSequence{
-			{"brew", "tap", "Gentleman-Programming/homebrew-tap"},
-			{"brew", "reinstall", "gga"},
-		}, nil
-	case "winget":
-		// On Windows, use Git Bash explicitly to avoid bare "bash" resolving to
-		// C:\Windows\System32\bash.exe (WSL), which cannot run the script.
-		// Runtime cleanup is handled through system.PowerShellRunner before this
-		// sequence so pwsh launch failures can safely fall back.
-		cloneDst := filepath.Join(os.TempDir(), "gentleman-guardian-angel")
-		bash := gitBashPath()
-		return CommandSequence{
-			{"git", "clone", "--depth=1", "--branch", "v" + versions.GGAVersion, "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git", cloneDst},
-			{bash, bashScriptPath(profile, filepath.Join(cloneDst, "install.sh"))},
-		}, nil
-	default:
-		// Any package manager the system probe accepted is enough here: the
-		// Linux install is git clone + install.sh and never touches the
-		// manager, so re-enumerating managers would silently narrow the
-		// probe's list (issue #2499). The gate keeps a probe-rejected Linux
-		// profile (empty PackageManager) on the unsupported arm.
-		if profile.OS == "linux" && profile.PackageManager != "" {
-			const tmpDir = "/tmp/gentleman-guardian-angel"
-			tagRef := "refs/tags/v" + versions.GGAVersion
-			return CommandSequence{
-				{"rm", "-rf", tmpDir},
-				{"mkdir", "-p", tmpDir},
-				{"git", "init", tmpDir},
-				{"git", "-C", tmpDir, "fetch", "--depth=1", "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git", tagRef + ":" + tagRef},
-				{"git", "-C", tmpDir, "checkout", "-f", tagRef},
-				{"bash", tmpDir + "/install.sh"},
-			}, nil
-		}
-		return nil, fmt.Errorf(
-			"unsupported platform for gga: os=%q distro=%q pm=%q",
 			profile.OS, profile.LinuxDistro, profile.PackageManager,
 		)
 	}

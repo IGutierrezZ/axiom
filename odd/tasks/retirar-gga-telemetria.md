@@ -36,11 +36,10 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · Borrar las lápidas de telemetría: `telemetryruntime`, `sdd/telemetry_retire.go`, el paso de OpenCode en `run`/`sync`, la limpieza de hooks y plugin en `uninstall`, y sus tests.
-- [ ] T2 · Retirar GGA de instalación, sincronización, diagnóstico, desinstalación y TUI (componente, assets, registro, `installcmd`, `cli`, `uninstall`, pantallas), con el lector tolerante del estado.
-- [ ] T3 · Retirar GGA de versiones y actualización (`versions`, `update`, `update/upgrade`, `app`).
-- [ ] T4 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd retirar-gga-telemetria` y criterio `rg`.
+- [x] T2 · Retirar GGA del código y sus tests: componente, assets, registro, `installcmd`, `cli`, `uninstall`, TUI, `versions`, `update`, `update/upgrade` y `app`, con el lector tolerante del estado. (Se funde con la antigua T3: `update/upgrade` importaba el paquete `gga` y el commit no compilaría por separado.)
+- [ ] T3 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd retirar-gga-telemetria` y criterio `rg`.
 
-Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades independientes con superficies disjuntas que justifiquen escritores en paralelo).
+Ruta: T1, en línea. T2, código de producción en línea y limpieza de unos 30 ficheros de test delegada en un escritor (disparador: proteger el contexto del padre; ~450 menciones mecánicas). T3, en línea salvo `PRD.md`, delegado en un segundo escritor en paralelo (disparador: paralelismo, superficie disjunta).
 
 ## Criterio de terminado
 
@@ -50,10 +49,34 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - La spec `gga` queda retirada.
 - `go vet` y `go test` de los paquetes tocados en verde; la batería completa, en la CI de la PR.
 
+## Spec viva
+
+Retira la capacidad `gga` entera: Axiom deja de instalar, sincronizar, diagnosticar, desinstalar y actualizar GGA (P20, sin lápidas).
+
+### Capacidad: gga
+
+```openspec
+## REMOVED Requirements
+
+### Requirement: PowerShell Shim Asset
+
+(Reason: C-08-e retira GGA; Axiom ya no escribe el shim `gga.ps1`.)
+
+### Requirement: Windows Install Step
+
+(Reason: C-08-e retira GGA; la instalación ya no tiene paso de GGA en ningún sistema.)
+
+### Requirement: Non-Windows Systems Unaffected
+
+(Reason: C-08-e retira GGA; sin componente GGA no hay flujo de Linux o macOS que preservar.)
+```
+
 ## Progreso
 
 - 2026-11-25: worktree creado desde `origin/main` `9ed8e03c`; documento creado.
+- 2026-11-25: T1 hecha en `ce2fdf4e` (`go test` de `sdd`, `uninstall` y `cli -run OpenCode|Retire|Legacy|Sync` en verde).
+- 2026-11-26: T2 hecha. `go vet ./...` limpio; `go test` en verde de `app`, `model`, `versions`, `installcmd`, `components/uninstall`, `components/mcp`, `update`, `update/upgrade`, `state`, `catalog`, `tui/screens`, `tui -run Preset|Complete|Uninstall|Model` y `cli -run Doctor|Footprint|OptionalTools|NormalizeInstallFlags|RunNotes|PostInstallNotes|PathGuidance|GoInstallPathNote|WorkspaceAgents|Sync|RunInstall|CheckOneTool|CheckToolBinaries`. Goldens `preset-custom-*` regenerados (solo pierden la fila de GGA). Tests nuevos: `state.TestReadIgnoresComponentsAxiomNoLongerSupports` y `catalog.TestModelKnownComponentsCoverCatalog`. El método genérico `InstallScript` de `update` queda sin herramientas que lo usen; se conserva con sus tests.
 
 ## Siguiente paso
 
-T1.
+T3: docs, e2e, notas y Spec viva.

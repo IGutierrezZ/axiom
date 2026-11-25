@@ -56,7 +56,7 @@ func TestRunUpgradeReport_ClassifiesOutcomes(t *testing.T) {
 			name: "all tools succeeded without self-tool restart",
 			results: []upgrade.ToolUpgradeResult{
 				{ToolName: "engram", Status: upgrade.UpgradeSucceeded, NewVersion: "0.4.0"},
-				{ToolName: "gga", Status: upgrade.UpgradeSucceeded, NewVersion: "1.1.0"},
+				{ToolName: "opencode-subagent-statusline", Status: upgrade.UpgradeSucceeded, NewVersion: "1.1.0"},
 			},
 			wantStatus:     "succeeded",
 			wantToolStatus: []string{"succeeded", "succeeded"},

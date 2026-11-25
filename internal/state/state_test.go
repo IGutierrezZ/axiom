@@ -1512,3 +1512,40 @@ func TestReadIgnoresAgentsTheCatalogNoLongerKnows(t *testing.T) {
 		t.Errorf("la siguiente escritura no debe conservar el agente retirado: %s", out)
 	}
 }
+
+// Un estado guardado con un componente que Axiom ya no admite (como gga) sigue
+// cargando sin error: el componente sale de Components y queda en
+// IgnoredComponents para avisar, y la siguiente escritura ya no lo conserva.
+func TestReadIgnoresComponentsAxiomNoLongerSupports(t *testing.T) {
+	home := t.TempDir()
+	path := Path(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"selection_configured": true, "components": ["engram", "gga", "sdd"]}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Read(home)
+	if err != nil {
+		t.Fatalf("Read() error = %v, want nil con un componente retirado", err)
+	}
+	if want := []model.ComponentID{model.ComponentEngram, model.ComponentSDD}; !reflect.DeepEqual(s.Components, want) {
+		t.Errorf("Components = %v, want %v", s.Components, want)
+	}
+	if want := []model.ComponentID{"gga"}; !reflect.DeepEqual(s.IgnoredComponents, want) {
+		t.Errorf("IgnoredComponents = %v, want %v", s.IgnoredComponents, want)
+	}
+
+	if err := Write(home, s); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(written), "gga") {
+		t.Errorf("la siguiente escritura no debe conservar el componente retirado: %s", written)
+	}
+}

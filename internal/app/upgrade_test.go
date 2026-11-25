@@ -83,7 +83,7 @@ func TestRunArgs_UpgradeToolFilter(t *testing.T) {
 	}
 
 	out := buf.String()
-	// Output should only mention engram or no-upgrades, not gentle-ai or gga.
+	// Output should only mention engram or no-upgrades, not gentle-ai or opencode-subagent-statusline.
 	// This is a soft check since the tool may not be installed.
 	if strings.Contains(out, "gentle-ai") && !strings.Contains(out, "engram") {
 		t.Errorf("filtering to engram should not show gentle-ai in output; got: %s", out)
@@ -197,14 +197,14 @@ func TestRenderUpgradeReport_PerToolSemantics_Deterministic(t *testing.T) {
 			name: "real failure shows error details",
 			results: []upgrade.ToolUpgradeResult{
 				{
-					ToolName:   "gga",
+					ToolName:   "opencode-subagent-statusline",
 					OldVersion: "1.0.0",
 					NewVersion: "2.0.0",
 					Status:     upgrade.UpgradeFailed,
-					Err:        errors.New("brew upgrade gga: exit status 1"),
+					Err:        errors.New("brew upgrade opencode-subagent-statusline: exit status 1"),
 				},
 			},
-			wantContains:   []string{"gga", "FAILED", "exit status 1", "[!!]"},
+			wantContains:   []string{"opencode-subagent-statusline", "FAILED", "exit status 1", "[!!]"},
 			wantNotContain: []string{"manual update required"},
 		},
 		{
@@ -238,14 +238,14 @@ func TestRenderUpgradeReport_PerToolSemantics_Deterministic(t *testing.T) {
 					ManualHint: "source build — upgrade manually",
 				},
 				{
-					ToolName:   "gga",
+					ToolName:   "opencode-subagent-statusline",
 					OldVersion: "1.0.0",
 					NewVersion: "2.0.0",
 					Status:     upgrade.UpgradeSkipped,
-					ManualHint: "Download from https://github.com/Gentleman-Programming/gga/releases",
+					ManualHint: "Download from https://github.com/Joaquinvesapa/sub-agent-statusline/releases",
 				},
 			},
-			wantContains:   []string{"engram", "[ok]", "gentle-ai", "[--]", "gga", "1 succeeded", "2 skipped"},
+			wantContains:   []string{"engram", "[ok]", "gentle-ai", "[--]", "opencode-subagent-statusline", "1 succeeded", "2 skipped"},
 			wantNotContain: []string{"FAILED", "[!!]"},
 		},
 	}

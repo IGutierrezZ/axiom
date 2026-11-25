@@ -26,7 +26,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
@@ -75,14 +74,9 @@ var (
 	pathEnvEntries               = func(profile system.PlatformProfile) []string {
 		return splitPathForOS(os.Getenv("PATH"), profile.OS)
 	}
-	addUserPath          = system.AddToUserPath
-	ensureUserPathFirst  = system.PrioritizeUserPath
-	userPathEntries      = system.UserPathEntries
-	cleanupGGAInstallDir = gga.CleanupInstallDir
-
-	// ggaAvailableCheck is an optional override for ggaAvailable behavior.
-	// When set, it is called instead of the default filesystem check.
-	ggaAvailableCheck func(system.PlatformProfile) bool
+	addUserPath         = system.AddToUserPath
+	ensureUserPathFirst = system.PrioritizeUserPath
+	userPathEntries     = system.UserPathEntries
 
 	// engramDownloadFn is the function used to download the engram binary on non-brew platforms.
 	// Package-level var for testability — tests can replace this to avoid real HTTP calls.
@@ -293,7 +287,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		return result, fmt.Errorf("execute install pipeline: %w", result.Execution.Err)
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
-	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.ggaManualActions()...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
@@ -306,7 +299,7 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		Resolved:     resolved,
 		State:        runtime.state,
 	})
-	result.Verify = withPostInstallNotes(result.Verify, resolved, runtime.state.ggaInstallDeferred)
+	result.Verify = withPostInstallNotes(result.Verify, resolved)
 	result.Verify = withOpenCodeBackgroundPending(result.Verify, background, runtime.runtimeReady, resolved.Agents)
 	result.Verify = withOpenCodeBackgroundActivationNote(result.Verify, background, resolved.Agents)
 	if plan := piBackground.projectionPlan; plan != nil && plan.skipReason != "" {
@@ -496,12 +489,9 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	return merged, nil
 }
 
-func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan, ggaInstallDeferred bool) verify.Report {
+func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan) verify.Report {
 	report = withReadyAgentRunNote(report, resolved)
 	report = withFailedVerificationNote(report, resolved)
-	if hasComponent(resolved.OrderedComponents, model.ComponentGGA) && report.Ready && !ggaInstallDeferred {
-		report.FinalNote = report.FinalNote + "\n\nGGA is now installed globally. To enable project hooks, run in each repo:\n- gga init\n- gga install"
-	}
 	report = withGoInstallPathNote(report, resolved)
 	return report
 }
@@ -744,10 +734,6 @@ type runtimeState struct {
 	createdBackupDir         string
 	piCodeGraph              *communitytool.PiCodeGraphResult
 	compatibilityTransaction compatibilityRefreshTransaction
-	// ggaInstallDeferred indica que la instalación del binario de GGA se pospuso
-	// porque falta Homebrew en macOS; la configuración de GGA sí se aplicó.
-	ggaInstallDeferred bool
-
 	// engramVersionResolved, engramVersion, and engramVersionErr cache the
 	// single `engram version` invocation performed by componentApplyStep.Run
 	// for ComponentEngram (Decision 1 gate), so the post-apply health check
@@ -756,20 +742,6 @@ type runtimeState struct {
 	engramVersionResolved bool
 	engramVersion         string
 	engramVersionErr      error
-}
-
-func (s *runtimeState) recordGGAInstallDeferred() {
-	if s != nil {
-		s.ggaInstallDeferred = true
-	}
-}
-
-// ggaManualActions devuelve las acciones de cierre que deben los pasos de GGA.
-func (s *runtimeState) ggaManualActions() []string {
-	if s == nil || !s.ggaInstallDeferred {
-		return nil
-	}
-	return []string{GGAHomebrewDeferredAction}
 }
 
 func (s *runtimeState) cleanupRollbackSnapshot() {
@@ -1907,64 +1879,6 @@ func (s componentApplyStep) Run() error {
 			}
 		}
 		return nil
-	case model.ComponentGGA:
-		installGGA := !ggaAvailable(s.profile)
-		if installGGA && s.profile.PackageManager == "brew" && !homebrewAvailable() {
-			// Sin Homebrew el binario de GGA es un prerrequisito opcional que falta, no
-			// una instalación fallida: se anota una acción manual y se sigue aplicando
-			// la configuración de GGA. Un Homebrew presente que falle sí falla el paso.
-			s.state.recordGGAInstallDeferred()
-			installGGA = false
-		}
-		if installGGA {
-			// GGA not found on any known PATH — install it.
-			if s.profile.OS == "windows" {
-				if err := cleanupGGAInstallDir(); err != nil {
-					return err
-				}
-			}
-			commands, err := gga.InstallCommand(s.profile)
-			if err != nil {
-				return fmt.Errorf("resolve install command for component %q: %w", s.component, err)
-			}
-			installErr := runCommandSequence(withResolvedBrewCommand(commands))
-			if installErr != nil {
-				if ggaAvailable(s.profile) {
-					// The GGA install script uses `set -e` and `read -p` for
-					// the "already installed" confirmation. Without a TTY
-					// (common in automated/re-run scenarios), `read` fails
-					// with exit code 1 and `set -e` kills the script before
-					// it can exit 0. If GGA is actually available after the
-					// script ran, the install succeeded functionally — treat
-					// as success but warn the user.
-					fmt.Fprintf(os.Stderr, "WARNING: gga install command reported an error but gga is available — continuing. Error was: %v\n", installErr)
-				} else {
-					return installErr
-				}
-			}
-		}
-		if err := gga.EnsureRuntimeAssets(s.homeDir); err != nil {
-			return fmt.Errorf("ensure gga runtime assets: %w", err)
-		}
-		if runtime.GOOS == "windows" {
-			if err := gga.EnsurePowerShellShim(s.homeDir); err != nil {
-				return fmt.Errorf("ensure gga powershell shim: %w", err)
-			}
-			if err := gga.EnsureCommandShim(s.homeDir); err != nil {
-				return fmt.Errorf("ensure gga command shim: %w", err)
-			}
-			// Add GGA bin dir to the user PATH persistently on Windows.
-			// GGA's install.sh drops the binary into ~/bin which is not on PATH by default.
-			ggaBinDir := filepath.Join(s.homeDir, "bin")
-			if err := addUserPath(ggaBinDir); err != nil {
-				// Non-fatal: warn but continue — GGA was installed successfully.
-				fmt.Fprintf(os.Stderr, "WARNING: could not add %s to PATH: %v\n", ggaBinDir, err)
-			}
-		}
-		if _, err := gga.Inject(s.homeDir, s.agents); err != nil {
-			return fmt.Errorf("inject gga config: %w", err)
-		}
-		return nil
 	case model.ComponentTheme:
 		// Retained for legacy selections; no visual configuration is installed.
 		return nil
@@ -2080,7 +1994,6 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
 	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
-	result.ManualActions = append(result.ManualActions, runtime.state.ggaManualActions()...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
@@ -2113,48 +2026,6 @@ func ResolveInstallProfile(detection system.DetectionResult) system.PlatformProf
 		PackageManager: "brew",
 		Supported:      true,
 	}
-}
-
-// ggaAvailable reports whether the gga binary is reachable. gga is often
-// installed to ~/.local/bin (the default for install.sh on Linux and macOS)
-// or ~/bin (the default for install.sh on Windows), which may not be on PATH.
-// On macOS with Homebrew, gga may be in /opt/homebrew/bin or /usr/local/bin.
-// We check the filesystem directly to avoid spawning a subprocess and to work
-// regardless of whether the install directory has been added to PATH.
-func ggaAvailable(profile system.PlatformProfile) bool {
-	// Allow test override.
-	if ggaAvailableCheck != nil {
-		return ggaAvailableCheck(profile)
-	}
-	if _, err := cmdLookPath("gga"); err == nil {
-		return true
-	}
-	homeDir, err := osUserHomeDir()
-	if err != nil {
-		return false
-	}
-	if _, err := osStat(filepath.Join(homeDir, ".local", "bin", "gga")); err == nil {
-		return true
-	}
-	// Check well-known Homebrew prefixes for macOS (arm64 and x86).
-	// gga may be installed via brew but not yet in the shell PATH
-	// (e.g. new terminal session, Rosetta environment mismatch).
-	if profile.OS == "darwin" || profile.PackageManager == "brew" {
-		for _, brewBin := range []string{
-			"/opt/homebrew/bin/gga",
-			"/usr/local/bin/gga",
-		} {
-			if _, err := osStat(brewBin); err == nil {
-				return true
-			}
-		}
-	}
-	if profile.OS == "windows" {
-		if _, err := osStat(filepath.Join(homeDir, "bin", "gga")); err == nil {
-			return true
-		}
-	}
-	return false
 }
 
 func isExecutableFile(path string) bool {
@@ -2195,21 +2066,6 @@ func resolveEngramInstalledPath(profile system.PlatformProfile) (string, bool) {
 		return standardHomebrewExecutable("engram")
 	}
 	return "", false
-}
-
-// GGAHomebrewDeferredAction es la acción manual que se registra cuando se
-// pospone la instalación de GGA por falta de Homebrew. Los renderizadores de
-// cierre la usan para no afirmar que GGA quedó instalado.
-const GGAHomebrewDeferredAction = "gga was not installed because Homebrew is not available. Install Homebrew (https://brew.sh), then run `axiom install --component gga`."
-
-// homebrewAvailable indica si brew está en el PATH o en un prefijo estándar de
-// Homebrew, las mismas ubicaciones que usa resolveBrewCommand.
-func homebrewAvailable() bool {
-	if _, err := cmdLookPath("brew"); err == nil {
-		return true
-	}
-	_, found := standardHomebrewExecutable("brew")
-	return found
 }
 
 // resolveBrewCommand avoids environment-sensitive shell profile probing. The
@@ -2791,12 +2647,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					paths = append(paths, p)
 				}
 			}
-		case model.ComponentGGA:
-			if scope == ScopeWorkspace {
-				break
-			}
-			paths = append(paths, gga.ConfigPath(homeDir))
-			paths = append(paths, gga.AgentsTemplatePath(homeDir))
 		case model.ComponentTheme:
 			// No managed path: legacy theme component is inert.
 		case model.ComponentClaudeTheme:

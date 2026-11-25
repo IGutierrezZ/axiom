@@ -10,10 +10,9 @@ func VisualPolishComponents() []ComponentID {
 // ComponentsForPreset returns the managed components implied by a preset/persona
 // pair. Visual themes are retained as legacy cleanup IDs, never installed.
 //
-// GGA no forma parte de ningún preset predefinido: es opcional y solo se instala
-// por selección explícita (`--component gga`, preset custom o la TUI). CodeGraph
-// tampoco: es una herramienta de la comunidad que se elige aparte
-// (Selection.CommunityTools) y nunca viene marcada por defecto.
+// CodeGraph no forma parte de ningún preset predefinido: es una herramienta de
+// la comunidad que se elige aparte (Selection.CommunityTools) y nunca viene
+// marcada por defecto.
 func ComponentsForPreset(preset PresetID, persona PersonaID) []ComponentID {
 	var components []ComponentID
 	switch preset {

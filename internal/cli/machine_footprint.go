@@ -2,13 +2,11 @@ package cli
 
 import (
 	"fmt"
-	"runtime"
 	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
@@ -20,7 +18,7 @@ import (
 // pasos implícitos que escribían en HOME se omiten (engram setup, la copia de
 // skills de compatibilidad, la limpieza de skills retiradas en HOME y el refresco
 // de plugins de OpenCode en HOME). Los componentes que el usuario elige de forma
-// explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conservan su
+// explícita (CodeGraph, plugins comunitarios de OpenCode) conservan su
 // huella en HOME, que es consentimiento expreso, pero se declara aquí con un
 // aviso que enumera las rutas y la modificación del PATH.
 
@@ -66,16 +64,6 @@ func optInFootprintNotes(scope InstallScope, homeDir string, components []model.
 		return nil
 	}
 	var notes []string
-	if slices.Contains(components, model.ComponentGGA) {
-		paths := gga.FootprintPaths(homeDir, runtime.GOOS)
-		note := fmt.Sprintf(
-			"GGA se ha elegido de forma explícita y escribe fuera del proyecto, en tu carpeta de usuario: %s, además del binario `gga` que instala su script en ~/bin o ~/.local/bin.",
-			strings.Join(paths, ", "))
-		if entries := gga.FootprintPathEntries(homeDir, runtime.GOOS); len(entries) > 0 {
-			note += fmt.Sprintf(" También modifica el PATH de usuario: añade %s.", strings.Join(entries, ", "))
-		}
-		notes = append(notes, note+" Es la huella de máquina declarada de GGA; retírala a mano si dejas de usarlo.")
-	}
 	if selection.HasCommunityTool(model.CommunityToolCodeGraph) {
 		note := "CodeGraph se ha elegido de forma explícita y Axiom no lo integra con ubicación de proyecto: se instala como paquete global y su MCP y su guía se escriben en la configuración de usuario de los agentes detectados"
 		if paths := communitytool.CodeGraphManagedPaths(homeDir); len(paths) > 0 {

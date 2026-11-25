@@ -58,8 +58,6 @@ func updateHint(tool ToolInfo, profile system.PlatformProfile) string {
 	switch tool.Name {
 	case "engram":
 		return engramHint(profile)
-	case "gga":
-		return ggaHint(profile)
 	case "opencode-subagent-statusline", "opencode-sdd-engram-manage":
 		return "axiom upgrade updates ~/.config/opencode npm deps, clears this plugin's @latest cache, then requires OpenCode restart/reload"
 	default:
@@ -105,11 +103,4 @@ func engramHint(profile system.PlatformProfile) string {
 		return "brew upgrade engram"
 	}
 	return "axiom upgrade (downloads pre-built binary)"
-}
-
-func ggaHint(profile system.PlatformProfile) string {
-	if profile.PackageManager == "brew" && homebrewPackageInstalled("gga") {
-		return "brew upgrade gga"
-	}
-	return "See https://github.com/Gentleman-Programming/gentleman-guardian-angel"
 }

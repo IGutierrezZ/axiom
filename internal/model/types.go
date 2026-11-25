@@ -92,7 +92,6 @@ const (
 	ComponentContext7           ComponentID = "context7"
 	ComponentPersona            ComponentID = "persona"
 	ComponentPermission         ComponentID = "permissions"
-	ComponentGGA                ComponentID = "gga"
 	ComponentTheme              ComponentID = "theme"
 	ComponentClaudeTheme        ComponentID = "claude-theme"
 	ComponentOpenCodeGentleLogo ComponentID = "opencode-gentle-logo"
@@ -259,5 +258,28 @@ var knownAgentIDs = map[AgentID]struct{}{
 // (por ejemplo, de un agente retirado) se ignora al leer el estado.
 func IsKnownAgentID(id AgentID) bool {
 	_, ok := knownAgentIDs[id]
+	return ok
+}
+
+// knownComponentIDs son los componentes que Axiom admite, incluidos los visuales
+// que solo se conservan para limpiarlos. Contiene los de catalog.MVPComponents
+// (lo comprueba una prueba de catalog); está aquí para que el estado pueda
+// filtrar componentes retirados, como GGA, sin depender del catálogo.
+var knownComponentIDs = map[ComponentID]struct{}{
+	ComponentEngram:             {},
+	ComponentSDD:                {},
+	ComponentSkills:             {},
+	ComponentContext7:           {},
+	ComponentPersona:            {},
+	ComponentPermission:         {},
+	ComponentTheme:              {},
+	ComponentClaudeTheme:        {},
+	ComponentOpenCodeGentleLogo: {},
+}
+
+// IsKnownComponentID dice si Axiom admite el componente. Un identificador que no
+// lo es (por ejemplo, el de GGA, retirado) se ignora al leer el estado.
+func IsKnownComponentID(id ComponentID) bool {
+	_, ok := knownComponentIDs[id]
 	return ok
 }

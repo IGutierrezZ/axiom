@@ -11,13 +11,10 @@ import (
 )
 
 // La selección por defecto de la desinstalación parcial retira el agente entero
-// (Engram incluido, para que salga de state.json) pero no la huella de máquina de GGA.
-func TestDefaultUninstallComponentsExcludesGGA(t *testing.T) {
+// (Engram incluido, para que salga de state.json): todo el catálogo desinstalable.
+func TestDefaultUninstallComponentsCoverWholeCatalog(t *testing.T) {
 	m := NewModel(system.DetectionResult{}, "dev")
 
-	if slices.Contains(m.UninstallComponents, model.ComponentGGA) {
-		t.Fatalf("default UninstallComponents = %v, want no %q", m.UninstallComponents, model.ComponentGGA)
-	}
 	if !slices.Contains(m.UninstallComponents, model.ComponentEngram) {
 		t.Fatalf("default UninstallComponents = %v, want %q", m.UninstallComponents, model.ComponentEngram)
 	}
@@ -29,13 +26,12 @@ func TestDefaultUninstallComponentsExcludesGGA(t *testing.T) {
 }
 
 // Con la selección por defecto, el TUI no pasa componentes: el servicio aplica lo
-// mismo que `axiom uninstall --agent X` sin `--components` (conserva GGA y el
-// registro MCP de Engram). Cualquier otra selección es explícita y viaja tal cual.
+// mismo que `axiom uninstall --agent X` sin `--components` (conserva el registro
+// MCP de Engram). Cualquier otra selección es explícita y viaja tal cual.
 func TestStartUninstallPassesComponentsOnlyForNonDefaultSelection(t *testing.T) {
 	defaultSelection := defaultUninstallComponents()
 	reordered := slices.Clone(defaultSelection)
 	slices.Reverse(reordered)
-	withGGA := append(slices.Clone(defaultSelection), model.ComponentGGA)
 	onlyEngram := []model.ComponentID{model.ComponentEngram}
 
 	cases := []struct {
@@ -48,7 +44,6 @@ func TestStartUninstallPassesComponentsOnlyForNonDefaultSelection(t *testing.T) 
 		{name: "default selection", mode: model.UninstallModePartial, selection: defaultSelection, wantPassed: nil},
 		{name: "default selection in another order", mode: model.UninstallModePartial, selection: reordered, wantPassed: nil},
 		{name: "default selection with profiles", mode: model.UninstallModePartial, selection: defaultSelection, wantPassed: nil, withProfiles: true},
-		{name: "default plus GGA", mode: model.UninstallModePartial, selection: withGGA, wantPassed: withGGA},
 		{name: "only Engram", mode: model.UninstallModePartial, selection: onlyEngram, wantPassed: onlyEngram},
 		{name: "full uninstall", mode: model.UninstallModeFull, selection: defaultSelection, wantPassed: defaultSelection},
 	}

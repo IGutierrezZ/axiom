@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -33,9 +32,7 @@ const (
 )
 
 // coreTools are ecosystem-level binaries that axiom always requires
-// regardless of which agents the user installed. GGA is no longer one of them:
-// it is optional and only required when the persisted selection includes it
-// (see doctorGGARequired). Agent-specific binaries are
+// regardless of which agents the user installed. Agent-specific binaries are
 // derived from state.json's InstalledAgents field (see #709) so the doctor
 // only reports missing agents the user actually selected.
 var coreTools = []string{"axiom", "engram"}
@@ -139,9 +136,6 @@ func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState)
 
 	pathDirs := pathDirsFn()
 	requiredTools := requiredDoctorTools(installedAgents)
-	if doctorGGARequired(installedState) && !slices.Contains(requiredTools, "gga") {
-		requiredTools = append(requiredTools, "gga")
-	}
 	checks := make([]doctor.Check, 0, len(requiredTools)+4)
 	for _, tool := range requiredTools {
 		tool := tool

@@ -3,13 +3,11 @@ package cli
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
@@ -113,7 +111,7 @@ func TestRunInstallWorkspaceDefaultPresetLeavesHomeUntouched(t *testing.T) {
 			t.Errorf("el aviso de engram setup omitido no contiene %q:\n%s", want, joined)
 		}
 	}
-	for _, unwanted := range []string{"GGA", "CodeGraph"} {
+	for _, unwanted := range []string{"CodeGraph"} {
 		if strings.Contains(joined, unwanted) {
 			t.Errorf("el preset por defecto no elige %s, pero hay aviso:\n%s", unwanted, joined)
 		}
@@ -244,22 +242,8 @@ func TestOptInFootprintNotes(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 
-	// GGA elegido de forma explícita: rutas de HOME y, en Windows, el PATH.
-	notes := optInFootprintNotes(ScopeWorkspace, home, []model.ComponentID{model.ComponentGGA}, nil, model.Selection{})
-	if len(notes) != 1 {
-		t.Fatalf("GGA explícito debe dar un aviso, got %v", notes)
-	}
-	for _, path := range gga.FootprintPaths(home, runtime.GOOS) {
-		if !strings.Contains(notes[0], path) {
-			t.Errorf("el aviso de GGA no lista %s:\n%s", path, notes[0])
-		}
-	}
-	if hasPathChange := strings.Contains(notes[0], "PATH de usuario"); hasPathChange != (runtime.GOOS == "windows") {
-		t.Errorf("la modificación del PATH solo se declara en Windows (GOOS=%s):\n%s", runtime.GOOS, notes[0])
-	}
-
 	// CodeGraph no admite ubicación de proyecto en Axiom: se declara igual.
-	notes = optInFootprintNotes(ScopeWorkspace, home, nil, nil, model.Selection{CommunityTools: []model.CommunityToolID{model.CommunityToolCodeGraph}})
+	notes := optInFootprintNotes(ScopeWorkspace, home, nil, nil, model.Selection{CommunityTools: []model.CommunityToolID{model.CommunityToolCodeGraph}})
 	if len(notes) != 1 || !strings.Contains(notes[0], "CodeGraph") || !strings.Contains(notes[0], "paquete global") {
 		t.Errorf("CodeGraph explícito debe declarar su huella global, got %v", notes)
 	}
@@ -279,42 +263,7 @@ func TestOptInFootprintNotes(t *testing.T) {
 	if got := optInFootprintNotes(ScopeWorkspace, home, []model.ComponentID{model.ComponentSDD}, []model.AgentID{model.AgentOpenCode}, model.Selection{}); len(got) != 0 {
 		t.Errorf("sin opt-in no hay avisos, got %v", got)
 	}
-	if got := optInFootprintNotes(ScopeGlobal, home, []model.ComponentID{model.ComponentGGA}, nil, model.Selection{}); len(got) != 0 {
+	if got := optInFootprintNotes(ScopeGlobal, home, nil, nil, model.Selection{CommunityTools: []model.CommunityToolID{model.CommunityToolCodeGraph}}); len(got) != 0 {
 		t.Errorf("con ámbito global no hay avisos, got %v", got)
-	}
-}
-
-// Elegir GGA de forma explícita con --scope workspace sigue escribiendo en HOME
-// (consentimiento expreso), pero la instalación lo declara con un aviso.
-func TestRunInstallWorkspaceExplicitGGAEmitsFootprintNote(t *testing.T) {
-	home, _, _ := footprintEnv(t)
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	result, err := RunInstall([]string{"--scope", "workspace", "--agent", "opencode", "--component", "gga"}, macOSDetectionResult())
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	joined := strings.Join(result.Execution.ManualActions, "\n")
-	if !strings.Contains(joined, "GGA se ha elegido de forma explícita") || !strings.Contains(joined, filepath.Join(home, ".local", "share", "gga")) {
-		t.Errorf("falta el aviso de huella de GGA con las rutas de HOME:\n%s", joined)
-	}
-}
-
-func TestRunSyncWorkspaceExplicitGGAEmitsFootprintNote(t *testing.T) {
-	home, workspace, _ := footprintEnv(t)
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentGGA},
-		Persona:    model.PersonaNeutral,
-	}
-	result, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection)
-	if err != nil {
-		t.Fatalf("RunSyncWithSelectionScoped() error = %v", err)
-	}
-	if joined := strings.Join(result.Execution.ManualActions, "\n"); !strings.Contains(joined, "GGA se ha elegido de forma explícita") {
-		t.Errorf("sync con GGA explícito debe declarar su huella:\n%s", joined)
 	}
 }
