@@ -11,7 +11,6 @@ require (
 	github.com/mattn/go-isatty v0.0.24
 	github.com/muesli/termenv v0.16.0
 	github.com/rivo/uniseg v0.4.7
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/sys v0.47.0
 	gopkg.in/yaml.v3 v3.0.1

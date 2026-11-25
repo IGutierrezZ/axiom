@@ -32,43 +32,6 @@ The uninstall flow is also available from the TUI menu. It lets you:
 
 Antes de modificar cualquier fichero gestionado, Axiom crea una copia de seguridad que permite restaurar la configuración si es necesario.
 
-### Receipt-Driven Development during installation
-
-Before the final installation confirmation, the customizable installer explains Receipt-Driven Development (RDD) and asks you to choose **RDD ON** or **RDD OFF**. RDD records bounded, independent review evidence for a frozen change candidate and supports a bounded correction process. It can add review time and model cost.
-
-La elección es opcional y, si no existe una preferencia global, el valor predeterminado es OFF. Puedes volver desde la pantalla de confirmación para cambiarla. Axiom guarda la preferencia global seleccionada solo cuando la instalación termina correctamente; una instalación interrumpida o fallida no la modifica. Los ajustes locales existentes de cada clon se conservan, por lo que el modo efectivo de un clon puede diferir del global. La evidencia de RDD no autoriza commits, pushes, pull requests ni releases: la entrega sigue sujeta a las normas habituales del repositorio.
-
-### RDD por usuario y proyecto
-
-Además del interruptor global y del «apagar» de cada clon, puedes fijar tu propia preferencia de RDD para un proyecto registrado en tu hub:
-
-```bash
-# Encendido para ti en este proyecto
-axiom review mode enable --scope project
-
-# Apagado para ti en este proyecto
-axiom review mode disable --scope project
-
-# Retira la preferencia: vuelve a mandar el global
-axiom review mode inherit --scope project
-
-# Muestra cada fuente y cuál decide
-axiom review mode status
-```
-
-La preferencia es tuya y de esta máquina: se guarda en el registro del hub (`~/.axiom/workspaces.json`, junto a las preferencias de worktree), nunca en `axiom.yaml` ni en `.axiom/state.json`, así que no se versiona y ningún repositorio puede imponerla. El proyecto es el registrado que contiene el repositorio; en multirepo, los repositorios de los roles y el de especificaciones pertenecen al proyecto de la carpeta maestra. Fuera de un proyecto registrado, `--scope project` falla con un mensaje que lo dice.
-
-Precedencia, de mayor a menor:
-
-1. El «apagar» del clon (`--scope clone`) gana siempre.
-2. Tu preferencia de proyecto, en ambos sentidos: puede encender un proyecto aunque el global esté apagado, o apagarlo aunque esté encendido.
-3. El interruptor global.
-4. Si nadie ha expresado una opinión, apagado.
-
-`axiom review mode status` informa del modo efectivo y de la fuente que decide (`clone_local`, `project`, `global` o `default`), además del valor de cada fuente. Quitar el «apagar» del clon mientras tu preferencia de proyecto esté en `off` se rechaza, porque no encendería nada; el mensaje nombra el comando del origen que decide.
-
-El dashboard muestra lo mismo en la tarjeta **Revisión (RDD) de este proyecto** de la pantalla Ecosistema: el modo efectivo, la fuente que decide y un selector para heredar, encender o apagar el proyecto abierto. El mismo selector está en el alta de proyecto.
-
 ### Disable TUI spinner animation
 
 Define `AXIOM_NO_ANIMATION=1` para detener la animación del indicador de la TUI. El nombre anterior `GENTLE_AI_NO_ANIMATION` se mantiene como alternativa de compatibilidad:
@@ -92,7 +55,7 @@ Configuración inicial: detecta tus herramientas y configura los agentes y compo
 - Axiom no escribe en tu HOME salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el hub, las copias de seguridad, `bin` y la caché; el estado de cada proyecto vive en `<raíz>/.axiom/state.json`, sin versionar.
 - Lo opcional es opt-in. GGA y CodeGraph no entran en ningún preset y hay que pedirlos expresamente; si los eliges, conservan su huella en HOME y Axiom la avisa.
 - El componente de permisos solo añade reglas de denegación (`deny`) y nunca fija modos de autoaprobación. Detalle en [Componentes](components.md).
-- Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama, preflight SDD y stop-hook de revisión) no hacen nada fuera de un proyecto así.
+- Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama y preflight SDD) no hacen nada fuera de un proyecto así.
 - Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Windsurf, Trae, Antigravity, Pi y OpenClaw no tienen modo workspace y se omiten con un aviso; Kimi Code, Qwen Code y Hermes ya no se pueden elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
 
 ```bash
@@ -147,8 +110,6 @@ See [Skill Registry](skill-registry.md) for the full index-first flow and diagra
 ### sync
 
 Actualiza los recursos gestionados a la versión vigente. Ejecútalo después de sustituir o actualizar el binario `axiom`, por ejemplo con `axiom upgrade` o `go install`. No reinstala otros binarios (Engram, GGA); solo actualiza el contenido de prompts, las skills, las configuraciones MCP y los orquestadores SDD.
-
-Managed reviewer and runtime assets are version-bound to the binary. Until sync succeeds, review lifecycle operations fail closed when managed writer provenance is missing or mismatched.
 
 > **Importante:** `axiom sync` actualiza los agentes registrados como instalados por Axiom, no todos los directorios de configuración de agentes de tu equipo.
 >
@@ -403,13 +364,13 @@ El botón de añadir proyecto abre un modal que da de alta un proyecto con su co
 - **Topología**, `monorepo-embedded` o `multirepo`. Con multirepo aparece el **repositorio de especificaciones**, una ruta relativa a la carpeta del proyecto (obligatoria, distinta de la propia carpeta y dentro de ella). Si no existe, el alta lo crea (sin `git init`), escribe en él `axiom.yaml` y `openspec/` y deja en la carpeta del proyecto el puntero `.axiom-workspace` (`config: <repo>/axiom.yaml`). Después comprueba el resultado con el mismo localizador que usan los demás comandos.
 - **Roles**, opcionales: identificador, nombre, repositorios (rutas relativas separadas por comas), tecnologías y si es no bloqueante, que se escribe como `deferred`. Sin roles se crea uno `fullstack`.
 - **Adaptadores**, opcionales, que se instalan en el proyecto en modo workspace. Los que solo tienen configuración global (Pi, OpenClaw, Windsurf, Antigravity y Trae) aparecen deshabilitados con el motivo. No elegir ninguno es válido: el proyecto queda sin adaptadores y se pueden instalar después con `axiom install --scope workspace`.
-- **Preferencias personales**: modo de trabajo y raíz de worktrees, y la preferencia de RDD del proyecto (heredar, encendida o apagada). Se guardan en tu hub, no en `axiom.yaml`.
+- **Preferencias personales**: modo de trabajo y raíz de worktrees. Se guardan en tu hub, no en `axiom.yaml`.
 
 Todo se valida antes de escribir nada. Los errores de formulario (ruta vacía, claves repetidas, repositorios absolutos o fuera del proyecto, repositorio de specs inválido) se avisan en el propio modal, y el servidor repite la validación y responde con `400` y la lista completa de violaciones, que el modal muestra una por línea; no se crea ni registra nada. Un adaptador que no existe o no admite workspace también se rechaza antes de escribir.
 
-Los adaptadores se instalan después de escribir el proyecto, en su carpeta y con el mismo código que `axiom install --scope workspace`, sin depender del directorio desde el que se lanzó el dashboard. Si la instalación falla, el proyecto queda creado y registrado, y el modal se cierra con un aviso que explica el fallo; no se deshace nada. Lo mismo ocurre si no se puede guardar la preferencia de RDD.
+Los adaptadores se instalan después de escribir el proyecto, en su carpeta y con el mismo código que `axiom install --scope workspace`, sin depender del directorio desde el que se lanzó el dashboard. Si la instalación falla, el proyecto queda creado y registrado, y el modal se cierra con un aviso que explica el fallo; no se deshace nada.
 
-`POST /api/projects/init` y `POST /api/project/review-mode` solo aceptan peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responden `403` sin hacer nada.
+`POST /api/projects/init` solo acepta peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin hacer nada.
 
 #### Modelo por fase desde el dashboard
 
@@ -479,7 +440,6 @@ Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenC
 | Copias de respaldo | `<raíz>/backups/` |
 | Caché | `<raíz>/cache/` |
 | Lanzadores gestionados de OpenCode | `<raíz>/bin/` |
-| Estado de sesión del stop-hook de revisión | `<raíz>/review-stop-hook/v1/` |
 
 Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axiom` ni `~/.gentle-ai`. Sin ella las rutas son las de siempre, así que nada cambia en un equipo existente. Efectos a tener en cuenta al estrenar la variable en un equipo que ya instaló:
 
@@ -495,7 +455,7 @@ Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axi
 | `--scope workspace` (`install`, `setup`, `sync` y la TUI) | `<raíz del workspace>/.axiom/state.json`, sin versionar |
 | `--scope global` | `~/.axiom/state.json` (o `<AXIOM_STATE_DIR>/state.json`) |
 
-Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos del proyecto B. El estado global conserva lo que es de la máquina: la comprobación de actualizaciones (`last_update_check`), la sincronización pendiente tras una autoactualización (`pending_sync`) y el interruptor de revisión (`rdd_mode`); el estado del proyecto nunca los guarda.
+Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos del proyecto B. El estado global conserva lo que es de la máquina: la comprobación de actualizaciones (`last_update_check`) y la sincronización pendiente tras una autoactualización (`pending_sync`); el estado del proyecto nunca los guarda.
 
 - **Compatibilidad.** Mientras un proyecto no tiene `.axiom/state.json`, la primera lectura en workspace toma el estado global como semilla de solo lectura, sin los campos de máquina ni la lista de agentes instalados, y no lo modifica. La semilla aporta preferencias (persona, modelos, componentes, skills, preset, intenciones de segundo plano), pero no los agentes: el estado global es la unión de todos los proyectos y de las instalaciones globales, y heredarlo haría que un `sync` del proyecto escribiera en tu carpeta de usuario la configuración de agentes sin modo workspace. Un proyecto que no ha instalado nada propio descubre los agentes por ficheros, como un equipo sin estado, y su `install --agent X` registra solo `X`. La primera escritura en workspace crea el fichero del proyecto y desde entonces manda el del proyecto: un cambio posterior en el estado global ya no le afecta.
 - **Sin versionar.** Al crear el estado del proyecto, Axiom añade `/.axiom/state.json` y su cerrojo `/.axiom/state.json.lock` a `.git/info/exclude` (en un worktree enlazado, al del repositorio común). Es una exclusión local: no toca tu `.gitignore` ni deja un cambio que commitear en proyectos ajenos. Solo se excluyen esos dos ficheros, porque el resto de `.axiom/` (`inbox/skills/`, la caché y el buzón de autoskills) tiene otros usos. Si el proyecto no es un repositorio git no hay nada que excluir.
@@ -598,7 +558,7 @@ A missing, stale, malformed, or failed verification report is not an archive gat
 An explicit archive may close unfinished work, preserving task/report history and
 reporting unresolved findings without inventing PASS or completing checkboxes.
 Edit permissions, mechanical copy/move and collision checks, and native delta-spec
-composition still apply. SDD does not invoke RDD; ordinary delivery policy remains.
+composition still apply. Ordinary delivery policy remains.
 
 ```mermaid
 flowchart LR

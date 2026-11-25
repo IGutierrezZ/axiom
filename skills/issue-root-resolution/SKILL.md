@@ -9,7 +9,7 @@ metadata:
 
 ## Activation Contract
 
-Load when auditing a defect backlog for shared root causes, proposing a fix for an issue cluster, or closing issues as resolved/outdated. Complements `rdd-defect-workflow` (single-defect flow) — this skill governs the cluster-level method.
+Load when auditing a defect backlog for shared root causes, proposing a fix for an issue cluster, or closing issues as resolved/outdated. This skill governs the cluster-level method.
 
 ## Hard Rules
 
@@ -48,8 +48,3 @@ Load when auditing a defect backlog for shared root causes, proposing a fix for 
 ## Output Contract
 
 Per pass, report: roots table (issues, fix shape, state), closures with rule+evidence, borderline list with reasons, D-items and their answers, mechanism-map mismatches found, and the meta-issue comment link.
-
-## References
-
-- `../rdd-advisory-transport/references/shared-advisory-transport-proposal.md` — exemplar proposal shape produced by this method.
-- `../rdd-advisory-transport/references/issue-impact-matrix.md` — exemplar per-issue disposition matrix.

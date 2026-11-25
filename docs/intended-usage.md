@@ -115,7 +115,7 @@ The orchestrator must stop acting as a monolithic executor when complexity appea
 
 - **Evidence-budget rule**: inline evidence is one parallel batch of at most 3 calls and about 10k tokens. When understanding does not fit, delegate one read-only explorer that returns a handoff of at most about 2k tokens with `path:line` evidence; the number of files never decides.
 - **Writer rule**: a writer is delegated only for a named reason, either independent units written in parallel or protecting the parent context, never by file count. A unit of about 100 changed lines or less always runs inline.
-- **PR rule**: review can provide fresh evidence for a commit, push, or PR, but it never authorizes delivery. Receipt-driven development is opt-in with `axiom review mode enable --scope global`; whether it is on or off, ordinary repository policy decides delivery.
+- **PR rule**: review can provide fresh evidence for a commit, push, or PR, but it never authorizes delivery; ordinary repository policy decides delivery.
 - **Incident rule**: after wrong cwd, worktree/git accident, merge recovery, confusing test command, or environment workaround, run a fresh audit before continuing.
 - **Long-session backstop**: at roughly 150k parent-context tokens, consider delegating the next bounded unit. This is advisory guidance, not an enforced limit; no trigger fires on a count of tool calls, reads, or edits. Each rule holds only when its condition truly holds; when in doubt, work inline.
 - **Fresh review rule**: use fresh context for adversarial review of diffs, conflicts, PR readiness, and incidents when the agent platform supports it.
@@ -203,4 +203,4 @@ flowchart TD
     style T fill:#2D4F67,color:#fff
 ```
 
-SDD never offers, launches, or consumes RDD. Completed implementation proceeds directly to archive; verification is optional; standalone organic RDD remains separate. No review binding, receipt or gate controls SDD Archive or delivery; ordinary repository policy remains authoritative.
+Completed implementation proceeds directly to archive; verification is optional. No review binding, receipt or gate controls SDD Archive or delivery; ordinary repository policy remains authoritative.

@@ -101,12 +101,6 @@ type Lock struct {
 	owner LockOwner
 }
 
-// File devuelve el descriptor del fichero bloqueado.
-func (lock *Lock) File() *os.File { return lock.file }
-
-// Owner devuelve el registro de propietario escrito al adquirir.
-func (lock *Lock) Owner() LockOwner { return lock.owner }
-
 // AcquireLock abre y bloquea de forma exclusiva el fichero de cerrojo en path,
 // con el recorrido seguro anclado en la raíz del sistema de ficheros.
 func AcquireLock(path string) (*Lock, error) { return AcquireLockAnchored(path, nil) }
