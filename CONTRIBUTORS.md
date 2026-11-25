@@ -15,7 +15,7 @@ Ordered by number of merged pull requests descending, then alphabetically by Git
 | | Name | GitHub | Contributions |
 |---|---|---|---|
 | <img src="https://github.com/dnlrsls.png" alt="" width="40"> | Daniel Rosales | [@dnlrsls](https://github.com/dnlrsls) | OpenCode runtime model discovery, SDD nested workspace projects, Windows beta self-update, change-intent guidance, skills publishing |
-| <img src="https://github.com/decode2.png" alt="" width="40"> | Matías D. | [@decode2](https://github.com/decode2) | TUI install state persistence, global RDD mode controls, shared RDD mode API, bench PTY execution for TUI journeys |
+| <img src="https://github.com/decode2.png" alt="" width="40"> | Matías D. | [@decode2](https://github.com/decode2) | TUI install state persistence, global review-mode controls and their shared API, bench PTY execution for TUI journeys (the last three were retired with RDD) |
 | <img src="https://github.com/ardelperal.png" alt="" width="40"> | aroman | [@ardelperal](https://github.com/ardelperal) | Review authority classification on Windows, install rollback on state failure, orchestrator single-select contract, Judgment Day role binding |
 | <img src="https://github.com/Matere413.png" alt="" width="40"> | David Guevara Cascante | [@Matere413](https://github.com/Matere413) | Review recovery targeting, installer progress reporting, Codex hooks in backup targets, Windows junction support in filemerge |
 | <img src="https://github.com/aparragithub.png" alt="" width="40"> | Angel Parra | [@aparragithub](https://github.com/aparragithub) | Immutable review slot identity, Engram project identity from linked worktrees, SDD change identity resolution, pre-PR delivery graph |
