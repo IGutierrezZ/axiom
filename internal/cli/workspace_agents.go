@@ -177,3 +177,11 @@ func resolveAdaptersScoped(scope InstallScope, workspaceDir string, agentIDs []m
 	}
 	return adapters
 }
+
+// noteIgnoredStateAgents avisa de los agentes que el estado guardaba y Axiom ya no
+// conoce (agentes retirados): el sync los ignora y sigue con los demás.
+func noteIgnoredStateAgents(ignored []string) {
+	for _, id := range ignored {
+		fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: el estado incluye el agente %q, que Axiom ya no admite; se ignora y se sincronizan los demás.\n", id)
+	}
+}

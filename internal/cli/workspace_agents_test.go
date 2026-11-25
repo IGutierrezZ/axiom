@@ -492,3 +492,26 @@ func TestErrNoWorkspaceAgentsNamesEveryOmittedAgent(t *testing.T) {
 		}
 	}
 }
+
+// Un estado de una instalación anterior que guarda un agente retirado (aquí
+// "windsurf") sigue cargando: el sync avisa, lo ignora y sincroniza el resto.
+func TestRunSyncWithRetiredAgentInStateWarnsAndSyncsTheRest(t *testing.T) {
+	root, _, home := workspaceAgentsFixture(t)
+	t.Chdir(root)
+	if err := state.ProjectStore(home, root).Write(persistedAgents("windsurf", "claude-code")); err != nil {
+		t.Fatal(err)
+	}
+	notices := captureWorkspaceAgentsNotice(t)
+
+	result, err := RunSync([]string{"--scope", "workspace"})
+	if err != nil {
+		t.Fatalf("RunSync() error = %v", err)
+	}
+
+	if !strings.Contains(notices.String(), `"windsurf"`) || !strings.Contains(notices.String(), "se ignora") {
+		t.Errorf("falta el aviso del agente retirado:\n%s", notices.String())
+	}
+	if want := []model.AgentID{model.AgentClaudeCode}; !slices.Equal(result.Agents, want) {
+		t.Errorf("agentes sincronizados = %v, want %v", result.Agents, want)
+	}
+}

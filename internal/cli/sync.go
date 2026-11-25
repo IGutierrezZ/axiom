@@ -2175,6 +2175,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	// A missing state file is treated as a fresh home; other read/validation
 	// errors stop sync before any persona mutation or asset write.
 	persistedState, persistedStateErr := syncStateStore.Read()
+	noteIgnoredStateAgents(persistedState.IgnoredAgents)
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}

@@ -41,7 +41,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
 - [x] T5 · Retirar Windsurf (assets y goldens).
 - [x] T6 · Retirar Kiro IDE (modelos de Kiro, selector de la TUI, assets y goldens).
-- [ ] T7 · Lector tolerante: un estado con agentes retirados carga y sincroniza el resto con un aviso.
+- [x] T7 · Lector tolerante: un estado con agentes retirados carga y sincroniza el resto con un aviso.
 - [ ] T8 · Docs, e2e, documentos ODD superados, `## Spec viva` integrada con `axiom archive integrate --odd retirar-agentes` y criterio `rg`.
 
 Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades independientes con superficies disjuntas que justifiquen escritores en paralelo).
@@ -97,7 +97,15 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - Assets compartidos: menciones de Kiro en los jueces de Judgment Day, `project-baseline-convention.md` y `PROJECT_MARKERS`; `sdd-init/references/init-details.md` pierde las rutas de los seis agentes. `docs/manual-de-inicio.md` deja de nombrar a Kiro (lo fija `docs_contract_test`).
 - Pruebas: las de prompts heredados pasan a Cursor; las de MCP global y CodeGraph, a `~/.cursor/mcp.json`. Recuentos: 11 agentes, 8 plantillas de orquestador.
 - Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...` (goldens), `skillregistry`, `system`, `assets`, `tui/...`, `dashboard`, `app`, `update/...`, `state`, `workspace` y `semantic`. `cli` completo no se repite aquí (decisión del usuario: ir más rápido); lo cubre la CI de la PR.
+- Commit: `53115740`.
+
+### T7 · Lector tolerante
+
+- `state.InstallState.UnmarshalJSON` separa de `installed_agents` los agentes que el catálogo no conoce y los deja en `IgnoredAgents` (no se persiste): global y de proyecto, también la lectura del estado heredado. Todos los consumidores (sync, install, TUI, uninstall, doctor) ven solo agentes conocidos y la siguiente escritura del estado ya no los incluye. Es genérico: no nombra los agentes retirados.
+- `sync` avisa por cada agente ignorado (`noteIgnoredStateAgents`) y sincroniza el resto.
+- Pruebas nuevas: `state.TestReadIgnoresAgentsTheCatalogNoLongerKnows` y `cli.TestRunSyncWithRetiredAgentInStateWarnsAndSyncsTheRest`.
+- Evidencia: `go vet` limpio; `go test` ok en `state` y en `cli -run` (las dos nuevas y las de agentes persistidos en workspace).
 
 ## Siguiente paso
 
-T7.
+T8.

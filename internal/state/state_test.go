@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -1488,4 +1489,26 @@ func findSub(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// Un estado guardado con un agente que Axiom ya no conoce sigue cargando: el
+// agente sale de InstalledAgents y queda en IgnoredAgents para avisar.
+func TestReadIgnoresAgentsTheCatalogNoLongerKnows(t *testing.T) {
+	var s InstallState
+	if err := json.Unmarshal([]byte(`{"installed_agents":["claude-code","kiro-ide","codex"]}`), &s); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if want := []string{"claude-code", "codex"}; !reflect.DeepEqual(s.InstalledAgents, want) {
+		t.Errorf("InstalledAgents = %v, want %v", s.InstalledAgents, want)
+	}
+	if want := []string{"kiro-ide"}; !reflect.DeepEqual(s.IgnoredAgents, want) {
+		t.Errorf("IgnoredAgents = %v, want %v", s.IgnoredAgents, want)
+	}
+	out, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "kiro-ide") {
+		t.Errorf("la siguiente escritura no debe conservar el agente retirado: %s", out)
+	}
 }
