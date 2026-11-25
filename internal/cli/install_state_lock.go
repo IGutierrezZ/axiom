@@ -9,12 +9,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-func withInstallStateLock(homeDir string, operation func() error) error {
-	return statecoord.WithLock(homeDir, operation)
-}
-
 // withStateStoreLock serializa un ciclo leer-modificar-escribir sobre el almacén de
-// estado: el global comparte cerrojo con withInstallStateLock y cada proyecto tiene
+// estado: el global comparte cerrojo con statecoord.WithLock y cada proyecto tiene
 // el suyo.
 func withStateStoreLock(store state.Store, operation func() error) error {
 	return statecoord.WithStoreLock(store, operation)

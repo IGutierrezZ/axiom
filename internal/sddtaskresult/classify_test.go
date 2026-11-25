@@ -8,8 +8,8 @@ import "testing"
 // enforcement at all, so the typed terminal failure was only reliably produced
 // where that plugin runs.
 //
-// The cases below are the grammar table bench/axis_sdd_task_result.go drives
-// through the real plugin. Reusing them is deliberate: this package must agree
+// The cases below are the grammar table that was driven
+// through the real plugin. Keeping them is deliberate: this package must agree
 // with the shipped behaviour case for case, not merely look reasonable.
 func TestClassifyMatchesTheShippedGrammar(t *testing.T) {
 	for _, tc := range []struct {

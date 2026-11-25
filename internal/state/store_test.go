@@ -95,8 +95,6 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
 		Persona:             "neutral",
-		RDDMode:             "on",
-		RDDModeRecordedAt:   &recorded,
 		LastUpdateCheck:     &checked,
 		PendingSync:         true,
 	}
@@ -114,7 +112,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 	if seed.InstalledAgents != nil || seed.Persona != "neutral" || !seed.SelectionConfigured {
 		t.Errorf("la semilla no refleja la selección global: %#v", seed)
 	}
-	if seed.RDDMode != "" || seed.RDDModeRecordedAt != nil || seed.LastUpdateCheck != nil || seed.PendingSync {
+	if seed.LastUpdateCheck != nil || seed.PendingSync {
 		t.Errorf("la semilla no debe arrastrar campos de máquina: %#v", seed)
 	}
 	if _, err := os.Stat(store.Path()); !os.IsNotExist(err) {
@@ -128,7 +126,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	isolateGlobalState(t)
 	home, root := t.TempDir(), t.TempDir()
-	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral", RDDMode: "off"}); err != nil {
+	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral", PendingSync: true}); err != nil {
 		t.Fatal(err)
 	}
 	before := readBytes(t, Path(home))
@@ -150,8 +148,8 @@ func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	if got.Persona != "gentleman" {
 		t.Errorf("tras la primera escritura manda el proyecto: persona = %q, want gentleman", got.Persona)
 	}
-	if got.RDDMode != "" {
-		t.Errorf("el documento del proyecto no debe guardar rdd_mode: %q", got.RDDMode)
+	if got.PendingSync {
+		t.Errorf("el documento del proyecto no debe guardar pending_sync: %v", got.PendingSync)
 	}
 	if !bytes.Equal(before, readBytes(t, Path(home))) {
 		t.Error("escribir el estado del proyecto ha modificado el global")
@@ -200,7 +198,7 @@ func TestProjectStoreCorruptProjectStateDoesNotFallBackToGlobal(t *testing.T) {
 func TestProjectStoreAtHomeSharesTheGlobalFile(t *testing.T) {
 	isolateGlobalState(t)
 	home := t.TempDir()
-	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, RDDMode: "on"}); err != nil {
+	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, PendingSync: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,19 +206,19 @@ func TestProjectStoreAtHomeSharesTheGlobalFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.RDDMode != "on" || got.InstalledAgents[0] != "claude-code" {
+	if !got.PendingSync || got.InstalledAgents[0] != "claude-code" {
 		t.Errorf("con la raíz en HOME el almacén es el global sin recortar campos: %#v", got)
 	}
 }
 
 func TestWithMachineFieldsKeepsProjectSelection(t *testing.T) {
 	recorded := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
-	machine := InstallState{RDDMode: "on", RDDModeRecordedAt: &recorded, PendingSync: true, InstalledAgents: []string{"codex"}}
+	machine := InstallState{LastUpdateCheck: &recorded, PendingSync: true, InstalledAgents: []string{"codex"}}
 	project := InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral"}
 
 	got := WithMachineFields(project, machine)
 
-	if !got.PendingSync || got.RDDMode != "on" || got.RDDModeRecordedAt == nil {
+	if !got.PendingSync || got.LastUpdateCheck == nil {
 		t.Errorf("faltan los campos de máquina: %#v", got)
 	}
 	if got.InstalledAgents[0] != "claude-code" || got.Persona != "neutral" {

@@ -27,7 +27,7 @@ env:
   AXIOM_TEST_BUILD_BINARIES: "1"
 
 jobs:
-  # Este job, go-format, unit-tests y claude-network-none se omiten en un PR
+  # Este job, go-format y unit-tests se omiten en un PR
   # que solo toca artefactos de planificación (salida `artifacts_only` del job
   # `changes`). Un job omitido cuenta como superado para un check obligatorio;
   # un workflow filtrado por rutas, en cambio, deja el check esperando.
@@ -47,8 +47,6 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: '24'
-      - name: Test bounded V2 host activation polling
-        run: python3 -B -m unittest discover -s scripts -p test_opencode_v2_host_test.py
       - name: Typecheck V2 assets against released 2.0.4
         run: bash scripts/test-opencode-v2-contracts.sh
 
@@ -255,93 +253,6 @@ jobs:
             exit 1
           fi
 
-      - name: Build, vet, and test benchmark module
-        working-directory: bench
-        run: |
-          go build -o "$RUNNER_TEMP/gentle-ai-bench" .
-          go vet ./...
-          go test ./...
-
-      - name: Run benchmark evidence
-        run: |
-          # Build the canonical binary. The retired ./cmd/gentle-ai package
-          # wrote a notice to stderr on every invocation, and the journeys
-          # read the product's own output: j122 parsed the notice's first
-          # letter as JSON ("invalid character 'A'"), and the TUI journeys
-          # captured it ahead of the menu they wait for. The file keeps the
-          # legacy name because the corpus resolves the product by that name.
-          # rdd_harness: RDD está suspendido (C-01-c) y solo un binario con esta
-          # etiqueta admite `review mode enable`, que activan los journeys.
-          go build -tags rdd_harness -trimpath -o "$RUNNER_TEMP/gentle-ai" ./cmd/axiom
-          "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai" --out "$RUNNER_TEMP/bench-portable.json"
-          jq -e '
-            def completed_once($id):
-              [.journeys[] | select(.id == $id)] as $matches
-              | ($matches | length == 1) and ($matches[0].status == "completed");
-            completed_once("j51-negotiated-status-correction-continuation") and
-            completed_once("j59-current-status-and-start-ignore-sibling-worktree-transaction") and
-            completed_once("j60-explicit-active-lineage-keeps-four-lens-correction-and-validator-flow") and
-            completed_once("j75-intended-untracked-selection-executes-printed-start") and
-            completed_once("j89-staged-validation-is-informational-and-unmanaged") and
-            completed_once("j104-repository-context-survives-fresh-process") and
-            completed_once("j110-untracked-terminal-burn-and-unmanaged-staged-validation") and
-            completed_once("j111-approved-transaction-burns-and-shipped-gates-are-unmanaged") and
-            completed_once("j113-correction-removes-candidate-only-path") and
-            completed_once("j114-last-reviewer-capture-closes-and-burns") and
-            completed_once("j116-codex-committed-correction-runs-returned-status-continuation") and
-            completed_once("j123-rejected-provider-validator-starts-fresh-high-risk-review") and
-            completed_once("j4435-selected-untracked-correction-continuation-is-selectorless")
-          ' "$RUNNER_TEMP/bench-portable.json"
-          "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai" --only j105-compiled-provider-capture-retries-same-binding --out "$RUNNER_TEMP/bench-provider-capture.json"
-          jq -e '
-            def completed_once($id):
-              [.journeys[] | select(.id == $id)] as $matches
-              | ($matches | length == 1) and ($matches[0].status == "completed");
-            completed_once("j105-compiled-provider-capture-retries-same-binding")
-          ' "$RUNNER_TEMP/bench-provider-capture.json"
-          # Transition axis (#2829): sequences of ordinary operations, which is
-          # how #2830 shipped. #2830 now refuses the second consecutive rescope
-          # before publication, so every transition journey must complete.
-          #
-          # #4612 retires SDD attempt transitions; the standalone review-mode
-          # transition must still execute exactly once and complete.
-          #
-          # INC-20 correction (2026-09-20): the F4 note this replaces kept the
-          # 11-journey assertion on the premise that upstream had merely pruned
-          # files from bench/ while this fork kept them. The count was right and
-          # the reason was not. Upstream reduced the axis because the runtime
-          # retired `sdd-attempt` acquire/settle/status, which those transitions
-          # drive. This fork absorbed that retirement (REQ-13.3) without the
-          # corpus that accompanied it, so bench/ was not emitting 11 journeys
-          # that pass -- it was emitting 11 that fail. bench/ has now been
-          # reconciled with the absorbed runtime, preserving this fork's own
-          # adaptations, so the assertion tracks upstream's reduced axis.
-          "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai" --axis transition --out "$RUNNER_TEMP/bench-transition.json"
-          jq -e '
-            def completed_once($id):
-              [.journeys[] | select(.id == $id)] as $matches
-              | ($matches | length == 1) and ($matches[0].status == "completed");
-            ([.journeys[] | select(.id | startswith("tr"))] | length) == 1 and
-            ([.journeys[] | select((.id | startswith("tr")) and .status == "completed")] | length) == 1 and
-            completed_once("tr09-mode-flip-while-a-review-lineage-is-open")
-          ' "$RUNNER_TEMP/bench-transition.json"
-          "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai" --axis model-picker --only j97-opencode-custom-agent-model-picker-runtime --out "$RUNNER_TEMP/bench-model-picker-untagged.json"
-          jq -e '
-            def unsupported_once($id):
-              [.journeys[] | select(.id == $id)] as $matches
-              | ($matches | length == 1) and ($matches[0].status == "unsupported");
-            unsupported_once("j97-opencode-custom-agent-model-picker-runtime")
-          ' "$RUNNER_TEMP/bench-model-picker-untagged.json"
-          # Canonical package, same as the build above.
-          go build -tags bench_fixture -trimpath -o "$RUNNER_TEMP/gentle-ai-bench-fixture" ./cmd/axiom
-          "$RUNNER_TEMP/gentle-ai-bench" run --binary "$RUNNER_TEMP/gentle-ai-bench-fixture" --axis model-picker --only j97-opencode-custom-agent-model-picker-runtime --out "$RUNNER_TEMP/bench-model-picker.json"
-          jq -e '
-            def completed_once($id):
-              [.journeys[] | select(.id == $id)] as $matches
-              | ($matches | length == 1) and ($matches[0].status == "completed");
-            completed_once("j97-opencode-custom-agent-model-picker-runtime")
-          ' "$RUNNER_TEMP/bench-model-picker.json"
-
       # Informative window -- cmd/axiom coverage (INC-20 F0, opened 2026-09-19)
       #
       # Blocking: init, project, change, workspace, handoff, role, skill,
@@ -350,10 +261,7 @@ jobs:
       # contract touches (REQ-20.15). The odd verb blocked here too until
       # this increment's Phase 11 (F6.2a) retired the `axiom odd` command
       # entirely; it no longer exists, so it no longer appears in this list
-      # or in the smoke table below. This is additional to, and does not replace, the
-      # "Run benchmark evidence" step above: that step already builds and
-      # exercises cmd/axiom, but only through journeys shared with upstream's
-      # review/SDD lifecycle, none of which invoke this exclusive surface.
+      # or in the smoke table below.
       #
       # init and ui use --help instead of the no-argument form: their
       # no-argument form is NOT inert, confirmed empirically in an isolated
@@ -375,7 +283,7 @@ jobs:
       # living-doc index (LastSync: time.Now). Pre-existing on main, not caused
       # by this phase -- the guard below therefore compares against the state
       # captured before the smoke, not against a clean tree. Assumed by INC-21.
-      # design.md D-07 also names codegraph, telemetry, skill-registry, and bench-model-picker, but REQ-20.15's floor does not; they stay informative here too, assumed by INC-21.
+      # design.md D-07 also names codegraph, telemetry, and skill-registry, but REQ-20.15's floor does not; they stay informative here too, assumed by INC-21.
       #
       # Successor: INC-21 (docs/ROADMAP.md). This window does not grow: any
       # new symptom belongs to the successor, not to this list.
@@ -438,29 +346,6 @@ jobs:
       # it would have performed.
       - name: Check for new unreachable functions
         run: ./scripts/deadcode-ratchet.sh
-
-  claude-network-none:
-    name: Claude Network-None Runtime (Required)
-    needs: changes
-    if: >-
-      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout exact event candidate
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Build pinned Claude runtime proof image
-        run: docker build -f e2e/Dockerfile.claude-network-none -t gentle-ai-claude-network-none:ci .
-      - name: Prove Claude transport without external networking
-        run: |
-          docker run --rm --pull=never --network none --cap-drop=ALL \
-            --security-opt=no-new-privileges --read-only \
-            --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
-            -e GENTLE_AI_PARENT_NETNS="$(stat -Lc %i /proc/self/ns/net)" \
-            gentle-ai-claude-network-none:ci
 
   windows-runtime:
     name: Windows Runtime
@@ -545,27 +430,10 @@ jobs:
           go test -v ./internal/components/filemerge -count=1 -run $selector
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Every Windows git launch goes through the suspended-start / job-object
-      # / resume sequence; the crashes in #4081, #4128 and #4152 were a Go
-      # runtime fault on that path at roughly one launch in four, so the lane
-      # bursts real launches instead of trusting a single green run.
-      - name: Run native Windows git process tree tests
-        shell: pwsh
-        timeout-minutes: 6
-        run: |
-          $selector = '^(TestStartGitProcessTreeSurvivesRepeatedLaunches|TestStartGitProcessTreeKillsUnboundChildOnFailure|TestRunGitStartsWithoutAttachedConsole|TestRequireNoAttachedConsoleRejectsAttachedConsole)$'
-          $selected = @(go test ./internal/reviewtransaction -list $selector | Where-Object { $_ -match '^Test' })
-          if ($LASTEXITCODE -ne 0) { throw 'Could not list native Windows git process tree tests' }
-          if ($selected.Count -ne 4) { throw "Missing native Windows git process tree tests: $($selected -join ', ')" }
-          go test -v ./internal/reviewtransaction -count=1 -run $selector
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      # Canonical package, same as the "Run benchmark evidence" step: these
-      # release-blocker tests read the product's own behavior. The output keeps
-      # the legacy "gentle-ai.exe" name: nothing downstream (GENTLE_AI_TEST_BINARY below,
-      # the Defender exclusion above) needs it renamed, and this repository's
-      # own precedent for this exact kind of switch (ci.yml's benchmark
-      # steps) is to keep the artifact name and change only the build target.
+      # Canonical package: these release-blocker tests read the product's own
+      # behavior. The output keeps the legacy "gentle-ai.exe" name: nothing
+      # downstream (GENTLE_AI_TEST_BINARY below, the Defender exclusion above)
+      # needs it renamed, so only the build target changes.
       - name: Build native test binary
         shell: pwsh
         run: go build -trimpath -ldflags="-s -w -X main.version=ci" -o "$env:RUNNER_TEMP\gentle-ai.exe" ./cmd/axiom
@@ -575,42 +443,17 @@ jobs:
         timeout-minutes: 10
         env:
           GENTLE_AI_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
-          GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER: "1"
         run: |
-          $packages = @('./internal/cli', './internal/fileprim', './internal/reviewtransaction', './internal/sddstatus', './internal/components/engram')
+          $packages = @('./internal/fileprim', './internal/components/engram')
           $expected = @(
-            'TestRARSharedOwnerAcceptsOnlyCurrentWindowsPrincipals',
-            'TestRARPrivateOwnerRemainsTokenUserOnly',
             'TestWindowsSecureOpenRetriesDirectDriveDeviceWithoutWeakeningFlags',
             'TestWindowsSecureOpenDriveFallbackFailsClosed',
             'TestWindowsSecureOpenDoesNotRetryOtherErrors',
-            'TestWindowsStoreLockUsesExistingInodeAdvisoryTruth',
-            'TestRunGitBoundsLocalAndRemoteCommands',
-            'TestRunGitDistinguishesAggregateDeadlineAndTypedExit',
-            'TestStoreLockReportsLiveOwnerAndCannotBeStolen',
-            'TestStoreLockRecoversCrashAndCorruptOwnerRecords',
-            'TestStoreLockIsReleasedWhenOwnerProcessExits',
-            'TestConcurrentStoreLockRecoverersCannotBothWin',
-            'TestAuthorityLockCancellationPreservesSentinelAndCallerDeadline',
-            'TestCompactStatusLoadContextCancelsUnderExclusiveMaintenance',
-            'TestRepairClassifiedAuthorityConcurrentExecutionCommitsAndReplays',
-            'TestRepairClassifiedAuthorityResumesEachDurablePhase',
-            'TestNegotiatedStatusUnderUnavailableProcessTempOffersFreshStartOnBothContracts',
-            'TestNegotiatedStatusUnderUnavailableProcessTempResolvesWorkspaceOverlayBaseRef',
-            'TestNegotiatedStatusUnderUnavailableProcessTempContinuesCompactCorrection',
-            'TestNegotiatedStatusLeavesNoTemporaryGitArtifactsAfterFailure',
-            'TestFrozenCandidateReviewerDiffUsesRegularAttributesFileAndIgnoresMutableSources',
             'TestStdioHandshake_TerminatesDescendantOnContextEnd',
             'TestStdioHandshake_PreservesEarlierDeadline',
             'TestStdioHandshake_PreservesCallerCancellation',
             'TestProbeStdio_MissingAbsoluteConfiguredCommandFails',
-            'TestProbeStdio_MissingRelativeWindowsExecutableIsNotInstalled',
-            'TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns',
-            'TestCaptureCorrectionPlanBindsExactRequestAndRefusesBudgetOverrun',
-            'TestTargetedValidatorCaptureIssuesAcknowledgementWithoutFinalize',
-            'TestReviewStartWithZeroLensesIssuesAcknowledgement',
-            'TestReviewRecoverEscalatedRequiresExactSuccessorBoundAuthorization',
-            'TestCompactReceiptAndGateAPIsAreAbsentFromProductionPackages'
+            'TestProbeStdio_MissingRelativeWindowsExecutableIsNotInstalled'
           )
           $selector = '^(' + [string]::Join('|', $expected) + ')$'
           $selected = @(go test $packages -list $selector | Where-Object { $_ -match '^Test' })
@@ -619,10 +462,6 @@ jobs:
           if ($missing.Count -gt 0) { throw "Missing Windows release-blocker tests: $($missing -join ', ')" }
           go test -v $packages -run $selector -count=1 -timeout=8m
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Stress repository-context sharing retry
-        shell: pwsh
-        run: go test ./internal/reviewtransaction -count=100 -timeout=10m -run '^(TestReadReviewRepositoryContextRetriesTransientWindowsSharingViolation|TestReviewRepositoryContextPublicationConvergesAndRejectsUnsafeEntries)$'
 
       # PR runs the release-blocker subset only; the full Windows suite runs
       # in the separate, honestly-named "Windows Full Suite" workflow.
@@ -724,13 +563,6 @@ jobs:
         # advises "latest" too (see internal/installcmd/resolver.go).
         run: npm install --global @anthropic-ai/claude-code@latest
 
-      - name: Install pinned Codex runtime
-        shell: pwsh
-        run: |
-          if ($env:RUNNER_OS -eq 'Linux') {
-            npm install --global @openai/codex@0.147.0
-          }
-
       - name: Verify real-agent detection E2E is registered
         # organic_runtime_real_agent_detection_test.go is gated behind the
         # real_agent_e2e build tag precisely so `go test ./...` at the repo
@@ -746,15 +578,6 @@ jobs:
             throw 'Real-agent detection E2E is missing'
           }
 
-      - name: Verify live OpenCode provider isolation E2E is registered
-        shell: pwsh
-        run: |
-          if ($env:RUNNER_OS -ne 'Linux') { exit 0 }
-          $tests = go test -list '^TestOpenCodeRuntimeIsPinnedForTheLiveProviderTransport$' ./e2e/organicruntime
-          if ($LASTEXITCODE -ne 0 -or $tests -notcontains 'TestOpenCodeRuntimeIsPinnedForTheLiveProviderTransport') {
-            throw 'Live OpenCode provider isolation E2E is missing'
-          }
-
       - name: Run organic journeys
         # No -run filter: a renamed test must fail this job loudly, never let
         # go test exit 0 having matched nothing. The gated real-agent journey
@@ -764,17 +587,6 @@ jobs:
         # `go test ./...` never does — see that file's build-tag comment.
         env:
           GENTLE_AI_REAL_AGENT_E2E: "1"
-          # The Linux-only Codex journey invokes the registered adapter through
-          # the product CLI under a process-scoped denying proxy and strace.
-          GENTLE_AI_CODEX_RUNTIME_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
-          # The live OpenCode transport stays on Ubuntu because its process-scoped
-          # loopback denying proxy and strace proof require Linux.
-          GENTLE_AI_OPENCODE_RUNTIME_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
-          # The large-workspace journey spawns one Git subprocess per intended
-          # untracked path, so its cost is dominated by process creation. Linux
-          # absorbs it; Windows does not, and gating it here keeps the real
-          # coverage where it is affordable instead of deleting it outright.
-          GENTLE_AI_LARGE_WORKSPACE_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
         run: go test -tags real_agent_e2e -v ./e2e/organicruntime -count=1 -timeout=25m
 
   e2e-tests:

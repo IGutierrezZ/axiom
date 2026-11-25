@@ -2301,7 +2301,7 @@ func TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome(
 	}
 
 	pluginDir := filepath.Join(xdg, "opencode", "plugins")
-	managed := append([]string{"background-agents.ts"}, sdd.OpenCodePluginLifecycleNames(model.AgentOpenCode)...)
+	managed := append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(model.AgentOpenCode)...)
 	for _, name := range managed {
 		path := filepath.Join(pluginDir, name)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

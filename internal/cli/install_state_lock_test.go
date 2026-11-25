@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 )
@@ -74,7 +72,7 @@ func TestPersistInstallStateMergesExplicitAgentsFromLatestState(t *testing.T) {
 }
 
 // TestInstallStateLockAcceptsSymlinkedHome is the RED-first proof for #3926:
-// `review mode enable --scope global` on a virgin home whose path crosses a
+// a global install-state write on a virgin home whose path crosses a
 // symlink (macOS `/var` -> `/private/var`, a `mktemp -d` HOME) used to fail
 // with "acquire install state lock: ... not a directory" because the
 // O_NOFOLLOW component walk was handed the unresolved path. The lock must be
@@ -92,16 +90,15 @@ func TestInstallStateLockAcceptsSymlinkedHome(t *testing.T) {
 	t.Setenv("HOME", link)
 	t.Setenv("USERPROFILE", link)
 
-	var output bytes.Buffer
-	if err := RunReviewMode([]string{"enable", "--cwd", t.TempDir(), "--scope", "global", "--json"}, &output); err != nil {
-		t.Fatalf("global enable under a symlinked home: %v\n%s", err, output.String())
+	if err := persistInstallState(state.GlobalStore(link), state.InstallState{InstalledAgents: []string{"codex"}}, []string{"codex"}, InstallFlags{Agents: []string{"codex"}}, "sha256:current-writer"); err != nil {
+		t.Fatalf("global state write under a symlinked home: %v", err)
 	}
 	persisted, err := state.Read(real)
 	if err != nil {
 		t.Fatalf("read state under the real home: %v", err)
 	}
-	if persisted.RDDMode != string(reviewtransaction.RDDModeOn) || persisted.RDDModeRecordedAt == nil {
-		t.Fatalf("symlinked-home enable did not persist under the real home: %#v", persisted)
+	if len(persisted.InstalledAgents) != 1 || persisted.InstalledAgents[0] != "codex" || persisted.ManagedAssetDigest != "sha256:current-writer" {
+		t.Fatalf("symlinked-home write did not persist under the real home: %#v", persisted)
 	}
 }
 

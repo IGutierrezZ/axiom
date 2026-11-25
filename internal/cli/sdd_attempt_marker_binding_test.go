@@ -12,7 +12,7 @@ import (
 )
 
 func TestSDDAttemptRefusesRecreatedMarker(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	outsideRoot := filepath.Join(t.TempDir(), "source")
 	writeSDDStatusFile(t, filepath.Join(outsideRoot, "main.go"), "package source\n")
 	const change = "recreated-marker"

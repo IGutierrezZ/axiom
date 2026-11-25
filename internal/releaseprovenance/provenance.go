@@ -18,16 +18,14 @@ const (
 	// not because a local build has provenance to report: prerelease tags do not
 	// trigger release.yml, so building one by hand is the documented path, and a
 	// local checkout knows no tag, run or workflow it could honestly name.
-	localSchema         = "gentle-ai.release-provenance/local-build"
-	repository          = "IGutierrezZ/axiom"
-	goReleaserVersion   = "v2.15.2"
-	providerArchiveKind = "provider-contract"
+	localSchema       = "gentle-ai.release-provenance/local-build"
+	repository        = "IGutierrezZ/axiom"
+	goReleaserVersion = "v2.15.2"
 )
 
 var (
 	canonicalNumber = `(0|[1-9][0-9]*)`
 	tagPattern      = regexp.MustCompile(`^v` + canonicalNumber + `\.` + canonicalNumber + `\.` + canonicalNumber + `(?:-rc\.[1-9][0-9]*)?$`)
-	semverPattern   = regexp.MustCompile(`^` + canonicalNumber + `\.` + canonicalNumber + `\.` + canonicalNumber + `$`)
 	shaPattern      = regexp.MustCompile(`^[0-9a-f]{40}$`)
 	runIDPattern    = regexp.MustCompile(`^[1-9][0-9]*$`)
 	goPattern       = regexp.MustCompile(`^go1\.[0-9]+(?:\.[0-9]+)?$`)
@@ -35,27 +33,25 @@ var (
 )
 
 type Input struct {
-	Tag                    string
-	SourceSHA              string
-	WorkflowName           string
-	RunID                  string
-	RunAttempt             int
-	Job                    string
-	GoVersion              string
-	ProviderContractSemver string
-	GoReleaserVersion      string
+	Tag               string
+	SourceSHA         string
+	WorkflowName      string
+	RunID             string
+	RunAttempt        int
+	Job               string
+	GoVersion         string
+	GoReleaserVersion string
 }
 
 type manifest struct {
-	Schema                 string    `json:"schema"`
-	Repository             string    `json:"repository"`
-	Tag                    string    `json:"tag"`
-	SourceSHA              string    `json:"source_sha"`
-	Workflow               workflow  `json:"workflow"`
-	Toolchain              toolchain `json:"toolchain"`
-	ProviderContractSemver string    `json:"provider_contract_semver"`
-	ConfigurationSHA256    string    `json:"configuration_sha256"`
-	Artifacts              []any     `json:"artifacts"`
+	Schema              string    `json:"schema"`
+	Repository          string    `json:"repository"`
+	Tag                 string    `json:"tag"`
+	SourceSHA           string    `json:"source_sha"`
+	Workflow            workflow  `json:"workflow"`
+	Toolchain           toolchain `json:"toolchain"`
+	ConfigurationSHA256 string    `json:"configuration_sha256"`
+	Artifacts           []any     `json:"artifacts"`
 }
 
 type workflow struct {
@@ -84,44 +80,37 @@ type binaryArtifact struct {
 	Trimpath   bool   `json:"trimpath"`
 }
 
-type contractArtifact struct {
-	Name string `json:"name"`
-	Kind string `json:"kind"`
-}
-
 // Build returns a detached canonical manifest for the supplied release inputs.
 func Build(config []byte, input Input) ([]byte, error) {
 	if !tagPattern.MatchString(input.Tag) || !shaPattern.MatchString(input.SourceSHA) ||
 		!textPattern.MatchString(input.WorkflowName) || !runIDPattern.MatchString(input.RunID) ||
 		input.RunAttempt < 1 || !textPattern.MatchString(input.Job) || !goPattern.MatchString(input.GoVersion) ||
-		!semverPattern.MatchString(input.ProviderContractSemver) || input.GoReleaserVersion != goReleaserVersion {
+		input.GoReleaserVersion != goReleaserVersion {
 		return nil, errors.New("release provenance input is invalid")
 	}
 	version := input.Tag[1:]
 	platforms := [][2]string{{"darwin", "amd64"}, {"darwin", "arm64"}, {"linux", "amd64"}, {"linux", "arm64"}}
-	artifacts := make([]any, 0, len(platforms)+1)
+	artifacts := make([]any, 0, len(platforms))
 	for _, platform := range platforms {
 		artifacts = append(artifacts, binaryArtifact{
 			// El nombre del archivo lo da la plantilla {{ .ProjectName }}_... de
 			// .goreleaser.yaml, y este fork se llama axiom. Con el prefijo de
 			// upstream el manifiesto firmado atestiguaba artefactos que el
 			// release no contiene, que es lo contrario de lo que existe para
-			// hacer. El archivo del contrato de proveedor conserva su prefijo
-			// porque su name_template es explicito.
+			// hacer.
 			Name: "axiom_" + version + "_" + platform[0] + "_" + platform[1] + ".tar.gz", Kind: "binary",
 			GOOS: platform[0], GOARCH: platform[1], CGOEnabled: "0", Trimpath: true,
 		})
 	}
-	artifacts = append(artifacts, contractArtifact{Name: "gentle-ai-review-provider-contract-" + input.ProviderContractSemver + ".tar.gz", Kind: providerArchiveKind})
 	digest := sha256.Sum256(config)
 	encoded, err := json.Marshal(manifest{
-		Schema:                 schema,
-		Repository:             repository,
-		Tag:                    input.Tag,
-		SourceSHA:              input.SourceSHA,
-		Workflow:               workflow{Name: input.WorkflowName, RunID: input.RunID, RunAttempt: input.RunAttempt, Job: input.Job},
-		Toolchain:              toolchain{GoReleaser: input.GoReleaserVersion, Go: input.GoVersion},
-		ProviderContractSemver: input.ProviderContractSemver, ConfigurationSHA256: "sha256:" + hex.EncodeToString(digest[:]), Artifacts: artifacts,
+		Schema:              schema,
+		Repository:          repository,
+		Tag:                 input.Tag,
+		SourceSHA:           input.SourceSHA,
+		Workflow:            workflow{Name: input.WorkflowName, RunID: input.RunID, RunAttempt: input.RunAttempt, Job: input.Job},
+		Toolchain:           toolchain{GoReleaser: input.GoReleaserVersion, Go: input.GoVersion},
+		ConfigurationSHA256: "sha256:" + hex.EncodeToString(digest[:]), Artifacts: artifacts,
 	})
 	if err != nil {
 		return nil, errors.New("release provenance encoding failed")

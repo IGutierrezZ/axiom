@@ -97,11 +97,11 @@ func TestInjectWritesSharedSkillsWithGenericRuntimeIdentity(t *testing.T) {
 			t.Fatalf("%s: %v", agent, err)
 		}
 		shared := sharedskills.Dir(root)
-		ledger, err := os.ReadFile(filepath.Join(shared, "_shared", "review-ledger-contract.md"))
+		common, err := os.ReadFile(filepath.Join(shared, "_shared", "sdd-phase-common.md"))
 		if err != nil {
 			t.Fatalf("%s: %v", agent, err)
 		}
-		if strings.Contains(string(ledger), runtimeAgentIDPlaceholder) || strings.Contains(string(ledger), string(agent)+"\"") {
+		if strings.Contains(string(common), runtimeAgentIDPlaceholder) || strings.Contains(string(common), string(agent)+"\"") {
 			t.Errorf("%s: la copia compartida no debe llevar la identidad del agente ni el marcador sin resolver", agent)
 		}
 		if _, err := os.Stat(filepath.Join(shared, "sdd-apply", "SKILL.md")); err != nil {

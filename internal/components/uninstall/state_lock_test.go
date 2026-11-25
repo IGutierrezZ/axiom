@@ -6,13 +6,12 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 )
 
 // El leer-modificar-escribir de updateStateAfterUninstall corre dentro del
-// cerrojo canónico del estado: el RDDMode de un escritor concurrente sobrevive a
+// cerrojo canónico del estado: el PendingSync de un escritor concurrente sobrevive a
 // la retirada del agente y, con el cerrojo ocupado, falla rápido sin escribir.
 func TestUpdateStateAfterUninstallReReadsLatestStateAfterLockContention(t *testing.T) {
 	home := t.TempDir()
@@ -26,7 +25,7 @@ func TestUpdateStateAfterUninstallReReadsLatestStateAfterLockContention(t *testi
 	}
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{string(model.AgentOpenCode), "claude-code"},
-		RDDMode:         string(reviewtransaction.RDDModeOn),
+		PendingSync:     true,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +33,7 @@ func TestUpdateStateAfterUninstallReReadsLatestStateAfterLockContention(t *testi
 		t.Fatalf("error con cerrojo ocupado = %v", err)
 	}
 	contended, err := state.Read(home)
-	if err != nil || len(contended.InstalledAgents) != 2 || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+	if err != nil || len(contended.InstalledAgents) != 2 || !contended.PendingSync {
 		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
 	}
 	if err := held.Release(); err != nil {
@@ -55,7 +54,7 @@ func TestUpdateStateAfterUninstallReReadsLatestStateAfterLockContention(t *testi
 	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != "claude-code" {
 		t.Fatalf("InstalledAgents = %v, want [claude-code]", got.InstalledAgents)
 	}
-	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
-		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
+	if !got.PendingSync {
+		t.Fatalf("PendingSync pisado: %v, want true", got.PendingSync)
 	}
 }

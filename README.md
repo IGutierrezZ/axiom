@@ -12,7 +12,7 @@
 <p>
 <img src="https://img.shields.io/badge/go-1.25.10+-38BDF8?style=for-the-badge&labelColor=0F172A" alt="Go 1.25.10+">
 <img src="https://img.shields.io/badge/agents-16-818CF8?style=for-the-badge&labelColor=0F172A" alt="16 agents">
-<img src="https://img.shields.io/badge/lifecycle-SDD%20%2B%20RDD-38BDF8?style=for-the-badge&labelColor=0F172A" alt="SDD + RDD">
+<img src="https://img.shields.io/badge/lifecycle-SDD%20%2B%20ODD-38BDF8?style=for-the-badge&labelColor=0F172A" alt="SDD + ODD">
 <img src="https://img.shields.io/badge/multi--project-Hub-C084FC?style=for-the-badge&labelColor=0F172A" alt="Multi-Project Hub">
 <a href="LICENSE"><img src="https://img.shields.io/badge/MIT-818CF8?style=for-the-badge&labelColor=0F172A" alt="License: MIT"></a>
 </p>
@@ -74,21 +74,11 @@ The cost of a fresh session is not the tokens — it is you, re-explaining the s
 
 ### SDD — Give each change a clear path
 
-<img width="100%" src="docs/assets/diagrams/sdd-cycle.svg" alt="The SDD cycle is selected only by explicit request or accepted proposal. Explore can use optional Research; Proposal, Spec, Design and Tasks create formal planning artifacts; Apply uses configured TDD. Optional Verify reports practical diagnostics, including for partial work, but does not gate Archive: a separate path leads from Apply straight to Archive when Verify is skipped. Archive records actual state and history, including unfinished work when explicitly archived. It is not shipping, approval, or RDD." />
+<img width="100%" src="docs/assets/diagrams/sdd-cycle.svg" alt="The SDD cycle is selected only by explicit request or accepted proposal. Explore can use optional Research; Proposal, Spec, Design and Tasks create formal planning artifacts; Apply uses configured TDD. Optional Verify reports practical diagnostics, including for partial work, but does not gate Archive: a separate path leads from Apply straight to Archive when Verify is skipped. Archive records actual state and history, including unfinished work when explicitly archived. It is not shipping or approval." />
 
-When you explicitly choose Spec-Driven Development, proposal, specification, design, and task artifacts make the plan reviewable before implementation. File-backed storage keeps them on disk; Engram-backed storage keeps them in memory. Apply follows the configured TDD mode. Research and Verify are optional: Verify can diagnose partial work and report practical findings, but it is not an archive gate. Archive records the actual state and history, including unfinished work when you explicitly archive it; it does not ship or approve the change, and SDD does not invoke RDD. TDD is also available in ODD; it does not require an SDD phase.
+When you explicitly choose Spec-Driven Development, proposal, specification, design, and task artifacts make the plan reviewable before implementation. File-backed storage keeps them on disk; Engram-backed storage keeps them in memory. Apply follows the configured TDD mode. Research and Verify are optional: Verify can diagnose partial work and report practical findings, but it is not an archive gate. Archive records the actual state and history, including unfinished work when you explicitly archive it; it does not ship or approve the change. TDD is also available in ODD; it does not require an SDD phase.
 
 **[Docs →](docs/intended-usage.md)**
-
----
-
-### RDD — Check finished work at the right depth
-
-<img width="100%" src="docs/assets/diagrams/rdd-review.svg" alt="How RDD checks a finished change. The exact change is frozen to a lineage, revision and target, then a read-only risk assessment picks the depth: passive gets a structural readback with zero reviewer lenses, medium gets one focused lens, high gets the canonical 4R — Risk, Resilience, Readability and Reliability. At most one bounded correction is allowed, and one exact acknowledgement closes the transaction. Delivery stays human-owned." />
-
-Receipt-Driven Development (RDD) is opt-in and stays off until you enable it. Its point is that a review cannot drift: the candidate is frozen before anything reads it, so the evidence belongs to the exact version you are about to rely on — not to whatever the worktree looked like a moment later. The depth comes from that frozen candidate rather than from the model's judgment, and the result is informational. Commit, push and release stay your call.
-
-**[Docs →](docs/review-integration.md)**
 
 ---
 
@@ -96,7 +86,7 @@ Receipt-Driven Development (RDD) is opt-in and stays off until you enable it. It
 
 <img width="100%" src="docs/assets/diagrams/deterministic.svg" alt="Agentes, modelos y sesiones distintas convergen en la CLI de Axiom. Lee el estado del cambio desde ficheros y devuelve la siguiente transición válida sin delegar la decisión en el modelo. Sus estados públicos son Working, Checking, Ready y Needs your decision." />
 
-Si el modelo tiene que adivinar el siguiente paso, mañana puede proponer uno distinto, y otro diferente a tu compañero. Esa es la diferencia entre un flujo determinista y una sugerencia. El ejecutable **`axiom`** resuelve las transiciones nativas de SDD y RDD leyendo el estado persistido, no el contexto efímero de una conversación; así, el siguiente paso válido no depende de quién pregunte ni de cuándo.
+Si el modelo tiene que adivinar el siguiente paso, mañana puede proponer uno distinto, y otro diferente a tu compañero. Esa es la diferencia entre un flujo determinista y una sugerencia. El ejecutable **`axiom`** resuelve las transiciones nativas de SDD leyendo el estado persistido, no el contexto efímero de una conversación; así, el siguiente paso válido no depende de quién pregunte ni de cuándo.
 
 **[Docs →](docs/trigger-rules.md)**
 
@@ -114,7 +104,7 @@ Si el modelo tiene que adivinar el siguiente paso, mañana puede proponer uno di
 
 <img width="100%" src="docs/assets/features/agents.png" alt="The installer configuring multiple agents" />
 
-Axiom lleva sus flujos a Pi, OpenCode, Claude Code, Codex y otras integraciones. Cada adaptador usa las capacidades nativas del agente, por lo que funciones como la delegación y la revisión RDD pueden variar.
+Axiom lleva sus flujos a Pi, OpenCode, Claude Code, Codex y otras integraciones. Cada adaptador usa las capacidades nativas del agente, por lo que funciones como la delegación pueden variar.
 
 **[Docs →](docs/agents.md)**
 
@@ -180,7 +170,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Uso y comandos](docs/usage.md)** | Guía de comandos y flujos operativos del CLI de Axiom; las opciones heredadas se identifican como tales. |
 | **[Agents](docs/agents.md)** | Feature matrix and per-agent notes for all 16 |
 | **[Routing](docs/trigger-rules.md)** | How the agent picks direct, delegated or SDD |
-| **[Review](docs/review-integration.md)** · **[Architecture](docs/architecture/organic-rdd.md)** | The RDD contract, lifecycle and threat model |
+| **[Retirada de RDD](docs/releases/notas-retirada-rdd.md)** | Notas de migración: qué limpiar a mano antes de instalar la versión que retira `axiom review` y `bench/`. |
 | **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
 | **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | How the codebase is organised and how to extend it |
 | **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and how old installs are cleaned up |

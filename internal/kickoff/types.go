@@ -2,7 +2,7 @@
 // INC-21: the sealed kickoff configuration (kickoff.yaml), the append-only
 // gate ledger (gates.yaml), and the pure gate state machine that projects
 // them. It is a leaf package: it depends only on internal/multirole (for
-// RoleAssignment/GatePolicy), internal/reviewtransaction (atomic publish and
+// RoleAssignment/GatePolicy), internal/fileprim (atomic publish and
 // locking primitives), the standard library, and gopkg.in/yaml.v3.
 package kickoff
 

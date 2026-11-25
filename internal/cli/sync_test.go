@@ -1666,11 +1666,11 @@ func TestRunSyncSkipsOpenCodeGentleLogoWhenOpenCodeNotSelected(t *testing.T) {
 	}
 }
 
-// TestRunSyncRefreshesInstalledOpenCodeReviewPluginWithoutSDDComponent
+// TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent
 // reproduces issue #1440: when the persisted selection lacks the SDD component
 // but managed OpenCode plugins are already installed on disk, `gentle-ai sync`
 // must refresh them to the embedded assets of the running binary.
-func TestRunSyncRefreshesInstalledOpenCodeReviewPluginWithoutSDDComponent(t *testing.T) {
+func TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent(t *testing.T) {
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents:     []string{"opencode"},
@@ -1683,7 +1683,7 @@ func TestRunSyncRefreshesInstalledOpenCodeReviewPluginWithoutSDDComponent(t *tes
 
 	pluginsDir := filepath.Join(home, ".config", "opencode", "plugins")
 	stalePlugins := map[string]string{
-		"opencode-review-transport.ts": filepath.Join(pluginsDir, "opencode-review-transport.ts"),
+		"sdd-task-result-artifacts.ts": filepath.Join(pluginsDir, "sdd-task-result-artifacts.ts"),
 		"model-variants.ts":            filepath.Join(pluginsDir, "model-variants.ts"),
 	}
 	for name, path := range stalePlugins {
@@ -1725,9 +1725,10 @@ func TestRunSyncRefreshesInstalledOpenCodeReviewPluginWithoutSDDComponent(t *tes
 	}
 }
 
-// TestRunSyncRemovesOpenCodeOnlyReviewPluginFromKilocode ensures a stale
-// OpenCode review interception plugin cannot keep affecting Kilo after sync.
-func TestRunSyncRemovesOpenCodeOnlyReviewPluginFromKilocode(t *testing.T) {
+// TestRunSyncLeavesResidualReviewPluginInKilocode pins REQ-46.4: a review
+// plugin an earlier release left in the Kilo plugins directory is neither
+// removed nor reported as changed, and sync ends without error.
+func TestRunSyncLeavesResidualReviewPluginInKilocode(t *testing.T) {
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents:     []string{"kilocode"},
@@ -1756,11 +1757,11 @@ func TestRunSyncRemovesOpenCodeOnlyReviewPluginFromKilocode(t *testing.T) {
 		t.Fatalf("RunSync() error = %v", err)
 	}
 
-	if _, statErr := os.Stat(reviewPlugin); !os.IsNotExist(statErr) {
-		t.Fatalf("sync left OpenCode-only review plugin installed for Kilo: %v", statErr)
+	if _, statErr := os.Stat(reviewPlugin); statErr != nil {
+		t.Fatalf("sync removed the residual review plugin left for Kilo: %v", statErr)
 	}
-	if !containsPath(result.ChangedFiles, reviewPlugin) {
-		t.Errorf("ChangedFiles missing removed Kilocode plugin path %q\nchanged = %#v", reviewPlugin, result.ChangedFiles)
+	if containsPath(result.ChangedFiles, reviewPlugin) {
+		t.Errorf("ChangedFiles reports the residual Kilocode plugin path %q\nchanged = %#v", reviewPlugin, result.ChangedFiles)
 	}
 
 	// skill-registry.ts was never installed — sync must not create it.
@@ -1770,10 +1771,10 @@ func TestRunSyncRemovesOpenCodeOnlyReviewPluginFromKilocode(t *testing.T) {
 	}
 }
 
-// TestRunSyncDoesNotCreateOpenCodeReviewPluginWhenNeverInstalled guards the
+// TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled guards the
 // refresh behavior for issue #1440: users who never had the SDD/OpenCode
 // plugins installed must not receive them from a plain sync.
-func TestRunSyncDoesNotCreateOpenCodeReviewPluginWhenNeverInstalled(t *testing.T) {
+func TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled(t *testing.T) {
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents:     []string{"opencode"},
@@ -1797,7 +1798,7 @@ func TestRunSyncDoesNotCreateOpenCodeReviewPluginWhenNeverInstalled(t *testing.T
 		t.Fatalf("RunSync() error = %v", err)
 	}
 
-	pluginPath := filepath.Join(home, ".config", "opencode", "plugins", "opencode-review-transport.ts")
+	pluginPath := filepath.Join(home, ".config", "opencode", "plugins", "sdd-task-result-artifacts.ts")
 	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
 		t.Errorf("sync must not install %q for users who never had it; stat err = %v", pluginPath, err)
 	}
@@ -1819,7 +1820,7 @@ func TestSyncBackupTargetsIncludeManagedOpenCodePluginsWithoutSDD(t *testing.T) 
 	}
 
 	for configDir, agent := range map[string]model.AgentID{"opencode": model.AgentOpenCode, "kilo": model.AgentKilocode} {
-		for _, plugin := range sdd.OpenCodePluginLifecycleNames(agent) {
+		for _, plugin := range sdd.ManagedOpenCodePluginNamesFor(agent) {
 			want := filepath.Join(home, ".config", configDir, "plugins", plugin)
 			if !containsPath(targets, want) {
 				t.Errorf("syncBackupTargets missing managed plugin path %q\ntargets = %v", want, targets)
@@ -2039,10 +2040,10 @@ func TestRunSyncRollbackRestoresCodexEngramInstructionFiles(t *testing.T) {
 	}
 }
 
-func TestSyncRollbackRestoresLegacyOpenCodePluginAndRemovesReplacement(t *testing.T) {
+func TestSyncRollbackKeepsResidualReviewPluginAndRemovesReplacement(t *testing.T) {
 	home := t.TempDir()
 	pluginsDir := filepath.Join(home, ".config", "opencode", "plugins")
-	legacyPath := filepath.Join(pluginsDir, sdd.LegacyOpenCodeReviewPluginName)
+	legacyPath := filepath.Join(pluginsDir, "review-result-artifacts.ts")
 	legacyBytes := []byte("legacy review plugin\n")
 	mustWriteFile(t, legacyPath, legacyBytes)
 
@@ -2064,7 +2065,7 @@ func TestSyncRollbackRestoresLegacyOpenCodePluginAndRemovesReplacement(t *testin
 	if err != nil || !bytes.Equal(got, legacyBytes) {
 		t.Fatalf("legacy plugin after rollback = %q, %v", got, err)
 	}
-	for _, plugin := range []string{"opencode-review-transport.ts", "sdd-task-result-artifacts.ts"} {
+	for _, plugin := range []string{"sdd-task-result-artifacts.ts"} {
 		if _, statErr := os.Stat(filepath.Join(pluginsDir, plugin)); !os.IsNotExist(statErr) {
 			t.Fatalf("rollback retained replacement plugin %q: %v", plugin, statErr)
 		}
@@ -2973,8 +2974,8 @@ func TestRunSyncAppliesManagedFilesystemChanges(t *testing.T) {
 	if helper, ok := agentsMap["user-helper"].(map[string]any); !ok || helper["description"] != "preserve me" {
 		t.Fatalf("sync discarded unrelated user agent: %#v", agentsMap["user-helper"])
 	}
-	if _, ok := agentsMap["review-validator"].(map[string]any); !ok {
-		t.Fatalf("sync did not add review-validator: %#v", agentsMap)
+	if _, ok := agentsMap["jd-judge-a"].(map[string]any); !ok {
+		t.Fatalf("sync did not add jd-judge-a: %#v", agentsMap)
 	}
 	// INC-11 renamed the managed orchestrator agent to `axiom-orchestrator`;
 	// upstream still ships `gentle-orchestrator`. Accept either, and report a
@@ -2992,8 +2993,8 @@ func TestRunSyncAppliesManagedFilesystemChanges(t *testing.T) {
 	if replacement, ok := allowlist["__replace__"].(map[string]any); ok {
 		allowlist = replacement
 	}
-	if allowlist["review-validator"] != "allow" {
-		t.Fatalf("sync did not authorize gentle-orchestrator -> review-validator: %#v", allowlist)
+	if allowlist["jd-judge-a"] != "allow" {
+		t.Fatalf("sync did not authorize gentle-orchestrator -> jd-judge-a: %#v", allowlist)
 	}
 	if _, err := os.Stat(legacyPluginPath); !os.IsNotExist(err) {
 		t.Errorf("expected sync to remove legacy OpenCode plugin %q; stat err = %v", legacyPluginPath, err)
@@ -3922,16 +3923,10 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 	}
 	orchestrator := orchestratorEntry.Prompt
 	postApply := string(applyPayload)
-	// The shipped prompts negotiate the axiom dialect, so the CLI echoes axiom
-	// commands back; the legacy spelling stays accepted for older renders.
-	canonicalStatusAxiom := "axiom review status --cwd <repo> --contract axiom.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
-	canonicalStatusGentle := "gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent " + string(model.AgentOpenCode) + " --next-transition"
 
-	// Only the parent orchestrator owns canonical STATUS negotiation. It must
-	// declare OpenCode's own identity, never Claude Code's.
-	if !strings.Contains(orchestrator, canonicalStatusAxiom) && !strings.Contains(orchestrator, canonicalStatusGentle) {
-		t.Error("synced OpenCode orchestrator does not use canonical STATUS routing under its own runtime identity")
-	}
+	// Neither the parent orchestrator nor the apply command routes through the
+	// retired review commands, and neither declares Claude Code's identity to an
+	// OpenCode user.
 	for name, content := range map[string]string{
 		"orchestrator": orchestrator,
 		"post-apply":   postApply,
@@ -3939,31 +3934,11 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 		if strings.Contains(content, "--agent "+string(model.AgentClaudeCode)) {
 			t.Errorf("synced OpenCode %s controller tells an OpenCode user to declare Claude Code's identity", name)
 		}
-		for _, stale := range []string{
-			"Call `gentle-ai review start` once.",
-			"runs `gentle-ai review start --cwd <repo>`",
-			"| 01 | `gentle-ai review start`",
-		} {
-			if strings.Contains(content, stale) {
-				t.Errorf("synced OpenCode %s controller restored direct START route %q", name, stale)
+		for _, retired := range []string{"axiom review", "gentle-ai review", "review lineage", "RDD"} {
+			if strings.Contains(content, retired) {
+				t.Errorf("synced OpenCode %s controller carries the retired review prose %q", name, retired)
 			}
 		}
-	}
-
-	// post-apply returns to SDD verification without offering review. It
-	// must not negotiate canonical STATUS or retain review authority itself.
-	for _, required := range []string{
-		"SDD does not retain, read, or persist review lineage, receipt, binding, successor, gate, transaction, or prior authority",
-	} {
-		if !strings.Contains(postApply, required) {
-			t.Errorf("synced OpenCode post-apply controller is missing parent-owned routing clause %q", required)
-		}
-	}
-	if strings.Contains(postApply, "RDD") {
-		t.Error("synced OpenCode post-apply controller names RDD, which is suspended (C-01-c)")
-	}
-	if strings.Contains(postApply, canonicalStatusAxiom) || strings.Contains(postApply, canonicalStatusGentle) {
-		t.Error("synced OpenCode post-apply controller repeats canonical STATUS instead of consuming parent routing")
 	}
 }
 
@@ -6951,7 +6926,7 @@ func TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification(t *testi
 				InstalledAgents:     []string{"claude-code"},
 				SelectionConfigured: true,
 				Components:          []model.ComponentID{model.ComponentSkills},
-				Skills:              []model.SkillID{"branch-pr", "gentle-ai-bench", model.SkillGoTesting},
+				Skills:              []model.SkillID{"branch-pr", "gentle-ai-bench", "rdd-defect-workflow", model.SkillGoTesting},
 				Persona:             "custom",
 			}); err != nil {
 				t.Fatal(err)
@@ -6971,7 +6946,7 @@ func TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification(t *testi
 			if _, err := os.Stat(filepath.Join(root, "go-testing", "SKILL.md")); err != nil {
 				t.Fatalf("non-retired skill was not installed: %v", err)
 			}
-			for _, retired := range []string{"branch-pr", "gentle-ai-bench"} {
+			for _, retired := range []string{"branch-pr", "gentle-ai-bench", "rdd-defect-workflow"} {
 				if _, err := os.Stat(filepath.Join(root, retired)); !os.IsNotExist(err) {
 					t.Fatalf("retired skill %q must not be installed: %v", retired, err)
 				}

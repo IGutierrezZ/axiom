@@ -2,35 +2,55 @@ package update
 
 import (
 	"context"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
-	"runtime"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
-	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
-func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testing.T) {
+// cooldownScenarioBudget bounds a whole two-actor scenario. It is a ceiling,
+// not an expectation: a genuine deadlock still fails the test, only later.
+const cooldownScenarioBudget = time.Minute
+
+// markPendingSyncAsActorB is the concurrent writer of these scenarios: another
+// actor that takes the canonical install-state lock, re-reads the latest state
+// and sets PendingSync, a machine field the cooldown timestamp write must never
+// revert. It fails fast, without writing, when the lock is held.
+func markPendingSyncAsActorB(home string) error {
+	return statecoord.WithLock(home, func() error {
+		current, err := state.Read(home)
+		if err != nil {
+			return err
+		}
+		current.PendingSync = true
+		return state.WriteReconciled(home, current)
+	})
+}
+
+func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}, message string) {
+	t.Helper()
+	select {
+	case <-signal:
+	case <-ctx.Done():
+		t.Fatalf("%s: %v", message, ctx.Err())
+	}
+}
+
+func TestCheckAllWithCooldown_ConcurrentWriterPreservesPendingSync(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv(system.EnvStateDirAxiom, filepath.Join(home, ".axiom"))
 	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
 	stale := now.Add(-7 * time.Hour)
-	recordedAt := now.Add(-time.Hour)
-	if err := state.Write(home, state.InstallState{
-		LastUpdateCheck:   &stale,
-		RDDMode:           "on",
-		RDDModeRecordedAt: &recordedAt,
-	}); err != nil {
+	if err := state.Write(home, state.InstallState{LastUpdateCheck: &stale}); err != nil {
 		t.Fatalf("state.Write initial state: %v", err)
 	}
 
-	binary := buildCandidateBinary(t)
 	ctx, cancel := context.WithTimeout(context.Background(), cooldownScenarioBudget)
 	defer cancel()
 	persistReached := make(chan struct{}, 1)
@@ -64,24 +84,21 @@ func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testin
 		)
 	}()
 
-	awaitSignal(t, ctx, persistReached, "actor A did not reach timestamp persistence before actor B disables review mode")
+	awaitSignal(t, ctx, persistReached, "actor A did not reach timestamp persistence before actor B sets PendingSync")
 
-	actorB := exec.CommandContext(ctx, binary, "review", "mode", "disable", "--scope", "global")
-	actorB.Dir = repositoryRoot(t)
-	actorB.Env = isolatedActorEnv(home)
-	if output, err := actorB.CombinedOutput(); err != nil {
-		t.Fatalf("actor B review mode disable failed: %v\n%s", err, output)
+	if err := markPendingSyncAsActorB(home); err != nil {
+		t.Fatalf("actor B PendingSync write failed: %v", err)
 	}
 
 	intermediate, err := state.Read(home)
 	if err != nil {
 		t.Fatalf("state.Read after actor B: %v", err)
 	}
-	if intermediate.RDDMode != "off" {
-		t.Fatalf("actor B did not persist disabled review mode while actor A was blocked: got %q, want off", intermediate.RDDMode)
+	if !intermediate.PendingSync {
+		t.Fatal("actor B did not persist PendingSync while actor A was blocked")
 	}
 	if intermediate.LastUpdateCheck == nil || !intermediate.LastUpdateCheck.Equal(stale) {
-		t.Fatalf("actor B changed the timestamp while disabling review mode: got %v, want %v", intermediate.LastUpdateCheck, stale)
+		t.Fatalf("actor B changed the timestamp while setting PendingSync: got %v, want %v", intermediate.LastUpdateCheck, stale)
 	}
 
 	release()
@@ -94,27 +111,20 @@ func TestCheckAllWithCooldown_ConcurrentReviewModeDisablePreservesMode(t *testin
 	if final.LastUpdateCheck == nil || !final.LastUpdateCheck.Equal(now) {
 		t.Fatalf("last_update_check = %v, want %v after actor A writes", final.LastUpdateCheck, now)
 	}
-	if final.RDDMode != "off" {
-		t.Fatalf("stale cooldown write reverted actor B's persisted disabled review mode: got %q, want off", final.RDDMode)
+	if !final.PendingSync {
+		t.Fatal("stale cooldown write reverted actor B's persisted PendingSync")
 	}
 }
 
-func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *testing.T) {
+func TestCheckAllWithCooldown_ContendedPersistenceRejectsConcurrentWriter(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv(system.EnvStateDirAxiom, filepath.Join(home, ".axiom"))
 	now := time.Date(2026, 6, 14, 12, 0, 0, 0, time.UTC)
 	stale := now.Add(-7 * time.Hour)
-	recordedAt := now.Add(-time.Hour)
-	initial := state.InstallState{
-		LastUpdateCheck:   &stale,
-		RDDMode:           "on",
-		RDDModeRecordedAt: &recordedAt,
-	}
-	if err := state.Write(home, initial); err != nil {
+	if err := state.Write(home, state.InstallState{LastUpdateCheck: &stale}); err != nil {
 		t.Fatalf("state.Write initial state: %v", err)
 	}
 
-	binary := buildCandidateBinary(t)
 	ctx, cancel := context.WithTimeout(context.Background(), cooldownScenarioBudget)
 	defer cancel()
 	writerEntered := make(chan struct{}, 1)
@@ -156,13 +166,8 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 		t.Fatalf("state.Read before contended actor B: %v", err)
 	}
 
-	actorBContext, cancelActorB := context.WithTimeout(ctx, cooldownActorBudget)
-	defer cancelActorB()
-	actorB := exec.CommandContext(actorBContext, binary, "review", "mode", "disable", "--scope", "global")
-	actorB.Dir = repositoryRoot(t)
-	actorB.Env = isolatedActorEnv(home)
-	if output, err := actorB.CombinedOutput(); err == nil {
-		t.Fatalf("actor B unexpectedly disabled review mode while cooldown held the lock: %s", output)
+	if err := markPendingSyncAsActorB(home); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
+		t.Fatalf("actor B error while cooldown held the lock = %v, want lock acquisition failure", err)
 	}
 
 	afterAttempt, err := state.Read(home)
@@ -180,90 +185,19 @@ func TestCheckAllWithCooldown_ContendedPersistenceRejectsReviewModeDisable(t *te
 	if err != nil {
 		t.Fatalf("state.Read after actor A: %v", err)
 	}
-	if afterActorA.RDDMode != "on" || afterActorA.LastUpdateCheck == nil || !afterActorA.LastUpdateCheck.Equal(now) {
-		t.Fatalf("actor A state = %#v, want mode on with timestamp %v", afterActorA, now)
+	if afterActorA.PendingSync || afterActorA.LastUpdateCheck == nil || !afterActorA.LastUpdateCheck.Equal(now) {
+		t.Fatalf("actor A state = %#v, want PendingSync unset with timestamp %v", afterActorA, now)
 	}
 
-	retryContext, cancelRetry := context.WithTimeout(ctx, cooldownActorBudget)
-	defer cancelRetry()
-	retry := exec.CommandContext(retryContext, binary, "review", "mode", "disable", "--scope", "global")
-	retry.Dir = repositoryRoot(t)
-	retry.Env = isolatedActorEnv(home)
-	if output, err := retry.CombinedOutput(); err != nil {
-		t.Fatalf("actor B retry review mode disable failed: %v\n%s", err, output)
+	if err := markPendingSyncAsActorB(home); err != nil {
+		t.Fatalf("actor B retry PendingSync write failed: %v", err)
 	}
 
 	final, err := state.Read(home)
 	if err != nil {
 		t.Fatalf("state.Read after actor B retry: %v", err)
 	}
-	if final.RDDMode != "off" || final.LastUpdateCheck == nil || !final.LastUpdateCheck.Equal(now) {
-		t.Fatalf("final state = %#v, want mode off with timestamp %v", final, now)
+	if !final.PendingSync || final.LastUpdateCheck == nil || !final.LastUpdateCheck.Equal(now) {
+		t.Fatalf("final state = %#v, want PendingSync set with timestamp %v", final, now)
 	}
-}
-
-// The scenarios below spawn a real axiom binary and link a fresh one, so their
-// wall-clock budgets must absorb a cold build cache and antivirus scans of a
-// just-written executable on a loaded machine. They are ceilings, not
-// expectations: a genuine deadlock still fails the test, only later, and the
-// failure messages name the budget and the context error.
-const (
-	// candidateBuildBudget bounds `go build ./cmd/axiom` (a cold link took ~25s
-	// on a developer Windows machine, which a 30s budget turned into a flake).
-	candidateBuildBudget = 3 * time.Minute
-	// cooldownScenarioBudget bounds a whole two-actor scenario.
-	cooldownScenarioBudget = time.Minute
-	// cooldownActorBudget bounds one `review mode disable` subprocess.
-	cooldownActorBudget = 30 * time.Second
-)
-
-// isolatedActorEnv returns the environment for a candidate axiom subprocess that
-// must see the scenario's home and nothing of the developer's real profile:
-// every home-like location, the state directory and the persistent PATH write
-// opt-out all point into home. Later entries win over the inherited ones.
-func isolatedActorEnv(home string) []string {
-	return append(os.Environ(),
-		"HOME="+home,
-		"USERPROFILE="+home,
-		"LOCALAPPDATA="+filepath.Join(home, "AppData", "Local"),
-		"APPDATA="+filepath.Join(home, "AppData", "Roaming"),
-		system.EnvStateDirAxiom+"="+filepath.Join(home, ".axiom"),
-		system.NoPersistentPathEnvVar+"=1",
-	)
-}
-
-func awaitSignal(t *testing.T, ctx context.Context, signal <-chan struct{}, message string) {
-	t.Helper()
-	select {
-	case <-signal:
-	case <-ctx.Done():
-		t.Fatalf("%s: %v", message, ctx.Err())
-	}
-}
-
-func buildCandidateBinary(t *testing.T) string {
-	t.Helper()
-	testenv.RequireBinaryBuilds(t)
-	binaryName := "axiom"
-	if runtime.GOOS == "windows" {
-		binaryName += ".exe"
-	}
-	binary := filepath.Join(t.TempDir(), binaryName)
-	ctx, cancel := context.WithTimeout(context.Background(), candidateBuildBudget)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "build", "-o", binary, "./cmd/axiom")
-	command.Dir = repositoryRoot(t)
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build candidate axiom binary: %v\n%s", err, output)
-	}
-	return binary
-}
-
-func repositoryRoot(t *testing.T) string {
-	t.Helper()
-	_, sourceFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("discover repository root from runtime caller")
-	}
-	return filepath.Clean(filepath.Join(filepath.Dir(sourceFile), "..", ".."))
 }

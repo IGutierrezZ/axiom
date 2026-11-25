@@ -7,14 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -23,11 +21,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
-	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
-	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/tui"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
@@ -480,88 +476,6 @@ func TestRunArgsSDDContinueIsDispatchedBeforePlatformValidation(t *testing.T) {
 	}
 }
 
-func TestRunArgsDispatchesNativeReviewOperationsBeforePlatformValidation(t *testing.T) {
-	origEnsure := ensureCurrentOSSupported
-	t.Cleanup(func() { ensureCurrentOSSupported = origEnsure })
-	ensureCurrentOSSupported = func() error { return fmt.Errorf("unsupported platform") }
-
-	for _, test := range []struct {
-		command string
-		want    string
-	}{
-		{command: "review-start", want: "review-start requires --cwd, --lineage, and --policy-file"},
-		{command: "review-resume", want: "review-resume requires --cwd and --lineage"},
-		{command: "review-bundle-export", want: "review-bundle-export requires --cwd, --lineage, and --out"},
-		{command: "review-bundle-import", want: "review-bundle-import requires --cwd and --bundle"},
-		{command: "review-validate", want: "review-validate requires --cwd"},
-	} {
-		t.Run(test.command, func(t *testing.T) {
-			var output bytes.Buffer
-			err := RunArgs([]string{test.command}, &output)
-			if err == nil || !strings.Contains(err.Error(), test.want) {
-				t.Fatalf("RunArgs(%s) error = %v, want %q", test.command, err, test.want)
-			}
-		})
-	}
-}
-
-func TestRunArgsReviewSubcommandHelpExitsSuccessfully(t *testing.T) {
-	for _, command := range []string{"review-start", "review-step", "review-resume", "review-validate", "review-bundle-export", "review-bundle-import"} {
-		t.Run(command, func(t *testing.T) {
-			var output bytes.Buffer
-			if err := RunArgs([]string{command, "--help"}, &output); err != nil {
-				t.Fatalf("RunArgs(%s --help) error = %v", command, err)
-			}
-			if !strings.Contains(output.String(), "Usage: axiom "+command+" [flags]") {
-				t.Fatalf("RunArgs(%s --help) output:\n%s", command, output.String())
-			}
-		})
-	}
-}
-
-func TestRunArgsDispatchesCompactReviewFacadeBeforePlatformValidation(t *testing.T) {
-	origEnsure := ensureCurrentOSSupported
-	t.Cleanup(func() { ensureCurrentOSSupported = origEnsure })
-	ensureCurrentOSSupported = func() error { return fmt.Errorf("unsupported platform") }
-
-	var output bytes.Buffer
-	if err := RunArgs([]string{"review", "--help"}, &output); err != nil {
-		t.Fatalf("RunArgs(review --help) error = %v", err)
-	}
-	if !strings.Contains(output.String(), "review <acknowledge-approved|capture-result|capture-correction-plan|capture-refuter|capture-unachievable|capture-validation|lens-context|capabilities|assess|start|validate|status|repair|invalidate|abandon|recover|reclaim|store-reset|inspect-authority|inspect-candidate|reopen-results|schema|opencode-transport>") {
-		t.Fatalf("compact review help missing:\n%s", output.String())
-	}
-	for _, retired := range []string{"preserve-result", "dispose-result"} {
-		if strings.Contains(output.String(), retired) {
-			t.Fatalf("compact review help still advertises retired %q:\n%s", retired, output.String())
-		}
-	}
-	output.Reset()
-	if err := RunArgs([]string{"review", "repair", "--help"}, &output); err != nil || !strings.Contains(output.String(), "provider-owned") {
-		t.Fatalf("RunArgs(review repair --help) = %v\n%s", err, output.String())
-	}
-}
-
-func TestRunArgsDispatchesReviewModeBeforePlatformValidation(t *testing.T) {
-	origEnsure := ensureCurrentOSSupported
-	t.Cleanup(func() { ensureCurrentOSSupported = origEnsure })
-	ensureCurrentOSSupported = func() error { return fmt.Errorf("unsupported platform") }
-
-	var output bytes.Buffer
-	if err := RunArgs([]string{"review", "mode", "--help"}, &output); err != nil {
-		t.Fatalf("RunArgs(review mode --help) error = %v", err)
-	}
-	if !strings.Contains(output.String(), "axiom review mode <enable|disable|status>") {
-		t.Fatalf("review mode help missing:\n%s", output.String())
-	}
-
-	output.Reset()
-	err := RunArgs([]string{"review", "mode", "toggle"}, &output)
-	if err == nil || !strings.Contains(err.Error(), "unknown review mode command") {
-		t.Fatalf("RunArgs(review mode toggle) error = %v", err)
-	}
-}
-
 // TestListBackupsFallsBackGracefullyForOldManifests verifies that old manifests
 // without Source/Description are still returned (not skipped) and can be displayed
 // via DisplayLabel without panicking.
@@ -786,7 +700,6 @@ func TestTUIExecuteWithBackgroundPublishesChoiceAndPreservesState(t *testing.T) 
 		ManagedAssetDigest: "existing-writer",
 		LastUpdateCheck:    &lastCheck,
 		PendingSync:        true,
-		RDDMode:            "off",
 		BackgroundIntent:   model.OpenCodeBackgroundOff,
 	}); err != nil {
 		t.Fatal(err)
@@ -809,112 +722,9 @@ func TestTUIExecuteWithBackgroundPublishesChoiceAndPreservesState(t *testing.T) 
 	if got.BackgroundIntent != model.OpenCodeBackgroundOn {
 		t.Fatalf("BackgroundIntent = %q, want on", got.BackgroundIntent)
 	}
-	if got.ManagedAssetDigest != "existing-writer" || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastCheck) || !got.PendingSync || got.RDDMode != "off" {
+	if got.ManagedAssetDigest != "existing-writer" || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastCheck) || !got.PendingSync {
 		t.Fatalf("unrelated state was not preserved: %#v", got)
 	}
-}
-
-func TestTUIExecuteWithBackgroundPreservesConcurrentCLIStateMutation(t *testing.T) {
-	home := t.TempDir()
-	candidate := buildAppCandidateBinary(t)
-	setupMockHome(t, home)
-
-	initialRecordedAt := time.Now().UTC().Add(-time.Hour)
-	if err := state.Write(home, state.InstallState{
-		RDDMode:           "off",
-		RDDModeRecordedAt: &initialRecordedAt,
-		BackgroundIntent:  model.OpenCodeBackgroundOff,
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	publicationReached := make(chan struct{})
-	releasePublication := make(chan struct{})
-	var releaseOnce sync.Once
-	release := func() { releaseOnce.Do(func() { close(releasePublication) }) }
-	t.Cleanup(release)
-	previousWriteReconciled := appStateWriteReconciled
-	appStateWriteReconciled = func(store state.Store, installState state.InstallState) error {
-		close(publicationReached)
-		<-releasePublication
-		return store.WriteReconciled(installState)
-	}
-	t.Cleanup(func() { appStateWriteReconciled = previousWriteReconciled })
-
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{},
-		Preset:     model.PresetCustom,
-	}
-	resultCh := make(chan pipeline.ExecutionResult, 1)
-	go func() {
-		resultCh <- tuiExecuteWithBackground(selection, planner.ResolvedPlan{}, system.DetectionResult{}, model.OpenCodeBackgroundOn, model.OpenCodeBackgroundOn, "", "", nil)
-	}()
-
-	select {
-	case <-publicationReached:
-	case <-time.After(10 * time.Second):
-		t.Fatal("TUI did not reach final state publication")
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, candidate, "review", "mode", "enable", "--scope", "global")
-	command.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
-	output, err := command.CombinedOutput()
-	if err == nil {
-		t.Fatalf("candidate review mode enable succeeded while TUI owned the install-state transaction:\n%s", output)
-	}
-	intermediate, err := state.Read(home)
-	if err != nil {
-		t.Fatalf("read state after contended candidate review mode enable: %v", err)
-	}
-	if intermediate.RDDMode != "off" || intermediate.RDDModeRecordedAt == nil || !intermediate.RDDModeRecordedAt.Equal(initialRecordedAt) {
-		t.Fatalf("contended candidate review mode enable changed persisted state: %#v", intermediate)
-	}
-
-	release()
-	select {
-	case result := <-resultCh:
-		if result.Err != nil {
-			t.Fatalf("tuiExecuteWithBackground() error = %v", result.Err)
-		}
-	case <-time.After(10 * time.Second):
-		t.Fatal("TUI did not finish final state publication")
-	}
-
-	command = exec.CommandContext(ctx, candidate, "review", "mode", "enable", "--scope", "global")
-	command.Env = append(os.Environ(), "HOME="+home, "USERPROFILE="+home)
-	output, err = command.CombinedOutput()
-	if err != nil {
-		t.Fatalf("candidate review mode enable retry failed: %v\n%s", err, output)
-	}
-
-	final, err := state.Read(home)
-	if err != nil {
-		t.Fatalf("read final install state: %v", err)
-	}
-	if final.RDDMode != "on" || final.RDDModeRecordedAt == nil || !final.RDDModeRecordedAt.After(initialRecordedAt) || final.BackgroundIntent != model.OpenCodeBackgroundOn || !final.SelectionConfigured || final.Preset != model.PresetCustom || !slices.Equal(final.InstalledAgents, []string{string(model.AgentOpenCode)}) {
-		t.Fatalf("final install state lost retried CLI review-mode mutation or TUI-owned fields: %#v", final)
-	}
-}
-
-func buildAppCandidateBinary(t *testing.T) string {
-	t.Helper()
-	testenv.RequireBinaryBuilds(t)
-	binary := filepath.Join(t.TempDir(), "axiom")
-	if runtime.GOOS == "windows" {
-		binary += ".exe"
-	}
-	// A cold build of the whole binary on a shared CI runner can exceed
-	// 30s; the cap only guards against a hung toolchain, not build speed.
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	command := exec.CommandContext(ctx, "go", "build", "-tags", "rdd_harness", "-o", binary, "../../cmd/axiom")
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build candidate binary: %v\n%s", err, output)
-	}
-	return binary
 }
 
 func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.T) {
@@ -2938,5 +2748,26 @@ func TestTuiSyncCarriesSyncWarningsToTheTUI(t *testing.T) {
 	const want = "skill index refresh: index is read-only"
 	if !slices.Contains(outcome.Warnings, want) {
 		t.Fatalf("tuiSync() warnings = %q, want %q", outcome.Warnings, want)
+	}
+}
+
+func TestRunArgsRefusesTheRetiredReviewCommands(t *testing.T) {
+	for _, args := range [][]string{
+		{"review", "--help"},
+		{"review", "mode", "status"},
+		{"review-start"},
+		{"review-resume"},
+		{"review-step"},
+		{"review-bundle-export"},
+		{"review-bundle-import"},
+		{"review-validate"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var output bytes.Buffer
+			err := RunArgs(args, &output)
+			if err == nil || !strings.Contains(err.Error(), "unknown command") {
+				t.Fatalf("RunArgs(%v) error = %v, want an unknown command refusal", args, err)
+			}
+		})
 	}
 }

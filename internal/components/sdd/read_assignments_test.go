@@ -100,7 +100,6 @@ func TestDiscoverCustomAgentsExcludesReservedRolesAndDeduplicates(t *testing.T) 
     "gentle-reviewer": { "model": "openai/gpt-5" },
     "gentle-worker": { "model": "openai/gpt-5-mini" },
     "sdd-orchestrator": { "model": "openai/gpt-5" },
-    "review-validator": { "model": "openai/gpt-5-mini" },
     "a-custom-agent": { "model": "openai/gpt-5-mini" },
     "z-custom-agent": { "model": "openai/gpt-5" },
     "a-custom-agent": { "model": "openai/gpt-5" }
@@ -125,18 +124,15 @@ func TestDiscoverCustomAgentsExcludesReservedRolesAndDeduplicates(t *testing.T) 
 	}
 }
 
-func TestReadCurrentModelAssignmentsIncludesReviewAgentsFromJSONC(t *testing.T) {
+func TestReadCurrentModelAssignmentsIncludesJudgmentDayAgentsFromJSONC(t *testing.T) {
 	dir := t.TempDir()
 	settingsPath := filepath.Join(dir, "opencode.json")
 	content := `{
-  // Reviewer models remain global across named profiles.
+  // Judgment Day models remain global across named profiles.
   "agent": {
-    "review-risk": { "model": "anthropic/claude-sonnet-4" },
-    "review-readability": { "model": "openai/gpt-5" },
-    "review-reliability": { "model": "openai/gpt-5" },
-    "review-resilience": { "model": "anthropic/claude-sonnet-4" },
-    "review-refuter": { "model": "openai/gpt-5", "variant": "high" },
-    "review-validator": { "model": "openai/gpt-5-mini" },
+    "jd-judge-a": { "model": "anthropic/claude-sonnet-4" },
+    "jd-judge-b": { "model": "openai/gpt-5" },
+    "jd-fix-agent": { "model": "openai/gpt-5", "variant": "high" },
   },
 }`
 	if err := os.WriteFile(settingsPath, []byte(content), 0o644); err != nil {
@@ -147,13 +143,13 @@ func TestReadCurrentModelAssignmentsIncludesReviewAgentsFromJSONC(t *testing.T) 
 	if err != nil {
 		t.Fatalf("ReadCurrentModelAssignments() error = %v", err)
 	}
-	for _, agent := range []string{"review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter", "review-validator"} {
+	for _, agent := range []string{"jd-judge-a", "jd-judge-b", "jd-fix-agent"} {
 		if got[agent].ProviderID == "" || got[agent].ModelID == "" {
-			t.Errorf("review assignment %q missing: %v", agent, got)
+			t.Errorf("judgment day assignment %q missing: %v", agent, got)
 		}
 	}
-	if got["review-refuter"].Effort != "high" {
-		t.Fatalf("review-refuter effort = %q, want high", got["review-refuter"].Effort)
+	if got["jd-fix-agent"].Effort != "high" {
+		t.Fatalf("jd-fix-agent effort = %q, want high", got["jd-fix-agent"].Effort)
 	}
 }
 

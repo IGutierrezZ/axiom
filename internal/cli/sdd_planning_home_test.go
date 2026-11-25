@@ -163,7 +163,7 @@ func TestSDDAttemptGrantOperatesOnTheSpecsRepositoryFromACodeRepository(t *testi
 		{"config", "user.name", "Test"},
 		{"config", "core.autocrlf", "false"},
 	} {
-		runReviewCLIGit(t, ws.Specs, args...)
+		runCLIGit(t, ws.Specs, args...)
 	}
 	sibling, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -171,8 +171,8 @@ func TestSDDAttemptGrantOperatesOnTheSpecsRepositoryFromACodeRepository(t *testi
 	}
 	seedSDDStatusReadyChange(t, ws.Specs, "cli-grant", "- [ ] 1.1 Update `"+filepath.Join(sibling, "main.go")+"`\n")
 	retroSealForGuard(t, ws.Specs, "cli-grant")
-	runReviewCLIGit(t, ws.Specs, "add", "-A")
-	runReviewCLIGit(t, ws.Specs, "commit", "-qm", "base")
+	runCLIGit(t, ws.Specs, "add", "-A")
+	runCLIGit(t, ws.Specs, "commit", "-qm", "base")
 
 	start := filepath.Join(ws.Backend, "src")
 	var continued bytes.Buffer

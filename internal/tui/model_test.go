@@ -28,7 +28,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -590,17 +589,17 @@ func TestProfileCreateCustomAgentsDoNotChangeNavigation(t *testing.T) {
 	}
 }
 
-func TestModelPickerNavigationSkipsReviewSeparator(t *testing.T) {
+func TestModelPickerNavigationSkipsNativeAgentsSeparator(t *testing.T) {
 	rows := screens.ModelPickerRows()
 	separator := -1
 	for i, row := range rows {
-		if row == "--- Review agents ---" {
+		if row == "--- OpenCode native agents ---" {
 			separator = i
 			break
 		}
 	}
 	if separator < 1 {
-		t.Fatalf("review separator missing from rows: %v", rows)
+		t.Fatalf("native agents separator missing from rows: %v", rows)
 	}
 
 	m := NewModel(system.DetectionResult{}, "dev")
@@ -610,7 +609,7 @@ func TestModelPickerNavigationSkipsReviewSeparator(t *testing.T) {
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 	if got := updated.(Model).Cursor; got != separator+1 {
-		t.Fatalf("cursor after review separator = %d, want %d", got, separator+1)
+		t.Fatalf("cursor after native agents separator = %d, want %d", got, separator+1)
 	}
 }
 
@@ -2072,13 +2071,13 @@ func TestWelcomeMenu_UninstallOpenCodePluginEmptyTUIJSON(t *testing.T) {
 func TestWelcomeMenu_UninstallNavigation_WithoutProfiles(t *testing.T) {
 	m := NewModel(system.DetectionResult{}, "dev")
 	m.Screen = ScreenWelcome
-	m.Cursor = 11
+	m.Cursor = 10
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	state := updated.(Model)
 
 	if state.Screen != ScreenUninstallMode {
-		t.Fatalf("cursor=11 (Managed uninstall): screen = %v, want %v", state.Screen, ScreenUninstallMode)
+		t.Fatalf("cursor=10 (Managed uninstall): screen = %v, want %v", state.Screen, ScreenUninstallMode)
 	}
 }
 
@@ -2087,29 +2086,29 @@ func TestWelcomeMenu_UninstallNavigation_WithProfiles(t *testing.T) {
 		Configs: []system.ConfigState{{Agent: string(model.AgentOpenCode), Exists: true}},
 	}, "dev")
 	m.Screen = ScreenWelcome
-	m.Cursor = 12
+	m.Cursor = 11
 
 	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	state := updated.(Model)
 
 	if state.Screen != ScreenUninstallMode {
-		t.Fatalf("cursor=12 (Managed uninstall with profiles): screen = %v, want %v", state.Screen, ScreenUninstallMode)
+		t.Fatalf("cursor=11 (Managed uninstall with profiles): screen = %v, want %v", state.Screen, ScreenUninstallMode)
 	}
 }
 
-// TestWelcomeMenu_OptionCount verifies the welcome menu has 14 items without OpenCode
-// and 15 items when OpenCode is detected (adds "OpenCode SDD Profiles" option).
+// TestWelcomeMenu_OptionCount verifies the welcome menu has 13 items without OpenCode
+// and 14 items when OpenCode is detected (adds "OpenCode SDD Profiles" option).
 func TestWelcomeMenu_OptionCount(t *testing.T) {
 	m := NewModel(system.DetectionResult{}, "dev")
-	// Without OpenCode detected: 14 options, including the governance entry (no RDD entry while suspended).
+	// Without OpenCode detected: 13 options, including the governance entry.
 	opts := screens.WelcomeOptions(m.UpdateResults, m.UpdateCheckDone, false, 0, true)
-	if len(opts) != 14 {
-		t.Fatalf("WelcomeOptions(showProfiles=false) len = %d, want 14; got %v", len(opts), opts)
+	if len(opts) != 13 {
+		t.Fatalf("WelcomeOptions(showProfiles=false) len = %d, want 13; got %v", len(opts), opts)
 	}
-	// With OpenCode detected: 15 options (adds "OpenCode SDD Profiles").
+	// With OpenCode detected: 14 options (adds "OpenCode SDD Profiles").
 	optsWithProfiles := screens.WelcomeOptions(m.UpdateResults, m.UpdateCheckDone, true, 0, true)
-	if len(optsWithProfiles) != 15 {
-		t.Fatalf("WelcomeOptions(showProfiles=true) len = %d, want 15; got %v", len(optsWithProfiles), optsWithProfiles)
+	if len(optsWithProfiles) != 14 {
+		t.Fatalf("WelcomeOptions(showProfiles=true) len = %d, want 14; got %v", len(optsWithProfiles), optsWithProfiles)
 	}
 }
 
@@ -8473,13 +8472,13 @@ func TestStrictTDDForward(t *testing.T) {
 
 func TestCodexCustomAssignmentsRestoreFromSelection(t *testing.T) {
 	m := NewModel(system.DetectionResult{}, "dev")
-	m.Selection.CodexPhaseModelAssignments = map[string]string{"odd-explorer": "gpt-6-luna", "rdd-risk": "gpt-6-astra"}
-	m.Selection.CodexModelAssignments = map[string]model.CodexEffort{"odd-explorer": model.CodexEffortLow, "rdd-risk": model.CodexEffortHigh}
+	m.Selection.CodexPhaseModelAssignments = map[string]string{"odd-explorer": "gpt-6-luna", "odd-worker": "gpt-6-astra"}
+	m.Selection.CodexModelAssignments = map[string]model.CodexEffort{"odd-explorer": model.CodexEffortLow, "odd-worker": model.CodexEffortHigh}
 	m.CodexModelPicker = screens.NewCodexModelPickerStateFromAssignments(m.Selection.CodexModelAssignments)
 	m.restoreCodexCustomAssignments()
 	for role, want := range map[string]screens.CodexCustomAssignment{
 		"odd-explorer": {ModelID: "gpt-6-luna", Effort: model.CodexEffortLow},
-		"rdd-risk":     {ModelID: "gpt-6-astra", Effort: model.CodexEffortHigh},
+		"odd-worker":   {ModelID: "gpt-6-astra", Effort: model.CodexEffortHigh},
 	} {
 		if got := m.CodexModelPicker.CustomAssignments[role]; got != want {
 			t.Errorf("restored %s = %+v, want %+v", role, got, want)
@@ -8494,7 +8493,7 @@ func TestCodexModelPickerCustomConfirmSignalsOrchestratorClear(t *testing.T) {
 	m.CodexModelPicker = screens.NewCodexModelPickerState()
 	m.CodexModelPicker.CustomMode = screens.CodexCustomModePhaseList
 	m.CodexModelPicker.CustomAssignments["odd-worker"] = screens.CodexCustomAssignment{ModelID: "gpt-6-sol", Effort: model.CodexEffortHigh}
-	m.CodexModelPicker.CustomAssignments["rdd-validator"] = screens.CodexCustomAssignment{ModelID: "gpt-6-astra", Effort: model.CodexEffortXHigh}
+	m.CodexModelPicker.CustomAssignments["odd-verify"] = screens.CodexCustomAssignment{ModelID: "gpt-6-astra", Effort: model.CodexEffortXHigh}
 	m.Selection.CodexOrchestratorAssignment = model.CodexPresetOrchestratorAssignment(string(model.CodexPresetRecommended))
 	m.Cursor = screens.CodexModelPickerOptionCount(m.CodexModelPicker) - 1 // Confirm row.
 
@@ -8509,7 +8508,7 @@ func TestCodexModelPickerCustomConfirmSignalsOrchestratorClear(t *testing.T) {
 	if state.PendingSyncOverrides == nil || !state.PendingSyncOverrides.ClearCodexOrchestratorAssignment {
 		t.Fatal("custom confirmation did not propagate clear signal to sync overrides")
 	}
-	for role, want := range map[string]string{"odd-worker": "gpt-6-sol", "rdd-validator": "gpt-6-astra"} {
+	for role, want := range map[string]string{"odd-worker": "gpt-6-sol", "odd-verify": "gpt-6-astra"} {
 		if state.Selection.CodexPhaseModelAssignments[role] != want || state.PendingSyncOverrides.CodexPhaseModelAssignments[role] != want {
 			t.Errorf("role %s not forwarded to persisted sync selection", role)
 		}
@@ -9515,6 +9514,7 @@ func TestCustomPickerStillOffersExplicitGGA(t *testing.T) {
 // sobrevive, y con el cerrojo ocupado falla rápido sin escribir nada.
 func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testing.T) {
 	home := t.TempDir()
+	concurrentCheck := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	lockPath, err := statecoord.LockPath(home)
 	if err != nil {
 		t.Fatalf("install state lock path: %v", err)
@@ -9525,13 +9525,13 @@ func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testin
 	}
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{"opencode"},
-		RDDMode:         string(reviewtransaction.RDDModeOn),
+		LastUpdateCheck: &concurrentCheck,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	markPendingSyncUnderLock(home)
 	contended, err := state.Read(home)
-	if err != nil || contended.PendingSync || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+	if err != nil || contended.PendingSync || contended.LastUpdateCheck == nil {
 		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
 	}
 	if err := held.Release(); err != nil {
@@ -9549,7 +9549,7 @@ func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testin
 	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != "opencode" {
 		t.Fatalf("InstalledAgents = %v, want [opencode]", got.InstalledAgents)
 	}
-	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
-		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
+	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) {
+		t.Fatalf("LastUpdateCheck pisado: %v, want %v", got.LastUpdateCheck, concurrentCheck)
 	}
 }

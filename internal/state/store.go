@@ -133,7 +133,6 @@ func (s Store) Prepare() {
 // Campos de máquina, que siempre viven en el estado global:
 //   - LastUpdateCheck: la comprobación de versión remota es de la máquina;
 //   - PendingSync: lo fija una autoactualización del binario, que es de la máquina;
-//   - RDDMode y RDDModeRecordedAt: el interruptor de revisión es del usuario.
 //
 // La semilla tampoco aporta InstalledAgents: la lista de agentes de un proyecto es la
 // de lo que se instaló en él, y el estado global es la unión de todos los proyectos
@@ -149,8 +148,6 @@ func ProjectView(s InstallState) InstallState {
 	s.InstalledAgents = nil
 	s.LastUpdateCheck = nil
 	s.PendingSync = false
-	s.RDDMode = ""
-	s.RDDModeRecordedAt = nil
 	return s
 }
 
@@ -160,8 +157,6 @@ func ProjectView(s InstallState) InstallState {
 func WithMachineFields(project, machine InstallState) InstallState {
 	project.LastUpdateCheck = machine.LastUpdateCheck
 	project.PendingSync = machine.PendingSync
-	project.RDDMode = machine.RDDMode
-	project.RDDModeRecordedAt = machine.RDDModeRecordedAt
 	return project
 }
 

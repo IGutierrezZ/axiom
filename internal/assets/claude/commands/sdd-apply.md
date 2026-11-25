@@ -48,8 +48,6 @@ For each task:
 Return a structured result with: status, executive_summary, detailed_report (files changed), artifacts, and next_recommended.
 
 SDD CONTINUATION:
-Return control to the parent orchestrator. Apply itself never routes to review — `nextRecommended` proceeds to `archive` once tasks are complete; verification is optional. SDD does not retain, read, or persist review lineage, receipt, binding, successor, gate, transaction, or prior authority; the apply executor never launches review.
+Return control to the parent orchestrator. Apply itself never routes to review — `nextRecommended` proceeds to `archive` once tasks are complete; verification is optional.
 
-{{GENTLE_AI_AUTHORITY_FIRST_TERMINAL_PROCEDURE}}
-
-Approval returns one exact pending acknowledgement continuation. Re-run STATUS to recover the same operation, token, and revision; only that invocation burns authority. Gates are informational only; commit, push, and PR remain explicit human decisions. Never auto-launch Judgment Day.
+Never auto-launch Judgment Day.

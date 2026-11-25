@@ -76,7 +76,6 @@ func withOpenCodeV2Runtime(t *testing.T) {
 func TestOpenCodeManagedPluginAssetsSpawnAxiom(t *testing.T) {
 	for _, path := range []string{
 		"opencode/plugins/skill-registry.ts", "opencode/plugins-v2/skill-registry.ts",
-		"opencode/plugins/opencode-review-transport.ts", "opencode/plugins-v2/opencode-review-transport.ts",
 		"opencode/plugins/axiom-branch-guard.ts", "opencode/plugins-v2/axiom-branch-guard.ts",
 	} {
 		content := assets.MustRead(path)
@@ -96,7 +95,6 @@ func TestOpenCodeManagedPluginAssetsSpawnAxiom(t *testing.T) {
 func TestHistoricalOpenCodePluginDigestTable(t *testing.T) {
 	want := map[string]map[string]int{
 		"skill-registry.ts":            {"v1": 5, "v2": 1},
-		"opencode-review-transport.ts": {"v1": 7, "v2": 1},
 		"model-variants.ts":            {"v1": 6},
 		"sdd-task-result-artifacts.ts": {"v1": 10, "v2": 5},
 		// Plugin nuevo (inc-25): sin revisiones anteriores que reconocer; la entrada existe porque

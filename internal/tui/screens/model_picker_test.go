@@ -33,34 +33,23 @@ func makeTestState(phaseIdx int) *ModelPickerState {
 
 func TestModelPickerRows_Count(t *testing.T) {
 	rows := ModelPickerRows()
-	want := 2 + len(opencode.SDDPhases()) + 1 + len(opencode.JDPhases()) + 1 + len(opencode.ReviewPhases()) + 3
+	want := 2 + len(opencode.SDDPhases()) + 1 + len(opencode.JDPhases()) + 3
 	if len(rows) != want {
 		t.Fatalf("ModelPickerRows() len = %d, want %d; rows = %v", len(rows), want, rows)
 	}
 }
 
-func TestModelPickerRows_ReviewAgentsFollowJudgmentDay(t *testing.T) {
+func TestRenderModelPickerScrollsToNativeAgents(t *testing.T) {
 	rows := ModelPickerRows()
-	wantSuffix := append([]string{"--- Review agents ---"}, opencode.ReviewPhases()...)
-	got := rows[len(rows)-3-len(wantSuffix) : len(rows)-3]
-	for i := range wantSuffix {
-		if got[i] != wantSuffix[i] {
-			t.Fatalf("review row %d = %q, want %q; rows = %v", i, got[i], wantSuffix[i], rows)
-		}
-	}
-}
-
-func TestRenderModelPickerScrollsToReviewAgents(t *testing.T) {
-	rows := ModelPickerRows()
-	cursor := len(rows) - 4
+	cursor := len(rows) - 1
 	state := ModelPickerState{AvailableIDs: []string{"openai"}}
 
 	output := RenderModelPicker(nil, state, cursor)
-	if !strings.Contains(output, "review-refuter") || !strings.Contains(output, "↑ more assignments") {
-		t.Fatalf("review rows are not visible at cursor %d:\n%s", cursor, output)
+	if !strings.Contains(output, "explore") || !strings.Contains(output, "↑ more assignments") {
+		t.Fatalf("last rows are not visible at cursor %d:\n%s", cursor, output)
 	}
 	if strings.Contains(output, SDDOrchestratorPhase) {
-		t.Fatalf("picker did not window rows around review cursor:\n%s", output)
+		t.Fatalf("picker did not window rows around the last cursor:\n%s", output)
 	}
 }
 
@@ -1092,26 +1081,6 @@ func TestHandleModelNav_JDLastRow(t *testing.T) {
 	}
 }
 
-func TestHandleModelNav_ReviewAgentRowsAssignCorrectly(t *testing.T) {
-	rows := ModelPickerRows()
-	for _, agent := range opencode.ReviewPhases() {
-		t.Run(agent, func(t *testing.T) {
-			rowIdx := -1
-			for i, row := range rows {
-				if row == agent {
-					rowIdx = i
-					break
-				}
-			}
-			state := makeTestState(rowIdx)
-			_, updated := handleModelNav("enter", state, map[string]model.ModelAssignment{})
-			if got := updated[agent]; got.ProviderID != "test-provider" || got.ModelID != "model-alpha" {
-				t.Fatalf("%s assignment = %+v, want test-provider/model-alpha", agent, got)
-			}
-		})
-	}
-}
-
 // ─── ModelPickerRowsForProfile ──────────────────────────────────────────
 
 func TestModelPickerRowsForProfile(t *testing.T) {
@@ -1139,13 +1108,6 @@ func TestModelPickerRowsForProfile(t *testing.T) {
 		}
 		if !found {
 			t.Fatalf("ModelPickerRowsForProfile() missing JD agent %q; got: %v", jd, rows)
-		}
-	}
-	for _, reviewAgent := range opencode.ReviewPhases() {
-		for _, row := range rows {
-			if row == reviewAgent {
-				t.Fatalf("profile rows must use global reviewer %q, got: %v", reviewAgent, rows)
-			}
 		}
 	}
 }

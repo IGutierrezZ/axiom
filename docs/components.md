@@ -84,7 +84,6 @@ Las skills de base se incluyen en los presets no mínimos. Los identificadores d
 |-----------------------|----|-------------|
 | Issue Creation | `issue-creation` | Plantillas para incidencias e historias. |
 | Comment Writer | `comment-writer` | Borradores de comentarios de colaboración y respuesta a revisiones. |
-| RDD Defect Workflow | `rdd-defect-workflow` | Tratamiento de defectos RDD con evidencia y límites de autoridad explícitos. |
 | Systemic Issue Triage | `systemic-issue-triage` | Agrupa incidencias por causa sistémica. |
 
 ### Skills de programación de la comunidad

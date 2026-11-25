@@ -8,8 +8,8 @@ import (
 )
 
 // fakeAncestryChecker is the double VerifyIntegrationEvidence's own tests
-// exercise instead of the real reviewtransaction-backed implementation
-// (phase 19): this leaf package never imports internal/reviewtransaction
+// exercise instead of the real gitcommon-backed implementation
+// (phase 19): this leaf package never imports internal/gitcommon
 // for a single boolean question (design.md S4.6).
 type fakeAncestryChecker struct {
 	isAncestor bool

@@ -29,6 +29,16 @@ func TestSelectedSkillIDsDropsRetired(t *testing.T) {
 		}
 	})
 
+	t.Run("a skill with no embedded asset is dropped from an explicit list", func(t *testing.T) {
+		got := selectedSkillIDs(model.Selection{Skills: []model.SkillID{
+			model.SkillGoTesting, "rdd-defect-workflow", model.SkillChainedPR,
+		}})
+		want := []model.SkillID{model.SkillGoTesting, model.SkillChainedPR}
+		if !slices.Equal(got, want) {
+			t.Fatalf("selectedSkillIDs() = %v, want %v", got, want)
+		}
+	})
+
 	t.Run("preset path is unaffected", func(t *testing.T) {
 		preset := model.PresetFullGentleman
 		got := selectedSkillIDs(model.Selection{Preset: preset})

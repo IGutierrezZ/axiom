@@ -144,7 +144,6 @@ const (
 	SkillCognitiveDoc        SkillID = "cognitive-doc-design"
 	SkillCommentWriter       SkillID = "comment-writer"
 	SkillWorkUnitCommits     SkillID = "work-unit-commits"
-	SkillRDDDefectWorkflow   SkillID = "rdd-defect-workflow"
 	SkillSystemicIssueTriage SkillID = "systemic-issue-triage"
 )
 

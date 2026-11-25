@@ -53,9 +53,9 @@ func NewLockOwner() (LockOwner, error) {
 // the guarded body never ran.
 var ErrLockContended = errors.New("authoritative review store advisory lock is held")
 
-// concurrentUpdateText es el texto de ErrConcurrentUpdate de reviewtransaction.
-// El error de cerrojo ocupado debe renderizar el mismo mensaje que ese paquete
-// ofrecía, sin importarlo.
+// concurrentUpdateText es el texto de ErrConcurrentUpdate del almacén de revisión
+// retirado. El error de cerrojo ocupado debe renderizar el mismo mensaje que ese
+// almacén ofrecía.
 const concurrentUpdateText = "review transaction changed concurrently"
 
 type lockBusyError struct{}
@@ -100,12 +100,6 @@ type Lock struct {
 	file  *os.File
 	owner LockOwner
 }
-
-// File devuelve el descriptor del fichero bloqueado.
-func (lock *Lock) File() *os.File { return lock.file }
-
-// Owner devuelve el registro de propietario escrito al adquirir.
-func (lock *Lock) Owner() LockOwner { return lock.owner }
 
 // AcquireLock abre y bloquea de forma exclusiva el fichero de cerrojo en path,
 // con el recorrido seguro anclado en la raíz del sistema de ficheros.

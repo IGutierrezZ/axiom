@@ -16,7 +16,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitidentity"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
-	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -58,9 +57,6 @@ import (
 // necesitan otra identidad, o la resolución real, la sustituyen localmente con
 // stubActorIdentity y useRealActorIdentity.
 func TestMain(m *testing.M) {
-	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
-	// que ejercitan la revisión activan el punto de inyección del paquete.
-	rddharness.SetForTesting(true)
 	resolveActorIdentity = func(context.Context, string) gitidentity.Identity {
 		return gitidentity.New("Prueba Axiom", "prueba@ejemplo.invalid")
 	}

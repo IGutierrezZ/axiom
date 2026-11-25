@@ -5,13 +5,13 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
 ## Running tests locally on Windows
 
 - **Run focused packages while iterating.** Use `go test ./internal/<pkg> -run '^TestName$' -count=1`.
-- **The whole suite except two packages finishes locally.** Measured on 2026-11-25: 118 packages in about 9 minutes of wall time, with `internal/branch/engine` the slowest at about 8.5 minutes, so pass an explicit `-timeout`:
+- **The whole suite except `internal/cli` finishes locally.** Measured on 2026-11-25: 118 packages in about 9 minutes of wall time, with `internal/branch/engine` the slowest at about 8.5 minutes, so pass an explicit `-timeout`:
 
   ```powershell
-  go test (go list ./... | Where-Object { $_ -notmatch '/internal/(cli|reviewtransaction)$' }) -count=1 -timeout 20m
+  go test (go list ./... | Where-Object { $_ -notmatch '/internal/cli$' }) -count=1 -timeout 20m
   ```
 
-  `internal/cli` and `internal/reviewtransaction` exceed the default 10-minute timeout until RDD is retired (C-01-e): run them on their own with `-timeout 60m`, or split them with `-run`. Their remaining local failures are RDD and GGA tests, which go away with C-01-e and C-08-e.
+  `internal/cli` exceeds the default 10-minute timeout: run it on its own with an explicit `-timeout`, or split it with `-run` (the Windows full-suite workflow uses four selectors: `^Test[A-M]`, `^Test[N-O]`, `^Test[P-Q]|^Test[S-Z]` and `^TestR`).
 - **Symlink tests skip without privilege.** Creating a symlink on Windows needs a privilege that a normal user lacks (error 1314, `ERROR_PRIVILEGE_NOT_HELD`).
   - Tests that need symlinks call `testenv.RequireSymlink(t)` (`internal/testenv`), which probes once per process.
   - The test is skipped only when the probe fails with that error, and the skip message says so.
@@ -35,15 +35,14 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - Production budgets never change.
   - Raise it on a loaded machine, for example `$env:AXIOM_TEST_TIMEOUT_SCALE = "3"`. Tests are never retried automatically.
 - **Tests that build binaries skip unless you opt in.** Corporate EDR tools (Cortex XDR) block and delete the unsigned Go binaries that some tests compile into `%TEMP%` and run, and every local run raises a security alert.
-  - Those tests call `testenv.RequireBinaryBuilds(t)` before any `go build` and skip with a message naming `AXIOM_TEST_BUILD_BINARIES`. `bench/` is a separate Go module and carries an equivalent local helper.
+  - Those tests call `testenv.RequireBinaryBuilds(t)` before any `go build` and skip with a message naming `AXIOM_TEST_BUILD_BINARIES`.
   - The variable must be `1` or `true`. It is not implied by `CI`: the workflows set `AXIOM_TEST_BUILD_BINARIES: "1"` explicitly, so CI runs them all.
   - On a machine without such an EDR, opt in with `$env:AXIOM_TEST_BUILD_BINARIES = "1"`.
-  - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga`, `bench` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
+  - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
 - **Tests that launch the Go toolchain skip behind the same variable.** They call `testenv.RequireGoToolchain(t)` before the first `go build`, `go run`, `go test -list` or `go version` subprocess, because each costs minutes on Windows. CI runs them because the workflows set the variable.
   - `internal/update`: `TestCanonicalReleasePublicKeysControlRealLinkerBuild` and the release distribution policy tests (`newReleasePolicyFixture`, which runs `go run ./internal/releasepolicycmd`).
   - `internal/app`: `TestDocumentedInvocationsRunAsDocumented`.
   - `internal/assets`: `TestWindowsFullSuiteShardsCoverEveryTestName` (nested `go test -list`).
-- **`bench/` is Linux-only.** Its tests execute `#!/bin/sh` fakes and drive a TTY, so CI runs them only on Ubuntu.
 
 ## When CI runs the Windows tests
 

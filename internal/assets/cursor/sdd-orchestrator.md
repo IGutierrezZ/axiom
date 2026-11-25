@@ -57,10 +57,6 @@ Use a platform-native bounded worker for delegated-direct work. A named `sdd-*` 
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Review Execution Contract
-
-{{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
-
 #### Cost and Context Balance
 
 {{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}

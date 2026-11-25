@@ -40,19 +40,6 @@ func IsRetired(id model.SkillID) bool {
 	return false
 }
 
-// WithoutRetired returns ids without the retired skills, preserving order.
-// It never aliases or mutates the input slice.
-func WithoutRetired(ids []model.SkillID) []model.SkillID {
-	kept := make([]model.SkillID, 0, len(ids))
-	for _, id := range ids {
-		if !IsRetired(id) {
-			kept = append(kept, id)
-		}
-	}
-
-	return kept
-}
-
 // retiredFingerprints lists, per retired skill, the SHA-256 of every SKILL.md
 // release that ever shipped, computed over the content with CRLF folded to LF
 // (a Windows build could have installed CRLF copies). A copy is Axiom's own

@@ -43,14 +43,13 @@ var codexPresetConstructors = map[CodexModelPreset]func() map[string]model.Codex
 	CodexPresetPowerful:    model.CodexModelPresetPowerful,
 }
 
-// codexCustomPhases is the ordered list of SDD, ODD and RDD roles for the Custom
+// codexCustomPhases is the ordered list of SDD and ODD roles for the Custom
 // per-phase model picker. Order matches codexTierGroups phase groupings.
 var codexCustomPhases = []string{
 	"sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks",
 	"sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard",
 	"jd-judge-a", "jd-judge-b", "jd-fix-agent", "default",
 	"odd-explorer", "odd-worker", "odd-verify",
-	"rdd-risk", "rdd-readability", "rdd-reliability", "rdd-resilience", "rdd-refuter", "rdd-validator",
 }
 
 // CodexCustomMode represents the active sub-mode of the Custom picker flow.
@@ -460,7 +459,7 @@ func renderCodexMainPicker(state CodexModelPickerState, cursor int) string {
 	} else {
 		b.WriteString(styles.UnselectedStyle.Render("  "+customLabel) + "\n")
 	}
-	b.WriteString(styles.SubtextStyle.Render("    Assign a specific model and effort to SDD, ODD and RDD roles") + "\n")
+	b.WriteString(styles.SubtextStyle.Render("    Assign a specific model and effort to SDD and ODD roles") + "\n")
 
 	b.WriteString("\n")
 	b.WriteString(renderOptions([]string{"← Back"}, cursor-len(codexPresetOrder)-1))
@@ -472,7 +471,7 @@ func renderCodexMainPicker(state CodexModelPickerState, cursor int) string {
 
 func renderCodexCustomPhaseList(state CodexModelPickerState, cursor, height int) string {
 	// Reserve six lines for title, instruction and help; scroll the role list
-	// with the cursor so the RDD roles and Confirm remain reachable on short terminals.
+	// with the cursor so the remaining roles and Confirm remain reachable on short terminals.
 	start, end := 0, len(codexCustomPhases)+1
 	if height > 0 && height < end+6 {
 		visible := max(1, height-6)
@@ -483,7 +482,7 @@ func renderCodexCustomPhaseList(state CodexModelPickerState, cursor, height int)
 
 	b.WriteString(styles.TitleStyle.Render("Custom — Per-Phase Model & Effort"))
 	b.WriteString("\n\n")
-	b.WriteString(styles.SubtextStyle.Render("Select a role to assign its model and effort. Unassigned roles use preset defaults (RDD: native defaults)."))
+	b.WriteString(styles.SubtextStyle.Render("Select a role to assign its model and effort. Unassigned roles use preset defaults."))
 	b.WriteString("\n\n")
 
 	for idx, phase := range codexCustomPhases {

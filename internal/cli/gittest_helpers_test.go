@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -93,4 +94,51 @@ func TestSplitCommandLine(t *testing.T) {
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Errorf("palabras = %q, quería %q", got, want)
 	}
+}
+
+// canonicalCLITempDir returns t.TempDir() in its canonical spelling.
+// Production resolvers answer with the canonical form, so a fixture that keeps
+// the raw spelling compares unequal to its own repository: on the Windows
+// runners TEMP is an 8.3 short name, and on macOS /var symlinks /private/var.
+func canonicalCLITempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func initCLIGitRepo(t *testing.T) string {
+	t.Helper()
+	repo := canonicalCLITempDir(t)
+	runCLIGit(t, repo, "init", "-q")
+	runCLIGit(t, repo, "config", "user.email", "test@example.com")
+	runCLIGit(t, repo, "config", "user.name", "Test")
+	runCLIGit(t, repo, "config", "core.autocrlf", "false")
+	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "base")
+	return repo
+}
+
+func runCLIGit(t *testing.T, repo string, args ...string) string {
+	t.Helper()
+	command := exec.Command("git", append([]string{"-C", repo}, args...)...)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v: %s", args, err, output)
+	}
+	return string(output)
+}
+
+func containsString(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

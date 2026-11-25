@@ -66,7 +66,6 @@ func WelcomeOptions(updateResults []update.UpdateResult, updateCheckDone bool, s
 
 	opts = append(opts, "📁 Proyectos y Gobernanza SDD ➔")
 	opts = append(opts, "Gestionar respaldos")
-	opts = append(opts, "Reiniciar almacén de revisiones")
 	opts = append(opts, "Desinstalación gestionada")
 	opts = append(opts, "Herramientas y plugins comunitarios")
 	opts = append(opts, "Salir")

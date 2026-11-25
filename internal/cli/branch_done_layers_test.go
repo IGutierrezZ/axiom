@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,12 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Arnés en proceso de S6.10 y cableado de la sonda de linajes RDD en `axiom branch done` (INC-25,
-// S6-c2, REQ-25.16, REQ-25.17, A-4). El arnés llama a `RunBranch`, el mismo punto de entrada que
+// Arnés en proceso de S6.10 de `axiom branch done` (INC-25,
+// S6-c2, REQ-25.16). El arnés llama a `RunBranch`, el mismo punto de entrada que
 // `case "branch"` de cmd/axiom/main.go, sobre un repositorio temporal, sin compilar ningún ejecutable.
 
 var branchGitVersion = regexp.MustCompile(`(\d+)\.(\d+)`)
@@ -88,21 +85,22 @@ func TestBranchDoneHarnessConfirmsASquashByEquivalentTree(t *testing.T) {
 	}
 }
 
-// A-4 y REQ-25.17: `done` monta la sonda de linajes RDD (aquí un doble, por la variable que las
-// pruebas sustituyen): con un linaje abierto en el worktree de una rama fusionada, el JSON lleva un
-// aviso que nombra el linaje y `axiom review abandon`, la eliminación se realiza y sale con 0.
-func TestBranchDoneMountsTheLineageProbeAndWarnsOfAnOpenLineage(t *testing.T) {
+// `done` ignora sin aviso un almacén de revisiones residual `<git common dir>/gentle-ai/...` de la
+// retirada de RDD: elimina la rama fusionada, sale con 0 y no añade avisos.
+func TestBranchDoneIgnoresAResidualReviewStoreWithoutWarning(t *testing.T) {
 	repo := newBranchRepository(t)
 	if code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--mode", "in_place", "--cwd", repo); code != 0 {
 		t.Fatalf("ensure: código %d, stderr %q\n%s", code, stderr, stdout)
 	}
 	branchTestGit(t, repo, "branch", "-f", "main", "feat/x")
-	var asked []string
-	previous := newBranchLineageProbe
-	newBranchLineageProbe = func() branch.LineageProbe {
-		return fixedLineageProbe{lineages: []string{"linaje-abierto"}, asked: &asked}
+	commonDir := filepath.Join(repo, ".git")
+	residual := filepath.Join(commonDir, "gentle-ai", "review-transactions", "linaje-1", "estado.json")
+	if err := os.MkdirAll(filepath.Dir(residual), 0o755); err != nil {
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { newBranchLineageProbe = previous })
+	if err := os.WriteFile(residual, []byte(`{"linaje":"abierto"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	code, stdout, stderr := runBranchCLI(t, "done", "--change", "x", "--json", "--cwd", repo)
 
@@ -110,20 +108,10 @@ func TestBranchDoneMountsTheLineageProbeAndWarnsOfAnOpenLineage(t *testing.T) {
 		t.Fatalf("código %d, stderr %q; se esperaba 0\n%s", code, stderr, stdout)
 	}
 	result := decodeDoneResult(t, stdout)
-	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "linaje-abierto") || !strings.Contains(result.Warnings[0], "axiom review abandon") {
-		t.Errorf("avisos = %v, se esperaba uno que nombre el linaje y `axiom review abandon`", result.Warnings)
+	if len(result.Warnings) != 0 {
+		t.Errorf("avisos = %v, se esperaba ninguno", result.Warnings)
 	}
-	if len(asked) != 1 || branchGitOutput(t, repo, "branch", "--list", "feat/x") != "" {
-		t.Errorf("la sonda se consulta una vez (%v) y la rama se elimina", asked)
+	if branchGitOutput(t, repo, "branch", "--list", "feat/x") != "" {
+		t.Error("la rama fusionada debía eliminarse")
 	}
-}
-
-type fixedLineageProbe struct {
-	lineages []string
-	asked    *[]string
-}
-
-func (f fixedLineageProbe) OpenLineages(_ context.Context, worktreeRoot string) ([]string, error) {
-	*f.asked = append(*f.asked, worktreeRoot)
-	return f.lineages, nil
 }

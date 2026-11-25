@@ -39,7 +39,7 @@ package cli
 // collectors and their own baseline; nothing here sees them.
 //
 // WHAT THIS RATCHET PROVES: every refusal-origin site in the production
-// sources of internal/cli, internal/reviewtransaction, and internal/sddstatus
+// sources of internal/cli and internal/sddstatus
 // either
 //
 //  (a) names a runnable continuation (a `gentle-ai ...` invocation) in the
@@ -129,9 +129,7 @@ import (
 )
 
 // refusalRatchetByDesignShapes is the closed by-design vocabulary. It MUST
-// stay identical to the bench classifier's (bench/classify.go), so there is
-// one taxonomy, not two; TestRefusalRatchetVocabularyMatchesBenchClassifier
-// enforces that mechanically.
+// stay closed: a new shape is a deliberate change to this table.
 var refusalRatchetByDesignShapes = map[string]bool{
 	"operator-knowledge": true, // the product cannot know a value only the operator has
 	"world-action":       true, // the exit is an action in the world, not a command
@@ -267,62 +265,6 @@ func refusalRatchetClassifyBaselineDrift(baseline []string, analyzed map[string]
 }
 
 // --- Tests ---------------------------------------------------------------
-
-// TestRefusalRatchetVocabularyMatchesBenchClassifier proves the marker
-// vocabulary and the bench classifier's by-design vocabulary are the same
-// set, extracted mechanically from bench/classify.go, so the taxonomy cannot
-// fork. bench is its own module (package main), so importing it is not an
-// option; the extraction fails closed when it stops finding anything.
-func TestRefusalRatchetVocabularyMatchesBenchClassifier(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("..", "..", "bench", "classify.go"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "classify.go", source, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	benchShapes := map[string]bool{}
-	ast.Inspect(file, func(node ast.Node) bool {
-		decl, ok := node.(*ast.GenDecl)
-		if !ok || decl.Tok != token.CONST {
-			return true
-		}
-		for _, spec := range decl.Specs {
-			value, ok := spec.(*ast.ValueSpec)
-			if !ok || len(value.Names) != 1 || len(value.Values) != 1 {
-				continue
-			}
-			if !strings.HasPrefix(value.Names[0].Name, "ByDesign") {
-				continue
-			}
-			literal, ok := value.Values[0].(*ast.BasicLit)
-			if !ok || literal.Kind != token.STRING {
-				continue
-			}
-			shape, unquoteErr := strconv.Unquote(literal.Value)
-			if unquoteErr != nil {
-				continue
-			}
-			benchShapes[shape] = true
-		}
-		return false
-	})
-	if len(benchShapes) == 0 {
-		t.Fatal("extracted no ByDesign* string constants from bench/classify.go; the extraction is stale")
-	}
-	for shape := range benchShapes {
-		if !refusalRatchetByDesignShapes[shape] {
-			t.Errorf("bench vocabulary has shape %q; the ratchet vocabulary does not -- the taxonomy has forked", shape)
-		}
-	}
-	for shape := range refusalRatchetByDesignShapes {
-		if !benchShapes[shape] {
-			t.Errorf("ratchet vocabulary has shape %q; bench/classify.go does not -- the taxonomy has forked", shape)
-		}
-	}
-}
 
 // TestRefusalRatchetClassifiesSyntheticSites is the unit contract of the
 // analyzer: every rule demonstrated on synthetic source, including the two
@@ -651,12 +593,12 @@ func TestRefusalRatchetReportsFieldCarriedRefusals(t *testing.T) {
 // now name a resolution, are annotated, or are gone" -- and the one that meant
 // LOST COVERAGE read exactly like the two that meant progress.
 func TestRefusalRatchetReportsStaleBaselineEntries(t *testing.T) {
-	const fixed = "internal/reviewtransaction/gate.go\t\"a refusal that now names its exit\""
-	const gone = "internal/reviewtransaction/gate.go\t\"advertised base commit is not available locally; fetch before validation\""
-	const live = "internal/reviewtransaction/gate.go\t\"a refusal still frozen\""
+	const fixed = "internal/cli/synthetic_refusals.go\t\"a refusal that now names its exit\""
+	const gone = "internal/cli/synthetic_refusals.go\t\"advertised base commit is not available locally; fetch before validation\""
+	const live = "internal/cli/synthetic_refusals.go\t\"a refusal still frozen\""
 
 	analyzed := map[string]bool{fixed: true, live: true}
-	current := map[string]refusalRatchetSite{live: {file: "internal/reviewtransaction/gate.go", message: "a refusal still frozen"}}
+	current := map[string]refusalRatchetSite{live: {file: "internal/cli/synthetic_refusals.go", message: "a refusal still frozen"}}
 
 	drift := refusalRatchetClassifyBaselineDrift([]string{fixed, gone, live, ""}, analyzed, current)
 
@@ -681,10 +623,12 @@ func TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign(t *testing.T) {
 
 	total := len(analysis.violations) + analysis.satisfiedNamed + analysis.satisfiedAnnotated + analysis.exemptWraps + len(analysis.unanalyzable)
 	// The survey that motivated this guard counted ~2,500 constructor sites
-	// across these packages. A walk that suddenly sees a fraction of that is
-	// broken, not clean.
-	if total < 1000 {
-		t.Fatalf("enumerated only %d error-constructor sites; the survey found ~2,500, so the walk is broken", total)
+	// across the audited packages. Retiring the review-transaction package
+	// (C-01-e) removed most of them; ~590 remain in internal/cli,
+	// internal/fileprim and internal/sddstatus. A walk that suddenly sees a
+	// fraction of that is broken, not clean.
+	if total < 400 {
+		t.Fatalf("enumerated only %d error-constructor sites; the remaining audited packages hold ~590, so the walk is broken", total)
 	}
 	t.Logf("sites: %d total = %d violations + %d named + %d annotated + %d exempt wraps + %d unanalyzable",
 		total, len(analysis.violations), analysis.satisfiedNamed, analysis.satisfiedAnnotated, analysis.exemptWraps, len(analysis.unanalyzable))
@@ -833,7 +777,6 @@ func refusalRatchetReportFieldCarriedRefusals(t *testing.T, analysis refusalRatc
 var refusalRatchetProductionDirs = []struct{ dir, prefix string }{
 	{".", "internal/cli"},
 	{filepath.Join("..", "fileprim"), "internal/fileprim"},
-	{filepath.Join("..", "reviewtransaction"), "internal/reviewtransaction"},
 	{filepath.Join("..", "sddstatus"), "internal/sddstatus"},
 }
 

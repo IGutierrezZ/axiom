@@ -1252,7 +1252,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			// The SDD plugin writer resolves the config directory through the
 			// adapter and owns the plugin list; uninstall must match it (#3219).
 			pluginDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-			for _, name := range append([]string{"background-agents.ts"}, sdd.OpenCodePluginLifecycleNames(adapter.Agent())...) {
+			for _, name := range append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(adapter.Agent())...) {
 				pluginPath := filepath.Join(pluginDir, name)
 				targets = append(targets, pluginPath)
 				ops = append(ops, removeFile(pluginPath))

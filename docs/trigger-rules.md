@@ -4,8 +4,8 @@
 
 Ask for the outcome. Axiom keeps already-understood work inline, delegates only
 the actions that benefit from fresh context, and offers SDD only when durable
-planning would materially reduce uncertainty. Native providers own verification,
-review mechanics, and lifecycle authority; ordinary repository policy owns delivery.
+planning would materially reduce uncertainty. Native providers own verification
+and lifecycle authority; ordinary repository policy owns delivery.
 
 ## Quick path
 
@@ -15,7 +15,7 @@ review mechanics, and lifecycle authority; ordinary repository policy owns deliv
 3. The normal interaction reports only **Working**, **Checking**, **Ready**, or
    **Needs your decision**.
 
-The user does not choose review internals, hashes, receipts, or lifecycle
+The user does not choose internals, hashes, or lifecycle
 transitions. A question is necessary only when the answer changes requested
 scope, destructive or irreversible impact, permission or security exposure,
 verification cost or external side effects, accepted residual risk, or delivery.
@@ -65,127 +65,9 @@ work that remains.
 
 The user still asks only for the outcome. Repository identity, route, policy,
 candidate, delivery mechanism, and authority references remain owner-derived.
-Adapters do not select review lenses, reconstruct recovery policy, or infer
+Adapters do not reconstruct recovery policy or infer
 success from prose. Existing SDD v1 runs continue through their SDD-specific
 status contract; direct and delegated runs do not create or consume an SDD run.
-
-## Review mode
-
-Receipt-driven development is user-owned, opt-in, and independent of the
-implementation route. With no source expressing an opinion it is **off**,
-reported as decided by `default`:
-
-| Command | Effect |
-|---|---|
-| `axiom review mode status --cwd <repo>` | Report the global source, project preference, clone-local source, deciding source, and effective mode without mutation. |
-| `axiom review mode enable --scope global --cwd <repo>` | Opt in. Enables receipt-driven development globally for future candidates. Together with `enable --scope project`, the only commands that turn it on. |
-| `axiom review mode disable --cwd <repo>` | Disable receipt-driven development globally. |
-| `axiom review mode disable --scope clone --cwd <repo>` | Disable it only for this clone; no other clone inherits the override. |
-| `axiom review mode enable --scope clone --cwd <repo>` | Clear this clone's off-only override. Does not turn review on by itself. |
-| `axiom review mode enable --scope project --cwd <repo>` | Your own preference: turn it on for the registered project that contains the repository, even if the global switch is off. Stored in your hub (`~/.axiom/workspaces.json`), never in the repository. |
-| `axiom review mode disable --scope project --cwd <repo>` | Your own preference: turn it off for that project, even if the global switch is on. |
-| `axiom review mode inherit --scope project --cwd <repo>` | Clear your project preference; the global switch decides again. |
-
-Precedence: a clone-local off wins, then your project preference (either way),
-then the global switch, then off by default. A clone may opt out but cannot
-require review for the user: only your own global or project preference turns it
-on, and the project preference lives in your hub, never in the repository. Interactive starts ask before
-reviewer work; non-interactive tier-1/tier-2 starts proceed without prompting and
-report how to disable review mode. Interactive consent is asked
-once per clone. Accepting records that choice; **not now** applies only to that
-candidate and does not change review mode.
-
-The clone-local override can only turn review off, so it never has to be readable
-while review would be off anyway. If the deciding source computed without it
-(project, then global, then the default) is not `on`, a failure to validate the
-location of the override, such as a Git common directory on an SMB/UNC share
-where the Windows path-safety checks refuse, is ignored: `status` reports `off`
-and the Claude Code stop hook stays silent. Only that "cannot validate" class
-is ignored: a corrupt override, a private RAR path with insecure permissions,
-or a mount that cannot represent private modes keeps refusing. If that source
-is `on`, the failure
-still fails closed with a typed unsupported-filesystem refusal whose
-continuation is `axiom review mode disable` or moving the repository to a local
-NTFS or ReFS volume. `review mode status` then prints `unavailable` instead of a
-deciding source.
-
-While review mode is disabled, continue through direct inline, delegated direct,
-or optional SDD routing without starting, retrying, or re-enabling review on the
-user's behalf. Review context may remain visible when available, but it never
-authorizes or blocks commit, push, PR, release, or archive. Native delivery gates
-report `disabled/unmanaged` when no exact receipt applies and never fabricate approval.
-
-In stable [`v2.6.0`](https://github.com/Gentleman-Programming/gentle-ai/releases/tag/v2.6.0) and unreleased `main`, disabled SDD status skips review authority and leaves `reviewGate` structurally absent. Pre-verify continues without routing to review. When visible, `reviewGate` is informational only; SDD archive preserves actual task and diagnostic history without requiring a verification certificate, while ordinary repository policy owns delivery. Native compatibility commands may report `disabled/unmanaged` review context, but no receipt state or validation result governs delivery. See the [SDD status contract](../internal/assets/skills/_shared/sdd-status-contract.md).
-
-## Review store reset
-
-Review authority accumulates without bound: every candidate leaves a lineage
-behind and nothing removes a delivered one, so a long-lived clone eventually
-holds hundreds of lineages and hundreds of megabytes of candidate checkouts.
-`review abandon` refuses terminal states and `review reclaim` refuses any entry
-holding authoritative artifacts, so until now a degraded store had no exit.
-
-| Command | Effect |
-|---|---|
-| `axiom review store-reset --cwd <repo>` | Report, per category, what a reset would remove and what it would preserve. Removes nothing. |
-| `axiom review store-reset --cwd <repo> --confirm` | Remove this clone's review lineage state. Irreversible. |
-| `axiom review store-reset --cwd <repo> --confirm --include-in-flight` | Also remove reviews that have not reached a terminal state. |
-| `axiom review store-reset --cwd <repo> --confirm --include-adapter-reviews` | Also remove the adapter-written `reviews/` graph store, which the lease and the in-flight refusal do not cover. |
-| `axiom review store-reset --cwd <repo> --json` | The same report, machine-readable. |
-
-Every sub-action is user-initiated only; no adapter and no automation reaches
-it, because the verb carries no negotiated contract row. Preview is the default
-and `--confirm` is required to remove anything: the operation is irreversible
-and clone-wide, so the invocation typed from memory has to be the one that only
-looks. It is clone-scoped and never touches a global or machine-wide location.
-
-It **removes** `candidate-views/` and the `v1`, `v2`, `quarantine`,
-`effect-markers`, and `incidents` subtrees of `review-transactions/`. Candidate
-views are registered Git worktrees, so their administrative directories are
-removed too, but only when each one's own `gitdir` file proves it belongs to
-that exact view; no unrelated worktree is pruned. A registration moved aside for
-a category that then could not be removed is put back; on the rare occasion the
-move back also fails, the directory is kept rather than deleted, and the report
-names it, names where it was left, and withdraws its usual claim that nothing
-marked SKIPPED was touched.
-
-It **preserves** the receipt-driven-development kill switch in both the
-`review-mode/` location and the pre-#2882 mirror inside
-`review-transactions/rar-authority/`, along with `sdd-runtime/`,
-`defect-reports/`, `review-artifacts/`, `incidents/`, and
-`REVIEW-MAINTENANCE.lock`. Reviews that were off stay off. The list is an
-allowlist, so any path the command does not recognize -- including one a future
-release adds -- is reported and left in place rather than guessed at.
-
-It **withholds** `reviews/`, the review graph store the gentle-pi adapter
-writes, and removes it only when `--include-adapter-reviews` is given. Both
-safeties described below stop at the edge of that directory:
-`REVIEW-MAINTENANCE.lock` does not cover any path under it, so the exclusive
-lease excludes no writer there, and the in-flight classification reads only
-`review-transactions/v2`, so a review living there can never be listed as open.
-A default run therefore cannot tell a dead graph from a live review, and a
-destructive command does not delete what it cannot vouch for. The category is
-still measured and still reported, under the preserved list, carrying that
-reason and the flag that overrides it.
-
-Reviews that have not reached a terminal state (anything other than approved,
-escalated, or invalidated, plus any record that cannot be parsed) are refused by
-default and listed by name. The reset takes the same exclusive maintenance lease
-every other maintenance operation takes *before* it reads the store, so that
-classification and the removal it authorizes are one atomic step: a review that
-starts while the reset is waiting for the lease is seen and refused, never
-destroyed by a run that reported none open. Each category is removed all at once
-or not at all -- a category that cannot be moved aside is reported with its
-reason and left exactly as it was found, worktree registrations included. The
-reset runs while review mode is disabled: gating cleanup on the kill switch
-would rebuild the dead end it exists to remove.
-
-The TUI exposes the same action as **Reset review store** in the main menu,
-between *Manage backups* and *Managed uninstall*, showing the same survey behind
-a confirmation whose cursor starts on *Cancel*. The TUI has no
-`--include-in-flight` or `--include-adapter-reviews` equivalent: when open
-reviews exist it refuses and prints the CLI invocation instead, so destroying
-in-flight work is never one keystroke away.
 
 ## Installation and refresh
 
@@ -215,7 +97,3 @@ and its adapter delivery is owned by
 [`internal/components/agentguidance/inject.go`](../internal/components/agentguidance/inject.go).
 Canonical route facts come from
 [`internal/agents/capabilitymanifest/manifest.go`](../internal/agents/capabilitymanifest/manifest.go).
-Review mode is implemented in
-[`internal/cli/review_mode.go`](../internal/cli/review_mode.go). The current
-authority and recovery behavior is documented in the
-[Organic RDD architecture](architecture/organic-rdd.md).

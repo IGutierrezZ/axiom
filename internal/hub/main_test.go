@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -19,9 +18,6 @@ import (
 // usuario, con un autor fijo y sin red (tasks.md, regla 9): las pruebas de
 // REQ-25.31 crean repositorios y worktrees reales.
 func TestMain(m *testing.M) {
-	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
-	// que ejercitan la revisión activan el punto de inyección del paquete.
-	rddharness.SetForTesting(true)
 	os.Exit(runTests(m))
 }
 

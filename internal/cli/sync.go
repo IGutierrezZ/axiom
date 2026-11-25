@@ -859,7 +859,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 				continue
 			}
 			pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-			for _, name := range sdd.OpenCodePluginLifecycleNames(adapter.Agent()) {
+			for _, name := range sdd.ManagedOpenCodePluginNamesFor(adapter.Agent()) {
 				paths[filepath.Join(pluginsDir, name)] = struct{}{}
 			}
 		}
@@ -2633,28 +2633,6 @@ func runPostSyncVerificationScoped(homeDir, workspaceDir string, scope InstallSc
 			})
 		}
 	}
-	if scope != ScopeWorkspace {
-		for _, adapter := range adapters {
-			if !sdd.AgentReceivesManagedOpenCodePlugins(adapter.Agent()) {
-				continue
-			}
-			pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-			legacyPath := filepath.Join(pluginsDir, sdd.LegacyOpenCodeReviewPluginName)
-			checks = append(checks, verify.Check{
-				ID:          "verify:sync:file:" + legacyPath,
-				Description: "legacy OpenCode review plugin removed",
-				Run: func(context.Context) error {
-					if _, err := os.Lstat(legacyPath); err == nil {
-						return fmt.Errorf("legacy OpenCode review plugin still exists; rerun `axiom sync` to complete the managed plugin migration")
-					} else if !os.IsNotExist(err) {
-						return err
-					}
-					return nil
-				},
-			})
-		}
-	}
-
 	// Retired copies that sync kept (edited, so not provably Axiom's) still
 	// compete with their replacement. Warn once per copy; never fail the sync.
 	for _, root := range retiredSkillRoots(homeDir, workspaceDir, scope, adapters) {

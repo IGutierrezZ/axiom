@@ -38,10 +38,6 @@ These rules apply to **all non-trivial work**, not only SDD phases. Delegation i
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Review Execution Contract
-
-{{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
-
 ### Cost and Context Balance
 
 {{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}

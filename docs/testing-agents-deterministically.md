@@ -272,4 +272,3 @@ The approach generalizes to any agent-driven system:
 
 - [Docker E2E Testing](./docker-e2e-testing.md) — the installer suite
 - [Organic Recovery Architecture and Implementation Plan](./audits/2026-07-23-organic-recovery-implementation-plan.md) — the routes, verification axes, and acceptance criteria this suite exercises
-- [Review Authority Threat Model](./review-authority-threat-model.md) — boundaries and assumptions of the trust kernel

@@ -16,7 +16,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
@@ -105,10 +104,6 @@ func RunArgs(args []string, stdout io.Writer) error {
 		case "help", "--help", "-h":
 			printHelp(stdout, Version)
 			return nil
-		case "bench-model-picker":
-			if handled, err := runBenchModelPickerCommand(args[1:], stdout); handled {
-				return err
-			}
 		case "uninstall":
 			if len(args) >= 2 && args[1] == "opencode-plugin" {
 				_, err := cli.RunUninstallOpenCodePlugin(args[2:], stdout)
@@ -131,25 +126,6 @@ func RunArgs(args []string, stdout io.Writer) error {
 			return cli.RunSDDPreflightHook(args[1:], stdout)
 		case "codegraph":
 			return cli.RunCodeGraph(args[1:], stdout)
-		case "review":
-			// The kill switch must stay reachable even when review authority
-			// itself is disabled, so it is dispatched ahead of the facade.
-			if len(args) >= 2 && args[1] == "mode" {
-				return cli.RunReviewMode(args[2:], stdout)
-			}
-			return cli.RunReview(args[1:], stdout)
-		case "review-start":
-			return cli.RunReviewStart(args[1:], stdout)
-		case "review-resume":
-			return cli.RunReviewResume(args[1:], stdout)
-		case "review-step":
-			return cli.RunReviewStep(args[1:], stdout)
-		case "review-bundle-export":
-			return cli.RunReviewBundleExport(args[1:], stdout)
-		case "review-bundle-import":
-			return cli.RunReviewBundleImport(args[1:], stdout)
-		case "review-validate":
-			return cli.RunReviewValidateNonDeciding(args[1:], stdout)
 		case "install":
 			if hasHelpFlag(args[1:]) {
 				cli.PrintInstallHelp(stdout)
@@ -296,13 +272,6 @@ func RunArgs(args []string, stdout io.Writer) error {
 		// nil; assigning it explicitly here keeps the production wiring
 		// visible at the same seam as the other injected functions.
 		m.OpenCodePluginUninstallFn = opencodeplugin.Uninstall
-		// The review store is clone-scoped, so the TUI acts on the repository
-		// the user launched it from. Both closures resolve the working
-		// directory at call time rather than at wiring time, so a survey and
-		// the reset it authorized can never disagree about which clone they
-		// mean.
-		m.ReviewStoreResetSurveyFn = tuiReviewStoreSurvey
-		m.ReviewStoreResetFn = tuiReviewStoreReset
 		finalModel, err := runTUI(m, tea.WithAltScreen())
 		if err != nil {
 			return err
@@ -1139,31 +1108,6 @@ func codexOrchestratorFromState(a *state.CodexOrchestratorAssignmentState) *mode
 		return nil
 	}
 	return &model.CodexOrchestratorAssignment{Model: a.Model, Effort: model.CodexEffort(a.Effort)}
-}
-
-// tuiReviewStoreSurvey reports what a review store reset would remove for the
-// clone the TUI was launched from. It is read-only.
-func tuiReviewStoreSurvey() (reviewtransaction.StoreResetReport, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return reviewtransaction.StoreResetReport{}, err
-	}
-	return reviewtransaction.SurveyReviewStore(context.Background(), cwd, reviewtransaction.StoreResetRequest{})
-}
-
-// tuiReviewStoreReset applies the reset for that same clone.
-//
-// It never sets IncludeInFlight, and never sets IncludeAdapterReviews either.
-// The TUI has no keystroke that destroys a review somebody is in the middle of,
-// nor one that destroys a store this command cannot classify: the confirmation
-// screen refuses outright and prints the CLI invocation that overrides it, so
-// every override stays an act the user has to type out.
-func tuiReviewStoreReset() (reviewtransaction.StoreResetReport, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return reviewtransaction.StoreResetReport{}, err
-	}
-	return reviewtransaction.ResetReviewStore(context.Background(), cwd, reviewtransaction.StoreResetRequest{})
 }
 
 // installStateStore elige el almacén del estado de instalación para la TUI según el

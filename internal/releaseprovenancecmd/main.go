@@ -66,6 +66,6 @@ func run(args []string) error {
 	return releaseprovenance.Write(*output, *config, releaseprovenance.Input{
 		Tag: os.Getenv("GITHUB_REF_NAME"), SourceSHA: os.Getenv("GITHUB_SHA"), WorkflowName: os.Getenv("GITHUB_WORKFLOW"),
 		RunID: os.Getenv("GITHUB_RUN_ID"), RunAttempt: runAttempt, Job: os.Getenv("GITHUB_JOB"), GoVersion: runtime.Version(),
-		ProviderContractSemver: os.Getenv("PROVIDER_CONTRACT_SEMVER"), GoReleaserVersion: *goReleaser,
+		GoReleaserVersion: *goReleaser,
 	})
 }

@@ -421,8 +421,8 @@ func canonicalDispatchVerbs(t *testing.T, file string) map[string]struct{} {
 // canonical-binary guard family [D-04]: every verb reachable through the
 // deprecated internal/app.RunArgs dispatch switch MUST also be reachable
 // through cmd/axiom/main.go's own dispatch switch. This is the guard that
-// would have caught codegraph, telemetry, skill-registry and
-// bench-model-picker existing only in internal/app before this increment.
+// would have caught codegraph, telemetry and skill-registry existing only in
+// internal/app before this increment.
 //
 // Characterization test (task 3.5): the four verbs above were already
 // rewired into cmd/axiom/main.go before this phase started (main.go:396-415),

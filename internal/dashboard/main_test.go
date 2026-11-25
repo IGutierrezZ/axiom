@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -21,7 +20,7 @@ var sandboxHome string
 // doctor, the skills index mirror and the install state, and several handlers
 // reach tools that write outside the process (sync, upgrade, codegraph). Pointing
 // HOME/USERPROFILE at a throwaway directory for the whole binary — the same
-// pattern as internal/app, internal/cli and internal/reviewtransaction — makes
+// pattern as internal/app and internal/cli — makes
 // those paths hermetic even for a test that forgets to isolate itself.
 // AXIOM_NO_PERSISTENT_PATH keeps any real axiom binary a test starts as a
 // subprocess (not a Go test binary, so it bypasses the in-process guard) from
@@ -33,9 +32,6 @@ var sandboxHome string
 // on PATH, so nothing is written to the repository checkout either. The
 // repository guard (repo_guard_test.go) fails the run if any of them still does.
 func TestMain(m *testing.M) {
-	// RDD está suspendido sin la etiqueta rdd_harness (C-01-c): los tests en proceso
-	// que ejercitan la revisión activan el punto de inyección del paquete.
-	rddharness.SetForTesting(true)
 	os.Exit(runTests(m))
 }
 

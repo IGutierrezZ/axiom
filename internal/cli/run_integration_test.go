@@ -2187,6 +2187,51 @@ func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T
 	}
 }
 
+func TestRunInstallSelectionWithSkillWithoutEmbeddedAssetIsIgnored(t *testing.T) {
+	home := t.TempDir()
+	restoreHome := osUserHomeDir
+	restoreCommand := runCommand
+	restoreLookPath := cmdLookPath
+	t.Cleanup(func() {
+		osUserHomeDir = restoreHome
+		runCommand = restoreCommand
+		cmdLookPath = restoreLookPath
+	})
+
+	osUserHomeDir = func() (string, error) { return home, nil }
+	runCommand = func(string, ...string) error { return nil }
+	cmdLookPath = func(name string) (string, error) {
+		return "/usr/local/bin/" + name, nil
+	}
+
+	args := []string{"--agent", "claude-code", "--preset", "custom", "--component", "skills", "--skills", "go-testing"}
+	flags, err := ParseInstallFlags(args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := NormalizeInstallFlags(flags, system.DetectionResult{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The selection reaches the installer already built (the TUI, a restored
+	// selection): it still names the skill an earlier release shipped.
+	input.Selection.Skills = append(input.Selection.Skills, "rdd-defect-workflow")
+	result, err := runInstall(flags, input, system.DetectionResult{}, home, t.TempDir(), "")
+	if err != nil {
+		t.Fatalf("runInstall() with a retired skill id in the selection error = %v", err)
+	}
+	if !result.Verify.Ready {
+		t.Fatalf("verification ready = false, report = %#v", result.Verify)
+	}
+	skillsDir := filepath.Join(home, ".claude", "skills")
+	if _, err := os.Stat(filepath.Join(skillsDir, "go-testing", "SKILL.md")); err != nil {
+		t.Fatalf("go-testing was not installed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(skillsDir, "rdd-defect-workflow")); !os.IsNotExist(err) {
+		t.Fatalf("rdd-defect-workflow must not be installed: %v", err)
+	}
+}
+
 func TestRunInstallCustomPresetSkillsNoFlagInstallsNothing(t *testing.T) {
 	home := t.TempDir()
 	restoreHome := osUserHomeDir

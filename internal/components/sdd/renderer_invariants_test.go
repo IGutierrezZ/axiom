@@ -140,10 +140,6 @@ func assertCurrentOpenCodeOrchestratorContract(t *testing.T, label string, conte
 	if strings.Contains(content, runtimeAgentIDPlaceholder) {
 		t.Fatalf("%s retains runtime identity placeholder", label)
 	}
-	if !strings.Contains(content, "--agent "+string(agent)+" --next-transition") {
-		t.Fatalf("%s does not bind negotiated review routing to runtime %q", label, agent)
-	}
-
 	lastMarker := -1
 	for _, section := range currentOpenCodeOrchestratorSections {
 		markerIndex := strings.Index(content, section.marker)
@@ -178,14 +174,11 @@ func assertCurrentOpenCodeOrchestratorContract(t *testing.T, label string, conte
 		}
 	}
 
-	assertTextContainsClauses(t, label+" bounded review", content, []string{
-		"#### Review Execution Contract",
-		"Selectorless STATUS only preflights the current worktree candidate",
-		"START freezes one compact atomic transaction",
-		"Only candidate-caused severe findings block",
-		"Only that exact invocation burns authority and artifacts",
-		"The final reviewer, refuter, or targeted-validator capture owns closure.",
-	})
+	for _, forbidden := range []string{"Review Execution Contract", "axiom review", "Selectorless STATUS"} {
+		if strings.Contains(content, forbidden) {
+			t.Errorf("%s still carries review-by-receipt prose %q", label, forbidden)
+		}
+	}
 	if profileName == "" {
 		assertTextContainsClauses(t, label+" model assignment contract", content, []string{
 			"<!-- gentle-ai:sdd-model-assignments -->",

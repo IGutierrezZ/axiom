@@ -14,7 +14,7 @@ import (
 )
 
 func TestRunSDDAttemptGrantPersistsAndReplaysThroughTheCLI(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	change := "cli-grant"
 	sibling, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {

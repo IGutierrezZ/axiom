@@ -19,10 +19,6 @@ func TestJudgmentDaySkillStartsWithoutReviewTransaction(t *testing.T) {
 		"review/start",
 		"mode=judgment_day",
 		"persist the transaction",
-		// The unconditional authority half: terminal transaction states and
-		// the terminal receipt belong to the negotiated lifecycle only. The
-		// shared review-ledger-contract reference may remain, but only scoped
-		// to the opt-in delivery-authority route.
 		"terminal transaction states",
 		"terminal receipt",
 	} {
@@ -31,7 +27,7 @@ func TestJudgmentDaySkillStartsWithoutReviewTransaction(t *testing.T) {
 		}
 	}
 
-	if !strings.Contains(lower, "issues no receipt") {
-		t.Error("skills/judgment-day/SKILL.md must state that a judgment issues no receipt and carries no delivery authority")
+	if !strings.Contains(lower, "carries no delivery authority") {
+		t.Error("skills/judgment-day/SKILL.md must state that a judgment carries no delivery authority")
 	}
 }

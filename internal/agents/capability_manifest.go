@@ -19,9 +19,8 @@ type ContractID = capabilitymanifest.ContractID
 type ContractExposure = capabilitymanifest.ContractExposure
 
 const (
-	AgentCapabilityManifestV1         = capabilitymanifest.SchemaV1
-	ContractWorkRoutingV1             = capabilitymanifest.ContractWorkRoutingV1
-	ContractImmutableReviewExecutorV1 = capabilitymanifest.ContractImmutableReviewExecutorV1
+	AgentCapabilityManifestV1 = capabilitymanifest.SchemaV1
+	ContractWorkRoutingV1     = capabilitymanifest.ContractWorkRoutingV1
 
 	ContractExposureDormant    = capabilitymanifest.ContractExposureDormant
 	ContractExposureAdvertised = capabilitymanifest.ContractExposureAdvertised

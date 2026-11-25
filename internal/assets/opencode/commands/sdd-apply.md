@@ -36,8 +36,6 @@ If all gates pass, launch the hidden `sdd-apply` sub-agent with:
 Return a structured orchestration result with: status, executive_summary, artifacts, next_recommended, risks, and skill_resolution.
 
 SDD CONTINUATION:
-After apply returns, its own next_recommended proceeds toward archive when tasks are complete; verification is optional — apply itself never routes to review. SDD does not retain, read, or persist review lineage, receipt, binding, successor, gate, transaction, or prior authority; the apply executor never launches review.
+After apply returns, its own next_recommended proceeds toward archive when tasks are complete; verification is optional — apply itself never routes to review.
 
-{{GENTLE_AI_AUTHORITY_FIRST_TERMINAL_PROCEDURE}}
 
-Approval returns one exact pending acknowledgement continuation. Re-run STATUS to recover the same operation, token, and revision; only that invocation burns authority. Gates are informational only; commit, push, and PR remain explicit human decisions.

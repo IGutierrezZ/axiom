@@ -121,7 +121,7 @@ func TestClaudePhaseAssignmentsFromLegacyPreservesModelsWithDefaultEffort(t *tes
 
 func TestClaudePhaseNamesIsACopyWithoutTheOrchestrator(t *testing.T) {
 	names := model.ClaudePhaseNames()
-	if len(names) != 20 || names[0] != "sdd-explore" || names[len(names)-1] != "default" {
+	if len(names) != 14 || names[0] != "sdd-explore" || names[len(names)-1] != "default" {
 		t.Fatalf("model.ClaudePhaseNames() = %v", names)
 	}
 	for _, name := range names {

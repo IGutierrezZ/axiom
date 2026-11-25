@@ -298,7 +298,7 @@ func doctorInvokedGentleAIClause(pathResolved string) string {
 	if err != nil {
 		return ""
 	}
-	version, _ := reviewGentleAIVersionAndCommit()
+	version, _ := buildVersionAndCommit()
 	clause := fmt.Sprintf("; invoked executable: %s (version %s)", invoked, version)
 	if pathResolved != "" && !doctorSameExecutable(invoked, pathResolved) {
 		clause += " -- this differs from the PATH-resolved copy above; the PATH copy's health does not describe the build actually running"

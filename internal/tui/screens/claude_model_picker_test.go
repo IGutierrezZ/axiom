@@ -7,11 +7,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-func TestClaudeShortTerminalShowsFocusedRDDRowsAndConfirm(t *testing.T) {
+func TestClaudeShortTerminalShowsFocusedRowsAndConfirm(t *testing.T) {
 	picker := NewClaudeModelPickerState()
 	picker.InCustomMode = true
 	picker.Mode = ClaudeModePhaseList
-	for _, role := range []string{"risk", "readability", "reliability", "resilience", "refuter", "validator"} {
+	for _, role := range []string{"jd-judge-a", "jd-judge-b", "jd-fix-agent", "default"} {
 		for row, phase := range claudePhases {
 			if phase != role {
 				continue
@@ -34,8 +34,8 @@ func TestClaudeModelPickerPlacesResearchAfterExplore(t *testing.T) {
 	}
 }
 
-func TestClaudePickerSavesAndReopensNativeReviewRoles(t *testing.T) {
-	roles := []string{"risk", "readability", "reliability", "resilience", "refuter", "validator"}
+func TestClaudePickerSavesAndReopensJudgmentDayRoles(t *testing.T) {
+	roles := []string{"jd-judge-a", "jd-judge-b", "jd-fix-agent", "default"}
 	picker := NewClaudeModelPickerState()
 	picker.InCustomMode = true
 	for _, role := range roles {
@@ -67,9 +67,6 @@ func TestClaudePickerSavesAndReopensNativeReviewRoles(t *testing.T) {
 		if reopened.CustomAssignments[role].Model != model.ClaudeModelHaiku {
 			t.Errorf("reopened %s = %v, want haiku", role, reopened.CustomAssignments[role])
 		}
-	}
-	if _, present := model.ClaudeModelPresetBalanced()["risk"]; present {
-		t.Fatal("named preset policy changed")
 	}
 }
 

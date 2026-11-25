@@ -419,10 +419,6 @@ Retrieve full content via two steps:
 2. `mem_get_observation(id: {id})` → full content (REQUIRED — search results are truncated)
 <!-- sdd-orchestrator-section:Engram Topic Key Format:end -->
 
-<!-- sdd-orchestrator-section:Review Execution Contract:start -->
-The canonical native bounded-review contract is injected from the shared provider source at render time.
-<!-- sdd-orchestrator-section:Review Execution Contract:end -->
-
 <!-- sdd-orchestrator-section:Artifact Store Policy (Engram via MCP):start -->
 - `engram` — default when available; persistent memory across sessions via MCP
 - `openspec` — file-based artifacts; use only when user explicitly requests

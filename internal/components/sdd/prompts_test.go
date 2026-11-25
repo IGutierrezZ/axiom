@@ -12,7 +12,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
 
 // TestSharedPromptDir verifies the expected directory path is returned.
@@ -135,7 +134,6 @@ func agentPrompt(t *testing.T, agentsMap map[string]any, agentName string) strin
 func sddInstalledSubAgentsForCodeGraphTest() []string {
 	agents := append([]string{}, SharedPromptPhases()...)
 	agents = append(agents, sddJudgmentDaySubAgentsForCodeGraphTest()...)
-	agents = append(agents, sddReviewSubAgentsForCodeGraphTest()...)
 	return agents
 }
 
@@ -147,12 +145,8 @@ func sddJudgmentDaySubAgentsForCodeGraphTest() []string {
 	}
 }
 
-func sddReviewSubAgentsForCodeGraphTest() []string {
-	return opencode.ReviewPhases()
-}
-
 func sddShellDisabledSubAgentsForCodeGraphTest() []string {
-	return []string{"jd-judge-a", "jd-judge-b", "review-refuter"}
+	return []string{"jd-judge-a", "jd-judge-b"}
 }
 
 func assertOpenCodeSubAgentReadOnlyTools(t *testing.T, agentsMap map[string]any, agentName string) {
@@ -206,7 +200,7 @@ func nativeToolsLineForCodeGraphTest(t *testing.T, content string) string {
 }
 
 func kimiYAMLSubagentFilesForCodeGraphTest() []string {
-	return []string{"sdd-apply.yaml", "review-risk.yaml"}
+	return []string{"sdd-apply.yaml"}
 }
 
 func containsString(values []string, want string) bool {
@@ -545,7 +539,7 @@ func TestInjectOpenCodeSingleModeSubagentPromptsRespectBashCapabilityWhenCodeGra
 	}
 
 	agentsMap := readOpenCodeAgents(t, filepath.Join(home, ".config", "opencode", "opencode.json"))
-	bashCapableAgents := append(withoutStrings(SharedPromptPhases(), "sdd-research"), "jd-fix-agent", opencode.ReviewValidatorAgent)
+	bashCapableAgents := append(withoutStrings(SharedPromptPhases(), "sdd-research"), "jd-fix-agent")
 	for _, agentName := range bashCapableAgents {
 		prompt := agentPrompt(t, agentsMap, agentName)
 		if !containsCodeGraphGuidance(prompt) {
@@ -628,10 +622,7 @@ func TestInjectNativeSDDSubagentsIncludeCodeGraphGuidanceWhenEnabled(t *testing.
 				t.Fatalf("Inject(%s) error = %v", tc.name, err)
 			}
 
-			foundRefuter := false
-			foundEmptyTools := false
 			for _, fileName := range nativeMarkdownSubAgentFilesForCodeGraphTest(t, adapter) {
-				foundRefuter = foundRefuter || fileName == "review-refuter.md"
 				path := filepath.Join(adapter.SubAgentsDir(home), fileName)
 				content, err := os.ReadFile(path)
 				if err != nil {
@@ -642,7 +633,7 @@ func TestInjectNativeSDDSubagentsIncludeCodeGraphGuidanceWhenEnabled(t *testing.
 					t.Fatalf("%s guidance count = %d, want 1", fileName, count)
 				}
 
-				source := renderBoundedReviewAsset(adapter.Agent(), adapter.EmbeddedSubAgentsDir()+"/"+fileName)
+				source := renderManagedAsset(adapter.Agent(), adapter.EmbeddedSubAgentsDir()+"/"+fileName)
 				emptyToolsContract := false
 				if tc.toolGrant != "" {
 					// The asset carries {{ENGRAM_TOOL_PREFIX}}; injection expands it to
@@ -650,7 +641,6 @@ func TestInjectNativeSDDSubagentsIncludeCodeGraphGuidanceWhenEnabled(t *testing.
 					// expansion production performs rather than restating it here.
 					sourceTools := expandEngramToolNames(nativeToolsLineForCodeGraphTest(t, source))
 					emptyToolsContract = strings.TrimSpace(strings.TrimPrefix(sourceTools, "tools:")) == "[]"
-					foundEmptyTools = foundEmptyTools || emptyToolsContract
 					wantTools := sourceTools + ", " + tc.toolGrant
 					if tc.agentID == model.AgentKiroIDE {
 						wantTools = strings.TrimSuffix(sourceTools, "]") + `, "` + tc.toolGrant + `"]`
@@ -677,12 +667,6 @@ func TestInjectNativeSDDSubagentsIncludeCodeGraphGuidanceWhenEnabled(t *testing.
 				if strings.Count(text, "Bash") != strings.Count(source, "Bash") {
 					t.Fatalf("%s CodeGraph grant changed Bash count", fileName)
 				}
-			}
-			if !foundRefuter {
-				t.Fatal("dynamic native asset coverage missing review-refuter.md")
-			}
-			if tc.agentID == model.AgentClaudeCode && !foundEmptyTools {
-				t.Fatal("dynamic native asset coverage missing an empty-tools review lens")
 			}
 
 			second, err := Inject(home, adapter, model.SDDModeSingle, InjectOptions{CodeGraphGuidanceMarkdown: guidance})

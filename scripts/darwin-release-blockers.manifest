@@ -38,11 +38,6 @@
 ./internal/pathidentity TestSameDirectoryRejectsPathsThatDoNotExist             # identity is decided by the filesystem, not the string
 ./internal/pathidentity TestSameDirectoryRejectsRegularFiles                    # directory identity only; files never alias-match
 ./internal/pathidentity TestSameDirectoryDefersCaseFoldingToTheVolume           # APFS default is case-insensitive: the volume decides, not the code
-./internal/reviewtransaction TestResolveRepositoryRootAcceptsBothSpellingsOfOneRepository  # #1773 defect shape: authority bound via one spelling, found via the other
-./internal/reviewtransaction TestResolveRepositoryRootStillRejectsAForeignPath  # aliasing must not admit a foreign repository
-./internal/reviewtransaction TestAuthoritativeStorePathsAreCanonicalUnderAnAliasedRepository  # store paths canonicalize once, not per-spelling
-./internal/reviewtransaction TestAcquireLocalStoreLockUnderAnAliasedRepository  # the lock is one lock under either spelling
-./internal/reviewtransaction TestAcquireLocalStoreLockRefusesARawAliasedDirectory  # canonicalization happens before lock acquisition, not never
 
 # --- #1781: START EPERM under managed macOS profiles --------------------------
 # Fixed by 8fb1c2c1 (anchored lock walk); managed profiles surface as
@@ -54,7 +49,6 @@
 ./internal/fileprim TestAcquireLocalStoreLockRejectsSymlinkedParentAndPreservesTarget # openat walk vs symlinked parent, Darwin syscall semantics
 ./internal/fileprim TestAcquireLocalStoreLockRejectsSymlinkSwapAtOpenBoundary         # TOCTOU at the open boundary is filesystem-timing dependent
 ./internal/fileprim TestAcquireLocalStoreLockRejectsNonRegularUnixObject              # non-regular-object errnos differ on Darwin
-./internal/reviewtransaction TestBusyStoreLockProbePreservesExistingUnixInodeAndMetadata       # inode identity of a live lock under Darwin stat semantics
 
 # --- #4276: local store lock leaf first-create ENOENT -------------------------
 ./internal/fileprim TestSecureOpenLocalStoreLockLeafRetriesENOENT
@@ -82,24 +76,3 @@
 ./internal/sddstatus TestEditGrantRejectsStaleCASWithoutPublishing race
 ./internal/sddstatus TestEditGrantLockContentionPreservesTheNonMutationProof race
 ./internal/sddstatus TestEditGrantMutationContentionIsNotDoubleWrapped race
-
-# --- #1872: RAR plan-authority lock convoy (fixed by 6457a4a8) ----------------
-# Reproduced ONLY on Darwin: the critical section costs hundreds of ms there
-# (vs ~40ms Linux), making the 2s bounded wait exhaustible. count=20 matches
-# the reporter's reproduction; the fix converges on lock exhaustion, so the
-# high-count plain run is the regression sentinel.
-./internal/reviewtransaction TestRARPlanAuthorityConcurrentExactReplayConverges count=20  # the #1872 repro: 20 concurrent exact-replay publishers, x20
-./internal/reviewtransaction TestRARPlanAuthorityConcurrentExactReplayConverges count=2 race  # memory-safety net over the same convoy
-./internal/reviewtransaction TestRARPlanAuthorityConvergesOnExhaustedLockOverIdenticalPublishedAuthority race  # 6457a4a8: exhausted lock + identical published bytes converges
-./internal/reviewtransaction TestRARPlanAuthorityLockExhaustionWithoutConvergentAuthorityStaysTyped race       # 6457a4a8 no-weaken direction: no convergence proof, typed timeout stays
-
-# --- Advisory-lock timing (Windows Runtime lane precedent) --------------------
-# The #1872 class ("the lock outlives the answer") lives in this surface; these
-# are the flock/process-exit/cancellation timing tests whose failure windows
-# are platform-scheduler and filesystem dependent.
-./internal/reviewtransaction TestStoreLockReportsLiveOwnerAndCannotBeStolen      # live-owner probe under Darwin flock semantics
-./internal/reviewtransaction TestStoreLockRecoversCrashAndCorruptOwnerRecords    # crash recovery depends on platform lock-release behavior
-./internal/reviewtransaction TestStoreLockIsReleasedWhenOwnerProcessExits        # kernel releases flock on exit: timing is per-platform
-./internal/reviewtransaction TestConcurrentStoreLockRecoverersCannotBothWin race # recovery race window is scheduler-dependent
-./internal/reviewtransaction TestAuthorityLockCancellationPreservesSentinelAndCallerDeadline  # cancellation vs bounded wait ordering
-./internal/reviewtransaction TestCompactStatusLoadContextCancelsUnderExclusiveMaintenance     # read path vs exclusive maintenance lock timing
