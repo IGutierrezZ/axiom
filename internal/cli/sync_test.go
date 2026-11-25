@@ -784,7 +784,7 @@ func TestComponentSyncStepRunsPersonaInjectForSync(t *testing.T) {
 func TestComponentSyncStepWritesPiPersonaToHomeAndReportsChangedFile(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	path := filepath.Join(home, ".pi", "gentle-ai", "persona.json")
+	path := filepath.Join(home, ".pi", "axiom", "persona.json")
 	var changed []string
 	step := componentSyncStep{
 		id:           "sync:persona",
@@ -802,7 +802,7 @@ func TestComponentSyncStepWritesPiPersonaToHomeAndReportsChangedFile(t *testing.
 	if !containsPath(changed, path) {
 		t.Fatalf("first Pi persona sync changed files = %v, missing %q", changed, path)
 	}
-	if _, err := os.Stat(filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(workspace, ".pi", "axiom", "persona.json")); !os.IsNotExist(err) {
 		t.Fatalf("Pi sync wrote a workspace persona config; stat err = %v", err)
 	}
 	if got := readTextFile(t, path); got != "{\n  \"mode\": \"neutral\"\n}\n" {
@@ -827,8 +827,8 @@ func TestSyncPersonaPathsAndBackupTargetsTrackOnlyPiGlobalConfig(t *testing.T) {
 		Persona:    model.PersonaNeutral,
 	}
 	adapters := resolveAdapters(selection.Agents)
-	want := filepath.Join(home, ".pi", "gentle-ai", "persona.json")
-	unwanted := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+	want := filepath.Join(home, ".pi", "axiom", "persona.json")
+	unwanted := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 	prompt := systemPromptFileFor(t, home, model.AgentPi)
 
 	paths := syncPersonaPathsWithWorkspace(home, workspace, selection, adapters)
@@ -880,7 +880,7 @@ func TestRunSyncExplicitPiRetiresStaleRoutingAndReportsIt(t *testing.T) {
 func TestPiPersonaSyncSnapshotRestoresGlobalConfig(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	path := filepath.Join(home, ".pi", "gentle-ai", "persona.json")
+	path := filepath.Join(home, ".pi", "axiom", "persona.json")
 	mustWriteFile(t, path, []byte("{\n  \"mode\": \"gentleman\"\n}\n"))
 
 	selection := model.Selection{
@@ -2885,7 +2885,7 @@ func TestRunSyncReportsLegacySelectionMigrationPersistenceFailure(t *testing.T) 
 
 func writeManagedPiCodeGraphManifest(t *testing.T, home string) {
 	t.Helper()
-	manifestPath := filepath.Join(home, ".gentle-ai", "pi-codegraph.json")
+	manifestPath := filepath.Join(home, ".axiom", "pi-codegraph.json")
 	mcpPath := filepath.Join(home, ".pi", "agent", "mcp.json")
 	mustWriteFile(t, manifestPath, []byte(`{"mcpPath":`+strconv.Quote(mcpPath)+`,"mcp":{"afterHash":"managed"},"children":{}}`))
 	if err := os.Chmod(manifestPath, 0o600); err != nil {
@@ -5176,7 +5176,7 @@ func TestRunSyncWithSelectionPiUsesNeutralForMissingPersonaField(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 	mustWriteFile(t, piPath, []byte("{\n  \"mode\": \"gentleman\"\n}\n"))
 	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"]}`))
 
@@ -5190,7 +5190,7 @@ func TestRunSyncWithSelectionPiUsesNeutralForMissingPersonaField(t *testing.T) {
 	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
 		t.Fatalf("Selection.Persona = %q, want %q", got, want)
 	}
-	homePiPath := filepath.Join(home, ".pi", "gentle-ai", "persona.json")
+	homePiPath := filepath.Join(home, ".pi", "axiom", "persona.json")
 	if got, want := readTextFile(t, homePiPath), "{\n  \"mode\": \"neutral\"\n}\n"; got != want {
 		t.Fatalf("global Pi persona config = %q, want %q", got, want)
 	}
@@ -5218,7 +5218,7 @@ func TestRunSyncWithSelectionPiRejectsInvalidPersistedPersonaWithoutMutation(t *
 			home := t.TempDir()
 			workspace := t.TempDir()
 			t.Chdir(workspace)
-			piPath := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+			piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 			originalPi := []byte("{\n  \"mode\": \"gentleman\"\n}\n")
 			mustWriteFile(t, piPath, originalPi)
 
@@ -5255,7 +5255,7 @@ func TestRunSyncPiRejectsUnsupportedPersistedPersonaBeforeMutation(t *testing.T)
 	setSyncTestHome(t, home)
 	workspace := t.TempDir()
 	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 	originalPi := []byte("{\n  \"mode\": \"gentleman\"\n}\n")
 	mustWriteFile(t, piPath, originalPi)
 	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"],"persona":"unknown"}`))
@@ -5279,7 +5279,7 @@ func TestRunSyncWithSelectionPiCustomPersistedPersonaIsByteStable(t *testing.T) 
 	home := t.TempDir()
 	workspace := t.TempDir()
 	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 	originalPi := []byte("user-owned Pi persona bytes\n")
 	mustWriteFile(t, piPath, originalPi)
 	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"],"persona":"custom"}`))

@@ -12,6 +12,7 @@ import (
 	"runtime"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 )
 
 const ownershipSchema = "gentle-ai.telemetry-runtime-ownership/v1"
@@ -63,7 +64,19 @@ type managedManifest struct {
 // ManagedPaths accepts the adapter's resolved config directory, including XDG.
 // The manifest lives outside plugins; no user JSON or exporter is modified.
 func ManagedPaths(configDir string) []string {
-	return []string{filepath.Join(configDir, "plugins", "telemetry-runtime.ts"), filepath.Join(configDir, ".gentle-ai-telemetry-runtime.json")}
+	return []string{filepath.Join(configDir, "plugins", "telemetry-runtime.ts"), filepath.Join(configDir, ".axiom-telemetry-runtime.json")}
+}
+
+// migrateLegacyManifest renombra el manifiesto heredado
+// `.gentle-ai-telemetry-runtime.json` a `.axiom-telemetry-runtime.json` si el
+// nuevo no existe. Existe solo para retirar el nombre heredado; nunca pisa.
+func migrateLegacyManifest(configDir string) error {
+	legacy := filepath.Join(configDir, ".gentle-ai-telemetry-runtime.json")
+	current := filepath.Join(configDir, ".axiom-telemetry-runtime.json")
+	if _, err := legacyhome.MoveIfAbsent(legacy, current); err != nil {
+		return fmt.Errorf("migrate legacy telemetry runtime manifest: %w", err)
+	}
+	return nil
 }
 
 // Refuse indirection strictly inside the caller-resolved configuration root,
@@ -130,6 +143,9 @@ func readManaged(path string) ([]byte, error) {
 // inspect refuses adoption, even when an unowned file matches this release.
 // A missing owned asset is repairable; altered bytes or metadata are not.
 func inspect(configDir string) ([][]byte, error) {
+	if err := migrateLegacyManifest(configDir); err != nil {
+		return nil, err
+	}
 	paths := ManagedPaths(configDir)
 	current := make([][]byte, 2)
 	journal := mutationjournal.New(configDir)

@@ -52,9 +52,9 @@ func TestBackupScreenPreselectsNewestAxiomBackup(t *testing.T) {
 		want    int
 	}{
 		{
-			name: "latest Axiom backup wins over newer Gentle AI history",
+			name: "latest Axiom backup wins over newer unidentified-origin history",
 			backups: []backup.Manifest{
-				{ID: "newer-legacy", CreatedAt: created(23), Origin: backup.BackupOriginGentleAI},
+				{ID: "newer-legacy", CreatedAt: created(23), Origin: backup.BackupOriginUnknown},
 				{ID: "newest-axiom", CreatedAt: created(22), Origin: backup.BackupOriginAxiom},
 				{ID: "older-axiom", CreatedAt: created(21), Origin: backup.BackupOriginAxiom},
 			},
@@ -63,8 +63,8 @@ func TestBackupScreenPreselectsNewestAxiomBackup(t *testing.T) {
 		{
 			name: "no Axiom backups leaves historical backups unselected",
 			backups: []backup.Manifest{
-				{ID: "newest-legacy", CreatedAt: created(23), Origin: backup.BackupOriginGentleAI},
-				{ID: "older-legacy", CreatedAt: created(22), Origin: backup.BackupOriginGentleAI},
+				{ID: "newest-legacy", CreatedAt: created(23), Origin: backup.BackupOriginUnknown},
+				{ID: "older-legacy", CreatedAt: created(22), Origin: backup.BackupOriginUnknown},
 			},
 			want: 2, // Focus "Volver"; the user must deliberately choose a historical backup.
 		},
@@ -105,7 +105,7 @@ func TestBackupScreenScrollsToDefaultSelectionOutsideFirstPage(t *testing.T) {
 		backups = append(backups, backup.Manifest{
 			ID:        fmt.Sprintf("newer-history-%02d", i),
 			CreatedAt: base.Add(time.Duration(100+i) * time.Hour),
-			Origin:    backup.BackupOriginGentleAI,
+			Origin:    backup.BackupOriginUnknown,
 		})
 	}
 	backups = append(backups,

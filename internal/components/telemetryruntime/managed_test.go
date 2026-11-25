@@ -489,3 +489,36 @@ func TestRemoveManagedRejectsManifestWhoseAfterDoesNotMatchItsHash(t *testing.T)
 		t.Fatalf("manifest was removed: %v", err)
 	}
 }
+
+func TestManifestMigratesLegacyName(t *testing.T) {
+	dir := t.TempDir()
+	legacy := filepath.Join(dir, ".gentle-ai-telemetry-runtime.json")
+	current := ManagedPaths(dir)[1]
+	if err := os.WriteFile(legacy, []byte("viejo"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateLegacyManifest(dir); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(current); err != nil || string(got) != "viejo" {
+		t.Fatalf("el manifiesto no se movió a %s: %q, %v", current, got, err)
+	}
+	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
+		t.Fatalf("el manifiesto heredado debía desaparecer: %v", err)
+	}
+	if err := migrateLegacyManifest(dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte("otro"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrateLegacyManifest(dir); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(current); string(got) != "viejo" {
+		t.Fatalf("el manifiesto nuevo se pisó: %q", got)
+	}
+	if got, _ := os.ReadFile(legacy); string(got) != "otro" {
+		t.Fatalf("el manifiesto heredado debía quedar intacto: %q", got)
+	}
+}

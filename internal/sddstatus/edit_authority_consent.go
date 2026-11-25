@@ -28,7 +28,7 @@ import (
 // which is the resurrection hazard S5 exists to close.
 const (
 	changeInstanceMarkerFile       = ".axiom-instance"
-	legacyChangeInstanceMarkerFile = ".gentle-ai-instance"
+	legacyChangeInstanceMarkerFile = ".gentle-ai-instance" // solo para migrarlo a changeInstanceMarkerFile
 )
 
 const (
@@ -46,18 +46,13 @@ func readChangeInstanceMarker(changeRoot string) (string, error) {
 	markerPath := filepath.Join(changeRoot, changeInstanceMarkerFile)
 	info, err := os.Lstat(markerPath)
 	if errors.Is(err, os.ErrNotExist) {
-		legacyMarkerPath := filepath.Join(changeRoot, legacyChangeInstanceMarkerFile)
-		legacyInfo, legacyErr := os.Lstat(legacyMarkerPath)
-		if errors.Is(legacyErr, os.ErrNotExist) {
+		migrated, migrateErr := migrateLegacyChangeInstanceMarker(changeRoot)
+		if migrateErr != nil {
+			return "", migrateErr
+		}
+		if !migrated {
 			return "", nil
 		}
-		if legacyErr != nil {
-			return "", fmt.Errorf("inspect change-instance marker: %w", legacyErr)
-		}
-		if !legacyInfo.Mode().IsRegular() {
-			return "", errors.New("change-instance marker must be a regular file") // refusal:by-design world-action: inspect and recover the legacy change-local marker before continuation
-		}
-		markerPath = legacyMarkerPath
 	} else if err != nil {
 		return "", fmt.Errorf("inspect change-instance marker: %w", err)
 	} else if !info.Mode().IsRegular() {
@@ -284,4 +279,26 @@ func newEditAuthorityConsent(change, workspaceRoot string, missingRoots []string
 			Command: statusInvocation,
 		},
 	}
+}
+
+// migrateLegacyChangeInstanceMarker renombra el marcador heredado
+// `.gentle-ai-instance` a `.axiom-instance` cuando este no existe. Devuelve
+// true si había marcador heredado y quedó migrado. Existe solo para retirar el
+// nombre heredado; el contenido (el token de instancia) no cambia.
+func migrateLegacyChangeInstanceMarker(changeRoot string) (bool, error) {
+	legacyPath := filepath.Join(changeRoot, legacyChangeInstanceMarkerFile)
+	info, err := os.Lstat(legacyPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("inspect change-instance marker: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return false, errors.New("change-instance marker must be a regular file") // refusal:by-design world-action: inspect and recover the legacy change-local marker before continuation
+	}
+	if err := os.Rename(legacyPath, filepath.Join(changeRoot, changeInstanceMarkerFile)); err != nil {
+		return false, fmt.Errorf("migrate change-instance marker: %w", err)
+	}
+	return true, nil
 }

@@ -3157,3 +3157,39 @@ func TestInjectVSCodeWorkspaceKeepsTeamCopilotInstructions(t *testing.T) {
 		t.Fatalf("falta .github/instructions/axiom.instructions.md con applyTo (err=%v)", err)
 	}
 }
+
+func TestInjectPiPersonaMigratesLegacyPath(t *testing.T) {
+	root := t.TempDir()
+	legacy := filepath.Join(root, ".pi", "gentle-ai", "persona.json")
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte("{\n  \"mode\": \"gentleman\"\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := InjectPiPersona(root, model.PersonaNeutral); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
+		t.Fatalf("la ruta heredada debía moverse: %v", err)
+	}
+	got, err := os.ReadFile(PiPersonaConfigPath(root))
+	if err != nil || !strings.Contains(string(got), "neutral") {
+		t.Fatalf("la ruta nueva no se escribió: %q, %v", got, err)
+	}
+
+	// Con ambas rutas, se conserva la nueva y la heredada queda intacta.
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte("viejo"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InjectPiPersona(root, model.PersonaNeutral); err != nil {
+		t.Fatal(err)
+	}
+	if left, err := os.ReadFile(legacy); err != nil || string(left) != "viejo" {
+		t.Fatalf("la ruta heredada no debía tocarse: %q, %v", left, err)
+	}
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -23,6 +24,12 @@ type InjectionResult struct {
 // Pi resolves this file relative to the active agent configuration root, which
 // is the user's home for global install and the workspace for workspace install.
 func PiPersonaConfigPath(rootDir string) string {
+	return filepath.Join(rootDir, ".pi", "axiom", "persona.json")
+}
+
+// legacyPiPersonaConfigPath es la ruta heredada .pi/gentle-ai/persona.json. Solo
+// se usa para migrarla a PiPersonaConfigPath.
+func legacyPiPersonaConfigPath(rootDir string) string {
 	return filepath.Join(rootDir, ".pi", "gentle-ai", "persona.json")
 }
 
@@ -31,6 +38,9 @@ func PiPersonaConfigPath(rootDir string) string {
 func InjectPiPersona(rootDir string, persona model.PersonaID) (InjectionResult, error) {
 	if strings.TrimSpace(rootDir) == "" {
 		return InjectionResult{}, fmt.Errorf("Pi persona root must not be empty")
+	}
+	if _, err := legacyhome.MoveIfAbsent(legacyPiPersonaConfigPath(rootDir), PiPersonaConfigPath(rootDir)); err != nil {
+		return InjectionResult{}, fmt.Errorf("migrate legacy Pi persona config: %w", err)
 	}
 	if persona == model.PersonaCustom {
 		return InjectionResult{}, nil

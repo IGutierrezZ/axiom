@@ -432,7 +432,7 @@ func appendUniqueExt(exts []string, ext string) []string {
 	return append(exts, ext)
 }
 
-// checkStateJSON validates ~/.gentle-ai/state.json and agent config dirs.
+// checkStateJSON validates ~/.axiom/state.json and agent config dirs.
 func checkStateJSON(homeDir string, store state.Store) CheckResult {
 	const id = doctor.CheckStateJSON
 	statePath := store.Path()
@@ -714,11 +714,7 @@ func checkDiskSpace(homeDir string) CheckResult {
 	const id = doctor.CheckDiskSpace
 	dir := system.AxiomDir(homeDir)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if _, errLegacy := os.Stat(filepath.Join(homeDir, ".gentle-ai")); errLegacy == nil {
-			dir = filepath.Join(homeDir, ".gentle-ai")
-		} else {
-			dir = homeDir
-		}
+		dir = homeDir
 	}
 
 	free, err := availableBytesFn(dir)

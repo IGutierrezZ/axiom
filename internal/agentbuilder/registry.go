@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 )
 
 // builtinSkills returns the current set of built-in skill names derived from
@@ -78,4 +80,19 @@ func (r *Registry) RemoveByName(name string) bool {
 func HasConflictWithBuiltin(name string) bool {
 	_, ok := builtinSkills()[name]
 	return ok
+}
+
+// RegistryPath devuelve la ruta del registro de agentes personalizados,
+// <home>/.config/axiom/custom-agents.json. Antes de devolverla mueve el
+// registro heredado <home>/.config/gentle-ai/custom-agents.json a esa ruta si
+// la nueva no existe (migración idempotente que nunca pisa; existe solo para
+// retirar el nombre heredado). Un fallo de la migración no impide devolver la
+// ruta: la carga posterior trabaja con la ruta nueva.
+func RegistryPath(home string) string {
+	path := filepath.Join(home, ".config", "axiom", "custom-agents.json")
+	legacy := filepath.Join(home, ".config", "gentle-ai", "custom-agents.json")
+	if _, err := legacyhome.MoveIfAbsent(legacy, path); err == nil {
+		_ = os.Remove(filepath.Dir(legacy)) // solo si queda vacío
+	}
+	return path
 }

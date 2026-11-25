@@ -229,7 +229,10 @@ func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, e
 	if err != nil {
 		return RuntimeStore{}, err
 	}
-	dir := runtimeChangeLedgerDir(filepath.Join(commonDir, "gentle-ai", "sdd-runtime"), change)
+	if err := migrateLegacyRuntimeContainer(commonDir); err != nil {
+		return RuntimeStore{}, err
+	}
+	dir := runtimeChangeLedgerDir(filepath.Join(commonDir, runtimeContainerName, "sdd-runtime"), change)
 	return RuntimeStore{Dir: dir, Repo: root, Workspace: workspace, Change: change, commonDir: commonDir}, nil
 }
 
@@ -637,9 +640,9 @@ func (store RuntimeStore) ensureDirectories() error {
 		info, statErr := os.Lstat(current)
 		if os.IsNotExist(statErr) {
 			mode := os.FileMode(0o700)
-			// The shared gentle-ai container predates this private store and may
-			// also hold review authority. New SDD runtime descendants remain 0700.
-			if index == 0 && segment == "gentle-ai" {
+			// The shared axiom container may also hold review authority. New SDD
+			// runtime descendants remain 0700.
+			if index == 0 && segment == runtimeContainerName {
 				mode = 0o755
 			}
 			if err := os.Mkdir(current, mode); err != nil {
@@ -929,5 +932,40 @@ func validateRuntimeRecordShape(record runtimeRecord) error {
 	default:
 		return rejectRuntimeRecord("invalid_operation")
 	}
+	return nil
+}
+
+const (
+	// runtimeContainerName es el directorio, bajo el git common dir, que aloja
+	// el almacén privado del runtime SDD.
+	runtimeContainerName = "axiom"
+	// legacyRuntimeContainerName es el nombre heredado del mismo contenedor.
+	// Solo se usa en migrateLegacyRuntimeContainer, para retirar el nombre.
+	legacyRuntimeContainerName = "gentle-ai"
+)
+
+// migrateLegacyRuntimeContainer mueve `<common>/gentle-ai/sdd-runtime` a
+// `<common>/axiom/sdd-runtime` cuando la ruta nueva no existe. Es idempotente
+// y nunca pisa: si ambas existen se conserva la nueva y la vieja queda sin
+// tocar. Existe solo para retirar el nombre heredado `gentle-ai`. El
+// directorio movido conserva sus permisos 0700 y sus identidades de cambio,
+// porque estas se derivan del nombre del cambio y no de la ruta.
+func migrateLegacyRuntimeContainer(commonDir string) error {
+	legacy := filepath.Join(commonDir, legacyRuntimeContainerName, "sdd-runtime")
+	if _, err := os.Lstat(legacy); err != nil {
+		return nil
+	}
+	current := filepath.Join(commonDir, runtimeContainerName, "sdd-runtime")
+	if _, err := os.Lstat(current); err == nil {
+		return nil
+	}
+	container := filepath.Join(commonDir, runtimeContainerName)
+	if err := os.MkdirAll(container, 0o755); err != nil {
+		return fmt.Errorf("migrate SDD runtime store: %w", err)
+	}
+	if err := os.Rename(legacy, current); err != nil {
+		return fmt.Errorf("migrate SDD runtime store from %s to %s: %w", legacy, current, err)
+	}
+	_ = os.Remove(filepath.Join(commonDir, legacyRuntimeContainerName)) // solo si queda vacío
 	return nil
 }

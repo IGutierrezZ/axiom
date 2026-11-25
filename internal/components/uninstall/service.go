@@ -964,11 +964,13 @@ func retainedPiResources(homeDir, workspaceDir string) []string {
 		filepath.Join(homeDir, ".pi", "agent", "agents"),
 		filepath.Join(homeDir, ".pi", "agent", "chains"),
 		filepath.Join(homeDir, ".pi", "agent", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "agent", "axiom"),
 		filepath.Join(homeDir, ".pi", "agent", "subagents.json"),
 		filepath.Join(homeDir, ".pi", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "axiom"),
 	}
 	if workspaceDir != "" {
-		paths = append(paths, filepath.Join(workspaceDir, ".pi", "gentle-ai"))
+		paths = append(paths, filepath.Join(workspaceDir, ".pi", "gentle-ai"), filepath.Join(workspaceDir, ".pi", "axiom"))
 	}
 
 	retained := make([]string, 0, len(paths))

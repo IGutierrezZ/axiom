@@ -1002,17 +1002,16 @@ func TestCheckDiskSpace_DirectoryTargeting(t *testing.T) {
 		t.Fatalf("expected probe of %q, got %q", home, probedDir)
 	}
 
-	// 2. Only legacy ~/.gentle-ai exists -> probes ~/.gentle-ai
-	legacyDir := filepath.Join(home, ".gentle-ai")
-	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+	// 2. A leftover ~/.gentle-ai is ignored: it only measures homeDir.
+	if err := os.MkdirAll(filepath.Join(home, ".gentle-ai"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	checkDiskSpace(home)
-	if probedDir != legacyDir {
-		t.Fatalf("expected probe of legacy %q, got %q", legacyDir, probedDir)
+	if probedDir != home {
+		t.Fatalf("expected probe of %q ignoring ~/.gentle-ai, got %q", home, probedDir)
 	}
 
-	// 3. Canonical ~/.axiom exists -> probes ~/.axiom (outranks legacy)
+	// 3. Canonical ~/.axiom exists -> probes ~/.axiom
 	axiomDir := filepath.Join(home, ".axiom")
 	if err := os.MkdirAll(axiomDir, 0o755); err != nil {
 		t.Fatal(err)

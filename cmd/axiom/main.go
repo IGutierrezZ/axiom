@@ -25,6 +25,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/knowledge"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 	"github.com/IGutierrezZ/axiom/v3/internal/livingdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
@@ -225,6 +226,7 @@ func hasWorkspaceConfig(dir string) bool {
 func main() {
 	cli.AppVersion = Version
 	app.Version = Version
+	migrateLegacyHome()
 	if len(os.Args) < 2 {
 		if err := app.RunArgs([]string{}, os.Stdout); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -2577,4 +2579,17 @@ func runKnowledgeCrawl(args []string) {
 	fmt.Println("  axiom knowledge crawl --record-failure --unit <id> [--reason <str>]")
 	fmt.Println("  axiom knowledge crawl --finalize [--job <file>] [--json]")
 	os.Exit(1)
+}
+
+// migrateLegacyHome mueve el estado de usuario guardado bajo el nombre
+// heredado ~/.gentle-ai a ~/.axiom (sin pisar nada). Es una migración
+// idempotente y de mejor esfuerzo: un fallo se avisa pero no impide arrancar.
+func migrateLegacyHome() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	if err := legacyhome.MigrateHome(home); err != nil {
+		fmt.Fprintf(os.Stderr, "aviso: no se pudo migrar el estado heredado de %s: %v\n", legacyhome.Dir(home), err)
+	}
 }

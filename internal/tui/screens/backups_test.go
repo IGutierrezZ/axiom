@@ -33,7 +33,7 @@ func TestRenderBackupsMakesHistoricalFallbackExplicit(t *testing.T) {
 		ID:        "gentle-ai-history",
 		CreatedAt: time.Date(2026, 3, 22, 15, 4, 5, 0, time.UTC),
 		Source:    backup.BackupSourceSync,
-		Origin:    backup.BackupOriginGentleAI,
+		Origin:    backup.BackupOriginUnknown,
 	}
 
 	t.Run("Axiom backup is labeled without historical-only warning", func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestRenderBackupsMakesHistoricalFallbackExplicit(t *testing.T) {
 		if strings.Contains(output, "No hay respaldos de Axiom") {
 			t.Errorf("backup list must not show historical-only warning when an Axiom backup exists; got:\n%s", output)
 		}
-		if !strings.Contains(output, "Gentle AI histórico") {
+		if !strings.Contains(output, "origen no identificado") {
 			t.Errorf("backup list should keep the historical backup visibly selectable; got:\n%s", output)
 		}
 	})
@@ -55,7 +55,7 @@ func TestRenderBackupsMakesHistoricalFallbackExplicit(t *testing.T) {
 		if !strings.Contains(output, "No hay respaldos de Axiom") {
 			t.Errorf("backup list should explain the fallback when no Axiom backup exists; got:\n%s", output)
 		}
-		if !strings.Contains(output, "Gentle AI histórico") {
+		if !strings.Contains(output, "origen no identificado") {
 			t.Errorf("backup list should label legacy backup provenance; got:\n%s", output)
 		}
 	})

@@ -84,7 +84,7 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - `gofmt -l` sobre los `.go` modificados: salida vacía.
     - Verificado solo en CI: `internal/app` (`app_test.go` espera `AXIOM_CHANNEL` en la ayuda; `project_state_test.go` sin la variable vieja), `e2e/organicruntime` (variables `AXIOM_*`), `internal/filecoord` y `internal/fileprim` (solo `go vet`), `cmd/axiom`.
     - Decisiones: se eliminan `lookupEnvWithGentleAIFallback` y todas las constantes `*GentleAI*`; `system.Getenv` queda con una sola clave. Las pruebas del fallback pasan a comprobar que la variable vieja se ignora y conservan el literal `GENTLE_AI_*` a propósito (cli, engram, sddstatus, update). Se mantienen con literal viejo: `GENTLE_AI_PRODUCTIVE_RUNTIME` y `GENTLE_AI_REVIEW_BINDING` (listas de prohibidas), `GENTLE_AI_STATE_DIR` (prueba negativa) y `GENTLE_AI_CONFIRM_UPDATE` (prueba negativa en `internal/app`). Restos fuera de T2: `gentle-ai.exe` en `ci.yml` (T6), `GENTLE_AI_TELEMETRY` en `internal/components/telemetryruntime/testdata` (fixtures históricas), `{{GENTLE_AI_*}}` (T7), `DISCORD_GENTLE_AI_*` (T6), specs `openspec/specs/axiom-user-state-and-env/spec.md` y `openspec/INDEX.md` REQ-12.3 (T8).
-- [ ] T3. Estado local y su migración.
+- [x] T3. Estado local y su migración.
   - Rutas activas a `axiom`:
     - `<git common dir>/axiom/sdd-runtime`;
     - `~/.axiom/pi-codegraph.json`;
@@ -95,6 +95,23 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - `.axiom-telemetry-runtime.json` y `.axiom-default-agent.json`;
     - prefijos de temporales.
   - Migración que mueve lo viejo a lo nuevo si lo nuevo no existe. Sustituye los fallbacks de `~/.gentle-ai/state.json`, `~/.gentle-ai/backups`, `~/.gentle-ai/bin` y `.gentle-ai-instance`.
+  - Evidencia (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
+    - `go build ./...`: correcto.
+    - `go vet` de `./internal/legacyhome ./internal/state ./internal/backup ./internal/sddstatus ./internal/components/... ./internal/agents/... ./internal/assets ./internal/update/... ./internal/cli ./internal/tui/... ./internal/agentbuilder ./internal/app ./internal/dashboard ./internal/opencode ./cmd/...`: sin avisos.
+    - `go test -count=1`: ok en `internal/legacyhome`, `state`, `backup`, `sddstatus`, `agentbuilder`, `assets`, `update/...`, `tui/...`, `agents/...`, `components/{persona,telemetryruntime,opencodedefault,uninstall,filemerge,engram,opencodeplugin}`; `internal/cli -run` de las zonas tocadas (Pi, Persona, Backup, Restore, Doctor, Footprint, CodeGraph, Compat, Rollback, Uninstall, ComponentPaths, Sync, Run, Install, Status, Consent): ok.
+    - `gofmt -l` sobre los `.go` modificados: salida vacía.
+    - Migraciones añadidas (cada una con su prueba: vieja en disco, acaba en la nueva, idempotente, no pisa la nueva):
+      - `internal/legacyhome` (`MigrateHome`, llamado al arrancar desde `cmd/axiom/main.go`): `~/.gentle-ai/{state.json,pi-codegraph.json,backups}` a `AxiomDir`; los backups se mueven por id sin pisar y se reescriben `root_dir` y `snapshot_path` del manifiesto; `cache` heredada se descarta; `bin` no se toca; `~/.gentle-ai` se retira solo si queda vacío.
+      - `sddstatus.migrateLegacyRuntimeContainer` (al abrir `OpenRuntimeStore`): `<common>/gentle-ai/sdd-runtime` a `<common>/axiom/sdd-runtime`.
+      - `sddstatus.migrateLegacyChangeInstanceMarker`: `.gentle-ai-instance` a `.axiom-instance`.
+      - `agentbuilder.RegistryPath`: `~/.config/gentle-ai/custom-agents.json` a `~/.config/axiom/`.
+      - `persona.InjectPiPersona`: `.pi/gentle-ai/persona.json` a `.pi/axiom/`.
+      - `cli.piBackgroundProjectionPlan.Apply`: `<base>/gentle-ai/background-subagents.json` a `<base>/axiom/`.
+      - `telemetryruntime.migrateLegacyManifest` y `opencodedefault.migrateLegacyOwnership`: marcadores `.gentle-ai-*` a `.axiom-*`.
+    - Rutas renombradas sin migración: plugins TS de OpenCode (`~/.axiom/cache/...`, caché regenerable), prefijos de temporales `axiom-*`.
+    - Fallbacks retirados: lectura de `~/.gentle-ai/state.json` (`state.Read`), segunda raíz de backups (`LegacyBackupRootFor`, `BackupOriginGentleAI`), fallback de `doctor` en disco y `.gentle-ai-instance`.
+    - Verificado solo en CI: `internal/app`, `internal/dashboard`, `internal/opencode` y `cmd/axiom` (solo `go vet` y `go build`; en `internal/app` se retiró `TestListBackupsKeepsDuplicateIDsRestorableBySelectedRoot`).
+    - Decisiones: `LegacyBinDir` y `LegacyOwnershipMarker` de `internal/opencode/background.go` se dejan: el lanzador viejo ya se retira en la activación de OpenCode y el marcador es de T4. `retainedPiResources` y el desinstalador siguen limpiando las rutas viejas (y suman las nuevas `.pi/axiom`).
 - [ ] T4. Marcadores, plugins y MCP gestionados.
   - Todos los ids de sección pasan a `axiom:`. El reconocimiento de `gentle-ai:` queda solo para sustituir bloques ya escritos.
   - Ids de plugin `axiom.*`, cabeceras `// axiom:managed` y MCP o plugin `axiom-engram(-tools)`, con retirada de las entradas viejas.
@@ -118,8 +135,8 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 
 ## Progreso
 
-T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3-T8 sin empezar.
+T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4-T8 sin empezar.
 
 ## Siguiente paso
 
-T3.
+T4.

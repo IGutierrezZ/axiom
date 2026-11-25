@@ -104,7 +104,7 @@ func TestMain(m *testing.M) {
 	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 		panic(err)
 	}
-	testHome, err := os.MkdirTemp("", "gentle-ai-cli-test-home-*")
+	testHome, err := os.MkdirTemp("", "axiom-cli-test-home-*")
 	if err != nil {
 		panic(err)
 	}

@@ -233,7 +233,7 @@ func testGlobalArtifactRoots(t *testing.T, sync bool) {
 					t.Errorf("ambient content changed: %q", got)
 				}
 			}
-			for _, path := range []string{"AGENTS.md", "SOUL.md", ".openclaw/skills/go-testing/SKILL.md", ".codeium/windsurf/memories/global_rules.md", ".codeium/windsurf/skills/go-testing/SKILL.md", ".pi/gentle-ai/persona.json"} {
+			for _, path := range []string{"AGENTS.md", "SOUL.md", ".openclaw/skills/go-testing/SKILL.md", ".codeium/windsurf/memories/global_rules.md", ".codeium/windsurf/skills/go-testing/SKILL.md", ".pi/axiom/persona.json"} {
 				if _, err := os.Stat(filepath.Join(home, path)); err != nil {
 					t.Errorf("missing global artifact %s: %v", path, err)
 				}
@@ -258,7 +258,7 @@ func TestExplicitWorkspaceInstallOverridesOpenClawConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	runInstallInjectionSteps(t, rt)
-	for _, path := range []string{"AGENTS.md", "SOUL.md", ".openclaw/skills/go-testing/SKILL.md", ".windsurf/workflows/sdd-new.md", ".pi/gentle-ai/persona.json"} {
+	for _, path := range []string{"AGENTS.md", "SOUL.md", ".openclaw/skills/go-testing/SKILL.md", ".windsurf/workflows/sdd-new.md", ".pi/axiom/persona.json"} {
 		if _, err := os.Stat(filepath.Join(workspace, path)); err != nil {
 			t.Errorf("missing workspace artifact %s: %v", path, err)
 		}

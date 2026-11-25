@@ -16,7 +16,7 @@ import (
 func setupRestoreHome(t *testing.T, count int) string {
 	t.Helper()
 	home := t.TempDir()
-	backupRoot := backup.LegacyBackupRootFor(home)
+	backupRoot := backup.BackupRootFor(home)
 
 	for i := 0; i < count; i++ {
 		id := fmt.Sprintf("backup-%03d", i)

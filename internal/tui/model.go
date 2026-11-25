@@ -4035,7 +4035,7 @@ func (m *Model) setScreen(next Screen) {
 }
 
 // defaultBackupSelectionCursor selects the newest Axiom-owned snapshot while
-// leaving Gentle AI history available but never implicitly selected. When no
+// leaving non-Axiom-origin history available but never implicitly selected. When no
 // Axiom snapshot exists, focus the "Volver" row so the user must deliberately
 // choose a historical backup.
 func defaultBackupSelectionCursor(backups []backup.Manifest) int {
@@ -5563,7 +5563,7 @@ func (m Model) startInstallation() (tea.Model, tea.Cmd) {
 		}
 
 		// Persist entry to registry.
-		registryPath := filepath.Join(homeDir(), ".config", "gentle-ai", "custom-agents.json")
+		registryPath := agentbuilder.RegistryPath(homeDir())
 		_ = os.MkdirAll(filepath.Dir(registryPath), 0755)
 		if reg, loadErr := agentbuilder.LoadRegistry(registryPath); loadErr == nil {
 			// Collect IDs of agents that were successfully installed.

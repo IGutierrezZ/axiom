@@ -95,7 +95,7 @@ func CodeGraphPaths(homeDir string) CodeGraphPathSet {
 	return CodeGraphPathSet{
 		AgentDir:  agentDir,
 		MCPConfig: filepath.Join(agentDir, piEngramMCPConfigFile),
-		Manifest:  filepath.Join(homeDir, ".gentle-ai", "pi-codegraph.json"),
+		Manifest:  filepath.Join(system.AxiomDir(homeDir), "pi-codegraph.json"),
 	}
 }
 

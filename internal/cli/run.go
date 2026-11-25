@@ -426,7 +426,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 }
 
 // mergeExplicitAgentInstallState merges a fresh single-agent install's state
-// into the previously persisted ~/.gentle-ai/state.json (so `install --agent
+// into the previously persisted ~/.axiom/state.json (so `install --agent
 // X` preserves other previously installed agents and model assignments).
 //
 // When the existing state file is simply absent (first install, or an agent
@@ -1317,7 +1317,7 @@ func (s prepareBackupStep) Run() error {
 			if manifest, duplicate, dupErr := backup.DuplicateManifest(s.backupRoot, checksum); dupErr != nil {
 				log.Printf("backup: check duplicate: %v", dupErr)
 			} else if duplicate && manifestTargetsMatch(manifest, s.targets) {
-				rollbackDir, err := os.MkdirTemp("", "gentle-ai-rollback-*")
+				rollbackDir, err := os.MkdirTemp("", "axiom-rollback-*")
 				if err != nil {
 					return fmt.Errorf("create transaction snapshot directory: %w", err)
 				}

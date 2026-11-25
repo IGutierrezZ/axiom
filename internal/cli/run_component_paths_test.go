@@ -158,18 +158,18 @@ func TestComponentPathsPiPersonaUsesResolvedScopePath(t *testing.T) {
 	selection := model.Selection{Persona: model.PersonaNeutral}
 
 	global := componentPathsWithWorkspaceScoped(home, workspace, ScopeGlobal, selection, adapters, model.ComponentPersona)
-	if !containsPath(global, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
+	if !containsPath(global, filepath.Join(home, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("global Pi persona paths = %v, missing home-scoped config", global)
 	}
-	if containsPath(global, filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")) {
+	if containsPath(global, filepath.Join(workspace, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("global Pi persona paths = %v, includes active workspace config", global)
 	}
 
 	workspacePaths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, model.ComponentPersona)
-	if !containsPath(workspacePaths, filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")) {
+	if !containsPath(workspacePaths, filepath.Join(workspace, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("workspace Pi persona paths = %v, missing workspace-scoped config", workspacePaths)
 	}
-	if containsPath(workspacePaths, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
+	if containsPath(workspacePaths, filepath.Join(home, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("workspace Pi persona paths = %v, unexpectedly contains home config", workspacePaths)
 	}
 
@@ -207,11 +207,11 @@ func TestInstallPiPersonaWritesManagedScopePaths(t *testing.T) {
 				t.Fatalf("componentApplyStep.Run() error = %v", err)
 			}
 
-			want := filepath.Join(root, ".pi", "gentle-ai", "persona.json")
+			want := filepath.Join(root, ".pi", "axiom", "persona.json")
 			if _, err := os.Stat(want); err != nil {
 				t.Fatalf("Pi persona config %q was not written: %v", want, err)
 			}
-			unwanted := filepath.Join(other, ".pi", "gentle-ai", "persona.json")
+			unwanted := filepath.Join(other, ".pi", "axiom", "persona.json")
 			if _, err := os.Stat(unwanted); !os.IsNotExist(err) {
 				t.Fatalf("workspace-scoped Pi persona config %q was written outside scope; stat err = %v", unwanted, err)
 			}

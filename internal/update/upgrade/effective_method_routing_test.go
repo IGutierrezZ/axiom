@@ -258,7 +258,7 @@ func TestAxiomUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T) {
 	if report.BackupID != "" || report.BackupWarning != "" {
 		t.Errorf("manual fallback created a backup result: %#v", report)
 	}
-	backupRoot := backup.LegacyBackupRootFor(homeDir)
+	backupRoot := backup.BackupRootFor(homeDir)
 	if _, err := os.Stat(backupRoot); !os.IsNotExist(err) {
 		t.Errorf("manual fallback created or pruned backup tree %s: %v", backupRoot, err)
 	}
@@ -403,7 +403,7 @@ func TestAxiomUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 			if report.BackupID != "" || report.BackupWarning != "" {
 				t.Errorf("manual fallback created a backup result: %#v", report)
 			}
-			backupRoot := backup.LegacyBackupRootFor(homeDir)
+			backupRoot := backup.BackupRootFor(homeDir)
 			if _, err := os.Stat(backupRoot); !os.IsNotExist(err) {
 				t.Errorf("manual fallback created or pruned backup tree %s: %v", backupRoot, err)
 			}

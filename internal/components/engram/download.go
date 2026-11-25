@@ -179,7 +179,7 @@ func DownloadLatestBinary(profile system.PlatformProfile, isBeta bool) (string, 
 	}
 	outPath := filepath.Join(installDir, binaryName)
 
-	tmpDir, err := os.MkdirTemp("", "gentle-ai-engram-*")
+	tmpDir, err := os.MkdirTemp("", "axiom-engram-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}

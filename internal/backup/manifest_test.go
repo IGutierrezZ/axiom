@@ -44,7 +44,6 @@ func TestBackupOriginForRoot(t *testing.T) {
 		want BackupOrigin
 	}{
 		{name: "canonical Axiom root", root: BackupRootFor(home), want: BackupOriginAxiom},
-		{name: "legacy Gentle AI root", root: LegacyBackupRootFor(home), want: BackupOriginGentleAI},
 		{name: "unrecognized root", root: filepath.Join(home, "backups"), want: BackupOriginUnknown},
 	}
 

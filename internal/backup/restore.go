@@ -243,7 +243,7 @@ func (s RestoreService) restoreCompressed(manifest Manifest) error {
 		return fmt.Errorf("resolve restore roots: %w", err)
 	}
 
-	tempDir, err := os.MkdirTemp("", "gentle-ai-restore-*")
+	tempDir, err := os.MkdirTemp("", "axiom-restore-*")
 	if err != nil {
 		return fmt.Errorf("create temp restore dir: %w", err)
 	}

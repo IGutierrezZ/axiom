@@ -18,7 +18,7 @@ import (
 // to in the process running `go test` — the developer's real home on a machine
 // that has not sandboxed it for this specific test.
 func TestMain(m *testing.M) {
-	testHome, err := os.MkdirTemp("", "gentle-ai-app-test-home-*")
+	testHome, err := os.MkdirTemp("", "axiom-app-test-home-*")
 	if err != nil {
 		panic(err)
 	}

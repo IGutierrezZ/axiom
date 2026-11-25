@@ -17,13 +17,12 @@ type BackupSource string
 
 // BackupOrigin identifies the product-owned root from which a backup was
 // discovered. It is runtime metadata, not part of the persisted snapshot
-// contract: legacy manifests do not contain a product-origin field.
+// contract: el manifiesto no contiene un campo de origen.
 type BackupOrigin string
 
 const (
-	BackupOriginUnknown  BackupOrigin = ""
-	BackupOriginAxiom    BackupOrigin = "axiom"
-	BackupOriginGentleAI BackupOrigin = "gentle-ai"
+	BackupOriginUnknown BackupOrigin = ""
+	BackupOriginAxiom   BackupOrigin = "axiom"
 )
 
 // Label returns the human-readable product origin for a discovered backup.
@@ -31,8 +30,6 @@ func (o BackupOrigin) Label() string {
 	switch o {
 	case BackupOriginAxiom:
 		return "Axiom"
-	case BackupOriginGentleAI:
-		return "Gentle AI histórico"
 	default:
 		return "origen no identificado"
 	}
@@ -218,23 +215,10 @@ func backupRoot() (string, error) {
 	return BackupRootFor(home), nil
 }
 
-// LegacyBackupRootFor returns the legacy backup root directory
-// (<home>/.gentle-ai/backups) for the given home directory. It is the single
-// owning accessor for the legacy backup root literal, kept for the
-// permanent read-side compatibility fallback [D-03, D-12]: it is never used
-// to create new backups, only to keep resolving ones created before the
-// canonical root existed.
-func LegacyBackupRootFor(home string) string {
-	return filepath.Join(home, ".gentle-ai", "backups")
-}
-
-// BackupRoots returns every backup root that a reader must scan for the
-// given home directory, canonical root first: [BackupRootFor(home),
-// LegacyBackupRootFor(home)]. Order is part of the contract — callers can
-// identify canonical and historical backups consistently, but must not treat
-// manifest IDs as globally unique across these roots.
+// BackupRoots devuelve las raíces de copias que un lector debe recorrer: solo la
+// canónica. El estado heredado se mueve antes con internal/legacyhome.
 func BackupRoots(home string) []string {
-	return []string{BackupRootFor(home), LegacyBackupRootFor(home)}
+	return []string{BackupRootFor(home)}
 }
 
 // BackupOriginForRoot identifies one of the supported backup roots. Unknown
@@ -244,20 +228,9 @@ func BackupOriginForRoot(home, root string) BackupOrigin {
 	switch cleanRoot {
 	case filepath.Clean(BackupRootFor(home)):
 		return BackupOriginAxiom
-	case filepath.Clean(LegacyBackupRootFor(home)):
-		return BackupOriginGentleAI
 	default:
 		return BackupOriginUnknown
 	}
-}
-
-// legacyBackupRoot returns the legacy parent directory for Gentle AI backups (~/.gentle-ai/backups).
-func legacyBackupRoot() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("resolve home directory: %w", err)
-	}
-	return LegacyBackupRootFor(home), nil
 }
 
 // BackupRootFn is the function used to resolve the backup root directory.
@@ -265,7 +238,7 @@ func legacyBackupRoot() (string, error) {
 // point at a temp directory (manifest_test.go, restore_test.go,
 // retention_test.go, snapshot_dir_fsync_test.go). No other package overrides
 // it: production code elsewhere resolves the backup root through
-// BackupRootFor/LegacyBackupRootFor/BackupRoots instead.
+// BackupRootFor/BackupRoots instead.
 var BackupRootFn = backupRoot
 
 func isDirUnderRoot(dir, root string) bool {
@@ -285,7 +258,7 @@ func isDirUnderRoot(dir, root string) bool {
 }
 
 // isRootDirUnderBackupRoot validates that dir is a direct or indirect subdirectory
-// of the expected backup root (~/.axiom/backups/) or the legacy root (~/.gentle-ai/backups/).
+// of the expected backup root (~/.axiom/backups/).
 // This prevents a tampered manifest with root_dir set to "/" or another sensitive path
 // from deleting arbitrary files.
 func isRootDirUnderBackupRoot(dir string) (bool, error) {
@@ -294,9 +267,6 @@ func isRootDirUnderBackupRoot(dir string) (bool, error) {
 		return false, err
 	}
 	if isDirUnderRoot(dir, root) {
-		return true, nil
-	}
-	if legacy, err := legacyBackupRoot(); err == nil && isDirUnderRoot(dir, legacy) {
 		return true, nil
 	}
 	return false, nil

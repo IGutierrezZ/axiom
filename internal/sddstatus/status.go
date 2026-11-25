@@ -1011,7 +1011,7 @@ func declaredArtifactStore(workspaceRoot string) (ArtifactStore, bool) {
 }
 
 func exportEngramObservations(workspaceRoot string) ([]engramObservation, error) {
-	tmp, err := os.CreateTemp("", "gentle-ai-sdd-engram-*.json")
+	tmp, err := os.CreateTemp("", "axiom-sdd-engram-*.json")
 	if err != nil {
 		return nil, err
 	}

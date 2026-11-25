@@ -3,7 +3,6 @@ package state
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 )
 
 const stateDir = ".axiom"
-const legacyStateDir = ".gentle-ai"
 const stateFile = "state.json"
 
 // DefaultUpstreamVersion is the frozen upstream ceiling this fork is reconciled
@@ -229,18 +227,7 @@ func Bootstrap(homeDir string) error {
 // Read reads and unmarshals the state file from the given home directory.
 // Returns an error if the file does not exist or cannot be decoded.
 func Read(homeDir string) (InstallState, error) {
-	canonicalPath := Path(homeDir)
-	s, err := readStateFile(canonicalPath)
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		legacyPath := filepath.Join(homeDir, legacyStateDir, stateFile)
-		if legacyData, legacyErr := os.ReadFile(legacyPath); legacyErr == nil {
-			var legacy InstallState
-			if err := json.Unmarshal(legacyData, &legacy); err == nil {
-				return legacy, nil
-			}
-		}
-	}
-	return s, err
+	return readStateFile(Path(homeDir))
 }
 
 // readStateFile lee y decodifica el documento de estado de una ruta concreta.

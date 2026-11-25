@@ -726,9 +726,12 @@ func TestPartialUninstallPiReportsRetainedResourcesAndOptionalCleanup(t *testing
 		filepath.Join(homeDir, ".pi", "agent", "agents"),
 		filepath.Join(homeDir, ".pi", "agent", "chains"),
 		filepath.Join(homeDir, ".pi", "agent", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "agent", "axiom"),
 		filepath.Join(homeDir, ".pi", "agent", "subagents.json"),
 		filepath.Join(homeDir, ".pi", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "axiom"),
 		filepath.Join(workspaceDir, ".pi", "gentle-ai"),
+		filepath.Join(workspaceDir, ".pi", "axiom"),
 	}
 	for _, path := range retainedPaths {
 		if filepath.Ext(path) == ".json" {

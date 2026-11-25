@@ -11,7 +11,7 @@ export default Plugin.define({
     const abort = new AbortController()
     // V2 locations cannot overwrite the V1 global catalog or each other.
     const key = createHash("sha256").update(JSON.stringify([ctx.location.directory, ctx.location.workspaceID ?? ""])).digest("hex")
-    const directory = path.join(homedir(), ".gentle-ai", "cache", "opencode-v2")
+    const directory = path.join(homedir(), ".axiom", "cache", "opencode-v2")
     const destination = path.join(directory, `${key}.json`)
     const refresh = async () => {
       let temporary: string | undefined

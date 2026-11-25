@@ -202,18 +202,11 @@ func promptRestoreConfirm(manifest backup.Manifest, stdin io.Reader, stdout io.W
 }
 
 // listBackupsFromDir reads and sorts backups from the given homeDir,
-// scanning every root backup.BackupRoots reports (canonical first, then the
-// legacy fallback [D-12]) and de-duplicating by manifest ID so a
-// canonical-root backup wins over a legacy one sharing the same ID. It is
-// equivalent to app.ListBackups but operates on an explicit homeDir, keeping
+// scanning every root backup.BackupRoots reports (only the canonical one) and
+// de-duplicating by manifest ID. It is equivalent to app.ListBackups but operates on an explicit homeDir, keeping
 // the cli package independent from the app package.
 //
-// Amendment (2026-09-19, tasks.md Fase 2, 2.a): this previously read only
-// the legacy root via a hand-rolled homeDir+"/.gentle-ai/backups" literal.
-// Migrating the writers to backup.BackupRootFor without also migrating this
-// reader would have made every new backup invisible to `restore --list` and
-// `RunRestore` — a silent functional regression introduced by this same
-// phase.
+// El estado heredado de ~/.gentle-ai lo mueve antes internal/legacyhome.
 func listBackupsFromDir(homeDir string) []backup.Manifest {
 	manifests := make([]backup.Manifest, 0)
 	seenIDs := make(map[string]struct{})

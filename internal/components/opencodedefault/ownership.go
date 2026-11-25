@@ -11,6 +11,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 )
 
 const (
@@ -45,7 +46,18 @@ type UninstallPlan struct {
 }
 
 func OwnershipPath(settingsPath string) string {
-	return filepath.Join(filepath.Dir(settingsPath), ".gentle-ai-default-agent.json")
+	return filepath.Join(filepath.Dir(settingsPath), ".axiom-default-agent.json")
+}
+
+// migrateLegacyOwnership renombra el marcador heredado
+// `.gentle-ai-default-agent.json` a `.axiom-default-agent.json` si el nuevo no
+// existe. Existe solo para retirar el nombre heredado; nunca pisa.
+func migrateLegacyOwnership(settingsPath string) error {
+	legacy := filepath.Join(filepath.Dir(settingsPath), ".gentle-ai-default-agent.json")
+	if _, err := legacyhome.MoveIfAbsent(legacy, OwnershipPath(settingsPath)); err != nil {
+		return fmt.Errorf("migrate legacy default-agent ownership: %w", err)
+	}
+	return nil
 }
 
 // PrepareInstall prepara la escritura de default_agent en la configuración global:
@@ -62,6 +74,9 @@ func PrepareInstallPreservingJSONC(settingsPath string) (*InstallPlan, error) {
 }
 
 func prepareInstall(settingsPath string, preserveJSONC bool) (*InstallPlan, error) {
+	if err := migrateLegacyOwnership(settingsPath); err != nil {
+		return nil, err
+	}
 	root, _, exists, _, err := readSettings(settingsPath)
 	if err != nil {
 		return nil, err
@@ -107,6 +122,9 @@ func (p *InstallPlan) Apply() (bool, error) {
 	return changed, nil
 }
 func PrepareUninstall(settingsPath string) (*UninstallPlan, error) {
+	if err := migrateLegacyOwnership(settingsPath); err != nil {
+		return nil, err
+	}
 	_, _, exists, current, err := readSettings(settingsPath)
 	if err != nil {
 		return nil, err
