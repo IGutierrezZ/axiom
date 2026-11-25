@@ -1,6 +1,6 @@
 // Package skillcheck es la única fuente de reglas para validar skills
 // (`SKILL.md`). La usan el test de assets embebidos, las puertas de entrada
-// (`axiom skill approve`, el minero, agentbuilder) y las comprobaciones bajo
+// (`axiom skill approve` y el minero) y las comprobaciones bajo
 // demanda (`axiom doctor`, `axiom skill check`).
 //
 // El paquete no depende de la CLI ni escribe nada: informa de hallazgos con

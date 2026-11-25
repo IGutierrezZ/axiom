@@ -13,7 +13,7 @@ import (
 // «Revisión formal RDD».
 func TestWelcomeOptions_NoRDDEntry(t *testing.T) {
 	for _, showProfiles := range []bool{false, true} {
-		for _, opt := range screens.WelcomeOptions(nil, true, showProfiles, 1, true) {
+		for _, opt := range screens.WelcomeOptions(nil, true, showProfiles, 1) {
 			if strings.Contains(opt, "RDD") || strings.Contains(opt, "Revisión formal") {
 				t.Errorf("el menú no debe ofrecer RDD; opción %q", opt)
 			}
@@ -24,7 +24,7 @@ func TestWelcomeOptions_NoRDDEntry(t *testing.T) {
 // TestWelcomeOptions_WithoutProfiles verifies that when showProfiles is false,
 // the "Perfiles SDD de OpenCode" option is NOT present.
 func TestWelcomeOptions_WithoutProfiles(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, false, 0, true)
+	opts := screens.WelcomeOptions(nil, true, false, 0)
 	if !containsOption(opts, "Plugins comunitarios de OpenCode") {
 		t.Fatalf("expected dedicated Plugins comunitarios de OpenCode option; got: %v", opts)
 	}
@@ -38,7 +38,7 @@ func TestWelcomeOptions_WithoutProfiles(t *testing.T) {
 
 // TestWelcomeOptions_WithProfiles_ZeroCount shows "Perfiles SDD de OpenCode" without a badge.
 func TestWelcomeOptions_WithProfiles_ZeroCount(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, true, 0, true)
+	opts := screens.WelcomeOptions(nil, true, true, 0)
 	found := false
 	for _, opt := range opts {
 		if opt == "Perfiles SDD de OpenCode" {
@@ -55,7 +55,7 @@ func TestWelcomeOptions_WithProfiles_ZeroCount(t *testing.T) {
 
 // TestWelcomeOptions_WithProfiles_CountTwo shows "Perfiles SDD de OpenCode (2)".
 func TestWelcomeOptions_WithProfiles_CountTwo(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, true, 2, true)
+	opts := screens.WelcomeOptions(nil, true, true, 2)
 	found := false
 	for _, opt := range opts {
 		if opt == "Perfiles SDD de OpenCode (2)" {
@@ -69,7 +69,7 @@ func TestWelcomeOptions_WithProfiles_CountTwo(t *testing.T) {
 
 // TestWelcomeOptions_WithProfiles_CountOne shows "Perfiles SDD de OpenCode (1)".
 func TestWelcomeOptions_WithProfiles_CountOne(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, true, 1, true)
+	opts := screens.WelcomeOptions(nil, true, true, 1)
 	found := false
 	for _, opt := range opts {
 		if opt == "Perfiles SDD de OpenCode (1)" {
@@ -81,40 +81,23 @@ func TestWelcomeOptions_WithProfiles_CountOne(t *testing.T) {
 	}
 }
 
-// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 13 options when showProfiles=false
-// and hasEngines=true.
+// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 12 options when showProfiles=false.
 func TestWelcomeOptions_OptionCount_WithoutProfiles(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, false, 0, true)
+	opts := screens.WelcomeOptions(nil, true, false, 0)
+	// Includes the Governance entry.
+	want := 12
+	if len(opts) != want {
+		t.Errorf("WelcomeOptions(showProfiles=false) = %d options, want %d; opts: %v", len(opts), want, opts)
+	}
+}
+
+// TestWelcomeOptions_OptionCount_WithProfiles verifies 13 options when showProfiles=true.
+func TestWelcomeOptions_OptionCount_WithProfiles(t *testing.T) {
+	opts := screens.WelcomeOptions(nil, true, true, 2)
 	// Includes the Governance entry.
 	want := 13
 	if len(opts) != want {
-		t.Errorf("WelcomeOptions(showProfiles=false, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
-	}
-}
-
-// TestWelcomeOptions_OptionCount_WithProfiles verifies 14 options when showProfiles=true
-// and hasEngines=true.
-func TestWelcomeOptions_OptionCount_WithProfiles(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, true, 2, true)
-	// Includes the Governance entry.
-	want := 14
-	if len(opts) != want {
-		t.Errorf("WelcomeOptions(showProfiles=true, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
-	}
-}
-
-// TestWelcomeOptions_NoEngines_ShowsDisabledLabel verifies that when hasEngines=false,
-// the agent option is labelled "(sin motores)" to signal unavailability.
-func TestWelcomeOptions_NoEngines_ShowsDisabledLabel(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, false, 0, false)
-	found := false
-	for _, opt := range opts {
-		if strings.Contains(opt, "sin motores") {
-			found = true
-		}
-	}
-	if !found {
-		t.Errorf("expected 'sin motores' label when hasEngines=false; got: %v", opts)
+		t.Errorf("WelcomeOptions(showProfiles=true) = %d options, want %d; opts: %v", len(opts), want, opts)
 	}
 }
 
@@ -122,17 +105,17 @@ func TestWelcomeOptions_NoEngines_ShowsDisabledLabel(t *testing.T) {
 // profiles option sits between "Plugins comunitarios de OpenCode" / "Desinstalar plugin de OpenCode"
 // and "📁 Proyectos y Gobernanza SDD ➔" / "Gestionar respaldos".
 func TestWelcomeOptions_ProfilesInsertedBeforeManageBackups(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, true, 1, true)
+	opts := screens.WelcomeOptions(nil, true, true, 1)
 
-	agentIdx := -1
+	modelsIdx := -1
 	pluginsIdx := -1
 	uninstallIdx := -1
 	profilesIdx := -1
 	governanceIdx := -1
 	manageBackupsIdx := -1
 	for i, opt := range opts {
-		if strings.HasPrefix(opt, "Crear agente personalizado") {
-			agentIdx = i
+		if opt == "Configurar modelos" {
+			modelsIdx = i
 		}
 		if opt == "Plugins comunitarios de OpenCode" {
 			pluginsIdx = i
@@ -151,8 +134,8 @@ func TestWelcomeOptions_ProfilesInsertedBeforeManageBackups(t *testing.T) {
 		}
 	}
 
-	if agentIdx < 0 {
-		t.Fatal("option 'Crear agente personalizado' not found")
+	if modelsIdx < 0 {
+		t.Fatal("option 'Configurar modelos' not found")
 	}
 	if pluginsIdx < 0 {
 		t.Fatal("option 'Plugins comunitarios de OpenCode' not found")
@@ -170,9 +153,9 @@ func TestWelcomeOptions_ProfilesInsertedBeforeManageBackups(t *testing.T) {
 		t.Fatal("option 'Gestionar respaldos' not found")
 	}
 
-	if pluginsIdx != agentIdx+1 {
-		t.Errorf("plugins option at index %d, expected %d (right after 'Crear agente personalizado' at %d)",
-			pluginsIdx, agentIdx+1, agentIdx)
+	if pluginsIdx != modelsIdx+1 {
+		t.Errorf("plugins option at index %d, expected %d (right after 'Configurar modelos' at %d)",
+			pluginsIdx, modelsIdx+1, modelsIdx)
 	}
 	if uninstallIdx != pluginsIdx+1 {
 		t.Errorf("'Desinstalar plugin de OpenCode' at index %d, expected %d (right after plugins at %d)",
@@ -202,7 +185,7 @@ func containsOption(opts []string, want string) bool {
 }
 
 func TestWelcomeOptions_IncludesManagedUninstall(t *testing.T) {
-	opts := screens.WelcomeOptions(nil, true, false, 0, true)
+	opts := screens.WelcomeOptions(nil, true, false, 0)
 
 	found := false
 	for _, opt := range opts {
@@ -221,7 +204,7 @@ func TestWelcomeOptions_IncludesManagedUninstall(t *testing.T) {
 
 // TestRenderWelcome_WithoutProfiles verifies no "Perfiles SDD de OpenCode" in output.
 func TestRenderWelcome_WithoutProfiles(t *testing.T) {
-	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, false, 0, true)
+	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, false, 0)
 	if strings.Contains(output, "Perfiles SDD de OpenCode") {
 		snippet := output
 		if len(snippet) > 200 {
@@ -233,7 +216,7 @@ func TestRenderWelcome_WithoutProfiles(t *testing.T) {
 
 // TestRenderWelcome_WithProfiles_ZeroCount contains "Perfiles SDD de OpenCode" but no badge.
 func TestRenderWelcome_WithProfiles_ZeroCount(t *testing.T) {
-	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 0, true)
+	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 0)
 	if !strings.Contains(output, "Perfiles SDD de OpenCode") {
 		t.Errorf("RenderWelcome(showProfiles=true, count=0) missing 'Perfiles SDD de OpenCode'")
 	}
@@ -244,7 +227,7 @@ func TestRenderWelcome_WithProfiles_ZeroCount(t *testing.T) {
 
 // TestRenderWelcome_WithProfiles_CountTwo contains "Perfiles SDD de OpenCode (2)".
 func TestRenderWelcome_WithProfiles_CountTwo(t *testing.T) {
-	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 2, true)
+	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 2)
 	if !strings.Contains(output, "Perfiles SDD de OpenCode (2)") {
 		t.Errorf("RenderWelcome(showProfiles=true, count=2) missing 'Perfiles SDD de OpenCode (2)'")
 	}
@@ -252,7 +235,7 @@ func TestRenderWelcome_WithProfiles_CountTwo(t *testing.T) {
 
 // TestRenderWelcome_WithProfiles_CountOne contains "Perfiles SDD de OpenCode (1)".
 func TestRenderWelcome_WithProfiles_CountOne(t *testing.T) {
-	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 1, true)
+	output := screens.RenderWelcome(0, "1.0.0", "", nil, true, true, 1)
 	if !strings.Contains(output, "Perfiles SDD de OpenCode (1)") {
 		t.Errorf("RenderWelcome(showProfiles=true, count=1) missing 'Perfiles SDD de OpenCode (1)'")
 	}

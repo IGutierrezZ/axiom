@@ -26,19 +26,12 @@ type WelcomeAdvisory struct {
 // When showProfiles is true, an "Perfiles SDD de OpenCode" option is inserted
 // between "Configurar modelos" and "Gestionar respaldos".
 // profileCount is used to show a badge with the current profile count.
-// When hasEngines is false, "Crear agente personalizado" is shown as disabled
-// (labelled "(sin motores)") to signal that no supported AI engine is installed.
-func WelcomeOptions(updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, hasEngines bool) []string {
+func WelcomeOptions(updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int) []string {
 	upgradeLabel := "Actualizar herramientas"
 	if updateCheckDone && update.HasUpdates(updateResults) {
 		upgradeLabel = "Actualizar herramientas ★"
 	} else if updateCheckDone && !update.HasUpdates(updateResults) {
 		upgradeLabel = "Actualizar herramientas (al día)"
-	}
-
-	agentLabel := "Crear agente personalizado"
-	if !hasEngines {
-		agentLabel = "Crear agente personalizado (sin motores)"
 	}
 
 	opts := []string{
@@ -47,7 +40,6 @@ func WelcomeOptions(updateResults []update.UpdateResult, updateCheckDone bool, s
 		"Sincronizar configuraciones",
 		"Actualizar y sincronizar",
 		"Configurar modelos",
-		agentLabel,
 		"Plugins comunitarios de OpenCode",
 	}
 
@@ -73,15 +65,15 @@ func WelcomeOptions(updateResults []update.UpdateResult, updateCheckDone bool, s
 	return opts
 }
 
-func RenderWelcome(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, hasEngines bool) string {
-	return RenderWelcomeWithWidth(cursor, version, updateBanner, updateResults, updateCheckDone, showProfiles, profileCount, hasEngines, 0)
+func RenderWelcome(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int) string {
+	return RenderWelcomeWithWidth(cursor, version, updateBanner, updateResults, updateCheckDone, showProfiles, profileCount, 0)
 }
 
-func RenderWelcomeWithWidth(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, hasEngines bool, width int) string {
-	return RenderWelcomeWithAdvisory(cursor, version, updateBanner, updateResults, updateCheckDone, showProfiles, profileCount, hasEngines, width, 0, WelcomeAdvisory{})
+func RenderWelcomeWithWidth(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, width int) string {
+	return RenderWelcomeWithAdvisory(cursor, version, updateBanner, updateResults, updateCheckDone, showProfiles, profileCount, width, 0, WelcomeAdvisory{})
 }
 
-func RenderWelcomeWithAdvisory(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, hasEngines bool, width int, height int, advisory WelcomeAdvisory) string {
+func RenderWelcomeWithAdvisory(cursor int, version string, updateBanner string, updateResults []update.UpdateResult, updateCheckDone bool, showProfiles bool, profileCount int, width int, height int, advisory WelcomeAdvisory) string {
 	render := func(includeLogo, includeOptional, compact bool) string {
 		var b strings.Builder
 
@@ -118,7 +110,7 @@ func RenderWelcomeWithAdvisory(cursor int, version string, updateBanner string, 
 		} else {
 			b.WriteString("\n\n")
 		}
-		options := WelcomeOptions(updateResults, updateCheckDone, showProfiles, profileCount, hasEngines)
+		options := WelcomeOptions(updateResults, updateCheckDone, showProfiles, profileCount)
 		if compact {
 			b.WriteString(renderWelcomeOptions(options, cursor, width))
 		} else {
