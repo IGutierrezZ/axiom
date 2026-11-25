@@ -32,20 +32,6 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"c2b4382c014c2c15d4b18c70df8d65c272e557d2639e2b2f1ad8d9236142dc48", // 5a395e45
 		},
 	},
-	"opencode-review-transport.ts": {
-		"v1": {
-			"05e60cfdce94b017c569fa1752c02938cfd0aebedd4a6d86d2430ed2a4808653", // 7cdcfe57
-			"492cab42d786701eb6fa92c4da90dcca14b6408f52ae98af2398ed27131919c8", // 8b98b26a
-			"5b70f1f43e792397f06915f889add37bbb758e012b46990680fe62d1163d9dec", // 341cc531
-			"82d28ef92c13f2ce2aab5a671896d9c9016b2b9b0776df8e2ff8f5f8b00f944f", // 0c8f8666
-			"aa2f0beffddc3496a7e5ddd9eb26d963be7efab31123fd65e7126d478028f222", // 9589e493
-			"ea4a9e12442fd03e201a170fca71a2b722473d36e9645e13eef226a0a7c253fd", // a36736a9
-			"fa4c1674d8897371341088548e1c4be9098be03f737e97878d008327f6b38e66", // 229332a8
-		},
-		"v2": {
-			"886f5c89a6da4ae1b378aed39cbc7f90b0e4dc5c92350660db015287fb3c2445", // 5a395e45
-		},
-	},
 	"model-variants.ts": {
 		"v1": {
 			"1e7e9c8f3b45ba89a9a9de96425e1dd1edcd5b0efd8c9cd7cb4a53c64812c606", // d45d4583

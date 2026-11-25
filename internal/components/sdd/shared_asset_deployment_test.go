@@ -6,10 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 )
 
@@ -75,11 +73,11 @@ func TestInjectDeploysEveryEmbeddedSharedFile(t *testing.T) {
 	}
 }
 
-var sharedRelativeLinkPattern = regexp.MustCompile(`\]\(\.\./_shared/([^)#]+)`)
+var sharedRelativeLinkPattern = regexp.MustCompile(`\.\./_shared/([A-Za-z0-9._-]+\.md)`)
 
 // TestSkillRelativeSharedLinksResolveAfterInject pins that a skill shipping a
-// ../_shared/ relative link resolves on disk after install. judgment-day links
-// to review-ledger-contract.md, so a shared file that never deploys turns into
+// ../_shared/ relative link resolves on disk after install. sdd-apply links
+// to the shared SDD conventions, so a shared file that never deploys turns into
 // a dangling reference on every synced machine.
 func TestSkillRelativeSharedLinksResolveAfterInject(t *testing.T) {
 	mockNoPackageManager(t)
@@ -90,48 +88,22 @@ func TestSkillRelativeSharedLinksResolveAfterInject(t *testing.T) {
 	}
 
 	skillsRoot := filepath.Join(home, ".config", "opencode", "skills")
-	skillDoc := filepath.Join(skillsRoot, "judgment-day", "SKILL.md")
+	skillDoc := filepath.Join(skillsRoot, "sdd-apply", "SKILL.md")
 
 	content, err := os.ReadFile(skillDoc)
 	if err != nil {
-		t.Fatalf("read deployed judgment-day SKILL.md: %v", err)
+		t.Fatalf("read deployed sdd-apply SKILL.md: %v", err)
 	}
 
 	matches := sharedRelativeLinkPattern.FindAllStringSubmatch(string(content), -1)
 	if len(matches) == 0 {
-		t.Fatal("judgment-day SKILL.md has no ../_shared/ relative link; the guard would prove nothing")
+		t.Fatal("sdd-apply SKILL.md has no ../_shared/ relative link; the guard would prove nothing")
 	}
 
 	for _, match := range matches {
 		target := filepath.Join(skillsRoot, "_shared", filepath.FromSlash(match[1]))
 		if _, statErr := os.Stat(target); statErr != nil {
-			t.Errorf("judgment-day SKILL.md links to %q but it does not resolve on disk: %v", match[1], statErr)
-		}
-	}
-}
-
-// Issue #2846: the shared review ledger contract was raw-copied into every
-// runtime's skills/_shared, so the installed copy still carried the
-// {{GENTLE_AI_RUNTIME_AGENT_ID}} placeholder while the inline orchestrator copy
-// was rendered. The deployed shared file must bind the same runtime identity.
-func TestInjectBindsRuntimeIdentityInDeployedSharedReviewLedgerContract(t *testing.T) {
-	for agent, adapter := range map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter()} {
-		mockNoPackageManager(t)
-		home := t.TempDir()
-		result, err := Inject(home, adapter, "")
-		if err != nil {
-			t.Fatalf("Inject(%s) error = %v", agent, err)
-		}
-		var content []byte
-		for _, file := range result.Files {
-			if strings.HasSuffix(file, filepath.Join("_shared", "review-ledger-contract.md")) {
-				if content, err = os.ReadFile(file); err != nil {
-					t.Fatal(err)
-				}
-			}
-		}
-		if content == nil || strings.Contains(string(content), "{{") || !strings.Contains(string(content), "--agent "+agent+" --next-transition") {
-			t.Fatalf("deployed %s shared review ledger contract does not bind the runtime identity:\n%s", agent, content)
+			t.Errorf("sdd-apply SKILL.md links to %q but it does not resolve on disk: %v", match[1], statErr)
 		}
 	}
 }

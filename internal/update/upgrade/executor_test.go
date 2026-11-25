@@ -1646,7 +1646,7 @@ func TestManagedAgentBackupPathsOpenCodePluginsFollowXDGConfigHome(t *testing.T)
 			t.Fatalf("backup path %q ignores XDG_CONFIG_HOME", p)
 		}
 	}
-	for _, name := range append([]string{"background-agents.ts"}, sdd.OpenCodePluginLifecycleNames(model.AgentOpenCode)...) {
+	for _, name := range append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(model.AgentOpenCode)...) {
 		want := filepath.Join(xdg, "opencode", "plugins", name)
 		if _, ok := pathSet[want]; !ok {
 			t.Fatalf("backup paths miss managed plugin %q; got %v", want, paths)

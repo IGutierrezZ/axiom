@@ -73,7 +73,6 @@ func TestSkillsForPresetFullIncludesAll(t *testing.T) {
 	contributorOnly := map[model.SkillID]bool{
 		model.SkillIssueCreation:       true,
 		model.SkillCommentWriter:       true,
-		model.SkillRDDDefectWorkflow:   true,
 		model.SkillSystemicIssueTriage: true,
 	}
 	if len(selectableOnly) != len(contributorOnly) {
@@ -90,7 +89,6 @@ func TestSkillsForPresetExcludesContributorSkills(t *testing.T) {
 	excluded := []model.SkillID{
 		model.SkillIssueCreation,
 		model.SkillSystemicIssueTriage,
-		model.SkillRDDDefectWorkflow,
 		model.SkillCommentWriter,
 	}
 	required := []model.SkillID{

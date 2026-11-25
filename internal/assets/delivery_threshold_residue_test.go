@@ -35,11 +35,8 @@ var deliveryThresholdNumber = regexp.MustCompile(`\b400\b`)
 // never slip into a file that is admitted for another reason.
 func admittedDeliveryResidue(file, line string) bool {
 	switch {
-	case strings.Contains(file, "skills/rdd-defect-workflow/"):
-		// Both copies of the RDD skill; C-01-e retires them.
-		return true
 	case strings.Contains(line, "Full-4R review") && isFull4RSweepSource(file):
-		// Sweep threshold of the judges and of the RDD lenses.
+		// Sweep threshold of the judges.
 		return true
 	}
 	return false
@@ -48,7 +45,7 @@ func admittedDeliveryResidue(file, line string) bool {
 func isFull4RSweepSource(file string) bool {
 	dir, name := path.Split(file)
 	if strings.HasSuffix(dir, "/agents/") {
-		return strings.HasPrefix(name, "jd-judge-") || strings.HasPrefix(name, "review-")
+		return strings.HasPrefix(name, "jd-judge-")
 	}
 	return file == "opencode/sdd-overlay-single.json" || file == "opencode/sdd-overlay-multi.json"
 }
@@ -135,11 +132,8 @@ func TestDeliveryThresholdResidueAdmissionIsNarrow(t *testing.T) {
 	}{
 		{"judge sweep line", "claude/agents/jd-judge-a.md", "Full-4R review (or >400 changed lines)", true},
 		{"judge line without the sweep text", "claude/agents/jd-judge-a.md", "split above 400 lines", false},
-		{"lens sweep line", "kiro/agents/review-risk.md", "Full-4R review (or >400 changed lines)", true},
 		{"overlay sweep line", "opencode/sdd-overlay-multi.json", "Full-4R review >400", true},
 		{"sweep text in an unrelated asset", "claude/sdd-orchestrator-workflow.md", "Full-4R review >400", false},
-		{"rdd skill, embedded", "skills/rdd-defect-workflow/SKILL.md", "any line", true},
-		{"rdd skill, public", "skills/rdd-defect-workflow/SKILL.md", "any line", true},
 		{"another skill", "skills/chained-pr/SKILL.md", "PRs over 400 lines", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

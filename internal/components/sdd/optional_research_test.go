@@ -43,7 +43,7 @@ func TestOptionalResearchRendersWithoutAdministrativeAdmission(t *testing.T) {
 		t.Run(string(agent.ID), func(t *testing.T) {
 			prompt := renderSDDOrchestratorAsset(agent.ID)
 			if agent.ID == model.AgentClaudeCode {
-				prompt += "\n" + renderBoundedReviewAsset(agent.ID, "claude/sdd-orchestrator-workflow.md")
+				prompt += "\n" + renderManagedAsset(agent.ID, "claude/sdd-orchestrator-workflow.md")
 			}
 			assertOptionalResearchGuidance(t, prompt)
 			assertResearchGatekeeperPrecedence(t, prompt)
@@ -151,7 +151,7 @@ func TestOptionalResearchClaudeLazyWorkflowRetainsOrdinaryGate(t *testing.T) {
 	if !strings.Contains(parent, "sdd-orchestrator-workflow.md") {
 		t.Fatal("Claude parent no longer loads the tested lazy workflow")
 	}
-	workflow := renderBoundedReviewAsset(model.AgentClaudeCode, "claude/sdd-orchestrator-workflow.md")
+	workflow := renderManagedAsset(model.AgentClaudeCode, "claude/sdd-orchestrator-workflow.md")
 	assertResearchGatekeeperPrecedence(t, workflow)
 	if !strings.Contains(assets.MustRead("claude/sdd-orchestrator-workflow.md"), researchLifecyclePlaceholder) {
 		t.Fatal("lazy workflow must receive the shared research contract")

@@ -39,10 +39,6 @@ Use the platform's native bounded worker for delegated-direct work; reserve `sdd
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Review Execution Contract
-
-Runtime-specific lifecycle content is dynamically injected only when the compiled capability advertises it. Other runtimes retain this generic SDD baseline without review-transport promises.
-
 #### Cost and Context Balance
 
 {{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}

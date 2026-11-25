@@ -204,9 +204,9 @@ func TestIndependentReviewBoundaryJudgmentAndCoveragePassages(t *testing.T) {
 		"sdd/{change-name}/coverage-review/spec", "sdd/{change-name}/review-ledger/{role}",
 	})
 
-	// La prueba del juicio autónomo sigue vigente: la frase sin recibo no se toca.
-	if !strings.Contains(strings.ToLower(judgment), "issues no receipt") {
-		t.Error("judgment-day/SKILL.md debe conservar «issues no receipt»")
+	// La prueba del juicio autónomo sigue vigente: no concede autoridad de entrega.
+	if !strings.Contains(strings.ToLower(judgment), "carries no delivery authority") {
+		t.Error("judgment-day/SKILL.md debe conservar «carries no delivery authority»")
 	}
 }
 
@@ -355,28 +355,8 @@ func TestIndependentReviewBoundaryPinDetectsMutations(t *testing.T) {
 	}
 }
 
-// TestIndependentReviewBoundaryIsNotAWholeFileSweep: los ficheros preexistentes nombran la frontera a propósito, de modo que
-// un barrido de fichero completo fallaría; el pin inspecciona solo los pasajes nuevos o modificados (REQ-28.11).
-func TestIndependentReviewBoundaryIsNotAWholeFileSweep(t *testing.T) {
-	deliberate := []struct{ file, mention string }{
-		{"skills/judgment-day/SKILL.md", "issues no receipt"},
-	}
-	for _, d := range deliberate {
-		content := MustRead(d.file)
-		if !strings.Contains(content, d.mention) {
-			t.Errorf("%s: falta la mención preexistente que declara la frontera: %q", d.file, d.mention)
-		}
-		if len(reviewBoundaryViolations([]reviewPassage{{"fichero completo", d.file, content}})) == 0 {
-			t.Errorf("%s: se esperaba que el fichero completo incumpliera el vocabulario (mención deliberada de la frontera)", d.file)
-		}
-		for _, pinned := range pinnedReviewPhrases {
-			if pinned.file == d.file && len(pinned.phrase) >= len(content) {
-				t.Errorf("%s: un pasaje pineado cubre el fichero completo", d.file)
-			}
-		}
-	}
-
-	// RDD suspendido (C-01-c): las skills de SDD ya no nombran RDD como frontera.
+// TestSDDSkillsNameNoRDDBoundary: las skills de SDD no nombran RDD como frontera (REQ-46.3).
+func TestSDDSkillsNameNoRDDBoundary(t *testing.T) {
 	for _, file := range []string{"skills/sdd-verify/SKILL.md", "skills/sdd-apply/SKILL.md", "skills/sdd-archive/SKILL.md", "skills/_shared/sdd-status-contract.md"} {
 		if strings.Contains(MustRead(file), "RDD") {
 			t.Errorf("%s: sigue nombrando RDD", file)

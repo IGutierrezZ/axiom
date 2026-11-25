@@ -81,11 +81,11 @@ func TestWorkspaceSharedSkillsSingleCopyForAgentsReadingAgentsDir(t *testing.T) 
 	assertSharedSkillsCopy(t, workspace)
 	assertNothingUnder(t, workspace, append([]string{filepath.Join(".claude", "skills")}, legacyAgentSkillDirs...)...)
 	// Contenido idéntico para todos: sin marcadores sin resolver.
-	ledger, err := os.ReadFile(filepath.Join(workspace, ".agents", "skills", "_shared", "review-ledger-contract.md"))
+	common, err := os.ReadFile(filepath.Join(workspace, ".agents", "skills", "_shared", "sdd-phase-common.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(ledger), "{{") {
+	if strings.Contains(string(common), "{{") {
 		t.Errorf("la copia compartida tiene marcadores sin resolver")
 	}
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))

@@ -162,7 +162,7 @@ func GlobalAgentLeftovers(homeDir string) []GlobalLeftover {
 // kiloPluginNames son los plugins que la instalación escribe en la carpeta de
 // plugins de Kilo, los mismos que retira la desinstalación.
 func kiloPluginNames() []string {
-	return append([]string{"background-agents.ts"}, sdd.OpenCodePluginLifecycleNames(model.AgentKilocode)...)
+	return append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(model.AgentKilocode)...)
 }
 
 // kiloConfigHasAxiomEntries dice si el opencode.json de Kilo conserva agentes con la

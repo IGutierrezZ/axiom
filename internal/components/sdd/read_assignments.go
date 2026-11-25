@@ -10,7 +10,7 @@ import (
 )
 
 // configurableAgentSet is the set of valid agent names that may appear in
-// opencode.json. It includes SDD, Judgment Day, review, and coordinator agents.
+// opencode.json. It includes SDD, Judgment Day, and coordinator agents.
 var configurableAgentSet = buildConfigurableAgentSet()
 
 // reservedAgentSet contains native and package-owned roles that must not be

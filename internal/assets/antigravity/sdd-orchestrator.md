@@ -55,10 +55,6 @@ Use a dynamically defined, bounded general-purpose worker for delegated-direct w
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Review Execution Contract
-
-{{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
-
 #### Cost and Context Balance
 
 - Keep exploration, apply, and verify concerns separated even when all phases run in one Antigravity conversation.

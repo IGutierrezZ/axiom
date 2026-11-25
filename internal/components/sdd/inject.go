@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
-	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
@@ -19,7 +18,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
-	"github.com/IGutierrezZ/axiom/v3/internal/rddharness"
 )
 
 // delegationBlockSignature is a sentence of the current delegation triggers that
@@ -324,7 +322,7 @@ func SkillDirectoryPaths(skillDir, capability string) ([]string, error) {
 
 // InjectSkillDirectoryForAgent refreshes SDD skills for one runtime, binding
 // the runtime identity the shared assets state (issue #2846: the deployed
-// skills/_shared review ledger contract kept the raw placeholder while the
+// skills/_shared files kept the raw placeholder while the
 // inline orchestrator copy was rendered). An empty agent is the shared
 // compatibility root, which every runtime reads, so it renders the generic
 // `<runtime>` slot instead of one runtime's identity.
@@ -368,7 +366,7 @@ func injectSkillDirectoryWithWriter(skillDir, capability string, agent model.Age
 		}
 
 		path := filepath.Join(skillDir, "_shared", fileName)
-		writeResult, err := writeFile(path, suspendedSharedSkillContent(fileName, []byte(bindSharedSkillRuntimeIdentity(content, agent))), 0o644)
+		writeResult, err := writeFile(path, []byte(bindSharedSkillRuntimeIdentity(content, agent)), 0o644)
 		if err != nil {
 			return InjectionResult{}, err
 		}
@@ -637,7 +635,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 					continue
 				}
 
-				content := renderBoundedReviewAsset(adapter.Agent(), commandsAssetDir+"/"+entry.Name())
+				content := renderManagedAsset(adapter.Agent(), commandsAssetDir+"/"+entry.Name())
 				content = resolveSkillsDirPlaceholders(content, adapter, workspaceRootFor(homeDir, opts))
 				path := filepath.Join(commandsDir, entry.Name())
 				writeResult, err := filemerge.WriteFileAtomic(path, []byte(content), 0o644)
@@ -738,16 +736,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			overlayBytes, err = defaultOpenCodeShareDisabled(settingsPath, overlayBytes)
 			if err != nil {
 				return InjectionResult{}, fmt.Errorf("default OpenCode share mode: %w", err)
-			}
-
-			if !rddharness.Enabled() {
-				// RDD suspendido (C-01-c): se retiran de la configuración instalada
-				// los agentes de revisión que Axiom gestiona.
-				retired, retireErr := retireOpenCodeReviewAgents(settingsPath)
-				if retireErr != nil {
-					return InjectionResult{}, fmt.Errorf("retire OpenCode review agents: %w", retireErr)
-				}
-				changed = changed || retired
 			}
 
 			mergeSettings := mergeOpenCodeCompatibleJSONFile
@@ -997,7 +985,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 }
 
 func renderClaudeSessionPreflight() (string, error) {
-	content := renderBoundedReviewAsset(model.AgentClaudeCode, "claude/sdd-orchestrator-workflow.md")
+	content := renderManagedAsset(model.AgentClaudeCode, "claude/sdd-orchestrator-workflow.md")
 	return projectSDDSessionPreflightWithTool(substituteSharedOrchestratorSections(content), "### SDD Entry Routing (MANDATORY)", "AskUserQuestion")
 }
 
@@ -1136,7 +1124,7 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 	if !ok {
 		return overlayBytes, nil
 	}
-	expandOpenCodeBoundedReviewAgents(agentsMap, agent == model.AgentOpenCode)
+	expandOpenCodeJudgmentDayAgents(agentsMap, agent == model.AgentOpenCode)
 	if agent == model.AgentKilocode {
 		restoreKilocodeManagedAgentTools(agentsMap)
 	}
@@ -1224,7 +1212,7 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 	}
 
 	// Single-mode SDD embeds sub-agent prompts directly in opencode.json instead
-	// of using shared prompt files. Multi-mode still keeps JD/review prompts inline.
+	// of using shared prompt files. Multi-mode still keeps JD prompts inline.
 	// When CodeGraph is enabled through the Community Tool path, every sub-agent
 	// needs the same search-order rule the orchestrator gets; task artifact
 	// references alone are not enough.
@@ -1357,27 +1345,10 @@ func isKilocodeProfilePhase(name string) bool {
 	return false
 }
 
-func expandOpenCodeBoundedReviewAgents(agentsMap map[string]any, usePermissions ...bool) {
+// expandOpenCodeJudgmentDayAgents gives the Judgment Day judges the read-only
+// reviewer contract and the tool restrictions their runtime enforces.
+func expandOpenCodeJudgmentDayAgents(agentsMap map[string]any, usePermissions ...bool) {
 	permissions := len(usePermissions) > 0 && usePermissions[0]
-	if !rddharness.Enabled() {
-		// RDD suspendido (C-01-c): el overlay no declara los agentes de revisión.
-		stripOpenCodeReviewAgents(agentsMap)
-	}
-	for _, name := range opencode.ReviewLensPhases() {
-		agent, ok := agentsMap[name].(map[string]any)
-		if !ok {
-			continue
-		}
-		prompt, _ := openCodeProviderInjectedReviewerPrompt(name)
-		agent["prompt"] = prompt
-		if permissions {
-			agent["permission"] = map[string]any{"*": "deny"}
-		} else {
-			agent["tools"] = map[string]any{"*": false, "read": false, "write": false, "edit": false, "bash": false, "task": false}
-			agent["permission"] = map[string]any{"edit": "deny", "bash": "deny"}
-		}
-	}
-
 	for _, name := range []string{"jd-judge-a", "jd-judge-b"} {
 		agent, ok := agentsMap[name].(map[string]any)
 		if !ok {
@@ -1389,38 +1360,6 @@ func expandOpenCodeBoundedReviewAgents(agentsMap map[string]any, usePermissions 
 		} else {
 			delete(agent, "permission")
 			agent["tools"] = map[string]any{"*": false, "read": true, "write": false, "edit": false, "bash": false, "task": false}
-		}
-	}
-
-	if refuter, ok := agentsMap[opencode.ReviewRefuterAgent].(map[string]any); ok {
-		refuter["prompt"] = "You are the detached read-only refuter for exactly ONE transaction-wide inferential batch. Receive every inferential severe neutral claim and proof reference, return one corroborated | refuted | inconclusive result per finding, add no findings, modify nothing, return one complete result, and terminate. Missing or malformed entries are inconclusive."
-		if permissions {
-			refuter["permission"] = map[string]any{"edit": "deny", "write": "deny", "bash": "deny", "task": "deny"}
-		} else {
-			delete(refuter, "permission")
-			refuter["tools"] = map[string]any{"*": false, "read": true, "write": false, "edit": false, "bash": false, "task": false}
-		}
-	}
-
-	if validator, ok := agentsMap[opencode.ReviewValidatorAgent].(map[string]any); ok {
-		if permissions {
-			// The validator handles untrusted candidate input, so its shell is
-			// pinned to the single provider-issued read-only inspection command
-			// its briefing names (reviewerprovider contract); everything else
-			// is denied. Read stays unspecified so the global sensitive-path
-			// read denies remain authoritative.
-			validator["permission"] = map[string]any{
-				"write": "deny",
-				"edit":  "deny",
-				"task":  "deny",
-				"bash": map[string]any{
-					"axiom review inspect-candidate --purpose targeted-validation *": "allow",
-					"*": "deny",
-				},
-			}
-		} else {
-			delete(validator, "permission")
-			validator["tools"] = map[string]any{"read": true, "write": false, "edit": false, "bash": true, "task": false}
 		}
 	}
 }
@@ -1451,7 +1390,7 @@ func migratePreservedOpenCodeOrchestratorPrompt(prompt string) string {
 	migrated := removeLegacyOpenCodePlainChatPreflightLines(replacer.Replace(prompt))
 	migrated = ensurePreservedOpenCodeDelegationHardGates(migrated)
 	migrated = ensurePreservedOpenCodeResearchLifecycle(migrated)
-	return ensurePreservedOpenCodeReviewExecutionContract(migrated)
+	return migrated
 }
 
 func ensurePreservedOpenCodeResearchLifecycle(prompt string) string {
@@ -1474,24 +1413,6 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	options ...OrchestratorRenderOptions,
 ) string {
 	migrated := migratePreservedOpenCodeOrchestratorPrompt(prompt)
-	if agent == model.AgentOpenCode && !rddharness.Enabled() {
-		// RDD is suspended (C-01-c): retire the consent route a previous sync wrote.
-		for _, route := range []string{legacyOpenCodeConsentV3QuestionRoute, previousOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute} {
-			migrated = strings.ReplaceAll(migrated, route, openCodeNativeQuestionSourceRoute)
-		}
-		for _, clause := range []string{previousOpenCodeConsentV3FallbackClause, openCodeConsentV3FallbackClause} {
-			migrated = strings.ReplaceAll(migrated, clause, openCodeFallbackSourceClause)
-		}
-	}
-	if agent == model.AgentOpenCode && rddharness.Enabled() {
-		migrated = strings.ReplaceAll(migrated, legacyOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
-		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3QuestionRoute, openCodeConsentV3QuestionRoute)
-		migrated = strings.ReplaceAll(migrated, previousOpenCodeConsentV3FallbackClause, openCodeConsentV3FallbackClause)
-		migrated = strings.ReplaceAll(migrated, openCodeFallbackSourceClause, openCodeConsentV3FallbackClause)
-	}
-	if strings.Contains(migrated, openCodeNativeQuestionSourceRoute) {
-		migrated = replaceOpenCodeConsentV3QuestionRoute(migrated, agent)
-	}
 	var renderOptions OrchestratorRenderOptions
 	if len(options) > 0 {
 		renderOptions = options[0]
@@ -1586,13 +1507,38 @@ func removeLegacyOpenCodePlainChatPreflightLines(prompt string) string {
 	return strings.Join(kept, "\n")
 }
 
-// nativeReviewAuthorityRule is the authority bullet of the managed delegation block. It
-// replaces a rule that pointed at retired work-routing contracts. The current
-// lifecycle starts only from current-worktree preflight, retains the explicit
-// transaction binding, and leaves delivery to the user rather than a gate.
-const nativeReviewAuthorityRule = "- **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
-	" and execute its exact START; retain that transaction's lineage, revision, and target for every later lifecycle call." +
-	" Gates are informational only. Never select lenses, synthesize transitions, infer PASS, or authorize delivery from prose."
+// staleGeneratedReviewSentences are the exact review-routing sentences that
+// unmarked v1 prompts carried inside generated delegation bullets. No review
+// routing is generated any more, so the line that holds one is dropped.
+var staleGeneratedReviewSentences = []string{
+	"run a fresh-context review unless the diff is trivial docs/text",
+	"stop and run a fresh audit before continuing",
+	"use fresh context for adversarial review of diffs, conflicts, PR readiness, and incidents",
+	"run the concrete review lens(es) selected by Review Lens Selection unless the diff is trivial docs/text",
+	"run the concrete review lens(es) selected by Review Lens Selection unless the diff is trivial (tier 1)",
+}
+
+// staleReviewAuthorityRuleMarker identifies the managed delegation block an
+// earlier install wrote with the retired review authority bullet.
+const staleReviewAuthorityRuleMarker = "**Authority rule**: use selectorless"
+
+func removeStaleGeneratedReviewLines(prompt string) string {
+	lines := strings.Split(prompt, "\n")
+	kept := make([]string, 0, len(lines))
+	for _, line := range lines {
+		stale := false
+		for _, sentence := range staleGeneratedReviewSentences {
+			if strings.Contains(line, sentence) {
+				stale = true
+				break
+			}
+		}
+		if !stale {
+			kept = append(kept, line)
+		}
+	}
+	return strings.Join(kept, "\n")
+}
 
 func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
 	prompt = removeRetiredWorkRoutingAuthorityRule(prompt)
@@ -1601,18 +1547,7 @@ func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
 	// exact generated sentences here; never infer that every byte after the
 	// legacy heading belongs to gentle-ai because users may have appended H4 or
 	// plain-text policy beneath it.
-	prompt = strings.NewReplacer(
-		"run a fresh-context review unless the diff is trivial docs/text",
-		nativeReviewAuthorityRule,
-		"stop and run a fresh audit before continuing",
-		"stop with one typed Needs your decision result until native authority validates the immutable candidate",
-		"use fresh context for adversarial review of diffs, conflicts, PR readiness, and incidents",
-		nativeReviewAuthorityRule,
-		"run the concrete review lens(es) selected by Review Lens Selection unless the diff is trivial docs/text",
-		nativeReviewAuthorityRule,
-		"run the concrete review lens(es) selected by Review Lens Selection unless the diff is trivial (tier 1)",
-		nativeReviewAuthorityRule,
-	).Replace(prompt)
+	prompt = removeStaleGeneratedReviewLines(prompt)
 
 	// The managed block is generated from the delegation single source
 	// (agentguidance.DelegationTriggers), so a preserved OpenCode prompt receives
@@ -1627,7 +1562,6 @@ func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
 Semantic guard: **delegate** means using OpenCode's native Task tool to invoke a configured sub-agent. Running local scripts, Python, or Bash inline is execution, not delegation.
 
 ` + agentguidance.DelegationTriggers() + `
-` + nativeReviewAuthorityRule + `
 <!-- /gentle-ai:delegation-hard-gates-migration -->
 `
 
@@ -1638,10 +1572,9 @@ Semantic guard: **delegate** means using OpenCode's native Task tool to invoke a
 		strings.Contains(prompt, "Preparation trigger") &&
 		strings.Contains(prompt, "Per-action trigger") &&
 		strings.Contains(prompt, "Optional SDD trigger") &&
-		strings.Contains(prompt, "Authority rule") &&
 		strings.Contains(prompt, "Semantic guard") &&
 		strings.Contains(prompt, "execution, not delegation") &&
-		strings.Contains(prompt, nativeReviewAuthorityRule) &&
+		!strings.Contains(prompt, staleReviewAuthorityRuleMarker) &&
 		!strings.Contains(prompt, "#### Review Lens Selection") {
 		return prompt
 	}
@@ -1704,76 +1637,6 @@ func migrateLegacyMandatoryWordingInDelegationHardGates(prompt string) string {
 
 	managed := strings.ReplaceAll(prompt[start:end], legacyMandatoryWording, "fully mandatory")
 	return prompt[:start] + managed + prompt[end:]
-}
-
-func ensurePreservedOpenCodeReviewExecutionContract(prompt string) string {
-	if !rddharness.Enabled() {
-		// RDD suspendido (C-01-c): el bloque preservado de una instalación antigua
-		// deja de proyectarse.
-		return stripPreservedOpenCodeReviewExecutionContract(prompt)
-	}
-	const (
-		startMarker = "<!-- gentle-ai:review-execution-contract-migration -->"
-		endMarker   = "<!-- /gentle-ai:review-execution-contract-migration -->"
-		heading     = "#### Review Execution Contract"
-		nextHeading = "#### Cost and Context Balance"
-	)
-
-	source := renderSDDOrchestratorAsset(model.AgentOpenCode)
-	start := strings.Index(source, heading)
-	end := strings.Index(source, nextHeading)
-	if start < 0 || end <= start {
-		return prompt
-	}
-	canonical := strings.TrimSpace(source[start:end])
-	block := startMarker + "\n" + canonical + "\n" + endMarker
-
-	if markerStart := strings.Index(prompt, startMarker); markerStart >= 0 {
-		if relativeEnd := strings.Index(prompt[markerStart:], endMarker); relativeEnd >= 0 {
-			markerEnd := markerStart + relativeEnd + len(endMarker)
-			return replacePreservedPromptSection(prompt, markerStart, markerEnd, block)
-		}
-	}
-
-	if headingStart := strings.Index(prompt, heading); headingStart >= 0 {
-		headingEnd := len(prompt)
-		remainder := prompt[headingStart+len(heading):]
-		// The shared review contract has level-three headings of its own, and
-		// the OpenCode-only concurrent-group addendum is another level-three
-		// heading. Neither ends the managed review section; only the next
-		// enclosing section may do that.
-		for _, candidate := range []string{"\n" + nextHeading, "\n#### ", "\n## ", "\n# "} {
-			if relativeEnd := strings.Index(remainder, candidate); relativeEnd >= 0 {
-				candidateEnd := headingStart + len(heading) + relativeEnd + 1
-				if candidateEnd < headingEnd {
-					headingEnd = candidateEnd
-				}
-			}
-		}
-		return replacePreservedPromptSection(prompt, headingStart, headingEnd, block)
-	}
-
-	return strings.TrimRight(prompt, "\n") + "\n\n" + block + "\n"
-}
-
-func replacePreservedPromptSection(prompt string, start, end int, replacement string) string {
-	prefix := strings.TrimRight(prompt[:start], "\n")
-	suffix := strings.TrimLeft(prompt[end:], "\n")
-
-	var b strings.Builder
-	if prefix != "" {
-		b.WriteString(prefix)
-		b.WriteString("\n\n")
-	}
-	b.WriteString(replacement)
-	if suffix != "" {
-		b.WriteString("\n\n")
-		b.WriteString(suffix)
-	}
-	if strings.HasSuffix(prompt, "\n") && !strings.HasSuffix(b.String(), "\n") {
-		b.WriteString("\n")
-	}
-	return b.String()
 }
 
 func readOpenCodeAgentPrompt(settingsPath, agentKey string) (string, error) {
@@ -1893,20 +1756,6 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude skill-registry hook: %w", err)
 	}
-	var stopHookChanged bool
-	if rddharness.Enabled() {
-		stopHookChanged, err = ensureClaudeReviewStopHook(settingsPath, adapter.Agent())
-		if err != nil {
-			return InjectionResult{}, fmt.Errorf("install Claude review stop-hook: %w", err)
-		}
-	} else {
-		// RDD suspendido (C-01-c): el hook de parada no se registra y se retira
-		// el que dejó una versión anterior.
-		stopHookChanged, err = retireClaudeReviewStopHook(settingsPath, string(adapter.Agent()))
-		if err != nil {
-			return InjectionResult{}, fmt.Errorf("retire Claude review stop-hook: %w", err)
-		}
-	}
 	preflightHookChanged, err := ensureClaudeSDDPreflightHook(settingsPath, adapter.Agent())
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude SDD preflight hook: %w", err)
@@ -1919,7 +1768,7 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("retire Claude runtime telemetry hooks: %w", err)
 	}
-	return InjectionResult{Changed: changed || stopHookChanged || preflightHookChanged || branchGuardChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
+	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
 }
 
 func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
@@ -2264,7 +2113,7 @@ func ensureClaudeSDDPreflightHook(settingsPath string, agentID model.AgentID) (b
 			changed = true
 			continue
 		}
-		added, err := appendClaudeReviewStopHookEntry(hooksMap, hook.key, settingsPath, command, map[string]any{
+		added, err := appendClaudeHookEntry(hooksMap, hook.key, settingsPath, command, map[string]any{
 			"matcher": hook.matcher,
 			"hooks":   []any{map[string]any{"type": "command", "command": command, "timeout": 30}},
 		})
@@ -2391,102 +2240,12 @@ func ensureBranchGuardHookEntries(path, label, matcher, command string) (bool, e
 	return wr.Changed, nil
 }
 
-// ensureClaudeReviewStopHook appends the managed review preflight commands to
-// hooks.Stop and hooks.SessionStart in the Claude Code settings file. The
-// pair makes the review preflight deterministic across a Claude turn.
-// `axiom review stop-hook --agent <agentID>` reads `hook_event_name` from
-// the payload on stdin: at SessionStart it records the session's starting
-// candidate as the per-session baseline, and at Stop it prints a block
-// decision only when RDD is enabled and the session has produced an
-// unreviewed candidate since that baseline. It never starts a review by
-// itself. The runtime identity is always the caller-supplied agentID (never
-// a compiled literal) per issue #2440: only the caller states which runtime
-// is executing.
-func ensureClaudeReviewStopHook(settingsPath string, agentID model.AgentID) (bool, error) {
-	root := map[string]any{}
-	if data, err := os.ReadFile(settingsPath); err == nil && len(strings.TrimSpace(string(data))) > 0 {
-		if err := json.Unmarshal(data, &root); err != nil {
-			return false, fmt.Errorf("parse Claude settings %q: %w", settingsPath, err)
-		}
-	} else if err != nil && !os.IsNotExist(err) {
-		return false, err
-	}
-
-	command := fmt.Sprintf("axiom review stop-hook --agent %s", agentID)
-	legacyCommand := fmt.Sprintf("gentle-ai review stop-hook --agent %s", agentID)
-
-	hooksRaw, hasHooks := root["hooks"]
-	hooksMap, _ := hooksRaw.(map[string]any)
-	if hasHooks && hooksMap == nil {
-		return false, fmt.Errorf("Claude settings %q has unsupported hooks shape: want object", settingsPath)
-	}
-	if hooksMap == nil {
-		hooksMap = map[string]any{}
-	}
-
-	stopChanged := false
-	if replaceHookCommand(hooksMap, "Stop", legacyCommand, command) {
-		stopChanged = true
-	} else {
-		var err error
-		stopChanged, err = appendClaudeReviewStopHookEntry(hooksMap, "Stop", settingsPath, command, map[string]any{
-			"matcher": "",
-			"hooks": []any{
-				map[string]any{
-					"type":    "command",
-					"command": command,
-					"timeout": 60,
-				},
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-	}
-
-	sessionStartChanged := false
-	if replaceHookCommand(hooksMap, "SessionStart", legacyCommand, command) {
-		sessionStartChanged = true
-	} else {
-		var err error
-		sessionStartChanged, err = appendClaudeReviewStopHookEntry(hooksMap, "SessionStart", settingsPath, command, map[string]any{
-			"matcher": "startup|resume|clear|compact",
-			"hooks": []any{
-				map[string]any{
-					"type":    "command",
-					"command": command,
-					"timeout": 30,
-				},
-			},
-		})
-		if err != nil {
-			return false, err
-		}
-	}
-
-	if !stopChanged && !sessionStartChanged {
-		return false, nil
-	}
-
-	root["hooks"] = hooksMap
-	out, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return false, err
-	}
-	out = append(out, '\n')
-	wr, err := filemerge.WriteFileAtomic(settingsPath, out, 0o644)
-	if err != nil {
-		return false, err
-	}
-	return wr.Changed, nil
-}
-
-// appendClaudeReviewStopHookEntry appends entry to hooksMap[hookKey] unless
+// appendClaudeHookEntry appends entry to hooksMap[hookKey] unless
 // an entry with the identical command is already present under that exact
 // key, so the Stop reminder and the SessionStart baseline (which share the
 // same command string) are tracked independently and both keys can coexist
 // with the UserPromptSubmit skill-registry hook.
-func appendClaudeReviewStopHookEntry(hooksMap map[string]any, hookKey, settingsPath, command string, entry map[string]any) (bool, error) {
+func appendClaudeHookEntry(hooksMap map[string]any, hookKey, settingsPath, command string, entry map[string]any) (bool, error) {
 	raw, has := hooksMap[hookKey]
 	entries, _ := raw.([]any)
 	if has && entries == nil {
@@ -2534,23 +2293,11 @@ func ManagedOpenCodePluginNamesFor(agent model.AgentID) []string {
 	return managedOpenCodePluginNames(agent)
 }
 
-const LegacyOpenCodeReviewPluginName = "review-result-artifacts.ts"
-
-// OpenCodePluginLifecycleNames includes the retired plugin so transactional
-// install and sync snapshot it before replacing it.
-func OpenCodePluginLifecycleNames(agent model.AgentID) []string {
-	names := append([]string(nil), managedOpenCodePluginNames(agent)...)
-	if agent == model.AgentOpenCode || agent == model.AgentKilocode {
-		names = append(names, LegacyOpenCodeReviewPluginName)
-	}
-	return names
-}
-
 func managedOpenCodePluginNames(agent model.AgentID) []string {
 	switch agent {
 	case model.AgentOpenCode:
 		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, REQ-25.22): solo OpenCode.
-		return []string{"axiom-branch-guard.ts", "model-variants.ts", "opencode-review-transport.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
+		return []string{"axiom-branch-guard.ts", "model-variants.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
 	case model.AgentKilocode:
 		return []string{"model-variants.ts", "skill-registry.ts"}
 	default:
@@ -2577,22 +2324,6 @@ func stripOpenCodeNativeFallbackAgents(overlayBytes []byte) ([]byte, error) {
 	}
 	delete(agents, "general")
 	delete(agents, "explore")
-	// Kilocode does not host the OpenCode provider relay that issues the opaque
-	// validator task, so it must not expose or authorize that OpenCode-only role.
-	delete(agents, opencode.ReviewValidatorAgent)
-	for _, orchKey := range []string{"axiom-orchestrator", "gentle-orchestrator"} {
-		if orchestrator, ok := agents[orchKey].(map[string]any); ok {
-			if permission, ok := orchestrator["permission"].(map[string]any); ok {
-				if task, ok := permission["task"].(map[string]any); ok {
-					if replacement, ok := task["__replace__"].(map[string]any); ok {
-						delete(replacement, opencode.ReviewValidatorAgent)
-					} else {
-						delete(task, opencode.ReviewValidatorAgent)
-					}
-				}
-			}
-		}
-	}
 	result, err := json.MarshalIndent(overlay, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("marshal overlay: %w", err)
@@ -2618,38 +2349,11 @@ func RefreshInstalledOpenCodePlugins(homeDir string, adapter agents.Adapter) (In
 	}
 	var files []string
 	var changed bool
-	migrate, err := hasRegularLegacyOpenCodeReviewPlugin(pluginsDir)
-	if err != nil {
-		return InjectionResult{}, err
-	}
-	if migrate {
-		path, removed, err := removeLegacyOpenCodeReviewPlugin(pluginsDir)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		if removed {
-			changed = true
-			files = append(files, path)
-		}
-	}
-
 	for _, name := range managedOpenCodePluginNames(adapter.Agent()) {
 		pluginPath := filepath.Join(pluginsDir, name)
 		info, err := os.Lstat(pluginPath)
 		if err != nil {
-			if os.IsNotExist(err) && !(migrate && adapter.Agent() == model.AgentOpenCode && isOpenCodeReviewMigrationPlugin(name)) {
-				continue
-			}
 			if os.IsNotExist(err) {
-				content := assets.MustRead(assetDir + name)
-				writeResult, err := filemerge.WriteFileAtomic(pluginPath, []byte(content), 0o644)
-				if err != nil {
-					return InjectionResult{}, fmt.Errorf("refresh managed OpenCode plugin %s: %w", name, err)
-				}
-				if writeResult.Changed {
-					changed = true
-					files = append(files, pluginPath)
-				}
 				continue
 			}
 			return InjectionResult{}, fmt.Errorf("stat managed OpenCode plugin %s: %w", pluginPath, err)
@@ -2672,43 +2376,6 @@ func RefreshInstalledOpenCodePlugins(homeDir string, adapter agents.Adapter) (In
 	return InjectionResult{Changed: changed, Files: files}, nil
 }
 
-func isOpenCodeReviewMigrationPlugin(name string) bool {
-	return name == "opencode-review-transport.ts" || name == "sdd-task-result-artifacts.ts"
-}
-
-func hasRegularLegacyOpenCodeReviewPlugin(pluginsDir string) (bool, error) {
-	path := filepath.Join(pluginsDir, LegacyOpenCodeReviewPluginName)
-	info, err := os.Lstat(path)
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("stat legacy OpenCode review plugin %s: %w", path, err)
-	}
-	if !info.Mode().IsRegular() {
-		return false, fmt.Errorf("legacy OpenCode review plugin %s is not a regular file", path) // refusal:by-design world-action: replace or remove the user-owned non-regular legacy plugin before installing the incompatible Go transport shim
-	}
-	return true, nil
-}
-
-func removeLegacyOpenCodeReviewPlugin(pluginsDir string) (string, bool, error) {
-	path := filepath.Join(pluginsDir, LegacyOpenCodeReviewPluginName)
-	info, err := os.Lstat(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return path, false, nil
-		}
-		return path, false, fmt.Errorf("stat legacy OpenCode review plugin %s: %w", path, err)
-	}
-	if !info.Mode().IsRegular() {
-		return path, false, fmt.Errorf("legacy OpenCode review plugin %s is not a regular file", path) // refusal:by-design world-action: replace or remove the user-owned non-regular legacy plugin before installing the incompatible Go transport shim
-	}
-	if err := os.Remove(path); err != nil {
-		return path, false, fmt.Errorf("remove legacy OpenCode review plugin %s: %w", path, err)
-	}
-	return path, true, nil
-}
-
 // installOpenCodePluginsDirectory copies the OpenCode-compatible plugins that gentle-ai
 // still manages by default. Native OpenCode subagents replace the legacy
 // background-agents plugin, so that legacy cleanup is scoped to OpenCode only.
@@ -2721,9 +2388,6 @@ func installOpenCodePluginsDirectory(homeDir string, adapter agents.Adapter, ass
 	}
 	if err := os.MkdirAll(pluginsDir, 0o755); err != nil {
 		return InjectionResult{}, fmt.Errorf("create plugins dir: %w", err)
-	}
-	if _, err := hasRegularLegacyOpenCodeReviewPlugin(pluginsDir); err != nil {
-		return InjectionResult{}, err
 	}
 
 	var files []string
@@ -2738,17 +2402,6 @@ func installOpenCodePluginsDirectory(homeDir string, adapter agents.Adapter, ass
 		} else {
 			changed = true
 			files = append(files, legacyPluginPath)
-		}
-	}
-
-	if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
-		path, removed, err := removeLegacyOpenCodeReviewPlugin(pluginsDir)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		if removed {
-			changed = true
-			files = append(files, path)
 		}
 	}
 
@@ -2842,10 +2495,6 @@ func readAndMigrateOpenCodeCompatibleJSON(path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("migrate OpenCode-compatible command prompt field: %w", err)
 	}
-	baseJSON, err = retireObsoleteOpenCodePermissionKeys(baseJSON)
-	if err != nil {
-		return nil, fmt.Errorf("retire obsolete OpenCode-compatible permission keys: %w", err)
-	}
 	baseJSON, err = purgeLegacyManagedByMarker(baseJSON)
 	if err != nil {
 		return nil, fmt.Errorf("purge legacy OpenCode-compatible managed-by marker: %w", err)
@@ -2895,81 +2544,6 @@ func purgeLegacyManagedByMarker(baseJSON []byte) ([]byte, error) {
 	return append(encoded, '\n'), nil
 }
 
-// obsoleteOpenCodePermissionKeys enumerates the managed permission keys that a
-// previous release wrote into agent entries and that the current overlays no
-// longer declare, grouped by agent and then by permission action.
-//
-// The settings merge is a deep merge that never deletes base keys, and the
-// merge of "permission" is deliberately conservative so user rules survive. A
-// key dropped from an overlay would therefore stay in existing installs for
-// good, so each one is retired here, by exact name, before the merge. Never
-// add a pattern or a prefix: only keys that a release really wrote belong here.
-//
-// review-validator / bash: the validator's allowance for the legacy
-// "gentle-ai" spelling of the read-only inspection command, written by the
-// overlays from 2663f2cc until #132 removed it.
-var obsoleteOpenCodePermissionKeys = map[string]map[string][]string{
-	"review-validator": {
-		"bash": {"gentle-ai review inspect-candidate --purpose targeted-validation *"},
-	},
-}
-
-// retireObsoleteOpenCodePermissionKeys deletes from the base settings the
-// permission keys listed in obsoleteOpenCodePermissionKeys. Every other rule,
-// including the ones the user added to the same permission object, is kept
-// untouched and in order (OpenCode permission rules are order-sensitive). A
-// permission object left empty stays in place: the overlay fills it again.
-func retireObsoleteOpenCodePermissionKeys(baseJSON []byte) ([]byte, error) {
-	if len(strings.TrimSpace(string(baseJSON))) == 0 {
-		return baseJSON, nil
-	}
-
-	root, err := filemerge.UnmarshalJSONObject(baseJSON)
-	if err != nil {
-		// Preserve prior behavior for non-JSON/non-parseable inputs.
-		return baseJSON, nil
-	}
-
-	agents, ok := root["agent"].(map[string]any)
-	if !ok {
-		return baseJSON, nil
-	}
-
-	changed := false
-	for agentName, byAction := range obsoleteOpenCodePermissionKeys {
-		agent, ok := agents[agentName].(map[string]any)
-		if !ok {
-			continue
-		}
-		permission, ok := agent["permission"].(map[string]any)
-		if !ok {
-			continue
-		}
-		for action, keys := range byAction {
-			rules, ok := permission[action].(map[string]any)
-			if !ok {
-				continue
-			}
-			for _, key := range keys {
-				if _, exists := rules[key]; exists {
-					delete(rules, key)
-					changed = true
-				}
-			}
-		}
-	}
-
-	if !changed {
-		return baseJSON, nil
-	}
-
-	encoded, err := filemerge.MarshalJSONPreservingPermissions(baseJSON, root)
-	if err != nil {
-		return nil, err
-	}
-	return append(encoded, '\n'), nil
-}
-
 func mergeJSONFileContents(path string, baseJSON, overlay []byte) (mergeJSONResult, error) {
 	var merged []byte
 	var err error
@@ -2989,7 +2563,6 @@ func mergeJSONFileContents(path string, baseJSON, overlay []byte) (mergeJSONResu
 func removeManagedOpenCodeAgentTools(baseJSON, overlay []byte) ([]byte, error) {
 	keys := append([]string{"axiom-orchestrator", "gentle-orchestrator", "general", "explore"}, ProfilePhaseOrder()...)
 	keys = append(keys, opencode.JDPhases()...)
-	keys = append(keys, opencode.ReviewPhases()...)
 	if overlayRoot, err := filemerge.UnmarshalJSONObject(overlay); err == nil {
 		if overlayAgents, ok := overlayRoot["agent"].(map[string]any); ok {
 			for key := range overlayAgents {
@@ -3936,10 +3509,6 @@ func injectModelAssignments(overlayBytes []byte, assignments map[string]model.Mo
 	// only when already present in user settings. Deep merge updates their model
 	// and clears/updates variant while preserving other settings.
 	for agent, assignment := range assignments {
-		if !rddharness.Enabled() && slices.Contains(opencode.ReviewPhases(), agent) {
-			// RDD suspendido (C-01-c): una asignación antigua no recrea el agente.
-			continue
-		}
 		if (!existingAgentKeys[agent] && agent != "general" && agent != "explore") || assignment.ProviderID == "" || assignment.ModelID == "" {
 			continue
 		}
@@ -4085,18 +3654,8 @@ func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) 
 		if entry.IsDir() {
 			continue
 		}
-		if !rddharness.Enabled() && isReviewSubAgentFile(entry.Name()) {
-			// RDD suspendido (C-01-c): no se instala y se retira el que dejó una
-			// versión anterior.
-			retired, retireErr := retireReviewSubAgentFile(agentsDir, entry.Name())
-			if retireErr != nil {
-				return InjectionResult{}, retireErr
-			}
-			changed = changed || retired
-			continue
-		}
 		// Copy all files (not just .md) to support Kimi's YAML-based agents
-		contentStr := renderBoundedReviewAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
+		contentStr := renderManagedAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
 		contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
 
 		// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
@@ -4125,12 +3684,6 @@ func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) 
 		// Non-Claude adapters don't implement claudeModelResolver and are unaffected.
 		if cmr, ok := adapter.(claudeModelResolver); ok {
 			phase := strings.TrimSuffix(entry.Name(), ".md")
-			// Native review roles are stored without the installed agent's
-			// review- prefix. Leave SDD and JD phase keys unchanged.
-			switch phase {
-			case "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter":
-				phase = strings.TrimPrefix(phase, "review-")
-			}
 			assignment := resolveClaudePhaseAssignment(opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, phase)
 			contentStr = strings.ReplaceAll(contentStr, "{{CLAUDE_MODEL}}", cmr.ClaudeModelID(assignment.Model))
 			contentStr = injectClaudeEffortFrontmatter(contentStr, assignment)

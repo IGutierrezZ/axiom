@@ -460,7 +460,7 @@ func TestIsManagedAgent(t *testing.T) {
 		{"axiom-orchestrator", shaped, true},
 		{"sdd-orchestrator-fast", shaped, true},
 		{"jd-judge-a-fast", shaped, true},
-		{"review-validator", shaped, true},
+		{"review-validator", shaped, false},
 		{"sdd-apply", map[string]any{"mode": "subagent"}, false},
 		{"sdd-orchestrator-", shaped, false},
 		{"mio", shaped, false},

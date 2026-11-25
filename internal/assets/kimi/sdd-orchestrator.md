@@ -37,10 +37,6 @@ Use Kimi's `kimi_cli.tools.multiagent:Task` with a bounded general worker for de
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
-#### Review Execution Contract
-
-{{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
-
 #### Cost and Context Balance
 
 {{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}

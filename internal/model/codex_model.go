@@ -223,7 +223,6 @@ func CodexODDRoleCarrils() []struct{ Role, Carril string } {
 }
 
 // RenderCodexODDAssignments provides spawn_agent arguments for ODD work.
-// RDD assignments remain persisted for the native adapter, not prompt delegation.
 func RenderCodexODDAssignments(phaseModels map[string]string, efforts map[string]CodexEffort, carrilModels map[string]string) string {
 	if len(carrilModels) == 0 {
 		carrilModels = DefaultCarrilModels()

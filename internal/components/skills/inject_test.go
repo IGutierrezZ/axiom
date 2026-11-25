@@ -334,7 +334,6 @@ func TestInjectRequiredBundledSkillsForEverySkillsCapableDefaultAdapter(t *testi
 
 func TestInjectBundledSkillsAreRegistryDiscoverable(t *testing.T) {
 	for _, skill := range []model.SkillID{
-		model.SkillRDDDefectWorkflow,
 		model.SkillSystemicIssueTriage,
 	} {
 		t.Run(string(skill), func(t *testing.T) {
@@ -480,7 +479,6 @@ func requiredBundledSkillIDs() []model.SkillID {
 		model.SkillJudgmentDay,
 		model.SkillSDDInit,
 		model.SkillImprover,
-		model.SkillRDDDefectWorkflow,
 		model.SkillSystemicIssueTriage,
 	}
 }

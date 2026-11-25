@@ -35,7 +35,6 @@ var mvpSkills = []Skill{
 	{ID: model.SkillCognitiveDoc, Name: "cognitive-doc-design", Category: "workflow", Priority: "p0"},
 	{ID: model.SkillCommentWriter, Name: "comment-writer", Category: "workflow", Priority: "p0"},
 	{ID: model.SkillWorkUnitCommits, Name: "work-unit-commits", Category: "workflow", Priority: "p0"},
-	{ID: model.SkillRDDDefectWorkflow, Name: "rdd-defect-workflow", Category: "workflow", Priority: "p0"},
 	{ID: model.SkillSystemicIssueTriage, Name: "systemic-issue-triage", Category: "workflow", Priority: "p0"},
 }
 

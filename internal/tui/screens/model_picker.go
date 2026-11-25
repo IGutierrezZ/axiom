@@ -217,8 +217,8 @@ func ModelPickerRows() []string {
 	return modelPickerRowsWithCustom(true, nil)
 }
 
-func modelPickerRowsWithCustom(includeReview bool, customAgents []string) []string {
-	identityRows := modelPickerRowsWithCustomIdentity(includeReview, customAgents)
+func modelPickerRowsWithCustom(includeNativeAgents bool, customAgents []string) []string {
+	identityRows := modelPickerRowsWithCustomIdentity(includeNativeAgents, customAgents)
 	rows := make([]string, 0, len(identityRows))
 	for _, row := range identityRows {
 		rows = append(rows, row.Label)
@@ -226,8 +226,8 @@ func modelPickerRowsWithCustom(includeReview bool, customAgents []string) []stri
 	return rows
 }
 
-func modelPickerRowsWithCustomIdentity(includeReview bool, customAgents []string) []ModelPickerRow {
-	rows := make([]ModelPickerRow, 0, 2+len(opencode.SDDPhases())+1+len(opencode.JDPhases())+1+len(opencode.ReviewPhases())+3+len(customAgents)+2)
+func modelPickerRowsWithCustomIdentity(includeNativeAgents bool, customAgents []string) []ModelPickerRow {
+	rows := make([]ModelPickerRow, 0, 2+len(opencode.SDDPhases())+1+len(opencode.JDPhases())+3+len(customAgents)+2)
 	rows = append(rows,
 		ModelPickerRow{Kind: ModelPickerRowKindAgent, Label: SDDOrchestratorPhase, AgentID: SDDOrchestratorPhase},
 		ModelPickerRow{Kind: ModelPickerRowKindSetAllSDD, Label: "Set all SDD phases"},
@@ -241,13 +241,7 @@ func modelPickerRowsWithCustomIdentity(includeReview bool, customAgents []string
 			rows = append(rows, ModelPickerRow{Kind: ModelPickerRowKindAgent, Label: phase, AgentID: phase})
 		}
 	}
-	if includeReview && len(opencode.ReviewPhases()) > 0 {
-		rows = append(rows, ModelPickerRow{Kind: ModelPickerRowKindSeparator, Label: "--- Review agents ---"})
-		for _, phase := range opencode.ReviewPhases() {
-			rows = append(rows, ModelPickerRow{Kind: ModelPickerRowKindAgent, Label: phase, AgentID: phase})
-		}
-	}
-	if includeReview {
+	if includeNativeAgents {
 		rows = append(rows,
 			ModelPickerRow{Kind: ModelPickerRowKindSeparator, Label: "--- OpenCode native agents ---"},
 			ModelPickerRow{Kind: ModelPickerRowKindAgent, Label: "general", AgentID: "general"},
@@ -268,7 +262,7 @@ func modelPickerRowsWithCustomIdentity(includeReview bool, customAgents []string
 
 // ModelPickerRowsForProfile returns model picker rows for profile creation.
 // Profiles support both SDD phase assignments and optional Judgment Day agent
-// assignments. Native review agents remain unsuffixed global runtime agents.
+// assignments. OpenCode native agents remain unsuffixed global runtime agents.
 func ModelPickerRowsForProfile() []string {
 	return modelPickerRowsWithCustom(false, nil)
 }

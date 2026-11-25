@@ -215,13 +215,12 @@ func ClaudeModelPresetDiversity() map[string]ClaudeModelAlias {
 
 // claudePhaseNames son las claves de asignación que admite Claude Code, en el orden
 // en que las muestran la TUI y el dashboard: las fases SDD, los agentes de Judgment
-// Day, los roles de la revisión nativa y la delegación general («default»). No
+// Day y la delegación general («default»). No
 // incluye «orchestrator»: Claude Code controla el modelo de la sesión principal.
 var claudePhaseNames = []string{
 	"sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design",
 	"sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard",
 	"jd-judge-a", "jd-judge-b", "jd-fix-agent",
-	"risk", "readability", "reliability", "resilience", "refuter", "validator",
 	"default",
 }
 

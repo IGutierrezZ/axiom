@@ -26,7 +26,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	opencodemodel "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"gopkg.in/yaml.v3"
 	// agents/cursor, agents/gemini, agents/vscode used via agents.NewAdapter()
 )
@@ -379,7 +378,7 @@ func TestRemoteAuthorizationInstalledExecutors(t *testing.T) {
 		id    model.AgentID
 		count int
 	}{
-		{"claude-code", 19}, {"cursor", 16}, {model.AgentKiroIDE, 19}, {"kimi", 16},
+		{"claude-code", 14}, {"cursor", 11}, {model.AgentKiroIDE, 14}, {"kimi", 11},
 	} {
 		t.Run(string(tc.id), func(t *testing.T) {
 			adapter, err := agents.NewAdapter(tc.id)
@@ -1209,10 +1208,6 @@ func TestInjectOpenCodePreservesExistingOrchestratorPromptWhenRequested(t *testi
 		"Preparation trigger",
 		"Optional SDD trigger",
 		"Per-action trigger",
-		"Authority rule",
-		"selectorless `axiom review status`",
-		"exact START",
-		"Gates are informational only",
 	} {
 		if !strings.Contains(text, wanted) {
 			t.Fatalf("opencode.json missing migrated preserved prompt hard gate %q", wanted)
@@ -1431,12 +1426,8 @@ func TestInjectOpenCodeMigratesPreservedLegacyOrchestratorPromptReferences(t *te
 		"Preparation trigger",
 		"Optional SDD trigger",
 		"Per-action trigger",
-		"Authority rule",
 		"Semantic guard",
 		"execution, not delegation",
-		"selectorless `axiom review status`",
-		"exact START",
-		"Gates are informational only",
 	} {
 		if !strings.Contains(text, wanted) {
 			t.Fatalf("opencode.json missing migrated preserved prompt reference %q", wanted)
@@ -1525,10 +1516,6 @@ func TestInjectOpenCodeUpgradesPromptOwnedLensRouter(t *testing.T) {
 		"only for a named reason",
 		"Optional SDD trigger",
 		"Per-action trigger",
-		"Authority rule",
-		"selectorless `axiom review status`",
-		"exact START",
-		"Gates are informational only",
 	} {
 		if !strings.Contains(text, wanted) {
 			t.Fatalf("opencode.json missing native routing fragment %q after migration", wanted)
@@ -1565,14 +1552,12 @@ func TestInjectOpenCodeUpgradesPromptOwnedLensRouter(t *testing.T) {
 	}
 }
 
-func TestEnsurePreservedOpenCodeDelegationHardGatesMigratesToNativeTransition(t *testing.T) {
+func TestEnsurePreservedOpenCodeDelegationHardGatesDropsStaleReviewRouting(t *testing.T) {
 	legacy := "### Mandatory Delegation Triggers (Non-Skippable)\n\n" +
 		"before commit, push, or PR after code changes, run the concrete review lens(es) selected by Review Lens Selection unless the diff is trivial (tier 1)"
 	got := ensurePreservedOpenCodeDelegationHardGates(legacy)
-	for _, want := range []string{"selectorless `axiom review status`", "exact START", "lineage, revision, and target", "Gates are informational only"} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("migrated delegation gates missing native review authority clause %q:\n%s", want, got)
-		}
+	if strings.Contains(got, "axiom review") || strings.Contains(got, "Authority rule") {
+		t.Fatalf("migrated delegation gates carry a review authority rule:\n%s", got)
 	}
 	if strings.Contains(got, "Review Lens Selection") {
 		t.Fatalf("migrated delegation gates retained prompt-owned lens router:\n%s", got)
@@ -1622,12 +1607,6 @@ const retiredWorkRoutingAuthorityRule = "7. **Authority rule**: when a WorkRun e
 	" and apply only its exact provider-issued `gentle-ai.work-transition/v1` authorization." +
 	" Never select lenses, synthesize transitions, or infer PASS from prose."
 
-// The replacement rule 7 retains one current-worktree transaction binding and
-// never lets compatibility gates decide delivery.
-const nativeReviewAuthorityRuleText = "- **Authority rule**: use selectorless `axiom review status` only to preflight the current worktree" +
-	" and execute its exact START; retain that transaction's lineage, revision, and target for every later lifecycle call." +
-	" Gates are informational only. Never select lenses, synthesize transitions, infer PASS, or authorize delivery from prose."
-
 // previouslyInstalledDelegationHardGates reproduces, byte for byte, the managed
 // block that shipped before this migration, including the retired rule 7.
 func previouslyInstalledDelegationHardGates(userHead string) string {
@@ -1658,8 +1637,8 @@ func TestEnsurePreservedOpenCodeDelegationHardGatesRewritesRetiredWorkRoutingAut
 	if strings.Contains(got, retiredWorkRoutingAuthorityRule) {
 		t.Fatalf("preserved prompt kept the retired authority rule:\n%s", got)
 	}
-	if count := strings.Count(got, nativeReviewAuthorityRuleText); count != 1 {
-		t.Fatalf("native authority rule occurrences = %d, want 1:\n%s", count, got)
+	if strings.Contains(got, "axiom review") || strings.Contains(got, "Authority rule") {
+		t.Fatalf("migrated prompt carries a review authority rule:\n%s", got)
 	}
 	if !strings.HasPrefix(got, userHead+"\n\n") {
 		t.Fatalf("migration disturbed user-authored content outside the managed block:\n%s", got)
@@ -1672,15 +1651,15 @@ func TestEnsurePreservedOpenCodeDelegationHardGatesRewritesRetiredWorkRoutingAut
 	}
 }
 
-func TestEnsurePreservedOpenCodeDelegationHardGatesAddsNativeAuthorityRuleToFreshPrompt(t *testing.T) {
+func TestEnsurePreservedOpenCodeDelegationHardGatesAppendsManagedBlockToFreshPrompt(t *testing.T) {
 	t.Parallel()
 
 	const fresh = "EXTERNAL_PROFILE_MANAGER_CUSTOM_PROMPT_DO_NOT_OVERWRITE"
 
 	got := ensurePreservedOpenCodeDelegationHardGates(fresh)
 
-	if count := strings.Count(got, nativeReviewAuthorityRuleText); count != 1 {
-		t.Fatalf("native authority rule occurrences = %d, want 1:\n%s", count, got)
+	if strings.Contains(got, "axiom review") || strings.Contains(got, "Authority rule") {
+		t.Fatalf("migrated prompt carries a review authority rule:\n%s", got)
 	}
 	if !strings.Contains(got, fresh) {
 		t.Fatalf("fresh preserved prompt lost its user-authored content:\n%s", got)
@@ -1722,96 +1701,10 @@ func TestEnsurePreservedOpenCodeDelegationHardGatesNeverEmitsRetiredWorkRoutingV
 					t.Errorf("migrated prompt still carries retired token %q:\n%s", retired, got)
 				}
 			}
-			if count := strings.Count(got, nativeReviewAuthorityRuleText); count != 1 {
-				t.Errorf("native authority rule occurrences = %d, want 1:\n%s", count, got)
+			if strings.Contains(got, "axiom review") || strings.Contains(got, "Authority rule") {
+				t.Errorf("migrated prompt carries a review authority rule:\n%s", got)
 			}
 		})
-	}
-}
-
-func TestInjectOpenCodeUpgradesPreservedV1ReviewExecutionContract(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-
-	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll(settings dir) error = %v", err)
-	}
-
-	const staleV1Prompt = `# External profile prompt
-
-Keep this user-authored orchestration policy unchanged.
-
-#### Review Execution Contract
-
-Run an exhaustive review pass, then repeat until a dry pass.
-All severities enter the fix and re-review loop.
-WARNING findings use status open when assessed as real.
-Launch three refuters per candidate before fixing.
-
-#### User-Owned Policy
-
-PRESERVE_THIS_UNRELATED_SECTION exactly as authored.
-`
-	seed := `{
-  "agent": {
-    "gentle-orchestrator": {
-      "mode": "primary",
-      "prompt": ` + strconv.Quote(staleV1Prompt) + `
-    }
-  }
-}`
-	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
-		t.Fatalf("WriteFile(opencode.json) error = %v", err)
-	}
-
-	opts := InjectOptions{PreserveOpenCodeOrchestratorPrompt: true}
-	if _, err := Inject(home, opencodeAdapter(), model.SDDModeMulti, opts); err != nil {
-		t.Fatalf("first Inject() error = %v", err)
-	}
-
-	prompt := readGentleOrchestratorPrompt(t, settingsPath)
-	assertTextContainsClauses(t, "migrated preserved OpenCode prompt", prompt, requiredLedgerClauses)
-	assertTextContainsClauses(t, "migrated preserved OpenCode prompt", prompt, []string{requiredOrchestratorMergeModeClause})
-	for _, preserved := range []string{
-		"Keep this user-authored orchestration policy unchanged.",
-		"#### User-Owned Policy",
-		"PRESERVE_THIS_UNRELATED_SECTION exactly as authored.",
-	} {
-		if !strings.Contains(prompt, preserved) {
-			t.Errorf("migrated prompt lost unrelated user content %q", preserved)
-		}
-	}
-	for _, stale := range []string{
-		"repeat until a dry pass",
-		"All severities enter the fix and re-review loop",
-		"WARNING findings use status open",
-		"three refuters per candidate",
-	} {
-		if strings.Contains(prompt, stale) {
-			t.Errorf("migrated prompt retained stale v1 review semantics %q", stale)
-		}
-	}
-	if got := strings.Count(prompt, "#### Review Execution Contract"); got != 1 {
-		t.Fatalf("migrated prompt has %d Review Execution Contract headings, want 1", got)
-	}
-	if got := strings.Count(prompt, "<!-- gentle-ai:review-execution-contract-migration -->"); got != 1 {
-		t.Fatalf("migrated prompt has %d review-contract migration markers, want 1", got)
-	}
-
-	if _, err := Inject(home, opencodeAdapter(), model.SDDModeMulti, opts); err != nil {
-		t.Fatalf("second Inject() error = %v", err)
-	}
-	secondPrompt := readGentleOrchestratorPrompt(t, settingsPath)
-	if secondPrompt != prompt {
-		diffAt := 0
-		for diffAt < len(prompt) && diffAt < len(secondPrompt) && prompt[diffAt] == secondPrompt[diffAt] {
-			diffAt++
-		}
-		start := max(0, diffAt-80)
-		firstEnd := min(len(prompt), diffAt+160)
-		secondEnd := min(len(secondPrompt), diffAt+160)
-		t.Fatalf("preserved v1 Review Execution Contract migration is not idempotent at byte %d\nfirst:  %q\nsecond: %q", diffAt, prompt[start:firstEnd], secondPrompt[start:secondEnd])
 	}
 }
 
@@ -3219,9 +3112,9 @@ func TestInjectOpenCodeMultiMode(t *testing.T) {
 	}
 
 	// Multi overlay must contain gentle-orchestrator + 2 native fallback agents +
-	// 11 SDD sub-agents + 3 JD agents + 4 review agents + refuter + validator = 23 agents.
-	if len(agentMap) != 23 {
-		t.Fatalf("agent count = %d, want 23", len(agentMap))
+	// 11 SDD sub-agents + 3 JD agents = 17 agents.
+	if len(agentMap) != 17 {
+		t.Fatalf("agent count = %d, want 17", len(agentMap))
 	}
 
 	// Verify orchestrator is present.
@@ -3241,7 +3134,7 @@ func TestInjectOpenCodeMultiMode(t *testing.T) {
 	}
 
 	// Verify representative sub-agents are present.
-	for _, subAgent := range []string{"sdd-init", "sdd-apply", "sdd-verify", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-archive", "jd-judge-a", "jd-judge-b", "jd-fix-agent", "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter", "review-validator"} {
+	for _, subAgent := range []string{"sdd-init", "sdd-apply", "sdd-verify", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-archive", "jd-judge-a", "jd-judge-b", "jd-fix-agent"} {
 		if _, ok := agentMap[subAgent]; !ok {
 			t.Fatalf("missing sub-agent %q", subAgent)
 		}
@@ -3597,7 +3490,7 @@ func TestInjectOpenCodeEmptySDDModeDefaultsSingle(t *testing.T) {
 	}
 
 	// Empty mode defaults to single — orchestrator + 2 native fallback agents +
-	// 11 SDD sub-agents + 3 JD agents + 4 review agents + refuter + validator = 23 agents.
+	// 11 SDD sub-agents + 3 JD agents = 17 agents.
 	orchestratorRaw, ok := agentMap["axiom-orchestrator"]
 	if !ok {
 		orchestratorRaw, ok = agentMap["gentle-orchestrator"]
@@ -3605,8 +3498,8 @@ func TestInjectOpenCodeEmptySDDModeDefaultsSingle(t *testing.T) {
 	if !ok {
 		t.Fatal("missing orchestrator agent")
 	}
-	if len(agentMap) != 23 {
-		t.Fatalf("agent count = %d, want 23", len(agentMap))
+	if len(agentMap) != 17 {
+		t.Fatalf("agent count = %d, want 17", len(agentMap))
 	}
 
 	// Verify orchestrator mode is "primary".
@@ -3631,7 +3524,7 @@ func TestInjectOpenCodeEmptySDDModeDefaultsSingle(t *testing.T) {
 	}
 
 	// Verify sub-agents are present with mode "subagent".
-	for _, subAgent := range []string{"sdd-init", "sdd-apply", "sdd-verify", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-archive", "jd-judge-a", "jd-judge-b", "jd-fix-agent", "review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter", "review-validator"} {
+	for _, subAgent := range []string{"sdd-init", "sdd-apply", "sdd-verify", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-archive", "jd-judge-a", "jd-judge-b", "jd-fix-agent"} {
 		raw, ok := agentMap[subAgent]
 		if !ok {
 			t.Fatalf("missing sub-agent %q", subAgent)
@@ -3652,7 +3545,7 @@ func TestInjectOpenCodeEmptySDDModeDefaultsSingle(t *testing.T) {
 			t.Fatalf("gentle-orchestrator permission.task[%s] = %v, want allow", builtIn, got)
 		}
 	}
-	assertOpenCodeSubAgentReadOnlyTools(t, agentMap, "review-refuter")
+	assertOpenCodeSubAgentReadOnlyTools(t, agentMap, "jd-judge-a")
 }
 
 func TestInjectOpenCodeNativeFallbackAgentsPromptsAlignedWithGentlePi(t *testing.T) {
@@ -3863,59 +3756,6 @@ func TestInjectKilocodeNamedProfileRetainsToolsSchema(t *testing.T) {
 	phase := agents["sdd-apply-fast"].(map[string]any)
 	if !reflect.DeepEqual(phase["tools"], map[string]any{"read": true, "write": true, "edit": true, "bash": true}) || phase["permission"] != nil {
 		t.Fatalf("Kilocode profile phase = %#v", phase)
-	}
-}
-
-func TestInjectOpenCodeReviewLensesDenyAllPermissions(t *testing.T) {
-	home := t.TempDir()
-	if _, err := Inject(home, opencodeAdapter(), model.SDDModeMulti); err != nil {
-		t.Fatal(err)
-	}
-	agents := readOpenCodeAgents(t, opencodeAdapter().SettingsPath(home))
-	for _, name := range opencodemodel.ReviewLensPhases() {
-		t.Run(name, func(t *testing.T) {
-			agent := agents[name].(map[string]any)
-			if _, exists := agent["tools"]; exists {
-				t.Fatalf("OpenCode %s retained deprecated tools: %#v", name, agent["tools"])
-			}
-			permission := agent["permission"].(map[string]any)
-			if !reflect.DeepEqual(permission, map[string]any{"*": "deny"}) {
-				t.Fatalf("OpenCode %s permission = %#v, want deny-all boundary", name, permission)
-			}
-			for _, networkTool := range []string{"webfetch", "websearch"} {
-				if _, listed := permission[networkTool]; listed {
-					t.Fatalf("OpenCode %s lists %s instead of denying it through the wildcard boundary", name, networkTool)
-				}
-			}
-		})
-	}
-}
-
-func TestInjectOpenCodeReviewValidatorHasBoundedInspectionPermissions(t *testing.T) {
-	home := t.TempDir()
-	if _, err := Inject(home, opencodeAdapter(), model.SDDModeMulti); err != nil {
-		t.Fatal(err)
-	}
-
-	validator := readOpenCodeAgents(t, opencodeAdapter().SettingsPath(home))[opencodemodel.ReviewValidatorAgent].(map[string]any)
-	if _, exists := validator["tools"]; exists {
-		t.Fatalf("OpenCode validator retained deprecated tools: %#v", validator["tools"])
-	}
-	wantPermission := map[string]any{
-		"write": "deny",
-		"edit":  "deny",
-		"task":  "deny",
-		"bash": map[string]any{
-			"axiom review inspect-candidate --purpose targeted-validation *": "allow",
-			"*": "deny",
-		},
-	}
-	permission, ok := validator["permission"].(map[string]any)
-	if !ok || !reflect.DeepEqual(permission, wantPermission) {
-		t.Fatalf("OpenCode validator permission = %#v, want %#v", validator["permission"], wantPermission)
-	}
-	if _, exists := permission["read"]; exists {
-		t.Fatalf("OpenCode validator overrides global read policy: %#v", permission)
 	}
 }
 
@@ -4316,24 +4156,12 @@ func TestInjectOpenCodeMultiModeWithModelAssignments(t *testing.T) {
 	if m, _ := applyAgent["model"].(string); m != "openai/gpt-4o" {
 		t.Fatalf("sdd-apply model = %q, want %q", m, "openai/gpt-4o")
 	}
-	for agent, want := range map[string]string{
-		"review-risk":        "anthropic/claude-sonnet-4",
-		"review-readability": "openai/gpt-5-mini",
-		"review-reliability": "openai/gpt-5",
-		"review-resilience":  "anthropic/claude-sonnet-4",
-		"review-refuter":     "openai/gpt-5",
-		"review-validator":   "openai/gpt-5-mini",
-	} {
-		definition, ok := agentMap[agent].(map[string]any)
-		if !ok {
-			t.Fatalf("%s agent definition = %#v, want object", agent, agentMap[agent])
+	// Assignments persisted for the retired review roles stay inert: they never
+	// recreate the agents.
+	for _, agent := range []string{"review-risk", "review-readability", "review-reliability", "review-resilience", "review-refuter", "review-validator"} {
+		if _, exists := agentMap[agent]; exists {
+			t.Fatalf("the retired review agent %q was written", agent)
 		}
-		if got := definition["model"]; got != want {
-			t.Fatalf("%s model = %q, want %q", agent, got, want)
-		}
-	}
-	if got := agentMap["review-refuter"].(map[string]any)["variant"]; got != "high" {
-		t.Fatalf("review-refuter variant = %q, want high", got)
 	}
 
 	// Unassigned phases should NOT have a model field — the overlay no longer
@@ -5612,88 +5440,6 @@ func TestInjectOpenCodeRemovesLegacyBackgroundAgentsPlugin(t *testing.T) {
 	}
 }
 
-func TestInjectKilocodeKeepsLegacyBackgroundAgentsPluginAndRemovesOpenCodeReviewPlugin(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-
-	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
-	if err := os.MkdirAll(pluginsDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(plugins) error = %v", err)
-	}
-	legacyPluginPath := filepath.Join(pluginsDir, "background-agents.ts")
-	legacyContent := []byte("legacy kilo background agent plugin")
-	if err := os.WriteFile(legacyPluginPath, legacyContent, 0o644); err != nil {
-		t.Fatalf("WriteFile(background-agents.ts) error = %v", err)
-	}
-	reviewPluginPath := filepath.Join(pluginsDir, "review-result-artifacts.ts")
-	if err := os.WriteFile(reviewPluginPath, []byte("stale OpenCode-only review plugin"), 0o644); err != nil {
-		t.Fatalf("WriteFile(review-result-artifacts.ts) error = %v", err)
-	}
-
-	result, err := Inject(home, kilocodeAdapter(), "multi")
-	if err != nil {
-		t.Fatalf("Inject(multi) error = %v", err)
-	}
-
-	got, err := os.ReadFile(legacyPluginPath)
-	if err != nil {
-		t.Fatalf("legacy Kilo background-agents plugin should remain: %v", err)
-	}
-	if !bytes.Equal(got, legacyContent) {
-		t.Fatalf("legacy Kilo background-agents plugin content changed: got %q, want %q", got, legacyContent)
-	}
-	for _, file := range result.Files {
-		if file == legacyPluginPath {
-			t.Fatalf("legacy Kilo plugin path %q should not be reported as managed cleanup: %v", legacyPluginPath, result.Files)
-		}
-	}
-
-	for _, plugin := range []string{"model-variants.ts", "skill-registry.ts"} {
-		pluginPath := filepath.Join(pluginsDir, plugin)
-		if _, err := os.Stat(pluginPath); err != nil {
-			t.Fatalf("%s plugin should still be installed for Kilo: %v", plugin, err)
-		}
-	}
-	if _, err := os.Stat(reviewPluginPath); !os.IsNotExist(err) {
-		t.Fatalf("OpenCode-only review plugin remains installed for Kilo: %v", err)
-	}
-	settings, err := os.ReadFile(filepath.Join(home, ".config", "kilo", "opencode.json"))
-	if err != nil {
-		t.Fatalf("ReadFile(Kilocode settings) error = %v", err)
-	}
-	var root map[string]any
-	if err := json.Unmarshal(settings, &root); err != nil {
-		t.Fatalf("Unmarshal(Kilocode settings) error = %v", err)
-	}
-	agentMap, ok := root["agent"].(map[string]any)
-	if !ok {
-		t.Fatalf("Kilocode settings missing agent map: %v", root)
-	}
-	orchestratorRaw, exists := agentMap["axiom-orchestrator"]
-	if !exists {
-		orchestratorRaw, exists = agentMap["gentle-orchestrator"]
-	}
-	if !exists {
-		t.Fatalf("Kilocode settings must retain orchestrator agent: %v", agentMap)
-	}
-	if strings.Contains(string(settings), "codegraph_codegraph_explore") {
-		t.Fatal("Kilocode settings must not receive the OpenCode CodeGraph grant")
-	}
-	for _, openCodeOnlyAgent := range []string{"general", "explore", opencodemodel.ReviewValidatorAgent} {
-		if _, exists := agentMap[openCodeOnlyAgent]; exists {
-			t.Fatalf("Kilocode settings must not receive OpenCode-only agent %q", openCodeOnlyAgent)
-		}
-	}
-	orchestrator := orchestratorRaw.(map[string]any)
-	taskPermissions := orchestrator["permission"].(map[string]any)["task"].(map[string]any)
-	if replacement, ok := taskPermissions["__replace__"].(map[string]any); ok {
-		taskPermissions = replacement
-	}
-	if _, exists := taskPermissions[opencodemodel.ReviewValidatorAgent]; exists {
-		t.Fatalf("Kilocode settings must not authorize OpenCode-only agent %q", opencodemodel.ReviewValidatorAgent)
-	}
-}
-
 func TestInjectOpenCodePluginNoPkgManagerAvailable(t *testing.T) {
 	home := t.TempDir()
 
@@ -6942,7 +6688,7 @@ func TestInjectCursorWritesSubAgentFiles(t *testing.T) {
 	}
 
 	agentsDir := filepath.Join(home, ".cursor", "agents")
-	phases := []string{"sdd-init", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "review-risk", "review-readability", "review-reliability", "review-resilience"}
+	phases := []string{"sdd-init", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive"}
 
 	for _, phase := range phases {
 		agentPath := filepath.Join(agentsDir, phase+".md")
@@ -6989,73 +6735,6 @@ func TestInjectCursorWritesSubAgentFiles(t *testing.T) {
 		if strings.Contains(f, ".cursor/agents/") {
 			t.Fatalf("second inject should not report changed agent files, but got %s", f)
 		}
-	}
-}
-
-func TestInjectWritesNativeReviewAgentFiles(t *testing.T) {
-	tests := []struct {
-		name          string
-		adapter       agents.Adapter
-		agentsDir     func(home string) string
-		extraExts     []string
-		extraContains map[string]string
-	}{
-		{
-			name:      "claude",
-			adapter:   claudeAdapter(),
-			agentsDir: func(home string) string { return filepath.Join(home, ".claude", "agents") },
-		},
-		{
-			name:      "cursor",
-			adapter:   mustAdapter(t, "cursor"),
-			agentsDir: func(home string) string { return filepath.Join(home, ".cursor", "agents") },
-		},
-		{
-			name:      "kiro",
-			adapter:   mustAdapter(t, model.AgentKiroIDE),
-			agentsDir: func(home string) string { return filepath.Join(home, ".kiro", "agents") },
-		},
-		{
-			name:      "kimi",
-			adapter:   kimiAdapter(),
-			agentsDir: func(home string) string { return filepath.Join(home, ".kimi", "agents") },
-			extraExts: []string{".yaml"},
-			extraContains: map[string]string{
-				".yaml": "system_prompt_path: ./",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			home := t.TempDir()
-			result, err := Inject(home, tt.adapter, "")
-			if err != nil {
-				t.Fatalf("Inject(%s) error = %v", tt.name, err)
-			}
-			if !result.Changed {
-				t.Fatalf("Inject(%s) changed = false", tt.name)
-			}
-
-			for _, agent := range opencodemodel.ReviewLensPhases() {
-				assertNativeAgentFile(t, filepath.Join(tt.agentsDir(home), agent+".md"), `"findings":[]`)
-				for _, ext := range tt.extraExts {
-					want := tt.extraContains[ext]
-					if ext == ".yaml" {
-						want += agent + ".md"
-					}
-					assertNativeAgentFile(t, filepath.Join(tt.agentsDir(home), agent+ext), want)
-				}
-			}
-			assertNativeAgentFile(t, filepath.Join(tt.agentsDir(home), opencodemodel.ReviewRefuterAgent+".md"), "complete merged list of BLOCKER/CRITICAL candidates")
-			for _, ext := range tt.extraExts {
-				want := tt.extraContains[ext]
-				if ext == ".yaml" {
-					want += opencodemodel.ReviewRefuterAgent + ".md"
-				}
-				assertNativeAgentFile(t, filepath.Join(tt.agentsDir(home), opencodemodel.ReviewRefuterAgent+ext), want)
-			}
-		})
 	}
 }
 
@@ -7854,53 +7533,6 @@ func TestInjectClaudeSubAgentsResolveModels(t *testing.T) {
 	}
 }
 
-func TestInjectClaudeNativeReviewAgentsUseSavedRoleModels(t *testing.T) {
-	home := t.TempDir()
-	assignments := map[string]model.ClaudePhaseAssignment{
-		"risk":        {Model: model.ClaudeModelOpus},
-		"readability": {Model: model.ClaudeModelHaiku},
-		"reliability": {Model: model.ClaudeModelFable},
-		"resilience":  {Model: model.ClaudeModelOpus},
-		"refuter":     {Model: model.ClaudeModelHaiku},
-		"sdd-design":  {Model: model.ClaudeModelOpus},
-	}
-	if _, err := Inject(home, claudeAdapter(), "", InjectOptions{ClaudePhaseAssignments: assignments}); err != nil {
-		t.Fatal(err)
-	}
-	for role, assignment := range assignments {
-		name := "review-" + role
-		if role == "sdd-design" {
-			name = role
-		}
-		content, err := os.ReadFile(filepath.Join(home, ".claude", "agents", name+".md"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if want := "model: " + string(assignment.Model); !strings.Contains(string(content), want) {
-			t.Errorf("%s missing %q", name, want)
-		}
-	}
-	if _, err := os.Stat(filepath.Join(home, ".claude", "agents", "review-validator.md")); !os.IsNotExist(err) {
-		t.Fatalf("unexpected validator agent: %v", err)
-	}
-}
-
-func TestInjectClaudeReviewAgentFallsBackForInvalidRole(t *testing.T) {
-	home := t.TempDir()
-	if _, err := Inject(home, claudeAdapter(), "", InjectOptions{
-		ClaudePhaseAssignments: map[string]model.ClaudePhaseAssignment{"risk": {Model: "invalid"}},
-	}); err != nil {
-		t.Fatal(err)
-	}
-	content, err := os.ReadFile(filepath.Join(home, ".claude", "agents", "review-risk.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(content), "model: sonnet") {
-		t.Fatal("invalid role did not retain established generated-agent fallback")
-	}
-}
-
 func TestInjectClaudeSubAgentsRenderConfiguredEffort(t *testing.T) {
 	home := t.TempDir()
 
@@ -8389,75 +8021,6 @@ func TestPruneLegacyClaudeHookDeletesUserPromptSubmitWhenAllEntriesPruned(t *tes
 	}
 }
 
-func TestEnsureClaudeReviewStopHookAppendsIdempotently(t *testing.T) {
-	home := t.TempDir()
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	initial := `{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {"type": "command", "command": "echo keep"}
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {"type": "command", "command": "echo existing stop"}
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {"type": "command", "command": "echo existing session-start"}
-        ]
-      }
-    ]
-  }
-}`
-	if err := os.WriteFile(settingsPath, []byte(initial), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	changed, err := ensureClaudeReviewStopHook(settingsPath, model.AgentClaudeCode)
-	if err != nil {
-		t.Fatalf("ensureClaudeReviewStopHook() error = %v", err)
-	}
-	if !changed {
-		t.Fatal("first call changed = false, want true")
-	}
-	changed, err = ensureClaudeReviewStopHook(settingsPath, model.AgentClaudeCode)
-	if err != nil {
-		t.Fatalf("second ensureClaudeReviewStopHook() error = %v", err)
-	}
-	if changed {
-		t.Fatal("second call changed = true, want false")
-	}
-
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	if strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 {
-		t.Fatalf("hook command count mismatch, want one Stop entry and one SessionStart entry:\n%s", text)
-	}
-	if !strings.Contains(text, `"matcher": "startup|resume|clear|compact"`) {
-		t.Fatalf("SessionStart baseline entry missing expected matcher:\n%s", text)
-	}
-	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "echo existing stop") || !strings.Contains(text, "echo existing session-start") {
-		t.Fatalf("existing hooks not preserved:\n%s", text)
-	}
-}
-
 func TestRetireClaudeTelemetryHooksRemovesOnlyRetiredCommands(t *testing.T) {
 	home := t.TempDir()
 	settingsPath := filepath.Join(home, ".claude", "settings.json")
@@ -8546,74 +8109,12 @@ func TestInstallSkillRegistryAutomationClaudeWritesNoTelemetryHook(t *testing.T)
 	if strings.Contains(text, "telemetry") {
 		t.Fatalf("fresh install must not write telemetry hooks:\n%s", text)
 	}
-	if strings.Count(text, "axiom skill-registry refresh") != 1 || strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 || strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
+	if strings.Count(text, "axiom skill-registry refresh") != 1 || strings.Contains(text, "review stop-hook") || strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
 		t.Fatalf("other Axiom hooks missing:\n%s", text)
 	}
 	result, err := installSkillRegistryAutomation(home, claudeAdapter())
 	if err != nil || result.Changed {
 		t.Fatalf("second install must be a no-op: changed=%v err=%v", result.Changed, err)
-	}
-}
-
-func TestEnsureClaudeReviewStopHookRejectsUnexpectedHookSchema(t *testing.T) {
-	home := t.TempDir()
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	original := []byte(`{"hooks":{"Stop":{"bad":true}}}`)
-	if err := os.WriteFile(settingsPath, original, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	changed, err := ensureClaudeReviewStopHook(settingsPath, model.AgentClaudeCode)
-	if err == nil {
-		t.Fatal("ensureClaudeReviewStopHook() error = nil, want schema error")
-	}
-	if changed {
-		t.Fatal("changed = true, want false")
-	}
-	after, readErr := os.ReadFile(settingsPath)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if string(after) != string(original) {
-		t.Fatalf("settings were modified: %q", after)
-	}
-}
-
-func TestInject_ClaudeCodeInstallsReviewStopHook(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, claudeAdapter(), "")
-	if err != nil {
-		t.Fatalf("Inject() error = %v", err)
-	}
-
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	if !containsPath(result.Files, settingsPath) {
-		t.Fatalf("result.Files missing Claude settings path %q: %v", settingsPath, result.Files)
-	}
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	if !strings.Contains(text, "axiom skill-registry refresh") {
-		t.Fatalf("Claude settings.json missing skill-registry hook:\n%s", text)
-	}
-	if strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 {
-		t.Fatalf("Claude settings.json missing review stop-hook Stop+SessionStart entries:\n%s", text)
-	}
-	if !strings.Contains(text, `"matcher": "startup|resume|clear|compact"`) {
-		t.Fatalf("Claude settings.json missing SessionStart baseline matcher:\n%s", text)
-	}
-	if strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
-		t.Fatalf("Claude settings.json missing fail-closed SDD PreToolUse entry:\n%s", text)
-	}
-	for _, matcher := range []string{`"matcher": "Agent"`} {
-		if !strings.Contains(text, matcher) {
-			t.Fatalf("Claude settings.json missing SDD preflight hook %s:\n%s", matcher, text)
-		}
 	}
 }
 
@@ -8975,21 +8476,7 @@ func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
       {
         "matcher": "",
         "hooks": [
-          {"type": "command", "command": "gentle-ai review stop-hook --agent claude-code", "timeout": 60}
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
           {"type": "command", "command": "gentle-ai telemetry runtime claude --json", "async": true, "timeout": 5}
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {"type": "command", "command": "gentle-ai review stop-hook --agent claude-code", "timeout": 30}
         ]
       }
     ],
@@ -9026,8 +8513,8 @@ func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
 	if strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
 		t.Fatalf("expected 1 axiom sdd-preflight-hook, got:\n%s", text)
 	}
-	if strings.Count(text, "axiom review stop-hook --agent claude-code") != 2 {
-		t.Fatalf("expected 2 axiom review stop-hook entries, got:\n%s", text)
+	if strings.Contains(text, "review stop-hook") {
+		t.Fatalf("no review stop-hook may be written, got:\n%s", text)
 	}
 	if strings.Contains(text, "telemetry") || strings.Contains(text, `"SubagentStop"`) {
 		t.Fatalf("retired Claude telemetry hooks and their emptied event must be removed, got:\n%s", text)
@@ -9572,7 +9059,7 @@ func TestRefreshInstalledOpenCodePluginsSkipsSymlinksAndDirectories(t *testing.T
 	if err := os.WriteFile(userFile, userContent, 0o644); err != nil {
 		t.Fatalf("WriteFile(user file) error = %v", err)
 	}
-	symlinkPath := filepath.Join(pluginsDir, "opencode-review-transport.ts")
+	symlinkPath := filepath.Join(pluginsDir, "sdd-task-result-artifacts.ts")
 	if err := os.Symlink(userFile, symlinkPath); err != nil {
 		t.Skipf("symlinks not supported on this platform: %v", err)
 	}
@@ -9797,112 +9284,6 @@ func openCodeValidatorBashRules(t *testing.T, content []byte) map[string]any {
 		t.Fatalf("review-validator permission.bash missing:\n%s", content)
 	}
 	return rules
-}
-
-func TestRetireObsoleteOpenCodePermissionKeysKeepsUserRules(t *testing.T) {
-	seed := []byte(`{
-  "theme": "dark",
-  "agent": {
-    "review-validator": {
-      "mode": "subagent",
-      "permission": {
-        "edit": "deny",
-        "bash": {
-          "gentle-ai review inspect-candidate --purpose targeted-validation *": "allow",
-          "git status": "allow",
-          "*": "deny"
-        }
-      }
-    },
-    "custom": {"permission": {"bash": {"gentle-ai review inspect-candidate --purpose targeted-validation *": "allow"}}}
-  }
-}
-`)
-	content, err := retireObsoleteOpenCodePermissionKeys(seed)
-	if err != nil {
-		t.Fatalf("retireObsoleteOpenCodePermissionKeys() error = %v", err)
-	}
-	rules := openCodeValidatorBashRules(t, content)
-	if _, exists := rules[legacyValidatorBashKey]; exists {
-		t.Fatalf("legacy permission key should be retired:\n%s", content)
-	}
-	if rules["git status"] != "allow" || rules["*"] != "deny" || len(rules) != 2 {
-		t.Fatalf("user rules must survive untouched, got %#v", rules)
-	}
-	// Rule order is significant in OpenCode: the user rule precedes the catch-all.
-	if strings.Index(string(content), `"git status"`) > strings.Index(string(content), `"*": "deny"`) {
-		t.Fatalf("permission rule order changed:\n%s", content)
-	}
-	root, _ := filemerge.UnmarshalJSONObject(content)
-	if root["theme"] != "dark" {
-		t.Fatalf("unrelated settings lost:\n%s", content)
-	}
-	// Only the enumerated agent is touched: the same key on another agent is user-owned.
-	custom := root["agent"].(map[string]any)["custom"].(map[string]any)["permission"].(map[string]any)["bash"].(map[string]any)
-	if custom[legacyValidatorBashKey] != "allow" {
-		t.Fatalf("rule on a non-managed agent must be preserved, got %#v", custom)
-	}
-}
-
-func TestRetireObsoleteOpenCodePermissionKeysNoopWithoutLegacyKey(t *testing.T) {
-	for name, seed := range map[string]string{
-		"empty":               ``,
-		"not json":            `not json at all`,
-		"no agent":            `{"theme":"dark"}`,
-		"validator no bash":   `{"agent":{"review-validator":{"permission":{"edit":"deny"}}}}`,
-		"validator bash text": `{"agent":{"review-validator":{"permission":{"bash":"deny"}}}}`,
-		"jsonc with comments": "// keep\n{\n  \"agent\": {\"review-validator\": {\"permission\": {\"bash\": {\"axiom review inspect-candidate --purpose targeted-validation *\": \"allow\", \"*\": \"deny\"}}}}, // keep too\n}\n",
-	} {
-		t.Run(name, func(t *testing.T) {
-			content, err := retireObsoleteOpenCodePermissionKeys([]byte(seed))
-			if err != nil {
-				t.Fatalf("retireObsoleteOpenCodePermissionKeys() error = %v", err)
-			}
-			if string(content) != seed {
-				t.Fatalf("base without the legacy key must be returned byte for byte\nwant: %q\n got: %q", seed, content)
-			}
-		})
-	}
-}
-
-func TestMergeOpenCodeJSONFileRetiresLegacyValidatorPermission(t *testing.T) {
-	overlay, err := assets.Read(overlayAssetPath(model.SDDModeMulti))
-	if err != nil {
-		t.Fatalf("assets.Read() error = %v", err)
-	}
-	overlayRoot, err := filemerge.UnmarshalJSONObject([]byte(overlay))
-	if err != nil {
-		t.Fatalf("UnmarshalJSONObject(overlay) error = %v", err)
-	}
-	patch, err := json.Marshal(map[string]any{"agent": map[string]any{"review-validator": overlayRoot["agent"].(map[string]any)["review-validator"]}})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path := filepath.Join(t.TempDir(), "opencode.json")
-	seed := `{"agent":{"review-validator":{"permission":{"bash":{"gentle-ai review inspect-candidate --purpose targeted-validation *":"allow","git status":"allow","*":"deny"}}}}}`
-	if err := os.WriteFile(path, []byte(seed), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := mergeOpenCodeJSONFile(path, patch); err != nil {
-		t.Fatalf("mergeOpenCodeJSONFile() error = %v", err)
-	}
-	first, _ := os.ReadFile(path)
-	rules := openCodeValidatorBashRules(t, first)
-	if _, exists := rules[legacyValidatorBashKey]; exists {
-		t.Fatalf("sync must retire the legacy validator permission:\n%s", first)
-	}
-	if rules["axiom review inspect-candidate --purpose targeted-validation *"] != "allow" || rules["git status"] != "allow" || rules["*"] != "deny" {
-		t.Fatalf("managed and user rules must both be present, got %#v", rules)
-	}
-
-	if _, err := mergeOpenCodeJSONFile(path, patch); err != nil {
-		t.Fatalf("second mergeOpenCodeJSONFile() error = %v", err)
-	}
-	second, _ := os.ReadFile(path)
-	if string(first) != string(second) {
-		t.Fatalf("merge must be idempotent\nfirst=%s\nsecond=%s", first, second)
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -10233,8 +9614,8 @@ func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
 	if !slices.Contains(ManagedOpenCodePluginNames(), branchGuardPluginName) {
 		t.Fatalf("ManagedOpenCodePluginNames() no contiene %q: %v", branchGuardPluginName, ManagedOpenCodePluginNames())
 	}
-	if !slices.Contains(OpenCodePluginLifecycleNames(model.AgentOpenCode), branchGuardPluginName) {
-		t.Fatalf("OpenCodePluginLifecycleNames(opencode) no contiene %q: instantánea y retirada no lo verían", branchGuardPluginName)
+	if !slices.Contains(ManagedOpenCodePluginNamesFor(model.AgentOpenCode), branchGuardPluginName) {
+		t.Fatalf("ManagedOpenCodePluginNamesFor(opencode) no contiene %q: instantánea y retirada no lo verían", branchGuardPluginName)
 	}
 	for _, agent := range []model.AgentID{model.AgentKilocode, model.AgentClaudeCode, model.AgentCodex} {
 		if slices.Contains(managedOpenCodePluginNames(agent), branchGuardPluginName) {
@@ -10385,5 +9766,79 @@ func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.
 				t.Errorf("la referencia instalada en %s difiere del activo embebido", name)
 			}
 		})
+	}
+}
+
+func TestInjectKilocodeKeepsLegacyBackgroundAgentsPluginAndLeavesResidualReviewPlugin(t *testing.T) {
+	home := t.TempDir()
+	mockNoPackageManager(t)
+
+	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
+	if err := os.MkdirAll(pluginsDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(plugins) error = %v", err)
+	}
+	legacyPluginPath := filepath.Join(pluginsDir, "background-agents.ts")
+	legacyContent := []byte("legacy kilo background agent plugin")
+	if err := os.WriteFile(legacyPluginPath, legacyContent, 0o644); err != nil {
+		t.Fatalf("WriteFile(background-agents.ts) error = %v", err)
+	}
+	reviewPluginPath := filepath.Join(pluginsDir, "review-result-artifacts.ts")
+	if err := os.WriteFile(reviewPluginPath, []byte("residual review plugin left by an earlier release"), 0o644); err != nil {
+		t.Fatalf("WriteFile(review-result-artifacts.ts) error = %v", err)
+	}
+
+	result, err := Inject(home, kilocodeAdapter(), "multi")
+	if err != nil {
+		t.Fatalf("Inject(multi) error = %v", err)
+	}
+
+	got, err := os.ReadFile(legacyPluginPath)
+	if err != nil {
+		t.Fatalf("legacy Kilo background-agents plugin should remain: %v", err)
+	}
+	if !bytes.Equal(got, legacyContent) {
+		t.Fatalf("legacy Kilo background-agents plugin content changed: got %q, want %q", got, legacyContent)
+	}
+	for _, file := range result.Files {
+		if file == legacyPluginPath {
+			t.Fatalf("legacy Kilo plugin path %q should not be reported as managed cleanup: %v", legacyPluginPath, result.Files)
+		}
+	}
+
+	for _, plugin := range []string{"model-variants.ts", "skill-registry.ts"} {
+		pluginPath := filepath.Join(pluginsDir, plugin)
+		if _, err := os.Stat(pluginPath); err != nil {
+			t.Fatalf("%s plugin should still be installed for Kilo: %v", plugin, err)
+		}
+	}
+	if _, err := os.Stat(reviewPluginPath); err != nil {
+		t.Fatalf("the residual review plugin must be left untouched: %v", err)
+	}
+	settings, err := os.ReadFile(filepath.Join(home, ".config", "kilo", "opencode.json"))
+	if err != nil {
+		t.Fatalf("ReadFile(Kilocode settings) error = %v", err)
+	}
+	var root map[string]any
+	if err := json.Unmarshal(settings, &root); err != nil {
+		t.Fatalf("Unmarshal(Kilocode settings) error = %v", err)
+	}
+	agentMap, ok := root["agent"].(map[string]any)
+	if !ok {
+		t.Fatalf("Kilocode settings missing agent map: %v", root)
+	}
+	_, exists := agentMap["axiom-orchestrator"]
+	if !exists {
+		_, exists = agentMap["gentle-orchestrator"]
+	}
+	if !exists {
+		t.Fatalf("Kilocode settings must retain orchestrator agent: %v", agentMap)
+	}
+	if strings.Contains(string(settings), "codegraph_codegraph_explore") {
+		t.Fatal("Kilocode settings must not receive the OpenCode CodeGraph grant")
+	}
+	for _, openCodeOnlyAgent := range []string{"general", "explore"} {
+		if _, exists := agentMap[openCodeOnlyAgent]; exists {
+			t.Fatalf("Kilocode settings must not receive OpenCode-only agent %q", openCodeOnlyAgent)
+		}
 	}
 }

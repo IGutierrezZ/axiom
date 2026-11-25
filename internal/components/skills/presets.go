@@ -24,7 +24,6 @@ var sddSkills = []model.SkillID{
 var contributorSkills = []model.SkillID{
 	model.SkillIssueCreation,
 	model.SkillCommentWriter,
-	model.SkillRDDDefectWorkflow,
 	model.SkillSystemicIssueTriage,
 }
 
@@ -42,7 +41,6 @@ var selectableFoundationSkills = []model.SkillID{
 	model.SkillCognitiveDoc,
 	model.SkillCommentWriter,
 	model.SkillWorkUnitCommits,
-	model.SkillRDDDefectWorkflow,
 	model.SkillSystemicIssueTriage,
 }
 

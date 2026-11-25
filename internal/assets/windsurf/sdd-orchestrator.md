@@ -39,10 +39,6 @@ Windsurf has no subagents: keep the same bounded scope as an isolated inline ste
 
 {{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (Reduced Form)}}
 
-#### Review Execution Contract
-
-{{GENTLE_AI_SDD_SECTION:Review Execution Contract}}
-
 #### Cost and Context Balance
 
 - Keep exploration, apply, and verify concerns separated even when all phases run in one conversation.

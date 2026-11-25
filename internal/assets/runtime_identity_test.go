@@ -3,7 +3,6 @@ package assets
 import (
 	"io/fs"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
@@ -22,7 +21,7 @@ var runtimeIdentityBindingRegexp = regexp.MustCompile(`(?:--agent|agent:) +([A-Z
 // so a literal runtime identity baked into shared prose is a claim about who
 // is executing that only the renderer can truthfully make. The only admissible
 // binding in an asset is the substitution placeholder
-// internal/components/sdd/boundedreview.go fills in with the real runtime.
+// internal/components/sdd/asset_render.go fills in with the real runtime.
 func TestEmbeddedAssetsBindNoLiteralRuntimeIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -73,25 +72,3 @@ func TestEmbeddedAssetsBindNoLiteralRuntimeIdentity(t *testing.T) {
 // another package. TestAssetPlaceholderMatchesTheRenderer keeps the two from
 // drifting apart.
 const runtimeAgentIDPlaceholderForAssets = "{{GENTLE_AI_RUNTIME_AGENT_ID}}"
-
-// TestSharedReviewLedgerContractBindsTheRuntimePlaceholder pins the specific
-// file issue #2440 reported. It is the single shared source every runtime's
-// review protocol is rendered from, so it must bind the placeholder and never
-// a constant.
-func TestSharedReviewLedgerContractBindsTheRuntimePlaceholder(t *testing.T) {
-	t.Parallel()
-
-	contract := MustRead("skills/_shared/review-ledger-contract.md")
-	bindings := runtimeIdentityBindingRegexp.FindAllStringSubmatch(contract, -1)
-	if len(bindings) == 0 {
-		t.Fatal("the shared review ledger contract binds no runtime identity at all; the negotiated STATUS route is unusable")
-	}
-	for _, match := range bindings {
-		if match[1] != runtimeAgentIDPlaceholderForAssets {
-			t.Errorf("shared review ledger contract binds %q, want the %s placeholder", match[1], runtimeAgentIDPlaceholderForAssets)
-		}
-	}
-	if !strings.Contains(contract, "--agent "+runtimeAgentIDPlaceholderForAssets+" --next-transition") {
-		t.Error("shared review ledger contract never binds the runtime placeholder on the negotiated STATUS route")
-	}
-}

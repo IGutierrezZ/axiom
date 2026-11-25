@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -25,22 +26,16 @@ func TestModelEffortLevels(t *testing.T) {
 	}
 }
 
-func TestReviewPhasesCompleteRuntimeSet(t *testing.T) {
-	want := []string{
-		"review-risk",
-		"review-readability",
-		"review-reliability",
-		"review-resilience",
-		"review-refuter",
-		"review-validator",
+func TestConfigurableAgentPhasesAreSDDAndJudgmentDay(t *testing.T) {
+	want := append(SDDPhases(), JDPhases()...)
+	got := ConfigurableAgentPhases()
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ConfigurableAgentPhases() = %v, want %v", got, want)
 	}
-	if got := ReviewPhases(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("ReviewPhases() = %v, want %v", got, want)
-	}
-
-	configurable := ConfigurableAgentPhases()
-	if got := configurable[len(configurable)-len(want):]; !reflect.DeepEqual(got, want) {
-		t.Fatalf("ConfigurableAgentPhases() review suffix = %v, want %v", got, want)
+	for _, phase := range got {
+		if strings.HasPrefix(phase, "review-") {
+			t.Fatalf("ConfigurableAgentPhases() lists the retired review agent %q", phase)
+		}
 	}
 }
 

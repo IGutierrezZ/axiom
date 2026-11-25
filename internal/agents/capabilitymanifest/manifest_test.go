@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -157,30 +156,25 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 	t.Parallel()
 
 	const wantRoutingDigest = "sha256:24fb8cbd6f38e7c4a6917e3abdc523f4ae51eb4fea5da76705b383ade8f13ed3"
-	// Digests pin the four providers with an enforceable fresh-reviewer
-	// boundary: Claude Code's generated reviewer has no live tools, OpenCode
-	// relays one ordinary task through Go-owned admission, Codex's provider
-	// subprocess reaches the same contract, and gentle-pi's host relay
-	// forwards the Go-issued opaque task to a fresh locked-down pi
-	// subprocess (gentle-pi#311, gentle-ai#3249).
+	// Digests pin the canonical JSON of every supported agent's manifest.
 	wantManifestDigests := map[model.AgentID]string{
-		model.AgentAntigravity:      "sha256:03a35fd1c8b95f1ef5575e492ecdf3ae0719c165586663aa86a0d68c42797a7b",
-		model.AgentClaudeCode:       "sha256:4ff85fc5eb5278ef4a7552650270c012448e822c33bab8d442bc9bd849ab328e",
-		model.AgentCodex:            "sha256:72718322f2be7cab668922d44403cf622fa0ff550444cbd7c7879b2cbcc05ec5",
-		model.AgentCursor:           "sha256:14d2288f56d6efd8493b6a2fe2f907817a2363cee6604b78c0673f48815fd9ee",
-		model.AgentGeminiCLI:        "sha256:da66d357b74598aaf95e98e15af3ce709f41dc30b2a39a340c7f25d8f6158d2a",
-		model.AgentGitHubCopilotCLI: "sha256:56c2bb26d29547ac910483a1676d0ed92557dd1e01aa27afe2150c507f3aeb42",
-		model.AgentHermes:           "sha256:e39d7b505f57db5a968087770cd5d2b7c08d3a95dc4c8500ae3a207bd4490d58",
-		model.AgentKilocode:         "sha256:7e8858b732e0a0e637bd21f80d9757092f426bc903a69e856437e5dae545597c",
-		model.AgentKimi:             "sha256:3ad829e58930d03f0bdb2da3ba1d089912c3b7c0fd0dff5cf2d029515294a280",
-		model.AgentKiroIDE:          "sha256:f47244d8a8a480fc6c279a0f86acee1f2e3580493d42a08f0573613400921d41",
-		model.AgentOpenClaw:         "sha256:52a24440ec541fa3b5c35b0ad3593c2cd21c792881f52504855ee2830b50ae6c",
-		model.AgentOpenCode:         "sha256:303e1d4cd22cf891093b2b4d5d119a12190e7070f88fadeef240c666307a96cc",
-		model.AgentPi:               "sha256:049740b83550b87958131a157fd1303e3f32743028e1ced2f5d924990d4dad80",
-		model.AgentQwenCode:         "sha256:d5b3c45d7939810c3dd94c1838505825aab0f395e3a1b009a46030ca3b04fc5b",
-		model.AgentTrae:             "sha256:d91de263fb1dcb3f013d811dbad2973e33450b1d193a262ee5937fd68c7419af",
-		model.AgentVSCodeCopilot:    "sha256:da345ae4c631fdd99d92b77b21415ced213cd8c1fef2511de09c228ef4f01c7f",
-		model.AgentWindsurf:         "sha256:4b57475c602cfeafd91308c66b9360ae135b0459e2544d28c4ab2c13d06aa173",
+		model.AgentAntigravity:      "sha256:93147d813f87f038f0b486098c7d39fc01b6200b0b89e2aa55bddfbbecd36842",
+		model.AgentClaudeCode:       "sha256:6386624d7ec694d7ed79928b193ef6bc611564ee5421b32941aa2bb1f496c5b2",
+		model.AgentCodex:            "sha256:d082469ad7eb4fb6426951d4f9b5163558552b0e0448d7b2bfb94cd421ab9f54",
+		model.AgentCursor:           "sha256:da44d33b397550c4483966fb4eb466beba8c65737338cb9b0fe634709de57c67",
+		model.AgentGeminiCLI:        "sha256:619fa29a43d429b9d73aec4b131eeb8c33c325cd1f589c22dc583d7b0205564b",
+		model.AgentGitHubCopilotCLI: "sha256:8cb612203fa1e999505dc915f7ae4cfb87afafa96a09543a25b55ee47b9c4497",
+		model.AgentHermes:           "sha256:31e521642248d9a1946587d6a36346c09f827bdaeb08d56f0ffef3338e60caac",
+		model.AgentKilocode:         "sha256:4bea71ac2fa786e868906b916fbdea1fa2d2c4407fbec8eb9f2adaa33734c855",
+		model.AgentKimi:             "sha256:f5de46e14b67e155af07745190c098b9c4b497137fb7cc15165ae090e15dee05",
+		model.AgentKiroIDE:          "sha256:249818d423d03731195e79627df348858a0772ff3e9d401d9e9876d4026c3a8f",
+		model.AgentOpenClaw:         "sha256:b4f06b78e3e2e12e378ba0d45ecdceba2eff572adbec7c2ee680af292126c66b",
+		model.AgentOpenCode:         "sha256:49f3f6f0755335e58fd2f9acca0cfac75f762b84a15b9af90ee3726f000b93b4",
+		model.AgentPi:               "sha256:24ffc4968f6eab2800edefd09a99eb4249c5308e685ffdbb41df78504b6a348f",
+		model.AgentQwenCode:         "sha256:76982f969755bcc23dccf909d0cd77ed7b84f40f23d437247167fe0c4f87b133",
+		model.AgentTrae:             "sha256:0ee0722c20698dcf4edbf18c2c3c7ab0c4a128cf2513c16f750c1ee3b2080dc8",
+		model.AgentVSCodeCopilot:    "sha256:11162d72d627970fdaac530c70ba4a0acfe49d35a4b60df589290e9885244029",
+		model.AgentWindsurf:         "sha256:bb3083e660c6ac6c43996711c14c97444e98453e01d8319793ad1f214b1061f0",
 	}
 
 	for agent, wantDigest := range wantManifestDigests {
@@ -198,17 +192,6 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 			}
 			if manifest.Advertises(ContractWorkRoutingV1) {
 				t.Fatal("work-routing must remain unadvertised before final activation")
-			}
-			wantImmutableExecutor := agent == model.AgentClaudeCode || agent == model.AgentOpenCode || agent == model.AgentCodex || agent == model.AgentPi
-			if got := manifest.Advertises(ContractImmutableReviewExecutorV1); got != wantImmutableExecutor {
-				t.Fatalf("immutable reviewer execution advertised = %t, want %t", got, wantImmutableExecutor)
-			}
-			wantExposure := ContractExposureDormant
-			if wantImmutableExecutor {
-				wantExposure = ContractExposureAdvertised
-			}
-			if got := manifest.Contracts.ImmutableReviewExecutorV1.Exposure; got != wantExposure {
-				t.Fatalf("immutable reviewer execution exposure = %q, want %q", got, wantExposure)
 			}
 
 			payload, err := manifest.CanonicalJSON()
@@ -239,82 +222,6 @@ func TestEveryManifestKeepsWorkRoutingDormantAndHashesCanonically(t *testing.T) 
 				t.Fatalf("RoutingDigest() = %q, want %q", gotRoutingDigest, wantRoutingDigest)
 			}
 		})
-	}
-}
-
-// TestEveryManifestDigestStaysByteStable pins every non-Pi row at the closed
-// review-transport baseline. The 12 non-RDD rows change only because their
-// transport claim becomes dormant; the three non-Pi RDD rows remain unchanged.
-func TestEveryManifestDigestStaysByteStable(t *testing.T) {
-	t.Parallel()
-
-	wantNonPiDigests := map[model.AgentID]string{
-		model.AgentAntigravity:      "sha256:03a35fd1c8b95f1ef5575e492ecdf3ae0719c165586663aa86a0d68c42797a7b",
-		model.AgentClaudeCode:       "sha256:4ff85fc5eb5278ef4a7552650270c012448e822c33bab8d442bc9bd849ab328e",
-		model.AgentCodex:            "sha256:72718322f2be7cab668922d44403cf622fa0ff550444cbd7c7879b2cbcc05ec5",
-		model.AgentCursor:           "sha256:14d2288f56d6efd8493b6a2fe2f907817a2363cee6604b78c0673f48815fd9ee",
-		model.AgentGeminiCLI:        "sha256:da66d357b74598aaf95e98e15af3ce709f41dc30b2a39a340c7f25d8f6158d2a",
-		model.AgentGitHubCopilotCLI: "sha256:56c2bb26d29547ac910483a1676d0ed92557dd1e01aa27afe2150c507f3aeb42",
-		model.AgentHermes:           "sha256:e39d7b505f57db5a968087770cd5d2b7c08d3a95dc4c8500ae3a207bd4490d58",
-		model.AgentKilocode:         "sha256:7e8858b732e0a0e637bd21f80d9757092f426bc903a69e856437e5dae545597c",
-		model.AgentKimi:             "sha256:3ad829e58930d03f0bdb2da3ba1d089912c3b7c0fd0dff5cf2d029515294a280",
-		model.AgentKiroIDE:          "sha256:f47244d8a8a480fc6c279a0f86acee1f2e3580493d42a08f0573613400921d41",
-		model.AgentOpenClaw:         "sha256:52a24440ec541fa3b5c35b0ad3593c2cd21c792881f52504855ee2830b50ae6c",
-		model.AgentOpenCode:         "sha256:303e1d4cd22cf891093b2b4d5d119a12190e7070f88fadeef240c666307a96cc",
-		model.AgentQwenCode:         "sha256:d5b3c45d7939810c3dd94c1838505825aab0f395e3a1b009a46030ca3b04fc5b",
-		model.AgentTrae:             "sha256:d91de263fb1dcb3f013d811dbad2973e33450b1d193a262ee5937fd68c7419af",
-		model.AgentVSCodeCopilot:    "sha256:da345ae4c631fdd99d92b77b21415ced213cd8c1fef2511de09c228ef4f01c7f",
-		model.AgentWindsurf:         "sha256:4b57475c602cfeafd91308c66b9360ae135b0459e2544d28c4ab2c13d06aa173",
-	}
-
-	nonPiAgents := make([]model.AgentID, 0, len(wantNonPiDigests))
-	for agent := range wantNonPiDigests {
-		nonPiAgents = append(nonPiAgents, agent)
-	}
-
-	if got := len(nonPiAgents); got != 16 {
-		t.Fatalf("want 16 non-Pi agents, got %d", got)
-	}
-
-	for _, agent := range nonPiAgents {
-		agent := agent
-		wantDigest := wantNonPiDigests[agent]
-		t.Run(string(agent), func(t *testing.T) {
-			t.Parallel()
-
-			manifest := MustForAgent(agent)
-			gotDigest, err := manifest.Digest()
-			if err != nil {
-				t.Fatalf("Digest() error = %v", err)
-			}
-			if gotDigest != wantDigest {
-				t.Fatalf("Digest() = %q, want %q (byte-stable contract)", gotDigest, wantDigest)
-			}
-		})
-	}
-}
-
-func TestReviewTransportAdvertisementIsClosedCatalogSet(t *testing.T) {
-	const wantExposed = 4
-
-	exposed := 0
-	for _, agent := range catalog.AllAgents() {
-		t.Run(string(agent.ID), func(t *testing.T) {
-			manifest := MustForAgent(agent.ID)
-			want := agent.ID == model.AgentClaudeCode ||
-				agent.ID == model.AgentOpenCode ||
-				agent.ID == model.AgentCodex ||
-				agent.ID == model.AgentPi
-			if got := manifest.Advertises(ContractReviewTransportV1); got != want {
-				t.Fatalf("review transport advertised = %t, want %t", got, want)
-			}
-			if want {
-				exposed++
-			}
-		})
-	}
-	if exposed != wantExposed {
-		t.Fatalf("advertised review transport runtimes = %d, want %d", exposed, wantExposed)
 	}
 }
 

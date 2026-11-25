@@ -255,11 +255,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"claude/agents/sdd-init.md",
 		"claude/agents/sdd-onboard.md",
 		"claude/agents/sdd-research.md",
-		"claude/agents/review-risk.md",
-		"claude/agents/review-readability.md",
-		"claude/agents/review-reliability.md",
-		"claude/agents/review-resilience.md",
-		"claude/agents/review-refuter.md",
 
 		// OpenCode agent files
 		"opencode/persona-gentleman.md",
@@ -300,18 +295,8 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"cursor/agents/sdd-apply.md",
 		"cursor/agents/sdd-verify.md",
 		"cursor/agents/sdd-archive.md",
-		"cursor/agents/review-risk.md",
-		"cursor/agents/review-readability.md",
-		"cursor/agents/review-reliability.md",
-		"cursor/agents/review-resilience.md",
-		"cursor/agents/review-refuter.md",
 
 		// Kiro agent files
-		"kiro/agents/review-risk.md",
-		"kiro/agents/review-readability.md",
-		"kiro/agents/review-reliability.md",
-		"kiro/agents/review-resilience.md",
-		"kiro/agents/review-refuter.md",
 
 		// Kimi agent files
 		"kimi/persona-gentleman.md",
@@ -342,16 +327,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"kimi/agents/sdd-verify.md",
 		"kimi/agents/sdd-archive.md",
 		"kimi/agents/sdd-onboard.md",
-		"kimi/agents/review-risk.yaml",
-		"kimi/agents/review-readability.yaml",
-		"kimi/agents/review-reliability.yaml",
-		"kimi/agents/review-resilience.yaml",
-		"kimi/agents/review-refuter.yaml",
-		"kimi/agents/review-risk.md",
-		"kimi/agents/review-readability.md",
-		"kimi/agents/review-reliability.md",
-		"kimi/agents/review-resilience.md",
-		"kimi/agents/review-refuter.md",
 
 		// SDD skills
 		"skills/sdd-init/SKILL.md",
@@ -394,7 +369,6 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"skills/skill-improver/SKILL.md",
 		"skills/skill-improver/references/skill-style-guide.md",
 		"skills/chained-pr/references/chaining-details.md",
-		"skills/rdd-defect-workflow/SKILL.md",
 		"skills/systemic-issue-triage/SKILL.md",
 	}
 
@@ -570,10 +544,10 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDir(opencode/plugins) error = %v", err)
 	}
-	if len(pluginEntries) != 5 {
-		t.Fatalf("opencode plugins count = %d, want 5", len(pluginEntries))
+	if len(pluginEntries) != 4 {
+		t.Fatalf("opencode plugins count = %d, want 4", len(pluginEntries))
 	}
-	wantPlugins := map[string]bool{"axiom-branch-guard.ts": true, "model-variants.ts": true, "opencode-review-transport.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
+	wantPlugins := map[string]bool{"axiom-branch-guard.ts": true, "model-variants.ts": true, "sdd-task-result-artifacts.ts": true, "skill-registry.ts": true}
 	for _, entry := range pluginEntries {
 		if !wantPlugins[entry.Name()] {
 			t.Fatalf("unexpected plugin entry = %q", entry.Name())
@@ -593,32 +567,6 @@ func TestOpenCodeBackgroundPolicyMarkersAreBalanced(t *testing.T) {
 	}
 	if !strings.HasPrefix(trimmed, start+"\n") || !strings.HasSuffix(trimmed, "\n"+end) {
 		t.Fatalf("background policy markers are not balanced around the complete asset")
-	}
-}
-
-// TestOpenCodeReviewTransportPluginContract pins the adapter-minimality
-// boundary: the plugin correlates one host Task with one Go process, while Go
-// owns all prompt, schema, admission, and capture semantics.
-func TestOpenCodeReviewTransportPluginContract(t *testing.T) {
-	source, err := Read("opencode/plugins/opencode-review-transport.ts")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{`gentle-ai.provider-transport/v1`, `"review", "opencode-transport"`, `RELAY_REGISTRY_KEY`, `reviewRelayRegistry()`, `output.args.prompt = (await relay.prompt).prompt`, `output.output = await registration.relay.complete(output.output)`, `"tool.execute.before"`, `"tool.execute.after"`,
-		// A refused relay start must fail the Task loudly and never launch an
-		// unbound child: the before hook poisons the Task prompt and the after
-		// hook replaces child output with the typed refusal, so a host runtime
-		// that swallows hook errors still cannot deliver an unbound child's
-		// prose as a reviewer completion.
-		`opencode_review_transport_relay_refused`, `refused.set(key, reason)`, `output.args.prompt = relayRefusedPrompt(reason)`, `output.output = relayRefusedOutput(refusal)`} {
-		if !strings.Contains(source, want) {
-			t.Fatalf("transport plugin missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{"GENTLE_AI_REVIEW_BINDING", "repository_context", "review lens-context", "capture-result", "preserve-result", "opencode_runtime_provenance", "JSON.parse(output.output)", "writeFile", "link(", "chmod("} {
-		if strings.Contains(source, forbidden) {
-			t.Fatalf("transport plugin retains Go-owned behavior %q", forbidden)
-		}
 	}
 }
 
@@ -877,8 +825,8 @@ func TestClaudeEmbeddedAssetLayout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadDir(claude/agents) error = %v", err)
 	}
-	if len(agentEntries) != 19 {
-		t.Fatalf("claude agents count = %d, want 19", len(agentEntries))
+	if len(agentEntries) != 14 {
+		t.Fatalf("claude agents count = %d, want 14", len(agentEntries))
 	}
 }
 
@@ -973,543 +921,6 @@ func TestEngramEmbeddedAssetLayout(t *testing.T) {
 
 	if !seen["protocol.md"] {
 		t.Fatal("engram embedded assets missing \"protocol.md\"")
-	}
-}
-
-func TestFourRReviewAgentAssets(t *testing.T) {
-	reviewAgents := []string{"review-risk", "review-readability", "review-reliability", "review-resilience"}
-	nativeDirs := []string{"claude/agents", "cursor/agents", "kiro/agents"}
-	agentRules := map[string][]string{
-		"review-risk": {
-			"Rule sources: ai-course-2 slides",
-			"Flag when secrets, tokens, API keys, JWT secrets, or DB URLs are hardcoded",
-			"Block when authz is enforced only in the frontend",
-			"Do not flag when React default escaping is used",
-		},
-		"review-readability": {
-			"Rule sources: ai-course-2 slides",
-			"Flag magic numbers that should be named constants",
-			"Flag long parameter lists that should be parameter objects",
-			"Do not flag a small helper or inline constant",
-		},
-		"review-reliability": {
-			"Rule sources: ai-course-2 slides",
-			"Block behavior changes without tests that assert externally visible contract",
-			"Block when CI can pass with `test.only`",
-			"Do not flag intentional reliance on built-in async waiting/trace visibility",
-		},
-		"review-resilience": {
-			"Rule sources: ai-course-2 slides",
-			"Flag failures with no fallback, retry, or graceful-degradation path",
-			"prod error rate > 1% investigate, > 2% emergency, > 5% all hands",
-			"Do not flag explicitly low-impact expected issues",
-		},
-	}
-
-	for _, dir := range nativeDirs {
-		for _, agent := range reviewAgents {
-			content := mustReadResolved(dir + "/" + agent + ".md")
-			for _, want := range []string{"read-only reviewer", "severity: BLOCKER | CRITICAL | WARNING | SUGGESTION", "No findings."} {
-				if !strings.Contains(content, want) {
-					t.Fatalf("%s/%s.md missing %q", dir, agent, want)
-				}
-			}
-			for _, want := range agentRules[agent] {
-				if !strings.Contains(content, want) {
-					t.Fatalf("%s/%s.md missing concrete 4R rule %q", dir, agent, want)
-				}
-			}
-		}
-	}
-
-	for _, agent := range reviewAgents {
-		md := mustReadResolved("kimi/agents/" + agent + ".md")
-		yaml := mustReadResolved("kimi/agents/" + agent + ".yaml")
-		if !strings.Contains(md, "No findings.") || !strings.Contains(yaml, "system_prompt_path: ./"+agent+".md") {
-			t.Fatalf("kimi review agent %s missing prompt or YAML binding", agent)
-		}
-		for _, want := range agentRules[agent] {
-			if !strings.Contains(md, want) {
-				t.Fatalf("kimi review agent %s missing concrete 4R rule %q", agent, want)
-			}
-		}
-	}
-
-	for _, overlay := range []string{"opencode/sdd-overlay-single.json", "opencode/sdd-overlay-multi.json"} {
-		content := mustReadResolved(overlay)
-		for _, agent := range reviewAgents {
-			if !strings.Contains(content, `"`+agent+`"`) || !strings.Contains(content, "No findings.") {
-				t.Fatalf("%s missing OpenCode review agent %s", overlay, agent)
-			}
-			for _, want := range agentRules[agent] {
-				want = strings.ReplaceAll(want, "`", "")
-				if !strings.Contains(content, want) {
-					t.Fatalf("%s review agent %s missing concrete 4R rule %q", overlay, agent, want)
-				}
-			}
-		}
-	}
-}
-
-func TestOpenCodeSDDOrchestratorDoesNotOwnSessionPreflight(t *testing.T) {
-	content := mustReadResolved("opencode/sdd-orchestrator.md")
-	for _, retired := range []string{
-		"### SDD Session Preflight (HARD GATE)", "Before executing ANY SDD command or natural-language SDD request",
-		"Use the `question` tool for SDD Session Preflight", "all four preflight groups in one single `question` tool call",
-		"four localized groups in this order", "Review: 400 lines, 800 lines, Other",
-		"Interactive -> `interactive`", "OpenSpec -> `openspec`", "Ask me -> `ask-on-risk`",
-		"User-facing preflight question format:", "Map answers to canonical values", "A1", "A2", "B1", "C1", "D1",
-	} {
-		if strings.Contains(content, retired) {
-			t.Fatalf("raw opencode/sdd-orchestrator.md still owns retired preflight content %q", retired)
-		}
-	}
-}
-
-func TestOpenCodeSDDOrchestratorDelegationVisibility(t *testing.T) {
-	content := mustReadResolved("opencode/sdd-orchestrator.md")
-
-	for _, required := range []string{
-		"<!-- gentle-ai:opencode-desktop-delegation-progress -->",
-		"#### Delegation Visibility (OpenCode Desktop)",
-		"`delegate` or `task`",
-		"assistant-visible status line immediately before the call",
-		"When the call returns",
-		"⏳ Delegating {phase} to {agent}...",
-		"✅ {agent} completed — {status}",
-		"⚠️ {agent} returned {status} — {short reason}",
-		"15 tokens or fewer",
-		"25 tokens or fewer",
-		"executor prompts",
-		"<!-- /gentle-ai:opencode-desktop-delegation-progress -->",
-	} {
-		if !strings.Contains(content, required) {
-			t.Fatalf("opencode/sdd-orchestrator.md missing delegation visibility wording %q", required)
-		}
-	}
-
-	visibilityIndex := strings.Index(content, "#### Delegation Visibility (OpenCode Desktop)")
-	workflowIndex := strings.Index(content, "## SDD Workflow")
-	if visibilityIndex < 0 || workflowIndex < 0 || visibilityIndex > workflowIndex {
-		t.Fatal("delegation visibility must appear before the SDD workflow")
-	}
-}
-
-func TestOpenCodeSDDOrchestratorPreflightDoesNotUseVisibleCodesOrCanonicalUIValues(t *testing.T) {
-	content := mustReadResolved("opencode/sdd-orchestrator.md")
-	if start := strings.Index(content, "User-facing preflight question format:"); start >= 0 {
-		t.Fatalf("raw opencode/sdd-orchestrator.md still owns preflight UI at %d", start)
-	}
-	if end := strings.Index(content, "Map answers to canonical values"); end >= 0 {
-		t.Fatalf("raw opencode/sdd-orchestrator.md still owns preflight mappings at %d", end)
-	}
-	for _, forbidden := range []string{"A1", "A2", "B1", "C1", "D1", "Interactive -> `interactive`", "OpenSpec -> `openspec`", "Ask me -> `ask-on-risk`"} {
-		if strings.Contains(content, forbidden) {
-			t.Fatalf("raw opencode/sdd-orchestrator.md still owns preflight content %q", forbidden)
-		}
-	}
-}
-
-func TestClaudeSDDStatusUsesNativeForEveryDeclaredStore(t *testing.T) {
-	content := mustReadResolved("claude/commands/sdd-status.md")
-	hasStatusCmd := strings.Contains(content, "axiom sdd status [change] --cwd <repo> --json --instructions") ||
-		strings.Contains(content, "gentle-ai sdd-status [change] --cwd <repo> --json --instructions")
-	if !hasStatusCmd {
-		t.Errorf("Claude status missing status command invocation")
-	}
-	for _, want := range []string{
-		"every declared artifact store, including Engram", "native v2",
-		"Inspection needs no execution preflight", "without executing any recommendation",
-		"If the binary is unavailable", "non-authoritative", "Do not fabricate native-shaped status",
-		"artifactPaths", "actionContext", "blockedReasons",
-	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("Claude status missing %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"do NOT invoke the native dispatcher", "resolve status entirely from Engram",
-		"mem_search", "manual status schema", "SDD Session Preflight must already be complete",
-		"launch the corresponding planning phase", "Inspect the selected artifact store from session preflight",
-	} {
-		if strings.Contains(content, forbidden) {
-			t.Errorf("Claude status retains conflicting instruction %q", forbidden)
-		}
-	}
-}
-
-func TestClaudeSDDWorkflowRequiresSessionPreflight(t *testing.T) {
-	content := mustReadResolved("claude/sdd-orchestrator-workflow.md")
-
-	for _, required := range []string{
-		"Session preflight is projected here by the installer from the shared canonical authority",
-		"### SDD Init Guard (MANDATORY)",
-		"### SDD Entry Routing (MANDATORY)",
-		"Never launch `sdd-apply` just because the user asked to implement a feature",
-		"Only launch `sdd-apply` when all are true",
-		"If any dependency is missing, STOP and propose `/sdd-new` or `/sdd-ff`; do not implement",
-	} {
-		if !strings.Contains(content, required) {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md missing required preflight wording %q", required)
-		}
-	}
-
-	for _, forbidden := range []string{
-		"`question` tool", "AskUserQuestion", "groups as tabs",
-		"### SDD Session Preflight (HARD GATE)",
-		"gentle-ai:sdd-session-preflight", "Required preflight choices:",
-		"1. Pace:", "Both ->", "800 lines", "Other", "all four",
-	} {
-		if strings.Contains(content, forbidden) {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md must use Claude Code's AskUserQuestion mechanics, not OpenCode wording %q", forbidden)
-		}
-	}
-
-	if strings.Contains(content, "`both`") {
-		t.Fatal("claude/sdd-orchestrator-workflow.md must not use `both` as a canonical artifact-store value; the Claude asset vocabulary is `hybrid` end to end (Dispatcher Guard, Artifact Store Policy/Mode)")
-	}
-
-	// The pace is collected by the preflight (or fixed by the topology); the artifact store is never asked.
-	for _, section := range []struct{ heading, want string }{
-		{"### Execution Mode", "This is collected by `SDD Session Preflight`"},
-		{"### Artifact Store Mode", "The artifact store is never asked: in Axiom the session store is always `hybrid`."},
-	} {
-		idx := strings.Index(content, section.heading)
-		if idx < 0 {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md missing section %q", section.heading)
-		}
-		body := content[idx+len(section.heading):]
-		if end := strings.Index(body, "\n### "); end >= 0 {
-			body = body[:end]
-		}
-		if !strings.Contains(body, section.want) {
-			t.Fatalf("claude/sdd-orchestrator-workflow.md section %q must state %q instead of independently re-asking", section.heading, section.want)
-		}
-	}
-
-	routing := "### SDD Entry Routing (MANDATORY)"
-	initGuard := "### SDD Init Guard (MANDATORY)"
-	if strings.Count(content, routing) != 1 || strings.Count(content, initGuard) != 1 || strings.Index(content, routing) >= strings.Index(content, initGuard) {
-		t.Fatal("Claude projection template requires unique routing then init anchors")
-	}
-}
-
-// sddOrchestratorAutomaticDefaultRuntimes lists every runtime whose asset
-// carries the topology-driven execution-mode sentence: the 11 runtimes with a
-// standalone `sdd-orchestrator.md` plus Claude's separate workflow surface.
-// Deliberately not "all 12 runtime dirs" — Claude ships two files and only its
-// workflow file carries this sentence.
-var sddOrchestratorAutomaticDefaultRuntimes = []string{
-	"antigravity/sdd-orchestrator.md",
-	"hermes/sdd-orchestrator.md",
-	"gemini/sdd-orchestrator.md",
-	"codex/sdd-orchestrator.md",
-	"qwen/sdd-orchestrator.md",
-	"kimi/sdd-orchestrator.md",
-	"kiro/sdd-orchestrator.md",
-	"opencode/sdd-orchestrator.md",
-	"generic/sdd-orchestrator.md",
-	"cursor/sdd-orchestrator.md",
-	"windsurf/sdd-orchestrator.md",
-	"claude/sdd-orchestrator-workflow.md",
-}
-
-const sddOrchestratorAutomaticDefaultSentence = "If the user doesn't specify, default to **Automatic**."
-
-// sddOrchestratorTopologyModeSentence replaces it (REQ-28.20): no mode is assumed by default, the
-// project topology decides the pace.
-const sddOrchestratorTopologyModeSentence = "No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight."
-
-// sddOrchestratorHybridStoreSentence is the fixed-store doctrine of «Artifact Store Mode» (REQ-28.20),
-// byte-identical in every runtime that projects it.
-const sddOrchestratorHybridStoreSentence = "The artifact store is never asked: in Axiom the session store is always `hybrid`. Pass, as `artifact_store.mode` to every phase launch, the `artifactStore` and `artifactPaths` that `axiom sdd status` reports for the change; that native value (`openspec` when `openspec/config.yaml` declares nothing) is the authority phases persist to, and the session `hybrid` never overrides it. `axiom workspace validate` rejects a declared `engram` or `none`."
-
-const sddOrchestratorPromptBudgetSentence = "After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision."
-
-// TestSDDOrchestratorAssetsExecutionModeFollowsTopology pins that no SDD orchestrator asset
-// defaults to Automatic any more: every runtime carries the byte-identical topology sentence and
-// prompt-budget sentence, the fixed `hybrid` artifact-store doctrine, and keeps Interactive
-// explicitly selectable (never removed as an option).
-func TestSDDOrchestratorAssetsExecutionModeFollowsTopology(t *testing.T) {
-	for _, path := range sddOrchestratorAutomaticDefaultRuntimes {
-		t.Run(path, func(t *testing.T) {
-			content := mustReadResolved(path)
-			if strings.Contains(content, sddOrchestratorAutomaticDefaultSentence) || strings.Contains(content, "default to **Automatic**") {
-				t.Fatalf("%s still defaults to Automatic", path)
-			}
-			if !strings.Contains(content, sddOrchestratorTopologyModeSentence) {
-				t.Fatalf("%s missing byte-identical topology sentence %q", path, sddOrchestratorTopologyModeSentence)
-			}
-			if !strings.Contains(content, sddOrchestratorHybridStoreSentence) {
-				t.Fatalf("%s missing byte-identical hybrid store doctrine", path)
-			}
-			if strings.Contains(content, "ALSO ASK which artifact store") || strings.Contains(content, "default to `engram`") {
-				t.Fatalf("%s still asks or defaults the artifact store", path)
-			}
-			if !strings.Contains(content, sddOrchestratorPromptBudgetSentence) {
-				t.Fatalf("%s missing byte-identical prompt-budget sentence %q", path, sddOrchestratorPromptBudgetSentence)
-			}
-			if strings.Contains(content, "default to **Interactive**") {
-				t.Fatalf("%s still defaults to Interactive", path)
-			}
-			if !strings.Contains(content, "**Interactive**") {
-				t.Fatalf("%s must keep Interactive explicitly selectable", path)
-			}
-		})
-	}
-}
-
-// TestPersistenceContractFixesTheHybridSessionStore pins «Mode Resolution» (REQ-28.20): the contract
-// never asks the user for a mode, records the session `hybrid`, and consumes the store status reports.
-func TestPersistenceContractFixesTheHybridSessionStore(t *testing.T) {
-	content := MustRead("skills/_shared/persistence-contract.md")
-	for _, want := range []string{
-		"The orchestrator passes `artifact_store.mode` with the `artifactStore` that `axiom sdd status` reports",
-		"The orchestrator never asks the user for a mode: the session preflight always records `hybrid`, and it never overrides the reported store.",
-		"If no mode is passed, STOP and report it; never detect or default one.",
-	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("persistence-contract.md missing %q", want)
-		}
-	}
-	for _, stale := range []string{"The orchestrator ASKs the user which mode", "Default (if user doesn't specify)"} {
-		if strings.Contains(content, stale) {
-			t.Errorf("persistence-contract.md retains %q", stale)
-		}
-	}
-}
-
-func TestSDDFFCommandsHonorInteractiveMode(t *testing.T) {
-	for _, path := range []string{
-		"opencode/commands/sdd-ff.md",
-	} {
-		t.Run(path, func(t *testing.T) {
-			content := mustReadResolved(path)
-
-			for _, forbidden := range []string{
-				"Present a combined summary after ALL phases complete (not between each one).",
-			} {
-				if strings.Contains(content, forbidden) {
-					t.Fatalf("%s must not contain unqualified back-to-back planning instruction %q", path, forbidden)
-				}
-			}
-
-			for _, required := range []string{
-				"Honor the cached execution mode from SDD Session Preflight",
-				"In `interactive` mode: run only the next planning phase",
-				"Do not launch the following phase until the user confirms",
-				"In `auto` mode: run all planning phases back-to-back",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing interactive/auto guard wording %q", path, required)
-				}
-			}
-		})
-	}
-}
-
-func TestOpenCodeSDDCommandsAreOrchestratorGuarded(t *testing.T) {
-	entries, err := FS.ReadDir("opencode/commands")
-	if err != nil {
-		t.Fatalf("ReadDir(opencode/commands) error = %v", err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasPrefix(entry.Name(), "sdd-") {
-			continue
-		}
-		path := "opencode/commands/" + entry.Name()
-		content := mustReadResolved(path)
-
-		for _, forbidden := range []string{
-			"You are an SDD sub-agent",
-			"Artifact store mode: engram",
-		} {
-			if strings.Contains(content, forbidden) {
-				t.Fatalf("%s must not bypass orchestration with %q", path, forbidden)
-			}
-		}
-
-		requiredGuards := []string{"SDD Session Preflight must already be complete", "If missing, ask the exact orchestrator preflight prompt and STOP"}
-		if entry.Name() == "sdd-status.md" {
-			requiredGuards = []string{"command is read-only", "Inspection needs no execution preflight", "without executing any recommendation"}
-			if strings.Contains(content, "SDD Session Preflight must already be complete") {
-				t.Fatal("read-only status requires mutation preflight")
-			}
-		}
-		if entry.Name() == "sdd-research.md" {
-			requiredGuards = []string{"Research remains optional, including after selection.", "actually available and authorized external tools", "wait; never answer for the user"}
-			if strings.Contains(content, "SDD Session Preflight must already be complete") {
-				t.Fatal("optional research requires administrative preflight")
-			}
-		}
-		for _, required := range requiredGuards {
-			if !strings.Contains(content, required) {
-				t.Fatalf("%s missing orchestration guard wording %q", path, required)
-			}
-		}
-	}
-
-	applyContent := mustReadResolved("opencode/commands/sdd-apply.md")
-	for _, required := range []string{
-		"You are the `axiom-orchestrator`, not an SDD executor",
-		"If spec, design, or tasks are missing, do NOT implement",
-		"do not hardcode Engram",
-	} {
-		if !strings.Contains(applyContent, required) {
-			t.Fatalf("opencode/commands/sdd-apply.md missing apply guard wording %q", required)
-		}
-	}
-}
-
-func TestClaudeSDDOrchestratorChainStrategy(t *testing.T) {
-	content := mustReadResolved("claude/sdd-orchestrator.md") + "\n" + mustReadResolved("claude/sdd-orchestrator-workflow.md")
-
-	for _, required := range []string{
-		"### Chain Strategy",
-		"`stacked-to-main`",
-		"`feature-branch-chain`",
-		"Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `delivery_strategy`.",
-		"{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}",
-		"When `delivery_strategy` is `chained`, treat `chained-pr`",
-		"Claude Code's native Agent/Task mechanism",
-		"results are not persisted by OpenCode's background-agent plugin",
-		"treat `chained-pr` (registry skill `chained-pr`) as a required skill match",
-	} {
-		if !strings.Contains(content, required) {
-			t.Fatalf("claude/sdd-orchestrator.md missing required SDD chain/delegation wording %q", required)
-		}
-	}
-
-	for _, forbidden := range []string{
-		"plugin-backed persisted background delegation",
-		"background task storage",
-		"OpenCode plugin-backed persistence guarantees",
-	} {
-		if strings.Contains(content, forbidden) {
-			t.Fatalf("claude/sdd-orchestrator.md must not imply OpenCode persisted delegation semantics via %q", forbidden)
-		}
-	}
-}
-
-func TestNonClaudeSDDOrchestratorChainStrategyParity(t *testing.T) {
-	tests := []struct {
-		path             string
-		propagationScope string
-	}{
-		{path: "codex/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "gemini/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "qwen/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "generic/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "kimi/sdd-orchestrator.md", propagationScope: "Kimi custom-agent prompt"},
-		{path: "kiro/sdd-orchestrator.md", propagationScope: "Kiro phase context"},
-		{path: "windsurf/sdd-orchestrator.md", propagationScope: "inline phase context"},
-		{path: "antigravity/sdd-orchestrator.md", propagationScope: "dynamic subagent context"},
-		{path: "cursor/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "opencode/sdd-orchestrator.md", propagationScope: "prompt"},
-		{path: "hermes/sdd-orchestrator.md", propagationScope: "prompt"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.path, func(t *testing.T) {
-			content := mustReadResolved(tc.path)
-
-			for _, required := range []string{
-				"### Chain Strategy",
-				"`stacked-to-main`",
-				"`feature-branch-chain`",
-				"delivery_strategy",
-				"chain_strategy",
-				"sdd-tasks",
-				"sdd-apply",
-				tc.propagationScope,
-				"treat `chained-pr` (registry skill `chained-pr`) as a required skill match",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing required chain strategy wording %q", tc.path, required)
-				}
-			}
-		})
-	}
-}
-
-func TestDelegatedSDDProvidersForwardApplyVerifyContext(t *testing.T) {
-	tests := []struct {
-		name               string
-		path               string
-		delegatedContext   string
-		dependencyReadRows []string
-	}{
-		{
-			name:             "Codex prompt",
-			path:             "codex/sdd-orchestrator.md",
-			delegatedContext: "Codex phase prompt",
-		},
-		{
-			name:             "Kimi custom agent",
-			path:             "kimi/sdd-orchestrator.md",
-			delegatedContext: "Kimi custom-agent prompt",
-			dependencyReadRows: []string{
-				"| `sdd-apply` | project init + tasks + spec + design + **apply-progress (if exists)** | `apply-progress` |",
-				"| `sdd-verify` | project init + spec + tasks + **apply-progress (if exists)** | `verify-report` |",
-			},
-		},
-		{
-			name:             "Kiro native subagent",
-			path:             "kiro/sdd-orchestrator.md",
-			delegatedContext: "native Kiro subagent context",
-			dependencyReadRows: []string{
-				"| `sdd-apply` | project init + tasks + spec + design + **apply-progress (if exists)** | `apply-progress` |",
-				"| `sdd-verify` | project init + spec + tasks + **apply-progress (if exists)** | `verify-report` |",
-			},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			content := mustReadResolved(tc.path)
-			section := markdownSection(content, "### Apply/Verify Context Forwarding (MANDATORY)")
-			if section == "" {
-				t.Fatalf("%s missing apply/verify context forwarding section", tc.path)
-			}
-
-			required := []string{
-				"`sdd-apply`",
-				"`sdd-verify`",
-				`mem_search(query: "sdd-init/{project}", project: "{project}")`,
-				"mem_get_observation",
-				"full project init",
-				"Search previews are not sufficient",
-				"`strict_tdd: true|false`",
-				`mem_search(query: "sdd/{change-name}/apply-progress", project: "{project}")`,
-				"full prior apply-progress",
-				"`previous_apply_progress:",
-				"READ-MERGE-WRITE",
-				"Do NOT overwrite",
-				"full combined apply-progress",
-				tc.delegatedContext,
-			}
-			for _, required := range required {
-				if !strings.Contains(section, required) {
-					t.Fatalf("%s missing delegated apply/verify context contract %q", tc.path, required)
-				}
-			}
-			if !hasApplyVerifyContextFlow(section, tc.delegatedContext) {
-				t.Fatalf("%s does not relate retrieval, forwarding, and persistence", tc.path)
-			}
-
-			glossaryTokens := append(append([]string{}, required...), tc.dependencyReadRows...)
-			glossaryOnly := "### Apply/Verify Context Forwarding (MANDATORY)\n" + strings.Join(glossaryTokens, "\n")
-			if hasApplyVerifyContextFlow(glossaryOnly, tc.delegatedContext) {
-				t.Fatal("glossary-only token fixture must not satisfy the forwarding contract")
-			}
-
-			for _, row := range tc.dependencyReadRows {
-				if !strings.Contains(content, row) {
-					t.Fatalf("%s missing dependency forwarding row %q", tc.path, row)
-				}
-			}
-		})
 	}
 }
 
@@ -1897,9 +1308,9 @@ func TestEmbeddedAssetCount(t *testing.T) {
 		}
 	}
 
-	// We expect 25 skill directories (11 SDD + judgment-day + 11 foundation/review + hermes-ephemeral-delegation + _shared).
-	if skillDirs != 25 {
-		t.Fatalf("expected 25 skill directories, got %d", skillDirs)
+	// We expect 24 skill directories (11 SDD + judgment-day + 10 foundation + hermes-ephemeral-delegation + _shared).
+	if skillDirs != 24 {
+		t.Fatalf("expected 24 skill directories, got %d", skillDirs)
 	}
 
 	// Verify each skill directory has a SKILL.md.

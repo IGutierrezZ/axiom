@@ -31,7 +31,7 @@ func validateOpenCodePluginReplacement(dir, assetDir string) error {
 	if info, err := os.Lstat(dir); err == nil && !info.IsDir() {
 		return fmt.Errorf("OpenCode plugin directory conflict; user path preserved")
 	}
-	for _, name := range append(ManagedOpenCodePluginNames(), LegacyOpenCodeReviewPluginName, "background-agents.ts") {
+	for _, name := range append(ManagedOpenCodePluginNames(), "background-agents.ts") {
 		p := filepath.Join(dir, name)
 		info, err := os.Lstat(p)
 		if os.IsNotExist(err) {

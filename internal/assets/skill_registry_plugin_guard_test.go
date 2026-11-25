@@ -3,8 +3,11 @@ package assets
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -52,7 +55,7 @@ console.log(JSON.stringify({ project: projectDir, skills: skillsDir, lines: read
 import { appendFileSync } from "node:fs"
 appendFileSync(process.env.GENTLE_AI_RELAY_LOG, JSON.stringify(process.argv.slice(2)) + "\n")
 `
-	output, _ := runOpenCodeTransportPluginHarness(t, map[string]string{"plugin.mts": string(source)}, harness, relay)
+	output, _ := runOpenCodePluginHarness(t, map[string]string{"plugin.mts": string(source)}, harness, relay)
 	// The plugin's stderr skip notices share the combined harness output with
 	// the stdout result; the result is the final line. Skip notices must stay
 	// off stdout so `opencode models --verbose` parsing never sees them, and
@@ -125,4 +128,53 @@ func TestSkillRegistryPluginsDiagnoseSpawnFailures(t *testing.T) {
 	if v1 := MustRead("opencode/plugins/skill-registry.ts"); strings.Contains(v1, `"refresh failed:", err`) {
 		t.Error("el plugin V1 no debe volcar el error crudo con su pila")
 	}
+}
+
+func runOpenCodePluginHarness(t *testing.T, modules map[string]string, harness, relay string) (string, string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the relay fixture uses a POSIX shell")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is unavailable")
+	}
+	root := t.TempDir()
+	bin := filepath.Join(root, "bin")
+	if err := os.MkdirAll(bin, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name, source := range modules {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "harness.mts"), []byte(harness), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// Current plugins spawn "axiom"; the legacy pre-registry fixture models an
+	// older managed copy that still spawns "gentle-ai", so both names resolve
+	// to the same fake relay.
+	for _, name := range []string{"axiom", "gentle-ai"} {
+		if err := os.WriteFile(filepath.Join(bin, name), []byte(relay), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logPath := filepath.Join(root, "relay.log")
+	command := exec.Command(node, "harness.mts")
+	command.Dir = root
+	command.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"), "GENTLE_AI_RELAY_LOG="+logPath)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("plugin harness failed: %v\n%s", err, output)
+	}
+	log, err := os.ReadFile(logPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// A harness that never spawns a relay leaves no frame log behind.
+			return string(output), ""
+		}
+		t.Fatal(err)
+	}
+	return string(output), string(log)
 }

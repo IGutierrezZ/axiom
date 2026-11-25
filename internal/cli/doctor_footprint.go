@@ -161,7 +161,7 @@ func openCodeUserPlugins(homeDir string) []string {
 		return nil
 	}
 	pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
-	for _, name := range sdd.OpenCodePluginLifecycleNames(model.AgentOpenCode) {
+	for _, name := range sdd.ManagedOpenCodePluginNamesFor(model.AgentOpenCode) {
 		path := filepath.Join(pluginsDir, name)
 		if info, err := os.Lstat(path); err == nil && !info.IsDir() && !slices.Contains(found, path) {
 			found = append(found, path)

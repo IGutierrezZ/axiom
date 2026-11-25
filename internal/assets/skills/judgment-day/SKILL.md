@@ -9,19 +9,18 @@ metadata:
 
 ## Activation Contract
 
-Load only when the user explicitly requests Judgment Day or equivalent dual/adversarial review for a concrete target. The diff of one role of an SDD change is a valid target: accepting the orchestrator's offer, or a session preference that includes judgment, counts as that explicit request (see `SDD Role Target` in `references/prompts-and-formats.md`). Judgment Day is a standalone developer tool: judges run whenever asked, on any runtime, and need no review transaction, runtime identity, or delivery-receipt machinery to start. It replaces ordinary 4R as the adversarial method for that target; never run both.
+Load only when the user explicitly requests Judgment Day or equivalent dual/adversarial review for a concrete target. The diff of one role of an SDD change is a valid target: accepting the orchestrator's offer, or a session preference that includes judgment, counts as that explicit request (see `SDD Role Target` in `references/prompts-and-formats.md`). Judgment Day is a standalone developer tool: judges run whenever asked, on any runtime, and need no review transaction or runtime identity to start.
 
 ## Hard Rules
 
 - Resolve matching project skills before starting and pass the same paths to both judges (`jd-judge-a`, `jd-judge-b`) and the fix actor (`jd-fix-agent`).
 - Build one complete immutable target, then launch two blind read-only judges in parallel with identical scope and criteria.
 - Each judge returns one neutral findings result and terminates. Wait for both; never accept a partial judgment.
-- Never launch `review-refuter`; two-judge agreement is the corroboration mechanism.
 - Only the parent orchestrator merges/persists findings, launches the fix actor (`jd-fix-agent`), and launches scoped re-judgment.
 - Fix only severe findings confirmed by both judges. WARNING/SUGGESTION rows remain `info`.
 - Permit at most two fix rounds and two scoped re-judgments. Re-judgment sees only the frozen ledger plus fix delta and may record fix-caused defects.
 - The only terminal verdicts are `APPROVED | ESCALATED`; never reset or extend an exhausted round budget.
-- A judgment issues no receipt and carries no delivery authority: it satisfies no commit, push, PR, or release gate. When the caller explicitly wants ordinary negotiated review for the same target, run it as its own step; neither outcome authorizes delivery, which remains under ordinary repository policy.
+- A judgment carries no delivery authority: it satisfies no commit, push, PR, or release gate, and delivery remains under ordinary repository policy.
 
 ## Decision Gates
 
@@ -51,4 +50,3 @@ Return target identity, round, confirmed/suspect/contradiction/INFO counts, corr
 ## References
 
 - [references/prompts-and-formats.md](references/prompts-and-formats.md) — compact judge/fix prompts and verdict shape.
-- [../_shared/review-ledger-contract.md](../_shared/review-ledger-contract.md) — optional ordinary negotiated-review context: consult it only when the caller explicitly requests that lifecycle; never required to run judges and never delivery authorization.

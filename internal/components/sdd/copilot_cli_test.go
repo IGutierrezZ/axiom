@@ -92,7 +92,7 @@ func TestCopilotCLIAndVSCodeShareSkillsWithoutOverwritingEachOther(t *testing.T)
 		}
 	}
 
-	ledger := filepath.Join(home, ".copilot", "skills", "_shared", "review-ledger-contract.md")
+	ledger := filepath.Join(home, ".copilot", "skills", "_shared", "sdd-phase-common.md")
 	first := readText(t, ledger)
 	if strings.Contains(first, runtimeAgentIDPlaceholder) {
 		t.Fatal("la skill compartida conserva el hueco de identidad sin resolver")
@@ -101,9 +101,6 @@ func TestCopilotCLIAndVSCodeShareSkillsWithoutOverwritingEachOther(t *testing.T)
 		if strings.Contains(first, string(identity)) {
 			t.Fatalf("la skill compartida lleva la identidad %q de uno solo de los dos agentes", identity)
 		}
-	}
-	if !strings.Contains(first, "<runtime>") {
-		t.Fatal("la skill compartida debe llevar el hueco genérico <runtime>")
 	}
 
 	// Un segundo sync de cada uno no cambia nada, en cualquier orden.
@@ -128,8 +125,8 @@ func TestCopilotCLIAndVSCodeShareSkillsWithoutOverwritingEachOther(t *testing.T)
 	}
 }
 
-// Con COPILOT_HOME las carpetas dejan de coincidir: cada agente conserva su propia
-// identidad de runtime y no se tocan entre sí.
+// Con COPILOT_HOME las carpetas dejan de coincidir: cada agente escribe las skills
+// compartidas en su propia carpeta y no se tocan entre sí.
 func TestCopilotCLIWithCopilotHomeDoesNotShareSkillsWithVSCode(t *testing.T) {
 	home := copilotHome(t)
 	custom := filepath.Join(t.TempDir(), "custom-copilot")
@@ -144,13 +141,13 @@ func TestCopilotCLIWithCopilotHomeDoesNotShareSkillsWithVSCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	vscodeLedger := readText(t, filepath.Join(home, ".copilot", "skills", "_shared", "review-ledger-contract.md"))
-	cliLedger := readText(t, filepath.Join(custom, "skills", "_shared", "review-ledger-contract.md"))
-	if !strings.Contains(vscodeLedger, string(model.AgentVSCodeCopilot)) {
-		t.Fatal("VS Code Copilot debe conservar su identidad cuando la carpeta no se comparte")
-	}
-	if !strings.Contains(cliLedger, string(model.AgentGitHubCopilotCLI)) {
-		t.Fatal("Copilot CLI debe conservar su identidad cuando la carpeta no se comparte")
+	for _, shared := range []string{
+		filepath.Join(home, ".copilot", "skills", "_shared", "sdd-phase-common.md"),
+		filepath.Join(custom, "skills", "_shared", "sdd-phase-common.md"),
+	} {
+		if _, err := os.Stat(shared); err != nil {
+			t.Fatalf("falta la skill compartida %s: %v", shared, err)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(custom, "copilot-instructions.md")); err != nil {
 		t.Fatalf("el prompt de Copilot CLI no sigue COPILOT_HOME: %v", err)

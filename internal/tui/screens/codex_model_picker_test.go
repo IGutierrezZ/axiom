@@ -70,8 +70,8 @@ func TestCodexModelPickerOptionCount_PhaseListMode(t *testing.T) {
 	state := screens.NewCodexModelPickerState()
 	state.CustomMode = screens.CodexCustomModePhaseList
 	count := screens.CodexModelPickerOptionCount(state)
-	if count != 24 {
-		t.Errorf("CodexModelPickerOptionCount(phase-list) = %d, want 24", count)
+	if count != 18 {
+		t.Errorf("CodexModelPickerOptionCount(phase-list) = %d, want 18", count)
 	}
 }
 
@@ -543,17 +543,16 @@ func TestCodexCustomRestoresPresetWithWorkerEfforts(t *testing.T) {
 	}
 }
 
-func TestCodexCustomShortTerminalFollowsRDDAndConfirm(t *testing.T) {
+func TestCodexCustomShortTerminalFollowsODDAndConfirm(t *testing.T) {
 	state := screens.NewCodexModelPickerState()
 	state.CustomMode = screens.CodexCustomModePhaseList
 	for _, tc := range []struct {
 		cursor          int
 		visible, hidden string
 	}{
-		{0, "sdd-explore", "rdd-validator"},
-		{17, "rdd-risk", "sdd-explore"},
-		{22, "rdd-validator", "sdd-explore"},
-		{23, "Confirm assignments", "sdd-explore"},
+		{0, "sdd-explore", "odd-verify"},
+		{16, "odd-verify", "sdd-explore"},
+		{17, "Confirm assignments", "sdd-explore"},
 	} {
 		out := screens.RenderCodexModelPicker(state, tc.cursor, 12)
 		if !strings.Contains(out, tc.visible) || strings.Contains(out, tc.hidden) {
@@ -562,8 +561,8 @@ func TestCodexCustomShortTerminalFollowsRDDAndConfirm(t *testing.T) {
 	}
 }
 
-func TestCodexCustomODDAndRDDRowsRoundTrip(t *testing.T) {
-	roles := map[int]string{14: "odd-explorer", 15: "odd-worker", 16: "odd-verify", 17: "rdd-risk", 18: "rdd-readability", 19: "rdd-reliability", 20: "rdd-resilience", 21: "rdd-refuter", 22: "rdd-validator"}
+func TestCodexCustomODDRowsRoundTrip(t *testing.T) {
+	roles := map[int]string{14: "odd-explorer", 15: "odd-worker", 16: "odd-verify"}
 	state := screens.NewCodexModelPickerState()
 	state.CustomMode = screens.CodexCustomModePhaseList
 	for idx, role := range roles {

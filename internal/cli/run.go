@@ -2440,11 +2440,11 @@ func executeCommand(name string, args ...string) error {
 // has explicit skills, those are used; otherwise skills are derived from the preset.
 func selectedSkillIDs(selection model.Selection) []model.SkillID {
 	if len(selection.Skills) > 0 {
-		// Retired skills (#70) have no embedded asset, so injection never
-		// writes them and verification must not require them. Filtering after
-		// the length check keeps an explicit list made only of retired IDs
-		// empty instead of falling back to the preset.
-		return skills.WithoutRetired(selection.Skills)
+		// Retired skills (#70) and any id without an embedded asset are never
+		// written by injection, so verification must not require them.
+		// Filtering after the length check keeps an explicit list made only of
+		// such IDs empty instead of falling back to the preset.
+		return skills.Installable(selection.Skills)
 	}
 
 	return skills.SkillsForPreset(selection.Preset)
@@ -2503,7 +2503,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 				continue
 			}
 			pluginsDir := filepath.Join(adapter.GlobalConfigDir(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, model.ComponentSDD)), "plugins")
-			for _, name := range sdd.OpenCodePluginLifecycleNames(adapter.Agent()) {
+			for _, name := range sdd.ManagedOpenCodePluginNamesFor(adapter.Agent()) {
 				paths[filepath.Join(pluginsDir, name)] = struct{}{}
 			}
 		}
@@ -3274,8 +3274,7 @@ func openCodeConfigChecks(homeDir, workspaceDir string, agentIDs []model.AgentID
 // isRetiredManagedPath reports whether path names a managed file that install
 // and sync remove instead of write, so verification checks its absence.
 func isRetiredManagedPath(path string) bool {
-	return isLegacyOpenCodeBackgroundAgentsPlugin(path) || sdd.IsLegacyClaudeCommandPath(path) ||
-		sdd.IsRetiredReviewSubAgentPath(path)
+	return isLegacyOpenCodeBackgroundAgentsPlugin(path) || sdd.IsLegacyClaudeCommandPath(path)
 }
 
 func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {
