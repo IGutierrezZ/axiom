@@ -8,7 +8,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -26,11 +25,9 @@ func legacyPromptCases(t *testing.T, home string) []legacyPromptCase {
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	cases := []legacyPromptCase{
-		{name: "kiro", adapter: kiro.NewAdapter(), legacy: "gentle-ai.md"},
 		{name: "vscode", adapter: vscode.NewAdapter(), legacy: "gentle-ai.instructions.md"},
-		{name: "cursor", adapter: cursor.NewAdapter(), legacy: "axiom-legacy-placeholder"},
+		{name: "cursor", adapter: cursor.NewAdapter(), legacy: "gentle-ai.mdc"},
 	}
-	cases[2].legacy = "gentle-ai.mdc"
 	return cases
 }
 
@@ -169,7 +166,7 @@ func TestRetireLegacyPromptFilesNoLegacyFileIsANoOp(t *testing.T) {
 
 func TestRetireLegacyPromptFilesIgnoresAdaptersWithoutLegacyNames(t *testing.T) {
 	home := t.TempDir()
-	if result := RetireLegacyPromptFiles(home, nonLegacyAdapter{kiro.NewAdapter()}); len(result.Removed) != 0 || len(result.Notes) != 0 {
+	if result := RetireLegacyPromptFiles(home, nonLegacyAdapter{cursor.NewAdapter()}); len(result.Removed) != 0 || len(result.Notes) != 0 {
 		t.Fatalf("result = %+v, want a no-op", result)
 	}
 }

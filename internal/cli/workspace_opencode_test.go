@@ -12,9 +12,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// Las pruebas de este fichero cubren la distribución de proyecto de OpenCode y
-// Kilo con --scope workspace: opencode.json y .opencode/ (OpenCode), .kilo/ (Kilo).
-// Ningún agente lee <proyecto>/.config/opencode ni <proyecto>/.config/kilo, que es
+// Las pruebas de este fichero cubren la distribución de proyecto de OpenCode
+// con --scope workspace: opencode.json y .opencode/. OpenCode no lee
+// <proyecto>/.config/opencode, que es
 // donde Axiom escribía antes.
 
 func readJSONObject(t *testing.T, path string) map[string]any {
@@ -49,13 +49,13 @@ func assertNothingUnder(t *testing.T, root string, relative ...string) {
 	}
 }
 
-func TestRunInstallWorkspaceOpenCodeAndKiloUseProjectLayout(t *testing.T) {
+func TestRunInstallWorkspaceOpenCodeUsesProjectLayout(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	home, workspace, _ := footprintEnv(t)
 	seedFootprintHome(t, home)
 	before := homeSnapshotWithoutState(t, home)
 
-	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "opencode,kilocode"}, macOSDetectionResult()); err != nil {
+	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "opencode"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 
@@ -65,23 +65,18 @@ func TestRunInstallWorkspaceOpenCodeAndKiloUseProjectLayout(t *testing.T) {
 		filepath.Join(".opencode", "commands", "sdd-init.md"),
 		filepath.Join(".agents", "skills", "sdd-init", "SKILL.md"),
 		filepath.Join(".opencode", "plugins", "skill-registry.ts"),
-		filepath.Join(".kilo", "kilo.json"),
-		filepath.Join(".kilo", "rules", "axiom.md"),
-		filepath.Join(".kilo", "commands", "sdd-init.md"),
-		filepath.Join(".kilo", "plugins", "skill-registry.ts"),
 	} {
 		if _, err := os.Stat(filepath.Join(workspace, rel)); err != nil {
 			t.Errorf("falta %s en el proyecto: %v", rel, err)
 		}
 	}
-	assertNothingUnder(t, workspace, filepath.Join(".config", "opencode"), filepath.Join(".config", "kilo"), "AGENTS.md")
+	assertNothingUnder(t, workspace, filepath.Join(".config", "opencode"), "AGENTS.md")
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
 
 	for _, tc := range []struct {
 		settings, skillsDir, instruction string
 	}{
 		{"opencode.json", ".agents/skills", ".opencode/axiom.md"},
-		{filepath.Join(".kilo", "kilo.json"), ".agents/skills", ".kilo/rules/axiom.md"},
 	} {
 		path := filepath.Join(workspace, tc.settings)
 		settings := readJSONObject(t, path)
@@ -99,7 +94,7 @@ func TestRunInstallWorkspaceOpenCodeAndKiloUseProjectLayout(t *testing.T) {
 		}
 		raw, _ := os.ReadFile(path)
 		text := string(raw)
-		if strings.Contains(text, "{{AXIOM_SKILLS_DIR") || strings.Contains(text, ".config/opencode") || strings.Contains(text, ".config/kilo") {
+		if strings.Contains(text, "{{AXIOM_SKILLS_DIR") || strings.Contains(text, ".config/opencode") {
 			t.Errorf("%s: quedan marcadores sin resolver o rutas globales", tc.settings)
 		}
 		if !strings.Contains(text, tc.skillsDir+"/sdd-research/SKILL.md") {
@@ -232,12 +227,12 @@ func TestWorkspaceNoticesStaleConfigFromPreviousInstalls(t *testing.T) {
 	}
 }
 
-// Con el ámbito global la distribución de OpenCode y Kilo no cambia.
-func TestRunInstallGlobalOpenCodeAndKiloKeepGlobalLayout(t *testing.T) {
+// Con el ámbito global la distribución de OpenCode no cambia.
+func TestRunInstallGlobalOpenCodeKeepsGlobalLayout(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	home, workspace, _ := footprintEnv(t)
 
-	if _, err := RunInstall([]string{"--scope", "global", "--agent", "opencode,kilocode", "--component", "persona", "--component", "sdd"}, macOSDetectionResult()); err != nil {
+	if _, err := RunInstall([]string{"--scope", "global", "--agent", "opencode", "--component", "persona", "--component", "sdd"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 
@@ -245,14 +240,12 @@ func TestRunInstallGlobalOpenCodeAndKiloKeepGlobalLayout(t *testing.T) {
 		filepath.Join(".config", "opencode", "opencode.json"),
 		filepath.Join(".config", "opencode", "AGENTS.md"),
 		filepath.Join(".config", "opencode", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(".config", "kilo", "opencode.json"),
-		filepath.Join(".config", "kilo", "AGENTS.md"),
 	} {
 		if _, err := os.Stat(filepath.Join(home, rel)); err != nil {
 			t.Errorf("falta %s en HOME: %v", rel, err)
 		}
 	}
-	assertNothingUnder(t, workspace, "opencode.json", ".opencode", ".kilo")
+	assertNothingUnder(t, workspace, "opencode.json", ".opencode")
 }
 
 // Un instructions que no es una lista no se toca: es del usuario y Axiom avisa en
@@ -275,38 +268,5 @@ func TestWorkspaceInstructionsNotAListIsLeftUntouched(t *testing.T) {
 	}
 	if !strings.Contains(notices.String(), "no es una lista") {
 		t.Errorf("falta el aviso:\n%s", notices.String())
-	}
-}
-
-// Kilo reutiliza el kilo.jsonc que ya existe en la raíz del proyecto y conserva sus
-// claves y su instructions; sin AGENTS.md de la raíz tocado y sin segundo fichero.
-func TestWorkspaceKiloReusesExistingConfigAndIsIdempotent(t *testing.T) {
-	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
-	home, workspace, _ := footprintEnv(t)
-	mustWriteFile(t, filepath.Join(workspace, "kilo.jsonc"), []byte("{\n  // modelo del equipo\n  \"model\": \"kilo/auto\",\n  \"instructions\": [\"docs/reglas.md\"]\n}\n"))
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentKilocode},
-		Components: []model.ComponentID{model.ComponentEngram, model.ComponentPersona, model.ComponentSDD, model.ComponentSkills},
-		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
-	}
-
-	for i := 0; i < 2; i++ {
-		if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {
-			t.Fatalf("sync %d: %v", i+1, err)
-		}
-	}
-
-	assertNothingUnder(t, workspace, filepath.Join(".kilo", "kilo.json"), filepath.Join(".config", "kilo"), "AGENTS.md")
-	path := filepath.Join(workspace, "kilo.jsonc")
-	raw, _ := os.ReadFile(path)
-	if !strings.Contains(string(raw), "// modelo del equipo") {
-		t.Errorf("kilo.jsonc perdió el comentario del usuario")
-	}
-	if settings := readJSONObject(t, path); settings["model"] != "kilo/auto" {
-		t.Errorf("kilo.jsonc perdió el modelo: %v", settings["model"])
-	}
-	if got := instructionsOf(t, path); !slices.Equal(got, []string{"docs/reglas.md", ".kilo/rules/axiom.md"}) {
-		t.Errorf("instructions = %v", got)
 	}
 }

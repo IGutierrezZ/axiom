@@ -381,8 +381,8 @@ func runSkillRegistry(args []string, stdout io.Writer) error {
 
 // resolveSkillRegistryDirs resolves the working directory (defaulting to the
 // process cwd) and the user home directory used to locate skills. An empty
-// home resolves the process user home directory. A relative cwd (the Kiro
-// hook passes "--cwd .") is made absolute: otherwise the root guard sees
+// home resolves the process user home directory. A relative cwd (for
+// example "--cwd .") is made absolute: otherwise the root guard sees
 // filepath.Dir(".") == "." and skips the refresh as a filesystem root.
 func resolveSkillRegistryDirs(cwd, home string) (string, string, error) {
 	if cwd == "" {
@@ -535,7 +535,6 @@ func tuiExecuteWithBackground(
 			if copilotState := state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments); copilotState != nil {
 				installState.CopilotPhaseAssignments = copilotState
 			}
-			installState.KiroModelAssignments = kiroAliasesToStrings(selection.KiroModelAssignments)
 			installState.CodexModelAssignments = codexEffortsToStrings(selection.CodexModelAssignments)
 			installState.CodexOrchestratorAssignment = codexOrchestratorToState(selection.CodexOrchestratorAssignment)
 			installState.CodexCarrilModelAssignments = selection.CodexCarrilModelAssignments
@@ -742,9 +741,6 @@ func applyOverrides(selection *model.Selection, overrides *model.SyncOverrides) 
 	if overrides.CopilotPhaseAssignments != nil {
 		selection.CopilotPhaseAssignments = overrides.CopilotPhaseAssignments
 	}
-	if overrides.KiroModelAssignments != nil {
-		selection.KiroModelAssignments = overrides.KiroModelAssignments
-	}
 	if overrides.ClearCodexOrchestratorAssignment {
 		selection.CodexOrchestratorAssignment = nil
 		selection.ClearCodexOrchestratorAssignment = true
@@ -828,13 +824,6 @@ func loadPersistedAssignments(store state.Store, selection *model.Selection) {
 			selection.CopilotPhaseAssignments = assignments
 		}
 	}
-	if len(selection.KiroModelAssignments) == 0 && len(s.KiroModelAssignments) > 0 {
-		m := make(map[string]model.KiroModelAlias, len(s.KiroModelAssignments))
-		for k, v := range s.KiroModelAssignments {
-			m[k] = model.KiroModelAlias(v)
-		}
-		selection.KiroModelAssignments = m
-	}
 	if len(selection.CodexModelAssignments) == 0 && len(s.CodexModelAssignments) > 0 {
 		m := make(map[string]model.CodexEffort, len(s.CodexModelAssignments))
 		for k, v := range s.CodexModelAssignments {
@@ -876,14 +865,13 @@ func persistAssignments(store state.Store, selection model.Selection) error {
 	hasAssignmentSignal := selection.ClaudeModelAssignments != nil ||
 		selection.ClaudePhaseAssignments != nil ||
 		selection.CopilotPhaseAssignments != nil ||
-		selection.KiroModelAssignments != nil ||
 		selection.ModelAssignments != nil ||
 		selection.CodexModelAssignments != nil ||
 		selection.CodexOrchestratorAssignment != nil ||
 		selection.ClearCodexOrchestratorAssignment ||
 		selection.CodexCarrilModelAssignments != nil ||
 		selection.CodexPhaseModelAssignments != nil
-	if len(selection.ClaudeModelAssignments) == 0 && len(selection.ClaudePhaseAssignments) == 0 && len(selection.KiroModelAssignments) == 0 && len(selection.ModelAssignments) == 0 && len(selection.CodexModelAssignments) == 0 && len(selection.CodexCarrilModelAssignments) == 0 && len(selection.CodexPhaseModelAssignments) == 0 && !hasAssignmentSignal {
+	if len(selection.ClaudeModelAssignments) == 0 && len(selection.ClaudePhaseAssignments) == 0 && len(selection.ModelAssignments) == 0 && len(selection.CodexModelAssignments) == 0 && len(selection.CodexCarrilModelAssignments) == 0 && len(selection.CodexPhaseModelAssignments) == 0 && !hasAssignmentSignal {
 		return nil
 	}
 	// The whole read-modify-write runs under the canonical install-state lock:
@@ -917,13 +905,6 @@ func persistAssignments(store state.Store, selection model.Selection) error {
 		if selection.CopilotPhaseAssignments != nil {
 			// non-nil vacío = reiniciar (borra la clave); nil = no tocar.
 			current.CopilotPhaseAssignments = state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments)
-		}
-		if selection.KiroModelAssignments != nil {
-			if len(selection.KiroModelAssignments) > 0 {
-				current.KiroModelAssignments = kiroAliasesToStrings(selection.KiroModelAssignments)
-			} else {
-				current.KiroModelAssignments = nil
-			}
 		}
 		if selection.ClearCodexOrchestratorAssignment {
 			current.CodexOrchestratorAssignment = nil
@@ -1001,17 +982,6 @@ func claudePhaseAssignmentsToState(m map[string]model.ClaudePhaseAssignment) map
 			continue
 		}
 		out[k] = state.ClaudePhaseAssignmentState{Model: string(v.Model), Effort: string(v.Effort)}
-	}
-	return out
-}
-
-func kiroAliasesToStrings(m map[string]model.KiroModelAlias) map[string]string {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, v := range m {
-		out[k] = string(v)
 	}
 	return out
 }

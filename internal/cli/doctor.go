@@ -42,7 +42,7 @@ var coreTools = []string{"axiom", "engram"}
 
 // agentToolBinaries maps an agent ID from state.json's InstalledAgents to the
 // CLI binary name exec.LookPath should resolve. An empty string means "no CLI
-// binary to check" — typically IDE-only agents like cursor, windsurf, or
+// binary to check" — typically IDE-only agents like cursor or
 // antigravity that do not ship a standalone executable on PATH.
 //
 // Keep this map in sync with the agentID → binary convention used by the
@@ -55,13 +55,8 @@ var agentToolBinaries = map[string]string{
 	"codex":              "codex",
 	"pi":                 "pi",
 	"gemini-cli":         "gemini",
-	"kilocode":           "kilo",
-	"kiro-ide":           "kiro",
-	"kimi":               "kimi",
 	"qwen-code":          "qwen",
 	"vscode-copilot":     "code",
-	"openclaw":           "openclaw",
-	"hermes":             "hermes",
 	"github-copilot-cli": "copilot",
 }
 
@@ -578,14 +573,10 @@ func agentConfigDir(homeDir, agentID string) string {
 		return filepath.Join(cfgBase, "opencode")
 	case "cursor":
 		return filepath.Join(homeDir, ".cursor")
-	case "windsurf":
-		return filepath.Join(homeDir, ".codeium", "windsurf")
 	case "vscode":
 		return filepath.Join(cfgBase, "Code")
 	case "codex":
 		return filepath.Join(homeDir, ".codex")
-	case "kiro":
-		return filepath.Join(homeDir, ".kiro")
 	default:
 		return ""
 	}

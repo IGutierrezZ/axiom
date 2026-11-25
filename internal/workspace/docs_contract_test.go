@@ -119,7 +119,7 @@ func TestManualDeInicioDocumentsTheArchiveModelForMaintainedContext(t *testing.T
 	assertDocContains(t, readManualDeInicio(t),
 		"#### Modelo de `sdd-archive` con contexto mantenido",
 		"el orquestador lanza `sdd-archive` con el modelo asignado a `sdd-apply`",
-		"En los runtimes con el modelo fijado por agente (OpenCode, Kiro y otros)",
+		"En los runtimes con el modelo fijado por agente (OpenCode y otros)",
 		"asigna a `sdd-archive` un modelo de nivel de implementación con el selector de modelos existente",
 		"Nunca bloquea el archivado",
 	)

@@ -1,5 +1,7 @@
 # Paridad de Kiro (`kiro-ide`) en ámbito proyecto
 
+> **Superado (2026-11-25).** C-08-d (`odd/tasks/retirar-agentes.md`) retira Kiro IDE del producto; este documento queda como historial.
+
 > **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/kiro-workspace-parity.md`.
 > Espejo de recuperación en Engram: topic `odd/kiro-workspace-parity/tasks`, proyecto `axiom` (pendiente: Engram no está disponible en esta sesión).
 > Creado a mano siguiendo `odd/tasks/workspace-isolated-sync.md`: el binario actual no expone `axiom odd` (`axiom odd --help` responde "comando 'odd' no reconocido").

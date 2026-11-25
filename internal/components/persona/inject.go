@@ -56,13 +56,6 @@ func InjectPiPersona(rootDir string, persona model.PersonaID) (InjectionResult, 
 	return InjectionResult{Changed: writeResult.Changed, Files: []string{path}}, nil
 }
 
-// bootstrapper is an optional adapter capability: if an adapter implements
-// this interface, any injector that writes Jinja modules will first ensure
-// the base template (entry point) exists.
-type bootstrapper interface {
-	BootstrapTemplate(homeDir string) error
-}
-
 // outputStyleOverlayJSON is the settings.json overlay to enable the selected
 // managed Claude Code output style.
 func outputStyleOverlayJSON(name string) []byte {
@@ -73,10 +66,9 @@ func outputStyleOverlayJSON(name string) []byte {
 // SDD is installed separately by the SDD component as "gentle-orchestrator";
 // persona injection must not create legacy SDD conductor keys.
 var openCodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n      \"mode\": \"primary\",\n      \"description\": \"Senior Architect mentor - helpful first, challenging when it matters\",\n      \"prompt\": \"{file:./AGENTS.md}\"\n    }\n  }\n}\n")
-var kilocodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n      \"mode\": \"primary\",\n      \"description\": \"Senior Architect mentor - helpful first, challenging when it matters\",\n      \"prompt\": \"{file:./AGENTS.md}\",\n      \"tools\": {\n        \"write\": true,\n        \"edit\": true\n      }\n    }\n  }\n}\n")
 
 // Inject performs a full persona injection: the marker-bound markdown block,
-// the OpenCode/Kilocode `gentleman` agent definition in settings JSON, AND
+// the OpenCode `gentleman` agent definition in settings JSON, AND
 // the Claude Code output-style overlay. Used by `gentle-ai install`.
 func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
 	return injectInternal(homeDir, adapter, persona, false)
@@ -88,8 +80,8 @@ func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (In
 //   - The Gentleman output-style file + outputStyle settings overlay (Claude
 //     Code only — no conflict with other components).
 //
-// It deliberately skips the OpenCode/Kilocode `gentleman` agent definition in
-// opencode.json/kilocode.json: that JSON merge shares the "agent" key with
+// It deliberately skips the OpenCode `gentleman` agent definition in
+// opencode.json: that JSON merge shares the "agent" key with
 // SDD's gentle-orchestrator overlay, so running both in the same sync clobbers
 // each other's entries and breaks idempotency. That overlay remains an
 // install-only concern.
@@ -98,14 +90,11 @@ func InjectForSync(homeDir string, adapter agents.Adapter, persona model.Persona
 }
 
 // syncManaged is the internal flag previously called `markdownOnly`.
-// When true the OpenCode/Kilocode agent overlay is skipped (see InjectForSync).
+// When true the OpenCode agent overlay is skipped (see InjectForSync).
 func injectInternal(homeDir string, adapter agents.Adapter, persona model.PersonaID, syncManaged bool) (InjectionResult, error) {
 	persona = canonicalPersona(persona)
 	if !adapter.SupportsSystemPrompt() {
 		return InjectionResult{}, nil
-	}
-	if err := validateOpenClawWorkspacePath(homeDir, adapter); err != nil {
-		return InjectionResult{}, err
 	}
 
 	// Custom persona does nothing — user keeps their own config.
@@ -122,9 +111,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	}
 
 	// 1. Inject persona content based on system prompt strategy.
-	if adapter.Agent() == model.AgentOpenClaw {
-		return injectOpenClawSoulPersona(homeDir, content)
-	}
 
 	switch adapter.SystemPromptStrategy() {
 	case model.StrategyMarkdownSections:
@@ -265,31 +251,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		changed = changed || writeResult.Changed
 		files = append(files, promptPath)
 
-	case model.StrategySteeringFile:
-		promptPath := adapter.SystemPromptFile(homeDir)
-
-		existing, readErr := readFileOrEmpty(promptPath)
-		if readErr != nil {
-			return InjectionResult{}, readErr
-		}
-
-		var steeringContent string
-		if preserved, ok := preserveManagedSections(existing, wrapSteeringFile(content), persona); ok {
-			steeringContent = preserved
-		} else {
-			steeringContent = wrapSteeringFile(content)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(promptPath), 0o755); err != nil {
-			return InjectionResult{}, err
-		}
-		writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(steeringContent), 0o644)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		changed = changed || writeResult.Changed
-		files = append(files, promptPath)
-
 	case model.StrategyAppendToFile:
 		promptPath := adapter.SystemPromptFile(homeDir)
 
@@ -312,65 +273,19 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		changed = changed || writeResult.Changed
 		files = append(files, promptPath)
 
-	case model.StrategyJinjaModules:
-		// Ensure the base template exists for Jinja-based agents.
-		if bs, ok := adapter.(bootstrapper); ok {
-			if err := bs.BootstrapTemplate(homeDir); err != nil {
-				return InjectionResult{}, fmt.Errorf("bootstrap template: %w", err)
-			}
-			files = append(files, adapter.SystemPromptFile(homeDir))
-			files = append(files, adapter.SettingsPath(homeDir))
-		}
-
-		// Write separate Jinja include modules for Kimi (and any future agents that
-		// use this strategy). Each module corresponds to one {% include "…" %} in
-		// the static KIMI.md template that the bootstrapper above ensures exists.
-		configDir := adapter.GlobalConfigDir(homeDir)
-
-		// Module 1: persona (raw content — no variables; those live in the template).
-		personaPath := filepath.Join(configDir, "persona.md")
-		wr1, err := filemerge.WriteFileAtomic(personaPath, []byte(content), 0o644)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		changed = changed || wr1.Changed
-		files = append(files, personaPath)
-
-		// Module 2: output-style. Neutral gets a meaningful output-style module
-		// rather than an empty include so Kimi receives the same behavior contract
-		// across both persona and output-style instruction layers.
-		outputStyleContent := ""
-		switch {
-		case persona == model.PersonaAxiom:
-			outputStyleContent = assets.MustRead("kimi/output-style-axiom.md")
-		case isGentlemanConversationPersona(persona):
-			outputStyleContent = assets.MustRead("kimi/output-style-gentleman.md")
-		case persona == model.PersonaNeutral:
-			outputStyleContent = assets.MustRead("kimi/output-style-neutral.md")
-		}
-		outputStylePath := filepath.Join(configDir, "output-style.md")
-		wr2, err := filemerge.WriteFileAtomic(outputStylePath, []byte(outputStyleContent), 0o644)
-		if err != nil {
-			return InjectionResult{}, err
-		}
-		changed = changed || wr2.Changed
-		files = append(files, outputStylePath)
 	}
 
-	// 2. OpenCode/Kilocode agent definitions — Tab-switchable agents in settings.
+	// 2. OpenCode agent definitions — Tab-switchable agents in settings.
 	// Gentleman overlay creation remains install-only because this overlay shares
 	// the "agent" key in opencode.json with SDD's gentle-orchestrator overlay.
 	// Sync only performs narrow cleanup: OpenCode removes stale gentleman tools,
 	// while non-gentleman personas remove agent.gentleman entirely.
-	if (adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode) && persona != model.PersonaCustom {
+	if (adapter.Agent() == model.AgentOpenCode) && persona != model.PersonaCustom {
 		settingsPath := adapter.SettingsPath(homeDir)
 		if settingsPath != "" {
 			if isGentlemanConversationPersona(persona) {
 				if !syncManaged {
 					overlay, managedAgentNames := openCodeAgentOverlayJSON, []string{"gentleman"}
-					if adapter.Agent() == model.AgentKilocode {
-						overlay, managedAgentNames = kilocodeAgentOverlayJSON, nil
-					}
 					agentResult, err := mergeJSONFile(settingsPath, overlay, managedAgentNames...)
 					if err != nil {
 						return InjectionResult{}, err
@@ -409,7 +324,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	// their paths from this same plan.
 	plan := ResourcePlanFor(persona)
 	style, selectedStyle := plan.OutputStyle()
-	if adapter.Agent() != model.AgentOpenClaw && adapter.SupportsOutputStyles() {
+	if adapter.SupportsOutputStyles() {
 		stylePaths := plan.OutputStylePaths(adapter.OutputStyleDir(homeDir))
 		if selectedStyle && stylePaths.Write != "" {
 			styleResult, err := filemerge.WriteFileAtomic(stylePaths.Write, []byte(assets.MustRead(style.AssetPath)), 0o644)
@@ -460,32 +375,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	return InjectionResult{Changed: changed, Files: files}, nil
 }
 
-func validateOpenClawWorkspacePath(workspaceDir string, adapter agents.Adapter) error {
-	if adapter.Agent() == model.AgentOpenClaw && strings.TrimSpace(workspaceDir) == "" {
-		return fmt.Errorf("openclaw workspace path is required for workspace-first injection")
-	}
-	return nil
-}
-
-func injectOpenClawSoulPersona(workspaceDir, content string) (InjectionResult, error) {
-	soulPath := filepath.Join(workspaceDir, "SOUL.md")
-	existing, err := readFileOrEmpty(soulPath)
-	if err != nil {
-		return InjectionResult{}, err
-	}
-
-	healed := filemerge.StripLegacyPersonaBlock(existing)
-	healed = filemerge.StripLegacyATLBlock(healed)
-	updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
-
-	writeResult, err := filemerge.WriteFileAtomic(soulPath, []byte(updated), 0o644)
-	if err != nil {
-		return InjectionResult{}, err
-	}
-
-	return InjectionResult{Changed: writeResult.Changed, Files: []string{soulPath}}, nil
-}
-
 // shouldStripManagedLegacyPersona returns true ONLY when the existing file
 // already contains a <!-- gentle-ai:persona --> section. That is the strongest
 // evidence that the pre-marker persona content is stale legacy text written by
@@ -531,12 +420,9 @@ func isGentlemanConversationPersona(persona model.PersonaID) bool {
 // residualChannel reports whether the adapter already delivers tone/language/
 // philosophy content through an active output-style channel that loads every
 // session, making the system-prompt persona section redundant for that
-// content. Claude Code is gated on SupportsOutputStyles(); Kimi is an explicit
-// carve-out because its KIMI.md unconditionally double-includes both the
-// persona.md and output-style.md Jinja modules regardless of that capability
-// flag (see design.md Decision 1).
+// content. Claude Code is gated on SupportsOutputStyles().
 func residualChannel(adapter agents.Adapter) bool {
-	return adapter.SupportsOutputStyles() || adapter.Agent() == model.AgentKimi
+	return adapter.SupportsOutputStyles()
 }
 
 // personaContent returns the persona asset for the given agent and persona.
@@ -555,9 +441,6 @@ func personaContent(agent model.AgentID, persona model.PersonaID, residualConten
 }
 
 func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
-	if agent == model.AgentHermes {
-		return assets.MustRead("hermes/persona-axiom.md")
-	}
 	if residualContentAvailable {
 		switch agent {
 		case model.AgentClaudeCode:
@@ -565,44 +448,31 @@ func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) str
 		}
 	}
 	switch agent {
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-axiom.md")
-	case model.AgentKiroIDE:
-		return assets.MustRead("kiro/persona-axiom.md")
 	default:
 		return assets.MustRead("generic/persona-axiom.md")
 	}
 }
 
 func neutralPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
-	if agent == model.AgentHermes {
-		return assets.MustRead("hermes/persona-neutral.md")
-	}
 	if residualContentAvailable {
 		switch agent {
 		case model.AgentClaudeCode:
 			return assets.MustRead("claude/persona-neutral-residual.md")
-		case model.AgentKimi:
-			return assets.MustRead("kimi/persona-neutral-residual.md")
 		}
 	}
 	return assets.MustRead("generic/persona-neutral.md")
 }
 
 func gentlemanPersonaContent(agent model.AgentID) string {
-	// Claude and Kimi Gentleman assets are already residual/slim in place; unlike
+	// Claude Gentleman assets are already residual/slim in place; unlike
 	// Neutral, there is no separate residual variant to choose here.
 	switch agent {
 	case model.AgentClaudeCode:
 		return assets.MustRead("claude/persona-gentleman.md")
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return assets.MustRead("opencode/persona-gentleman.md")
-	case model.AgentKimi:
-		return assets.MustRead("kimi/persona-gentleman.md")
-	case model.AgentKiroIDE:
-		return assets.MustRead("kiro/persona-gentleman.md")
-	case model.AgentHermes:
-		return assets.MustRead("hermes/persona-gentleman.md")
 	default:
 		return assets.MustRead("generic/persona-gentleman.md")
 	}
@@ -727,14 +597,6 @@ func wrapInstructionsFile(content string) string {
 		"name: Axiom Persona\n" +
 		"description: Teaching-oriented persona with SDD orchestration and Engram protocol\n" +
 		"applyTo: \"**\"\n" +
-		"---\n\n"
-
-	return frontmatter + content
-}
-
-func wrapSteeringFile(content string) string {
-	frontmatter := "---\n" +
-		"inclusion: always\n" +
 		"---\n\n"
 
 	return frontmatter + content

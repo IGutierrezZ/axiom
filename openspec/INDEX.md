@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-25 16:58:08 UTC
-> **Total Dominios:** 54 | **Total Requerimientos:** 533 | **Total Escenarios BDD:** 2150
+> **Última Sincronización:** 2026-11-25 22:16:39 UTC
+> **Total Dominios:** 54 | **Total Requerimientos:** 531 | **Total Escenarios BDD:** 2144
 
 ---
 
@@ -42,7 +42,7 @@
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
 | `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 68 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
-| `persona-behavior-contract` | persona-behavior-contract Specification | 17 | 32 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
+| `persona-behavior-contract` | persona-behavior-contract Specification | 15 | 28 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
@@ -52,7 +52,7 @@
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 108 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 91 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 90 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
@@ -62,7 +62,7 @@
 | `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
 | `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
-| `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 7 | [Ver Spec](specs/visual-decoupling/spec.md) |
+| `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 6 | [Ver Spec](specs/visual-decoupling/spec.md) |
 | `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 102 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
@@ -1569,36 +1569,30 @@ Define the managed, provider-neutral instructions that project Gentle AI's
 - **[REQ-persona-behavior-contract-4]** Claude Neutral Output Style Contract
   - *Escenario BDD:* Claude neutral output-style is not default assistant behavior
   - *Escenario BDD:* Claude explicit Gentleman output-style remains honored
-- **[REQ-persona-behavior-contract-5]** Kimi Neutral Output Style Content
-  - *Escenario BDD:* Kimi neutral output-style is meaningful
-  - *Escenario BDD:* Kimi neutral output-style rejects placeholder-only content
-- **[REQ-persona-behavior-contract-6]** Generic Neutral Asset Parity
+- **[REQ-persona-behavior-contract-5]** Generic Neutral Asset Parity
   - *Escenario BDD:* Non-agent-specific consumers receive generic neutral parity
   - *Escenario BDD:* Agent-specific neutral assets do not weaken generic behavior
   - *Escenario BDD:* Output-style-capable adapters are evaluated on the combined channel
-- **[REQ-persona-behavior-contract-7]** Safe Persona Fallback Semantics
+- **[REQ-persona-behavior-contract-6]** Safe Persona Fallback Semantics
   - *Escenario BDD:* Missing persisted persona does not reactivate Gentleman
   - *Escenario BDD:* Invalid persisted persona does not reactivate Gentleman
   - *Escenario BDD:* Unreadable persisted persona does not reactivate Gentleman
-- **[REQ-persona-behavior-contract-8]** Explicit Persona Selection Preservation
+- **[REQ-persona-behavior-contract-7]** Explicit Persona Selection Preservation
   - *Escenario BDD:* Explicit Gentleman selection remains honored during sync
   - *Escenario BDD:* Explicit neutral selection remains honored during sync
   - *Escenario BDD:* Fallback does not override an explicit selection
-- **[REQ-persona-behavior-contract-9]** Canonical Tone Channel for Output-Style-Capable Adapters
-  - *Escenario BDD:* Claude and Kimi residual sections carry no tone content
-- **[REQ-persona-behavior-contract-10]** Persona Section Parity for Non-Output-Style Adapters
+- **[REQ-persona-behavior-contract-8]** Canonical Tone Channel for Output-Style-Capable Adapters
+  - *Escenario BDD:* Claude residual section carries no tone content
+- **[REQ-persona-behavior-contract-9]** Persona Section Parity for Non-Output-Style Adapters
   - *Escenario BDD:* Non-output-style adapter keeps full persona section
-- **[REQ-persona-behavior-contract-11]** Persona Drift Reconciliation
+- **[REQ-persona-behavior-contract-10]** Persona Drift Reconciliation
   - *Escenario BDD:* Gentleman and Neutral reconciliation preserve rules from both copies
-- **[REQ-persona-behavior-contract-12]** Idempotent Convergence on Re-Injection
+- **[REQ-persona-behavior-contract-11]** Idempotent Convergence on Re-Injection
   - *Escenario BDD:* Existing full section converges to residual, then stays stable
-- **[REQ-persona-behavior-contract-13]** Legacy Fingerprint Continuity
+- **[REQ-persona-behavior-contract-12]** Legacy Fingerprint Continuity
   - *Escenario BDD:* Uninstall and auto-heal fingerprints still match after slimming
-- **[REQ-persona-behavior-contract-14]** Kimi Non-Duplication and Documentation Accuracy
-  - *Escenario BDD:* Kimi delivers tone content once per session
-  - *Escenario BDD:* docs/agents.md reflects Kimi's real output-style status
-- **[REQ-persona-behavior-contract-15]** Per-Adapter Test and Golden Coverage
-  - *Escenario BDD:* Claude goldens capture the residual section; Kimi is covered by unit assertions
+- **[REQ-persona-behavior-contract-13]** Per-Adapter Test and Golden Coverage
+  - *Escenario BDD:* Claude goldens capture the residual section
   - *Escenario BDD:* Non-output-style adapter goldens remain unchanged
 - **[REQ-10.1 & REQ-10.2]** Axiom Persona Definition and Default Selection
   - *Escenario BDD:* Axiom persona is default and uses Peninsular Spanish
@@ -2557,11 +2551,11 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Non-Claude guidance forwards both strategy fields to sdd-apply on chained
   - *Escenario BDD:* Non-Claude con la entrega por defecto no reenvía `chain_strategy`
 - **[REQ-sdd-orchestrator-assets-5]** Platform-Native Solo Inline Semantics Preservation
-  - *Escenario BDD:* Windsurf and Antigravity keep inline-accurate wording
+  - *Escenario BDD:* Antigravity keeps inline-accurate wording
   - *Escenario BDD:* Other non-Claude platform-native assets avoid inaccurate persistence claims
 - **[REQ-sdd-orchestrator-assets-6]** chained-pr Skill Binding in Chain Strategy Guidance
   - *Escenario BDD:* Orchestrator resolves chained-pr skill by registry name on chained delivery
-  - *Escenario BDD:* Binding is present in all 12 orchestrator templates
+  - *Escenario BDD:* Binding is present in all orchestrator templates
   - *Escenario BDD:* sdd-tasks sub-agent reads chained-pr skill before planning PRs
   - *Escenario BDD:* sdd-apply sub-agent reads chained-pr skill before creating PRs
   - *Escenario BDD:* La skill chained-pr no menciona ningún umbral numérico
@@ -2575,9 +2569,8 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Cursor chain strategy naming is canonical
 - **[REQ-sdd-orchestrator-assets-9]** Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
   - *Escenario BDD:* Solo-inline binding wording is platform-accurate
-  - *Escenario BDD:* Platform-native non-Claude binding wording avoids inaccurate persistence claims
 - **[REQ-sdd-orchestrator-assets-10]** Golden Fixture and Static Assertion Coverage for the Binding
-  - *Escenario BDD:* New static assertions verify binding presence in all 12 templates
+  - *Escenario BDD:* New static assertions verify binding presence in all templates
   - *Escenario BDD:* Cursor is added to chain-strategy parity static assertions
   - *Escenario BDD:* Golden fixtures updated without unrelated churn
   - *Escenario BDD:* inject_test.go binding assertion passes
@@ -2998,7 +2991,6 @@ Definir de forma exhaustiva y verificable los requerimientos y escenarios de pru
   - *Escenario BDD:* Generación de temas opcionales Axiom
 - **[REQ-09.4]** Rutas de instrucciones con nomenclatura Axiom
   - *Escenario BDD:* Archivo de instrucciones en VS Code Copilot
-  - *Escenario BDD:* Archivo de steering en Kiro IDE
   - *Escenario BDD:* Directorio de modelos en Pi
 
 ### Dominio: `workspace-topology` — Especificación Viva: Topología de Workspace y CLI de Axiom

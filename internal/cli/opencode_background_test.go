@@ -299,7 +299,7 @@ func TestBackgroundPolicyForwardingIsOpenCodeOnly(t *testing.T) {
 	for _, tt := range []struct {
 		agent model.AgentID
 		want  bool
-	}{{model.AgentOpenCode, true}, {model.AgentKilocode, false}} {
+	}{{model.AgentOpenCode, true}} {
 		var got bool
 		injectSDD = func(_ string, adapter agents.Adapter, _ model.SDDModeID, options ...sdd.InjectOptions) (sdd.InjectionResult, error) {
 			if adapter.Agent() != tt.agent {
@@ -602,7 +602,7 @@ func TestSyncBackgroundPolicyForwardingIsOpenCodeOnly(t *testing.T) {
 	for _, tt := range []struct {
 		agent model.AgentID
 		want  bool
-	}{{model.AgentOpenCode, true}, {model.AgentKilocode, false}} {
+	}{{model.AgentOpenCode, true}} {
 		t.Run(string(tt.agent), func(t *testing.T) {
 			var got bool
 			injectSDD = func(_ string, adapter agents.Adapter, _ model.SDDModeID, options ...sdd.InjectOptions) (sdd.InjectionResult, error) {

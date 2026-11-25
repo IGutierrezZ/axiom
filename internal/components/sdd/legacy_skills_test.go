@@ -146,11 +146,11 @@ func TestRetireLegacyWorkspaceSkillsKeepsCopyWithoutReplacement(t *testing.T) {
 // la copia compartida exista (la copia se hace antes de instalar).
 func TestLegacyWorkspaceSkillFilesDoNotNeedSharedCopy(t *testing.T) {
 	root := t.TempDir()
-	legacy := filepath.Join(root, ".kilo", "skills")
+	legacy := filepath.Join(root, ".opencode", "skills")
 	shared := filepath.Join(root, ".agents", "skills")
-	installManagedSkills(t, legacy, model.AgentKilocode)
+	installManagedSkills(t, legacy, model.AgentOpenCode)
 
-	files := LegacyWorkspaceSkillFiles(legacy, shared, model.AgentKilocode)
+	files := LegacyWorkspaceSkillFiles(legacy, shared, model.AgentOpenCode)
 	want := filepath.Join(legacy, "go-testing", "SKILL.md")
 	found := false
 	for _, f := range files {

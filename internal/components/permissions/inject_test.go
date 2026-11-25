@@ -15,7 +15,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
@@ -79,7 +78,7 @@ func TestRemoteMatcherBoundaryFixtures(t *testing.T) {
 }
 
 func TestRemoteCommandApprovalDefaults(t *testing.T) {
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, id := range []model.AgentID{model.AgentOpenCode} {
 		for _, seed := range []string{`{}`, `{"permission":{"bash":{"*":"allow"}}}`, `{"permission":{"bash":{"*":"allow","ssh*":"deny"}}}`, `{"permission":"deny"}`, `{"permission":{"bash":"ask"}}`, `{"permission":{"bash":"deny"}}`, `{"permission":{"bash":{"*":"deny"}}}`, `{"permission":{"bash":{"*":"allow","ssh *":"deny"}}}`, `{"permission":{"bash":{"*":"allow","ssh*":"allow"}}}`} {
 			t.Run(string(id)+seed, func(t *testing.T) {
 				home := t.TempDir()
@@ -126,7 +125,6 @@ func qwenAdapter() agents.Adapter        { return qwen.NewAdapter() }
 func vscodeAdapter() agents.Adapter      { return vscode.NewAdapter() }
 func codexAdapter() agents.Adapter       { return codex.NewAdapter() }
 func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
-func hermesAdapter() agents.Adapter      { return hermes.NewAdapter() }
 
 // codexInjectedLegacyConfig mirrors a config.toml produced by the retired
 // gentle-dev permission profile injection, wrapped in user-authored content.
@@ -182,29 +180,6 @@ func writeCodexConfig(t *testing.T, home, content string) string {
 		t.Fatalf("WriteFile() error = %v", err)
 	}
 	return configPath
-}
-
-// TestInjectHermesSkipsPermissions verifies that Hermes returns nil (no file written)
-// because Hermes permission format is undocumented — §14 of spec.
-func TestInjectHermesSkipsPermissions(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-	if result.Changed {
-		t.Fatal("Inject(hermes) changed = true, want false (no file should be written)")
-	}
-	if len(result.Files) != 0 {
-		t.Fatalf("Inject(hermes) files = %v, want [] (no file should be written)", result.Files)
-	}
-
-	// Confirm no config.yaml or settings file was created.
-	hermesDir := filepath.Join(home, ".hermes")
-	if _, err := os.Stat(hermesDir); err == nil {
-		t.Fatal("Inject(hermes) created ~/.hermes directory, want no files written")
-	}
 }
 
 func TestInjectOpenCodeIsIdempotent(t *testing.T) {
@@ -334,7 +309,7 @@ func TestInjectNeverWritesAutoApprovalModes(t *testing.T) {
 	forbidden := []string{"bypassPermissions", "auto_edit", "chat.tools.autoApprove", "defaultMode", "defaultApprovalMode"}
 
 	for _, id := range []model.AgentID{
-		model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode,
+		model.AgentClaudeCode, model.AgentOpenCode,
 		model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot,
 	} {
 		t.Run(string(id), func(t *testing.T) {
@@ -365,7 +340,7 @@ func TestInjectNeverWritesAutoApprovalModes(t *testing.T) {
 					t.Errorf("%s settings contain %q:\n%s", id, word, content)
 				}
 			}
-			if id == model.AgentOpenCode || id == model.AgentKilocode {
+			if id == model.AgentOpenCode {
 				var settings struct {
 					Permission struct {
 						Bash map[string]string `json:"bash"`
@@ -432,7 +407,7 @@ func TestInjectLeavesUserAutoApprovalValuesUntouched(t *testing.T) {
 }
 
 func TestInjectOpenCodeKeepsUserCatchAllAllow(t *testing.T) {
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, id := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(id), func(t *testing.T) {
 			home := t.TempDir()
 			adapter, _ := agents.NewAdapter(id)
@@ -608,7 +583,6 @@ func TestTargetPathFollowsRoot(t *testing.T) {
 	}{
 		{model.AgentClaudeCode, []string{".claude", "settings.json"}, "claude"},
 		{model.AgentOpenCode, []string{".config", "opencode", "opencode.json"}, "opencode"},
-		{model.AgentKilocode, []string{".config", "kilo", "opencode.json"}, "kilocode"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			adapter, err := agents.NewAdapter(tt.id)
@@ -813,7 +787,7 @@ func TestInjectClaudeCodeSensitivePathsDenied(t *testing.T) {
 }
 
 // TestInjectOpenCodeSensitivePathsDenied verifies that the default sensitive-path
-// deny list is present in the OpenCode/Kilocode read permissions block.
+// deny list is present in the OpenCode read permissions block.
 func TestInjectOpenCodeSensitivePathsDenied(t *testing.T) {
 	sensitivePatterns := []string{
 		"**/.ssh/**",
@@ -1023,7 +997,7 @@ func injectSeeded(t *testing.T, id model.AgentID, seed string) (string, string, 
 // laxa que el "*" raíz entra en un mapa de herramienta que el usuario acotó,
 // donde seguiría a la regla raíz y ganaría como última coincidencia.
 func TestInjectKeepsUserDenyByDefault(t *testing.T) {
-	for _, id := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, id := range []model.AgentID{model.AgentOpenCode} {
 		t.Run(string(id), func(t *testing.T) {
 			home, path, adapter, raw := injectSeeded(t, id, `{"permission":{"*":"deny","bash":{"git status":"allow"}}}`)
 			var root struct {
@@ -1083,7 +1057,7 @@ func TestInjectKeepsUserAskByDefault(t *testing.T) {
 // Un "*" raíz en forma de mapa de patrones con deny también es deny por
 // defecto: el overlay no añade reglas más laxas y el filtro tolera esa forma.
 func TestInjectToleratesPatternMapRootDefault(t *testing.T) {
-	_, _, _, raw := injectSeeded(t, model.AgentKilocode, `{"permission":{"*":{"*":"deny"}}}`)
+	_, _, _, raw := injectSeeded(t, model.AgentOpenCode, `{"permission":{"*":{"*":"deny"}}}`)
 	var root struct {
 		Permission map[string]json.RawMessage `json:"permission"`
 	}

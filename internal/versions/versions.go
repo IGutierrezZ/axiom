@@ -3,7 +3,7 @@
 // by the customManager defined in renovate.json — keep them in the exact form
 // `// renovate: datasource=<ds> depName=<name>` immediately above each const.
 //
-// ClaudeCode, Kilocode, QwenCode, Codex, and GeminiCLI pins were removed here:
+// ClaudeCode, QwenCode, Codex, and GeminiCLI pins were removed here:
 // gentle-ai no longer installs agent runtimes on the user's behalf (see
 // agentInstallStep in internal/cli/run.go), and the display-only refusal
 // commands that used to read these pins now advise "latest" instead, since a

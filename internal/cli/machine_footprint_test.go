@@ -2,20 +2,16 @@ package cli
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // footprintEnv aísla un HOME y un workspace temporales y fija los seams de
@@ -209,34 +205,6 @@ func TestRetiredSkillRootsScope(t *testing.T) {
 	scoped := retiredSkillRoots(home, workspace, ScopeWorkspace, []agents.Adapter{adapter})
 	if len(scoped) != 1 || scoped[0] != workspaceRoot {
 		t.Errorf("workspace debe limpiar solo el proyecto, got %v", scoped)
-	}
-}
-
-// El hub de prompts de Kimi se crea en el proyecto con el ámbito workspace.
-func TestRunInstallWorkspaceKimiHubStaysInWorkspace(t *testing.T) {
-	home, workspace, _ := footprintEnv(t)
-	cmdLookPath = missingBinaryLookPath
-	restoreInstallcmdLookPath := installcmd.OverrideLookPath(func(name string) (string, error) {
-		if name == "uv" {
-			return "/usr/bin/uv", nil
-		}
-		return "", exec.ErrNotFound
-	})
-	t.Cleanup(restoreInstallcmdLookPath)
-	// Kimi se da por instalado: la prueba va del hub de prompts, no de la detección.
-	restoreKimiLookPath := kimi.LookPathOverride
-	kimi.LookPathOverride = func(string) (string, error) { return "/usr/local/bin/kimi", nil }
-	t.Cleanup(func() { kimi.LookPathOverride = restoreKimiLookPath })
-	allowUnselectableAgentsForTest(t)
-	before := homeSnapshotWithoutState(t, home)
-
-	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "kimi", "--component", "permissions"}, system.DetectionResult{}); err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
-	if _, err := os.Stat(filepath.Join(workspace, ".kimi", "KIMI.md")); err != nil {
-		t.Errorf("el hub de Kimi debe crearse en el workspace: %v", err)
 	}
 }
 

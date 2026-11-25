@@ -249,21 +249,6 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	model.AgentGitHubCopilotCLI: {
 		Skills: true, SystemPrompt: true, MCP: true,
 	},
-	model.AgentHermes: {
-		Skills: true, SystemPrompt: true, MCP: true,
-	},
-	model.AgentKilocode: {
-		SlashCommands: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
-	model.AgentKimi: {
-		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
-	model.AgentKiroIDE: {
-		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
-	model.AgentOpenClaw: {
-		Skills: true, SystemPrompt: true, MCP: true,
-	},
 	model.AgentOpenCode: {
 		SlashCommands: true, Skills: true, SystemPrompt: true, MCP: true,
 	},
@@ -278,8 +263,5 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	},
 	model.AgentVSCodeCopilot: {
 		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
-	},
-	model.AgentWindsurf: {
-		Skills: true, SystemPrompt: true, MCP: true, Workflows: true,
 	},
 }

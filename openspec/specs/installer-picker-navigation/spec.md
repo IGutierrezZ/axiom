@@ -10,25 +10,22 @@ Defines the navigation contract for the installer TUI's conditional picker chain
 
 ### Requirement: Declarative picker flow ordering
 
-The installer's conditional picker chain MUST be navigated forward from a single ordered source of truth, filtered by the per-selection `shouldShow*` predicates. The forward order is:
-
-```
-Claude → Kiro → Codex → SDDMode → ModelPicker → StrictTDD → OpenCodePlugins → DependencyTree
-```
+The installer's conditional picker chain MUST be navigated forward from a single ordered source of truth, filtered by the per-selection `shouldShow*` predicates. The forward order is `Claude → Codex → SDDMode → ModelPicker → StrictTDD → OpenCodePlugins → DependencyTree`.
 
 `ScreenModelPicker` MUST be included when `SDDMode == Multi`. It asynchronously discovers the active project's effective OpenCode catalog after opening, so no private model-cache file gates navigation. No screen may appear out of this order, and none may be skipped unless its predicate is false. When `Preset == PresetCustom`, `ScreenDependencyTree` precedes the picker sequence (component selector first) instead of being the terminal anchor.
+(Previously: the chain included a Kiro picker between Claude and Codex; Kiro is retired by C-08-d.)
 
 #### Scenario: All agents selected, full forward pass
 
 - GIVEN all `shouldShow*` predicates return true and `SDDMode == Multi`
 - WHEN the user confirms each picker screen in sequence
-- THEN the screens visited in order are Claude → Kiro → Codex → SDDMode → ModelPicker → StrictTDD → OpenCodePlugins → DependencyTree
+- THEN the screens visited in order are Claude → Codex → SDDMode → ModelPicker → StrictTDD → OpenCodePlugins → DependencyTree
 
 #### Scenario: Eligible-only screens are visited
 
-- GIVEN `shouldShowKiro` is false and all other predicates are true
+- GIVEN `shouldShowCodex` is false and all other predicates are true
 - WHEN the user confirms Claude and continues
-- THEN the next screen is Codex (Kiro is skipped)
+- THEN the next screen is SDDMode (Codex is skipped)
 
 #### Scenario: ModelPicker is independent of private cache state
 
@@ -44,12 +41,12 @@ Claude → Kiro → Codex → SDDMode → ModelPicker → StrictTDD → OpenCode
 
 - GIVEN `Preset == PresetCustom`
 - WHEN navigation enters the picker chain
-- THEN DependencyTree appears first (before Claude/Kiro/Codex), not last
-
+- THEN DependencyTree appears first (before Claude/Codex), not last
 
 ### Requirement: Symmetric reverse navigation
 
 Backward navigation MUST be the exact reverse of forward navigation and MUST be identical whether triggered by Esc or by selecting the "← Back" row. Both mechanisms read the same flow slice.
+(Previously: the Codex back-row scenario used the Kiro picker as the previous screen.)
 
 #### Scenario: SDDMode back returns to Codex when Codex is in the flow
 
@@ -59,9 +56,9 @@ Backward navigation MUST be the exact reverse of forward navigation and MUST be 
 
 #### Scenario: Codex "← Back" row is not inert
 
-- GIVEN Kiro is in the flow (`shouldShowKiro` is true) and the user is on ScreenCodex
+- GIVEN Claude is in the flow (`shouldShowClaude` is true) and the user is on ScreenCodex
 - WHEN the user selects "← Back" on ScreenCodex
-- THEN the current screen is ScreenKiro
+- THEN the current screen is ScreenClaude
 
 #### Scenario: Full round-trip symmetry for any agent subset
 
@@ -95,7 +92,7 @@ The `ModelConfigMode` exit-ramp, the `OpenCodePluginsStandalone` guard, and the 
 | SDDMode back → Codex, Codex back not inert | `TestInstallNavigationRoundTrips` regression cases + `TestPickerBackRowRegression` |
 | ModelPicker gate (multi / cache) | `pickerFlowSlice` unit rows in `model_test.go` |
 | PresetCustom inversion | `TestCustomPresetPostComponentFlowMatrix` |
-| First-picker entry incl. Kiro/Codex-first | `TestPresetConfirmEntersFirstPickerInFlow` |
+| First-picker entry incl. Codex-first | `TestPresetConfirmEntersFirstPickerInFlow` |
 | ModelConfigMode / OpenCodePlugins guards | existing guard tests (unchanged) |
 
 ---

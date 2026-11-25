@@ -141,7 +141,7 @@ func isManagedMCPServer(name string, value any) bool {
 			args, _ := entry["args"].([]any)
 			return isEngramBinary(command) && len(args) > 0 && args[0] == "mcp"
 		}
-		// OpenCode y Kilo: command es la lista completa.
+		// OpenCode: command es la lista completa.
 		if command, ok := entry["command"].([]any); ok && len(command) >= 2 {
 			first, _ := command[0].(string)
 			return isEngramBinary(first) && command[1] == "mcp"
@@ -206,7 +206,7 @@ func (s *Service) rewriteManagedMCPServer(path string, parent jsonPath, name str
 
 // managedMCPOperations devuelve las operaciones que retiran el servidor MCP name
 // (context7 o engram) de la configuración de un agente, sobre la raíz del ámbito
-// (el proyecto en workspace; la carpeta de usuario en global, donde solo la usa Kilo).
+// (el proyecto en workspace; la carpeta de usuario en global).
 // Solo se retiran las entradas con la forma de Axiom; el resto del fichero es del
 // usuario o del equipo.
 func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (targets []string, ops []operation) {
@@ -238,10 +238,8 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 	case model.StrategyMergeIntoSettings:
 		parent := jsonPath{"mcpServers"}
 		switch adapter.Agent() {
-		case model.AgentOpenCode, model.AgentKilocode:
+		case model.AgentOpenCode:
 			parent = jsonPath{"mcp"}
-		case model.AgentOpenClaw:
-			parent = jsonPath{"mcp", "servers"}
 		}
 		for _, path := range s.settingsTargets(adapter) {
 			targets = append(targets, path)
@@ -442,7 +440,7 @@ func removeCodexDeveloperInstructionsBlock(content, key string) (string, bool) {
 }
 
 // instructionsEntryRemoval retira de la lista instructions del fichero de
-// configuración de OpenCode o Kilo la entrada que registra el fichero de Axiom.
+// configuración de OpenCode la entrada que registra el fichero de Axiom.
 func instructionsEntryRemoval(entry string) func(raw []byte) ([]byte, bool, error) {
 	return func(raw []byte) ([]byte, bool, error) {
 		root, err := unmarshalJSONObject(raw)
@@ -519,7 +517,7 @@ func contextFileNameRemoval(entry string, defaults []string) func(raw []byte) ([
 }
 
 // removeManagedAgentEntries retira de agent.* las definiciones que llevan la marca
-// de Axiom y deja las del usuario. El overlay de OpenCode y Kilo ya no escribe el
+// de Axiom y deja las del usuario. El overlay de OpenCode ya no escribe el
 // marcador __managed_by, así que se identifican por nombre y forma (orquestador,
 // fases de SDD, jueces, revisores y perfiles), y el marcador heredado de las
 // instalaciones previas sigue valiendo.
@@ -580,13 +578,12 @@ func marshalLike(raw []byte, root map[string]any) ([]byte, bool, error) {
 }
 
 // stripManagedFrontmatter quita la cabecera que Axiom escribe al crear un fichero
-// de instrucciones con cabecera propia (VS Code y Kiro).
+// de instrucciones con cabecera propia (VS Code).
 func stripManagedFrontmatter(content string) string {
 	normalized := strings.ReplaceAll(content, "\r\n", "\n")
 	for _, header := range []string{
 		filemerge.SDDInstructionsFrontmatter,
 		filemerge.LegacySDDInstructionsFrontmatter,
-		filemerge.SDDSteeringFrontmatter,
 	} {
 		if strings.HasPrefix(normalized, header) {
 			return normalized[len(header):]

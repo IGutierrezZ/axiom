@@ -44,10 +44,6 @@ func (profileResolver) ResolveAgentInstall(profile system.PlatformProfile, agent
 		return resolveClaudeCodeInstall(profile), nil
 	case model.AgentOpenCode:
 		return resolveOpenCodeInstall(profile)
-	case model.AgentKilocode:
-		return resolveKilocodeInstall(profile), nil
-	case model.AgentKimi:
-		return resolveKimiInstall(profile)
 	case model.AgentGitHubCopilotCLI:
 		return resolveCopilotCLIInstall(profile), nil
 	default:
@@ -75,18 +71,6 @@ func resolveClaudeCodeInstall(profile system.PlatformProfile) CommandSequence {
 	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
 }
 
-// resolveKilocodeInstall returns the npm install command sequence gentle-ai
-// shows for Kilocode — display text only, never executed by gentle-ai. On
-// Linux with system npm, sudo is required. With nvm/fnm/volta, it is not.
-// On Windows and macOS, sudo is never needed.
-func resolveKilocodeInstall(profile system.PlatformProfile) CommandSequence {
-	const pkg = "@kilocode/cli@latest"
-	if profile.OS == "linux" && !profile.NpmWritable {
-		return CommandSequence{{"sudo", "npm", "install", "-g", "--ignore-scripts", pkg}}
-	}
-	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
-}
-
 // resolveCopilotCLIInstall devuelve el comando npm que se muestra para GitHub
 // Copilot CLI; es solo texto, Axiom no lo ejecuta. En Linux con npm del sistema
 // hace falta sudo; con nvm/fnm/volta, no. En Windows y macOS nunca.
@@ -103,20 +87,6 @@ func resolveCopilotCLIInstall(profile system.PlatformProfile) CommandSequence {
 	return CommandSequence{{"npm", "install", "-g", "--ignore-scripts", pkg}}
 }
 
-// resolveKimiInstall returns the official Kimi install command sequence.
-// To avoid the security risks of pipe-to-shell patterns (curl | bash),
-// we execute the underlying command that the scripts alias: `uv tool install`.
-func resolveKimiInstall(profile system.PlatformProfile) (CommandSequence, error) {
-	// Kimi CLI is a python-based tool. We use Astral's `uv` as our deterministic
-	// prerequisite manager to ensure secure and isolated installs.
-	if !profile.Supported {
-		return nil, fmt.Errorf("Kimi is not supported on this platform (%s/%s)", profile.OS, profile.LinuxDistro)
-	}
-
-	// We explicitly request python 3.13 as strictly defined by Kimi upstream.
-	return CommandSequence{{"uv", "tool", "install", "--python", "3.13", "kimi-cli"}}, nil
-}
-
 // npmBasedAgents is the set of agents whose auto-install runs npm commands.
 // When any of these agents is selected, npm (and therefore Node.js) must be
 // present before the pipeline reaches the agent install step.
@@ -127,7 +97,6 @@ func resolveKimiInstall(profile system.PlatformProfile) (CommandSequence, error)
 var npmBasedAgents = map[model.AgentID]struct{}{
 	model.AgentClaudeCode: {},
 	model.AgentOpenCode:   {},
-	model.AgentKilocode:   {},
 	model.AgentGeminiCLI:  {},
 	model.AgentCodex:      {},
 	model.AgentQwenCode:   {},
@@ -145,8 +114,6 @@ func ValidateAgentInstallPreflight(profile system.PlatformProfile, agent model.A
 		}
 	}
 	switch agent {
-	case model.AgentKimi:
-		return validateKimiInstallPreflight(profile)
 	case model.AgentPi:
 		return validatePiInstallPreflight()
 	default:
@@ -181,46 +148,6 @@ func validateNpmInstallPreflight(profile system.PlatformProfile) error {
 		return fmt.Errorf("%s", msg)
 	}
 	return nil
-}
-
-func validateKimiInstallPreflight(profile system.PlatformProfile) error {
-	if !profile.Supported {
-		return fmt.Errorf("Kimi is not supported on this platform (%s/%s)", profile.OS, profile.LinuxDistro)
-	}
-
-	if _, err := cmdLookPath("uv"); err != nil {
-		msg := fmt.Sprintf(
-			"Kimi requires Astral uv, but `uv` was not found in PATH.\n"+
-				"Install uv and retry:\n"+
-				"  %s",
-			uvInstallHint(profile),
-		)
-		if profile.PackageManager == "rpm-ostree" {
-			msg += "\nIf a pending deployment prevents --apply-live, stage without it and reboot:\n  rpm-ostree install -y uv && systemctl reboot"
-		}
-		return fmt.Errorf("%s", msg)
-	}
-
-	return nil
-}
-
-func uvInstallHint(profile system.PlatformProfile) string {
-	switch profile.PackageManager {
-	case "brew":
-		return "brew install uv"
-	case "apt":
-		return "sudo apt-get install -y uv (or see https://docs.astral.sh/uv/getting-started/installation/)"
-	case "pacman":
-		return "sudo pacman -S --noconfirm uv"
-	case "dnf":
-		return "sudo dnf install -y uv"
-	case "rpm-ostree":
-		return "rpm-ostree install -y --apply-live uv (or see https://docs.astral.sh/uv/getting-started/installation/)"
-	case "winget":
-		return "winget install --id astral-sh.uv -e --accept-source-agreements --accept-package-agreements"
-	default:
-		return "https://docs.astral.sh/uv/getting-started/installation/"
-	}
 }
 
 func (profileResolver) ResolveComponentInstall(profile system.PlatformProfile, component model.ComponentID) (CommandSequence, error) {

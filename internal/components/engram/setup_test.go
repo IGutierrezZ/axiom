@@ -58,14 +58,11 @@ func TestSetupAgentSlug(t *testing.T) {
 		{model.AgentGeminiCLI, "gemini-cli", true},
 		{model.AgentCodex, "codex", true},
 		{model.AgentAntigravity, "gemini-cli", true},
-		{model.AgentWindsurf, "windsurf", true},
 		{model.AgentQwenCode, "", false},
 		{model.AgentCursor, "", false},
 		{model.AgentVSCodeCopilot, "", false},
 		// Copilot CLI recibe el MCP directamente en mcp-config.json.
 		{model.AgentGitHubCopilotCLI, "", false},
-		// Hermes MCP is injected directly via YAML helpers — no engram setup slug.
-		{model.AgentHermes, "", false},
 	}
 
 	for _, tt := range tests {

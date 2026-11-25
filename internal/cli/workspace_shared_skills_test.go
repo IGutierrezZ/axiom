@@ -13,7 +13,7 @@ import (
 )
 
 // Con --scope workspace, los agentes que leen .agents/skills (Codex, VS Code Copilot,
-// OpenCode, Kilo, Gemini CLI y Cursor) comparten una sola copia de las skills de Axiom;
+// OpenCode, Gemini CLI y Cursor) comparten una sola copia de las skills de Axiom;
 // Claude Code, que no la lee, conserva .claude/skills. Las pruebas de este fichero fijan
 // ese reparto, la migración de las carpetas propias de instalaciones anteriores y que
 // el global no cambia.
@@ -24,7 +24,6 @@ var legacyAgentSkillDirs = []string{
 	filepath.Join(".github", "skills"),
 	filepath.Join(".gemini", "skills"),
 	filepath.Join(".opencode", "skills"),
-	filepath.Join(".kilo", "skills"),
 	filepath.Join(".cursor", "skills"),
 	filepath.Join(".codex", "skills"),
 }

@@ -12,15 +12,14 @@
 Permite a los usuarios operar las tareas de mantenimiento, diagnóstico y configuración del ecosistema de desarrollo de Axiom directamente desde el Dashboard Web SPA (`axiom ui`).
 
 ### Requirement: Diagnóstico de Salud del Sistema (Axiom Doctor) en Web UI (REQ-17.1)
-El servidor HTTP local DEBE exponer el endpoint `GET /api/ecosystem/doctor` que recopila y retorna el estado de salud de los agentes compatibles (Claude Code, OpenCode, Kiro, Codex, Pi), herramientas del sistema (Git, Go, Node.js), permisos del directorio de usuario (`~/.axiom/`) y configuración general. El frontend web DEBE renderizar estos diagnósticos en tarjetas con indicadores visuales claros (verde: saludable, amarillo: advertencia, rojo: error).
+El servidor HTTP local DEBE exponer el endpoint `GET /api/ecosystem/doctor` que recopila y retorna el estado de salud de los agentes compatibles (Claude Code, OpenCode, Codex, Pi), herramientas del sistema (Git, Go, Node.js), permisos del directorio de usuario (`~/.axiom/`) y configuración general. El frontend web DEBE renderizar estos diagnósticos en tarjetas con indicadores visuales claros (verde: saludable, amarillo: advertencia, rojo: error).
+(Previously: la lista de agentes incluía Kiro, retirado por C-08-d.)
 
 #### Scenario: Consulta de diagnóstico de salud del sistema
 - **DADO** el servidor del Dashboard Web activo
 - **CUANDO** se realiza una petición `GET /api/ecosystem/doctor`
 - **ENTONCES** el servidor responde con código `200 OK`
 - **Y** el cuerpo JSON contiene la lista de diagnósticos con campos `name`, `status` (`ok`, `warning`, `error`), `details` y `recommendation`
-
----
 
 ### Requirement: Sincronización y Actualización Reactiva de Herramientas en Web UI (REQ-17.2)
 El servidor HTTP local DEBE exponer los endpoints `POST /api/ecosystem/sync` y `POST /api/ecosystem/upgrade`. El endpoint `POST /api/ecosystem/upgrade` DEBE ejecutar secuencialmente la cadena `upgrade` ➔ `sync` con reporte estructurado por fases (`phases.upgrade`, `phases.sync`), omitiendo `sync` de forma segura si `upgrade` exige reinicio del proceso (`restart_required: true`). El frontend web DEBE ofrecer botones de acción interactiva en la pestaña `⚙️ Ecosistema & Herramientas` y mostrar un registro de salida con los resultados detallados de la operación.

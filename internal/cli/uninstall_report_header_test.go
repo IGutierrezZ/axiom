@@ -12,13 +12,13 @@ import (
 // reads the header before the manual-cleanup detail printed further down.
 func TestRenderUninstallReportHeaderNamesAPartialBatch(t *testing.T) {
 	report := RenderUninstallReport(componentuninstall.Result{
-		FailedAgents: []model.AgentID{model.AgentHermes},
+		FailedAgents: []model.AgentID{model.AgentQwenCode},
 	})
 	header := strings.SplitN(report, "\n", 2)[0]
 	if !strings.Contains(header, "partially complete") {
 		t.Fatalf("header = %q, want it to name the batch as partial", header)
 	}
-	if !strings.Contains(header, "Hermes") && !strings.Contains(header, "hermes") {
+	if !strings.Contains(header, "Qwen") && !strings.Contains(header, "qwen-code") {
 		t.Fatalf("header = %q, want it to name the failed agent", header)
 	}
 }
