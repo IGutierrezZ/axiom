@@ -47,7 +47,11 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
   - Arreglo: `isolatedStateStore` hace `t.Chdir` a un directorio vacío antes de resolver el almacén; sustituye las 14 llamadas de `doctor_test.go`.
   - Evidencia: con `.axiom/state.json` copiado al worktree, `-run 'TestCheckInstalledAssetVersion_|TestCheckStateJSON_|TestDoctor|TestRunDoctor'` solo falla en `TestRunDoctor_GGARequiredWhenSelected` y `TestRunDoctor_FootprintShowsSelectedGGAAsOptional`.
   - Esos dos de GGA fallan por la misma fuga (sin el fichero pasan), pero el plan los deja fuera: desaparecen con C-08-e.
-- [ ] T4. `app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `TestDeferredSyncIncludesCodexPermissionsArgs`. Ruta: inline.
+- [x] T4. `app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `TestDeferredSyncIncludesCodexPermissionsArgs`. Ruta: inline.
+  - `TestTuiInstall...`: **defecto real** (commit `7ef7f55a`). El lanzador gestionado `~/.axiom/bin/opencode.cmd` escribía la ruta larga del runtime (`C:\Users\IñigoGutiérrezZufia\...`) en UTF-8; `cmd.exe` lee el `.cmd` con la página de códigos OEM y devolvía «El sistema no puede encontrar la ruta especificada» (exit 3), así que la detección de versión fallaba. Lo mismo pasa con el `.ps1` en Windows PowerShell 5.1. Afecta a cualquier usuario con un perfil no ASCII. Arreglo: `windowsLauncherTarget` escribe la forma corta 8.3 (ASCII) si la larga no es ASCII y el volumen la tiene; si no, conserva la larga. Pruebas: `TestWindowsLauncherTargetUsesASCIIShortPathForNonASCIITargets` (con `shortPathName` simulado) y `TestPlatformShortPathNamePointsAtTheSameFile` (Windows real; se omite si el volumen no tiene nombres 8.3).
+  - `TestDeferredSync...`: la misma fuga de T3 (`syncArgsForDiscoveredAgents` usa `EffectiveStateStore` desde el directorio actual). Arreglo: `t.Chdir(t.TempDir())`.
+  - Evidencia: con `.axiom/state.json` copiado al worktree, los dos tests en `PASS`; `go test ./internal/opencode/` en `ok`; `GOOS=linux go vet ./internal/opencode/` limpio.
+  - Sin impacto en la spec viva: el lanzador sigue invocando el mismo runtime; cambia solo la forma de la ruta escrita.
 - [ ] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
 
 ## Criterio de terminado
