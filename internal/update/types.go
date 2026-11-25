@@ -44,8 +44,7 @@ const (
 	InstallGoInstall InstallMethod = "go-install"
 	InstallBinary    InstallMethod = "binary"
 	// InstallScript downloads and executes the project's install.sh via pipe.
-	// Used for tools that distribute via shell scripts rather than pre-built binaries
-	// (e.g., GGA which has no release binary assets).
+	// Used for tools that distribute via shell scripts rather than pre-built binaries.
 	InstallScript InstallMethod = "script"
 	// InstallOpenCodePlugin is a manual upgrade method: Gentle AI registers the
 	// package in tui.json, and OpenCode owns package resolution on restart/reload.

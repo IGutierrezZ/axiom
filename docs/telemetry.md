@@ -13,10 +13,9 @@ any telemetry server, including the upstream Gentle AI one.
 
 ## Cleanup of earlier installs
 
-`axiom sync` and `axiom install` remove the Axiom telemetry hooks and the
-Axiom-owned OpenCode `telemetry-runtime.ts` plugin left by earlier versions. A
-copy you edited yourself is kept, and Axiom prints a warning so you can delete
-it by hand.
+Axiom no longer removes what earlier versions installed. Delete the leftover
+telemetry hooks and the OpenCode `telemetry-runtime.ts` plugin by hand: the
+list is in [`releases/notas-retirada-gga-telemetria.md`](releases/notas-retirada-gga-telemetria.md).
 
 ## `~/.gentle-ai/telemetry.json`
 

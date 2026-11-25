@@ -17,7 +17,7 @@ Use this page when you know what you need to change but not where it belongs.
 | `internal/system/` | OS detection, dependency checks, path guards. | Agent config injection. |
 | `internal/planner/` | Dependency graph resolution and component ordering. | UI rendering or file writes. |
 | `internal/pipeline/` | Staged execution, progress, rollback policy. | Component decision logic. |
-| `internal/components/` | Reusable component injection and verification helpers, including Engram, SDD, MCP, persona, skills, GGA, community tools, OpenCode plugins, uninstall, and file merge helpers. | Per-agent strategy definitions. |
+| `internal/components/` | Reusable component injection and verification helpers, including Engram, SDD, MCP, persona, skills, community tools, OpenCode plugins, uninstall, and file merge helpers. | Per-agent strategy definitions. |
 | `internal/components/communitytool/` | Community tool installation orchestration plus managed guidance/config/MCP reconciliation, currently for CodeGraph. | OpenCode plugin registration or external tool runtime implementation. |
 | `internal/components/uninstall/` | Managed cleanup services for installed component artifacts. | Interactive TUI state or backup storage. |
 | `internal/agents/` | Adapter strategy, config paths, capability flags per agent. | Shared component behavior. |

@@ -23,7 +23,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
@@ -368,7 +367,7 @@ func parseModelSpec(spec string) (model.ModelAssignment, error) {
 
 // BuildSyncSelection builds a model.Selection for the sync command.
 //
-// Default sync scope: SDD, Engram, Context7, GGA, Skills, Persona.
+// Default sync scope: SDD, Engram, Context7, Skills, Persona.
 // Excluded by default: Permissions, Theme (no markers; managed via JSON
 // overlays where user customization cannot be safely diff-merged).
 // Permissions and Theme can be opted-in via flags.
@@ -393,9 +392,6 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 		model.ComponentContext7,
 		model.ComponentSkills,
 	}
-	// GGA es opcional: ya no se sincroniza por defecto. Las instalaciones que lo
-	// tenían lo conservan por el estado persistido (RestorePersistedSelection) o,
-	// sin estado, por detección (restoreDetectedGGA).
 
 	if flags.IncludePermissions {
 		components = append(components, model.ComponentPermission)
@@ -487,18 +483,6 @@ func RestorePersistedSelection(selection *model.Selection, persisted state.Insta
 	if model.CarriesSDDWork(explicit.Profiles, explicit.ModelAssignments) {
 		selection.EnsureComponent(model.ComponentSDD)
 	}
-}
-
-// RestoreDetectedGGA mantiene GGA en la selección de sync cuando no hay una
-// selección persistida (estado anterior a las selecciones o ausente) pero Axiom
-// ya aprovisionó GGA en este HOME. Con una selección persistida esa lista manda
-// y no se toca: GGA se conserva si ya figuraba en ella y no se añade si no.
-// Así, sacar GGA de los presets solo afecta a las instalaciones nuevas.
-func RestoreDetectedGGA(homeDir string, selection *model.Selection, persisted state.InstallState) {
-	if persisted.SelectionConfigured || !gga.Managed(homeDir) {
-		return
-	}
-	selection.EnsureComponent(model.ComponentGGA)
 }
 
 func setSelectionComponent(selection *model.Selection, component model.ComponentID, configured, included bool) {
@@ -726,10 +710,6 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 		apply = append(apply, piCodeGraphSyncStep{id: "sync:community-tool:pi-codegraph", homeDir: r.homeDir, workspaceDir: r.workspaceDir, changedFiles: &r.changedFiles})
 	}
 
-	// Retire last so a failing earlier step never leaves the plugin half-removed.
-	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs); telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryRetirementStep{id: "sync:opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
-	}
 	if legacy := legacyPromptAdapters(adapters); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
 			id:       "sync:retire-legacy-prompt-files",
@@ -1442,33 +1422,6 @@ func (s componentSyncStep) Run() error {
 		}
 		return nil
 
-	case model.ComponentGGA:
-		// Sync: ensure runtime assets are current and inject config.
-		// NO binary install.
-		if err := gga.EnsureRuntimeAssets(s.homeDir); err != nil {
-			return fmt.Errorf("sync gga runtime assets: %w", err)
-		}
-		if runtime.GOOS == "windows" {
-			if err := gga.EnsurePowerShellShim(s.homeDir); err != nil {
-				return fmt.Errorf("ensure gga powershell shim: %w", err)
-			}
-		}
-		res, err := gga.Inject(s.homeDir, s.agents)
-		if err != nil {
-			return fmt.Errorf("sync gga config: %w", err)
-		}
-		// Count GGA files changed based on individual Changed flags.
-		total := boolToInt(res.ConfigChanged) + boolToInt(res.AgentsChanged)
-		var ggaFiles []string
-		if res.ConfigChanged && res.ConfigFile != "" {
-			ggaFiles = append(ggaFiles, res.ConfigFile)
-		}
-		if res.AgentsChanged && res.AgentsFile != "" {
-			ggaFiles = append(ggaFiles, res.AgentsFile)
-		}
-		s.countChanged(total, ggaFiles...)
-		return nil
-
 	case model.ComponentPermission:
 		// Opt-in only — reached when --include-permissions is set.
 		for _, adapter := range adapters {
@@ -1896,7 +1849,6 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
 	restorePersistedCommunityTools(homeDir, &selection, persistedState)
-	RestoreDetectedGGA(homeDir, &selection, persistedState)
 
 	// Resolve persona from persisted state when the caller has not provided one.
 	// RunSync already resolves persona before delegating here, so on the CLI path
@@ -2176,6 +2128,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	// errors stop sync before any persona mutation or asset write.
 	persistedState, persistedStateErr := syncStateStore.Read()
 	noteIgnoredStateAgents(persistedState.IgnoredAgents)
+	noteIgnoredStateComponents(persistedState.IgnoredComponents)
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}

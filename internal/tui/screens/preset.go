@@ -18,8 +18,8 @@ func PresetOptions() []model.PresetID {
 
 var presetDescriptions = map[model.PresetID]string{
 	model.PresetMinimal:       "Just Engram persistent memory across sessions",
-	model.PresetEcosystemOnly: "Memoria + SDD + skills + docs (GGA y CodeGraph son opcionales)",
-	model.PresetFullGentleman: "Ecosistema completo; GGA y CodeGraph son opcionales",
+	model.PresetEcosystemOnly: "Memoria + SDD + skills + docs (CodeGraph es opcional)",
+	model.PresetFullGentleman: "Ecosistema completo; CodeGraph es opcional",
 	model.PresetCustom:        "Elige cada componente: memoria, persona, herramientas y más",
 }
 

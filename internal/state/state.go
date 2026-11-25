@@ -165,6 +165,11 @@ type InstallState struct {
 	// No se persiste: la siguiente escritura del estado ya no los incluye.
 	IgnoredAgents []string `json:"-"`
 
+	// IgnoredComponents son los componentes de components que Axiom ya no admite
+	// (por ejemplo, GGA). Igual que IgnoredAgents: se descartan al leer el estado
+	// para que siga cargando, quien lo lee puede avisar y no se persisten.
+	IgnoredComponents []model.ComponentID `json:"-"`
+
 	// LastUpdateCheck records the last time a successful remote update check was
 	// performed. Used by the cooldown gate (UpdateCheckTTL = 6h) to avoid
 	// hitting the GitHub API on every launch. Nil = never checked, so the
@@ -214,6 +219,7 @@ func (s *InstallState) UnmarshalJSON(data []byte) error {
 	*s = InstallState(decoded)
 	_, s.PersonaPresent = fields["persona"]
 	s.InstalledAgents, s.IgnoredAgents = splitKnownAgents(s.InstalledAgents)
+	s.Components, s.IgnoredComponents = splitKnownComponents(s.Components)
 	return nil
 }
 
@@ -385,6 +391,23 @@ func marshal(s InstallState) ([]byte, error) {
 		return nil, err
 	}
 	return append(data, '\n'), nil
+}
+
+// splitKnownComponents separa los componentes que Axiom admite de los retirados.
+// Conserva el orden de los conocidos.
+func splitKnownComponents(ids []model.ComponentID) (known, ignored []model.ComponentID) {
+	if ids == nil {
+		return nil, nil
+	}
+	known = make([]model.ComponentID, 0, len(ids))
+	for _, id := range ids {
+		if model.IsKnownComponentID(id) {
+			known = append(known, id)
+			continue
+		}
+		ignored = append(ignored, id)
+	}
+	return known, ignored
 }
 
 // splitKnownAgents separa los agentes que el catálogo conoce de los que no (por

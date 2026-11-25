@@ -13,7 +13,7 @@
 | Linux (Fedora Silverblue) | rpm-ostree | Supported |
 | Windows 10/11 | `go install` (Go toolchain) | Supported (binary distribution held) |
 
-The "Package Manager" column is the system manager Axiom uses for dependencies. Axiom itself is not distributed through Homebrew: on Linux/macOS it comes from the signed release archive (`curl -fsSL .../scripts/install.sh | bash`) and on Windows from `go install` (`irm .../scripts/install.ps1 | iex`). The Homebrew tap of Gentleman Programming only serves `engram` and `gga`.
+The "Package Manager" column is the system manager Axiom uses for dependencies. Axiom itself is not distributed through Homebrew: on Linux/macOS it comes from the signed release archive (`curl -fsSL .../scripts/install.sh | bash`) and on Windows from `go install` (`irm .../scripts/install.ps1 | iex`). The Homebrew tap of Gentleman Programming only serves `engram`.
 
 Derivatives are detected via `ID_LIKE` in `/etc/os-release` (Linux Mint, Pop!_OS, Manjaro, EndeavourOS, CentOS Stream, Rocky Linux, AlmaLinux, etc.).
 
@@ -58,9 +58,8 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 - **npm global installs** do not require `sudo` on Windows (user-writable by default).
 - **curl** is pre-installed on Windows 10+ and does not require separate installation.
 - **PowerShell** is the default shell when `$SHELL` is not set.
-- **GGA on Windows** works from both Git Bash and PowerShell. Axiom installs a `gga.ps1` shim that automatically delegates to Git Bash, so no manual shell switching is required.
 - **PowerShell source-installer output** is forced to UTF-8 and installs through Go's configured `GOBIN`/`GOPATH`.
-- **Fresh install detection** falls back to known Engram™/GGA install locations when the running process has a stale `PATH`.
+- **Fresh install detection** falls back to known Engram™ install locations when the running process has a stale `PATH`.
 - **Running the test suite on Windows** (contributors): see [Windows test policy](testing/windows-tests.md) for focused local runs, symlink skips, `TEMP` placement, and when CI runs the Windows tests.
 
 ---

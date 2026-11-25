@@ -25,8 +25,8 @@ func captureWorkspaceAgentsNotice(t *testing.T) *bytes.Buffer {
 }
 
 // workspaceAgentsFixture monta el proyecto con git y el HOME aislados de projectStateFixture y,
-// además, aísla APPDATA y XDG_CONFIG_HOME: la detección de GGA lee de ahí y un GGA real de
-// la máquina haría que el sync lo escribiera en el HOME de la prueba.
+// además, aísla APPDATA y XDG_CONFIG_HOME: la detección de herramientas lee de ahí y una instalación real de
+// la máquina haría que el sync la escribiera en el HOME de la prueba.
 func workspaceAgentsFixture(t *testing.T) (rootA, rootB, home string) {
 	t.Helper()
 	t.Setenv("APPDATA", t.TempDir())

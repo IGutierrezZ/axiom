@@ -24,7 +24,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
@@ -268,10 +267,6 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 func managedGlobalBackupPaths(homeDir string) []string {
 	return []string{
 		state.Path(homeDir),
-		gga.ConfigPath(homeDir),
-		gga.AgentsTemplatePath(homeDir),
-		gga.RuntimePRModePath(homeDir),
-		gga.RuntimePS1Path(homeDir),
 	}
 }
 

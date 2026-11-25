@@ -51,16 +51,8 @@ func TestCompleteUninstallRemovesOnlyTheManagedPathEntries(t *testing.T) {
 
 	engramDir := filepath.Join(localAppData, "engram", "bin")
 	launchersDir := system.BinDir(home)
-	ggaBin := filepath.Join(home, "bin")
 	foreign := []string{filepath.Join(t.TempDir(), "herramientas"), filepath.Join(t.TempDir(), "otras")}
-	// GGA lo gestiona Axiom: sus shims están en HOME.
-	if err := os.MkdirAll(ggaBin, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(ggaBin, "gga.cmd"), []byte("@echo off\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	entries := fakeUserPath(t, "windows", foreign[0], engramDir, ggaBin, launchersDir, foreign[1])
+	entries := fakeUserPath(t, "windows", foreign[0], engramDir, launchersDir, foreign[1])
 
 	result, err := newGlobalService(t, home, Options{}).CompleteUninstall()
 	if err != nil {
@@ -70,13 +62,13 @@ func TestCompleteUninstallRemovesOnlyTheManagedPathEntries(t *testing.T) {
 	if !slices.Equal(*entries, foreign) {
 		t.Fatalf("PATH = %v, want solo las entradas ajenas %v", *entries, foreign)
 	}
-	wantRemoved := []string{engramDir, ggaBin, launchersDir}
+	wantRemoved := []string{engramDir, launchersDir}
 	if !slices.Equal(result.RemovedPathEntries, wantRemoved) {
 		t.Fatalf("RemovedPathEntries = %v, want %v", result.RemovedPathEntries, wantRemoved)
 	}
 }
 
-// Sin GGA de Axiom en HOME, ~/bin no es de Axiom y su entrada del PATH se queda; en
+// ~/bin no es de Axiom y su entrada del PATH se queda; en
 // plataformas que no persisten PATH, la carpeta de Engram (compartida) tampoco se toca.
 func TestCompleteUninstallKeepsPathEntriesAxiomDidNotAdd(t *testing.T) {
 	home := t.TempDir()
@@ -85,14 +77,14 @@ func TestCompleteUninstallKeepsPathEntriesAxiomDidNotAdd(t *testing.T) {
 	userBin := filepath.Join(home, "bin")
 	usrLocal := filepath.Join(t.TempDir(), "usr-local-bin")
 
-	t.Run("sin GGA de Axiom", func(t *testing.T) {
+	t.Run("~/bin no es de Axiom", func(t *testing.T) {
 		entries := fakeUserPath(t, "windows", userBin, usrLocal)
 		result, err := newGlobalService(t, home, Options{}).CompleteUninstall()
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !slices.Equal(*entries, []string{userBin, usrLocal}) || len(result.RemovedPathEntries) != 0 {
-			t.Fatalf("PATH = %v, removed = %v: no debe tocar ~/bin si GGA no era de Axiom", *entries, result.RemovedPathEntries)
+			t.Fatalf("PATH = %v, removed = %v: no debe tocar ~/bin", *entries, result.RemovedPathEntries)
 		}
 	})
 

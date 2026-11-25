@@ -1418,11 +1418,7 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude branch guard hook: %w", err)
 	}
-	telemetryHookChanged, err := retireClaudeTelemetryHooks(settingsPath)
-	if err != nil {
-		return InjectionResult{}, fmt.Errorf("retire Claude runtime telemetry hooks: %w", err)
-	}
-	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
+	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged, Files: []string{settingsPath}}, nil
 }
 
 func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
@@ -1470,10 +1466,6 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 		changed = true
 	}
 
-	// Runtime telemetry was retired: drop the hooks earlier versions installed.
-	if retireRuntimeTelemetryHooks(hooksMap, "codex") {
-		changed = true
-	}
 	if !changed {
 		return false, nil
 	}

@@ -169,7 +169,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Retirada de RDD](docs/releases/notas-retirada-rdd.md)** | Notas de migración: qué limpiar a mano antes de instalar la versión que retira `axiom review` y `bench/`. |
 | **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
 | **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | How the codebase is organised and how to extend it |
-| **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and how old installs are cleaned up |
+| **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and what to clean up by hand |
 
 <div align="right"><a href="#top">Back to top</a></div>
 

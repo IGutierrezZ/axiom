@@ -299,8 +299,7 @@ func TestBuildSyncSelectionDefaultScopeIncludesManagedComponents(t *testing.T) {
 
 	sel := BuildSyncSelection(flags, agents)
 
-	// Default sync must include: SDD, Engram, Context7, Skills, Persona. GGA is
-	// optional and is restored only from persisted state or detection.
+	// Default sync must include: SDD, Engram, Context7, Skills, Persona.
 	// Persona is included because the content between <!-- gentle-ai:persona -->
 	// markers is harness-managed; sync must propagate embedded-asset changes to
 	// users who already have a persona installed. Content outside the markers
@@ -1445,51 +1444,6 @@ func TestSyncPersonaOnlyRollbackRestoresOpenCodeSettingsAfterGentlemanCleanup(t 
 	}
 }
 
-func TestComponentSyncStepRunsGGAInjectWithoutBinaryInstall(t *testing.T) {
-	home := t.TempDir()
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	cmdLookPath = func(name string) (string, error) {
-		return "", os.ErrNotExist
-	}
-
-	var commandsCalled []string
-	runCommand = func(name string, args ...string) error {
-		commandsCalled = append(commandsCalled, name+" "+strings.Join(args, " "))
-		return nil
-	}
-
-	step := componentSyncStep{
-		id:        "sync:gga",
-		component: model.ComponentGGA,
-		homeDir:   home,
-		agents:    []model.AgentID{model.AgentOpenCode},
-		selection: model.Selection{},
-	}
-
-	if err := step.Run(); err != nil {
-		t.Fatalf("componentSyncStep.Run() GGA error = %v", err)
-	}
-
-	// No GGA binary install command should have been called.
-	for _, cmd := range commandsCalled {
-		if strings.Contains(cmd, "clone") || strings.Contains(cmd, "install.sh") {
-			t.Errorf("componentSyncStep GGA must not run binary install, got command: %s", cmd)
-		}
-	}
-
-	// GGA runtime asset should be written.
-	prModePath := filepath.Join(home, ".local", "share", "gga", "lib", "pr_mode.sh")
-	if _, err := os.Stat(prModePath); err != nil {
-		t.Errorf("expected GGA runtime asset at %q: %v", prModePath, err)
-	}
-}
-
 func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 	workspace, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -1521,7 +1475,7 @@ func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 		backup.UserHomeDirFn = restoreBackupHome
 	})
 
-	// Persisted visual themes are ignored and no telemetry plugin is written.
+	// Persisted visual themes are ignored.
 	// The last two entries are the routing guidance targets. Guidance is written
 	// for every configured agent regardless of which components are persisted.
 	wantFiles := []string{
@@ -3408,7 +3362,6 @@ func TestRunSyncWithProfilesIntegration(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode:  model.SDDModeSingle,
@@ -3522,7 +3475,6 @@ func TestRunSyncDetectsExistingProfilesOnRegularSync(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode: model.SDDModeSingle,
@@ -3575,7 +3527,6 @@ func TestRunSyncDetectsExistingProfilesOnRegularSync(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode: model.SDDModeSingle,
@@ -3748,7 +3699,7 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 
@@ -3842,7 +3793,7 @@ func TestRunSyncWithSelection_FilesChangedOnFreshHome(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 
@@ -3872,7 +3823,7 @@ func TestRunSyncWithSelection_IsIdempotent(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
@@ -3930,7 +3881,7 @@ func TestRunSyncWithSelection_SelectionAgentsForwarded(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 	}
 
 	result, err := RunSyncWithSelection(home, sel)
@@ -4094,7 +4045,7 @@ func TestRunSyncRollsBackOnFailure(t *testing.T) {
 	// Fail after context7 inject to trigger rollback.
 	runCommand = func(string, ...string) error { return nil }
 
-	// Inject a forced failure by injecting a bad gga step — we use a test
+	// Inject a forced failure by injecting a bad step — we use a test
 	// hook approach. We must fail the sync pipeline somehow. The simplest
 	// approach without a hook: use an invalid agent ID that will fail the
 	// adapter resolution inside the sync step.
