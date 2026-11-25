@@ -2,8 +2,6 @@ package installcmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -217,73 +215,6 @@ func TestResolveDependencyInstall(t *testing.T) {
 				t.Fatalf("ResolveDependencyInstall() = %v, want %v", command, tt.want)
 			}
 		})
-	}
-}
-
-func TestGitBashPathResolvesFromGitOnPath(t *testing.T) {
-	// Create a fake directory structure mimicking Git for Windows layout:
-	// tmpdir/cmd/git.exe  (git binary)
-	// tmpdir/bin/bash.exe (git bash)
-	tmpDir := t.TempDir()
-	cmdDir := filepath.Join(tmpDir, "cmd")
-	binDir := filepath.Join(tmpDir, "bin")
-	if err := os.MkdirAll(cmdDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.MkdirAll(binDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	fakeGit := filepath.Join(cmdDir, "git.exe")
-	if err := os.WriteFile(fakeGit, []byte("fake"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	fakeBash := filepath.Join(binDir, "bash.exe")
-	if err := os.WriteFile(fakeBash, []byte("fake"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	// Override cmdLookPath to return our fake git.
-	original := cmdLookPath
-	cmdLookPath = func(file string) (string, error) {
-		if file == "git" {
-			return fakeGit, nil
-		}
-		return "", fmt.Errorf("not found")
-	}
-	t.Cleanup(func() { cmdLookPath = original })
-
-	got := gitBashPath()
-	if got != fakeBash {
-		t.Fatalf("gitBashPath() = %q, want %q", got, fakeBash)
-	}
-}
-
-func TestGitBashPathFallsBackToBareWhenNoGit(t *testing.T) {
-	origLookPath := cmdLookPath
-	cmdLookPath = func(file string) (string, error) {
-		return "", fmt.Errorf("not found")
-	}
-	t.Cleanup(func() { cmdLookPath = origLookPath })
-
-	origStat := osStat
-	osStat = func(name string) (os.FileInfo, error) {
-		return nil, fmt.Errorf("not found")
-	}
-	t.Cleanup(func() { osStat = origStat })
-
-	got := gitBashPath()
-	if got != "bash" {
-		t.Fatalf("gitBashPath() = %q, want %q", got, "bash")
-	}
-}
-
-func TestBashScriptPathWindowsUsesForwardSlashes(t *testing.T) {
-	profile := system.PlatformProfile{OS: "windows", PackageManager: "winget"}
-	got := bashScriptPath(profile, `C:\Users\jorge\AppData\Local\Temp\mytool\install.sh`)
-	want := "C:/Users/jorge/AppData/Local/Temp/mytool/install.sh"
-	if got != want {
-		t.Fatalf("bashScriptPath() = %q, want %q", got, want)
 	}
 }
 

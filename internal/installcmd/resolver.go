@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -217,61 +216,6 @@ func resolveOpenCodeInstall(profile system.PlatformProfile) (CommandSequence, er
 			profile.OS, profile.LinuxDistro, profile.PackageManager,
 		)
 	}
-}
-
-func bashScriptPath(profile system.PlatformProfile, path string) string {
-	if profile.OS == "windows" {
-		return strings.ReplaceAll(path, `\`, "/")
-	}
-	return path
-}
-
-// GitBashPath is the exported wrapper so other packages (e.g. cli) can
-// resolve the Git Bash binary without duplicating the detection logic.
-func GitBashPath() string { return gitBashPath() }
-
-// gitBashPath returns the path to Git Bash on Windows.
-// It resolves git on PATH, then finds bash.exe relative to it
-// (Git for Windows always installs both in the same bin/ directory).
-// Falls back to well-known locations, then to bare "bash" as last resort.
-func gitBashPath() string {
-	// Strategy 1: find git on PATH and derive bash.exe from it.
-	if gitPath, err := cmdLookPath("git"); err == nil {
-		// gitPath is e.g. "C:\Program Files\Git\cmd\git.exe"
-		// bash.exe lives in the sibling bin/ directory.
-		gitDir := filepath.Dir(gitPath) // .../cmd or .../bin
-		parent := filepath.Dir(gitDir)  // .../Git
-
-		candidate := filepath.Join(parent, "bin", "bash.exe")
-		if _, err := osStat(candidate); err == nil {
-			return candidate
-		}
-
-		// git might already be in bin/ (not cmd/).
-		candidate = filepath.Join(gitDir, "bash.exe")
-		if _, err := osStat(candidate); err == nil {
-			return candidate
-		}
-	}
-
-	// Strategy 2: well-known locations.
-	candidates := []string{
-		filepath.Join(os.Getenv("ProgramFiles"), "Git", "bin", "bash.exe"),
-		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Git", "bin", "bash.exe"),
-		`C:\Program Files\Git\bin\bash.exe`,
-	}
-
-	for _, c := range candidates {
-		if c == "" {
-			continue
-		}
-		if _, err := osStat(c); err == nil {
-			return c
-		}
-	}
-
-	// Last resort — bare "bash" and hope it's Git Bash, not WSL.
-	return "bash"
 }
 
 // validateGoForModuleInstall checks that Go ≥1.24 is installed and GO111MODULE is not
