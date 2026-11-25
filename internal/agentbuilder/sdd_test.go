@@ -42,7 +42,7 @@ func TestInjectSDDReference_InjectIntoEmptyFile(t *testing.T) {
 	}
 
 	content := string(data)
-	marker := "<!-- gentle-ai:custom-agent:my-skill -->"
+	marker := "<!-- axiom:custom-agent:my-skill -->"
 	if !strings.Contains(content, marker) {
 		t.Errorf("marker not found in file;\ngot:\n%s", content)
 	}
@@ -72,7 +72,7 @@ func TestInjectSDDReference_ExistingContentPreserved(t *testing.T) {
 	if !strings.Contains(content, "My System Prompt") {
 		t.Errorf("existing content was not preserved;\ngot:\n%s", content)
 	}
-	if !strings.Contains(content, "<!-- gentle-ai:custom-agent:my-skill -->") {
+	if !strings.Contains(content, "<!-- axiom:custom-agent:my-skill -->") {
 		t.Errorf("marker not found in file;\ngot:\n%s", content)
 	}
 }
@@ -102,7 +102,7 @@ func TestInjectSDDReference_DuplicateInjection_MarkerReplacedNotDuplicated(t *te
 	content := string(data)
 
 	// Count marker occurrences — should appear exactly once.
-	marker := "<!-- gentle-ai:custom-agent:dedup-skill -->"
+	marker := "<!-- axiom:custom-agent:dedup-skill -->"
 	count := strings.Count(content, marker)
 	if count != 1 {
 		t.Errorf("marker appears %d times, want exactly 1;\ngot:\n%s", count, content)
@@ -199,5 +199,40 @@ func TestInjectSDDReference_NilAgent_IsNoop(t *testing.T) {
 
 	if err := InjectSDDReference(nil, promptFile); err != nil {
 		t.Fatalf("expected no error for nil agent, got: %v", err)
+	}
+}
+
+func TestInjectSDDReference_LegacyBlockIsReplacedByAxiomBlock(t *testing.T) {
+	dir := t.TempDir()
+	promptFile := filepath.Join(dir, "system-prompt.md")
+
+	legacy := "# Prompt\n\n<!-- gentle-ai:custom-agent:old-skill -->\n## Custom Agent: Old\n<!-- /gentle-ai:custom-agent:old-skill -->\n\nTail\n"
+	if err := os.WriteFile(promptFile, []byte(legacy), 0644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	agent := makeSDDAgent("old-skill", "When old", &SDDIntegration{
+		Mode:        SDDPhaseSupport,
+		TargetPhase: "verify",
+	})
+	for i := 0; i < 2; i++ {
+		if err := InjectSDDReference(agent, promptFile); err != nil {
+			t.Fatalf("inject %d: %v", i, err)
+		}
+	}
+
+	data, _ := os.ReadFile(promptFile)
+	content := string(data)
+	if strings.Contains(content, "gentle-ai:") {
+		t.Errorf("legacy marker survived the migration;\ngot:\n%s", content)
+	}
+	if got := strings.Count(content, "<!-- axiom:custom-agent:old-skill -->"); got != 1 {
+		t.Errorf("axiom marker appears %d times, want 1;\ngot:\n%s", got, content)
+	}
+	if got := strings.Count(content, "<!-- /axiom:custom-agent:old-skill -->"); got != 1 {
+		t.Errorf("axiom end marker appears %d times, want 1;\ngot:\n%s", got, content)
+	}
+	if !strings.Contains(content, "Tail") {
+		t.Errorf("content after the block was lost;\ngot:\n%s", content)
 	}
 }

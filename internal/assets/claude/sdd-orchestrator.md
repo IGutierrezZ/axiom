@@ -52,8 +52,8 @@ Use Claude Code's native Agent/Task mechanism for delegated-direct work; reserve
 
 {{GENTLE_AI_RESEARCH_LIFECYCLE}}
 
-<!-- gentle-ai:sdd-model-assignments -->
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ## SDD Workflow (lazy-loaded)
 

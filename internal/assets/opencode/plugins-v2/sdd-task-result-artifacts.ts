@@ -1,4 +1,4 @@
-// gentle-ai:managed sdd-task-result-artifacts/v2
+// axiom:managed sdd-task-result-artifacts/v2
 import { Plugin } from "@opencode/plugin"
 import { readFile, stat } from "node:fs/promises"
 import { dirname, isAbsolute, join, resolve } from "node:path"
@@ -6,9 +6,9 @@ import { dirname, isAbsolute, join, resolve } from "node:path"
 const SDD_PHASES = ["sdd-init", "sdd-explore", "sdd-research", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"]
 const SDD_TASK_FAILURE_PREFIX = "AXIOM_SDD_FAILURE "
 const SDD_PREFLIGHT_QUESTION_PREFIX = "Axiom SDD preflight "
-// The legacy prefix stays accepted indefinitely: plugins and agent instructions already installed
-// on a machine keep emitting it until `axiom sync`. Canonicalization rewrites it to the Axiom prefix.
-const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX, "Gentle AI SDD preflight "]
+// Solo se acepta el prefijo de Axiom: las preguntas con el prefijo del nombre anterior
+// dejan de reconocerse; `axiom sync` reinstala los plugins y las instrucciones.
+const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX]
 const SDD_PREFLIGHT_HEADING = "## SDD Session Preflight"
 // #2855: host cwd does not identify the coordinator's selected change/store.
 const SDD_TASK_CONTINUATION_GUIDANCE = "Return to the active SDD coordinator and inspect only its retained structured status for the selected change and artifact store. If that status is unavailable, report this terminal failure and ask the user to select the change and artifact store. Do not infer either, run unscoped status discovery, retry, or launch another phase."
@@ -156,7 +156,7 @@ function canonicalizeSDDPreflightQuestions(args: unknown, topology: SDDTopology)
   for (const { group, index } of sddPreflightBoundQuestions(questions, topology)) {
     const question = questions[index] as Record<string, unknown>
     const marker = `${SDD_PREFLIGHT_QUESTION_PREFIX}${group.id}:`
-    const existing = new RegExp(`^(?:Gentle AI|Axiom) SDD preflight (?:${group.id}|${group.legacyNumber}/3):\\s*`)
+    const existing = new RegExp(`^Axiom SDD preflight (?:${group.id}|${group.legacyNumber}/3):\\s*`)
     question.question = `${marker} ${(question.question as string).replace(existing, "")}`.trim()
     question.multiple = false
     if (typeof question.header !== "string" || question.header.trim() === "") question.header = group.header
@@ -460,7 +460,7 @@ function record(value: unknown): Record<string, unknown> {
 }
 
 export default Plugin.define({
-  id: "gentle-ai.sdd-task-result-artifacts",
+  id: "axiom.sdd-task-result-artifacts",
   async setup(ctx) {
     // Same session directory the branch guard plugin uses.
     const cwd = ctx.location.directory

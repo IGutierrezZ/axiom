@@ -181,7 +181,7 @@ func assertCurrentOpenCodeOrchestratorContract(t *testing.T, label string, conte
 	}
 	if profileName == "" {
 		assertTextContainsClauses(t, label+" model assignment contract", content, []string{
-			"<!-- gentle-ai:sdd-model-assignments -->",
+			"<!-- axiom:sdd-model-assignments -->",
 			"## Model Assignments",
 			"agent.gentle-orchestrator.model",
 			"agent.sdd-<phase>.model",
@@ -197,7 +197,7 @@ func TestOpenCodeBaseOrchestratorPreservesCurrentContract(t *testing.T) {
 	}
 	assertCurrentOpenCodeOrchestratorContract(t, "OpenCode base orchestrator", content, model.AgentOpenCode, "")
 
-	visibilityMarker := "<!-- gentle-ai:" + openCodeDelegationVisibilitySectionID + " -->"
+	visibilityMarker := "<!-- axiom:" + openCodeDelegationVisibilitySectionID + " -->"
 	for _, required := range []string{
 		visibilityMarker,
 		"#### Delegation Visibility (OpenCode Desktop)",
@@ -272,8 +272,8 @@ func TestOpenCodeNamedProfileOrchestratorPreservesCurrentContract(t *testing.T) 
 	assertCurrentOpenCodeOrchestratorContract(t, "OpenCode named profile", content, model.AgentOpenCode, profileName)
 
 	assertTextContainsClauses(t, "OpenCode named profile model assignments", content, []string{
-		"<!-- gentle-ai:sdd-model-assignments -->",
-		"<!-- /gentle-ai:sdd-model-assignments -->",
+		"<!-- axiom:sdd-model-assignments -->",
+		"<!-- /axiom:sdd-model-assignments -->",
 		"## Model Assignments",
 		"| orchestrator | openai/gpt-5.1 |",
 		"| sdd-apply-" + profileName + " | anthropic/claude-sonnet-4-5 |",
@@ -310,7 +310,7 @@ func TestOpenCodeNamedProfileOrchestratorPreservesCurrentContract(t *testing.T) 
 
 	// This is an existing named-profile exclusion, not a future inheritance rule:
 	// profile rendering deliberately removes the default Desktop narration block.
-	visibilityMarker := "<!-- gentle-ai:" + openCodeDelegationVisibilitySectionID + " -->"
+	visibilityMarker := "<!-- axiom:" + openCodeDelegationVisibilitySectionID + " -->"
 	if strings.Contains(content, visibilityMarker) {
 		t.Fatalf("named profile unexpectedly inherited the default Desktop delegation section")
 	}

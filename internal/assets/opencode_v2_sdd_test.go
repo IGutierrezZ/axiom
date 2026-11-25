@@ -12,7 +12,7 @@ const cleanup=await plugin.setup(ctx);if(!hooks['execute.before']||!hooks['execu
 const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
 const request=()=>({tool:'subagent',sessionID:'root',id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
 await reject(()=>hooks['execute.before'](request()),'missing preflight accepted');
-const question={tool:'question',sessionID:'root',id:'q',input:{questions:[{question:'Gentle AI SDD preflight 1/3: Pace?',options:[]},{question:'Axiom SDD preflight pr-strategy: PR?',options:[]}]}};
+const question={tool:'question',sessionID:'root',id:'q',input:{questions:[{question:'Axiom SDD preflight 1/3: Pace?',options:[]},{question:'Axiom SDD preflight pr-strategy: PR?',options:[]}]}};
 await hooks['execute.before'](question);
 await reject(()=>hooks['execute.after']({...question,status:'completed',result:{output:{answers:[['please proceed'],['Auto']]}}}),'free text accepted');
 for(const answers of [[['Automatic','Interactive'],['Auto']],[['Automátic'],['Auto']],[[]]]) {
@@ -37,17 +37,21 @@ let cleaned=0;await reject(()=>plugin.setup({...ctx,tool:{async hook(name,fn){if
 `)
 }
 
-// TestOpenCodeV2SDDPreflightAcceptsBothPrefixes pins that the managed plugin
-// recognizes the preflight under the legacy "Gentle AI" prefix and under the
-// "Axiom" prefix, so plugins and agent instructions already written on users'
-// machines keep working until the next sync.
-func TestOpenCodeV2SDDPreflightAcceptsBothPrefixes(t *testing.T) {
+// TestOpenCodeV2SDDPreflightAcceptsOnlyTheAxiomPrefix pins that the managed
+// plugin recognizes the preflight under the "Axiom" prefix only: the prefix of
+// the previous product name no longer creates authority.
+func TestOpenCodeV2SDDPreflightAcceptsOnlyTheAxiomPrefix(t *testing.T) {
 	runV2Plugin(t, "sdd-task-result-artifacts", sddAxiomProjectFixture+`
 const hooks={};let disposals=0,signal,wake;const queue=[];
 const ctx={location:{directory:projectDir,workspaceID:'one'},tool:{async hook(name,fn){await Promise.resolve();hooks[name]=fn;return {async dispose(){disposals++}}}},session:{async get(arg){if(Object.keys(arg).join()!=='sessionID')throw Error('V1 SDK shape');return {id:arg.sessionID,...(arg.sessionID==='child'?{parentID:'root'}:{})}}},event:{subscribe(opts){signal=opts.signal;signal.addEventListener('abort',()=>wake?.());return {[Symbol.asyncIterator]:async function*(){while(!signal.aborted){if(!queue.length)await new Promise(r=>wake=r);while(queue.length)yield queue.shift()}}}}}};
 const cleanup=await plugin.setup(ctx);
 const reject=async(fn,why)=>{let failed=false;try{await fn()}catch{failed=true}if(!failed)throw Error(why)};
-for(const prefix of ['Gentle AI SDD preflight','Axiom SDD preflight']){
+{const sessionID='root-retired';
+ const retiredQuestion={tool:'question',sessionID,id:'q',input:{questions:[{question:'Gentle AI SDD preflight pace: Pace?',options:[{label:'Interactive'},{label:'Automatic'}]}]}};
+ await hooks['execute.before'](retiredQuestion);
+ await hooks['execute.after']({...retiredQuestion,status:'completed',result:{output:{answers:[['Automatic']]}}});
+ await reject(()=>hooks['execute.before']({tool:'subagent',sessionID,id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}}),'retired prefix created authority')}
+for(const prefix of ['Axiom SDD preflight']){
  const sessionID='root-'+prefix.split(' ')[0];
  const request=()=>({tool:'subagent',sessionID,id:'call',input:{agent:'sdd-apply',prompt:'Implement approved tasks',description:'Apply'}});
  await reject(()=>hooks['execute.before'](request()),'missing preflight accepted for '+prefix);

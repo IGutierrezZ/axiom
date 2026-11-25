@@ -423,3 +423,33 @@ func TestOpenCodeBackgroundPolicyIsExcludedByKilocodePublicInject(t *testing.T) 
 		t.Fatal("Kilocode received the OpenCode-only background policy")
 	}
 }
+
+func TestUpgradeLegacyOpenCodeBackgroundPolicyReplacesTheOldMarkersOnly(t *testing.T) {
+	legacy := "HEAD\n" + legacyOpenCodeBackgroundPolicyMarker + "\nbody\n" + legacyOpenCodeBackgroundPolicyEnd + "\nTAIL"
+	got := upgradeLegacyOpenCodeBackgroundPolicy(legacy)
+	want := "HEAD\n" + openCodeBackgroundPolicyMarker + "\nbody\n" + openCodeBackgroundPolicyEnd + "\nTAIL"
+	if got != want {
+		t.Fatalf("upgrade = %q, want %q", got, want)
+	}
+	if again := upgradeLegacyOpenCodeBackgroundPolicy(got); again != got {
+		t.Fatalf("upgrade is not idempotent: %q", again)
+	}
+	if err := validateOpenCodeBackgroundPolicy(got, false); err != nil {
+		t.Fatalf("upgraded block does not validate: %v", err)
+	}
+}
+
+func TestPreservedOpenCodePromptWithLegacyBackgroundPolicyKeepsASingleAxiomBlock(t *testing.T) {
+	legacy := "CUSTOM_CONTENT\n\n" + legacyOpenCodeBackgroundPolicyMarker + "\nold policy body\n" + legacyOpenCodeBackgroundPolicyEnd + "\n"
+	got := renderPreservedOpenCodeOrchestratorPrompt(legacy, model.AgentOpenCode, OrchestratorRenderOptions{IncludeOpenCodeBackgroundPolicy: true})
+	if strings.Contains(got, "gentle-ai:") {
+		t.Fatalf("legacy marker survived:\n%s", got)
+	}
+	if strings.Count(got, openCodeBackgroundPolicyMarker) != 1 || strings.Count(got, openCodeBackgroundPolicyEnd) != 1 {
+		t.Fatalf("want exactly one axiom policy block:\n%s", got)
+	}
+	off := renderPreservedOpenCodeOrchestratorPrompt(legacy, model.AgentOpenCode, OrchestratorRenderOptions{})
+	if strings.Contains(off, "old policy body") || strings.Contains(off, "gentle-ai:") || !strings.Contains(off, "CUSTOM_CONTENT") {
+		t.Fatalf("policy off must retire the legacy block and keep custom content:\n%s", off)
+	}
+}

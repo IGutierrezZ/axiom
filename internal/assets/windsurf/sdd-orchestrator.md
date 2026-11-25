@@ -183,7 +183,7 @@ When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chain
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
 
-<!-- gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
 ## Model Assignments
 
 Read this table at session start. Windsurf Cascade supports multiple models — if your current model matches a phase's recommended alias, proceed normally. If you cannot switch models mid-session, use the table as a reasoning-depth guide: phases assigned to `opus` require deeper architectural thinking, while `haiku` phases are mechanical.
@@ -200,7 +200,7 @@ Read this table at session start. Windsurf Cascade supports multiple models — 
 | sdd-archive | haiku | Copy and close |
 | default | sonnet | SDD/JD phase fallback |
 
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ## Windsurf-Native Features
 

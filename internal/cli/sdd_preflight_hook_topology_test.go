@@ -118,7 +118,7 @@ func TestValidSDDPreflightHookBlockFollowsFieldTable(t *testing.T) {
 
 func TestSDDPreflightHookAcceptsNominalMarkers(t *testing.T) {
 	embedded := workspacetest.Embedded(t, "")
-	for _, brand := range []string{"Gentle AI", "Axiom"} {
+	for _, brand := range []string{"Axiom"} {
 		t.Run(brand, func(t *testing.T) {
 			pacePrompt := strings.Replace(testSDDPreflightNominalPace, "Axiom", brand, 1)
 			prPrompt := strings.Replace(testSDDPreflightNominalPR, "Axiom", brand, 1)

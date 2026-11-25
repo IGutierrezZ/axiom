@@ -41,7 +41,7 @@ Use OpenCode's native `explore` agent for read-only mapping and `general` agent 
 
 {{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
 
-<!-- gentle-ai:opencode-desktop-delegation-progress -->
+<!-- axiom:opencode-desktop-delegation-progress -->
 #### Delegation Visibility (OpenCode Desktop)
 
 For every native `delegate` or `task` call, emit exactly one concise, assistant-visible status line immediately before the call:
@@ -54,7 +54,7 @@ When the call returns, emit exactly one concise, assistant-visible status line w
 - Blocked or failure: `⚠️ {agent} returned {status} — {short reason}`
 
 Keep pre-call lines to 15 tokens or fewer and post-call lines to 25 tokens or fewer. Use the actual phase, agent, status, and short reason. Do not emit multi-line narration, structured blocks, or these status lines from executor prompts.
-<!-- /gentle-ai:opencode-desktop-delegation-progress -->
+<!-- /axiom:opencode-desktop-delegation-progress -->
 
 ## SDD Workflow (Spec-Driven Development)
 
@@ -208,7 +208,7 @@ When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chain
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
 
-<!-- gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
 
 ## Model Assignments
 
@@ -219,7 +219,7 @@ Read the configured models from `opencode.json` at session start (or before firs
 - If a phase does not have an explicit model, use the default OpenCode runtime model for that agent and continue.
 - For named profiles, apply the same rule to the suffixed agent keys (for example, `sdd-apply-cheap`).
 
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ### Sub-Agent Launch Deduplication (MANDATORY)
 

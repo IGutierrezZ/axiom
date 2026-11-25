@@ -256,7 +256,7 @@ The Kiro phase result must prove that persistence contract. Refresh prior progre
 
 {{GENTLE_AI_SDD_SECTION:Result Contract}}
 
-<!-- gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
 ## Model Assignments
 
 Read this table at session start. Kiro IDE is powered by Claude — use the table as a reasoning-depth guide: phases assigned to `opus` require deeper architectural thinking, while `haiku` phases are mechanical.
@@ -273,7 +273,7 @@ Read this table at session start. Kiro IDE is powered by Claude — use the tabl
 | sdd-archive | haiku | Copy and close |
 | default | sonnet | SDD/JD phase fallback |
 
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ## Kiro Steering Files
 

@@ -31,8 +31,12 @@ const (
 	delegationTriggersMarker = "{{AXIOM_DELEGATION_TRIGGERS}}"
 
 	openCodeBackgroundPolicyAsset  = "opencode/background-subagents.md"
-	openCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
-	openCodeBackgroundPolicyEnd    = "<!-- /gentle-ai:opencode-background-subagents -->"
+	openCodeBackgroundPolicyMarker = "<!-- axiom:opencode-background-subagents -->"
+	openCodeBackgroundPolicyEnd    = "<!-- /axiom:opencode-background-subagents -->"
+	// Marcadores que escribieron las versiones con el nombre anterior: solo se
+	// reconocen para sustituirlos por los actuales, nunca se escriben.
+	legacyOpenCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
+	legacyOpenCodeBackgroundPolicyEnd    = "<!-- /gentle-ai:opencode-background-subagents -->"
 )
 
 // OrchestratorRenderOptions carries already-resolved prompt policy selections.
@@ -265,6 +269,14 @@ func mustReadOpenCodeBackgroundPolicy() string {
 		panic(err.Error())
 	}
 	return content
+}
+
+// upgradeLegacyOpenCodeBackgroundPolicy reescribe los marcadores del nombre
+// anterior de un prompt preservado para que el resto del flujo vea solo los
+// actuales (sin duplicar el bloque).
+func upgradeLegacyOpenCodeBackgroundPolicy(content string) string {
+	content = strings.ReplaceAll(content, legacyOpenCodeBackgroundPolicyMarker, openCodeBackgroundPolicyMarker)
+	return strings.ReplaceAll(content, legacyOpenCodeBackgroundPolicyEnd, openCodeBackgroundPolicyEnd)
 }
 
 func appendOpenCodeBackgroundPolicy(content, policy string) string {

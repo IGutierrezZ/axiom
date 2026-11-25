@@ -88,7 +88,7 @@ function targetPath(input: unknown): string | undefined {
 }
 
 export default Plugin.define({
-  id: "gentle-ai.axiom-branch-guard",
+  id: "axiom.branch-guard",
   async setup(ctx) {
     const registrations: Array<{ dispose(): Promise<void> }> = []
     const cwd = ctx.location.directory

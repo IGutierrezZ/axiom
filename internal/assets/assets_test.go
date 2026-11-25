@@ -558,8 +558,8 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 func TestOpenCodeBackgroundPolicyMarkersAreBalanced(t *testing.T) {
 	content := mustReadResolved("opencode/background-subagents.md")
 	const (
-		start = "<!-- gentle-ai:opencode-background-subagents -->"
-		end   = "<!-- /gentle-ai:opencode-background-subagents -->"
+		start = "<!-- axiom:opencode-background-subagents -->"
+		end   = "<!-- /axiom:opencode-background-subagents -->"
 	)
 	trimmed := strings.TrimSpace(content)
 	if strings.Count(trimmed, start) != 1 || strings.Count(trimmed, end) != 1 {
@@ -575,7 +575,7 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Axiom SDD preflight `, `Gentle AI SDD preflight `, `SDD_PREFLIGHT_ACCEPTED_PREFIXES`, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
+	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Axiom SDD preflight `, `SDD_PREFLIGHT_ACCEPTED_PREFIXES`, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
 		`canonicalizeSDDPreflightQuestions`, `input.tool === "question"`,
 		`{ label: "Interactive", description:`, `{ label: "Automatic", description:`,
 		`{ label: "OpenSpec", description:`, `{ label: "Engram", description:`, `{ label: "Both", description:`,

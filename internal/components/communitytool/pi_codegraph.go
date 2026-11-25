@@ -23,9 +23,15 @@ import (
 )
 
 const (
-	piCodeGraphToolMarker     = "<!-- gentle-ai:pi-codegraph-tool -->"
-	piCodeGraphGuidanceMarker = "<!-- gentle-ai:pi-codegraph-guidance -->"
-	piCodeGraphEndMarker      = "<!-- /gentle-ai:pi-codegraph -->"
+	piCodeGraphToolMarker     = "<!-- axiom:pi-codegraph-tool -->"
+	piCodeGraphGuidanceMarker = "<!-- axiom:pi-codegraph-guidance -->"
+	piCodeGraphEndMarker      = "<!-- /axiom:pi-codegraph -->"
+
+	// Marcadores que escribieron las versiones con el nombre anterior: solo se
+	// reconocen para retirar el bloque ya escrito, nunca se escriben.
+	legacyPiCodeGraphToolMarker     = "<!-- gentle-ai:pi-codegraph-tool -->"
+	legacyPiCodeGraphGuidanceMarker = "<!-- gentle-ai:pi-codegraph-guidance -->"
+	legacyPiCodeGraphEndMarker      = "<!-- /gentle-ai:pi-codegraph -->"
 )
 
 var (
@@ -216,7 +222,7 @@ func ReconcilePiCodeGraph(options PiCodeGraphOptions) (result PiCodeGraphResult,
 		} else {
 			child.Classification, child.Reason = PiChildGuidanceOnly, "child does not allow bash"
 		}
-		if child.Classification != PiChildCompatible && strings.Contains(string(body), piCodeGraphToolMarker) {
+		if child.Classification != PiChildCompatible && hasPiCodeGraphToolBlock(string(body)) {
 			child.Classification, child.Reason = PiChildMisconfigured, "child CodeGraph tool block conflicts with its effective tool allowlist"
 			result.Children = append(result.Children, child)
 			continue
@@ -426,18 +432,29 @@ func replacePiChildTools(body string, tools []string) string {
 	return strings.Join(lines, "\n") + body[frontEnd:]
 }
 
+// hasPiCodeGraphToolBlock reconoce el bloque de herramientas con el marcador
+// actual o con el del nombre anterior, para detectar uno obsoleto o conflictivo.
+func hasPiCodeGraphToolBlock(body string) bool {
+	return strings.Contains(body, piCodeGraphToolMarker) || strings.Contains(body, legacyPiCodeGraphToolMarker)
+}
+
 func stripPiCodeGraphBlocks(body string) (string, error) {
-	for _, marker := range []string{piCodeGraphToolMarker, piCodeGraphGuidanceMarker} {
+	for _, block := range []struct{ open, end string }{
+		{piCodeGraphToolMarker, piCodeGraphEndMarker},
+		{piCodeGraphGuidanceMarker, piCodeGraphEndMarker},
+		{legacyPiCodeGraphToolMarker, legacyPiCodeGraphEndMarker},
+		{legacyPiCodeGraphGuidanceMarker, legacyPiCodeGraphEndMarker},
+	} {
 		for {
-			start := strings.Index(body, marker)
+			start := strings.Index(body, block.open)
 			if start < 0 {
 				break
 			}
-			end := strings.Index(body[start:], piCodeGraphEndMarker)
+			end := strings.Index(body[start:], block.end)
 			if end < 0 {
-				return body, fmt.Errorf("unmatched managed marker %q", marker)
+				return body, fmt.Errorf("unmatched managed marker %q", block.open)
 			}
-			body = strings.TrimRight(body[:start], "\n") + strings.TrimLeft(body[start+end+len(piCodeGraphEndMarker):], "\n")
+			body = strings.TrimRight(body[:start], "\n") + strings.TrimLeft(body[start+end+len(block.end):], "\n")
 		}
 	}
 	return body, nil
@@ -694,7 +711,7 @@ func inspectPiCodeGraph(homeDir, workspaceDir string) (bool, string, []PiCodeGra
 		if parseable && slices.Contains(tools, "bash") {
 			classification = PiChildCompatible
 		}
-		if classification != PiChildCompatible && strings.Contains(string(body), piCodeGraphToolMarker) {
+		if classification != PiChildCompatible && hasPiCodeGraphToolBlock(string(body)) {
 			return false, fmt.Sprintf("Pi child %q has stale CodeGraph tools without bash support", child.Name), reports
 		}
 		reports = append(reports, PiCodeGraphChild{Name: child.Name, Source: child.Source, Target: child.Target, Tools: tools, Classification: classification})

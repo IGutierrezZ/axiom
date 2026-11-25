@@ -136,7 +136,7 @@ Artifact store: default `engram` when available.
 When delegating to sub-agents, pass `## Skills to load before work` followed by exact `SKILL.md` paths. Sub-agents must `mem_save` important discoveries before returning.
 <!-- /section:model-small -->
 
-<!-- gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
 ## Model Assignments
 
 Read this table at session start (or before first SDD/Judgment-Day delegation), cache it for the session, and use the mapped alias only for SDD/Judgment-Day phase agents. If an SDD/Judgment-Day phase is missing, use the `default` fallback row. If you lack access to the assigned model, substitute `sonnet` and continue.
@@ -153,7 +153,7 @@ Read this table at session start (or before first SDD/Judgment-Day delegation), 
 | sdd-archive | haiku | Copy and close |
 | default | sonnet | SDD/JD phase fallback |
 
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ### Sub-Agent Launch Deduplication (MANDATORY)
 

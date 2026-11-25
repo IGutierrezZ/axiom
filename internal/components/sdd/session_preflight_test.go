@@ -14,7 +14,7 @@ const testSDDSessionPreflightEntryAnchor = "### SDD Entry Routing (MANDATORY)"
 
 func assertFallbackSessionPreflight(t *testing.T, got string) {
 	t.Helper()
-	open, close := "<!-- gentle-ai:sdd-session-preflight -->", "<!-- /gentle-ai:sdd-session-preflight -->"
+	open, close := "<!-- axiom:sdd-session-preflight -->", "<!-- /axiom:sdd-session-preflight -->"
 	if strings.Count(got, open) != 1 || strings.Count(got, close) != 1 {
 		t.Fatal("installed prompt requires exactly one bounded preflight")
 	}
@@ -257,7 +257,7 @@ func TestSDDSessionPreflightFallbackStatesPromptOnlyLimitation(t *testing.T) {
 
 func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 	block := sddSessionPreflightBlock()
-	for _, want := range []string{"<!-- gentle-ai:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight pace:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "- **Pace** (`pace`, `monorepo-embedded` only)", "always `hybrid`", "Delivery is never asked: it is always `single-pr`", "<!-- /gentle-ai:sdd-session-preflight -->"} {
+	for _, want := range []string{"<!-- axiom:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight pace:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "- **Pace** (`pace`, `monorepo-embedded` only)", "always `hybrid`", "Delivery is never asked: it is always `single-pr`", "<!-- /axiom:sdd-session-preflight -->"} {
 		if !strings.Contains(block, want) {
 			t.Fatalf("canonical block missing %q", want)
 		}
@@ -340,5 +340,29 @@ func TestSessionPreflightFallbackAnswerSyntaxUsesRequiredGroups(t *testing.T) {
 	}
 	if strings.Contains(fallback, "Artifacts: <label>") || strings.Contains(fallback, "all three") {
 		t.Error("fallback variant retains the three-group answer syntax")
+	}
+}
+
+func TestMigratePreservedSDDSessionPreflightReplacesTheBlockOfThePreviousName(t *testing.T) {
+	for _, newline := range []string{"\n", "\r\n"} {
+		prompt := "PREFIX" + newline + legacyNamedSDDSessionPreflightMarker + newline + "old body" + newline + legacyNamedSDDSessionPreflightEnd + newline + "SUFFIX"
+		got, err := migratePreservedSDDSessionPreflight(prompt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		block := strings.ReplaceAll(sddSessionPreflightBlock(), "\n", newline)
+		if want := "PREFIX" + newline + block + newline + "SUFFIX"; got != want {
+			t.Fatalf("migration = %q, want %q", got, want)
+		}
+		if strings.Contains(got, "gentle-ai:") {
+			t.Fatalf("legacy marker survived: %q", got)
+		}
+		if again, err := migratePreservedSDDSessionPreflight(got); err != nil || again != got {
+			t.Fatalf("migration is not idempotent: %q, %v", again, err)
+		}
+		mixed := prompt + newline + sddSessionPreflightBlock()
+		if err := validatePreservedSDDSessionPreflight(mixed); err == nil {
+			t.Fatal("canonical and legacy-named pairs together must be rejected")
+		}
 	}
 }

@@ -245,7 +245,7 @@ func InjectWithPromptDir(configHomeDir, promptDir string, adapter agents.Adapter
 }
 
 const antigravityEngramPluginJSON = `{
-  "name": "gentle-ai-engram",
+  "name": "axiom-engram",
   "description": "Loads Engram MCP memory tools for Antigravity sessions.",
   "version": "0.1.0"
 }
@@ -255,7 +255,7 @@ const antigravityEngramToolsMessage = "CRITICAL FIRST ACTION — Ensure these En
 
 func antigravityEngramHooksJSON() []byte {
 	cfg := map[string]any{
-		"gentle-ai-engram-tools": map[string]any{
+		"axiom-engram-tools": map[string]any{
 			"PreInvocation": []any{
 				map[string]any{
 					"type": "command",
@@ -290,9 +290,22 @@ func ensureJSONFileIfMissing(path string) (filemerge.WriteResult, error) {
 }
 
 func installAntigravityEngramPlugin(homeDir, engramCommand string) (bool, []string, error) {
-	pluginDir := filepath.Join(homeDir, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram")
+	pluginsDir := filepath.Join(homeDir, ".gemini", "antigravity-cli", "plugins")
+	pluginDir := filepath.Join(pluginsDir, "axiom-engram")
 	files := make([]string, 0, 3)
 	changed := false
+
+	// Migración: el plugin que escribieron las versiones con el nombre anterior
+	// se retira para que no queden dos plugins de Engram cargados.
+	legacyPluginDir := filepath.Join(pluginsDir, "gentle-ai-engram")
+	if _, err := os.Lstat(legacyPluginDir); err == nil {
+		if err := os.RemoveAll(legacyPluginDir); err != nil {
+			return false, nil, fmt.Errorf("remove legacy Antigravity Engram plugin: %w", err)
+		}
+		changed = true
+	} else if !os.IsNotExist(err) {
+		return false, nil, fmt.Errorf("stat legacy Antigravity Engram plugin: %w", err)
+	}
 
 	pluginPath := filepath.Join(pluginDir, "plugin.json")
 	pluginWrite, err := filemerge.WriteFileAtomic(pluginPath, []byte(antigravityEngramPluginJSON), 0o644)

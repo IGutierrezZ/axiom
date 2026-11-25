@@ -112,11 +112,26 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - Fallbacks retirados: lectura de `~/.gentle-ai/state.json` (`state.Read`), segunda raíz de backups (`LegacyBackupRootFor`, `BackupOriginGentleAI`), fallback de `doctor` en disco y `.gentle-ai-instance`.
     - Verificado solo en CI: `internal/app`, `internal/dashboard`, `internal/opencode` y `cmd/axiom` (solo `go vet` y `go build`; en `internal/app` se retiró `TestListBackupsKeepsDuplicateIDsRestorableBySelectedRoot`).
     - Decisiones: `LegacyBinDir` y `LegacyOwnershipMarker` de `internal/opencode/background.go` se dejan: el lanzador viejo ya se retira en la activación de OpenCode y el marcador es de T4. `retainedPiResources` y el desinstalador siguen limpiando las rutas viejas (y suman las nuevas `.pi/axiom`).
-- [ ] T4. Marcadores, plugins y MCP gestionados.
+- [x] T4. Marcadores, plugins y MCP gestionados.
   - Todos los ids de sección pasan a `axiom:`. El reconocimiento de `gentle-ai:` queda solo para sustituir bloques ya escritos.
   - Ids de plugin `axiom.*`, cabeceras `// axiom:managed` y MCP o plugin `axiom-engram(-tools)`, con retirada de las entradas viejas.
   - Reconocimiento de los hooks y comandos `gentle-ai …` solo para retirarlos.
   - Goldens.
+  - Evidencia (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
+    - `go build ./...`: correcto.
+    - `go vet ./internal/components/... ./internal/agentbuilder ./internal/assets ./internal/sddtaskresult ./internal/cli ./internal/app ./internal/opencode ./cmd/...`: sin avisos.
+    - `go test -count=1`: ok en `./internal/components/...` (incluido `sdd`, `communitytool`, `engram`, `uninstall`, `persona`, `filemerge`), `./internal/agentbuilder`, `./internal/skillregistry`, `./internal/assets`, `./internal/sddtaskresult`; `./internal/cli -run 'Sync|Persona|Skill|Hook|Preflight|Uninstall|Golden|Pi|CodeGraph|Engram'`: ok.
+    - Goldens regenerados con `go test ./internal/components -update` (13 ficheros: solo cambian los marcadores `sdd-session-preflight` y `sdd-model-assignments` a `axiom:`).
+    - `gofmt -l` sobre los `.go` tocados: salida vacía.
+    - Se escribe ahora con `axiom`: `sdd-session-preflight`, `opencode-background-subagents`, `opencode-desktop-delegation-progress`, `sdd-model-assignments` (assets), `delegation-hard-gates-migration`, `pi-codegraph-*`, `custom-agent:<name>`, ids de plugin OpenCode (`axiom.model-variants`, `axiom.skill-registry`, `axiom.sdd-task-result-artifacts`, `axiom.branch-guard`), cabeceras `// axiom:managed`, plugin Antigravity `axiom-engram` y hooks `axiom-engram-tools`.
+    - Migraciones (cada una con su prueba): bloque de preflight del nombre anterior en un prompt preservado de OpenCode sustituido por el actual (`TestMigratePreservedSDDSessionPreflightReplacesTheBlockOfThePreviousName`); bloque de subagentes en segundo plano (`upgradeLegacyOpenCodeBackgroundPolicy`, dos pruebas); bloque de delegación (las pruebas existentes de `ensurePreservedOpenCodeDelegationHardGates` parten ahora de un bloque `gentle-ai:` y exigen un único bloque `axiom:`); bloques Pi de CodeGraph (`TestRenderPiChildReplacesLegacyBlocksWithAxiomBlocks`); bloque `custom-agent` (`TestInjectSDDReference_LegacyBlockIsReplacedByAxiomBlock`); directorio `gentle-ai-engram` de Antigravity retirado al inyectar, idempotente (`TestInjectAntigravityWritesMCPToCLIConfig`); sección de CodeGraph reconocida con ambos prefijos en la huella de doctor.
+    - Plugins OpenCode: la verificación de propiedad compara el hash de los bytes instalados, así que `opencode_plugin_digests.go` suma los resúmenes de las revisiones sustituidas (los cuatro plugins v2, `sdd-task-result-artifacts` v1 y, de paso, las de `model-variants` v1 y v2 que T3 cambió sin registrar). Sin eso `axiom sync` rechazaría el plugin ya instalado por «propiedad no verificada».
+    - Retirada la variante `Gentle AI SDD preflight `: plugins TS (v1 y v2), hook `internal/cli/sdd_preflight_hook.go` y sus pruebas (nueva prueba que exige que el prefijo viejo no cree autoridad).
+    - Quedan como solo reconocimiento (verificado con `git grep`): marcadores `legacy*` de `sdd`, `communitytool`, `agentbuilder` y `skillregistry`; `filemerge` y los limpiadores de `uninstall`/`persona` (`gentle-ai:` genérico, `name: Gentle AI Persona`); comandos `gentle-ai skill-registry refresh`, `sdd-preflight-hook`, `telemetry runtime` y `review stop-hook` (retirada de hooks); `gentle-ai/sdd` en `managed-by` (solo se purga); `LegacyOwnershipMarker` del lanzador de OpenCode (se lee para retirar el lanzador viejo); `removePiManagedSections`; nombres de ficheros de prompt viejos (`gentle-ai.mdc`, `gentle-ai.md`, `gentle-ai.instructions.md`). Ninguna ruta escribe `gentle-ai skill-registry refresh`: `ensureClaudeSkillRegistryHook` y `ensureCodexSkillRegistryHook` ya escribían `axiom`.
+    - Decisión: se quita el reconocimiento de `gentle-ai:sdd-model-assignments` en `inject.go` y `profiles.go` (solo operaban sobre assets embebidos, que ya llevan `axiom:`). `ManagedCodeGraphGuidanceFiles` y `hasCodeGraphGuidance` solo miraban `gentle-ai:` aunque la guía se escribe con `axiom:`: ahora reconocen ambos.
+    - Verificado solo en CI: `internal/app` (`app_test.go`, literales de marcadores ajustados), `internal/opencode`, `internal/dashboard` y `e2e/...` (solo `go vet` y `go build`).
+    - Restos fuera de T4: comentarios `gentle-ai` en `sync.go`, `run.go`, `persona/inject.go`, `sdd/inject.go:65`, `model/types.go` y los comentarios de `plugins/model-variants.ts` y `plugins/skill-registry.ts` (T7; cambiar esos dos ficheros TS exige añadir antes su hash a `opencode_plugin_digests.go`); esquemas `gentle-ai.*` (T5); fixtures `telemetryruntime/testdata` (históricas).
+    - Docs y specs que citan lo cambiado (para T8): `openspec/specs/sdd-preflight-configuration/spec.md`, `PRD-AGENT-BUILDER.md`, `docs/prd-opencode-profiles.md`.
 - [ ] T5. Esquemas y contratos JSON.
   - `gentle-ai.*` pasa a `axiom.*`: runtime ledger, governance, archive-compose, capability manifest, telemetry ownership, opencode default y review-store-lock.
   - Se aceptan al leer los esquemas viejos de ficheros ya escritos.
@@ -135,8 +150,8 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 
 ## Progreso
 
-T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4-T8 sin empezar.
+T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5-T8 sin empezar.
 
 ## Siguiente paso
 
-T4.
+T5.

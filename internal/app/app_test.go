@@ -686,7 +686,7 @@ func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.
 	if err != nil {
 		t.Fatalf("ReadFile(OpenCode settings): %v", err)
 	}
-	if !strings.Contains(string(settings), `\u003c!-- gentle-ai:opencode-background-subagents --\u003e`) {
+	if !strings.Contains(string(settings), `\u003c!-- axiom:opencode-background-subagents --\u003e`) {
 		t.Fatalf("TUI sync did not preserve OpenCode background policy in SDD settings")
 	}
 	persisted, err := state.Read(home)
@@ -783,7 +783,7 @@ func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
 		t.Fatalf("ReadFile(%s): %v", workflowPath, err)
 	}
 	for _, unwanted := range []string{
-		"<!-- gentle-ai:sdd-model-assignments -->",
+		"<!-- axiom:sdd-model-assignments -->",
 		"## Model Assignments",
 		"Every Claude Agent tool call MUST include `model`",
 	} {
