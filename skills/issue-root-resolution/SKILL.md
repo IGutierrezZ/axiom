@@ -1,6 +1,6 @@
 ---
 name: issue-root-resolution
-description: "Trigger: root audit, atacar la raíz, issue roots, backlog roots, mechanism map, deletion-driven fix, resolver issues de raíz, close outdated issues. Audit and resolve issue clusters by verified root cause."
+description: "Trigger: root audit, atacar la raíz, issue roots, mechanism map, deletion-driven fix, close outdated issues. Resolve issue clusters by verified root cause."
 license: Apache-2.0
 metadata:
   author: gentleman-programming

@@ -36,7 +36,7 @@ Hallazgos del entorno, fuera del repositorio:
 ## Tareas
 
 - [x] T1 — Renombrar `skills/branch-pr/` a `skills/axiom-branch-pr/` y actualizar su fila en el índice de `AGENTS.md`. Ruta: inline (cambio mecánico, menos de 100 líneas).
-- [ ] T2 — Recortar a 160 runas o menos las `description` de `issue-root-resolution`, `knowledge-crawl`, `knowledge-query` y las dos copias de `systemic-issue-triage`, y regenerar sus filas en `AGENTS.md`. Ruta: inline.
+- [x] T2 — Recortar a 160 runas o menos las `description` de `issue-root-resolution`, `knowledge-crawl`, `knowledge-query` y las dos copias de `systemic-issue-triage`, y regenerar sus filas en `AGENTS.md`. Ruta: inline.
 - [ ] T3 — Hacer que `sdd-propose` cite la guía de adopción como `sdd-spec/references/openspec-adoption.md` y ajustar `TestSDDSpecAndProposePointToTheAdoptionReference`. Ruta: inline.
 
 ## Criterios de aceptación
@@ -50,6 +50,11 @@ Hallazgos del entorno, fuera del repositorio:
   - `git mv skills/branch-pr skills/axiom-branch-pr` y fila de `AGENTS.md` con la ruta nueva.
   - `go test ./internal/skillregistry/ -run TestRepoAgentsIndex -count=1`: `ok` (12,1 s).
 
+- T2:
+  - Las descripciones quedan en 155, 157, 159 y 156 runas. Las filas de `AGENTS.md` se cambian con el mismo texto.
+  - `go test ./internal/skillregistry/ ./internal/skillcheck/ ./internal/catalog/ -count=1`: `ok`.
+  - `./internal/assets/` falla por T1: `issue_creation_authority_test.go:77,119` leía `skills/branch-pr/SKILL.md`. Se corrige con un fixup de T1.
+
 ## Siguiente paso
 
-T2.
+Fixup de T1 y T3.
