@@ -42,7 +42,7 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 - [x] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
 - [ ] T4 · Dashboard (implementada en `8eb0c56d`; pendiente de CI y de verla en el navegador). API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
 - [ ] T5 · Cargado sin uso (implementada en `02e61754`; la parte del dashboard, pendiente de CI). Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
-- [ ] T6 · Documentación de uso, revisión de la spec viva (`## Spec viva` si `openspec/specs` cubre el doctor o el dashboard) y cierre: `go test` de los paquetes tocados y `axiom doctor`. Ruta: inline.
+- [x] T6 · Documentación de uso, revisión de la spec viva (`## Spec viva` si `openspec/specs` cubre el doctor o el dashboard) y cierre: `go test` de los paquetes tocados y `axiom doctor`. Ruta: inline.
 
 ## Criterio de aceptación
 
@@ -95,9 +95,17 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
   - Evidencia: `gofmt -l` limpio; `go vet ./internal/mcpexclusion/ ./internal/cli/ ./internal/dashboard/` ok; `go test ./internal/mcpexclusion/` ok (repetido por el padre); `go test ./internal/cli/ -run "Footprint|Doctor"` ok.
   - **Pendiente:** `go test ./internal/dashboard/...` en CI.
 
+- T6 · commit `cd7f3d82`.
+  - `docs/usage.md` gana la sección «Contexto por proyecto: duplicados y servidores MCP». La limitación de escritorio va en un párrafo propio. `docs/manual-de-inicio.md` enlaza a ella.
+  - `## Spec viva`: `multi-project-hub` (REQ-30.33 y REQ-30.34) y `local-web-dashboard` (REQ-25.55). Ninguna spec cubre la huella de `axiom doctor`, así que no se inventa ninguna capacidad para `duplicado` ni `sin uso`.
+  - Evidencia: `axiom archive integrate --odd contexto-por-proyecto` terminó con salida 0 (`increment`, impacto `delta`, las dos capacidades `composed`); el padre comprobó que cada id aparece una sola vez.
+  - No se ejecutó `axiom doctor`: no acepta `--cwd`, y el binario instalado es de `main`.
+
 ## Siguiente paso
 
-T6. Según el resultado de la prueba por id, ajustar T3 y T4: escribir los dos nombres de cada conector, o avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión.
+1. Resultado de la prueba de escritorio por id. Si funciona, ajustar T3 y T4 para que escriban también el id del conector. Si no, avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión. En los dos casos, actualizar el párrafo de escritorio de `docs/usage.md`.
+2. Abrir la PR (`scripts/axiom-worktree.ps1 pr contexto-por-proyecto`) para que CI ejecute `go test ./internal/dashboard/...`, y cerrar T4 y T5 con esa evidencia.
+3. Verificar la pantalla en el navegador con un binario de esta rama.
 
 ## Spec viva
 
