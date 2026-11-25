@@ -25,7 +25,6 @@ func ciEnvironment(t *testing.T) {
 	t.Setenv("GITHUB_RUN_ID", "42")
 	t.Setenv("GITHUB_RUN_ATTEMPT", "2")
 	t.Setenv("GITHUB_JOB", "publish")
-	t.Setenv("PROVIDER_CONTRACT_SEMVER", "1.4.0")
 }
 
 // TestLocalBuildWritesNoReleaseClaim covers the only path that reaches this

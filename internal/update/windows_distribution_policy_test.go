@@ -121,12 +121,6 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 			},
 		},
 		{
-			name: "provider contract archive version differs from committed semver",
-			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "gentle-ai-review-provider-contract-"+releasePolicyContractSemver(t)+".tar.gz", "gentle-ai-review-provider-contract-2.0.0.tar.gz")
-			},
-		},
-		{
 			name: "alternate publication config",
 			mutate: func(t *testing.T, root string) {
 				replaceReleasePolicyFile(t, root, filepath.Join(".github", "workflows", "release.yml"), "args: release --clean", "args: release --clean --config .goreleaser-alternate.yaml")
@@ -419,9 +413,8 @@ func newReleasePolicyFixture(t *testing.T) string {
 	}
 	files := map[string]string{
 		".goreleaser.yaml": readRepositoryFile(t, ".goreleaser.yaml"),
-		filepath.Join("contracts", "review-provider-contract", "CONTRACT_SEMVER"): readRepositoryFile(t, "contracts", "review-provider-contract", "CONTRACT_SEMVER"),
-		"go.mod": readRepositoryFile(t, "go.mod"),
-		"go.sum": readRepositoryFile(t, "go.sum"),
+		"go.mod":           readRepositoryFile(t, "go.mod"),
+		"go.sum":           readRepositoryFile(t, "go.sum"),
 		filepath.Join(".github", "workflows", "release.yml"):              readRepositoryFile(t, ".github", "workflows", "release.yml"),
 		filepath.Join("internal", "releasepolicy", "policy.go"):           readRepositoryFile(t, "internal", "releasepolicy", "policy.go"),
 		filepath.Join("internal", "releasepolicycmd", "main.go"):          readRepositoryFile(t, "internal", "releasepolicycmd", "main.go"),
@@ -539,17 +532,9 @@ func replaceReleasePolicyFile(t *testing.T, root, path, old, replacement string)
 	}
 }
 
-// releasePolicyContractSemver is the committed provider contract version the
-// fixture's provider contract archive must be named after; reading it keeps the
-// fixture correct across CONTRACT_SEMVER bumps.
-func releasePolicyContractSemver(t *testing.T) string {
-	t.Helper()
-	return strings.TrimSpace(readRepositoryFile(t, "contracts", "review-provider-contract", "CONTRACT_SEMVER"))
-}
-
 func releasePolicyArtifacts(t *testing.T) string {
 	t.Helper()
-	return strings.ReplaceAll(releasePolicyArtifactsFixture, "{{CONTRACT_SEMVER}}", releasePolicyContractSemver(t))
+	return releasePolicyArtifactsFixture
 }
 
 const releasePolicyArtifactsFixture = `[
@@ -562,7 +547,6 @@ const releasePolicyArtifactsFixture = `[
   {"name":"axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","goos":"linux","goarch":"arm64","target":"linux_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","goos":"darwin","goarch":"amd64","target":"darwin_amd64_v1","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","goos":"darwin","goarch":"arm64","target":"darwin_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
-  {"name":"gentle-ai-review-provider-contract-{{CONTRACT_SEMVER}}.tar.gz","path":"dist/gentle-ai-review-provider-contract-{{CONTRACT_SEMVER}}.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"review-provider-contract"}},
   {"name":"gentle-ai-release-provenance-v1.tar.gz","path":"dist/gentle-ai-release-provenance-v1.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"release-provenance"}},
   {"name":"checksums.txt","path":"dist/checksums.txt","type":"Checksum","extra":{}}
 ]`
