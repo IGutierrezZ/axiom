@@ -37,7 +37,7 @@ Hallazgos del entorno, fuera del repositorio:
 
 - [x] T1 — Renombrar `skills/branch-pr/` a `skills/axiom-branch-pr/` y actualizar su fila en el índice de `AGENTS.md`. Ruta: inline (cambio mecánico, menos de 100 líneas).
 - [x] T2 — Recortar a 160 runas o menos las `description` de `issue-root-resolution`, `knowledge-crawl`, `knowledge-query` y las dos copias de `systemic-issue-triage`, y regenerar sus filas en `AGENTS.md`. Ruta: inline.
-- [ ] T3 — Hacer que `sdd-propose` cite la guía de adopción como `sdd-spec/references/openspec-adoption.md` y ajustar `TestSDDSpecAndProposePointToTheAdoptionReference`. Ruta: inline.
+- [x] T3 — Hacer que `sdd-propose` cite la guía de adopción como `sdd-spec/references/openspec-adoption.md` y ajustar `TestSDDSpecAndProposePointToTheAdoptionReference`. Ruta: inline.
 
 ## Criterios de aceptación
 
@@ -55,6 +55,20 @@ Hallazgos del entorno, fuera del repositorio:
   - `go test ./internal/skillregistry/ ./internal/skillcheck/ ./internal/catalog/ -count=1`: `ok`.
   - `./internal/assets/` falla por T1: `issue_creation_authority_test.go:77,119` leía `skills/branch-pr/SKILL.md`. Se corrige con un fixup de T1.
 
+- T1 (fixup):
+  - `internal/assets/issue_creation_authority_test.go` lee `skills/axiom-branch-pr/SKILL.md`.
+  - `go test ./internal/assets/ -count=1`: `ok`.
+- T3:
+  - `sdd-propose` cita `sdd-spec/references/openspec-adoption.md`. El detector de referencias solo considera `references/…` cuando va precedido de espacio, comilla invertida o paréntesis, así que la ruta con el prefijo de la skill no se toma como propia.
+  - `TestSDDSpecAndProposePointToTheAdoptionReference` exige el texto nuevo.
+- Cierre:
+  - `go test ./internal/assets/ ./internal/skillregistry/ ./internal/skillcheck/ ./internal/catalog/ ./internal/components/sdd/ ./internal/components/skills/ -count=1`: todos `ok`.
+  - `axiom skill check --path <worktree>`: `33 skills, 0 error(es), 0 aviso(s)`.
+
+## Pendiente fuera del repositorio
+
+En el checkout principal, `.claude/skills/judgment-day` y `.claude/skills/sdd-propose` seguirán avisando hasta reinstalar `axiom` desde `main` tras el merge y repetir `axiom install --scope workspace --agent claude-code`.
+
 ## Siguiente paso
 
-Fixup de T1 y T3.
+PR (decisión de la persona).

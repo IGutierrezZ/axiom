@@ -3723,7 +3723,7 @@ func TestSDDSpecAndProposePointToTheAdoptionReference(t *testing.T) {
 		}
 	}
 	propose := mustReadResolved("skills/sdd-propose/SKILL.md")
-	for _, want := range []string{"`axiom archive adopt scan`", "`sdd-spec` `references/openspec-adoption.md`", "`spec` gate"} {
+	for _, want := range []string{"`axiom archive adopt scan`", "`sdd-spec/references/openspec-adoption.md`", "`spec` gate"} {
 		if !strings.Contains(propose, want) {
 			t.Errorf("sdd-propose/SKILL.md is missing %q", want)
 		}
