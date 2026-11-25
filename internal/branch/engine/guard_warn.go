@@ -3,8 +3,10 @@ package engine
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
@@ -13,13 +15,15 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// El aviso de la guarda D (REQ-25.21 escenarios 3 a 8, design D-18 paso 4): con el evento `post` y
-// un fichero que no es un documento de Axiom, avisa sin bloquear —la escritura ya ocurrió— cuando
-// el checkout que lo contiene no está en la rama de ninguno de los cambios activos registrados por
-// `ensure` en ese repositorio. Como el bloqueo, decide solo con lecturas de ficheros: no lanza un
-// proceso, no consulta `VerdictFor` (el consultante `guard` evalúa un repositorio de código como
+// El aviso de la guarda D (REQ-25.21 punto 2 y sus escenarios, design D-18 paso 4): con el evento
+// `post` y un fichero que no es un documento de Axiom, avisa sin bloquear —la escritura ya
+// ocurrió— cuando el checkout que lo contiene no está en la rama de ninguno de los cambios activos
+// registrados por `ensure` en ese repositorio y git no ignora el fichero. Decide con lecturas de
+// ficheros —no consulta `VerdictFor` (el consultante `guard` evalúa un repositorio de código como
 // `not_applicable`; el aviso no pregunta por el papel del repositorio sino por el registro local y
-// por `HEAD`) y falla en abierto.
+// por `HEAD`)— y falla en abierto. Su único proceso es la consulta `git check-ignore` de
+// ignoredByGit, que solo se lanza cuando las lecturas ya piden el aviso: sin motivo de aviso no
+// lanza ninguno.
 
 // guardWarn compone el aviso de las rutas de un evento `post`. Cada checkout se avisa una sola vez,
 // aunque el parche escriba varios ficheros en él; sin nada que avisar devuelve `none`.
@@ -29,7 +33,7 @@ func (e *Engine) guardWarn(ctx context.Context, payload GuardPayload) GuardDecis
 		if ctx.Err() != nil {
 			return guardNone
 		}
-		root, message, ok := e.warnFile(path)
+		root, message, ok := e.warnFile(ctx, path)
 		if !ok || containsDirectory(roots, root) {
 			continue
 		}
@@ -45,8 +49,9 @@ func (e *Engine) guardWarn(ctx context.Context, payload GuardPayload) GuardDecis
 // aviso. ok es falso cuando no hay nada que avisar: el fichero es un documento de Axiom (su
 // responsabilidad es la del bloqueo, evento `pre`), queda fuera de un proyecto Axiom o es del
 // repositorio de specs de un `multirepo` (exento); el repositorio no tiene ningún cambio activo
-// registrado; el checkout está en la rama de uno de ellos; o cualquier lectura falla.
-func (e *Engine) warnFile(path string) (root, message string, ok bool) {
+// registrado; el checkout está en la rama de uno de ellos; git ignora el fichero; o cualquier
+// lectura falla.
+func (e *Engine) warnFile(ctx context.Context, path string) (root, message string, ok bool) {
 	start := existingDirectory(path)
 	root, inGit := gitcommon.GitRootFromFiles(start)
 	if !inGit {
@@ -97,7 +102,38 @@ func (e *Engine) warnFile(path string) (root, message string, ok bool) {
 			}
 		}
 	}
+	// La consulta a git va la última: solo se paga cuando todo lo demás ya pide el aviso.
+	if ignoredByGit(ctx, root, path) {
+		return "", "", false
+	}
 	return root, warnMessage(path, current, detached, active), true
+}
+
+// ignoreCheckTimeout es el límite de la consulta de ignoredByGit cuando el contexto no trae plazo
+// (con el plazo de la guarda, el límite es la mitad de lo que queda).
+const ignoreCheckTimeout = 500 * time.Millisecond
+
+// ignoredByGit dice si git ignora path en el checkout cuya raíz es root: un único
+// `git check-ignore -q -- <ruta relativa>` ejecutado en root, local y sin red. Sin `--no-index`,
+// un fichero versionado nunca cuenta como ignorado aunque coincida con un patrón de exclusión. La
+// consulta usa como mucho la mitad del presupuesto que le queda a la guarda, de modo que un git
+// lento no se come el aviso. Cualquier fallo —git ausente, un error (código distinto de 0 y 1), su límite
+// agotado o una ruta fuera de root— responde «no ignorado»: el aviso se emite como antes de existir
+// la consulta, y la guarda nunca bloquea por ella.
+func ignoredByGit(ctx context.Context, root, path string) bool {
+	relative, err := filepath.Rel(root, path)
+	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return false
+	}
+	timeout := ignoreCheckTimeout
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline) / 2
+	}
+	if timeout <= 0 {
+		return false
+	}
+	result, err := gitcommon.RunWithTimeout(ctx, root, timeout, "check-ignore", "-q", "--", filepath.ToSlash(relative))
+	return err == nil && result.ExitCode == 0
 }
 
 // activeChange es un cambio activo registrado en un repositorio: su carril, su nombre, el modo de

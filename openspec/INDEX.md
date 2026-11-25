@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-24 19:58:22 UTC
-> **Total Dominios:** 75 | **Total Requerimientos:** 657 | **Total Escenarios BDD:** 2322
+> **Última Sincronización:** 2026-11-25 14:17:14 UTC
+> **Total Dominios:** 75 | **Total Requerimientos:** 657 | **Total Escenarios BDD:** 2327
 
 ---
 
@@ -21,7 +21,7 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 3 | 5 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 301 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 306 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 5 | 12 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
@@ -693,11 +693,16 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Con varios cambios activos el aviso nombra los worktrees de todos
   - *Escenario BDD:* En modo `in_place` el aviso nombra la rama esperada
   - *Escenario BDD:* Sin aviso si el fichero está en el worktree correcto
+  - *Escenario BDD:* Sin aviso en un fichero ignorado por git
+  - *Escenario BDD:* Un fichero versionado avisa aunque coincida con un patrón de exclusión
+  - *Escenario BDD:* Si la consulta a git falla, el aviso se emite
+  - *Escenario BDD:* Un documento de Axiom ignorado por git se sigue bloqueando
   - *Escenario BDD:* Sin cambio activo registrado en el repositorio no hace nada con el código
   - *Escenario BDD:* El repositorio de specs de un multirepo queda exento del aviso
   - *Escenario BDD:* Inerte fuera de un proyecto Axiom
   - *Escenario BDD:* Fail-open ante un error interno
-  - *Escenario BDD:* El hook no lanza git ni ningún otro proceso
+  - *Escenario BDD:* Sin motivo de aviso no se lanza ningún proceso
+  - *Escenario BDD:* Antes de avisar, como mucho una consulta `git check-ignore`
   - *Escenario BDD:* El documento ODD está cubierto
   - *Escenario BDD:* Solo afecta al agente a través del runtime
 - **[REQ-25.22]** Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git
