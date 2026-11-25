@@ -1,0 +1,166 @@
+# Tareas: Retirada completa de RDD y de `bench/` (C-01-e)
+
+Una fase por commit del diseño (C1-C12), una sola PR (`single-pr`). Cada fase termina en un commit Conventional Commit sin atribución de IA. El diseño (`design.md`) manda sobre el orden y las fronteras; la numeración 0-9 de la propuesta solo identifica unidades.
+
+## Previsión de carga de revisión
+
+| Campo | Valor |
+|-------|-------|
+| Líneas cambiadas estimadas | 230.000-300.000 (más del 95 % son borrados: `reviewtransaction`, `reviewerprovider`, `rddharness`, `cli/review*`, `bench/`, activos `review-*`, docs RDD) |
+| Riesgo frente al presupuesto de 400 líneas | High |
+| PR encadenadas recomendadas | No (regla del proyecto: una sola PR por cambio, commit por tarea; sin `size:exception` ni umbral de 400) |
+| División sugerida | PR única con 12 commits revisables y revertibles por unidad |
+| Estrategia de entrega | single-pr |
+| Estrategia de cadena | pending |
+
+Decision needed before apply: No
+Chained PRs recommended: No
+Chain strategy: pending
+400-line budget risk: High
+
+### Unidades de trabajo sugeridas
+
+| Unidad | Objetivo | PR | Comando de prueba focal | Arnés de ejecución | Frontera de reversión |
+|--------|----------|----|-------------------------|--------------------|-----------------------|
+| C1 | Desacoplar lo no RDD (sin borrar) | PR única | `go test ./internal/sddstatus -count=1 -timeout 30m` | N/A: sin binario (EDR) | Revertible sola |
+| C2 | Retirar `bench/` | PR única | `go test ./cmd/axiom ./internal/app -count=1 -timeout 30m` | N/A | Revertible sola |
+| C3 | Scripts y CI RDD puros | PR única | `go test ./internal/assets -count=1 -timeout 15m` | N/A | Revertible sola |
+| C4 | Cirugía de `e2e/organicruntime` y job `claude-network-none` | PR única | `go test ./e2e/organicruntime -list '.*'` | Prueba Go; el job manual `organic-runtime-e2e` en CI | Revertible sola |
+| C5 | Release sin contrato del proveedor | PR única | `go test ./internal/update ./internal/releasepolicy -count=1 -timeout 15m` | N/A | Revertir C5 exige revertir C9-C12 (D1) |
+| C6 | TUI | PR única | `go test ./internal/tui/... -count=1 -timeout 20m` | N/A | Revertible sola |
+| C7 | Dashboard | PR única | `go test ./internal/dashboard/... -count=1 -timeout 15m` | N/A | Revertible sola |
+| C8 | `cli/review*`, despachadores y `branch` | PR única | `go test ./internal/cli -count=1 -timeout 90m` | N/A | Revertir C8 antes que C9-C11 |
+| C9 | `components/sdd`, activos, skill y contratos | PR única | `go test ./internal/components/... ./internal/assets/... -count=1 -timeout 60m` | N/A | Revertir C9 antes que C10-C11 |
+| C10 | `hub` y `state` sin `RDDMode*` | PR única | `go test ./internal/state ./internal/hub -count=1 -timeout 30m` | N/A | Revertible sola |
+| C11 | Paquetes RDD y su CI | PR única | `go list ./... \| rg 'reviewtransaction\|reviewerprovider\|rddharness'` vacío | N/A | Revertible tras revertir C12 |
+| C12 | Cierre: docs, baselines, `go mod tidy` | PR única | `go build ./... && go vet ./...` | CI completa (`ci:windows`) | Revertible sola |
+
+## Reglas comunes a todas las fases
+
+- Comprobación común de cada commit: `go build ./...` y `go vet ./...` en verde, y `go test` de **cada paquete tocado, entero**, con `-count=1` y `-timeout` explícito. Nunca `-run` para ocultar tests; `-run` solo aparece en las órdenes que regeneran baselines o goldens, y va seguido de la ejecución completa del paquete.
+- `internal/cli` usa siempre `-timeout 90m` o más.
+- No compilar binarios sueltos de `axiom` (el EDR los borra): nada de `go build -o`, `go install ./cmd/axiom` ni ejecutar el binario. Toda comprobación que exija el binario se sustituye por su prueba Go equivalente o se marca para la CI.
+- Ningún baseline ni golden se edita a mano; se regeneran con su mecanismo (D12, D6).
+- Un test que valida un activo o comportamiento que se borra sale, como tarde, en el commit que lo borra. Un símbolo compartido que `go vet` revele se mueve, nunca se reimplementa.
+- Al cerrar cada tarea: marcar la casilla, anotar el sha del commit en este fichero y actualizar el espejo Engram `sdd/retirar-rdd/tasks`.
+- TDD: no fijado; en C1, C9 y C10 el comportamiento nuevo escribe la prueba antes y se observa en rojo.
+
+## C1 — Unidad 0: desacoplar lo no RDD (REQ-46.7, equivalencia de `CommonDir`)
+
+- [ ] 1.1 RED: crear `internal/sddstatus/runtime_common_dir_test.go` con los cinco casos de la matriz de amenazas: checkout principal; worktree enlazado (resuelve al common dir del principal); ruta con enlace simbólico (se salta en Windows sin privilegio); temporal 8.3 en Windows; llamada desde un subdirectorio por `OpenRuntimeStore`. Oráculo: `EvalSymlinks(git rev-parse --path-format=absolute --git-common-dir)`. Añadir el subtest temporal de paridad con `reviewtransaction.CompactAuthoritativeStore` (se borra en 11.x). Observar rojo.
+- [ ] 1.2 GREEN: en `internal/sddstatus/runtime_ledger.go` añadir `runtimeGitCommonDir` (D3: `gitcommon.CommonDir` + `EvalSymlinks` + `Clean`) y sustituir la sonda `CompactAuthoritativeStore` y los cuatro `filepath.Dir` en `OpenRuntimeStore`. Se conserva `RuntimeRepositoryRequiredError` fuera de un repositorio.
+- [ ] 1.3 Mover helpers (D7), sin cambiar comportamiento: crear `internal/cli/managed_asset_digest.go` (`managedAssetDigest`); renombrar en `internal/cli/console_interactive.go` a `consoleInteractive`/`consoleTerminal`; crear `internal/cli/build_version.go` (`buildVersionAndCommit`) y `internal/cli/build_version_test.go` con la parte no RDD de `review_version_consistency_test.go`; actualizar `internal/cli/doctor.go`, `run.go`, `sync.go` y `doctor_project.go`.
+- [ ] 1.4 Crear `internal/cli/gittest_helpers_test.go` (`runCLIGit`, `initCLIGitRepo`, `canonicalCLITempDir`, `containsString`) y repuntar `sdd_planning_home_test`, `sdd_status_continue_consent_test`, `sdd_attempt_test` y `sdd_attempt_marker_binding_test`; los `review_*` pasan a los nombres nuevos.
+- [ ] 1.5 Trasladar `TestDualContract_SDDStatusDualSerialization` (desde `internal/cli/dual_contract_integration_test.go:344`) a `internal/cli/sdd_status_serialization_test.go` como `TestSDDStatusDualSerialization` (REQ-46.7). El resto del fichero original no se toca hasta C8.
+- [ ] 1.6 D5, centinelas: sustituir `RDDMode` por `PendingSync: true` (o `LastUpdateCheck` fijo si ya manipulan `PendingSync`) en los tests de `internal/state/{state,store}_test.go`, `internal/app/{app_test,state_lock_test}.go`, `internal/components/uninstall/state_lock_test.go`, `internal/cli/{install_state_lock,sync_persona_migration,opencode_background,project_state}_test.go`, `internal/tui/{model,pi_background_model}_test.go` y `internal/update/cooldown_concurrency_test.go`. `TestInstallStateLockAcceptsSymlinkedHome` usa el escritor no RDD de `TestPersistInstallStateMergesExplicitAgentsFromLatestState`.
+- [ ] 1.7 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/sddstatus ./internal/state ./internal/app ./internal/components/uninstall ./internal/update ./internal/tui/... ./internal/cli -count=1 -timeout 90m`. Verificar en verde `TestSDDStatusDualSerialization` y `TestStatusRenderersEmbedOnlyStatusV2Projection` (línea base de REQ-46.7) y los cinco casos de equivalencia de `CommonDir`.
+- [ ] 1.8 Commit propuesto: `refactor(sddstatus): resolver el git common dir con gitcommon y mover helpers fuera de ficheros RDD`.
+
+## C2 — Unidad 1: retirar `bench/` (P21)
+
+- [ ] 2.1 Borrar `bench/`, `results.json`, `skills/axiom-bench/`, `internal/app/bench_model_picker.go`, `internal/app/bench_model_picker_fixture.go` y `TestRefusalRatchetVocabularyMatchesBenchClassifier` (en `internal/cli`, D12).
+- [ ] 2.2 Editar `cmd/axiom/main.go` (`:451-470`, verbo `bench-model-picker`) e `internal/app/app.go:108`; comentario de `internal/sddtaskresult/classify_test.go:11-13`.
+- [ ] 2.3 Editar `.github/workflows/ci.yml` (pasos de bench y comentarios del paso de humo), `.github/PULL_REQUEST_TEMPLATE.md` y la fila `axiom-bench` de `AGENTS.md`.
+- [ ] 2.4 Comprobar: `go build ./... && go vet ./...`; `go test ./cmd/axiom ./internal/app ./internal/sddtaskresult ./internal/cli -count=1 -timeout 90m`; `rg -n 'bench-model-picker|bench_fixture' --glob '!docs/plan/**' --glob '!openspec/changes/**' --glob '!odd/**'` sin resultados en código y CI.
+- [ ] 2.5 Commit propuesto: `chore(bench): retirar bench/, bench-model-picker y la skill axiom-bench`.
+
+## C3 — Unidad 2: scripts y CI RDD puros
+
+- [ ] 3.1 Borrar `scripts/test-review-capabilities.sh`, `scripts/test-review-contract-package.sh`, `scripts/cross-lane-battery.sh`, `scripts/crosslane/`, `scripts/opencode_v2_loopback.py`, `scripts/test-opencode-v2-host` y `scripts/test_opencode_v2_host_test.py`.
+- [ ] 3.2 Editar `.github/workflows/ci.yml`, job `opencode-v2-contracts`: quitar «Test bounded V2 host activation polling»; conservar el `tsc` de los plugins no RDD. `scripts/test-opencode-v2-contracts.sh` no cambia.
+- [ ] 3.3 No tocar los shards de `windows-full-suite.yml` (D8: van con el código que cubren).
+- [ ] 3.4 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/assets -count=1 -timeout 15m`.
+- [ ] 3.5 Commit propuesto: `ci: retirar scripts y pasos de CI exclusivos de RDD`.
+
+## C4 — Unidad 8: `e2e/organicruntime` y job `claude-network-none`
+
+- [ ] 4.1 Conservar `TestOrganicDirectoryIdentityAcceptsCanonicalAliases`, `TestOrganicConfiguredAgentReceivesRoutingGuidance{Cursor,RealAgents}`, `TestOrganicEnvironmentDisablesPersistentPathWrites`, los cuatro `*InstalledSDDApplyExecutor*`, `e2e/organicruntime/opencode_trace_test.go` y `sdd_consent_wiring_e2e_test.go` entero.
+- [ ] 4.2 Reescribir sin pasos de revisión: `TestOrganicImplementationRoutesReachDelivery` (fuera `startReview`, `approveReview`, `gate`), `TestOrganicOptionalSDDDeclineAndAccept` (fuera la aserción de `ReviewGate`) y `TestRealAgentOrganicJourneys` (fuera los turnos `review start|finalize|validate` y la puerta; quedan commit, marcador, subagente y ausencia de artefactos SDD).
+- [ ] 4.3 Borrar los tests RDD de `explore.md` §3 (e2e), sus helpers, la consulta `review mode status` de `assertOrganicDelegatedWorkerStaysInRoute`, la importación de `reviewerprovider` y `-tags rdd_harness` de `buildOrganicBinary`.
+- [ ] 4.4 Borrar `e2e/Dockerfile.claude-network-none` y el job `claude-network-none` de `.github/workflows/ci.yml` (decisión confirmada: la persona titular quitará «Claude Network-None Runtime (Required)» del ruleset antes del merge).
+- [ ] 4.5 Editar `ci.yml`, job `organic-runtime-e2e`: quitar «Verify live OpenCode provider isolation E2E is registered», la instalación de Codex y `GENTLE_AI_{CODEX,OPENCODE}_RUNTIME_E2E` y `GENTLE_AI_LARGE_WORKSPACE_E2E`. En `formatter_ordering_test.go`: `unit-tests` pasa a `next: "windows-runtime"` y `TestOrganicRuntimeE2EUsesInstalledOpenCodePin` solo exige la instalación fijada de OpenCode.
+- [ ] 4.6 Comprobar: `go build ./... && go vet ./...`; `go test ./e2e/organicruntime -list '.*'` (la lista conservada aparece completa); `go test ./e2e/organicruntime ./internal/assets -count=1 -timeout 30m`; `rg -n '"review"|review (start|status|finalize|validate|mode)' e2e/organicruntime` sin invocaciones del verbo `review` en los tests conservados (el binario aún lo incluye hasta C8).
+- [ ] 4.7 Commit propuesto: `test(e2e): retirar de organicruntime los recorridos de revisión RDD y el job claude-network-none`.
+
+## C5 — Unidad 7a: release sin contrato del proveedor (D2, D11)
+
+- [ ] 5.1 Borrar `internal/providercontractbundle/`, `internal/providercontractbundlecmd/`, `contracts/review-provider-contract/`, `internal/update/release_security_test.go` y `internal/update/windows_distribution_policy_test.go` (D2), y la línea `.goreleaser-provider-contract/` de `.gitignore`.
+- [ ] 5.2 Editar `.goreleaser.yaml`: quitar el hook y el archivo `review-provider-contract` y las entradas `docs/review-integration.md` y `contracts/review-integration/**` del archivo principal.
+- [ ] 5.3 Editar `.github/workflows/release.yml` (tres lecturas de `CONTRACT_SEMVER` y «Verify provider contract bundle») y `.github/workflows/promote-stable-rc.yml` (salida `provider_contract_semver`, «Read immutable provider contract semver», «Verify source provider contract bundle», `PROVIDER_CONTRACT_SEMVER` y el asset de la lista `:137`).
+- [ ] 5.4 Editar `scripts/promote-stable-preflight.sh:51-52,76` y `scripts/verify-release-assets.sh:28-42` (semver y asset).
+- [ ] 5.5 Editar `internal/releasepolicy/policy.go` (texto fijado `:570-640`, `:720-790`; comprobación de artefactos `:375-428`) y `internal/releaseprovenance{,cmd}` (D11: borrar `Input.ProviderContractSemver`, `provider_contract_semver`, la entrada `provider-contract` de `artifacts` y su validación; esquema y asset siguen en `v1`).
+- [ ] 5.6 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/update ./internal/releasepolicy ./internal/releaseprovenance ./internal/releaseprovenancecmd -count=1 -timeout 30m`; `rg -n "provider.contract|providercontractbundle|PROVIDER_CONTRACT" .goreleaser.yaml .github scripts internal/releasepolicy internal/releaseprovenance internal/update` vacío. `ReviewExecutionContractFor` sigue vivo hasta C9; la compilación lo confirma.
+- [ ] 5.7 Commit propuesto: `build(release): retirar el contrato publicado review-provider-contract del pipeline de release`.
+
+## C6 — Unidad 3: TUI
+
+- [ ] 6.1 Borrar `internal/tui/screens/review_store_reset.go`, `screens/review_mode.go`, `screens/install_review_mode.go`, `screens/install_review_mode_test.go` y `internal/tui/review_store_reset_test.go`.
+- [ ] 6.2 Editar `internal/tui/model.go` (entrada de bienvenida `:2131` y bloques de `explore.md` §3), `internal/tui/router.go:36-37`, `internal/app/app.go:299-305,1144-1166`, `internal/tui/main_test.go` y `internal/tui/model_test.go` (cursor). `ScreenReview` («Review and Confirm») no se toca; `tui/testdata` no cambia.
+- [ ] 6.3 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/tui/... ./internal/app -count=1 -timeout 30m`; `rg -n 'ScreenReview' internal/tui` sigue mostrando la pantalla de confirmación; `rg -n 'review_mode|install_review_mode|review_store_reset' internal/tui internal/app` sin pantallas RDD.
+- [ ] 6.4 Commit propuesto: `refactor(tui): retirar las pantallas del interruptor RDD y el reinicio del almacén de revisión`.
+
+## C7 — Unidad 4a: dashboard
+
+- [ ] 7.1 Borrar `internal/dashboard/service_review_mode.go`, `server_review_mode_test.go`, `assets_reviewmode_test.go` y `internal/dashboard/assets/js/core/reviewmode.js`.
+- [ ] 7.2 Editar `internal/dashboard/server.go:79,348-380`, `service.go:938-956`, `service_adapters.go:43,107`, `types.go:237-241` (`ReviewMode`, `ReviewModeError`) y `main_test.go`.
+- [ ] 7.3 Editar `internal/dashboard/secrets_canary_test.go:45`: la ruta `/api/project/review-mode` sale de `excludedRoutes`; el test sigue verde y ningún HTML o JS carga `reviewmode.js` (`rg -n 'reviewmode' internal/dashboard` vacío).
+- [ ] 7.4 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/dashboard/... -count=1 -timeout 30m`; restaurar `openspec/INDEX.md` con `git restore` si esos tests lo reescriben (defecto previo). Un cliente que envíe `review_mode` no recibe error y una petición a `/api/project/review-mode` obtiene 404.
+- [ ] 7.5 Commit propuesto: `refactor(dashboard): retirar la ruta y el módulo del interruptor RDD`.
+
+## C8 — Unidad 6: `cli/review*`, despachadores y `branch`
+
+- [ ] 8.1 Borrar `internal/cli/review*.go` (producción y tests, incluido `review_stop_hook*`), `branch_lineage.go`, `branch_lineage_test.go`, `codex_review_provider_model_test.go`, `sync_review_agents_verify_test.go`, `sdd_status_review_disabled_test.go`, `sdd_status_reenable_fresh_review_test.go`, `dual_contract_integration_test.go` (tras el traslado de 1.5; `TestDualContract_SchemaValidationWithCompiledSchemas` no se conserva, D16), `protocol_probe_test.go`, `continuation_paths_test.go`, `sdd_no_review_test.go` y `sdd_attempt_rar_mode_read_refusal_{unix,windows}_test.go`.
+- [ ] 8.2 Borrar `internal/app/review_validate_nondeciding_test.go`, `internal/kickoff/rdd_boundary_test.go`, los tests RDD de `internal/sddstatus` (D13) y `review_reverify_test.go` (vacío).
+- [ ] 8.3 Editar `cmd/axiom/main.go` (ayuda `:174`, casos `:433-446`, `runReview` `:2303-2375`) y sus tests; `internal/app/app.go:134-152` y tests de ayuda; `cmd/axiom/testmain_test.go`, `internal/app/testmain_test.go` e `internal/sddstatus/main_test.go` (fuera `rddharness` y `reviewtransaction`).
+- [ ] 8.4 Editar `internal/cli/branch_done.go` (`:38`, `newBranchLineageProbe` `:114`), `internal/branch/ports.go:55-58`, `internal/branch/engine/engine.go:89-110`, `internal/branch/engine/done.go` y sus tests: desaparecen `LineageProbe` y `DefaultWithLineages`; `done` termina bien e ignora sin aviso un almacén residual `<git common dir>/gentle-ai/...`.
+- [ ] 8.5 Editar `internal/cli/project_state_test.go` (fuera `checkManagedReviewerAssets`), `.github/workflows/windows-full-suite.yml` (D8, primera mitad: `cli-review-a-m`, `cli-review-n-z` y `cli-r-other` pasan a `cli-r` con `^TestR`), release-blockers de `cli` y `sddstatus` en `ci.yml` y `darwin-release-blockers.manifest`. Opcional: `internal/sddstatus/review_gate.go` → `read_text.go`.
+- [ ] 8.6 Regenerar el baseline de rechazos (D12, sin editarlo a mano): quitar `reviewtransaction` de `refusalRatchetProductionDirs` si procede, y ejecutar `GENTLE_AI_REFUSAL_RATCHET_UPDATE=1 go test ./internal/cli -run TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign -count=1 -timeout 30m`; después ejecutar el paquete entero sin la variable.
+- [ ] 8.7 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/cli ./cmd/axiom ./internal/app ./internal/branch/... ./internal/kickoff ./internal/sddstatus ./internal/assets -count=1 -timeout 120m`. Verificar en verde `TestSDDStatusDualSerialization` (REQ-46.7), `TestStatusRenderersEmbedOnlyStatusV2Projection`, `TestRunSyncWorkspaceScopeWritesToTheProjectRoot`, `TestRunInstallWorkspaceScopeWritesToTheProjectRoot`, `TestInstallInWorkspaceInstallsInTheExplicitRootWhateverTheCwd` y `TestUninstallWorkspaceFromASubfolderUsesTheProjectRoot` (REQ-46.8). `TestWindowsFullSuiteShardsCoverEveryTestName` en verde. Confirmar que se conservan `axiom sdd-attempt grant`, `internal/consentenvelope` y `kickoff.CommitReview*` (`rg -n 'CommitReview' internal/kickoff` y `go test ./internal/kickoff`). Los e2e conservados no invocan `review` (repetir el `rg` de 4.6).
+- [ ] 8.8 Commit propuesto: `refactor(cli): retirar axiom review, los despachadores de revisión y el sondeo de linajes de branch`.
+
+## C9 — Unidad 5: `components/sdd`, activos, skill y contratos de capacidad (REQ-46.9, REQ-46.10)
+
+- [ ] 9.1 RED de D4: escribir `internal/components/skills/installable_test.go` (mixto con orden conservado, solo retiradas, sin activo con `rdd-defect-workflow` y un id inventado, sin mutar la entrada) y ampliar `internal/cli/selected_skill_ids_test.go` con `rdd-defect-workflow`. Ampliar `TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification` con `rdd-defect-workflow` en `Skills` (global y workspace): `sync` sin error, sin directorio `rdd-defect-workflow`, `go-testing` instalado; test equivalente para `RunInstall`. Observar rojo.
+- [ ] 9.2 GREEN de D4: crear `internal/components/skills/installable.go` (`Installable`); `cli.selectedSkillIDs` lo usa; borrar `WithoutRetired` en `internal/components/skills/retired.go` (se conservan `IsRetired` y `RetireInstalled`).
+- [ ] 9.3 D6 en `internal/components/sdd`: crear `asset_render.go` con lo no RDD renombrado (`renderManagedAsset{,Body,BodyFromContent}`, `replaceManagedSection`, `bindRuntimeAgentIdentity`, `researchLifecycleContract`, `judgmentDayReviewerContract`, `nativeReviewerResultSchema`, `replaceAgentBody`, `renderSDDOrchestratorAsset`); borrar el resto de `boundedreview.go` y `rdd_retire.go`; quitar `rddharness.Enabled()` y sus ramas de `inject.go`, `orchestrator.go:119,233-275` y `profiles.go:310`. Mover `assertTextContainsClauses` y `readGentleOrchestratorPrompt` a `helpers_test.go`. Recortar los tests mixtos listados en C9 del diseño y borrar `rdd_*_test.go`; `main_test.go` sin `rddharness`.
+- [ ] 9.4 Contratos de capacidad: `internal/capabilitymanifest/manifest.go` (`ContractReviewTransportV1`, `ContractImmutableReviewExecutorV1`, mapas de exposición, campos de `ContractClaims`, ramas de `Advertises`), `internal/agents/capability_manifest.go:24` y `manifest_test.go`; borrar `internal/agents/adapter_forbidden_construction_guard_test.go`.
+- [ ] 9.5 `internal/cli`: `run.go:3278` (`IsRetiredReviewSubAgentPath`), `sync.go:2636-2655` (verificación del plugin heredado `review-result-artifacts.ts`: `sync` ya no falla si existe), y tests que leen activos borrados (`install_test.go`, `run_component_paths_test.go`, `sync_test.go:3927-3963`, `workspace_shared_skills_test.go`). Añadir escenarios: un `opencode.json` u overlay con `review-*` no rompe `sync`; se conservan los hooks ajenos de `settings.json`.
+- [ ] 9.6 Skill y modelos: `internal/model` (`SkillRDDDefectWorkflow`), `internal/catalog/skills.go:38` y `skills_test.go`, `internal/components/skills/presets.go:27,45` (fuera de `contributorSkills`), `internal/tui/screens/skill_picker.go:38`, `opencode.{ReviewRefuterAgent,ReviewValidatorAgent,ReviewLensPhases,ReviewPhases}`, `internal/opencode/config.go:389-407` con `{models,config}_test.go`, filas RDD de `internal/tui/screens/{model_picker,claude_model_picker,codex_model_picker}.go` y sus tests, `internal/components/uninstall/workspace_test.go`. Carga tolerante: un estado con asignaciones de modelo de roles `rdd-*`/`review-*` (Codex, Claude, OpenCode) y una selección con `rdd-defect-workflow` cargan sin error y se ignoran (prueba nueva en `internal/model` u `internal/opencode`).
+- [ ] 9.7 Activos: borrar los 25 `review-*` de `internal/assets/{claude,cursor,kiro,kimi}/agents/`, las 6 entradas RDD de `opencode/sdd-overlay-{single,multi}.json`, `opencode/plugins{,-v2}/opencode-review-transport.ts`, `skills/_shared/review-ledger-contract{,-pi}.md`, `internal/assets/skills/rdd-defect-workflow/`, `skills/{rdd-defect-workflow,rdd-advisory-transport}/` y las filas de `AGENTS.md:62-63`; borrar los tests de `internal/assets` de `explore.md` §4. Conservar Judgment Day con su `review-ledger`.
+- [ ] 9.8 Guarda de ausencia (D13): crear `internal/assets/retired_review_commands_test.go` (ningún activo embebido contiene `axiom review `, `gentle-ai review `, `review-ledger-contract` ni `rdd-defect-workflow`; cubre también `rdd-advisory-transport`, `axiom-bench` y los agentes `review-*` embebidos, no solo el directorio de salida).
+- [ ] 9.9 Prosa y goldens (D6) en dos pasos. Paso 1, mecánico: quitar de la fuente exactamente lo que recortan los recortadores (`sdd-orchestrator.md` x12, `skills/_shared/sdd-orchestrator-sections.md`, `claude|opencode/commands/sdd-apply.md`) y borrar los recortadores; `go test ./internal/components -run TestGolden -count=1` **sin** `-update` pasa. Paso 2, prosa: podar las frases listadas en D6; regenerar con `-update` (`go test ./internal/components -run TestGolden -update -count=1`, y `go test ./internal/tui -run TestCustomPresetPostComponentFlowMatrix -update` para los dos goldens con «RDD Defect Workflow»), revisar que el diff solo toca esas frases y volver a ejecutar sin `-update`.
+- [ ] 9.10 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/components/... ./internal/assets/... ./internal/opencode/... ./internal/catalog ./internal/model ./internal/agents/... ./internal/tui/... ./internal/cli -count=1 -timeout 120m`. Verificar en verde `TestSkillsForPresetExcludesContributorSkills` y el golden `skills-presets.json` (REQ-46.9), `TestProtocolAmbiguousProjectRecoveryDistinction` (REQ-46.10), y repetir los cuatro tests de REQ-46.8 y los de REQ-46.7. Confirmar que se conservan `ScreenReview`, `sdd-attempt grant`, `consentenvelope` y `kickoff.CommitReview*`.
+- [ ] 9.11 Commit propuesto: `refactor(sdd): retirar activos, skill rdd-defect-workflow y contratos de capacidad de RDD`.
+
+## C10 — Unidad 4b: `hub` y `state` sin `RDDMode*` (D5)
+
+- [ ] 10.1 RED: crear las pruebas de tolerancia en `internal/state` y `internal/hub`: JSON crudo con `rdd_mode` y `rdd_mode_recorded_at` (y `rdd_mode` del hub) carga, conserva el resto de campos y, tras escribir, el fichero ya no los contiene; casos con `rdd_mode` de tipo inesperado y JSON parcial. Observar rojo mientras los campos existan.
+- [ ] 10.2 GREEN: borrar `internal/hub/rddpref.go` y `rddpref_test.go`; editar `internal/hub/types.go:24-26` (`WorkspaceRecord.RDDMode`), `internal/hub/main_test.go`, `internal/state/state.go:183-196,341-342` (`RDDMode`, `RDDModeRecordedAt`, copia en `merge`, `ProjectView`, `WithMachineFields`) y `internal/state/store.go:136-164`.
+- [ ] 10.3 Comprobar: `go build ./... && go vet ./...`; `go test ./internal/state ./internal/hub ./internal/statecoord ./internal/app ./internal/cli -count=1 -timeout 90m`; `rg -n 'RDDMode|SetProjectRDD' internal` sin resultados.
+- [ ] 10.4 Commit propuesto: `refactor(state): eliminar RDDMode del estado global y del hub con lectura tolerante`.
+
+## C11 — Unidad 7b: paquetes RDD y su CI
+
+- [ ] 11.1 Borrar `internal/reviewtransaction/`, `internal/reviewerprovider/`, `internal/rddharness/`, `contracts/review-integration/`, `model.ValidCodexReviewModel` y su test; borrar el subtest temporal de paridad de 1.1.
+- [ ] 11.2 Editar `.github/workflows/windows-full-suite.yml` (D8, segunda mitad: fuera `reviewtransaction-{a-c,d-k,l-z}` y la exclusión `/internal/reviewtransaction$` de `rest`; cabecera de 10 shards y tabla de costes reescritas con costes pendientes de medir; matriz final `cli-a-m`, `cli-n-o`, `cli-p-q-s-z`, `cli-r`, `rest`). Criterio de aceptación de `cli-r`: ejecutar con la etiqueta `ci:windows` y, si supera el timeout, partirlo antes del merge.
+- [ ] 11.3 Editar `ci.yml`, job `windows-runtime`: fuera «Run native Windows git process tree tests», «Stress repository-context sharing retry», `GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER` y los release-blockers de `reviewtransaction` (quedan `./internal/fileprim` con 3 y `./internal/components/engram` con 5); `TestWindowsReleaseBlockerCannotSkipOwnerRebinding` pasa a `TestWindowsReleaseBlockerPackagesExist`; `darwin-release-blockers.manifest`; `.github/PULL_REQUEST_TEMPLATE.md`.
+- [ ] 11.4 Ratchets (D12, sin edición manual): quitar `reviewtransaction` de `refusalRatchetProductionDirs` y pasar los datos sintéticos de `:654-659` a una ruta neutra; regenerar con `GENTLE_AI_REFUSAL_RATCHET_UPDATE=1 go test ./internal/cli -run TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign -count=1 -timeout 30m` y `GENTLE_AI_GUARD_POPULATION_UPDATE=1 go test ./internal/cli -run TestEveryRegisteredGuardPopulationDeclarationMatchesProduction -count=1 -timeout 30m`; `guardPopulationCount` 6→2 y `guardPopulationProductionDirs`; actualizar `docs/architecture/guard-population.md`. Ejecutar después `internal/cli` entero sin variables.
+- [ ] 11.5 Comentarios que citan los paquetes: `internal/fileprim/lock.go`, `internal/pathidentity/identity.go`, `internal/kickoff/{integration,types,integration_test}.go`, `internal/state/state.go`, `e2e/organicruntime/organic_runtime_real_agent_detection_test.go:4`.
+- [ ] 11.6 Comprobar: `go build ./... && go vet ./...`; `go list ./... | rg 'reviewtransaction|reviewerprovider|rddharness'` vacío; `go test ./internal/cli ./internal/assets ./internal/model ./internal/kickoff ./internal/fileprim ./internal/pathidentity ./internal/state ./internal/sddstatus ./e2e/organicruntime -count=1 -timeout 120m`; `TestWindowsFullSuiteShardsCoverEveryTestName` y `TestWindowsReleaseBlockerPackagesExist` en verde; repetir en verde el test de equivalencia de `CommonDir` (sin el subtest de paridad).
+- [ ] 11.7 Commit propuesto: `refactor: retirar reviewtransaction, reviewerprovider, rddharness y los contratos review-integration`.
+
+## C12 — Unidad 9: cierre
+
+- [ ] 12.1 Borrar los documentos de D14: `docs/review-integration.md`, `docs/review-authority-threat-model.md`, `docs/architecture/{organic-rdd,rdd-backlog-disposition,rdd-freeze-expansion-policy,rdd-ownership-inventory,rdd-root-simplification-design,rdd-wave7-deletion-proof-tracker,the-organic-rdd-story}.md`, `docs/audits/{2026-07-21-rdd-system-audit,2026-07-24-organic-rdd-recovery-plan}.md`, `docs/audits/data/organic-rdd-recovery/`, `docs/testing/organic-rdd-testing-guide.md` y `docs/assets/diagrams/rdd-review.svg`.
+- [ ] 12.2 Podar la prosa RDD de `README.md`, `AGENTS.md`, `docs/{usage,trigger-rules,intended-usage,components,manual-de-inicio,agents}.md`, `docs/testing/windows-tests.md`, `docs/assets/diagrams/sdd-cycle.svg` y `.github/PULL_REQUEST_TEMPLATE.md`. No tocar `docs/plan/**`, `docs/releases/**` (salvo la nueva nota), `docs/archive/**`, informes fechados no RDD de `docs/audits/`, `docs/upstream-absorption-ledger.md`, `openspec/changes/archive/**`, `odd/tasks/**` ni `openspec/specs/**` (D14: las specs vivas se integran al archivar; los directorios de las 21 specs retiradas no se borran aquí).
+- [ ] 12.3 Crear `docs/releases/notas-retirada-rdd.md` con el texto de «Migración» del diseño (incluidos: hooks `Stop`/`SessionStart`, agentes `review-*`, plugins de OpenCode, skill y `_shared/review-ledger-contract*.md`, restos de la sección `#### Review Execution Contract` en instalaciones anteriores, campos `rdd_mode`, y capacidades publicadas retiradas) y enlazarlo desde `README.md`. Anotar en la PR las acciones humanas: quitar «Claude Network-None Runtime (Required)» del ruleset antes del merge y cortar una RC nueva.
+- [ ] 12.4 Regenerar `.deadcode-baseline.txt` con `bash scripts/deadcode-ratchet.sh --update` (sin editarlo a mano; una función nueva inalcanzable se borra, no entra en el baseline). Si el EDR bloquea la instalación de `deadcode`, marcar el paso para la CI («Check for new unreachable functions») y no editar a mano.
+- [ ] 12.5 Ejecutar `go mod tidy` y comprobar que el diff de `go.mod` y `go.sum` es el esperado.
+- [ ] 12.6 Comprobar: `go build ./... && go vet ./... && go test ./... -count=1 -timeout 180m`; `go mod tidy` sin diff residual; `rg -l 'reviewtransaction|reviewerprovider|rddharness'` sin resultados fuera de los históricos de D14 (excluir también `openspec/changes/retirar-rdd/**` y, hasta el archivo, `openspec/specs/**`); `rg -n 'bench-model-picker|bench_fixture|rdd_harness' --glob '!docs/plan/**' --glob '!openspec/changes/**' --glob '!odd/**'` vacío; verificar REQ-46.7 a 46.10 con sus tests de D16; confirmar la conservación de `ScreenReview`, `sdd-attempt grant`, `consentenvelope` y `kickoff.CommitReview*`; marcar para la CI `windows-full-suite` con la etiqueta `ci:windows`.
+- [ ] 12.7 Commit propuesto: `docs: cerrar la retirada de RDD con notas de migración, baselines regenerados y go mod tidy`.
+
+## Registro de ejecución
+
+| Tarea | Commit | Fecha | Notas |
+|-------|--------|-------|-------|
+| — | — | — | Sin ejecutar |
