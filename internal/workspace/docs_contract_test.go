@@ -8,8 +8,7 @@ import (
 )
 
 // readManualDeInicio lee el manual real de docs/ con una ruta relativa al
-// paquete (mismo patrón que internal/absorptionledger/ledger_test.go): los pins
-// de documentación leen el texto que se publica, no una copia.
+// paquete: los pins de documentación leen el texto que se publica, no una copia.
 func readManualDeInicio(t *testing.T) string {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "..", "docs", "manual-de-inicio.md"))
