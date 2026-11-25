@@ -360,6 +360,52 @@ func TestPartialUninstallRemovesSharedGGAOnLastAgent(t *testing.T) {
 	}
 }
 
+// TestPartialUninstallWithoutComponentsKeepsGGAOnLastAgent reproduce
+// `axiom uninstall --scope global --agent claude-code` sin --components con
+// Claude Code como único agente en state.json: GGA es huella de máquina y solo
+// se retira si se nombra (`--components gga`) o con `--all`. El agente sí sale
+// de state.json.
+func TestPartialUninstallWithoutComponentsKeepsGGAOnLastAgent(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("APPDATA", filepath.Join(homeDir, "AppData", "Roaming"))
+	if err := state.Write(homeDir, state.InstallState{
+		InstalledAgents: []string{"claude-code"},
+		Components:      []model.ComponentID{model.ComponentGGA},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ggaFiles := []string{gga.ConfigPath(homeDir), gga.RuntimeCMDPath(homeDir), gga.RuntimePS1Path(homeDir), gga.RuntimePRModePath(homeDir)}
+	for _, path := range ggaFiles {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("gga"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	svc, err := NewService(homeDir, t.TempDir(), "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc.snapshotter = stubSnapshotter{}
+
+	result, err := svc.PartialUninstall([]model.AgentID{model.AgentClaudeCode}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range ggaFiles {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("GGA file %q stat error = %v, want kept: GGA was not requested", path, err)
+		}
+	}
+	if !slices.Equal(result.AgentsRemovedFromState, []model.AgentID{model.AgentClaudeCode}) {
+		t.Fatalf("AgentsRemovedFromState = %v, want [claude-code]", result.AgentsRemovedFromState)
+	}
+}
+
 // TestPartialUninstallExplicitGGARequestSkippedWhileSharedWithAnotherAgent
 // covers requesting `--components gga` explicitly for one agent while
 // another installed agent still relies on it: the safer behavior is to skip

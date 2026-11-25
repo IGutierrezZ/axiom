@@ -362,15 +362,17 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 		return Result{}, fmt.Errorf("partial uninstall requires at least one agent")
 	}
 
-	// explicitGGA tracks whether the caller itself named "gga" (as opposed to
-	// it only being present because the component list defaulted to
-	// allManagedComponents). It decides whether an unreadable install state
-	// fails the whole command or is merely downgraded to a kept-GGA note.
+	// explicitGGA tracks whether the caller itself named "gga". It decides
+	// whether an unreadable install state fails the whole command or is merely
+	// downgraded to a kept-GGA note.
 	explicitGGA := slices.Contains(componentIDs, model.ComponentGGA)
 
+	// Sin componentes se retira el agente entero (fullAgentRemovalComponents, lo
+	// mismo que exige stateAgentsToRemove), no todo lo gestionado: GGA es huella
+	// de máquina y solo se retira si se nombra (`--components gga`) o con `--all`.
 	components := componentIDs
 	if len(components) == 0 {
-		components = slices.Clone(allManagedComponents)
+		components = slices.Clone(fullAgentRemovalComponents)
 	}
 	components = expandVisualPolishUninstallComponents(components)
 
