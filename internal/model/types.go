@@ -237,3 +237,27 @@ type Profile struct {
 	OrchestratorModel ModelAssignment            // orchestrator model
 	PhaseAssignments  map[string]ModelAssignment // key = phase name (e.g. "sdd-apply")
 }
+
+// knownAgentIDs son los agentes que Axiom admite. Coincide con catalog.AllAgents
+// (lo comprueba una prueba de catalog); está aquí para que el estado pueda
+// filtrar agentes retirados sin depender del catálogo.
+var knownAgentIDs = map[AgentID]struct{}{
+	AgentClaudeCode:       {},
+	AgentOpenCode:         {},
+	AgentGeminiCLI:        {},
+	AgentCursor:           {},
+	AgentVSCodeCopilot:    {},
+	AgentCodex:            {},
+	AgentAntigravity:      {},
+	AgentQwenCode:         {},
+	AgentPi:               {},
+	AgentTrae:             {},
+	AgentGitHubCopilotCLI: {},
+}
+
+// IsKnownAgentID dice si Axiom admite el agente. Un identificador que no lo es
+// (por ejemplo, de un agente retirado) se ignora al leer el estado.
+func IsKnownAgentID(id AgentID) bool {
+	_, ok := knownAgentIDs[id]
+	return ok
+}

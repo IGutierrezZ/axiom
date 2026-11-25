@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -396,7 +395,7 @@ func splitKnownAgents(ids []string) (known, ignored []string) {
 	}
 	known = make([]string, 0, len(ids))
 	for _, id := range ids {
-		if catalog.IsSupportedAgent(model.AgentID(id)) {
+		if model.IsKnownAgentID(model.AgentID(id)) {
 			known = append(known, id)
 			continue
 		}
