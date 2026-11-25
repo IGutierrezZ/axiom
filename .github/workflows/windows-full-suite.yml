@@ -17,8 +17,8 @@ name: Windows Full Suite
 #
 # Everything below is otherwise identical to the ci.yml job it replaces.
 #
-# Cuándo se ejecuta. Son 5 shards de hasta 30 min (coste pendiente de volver a medir tras retirar RDD) en runners Windows, que cuestan el
-# doble, así que no se lanza en cada push. A diferencia del job windows-runtime
+# Cuándo se ejecuta. Son 6 shards de unos 5 min cada uno en runners Windows,
+# que cuestan el doble, así que no se lanza en cada push. A diferencia del job windows-runtime
 # de ci.yml, no reacciona a los cambios de ruta: solo corre
 #   - a mano (workflow_dispatch);
 #   - en un PR con la etiqueta `ci:windows`: al añadirla, y después en cada
@@ -140,16 +140,16 @@ jobs:
   # change in one package fails a ratchet or contract test that lives in
   # another.
   #
-  # Split by measured cost: internal/cli is the only package that exceeded the
-  # 30m go-test timeout, so it takes four shards. `rest` is derived from
-  # `go list` rather than listed, so a new package is covered the day it is
-  # added.
+  # Split by measured cost (run 45650722391, 2026-11-25, after retiring RDD):
+  # the old `rest` shard took 7m50s and set the wall clock, driven by
+  # internal/branch/engine (431s) and internal/components/sdd (291s), while
+  # the four cli shards took 4m30s, 0m21s, 2m10s and 2m55s. internal/cli now
+  # takes two shards, branch/engine two by name, components/sdd one of its own,
+  # and `rest` keeps everything else. `rest` is derived from `go list` rather
+  # than listed, so a new package is covered the day it is added.
   #
-  # The shards are sized from measured per-selector cost, not a letter tiling,
-  # because test names cluster by prefix and cost clusters with them. With the
-  # review tests retired, the TestR* names form a single small shard (cli-r).
-  # The earlier per-shard costs no longer apply; they are pending a new
-  # measurement once this change is merged.
+  # Name selectors follow measured cost, not an even letter tiling, because
+  # test names cluster by prefix and cost clusters with them.
   #
   # Intra-package t.Parallel() would be the deeper fix, but internal/cli has 89
   # os.Setenv/t.Setenv sites and t.Setenv panics in a parallel test, so that is
@@ -168,22 +168,35 @@ jobs:
         # `go test -list` inventory of each package and fails unless every test
         # is claimed by exactly one shard, so a shard cannot leave tests unrun
         # and silently report the lane green.
+        #
+        # `rest` runs `go list ./...` minus its `exclude`, which internal/assets
+        # also checks is exactly the union of the packages the other shards
+        # name: no package runs twice and none is left out.
         shard:
-          - name: cli-a-m
+          - name: cli-a-o
             packages: ./internal/cli
-            run: ^Test[A-M]
-          - name: cli-n-o
+            run: ^Test[A-O]
+            exclude: ""
+          - name: cli-p-z
             packages: ./internal/cli
-            run: ^Test[N-O]
-          - name: cli-p-q-s-z
-            packages: ./internal/cli
-            run: ^Test[P-Q]|^Test[S-Z]
-          - name: cli-r
-            packages: ./internal/cli
-            run: ^TestR
+            run: ^Test[P-Z]
+            exclude: ""
+          - name: engine-a-e
+            packages: ./internal/branch/engine
+            run: ^Test[A-E]
+            exclude: ""
+          - name: engine-f-z
+            packages: ./internal/branch/engine
+            run: ^Test[F-Z]
+            exclude: ""
+          - name: components-sdd
+            packages: ./internal/components/sdd
+            run: ""
+            exclude: ""
           - name: rest
             packages: ""
             run: ""
+            exclude: ./internal/cli ./internal/branch/engine ./internal/components/sdd
     steps:
       # This suite is process- and filesystem-bound, not CPU-bound: it spawns
       # git constantly and builds throwaway repositories under TEMP. Defender
@@ -220,16 +233,22 @@ jobs:
       - name: Run shard
         shell: pwsh
         timeout-minutes: 35
+        env:
+          SHARD_PACKAGES: ${{ matrix.shard.packages }}
+          SHARD_RUN: ${{ matrix.shard.run }}
+          SHARD_EXCLUDE: ${{ matrix.shard.exclude }}
         run: |
-          if ('${{ matrix.shard.packages }}' -ne '') {
-            $packages = @('${{ matrix.shard.packages }}')
-          } else {
-            $packages = go list ./... | Where-Object {
-              $_ -notmatch '/internal/cli$'
-            }
+          $split = [StringSplitOptions]::RemoveEmptyEntries
+          $packages = @($env:SHARD_PACKAGES.Split(' ', $split))
+          if ($packages.Count -eq 0) {
+            # `go list` of a package that no longer exists fails, so a stale
+            # exclude breaks the shard instead of excluding nothing.
+            $excluded = @(go list $env:SHARD_EXCLUDE.Split(' ', $split))
+            if ($LASTEXITCODE -ne 0) { throw 'could not resolve the excluded packages' }
+            $packages = @(go list ./... | Where-Object { $_ -notin $excluded })
           }
           if (-not $packages) { throw 'shard resolved to no packages' }
-          $selector = '${{ matrix.shard.run }}'
+          $selector = $env:SHARD_RUN
           $arguments = @('test') + $packages + @('-count=1', '-timeout=30m')
           if ($selector -ne '') { $arguments += @('-run', $selector) }
           # A range shard that matches nothing is a silent hole: the shard

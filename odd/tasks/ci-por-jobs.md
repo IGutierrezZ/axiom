@@ -48,7 +48,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false`. Comprobaciones:
 ## Tareas
 
 - [x] T1 · Partir `Unit Tests` en jobs paralelos con agregador (`ci.yml` y tests de guarda).
-- [ ] T2 · Rebalancear `windows-full-suite.yml` y ampliar la guarda de la partición.
+- [x] T2 · Rebalancear `windows-full-suite.yml` y ampliar la guarda de la partición.
 - [ ] T3 · Medir la CI de la PR (antes y después) y registrar el resultado aquí.
 
 Ruta de todas las tareas: inline (unidades pequeñas sobre ficheros de CI ya leídos).
@@ -63,3 +63,4 @@ Ruta de todas las tareas: inline (unidades pequeñas sobre ficheros de CI ya le�
 ## Progreso
 
 - T1: agregador `Unit Tests` y jobs `Go Tests (cli | app-assets-update | engine-sdd | rest)`, `Binary Smoke` y `Deadcode Ratchet`. Guardas nuevas en `internal/assets/workflow_shards_test.go`: `TestUnitTestShardsPartitionEveryPackage` (comprobada con la mutación que quita `./internal/update` de `exclude`: falla) y `TestUnitTestsAggregatorRequiresEveryUnitJob`. `windows_distribution_policy_test.go` exige ahora `go list ./...` en lugar de `go test ./...`. `go vet` y `go test ./internal/assets ./internal/update -run` de los tests tocados, en verde.
+- T2: seis shards de Windows (`cli-a-o`, `cli-p-z`, `engine-a-e`, `engine-f-z`, `components-sdd`, `rest`); `rest` excluye por el campo `exclude` y los valores de la matriz llegan al paso por `env`. `TestWindowsFullSuiteShardsCoverEveryTestName` lee la matriz con `yaml.v3`, aplica `checkShardPartition` y mantiene la comprobación contra `go test -list`. En verde con `AXIOM_TEST_BUILD_BINARIES=1 go test ./internal/assets -run`.

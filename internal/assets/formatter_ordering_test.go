@@ -294,20 +294,14 @@ func TestFormatterOrderingBehaviorContract(t *testing.T) {
 // contiguous -- and it leaves the split free to follow measured cost.
 func TestWindowsFullSuiteShardsCoverEveryTestName(t *testing.T) {
 	testenv.RequireGoToolchain(t)
-	data, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "windows-full-suite.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	start := strings.Index(string(data), "  windows-full-suite:")
-	if start < 0 {
+	job, ok := readWorkflowJobs(t, "windows-full-suite.yml")["windows-full-suite"]
+	if !ok {
 		t.Fatal("missing windows-full-suite job")
 	}
-	section := string(data)[start:]
-	// Stop at the step list: steps carry their own `run:` keys, and a shell
-	// command is not a shard selector.
-	if end := strings.Index(section, "\n    steps:"); end >= 0 {
-		section = section[:end]
-	}
+	// Every package runs in exactly one place: its own shards or `rest`. The
+	// shards that split one package by name are then proved below against
+	// that package's real test inventory.
+	checkShardPartition(t, "windows-full-suite.yml", job.Strategy.Matrix.Shard)
 
 	// Selectors are read straight out of the matrix, so this cannot drift from
 	// what actually runs the way a copy of the list would.
@@ -318,30 +312,20 @@ func TestWindowsFullSuiteShardsCoverEveryTestName(t *testing.T) {
 		matcher  *regexp.Regexp
 	}
 	var shards []shard
-	var name string
-	var pkg string
-	for _, line := range strings.Split(section, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if value, ok := strings.CutPrefix(trimmed, "- name: "); ok {
-			name = strings.Trim(value, `"`)
-		}
-		if value, ok := strings.CutPrefix(trimmed, "packages: "); ok {
-			pkg = strings.Trim(value, `"`)
-		}
-		value, ok := strings.CutPrefix(trimmed, "run: ")
-		if !ok {
+	for _, entry := range job.Strategy.Matrix.Shard {
+		if entry.Run == "" {
+			// Whole-package shards and `rest` select by package, not by name.
 			continue
 		}
-		value = strings.Trim(value, `"`)
-		if value == "" {
-			// The `rest` shard selects by package, not by name.
-			continue
-		}
-		matcher, err := regexp.Compile(value)
+		matcher, err := regexp.Compile(entry.Run)
 		if err != nil {
-			t.Fatalf("shard %q selector %q does not compile as a -run regex: %v", name, value, err)
+			t.Fatalf("shard %q selector %q does not compile as a -run regex: %v", entry.Name, entry.Run, err)
 		}
-		shards = append(shards, shard{name: name, pkg: pkg, selector: value, matcher: matcher})
+		packages := strings.Fields(entry.Packages)
+		if len(packages) != 1 {
+			t.Fatalf("shard %q selects by name over %d packages; a name selector addresses exactly one package", entry.Name, len(packages))
+		}
+		shards = append(shards, shard{name: entry.Name, pkg: packages[0], selector: entry.Run, matcher: matcher})
 	}
 	if len(shards) == 0 {
 		t.Fatal("no name-selecting shards found; the guard would pass vacuously")
