@@ -42,7 +42,6 @@ var excludedRoutes = map[string]string{
 	"/api/projects/add":                   "mutación (POST): registra un proyecto en el hub",
 	"/api/projects/init":                  "mutación (POST): inicializa un proyecto",
 	"/api/adapters":                       "lista los adaptadores de agentes del sistema; no lee el proyecto",
-	"/api/project/review-mode":            "lee y fija el interruptor de revisión del hub, no axiom.yaml",
 	"/api/projects/active/worktree-prefs": "preferencias personales de worktrees del hub",
 	"/api/fs/directories":                 "exploración de directorios del sistema de ficheros",
 	"/api/fs/native-picker":               "selector nativo de carpetas del sistema",
