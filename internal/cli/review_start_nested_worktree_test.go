@@ -26,8 +26,8 @@ import (
 
 func TestReviewStartExcludesNestedWorktreeFromFrozenManifest(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	runReviewCLIGit(t, repo, "worktree", "add", "-q", "-b", "nested-1881", filepath.Join(repo, ".wt", "test"))
+	repo := initCLIGitRepo(t)
+	runCLIGit(t, repo, "worktree", "add", "-q", "-b", "nested-1881", filepath.Join(repo, ".wt", "test"))
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	writeReviewStartCandidate(t, repo, "extra-notes.txt", "declared candidate file\n", 0o644)
 	writeReviewStartCandidate(t, repo, ".wt/stray-note.txt", "beside the worktree, not inside it\n", 0o644)
@@ -59,8 +59,8 @@ func TestReviewStartExcludesNestedWorktreeFromFrozenManifest(t *testing.T) {
 // #2652 intentionally preserves the nested-repository boundary even when an
 // explicit untracked-scope preflight precedes snapshot construction.
 func TestNegotiatedReviewStartRejectsEmbeddedForeignRepository(t *testing.T) {
-	repo := initReviewCLIRepo(t)
-	runReviewCLIGit(t, repo, "init", "-q", filepath.Join(repo, "vendor", "embedded"))
+	repo := initCLIGitRepo(t)
+	runCLIGit(t, repo, "init", "-q", filepath.Join(repo, "vendor", "embedded"))
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 
 	var output bytes.Buffer
@@ -77,9 +77,9 @@ func TestNegotiatedReviewStartRejectsEmbeddedForeignRepository(t *testing.T) {
 }
 func TestReviewStartKeepsSiblingLinkedWorktreeWorking(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	sibling := filepath.Join(t.TempDir(), "sibling-worktree")
-	runReviewCLIGit(t, repo, "worktree", "add", "-q", "-b", "sibling-1881", sibling)
+	runCLIGit(t, repo, "worktree", "add", "-q", "-b", "sibling-1881", sibling)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 
 	var output bytes.Buffer

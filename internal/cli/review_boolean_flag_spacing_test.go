@@ -21,10 +21,10 @@ import (
 // touching each verb's own "unexpected review <verb> argument" call site.
 func TestReviewBooleanFlagSpacedValueNamesTheEqualsForm(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/second.md", "# second\n\nplain prose, no executable content.\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "docs/second.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "second")
+	runCLIGit(t, repo, "add", "docs/second.md")
+	runCLIGit(t, repo, "commit", "-qm", "second")
 
 	t.Run("review start --committed-only true names the = form", func(t *testing.T) {
 		var output bytes.Buffer

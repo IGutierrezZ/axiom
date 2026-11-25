@@ -870,21 +870,7 @@ var reviewConsole = defaultReviewConsole
 // stream carries the machine-readable review result, and a prompt mixed into it
 // would corrupt every caller that parses it.
 func defaultReviewConsole() reviewConsentSession {
-	return reviewConsentSession{Interactive: reviewConsoleInteractive(), Input: os.Stdin, Output: os.Stderr}
-}
-
-// reviewConsoleInteractive requires a real terminal on both ends and no CI
-// marker. A question nobody can answer must never become a blocking read.
-func reviewConsoleInteractive() bool {
-	if strings.TrimSpace(os.Getenv("CI")) != "" {
-		return false
-	}
-	return reviewConsoleTerminal(os.Stdin) && reviewConsoleTerminal(os.Stderr)
-}
-
-func reviewConsoleTerminal(file *os.File) bool {
-	info, err := file.Stat()
-	return err == nil && info.Mode()&os.ModeCharDevice != 0
+	return reviewConsentSession{Interactive: consoleInteractive(), Input: os.Stdin, Output: os.Stderr}
 }
 
 // authorizeReviewStart is the single call site where a new review start meets

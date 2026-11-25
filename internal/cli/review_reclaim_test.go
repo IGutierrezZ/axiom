@@ -12,7 +12,7 @@ import (
 
 func incompleteCompactResidueDir(t *testing.T, repo, lineage string) string {
 	t.Helper()
-	commonDir := filepath.Clean(strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--path-format=absolute", "--git-common-dir")))
+	commonDir := filepath.Clean(strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--path-format=absolute", "--git-common-dir")))
 	residue := filepath.Join(commonDir, "gentle-ai", "review-transactions", "v2", lineage)
 	if err := os.MkdirAll(residue, 0o755); err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func incompleteCompactResidueDir(t *testing.T, repo, lineage string) string {
 // classification for an interrupted store write that left a directory with no
 // state in it.
 func TestAuthorityInventoryReportsIncompleteStoreEntry(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	incompleteCompactResidueDir(t, repo, "reclaim-audit")
 
 	report, err := reviewtransaction.InventoryAuthority(t.Context(), repo)
@@ -44,7 +44,7 @@ func TestAuthorityInventoryReportsIncompleteStoreEntry(t *testing.T) {
 
 func TestReviewReclaimQuarantinesResidue(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	residue := incompleteCompactResidueDir(t, repo, "reclaim-audit")
 
 	var reclaimOutput bytes.Buffer
@@ -70,7 +70,7 @@ func TestReviewReclaimQuarantinesResidue(t *testing.T) {
 
 func TestReviewStartSucceedsDespiteIncompleteStoreResidue(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	incompleteCompactResidueDir(t, repo, "reclaim-audit")
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o755); err != nil {
 		t.Fatal(err)
@@ -78,7 +78,7 @@ func TestReviewStartSucceedsDespiteIncompleteStoreResidue(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "docs", "start.md"), []byte("start\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "docs/start.md")
+	runCLIGit(t, repo, "add", "docs/start.md")
 	var output bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "review-reclaim-start"}, &output); err != nil {
 		t.Fatalf("review start with incomplete residue present: %v\n%s", err, output.String())
@@ -93,7 +93,7 @@ func TestReviewStartSucceedsDespiteIncompleteStoreResidue(t *testing.T) {
 // works on both sides of that, not only after it.
 func TestReviewReclaimClearsEnumeratedResidueThatNeverBlockedStart(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	residue := incompleteCompactResidueDir(t, repo, "reclaim-audit")
 	if err := os.WriteFile(filepath.Join(residue, "stray.tmp"), []byte("stray\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestReviewReclaimClearsEnumeratedResidueThatNeverBlockedStart(t *testing.T)
 	if err := os.WriteFile(filepath.Join(repo, "docs", "start.md"), []byte("start\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "docs/start.md")
+	runCLIGit(t, repo, "add", "docs/start.md")
 	var output bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "review-reclaim-start"}, &output); err != nil {
 		t.Fatalf("enumerated residue blocked an unrelated start: %v\n%s", err, output.String())

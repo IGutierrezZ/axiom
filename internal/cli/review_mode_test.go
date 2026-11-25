@@ -19,7 +19,7 @@ import (
 
 func TestReviewModeStatusReportsBothSourcesWithoutMutating(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	// This test pins that status leaves global user state alone, so it needs
 	// state on disk to compare against. It writes its own rather than relying
 	// on a shared fixture: nothing else in this flow creates one.
@@ -60,7 +60,7 @@ func TestReviewModeStatusReportsBothSourcesWithoutMutating(t *testing.T) {
 
 func TestReviewModeDisableGlobalWinsOverEveryRepository(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"disable", "--cwd", repo, "--json"}, &output); err != nil {
@@ -226,7 +226,7 @@ func TestWriteGlobalRDDModeSerializesWithInstallStateAndPreservesFreshFields(t *
 // to the now-off default. A clone that never opted in stays off.
 func TestReviewModeGlobalEnableSurvivesTheOptInDefault(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"status", "--cwd", repo, "--json"}, &output); err != nil {
@@ -257,7 +257,7 @@ func TestReviewModeGlobalEnableSurvivesTheOptInDefault(t *testing.T) {
 
 	// The persisted opinion, not the process that wrote it, is what survives an
 	// upgrade: a later status in a different clone reads the same explicit on.
-	other := initReviewCLIRepo(t)
+	other := initCLIGitRepo(t)
 	output.Reset()
 	if err := RunReviewMode([]string{"status", "--cwd", other, "--json"}, &output); err != nil {
 		t.Fatalf("RunReviewMode(status other clone) error = %v", err)
@@ -275,7 +275,7 @@ func TestReviewModeGlobalEnableSurvivesTheOptInDefault(t *testing.T) {
 // read off for the same reason and the test would prove nothing.
 func TestReviewModeCloneScopeDisablesOnlyThisClone(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"disable", "--cwd", repo, "--scope", "clone", "--json"}, &output); err != nil {
@@ -289,7 +289,7 @@ func TestReviewModeCloneScopeDisablesOnlyThisClone(t *testing.T) {
 	}
 
 	clone := filepath.Join(t.TempDir(), "clone")
-	runReviewCLIGit(t, repo, "clone", "-q", repo, clone)
+	runCLIGit(t, repo, "clone", "-q", repo, clone)
 	output.Reset()
 	if err := RunReviewMode([]string{"status", "--cwd", clone, "--json"}, &output); err != nil {
 		t.Fatalf("RunReviewMode(status clone) error = %v", err)
@@ -301,7 +301,7 @@ func TestReviewModeCloneScopeDisablesOnlyThisClone(t *testing.T) {
 
 func TestReviewModeCloneScopeEnableIsIdempotentWhenGlobalOn(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := state.Write(home, state.InstallState{RDDMode: string(reviewtransaction.RDDModeOn)}); err != nil {
 		t.Fatalf("state.Write error = %v", err)
 	}
@@ -326,7 +326,7 @@ func TestReviewModeCloneScopeEnableIsIdempotentWhenGlobalOn(t *testing.T) {
 // against the opt-in default it would land on off and hide the migration.
 func TestReviewModeCloneScopeEnableMigratesLegacyRevision(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	ctx := context.Background()
 	disabled, err := reviewtransaction.SetCloneLocalRDDMode(ctx, repo, reviewtransaction.RDDModeOff, "", reviewtransaction.RDDGlobalMode{Value: "on"})
 	if err != nil {
@@ -379,7 +379,7 @@ func TestReviewModeCloneScopeEnableMigratesLegacyRevision(t *testing.T) {
 
 func TestReviewModeCloneScopeEnableRejectsGlobalOffWithoutLocalOverride(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := state.Write(home, state.InstallState{RDDMode: string(reviewtransaction.RDDModeOff)}); err != nil {
 		t.Fatalf("state.Write error = %v", err)
 	}
@@ -405,7 +405,7 @@ func TestReviewModeCloneScopeEnableRejectsGlobalOffWithoutLocalOverride(t *testi
 
 func TestReviewModeCloneScopeEnableRejectsLegacyInheritWhileGlobalOff(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	global := reviewtransaction.RDDGlobalMode{Value: string(reviewtransaction.RDDModeOn)}
 	disabled, err := reviewtransaction.SetCloneLocalRDDMode(context.Background(), repo, reviewtransaction.RDDModeOff, "", global)
 	if err != nil {
@@ -452,7 +452,7 @@ func TestReviewModeCloneScopeEnableRejectsLegacyInheritWhileGlobalOff(t *testing
 
 func TestReviewModeCloneScopeEnableRejectsExplicitOffWhileGlobalOff(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	disabled, err := reviewtransaction.SetCloneLocalRDDMode(
 		context.Background(), repo, reviewtransaction.RDDModeOff, "", reviewtransaction.RDDGlobalMode{Value: string(reviewtransaction.RDDModeOn)})
 	if err != nil {
@@ -500,7 +500,7 @@ func TestReviewModeCloneScopeEnableRejectsExplicitOffWhileGlobalOff(t *testing.T
 
 func TestReviewModeCloneScopeDisableIsIdempotent(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := state.Write(home, state.InstallState{RDDMode: string(reviewtransaction.RDDModeOn)}); err != nil {
 		t.Fatalf("state.Write error = %v", err)
 	}
@@ -543,7 +543,7 @@ func TestReviewModeCloneScopeDisableIsIdempotent(t *testing.T) {
 
 func TestReviewModeReportsUnknownPersistedModeAsDisabled(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := state.Write(home, state.InstallState{RDDMode: "sometimes"}); err != nil {
 		t.Fatalf("state.Write error = %v", err)
 	}
@@ -560,7 +560,7 @@ func TestReviewModeReportsUnknownPersistedModeAsDisabled(t *testing.T) {
 
 func TestReviewModeRejectsUnknownSubcommandAndScope(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"toggle", "--cwd", repo}, &output); err == nil ||
 		!strings.Contains(err.Error(), "unknown review mode command") {
@@ -577,7 +577,7 @@ func TestReviewModeRejectsUnknownSubcommandAndScope(t *testing.T) {
 // receipt merely to exercise the negative path.
 func TestReviewStartIsRejectedWhileTheKillSwitchIsOff(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/guide.md", "ordinary documentation\n", 0o644)
 
 	var modeOutput bytes.Buffer
@@ -609,7 +609,7 @@ func TestReviewStartIsRejectedWhileTheKillSwitchIsOff(t *testing.T) {
 
 func TestTierZeroReviewStartNeverAsksForConsent(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "1\n")
 	writeReviewStartCandidate(t, repo, "docs/guide.md", "ordinary documentation\n", 0o644)
 
@@ -632,7 +632,7 @@ func TestTierZeroReviewStartNeverAsksForConsent(t *testing.T) {
 
 func TestTierOneReviewStartAsksOnceForOneConsolidatedReview(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "1\n")
 	writeReviewStartCandidate(t, repo, "internal/app.go", "package internal\n", 0o644)
 
@@ -665,7 +665,7 @@ func TestTierOneReviewStartAsksOnceForOneConsolidatedReview(t *testing.T) {
 
 func TestTierTwoReviewStartAsksOnceWithGenericExecutionReason(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "1\n")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -700,7 +700,7 @@ func TestTierTwoReviewStartAsksOnceWithGenericExecutionReason(t *testing.T) {
 // safety net off for good now costs a deliberate command.
 func TestReviewConsentNeverAskAgainIsNoLongerAnOfferedAnswer(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "3\n")
 	writeReviewStartCandidate(t, repo, "internal/app.go", "package internal\n", 0o644)
 
@@ -732,7 +732,7 @@ func TestReviewConsentNeverAskAgainIsNoLongerAnOfferedAnswer(t *testing.T) {
 // question unanswered, so the next candidate can still ask.
 func TestReviewConsentUnrecognizedAnswerReviewsAndAsksAgain(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "maybe later\n")
 	writeReviewStartCandidate(t, repo, "internal/app.go", "package internal\n", 0o644)
 
@@ -764,7 +764,7 @@ func TestReviewConsentUnrecognizedAnswerReviewsAndAsksAgain(t *testing.T) {
 // nothing about tomorrow's migration.
 func TestReviewConsentNotNowIsNotPersisted(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "2\n")
 	writeReviewStartCandidate(t, repo, "internal/app.go", "package internal\n", 0o644)
 
@@ -816,7 +816,7 @@ func TestReviewConsentNotNowIsNotPersisted(t *testing.T) {
 
 func TestNonInteractiveReviewStartNeverBlocksOnConsent(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -850,7 +850,7 @@ func TestNonInteractiveReviewStartNeverBlocksOnConsent(t *testing.T) {
 // clone can still be asked.
 func TestNonInteractiveReviewStartNoticeShownOnlyOnce(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
@@ -982,7 +982,7 @@ func decodeReviewModeResult(t *testing.T, payload []byte) ReviewModeResult {
 // it as an exact object and would reject a new field.
 func TestReviewModeCloneScopeEnableNamesTheGlobalExitWhileGlobalUnset(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"enable", "--cwd", repo, "--scope", "clone"}, &output); err != nil {

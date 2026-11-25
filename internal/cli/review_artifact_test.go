@@ -149,12 +149,12 @@ func TestReviewCaptureResultRejectsSemanticAdmissionBeforePublication(t *testing
 
 func TestReviewCaptureResultPublishesExternalRepositoryProofExactlyOnce(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "support.go"), []byte("package support\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "--", "support.go")
-	runReviewCLIGit(t, repo, "commit", "-m", "add supporting implementation")
+	runCLIGit(t, repo, "add", "--", "support.go")
+	runCLIGit(t, repo, "commit", "-m", "add supporting implementation")
 	if err := os.WriteFile(filepath.Join(repo, "service-token.ts"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -668,7 +668,7 @@ func TestReviewCaptureResultConcurrentSelectedLenses(t *testing.T) {
 }
 func newArtifactReview(t *testing.T, high bool) (string, ReviewFacadeStartResult, reviewtransaction.CompactStore, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	name := "tracked.txt"
 	if high {
 		name = "service-token.ts"

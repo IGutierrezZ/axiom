@@ -29,14 +29,14 @@ import (
 func disabledReviewRepo(t *testing.T, lineage string) (repo string, started ReviewFacadeStartResult) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo = initReviewCLIRepo(t)
+	repo = initCLIGitRepo(t)
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, "docs", "frozen.md"), []byte("frozen by the kill switch\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "docs/frozen.md")
+	runCLIGit(t, repo, "add", "docs/frozen.md")
 	started = startFacadeReviewResult(t, repo, lineage)
 	disableReviewForClone(t, repo)
 	return repo, started

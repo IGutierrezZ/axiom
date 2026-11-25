@@ -22,15 +22,15 @@ import (
 // a stopgap: it must refuse before anything is persisted, naming the
 // negotiated form as the exit.
 func TestReviewFacadeStartDirectRouteRefusesUncompletableReview(t *testing.T) {
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	runReviewCLIGit(t, repo, "checkout", "-qb", "feature/change")
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "checkout", "-qb", "feature/change")
 	changeFile := filepath.Join(repo, "change.go")
 	if err := os.WriteFile(changeFile, []byte("package main\n\nfunc doSomething(x int) int {\n\tif x > 10 {\n\t\treturn x * 2\n\t}\n\treturn x + 1\n}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "change.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "add a method")
+	runCLIGit(t, repo, "add", "change.go")
+	runCLIGit(t, repo, "commit", "-qm", "add a method")
 
 	var output bytes.Buffer
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--base-ref", base, "--committed-only=true"}, &output)

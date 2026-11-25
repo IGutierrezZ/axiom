@@ -19,10 +19,10 @@ import (
 func closeCommittedBaseDiffLineageIntoCorrectionRequired(t *testing.T, repo, lineage string) {
 	t.Helper()
 	const baseRef = "frozen-base"
-	runReviewCLIGit(t, repo, "branch", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", baseRef, "HEAD")
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "candidate")
 
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
 		"--cwd", repo, "--lineage", lineage, "--base-ref", baseRef, "--committed-only",
@@ -50,7 +50,7 @@ func closeCommittedBaseDiffLineageIntoCorrectionRequired(t *testing.T, repo, lin
 
 	// Only the committed range moves the base branch afterwards; the frozen
 	// tree, never the mutable ref, is what a selectorless re-entry resumes.
-	runReviewCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
 }
 
 func loadCompactReviewRecordForTest(t *testing.T, repo, lineage string) reviewtransaction.CompactRecord {
@@ -78,7 +78,7 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
 
 	t.Run("clean committed range resumes its frozen correction target", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		const lineage = "committed-range-correction-selectorless"
 		closeCommittedBaseDiffLineageIntoCorrectionRequired(t, repo, lineage)
 		// An eligible untracked file must not pull the committed range into
@@ -119,7 +119,7 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 	})
 
 	t.Run("committed drift outside the frozen manifest routes to recovery", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		const lineage = "committed-range-correction-drift"
 		closeCommittedBaseDiffLineageIntoCorrectionRequired(t, repo, lineage)
 		record := loadCompactReviewRecordForTest(t, repo, lineage)
@@ -127,8 +127,8 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 		if err := os.WriteFile(filepath.Join(repo, "unrelated.go"), []byte("package unrelated\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		runReviewCLIGit(t, repo, "add", "unrelated.go")
-		runReviewCLIGit(t, repo, "commit", "-qm", "drift outside the reviewed range")
+		runCLIGit(t, repo, "add", "unrelated.go")
+		runCLIGit(t, repo, "commit", "-qm", "drift outside the reviewed range")
 
 		status := negotiatedReviewStatusForLineage(t, repo, lineage)
 		if status.TargetIdentity == record.State.CurrentSnapshot.Identity {
@@ -150,12 +150,12 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 	})
 
 	t.Run("committed drift inside the frozen manifest matches the explicit selector", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		const lineage = "committed-range-correction-in-manifest"
 		closeCommittedBaseDiffLineageIntoCorrectionRequired(t, repo, lineage)
 		record := loadCompactReviewRecordForTest(t, repo, lineage)
 		writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 2 }\n", 0o644)
-		runReviewCLIGit(t, repo, "commit", "-qam", "edit the reviewed path")
+		runCLIGit(t, repo, "commit", "-qam", "edit the reviewed path")
 
 		// The resumed target is re-derived from the live worktree, never
 		// forced to the frozen identity: the selectorless re-entry must route
@@ -182,7 +182,7 @@ func TestSelectorlessStatusResumesCommittedRangeCorrectionRequired(t *testing.T)
 	})
 
 	t.Run("current-changes correction lineage keeps requiring a live untracked declaration", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		lineage := closeReviewLineageIntoCorrectionRequired(t, repo, "current-changes-correction-selectorless")
 		writeUndeclaredWorkspaceFile(t, repo, "scratch.txt", "local-only notes\n", 0o644)
 

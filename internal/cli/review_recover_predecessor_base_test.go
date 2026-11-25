@@ -26,19 +26,19 @@ func TestReviewRecoverEscalatedBaseDiffKeepsPredecessorBase(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
-			base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+			repo := initCLIGitRepo(t)
+			base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 			if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			runReviewCLIGit(t, repo, "add", "--", "tracked.txt")
-			runReviewCLIGit(t, repo, "commit", "-m", "candidate")
+			runCLIGit(t, repo, "add", "--", "tracked.txt")
+			runCLIGit(t, repo, "commit", "-m", "candidate")
 			lineage := "recover-5038-" + strings.ReplaceAll(tt.name, " ", "-")
 			predecessor := escalatedBaseDiffRecoveryFixture(t, repo, lineage, base)
 			if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("corrected after escalation\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			runReviewCLIGit(t, repo, "commit", "-am", "correction")
+			runCLIGit(t, repo, "commit", "-am", "correction")
 
 			successor := lineage + "-successor"
 			identity := reviewRecoverBaseDiffSuccessorIdentity(t, repo, base)

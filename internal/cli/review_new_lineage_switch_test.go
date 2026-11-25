@@ -16,7 +16,7 @@ import (
 // authority through CreateOrReplayAtomicStart.
 func TestReviewStartAlwaysCreatesCompactAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	path := filepath.Join(repo, "docs", "atomic-start.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -24,10 +24,10 @@ func TestReviewStartAlwaysCreatesCompactAuthority(t *testing.T) {
 	if err := os.WriteFile(path, []byte("atomic start fixture\n"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "docs/atomic-start.md")
+	runCLIGit(t, repo, "add", "docs/atomic-start.md")
 	// Windows has no executable bit: record the fixture's 0o755 intent in the
 	// index so risk classification matches POSIX.
-	runReviewCLIGit(t, repo, "update-index", "--chmod=+x", "docs/atomic-start.md")
+	runCLIGit(t, repo, "update-index", "--chmod=+x", "docs/atomic-start.md")
 
 	var out bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo}, &out); err != nil {
@@ -53,7 +53,7 @@ func TestReviewStartAlwaysCreatesCompactAuthority(t *testing.T) {
 // exactly its v2 compact record and no same-lineage authority in retained stores.
 func TestReviewStartCreatesNoLegacyOrV3Siblings(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lines := make([]string, 129)
 	for index := range lines {
 		lines[index] = "ordinary documentation line"

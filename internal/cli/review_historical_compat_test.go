@@ -47,11 +47,11 @@ func injectCLIRetiredCompactStateField(t *testing.T, statePath, field string, va
 }
 
 func TestReviewFacadeStartRefusesHistoricalCandidateArtifactRequiredWithoutRewrite(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	args := []string{"--cwd", repo, "--projection", "staged", "--lineage", "candidate-artifact-required"}
 	var createdOutput bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, args, &createdOutput); err != nil {
@@ -116,7 +116,7 @@ func injectCLIRetiredRecoveryReviewStart(t *testing.T, statePath string) {
 
 func TestReviewStatusReportsHistoricalRecoveredStartLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("recovered candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +185,7 @@ func TestReviewStatusReportsHistoricalRecoveredStartLineage(t *testing.T) {
 }
 
 func TestReviewBundleExportRefusesHistoricalZeroEditEscalationClearly(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("historical candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -218,13 +218,13 @@ func TestReviewBundleExportRefusesHistoricalZeroEditEscalationClearly(t *testing
 
 func TestCurrentCaptureCompletionLeavesHistoricalSiblingBytePreserved(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("historical candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	historical := seedHistoricalApprovalForRepo(t, repo, "historical-zero-edit-escalation")
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "historical candidate")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "historical candidate")
 
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("current candidate\n"), 0o644); err != nil {
 		t.Fatal(err)

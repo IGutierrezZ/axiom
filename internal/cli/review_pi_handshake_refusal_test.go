@@ -33,7 +33,7 @@ const piRelayHandshakeRefusalCause = "the active runtime is not eligible for imm
 // actually the deciding one.
 func TestPiTransportRefusalNamesTheHandshakeNotTheKillSwitch(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\ncandidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

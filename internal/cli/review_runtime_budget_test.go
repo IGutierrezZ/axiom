@@ -68,7 +68,7 @@ func writeRuntimeBudgetCandidate(t *testing.T, repo, name string, lines int) int
 // complete candidate must never launch on a partial view of it.
 func TestNegotiatedStartRuntimeBudgetRefusesOver200KiBCandidateWithoutAuthority(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeRuntimeBudgetOverCandidate(t, repo)
 	authorityRoot := reviewCLIAuthorityRoot(t, repo)
 	authorityBefore := snapshotAuthorityTree(t, authorityRoot)
@@ -110,7 +110,7 @@ func TestNegotiatedStartRuntimeBudgetRefusesOver200KiBCandidateWithoutAuthority(
 // mutates nothing.
 func TestNegotiatedStatusRuntimeBudgetClassifiesLegacyOverBudgetLineage(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeRuntimeBudgetOverCandidate(t, repo)
 	record := startCompactAuthorityWithoutFacadeChecks(t, repo, "runtime-budget-status-legacy")
 	handle := deriveLensContextHandle(t, repo, record)
@@ -158,7 +158,7 @@ func TestNegotiatedStatusRuntimeBudgetClassifiesLegacyOverBudgetLineage(t *testi
 // inside the cap.
 func TestNegotiatedStartRuntimeBudgetAdmitsCandidateUnder200KiB(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeRuntimeBudgetUnderCandidate(t, repo)
 	started := runNegotiatedReviewStart(t, repo, "runtime-budget-under")
 
@@ -210,7 +210,7 @@ func writeRuntimeBudgetManyPathCandidate(t *testing.T, repo string, paths int) i
 // persists anything.
 func TestNegotiatedStartRuntimeBudgetRefusesManySmallPathsInAggregate(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeRuntimeBudgetManyPathCandidate(t, repo, 84)
 	authorityRoot := reviewCLIAuthorityRoot(t, repo)
 	authorityBefore := snapshotAuthorityTree(t, authorityRoot)
@@ -246,7 +246,7 @@ func TestNegotiatedStartRuntimeBudgetRefusesManySmallPathsInAggregate(t *testing
 // invariant behind the unexecutable lineage #3367 closed and #4680 reopened.
 func TestNegotiatedStartAdmitsGeneratedDominatedCandidateEveryRoleCanMaterialize(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	generated := strings.Repeat("generated fixture entry with opaque content that is irrelevant to authored review evidence\n", 5_000)
 	generatedPath := filepath.Join("testdata", "golden", "review-runtime.golden")
 	writeReviewStartCandidate(t, repo, generatedPath, generated, 0o644)
@@ -316,7 +316,7 @@ func writeRuntimeBudgetEscapedCandidate(t *testing.T, repo string) int64 {
 // probe must measure the envelope those roles are actually held to.
 func TestNegotiatedStartRuntimeBudgetRefusesEscapedOverBudgetCandidate(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeRuntimeBudgetEscapedCandidate(t, repo)
 	authorityRoot := reviewCLIAuthorityRoot(t, repo)
 	authorityBefore := snapshotAuthorityTree(t, authorityRoot)
@@ -358,7 +358,7 @@ func TestNegotiatedStartRuntimeBudgetRefusesEscapedOverBudgetCandidate(t *testin
 // issue closes, reached through the validator role.
 func TestNegotiatedStartRuntimeBudgetRefusesOverBudgetFrozenPolicy(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	// Small candidate: its own evidence is nowhere near the cap, so only the
 	// policy can push the validator envelope over it.
 	writeRuntimeBudgetCandidate(t, repo, "runtime-budget-policy.txt", 200)
@@ -440,8 +440,8 @@ func TestRecoveredOverBudgetLineageStopsTypedAndArrivesWithItsExitIntact(t *test
 		[]byte(strings.Repeat("runtime budget evidence line\n", 14_000)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "huge.txt")
-	runReviewCLIGit(t, repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "oversized successor scope")
+	runCLIGit(t, repo, "add", "huge.txt")
+	runCLIGit(t, repo, "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "oversized successor scope")
 
 	successorIdentity := reviewRecoverBaseDiffSuccessorIdentity(t, repo, baseRef)
 	authorization := reviewRecoveryAuthorization(predecessor.State.LineageID, predecessor.Revision, successorIdentity,
@@ -517,7 +517,7 @@ func TestRecoveredOverBudgetLineageStopsTypedAndArrivesWithItsExitIntact(t *test
 // could have measured predicts it.
 func driveReviewToOpenTargetedValidationWithCorrection(t *testing.T, lineage, correctedAlpha string) (repo string, record reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo = initReviewCLIRepo(t)
+	repo = initCLIGitRepo(t)
 	for name, content := range map[string]string{
 		"alpha.go": "package candidate\n\nfunc Alpha() int { return 1 }\n",
 		"beta.go":  "package candidate\n\nfunc Beta() int { return 2 }\n",
@@ -526,7 +526,7 @@ func driveReviewToOpenTargetedValidationWithCorrection(t *testing.T, lineage, co
 			t.Fatal(err)
 		}
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go", "beta.go")
+	runCLIGit(t, repo, "add", "alpha.go", "beta.go")
 
 	var startOut bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -556,7 +556,7 @@ func driveReviewToOpenTargetedValidationWithCorrection(t *testing.T, lineage, co
 	if err := os.WriteFile(filepath.Join(repo, "alpha.go"), []byte(correctedAlpha), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go")
+	runCLIGit(t, repo, "add", "alpha.go")
 
 	_, record, err := discoverCompactFacadeReview(context.Background(), repo, started.LineageID, false)
 	if err != nil {

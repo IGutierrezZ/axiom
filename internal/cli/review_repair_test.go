@@ -19,7 +19,7 @@ import (
 )
 
 func TestNegotiatedStatusKeepsExplicitHealthyTargetIsolatedFromUnrelatedRepair(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	appendClassifiedRepairCLIFixture(t, repo, "unrelated-repair-alias")
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, IntendedUntracked: []string{},
@@ -112,7 +112,7 @@ func classifiedRepairAuthorization(assessment reviewtransaction.AuthorityRepairA
 
 func classifiedRepairCLIFixture(t *testing.T, lineage string) (string, string, string) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	head := appendClassifiedRepairCLIFixture(t, repo, lineage)
 	return repo, lineage, head
 }
@@ -302,7 +302,7 @@ func TestReviewRepairPreflightIsReadOnlyAndExactExecutionReplays(t *testing.T) {
 }
 
 func TestReviewRepairPreflightSelectorStillClassifiesCompleteInventory(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	appendClassifiedRepairCLIFixture(t, repo, "selected-alias")
 	appendClassifiedRepairCLIFixture(t, repo, "other-alias")
 	var output bytes.Buffer
@@ -548,7 +548,7 @@ func retiredReviewSnapshotIdentityForRepairTest(snapshot reviewtransaction.Snaps
 // shape that previously left AssessAuthorityRepair reporting "unsupported,
 // no inputs" with no way forward.
 func TestReviewRepairPreflightSurfacesAuthorityDispositionPlanForEligibleLeaf(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-disposition", false, dispositionForgedAuthorization)
 
 	var first, second bytes.Buffer
@@ -582,7 +582,7 @@ func TestReviewRepairPreflightSurfacesAuthorityDispositionPlanForEligibleLeaf(t 
 // when derivation cannot close on exactly one seed (the #2014/#1656
 // multi-lineage shape), preflight never surfaces a disposition plan.
 func TestReviewRepairPreflightOmitsAuthorityDispositionPlanForMultiNodeShape(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-alpha", false, dispositionForgedAuthorization)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-bravo", false, dispositionForgedAuthorization)
 
@@ -639,7 +639,7 @@ func TestReviewRepairPreflightOmitsAuthorityDispositionPlanForMultiNodeShape(t *
 // TestReviewRepairPreflightRejectsAuthorityDispositionExecutionInputs extends
 // the existing execution-input guard to the new disposition flags.
 func TestReviewRepairPreflightRejectsAuthorityDispositionExecutionInputs(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	args := []string{"repair", "--preflight", "--cwd", repo, "--plan-digest", "sha256:" + strings.Repeat("a", 64)}
 	var output bytes.Buffer
 	if err := RunReview(args, &output); err == nil {
@@ -653,7 +653,7 @@ func TestReviewRepairPreflightRejectsAuthorityDispositionExecutionInputs(t *test
 // refuses without ever reaching RepairAuthorityDisposition's maintenance
 // lock acquisition, and never leaks the repository path.
 func TestReviewRepairDispositionExecutionRequiresAllFlagsBeforeLockAcquisition(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-missing-flags", false, dispositionForgedAuthorization)
 	var preflightOutput bytes.Buffer
 	if err := RunReview([]string{"repair", "--preflight", "--cwd", repo}, &preflightOutput); err != nil {
@@ -699,7 +699,7 @@ func TestReviewRepairDispositionExecutionRequiresAllFlagsBeforeLockAcquisition(t
 // reports it has nothing more to surface, not a second identical execution.
 func TestReviewRepairDispositionExecutionQuarantinesEligibleLeaf(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-execute", false, dispositionForgedAuthorization)
 	authorityRoot := reviewCLIAuthorityRoot(t, repo)
 	sourceDir := filepath.Join(authorityRoot, "v2", "leaf-execute-successor")
@@ -771,7 +771,7 @@ func TestReviewRepairDispositionExecutionQuarantinesEligibleLeaf(t *testing.T) {
 // nothing is actually wrong with the tool.
 func TestReviewRepairDispositionExecutionDigestMismatchRefusesWithoutDefectReport(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-digest-mismatch", false, dispositionForgedAuthorization)
 
 	actor, reason := "maintainer@example.com", "quarantine content-mismatched leaf"
@@ -815,7 +815,7 @@ func TestReviewRepairDispositionExecutionDigestMismatchRefusesWithoutDefectRepor
 // the real actor/reason) for the same graph state.
 func TestReviewRepairDispositionExecutionAcceptsPreflightPublishedDigest(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "leaf-preflight-digest", false, dispositionForgedAuthorization)
 
 	var preflightOutput bytes.Buffer
@@ -1064,7 +1064,7 @@ func TestWindowsRuntimeIncludesRepairAndMaintenanceLockRegressions(t *testing.T)
 // The store here is real: authority entries are planted on disk past the
 // bound and the assessment is driven through the CLI, never constructed.
 func TestReviewRepairPreflightNamesAWayForwardWhenTheStoreExceedsTheBound(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	compactRoot := filepath.Join(repo, ".git", "gentle-ai", "review-transactions", "v2")
 	// Comfortably past the bounded assessment's ceiling, and past the
 	// 271-lineage store the report measured, without this test naming an

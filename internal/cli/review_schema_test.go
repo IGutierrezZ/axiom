@@ -28,12 +28,3 @@ func TestReviewerSchemaMatchesProviderAdmissionEnvelope(t *testing.T) {
 		t.Fatalf("reviewer subject_hash schema = %#v", properties["subject_hash"])
 	}
 }
-
-func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
-}

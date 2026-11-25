@@ -98,10 +98,10 @@ func assertHistoricalPendingSubject(t *testing.T, status ReviewTargetStatusResul
 
 func historicalGeneratedReviewingStatusFixture(t *testing.T) (string, reviewtransaction.CompactStore, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "go.sum", "base dependency\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "go.sum")
-	runReviewCLIGit(t, repo, "commit", "-qm", "historical generated base")
+	runCLIGit(t, repo, "add", "go.sum")
+	runCLIGit(t, repo, "commit", "-qm", "historical generated base")
 	writeReviewStartCandidate(t, repo, "go.sum", "candidate dependency\n", 0o644)
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'candidate'\n", 0o644)
 	store, record := createFrozenReviewingStatusRecord(t, repo, "historical-generated-status", reviewtransaction.Target{

@@ -272,7 +272,7 @@ func decodeTargetedValidatorPromptRequest(t *testing.T, prompt []byte) targetedV
 // verdict.
 func driveReviewToOpenTargetedValidation(t *testing.T) (repo string, state reviewtransaction.CompactState, revision string) {
 	t.Helper()
-	repo = initReviewCLIRepo(t)
+	repo = initCLIGitRepo(t)
 	for name, content := range map[string]string{
 		"alpha.go": "package candidate\n\nfunc Alpha() int { return 1 }\n",
 		"beta.go":  "package candidate\n\nfunc Beta() int { return 2 }\n",
@@ -284,7 +284,7 @@ func driveReviewToOpenTargetedValidation(t *testing.T) (repo string, state revie
 	if err := os.Chmod(filepath.Join(repo, "alpha.go"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go", "beta.go")
+	runCLIGit(t, repo, "add", "alpha.go", "beta.go")
 
 	var startOut bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -315,7 +315,7 @@ func driveReviewToOpenTargetedValidation(t *testing.T) (repo string, state revie
 	if err := os.WriteFile(filepath.Join(repo, "alpha.go"), []byte("package candidate\n\nfunc Alpha() int { return 10 }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go")
+	runCLIGit(t, repo, "add", "alpha.go")
 
 	_, record, err := discoverCompactFacadeReview(context.Background(), repo, started.LineageID, false)
 	if err != nil {

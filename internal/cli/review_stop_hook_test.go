@@ -111,11 +111,11 @@ func markReviewCLIAxiomProject(t *testing.T, repo string) {
 	}
 }
 
-// initReviewStopHookRepo is initReviewCLIRepo for a repository that belongs to
+// initReviewStopHookRepo is initCLIGitRepo for a repository that belongs to
 // an Axiom project, the only place the stop hook acts.
 func initReviewStopHookRepo(t *testing.T) string {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	markReviewCLIAxiomProject(t, repo)
 	return repo
 }
@@ -126,7 +126,7 @@ func initReviewStopHookRepo(t *testing.T) string {
 // and write nothing under the user's home.
 func TestReviewStopHookIsInertOutsideAnAxiomProject(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.MkdirAll(filepath.Join(repo, "openspec", "changes", "x"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -482,7 +482,7 @@ func TestReviewStopHookStopRemindsAfterCandidateChangesFromBaseline(t *testing.T
 	if err := os.WriteFile(filepath.Join(repo, "session-authored.txt"), []byte("new content\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "-A")
+	runCLIGit(t, repo, "add", "-A")
 
 	stdin := strings.NewReader(reviewStopHookTestPayload(t, "sess-changed", repo, false, nil))
 	var stopStdout, stopStderr bytes.Buffer

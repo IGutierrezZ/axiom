@@ -15,7 +15,7 @@ import (
 // selection again, because the frozen authority already holds that decision.
 func TestExcludedUntrackedDeclarationSurvivesReviewingReentry(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc Candidate() int { return 1 }\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "scratch/mockup.txt", "kept outside the candidate\n", 0o644)
 	started := runNegotiatedReviewStartExcludingUntracked(t, repo, "excluded-untracked-reentry")

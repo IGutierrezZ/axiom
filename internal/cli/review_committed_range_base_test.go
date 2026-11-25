@@ -15,28 +15,28 @@ import (
 // never leaves the initial base commit.
 func buildTrunkIntegrationSplitRepo(t *testing.T) (repo, develop string) {
 	t.Helper()
-	repo = initReviewCLIRepo(t)
+	repo = initCLIGitRepo(t)
 	// Capture the default branch BEFORE cutting the integration branch: the
 	// remote default branch (origin/HEAD) lags the integration branch in the
 	// #4639 shape, and deriving it late would silently aim origin/HEAD at the
 	// integration branch and void the reproduction.
-	defaultBranch := strings.TrimSpace(runReviewCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
-	runReviewCLIGit(t, repo, "checkout", "-qb", "develop")
+	defaultBranch := strings.TrimSpace(runCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
+	runCLIGit(t, repo, "checkout", "-qb", "develop")
 	if err := os.WriteFile(filepath.Join(repo, "integration.md"), []byte("integration work\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "integration.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "integration work one")
+	runCLIGit(t, repo, "add", "integration.md")
+	runCLIGit(t, repo, "commit", "-qm", "integration work one")
 	if err := os.WriteFile(filepath.Join(repo, "integration-two.md"), []byte("integration work two\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "integration-two.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "integration work two")
+	runCLIGit(t, repo, "add", "integration-two.md")
+	runCLIGit(t, repo, "commit", "-qm", "integration work two")
 	main := defaultBranch
-	develop = strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "refs/heads/develop"))
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/"+defaultBranch, main)
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/develop", develop)
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/"+defaultBranch)
+	develop = strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "refs/heads/develop"))
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/"+defaultBranch, main)
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/develop", develop)
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/"+defaultBranch)
 	return repo, develop
 }
 
@@ -51,15 +51,15 @@ func buildTrunkIntegrationSplitRepo(t *testing.T) (repo, develop string) {
 func TestNextTransitionCommittedRangeBasePrefersBranchUpstream(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, develop := buildTrunkIntegrationSplitRepo(t)
-	runReviewCLIGit(t, repo, "checkout", "-qb", "feature")
+	runCLIGit(t, repo, "checkout", "-qb", "feature")
 	if err := os.WriteFile(filepath.Join(repo, "feature.txt"), []byte("the change under review\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "feature.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "feature work")
-	runReviewCLIGit(t, repo, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
-	runReviewCLIGit(t, repo, "config", "branch.feature.remote", "origin")
-	runReviewCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/develop")
+	runCLIGit(t, repo, "add", "feature.txt")
+	runCLIGit(t, repo, "commit", "-qm", "feature work")
+	runCLIGit(t, repo, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+	runCLIGit(t, repo, "config", "branch.feature.remote", "origin")
+	runCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/develop")
 
 	status := derivedRangeTerminalStatus(t, repo)
 	if status.NextTransition == nil || status.NextTransition.Execute == nil || status.NextTransition.Execute.Operation != "review.start" {
@@ -86,16 +86,16 @@ func TestNextTransitionCommittedRangeBasePrefersBranchUpstream(t *testing.T) {
 func TestNextTransitionCommittedRangeBaseRetainsDefaultBranchForLevelUpstream(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, _ := buildTrunkIntegrationSplitRepo(t)
-	runReviewCLIGit(t, repo, "checkout", "-qb", "feature")
+	runCLIGit(t, repo, "checkout", "-qb", "feature")
 	if err := os.WriteFile(filepath.Join(repo, "feature.txt"), []byte("the change under review\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "feature.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "feature work")
-	feature := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "refs/heads/feature"))
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/feature", feature)
-	runReviewCLIGit(t, repo, "config", "branch.feature.remote", "origin")
-	runReviewCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/feature")
+	runCLIGit(t, repo, "add", "feature.txt")
+	runCLIGit(t, repo, "commit", "-qm", "feature work")
+	feature := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "refs/heads/feature"))
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/feature", feature)
+	runCLIGit(t, repo, "config", "branch.feature.remote", "origin")
+	runCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/feature")
 
 	status := derivedRangeTerminalStatus(t, repo)
 	if status.NextTransition == nil || status.NextTransition.Execute == nil || status.NextTransition.Execute.Operation != "review.start" {
@@ -118,36 +118,36 @@ func TestNextTransitionCommittedRangeBaseCrissCrossUpstreamKeepsDefaultBranch(t 
 	repo, _ := buildTrunkIntegrationSplitRepo(t)
 	// Build a criss-cross between feature and its upstream develop: two
 	// symmetric merges of one branch into the other.
-	runReviewCLIGit(t, repo, "checkout", "-qb", "side")
+	runCLIGit(t, repo, "checkout", "-qb", "side")
 	if err := os.WriteFile(filepath.Join(repo, "side.txt"), []byte("side\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "side.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "side work")
-	runReviewCLIGit(t, repo, "checkout", "develop")
+	runCLIGit(t, repo, "add", "side.txt")
+	runCLIGit(t, repo, "commit", "-qm", "side work")
+	runCLIGit(t, repo, "checkout", "develop")
 	if err := os.WriteFile(filepath.Join(repo, "develop-side.txt"), []byte("develop side\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "develop-side.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "develop side work")
-	preMergeDevelop := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "develop"))
-	runReviewCLIGit(t, repo, "merge", "--no-ff", "-qm", "merge side into develop", "side")
-	runReviewCLIGit(t, repo, "checkout", "side")
-	runReviewCLIGit(t, repo, "merge", "--no-ff", "-qm", "merge pre-merge develop into side", preMergeDevelop)
-	runReviewCLIGit(t, repo, "checkout", "-B", "feature", "side")
+	runCLIGit(t, repo, "add", "develop-side.txt")
+	runCLIGit(t, repo, "commit", "-qm", "develop side work")
+	preMergeDevelop := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "develop"))
+	runCLIGit(t, repo, "merge", "--no-ff", "-qm", "merge side into develop", "side")
+	runCLIGit(t, repo, "checkout", "side")
+	runCLIGit(t, repo, "merge", "--no-ff", "-qm", "merge pre-merge develop into side", preMergeDevelop)
+	runCLIGit(t, repo, "checkout", "-B", "feature", "side")
 	if err := os.WriteFile(filepath.Join(repo, "feature.txt"), []byte("the change under review\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "feature.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "feature work")
-	merges := strings.TrimSpace(runReviewCLIGit(t, repo, "merge-base", "--all", "HEAD", "develop"))
+	runCLIGit(t, repo, "add", "feature.txt")
+	runCLIGit(t, repo, "commit", "-qm", "feature work")
+	merges := strings.TrimSpace(runCLIGit(t, repo, "merge-base", "--all", "HEAD", "develop"))
 	if strings.Count(strings.TrimSpace(merges), "\n") != 1 {
 		t.Fatalf("fixture is not criss-cross: merge-base --all returned %q", merges)
 	}
-	runReviewCLIGit(t, repo, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/develop", "develop")
-	runReviewCLIGit(t, repo, "config", "branch.feature.remote", "origin")
-	runReviewCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/develop")
+	runCLIGit(t, repo, "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*")
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/develop", "develop")
+	runCLIGit(t, repo, "config", "branch.feature.remote", "origin")
+	runCLIGit(t, repo, "config", "branch.feature.merge", "refs/heads/develop")
 
 	status := derivedRangeTerminalStatus(t, repo)
 	if status.NextTransition == nil || status.NextTransition.Execute == nil || status.NextTransition.Execute.Operation != "review.start" {

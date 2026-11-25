@@ -49,7 +49,7 @@ func requireNoReviewProcessTempResidue(t *testing.T, repo string) {
 	t.Helper()
 	seen := map[string]bool{}
 	for _, selector := range []string{"--git-dir", "--git-common-dir"} {
-		directory := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", selector))
+		directory := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", selector))
 		if !filepath.IsAbs(directory) {
 			directory = filepath.Join(repo, directory)
 		}
@@ -101,7 +101,7 @@ func TestNegotiatedStatusUnderUnavailableProcessTempOffersFreshStartOnBothContra
 	reviewEnabledHome(t)
 	for _, contract := range []string{ReviewIntegrationContractV1, ReviewIntegrationContractV2} {
 		t.Run(contract, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			dirtyTrackedCandidate(t, repo)
 			unavailableProcessTemp(t)
 
@@ -135,8 +135,8 @@ func TestNegotiatedStatusUnderUnavailableProcessTempOffersFreshStartOnBothContra
 // snapshot-derivation path and needs its own proof.
 func TestNegotiatedStatusUnderUnavailableProcessTempResolvesWorkspaceOverlayBaseRef(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--abbrev-ref", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--abbrev-ref", "HEAD"))
 	dirtyTrackedCandidate(t, repo)
 	unavailableProcessTemp(t)
 
@@ -170,7 +170,7 @@ func TestNegotiatedStatusUnderUnavailableProcessTempResolvesWorkspaceOverlayBase
 // derives a live snapshot to compare against the frozen target.
 func TestNegotiatedStatusUnderUnavailableProcessTempContinuesCompactCorrection(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const candidatePath = "internal/candidate.go"
 	writeReviewStartCandidate(t, repo, candidatePath, "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
@@ -231,7 +231,7 @@ func TestNegotiatedStatusUnderUnavailableProcessTempContinuesCompactCorrection(t
 // by the time the typed failure is published.
 func TestNegotiatedStatusLeavesNoTemporaryGitArtifactsAfterFailure(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	dirtyTrackedCandidate(t, repo)
 
 	var startedOutput bytes.Buffer

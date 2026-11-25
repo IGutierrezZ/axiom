@@ -19,7 +19,7 @@ import (
 // exit that stranded every v1 consumer one step before the burn.
 func TestNextTransitionV1ApprovedPendingAcknowledgementIsNotTerminalStop(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/approved.md", "# Approved\n", 0o644)
 	var startOutput bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -68,7 +68,7 @@ func TestNextTransitionV1ApprovedPendingAcknowledgementIsNotTerminalStop(t *test
 // retry can never succeed.
 func TestNegotiatedStatusOverlayWithoutBaseRefIsInvalidRequestWithCause(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	var output bytes.Buffer
 	err := RunReview([]string{
 		"status", "--cwd", repo, "--contract", ReviewIntegrationContractV2, "--next-transition", "--workspace-overlay",
@@ -95,7 +95,7 @@ func TestNegotiatedStatusOverlayWithoutBaseRefIsInvalidRequestWithCause(t *testi
 // owning repository resumes the reviewing authority.
 func TestNegotiatedStatusWithUnknownLineageFailsClosedFromForeignRepository(t *testing.T) {
 	reviewEnabledHome(t)
-	owner := initReviewCLIRepo(t)
+	owner := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, owner, "candidate.go", "package candidate\n\nfunc Candidate() int { return 6 }\n", 0o644)
 	started := runNegotiatedReviewStart(t, owner, "continuation-foreign-cwd")
 	execution := startStatusContinuationExecution(t, started, []ReviewTransitionArgument{
@@ -106,7 +106,7 @@ func TestNegotiatedStatusWithUnknownLineageFailsClosedFromForeignRepository(t *t
 	}
 	fields := strings.Fields(execution.Command)
 
-	foreign := initReviewCLIRepo(t)
+	foreign := initCLIGitRepo(t)
 	previous, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -157,7 +157,7 @@ func TestNegotiatedStatusWithUnknownLineageFailsClosedFromForeignRepository(t *t
 // evaluated from the exact worktree that froze it.
 func TestNegotiatedStatusWithOccupiedLineageFailsClosedFromSiblingWorktree(t *testing.T) {
 	reviewEnabledHome(t)
-	owner := initReviewCLIRepo(t)
+	owner := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, owner, "candidate.go", "package candidate\n\nfunc Candidate() int { return 7 }\n", 0o644)
 	started := runNegotiatedReviewStart(t, owner, "continuation-sibling-worktree")
 	execution := startStatusContinuationExecution(t, started, []ReviewTransitionArgument{
@@ -168,8 +168,8 @@ func TestNegotiatedStatusWithOccupiedLineageFailsClosedFromSiblingWorktree(t *te
 	}
 	fields := strings.Fields(execution.Command)
 
-	sibling := canonicalReviewCLITempDir(t)
-	runReviewCLIGit(t, owner, "worktree", "add", sibling, "-b", "sibling-branch")
+	sibling := canonicalCLITempDir(t)
+	runCLIGit(t, owner, "worktree", "add", sibling, "-b", "sibling-branch")
 	previous, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)

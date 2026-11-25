@@ -19,13 +19,13 @@ import (
 func TestCommittedBaseDiffLastReviewerCapturePublishesExactStatusContinuation(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const baseRef = "frozen-base"
 	const lineage = "committed-last-capture-continuation"
-	runReviewCLIGit(t, repo, "branch", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", baseRef, "HEAD")
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 1\n}\n", 0o755)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "wrong candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "wrong candidate")
 
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
 		"--cwd", repo, "--lineage", lineage, "--base-ref", baseRef, "--committed-only",
@@ -104,7 +104,7 @@ func TestCommittedBaseDiffLastReviewerCapturePublishesExactStatusContinuation(t 
 
 	// The named branch is mutable after START. Re-entry must remain bound to the
 	// frozen BaseTree carried by the continuation rather than this symbolic ref.
-	runReviewCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
 	statusArgs := []string{strings.TrimPrefix(continuation.Operation, "review.")}
 	for _, argument := range continuation.Arguments {
 		statusArgs = append(statusArgs, argument.Token)
@@ -124,11 +124,11 @@ func TestCommittedBaseDiffCorrectionReentryRunsReturnedContinuationForAdvertised
 	for _, runtime := range []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentCodex} {
 		t.Run(string(runtime), func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
-			baseTree := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
+			repo := initCLIGitRepo(t)
+			baseTree := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
 			writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 1\n}\n", 0o644)
-			runReviewCLIGit(t, repo, "add", "candidate.go")
-			runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+			runCLIGit(t, repo, "add", "candidate.go")
+			runCLIGit(t, repo, "commit", "-qm", "candidate")
 
 			lineage := "committed-" + string(runtime) + "-closure"
 			var startOutput bytes.Buffer
@@ -305,7 +305,7 @@ func TestSelectorlessCommittedCorrectionClosesOnTargetedValidation(t *testing.T)
 			repo, base, lineage := forecastCommittedCorrection(t)
 			writeCommittedCorrection(t, repo, amend)
 			// The mutable ref must not influence the frozen correction boundary.
-			runReviewCLIGit(t, repo, "branch", "-f", base, "HEAD")
+			runCLIGit(t, repo, "branch", "-f", base, "HEAD")
 			authorityStore, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, lineage)
 			if err != nil {
 				t.Fatal(err)
@@ -351,9 +351,9 @@ func TestSelectorlessCommittedCorrectionClosesOnTargetedValidation(t *testing.T)
 func TestStagedCorrectionClosesOnTargetedValidation(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "base\none\ntwo\nthree\nwrong\n", 0o755)
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--lineage", "staged-correction", "--projection", "staged"}, &output); err != nil {
 		t.Fatal(err)
@@ -373,7 +373,7 @@ func TestStagedCorrectionClosesOnTargetedValidation(t *testing.T) {
 	}
 	captureCorrectionPlanFromCurrentStatus(t, repo, started.LineageID, 2)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "base\none\ntwo\nthree\nfixed\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	var statusOutput bytes.Buffer
 	if err := RunReview([]string{
 		"status", "--cwd", repo, "--contract", ReviewIntegrationContractV2, "--next-transition",
@@ -424,7 +424,7 @@ func TestSelectorlessCommittedCorrectionFailsClosedForUnreadableAuthority(t *tes
 		t.Fatal(err)
 	}
 	writeCommittedCorrection(t, repo, false)
-	runReviewCLIGit(t, repo, "branch", "-f", base, "HEAD")
+	runCLIGit(t, repo, "branch", "-f", base, "HEAD")
 
 	statePath := filepath.Join(reviewCLICompactStoreDir(repo, "unreadable-authority"), "review-state.json")
 	if err := os.MkdirAll(statePath, 0o755); err != nil {
@@ -515,11 +515,11 @@ func committedCorrectionWithOverBudgetReconstructionAuthority(t *testing.T) stri
 	t.Helper()
 	repo, base, _ := forecastCommittedCorrection(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 2\n}\nvar repaired = true\nvar extraOne = 1\nvar extraTwo = 2\nvar extraThree = 3\nvar extraFour = 4\nvar extraFive = 5\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "large candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "large candidate")
 	startCommittedCorrectionFixture(t, repo, "healthy-reconstruction", base, nil, 5)
 	writeOverBudgetCommittedCorrection(t, repo)
-	runReviewCLIGit(t, repo, "branch", "-f", base, "HEAD")
+	runCLIGit(t, repo, "branch", "-f", base, "HEAD")
 	return repo
 }
 
@@ -564,12 +564,12 @@ func startCommittedCorrectionFixture(t *testing.T, repo, lineage, baseRef string
 func forecastCommittedCorrection(t *testing.T) (string, string, string) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	base := "frozen-base"
-	runReviewCLIGit(t, repo, "branch", base, "HEAD")
+	runCLIGit(t, repo, "branch", base, "HEAD")
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 1\n}\n", 0o755)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "wrong candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "wrong candidate")
 
 	const lineage = "committed-correction"
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
@@ -616,19 +616,19 @@ func forecastCommittedCorrection(t *testing.T) (string, string, string) {
 func writeCommittedCorrection(t *testing.T, repo string, amend bool) {
 	t.Helper()
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 2\n}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "add", "candidate.go")
 	if amend {
-		runReviewCLIGit(t, repo, "commit", "--amend", "--no-edit")
+		runCLIGit(t, repo, "commit", "--amend", "--no-edit")
 		return
 	}
-	runReviewCLIGit(t, repo, "commit", "-qm", "correct candidate")
+	runCLIGit(t, repo, "commit", "-qm", "correct candidate")
 }
 
 func writeOverBudgetCommittedCorrection(t *testing.T, repo string) {
 	t.Helper()
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 2\n}\nvar repaired = true\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "over-budget correct candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "over-budget correct candidate")
 }
 
 func committedCorrectionStatus(t *testing.T, repo, lineage, baseTree string) ReviewTargetStatusResult {

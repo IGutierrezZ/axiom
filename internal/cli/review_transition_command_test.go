@@ -519,7 +519,7 @@ func TestPublishedStatusSchemasRequireTokenOnExecutableArguments(t *testing.T) {
 // end this defect class is about.
 func TestReviewRecoverTransitionEmitsACommandThatRuns(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{"--cwd", repo, "--lineage", "recover-command"})
 	if err != nil {

@@ -86,7 +86,7 @@ func TestAuthorizeReviewTransportCapabilityMatrix(t *testing.T) {
 // the unsupported-transport denial happens before any authority, tier,
 // lens, budget, or collection state exists.
 func TestUnsupportedReviewTransportCapabilityStopsBeforeAnyAuthority(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n", 0o644)
 
 	var output bytes.Buffer
@@ -112,7 +112,7 @@ func TestUnsupportedReviewTransportCapabilityStopsBeforeAnyAuthority(t *testing.
 
 func TestReviewTransportAdmissionRefusalNamesWorkingExits(t *testing.T) {
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n", 0o644)
 
 	var output bytes.Buffer

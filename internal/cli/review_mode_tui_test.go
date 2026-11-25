@@ -9,7 +9,7 @@ import (
 
 func TestReviewModeTUIWrappersResolveAndChangeOnlyGlobalMode(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	before, err := ReviewModeStatus(context.Background(), repo)
 	if err != nil || before.Effective != reviewtransaction.RDDModeOff {

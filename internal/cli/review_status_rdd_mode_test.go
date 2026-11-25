@@ -34,7 +34,7 @@ func TestNegotiatedStatusMatchesReviewStartRDDMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewModeHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("changed\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
@@ -93,7 +93,7 @@ func TestNegotiatedStatusMatchesReviewStartRDDMode(t *testing.T) {
 
 func TestNegotiatedStatusFailsWhenEffectiveModeCannotResolve(t *testing.T) {
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	for _, dir := range []string{".axiom", ".gentle-ai"} {
 		if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
 			t.Fatal(err)
@@ -114,7 +114,7 @@ func TestNegotiatedStatusFailsWhenEffectiveModeCannotResolve(t *testing.T) {
 
 func TestNegotiatedStatusKeepsRDDDisabledStopWhenUntrackedSelectionIsNeeded(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("changed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestDisabledStatusStaysSilentForEveryCWDSpelling(t *testing.T) {
 	for _, cwd := range [][]string{{"--cwd=."}, {"--cwd", "."}} {
 		t.Run(strings.Join(cwd, " "), func(t *testing.T) {
 			reviewModeHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			t.Chdir(repo)
 			if err := RunReviewMode([]string{"disable", "--cwd", repo, "--scope", "global"}, io.Discard); err != nil {
 				t.Fatal(err)

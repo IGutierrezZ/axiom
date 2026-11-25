@@ -23,7 +23,7 @@ import (
 // as before, for the identical structural reason (no receipt governs it).
 func TestRelayedCandidateDeclineNeverAuthorizesLaterGateDelivery(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -46,7 +46,7 @@ func TestRelayedCandidateDeclineNeverAuthorizesLaterGateDelivery(t *testing.T) {
 		t.Fatalf("declined candidate created receipt: %v", err)
 	}
 
-	runReviewCLIGit(t, repo, "add", "scripts/deploy.sh")
+	runCLIGit(t, repo, "add", "scripts/deploy.sh")
 	var output bytes.Buffer
 	if err := RunReviewFacadeValidate([]string{"--cwd", repo, "--gate", string(reviewtransaction.GatePreCommit)}, &output); err != nil {
 		t.Fatalf("candidate-declined pre-commit delivery: %v\n%s", err, output.String())
@@ -56,7 +56,7 @@ func TestRelayedCandidateDeclineNeverAuthorizesLaterGateDelivery(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "scripts", "deploy.sh"), []byte("echo drift\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "scripts/deploy.sh")
+	runCLIGit(t, repo, "add", "scripts/deploy.sh")
 	var drifted bytes.Buffer
 	if err := RunReviewFacadeValidate([]string{"--cwd", repo, "--gate", string(reviewtransaction.GatePreCommit)}, &drifted); err != nil {
 		t.Fatalf("candidate-decline drifted delivery: %v\n%s", err, drifted.String())
@@ -66,7 +66,7 @@ func TestRelayedCandidateDeclineNeverAuthorizesLaterGateDelivery(t *testing.T) {
 
 func TestCandidateDeclineNeverAuthorizesRelease(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -75,8 +75,8 @@ func TestCandidateDeclineNeverAuthorizesRelease(t *testing.T) {
 		"--lineage", "review-candidate-decline-release", "--consent", "relay",
 	})).Bytes())
 	runConsentRelayStart(t, invocationArgs(t, question.Choices[1].Invocation))
-	runReviewCLIGit(t, repo, "add", "scripts/deploy.sh")
-	runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+	runCLIGit(t, repo, "add", "scripts/deploy.sh")
+	runCLIGit(t, repo, "commit", "-qm", "candidate")
 
 	var output bytes.Buffer
 	if err := RunReviewFacadeValidate([]string{"--cwd", repo, "--gate", string(reviewtransaction.GateRelease)}, &output); err != nil {

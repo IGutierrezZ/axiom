@@ -27,7 +27,7 @@ func suspendRDD(t *testing.T) {
 func TestReviewModeEnableFailsAtEveryScopeWhileSuspended(t *testing.T) {
 	suspendRDD(t)
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	for _, scope := range []string{"global", "project", "clone"} {
 		var output bytes.Buffer
@@ -47,7 +47,7 @@ func TestReviewModeEnableFailsAtEveryScopeWhileSuspended(t *testing.T) {
 func TestReviewModeSettersRejectOnWhileSuspended(t *testing.T) {
 	suspendRDD(t)
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	if _, err := SetGlobalReviewMode(t.Context(), repo, true); err == nil {
 		t.Fatal("SetGlobalReviewMode(true) debe fallar")
@@ -63,7 +63,7 @@ func TestReviewModeSettersRejectOnWhileSuspended(t *testing.T) {
 func TestReviewModeDisableAndStatusStillWorkWhileSuspended(t *testing.T) {
 	suspendRDD(t)
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"disable", "--scope", "global", "--cwd", repo, "--json"}, &output); err != nil {
@@ -82,7 +82,7 @@ func TestReviewModeDisableAndStatusStillWorkWhileSuspended(t *testing.T) {
 func TestReviewModeStatusIsOffWithStoredOnWhileSuspended(t *testing.T) {
 	suspendRDD(t)
 	home := reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	recordedAt := time.Now().UTC()
 	if err := state.Write(home, state.InstallState{
 		RDDMode:           string(reviewtransaction.RDDModeOn),
@@ -104,7 +104,7 @@ func TestReviewModeStatusIsOffWithStoredOnWhileSuspended(t *testing.T) {
 func TestReviewStopHookIsANoOpWhileSuspended(t *testing.T) {
 	suspendRDD(t)
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	for _, payload := range []string{
 		reviewStopHookTestPayload(t, "sess-suspended", repo, false, nil),

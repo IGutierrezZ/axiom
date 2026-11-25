@@ -131,7 +131,7 @@ func TestUnrelatedRepositoryContextFailureIsNotLabelledUntrusted(t *testing.T) {
 func startedOpaqueCaptureBinding(t *testing.T, lineage string) ([]string, string, string) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "internal/auth/session.go", "package auth\n\nfunc Trust() {}\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, lineage)
 	if started.RepositoryContext == nil || len(started.SelectedLenses) == 0 {

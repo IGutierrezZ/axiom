@@ -20,7 +20,7 @@ import (
 // frozen declaration.
 func escalatedSelectionReplayFixture(t *testing.T, lineage string) (string, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

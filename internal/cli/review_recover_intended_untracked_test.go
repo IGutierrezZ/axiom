@@ -19,7 +19,7 @@ import (
 // explicitly declared intended-untracked paths alongside a tracked change.
 func escalatedIntendedUntrackedRecoveryFixture(t *testing.T, lineage string) (string, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -246,8 +246,8 @@ func TestReviewRecoverInheritsDeclarationAfterDeclaredPathWasCommitted(t *testin
 
 	// Unrelated development lands one declared path between escalation and
 	// recovery; the other declared path stays untracked.
-	runReviewCLIGit(t, repo, "add", "notes-a.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "land notes-a")
+	runCLIGit(t, repo, "add", "notes-a.txt")
+	runCLIGit(t, repo, "commit", "-qm", "land notes-a")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\ncorrected\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

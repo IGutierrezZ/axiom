@@ -20,7 +20,7 @@ import (
 
 func TestNegotiatedReviewStartMatchesVersionedFixture(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
 	var output bytes.Buffer
@@ -74,7 +74,7 @@ func TestNegotiatedReviewStartRiskReasonsUseOnlyImmutableSnapshotEvidence(t *tes
 		if runtime.GOOS == "windows" {
 			t.Skip("Git worktree executable-bit transitions are POSIX-only")
 		}
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		if runtime.GOOS != "windows" {
 			if err := os.Chmod(filepath.Join(repo, "tracked.txt"), 0o755); err != nil {
 				t.Fatal(err)
@@ -92,7 +92,7 @@ func TestNegotiatedReviewStartRiskReasonsUseOnlyImmutableSnapshotEvidence(t *tes
 	})
 
 	t.Run("canonical stable sorting", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		if err := os.Chmod(filepath.Join(repo, "tracked.txt"), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -112,7 +112,7 @@ func TestNegotiatedReviewStartRiskReasonsUseOnlyImmutableSnapshotEvidence(t *tes
 	})
 
 	t.Run("semantic filename near misses", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "internal/model-provider-profile-data-exposure-data-loss.go", "package internal\n", 0o644)
 		writeReviewStartCandidate(t, repo, "scripts/deploy.sh.txt", "not shell source\n", 0o644)
 		writeReviewStartCandidate(t, repo, "tokens/service-tokenizer.go", "package tokens\n", 0o644)
@@ -182,7 +182,7 @@ func TestNegotiatedReviewStartRoutesLargeCandidatesByEvidence(t *testing.T) {
 	}
 	for index, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, tt.path, tt.prefix+strings.Repeat("line\n", tt.lines), 0o644)
 			args := []string{
 				"start", "--contract", ReviewIntegrationContractV1, "--cwd", repo,
@@ -204,7 +204,7 @@ func TestNegotiatedReviewStartRoutesLargeCandidatesByEvidence(t *testing.T) {
 		})
 	}
 
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "internal/app.go", strings.Repeat("line\n", 401), 0o644)
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "large-doc-invalid-focus", "--focus", "unknown"}, &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "unsupported review focus") {
@@ -238,13 +238,13 @@ func TestNegotiatedReviewStartPreservesPrePolicyLargeDocumentationAuthority(t *t
 
 func TestNegotiatedReviewStartAndStatusExposeWorkspaceOverlay(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	if err := os.WriteFile(filepath.Join(repo, "committed.txt"), []byte("committed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "committed.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "branch")
+	runCLIGit(t, repo, "add", "committed.txt")
+	runCLIGit(t, repo, "commit", "-qm", "branch")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("overlay\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -292,14 +292,14 @@ func TestNegotiatedReviewStartAndStatusExposeWorkspaceOverlay(t *testing.T) {
 
 func TestNegotiatedOverlayStatusUsesResolvedStartBaseAfterSymbolicRefAdvances(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	baseCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	runReviewCLIGit(t, repo, "branch", "review-base", baseCommit)
+	repo := initCLIGitRepo(t)
+	baseCommit := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "branch", "review-base", baseCommit)
 	if err := os.WriteFile(filepath.Join(repo, "committed.txt"), []byte("committed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "committed.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "branch")
+	runCLIGit(t, repo, "add", "committed.txt")
+	runCLIGit(t, repo, "commit", "-qm", "branch")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("overlay\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +312,7 @@ func TestNegotiatedOverlayStatusUsesResolvedStartBaseAfterSymbolicRefAdvances(t 
 		t.Fatal(err)
 	}
 	start := decodeNegotiatedReviewStart(t, startOutput.Bytes())
-	runReviewCLIGit(t, repo, "update-ref", "refs/heads/review-base", "HEAD")
+	runCLIGit(t, repo, "update-ref", "refs/heads/review-base", "HEAD")
 
 	var exactOutput bytes.Buffer
 	if err := RunReviewStatus([]string{
@@ -371,8 +371,8 @@ func TestReviewRecoverRetainsWorkspaceOverlayBaseAndScope(t *testing.T) {
 func TestReviewRecoverAdoptsExplicitWorkspaceOverlayBase(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, predecessor := approvedWorkspaceOverlayRecoveryPredecessor(t, "overlay-explicit-base-predecessor")
-	declaredBase := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	declaredBaseTree := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", declaredBase+"^{tree}"))
+	declaredBase := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	declaredBaseTree := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", declaredBase+"^{tree}"))
 	args := []string{"--cwd", repo, "--predecessor-lineage", predecessor.State.LineageID, "--expected-predecessor-revision", predecessor.Revision,
 		"--successor-lineage", "overlay-explicit-base-successor", "--disposition", "scope_changed", "--reason", "base advanced", "--actor", "maintainer", "--base-ref", declaredBase}
 
@@ -395,13 +395,13 @@ func TestReviewRecoverAdoptsExplicitWorkspaceOverlayBase(t *testing.T) {
 
 func approvedWorkspaceOverlayRecoveryPredecessor(t *testing.T, lineage string) (string, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	if err := os.WriteFile(filepath.Join(repo, "committed.txt"), []byte("committed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "committed.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "branch")
+	runCLIGit(t, repo, "add", "committed.txt")
+	runCLIGit(t, repo, "commit", "-qm", "branch")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("overlay\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -516,7 +516,7 @@ func TestReviewRecoverRejectsStagedIndexMutationBeforePersistence(t *testing.T) 
 		if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("raced index\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		runReviewCLIGit(t, repo, "add", "tracked.txt")
+		runCLIGit(t, repo, "add", "tracked.txt")
 	}
 	t.Cleanup(func() { reviewRecoverBeforePersist = original })
 	if err := RunReviewRecover(args, io.Discard); err == nil || !strings.Contains(err.Error(), "repository evidence") {
@@ -543,7 +543,7 @@ func TestReviewRecoverHelpDocumentsProjectionAndCanonicalAuthorization(t *testin
 
 func escalatedRecoveryProjectionFixture(t *testing.T, lineage string) (string, reviewtransaction.CompactRecord, ReviewTargetStatusResult) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -576,7 +576,7 @@ func escalatedRecoveryProjectionFixture(t *testing.T, lineage string) (string, r
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("staged successor\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("unstaged divergence\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -601,17 +601,17 @@ func reviewRecoveryAuthorization(lineage, revision, identity, actor, reason stri
 
 func TestReviewRecoverReleaseScopeExpandsMergedSliceToFirstParentDiff(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	mainBranch := strings.TrimSpace(runReviewCLIGit(t, repo, "branch", "--show-current"))
-	runReviewCLIGit(t, repo, "checkout", "-qb", "release-candidate")
+	repo := initCLIGitRepo(t)
+	mainBranch := strings.TrimSpace(runCLIGit(t, repo, "branch", "--show-current"))
+	runCLIGit(t, repo, "checkout", "-qb", "release-candidate")
 	if err := os.MkdirAll(filepath.Join(repo, ".github", "workflows"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, ".github", "workflows", "release.yml"), []byte("name: Release\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", ".github/workflows/release.yml")
-	runReviewCLIGit(t, repo, "commit", "-qm", "release workflow")
+	runCLIGit(t, repo, "add", ".github/workflows/release.yml")
+	runCLIGit(t, repo, "commit", "-qm", "release workflow")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("reviewed slice\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -648,11 +648,11 @@ func TestReviewRecoverReleaseScopeExpandsMergedSliceToFirstParentDiff(t *testing
 		t.Fatal(err)
 	}
 
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "reviewed slice")
-	runReviewCLIGit(t, repo, "checkout", "-q", mainBranch)
-	runReviewCLIGit(t, repo, "merge", "--no-ff", "-qm", "release candidate", "release-candidate")
-	mergedTree := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "reviewed slice")
+	runCLIGit(t, repo, "checkout", "-q", mainBranch)
+	runCLIGit(t, repo, "merge", "--no-ff", "-qm", "release candidate", "release-candidate")
+	mergedTree := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
 	if mergedTree != predecessor.State.CurrentSnapshot.CandidateTree {
 		t.Fatalf("merged tree = %s, reviewed candidate = %s", mergedTree, predecessor.State.CurrentSnapshot.CandidateTree)
 	}
@@ -675,7 +675,7 @@ func TestReviewRecoverReleaseScopeExpandsMergedSliceToFirstParentDiff(t *testing
 		t.Fatal(err)
 	}
 	snapshot := successor.State.InitialSnapshot
-	wantBase := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD^1^{tree}"))
+	wantBase := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD^1^{tree}"))
 	wantPaths := []string{".github/workflows/release.yml", "tracked.txt"}
 	if snapshot.Kind != reviewtransaction.TargetBaseDiff || snapshot.BaseTree != wantBase || snapshot.CandidateTree != mergedTree ||
 		!reflect.DeepEqual(snapshot.Paths, wantPaths) || successor.State.RiskLevel != reviewtransaction.RiskHigh || len(successor.State.SelectedLenses) != 4 {
@@ -685,8 +685,8 @@ func TestReviewRecoverReleaseScopeExpandsMergedSliceToFirstParentDiff(t *testing
 
 func TestNegotiatedReviewStartPreservesLegacyPayloadAndAuthorityIdentity(t *testing.T) {
 	reviewEnabledHome(t)
-	legacyRepo := initReviewCLIRepo(t)
-	negotiatedRepo := initReviewCLIRepo(t)
+	legacyRepo := initCLIGitRepo(t)
+	negotiatedRepo := initCLIGitRepo(t)
 	for _, repo := range []string{legacyRepo, negotiatedRepo} {
 		if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 			t.Fatal(err)
@@ -763,7 +763,7 @@ func TestReviewStartContractLeavesScopeDriftAuthoritiesIndependent(t *testing.T)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			const staleLineage = "scope-drift-stale"
 			const freshLineage = "scope-drift-fresh"
 			writeReviewStartCandidate(t, repo, "tracked.txt", "reviewing candidate\n", 0o644)
@@ -817,7 +817,7 @@ func TestReviewStartContractReplaysOnlyItsExactLineage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			const reviewingLineage = "scope-drift-resume"
 			writeReviewStartCandidate(t, repo, "tracked.txt", "same candidate\n", 0o644)
 
@@ -923,7 +923,7 @@ func reviewStartOutputTargetIdentity(t *testing.T, fields map[string]json.RawMes
 func TestNegotiatedReviewStartRejectsInvalidContractsBeforeAuthorityMutation(t *testing.T) {
 	for _, contract := range []string{"", "gentle-ai.review-integration/v3", " " + ReviewIntegrationContractV1} {
 		t.Run(strings.ReplaceAll(contract, "/", "_"), func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 				t.Fatal(err)
 			}
@@ -950,9 +950,9 @@ func TestNegotiatedReviewStartRejectsInvalidContractsBeforeAuthorityMutation(t *
 
 func TestExplicitReviewStartRetriesAcrossSharedCommonDirWithoutReconstruction(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	linked := filepath.Join(t.TempDir(), "linked")
-	runReviewCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
+	runCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
 	for _, root := range []string{repo, linked} {
 		writeReviewStartCandidate(t, root, "tracked.txt", "same candidate\n", 0o644)
 	}
@@ -1204,12 +1204,12 @@ func writeReviewStartCandidate(t *testing.T, repo, path, contents string, mode o
 		t.Fatal(err)
 	}
 	if !tracked {
-		runReviewCLIGit(t, repo, "add", "--", path)
+		runCLIGit(t, repo, "add", "--", path)
 		if mode&0o111 != 0 {
 			// Windows has no executable bit, so record the fixture's intent in
 			// the index: the candidate then carries the same 100755 mode git
 			// snapshots on POSIX, and risk classification stays identical.
-			runReviewCLIGit(t, repo, "update-index", "--chmod=+x", "--", path)
+			runCLIGit(t, repo, "update-index", "--chmod=+x", "--", path)
 		}
 	}
 }
@@ -1324,7 +1324,7 @@ const dangerousSinkStartCandidate = "package client\n\nimport \"crypto/tls\"\n\n
 // Validate() porque el motivo que emite el clasificador no tenía caso.
 func TestNegotiatedReviewStartEmitsDangerousSinkAgainstStartV5(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "client/tls.go", dangerousSinkStartCandidate, 0o644)
 
 	var output bytes.Buffer
@@ -1355,7 +1355,7 @@ func TestNegotiatedReviewStartEmitsDangerousSinkAgainstStartV5(t *testing.T) {
 // emitir un sobre inválido o degradar el motivo a otro inexacto.
 func TestNegotiatedReviewStartV1RefusesDangerousSinkBeforeAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "client/tls.go", dangerousSinkStartCandidate, 0o644)
 
 	var output bytes.Buffer

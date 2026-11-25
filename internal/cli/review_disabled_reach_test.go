@@ -90,7 +90,7 @@ func assertDisabledUnmanagedGate(t *testing.T, runErr error, payload []byte) Rev
 // direct non-deciding gate coverage while reviews are disabled.
 func TestReviewFacadeValidateReportsDisabledUnmanagedDeliveryAtPostApply(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	disableReviewForClone(t, repo)
 
 	var output bytes.Buffer
@@ -119,20 +119,20 @@ func TestReviewFacadeValidateReportsDisabledUnmanagedDeliveryAtPostApply(t *test
 // disabled, the damage simply never gets read in the first place.
 func TestReviewValidateReportsDisabledUnmanagedDeliveryOverCorruptedAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("reviewed candidate behavior\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "reviewed candidate")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "reviewed candidate")
 
 	disableReviewForClone(t, repo)
 
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("work authored while disabled\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "authored while disabled")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "authored while disabled")
 	corruptReviewAuthorityInventory(t, repo)
 
 	var output bytes.Buffer
@@ -144,7 +144,7 @@ func TestReviewValidateReportsDisabledUnmanagedDeliveryOverCorruptedAuthority(t 
 // the negotiated non-deciding gate while reviews are disabled.
 func TestReviewValidateNegotiatedContractReportsDisabledUnmanagedDelivery(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	disableReviewForClone(t, repo)
 
 	var output bytes.Buffer
@@ -177,7 +177,7 @@ func TestReviewValidateNegotiatedContractReportsDisabledUnmanagedDelivery(t *tes
 // inspecting authority.
 func TestReviewValidateNegotiatedContractUsesUnmanagedDeliveryWhileEnabled(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReview([]string{
@@ -205,7 +205,7 @@ func TestReviewValidateNegotiatedContractUsesUnmanagedDeliveryWhileEnabled(t *te
 // compact authority over the current candidate.
 func TestReviewValidateReValidatesFromScratchAfterReEnabling(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "reviewed candidate behavior\n", 0o644)
 	predecessor := runNegotiatedReviewStart(t, repo, "review-before-disabling")
 	predecessorStore, err := reviewtransaction.CompactAuthoritativeStore(t.Context(), repo, predecessor.LineageID)
@@ -381,7 +381,7 @@ func TestDisabledGateNeverEmitsAllowOrCreatesReceipt(t *testing.T) {
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			testCase.stage(t, repo)
 			disableReviewForClone(t, repo)
 			before := reviewAuthorityFingerprint(t, repo)

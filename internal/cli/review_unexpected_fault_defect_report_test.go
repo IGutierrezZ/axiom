@@ -29,7 +29,7 @@ const reviewTestZeroTarget = "sha256:0000000000000000000000000000000000000000000
 
 func reviewDefectReportDir(t *testing.T, repo string) string {
 	t.Helper()
-	commonDir := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--git-common-dir"))
+	commonDir := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--git-common-dir"))
 	if !filepath.IsAbs(commonDir) {
 		commonDir = filepath.Join(repo, commonDir)
 	}
@@ -50,7 +50,7 @@ func injectReviewStartFault(t *testing.T, fault error) {
 }
 
 func TestNegotiatedStartUnanticipatedFaultEmitsEnvelopeAndDefectReport(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	injectReviewStartFault(t, errors.New("injected unanticipated discovery fault"))
 
@@ -98,8 +98,8 @@ func TestNegotiatedStartUnanticipatedFaultEmitsEnvelopeAndDefectReport(t *testin
 }
 
 func TestNamedRefusalsAndReadOnlyOperationsNeverWriteDefectReports(t *testing.T) {
-	repo := initReviewCLIRepo(t)
-	runReviewCLIGit(t, repo, "init", "-q", filepath.Join(repo, "vendor", "embedded"))
+	repo := initCLIGitRepo(t)
+	runCLIGit(t, repo, "init", "-q", filepath.Join(repo, "vendor", "embedded"))
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 
 	// Named refusal on a mutating operation: the embedded-repository refusal
@@ -125,12 +125,12 @@ func TestNamedRefusalsAndReadOnlyOperationsNeverWriteDefectReports(t *testing.T)
 }
 
 func TestDefectReportSaveFailureNeverMasksTheEnvelopeOrError(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	injectReviewStartFault(t, errors.New("injected unanticipated discovery fault"))
 	// Occupy the report directory path with a regular file so persisting the
 	// report fails deterministically.
-	commonDir := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--git-common-dir"))
+	commonDir := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--git-common-dir"))
 	if !filepath.IsAbs(commonDir) {
 		commonDir = filepath.Join(repo, commonDir)
 	}

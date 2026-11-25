@@ -24,7 +24,7 @@ import (
 func reviewTargetEvidenceRelaySetup(t *testing.T) (string, ReviewIntegrationConsentResult) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	output := runConsentRelayStart(t, boundNegotiatedStartArgs(t, []string{
 		"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo,
@@ -184,7 +184,7 @@ func TestReviewStaleWithoutTargetEvidenceKeepsLegacyEnvelope(t *testing.T) {
 // staleness classification.
 func TestReviewStartRejectsTargetEvidenceIdentityMismatch(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},
@@ -217,7 +217,7 @@ func TestReviewStartRejectsTargetEvidenceIdentityMismatch(t *testing.T) {
 // request defect, never a staleness classification.
 func TestReviewStartRejectsMalformedTargetEvidence(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},
@@ -244,7 +244,7 @@ func TestReviewStartRejectsMalformedTargetEvidence(t *testing.T) {
 // continuation factories publish the evidence token beside the identity hash.
 func TestReviewNegotiatedStartCommandCarriesTargetEvidence(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},
@@ -368,7 +368,7 @@ func TestReviewConsentStaleMarkerRecordsMovedConsentRefusal(t *testing.T) {
 // consent answer must not silence the stop hook.
 func TestReviewConsentStaleMarkerSkipsNonConsentStale(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},
@@ -403,7 +403,7 @@ func TestReviewConsentStaleMarkerSkipsNonConsentStale(t *testing.T) {
 // (nothing moved; the stop hook must keep working).
 func TestReviewNegotiatedStaleIdentityOnlyDriftStopsInsteadOfRetrying(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o755)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},

@@ -115,13 +115,13 @@ func TestReviewRecoverInvalidatedRequiresInvalidatedPredecessor(t *testing.T) {
 // predecessor that was already base-diff.
 func TestReviewRecoverBaseDiffPredecessorStillBindsFrozenBaseTree(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	firstBase := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	firstBase := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "--", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-m", "candidate")
+	runCLIGit(t, repo, "add", "--", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-m", "candidate")
 
 	predecessor := escalatedBaseDiffRecoveryFixture(t, repo, "recover-1744-frozen-base", firstBase)
 	if predecessor.State.InitialSnapshot.Kind != reviewtransaction.TargetBaseDiff {
@@ -133,9 +133,9 @@ func TestReviewRecoverBaseDiffPredecessorStillBindsFrozenBaseTree(t *testing.T) 
 	if err := os.WriteFile(filepath.Join(repo, "unrelated.txt"), []byte("unrelated\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "--", "unrelated.txt")
-	runReviewCLIGit(t, repo, "commit", "-m", "unrelated base")
-	differentBase := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "add", "--", "unrelated.txt")
+	runCLIGit(t, repo, "commit", "-m", "unrelated base")
+	differentBase := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 
 	successorIdentity := reviewRecoverBaseDiffSuccessorIdentity(t, repo, differentBase)
 	authorization := reviewRecoveryAuthorization(predecessor.State.LineageID, predecessor.Revision, successorIdentity, "maintainer", "recover with a different base")
@@ -190,8 +190,8 @@ func TestReviewRecoverArgvCoherenceStillRejectsMismatchedBaseRefFlags(t *testing
 // mechanism TestReviewFacadePersistsOverBudgetForecastAndActual exercises.
 func escalatedCurrentChangesRecoveryFixture(t *testing.T, lineage string) (string, string, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
-	baseRef := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	baseRef := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

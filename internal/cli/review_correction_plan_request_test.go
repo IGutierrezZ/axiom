@@ -45,7 +45,7 @@ func TestNegotiatedCorrectionPlanningExposesProviderOwnedFindings(t *testing.T) 
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, tt.path, tt.content, 0o644)
 			started := runNegotiatedReviewStart(t, repo, "correction-findings-"+strings.ReplaceAll(tt.name, " ", "-"))
 			if started.RiskLevel != tt.wantRisk || len(started.SelectedLenses) != tt.wantSelectedLens {
@@ -158,7 +158,7 @@ func TestNegotiatedCorrectionPlanningExposesProviderOwnedFindings(t *testing.T) 
 func TestNegotiatedStatusExposesMixedOutcomeCorrectionPlan(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "one\ntwo\nthree\n", 0o644)
 	started := startFacadeReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
@@ -344,12 +344,12 @@ func TestNegotiatedStatusRoutesCorrectionRequiredDriftCorrectly(t *testing.T) {
 	reviewEnabledHome(t)
 
 	t.Run("drift outside the frozen manifest routes to recovery", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		if err := os.WriteFile(filepath.Join(repo, "unrelated.go"), []byte("package unrelated\n\nfunc Value() int { return 1 }\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		runReviewCLIGit(t, repo, "add", "unrelated.go")
-		runReviewCLIGit(t, repo, "commit", "-qm", "add unrelated tracked file")
+		runCLIGit(t, repo, "add", "unrelated.go")
+		runCLIGit(t, repo, "commit", "-qm", "add unrelated tracked file")
 
 		lineage := closeReviewLineageIntoCorrectionRequired(t, repo, "drift-outside-manifest")
 
@@ -366,7 +366,7 @@ func TestNegotiatedStatusRoutesCorrectionRequiredDriftCorrectly(t *testing.T) {
 	})
 
 	t.Run("drift inside the frozen manifest still offers the correction plan", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		lineage := closeReviewLineageIntoCorrectionRequired(t, repo, "drift-inside-manifest")
 
 		// Edit the SAME genesis path again, unstaged, before capturing the

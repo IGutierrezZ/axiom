@@ -83,7 +83,7 @@ func executePrintedReview(t *testing.T, repo, command string) []byte {
 
 func TestIntendedUntrackedPreflightRequiresExplicitIntentBeforeAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeUndeclaredWorkspaceFile(t, repo, "candidate, with space.txt", "candidate\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, unrelatedCredentialPath, unrelatedCredentialContents, 0o600)
 
@@ -136,7 +136,7 @@ func TestNegotiatedStatusUnbornUntrackedRequiresSelectionBeforeSnapshot(t *testi
 func TestIntendedUntrackedSelectionSubmissionExecutesSelectedStatusThenPrintedStart(t *testing.T) {
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeUndeclaredWorkspaceFile(t, repo, "docs/chosen, file.md", "# Chosen\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "docs/second file,with comma.md", "# Second\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, unrelatedCredentialPath, unrelatedCredentialContents, 0o600)
@@ -185,7 +185,7 @@ func TestIntendedUntrackedSelectionSubmissionExecutesSelectedStatusThenPrintedSt
 
 func TestIntendedUntrackedSelectionUsesCanonicalPathsAndPrintedStart(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeUndeclaredWorkspaceFile(t, repo, "docs/chosen, file.md", "# Chosen\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "docs/second file,with comma.md", "# Second\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, unrelatedCredentialPath, unrelatedCredentialContents, 0o600)
@@ -223,7 +223,7 @@ func TestIntendedUntrackedInventoryChangesFailClosedBeforeAuthority(t *testing.T
 		remove bool
 	}{{"addition", false}, {"removal", true}} {
 		t.Run(test.name, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 			digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 			if test.remove {
@@ -255,7 +255,7 @@ func TestIntendedUntrackedInvalidIntentNeverCreatesAuthority(t *testing.T) {
 	}
 	for _, test := range cases {
 		t.Run(test[0], func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 			digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 			args := append([]string(nil), test[1:]...)
@@ -272,7 +272,7 @@ func TestIntendedUntrackedInvalidIntentNeverCreatesAuthority(t *testing.T) {
 
 func TestIntendedUntrackedSelectWithoutPathsNamesSelectedPathContinuation(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 	digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 	err := RunReviewFacadeStart([]string{
@@ -298,7 +298,7 @@ func TestIntendedUntrackedSelectWithoutPathsNamesSelectedPathContinuation(t *tes
 
 func TestIntendedUntrackedConsentFollowUpPreservesSelectedScope(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	path := "scripts/deploy candidate.sh"
 	writeUndeclaredWorkspaceFile(t, repo, path, "#!/bin/sh\necho deploy\n", 0o755)
 	digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
@@ -367,7 +367,7 @@ func TestConsentFollowUpPrintedPathFlagsRoundTripWindowsNativePaths(t *testing.T
 // and runtime identity. The named continuation is extracted and executed.
 func TestIntendedUntrackedRefusalsNameARunnableStatusInvocation(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 	digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 	undeclared := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "runnable-inventory-undeclared"}, &bytes.Buffer{})
@@ -436,24 +436,24 @@ func TestEligibleUntrackedInventoryPublishedUnconditionally(t *testing.T) {
 			switch scenario {
 			case "undeclared":
 				reviewEnabledHome(t)
-				repo = initReviewCLIRepo(t)
+				repo = initCLIGitRepo(t)
 				writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 				status = intendedUntrackedStatus(t, repo)
 			case "declared_select":
 				reviewEnabledHome(t)
-				repo = initReviewCLIRepo(t)
+				repo = initCLIGitRepo(t)
 				writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 				digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 				status = intendedUntrackedStatus(t, repo, intendedUntrackedSelectArgs(digest, "candidate.txt")...)
 			case "declared_exclude":
 				reviewEnabledHome(t)
-				repo = initReviewCLIRepo(t)
+				repo = initCLIGitRepo(t)
 				writeUndeclaredWorkspaceFile(t, repo, "candidate.txt", "candidate\n", 0o644)
 				digest, _ := intendedUntrackedSelection(t, intendedUntrackedStatus(t, repo))
 				status = intendedUntrackedStatus(t, repo, "--untracked-scope=exclude", "--expected-untracked-inventory="+digest)
 			case "rdd_disabled":
 				reviewModeHome(t)
-				repo = initReviewCLIRepo(t)
+				repo = initCLIGitRepo(t)
 				if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("changed\n"), 0o644); err != nil {
 					t.Fatal(err)
 				}
@@ -482,9 +482,9 @@ func TestEligibleUntrackedInventoryPublishedUnconditionally(t *testing.T) {
 // pass on the exact defect this change fixes.
 func TestStagedProjectionOmitsEligibleUntrackedInventoryKey(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc staged() {}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "add", "candidate.go")
 
 	var output bytes.Buffer
 	if err := RunReview([]string{

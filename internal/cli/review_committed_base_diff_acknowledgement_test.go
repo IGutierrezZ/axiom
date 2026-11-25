@@ -21,13 +21,13 @@ import (
 func TestSelectorlessStatusResumesCommittedRangeApprovedAcknowledgement(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const baseRef = "frozen-base"
 	const lineage = "committed-range-approved-acknowledgement"
-	runReviewCLIGit(t, repo, "branch", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", baseRef, "HEAD")
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 1\n}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "candidate")
 
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
 		"--cwd", repo, "--lineage", lineage, "--base-ref", baseRef, "--committed-only",
@@ -61,7 +61,7 @@ func TestSelectorlessStatusResumesCommittedRangeApprovedAcknowledgement(t *testi
 
 	// The named branch is mutable and irrelevant after approval; the
 	// selectorless refresh must resume the frozen tree, never the ref.
-	runReviewCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
+	runCLIGit(t, repo, "branch", "-f", baseRef, "HEAD")
 
 	// This is the exact selectorless shape the public acknowledge-approved
 	// operation issues: no --base-ref, no --committed-only, no --workspace-overlay.

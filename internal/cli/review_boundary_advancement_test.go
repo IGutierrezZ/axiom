@@ -16,16 +16,16 @@ import (
 // re-reviews every byte the prior receipt already covered.
 func TestNextTransitionDerivedRangeAdvancesAcknowledgedBoundary(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
-	originalBase := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "refs/remotes/origin/main"))
+	repo := initCLIGitRepo(t)
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	originalBase := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "refs/remotes/origin/main"))
 
 	// First work unit: a documentation candidate, zero-lens, closed approved
 	// and acknowledged through the standard negotiated flow.
 	writeZeroLensDocumentationCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "docs/ordinary-guide.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "documentation candidate")
+	runCLIGit(t, repo, "add", "docs/ordinary-guide.md")
+	runCLIGit(t, repo, "commit", "-qm", "documentation candidate")
 	offered := derivedRangeTerminalStatus(t, repo)
 	if offered.NextTransition == nil || offered.NextTransition.Execute == nil {
 		t.Fatalf("no committed-range START for the first work unit: %#v", offered.NextTransition)
@@ -57,15 +57,15 @@ func TestNextTransitionDerivedRangeAdvancesAcknowledgedBoundary(t *testing.T) {
 	if err != nil || !consumed {
 		t.Fatalf("first work unit consumption = %v, %v", consumed, err)
 	}
-	boundary := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	boundary := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 
 	// Second work unit: executable code after the acknowledged boundary. The
 	// reviewed boundary advances to the acknowledged commit, so the derived
 	// candidate is the delta since that boundary -- its --base-ref names the
 	// boundary commit, never the original branch point.
 	writeReviewStartCandidate(t, repo, "cmd/app/main.go", "package main\n\nfunc main() {}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "cmd/app/main.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "code follow-up")
+	runCLIGit(t, repo, "add", "cmd/app/main.go")
+	runCLIGit(t, repo, "commit", "-qm", "code follow-up")
 	changed := derivedRangeTerminalStatus(t, repo)
 	if changed.NextTransition == nil || changed.NextTransition.Execute == nil || changed.NextTransition.Execute.Operation != "review.start" {
 		t.Fatalf("non-passive follow-up after the boundary not offered: %#v", changed.NextTransition)
@@ -83,12 +83,12 @@ func TestNextTransitionAcknowledgedBoundaryReachesHead(t *testing.T) {
 	reviewEnabledHome(t)
 	// The Stop hook only acts in an Axiom project.
 	repo := initReviewStopHookRepo(t)
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 
 	writeZeroLensDocumentationCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "docs/ordinary-guide.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "documentation candidate")
+	runCLIGit(t, repo, "add", "docs/ordinary-guide.md")
+	runCLIGit(t, repo, "commit", "-qm", "documentation candidate")
 	offered := derivedRangeTerminalStatus(t, repo)
 	if offered.NextTransition == nil || offered.NextTransition.Execute == nil {
 		t.Fatalf("no committed-range START: %#v", offered.NextTransition)
@@ -112,7 +112,7 @@ func TestNextTransitionAcknowledgedBoundaryReachesHead(t *testing.T) {
 	}
 
 	// An empty commit after the acknowledgement: the boundary reaches HEAD.
-	runReviewCLIGit(t, repo, "commit", "--allow-empty", "-qm", "empty follow-up")
+	runCLIGit(t, repo, "commit", "--allow-empty", "-qm", "empty follow-up")
 	reaches := derivedRangeTerminalStatus(t, repo)
 	if reaches.NextTransition == nil || reaches.NextTransition.Kind != reviewNextTransitionStop ||
 		reaches.NextTransition.ReasonCode != "acknowledged_boundary_reaches_head" {

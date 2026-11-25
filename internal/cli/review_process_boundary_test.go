@@ -17,7 +17,7 @@ import (
 // select the canonical 4R lens set, never a single-lens medium route.
 func TestReviewStartSelectsCanonicalFourRForSubprocessWrapper(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewCLIModule(t, repo, "tools/procwrap/runner.py", issue1438WrapperModule(200))
 	writeReviewCLIModule(t, repo, "tools/procwrap/policy.py", paddedReviewCLIModule([]string{`"""Argv, cwd, timeout, and environment policy tables."""`}, 80))
 	writeReviewCLIModule(t, repo, "tools/procwrap/errors.py", paddedReviewCLIModule([]string{`"""Process output and error policy."""`}, 30))

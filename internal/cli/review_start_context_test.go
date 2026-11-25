@@ -19,7 +19,7 @@ import (
 
 func TestNegotiatedReviewStartContextIsFrozenWhileLegacyBytesStayPrivate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "private tracked candidate\n", 0o644)
 	writeReviewStartCandidate(t, repo, "private.txt", "private intended candidate\n", 0o644)
 	lineage := "review-start-private-context"
@@ -87,7 +87,7 @@ func TestNegotiatedReviewStartContextIsFrozenWhileLegacyBytesStayPrivate(t *test
 		t.Fatalf("write hostile global Git config: %v\n%s", err, output)
 	}
 	t.Setenv("GIT_CONFIG_GLOBAL", hostileGlobalConfig)
-	runReviewCLIGit(t, repo, "config", "core.attributesFile", hostileAttributes)
+	runCLIGit(t, repo, "config", "core.attributesFile", hostileAttributes)
 	if err := os.WriteFile(filepath.Join(repo, ".git", "info", "attributes"), []byte("*.txt binary\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestNegotiatedReviewStartContextIsFrozenWhileLegacyBytesStayPrivate(t *test
 func TestNegotiatedReviewStartContextCoversCreatedReuseAndRecovery(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Run("created and closed-review restart", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 		lineage := "review-start-context-reuse"
 		created := runNegotiatedReviewStart(t, repo, lineage)
@@ -132,7 +132,7 @@ func TestNegotiatedReviewStartContextCoversCreatedReuseAndRecovery(t *testing.T)
 	})
 
 	t.Run("recovery selection", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "tracked.txt", "candidate before escalation\n", 0o644)
 		lineage := "review-start-context-recovery"
 		created := runNegotiatedReviewStart(t, repo, lineage)
@@ -178,7 +178,7 @@ func TestNegotiatedReviewStartLargeRepositoryUsesBoundedReferenceAdmission(t *te
 	if testing.Short() {
 		t.Skip("uses real git commands and a repository tree larger than 4 MiB")
 	}
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	baseCommit, supportingPath := installLargeReviewRepositoryHistory(t, repo)
 	lineage := "review-start-large-repository"
 	args := boundNegotiatedStartArgs(t, []string{
@@ -224,7 +224,7 @@ func TestNegotiatedReviewStartLargeRepositoryUsesBoundedReferenceAdmission(t *te
 
 func TestNegotiatedReviewStartContextValidationDistinguishesMissingAndEmpty(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	writeReviewStartCandidate(t, repo, "z.txt", "second candidate\n", 0o644)
 	valid := runNegotiatedReviewStart(t, repo, "review-start-context-validation")
@@ -294,7 +294,7 @@ func TestNegotiatedReviewStartContextValidationDistinguishesMissingAndEmpty(t *t
 func TestNegotiatedReviewStartContextFailureReportsTruthfulAuthorityProvenance(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Run("new authority remains uncreated", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 		lineage := "review-start-context-pre-native"
 		restore := forceReviewStartContextFailure(errors.New("forced pre-native context failure"))
@@ -319,7 +319,7 @@ func TestNegotiatedReviewStartContextFailureReportsTruthfulAuthorityProvenance(t
 	})
 
 	t.Run("existing authority remains selected and unchanged", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 		existingLineage := "review-start-context-existing"
 		if err := RunReview([]string{"start", "--cwd", repo, "--lineage", existingLineage}, io.Discard); err != nil {
@@ -437,10 +437,10 @@ func installLargeReviewRepositoryHistory(t *testing.T, repo string) (string, str
 	fmt.Fprintf(&candidateTreeInput, "100644 blob %s\tmain.go\x00", candidateBlob)
 	baseTree := strings.TrimSpace(runReviewCLIGitInput(t, repo, baseTreeInput.Bytes(), "mktree", "-z"))
 	candidateTree := strings.TrimSpace(runReviewCLIGitInput(t, repo, candidateTreeInput.Bytes(), "mktree", "-z"))
-	baseCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "commit-tree", baseTree, "-m", "large base tree"))
-	candidateCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "commit-tree", candidateTree, "-p", baseCommit, "-m", "tiny candidate"))
-	runReviewCLIGit(t, repo, "update-ref", "HEAD", candidateCommit)
-	inventory := runReviewCLIGit(t, repo, "ls-tree", "-r", "-z", "--name-only", "--full-tree", baseTree)
+	baseCommit := strings.TrimSpace(runCLIGit(t, repo, "commit-tree", baseTree, "-m", "large base tree"))
+	candidateCommit := strings.TrimSpace(runCLIGit(t, repo, "commit-tree", candidateTree, "-p", baseCommit, "-m", "tiny candidate"))
+	runCLIGit(t, repo, "update-ref", "HEAD", candidateCommit)
+	inventory := runCLIGit(t, repo, "ls-tree", "-r", "-z", "--name-only", "--full-tree", baseTree)
 	if len(inventory) <= 4<<20 {
 		t.Fatalf("repository path inventory = %d bytes, want more than 4 MiB", len(inventory))
 	}

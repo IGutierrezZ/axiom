@@ -29,7 +29,7 @@ func derivedRangeTerminalStatus(t *testing.T, repo string) ReviewTargetStatusRes
 // operator's exact emitted START, not a hand-assembled substitute.
 func TestSelectorlessStatusDoesNotRestartEscalatedCandidate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "base\none\ntwo\nthree\nfour\n", 0o644)
 	// v1 emits a direct START; v2 relays candidate consent before START.
 	fresh := negotiatedStartStatusForContract(t, repo, ReviewIntegrationContractV1)
@@ -164,11 +164,11 @@ func TestSelectorlessStatusDoesNotRestartEscalatedCandidate(t *testing.T) {
 func TestNextTransitionDerivedRangeAcknowledgementStaysTerminal(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewStopHookRepo(t)
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 	writeZeroLensDocumentationCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "docs/ordinary-guide.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "documentation candidate")
+	runCLIGit(t, repo, "add", "docs/ordinary-guide.md")
+	runCLIGit(t, repo, "commit", "-qm", "documentation candidate")
 	offered := derivedRangeTerminalStatus(t, repo)
 	if offered.NextTransition == nil || offered.NextTransition.Execute == nil {
 		t.Fatalf("no committed-range START: %#v", offered)
@@ -212,8 +212,8 @@ func TestNextTransitionDerivedRangeAcknowledgementStaysTerminal(t *testing.T) {
 	// candidate changes the identity but has nothing new to review. STATUS
 	// stops without authority and the Stop hook stays silent.
 	writeReviewStartCandidate(t, repo, "docs/ordinary-guide.md", "new committed range\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "docs/ordinary-guide.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "passive follow-up")
+	runCLIGit(t, repo, "add", "docs/ordinary-guide.md")
+	runCLIGit(t, repo, "commit", "-qm", "passive follow-up")
 	passive := derivedRangeTerminalStatus(t, repo)
 	if passive.TargetIdentity == offered.TargetIdentity || passive.NextTransition == nil || passive.NextTransition.Execute != nil ||
 		passive.NextTransition.ReasonCode != "acknowledged_predecessor_passive_delta" || passive.Authority != nil {
@@ -229,8 +229,8 @@ func TestNextTransitionDerivedRangeAcknowledgementStaysTerminal(t *testing.T) {
 	}
 	// Anything non-passive after the acknowledgement is offered for review.
 	writeReviewStartCandidate(t, repo, "cmd/app/main.go", "package main\n\nfunc main() {}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "cmd/app/main.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "code follow-up")
+	runCLIGit(t, repo, "add", "cmd/app/main.go")
+	runCLIGit(t, repo, "commit", "-qm", "code follow-up")
 	changed := derivedRangeTerminalStatus(t, repo)
 	if changed.TargetIdentity == passive.TargetIdentity || changed.NextTransition == nil || changed.NextTransition.Execute == nil || changed.NextTransition.Execute.Operation != "review.start" {
 		t.Fatalf("non-passive committed range suppressed: %#v", changed)
@@ -280,10 +280,10 @@ func grantedDerivedRangeStart(t *testing.T, offered ReviewTargetStatusResult) Re
 func TestNextTransitionPassiveDeltaNeverHidesALiveReview(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := initReviewStopHookRepo(t)
-	runReviewCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runCLIGit(t, repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
-	runReviewCLIGit(t, repo, "commit", "-qam", "medium candidate")
+	runCLIGit(t, repo, "commit", "-qam", "medium candidate")
 
 	// Approve and acknowledge the medium candidate through its real lens.
 	started := grantedDerivedRangeStart(t, derivedRangeTerminalStatus(t, repo))
@@ -312,8 +312,8 @@ func TestNextTransitionPassiveDeltaNeverHidesALiveReview(t *testing.T) {
 	}
 
 	writeReviewStartCandidate(t, repo, "docs/notes.md", "Tracking note.\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "docs/notes.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "passive follow-up")
+	runCLIGit(t, repo, "add", "docs/notes.md")
+	runCLIGit(t, repo, "commit", "-qm", "passive follow-up")
 	passive := derivedRangeTerminalStatus(t, repo)
 	if passive.NextTransition == nil || passive.NextTransition.ReasonCode != "acknowledged_predecessor_passive_delta" {
 		t.Fatalf("passive delta after a medium acknowledgement re-offered review: %#v", passive.NextTransition)

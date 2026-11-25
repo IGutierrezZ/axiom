@@ -95,7 +95,7 @@ func TestDualContract_CaptureAcknowledgementIsTheOneRestartedStatusReoffers(t *t
 	for _, tt := range reviewV2DialectCases {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			started := startHighRiskCLIReview(t, repo)
 			store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 			if err != nil {
@@ -207,7 +207,7 @@ func TestDualContract_CorrectionContinuationKeepsTheNegotiatedContract(t *testin
 	for _, tt := range reviewV2DialectCases {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			started := startHighRiskCLIReview(t, repo)
 			last := len(started.SelectedLenses) - 1
 			for order := 0; order < last; order++ {
@@ -500,7 +500,7 @@ func TestDualContract_ProducersLeadCaptureTokensWithTheContractOnlyForAxiom(t *t
 // did before the axiom dialect existed.
 func TestDirectReviewStartKeepsTheLegacyDialectOnItsAcknowledgement(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeZeroLensDocumentationCandidate(t, repo)
 	var output bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo}, &output); err != nil {

@@ -25,7 +25,7 @@ import (
 // core fix: a clean, fully-committed worktree refuses negotiated START with
 // a typed, schema-valid preflight refusal, and persists nothing.
 func TestNegotiatedReviewStartRefusesEmptyCandidateWithoutAuthority(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -70,7 +70,7 @@ func TestNegotiatedReviewStartRefusesEmptyCandidateWithoutAuthority(t *testing.T
 // refusal text names --base-ref as the way forward and never silently
 // derives or proposes a base ref such as HEAD~1.
 func TestNegotiatedEmptyCandidateRefusalNamesBaseRefWithoutDerivingIt(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -98,10 +98,10 @@ func TestNegotiatedEmptyCandidateRefusalNamesBaseRefWithoutDerivingIt(t *testing
 // and proceeds normally.
 func TestNegotiatedStartWithExplicitBaseRefOverCommittedWorkStillStarts(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "second commit\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "second")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "second")
 
 	var output bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -120,7 +120,7 @@ func TestNegotiatedStartWithExplicitBaseRefOverCommittedWorkStillStarts(t *testi
 // fires when the worktree actually has pending changes.
 func TestNegotiatedStartWithPendingChangesIsUnaffected(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "pending change\n", 0o644)
 
 	result := runNegotiatedReviewStart(t, repo, "pending-changes")
@@ -139,7 +139,7 @@ func TestNegotiatedStartWithPendingChangesIsUnaffected(t *testing.T) {
 // guard that used to fire only on the negotiated route now fires here too,
 // before any authority is created.
 func TestDirectReviewStartRefusesEmptyCandidateWithoutAuthority(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "unnegotiated-empty"}, &output)
@@ -168,7 +168,7 @@ func TestDirectReviewStartRefusesEmptyCandidateWithoutAuthority(t *testing.T) {
 // diff) refuses identically to a clean TargetCurrentChanges candidate, on
 // the negotiated route.
 func TestNegotiatedReviewStartRefusesEmptyBaseDiffCandidate(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -200,7 +200,7 @@ func TestNegotiatedReviewStartRefusesEmptyBaseDiffCandidate(t *testing.T) {
 // direct (non-negotiated) route: issue #2586's guard extension applies to
 // both target kinds on both routes, not only the negotiated one.
 func TestDirectReviewStartRefusesEmptyBaseDiffCandidate(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "unnegotiated-empty-base-diff", "--base-ref", "HEAD"}, &output)

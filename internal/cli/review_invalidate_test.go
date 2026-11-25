@@ -57,7 +57,7 @@ func TestLegacyOrdinaryMutationRoutesShareTypedReadOnlyErrorWithoutMutation(t *t
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			lineage := "legacy-route-" + strings.ReplaceAll(tt.name, " ", "-")
 			store := addPristineLegacyAuthority(t, repo, lineage)
 			chain, err := store.LoadChain()
@@ -82,7 +82,7 @@ func TestLegacyOrdinaryMutationRoutesShareTypedReadOnlyErrorWithoutMutation(t *t
 
 func TestReviewInvalidateDeniesLegacyWithTypedReadOnlyErrorWithoutMutation(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	store := addPristineLegacyAuthority(t, repo, "legacy-invalidate-read-only")
 	chain, err := store.LoadChain()
 	if err != nil {
@@ -117,7 +117,7 @@ func TestReviewInvalidateDeniesLegacyWithTypedReadOnlyErrorWithoutMutation(t *te
 func TestReviewInvalidateFailsClosedForCompetingAuthorities(t *testing.T) {
 	for _, corrupt := range []bool{true, false} {
 		t.Run(map[bool]string{true: "corrupt compact", false: "dual valid"}[corrupt], func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			started := startFacadeReview(t, repo)
 			compact, _ := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 			record, _ := compact.Load()
@@ -150,7 +150,7 @@ func TestReviewInvalidateFailsClosedForCompetingAuthorities(t *testing.T) {
 // there is no longer a completed write to replay against.
 func TestReviewInvalidateRefusalIsIdempotentForApprovedLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "approved.md", "approved\n", 0o644)
 	historical := seedHistoricalCompatibilityApprovedCompactReceipt(t, repo, "invalidate-approved-replay", reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionWorkspace, IntendedUntracked: []string{},

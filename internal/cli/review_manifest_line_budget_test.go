@@ -49,7 +49,7 @@ func manifestEntryLineCost(t *testing.T, payload []byte, entries int) float64 {
 // and it is emitted in full for every candidate regardless of size.
 func TestNegotiatedStartBoundsChangedPathManifestLineCost(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const paths = 40
 	for index := range paths {
 		writeReviewStartCandidate(t, repo,
@@ -82,7 +82,7 @@ func TestNegotiatedStartBoundsChangedPathManifestLineCost(t *testing.T) {
 // merely stop spending ten lines on every entry.
 func TestCapturePreflightBoundsChangedPathManifestLineCost(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const paths = 40
 	for index := range paths {
 		writeReviewStartCandidate(t, repo,
@@ -121,7 +121,7 @@ func TestCapturePreflightBoundsChangedPathManifestLineCost(t *testing.T) {
 // lineage, unchanged.
 func TestNegotiatedStatusOmitsChangedPathManifestPerLens(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	// Forty paths, matching the START and preflight fixtures above. This used
 	// to be pinned to the retired 32-entry evidence cap, which was the largest
 	// candidate STATUS would answer at all before issue #3367.

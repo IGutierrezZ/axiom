@@ -73,7 +73,7 @@ func TestReviewingStartPublishesExecutableStatusContinuation(t *testing.T) {
 	reviewEnabledHome(t)
 
 	t.Run("current projection", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc Candidate() int { return 1 }\n", 0o644)
 		started := runNegotiatedReviewStart(t, repo, "continuation-current")
 		startStatusContinuationExecution(t, started, []ReviewTransitionArgument{
@@ -82,12 +82,12 @@ func TestReviewingStartPublishesExecutableStatusContinuation(t *testing.T) {
 	})
 
 	t.Run("committed base-ref", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		if err := os.WriteFile(filepath.Join(repo, "candidate.go"), []byte("package candidate\n\nfunc Candidate() int { return 2 }\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		runReviewCLIGit(t, repo, "add", "candidate.go")
-		runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+		runCLIGit(t, repo, "add", "candidate.go")
+		runCLIGit(t, repo, "commit", "-qm", "candidate")
 		var output bytes.Buffer
 		if err := RunReview(boundNegotiatedStartArgs(t, []string{
 			"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo,
@@ -109,12 +109,12 @@ func TestReviewingStartPublishesExecutableStatusContinuation(t *testing.T) {
 	})
 
 	t.Run("workspace overlay", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		if err := os.WriteFile(filepath.Join(repo, "candidate.go"), []byte("package candidate\n\nfunc Candidate() int { return 3 }\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		runReviewCLIGit(t, repo, "add", "candidate.go")
-		runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+		runCLIGit(t, repo, "add", "candidate.go")
+		runCLIGit(t, repo, "commit", "-qm", "candidate")
 		if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\noverlay\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -143,7 +143,7 @@ func TestReviewingStartPublishesExecutableStatusContinuation(t *testing.T) {
 // flag is appended — and receives the negotiated STATUS for the same lineage.
 func TestOpenCodeRunsTheStartStatusContinuationVerbatim(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc Candidate() int { return 4 }\n", 0o644)
 	var output bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{

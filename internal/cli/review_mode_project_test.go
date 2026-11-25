@@ -20,7 +20,7 @@ func projectModeFixture(t *testing.T) (home, repo string, mgr *hub.Manager) {
 	t.Helper()
 	home = reviewModeHome(t)
 	t.Setenv("AXIOM_STATE_DIR", "")
-	repo = initReviewCLIRepo(t)
+	repo = initCLIGitRepo(t)
 	var err error
 	if mgr, err = hub.NewManager(""); err != nil {
 		t.Fatal(err)
@@ -168,7 +168,7 @@ func TestReviewModeProjectScopeEnableDisableInherit(t *testing.T) {
 func TestReviewModeProjectScopeOutsideARegisteredProjectFails(t *testing.T) {
 	reviewModeHome(t)
 	t.Setenv("AXIOM_STATE_DIR", "")
-	repo := initReviewCLIRepo(t) // no registrado en el hub
+	repo := initCLIGitRepo(t) // no registrado en el hub
 
 	for _, op := range []string{"enable", "disable", "inherit"} {
 		_, err := runProjectMode(t, repo, op, "--scope", "project")

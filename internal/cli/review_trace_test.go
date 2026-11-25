@@ -22,7 +22,7 @@ import (
 // CommitApprovedCompactAcknowledgement call this fix guards.
 func TestZeroLensStartCommitsAndReportsUnwritableTraceOutcome(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lines := make([]string, 129)
 	for index := range lines {
 		lines[index] = fmt.Sprintf("ordinary documentation line %03d", index+1)
@@ -84,7 +84,7 @@ func TestZeroLensStartCommitsAndReportsUnwritableTraceOutcome(t *testing.T) {
 // persisted=true with the committed revision and no error class.
 func TestZeroLensStartRecordsTraceWhenTracePathIsWritable(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lines := make([]string, 129)
 	for index := range lines {
 		lines[index] = fmt.Sprintf("ordinary documentation line %03d", index+1)

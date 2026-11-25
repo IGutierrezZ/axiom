@@ -25,7 +25,7 @@ import (
 // here instead of shipping a token that cannot run.
 func TestNativeCaptureCollectArgumentsCarryRunnableTokens(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc collect() {}\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "collect-token-binding")
 	var output bytes.Buffer

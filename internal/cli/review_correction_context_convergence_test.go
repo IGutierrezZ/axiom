@@ -31,8 +31,8 @@ import (
 // red naming the exact hop.
 func TestCorrectionPhaseRepositoryContextStaysExecutable(t *testing.T) {
 	reviewEnabledHome(t)
-	sessionRoot := initReviewCLIRepo(t)
-	repo := initReviewCLIRepo(t)
+	sessionRoot := initCLIGitRepo(t)
+	repo := initCLIGitRepo(t)
 	nestedB := filepath.Join(repo, "nested", "requested")
 	if err := os.MkdirAll(nestedB, 0o755); err != nil {
 		t.Fatal(err)
@@ -51,7 +51,7 @@ func TestCorrectionPhaseRepositoryContextStaysExecutable(t *testing.T) {
 	if err := os.Chmod(filepath.Join(repo, "alpha.go"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go", "beta.go")
+	runCLIGit(t, repo, "add", "alpha.go", "beta.go")
 
 	startSnapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, Projection: reviewtransaction.ProjectionStaged, IntendedUntracked: []string{},
@@ -99,7 +99,7 @@ func TestCorrectionPhaseRepositoryContextStaysExecutable(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "alpha.go"), []byte("package candidate\n\nfunc Alpha() int { return 10 }\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "alpha.go")
+	runCLIGit(t, repo, "add", "alpha.go")
 
 	// Follow the negotiated route exactly as a consumer does, up to eight hops,
 	// satisfying the repository-verification collect the way the facade defines.

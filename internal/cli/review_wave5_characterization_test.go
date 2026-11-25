@@ -39,7 +39,7 @@ import (
 // delivery-gate authorization for any later gate call.
 func TestCandidateDeclineDowngrade_DeniesLikeAnyNeverReviewedCandidate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -59,7 +59,7 @@ func TestCandidateDeclineDowngrade_DeniesLikeAnyNeverReviewedCandidate(t *testin
 	// The identical declined candidate is now a supported pre-commit
 	// target: the (now-deleted) decline-gate matcher only ever covered
 	// pre-commit, pre-push, and pre-pr, never post-apply/release.
-	runReviewCLIGit(t, repo, "add", "scripts/deploy.sh")
+	runCLIGit(t, repo, "add", "scripts/deploy.sh")
 
 	var output bytes.Buffer
 	if err := RunReviewFacadeValidate([]string{"--cwd", repo, "--gate", string(reviewtransaction.GatePreCommit)}, &output); err != nil {

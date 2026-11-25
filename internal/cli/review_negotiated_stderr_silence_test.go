@@ -51,7 +51,7 @@ func captureReviewProcessStderr(t *testing.T) func() string {
 // UNEXPECTED_STDERR on any stderr byte a successful operation writes).
 func TestNegotiatedStatusSuccessIsByteSilentOnStderr(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/notes.md", "silent status\n", 0o644)
 	stderr := captureReviewProcessStderr(t)
 
@@ -79,7 +79,7 @@ func TestNegotiatedStatusSuccessIsByteSilentOnStderr(t *testing.T) {
 // in next_transition.reason_code.
 func TestNegotiatedStatusStopIsByteSilentOnStderr(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/notes.md", "disabled stop\n", 0o644)
 	if err := RunReviewMode([]string{"disable", "--cwd", repo, "--scope", "global"}, io.Discard); err != nil {
 		t.Fatal(err)
@@ -113,7 +113,7 @@ func TestNegotiatedStatusStopIsByteSilentOnStderr(t *testing.T) {
 // consumed, so a later plain (non-negotiated) start still shows the notice.
 func TestNegotiatedStartUndeclaredConsentIsByteSilentOnStderr(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	stderr := captureReviewProcessStderr(t)
@@ -145,7 +145,7 @@ func TestNegotiatedStartUndeclaredConsentIsByteSilentOnStderr(t *testing.T) {
 // question envelope, granted starts the review, and neither touches stderr.
 func TestNegotiatedStartConsentAnswersStayByteSilentOnStderr(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	stderr := captureReviewProcessStderr(t)
@@ -182,7 +182,7 @@ func TestNegotiatedStartConsentAnswersStayByteSilentOnStderr(t *testing.T) {
 // sequence gentle-pi drives fail-closed.
 func TestNegotiatedLifecycleOperationsAreByteSilentOnStderr(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"enable", "--scope", "global", "--cwd", repo}, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func TestNegotiatedLifecycleOperationsAreByteSilentOnStderr(t *testing.T) {
 		t.Fatalf("low-risk terminal START = %#v", started)
 	}
 
-	runReviewCLIGit(t, repo, "add", "--", "docs/notes.md")
+	runCLIGit(t, repo, "add", "--", "docs/notes.md")
 	var validated bytes.Buffer
 	if err := RunReview([]string{
 		"validate", "--contract", ReviewIntegrationContractV2, "--gate", "pre-commit", "--cwd", repo,
@@ -230,7 +230,7 @@ func TestNegotiatedLifecycleOperationsAreByteSilentOnStderr(t *testing.T) {
 // vocabulary reaching a real console through authorizeReviewStart.
 func TestNegotiatedStartUndeclaredInteractiveKeepsConsentCeremony(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, true, "2\n")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -255,7 +255,7 @@ func TestNegotiatedStartUndeclaredInteractiveKeepsConsentCeremony(t *testing.T) 
 // as it found them.
 func TestNegotiatedStartUndeclaredAskedLatchProceedsSilently(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	if err := recordReviewConsentAsked(context.Background(), repo); err != nil {
@@ -287,7 +287,7 @@ func TestNegotiatedStartUndeclaredAskedLatchProceedsSilently(t *testing.T) {
 // skip notice on its own line and nothing else.
 func TestPlainStartConsentNoticeStaysByteIdentical(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 

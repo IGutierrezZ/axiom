@@ -83,7 +83,7 @@ func TestNegotiatedStatusNeverOffersAStartItsOwnPreflightRefuses(t *testing.T) {
 		{
 			name: "dirty workspace offers a start that runs",
 			arrange: func(t *testing.T) (string, []string) {
-				repo := initReviewCLIRepo(t)
+				repo := initCLIGitRepo(t)
 				// Modify the TRACKED file: an untracked path correctly routes
 				// to intended-untracked selection first, which is a collect,
 				// not this shape's subject.
@@ -97,13 +97,13 @@ func TestNegotiatedStatusNeverOffersAStartItsOwnPreflightRefuses(t *testing.T) {
 		{
 			name: "committed-only with a distinct base offers a start that runs",
 			arrange: func(t *testing.T) (string, []string) {
-				repo := initReviewCLIRepo(t)
-				base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+				repo := initCLIGitRepo(t)
+				base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 				if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\nnext\n"), 0o644); err != nil {
 					t.Fatal(err)
 				}
-				runReviewCLIGit(t, repo, "add", "-A")
-				runReviewCLIGit(t, repo, "commit", "-m", "next change")
+				runCLIGit(t, repo, "add", "-A")
+				runCLIGit(t, repo, "commit", "-m", "next change")
 				return repo, []string{"--base-ref", base, "--committed-only"}
 			},
 			wantExecutable: true,
@@ -116,8 +116,8 @@ func TestNegotiatedStatusNeverOffersAStartItsOwnPreflightRefuses(t *testing.T) {
 			// offers START here has manufactured an unroutable loop.
 			name: "committed-only base equal to candidate stops up front",
 			arrange: func(t *testing.T) (string, []string) {
-				repo := initReviewCLIRepo(t)
-				head := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+				repo := initCLIGitRepo(t)
+				head := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 				return repo, []string{"--base-ref", head, "--committed-only"}
 			},
 			wantReason: "empty_base_diff_bootstrap_required",
@@ -127,7 +127,7 @@ func TestNegotiatedStatusNeverOffersAStartItsOwnPreflightRefuses(t *testing.T) {
 			// cannot succeed; the truthful answer is collecting a base.
 			name: "clean workspace collects a base instead of offering a start",
 			arrange: func(t *testing.T) (string, []string) {
-				return initReviewCLIRepo(t), nil
+				return initCLIGitRepo(t), nil
 			},
 			wantReason: "empty_candidate_base_ref_required",
 		},

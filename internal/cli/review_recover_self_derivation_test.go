@@ -17,7 +17,7 @@ import (
 // simplest self-derivation shape.
 func invalidatedRecoverySelfDerivationPredecessor(t *testing.T, lineage string) (string, reviewtransaction.CompactRecord) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/predecessor.md", "# predecessor\n\nplain prose, no executable content.\n", 0o644)
 	// The invalidated compact predecessor is fixture setup for RECOVER. Construct
 	// it through the test-only legacy seam so the subject recovery remains real.
@@ -56,8 +56,8 @@ func invalidatedRecoverySelfDerivationPredecessor(t *testing.T, lineage string) 
 func TestReviewRecoverSelfDerivesBindingForInvalidatedPredecessor(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, predecessor := invalidatedRecoverySelfDerivationPredecessor(t, "self-derive-invalidated")
-	runReviewCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
-	runReviewCLIGit(t, repo, "config", "user.email", "ada@example.com")
+	runCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
+	runCLIGit(t, repo, "config", "user.email", "ada@example.com")
 
 	var output bytes.Buffer
 	err := RunReviewRecover([]string{
@@ -94,11 +94,11 @@ func TestReviewRecoverSelfDerivesBindingForInvalidatedPredecessor(t *testing.T) 
 func TestReviewRecoverSelfDerivedBindingFallsBackToEnvActor(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, predecessor := invalidatedRecoverySelfDerivationPredecessor(t, "self-derive-env-actor")
-	// initReviewCLIRepo (via the fixture above) sets a local Git identity;
+	// initCLIGitRepo (via the fixture above) sets a local Git identity;
 	// remove it and isolate global/system config so the env fallback below
 	// is genuinely reached, matching reviewAuditActor's own isolation.
-	runReviewCLIGit(t, repo, "config", "--unset", "user.name")
-	runReviewCLIGit(t, repo, "config", "--unset", "user.email")
+	runCLIGit(t, repo, "config", "--unset", "user.name")
+	runCLIGit(t, repo, "config", "--unset", "user.email")
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "unused-gitconfig"))
 	t.Setenv("GIT_AUTHOR_EMAIL", "author@example.com")
@@ -186,7 +186,7 @@ func TestReviewRecoverSelfDerivationCorruptedAuthorityStillRefuses(t *testing.T)
 // state — still governs.
 func TestReviewRecoverSelfDerivationActiveAttemptNeverAutoResets(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lineage := "self-derive-active-attempt"
 	writeReviewStartCandidate(t, repo, "docs/active-attempt.md", "# active attempt\n\nplain prose, no executable content.\n", 0o644)
 	// The reviewing compact predecessor is fixture setup for the active-attempt

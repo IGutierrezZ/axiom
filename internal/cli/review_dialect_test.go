@@ -116,7 +116,7 @@ func reviewContinuationStatus(t *testing.T, repo string, started ReviewIntegrati
 // left, and v1 keeps its frozen shape (no consent relay, no forecast, no axiom).
 func TestDualContract_FreshStatusEchoesTheNegotiatedDialect(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
 	startCommand := func(status ReviewTargetStatusResult, tool, contract string, consent bool) string {
@@ -198,7 +198,7 @@ func TestDualContract_FreshStatusEchoesTheNegotiatedDialect(t *testing.T) {
 func TestDualContract_V2DialectsAnswerOneAuthorityIdentically(t *testing.T) {
 	reviewEnabledHome(t)
 	stubReviewConsole(t, false, "")
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
 	relay := func(contract string) []byte {

@@ -44,7 +44,7 @@ func unvalidatableReviewModeSwitchRoot(t *testing.T, repo string) {
 // unvalidatable clone-local location must not make status fail.
 func TestReviewModeStatusOffSucceedsWhenTheCloneOverrideCannotBeValidated(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"disable", "--cwd", repo, "--scope", "clone"}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestReviewModeStatusOffSucceedsWhenTheCloneOverrideCannotBeValidated(t *tes
 // that no stored record made.
 func TestReviewModeStatusReportsAFailedResolutionAsUnavailable(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"enable", "--cwd", repo, "--scope", "global"}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestReviewModeFailedMutationReportsTheModeAsUnavailable(t *testing.T) {
 	for _, operation := range []string{"enable", "disable"} {
 		t.Run(operation, func(t *testing.T) {
 			reviewModeHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			unvalidatableReviewModeSwitchRoot(t, repo)
 
 			var output bytes.Buffer
@@ -127,7 +127,7 @@ func TestReviewModeFailedMutationReportsTheModeAsUnavailable(t *testing.T) {
 // and the this-build note instead of reading as unavailable.
 func TestReviewModePartiallyAppliedMutationKeepsItsResolvedState(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"disable", "--scope", "clone", "--cwd", repo}, io.Discard); err != nil {
 		t.Fatal(err)
 	}

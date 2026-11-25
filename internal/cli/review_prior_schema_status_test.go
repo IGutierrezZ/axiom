@@ -7,7 +7,7 @@ import (
 
 func TestPriorStatusSchemaKeepsCurrentCaptureCollection(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "prior-status-capture")
 

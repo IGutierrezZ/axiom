@@ -108,7 +108,7 @@ func consentCLISnapshot(t *testing.T, root string) map[string]string {
 }
 
 func TestSDDCLIRepeatedStatusAndPreparationPreserveAuthority(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	outside := t.TempDir()
 	root := seedSDDStatusReadyChange(t, repo, "snapshots", "- [ ] Update `"+outside+"/main.go`\n")
 	retroSealForGuard(t, repo, "snapshots")

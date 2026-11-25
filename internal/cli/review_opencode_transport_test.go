@@ -107,8 +107,8 @@ func TestOpenCodeReviewTransportResolvesARegisteredTargetWorktreeFromTheHost(t *
 	reviewEnabledHome(t)
 	target, _, store, record := newArtifactReview(t, false)
 	host := filepath.Join(t.TempDir(), "opencode-host")
-	runReviewCLIGit(t, target, "worktree", "add", "-q", "-b", "opencode-registered-host", host, "HEAD")
-	t.Cleanup(func() { runReviewCLIGit(t, target, "worktree", "remove", "--force", host) })
+	runCLIGit(t, target, "worktree", "add", "-q", "-b", "opencode-registered-host", host, "HEAD")
+	t.Cleanup(func() { runCLIGit(t, target, "worktree", "remove", "--force", host) })
 	lens := record.State.SelectedLenses[0]
 	relay := startOpenCodeTransportRelay(t, host, openCodeLensTransportStart(t, target, record, lens))
 	hostOutput := string(admittedReviewerPayloadForTest(t, target, record, lens, 0))
@@ -129,7 +129,7 @@ func TestOpenCodeReviewTransportRefusesAnUnrelatedHostAndReoffersTargetSlots(t *
 	}
 	reviewEnabledHome(t)
 	target, started, store, record := newArtifactReview(t, false)
-	host := initReviewCLIRepo(t)
+	host := initCLIGitRepo(t)
 	t.Chdir(host)
 	start := openCodeLensTransportStart(t, target, record, record.State.SelectedLenses[0])
 	payload, err := json.Marshal(start)

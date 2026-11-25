@@ -19,7 +19,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // Keep the existing on-disk chain and schema so historical grants remain readable.
@@ -226,13 +225,26 @@ func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, e
 	if err != nil {
 		return RuntimeStore{}, err
 	}
-	probe, err := reviewtransaction.CompactAuthoritativeStore(ctx, root, "sdd-runtime-probe")
+	commonDir, err := runtimeGitCommonDir(ctx, root)
 	if err != nil {
 		return RuntimeStore{}, err
 	}
-	commonDir := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(probe.Dir))))
 	dir := runtimeChangeLedgerDir(filepath.Join(commonDir, "gentle-ai", "sdd-runtime"), change)
 	return RuntimeStore{Dir: dir, Repo: root, Workspace: workspace, Change: change, commonDir: commonDir}, nil
+}
+
+// runtimeGitCommonDir devuelve el git common dir de root en forma canónica:
+// absoluto y con los enlaces resueltos, igual que lo resolvía la sonda RDD.
+func runtimeGitCommonDir(ctx context.Context, root string) (string, error) {
+	common, err := gitcommon.CommonDir(ctx, root)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(common)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(resolved), nil
 }
 
 func validRuntimeChange(change string) bool {

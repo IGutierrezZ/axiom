@@ -98,7 +98,7 @@ func cliReviewerCaptureArgs(t *testing.T, repo string, started ReviewFacadeStart
 
 func TestLastReviewerCaptureIssuesReplayableAcknowledgementThenBurns(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 	if err != nil {
@@ -220,7 +220,7 @@ func assertApprovedAcknowledgementTransitionFor(t *testing.T, dialect reviewDial
 
 func TestLastReviewerCaptureReturnsAdvisoriesBeforeBurn(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 	if err != nil {
@@ -266,7 +266,7 @@ func TestLastReviewerCaptureReturnsAdvisoriesBeforeBurn(t *testing.T) {
 
 func TestLastReviewerCaptureOpensBoundedCorrectionForSevereFinding(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 	if err != nil {
@@ -308,7 +308,7 @@ func TestLastReviewerCaptureOpensBoundedCorrectionForSevereFinding(t *testing.T)
 
 func TestConcurrentFinalLensCaptureElectsOneCloserAndLeavesNoAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 	if err != nil {
@@ -359,7 +359,7 @@ func TestConcurrentFinalLensCaptureElectsOneCloserAndLeavesNoAuthority(t *testin
 
 func providerCorrectionReadyWithoutVerificationEvidence(t *testing.T, startArgs ...string) (string, string, reviewtransaction.TargetedValidationRequest) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -673,7 +673,7 @@ func TestTargetedValidatorCaptureIssuesAcknowledgementWithoutFinalize(t *testing
 
 func TestReviewStartWithZeroLensesIssuesAcknowledgement(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lineage := startLowRiskFacadeReview(t, repo)
 
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, lineage)
@@ -693,7 +693,7 @@ func TestReviewStartWithZeroLensesIssuesAcknowledgement(t *testing.T) {
 func correctionRequiredForPlanCapture(t *testing.T) (string, ReviewFacadeStartResult, reviewtransaction.CompactStore, reviewtransaction.CompactRecord, reviewtransaction.CorrectionPlanRequest) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	for order := 0; order < len(started.SelectedLenses)-1; order++ {
 		captureCleanCLIReviewerResult(t, repo, started, order, &bytes.Buffer{})
@@ -1035,7 +1035,7 @@ func runSelectorlessNegotiatedStatus(t *testing.T, repo string) ReviewTargetStat
 func startZeroLensPendingAcknowledgement(t *testing.T) (string, ReviewIntegrationStartResult, reviewtransaction.CompactStore, reviewtransaction.ApprovedCompactAcknowledgement) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeZeroLensDocumentationCandidate(t, repo)
 	offered := runSelectorlessNegotiatedStatus(t, repo)
 	started := runNegotiatedReviewStart(t, repo, startTransitionArgumentValue(t, offered, "lineage"))

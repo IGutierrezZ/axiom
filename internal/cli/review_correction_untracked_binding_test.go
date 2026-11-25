@@ -22,7 +22,7 @@ import (
 // declaration-less) target identity than the one the authority is bound to.
 func TestNegotiatedStatusPreservesUntrackedBindingThroughCorrectionLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const lineage = "correction-untracked-binding-3849"
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "notes.txt", "untracked but explicitly selected\n", 0o644)
@@ -98,7 +98,7 @@ func TestNegotiatedStatusPreservesUntrackedBindingThroughCorrectionLineage(t *te
 // must retain the frozen selection rather than demanding a new declaration.
 func TestSelectorlessStatusPreservesIntendedUntrackedBindingBeforeCorrectionPlan(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	const lineage = "correction-untracked-selectorless-status-4435"
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "notes.txt", "untracked but explicitly selected\n", 0o644)

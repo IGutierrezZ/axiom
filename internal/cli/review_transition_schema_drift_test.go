@@ -146,7 +146,7 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 	executionSchema := compileWholePublishedReviewSchema(t, "v2", reviewV2TransitionExecutionSchema)
 
 	reviewEnabledHome(t)
-	preflightRepo := initReviewCLIRepo(t)
+	preflightRepo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, preflightRepo, "docs/preflight.md", "# Candidate\n", 0o644)
 	var preflightOutput bytes.Buffer
 	if err := RunReview([]string{
@@ -161,7 +161,7 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 	}
 	validateReviewTransitionExecutionSchema(t, executionSchema, preflight.NextTransition.Execute)
 
-	startRepo := initReviewCLIRepo(t)
+	startRepo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, startRepo, "docs/approved.md", "# Approved\n", 0o644)
 	var startOutput bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -209,7 +209,7 @@ func TestV2TransitionSchemasAcceptProviderPayloadsAndRejectDrift(t *testing.T) {
 		validateAgainstPublishedStatusNextTransitionSchema(t, "v2", name, payload)
 	}
 
-	closureRepo := initReviewCLIRepo(t)
+	closureRepo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, closureRepo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	closureStart := runNegotiatedReviewStart(t, closureRepo, "transition-schema-closure")
 	var closureOutput bytes.Buffer

@@ -325,7 +325,7 @@ func TestReviewCaptureValidationInputSubmitsHostRunResultAndCloses(t *testing.T)
 // split-candidate resolution.
 func TestReviewCaptureRefuterMaterializeRefusesCompletePromptOverRuntimeBudget(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	// Raw patch bytes stay under the evidence budget; JSON escaping doubles
 	// every quote character, so the serialized prompt cannot fit.
 	writeReviewStartCandidate(t, repo, "runtime-budget-quotes.txt", strings.Repeat(`"`, 180_000)+"\n", 0o644)
@@ -930,7 +930,7 @@ func TestRefuterRequestCarriesTheFindingClaimText(t *testing.T) {
 // patches and metadata-only nonsemantic generated outputs.
 func TestReviewProviderMaterializeEvidenceSummarizesGeneratedPaths(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeGeneratedSummaryCandidateFixture(t, repo)
 	snapshot, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).Build(context.Background(), reviewtransaction.Target{
 		Kind: reviewtransaction.TargetCurrentChanges, IntendedUntracked: []string{},

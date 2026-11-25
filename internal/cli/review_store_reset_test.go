@@ -37,7 +37,7 @@ func storeResetStoreRoot(t *testing.T, repo string) string {
 // irreversible and clone-wide, so the bare invocation reports and stops.
 func TestReviewStoreResetPreviewsByDefault(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 
 	var output bytes.Buffer
@@ -60,7 +60,7 @@ func TestReviewStoreResetPreviewsByDefault(t *testing.T) {
 // spares and why, not only what it takes.
 func TestReviewStoreResetPreviewReportsBothLists(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	disableReviewForClone(t, repo)
 
@@ -91,7 +91,7 @@ func TestReviewStoreResetPreviewReportsBothLists(t *testing.T) {
 // dangerous path reachable by accident.
 func TestReviewStoreResetRefusesInFlightAndNamesTheOverride(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	storeResetSeedLineage(t, repo, "review-open", reviewtransaction.StateReviewing)
 
@@ -126,7 +126,7 @@ func TestReviewStoreResetRefusesInFlightAndNamesTheOverride(t *testing.T) {
 // TestReviewStoreResetConfirmRemovesSettledState is the ordinary success path.
 func TestReviewStoreResetConfirmRemovesSettledState(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	root := storeResetStoreRoot(t, repo)
 	views := filepath.Join(root, "candidate-views", "1a09d6f9")
@@ -160,7 +160,7 @@ func TestReviewStoreResetConfirmRemovesSettledState(t *testing.T) {
 // reachable once the user asks for it in as many words.
 func TestReviewStoreResetOverrideRemovesInFlightState(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-open", reviewtransaction.StateReviewing)
 
 	var output bytes.Buffer
@@ -180,7 +180,7 @@ func TestReviewStoreResetOverrideRemovesInFlightState(t *testing.T) {
 // for someone who turned them off.
 func TestReviewStoreResetKeepsTheKillSwitchOff(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	disableReviewForClone(t, repo)
 
@@ -204,7 +204,7 @@ func TestReviewStoreResetKeepsTheKillSwitchOff(t *testing.T) {
 // this command exists to remove.
 func TestReviewStoreResetRunsWhileReviewsAreDisabled(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	disableReviewForClone(t, repo)
 
@@ -232,7 +232,7 @@ func TestReviewStoreResetReportsPartialFailureWithoutClaimingSuccess(t *testing.
 		t.Skip("root ignores the permission bit this test withholds")
 	}
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	root := storeResetStoreRoot(t, repo)
 	reviews := filepath.Join(root, "reviews")
@@ -280,7 +280,7 @@ func TestReviewStoreResetReportsPartialFailureWithoutClaimingSuccess(t *testing.
 // the parse-rejection shape the documented-invocation guard recognizes.
 func TestReviewStoreResetRejectsUnexpectedArguments(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReview([]string{"store-reset", "--cwd", repo, "stray"}, &output)
@@ -373,7 +373,7 @@ func TestReviewStoreResetKeepsTheUntouchedPromiseForAnOrdinaryPartialRun(t *test
 // why.
 func TestReviewStoreResetSparesTheAdapterReviewStoreByDefault(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	storeResetSeedLineage(t, repo, "review-approved", reviewtransaction.StateApproved)
 	root := storeResetStoreRoot(t, repo)
 	identity := filepath.Join(root, "reviews", "IDENTITY")

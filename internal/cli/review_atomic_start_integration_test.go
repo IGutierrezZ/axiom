@@ -13,7 +13,7 @@ import (
 
 func TestAtomicStartIgnoresSiblingAuthorityAcrossVersions(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 
 	for _, version := range []string{"v1", "v3"} {
@@ -43,7 +43,7 @@ func TestAtomicStartIgnoresSiblingAuthorityAcrossVersions(t *testing.T) {
 
 func TestOrdinaryCompactLifecycleIgnoresHistoricalSiblings(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 
 	for _, version := range []string{"v1", "v3"} {
@@ -82,7 +82,7 @@ func TestOrdinaryCompactLifecycleIgnoresHistoricalSiblings(t *testing.T) {
 
 func TestAtomicStartPlainRouteAlwaysCreatesCompact(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 
 	var output bytes.Buffer
@@ -108,9 +108,9 @@ func TestAtomicStartPlainRouteAlwaysCreatesCompact(t *testing.T) {
 
 func TestAtomicStartLinkedWorktreesAreIndependentAndReplayExactly(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	linked := filepath.Join(canonicalReviewCLITempDir(t), "linked")
-	runReviewCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
+	repo := initCLIGitRepo(t)
+	linked := filepath.Join(canonicalCLITempDir(t), "linked")
+	runCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
 	for _, root := range []string{repo, linked} {
 		if err := os.WriteFile(filepath.Join(root, "tracked.txt"), []byte("same overlapping candidate\n"), 0o644); err != nil {
 			t.Fatal(err)
@@ -166,9 +166,9 @@ func TestAtomicStartLinkedWorktreesAreIndependentAndReplayExactly(t *testing.T) 
 
 func TestAtomicStartBurnRecreateAndCrossWorktreeConflictStayScoped(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	linked := filepath.Join(canonicalReviewCLITempDir(t), "linked")
-	runReviewCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
+	repo := initCLIGitRepo(t)
+	linked := filepath.Join(canonicalCLITempDir(t), "linked")
+	runCLIGit(t, repo, "worktree", "add", "--detach", linked, "HEAD")
 	for _, root := range []string{repo, linked} {
 		writeAtomicStartDocumentationCandidate(t, root)
 	}
@@ -231,7 +231,7 @@ func TestAtomicStartBurnRecreateAndCrossWorktreeConflictStayScoped(t *testing.T)
 
 func TestAtomicStartStatusLineageIsPureAndStableBeforeExecution(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 	for _, version := range []string{"v1", "v2", "v3"} {
 		writeAtomicStartCorruptSibling(t, repo, version, "unrelated-corrupt-"+version)
@@ -259,7 +259,7 @@ func TestAtomicStartStatusLineageIsPureAndStableBeforeExecution(t *testing.T) {
 // corruption.
 func TestAtomicStatusSelectorlessIgnoresCorruptAuthorityButExplicitLineageReportsIt(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 
 	_, fresh := atomicStatusStartLineage(t, repo)
@@ -310,7 +310,7 @@ func TestAtomicStartExplicitStatusCollectsCompactMediumAndHighLenses(t *testing.
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, testCase.path, testCase.contents, 0o644)
 			started := atomicStartV2(t, repo, "compact-status-"+testCase.name)
 			if len(started.SelectedLenses) != testCase.wantLenses {
@@ -336,7 +336,7 @@ func TestAtomicStartExplicitStatusCollectsCompactMediumAndHighLenses(t *testing.
 
 func TestAtomicStartDisabledPersistsNothing(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 	if err := RunReviewMode([]string{"disable", "--scope", "global", "--cwd", repo}, &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
@@ -443,11 +443,11 @@ func atomicStartV2WithPolicy(t *testing.T, repo, lineage, policyPath string) (Re
 // current binary with the default (Axiom) policy, byte-identically.
 func TestAtomicStartReplaysLineageFrozenWithLegacyDefaultPolicyUnderAxiomDefault(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 	const lineage = "legacy-policy-upgrade"
 
-	legacyPolicy := filepath.Join(canonicalReviewCLITempDir(t), "legacy-policy.txt")
+	legacyPolicy := filepath.Join(canonicalCLITempDir(t), "legacy-policy.txt")
 	if err := os.WriteFile(legacyPolicy, []byte(reviewtransaction.LegacyFacadeReviewPolicy), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -483,7 +483,7 @@ func TestAtomicStartReplaysLineageFrozenWithLegacyDefaultPolicyUnderAxiomDefault
 		t.Fatal("replay under the default Axiom policy changed legacy authority bytes")
 	}
 
-	otherPolicy := filepath.Join(canonicalReviewCLITempDir(t), "other-policy.txt")
+	otherPolicy := filepath.Join(canonicalCLITempDir(t), "other-policy.txt")
 	if err := os.WriteFile(otherPolicy, []byte("a different review policy\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -503,7 +503,7 @@ func TestAtomicStartReplaysLineageFrozenWithLegacyDefaultPolicyUnderAxiomDefault
 // the Axiom policy and not the legacy text.
 func TestAtomicStartDefaultPolicyFreezesAxiomText(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeAtomicStartDocumentationCandidate(t, repo)
 	created, err := atomicStartV2WithPolicy(t, repo, "axiom-default-policy", "")
 	if err != nil || created.Action != "created" {

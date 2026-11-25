@@ -49,7 +49,7 @@ func damageReviewAuthorityTree(t *testing.T, repo string) {
 // situation they point at it from.
 func TestKillSwitchIsReachableWhileReviewAuthorityIsDamaged(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	damageReviewAuthorityTree(t, repo)
 
 	var output bytes.Buffer
@@ -80,7 +80,7 @@ func TestKillSwitchIsReachableWhileReviewAuthorityIsDamaged(t *testing.T) {
 // nothing they can act on.
 func TestKillSwitchStatusIsReadableWhileReviewAuthorityIsDamaged(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	damageReviewAuthorityTree(t, repo)
 
 	var output bytes.Buffer

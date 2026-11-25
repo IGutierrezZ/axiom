@@ -13,7 +13,7 @@ import (
 // refusal for using --contract-gated target selectors without --contract
 // names the exact contract value the caller must pass, not only the concept.
 func TestReviewStatusTargetSelectorsRequireContractNamesValue(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	err := RunReviewStatus([]string{"--cwd", repo, "--base-ref", "target-selector-needs-contract"}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "--contract "+ReviewIntegrationContractV1) || !strings.Contains(err.Error(), AxiomReviewIntegrationContractV2) {
 		t.Fatalf("review status target selector error = %v, want it to name --contract %s or %s", err, ReviewIntegrationContractV1, AxiomReviewIntegrationContractV2)
@@ -23,7 +23,7 @@ func TestReviewStatusTargetSelectorsRequireContractNamesValue(t *testing.T) {
 // TestReviewStartTargetRequiresContractNamesValue pins that the refusal for
 // --target without --contract names the exact contract value.
 func TestReviewStartTargetRequiresContractNamesValue(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--target", "sha256:" + strings.Repeat("a", 64)}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "--contract "+AxiomReviewIntegrationContractV2) {
 		t.Fatalf("review start --target error = %v, want it to name --contract %s", err, AxiomReviewIntegrationContractV2)
@@ -33,7 +33,7 @@ func TestReviewStartTargetRequiresContractNamesValue(t *testing.T) {
 // TestReviewRepairRequiresContractNamesValue pins that the refusal for an
 // unsupported --contract on review repair names both exact supported values.
 func TestReviewRepairRequiresContractNamesValue(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	err := RunReviewRepair([]string{"--cwd", repo, "--contract", "gentle-ai.review-integration/v3"}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), ReviewIntegrationContractV1) || !strings.Contains(err.Error(), AxiomReviewIntegrationContractV2) {
 		t.Fatalf("review repair contract error = %v, want it to name %s and %s", err, ReviewIntegrationContractV1, AxiomReviewIntegrationContractV2)
@@ -44,7 +44,7 @@ func TestReviewRepairRequiresContractNamesValue(t *testing.T) {
 // missing --gate on review validate enumerates every valid gate value,
 // derived from the same source the validator uses so they cannot diverge.
 func TestReviewValidateRequiresGateNamesValidGates(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	err := RunReviewFacadeValidate([]string{"--cwd", repo}, io.Discard)
 	if err == nil {
 		t.Fatalf("review validate without --gate succeeded")
@@ -63,7 +63,7 @@ func TestReviewValidateRequiresGateNamesValidGates(t *testing.T) {
 // non-deciding even while an active review lifecycle exists.
 func TestReviewValidateDoesNotConsultAnActiveLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lineage := "receipt-not-available-before-closure"
 	writeReviewStartCandidate(t, repo, "docs/pending.md", "# pending\n\nplain prose, no executable content.\n", 0o644)
 	if err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", lineage}, io.Discard); err != nil {
@@ -84,7 +84,7 @@ func TestReviewValidateDoesNotConsultAnActiveLineage(t *testing.T) {
 // caller does not).
 func TestReviewCaptureResultOpaqueBindingMismatchNamesRefreshCommand(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc capture() {}\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "opaque-capture-binding-mismatch")
 	if started.RepositoryContext == nil || len(started.SelectedLenses) == 0 {

@@ -171,7 +171,7 @@ func TestOpenCodeBackgroundStateIsOptionalAndLossless(t *testing.T) {
 	want := state.InstallState{
 		InstalledAgents: []string{"opencode"}, ManagedAssetDigest: "sha256:asset", SelectionConfigured: true,
 		Components: []model.ComponentID{model.ComponentSDD}, CommunityTools: []string{"codegraph"}, CommunityToolsConfigured: true,
-		Persona: "neutral", PersonaPresent: true, PendingSync: true, RDDMode: "off", BackgroundIntent: model.OpenCodeBackgroundOn,
+		Persona: "neutral", PersonaPresent: true, PendingSync: true, BackgroundIntent: model.OpenCodeBackgroundOn,
 	}
 	if err := state.Write(home, want); err != nil {
 		t.Fatal(err)
@@ -389,8 +389,7 @@ func TestInstallPublishesIntentTransactionally(t *testing.T) {
 func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 	home := t.TempDir()
 	lastCheck := time.Date(2026, 8, 12, 9, 0, 0, 0, time.UTC)
-	recorded := time.Date(2026, 8, 12, 10, 0, 0, 0, time.UTC)
-	existing := state.InstallState{InstalledAgents: []string{"claude-code"}, ManagedAssetDigest: "old", LastUpdateCheck: &lastCheck, PendingSync: true, RDDMode: "off", RDDModeRecordedAt: &recorded, BackgroundIntent: model.OpenCodeBackgroundOff}
+	existing := state.InstallState{InstalledAgents: []string{"claude-code"}, ManagedAssetDigest: "old", LastUpdateCheck: &lastCheck, PendingSync: true, BackgroundIntent: model.OpenCodeBackgroundOff}
 	if err := state.Write(home, existing); err != nil {
 		t.Fatal(err)
 	}
@@ -405,7 +404,6 @@ func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 	want := fresh
 	want.ManagedAssetDigest = "new"
 	want.LastUpdateCheck, want.PendingSync = existing.LastUpdateCheck, existing.PendingSync
-	want.RDDMode, want.RDDModeRecordedAt = existing.RDDMode, existing.RDDModeRecordedAt
 	want.PersonaPresent = true
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("full install state = %#v, want %#v", got, want)
@@ -653,7 +651,7 @@ func TestSyncBackgroundPublicationWaitsForVerification(t *testing.T) {
 				if tt.intent == model.OpenCodeBackgroundOff {
 					prior = model.OpenCodeBackgroundOn
 				}
-				if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}, LastUpdateCheck: &lastUpdate, PendingSync: true, RDDMode: "off", BackgroundIntent: prior}); err != nil {
+				if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}, LastUpdateCheck: &lastUpdate, PendingSync: true, BackgroundIntent: prior}); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -685,7 +683,7 @@ func TestSyncBackgroundPublicationWaitsForVerification(t *testing.T) {
 					t.Fatalf("success result = %#v, want verified foreground fallback when capability is unknown", result)
 				}
 				got, readErr := state.Read(home)
-				if readErr != nil || got.BackgroundIntent != tt.intent || !got.PendingSync || got.RDDMode != "off" || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastUpdate) {
+				if readErr != nil || got.BackgroundIntent != tt.intent || !got.PendingSync || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastUpdate) {
 					t.Fatalf("published intent = %q, read error = %v", got.BackgroundIntent, readErr)
 				}
 			} else {

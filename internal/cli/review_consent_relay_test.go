@@ -138,7 +138,7 @@ func TestConsentFixtureNormalizationStripsRenderedWindowsCWDQuoting(t *testing.T
 
 func TestNegotiatedHighRiskStartWithRelayDeclarationEmitsBlockingConsentQuestion(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -229,7 +229,7 @@ func TestNegotiatedHighRiskStartWithRelayDeclarationEmitsBlockingConsentQuestion
 
 func TestRelayedConsentMediumRiskKeepsBriefDecisionAndRiskContext(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "internal/app.go", "package internal\n", 0o644)
 
@@ -255,7 +255,7 @@ func TestRelayedConsentMediumRiskKeepsBriefDecisionAndRiskContext(t *testing.T) 
 
 func TestRelayedConsentGrantRunsTheReviewAndIsReplaySafe(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -298,7 +298,7 @@ func TestRelayedConsentGrantRunsTheReviewAndIsReplaySafe(t *testing.T) {
 
 func TestPriorCloneLatchCannotSuppressNegotiatedRelay(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	if err := reviewtransaction.RecordRDDConsentAsked(context.Background(), repo); err != nil {
@@ -316,7 +316,7 @@ func TestPriorCloneLatchCannotSuppressNegotiatedRelay(t *testing.T) {
 
 func TestGlobalReviewModeEnabledPermitsButDoesNotGrantV2Consent(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	var modeOutput bytes.Buffer
 	if err := RunReviewMode([]string{"enable", "--cwd", repo, "--json"}, &modeOutput); err != nil {
@@ -341,7 +341,7 @@ func TestGlobalReviewModeEnabledPermitsButDoesNotGrantV2Consent(t *testing.T) {
 // global off this test is about.
 func TestGlobalReviewModeOffRefusesBeforeV2Consent(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	status := negotiatedStartStatusForContract(t, repo, ReviewIntegrationContractV2, "--lineage", "review-consent-global-off")
@@ -363,7 +363,7 @@ func TestGlobalReviewModeOffRefusesBeforeV2Consent(t *testing.T) {
 
 func TestRelayedConsentDeclineIsScopedToTheCandidate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -415,7 +415,7 @@ func TestRelayedConsentDeclineIsScopedToTheCandidate(t *testing.T) {
 // TestNegotiatedReviewStartMatchesVersionedFixture.
 func TestNegotiatedStartWithoutConsentDeclarationKeepsTodaysEnvelope(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -437,7 +437,7 @@ func TestNegotiatedStartWithoutConsentDeclarationKeepsTodaysEnvelope(t *testing.
 
 func TestLowRiskStartWithRelayDeclarationProceedsWithoutQuestion(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "docs/notes.md", "notes\n", 0o644)
 
@@ -455,7 +455,7 @@ func TestLowRiskStartWithRelayDeclarationProceedsWithoutQuestion(t *testing.T) {
 
 func TestConsentDeclineOnLowRiskCandidateIsRefused(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "docs/notes.md", "notes\n", 0o644)
 
@@ -472,7 +472,7 @@ func TestConsentDeclineOnLowRiskCandidateIsRefused(t *testing.T) {
 
 func TestConsentFlagRequiresNegotiatedContract(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -502,7 +502,7 @@ func TestConsentFlagRequiresNegotiatedContract(t *testing.T) {
 // attached, because there is no longer any way for reviews to be on by accident.
 func TestHeadlessSkipNoticeFollowsAnExplicitOptIn(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	console := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -521,7 +521,7 @@ func TestHeadlessSkipNoticeFollowsAnExplicitOptIn(t *testing.T) {
 	// An explicit opt-in is the only route to a review, and its headless notice
 	// carries no provenance sentence: the switch was chosen, not inherited.
 	reviewEnabledHome(t)
-	repoExplicit := initReviewCLIRepo(t)
+	repoExplicit := initCLIGitRepo(t)
 	consoleExplicit := stubReviewConsole(t, false, "")
 	writeReviewStartCandidate(t, repoExplicit, "scripts/deploy.sh", "echo deploy\n", 0o644)
 	output.Reset()
@@ -551,7 +551,7 @@ func TestConsentQuestionMatchesVersionedFixture(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			root, err := resolveReviewMutationRoot(context.Background(), repo)
 			if err != nil {
 				t.Fatalf("resolve fixture repository root: %v", err)

@@ -207,7 +207,7 @@ func TestExplicitFrozenReviewingStatusRejectsPartialSlotsAndStaleStartLineages(t
 
 	t.Run("explicit compact lineage ignores stale v1 and v3 siblings", func(t *testing.T) {
 		reviewEnabledHome(t)
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'frozen'\n", 0o644)
 		started := atomicStartV2(t, repo, "frozen-status-atomic")
 		store := atomicCompactStartStore(t, repo, started.LineageID)
@@ -246,8 +246,8 @@ func frozenReviewingStatusFixture(t *testing.T, kind reviewtransaction.TargetKin
 		return frozenStagedReviewingStatusFixture(t)
 	}
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'frozen'\n", 0o644)
 	target := reviewtransaction.Target{Kind: kind, IntendedUntracked: append([]string{}, intended...)}
 	for _, path := range intended {
@@ -255,8 +255,8 @@ func frozenReviewingStatusFixture(t *testing.T, kind reviewtransaction.TargetKin
 	}
 	switch kind {
 	case reviewtransaction.TargetBaseDiff:
-		runReviewCLIGit(t, repo, "add", "service-token.ts")
-		runReviewCLIGit(t, repo, "commit", "-qm", "frozen base diff")
+		runCLIGit(t, repo, "add", "service-token.ts")
+		runCLIGit(t, repo, "commit", "-qm", "frozen base diff")
 		target.BaseRef = base
 	}
 	store, record := createFrozenReviewingStatusRecord(t, repo,
@@ -267,7 +267,7 @@ func frozenReviewingStatusFixture(t *testing.T, kind reviewtransaction.TargetKin
 func frozenStagedReviewingStatusFixture(t *testing.T) (string, reviewtransaction.CompactStore, reviewtransaction.CompactRecord) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	// Keep a legal, unrelated open lineage in the authority inventory. The
 	// explicit frozen selector below must resume only its own pending review.
@@ -278,9 +278,9 @@ func frozenStagedReviewingStatusFixture(t *testing.T) (string, reviewtransaction
 	if unrelated.State.State != reviewtransaction.StateReviewing || len(unrelated.State.SelectedLenses) == 0 {
 		t.Fatalf("unrelated open frozen authority = %#v", unrelated)
 	}
-	runReviewCLIGit(t, repo, "commit", "-qm", "commit unrelated authority subject")
+	runCLIGit(t, repo, "commit", "-qm", "commit unrelated authority subject")
 
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'frozen'\n", 0o644)
 	store, record := createFrozenReviewingStatusRecord(t, repo, "frozen-staged-reviewing", reviewtransaction.Target{
 		Kind: reviewtransaction.TargetBaseWorkspaceOverlay, BaseRef: base, Projection: reviewtransaction.ProjectionStaged,
@@ -356,9 +356,9 @@ func createFrozenReviewingStatusRecord(t *testing.T, repo, lineage string, targe
 func TestExplicitFrozenReviewingBaseDiffStatusResumesAfterCommittedDrift(t *testing.T) {
 	reviewEnabledHome(t)
 	repo, _, record := frozenReviewingStatusFixture(t, reviewtransaction.TargetBaseDiff, nil)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD~1"))
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD~1"))
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'committed drift'\n", 0o644)
-	runReviewCLIGit(t, repo, "commit", "-qam", "correction committed before its plan")
+	runCLIGit(t, repo, "commit", "-qam", "correction committed before its plan")
 
 	var output bytes.Buffer
 	args := []string{"status", "--contract", ReviewIntegrationContractV2, "--next-transition", "--cwd", repo,

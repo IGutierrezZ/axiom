@@ -297,7 +297,7 @@ func TestReviewProviderArtifactStatusV7ContractsArePinned(t *testing.T) {
 // same envelope with `continuation` attached to an unrelated code/reason
 // (must fail the rule).
 func TestManagedAssetsContinuationSchemaRuleIsExercised(t *testing.T) {
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/schema-rule.md", "# Candidate\n", 0o644)
 	staleManagedReviewerAssets(t, home)
 

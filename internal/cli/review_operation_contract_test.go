@@ -30,7 +30,7 @@ func TestNegotiatedReviewOperationsRejectInvalidContractsBeforeMutation(t *testi
 	reviewEnabledHome(t)
 	for _, contract := range []string{"", "gentle-ai.review-integration/v3"} {
 		t.Run("validate_"+contract, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeNegotiatedOperationChange(t, repo, "thin")
 			lineage := "review-invalid-read-boundary"
 			fixture := seedHistoricalCompatibilityApprovedCompactReceipt(t, repo, lineage, reviewtransaction.Target{

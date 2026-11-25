@@ -104,7 +104,7 @@ func assertUnreadableModeIsRecoverable(t *testing.T, corruption reviewModeCorrup
 func reviewModeUnreadableFixture(t *testing.T, corruption reviewModeCorruption) (string, string) {
 	t.Helper()
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	if corruption.clone {
 		var output bytes.Buffer

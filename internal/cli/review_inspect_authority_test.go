@@ -64,7 +64,7 @@ func TestReviewInspectAuthorityHelpAndArguments(t *testing.T) {
 }
 
 func TestReviewInspectAuthorityCallsDomainOnceWithCanonicalRoot(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	nested := filepath.Join(repo, "nested")
 	if err := os.Mkdir(nested, 0o755); err != nil {
 		t.Fatal(err)
@@ -102,7 +102,7 @@ func TestReviewInspectAuthorityCallsDomainOnceWithCanonicalRoot(t *testing.T) {
 }
 
 func TestReviewInspectAuthorityReportsMixedCorruptionDeterministicallyWithoutMutation(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeInspectCLIRecoveryPair(t, repo, "a-valid", false, "")
 	writeInspectCLIRecoveryPair(t, repo, "b-unchanged", true, "")
 	const rawAuthorization = "legacy approval for /private/secret/logical/path"
@@ -205,7 +205,7 @@ func TestReviewInspectAuthorityReportsMixedCorruptionDeterministicallyWithoutMut
 }
 
 func TestReviewInspectAuthorityPropagatesContextFailure(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	var output bytes.Buffer

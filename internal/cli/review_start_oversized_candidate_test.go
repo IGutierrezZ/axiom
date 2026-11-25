@@ -20,14 +20,14 @@ func writeReviewStartLargeCandidate(t *testing.T, repo string, lines int) []byte
 	if err := os.WriteFile(filepath.Join(repo, "big.txt"), []byte(builder.String()), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "big.txt")
-	return []byte(runReviewCLIGit(t, repo, "diff", "--cached", "--binary", "--full-index",
+	runCLIGit(t, repo, "add", "big.txt")
+	return []byte(runCLIGit(t, repo, "diff", "--cached", "--binary", "--full-index",
 		"--no-color", "--no-renames", "--no-ext-diff", "--no-textconv"))
 }
 
 func TestLargeCandidateSTARTAndStatusCarryOnlyNativeGitReferences(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	fullDiff := writeReviewStartLargeCandidate(t, repo, 110000)
 	if len(fullDiff) <= 4<<20 {
 		t.Fatalf("fixture diff = %d bytes, want larger than the retired 4 MiB inline limit", len(fullDiff))
@@ -77,17 +77,17 @@ func TestLargeCandidateSTARTAndStatusCarryOnlyNativeGitReferences(t *testing.T) 
 	}
 	// The reviewer recipe is plain read-only native Git against the frozen
 	// trees: compact discovery first, then a literal-pathspec selective diff.
-	discovery := runReviewCLIGit(t, repo, "--no-pager", "diff", "--name-status", "--no-renames",
+	discovery := runCLIGit(t, repo, "--no-pager", "diff", "--name-status", "--no-renames",
 		start.BaseTree, start.CandidateTree)
 	if strings.TrimSpace(discovery) != "A\tbig.txt" {
 		t.Fatalf("compact discovery = %q, want the single added path", discovery)
 	}
-	numstat := runReviewCLIGit(t, repo, "--no-pager", "diff", "--numstat", "--no-renames",
+	numstat := runCLIGit(t, repo, "--no-pager", "diff", "--numstat", "--no-renames",
 		start.BaseTree, start.CandidateTree)
 	if !strings.Contains(numstat, "big.txt") {
 		t.Fatalf("numstat discovery = %q, want big.txt", numstat)
 	}
-	selective := runReviewCLIGit(t, repo, "--no-pager", "diff", "--no-ext-diff", "--no-textconv",
+	selective := runCLIGit(t, repo, "--no-pager", "diff", "--no-ext-diff", "--no-textconv",
 		"--full-index", "--no-renames", "--diff-algorithm=myers",
 		start.BaseTree, start.CandidateTree, "--", ":(literal)big.txt")
 	if len(selective) <= 4<<20 || !strings.Contains(selective, "line 00000000 payload") ||

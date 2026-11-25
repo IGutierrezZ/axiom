@@ -208,7 +208,7 @@ func writeOverByteBudgetLensContextCandidate(t *testing.T, repo string) {
 // authority, there is no dead lineage to abandon afterwards either (#3367).
 func TestNegotiatedStartRefusesOverBudgetCandidateWithoutPersistingAuthority(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeOverByteBudgetLensContextCandidate(t, repo)
 	authorityRoot := reviewCLIAuthorityRoot(t, repo)
 	authorityBefore := snapshotAuthorityTree(t, authorityRoot)
@@ -249,12 +249,12 @@ func TestNegotiatedStartRefusesOverBudgetCandidateWithoutPersistingAuthority(t *
 
 func TestNegotiatedStartRefusesOverBudgetDependencyLocks(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	body := strings.Repeat("oversized dependency evidence\n", 80_000)
 	for _, path := range []string{"package-lock.json", "nested/package-lock.json"} {
 		writeReviewStartCandidate(t, repo, path, body, 0o644)
 	}
-	before := runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all")
+	before := runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all")
 	var output bytes.Buffer
 	err := RunReview(boundNegotiatedStartArgs(t, []string{
 		"start", "--contract", ReviewIntegrationContractV2, "--cwd", repo, "--lineage", "lock-budget",
@@ -267,7 +267,7 @@ func TestNegotiatedStartRefusesOverBudgetDependencyLocks(t *testing.T) {
 	if strings.Contains(output.String(), "GENTLE_AI_REVIEW_") {
 		t.Fatal("budget refusal emitted partial reviewer evidence")
 	}
-	if after := runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"); before != after {
+	if after := runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"); before != after {
 		t.Fatal("budget refusal changed the candidate")
 	}
 }
@@ -337,13 +337,13 @@ func TestReviewLensContextCarriesAggregateDeadline(t *testing.T) {
 // along with the count. Every no-mutation assertion below is unchanged.
 func TestNegotiatedStatusStopsDeterministicLensContextBudgetWithoutMutation(t *testing.T) {
 	home := reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeOverByteBudgetLensContextCandidate(t, repo)
 	record := startCompactAuthorityWithoutFacadeChecks(t, repo, "lens-context-status-budget")
 	handle := deriveLensContextHandle(t, repo, record)
 	before := readLegacyAuthorityTree(t, reviewCLIAuthorityRoot(t, repo))
 	homeBefore := readLegacyAuthorityTree(t, home)
-	worktreeBefore := runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all")
+	worktreeBefore := runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all")
 
 	var context bytes.Buffer
 	err := RunReview([]string{
@@ -383,7 +383,7 @@ func TestNegotiatedStatusStopsDeterministicLensContextBudgetWithoutMutation(t *t
 	if after := readLegacyAuthorityTree(t, home); !reflect.DeepEqual(homeBefore, after) {
 		t.Fatalf("STATUS budget classification persisted an artifact: before=%#v after=%#v", homeBefore, after)
 	}
-	if worktreeAfter := runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"); worktreeAfter != worktreeBefore {
+	if worktreeAfter := runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"); worktreeAfter != worktreeBefore {
 		t.Fatalf("STATUS budget classification changed the worktree: before=%q after=%q", worktreeBefore, worktreeAfter)
 	}
 }
@@ -443,7 +443,7 @@ func writeGeneratedSummaryCandidateFixture(t *testing.T, repo string) {
 	t.Helper()
 	base := strings.Repeat("base dependency line\n", 100)
 	writeReviewStartCandidate(t, repo, "go.sum", base, 0o644)
-	runReviewCLIGit(t, repo, "commit", "-qm", "base generated lockfile")
+	runCLIGit(t, repo, "commit", "-qm", "base generated lockfile")
 	writeReviewStartCandidate(t, repo, "go.sum", base+"new dependency line\n", 0o644)
 	writeReviewStartCandidate(t, repo, "web/package-lock.json", strings.Repeat("package-lock line\n", 200), 0o644)
 	writeReviewStartCandidate(t, repo, "internal/render/testdata/golden/rendered.golden", "generated golden bytes\n", 0o644)
@@ -471,12 +471,12 @@ func runGeneratedSummaryLensContext(t *testing.T, repo, lineage string) string {
 // Dependency locks retain semantic evidence even when classified as generated.
 func TestReviewLensContextDependencyLocksKeepFrozenPatches(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	paths := []string{"package-lock.json", "nested/npm-shrinkwrap.json", "pnpm-lock.yaml", "yarn.lock", "go.sum", "Cargo.lock"}
 	for _, path := range paths {
 		writeReviewStartCandidate(t, repo, path, "base dependency marker\n", 0o644)
 	}
-	runReviewCLIGit(t, repo, "commit", "-qm", "base dependency locks")
+	runCLIGit(t, repo, "commit", "-qm", "base dependency locks")
 	for _, path := range paths {
 		writeReviewStartCandidate(t, repo, path, "candidate dependency marker\n", 0o644)
 	}
@@ -611,7 +611,7 @@ func assertGeneratedSummary(t *testing.T, block string, want generatedSummaryExp
 // locks and ordinary authored paths retain complete frozen patches.
 func TestReviewLensContextSummarizesGeneratedPathsAndOmitsTheirPatches(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeGeneratedSummaryCandidateFixture(t, repo)
 	block := runGeneratedSummaryLensContext(t, repo, "generated-summary")
 
@@ -679,11 +679,11 @@ func TestReviewLensContextSummarizesGeneratedPathsAndOmitsTheirPatches(t *testin
 // authored evidence with their complete patches.
 func TestReviewLensContextGeneratedSummaryKeepsDeletionEvidenceAndNearMissPatches(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	base := strings.Repeat("yarn dependency line\n", 80)
 	writeReviewStartCandidate(t, repo, "yarn.lock", base, 0o644)
-	runReviewCLIGit(t, repo, "commit", "-qm", "base yarn lockfile")
-	runReviewCLIGit(t, repo, "rm", "-q", "--", "yarn.lock")
+	runCLIGit(t, repo, "commit", "-qm", "base yarn lockfile")
+	runCLIGit(t, repo, "rm", "-q", "--", "yarn.lock")
 	writeReviewStartCandidate(t, repo, "tools/go.mod", "module example.com/tools\n\ngo 1.22\n", 0o644)
 	writeReviewStartCandidate(t, repo, "docs/yarn.lock.example", "# authored example, not a lockfile\n", 0o644)
 	block := runGeneratedSummaryLensContext(t, repo, "generated-summary-deletion")
@@ -713,7 +713,7 @@ func TestReviewLensContextGeneratedSummaryKeepsDeletionEvidenceAndNearMissPatche
 // next_transition.correction_request.findings (added by issue #4087).
 func TestReviewLensContextAfterCollectionClosesNamesTheFindingsSurface(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	for order := 0; order < len(started.SelectedLenses)-1; order++ {
 		captureCleanCLIReviewerResult(t, repo, started, order, &bytes.Buffer{})
@@ -871,15 +871,15 @@ func TestReviewLensContextLeavesRepositoryUntouched(t *testing.T) {
 	repo, args, _, _ := newCandidateInspectionReview(t, "candidate\n", true)
 	lens := args[slices.Index(args, "--lens")+1]
 	before := [2]string{
-		runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
-		runReviewCLIGit(t, repo, "rev-parse", "HEAD"),
+		runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
+		runCLIGit(t, repo, "rev-parse", "HEAD"),
 	}
 	if _, err := io.WriteString(io.Discard, lensContextBlock(t, args, lens)); err != nil {
 		t.Fatal(err)
 	}
 	after := [2]string{
-		runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
-		runReviewCLIGit(t, repo, "rev-parse", "HEAD"),
+		runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
+		runCLIGit(t, repo, "rev-parse", "HEAD"),
 	}
 	if before != after {
 		t.Fatalf("lens-context mutated the repository: before=%q after=%q", before, after)
@@ -1005,7 +1005,7 @@ func writeLensContextPathFixture(t *testing.T, repo string, paths int) {
 // authority whose STATUS is a permanent stop (issue #3367 property 1).
 func TestNegotiatedStartLeavesNoAuthorityStatusCanOnlyRefuse(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeLensContextPathFixture(t, repo, 60)
 	started := runNegotiatedReviewStart(t, repo, "large-candidate-reviewable")
 	if len(started.SelectedLenses) == 0 {
@@ -1028,7 +1028,7 @@ func TestNegotiatedStartLeavesNoAuthorityStatusCanOnlyRefuse(t *testing.T) {
 // budget (issue #3367 property 3).
 func TestReviewLensContextAdmitsManyPathsFarUnderByteBudget(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeLensContextPathFixture(t, repo, 33)
 	started := runNegotiatedReviewStart(t, repo, "lens-context-small-paths")
 	var output bytes.Buffer
@@ -1102,7 +1102,7 @@ func deriveLensContextHandle(t *testing.T, repo string, record reviewtransaction
 // apart from "never measured" (issue #3367 property 2).
 func TestReviewLensContextBudgetProbeReportsFailureInsteadOfUnderBudget(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeLensContextPathFixture(t, repo, 4)
 	started := runNegotiatedReviewStart(t, repo, "budget-probe-failure")
 	store, err := reviewtransaction.CompactAuthoritativeStore(t.Context(), repo, started.LineageID)

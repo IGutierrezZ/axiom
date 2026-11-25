@@ -331,7 +331,7 @@ func TestNegotiatedStatusLockFailuresAreTypedOperationSpecificAndPathFree(t *tes
 }
 
 func TestNegotiatedStatusUsesRealMaintenanceLockTruth(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startFacadeReview(t, repo)
 	lockContext, cancelLock := context.WithTimeout(context.Background(), time.Second)
 	defer cancelLock()

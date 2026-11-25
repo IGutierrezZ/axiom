@@ -16,12 +16,12 @@ import (
 // rather than the phrasing function in isolation.
 func TestStartDescribesAZeroByteFileAsEmptyRatherThanExecutable(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	empty := filepath.Join(repo, "EMPTY")
 	if err := os.WriteFile(empty, nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "EMPTY")
+	runCLIGit(t, repo, "add", "EMPTY")
 
 	info, err := os.Stat(empty)
 	if err != nil {

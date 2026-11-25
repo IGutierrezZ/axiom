@@ -17,11 +17,11 @@ import (
 
 func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "add candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "add candidate")
 	// The predecessor is compact-v2 fixture setup for the RECOVER selector
 	// behavior below. Construct it through the test-only legacy seam; production
 	// STATUS and RECOVER remain the subject operations under test.
@@ -53,8 +53,8 @@ func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeReviewStartCandidate(t, repo, "helper.go", "package candidate\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "helper.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "expand candidate scope")
+	runCLIGit(t, repo, "add", "helper.go")
+	runCLIGit(t, repo, "commit", "-qm", "expand candidate scope")
 	probe := selectorTransitionStatus(t, repo, "--lineage", started.LineageID, "--base-ref", base)
 	reason, actor := "approved scope expansion", "maintainer"
 	authorization := recoveryAuthorizationFromStatus(t, probe, "selector-recovered", actor, reason)
@@ -143,7 +143,7 @@ func TestStatusRecoverTransitionExecutesExactBaseDiffSelectors(t *testing.T) {
 // absent selector from an unrepresentable recovery.
 func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	runAccountingOnlyRecoveryThroughStatus(t, repo, nil)
 }
 
@@ -153,8 +153,8 @@ func TestStatusRecoverTransitionExecutesAccountingOnlyRecoveryWithoutSelectors(t
 // congelada, upstream #5146) y la evidencia recuperada se sigue arrastrando.
 func TestStatusRecoverCarriesEvidenceFromALegacyPolicyLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	legacyPolicy := filepath.Join(canonicalReviewCLITempDir(t), "legacy-policy.txt")
+	repo := initCLIGitRepo(t)
+	legacyPolicy := filepath.Join(canonicalCLITempDir(t), "legacy-policy.txt")
 	if err := os.WriteFile(legacyPolicy, []byte(reviewtransaction.LegacyFacadeReviewPolicy), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -352,10 +352,10 @@ func recoverAccountingOnlyThroughStatus(t *testing.T, repo string, started Revie
 
 func TestStatusStopsFreshStagedWorkspaceOverlay(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "docs/fresh.md", "# Fresh\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "docs/fresh.md")
+	runCLIGit(t, repo, "add", "docs/fresh.md")
 	status := selectorTransitionStatus(t, repo, "--action-eligibility", "--base-ref", base, "--projection", "staged", "--workspace-overlay")
 	if status.Applicability != reviewtransaction.TargetApplicabilityUnrelated || status.Action != reviewtransaction.TargetStatusActionStop ||
 		status.Replayability != reviewtransaction.ReplayabilityManualActionRequired ||
@@ -368,11 +368,11 @@ func TestStatusStopsFreshStagedWorkspaceOverlay(t *testing.T) {
 
 func TestStatusRecoverTransitionExecutesCorrectionRequiredStagedScopeExpansion(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int {\n\treturn 1\n}\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "add reviewed candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "add reviewed candidate")
 
 	// The predecessor is compact-v2 fixture setup for the staged RECOVER
 	// selector behavior below. Build it directly through the test-only legacy
@@ -413,10 +413,10 @@ func TestStatusRecoverTransitionExecutesCorrectionRequiredStagedScopeExpansion(t
 	stateBefore, _ := os.ReadFile(predecessorStore.StatePath())
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int {\n\treturn 2\n}\n", 0o644)
 	writeReviewStartCandidate(t, repo, "migration.sql", "CREATE TABLE recovered (id INTEGER);\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go", "migration.sql")
+	runCLIGit(t, repo, "add", "candidate.go", "migration.sql")
 	writeReviewStartCandidate(t, repo, "tracked.txt", "unstaged divergence\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, "scratch.txt", "untracked noise\n", 0o644)
-	wantTree := strings.TrimSpace(runReviewCLIGit(t, repo, "write-tree"))
+	wantTree := strings.TrimSpace(runCLIGit(t, repo, "write-tree"))
 
 	selectors := []string{
 		"--lineage", predecessorLineage, "--base-ref", base, "--projection", "staged", "--workspace-overlay",
@@ -473,14 +473,14 @@ func TestStatusRecoverTransitionExecutesCorrectionRequiredStagedScopeExpansion(t
 		t.Fatalf("recovered successor inherited review or verification evidence: %#v", state)
 	}
 	stateAfter, _ := os.ReadFile(predecessorStore.StatePath())
-	if !bytes.Equal(stateBefore, stateAfter) || strings.TrimSpace(runReviewCLIGit(t, repo, "write-tree")) != wantTree {
+	if !bytes.Equal(stateBefore, stateAfter) || strings.TrimSpace(runCLIGit(t, repo, "write-tree")) != wantTree {
 		t.Fatal("staged correction recovery mutated predecessor authority or index")
 	}
 }
 
 func TestCurrentChangesRecoverSelectorPresenceSurvivesJSONRoundTrip(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
 		"--cwd", repo, "--lineage", "selector-current",
@@ -570,7 +570,7 @@ func TestCurrentChangesRecoverSelectorPresenceSurvivesJSONRoundTrip(t *testing.T
 
 func TestStatusExecutesInvalidatedSameTargetCurrentChangesRecovery(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	var output bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "selector-current-invalidated"}, &output); err != nil {
@@ -633,8 +633,8 @@ func TestStatusExecutesInvalidatedSameTargetCurrentChangesRecovery(t *testing.T)
 
 func TestStatusStopsUnrepresentableRecoveryWithoutMutation(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	startedBytes, err := runLegacyFacadeStartForTestBytes(t, []string{
 		"--cwd", repo, "--lineage", "selector-unrepresentable",
@@ -664,8 +664,8 @@ func TestStatusStopsUnrepresentableRecoveryWithoutMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeReviewStartCandidate(t, repo, "helper.go", "package candidate\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go", "helper.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "commit candidate")
+	runCLIGit(t, repo, "add", "candidate.go", "helper.go")
+	runCLIGit(t, repo, "commit", "-qm", "commit candidate")
 	before, _ := os.ReadFile(store.StatePath())
 	storesBefore, _ := reviewtransaction.DiscoverCompactStores(context.Background(), repo)
 	status := selectorTransitionStatus(t, repo, "--lineage", record.State.LineageID, "--base-ref", base)
@@ -711,11 +711,11 @@ func TestTransitionSelectorFlagsRejectMixedAliases(t *testing.T) {
 
 func TestStatusStopsUnchangedBaseDiffRecoveryWithoutSuccessor(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "candidate.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "add candidate")
+	runCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "commit", "-qm", "add candidate")
 	// The invalidated compact predecessor is fixture setup for the STATUS stop
 	// behavior below, not a production START assertion.
 	if err := runLegacyFacadeStartForTest(t, []string{

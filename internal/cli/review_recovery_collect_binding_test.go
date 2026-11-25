@@ -18,7 +18,7 @@ import (
 // a partir del recover nativo que emite STATUS.
 func recoveryCollectBindingFixture(t *testing.T, lineage string) (string, []string, map[string]string, string) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

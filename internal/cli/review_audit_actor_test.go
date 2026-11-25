@@ -21,11 +21,11 @@ func reviewAuditActorRepoWithoutIdentity(t *testing.T) string {
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(isolatedHome, "unused-gitconfig"))
 	repo := t.TempDir()
-	runReviewCLIGit(t, repo, "init", "-q")
+	runCLIGit(t, repo, "init", "-q")
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	reviewAuditActorCommitWithEnvIdentity(t, repo)
 	return repo
 }
@@ -61,9 +61,9 @@ func TestReviewAuditActorFallbackChain(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("uses name and email when both configured", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
-		runReviewCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
-		runReviewCLIGit(t, repo, "config", "user.email", "ada@example.com")
+		repo := initCLIGitRepo(t)
+		runCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
+		runCLIGit(t, repo, "config", "user.email", "ada@example.com")
 		if got, want := reviewAuditActor(ctx, repo), "Ada Lovelace <ada@example.com>"; got != want {
 			t.Fatalf("reviewAuditActor() = %q, want %q", got, want)
 		}
@@ -71,7 +71,7 @@ func TestReviewAuditActorFallbackChain(t *testing.T) {
 
 	t.Run("falls back to email alone when name is unset", func(t *testing.T) {
 		repo := reviewAuditActorRepoWithoutIdentity(t)
-		runReviewCLIGit(t, repo, "config", "user.email", "ada@example.com")
+		runCLIGit(t, repo, "config", "user.email", "ada@example.com")
 		t.Setenv("GIT_AUTHOR_EMAIL", "")
 		t.Setenv("GIT_COMMITTER_EMAIL", "")
 		if got, want := reviewAuditActor(ctx, repo), "ada@example.com"; got != want {
@@ -107,9 +107,9 @@ func TestReviewAuditActorFallbackChain(t *testing.T) {
 	})
 
 	t.Run("resolved root is identical across absolute and nested cwd forms", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
-		runReviewCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
-		runReviewCLIGit(t, repo, "config", "user.email", "ada@example.com")
+		repo := initCLIGitRepo(t)
+		runCLIGit(t, repo, "config", "user.name", "Ada Lovelace")
+		runCLIGit(t, repo, "config", "user.email", "ada@example.com")
 		nested := filepath.Join(repo, "nested")
 		if err := os.MkdirAll(nested, 0o755); err != nil {
 			t.Fatal(err)

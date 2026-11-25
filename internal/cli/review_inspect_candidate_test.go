@@ -35,9 +35,9 @@ func TestReviewInspectCandidateReadsOnlyBoundFrozenTrees(t *testing.T) {
 	t.Setenv("GIT_CONFIG_VALUE_0", "true")
 	t.Setenv("GIT_DIFF_OPTS", "--unified=0")
 	t.Setenv("GIT_ATTR_SOURCE", "HEAD")
-	runReviewCLIGit(t, repo, "config", "core.attributesFile", filepath.ToSlash(attributes))
-	runReviewCLIGit(t, repo, "config", "diff.external", "false")
-	before := [2]string{runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"), runReviewCLIGit(t, repo, "rev-parse", "HEAD")}
+	runCLIGit(t, repo, "config", "core.attributesFile", filepath.ToSlash(attributes))
+	runCLIGit(t, repo, "config", "diff.external", "false")
+	before := [2]string{runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"), runCLIGit(t, repo, "rev-parse", "HEAD")}
 
 	tests := []inspectionCase{
 		{name: "name-status", argv: []string{"--operation", "name-status"}, want: "A\tdrive name 'quote';$.txt\nM\ttracked.txt\n"},
@@ -56,7 +56,7 @@ func TestReviewInspectCandidateReadsOnlyBoundFrozenTrees(t *testing.T) {
 			t.Fatalf("%s output mismatch\ngot:  %q\nwant: %q", test.name, output.String(), test.want)
 		}
 	}
-	after := [2]string{runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"), runReviewCLIGit(t, repo, "rev-parse", "HEAD")}
+	after := [2]string{runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"), runCLIGit(t, repo, "rev-parse", "HEAD")}
 	if after != before {
 		t.Fatalf("inspection mutated worktree, index, or HEAD: before=%q after=%q", before, after)
 	}
@@ -249,7 +249,7 @@ func TestReviewInspectCandidateRejectsTargetedBindingDecoys(t *testing.T) {
 func newCandidateInspectionReview(t *testing.T, tracked string, hostile bool) (string, []string, reviewtransaction.CompactRecord, int) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", tracked, 0o644)
 	if hostile {
 		writeReviewStartCandidate(t, repo, `drive name 'quote';$.txt`, "hostile path\n", 0o644)

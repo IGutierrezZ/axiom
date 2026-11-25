@@ -19,11 +19,11 @@ import (
 // refuses.
 func TestNegotiatedRecoverTransitionRunsVerbatimForStagedPredecessorAfterRebase(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	// Approved staged review of one tracked change.
 	writeReviewStartCandidate(t, repo, "feature.md", "# feature\n\nstaged reviewed prose.\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "feature.md")
+	runCLIGit(t, repo, "add", "feature.md")
 	// This approved predecessor is historical compact authority. Seed it through
 	// the test-only legacy seam because current START closes on its terminal
 	// capture before STATUS can select recovery.
@@ -40,16 +40,16 @@ func TestNegotiatedRecoverTransitionRunsVerbatimForStagedPredecessorAfterRebase(
 	// The exact candidate is committed, then rebased across a disjoint
 	// parent advance: patch, reviewed path set, and blobs stay identical
 	// while every commit identity moves.
-	runReviewCLIGit(t, repo, "commit", "-qm", "reviewed feature")
-	feature := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD~1"))
+	runCLIGit(t, repo, "commit", "-qm", "reviewed feature")
+	feature := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD~1"))
 	_ = base
-	runReviewCLIGit(t, repo, "checkout", "-q", base)
+	runCLIGit(t, repo, "checkout", "-q", base)
 	writeReviewStartCandidate(t, repo, "unrelated.md", "# unrelated\n\ndisjoint mainline advance.\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "unrelated.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "disjoint parent advance")
-	runReviewCLIGit(t, repo, "cherry-pick", feature)
-	runReviewCLIGit(t, repo, "checkout", "-q", "-B", "master", "HEAD")
+	runCLIGit(t, repo, "add", "unrelated.md")
+	runCLIGit(t, repo, "commit", "-qm", "disjoint parent advance")
+	runCLIGit(t, repo, "cherry-pick", feature)
+	runCLIGit(t, repo, "checkout", "-q", "-B", "master", "HEAD")
 	// The reporter's workspace carried untracked noise they then explicitly
 	// excluded; the non-empty live view is what makes discovery assess the
 	// approved staged authority against the moved candidate.
@@ -131,7 +131,7 @@ func TestNegotiatedRecoverTransitionRunsVerbatimForStagedPredecessorAfterRebase(
 // atomic review requested under an unused exact lineage.
 func TestNegotiatedStatusOffersFreshStartForByteIdenticalHistoricalApprovedCandidate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "feature.md", "# feature\n\nworkspace reviewed prose.\n", 0o755)
 	historical := seedHistoricalApprovalForRepo(t, repo, "historical-byte-identical")
 	stateBefore, err := os.ReadFile(historical.Store.StatePath())

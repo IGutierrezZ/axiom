@@ -18,7 +18,7 @@ import (
 // explains the "passive" tier, and review assess reuses that assessor rather
 // than forking it, so this envelope carries the same evidence START does.
 func TestReviewAssessPassiveDocumentationCandidate(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/guide.md", "ordinary documentation prose.\n", 0o644)
 
 	var output bytes.Buffer
@@ -43,7 +43,7 @@ func TestReviewAssessPassiveDocumentationCandidate(t *testing.T) {
 // admits) is reported as medium with the executable-change reason, exactly
 // as the shared assessor's fallback classifies it for START.
 func TestReviewAssessExecutableChangeCandidate(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "notes/scratch.txt", "some plain scratch content\n", 0o644)
 
 	var output bytes.Buffer
@@ -67,7 +67,7 @@ func TestReviewAssessExecutableChangeCandidate(t *testing.T) {
 // authentication-pattern path is reported as high with a matching reason
 // code, exactly as START's own hot-path classification would.
 func TestReviewAssessProcessBoundaryCandidate(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "internal/auth/login.go", "package auth\n", 0o644)
 
 	var output bytes.Buffer
@@ -99,10 +99,10 @@ func TestReviewAssessProcessBoundaryCandidate(t *testing.T) {
 // to select lenses.
 func TestReviewAssessCommittedOnlyBaseDiffMatchesStart(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	baseRef := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	baseRef := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
-	runReviewCLIGit(t, repo, "commit", "-qm", "add deploy script")
+	runCLIGit(t, repo, "commit", "-qm", "add deploy script")
 
 	var assessOutput bytes.Buffer
 	if err := RunReview([]string{"assess", "--cwd", repo, "--base-ref", baseRef, "--committed-only", "--json"}, &assessOutput); err != nil {
@@ -134,7 +134,7 @@ func TestReviewAssessCommittedOnlyBaseDiffMatchesStart(t *testing.T) {
 // named continuation are documented to treat this exactly like a "high"
 // result.
 func TestReviewAssessUnbuildableCandidateNamesResolution(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	err := RunReview([]string{"assess", "--cwd", repo, "--base-ref", "not-a-real-ref-4295"}, &output)
@@ -163,7 +163,7 @@ func TestReviewAssessJSONEnvelopeValidatesAgainstPublishedSchema(t *testing.T) {
 		{name: "high", path: "internal/auth/login.go", body: "package auth\n"},
 	} {
 		t.Run(fixture.name, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, fixture.path, fixture.body, 0o644)
 
 			var output bytes.Buffer
@@ -179,7 +179,7 @@ func TestReviewAssessJSONEnvelopeValidatesAgainstPublishedSchema(t *testing.T) {
 // output is human-readable text, not the machine envelope, and still reports
 // the risk and candidate shape.
 func TestReviewAssessHumanReadableOutputOmitsJSON(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/guide.md", "ordinary documentation prose.\n", 0o644)
 
 	var output bytes.Buffer
@@ -212,7 +212,7 @@ func TestReviewAssessDispatchedFromReviewCommand(t *testing.T) {
 // no new schema is involved.
 func TestReviewAssessJSONFailsClosedOnCandidateErrors(t *testing.T) {
 	reviewAssessSchema := compileWholePublishedReviewSchema(t, "v2", "assess.schema.json")
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	// An empty candidate fails; the envelope names the current-changes kind.
 	var output bytes.Buffer

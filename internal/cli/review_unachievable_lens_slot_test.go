@@ -36,7 +36,7 @@ func reviewTransitionArgumentValue(t *testing.T, input ReviewTransitionInput, na
 // restarted STATUS negotiation returns the same answer (restart-safety).
 func TestReviewCaptureUnachievableLensSlotStopsStatusFromReofferingIt(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 
 	statusNextTransitionRaw := func() ([]byte, ReviewTargetStatusResult) {
@@ -199,7 +199,7 @@ func TestReviewCaptureUnachievableLensSlotStopsStatusFromReofferingIt(t *testing
 // exactly like a stale binding on every other capture verb.
 func TestReviewCaptureUnachievableRejectsMismatchedRequestHash(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 
 	var output bytes.Buffer
@@ -248,7 +248,7 @@ func TestReviewCaptureUnachievableRejectsMismatchedRequestHash(t *testing.T) {
 // evidence).
 func TestReviewCaptureUnachievableWithdrawIsIdempotentAndRefusesBadCombinations(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 
 	var statusOutput bytes.Buffer

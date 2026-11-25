@@ -18,9 +18,9 @@ import (
 // specific to decline resolving anything, it proves nothing does.
 func TestCandidateDeclineNeverAuthorizesPrePushOrPrePRDelivery(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	stubReviewConsole(t, false, "")
-	branch := strings.TrimSpace(runReviewCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
+	branch := strings.TrimSpace(runCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
 	configureCLIReviewPublicationRemote(t, repo, branch)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
@@ -29,8 +29,8 @@ func TestCandidateDeclineNeverAuthorizesPrePushOrPrePRDelivery(t *testing.T) {
 		"--lineage", "review-candidate-decline-delivery", "--consent", "relay",
 	})).Bytes())
 	runConsentRelayStart(t, invocationArgs(t, question.Choices[1].Invocation))
-	runReviewCLIGit(t, repo, "add", "scripts/deploy.sh")
-	runReviewCLIGit(t, repo, "commit", "-qm", "declined candidate")
+	runCLIGit(t, repo, "add", "scripts/deploy.sh")
+	runCLIGit(t, repo, "commit", "-qm", "declined candidate")
 
 	for _, gate := range []reviewtransaction.GateKind{reviewtransaction.GatePrePush, reviewtransaction.GatePrePR} {
 		t.Run(string(gate), func(t *testing.T) {

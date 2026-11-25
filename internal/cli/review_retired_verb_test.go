@@ -22,9 +22,9 @@ func TestReviewRetiredVerbAdvisoryIsUnknownCommand(t *testing.T) {
 	handle := contextArgs[slices.Index(contextArgs, "--repository-context")+1]
 	lens := contextArgs[slices.Index(contextArgs, "--lens")+1]
 	sourceBefore := [3]string{
-		runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
-		runReviewCLIGit(t, repo, "rev-parse", "HEAD"),
-		runReviewCLIGit(t, repo, "diff", "--binary", "--full-index", "--no-color", "--no-ext-diff", "--no-textconv", "HEAD"),
+		runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
+		runCLIGit(t, repo, "rev-parse", "HEAD"),
+		runCLIGit(t, repo, "diff", "--binary", "--full-index", "--no-color", "--no-ext-diff", "--no-textconv", "HEAD"),
 	}
 	authorityBefore := snapshotAuthorityTree(t, reviewCLIAuthorityRoot(t, repo))
 
@@ -49,9 +49,9 @@ func TestReviewRetiredVerbAdvisoryIsUnknownCommand(t *testing.T) {
 				t.Fatalf("retired verb advisory wrote output before refusing: %q", output.String())
 			}
 			if sourceAfter := [3]string{
-				runReviewCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
-				runReviewCLIGit(t, repo, "rev-parse", "HEAD"),
-				runReviewCLIGit(t, repo, "diff", "--binary", "--full-index", "--no-color", "--no-ext-diff", "--no-textconv", "HEAD"),
+				runCLIGit(t, repo, "status", "--porcelain=v2", "--untracked-files=all"),
+				runCLIGit(t, repo, "rev-parse", "HEAD"),
+				runCLIGit(t, repo, "diff", "--binary", "--full-index", "--no-color", "--no-ext-diff", "--no-textconv", "HEAD"),
 			}; sourceAfter != sourceBefore {
 				t.Fatalf("retired verb advisory mutated tracked source: before=%q after=%q", sourceBefore, sourceAfter)
 			}

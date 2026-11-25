@@ -24,7 +24,7 @@ func frozenShapeRecoverArgs(repo string, started ReviewFacadeStartResult, predec
 
 func frozenShapePolicyFile(t *testing.T) string {
 	t.Helper()
-	path := filepath.Join(canonicalReviewCLITempDir(t), "policy.txt")
+	path := filepath.Join(canonicalCLITempDir(t), "policy.txt")
 	if err := os.WriteFile(path, []byte("private fixture policy bytes\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestRecoverEscalatedPreservesFrozenShape(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			startExtra := tc.start(t)
 			started, predecessor, store := setupAccountingOnlyEscalation(t, repo, startExtra)
 			var extra []string
@@ -96,7 +96,7 @@ func TestRecoverEscalatedRefusesConflictingFrozenShape(t *testing.T) {
 	}{
 		{name: "focus", flag: "--focus", extra: func(*testing.T) []string { return []string{"--focus", "reliability"} }},
 		{name: "politica", flag: "--policy", extra: func(t *testing.T) []string {
-			path := filepath.Join(canonicalReviewCLITempDir(t), "other.txt")
+			path := filepath.Join(canonicalCLITempDir(t), "other.txt")
 			if err := os.WriteFile(path, []byte("another policy\n"), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -105,7 +105,7 @@ func TestRecoverEscalatedRefusesConflictingFrozenShape(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			started, predecessor, store := setupAccountingOnlyEscalation(t, repo, []string{"--focus", "resilience", "--policy", frozenShapePolicyFile(t)})
 			before, err := os.ReadFile(store.StatePath())
 			if err != nil {
@@ -161,7 +161,7 @@ func TestRecoverEscalatedRefusesConflictingFrozenShape(t *testing.T) {
 // con hash) y que RECOVER la rechaza sin mutar.
 func TestAccountingOnlyRecoveryWithoutFrozenPolicyContentIsRefused(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started, predecessor, store := setupAccountingOnlyEscalation(t, repo, nil)
 	predecessor.State.FrozenPolicyContent = nil
 	revision, err := reviewtransaction.CompactRevisionForState(predecessor.State)

@@ -13,7 +13,7 @@ import (
 func TestNegotiatedStatusRoutesHistoricalScopeChangeToRecovery(t *testing.T) {
 	withFacadeOperationBudget(t, loadedMachineFacadeOperationBudget)
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/attempt.md", "# reviewed\n", 0o644)
 	historical := seedHistoricalApprovalForRepo(t, repo, "scope-recovery-historical")
 	writeReviewStartCandidate(t, repo, "docs/attempt.md", "# changed\n", 0o644)
@@ -85,7 +85,7 @@ func TestRejectedTargetedValidatorCaptureRoutesEscalatedRecovery(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "recovery.go"), []byte("package candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "recovery.go")
+	runCLIGit(t, repo, "add", "recovery.go")
 
 	for _, tt := range []struct {
 		name, contract, schema string

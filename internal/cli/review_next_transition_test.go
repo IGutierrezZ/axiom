@@ -20,7 +20,7 @@ import (
 
 func TestCorrectionPlanStatusIsStableAcrossRestart(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "correction-routing")
 	legacy := ReviewFacadeStartResult{
@@ -926,7 +926,7 @@ func TestReviewStatusEscalationRequiresCurrentSchema(t *testing.T) {
 
 func TestNegotiatedStatusForecastStaysStructuralAndV1StaysFrozen(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("forecast\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

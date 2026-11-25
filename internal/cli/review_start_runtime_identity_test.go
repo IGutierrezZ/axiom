@@ -37,15 +37,15 @@ func compiledRuntimeIdentities() map[string]bool {
 func initLensSelectingReviewCLIRepo(t *testing.T) (repo, baseRef string) {
 	t.Helper()
 
-	repo = initReviewCLIRepo(t)
-	baseRef = strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo = initCLIGitRepo(t)
+	baseRef = strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 
 	body := strings.Repeat("added line for lens selection\n", 400)
 	if err := os.WriteFile(filepath.Join(repo, "candidate.txt"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "candidate.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+	runCLIGit(t, repo, "add", "candidate.txt")
+	runCLIGit(t, repo, "commit", "-qm", "candidate")
 	return repo, baseRef
 }
 

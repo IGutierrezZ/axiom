@@ -63,7 +63,7 @@ func relocateCompactRecordWithIdentities(t *testing.T, repo, sourceLineage, targ
 
 func TestCurrentStatusRoutesReviewerCaptureWithoutCompactPublication(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\nchanged\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestCurrentStatusRoutesReviewerCaptureWithoutCompactPublication(t *testing.
 
 func TestHistoricalReceiptStatusRemainsReadable(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("historical candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

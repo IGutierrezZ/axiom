@@ -28,7 +28,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -9515,6 +9514,7 @@ func TestCustomPickerStillOffersExplicitGGA(t *testing.T) {
 // sobrevive, y con el cerrojo ocupado falla rápido sin escribir nada.
 func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testing.T) {
 	home := t.TempDir()
+	concurrentCheck := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	lockPath, err := statecoord.LockPath(home)
 	if err != nil {
 		t.Fatalf("install state lock path: %v", err)
@@ -9525,13 +9525,13 @@ func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testin
 	}
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{"opencode"},
-		RDDMode:         string(reviewtransaction.RDDModeOn),
+		LastUpdateCheck: &concurrentCheck,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	markPendingSyncUnderLock(home)
 	contended, err := state.Read(home)
-	if err != nil || contended.PendingSync || contended.RDDMode != string(reviewtransaction.RDDModeOn) {
+	if err != nil || contended.PendingSync || contended.LastUpdateCheck == nil {
 		t.Fatalf("estado tras la ejecución con cerrojo ocupado = %#v, err = %v", contended, err)
 	}
 	if err := held.Release(); err != nil {
@@ -9549,7 +9549,7 @@ func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testin
 	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != "opencode" {
 		t.Fatalf("InstalledAgents = %v, want [opencode]", got.InstalledAgents)
 	}
-	if got.RDDMode != string(reviewtransaction.RDDModeOn) {
-		t.Fatalf("RDDMode pisado: %q, want %q", got.RDDMode, reviewtransaction.RDDModeOn)
+	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) {
+		t.Fatalf("LastUpdateCheck pisado: %v, want %v", got.LastUpdateCheck, concurrentCheck)
 	}
 }

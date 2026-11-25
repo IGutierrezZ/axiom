@@ -23,8 +23,8 @@ func pristineReviewingCLIFixture(t *testing.T, repo string) (revision, snapshotI
 	if err := os.WriteFile(stale, []byte("package stale\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "stale.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "stale baseline")
+	runCLIGit(t, repo, "add", "stale.go")
+	runCLIGit(t, repo, "commit", "-qm", "stale baseline")
 	if err := os.WriteFile(stale, []byte("package stale\n\nvar Value = true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func staleReviewingAbandonArgs(repo, revision, authorization string) []string {
 // caused the denial.
 func TestReviewAbandonSucceedsWhileKillSwitchDisabled(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)
 	disableReviewForClone(t, repo)
 
@@ -107,7 +107,7 @@ func TestReviewAbandonSucceedsWhileKillSwitchDisabled(t *testing.T) {
 // enabled, and the refused abandon mutates nothing.
 func TestReviewAbandonWhileDisabledStillRequiresTheExactBinding(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)
 	statePath := filepath.Join(reviewCLIAuthorityRoot(t, repo), "v2", "abandon-stale-reviewing", "review-state.json")
 	payload, err := os.ReadFile(statePath)
@@ -132,7 +132,7 @@ func TestReviewAbandonWhileDisabledStillRequiresTheExactBinding(t *testing.T) {
 // remains refused with the switch off.
 func TestReviewAbandonWhileDisabledKeepsEligibilityAndRevisionChecks(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)
 	statePath := filepath.Join(reviewCLIAuthorityRoot(t, repo), "v2", "abandon-stale-reviewing", "review-state.json")
 	payload, err := os.ReadFile(statePath)
@@ -155,11 +155,11 @@ func TestReviewAbandonWhileDisabledKeepsEligibilityAndRevisionChecks(t *testing.
 // review while the switch is off stays refused with the typed disabled error.
 func TestReviewStartStaysRefusedWhileKillSwitchDisabled(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "candidate.go"), []byte("package candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "candidate.go")
+	runCLIGit(t, repo, "add", "candidate.go")
 	disableReviewForClone(t, repo)
 	before := snapshotAuthorityTree(t, reviewCLIAuthorityRoot(t, repo))
 
@@ -243,10 +243,10 @@ func breakForeignCompactSnapshotIdentity(t *testing.T, repo, lineage string) {
 // pristine reviewing lineage.
 func TestReviewAbandonOfAPristineLineageIgnoresAnUnrelatedUnloadableLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "foreign.go", "package foreign\n", 0o644)
 	foreignStarted := atomicStartV2(t, repo, "abandon-foreign-active")
-	runReviewCLIGit(t, repo, "commit", "-qm", "foreign active candidate")
+	runCLIGit(t, repo, "commit", "-qm", "foreign active candidate")
 	breakForeignCompactSnapshotIdentity(t, repo, foreignStarted.LineageID)
 
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)

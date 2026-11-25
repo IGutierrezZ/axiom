@@ -17,7 +17,7 @@ import (
 
 func TestRepositoryContextCaptureFromUnrelatedCWDClosesOnLastCapture(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc capture() {}\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "repository-context-capture")
 	if started.RepositoryContext == nil || len(started.SelectedLenses) != 1 {
@@ -112,7 +112,7 @@ func TestOpaqueContextErrorsDoNotExposeProviderPaths(t *testing.T) {
 	for _, damage := range []string{"authority"} {
 		t.Run(damage, func(t *testing.T) {
 			home := reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc opaqueFailure() {}\n", 0o644)
 			started := runNegotiatedReviewStart(t, repo, "opaque-error-"+damage)
 			store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
@@ -139,7 +139,7 @@ func TestOpaqueContextErrorsDoNotExposeProviderPaths(t *testing.T) {
 
 func TestNativeNextTransitionCarriesRepositoryContextCaptureBinding(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc transition() {}\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "repository-context-transition")
 	var output bytes.Buffer
@@ -194,7 +194,7 @@ func TestNativeNextTransitionCarriesRepositoryContextCaptureBinding(t *testing.T
 func TestNegotiatedStatusReturnsProviderOwnedTargetedValidationRequest(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc corrected() int { return 1 }\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "typed-validation-request")
 	resultPath := filepath.Join(t.TempDir(), "blocking-result.json")
@@ -307,12 +307,12 @@ func TestNegotiatedStatusReturnsProviderOwnedTargetedValidationRequest(t *testin
 
 func TestNegotiatedStatusAcceptsCorrectionSubsetDigest(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "corrected.go", "package candidate\n\nfunc correctedSubset() int { return 0 }\n", 0o644)
 	writeReviewStartCandidate(t, repo, "untouched.go", "package candidate\n\nfunc untouchedSubset() int { return 0 }\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "corrected.go", "untouched.go")
-	runReviewCLIGit(t, repo, "commit", "-qm", "add correction subset fixture")
-	runReviewCLIGit(t, repo, "config", "core.trustctime", "false")
+	runCLIGit(t, repo, "add", "corrected.go", "untouched.go")
+	runCLIGit(t, repo, "commit", "-qm", "add correction subset fixture")
+	runCLIGit(t, repo, "config", "core.trustctime", "false")
 	fixed := time.Unix(1_700_000_000, 0)
 	writeReviewStartCandidate(t, repo, "corrected.go", "package candidate\n\nfunc correctedSubset() int { return 1 }\n", 0o644)
 	writeReviewStartCandidate(t, repo, "untouched.go", "package candidate\n\nfunc untouchedSubset() int { return 1 }\n", 0o644)
@@ -321,8 +321,8 @@ func TestNegotiatedStatusAcceptsCorrectionSubsetDigest(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	runReviewCLIGit(t, repo, "add", "corrected.go", "untouched.go")
-	indexPath := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--git-path", "index"))
+	runCLIGit(t, repo, "add", "corrected.go", "untouched.go")
+	indexPath := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--git-path", "index"))
 	if !filepath.IsAbs(indexPath) {
 		indexPath = filepath.Join(repo, indexPath)
 	}
@@ -381,7 +381,7 @@ func TestNegotiatedStatusAcceptsCorrectionSubsetDigest(t *testing.T) {
 
 func TestNegotiatedStartPublishesStableOpaqueRepositoryContext(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 2 }\n", 0o644)
 
 	args := boundNegotiatedStartArgs(t, []string{"--cwd", repo, "--contract", ReviewIntegrationContractV2, "--lineage", "repository-context-start"})
@@ -485,14 +485,14 @@ func TestNegotiatedStartRepositoryContextCoversWorkspaceStagedAndOverlay(t *test
 		}},
 		{name: "staged", args: func(t *testing.T, repo string) []string {
 			writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc staged() {}\n", 0o644)
-			runReviewCLIGit(t, repo, "add", "candidate.go")
+			runCLIGit(t, repo, "add", "candidate.go")
 			return []string{"--projection", "staged"}
 		}},
 		{name: "workspace overlay", args: func(t *testing.T, repo string) []string {
-			base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+			base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 			writeReviewStartCandidate(t, repo, "committed.go", "package candidate\n", 0o644)
-			runReviewCLIGit(t, repo, "add", "committed.go")
-			runReviewCLIGit(t, repo, "commit", "-m", "add committed candidate")
+			runCLIGit(t, repo, "add", "committed.go")
+			runCLIGit(t, repo, "commit", "-m", "add committed candidate")
 			writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc overlay() {}\n", 0o644)
 			return []string{"--base-ref", base, "--workspace-overlay"}
 		}},
@@ -500,7 +500,7 @@ func TestNegotiatedStartRepositoryContextCoversWorkspaceStagedAndOverlay(t *test
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			args := boundNegotiatedStartArgs(t, append([]string{"--cwd", repo, "--contract", ReviewIntegrationContractV1, "--lineage", "repository-context-" + strings.ReplaceAll(tt.name, " ", "-")}, tt.args(t, repo)...))
 			var output bytes.Buffer
 			if err := RunReviewFacadeStart(args, &output); err != nil {
@@ -573,7 +573,7 @@ func replaceReviewContextToken(t *testing.T, args []string, handle string) []str
 
 func TestLegacyStartBytesDoNotContainRepositoryContext(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc legacy() {}\n", 0o644)
 	var output bytes.Buffer
 	if err := RunReviewFacadeStart([]string{"--cwd", repo, "--lineage", "legacy-no-context"}, &output); err != nil {

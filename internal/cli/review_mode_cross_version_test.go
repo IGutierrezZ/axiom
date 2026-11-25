@@ -18,7 +18,7 @@ import (
 // another build on the same machine with nothing in the output to explain it.
 func TestCloneScopeDisableReportsHowFarItReached(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	var output bytes.Buffer
 	if err := RunReviewMode([]string{"disable", "--cwd", repo, "--scope", "clone", "--json"}, &output); err != nil {
@@ -35,7 +35,7 @@ func TestCloneScopeDisableReportsHowFarItReached(t *testing.T) {
 // command report a machine-wide switch it did not publish machine-wide.
 func TestCloneScopeDisableSaysWhenItReachedOnlyThisBuild(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	damageReviewAuthorityTree(t, repo)
 
 	var output bytes.Buffer

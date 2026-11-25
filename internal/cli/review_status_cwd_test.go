@@ -10,7 +10,7 @@ import (
 )
 
 func TestReviewStatusSelectorFreeResolvesRepositoryRoot(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate behavior\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestReviewStatusSelectorFreeResolvesRepositoryRoot(t *testing.T) {
 	if err := os.Mkdir(nestedRepository, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, nestedRepository, "init", "-q")
+	runCLIGit(t, nestedRepository, "init", "-q")
 	var output bytes.Buffer
 	if err := RunReview([]string{"status", "--cwd", nestedRepository}, &output); err != nil {
 		t.Fatalf("review status in nested independent repository: %v", err)

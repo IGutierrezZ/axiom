@@ -28,7 +28,7 @@ func TestNegotiatedStatusStartLineageSelection(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 			if test.occupy {
 				// A legacy-v1 record occupies the requested compatibility name but
@@ -68,7 +68,7 @@ func TestNegotiatedStatusStartLineageSelection(t *testing.T) {
 func TestStatusStartTransitionPreservesFrozenTarget(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Run("workspace and explicit lineage", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, "tracked.txt", "workspace\n", 0o644)
 		status := negotiatedStartStatus(t, repo, "--lineage", "status-start-workspace")
 		assertStartTransition(t, status, []string{"cwd", "contract", "target", "target-evidence", "projection", "lineage"})
@@ -79,11 +79,11 @@ func TestStatusStartTransitionPreservesFrozenTarget(t *testing.T) {
 	})
 
 	t.Run("symbolic base movement", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
-		runReviewCLIGit(t, repo, "branch", "moving-base", "HEAD")
+		repo := initCLIGitRepo(t)
+		runCLIGit(t, repo, "branch", "moving-base", "HEAD")
 		writeReviewStartCandidate(t, repo, "tracked.txt", "committed\n", 0o644)
-		runReviewCLIGit(t, repo, "add", "tracked.txt")
-		runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+		runCLIGit(t, repo, "add", "tracked.txt")
+		runCLIGit(t, repo, "commit", "-qm", "candidate")
 		status := negotiatedStartStatus(t, repo, "--base-ref", "moving-base", "--committed-only")
 		assertStartTransition(t, status, []string{"cwd", "contract", "target", "target-evidence", "projection", "base-ref", "committed-only", "lineage"})
 		if got := startTransitionArgumentValue(t, status, "committed-only"); got != "true" {
@@ -92,18 +92,18 @@ func TestStatusStartTransitionPreservesFrozenTarget(t *testing.T) {
 		if got := startTransitionArgumentValue(t, status, "base-ref"); got != status.Projection.BaseTree {
 			t.Fatalf("emitted base-ref = %q, want resolved tree %q", got, status.Projection.BaseTree)
 		}
-		runReviewCLIGit(t, repo, "update-ref", "refs/heads/moving-base", "HEAD")
+		runCLIGit(t, repo, "update-ref", "refs/heads/moving-base", "HEAD")
 		if started := executeStartTransition(t, repo, status); negotiatedStartTarget(started) != status.TargetIdentity {
 			t.Fatalf("START target = %q, want %q", negotiatedStartTarget(started), status.TargetIdentity)
 		}
 	})
 
 	t.Run("workspace overlay", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
-		base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
+		repo := initCLIGitRepo(t)
+		base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD^{tree}"))
 		writeReviewStartCandidate(t, repo, "committed.txt", "committed\n", 0o644)
-		runReviewCLIGit(t, repo, "add", "committed.txt")
-		runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+		runCLIGit(t, repo, "add", "committed.txt")
+		runCLIGit(t, repo, "commit", "-qm", "candidate")
 		writeReviewStartCandidate(t, repo, "tracked.txt", "overlay\n", 0o644)
 		status := negotiatedStartStatus(t, repo, "--base-tree", base, "--workspace-overlay")
 		assertStartTransition(t, status, []string{"cwd", "contract", "target", "target-evidence", "projection", "base-ref", "workspace-overlay", "lineage"})
@@ -114,11 +114,11 @@ func TestStatusStartTransitionPreservesFrozenTarget(t *testing.T) {
 
 	t.Run("staged unborn", func(t *testing.T) {
 		repo := t.TempDir()
-		runReviewCLIGit(t, repo, "init", "-q")
-		runReviewCLIGit(t, repo, "config", "user.email", "test@example.com")
-		runReviewCLIGit(t, repo, "config", "user.name", "Test")
+		runCLIGit(t, repo, "init", "-q")
+		runCLIGit(t, repo, "config", "user.email", "test@example.com")
+		runCLIGit(t, repo, "config", "user.name", "Test")
 		writeReviewStartCandidate(t, repo, "first.txt", "first\n", 0o644)
-		runReviewCLIGit(t, repo, "add", "first.txt")
+		runCLIGit(t, repo, "add", "first.txt")
 		status := negotiatedStartStatus(t, repo, "--projection", "staged")
 		assertStartTransition(t, status, []string{"cwd", "contract", "target", "target-evidence", "projection", "lineage"})
 		if started := executeStartTransition(t, repo, status); negotiatedStartTarget(started) != status.TargetIdentity || started.Projection != reviewtransaction.ProjectionStaged {
@@ -129,10 +129,10 @@ func TestStatusStartTransitionPreservesFrozenTarget(t *testing.T) {
 
 func TestNegotiatedStatusStartReplayCanonicalBaseDiffStaged(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "committed\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "candidate")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "candidate")
 
 	status := negotiatedStartStatus(t, repo, "--base-ref", "HEAD~1", "--committed-only", "--projection", "staged")
 	if status.Projection.Projection != reviewtransaction.ProjectionWorkspace {
@@ -149,7 +149,7 @@ func TestNegotiatedStatusStartReplayCanonicalBaseDiffStaged(t *testing.T) {
 
 func TestNegotiatedStatusInterpretsCommittedOnlyValue(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	tests := []struct {
 		name string
 		args []string
@@ -199,7 +199,7 @@ func TestNegotiatedStatusInterpretsCommittedOnlyValue(t *testing.T) {
 
 func TestNegotiatedV2FreshStatusIncludesExactConsentRelay(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "scripts/deploy.sh", "echo deploy\n", 0o644)
 
 	status := negotiatedStartStatusForContract(t, repo, ReviewIntegrationContractV2, "--lineage", "status-v2-consent-relay")
@@ -241,7 +241,7 @@ func TestNegotiatedV2FreshStatusIncludesExactConsentRelay(t *testing.T) {
 
 func TestNegotiatedStartRejectsIncompleteBindingsWithoutAuthority(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	status := negotiatedStartStatus(t, repo)
 	valid := []string{"--contract=" + ReviewIntegrationContractV1, "--cwd=" + repo, "--target=" + status.TargetIdentity, "--projection=workspace", "--lineage=invalid-start-binding"}
@@ -302,7 +302,7 @@ func TestNegotiatedStartRejectsIncompleteBindingsWithoutAuthority(t *testing.T) 
 
 func TestLegacyStartPreservesDuplicateNonBindingFlags(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	if err := RunReviewFacadeStart([]string{
 		"--cwd", repo, "--cwd", repo,
@@ -317,7 +317,7 @@ func TestLegacyStartPreservesDuplicateNonBindingFlags(t *testing.T) {
 
 func TestNegotiatedStartRevalidatesFrozenTargetBeforeCreate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	const lineage = "start-live-revalidation"
 	status := negotiatedStartStatus(t, repo, "--lineage", lineage)
@@ -350,7 +350,7 @@ func TestNegotiatedStartRevalidatesFrozenTargetBeforeCreate(t *testing.T) {
 
 func TestStatusRejectsNonCanonicalStartTransition(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "candidate\n", 0o644)
 	valid := negotiatedStartStatus(t, repo)
 	for _, mutate := range []func(*ReviewTargetStatusResult){

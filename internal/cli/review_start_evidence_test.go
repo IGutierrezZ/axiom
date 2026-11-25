@@ -19,7 +19,7 @@ import (
 // interactive consent prompt speaks, derived from the one shared helper, so a
 // headless agent can explain WHY the deeper review was selected.
 func TestReviewFacadeStartHighRiskCarriesConsentEvidencePhrases(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'candidate'\n", 0o644)
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--lineage", "evidence-high"}, &output); err != nil {
@@ -70,7 +70,7 @@ func TestReviewFacadeStartHighRiskCarriesConsentEvidencePhrases(t *testing.T) {
 // Issue #1827: the reason alone is not enough — the start must also name the
 // evidence path that made the candidate non-passive.
 func TestReviewFacadeStartMediumRiskCarriesConsentReason(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "view.go", "package view\n\nconst label = \"candidate\"\n", 0o644)
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--lineage", "evidence-medium"}, &output); err != nil {
@@ -247,7 +247,7 @@ func TestReviewConsentReasonUsesAuthoritativeRiskSignals(t *testing.T) {
 // TestReviewFacadeStartDocsOnlyOmitsRiskEvidence proves a tier-0 start carries
 // no risk_evidence key at all: absence, not empty-string noise.
 func TestReviewFacadeStartDocsOnlyOmitsRiskEvidence(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +295,7 @@ func TestReviewFacadeStartResultOmitsAdditiveFieldsWhenAbsent(t *testing.T) {
 // recovery path is discoverable: a clean worktree yields an empty candidate,
 // and the result itself names --base-ref as the way to review committed work.
 func TestReviewFacadeStartEmptyCandidateHintsBaseRef(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--lineage", "evidence-empty"}, &output); err != nil {
 		t.Fatal(err)
@@ -321,7 +321,7 @@ func TestReviewFacadeStartEmptyCandidateHintsBaseRef(t *testing.T) {
 // TestReviewFacadeStartLensesRequiredHintsNegotiatedContract — which used to
 // be this test's fixture before that gap was fixed.)
 func TestReviewFacadeStartNonEmptyCandidateWithoutLensesHasNoHint(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +355,7 @@ func TestReviewFacadeStartNonEmptyCandidateWithoutLensesHasNoHint(t *testing.T) 
 // gap where a caller who obeys the reviewer contract, but invoked the plain
 // form, was blocked by a refusal that never mentioned the negotiated form.
 func TestReviewFacadeStartLensesRequiredHintsNegotiatedContract(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'candidate'\n", 0o644)
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--lineage", "evidence-hint-contract"}, &output); err != nil {
@@ -394,15 +394,15 @@ func TestReviewFacadeStartLensesRequiredHintsNegotiatedContract(t *testing.T) {
 // like any other negotiated START would be.
 func TestReviewFacadeStartBaseDiffRefusalReplaysFrozenSelector(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "dependency.go", "package dependency\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "--", "dependency.go")
-	runReviewCLIGit(t, repo, "commit", "-m", "feature dependency")
-	runReviewCLIGit(t, repo, "branch", "feature-base")
+	runCLIGit(t, repo, "add", "--", "dependency.go")
+	runCLIGit(t, repo, "commit", "-m", "feature dependency")
+	runCLIGit(t, repo, "branch", "feature-base")
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'candidate'\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "--", "service-token.ts")
-	runReviewCLIGit(t, repo, "commit", "-m", "feature candidate")
-	baseTree := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "feature-base^{tree}"))
+	runCLIGit(t, repo, "add", "--", "service-token.ts")
+	runCLIGit(t, repo, "commit", "-m", "feature candidate")
+	baseTree := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "feature-base^{tree}"))
 
 	var refusedFirst bytes.Buffer
 	err := RunReviewFacadeStart([]string{"--cwd", repo, "--base-ref", "feature-base", "--committed-only"}, &refusedFirst)
@@ -452,8 +452,8 @@ func TestReviewFacadeStartBaseDiffRefusalReplaysFrozenSelector(t *testing.T) {
 	}
 
 	writeReviewStartCandidate(t, repo, "service-token.ts", "export const token = 'mutated'\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "--", "service-token.ts")
-	runReviewCLIGit(t, repo, "commit", "-m", "mutate candidate")
+	runCLIGit(t, repo, "add", "--", "service-token.ts")
+	runCLIGit(t, repo, "commit", "-m", "mutate candidate")
 	var refused bytes.Buffer
 	if err := RunReview(args, &refused); err == nil {
 		t.Fatalf("stale named START succeeded: %s", refused.String())

@@ -79,7 +79,7 @@ func TestInstallWorkspaceStateIsPerProject(t *testing.T) {
 
 func TestInstallWorkspaceDoesNotModifyTheGlobalState(t *testing.T) {
 	rootA, _, home := projectStateFixture(t)
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, Persona: "neutral", RDDMode: "off"}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, Persona: "neutral", PendingSync: true}); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(state.Path(home))
@@ -134,7 +134,6 @@ func TestSyncWorkspaceSeedsFromGlobalAndLeavesItUntouched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	global.RDDMode = "on"
 	global.PendingSync = true
 	if err := state.Write(home, global); err != nil {
 		t.Fatal(err)
@@ -159,7 +158,7 @@ func TestSyncWorkspaceSeedsFromGlobalAndLeavesItUntouched(t *testing.T) {
 	if project.Persona != "neutral" || len(project.Components) != 1 || project.Components[0] != model.ComponentEngram {
 		t.Errorf("el proyecto no ha heredado la selección global: %#v", project)
 	}
-	if project.RDDMode != "" || project.PendingSync {
+	if project.PendingSync {
 		t.Errorf("el proyecto no debe guardar campos de máquina: %#v", project)
 	}
 	if project.InstalledBinaryVersion != AppVersion || project.ManagedAssetDigest == "" {

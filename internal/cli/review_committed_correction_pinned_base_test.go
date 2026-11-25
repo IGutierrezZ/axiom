@@ -57,19 +57,19 @@ func TestCommittedCorrectionStatusAfterCommitAnswersTheTransitionItBinds(t *test
 func committedCorrectionStatusAfterCommit(t *testing.T, evidence reviewtransaction.EvidenceClass, causal reviewtransaction.CausalDisposition, pinnedBaseRef, companionTest, contraction, dirtyTracked, amend bool) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if dirtyTracked {
 		writeReviewStartCandidate(t, repo, "unrelated.md", "base note\n", 0o644)
-		runReviewCLIGit(t, repo, "add", "unrelated.md")
-		runReviewCLIGit(t, repo, "commit", "-qm", "base note")
+		runCLIGit(t, repo, "add", "unrelated.md")
+		runCLIGit(t, repo, "commit", "-qm", "base note")
 	}
-	baseCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	baseCommit := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\nfunc value() int {\n\treturn 1\n}\n", 0o644)
 	if contraction {
 		writeReviewStartCandidate(t, repo, "helper.go", "package candidate\nvar one = 1\nvar two = 2\nvar three = 3\n", 0o644)
 	}
-	runReviewCLIGit(t, repo, "add", ".")
-	runReviewCLIGit(t, repo, "commit", "-qm", "wrong candidate")
+	runCLIGit(t, repo, "add", ".")
+	runCLIGit(t, repo, "commit", "-qm", "wrong candidate")
 
 	const lineage = "committed-pinned-base-correction"
 	started := runNegotiatedReviewStartWith(t, repo, lineage, "--agent", string(model.AgentClaudeCode), "--base-ref", baseCommit)
@@ -204,13 +204,13 @@ func committedCorrectionStatusAfterCommit(t *testing.T, evidence reviewtransacti
 		// the deleted lines exceed the two-line budget: native routes this
 		// lineage to recovery, so STATUS must answer with that collect
 		// instead of binding a validation it does not offer.
-		runReviewCLIGit(t, repo, "rm", "-q", "helper.go")
+		runCLIGit(t, repo, "rm", "-q", "helper.go")
 	}
-	runReviewCLIGit(t, repo, "add", ".")
+	runCLIGit(t, repo, "add", ".")
 	if amend {
-		runReviewCLIGit(t, repo, "commit", "--amend", "--no-edit", "-q")
+		runCLIGit(t, repo, "commit", "--amend", "--no-edit", "-q")
 	} else {
-		runReviewCLIGit(t, repo, "commit", "-qm", "correct candidate")
+		runCLIGit(t, repo, "commit", "-qm", "correct candidate")
 	}
 	if dirtyTracked {
 		writeReviewStartCandidate(t, repo, "unrelated.md", "dirty note outside review scope\n", 0o644)
@@ -266,7 +266,7 @@ func committedCorrectionStatusAfterCommit(t *testing.T, evidence reviewtransacti
 			t.Fatalf("validator state = %q, want approved", terminal.State)
 		}
 		assertApprovedCompactAuthorityBurned(t, store, lineage)
-		if got := runReviewCLIGit(t, repo, "diff", "--", "unrelated.md"); !strings.Contains(got, "dirty note outside review scope") {
+		if got := runCLIGit(t, repo, "diff", "--", "unrelated.md"); !strings.Contains(got, "dirty note outside review scope") {
 			t.Fatalf("unrelated dirt changed: %s", got)
 		}
 	}

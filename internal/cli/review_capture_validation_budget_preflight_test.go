@@ -22,7 +22,7 @@ import (
 // the returned request's actual correction size exceeds CorrectionBudget.
 func providerCorrectionReadyOverBudget(t *testing.T) (string, string, reviewtransaction.TargetedValidationRequest) {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\none\ntwo\nthree\nfour\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

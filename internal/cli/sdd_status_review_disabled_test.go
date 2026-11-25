@@ -48,11 +48,11 @@ func seedArchiveGatedSDDChange(t *testing.T, root string) {
 	// están en master o main: el retro-sellado sin instantánea lo exime (REQ-25.37), como en los
 	// fixtures de la guarda A. Estas pruebas tratan del modo de revisión, no de la rama.
 	retroSealForGuard(t, root, "thin")
-	runReviewCLIGit(t, root, "init", "-q")
-	runReviewCLIGit(t, root, "config", "user.email", "test@example.com")
-	runReviewCLIGit(t, root, "config", "user.name", "Test")
-	runReviewCLIGit(t, root, "add", ".")
-	runReviewCLIGit(t, root, "commit", "-qm", "base")
+	runCLIGit(t, root, "init", "-q")
+	runCLIGit(t, root, "config", "user.email", "test@example.com")
+	runCLIGit(t, root, "config", "user.name", "Test")
+	runCLIGit(t, root, "add", ".")
+	runCLIGit(t, root, "commit", "-qm", "base")
 }
 
 func runSDDCommandJSON(t *testing.T, run func([]string, io.Writer) error, args ...string) sddstatus.Status {
@@ -112,7 +112,7 @@ func seedScopeChangedApprovedSDDChange(t *testing.T, root string) {
 	t.Helper()
 	seedArchiveGatedSDDChange(t, root)
 	writeSDDStatusFile(t, root+"/docs/baseline.md", "# baseline\n\nplain prose, no executable content.\n")
-	runReviewCLIGit(t, root, "add", "-A")
+	runCLIGit(t, root, "add", "-A")
 	started := startFacadeReviewResult(t, root, "scope-changed-baseline")
 	if started.State != "approved" || started.Action != "closed" {
 		t.Fatalf("baseline zero-lens START = %#v", started)
@@ -181,7 +181,7 @@ func TestSDDStatusWithoutCWDUsesLinkedWorktreeCommonDirMode(t *testing.T) {
 	seedArchiveGatedSDDChange(t, root)
 	disableReviewForClone(t, root)
 	linked := filepath.Join(t.TempDir(), "linked")
-	runReviewCLIGit(t, root, "worktree", "add", "-q", "-b", "linked-status", linked)
+	runCLIGit(t, root, "worktree", "add", "-q", "-b", "linked-status", linked)
 	t.Chdir(linked)
 
 	status := runSDDCommandJSON(t, RunSDDStatus, "thin", "--json")

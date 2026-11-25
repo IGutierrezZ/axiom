@@ -15,7 +15,7 @@ import (
 
 func TestOrdinaryMarkdownLowRiskLifecycleNeedsNoExternalEvidence(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lines := make([]string, 129)
 	for index := range lines {
 		lines[index] = fmt.Sprintf("ordinary documentation line %03d", index+1)
@@ -66,7 +66,7 @@ func TestOrdinaryMarkdownLowRiskLifecycleNeedsNoExternalEvidence(t *testing.T) {
 // capture rather than structural readback alone.
 func TestActiveMDXRequiresReviewerEvidence(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/guide.mdx", "import Widget from './widget'\n\n# Active guide\n", 0o644)
 	var output bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{"start", "--contract", ReviewIntegrationContractV1, "--cwd", repo}), &output); err != nil {
@@ -89,7 +89,7 @@ func TestActiveMDXRequiresReviewerEvidence(t *testing.T) {
 
 func TestLowRiskNativeVerificationSupportsStagedProjection(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	path := filepath.Join(repo, "docs", "staged-guide.md")
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -97,7 +97,7 @@ func TestLowRiskNativeVerificationSupportsStagedProjection(t *testing.T) {
 	if err := os.WriteFile(path, []byte("staged documentation\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "--", "docs/staged-guide.md")
+	runCLIGit(t, repo, "add", "--", "docs/staged-guide.md")
 
 	var output bytes.Buffer
 	if err := RunReview(boundNegotiatedStartArgs(t, []string{
@@ -122,16 +122,16 @@ func TestLowRiskNativeVerificationSupportsStagedProjection(t *testing.T) {
 
 func TestLowRiskNativeVerificationSupportsBaseWorkspaceOverlay(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 	if err := os.MkdirAll(filepath.Join(repo, "docs"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repo, "docs", "committed.md"), []byte("committed documentation\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "docs/committed.md")
-	runReviewCLIGit(t, repo, "commit", "-qm", "branch documentation")
+	runCLIGit(t, repo, "add", "docs/committed.md")
+	runCLIGit(t, repo, "commit", "-qm", "branch documentation")
 	if err := os.WriteFile(filepath.Join(repo, "docs", "overlay.md"), []byte("overlay documentation\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestLowRiskNativeVerificationSupportsBaseWorkspaceOverlay(t *testing.T) {
 
 func TestMediumReviewClosesOnCapturedEvidence(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,7 @@ func startHighRiskCLIReview(t *testing.T, repo string) ReviewFacadeStartResult {
 	if err := os.WriteFile(filepath.Join(repo, "internal", "auth", "session.go"), []byte(source), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "-A")
+	runCLIGit(t, repo, "add", "-A")
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo}, &output); err != nil {
 		t.Fatalf("review start: %v", err)
@@ -84,7 +84,7 @@ func captureCLIReviewerResult(t *testing.T, repo string, started ReviewFacadeSta
 // approves the clean review and removes its compact authority.
 func TestCurrentCaptureResultClosesApprovedLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	started := startHighRiskCLIReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, started.LineageID)
 	if err != nil {

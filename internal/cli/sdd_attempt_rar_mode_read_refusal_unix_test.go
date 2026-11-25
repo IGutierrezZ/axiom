@@ -27,7 +27,7 @@ func TestUnsafeDisabledRARModeKeepsStatusReadOnlyAndValidationRefused(t *testing
 	} {
 		t.Run(command.name, func(t *testing.T) {
 			reviewModeHome(t)
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			disableReviewForClone(t, repo)
 			privateRARDir := filepath.Join(repo, ".git", "gentle-ai", "review-mode", "rar-authority", "v1")
 			if err := os.Chmod(privateRARDir, 0o755); err != nil {

@@ -17,7 +17,7 @@ import (
 // identity is the manual/non-agent compatibility path that
 // runReviewFacadeStart already documents, not an unsupported transport.
 func TestNegotiatedStatusWithoutRuntimeIdentityIsAnswered(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 
 	for _, test := range []struct {
 		name string
@@ -46,7 +46,7 @@ func TestNegotiatedStatusWithoutRuntimeIdentityIsAnswered(t *testing.T) {
 // rather than refuse the same undeclared identity one step later.
 func TestNegotiatedRouteWithoutRuntimeIdentityReachesStart(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n", 0o644)
 
 	var statusOutput bytes.Buffer
@@ -112,7 +112,7 @@ func TestNegotiatedRouteWithoutRuntimeIdentityReachesStart(t *testing.T) {
 // identity is validated exactly as before, and every unsupported one still
 // stops -- is still proven by two runtimes.
 func TestDeclaredUnsupportedRuntimeStillRefusesNegotiatedStatus(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	for _, runtime := range []string{string(model.AgentKilocode), "unknown-runtime"} {
 		t.Run(runtime, func(t *testing.T) {
 			var output bytes.Buffer
@@ -135,7 +135,7 @@ func TestDeclaredUnsupportedRuntimeStillRefusesNegotiatedStatus(t *testing.T) {
 // without `OPENCODE_DISABLE_*` environment controls; Codex invokes its native
 // provider adapter through the same Go-owned contract.
 func TestDeclaredBuiltInRuntimeUsesProvenExecutorBoundary(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	for _, test := range []struct {
 		runtime string
 	}{

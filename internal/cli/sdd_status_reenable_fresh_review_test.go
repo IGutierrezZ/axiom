@@ -37,9 +37,9 @@ func requireEnabledOrdinaryArchive(t *testing.T, status sddstatus.Status, subjec
 
 func commitAllSDDStatus(t *testing.T, repo, message string) string {
 	t.Helper()
-	runReviewCLIGit(t, repo, "add", "-A")
-	runReviewCLIGit(t, repo, "commit", "-qm", message)
-	return strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "add", "-A")
+	runCLIGit(t, repo, "commit", "-qm", message)
+	return strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
 }
 
 // TestSDDStatusReEnableSequenceLandsOnTheFreshFullReview drives the maintainer's
@@ -53,7 +53,7 @@ func TestSDDStatusReEnableSequenceLandsOnTheFreshFullReview(t *testing.T) {
 	seedArchiveGatedSDDChange(t, root)
 
 	writeSDDStatusFile(t, root+"/docs/baseline.md", "# baseline\n\nplain prose, no executable content.\n")
-	runReviewCLIGit(t, root, "add", "-A")
+	runCLIGit(t, root, "add", "-A")
 	baselineStarted := startFacadeReviewResult(t, root, "reenable-baseline")
 	if baselineStarted.State != "approved" || baselineStarted.Action != "closed" {
 		t.Fatalf("zero-lens baseline START = %#v", baselineStarted)

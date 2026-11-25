@@ -27,12 +27,12 @@ var reviewContinuationPattern = regexp.MustCompile("`([^`]+)`")
 // invocation for real, and requires the block to be gone afterwards.
 func TestReviewStartInABareRepositoryNamesAWorkingTreeThatActuallyWorks(t *testing.T) {
 	reviewEnabledHome(t)
-	checkout := initReviewCLIRepo(t)
+	checkout := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(checkout, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	bare := filepath.Join(t.TempDir(), "server.git")
-	runReviewCLIGit(t, checkout, "clone", "--bare", "-q", checkout, bare)
+	runCLIGit(t, checkout, "clone", "--bare", "-q", checkout, bare)
 
 	var output bytes.Buffer
 	err := RunReview([]string{"start", "--cwd", bare}, &output)
@@ -97,7 +97,7 @@ func TestReviewStartOutsideAnyRepositoryBootstrapsLocalGitAndContinuesToEmptyCan
 	if info, statErr := os.Stat(filepath.Join(workspace, ".git")); statErr != nil || !info.IsDir() {
 		t.Fatalf("local Git metadata = %v (%v), want directory", info, statErr)
 	}
-	if remote := strings.TrimSpace(runReviewCLIGit(t, workspace, "remote")); remote != "" {
+	if remote := strings.TrimSpace(runCLIGit(t, workspace, "remote")); remote != "" {
 		t.Fatalf("git remote = %q, want no remotes", remote)
 	}
 }
@@ -107,9 +107,9 @@ func TestReviewStartOutsideAnyRepositoryBootstrapsLocalGitAndContinuesToEmptyCan
 // the bare message names would be wrong advice there.
 func TestReviewStartInALinkedWorktreeIsNotTreatedAsBare(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	linked := filepath.Join(t.TempDir(), "linked")
-	runReviewCLIGit(t, repo, "worktree", "add", "-q", linked, "-b", "linked-branch")
+	runCLIGit(t, repo, "worktree", "add", "-q", linked, "-b", "linked-branch")
 	if err := os.WriteFile(filepath.Join(linked, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}

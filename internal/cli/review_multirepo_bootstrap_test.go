@@ -30,7 +30,7 @@ var multirepoMasterFixtures = []struct {
 		name: "child repositories",
 		build: func(t *testing.T, master string) {
 			t.Helper()
-			runReviewCLIGit(t, master, "init", "-q", "api")
+			runCLIGit(t, master, "init", "-q", "api")
 			if err := os.MkdirAll(filepath.Join(master, "web"), 0o755); err != nil {
 				t.Fatal(err)
 			}
@@ -79,7 +79,7 @@ func TestReviewLifecycleRefusesMultirepoMasterWithoutInitializingGit(t *testing.
 					for _, operation := range operations {
 						t.Run(operation.name, func(t *testing.T) {
 							mode.home(t)
-							master := canonicalReviewCLITempDir(t)
+							master := canonicalCLITempDir(t)
 							fixture.build(t, master)
 
 							var output bytes.Buffer
@@ -147,7 +147,7 @@ func TestReviewAssessNeverInitializesGit(t *testing.T) {
 	for _, fixture := range fixtures {
 		t.Run(fixture.name, func(t *testing.T) {
 			reviewEnabledHome(t)
-			dir := canonicalReviewCLITempDir(t)
+			dir := canonicalCLITempDir(t)
 			fixture.build(t, dir)
 
 			var output bytes.Buffer

@@ -82,7 +82,7 @@ func TestReviewStatusReusesContainingWorktreeWithoutNestedMetadata(t *testing.T)
 	}
 	// Identity, not string equality: on Windows the runner's TEMP is an 8.3
 	// short name that Git reports back in its long spelling.
-	if root := strings.TrimSpace(runReviewCLIGit(t, nested, "rev-parse", "--show-toplevel")); !pathidentity.SameDirectory(root, repo) {
+	if root := strings.TrimSpace(runCLIGit(t, nested, "rev-parse", "--show-toplevel")); !pathidentity.SameDirectory(root, repo) {
 		t.Fatalf("nested workspace root = %q, want %q", root, repo)
 	}
 }

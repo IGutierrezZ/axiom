@@ -786,7 +786,6 @@ func TestTUIExecuteWithBackgroundPublishesChoiceAndPreservesState(t *testing.T) 
 		ManagedAssetDigest: "existing-writer",
 		LastUpdateCheck:    &lastCheck,
 		PendingSync:        true,
-		RDDMode:            "off",
 		BackgroundIntent:   model.OpenCodeBackgroundOff,
 	}); err != nil {
 		t.Fatal(err)
@@ -809,7 +808,7 @@ func TestTUIExecuteWithBackgroundPublishesChoiceAndPreservesState(t *testing.T) 
 	if got.BackgroundIntent != model.OpenCodeBackgroundOn {
 		t.Fatalf("BackgroundIntent = %q, want on", got.BackgroundIntent)
 	}
-	if got.ManagedAssetDigest != "existing-writer" || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastCheck) || !got.PendingSync || got.RDDMode != "off" {
+	if got.ManagedAssetDigest != "existing-writer" || got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(lastCheck) || !got.PendingSync {
 		t.Fatalf("unrelated state was not preserved: %#v", got)
 	}
 }

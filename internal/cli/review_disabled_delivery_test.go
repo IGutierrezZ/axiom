@@ -15,7 +15,7 @@ import (
 // review authority.
 func TestReviewValidateReportsDisabledUnmanagedDeliveryWithoutAuthority(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	disableReviewForClone(t, repo)
 
 	for _, gate := range []reviewtransaction.GateKind{
@@ -45,11 +45,11 @@ func TestReviewValidateReportsDisabledUnmanagedDeliveryWithoutAuthority(t *testi
 
 // TestReviewValidateReportsDisabledUnmanagedDeliveryWhenNoUpstreamConfigured
 // proves the pre-push gate short-circuits to ordinary delivery before it tries
-// to derive a publication boundary. initReviewCLIRepo deliberately configures
+// to derive a publication boundary. initCLIGitRepo deliberately configures
 // neither a remote nor a branch upstream.
 func TestReviewValidateReportsDisabledUnmanagedDeliveryWhenNoUpstreamConfigured(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	disableReviewForClone(t, repo)
 
 	var output bytes.Buffer

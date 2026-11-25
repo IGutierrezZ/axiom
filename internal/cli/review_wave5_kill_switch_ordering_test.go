@@ -89,7 +89,7 @@ func TestReviewValidateRejectsUnsupportedGateBeforeRepositoryAndModeResolution(t
 func killSwitchOrderingFixture(t *testing.T) string {
 	t.Helper()
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	corruptReviewAuthorityInventory(t, repo)
 	disableReviewForClone(t, repo)
 	return repo
@@ -176,7 +176,7 @@ func TestDisabledOutputIsByteIdenticalRegardlessOfAuthorityStoreContent(t *testi
 	} {
 		t.Run(string(gate), func(t *testing.T) {
 			reviewModeHome(t)
-			clean := initReviewCLIRepo(t)
+			clean := initCLIGitRepo(t)
 			disableReviewForClone(t, clean)
 			var cleanOutput bytes.Buffer
 			if err := RunReviewFacadeValidate([]string{"--cwd", clean, "--gate", string(gate)}, &cleanOutput); err != nil {

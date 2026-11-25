@@ -33,7 +33,7 @@ func TestManagedReviewerAssetProvenanceAuthorityBoundary(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+			home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 			refuse, err := run(t, home, repo)
 			if refuse && (err == nil || !bytes.Contains([]byte(err.Error()), []byte(managedAssetProvenanceRefusal))) {
 				t.Fatalf("authority bypass error = %v, want %q", err, managedAssetProvenanceRefusal)
@@ -98,7 +98,7 @@ func TestManagedReviewerAssetProvenanceRefusesOnlyRecordedSkew(t *testing.T) {
 }
 
 func TestNegotiatedReviewStartClassifiesStaleManagedAssetsBeforeAuthority(t *testing.T) {
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/stale-assets.md", "# Candidate\n", 0o644)
 	staleManagedReviewerAssets(t, home)
 
@@ -140,7 +140,7 @@ func TestNegotiatedReviewStartClassifiesStaleManagedAssetsBeforeAuthority(t *tes
 }
 
 func TestNegotiatedReviewStartWithCurrentManagedAssetsStillStarts(t *testing.T) {
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/current-assets.md", "# Candidate\n", 0o644)
 	digest, err := managedAssetDigest()
 	requireManagedAssetProvenanceNoError(t, err)
@@ -167,7 +167,7 @@ func TestNegotiatedReviewStartWithCurrentManagedAssetsStillStarts(t *testing.T) 
 // no continuation the caller could run instead of guessing "run sync" from
 // prose.
 func TestNegotiatedStatusReportsManagedAssetsOutdatedBeforeOfferingStart(t *testing.T) {
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/status-stale-assets.md", "# Candidate\n", 0o644)
 	staleManagedReviewerAssets(t, home)
 
@@ -294,7 +294,7 @@ func TestNegotiatedBoundStatusResumesSameCaptureAfterManagedAssetsConverge(t *te
 // continuation attached to a transition it does not belong to (a producer
 // bug that would let a caller read two disagreeing exits from one envelope).
 func TestManagedAssetsStopTransitionCarriesExactlyOneSignal(t *testing.T) {
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/dual-signal.md", "# Candidate\n", 0o644)
 	staleManagedReviewerAssets(t, home)
 
@@ -501,7 +501,7 @@ func TestManagedAssetsContinuationUsesInvokingExecutable(t *testing.T) {
 	// End to end: a stale-assets STATUS stop produced by THIS (test) binary
 	// names THIS binary's own path in its continuation, so running the exact
 	// advertised command cannot reach a different `gentle-ai` through PATH.
-	home, repo := reviewEnabledHome(t), initReviewCLIRepo(t)
+	home, repo := reviewEnabledHome(t), initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "docs/invoking-executable.md", "# Candidate\n", 0o644)
 	staleManagedReviewerAssets(t, home)
 

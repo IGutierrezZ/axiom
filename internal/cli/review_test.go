@@ -7,7 +7,6 @@ import (
 	"errors"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -16,7 +15,7 @@ import (
 )
 
 func TestFlatReviewStartRejectsBeforeCreatingLegacyAuthority(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	policy := filepath.Join(t.TempDir(), "policy.md")
 	mirror := filepath.Join(t.TempDir(), "transaction.json")
 	if err := os.WriteFile(policy, []byte("legacy policy\n"), 0o644); err != nil {
@@ -132,8 +131,8 @@ type legacyCLIFixture struct {
 
 func newLegacyCLIFixture(t *testing.T, lineage string) legacyCLIFixture {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
-	branch := strings.TrimSpace(runReviewCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
+	repo := initCLIGitRepo(t)
+	branch := strings.TrimSpace(runCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
 	configureCLIReviewPublicationRemote(t, repo, branch)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("candidate\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -221,10 +220,10 @@ func appendLegacyCLIRecord(t *testing.T, store reviewtransaction.Store, previous
 func configureCLIReviewPublicationRemote(t *testing.T, repo, branch string) {
 	t.Helper()
 	remote := filepath.Join(t.TempDir(), "origin.git")
-	runReviewCLIGit(t, repo, "clone", "--bare", repo, remote)
-	runReviewCLIGit(t, repo, "remote", "add", "origin", remote)
-	runReviewCLIGit(t, repo, "config", "branch."+branch+".remote", "origin")
-	runReviewCLIGit(t, repo, "config", "branch."+branch+".merge", "refs/heads/"+branch)
+	runCLIGit(t, repo, "clone", "--bare", repo, remote)
+	runCLIGit(t, repo, "remote", "add", "origin", remote)
+	runCLIGit(t, repo, "config", "branch."+branch+".remote", "origin")
+	runCLIGit(t, repo, "config", "branch."+branch+".merge", "refs/heads/"+branch)
 }
 
 func assertReviewGateResult(t *testing.T, payload []byte, want reviewtransaction.GateResult) {
@@ -236,44 +235,6 @@ func assertReviewGateResult(t *testing.T, payload []byte, want reviewtransaction
 	if result.Result != want || result.Allowed != (want == reviewtransaction.GateAllow) {
 		t.Fatalf("review gate result = %#v, want %q", result, want)
 	}
-}
-
-// canonicalReviewCLITempDir returns t.TempDir() in its canonical spelling.
-// Production resolvers answer with the canonical form, so a fixture that keeps
-// the raw spelling compares unequal to its own repository: on the Windows
-// runners TEMP is an 8.3 short name, and on macOS /var symlinks /private/var.
-func canonicalReviewCLITempDir(t *testing.T) string {
-	t.Helper()
-	dir, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return dir
-}
-
-func initReviewCLIRepo(t *testing.T) string {
-	t.Helper()
-	repo := canonicalReviewCLITempDir(t)
-	runReviewCLIGit(t, repo, "init", "-q")
-	runReviewCLIGit(t, repo, "config", "user.email", "test@example.com")
-	runReviewCLIGit(t, repo, "config", "user.name", "Test")
-	runReviewCLIGit(t, repo, "config", "core.autocrlf", "false")
-	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("base\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "base")
-	return repo
-}
-
-func runReviewCLIGit(t *testing.T, repo string, args ...string) string {
-	t.Helper()
-	command := exec.Command("git", append([]string{"-C", repo}, args...)...)
-	output, err := command.CombinedOutput()
-	if err != nil {
-		t.Fatalf("git %v: %v: %s", args, err, output)
-	}
-	return string(output)
 }
 
 func writeReviewCLIJSON(t *testing.T, path string, value any) {
@@ -298,7 +259,7 @@ func writeReviewCLIJSON(t *testing.T, path string, value any) {
 
 func reviewCLIAuthorityRoot(t *testing.T, repo string) string {
 	t.Helper()
-	commonDir := filepath.Clean(strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "--path-format=absolute", "--git-common-dir")))
+	commonDir := filepath.Clean(strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "--path-format=absolute", "--git-common-dir")))
 	return filepath.Join(commonDir, "gentle-ai", "review-transactions")
 }
 

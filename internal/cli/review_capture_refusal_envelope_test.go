@@ -53,7 +53,7 @@ func decodeCaptureRefusalEnvelope(t *testing.T, err error, output []byte) Review
 func TestCaptureResultRefusalsEmitTypedFailureEnvelopes(t *testing.T) {
 	reviewEnabledHome(t)
 	t.Run("missing inputs", func(t *testing.T) {
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		var output bytes.Buffer
 		err := RunReview([]string{"capture-result", "--cwd", repo}, &output)
 		failure := decodeCaptureRefusalEnvelope(t, err, output.Bytes())
@@ -132,7 +132,7 @@ func TestProviderRoleCaptureRefusalsEmitTypedFailureEnvelopes(t *testing.T) {
 		{verb: "capture-validation", operation: "review.capture-validation"},
 	} {
 		t.Run(tt.verb, func(t *testing.T) {
-			repo := initReviewCLIRepo(t)
+			repo := initCLIGitRepo(t)
 			var output bytes.Buffer
 			err := RunReview([]string{tt.verb, "--cwd", repo}, &output)
 			failure := decodeCaptureRefusalEnvelope(t, err, output.Bytes())
@@ -216,7 +216,7 @@ func (w reviewEmitFailureWriter) Write([]byte) (int, error) { return 0, w.err }
 // both errors, refusal primary, so errors.Is/As dispatch keeps working.
 func TestCaptureRefusalEmitFailurePreservesNativeRefusal(t *testing.T) {
 	emitErr := errors.New("stdout gone: broken pipe")
-	err := RunReview([]string{"capture-result", "--cwd", initReviewCLIRepo(t)}, reviewEmitFailureWriter{err: emitErr})
+	err := RunReview([]string{"capture-result", "--cwd", initCLIGitRepo(t)}, reviewEmitFailureWriter{err: emitErr})
 	var typed *ReviewIntegrationFailureError
 	if !errors.As(err, &typed) || typed.Failure.Code != "invalid_request" {
 		t.Fatalf("native refusal lost when envelope emission failed: %v", err)

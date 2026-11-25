@@ -68,7 +68,7 @@ func abandonCLIBinding(t *testing.T, repo, revision, snapshotIdentity string) st
 
 func TestReviewAbandonRefusesTerminalInvalidatedLineage(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineInvalidatedCLIFixture(t, repo)
 	statePath := filepath.Join(reviewCLIAuthorityRoot(t, repo), "v2", "abandon-accidental", "review-state.json")
 	payload, err := os.ReadFile(statePath)
@@ -88,7 +88,7 @@ func TestReviewAbandonRefusesTerminalInvalidatedLineage(t *testing.T) {
 
 func TestReviewAbandonRequiresFlagsAndExactBinding(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)
 	statePath := filepath.Join(reviewCLIAuthorityRoot(t, repo), "v2", "abandon-stale-reviewing", "review-state.json")
 	payload, err := os.ReadFile(statePath)

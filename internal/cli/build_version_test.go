@@ -16,7 +16,7 @@ func TestGentleAIVersionMatchesTheStampedAppVersion(t *testing.T) {
 	t.Cleanup(func() { AppVersion = original })
 
 	AppVersion = "2.2.0-rc.1"
-	version, _ := reviewGentleAIVersionAndCommit()
+	version, _ := buildVersionAndCommit()
 	if version != "2.2.0-rc.1" {
 		t.Fatalf("resolved version = %q, want the stamped %q", version, "2.2.0-rc.1")
 	}
@@ -35,7 +35,7 @@ func TestGentleAIVersionFallsBackWhenNotStamped(t *testing.T) {
 
 	for _, unstamped := range []string{"", "dev"} {
 		AppVersion = unstamped
-		if version, _ := reviewGentleAIVersionAndCommit(); version == "" {
+		if version, _ := buildVersionAndCommit(); version == "" {
 			t.Fatalf("AppVersion %q resolved to an empty version", unstamped)
 		}
 	}

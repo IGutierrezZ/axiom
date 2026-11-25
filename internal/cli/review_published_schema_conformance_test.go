@@ -63,7 +63,7 @@ func validatePublishedReviewSchema(t *testing.T, schema *jsonschema.Schema, payl
 
 func TestLowRiskStartBurnsUnderPublishedStatusContract(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	lineage := startLowRiskFacadeReview(t, repo)
 	store, err := reviewtransaction.CompactAuthoritativeStore(t.Context(), repo, lineage)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestLowRiskStartBurnsUnderPublishedStatusContract(t *testing.T) {
 
 func TestPublishedLastEventClosureSchemaAcceptsApprovedTerminalCapture(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "candidate.go", "package candidate\n\nfunc value() int { return 1 }\n", 0o644)
 	started := runNegotiatedReviewStart(t, repo, "published-approved-terminal-closure")
 	var output bytes.Buffer

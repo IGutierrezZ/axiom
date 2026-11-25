@@ -12,7 +12,7 @@ import (
 )
 
 func TestReviewStatusLineageInventoryContinuationAndSelectorValidation(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("seed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestReviewStatusLineageInventoryContinuationAndSelectorValidation(t *testin
 // but it must fail closed instead of silently substituting the live target
 // when the named lineage does not exist.
 func TestReviewStatusContractedLineageScopesInventoryInsteadOfLiveTarget(t *testing.T) {
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("seed\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestReviewStatusContractedLineageScopesInventoryInsteadOfLiveTarget(t *test
 // drift apart.
 func TestReviewStatusContractedAbandonedLineageMatchesUncontractedExistenceCheck(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	revision, snapshotIdentity := pristineReviewingCLIFixture(t, repo)
 	if err := RunReview(staleReviewingAbandonArgs(repo, revision, staleReviewingAbandonBinding(t, repo, revision, snapshotIdentity)), &bytes.Buffer{}); err != nil {
 		t.Fatalf("abandon failed: %v", err)

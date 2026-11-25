@@ -37,8 +37,8 @@ func TestCrossRepositoryLifecycleRootConformance(t *testing.T) {
 				t.Setenv(reviewPiHostRelayContractEnvironment, reviewPiHostRelayContract)
 			}
 
-			sessionRoot := initReviewCLIRepo(t)
-			targetRoot := initReviewCLIRepo(t)
+			sessionRoot := initCLIGitRepo(t)
+			targetRoot := initCLIGitRepo(t)
 			targetNested := filepath.Join(targetRoot, "nested", "requested")
 			if err := os.MkdirAll(targetNested, 0o755); err != nil {
 				t.Fatal(err)

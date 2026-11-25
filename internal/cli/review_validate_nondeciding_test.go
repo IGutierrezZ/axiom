@@ -154,14 +154,14 @@ func assertEnabledUnmanagedGatePayload(t *testing.T, payload []byte, gate review
 // envelope.
 func TestShippedReviewValidatePrePushIgnoresExplicitBaseRefAndNeverTouchesNetwork(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"enable", "--scope", "global", "--cwd", repo}, io.Discard); err != nil {
 		t.Fatalf("enable receipt-driven development: %v", err)
 	}
 	// A reserved, non-routable TEST-NET-2 address (RFC 5737): a real network
 	// attempt or an interactive credential prompt would block well past this
 	// test's bound, while the shipped non-deciding route never dials out.
-	runReviewCLIGit(t, repo, "remote", "add", "origin", "https://198.51.100.1/unreachable/issue-2893.git")
+	runCLIGit(t, repo, "remote", "add", "origin", "https://198.51.100.1/unreachable/issue-2893.git")
 
 	type result struct {
 		payload []byte
@@ -196,7 +196,7 @@ func TestShippedReviewValidatePrePushIgnoresExplicitBaseRefAndNeverTouchesNetwor
 
 func TestShippedReviewValidateAllGatesIgnoreAuthorityStateWithoutMutation(t *testing.T) {
 	reviewModeHome(t)
-	modeRepo := initReviewCLIRepo(t)
+	modeRepo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"enable", "--scope", "global", "--cwd", modeRepo}, io.Discard); err != nil {
 		t.Fatalf("enable receipt-driven development: %v", err)
 	}
@@ -221,8 +221,8 @@ func TestShippedReviewValidateAllGatesIgnoreAuthorityStateWithoutMutation(t *tes
 			var expected []byte
 			for _, fixture := range fixtures {
 				t.Run(fixture, func(t *testing.T) {
-					repo := initReviewCLIRepo(t)
-					if gate == reviewtransaction.GatePrePush && runReviewCLIGit(t, repo, "remote") != "" {
+					repo := initCLIGitRepo(t)
+					if gate == reviewtransaction.GatePrePush && runCLIGit(t, repo, "remote") != "" {
 						t.Fatal("pre-push fixture unexpectedly has an upstream remote")
 					}
 					prepareShippedNonDecidingAuthorityFixture(t, repo, fixture)
@@ -266,7 +266,7 @@ func decodeNonDecidingGateSemantic(t *testing.T, payload []byte) nonDecidingGate
 
 func TestShippedReviewValidateAllGatesNegotiatedRoutesAgree(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"enable", "--scope", "global", "--cwd", repo}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +308,7 @@ func TestShippedReviewValidateAllGatesNegotiatedRoutesAgree(t *testing.T) {
 
 func TestShippedReviewValidateDisabledRouteIsByteStableAndUnmanaged(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := RunReviewMode([]string{"disable", "--scope", "global", "--cwd", repo}, io.Discard); err != nil {
 		t.Fatalf("disable receipt-driven development: %v", err)
 	}

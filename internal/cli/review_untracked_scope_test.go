@@ -55,7 +55,7 @@ func runNegotiatedReviewStartExcludingUntracked(t *testing.T, repo, lineage stri
 func startWithUnrelatedUntrackedCredential(t *testing.T, lineage string) (string, ReviewIntegrationStartResult) {
 	t.Helper()
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "reviewed candidate\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, unrelatedCredentialPath, unrelatedCredentialContents, 0o600)
 	return repo, runNegotiatedReviewStartExcludingUntracked(t, repo, lineage)
@@ -89,11 +89,11 @@ func TestNegotiatedStartKeepsUndeclaredUntrackedFileOutOfCandidate(t *testing.T)
 // configured for the safe default to also be the useful one.
 func TestNegotiatedStartKeepsDeclaredUntrackedFileInCandidate(t *testing.T) {
 	reviewEnabledHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	writeReviewStartCandidate(t, repo, "tracked.txt", "reviewed candidate\n", 0o644)
 	writeReviewStartCandidate(t, repo, "declared-helper.txt", "declared new file\n", 0o644)
 	writeUndeclaredWorkspaceFile(t, repo, unrelatedCredentialPath, unrelatedCredentialContents, 0o600)
-	runReviewCLIGit(t, repo, "add", "declared-helper.txt")
+	runCLIGit(t, repo, "add", "declared-helper.txt")
 
 	started := runNegotiatedReviewStartExcludingUntracked(t, repo, "untracked-scope-declared")
 

@@ -352,16 +352,16 @@ func TestNegotiatedStatusStopsZeroPathBaseDiffCandidate(t *testing.T) {
 // empty while an unambiguous committed range exists above it.
 func committedRangeReviewRepo(t *testing.T) string {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	origin := t.TempDir()
-	runReviewCLIGit(t, origin, "init", "--bare", "-q")
-	runReviewCLIGit(t, repo, "remote", "add", "origin", origin)
-	runReviewCLIGit(t, repo, "push", "-q", "origin", "HEAD:refs/heads/main")
-	runReviewCLIGit(t, repo, "fetch", "-q", "origin")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runCLIGit(t, origin, "init", "--bare", "-q")
+	runCLIGit(t, repo, "remote", "add", "origin", origin)
+	runCLIGit(t, repo, "push", "-q", "origin", "HEAD:refs/heads/main")
+	runCLIGit(t, repo, "fetch", "-q", "origin")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 	writeReviewStartCandidate(t, repo, "tracked.txt", "base\ncommitted\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "committed candidate")
+	runCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "commit", "-qm", "committed candidate")
 	return repo
 }
 
@@ -373,7 +373,7 @@ func committedRangeReviewRepo(t *testing.T) string {
 func TestNegotiatedStatusDerivedCommittedRangePayloadValidatesAgainstPublishedSchema(t *testing.T) {
 	reviewEnabledHome(t)
 	repo := committedRangeReviewRepo(t)
-	expectedBase := strings.TrimSpace(runReviewCLIGit(t, repo, "merge-base", "HEAD", "refs/remotes/origin/main"))
+	expectedBase := strings.TrimSpace(runCLIGit(t, repo, "merge-base", "HEAD", "refs/remotes/origin/main"))
 
 	var output bytes.Buffer
 	if err := RunReview([]string{"status", "--cwd", repo, "--contract", ReviewIntegrationContractV2, "--agent", "claude-code", "--next-transition"}, &output); err != nil {
@@ -412,30 +412,30 @@ func TestNegotiatedStatusDerivedCommittedRangePayloadValidatesAgainstPublishedSc
 // one candidate and the committed-range derivation must fall back.
 func crissCrossReviewRepo(t *testing.T) string {
 	t.Helper()
-	repo := initReviewCLIRepo(t)
-	base := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	runReviewCLIGit(t, repo, "checkout", "-q", "-b", "x")
+	repo := initCLIGitRepo(t)
+	base := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "checkout", "-q", "-b", "x")
 	writeReviewStartCandidate(t, repo, "x.txt", "x\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "x.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "x")
-	xCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	runReviewCLIGit(t, repo, "checkout", "-q", "-b", "y", base)
+	runCLIGit(t, repo, "add", "x.txt")
+	runCLIGit(t, repo, "commit", "-qm", "x")
+	xCommit := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "checkout", "-q", "-b", "y", base)
 	writeReviewStartCandidate(t, repo, "y.txt", "y\n", 0o644)
-	runReviewCLIGit(t, repo, "add", "y.txt")
-	runReviewCLIGit(t, repo, "commit", "-qm", "y")
-	yCommit := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD"))
-	runReviewCLIGit(t, repo, "checkout", "-q", "x")
-	runReviewCLIGit(t, repo, "merge", "-q", "--no-ff", "-m", "merge y into x", yCommit)
-	runReviewCLIGit(t, repo, "checkout", "-q", "y")
-	runReviewCLIGit(t, repo, "merge", "-q", "--no-ff", "-m", "merge x into y", xCommit)
+	runCLIGit(t, repo, "add", "y.txt")
+	runCLIGit(t, repo, "commit", "-qm", "y")
+	yCommit := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD"))
+	runCLIGit(t, repo, "checkout", "-q", "x")
+	runCLIGit(t, repo, "merge", "-q", "--no-ff", "-m", "merge y into x", yCommit)
+	runCLIGit(t, repo, "checkout", "-q", "y")
+	runCLIGit(t, repo, "merge", "-q", "--no-ff", "-m", "merge x into y", xCommit)
 	origin := t.TempDir()
-	runReviewCLIGit(t, origin, "init", "--bare", "-q")
-	runReviewCLIGit(t, repo, "remote", "add", "origin", origin)
-	runReviewCLIGit(t, repo, "push", "-q", "origin", "y:refs/heads/main")
-	runReviewCLIGit(t, repo, "fetch", "-q", "origin")
-	runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
-	runReviewCLIGit(t, repo, "checkout", "-q", "x")
-	if merges := strings.Fields(runReviewCLIGit(t, repo, "merge-base", "--all", "HEAD", "refs/remotes/origin/main")); len(merges) != 2 {
+	runCLIGit(t, origin, "init", "--bare", "-q")
+	runCLIGit(t, repo, "remote", "add", "origin", origin)
+	runCLIGit(t, repo, "push", "-q", "origin", "y:refs/heads/main")
+	runCLIGit(t, repo, "fetch", "-q", "origin")
+	runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+	runCLIGit(t, repo, "checkout", "-q", "x")
+	if merges := strings.Fields(runCLIGit(t, repo, "merge-base", "--all", "HEAD", "refs/remotes/origin/main")); len(merges) != 2 {
 		t.Fatalf("criss-cross fixture produced %d merge bases %q, want exactly two", len(merges), merges)
 	}
 	return repo
@@ -453,28 +453,28 @@ func TestNegotiatedStatusAmbiguousCommittedRangeFallsBackToCollect(t *testing.T)
 		{
 			name: "no origin/HEAD",
 			arrange: func(t *testing.T) string {
-				return initReviewCLIRepo(t)
+				return initCLIGitRepo(t)
 			},
 		},
 		{
 			name: "empty committed range",
 			arrange: func(t *testing.T) string {
-				repo := initReviewCLIRepo(t)
+				repo := initCLIGitRepo(t)
 				origin := t.TempDir()
-				runReviewCLIGit(t, origin, "init", "--bare", "-q")
-				runReviewCLIGit(t, repo, "remote", "add", "origin", origin)
-				runReviewCLIGit(t, repo, "push", "-q", "origin", "HEAD:refs/heads/main")
-				runReviewCLIGit(t, repo, "fetch", "-q", "origin")
-				runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
+				runCLIGit(t, origin, "init", "--bare", "-q")
+				runCLIGit(t, repo, "remote", "add", "origin", origin)
+				runCLIGit(t, repo, "push", "-q", "origin", "HEAD:refs/heads/main")
+				runCLIGit(t, repo, "fetch", "-q", "origin")
+				runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 				return repo
 			},
 		},
 		{
 			name: "origin/HEAD names a missing branch",
 			arrange: func(t *testing.T) string {
-				repo := initReviewCLIRepo(t)
-				runReviewCLIGit(t, repo, "remote", "add", "origin", t.TempDir())
-				runReviewCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/does-not-exist")
+				repo := initCLIGitRepo(t)
+				runCLIGit(t, repo, "remote", "add", "origin", t.TempDir())
+				runCLIGit(t, repo, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/does-not-exist")
 				return repo
 			},
 		},

@@ -18,9 +18,9 @@ import (
 func initUnbornReviewCLIRepo(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
-	runReviewCLIGit(t, repo, "init", "-q")
-	runReviewCLIGit(t, repo, "config", "user.email", "test@example.com")
-	runReviewCLIGit(t, repo, "config", "user.name", "Test")
+	runCLIGit(t, repo, "init", "-q")
+	runCLIGit(t, repo, "config", "user.email", "test@example.com")
+	runCLIGit(t, repo, "config", "user.name", "Test")
 	return repo
 }
 
@@ -65,7 +65,7 @@ func closeUnbornReviewOnSelectedCaptures(t *testing.T, repo string, started Revi
 func TestReviewFacadeUnbornHeadDefaultProjectionStart(t *testing.T) {
 	repo := initUnbornReviewCLIRepo(t)
 	writeUnbornReviewCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
+	runCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
 
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo}, &output); err != nil {
@@ -98,7 +98,7 @@ func TestReviewFacadeUnbornHeadStagedLifecycle(t *testing.T) {
 		t.Fatalf("enable receipt-driven development: %v", err)
 	}
 	writeUnbornReviewCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
+	runCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
 
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--projection", "staged"}, &output); err != nil {
@@ -129,8 +129,8 @@ func TestReviewFacadeUnbornHeadStagedLifecycle(t *testing.T) {
 	closeUnbornReviewOnSelectedCaptures(t, repo, started)
 	assertApprovedCompactAuthorityBurned(t, store, started.LineageID)
 
-	runReviewCLIGit(t, repo, "commit", "-qm", "first commit")
-	if headTree := strings.TrimSpace(runReviewCLIGit(t, repo, "rev-parse", "HEAD^{tree}")); headTree != record.State.CurrentSnapshot.CandidateTree {
+	runCLIGit(t, repo, "commit", "-qm", "first commit")
+	if headTree := strings.TrimSpace(runCLIGit(t, repo, "rev-parse", "HEAD^{tree}")); headTree != record.State.CurrentSnapshot.CandidateTree {
 		t.Fatalf("first commit tree = %q, want approved candidate %q", headTree, record.State.CurrentSnapshot.CandidateTree)
 	}
 	output.Reset()
@@ -157,11 +157,11 @@ func TestReviewFacadeExistingRemoteEmptyCommitAllowsPublicationGates(t *testing.
 	if err := RunReviewMode([]string{"enable", "--scope", "global", "--cwd", repo}, io.Discard); err != nil {
 		t.Fatalf("enable receipt-driven development: %v", err)
 	}
-	runReviewCLIGit(t, repo, "commit", "--allow-empty", "-qm", "empty base")
-	branch := strings.TrimSpace(runReviewCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
+	runCLIGit(t, repo, "commit", "--allow-empty", "-qm", "empty base")
+	branch := strings.TrimSpace(runCLIGit(t, repo, "symbolic-ref", "--short", "HEAD"))
 	configureCLIReviewPublicationRemote(t, repo, branch)
 	writeUnbornReviewCandidate(t, repo)
-	runReviewCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
+	runCLIGit(t, repo, "add", "--", "candidate.go", "candidate.md")
 	var output bytes.Buffer
 	if err := runLegacyFacadeStartForTest(t, []string{"--cwd", repo, "--projection", "staged"}, &output); err != nil {
 		t.Fatal(err)
@@ -177,7 +177,7 @@ func TestReviewFacadeExistingRemoteEmptyCommitAllowsPublicationGates(t *testing.
 	closeUnbornReviewOnSelectedCaptures(t, repo, started)
 	assertApprovedCompactAuthorityBurned(t, store, started.LineageID)
 
-	runReviewCLIGit(t, repo, "commit", "-qm", "deliver reviewed candidate")
+	runCLIGit(t, repo, "commit", "-qm", "deliver reviewed candidate")
 	for _, gate := range []reviewtransaction.GateKind{reviewtransaction.GatePrePush, reviewtransaction.GatePrePR} {
 		output.Reset()
 		if err := RunReview([]string{"validate", "--cwd", repo, "--gate", string(gate), "--base-ref", "origin/" + branch}, &output); err != nil {

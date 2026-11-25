@@ -122,7 +122,7 @@ func TestCandidateDecline_UnmanagedDelivery_ByteIdenticalToDisabled(t *testing.T
 	// reviews are disabled, THEN the identical candidate is gated.
 	declinedRepo := func() string {
 		reviewEnabledHome(t)
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		stubReviewConsole(t, false, "")
 		writeReviewStartCandidate(t, repo, candidatePath, candidateContents, 0o644)
 		question := decodeConsentQuestion(t, runConsentRelayStart(t, boundNegotiatedStartArgs(t, []string{
@@ -135,7 +135,7 @@ func TestCandidateDecline_UnmanagedDelivery_ByteIdenticalToDisabled(t *testing.T
 		if declinedResult.Action != "declined" {
 			t.Fatalf("decline did not record: %#v", declinedResult)
 		}
-		runReviewCLIGit(t, repo, "add", candidatePath)
+		runCLIGit(t, repo, "add", candidatePath)
 		disableReviewForClone(t, repo)
 		return repo
 	}()
@@ -144,9 +144,9 @@ func TestCandidateDecline_UnmanagedDelivery_ByteIdenticalToDisabled(t *testing.T
 	// otherwise-identical disabled repo.
 	controlRepo := func() string {
 		reviewEnabledHome(t)
-		repo := initReviewCLIRepo(t)
+		repo := initCLIGitRepo(t)
 		writeReviewStartCandidate(t, repo, candidatePath, candidateContents, 0o644)
-		runReviewCLIGit(t, repo, "add", candidatePath)
+		runCLIGit(t, repo, "add", candidatePath)
 		disableReviewForClone(t, repo)
 		return repo
 	}()

@@ -73,11 +73,11 @@ func snapshotAuthorityTree(t *testing.T, root string) string {
 // .git/gentle-ai subtree is byte-identical before and after each pass.
 func TestNewLineageKillSwitchOffProducesZeroSideEffectsAcrossEntrySurfaces(t *testing.T) {
 	reviewModeHome(t)
-	repo := initReviewCLIRepo(t)
+	repo := initCLIGitRepo(t)
 	if err := os.WriteFile(filepath.Join(repo, "tracked.txt"), []byte("kill-switch-off fixture\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	runReviewCLIGit(t, repo, "add", "tracked.txt")
+	runCLIGit(t, repo, "add", "tracked.txt")
 	disableReviewForClone(t, repo)
 
 	authorityRoot := filepath.Join(repo, ".git", "gentle-ai")
