@@ -976,6 +976,10 @@ func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.
 }
 
 func TestDeferredSyncIncludesCodexPermissionsArgs(t *testing.T) {
+	// syncArgsForDiscoveredAgents resolves the effective store from the working
+	// directory: a checkout with its own project .axiom/state.json would win
+	// over home and the test would read the developer's real state.
+	t.Chdir(t.TempDir())
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{InstalledAgents: []string{string(model.AgentCodex)}}); err != nil {
 		t.Fatalf("state.Write: %v", err)

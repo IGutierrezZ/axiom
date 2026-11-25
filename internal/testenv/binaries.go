@@ -43,3 +43,20 @@ func RequireBinaryBuilds(t testing.TB) {
 		t.Skip(binaryBuildsSkipMessage)
 	}
 }
+
+// goToolchainSkipMessage nombra la misma variable: la CI ya la fija en todos
+// los workflows que ejecutan go test, así que estas pruebas siguen corriendo allí.
+const goToolchainSkipMessage = "this test launches the Go toolchain (go build, go run, go test or go version) " +
+	"and takes minutes on developer machines; set " + BuildBinariesEnv + "=1 to run it (CI does)"
+
+// RequireGoToolchain omite la prueba salvo que BuildBinariesEnv valga "1" o
+// "true". Es para las pruebas que lanzan el toolchain de Go como subproceso
+// (compilar, `go run`, `go test -list` o `go version`) sin producir
+// necesariamente un ejecutable propio: en Windows local cuestan minutos y la
+// suite deja de servir de semáforo. Se llama antes del primer subproceso.
+func RequireGoToolchain(t testing.TB) {
+	t.Helper()
+	if !BinaryBuildsEnabled() {
+		t.Skip(goToolchainSkipMessage)
+	}
+}

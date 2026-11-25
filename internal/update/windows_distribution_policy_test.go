@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -404,6 +405,9 @@ func TestModifiedReleaseVerifierCannotGainWriteAuthority(t *testing.T) {
 
 func newReleasePolicyFixture(t *testing.T) string {
 	t.Helper()
+	// Every policy run is `go run ./internal/releasepolicycmd`: it compiles with
+	// the Go toolchain, so the whole family stays behind the CI gate.
+	testenv.RequireGoToolchain(t)
 	root := t.TempDir()
 	marker := releasePolicyMarkerPath(root)
 	if err := os.WriteFile(marker, []byte(releasePolicyRunID+"\n"), 0o600); err != nil {

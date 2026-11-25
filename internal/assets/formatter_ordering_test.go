@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
@@ -300,6 +301,7 @@ func TestFormatterOrderingBehaviorContract(t *testing.T) {
 // the range check -- it catches an uncovered name even when the ranges look
 // contiguous -- and it leaves the split free to follow measured cost.
 func TestWindowsFullSuiteShardsCoverEveryTestName(t *testing.T) {
+	testenv.RequireGoToolchain(t)
 	data, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "windows-full-suite.yml"))
 	if err != nil {
 		t.Fatal(err)

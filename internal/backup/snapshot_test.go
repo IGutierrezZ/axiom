@@ -4,12 +4,22 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
-// TestSnapshotterCreatesCompressedBackup verifies that Create() produces a
-// snapshot.tar.gz archive and sets Manifest.Compressed = true.
+// TestSnapshotterSkipsUnixSockets verifies that special files such as unix
+// sockets are recorded as not existing instead of being archived.
 func TestSnapshotterSkipsUnixSockets(t *testing.T) {
+	// En Windows, un socket AF_UNIX es un punto de reanálisis. En equipos cuyo
+	// software de seguridad protege %LOCALAPPDATA%\Temp, el fichero se crea pero
+	// nadie puede hacerle lstat ni borrarlo ("access denied"), y deja basura que
+	// TempDir no puede limpiar; con TEMP en otra carpeta la prueba pasa. No hay
+	// forma de sondearlo sin dejar esa basura, así que en Windows solo se ejecuta
+	// en la CI (variable CI), donde el entorno es conocido.
+	if runtime.GOOS == "windows" && os.Getenv("CI") == "" {
+		t.Skip("unix socket files in the temp directory can be locked by endpoint security tools on developer Windows machines; runs in CI")
+	}
 	home := t.TempDir()
 	regularFile := filepath.Join(home, "settings.json")
 	if err := os.WriteFile(regularFile, []byte(`{"ok":true}`), 0o644); err != nil {
