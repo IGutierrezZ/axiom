@@ -48,7 +48,7 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
 
 - [x] T1 · Crear `internal/fileprim` con cerrojo, publicación, reemplazo, sincronización de directorio y apertura sin seguir enlaces; mover sus pruebas; `reviewtransaction` delega en él; migrar los consumidores neutrales. Ruta: delegada (protección de contexto del padre: ~3.000 líneas de lectura).
 - [x] T2 · `SnapshotBuilder` de `sddstatus/runtime_ledger.go` y `cli/sdd_gate_evidence.go` a `gitcommon`. Ruta: inline (<100 líneas).
-- [ ] T3 · Comprobar el criterio de terminado (`rg -l 'internal/reviewtransaction"'`) y `go test` de los paquetes tocados.
+- [x] T3 · Comprobar el criterio de terminado (`rg -l 'internal/reviewtransaction"'`) y `go test` de los paquetes tocados.
 
 ## Criterio de aceptación
 
@@ -72,7 +72,7 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
   - `go test` ok en `cli -run 'StateLock|Compatibility|PersonaMigration|SDDGate|Lineage'` y en `cli -run 'ReviewMode|LockContention'`.
   - `reviewtransaction`, por shards: 4 fallos de entorno por falta del privilegio de crear symlinks en Windows (`os.Symlink`). Dos de ellos se reprodujeron también en `main`.
   - `app`: falla solo `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`, por «OpenCode runtime version unavailable». Es de entorno y falla igual en `main`.
-- Commit: `c13df45b`.
+- Commit: `b58254ec`.
 
 ### T2 · consultas de git a `gitcommon`
 
@@ -88,3 +88,30 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
   - `go test` ok en `gitcommon`, que incluye las pruebas nuevas de `RepositoryRoot` e `IsAncestor`.
   - `go test` ok en `sddstatus`.
   - `go test` ok en `cli -run 'SDDGate|Gate|Runtime|EditGrant'`.
+- Commit: `398f4142`.
+
+### T3 · criterio de terminado
+
+- `rg -l 'internal/reviewtransaction"' -g '*.go'` fuera de `reviewtransaction` devuelve solo ficheros clasificados como «parte RDD» en la tabla:
+  - `app/app.go`
+  - `cli/branch_lineage*`, `cli/review*`, `cli/sdd_status_*review*_test.go`, `cli/continuation_paths_test.go`, `cli/dual_contract_integration_test.go`, `cli/guard_population_test.go` y `cli/refusal_resolution_ratchet_test.go`
+  - `components/sdd/*review*`
+  - `reviewerprovider/adapter_minimality_guard_test.go`
+  - `kickoff/rdd_boundary_test.go`
+  - `sddstatus/main_test.go`, `review_mode_home_test.go` y `review_offer_absence_guard_test.go`
+  - `tui/model.go`, `tui/review_store_reset_test.go` y `tui/screens/*review*`
+- Además, en cuatro ficheros de prueba el único símbolo que sigue usándose es `RDDModeOn`: `cli/install_state_lock_test.go`, `cli/sync_persona_migration_test.go`, `components/uninstall/state_lock_test.go` y `tui/model_test.go`.
+- En `sddstatus/runtime_ledger.go` el único símbolo que sigue usándose es `CompactAuthoritativeStore`.
+- No hay ningún fichero de producción neutral que importe `reviewtransaction`.
+
+## Qué queda fuera de RDD (para C-01-e)
+
+- `internal/fileprim` queda fuera de RDD: cerrojo, publicación, reemplazo, sincronización de directorio y apertura sin enlaces. C-01-e no lo toca.
+- `internal/gitcommon` queda fuera de RDD: `RepositoryRoot` e `IsAncestor`. C-01-e no lo toca.
+- C-01-e tiene dos trabajos pendientes, de distinto tipo:
+  - **Sustituir, no borrar:** la sonda `CompactAuthoritativeStore` de `sddstatus/runtime_ledger.go` debe reemplazarse por `gitcommon.CommonDir`, porque el ledger es de SDD.
+  - **Retirar:** `RDDModeOn` de las cuatro pruebas citadas en T3.
+
+## Siguiente paso
+
+Abrir la PR y fusionarla con merge commit.
