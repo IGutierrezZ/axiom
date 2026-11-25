@@ -28,18 +28,27 @@ func injectedAgent(t *testing.T, home, name string) string {
 }
 
 // TestInjectGrantsBothEngramToolShapes pins that every declared Engram tool
-// reaches the agent under both registration routes.
+// reaches the agent under both registration routes. The judgment-day agents
+// hardcoded the plugin shape until they adopted the placeholder.
 func TestInjectGrantsBothEngramToolShapes(t *testing.T) {
 	home := t.TempDir()
 	if _, err := Inject(home, claudeAdapter(), ""); err != nil {
 		t.Fatalf("Inject() error = %v", err)
 	}
 
-	text := injectedAgent(t, home, "sdd-apply.md")
-	for _, tool := range []string{"mem_search", "mem_get_observation", "mem_save", "mem_update"} {
-		for _, prefix := range []string{"mcp__engram__", "mcp__plugin_engram_engram__"} {
-			if !strings.Contains(text, prefix+tool) {
-				t.Errorf("sdd-apply is missing the %s%s grant", prefix, tool)
+	grants := map[string][]string{
+		"sdd-apply.md":    {"mem_search", "mem_get_observation", "mem_save", "mem_update"},
+		"jd-judge-a.md":   {"mem_search", "mem_get_observation"},
+		"jd-judge-b.md":   {"mem_search", "mem_get_observation"},
+		"jd-fix-agent.md": {"mem_search", "mem_get_observation", "mem_save", "mem_update"},
+	}
+	for agent, tools := range grants {
+		text := injectedAgent(t, home, agent)
+		for _, tool := range tools {
+			for _, prefix := range []string{"mcp__engram__", "mcp__plugin_engram_engram__"} {
+				if !strings.Contains(text, prefix+tool) {
+					t.Errorf("%s is missing the %s%s grant", agent, prefix, tool)
+				}
 			}
 		}
 	}
