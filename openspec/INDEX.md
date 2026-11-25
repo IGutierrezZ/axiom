@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-25 22:20:50 UTC
-> **Total Dominios:** 53 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2134
+> **Última Sincronización:** 2026-11-25 23:55:22 UTC
+> **Total Dominios:** 53 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2136
 
 ---
 
@@ -47,7 +47,7 @@
 | `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 91 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 50 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
+| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 52 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 108 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
@@ -2172,7 +2172,9 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Con autorización sellada se publica al cerrar `tasks`
   - *Escenario BDD:* Con autorización sellada se publica al archivar
   - *Escenario BDD:* Sin el campo no se publica de forma automática
-  - *Escenario BDD:* No se publica entre otras fases
+  - *Escenario BDD:* Con autorización sellada se publica al terminar `spec` y al terminar `design`
+  - *Escenario BDD:* Un kickoff sellado antes hereda los momentos nuevos
+  - *Escenario BDD:* No se publica tras `apply`
   - *Escenario BDD:* Una negativa no interrumpe el encadenado
   - *Escenario BDD:* Almacén sin ficheros no publica
 - **[REQ-43.26]** `sdd publish --archive` Confirmado Emite `archive`

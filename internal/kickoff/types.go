@@ -132,7 +132,8 @@ type FlowConfig struct {
 // en el estilo continuous (REQ-27.4). Vacia significa «no se publica automaticamente».
 type DocsPublication string
 
-// DocsPublicationAuto autoriza publicar al cerrar `tasks` y tras archivar, sin preguntar.
+// DocsPublicationAuto autoriza publicar al terminar `spec` y `design`, al cerrar `tasks` y tras archivar,
+// sin preguntar (REQ-27.13).
 const DocsPublicationAuto DocsPublication = "auto"
 
 // CommitReviewMode is the per-commit review mode chosen at the tasks gate of a
