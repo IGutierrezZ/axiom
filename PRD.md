@@ -221,7 +221,6 @@ The installer supports configuring the Gentleman ecosystem into ANY AI coding ag
 |-------|-----------------|-------------------|----------|
 | Cursor | `~/.cursor/` | Good: skills via .cursorrules, MCP | P1 |
 | VSCode + Copilot/Cline | `~/.vscode/` + extension settings | Partial: skills via workspace rules, MCP via extensions | P1 |
-| Windsurf (Codeium) | `~/.windsurf/` or similar | Partial: rules, MCP | P2 |
 | Xcode + AI extensions | Xcode config paths | Minimal: persona via project rules | P2 |
 | JetBrains + AI Assistant | IDE config paths | Partial: rules, MCP via plugins | P2 |
 | Antigravity | TBD (emerging agent) | TBD — implement via Agent interface when stable | P2 |
@@ -233,7 +232,7 @@ The installer supports configuring the Gentleman ecosystem into ANY AI coding ag
 |------|---------------------|--------|
 | **Full** | Engram plugin + MCP servers + skills + SDD orchestrator + GGA integration + persona + theme + permissions + statusline + hooks | Claude Code, OpenCode |
 | **Good** | Skills + MCP servers + SDD (inline mode, no sub-agents) + GGA as review provider + persona rules | Cursor, VSCode |
-| **Partial** | Skills via system instructions + MCP where supported + GGA provider config + persona | Gemini CLI, Codex, Windsurf, JetBrains, Zed |
+| **Partial** | Skills via system instructions + MCP where supported + GGA provider config + persona | Gemini CLI, Codex, JetBrains, Zed |
 | **Minimal** | Persona and coding conventions via project/workspace rules | Xcode, Antigravity, any emerging agent |
 
 > **Note:** GGA (Guardian Angel) is agent-agnostic — it works with ANY provider for review execution, independent of which AI coding agent the user chose. It's a cross-cutting concern, not tied to a specific agent tier.
@@ -1071,8 +1070,7 @@ gentle-ai/
 │   │   ├── opencode.go             # OpenCode install + config
 │   │   ├── cursor.go               # Cursor install + config
 │   │   ├── gemini_cli.go           # Gemini CLI install + config
-│   │   ├── codex.go                # Codex install + config
-│   │   └── windsurf.go             # Windsurf install + config
+│   │   └── codex.go                # Codex install + config
 │   ├── components/
 │   │   ├── engram.go               # Engram install + config per agent
 │   │   ├── gga.go                  # GGA install + provider config

@@ -27,7 +27,7 @@ internal/
     filemerge/             Marker-based file merging (inject without clobbering)
   skillregistry/           .atl skill registry refresh/list support
   agents/                  Agent adapters (config strategy per agent)
-    claude/  opencode/  gemini/  cursor/  vscode/  codex/  windsurf/  antigravity/
+    claude/  opencode/  gemini/  cursor/  vscode/  codex/  antigravity/
   opencode/                OpenCode model/config parsing utilities
   state/                   Installation state tracking
   update/                  Self-update + upgrade logic
@@ -73,7 +73,7 @@ Test coverage is broad and changes frequently. Keep this section qualitative unl
 | | Gentleman.Dots | AI Gentle Stack |
 |--|---------------|-----------------|
 | **Purpose** | Dev environment (editors, shells, terminals) | AI development layer (agents, memory, skills) |
-| **Installs** | Neovim, Fish/Zsh, Tmux/Zellij, Ghostty | Configures Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot, Codex, Windsurf, Antigravity |
+| **Installs** | Neovim, Fish/Zsh, Tmux/Zellij, Ghostty | Configures Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot, Codex, Antigravity |
 | **Overlap** | None — complementary | None — different layer |
 
 Install Gentleman.Dots first for your dev environment, then AI Gentle Stack for the AI layer on top.
