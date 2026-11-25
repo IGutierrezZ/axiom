@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	schema = "gentle-ai.release-provenance/v1"
+	schema = "axiom.release-provenance/v1"
 	// localSchema marks a manifest produced outside GitHub Actions. It exists
 	// because the archive that packages the manifest needs the file to be there,
 	// not because a local build has provenance to report: prerelease tags do not
 	// trigger release.yml, so building one by hand is the documented path, and a
 	// local checkout knows no tag, run or workflow it could honestly name.
-	localSchema       = "gentle-ai.release-provenance/local-build"
+	localSchema       = "axiom.release-provenance/local-build"
 	repository        = "IGutierrezZ/axiom"
 	goReleaserVersion = "v2.15.2"
 )

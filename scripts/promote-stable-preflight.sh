@@ -55,7 +55,7 @@ jq -e --arg tag "$source_tag" \
   die "source prerelease release must be immutable, published, and prerelease"
 
 # shellcheck disable=SC2016 # GraphQL receives its own $tag variable.
-stable_release=$(gh api graphql -f 'query=query($tag: String!) { repository(owner: "Gentleman-Programming", name: "gentle-ai") { release(tagName: $tag) { databaseId } } }' -f "tag=$stable_tag" --jq '.data.repository.release.databaseId // empty')
+stable_release=$(gh api graphql -f 'query=query($owner: String!, $name: String!, $tag: String!) { repository(owner: $owner, name: $name) { release(tagName: $tag) { databaseId } } }' -f "owner=${GITHUB_REPOSITORY%/*}" -f "name=${GITHUB_REPOSITORY#*/}" -f "tag=$stable_tag" --jq '.data.repository.release.databaseId // empty')
 stable_ref=$(git ls-remote origin "refs/tags/$stable_tag" | awk 'NR == 1 { print $1 }')
 stable_peeled=$(git ls-remote origin "refs/tags/$stable_tag^{}" | awk 'NR == 1 { print $1 }')
 recovery_state=fresh
@@ -71,7 +71,7 @@ else
     if jq -e '.draft == true and (.assets | length) == 0' <<<"$release" >/dev/null; then
       recovery_state=reset-empty-draft
     elif jq -e '.draft == false and .prerelease == false and .immutable == true' <<<"$release" >/dev/null &&
-      diff -u <(printf '%s\n' "axiom_${version}_darwin_amd64.tar.gz" "axiom_${version}_darwin_arm64.tar.gz" "axiom_${version}_linux_amd64.tar.gz" "axiom_${version}_linux_arm64.tar.gz" "gentle-ai-release-provenance-v1.tar.gz" checksums.txt checksums.txt.minisig | LC_ALL=C sort) <(jq -r '.assets[].name' <<<"$release" | LC_ALL=C sort); then
+      diff -u <(printf '%s\n' "axiom_${version}_darwin_amd64.tar.gz" "axiom_${version}_darwin_arm64.tar.gz" "axiom_${version}_linux_amd64.tar.gz" "axiom_${version}_linux_arm64.tar.gz" "axiom-release-provenance-v1.tar.gz" checksums.txt checksums.txt.minisig | LC_ALL=C sort) <(jq -r '.assets[].name' <<<"$release" | LC_ALL=C sort); then
       recovery_state=verify-existing
     else
       die "stable release state is incompatible with safe recovery"

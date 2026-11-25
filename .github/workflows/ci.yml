@@ -398,7 +398,7 @@ jobs:
         run: |
           Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE -ErrorAction SilentlyContinue
           Add-MpPreference -ExclusionPath $env:RUNNER_TEMP -ErrorAction SilentlyContinue
-          Add-MpPreference -ExclusionProcess 'git.exe','go.exe','gentle-ai.exe' -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionProcess 'git.exe','go.exe','axiom.exe' -ErrorAction SilentlyContinue
 
       - name: Checkout exact event candidate
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
@@ -431,18 +431,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # Canonical package: these release-blocker tests read the product's own
-      # behavior. The output keeps the legacy "gentle-ai.exe" name: nothing
-      # downstream (AXIOM_TEST_BINARY below, the Defender exclusion above)
-      # needs it renamed, so only the build target changes.
+      # behavior. The output is named axiom.exe, the same name the Defender exclusion
+      # above and AXIOM_TEST_BINARY below use.
       - name: Build native test binary
         shell: pwsh
-        run: go build -trimpath -ldflags="-s -w -X main.version=ci" -o "$env:RUNNER_TEMP\gentle-ai.exe" ./cmd/axiom
+        run: go build -trimpath -ldflags="-s -w -X main.version=ci" -o "$env:RUNNER_TEMP\axiom.exe" ./cmd/axiom
 
       - name: Run Windows release-blocker tests
         shell: pwsh
         timeout-minutes: 10
         env:
-          AXIOM_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
+          AXIOM_TEST_BINARY: ${{ runner.temp }}\axiom.exe
         run: |
           $packages = @('./internal/fileprim', './internal/components/engram')
           $expected = @(
@@ -553,13 +552,13 @@ jobs:
 
       - name: Install Claude Code runtime
         # This suite drives the real install pipeline end to end, so it needs
-        # the real binary the same way it needs OpenCode above — gentle-ai
+        # the real binary the same way it needs OpenCode above — axiom
         # itself no longer installs this (agentInstallStep in
         # internal/cli/run.go refuses instead), so CI installs what it needs
         # to test, same as any other test dependency. No exact-pin test
         # applies here the way TestOrganicRuntimeE2EUsesInstalledOpenCodePin
         # asserts for OpenCode: there is no versions.go constant backing this
-        # one, since gentle-ai's own display-only refusal for Claude Code
+        # one, since axiom's own display-only refusal for Claude Code
         # advises "latest" too (see internal/installcmd/resolver.go).
         run: npm install --global @anthropic-ai/claude-code@latest
 
@@ -625,7 +624,7 @@ jobs:
         with:
           context: .
           file: e2e/${{ matrix.platform.dockerfile }}
-          tags: gentle-ai-e2e-${{ matrix.platform.name }}:ci
+          tags: axiom-e2e-${{ matrix.platform.name }}:ci
           load: true
           cache-from: type=gha,scope=e2e-${{ matrix.platform.name }}
           cache-to: type=gha,mode=max,scope=e2e-${{ matrix.platform.name }}
@@ -639,7 +638,7 @@ jobs:
       - name: Diagnose pinned OpenCode runtime before E2E
         run: |
           docker run --rm --pull=never --network none --entrypoint /bin/bash \
-            gentle-ai-e2e-${{ matrix.platform.name }}:ci -c '
+            axiom-e2e-${{ matrix.platform.name }}:ci -c '
               set -u
               export HOME=$(mktemp -d)
               export XDG_CONFIG_HOME="$HOME/config" XDG_DATA_HOME="$HOME/data"
@@ -662,4 +661,4 @@ jobs:
             -e RUN_FULL_E2E \
             -e RUN_BACKUP_TESTS \
             -e GITHUB_TOKEN \
-            gentle-ai-e2e-${{ matrix.platform.name }}:ci
+            axiom-e2e-${{ matrix.platform.name }}:ci

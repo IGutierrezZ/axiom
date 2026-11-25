@@ -64,7 +64,7 @@ jobs:
         working-directory: source
         run: |
           set -euo pipefail
-          marker="$RUNNER_TEMP/gentle-ai-release-policy-snapshot-start"
+          marker="$RUNNER_TEMP/axiom-release-policy-snapshot-start"
           umask 077
           printf '%s:%s:%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_JOB" >"$marker"
           printf 'RELEASE_POLICY_SNAPSHOT_MARKER=%s\n' "$marker" >>"$GITHUB_ENV"
@@ -188,7 +188,7 @@ jobs:
           canonical=$(./scripts/canonicalize-release-public-keys.sh)
           printf 'canonical=%s\n' "$canonical" >>"$GITHUB_OUTPUT"
       - name: Configure ephemeral signing paths
-        run: printf 'MINISIGN_SECRET_KEY_FILE=%s/gentle-ai-release.key\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"; printf 'MINISIGN_SIGNING_PUBLIC_KEY_FILE=%s/gentle-ai-release-signing.pub\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
+        run: printf 'MINISIGN_SECRET_KEY_FILE=%s/axiom-release.key\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"; printf 'MINISIGN_SIGNING_PUBLIC_KEY_FILE=%s/axiom-release-signing.pub\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
       - name: Install Minisign
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y minisign
       - name: Materialize signing key

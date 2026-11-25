@@ -147,10 +147,21 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - Decisión: se actualiza `internal/assets/skills/_shared/sdd-status-contract.md` (`schemaName` y contrato v2 a `axiom.sdd-status`), porque su instrucción de reintento citaba el contrato heredado que ya no se acepta; sus pruebas se ajustaron. Limitación: un reintento idempotente de un grant escrito con el dominio viejo, con el mismo `request-id`, computa el digest nuevo y daría conflicto (caso marginal; no afecta a la lectura ni a la autoridad vigente).
     - Verificado solo en CI: `internal/app`, `internal/dashboard`, `internal/opencode`, `e2e/...` y `cmd/axiom` (solo `go vet` y `go build`).
     - Docs y specs que citan lo cambiado (para T8): `docs/assets/diagrams/deterministic.svg`, `openspec/specs/axiom-distribution-identity/spec.md`, `openspec/specs/sdd-research/spec.md`.
-- [ ] T6. Release y CI.
+- [x] T6. Release y CI.
   - `axiom-release-provenance-v1.tar.gz` y esquema `axiom.release-provenance/v1` en `.goreleaser.yaml`, `releasepolicy`, `releaseprovenance` y los scripts de verificación y promoción.
   - Nombres de clave y marcador en los workflows, `axiom.exe` en CI, imágenes e2e y comentario no confiable de la firma.
   - Revisar la consulta GraphQL de `scripts/promote-stable-preflight.sh` al upstream.
+  - Evidencia (commit «ci(release): nombres axiom en la procedencia, la firma y la CI»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
+    - `go build ./...`: correcto.
+    - `go vet ./internal/releasepolicy/... ./internal/releaseprovenance/... ./internal/releaseprovenancecmd/... ./internal/update/... ./e2e/...`: sin avisos.
+    - `go test -count=1 ./internal/releasepolicy/... ./internal/releaseprovenance/... ./internal/releaseprovenancecmd/... ./internal/update/...`: ok (incluye `update/upgrade`).
+    - `bash -n` sobre `promote-stable-preflight.sh`, `verify-release-assets.sh`, `release-signing-preflight.sh` y `e2e/docker-test.sh`: correcto. `gofmt -l`: vacío.
+    - Renombrado: `axiom-release-provenance-v1.tar.gz` (goreleaser, policy, scripts y pruebas), esquemas `axiom.release-provenance/v1` y `/local-build` (sin lectura del viejo: las releases ya publicadas no se re-verifican), comentario de firma «signature from axiom release» y el comentario `-c` del canario de `release-signing-preflight.sh`, ficheros del runner `axiom-release.key`, `axiom-release-signing.pub` y `axiom-release-policy-snapshot-start`, `axiom.exe` en `ci.yml` y `windows-full-suite.yml`, imágenes `axiom-e2e-*` (CI y `docker-test.sh`), cabeceras de los `Dockerfile.*` y secretos `DISCORD_AXIOM_{RELEASES,BETA,ISSUES}_WEBHOOK`.
+    - Decisión GraphQL: `promote-stable-preflight.sh` consultaba si la release estable ya existía en `Gentleman-Programming/gentle-ai`, no en este repo (heredado del fork, errónea: la comprobación de recuperación solo tiene sentido sobre el propio repo). Ahora usa `$GITHUB_REPOSITORY` (ya validado como `IGutierrezZ/axiom`) como `owner`/`name`.
+    - Se deja a propósito: la regex de aviso retirado de `ci.yml` (comprueba que el binario canónico no emita avisos del nombre antiguo; es una guarda, no un identificador), comentarios históricos de `deadcode-ratchet.sh`, `.goreleaser.yaml:85` (homebrew-tap upstream) y `policy.go:298` (binario retirado), y fixtures negativas de `windows_distribution_policy_test.go` (T7).
+    - Acción manual del usuario: si alguna vez activa `discord-notifications.yml`, debe renombrar en GitHub los secretos a `DISCORD_AXIOM_RELEASES_WEBHOOK`, `DISCORD_AXIOM_BETA_WEBHOOK` y `DISCORD_AXIOM_ISSUES_WEBHOOK`.
+    - Verificado solo en CI y en el preflight de la próxima release: los workflows (`ci.yml`, `release.yml`, `promote-stable-rc.yml`, `windows-full-suite.yml`), `goreleaser`, `scripts/verify-release-assets.sh` y las pruebas de release que exigen `AXIOM_TEST_BUILD_BINARIES=1`.
+    - Docs y specs que citan lo cambiado (para T8): `docs/release-signing.md` (`gentle-ai-release.pub/.key`), `docs/docker-e2e-testing.md`, y las specs de release en `openspec/specs/*` que fijen el archivo de procedencia o el esquema (buscar `gentle-ai-release-provenance` y `gentle-ai.release-provenance`).
 - [ ] T7. Nombres internos.
   - Placeholders `{{GENTLE_AI_*}}` de las plantillas, identificadores Go, comentarios y nombres de pruebas.
   - `.gitignore`, `scripts/deadcode-ratchet.sh`, `e2e/` y la skill retirada `gentle-ai-bench`.
@@ -161,8 +172,8 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 
 ## Progreso
 
-T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5 hecha (commit «refactor(sddstatus): esquemas axiom con lectura de los gentle-ai persistidos»). T6-T8 sin empezar.
+T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5 hecha (commit «refactor(sddstatus): esquemas axiom con lectura de los gentle-ai persistidos»). T6 hecha (commit «ci(release): nombres axiom en la procedencia, la firma y la CI»). T7-T8 sin empezar.
 
 ## Siguiente paso
 
-T6.
+T7.
