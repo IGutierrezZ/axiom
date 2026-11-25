@@ -1,6 +1,6 @@
 # Plan maestro del backlog 2026-11
 
-Índice, orden de ejecución y protocolo de las 8 secciones de análisis. Rutas y líneas de las secciones 01 a 07 verificadas contra `main` en `5f6b05b4`; la sección 08 (adelgazamiento, 2026-11-24) y la corrección de C-01-e, contra `d580368d`. Total: 46 cambios. Versión integrada con la revisión cruzada de las 7 sesiones y con la revisión 08 (ver «Registro de revisión»).
+Índice, orden de ejecución y protocolo de las 8 secciones de análisis. Rutas y líneas de las secciones 01 a 07 verificadas contra `main` en `5f6b05b4`; la sección 08 (adelgazamiento, 2026-11-24) y la corrección de C-01-e, contra `d580368d`. Total: 47 cambios. Versión integrada con la revisión cruzada de las 7 sesiones y con las revisiones 08 y 09 (ver «Registro de revisión»).
 
 ## 1. Propósito y reglas de uso
 
@@ -50,6 +50,7 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-06-d | Marcas de ejecución por entorno en la UI, publicadas a integración | [06](06-ui-human-loop.md) | SDD | M | C-06-c, C-02-a | `marcas-pruebas` |
 | C-06-e | Pantalla «Ajustes del proyecto» con catálogo de claves, más bloque de preferencias personales con el interruptor del autofetch (P16) | [06](06-ui-human-loop.md) | SDD | L | C-01-b, C-01-c, C-02-a, C-03-a, C-05-d, C-06-b, C-06-c; C-02-c (P5 resuelta: con clave) | `ajustes-proyecto` |
 | C-06-f | Registrar decisiones de puerta desde la UI (confirmada, P3) | [06](06-ui-human-loop.md) | SDD | M | C-06-a, C-02-d | `puertas-desde-ui` |
+| C-06-g | Agentes del proyecto en la UI: disponibles, instalados e instalación con un clic | [06](06-ui-human-loop.md) | ODD (`## Spec viva`) | M | C-08-d, C-08-f | `agentes-ui` |
 | C-07-a | Identidad git como actor de los artefactos versionados (capacidad nueva `change-actor-identity`) | [07](07-integraciones.md) | SDD | S | — | `identidad-git-actor` |
 | C-07-b | Marco de plugins de integración | [07](07-integraciones.md) | SDD | L | C-07-a (blanda) | `marco-integraciones` |
 | C-07-c | Adaptador Azure DevOps: REST, conexión, identidad, descubrimiento | [07](07-integraciones.md) | SDD | M | C-07-b | `adaptador-ado` |
@@ -162,6 +163,8 @@ graph TD
   C08g --> C08h["C-08-h centinelas a goldens"]
   C08f --> C08h
   C01e --> C08i["C-08-i CI por jobs"]
+  C08d --> C06g["C-06-g agentes en la UI"]
+  C08f --> C06g
 ```
 
 Dependencias inferidas y su razón:
@@ -180,6 +183,7 @@ Dependencias inferidas y su razón:
 | C-08-d ← C-01-e | Solape duro: `components/sdd/inject.go`, los agentes `review-*` por agente, `tui/model.go`, los tests de `cli` y los goldens. |
 | C-08-e ← C-08-d; C-08-f ← C-08-e | Solape duro en `cli/run.go`, `cli/sync.go`, `components/uninstall`, `model/types.go`, `model/presets.go`, `catalog/components.go` y la pantalla de presets. |
 | C-08-g, C-08-h ← C-01-e, C-08-d, C-08-f | No se paraleliza ni se reescribe lo que se va a borrar. C-08-h va tras C-08-g porque los dos tocan ficheros de test de `components/sdd`. |
+| C-06-g ← C-08-d, C-08-f | La vista lista los agentes que quedan tras C-08-d y ofrece la instalación que deja C-08-f (presets y arranque mínimo). Hacerla antes obligaría a rehacerla. |
 | Funcionales pendientes ← C-08-c, C-01-e | C-03-b, C-05-c, C-06-b, C-06-c y C-06-f arrancan desde un `main` con las primitivas ya movidas y RDD retirado. No hay arista dura: es el motivo del orden de las olas. |
 
 ## 4. Mapa de solapes
@@ -211,10 +215,10 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `internal/branch/planner.go`, `planner_snapshot.go`, `naming.go` | duro | C-02-a (planner), C-07-f |
 | `internal/cli/sdd_gate.go` | duro | C-06-f, C-07-a, C-07-b, C-07-e |
 | `internal/cli/sdd_gate_handoff.go`, `sdd_gate_digest.go`, `sdd_kickoff.go` | duro | handoff: C-01-b (uso de `artifact_store`), C-05-c; digest: C-06-b, C-06-c (C-06-a lo lee); kickoff: C-02-d, C-06-b |
-| `internal/dashboard/server.go` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-07-h. C-06-b (CSP de la ruta del HTML) y C-07-h (CSP general y retirada de `Access-Control-Allow-Origin: *`) tocan `withHeaders` (`:215-217`): el segundo en fusionarse no duplica cabeceras |
-| `internal/dashboard/service.go`, `types.go` | duro | C-01-c (`:909-926`), C-06-a, C-06-b, C-06-c, C-06-d, C-06-e, C-06-f, C-07-h |
+| `internal/dashboard/server.go` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-06-g, C-07-h. C-06-b (CSP de la ruta del HTML) y C-07-h (CSP general y retirada de `Access-Control-Allow-Origin: *`) tocan `withHeaders` (`:215-217`): el segundo en fusionarse no duplica cabeceras |
+| `internal/dashboard/service.go`, `types.go` | duro | C-01-c (`:909-926`), C-06-a, C-06-b, C-06-c, C-06-d, C-06-e, C-06-f, C-06-g, C-07-h |
 | `internal/dashboard/assets/js/screens/detalle.js` | duro | C-06-a, C-06-b, C-06-c, C-06-f, C-07-h |
-| `internal/dashboard/assets/js/screens/ecosystem.js`, `core/branches.js`, `core/reviewmode.js`, `screens/projects.js` | duro | C-01-c (selector de RDD), C-06-e (sustituye la lectura de la política de ramas por la pantalla de ajustes) |
+| `internal/dashboard/assets/js/screens/ecosystem.js`, `core/branches.js`, `core/reviewmode.js`, `screens/projects.js` | duro | C-01-c (selector de RDD), C-06-e (sustituye la lectura de la política de ramas por la pantalla de ajustes), C-06-g (`ecosystem.js`: bloque de agentes) |
 | `internal/dashboard/assets/js/core/projectform.js` | duro | C-01-b (no ofrecer roles en monorepo). Vigilar si C-06-e o C-07-h tocan el formulario de alta |
 | `internal/tui/screens/review_mode.go`, `install_review_mode.go`; `internal/cli/review_mode.go`; `internal/reviewtransaction/rdd_mode.go` | duro | C-01-c, C-01-e |
 | `internal/components/sdd/boundedreview.go` | duro | C-01-c, C-01-e |
@@ -240,7 +244,7 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `openspec/specs/sdd-block-review-gates/` | duro | C-02-b, C-05-d (`spec.md:410`), C-06-b, C-06-c, C-06-d. C-07-a sale: usa una capacidad nueva |
 | `openspec/specs/change-actor-identity/` (nueva) | — | C-07-a |
 | `openspec/specs/sdd-docs-publication/` | duro | C-05-b, C-05-c, C-06-d |
-| `openspec/specs/local-web-dashboard/` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-07-h |
+| `openspec/specs/local-web-dashboard/` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-06-g, C-07-h |
 | `openspec/specs/` otras | duro | `sdd-preflight-configuration`: C-01-b, C-06-b; `workspace-topology`: C-06-c, C-06-e; `sdd-orchestrator-assets`: C-02-c; `rdd-*`: C-01-c, C-01-e; `sdd-iso-evidence` (REQ-29.3): C-03-a |
 | `openspec/specs/**` entero e `INDEX.md` | duro | C-03-e (+ C-01-d, que retira menciones de Serena) |
 | `.github/workflows/` | duro | `ci.yml`: C-01-e, C-08-b (solo si cambia la puerta de los tests del toolchain), C-08-i; `windows-full-suite.yml`: C-01-e, C-08-i; `release.yml` y `promote-stable-rc.yml`: C-01-e; `pr-check.yml` y la plantilla de PR: C-02-e |
@@ -275,7 +279,7 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | A5 | C-08-f | Comparte `model`, `catalog` y la pantalla de presets con C-08-e. Requiere P18 y P19. |
 | A6 | C-08-g | Paraleliza lo que queda tras los borrados. |
 | A7 | C-08-h | Va tras C-08-g: los dos tocan ficheros de test de `components/sdd`. Después se reanuda la ola 7. |
-| 7 | C-03-b, C-05-b, C-07-c | IDs provisionales, publicación tras spec y design, y adaptador ADO no comparten ficheros duros. C-05-b va antes que C-06-b y C-05-c. |
+| 7 | C-03-b, C-05-b, C-06-g | IDs provisionales y publicación tras spec y design no comparten ficheros duros. C-05-b va antes que C-06-b y C-05-c. El adaptador ADO (C-07-c) estaba en esta ola y ya está fusionado. C-06-g (revisión 09) ocupa su hueco: dashboard, `internal/agents` y estado del proyecto, sin solape duro con C-03-b ni C-05-b. |
 | 8 | C-03-c, C-03-d, C-05-c | La sección 03 admite C-03-c ∥ C-03-d. C-05-c toca `sddstatus`, el motor de ramas, la doctrina (`sdd-orchestrator-sections.md:82,88`), `sdd_gate_handoff.go`, `sdd-docs-publication` y goldens, sin solape duro con ellos. |
 | 9 | C-03-e | XL mecánico. La sección 03 exige una ventana sin cambios SDD abiertos: va solo. |
 | 10 | C-05-d, C-06-b | Autofetch (motor de ramas, hub, hooks) y HTML explicativo (skills spec y design, kickoff, dashboard) son disjuntos. Requiere P4 y P14. |
@@ -478,6 +482,7 @@ Para la sesión padre que coordine el plan.
 | C-06-d | pendiente | | | |
 | C-06-e | pendiente | | | |
 | C-06-f | pendiente | | | |
+| C-06-g | pendiente | | | |
 | C-07-a | pendiente | | | |
 | C-07-b | pendiente | | | |
 | C-07-c | pendiente | | | |
@@ -514,3 +519,7 @@ Para la sesión padre que coordine el plan.
     - Se añaden `release.yml`, `windows-full-suite.yml`, `bench/`, la TUI, el dashboard, `hub/rddpref`, los assets y las specs.
     - Specs: 21 capacidades. `sdd-block-review-gates` y `sdd-independent-review` son de SDD.
   - Las filas de solapes de las primitivas pasan de C-01-e a C-08-c.
+- **Revisión 09 (2026-11-25, `3c55c493`):**
+  - Se añade C-06-g (agentes del proyecto en la UI), a petición del usuario y detrás de C-08-f.
+  - Va en la ola 7 con C-03-b y C-05-b, en el hueco de C-07-c, ya fusionado. No cambia el orden de C-03-b.
+  - Filas de solapes con C-06-g: `server.go`, `service.go` y `types.go` del dashboard, `ecosystem.js` y `openspec/specs/local-web-dashboard/`.

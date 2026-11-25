@@ -307,6 +307,33 @@ Durante el análisis apareció además un bug previo. El detalle de un cambio en
 - **Criterio de terminado.** Por definir cuando el usuario lo confirme.
 - **Riesgos y avisos.** «Aprobar, publicar y parar» implica commit y push; el mismo aviso de operación remota que C-06-d.
 
+### C-06-g · Agentes del proyecto en la UI: disponibles, instalados e instalación con un clic
+
+Añadido el 2026-11-25 a petición del usuario. Rutas verificadas contra `main` en `3c55c493`.
+
+- **Objetivo.** Ver en el dashboard qué agentes admite Axiom, cuáles detecta en el equipo y cuáles están instalados en el proyecto abierto, e instalarlos sin salir de la UI.
+- **Problema.**
+  - Hoy el dashboard no tiene vista ni endpoint de agentes. Solo la pantalla Ecosistema lanza `axiom sync` en proceso (`internal/dashboard/service.go:1336`, `runAppArgsFn`).
+  - `axiom sync` nunca escribe `installed_agents`. Con la lista sin registrar (`null`), descubre los agentes por la carpeta de usuario (`internal/agents/discovery.go:135-139`) y trabaja con ellos, pero no los guarda. `ProjectView` no hereda los agentes del estado global, a propósito (`internal/state/store.go:148`).
+  - Por eso `axiom doctor` avisa en `state:json` y en `engram:reachable` aunque el sync funcione. Solo `axiom install` registra los agentes del proyecto (`internal/cli/run.go:343`).
+- **Decisiones.**
+  - (Usuario, 2026-11-20) «Estaría bien tener en la UI qué agentes tienes disponibles, cuáles están instalados y poder instalarlos fácilmente desde la UI.»
+  - (Usuario, 2026-11-25) Va al plan detrás de C-08-f, cuando la lista de agentes y el arranque ya sean los definitivos.
+  - (Análisis) La instalación reutiliza `axiom install --scope workspace --agent <id>` en proceso, con el mismo patrón que la sync. Con un solo agente, install lo añade a `installed_agents` sin pisar el resto (`docs/usage.md:51`).
+  - (Análisis) Los agentes sin modo workspace (`internal/cli/workspace_agents.go:52`, entre ellos Copilot CLI) aparecen como no instalables en el proyecto, con el motivo.
+- **Fuera de alcance.** Desinstalar agentes desde la UI y la instalación en ámbito global.
+- **Carril propuesto.** ODD con `## Spec viva` (requisitos nuevos en `openspec/specs/local-web-dashboard`).
+- **Tamaño.** M.
+- **Depende de / bloquea a.** Depende de C-08-d (lista de agentes) y de C-08-f (presets y arranque mínimo). No bloquea a nadie.
+- **Ficheros y paquetes que toca.**
+  - Dashboard: `server.go` (endpoint de lista e instalación), `service.go`, `types.go` y una pantalla o bloque nuevo en `assets/js/screens/ecosystem.js`.
+  - Lectura: `internal/agents` (registro y detección), `internal/state` (estado del proyecto) e `internal/cli/workspace_agents.go`.
+- **Criterio de terminado.**
+  - La UI lista cada agente con tres marcas: admitido, detectado en el equipo e instalado en el proyecto.
+  - Instalar desde la UI deja el agente en `.axiom/state.json` del proyecto, y tras ello `axiom doctor` deja de avisar en `state:json`.
+  - Un agente sin modo workspace no ofrece el botón y dice por qué.
+- **Riesgos y avisos.** La instalación escribe en el repositorio (y, según el agente, en la carpeta de usuario): la UI lo dice antes de ejecutar, igual que el aviso de huella de máquina de install.
+
 ## Descartado
 
 - **Mapa mental derivado de forma determinista en Go** a partir de la estructura del md: árbol plegable en SVG servido como JSON, con líneas «> En claro:» dentro del md.
