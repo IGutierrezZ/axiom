@@ -55,7 +55,9 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
 - [x] T6. `mcp`: `TestInjectClaudeWorkspaceIsDiscoveredByNativeClaudeMCPList` (aparecido al lanzar la suite desde una sesión de Claude Code). Ruta: inline.
   - Causa: el test ejecuta el `claude` real y hereda `BUN_INSPECT` de la sesión padre; el hijo intenta abrir el mismo puerto del depurador (9226) y sale con `EADDRINUSE`. Arreglo: quitar `BUN_INSPECT*` del entorno del subproceso.
   - Evidencia: `go test ./internal/components/mcp/ -count=1` en `ok` desde la misma sesión.
-- [ ] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
+- [x] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
+  - `AGENTS.md`: orden recomendada por paquete y la suite sin `cli` ni `reviewtransaction` con `-timeout 20m`; esos dos aparte con `-timeout` explícito o troceados con `-run`. Detalle en `docs/testing/windows-tests.md`, que también describe la puerta del toolchain, las omisiones de `%TEMP%` y la regla de no leer el estado del checkout.
+  - Todas las verificaciones se hicieron con una copia del `.axiom/state.json` del checkout principal en el worktree, para reproducir sus condiciones.
 
 ## Criterio de terminado
 
@@ -65,4 +67,16 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
 
 ## Progreso y evidencias
 
-(pendiente)
+Commits: `885492cf` (T1), `ff366ab3` (T2), `073297a7` (T3), `7ef7f55a` y `bdfc7442` (T4), `d5eaa145` (T6) y el de cierre (T5).
+
+Verificación del criterio de terminado (Windows local, 2026-11-25):
+
+- `go test <118 paquetes sin internal/cli ni internal/reviewtransaction> -count=1`: exit 0 en 512 s de pared. El más lento, `internal/branch/engine`, 506 s: por eso la orden lleva `-timeout 20m` (en una primera pasada con `cli` y `reviewtransaction` en paralelo superó los 10 minutos).
+- `internal/cli` completo no puede terminar mientras exista RDD: tres tests RDD entran en pánico (*nil pointer*) y cortan el paquete (`TestReviewStatusPreservesHistoricalGeneratedManifestBinding`, `TestNegotiatedStatusBindsManifestlessCaptureSubjectsToTheFrozenDigest` y `TestIntendedUntrackedSelectionUsesCanonicalPathsAndPrintedStart`, en `review_frozen_manifest_binding_test.go` y `review_intended_untracked_test.go`). En las pasadas que llegaron más lejos fallaron entre 116 y 136 tests, todos en ficheros `review_*` salvo los dos de GGA.
+- Los 1.320 tests de `internal/cli` fuera de ficheros `review_*`, en seis bloques con `-run`: 634 s, y solo fallan tests de RDD o GGA:
+  - RDD: `TestCodexReviewAdapterDispatchesSavedRoles`; `TestSDDStatusReEnableSequenceLandsOnTheFreshFullReview`, `TestSDDStatusArchiveNeverTreatsAnEmptyCandidateReviewAsCoverage` y `TestSDDStatusArchiveGateBlocksWhileReviewIsEnabled` («managed reviewer assets are outdated», la familia de `TestManagedReviewerAsset*`; sin el estado del checkout pasan).
+  - GGA: `TestRunDoctor_GGARequiredWhenSelected` y `TestRunDoctor_FootprintShowsSelectedGGAAsOptional`.
+- `internal/reviewtransaction` no se toca: es RDD entero y desaparece con C-01-e.
+- Pendiente: el log del job `unit-tests` de la CI con los tests del toolchain ejecutándose (se comprueba en la PR).
+
+Siguiente paso: PR, CI en verde, fusión con merge commit y `done`.

@@ -4,21 +4,30 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
 
 ## Running tests locally on Windows
 
-- **Run focused packages, not the whole suite.** Use `go test ./internal/<pkg> -run '^TestName$' -count=1`. The full suite needs about ten CI shards of up to 30 minutes each, so a local run on Windows costs too much to be useful.
+- **Run focused packages while iterating.** Use `go test ./internal/<pkg> -run '^TestName$' -count=1`.
+- **The whole suite except two packages finishes locally.** Measured on 2026-11-25: 118 packages in about 9 minutes of wall time, with `internal/branch/engine` the slowest at about 8.5 minutes, so pass an explicit `-timeout`:
+
+  ```powershell
+  go test (go list ./... | Where-Object { $_ -notmatch '/internal/(cli|reviewtransaction)$' }) -count=1 -timeout 20m
+  ```
+
+  `internal/cli` and `internal/reviewtransaction` exceed the default 10-minute timeout until RDD is retired (C-01-e): run them on their own with `-timeout 60m`, or split them with `-run`. Their remaining local failures are RDD and GGA tests, which go away with C-01-e and C-08-e.
 - **Symlink tests skip without privilege.** Creating a symlink on Windows needs a privilege that a normal user lacks (error 1314, `ERROR_PRIVILEGE_NOT_HELD`).
   - Tests that need symlinks call `testenv.RequireSymlink(t)` (`internal/testenv`), which probes once per process.
   - The test is skipped only when the probe fails with that error, and the skip message says so.
   - Any other probe failure fails the test.
   - To run these tests, enable Windows Developer Mode or use an elevated shell.
-- **Keep `TEMP` outside `%LOCALAPPDATA%`.** Some tests fail when their temporary directory is under `...\AppData\Local\...`, which is the default:
-  - creating a file with `O_EXCL` through a directory junction (`internal/components/filemerge`);
-  - `os.Lstat` on an AF_UNIX socket (`internal/backup`).
+- **Some tests skip under a protected `%TEMP%`.** On machines whose endpoint security protects `...\AppData\Local\Temp` (the default `TEMP`), two operations fail there and pass in any other folder, including the profile root:
+  - creating a file with `O_EXCL` through a directory junction (`internal/components/filemerge`): the junction tests probe it first and skip with the reason;
+  - `os.Lstat` or removal of an AF_UNIX socket file (`internal/backup`): it cannot be probed without leaving an undeletable file, so on Windows `TestSnapshotterSkipsUnixSockets` runs only when `CI` is set.
 
-  The same tests pass with a temporary directory elsewhere:
+  To run them locally, point the temporary directory elsewhere:
 
   ```powershell
   $env:TMP = "C:\tmp\go-test"; $env:TEMP = $env:TMP
   ```
+
+- **Tests must not read the checkout's project state.** A developer checkout can hold an ignored `.axiom/state.json`, and `cli.EffectiveStateStore` resolves from the working directory, so a test that resolves the effective store from a temporary home first calls `t.Chdir(t.TempDir())`.
 
 - **Time budgets scale.** `AXIOM_TEST_TIMEOUT_SCALE` multiplies the test-side time budgets of `internal/sddstatus`, `e2e/organicruntime` and the catalog cancellation test in `internal/opencode`.
   - It must be a number of at least 1. Any other value aborts the package instead of shrinking a budget.
@@ -30,6 +39,10 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - The variable must be `1` or `true`. It is not implied by `CI`: the workflows set `AXIOM_TEST_BUILD_BINARIES: "1"` explicitly, so CI runs them all.
   - On a machine without such an EDR, opt in with `$env:AXIOM_TEST_BUILD_BINARIES = "1"`.
   - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga`, `bench` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
+- **Tests that launch the Go toolchain skip behind the same variable.** They call `testenv.RequireGoToolchain(t)` before the first `go build`, `go run`, `go test -list` or `go version` subprocess, because each costs minutes on Windows. CI runs them because the workflows set the variable.
+  - `internal/update`: `TestCanonicalReleasePublicKeysControlRealLinkerBuild` and the release distribution policy tests (`newReleasePolicyFixture`, which runs `go run ./internal/releasepolicycmd`).
+  - `internal/app`: `TestDocumentedInvocationsRunAsDocumented`.
+  - `internal/assets`: `TestWindowsFullSuiteShardsCoverEveryTestName` (nested `go test -list`).
 - **`bench/` is Linux-only.** Its tests execute `#!/bin/sh` fakes and drive a TTY, so CI runs them only on Ubuntu.
 
 ## When CI runs the Windows tests

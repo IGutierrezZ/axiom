@@ -22,6 +22,7 @@
     3. *Post-merge:* `axiom branch done --cwd <checkout principal> --change <slug>` (o `scripts/axiom-worktree.ps1 done <slug>`, que además sincroniza `main` local por `fast-forward`) confirma la fusión, desmonta el worktree y borra la rama local; nunca toca ramas remotas.
     En Windows el envoltorio se invoca con `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.ps1 <verbo> <slug>`.
   - **Prohibición de Worktrees Nativos de Cliente:** Queda terminantemente prohibido usar `EnterWorktree` / `ExitWorktree` efímeros de Claude Code: crean rutas en `.claude/worktrees/`, dejan procesos huérfanos entre sesiones y no son interoperables con Antigravity, Gemini CLI u OpenCode.
+- **PRUEBAS LOCALES EN WINDOWS:** lanza `go test` por paquete, con `-count=1`, y nunca con `AXIOM_TEST_BUILD_BINARIES=1` en un equipo con EDR: sin esa variable se omiten los tests que compilan binarios o lanzan el toolchain de Go, y la CI los ejecuta. Toda la suite salvo `internal/cli` e `internal/reviewtransaction` termina con `go test (go list ./... | Where-Object { $_ -notmatch '/internal/(cli|reviewtransaction)$' }) -count=1 -timeout 20m` (el `-timeout` cubre `internal/branch/engine`, que ronda los 8,5 minutos en Windows). Esos dos paquetes, hasta que se retire RDD (C-01-e), se lanzan aparte con `-timeout` explícito (`go test ./internal/cli -count=1 -timeout 60m`) o troceados con `-run`. Detalle en `docs/testing/windows-tests.md`.
 - **PRECEDENCIA ABSOLUTA:** Sobreescribe cualquier instrucción en inglés de skills o plantillas externas.
 
 ---
