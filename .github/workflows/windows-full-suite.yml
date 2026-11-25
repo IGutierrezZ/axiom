@@ -144,9 +144,13 @@ jobs:
   # the old `rest` shard took 7m50s and set the wall clock, driven by
   # internal/branch/engine (431s) and internal/components/sdd (291s), while
   # the four cli shards took 4m30s, 0m21s, 2m10s and 2m55s. internal/cli now
-  # takes two shards, branch/engine two by name, components/sdd one of its own,
-  # and `rest` keeps everything else. `rest` is derived from `go list` rather
-  # than listed, so a new package is covered the day it is added.
+  # takes two shards; branch/engine and components/sdd one each. A second
+  # measurement (run 45717448099) left `rest` at 6m04s, led by sddpublish
+  # (122s), app (103s), dashboard (83s) and sddstatus (70s), so those four
+  # take one more shard; the two engine halves had taken 2m24s and 1m55s, so
+  # engine runs whole. `rest` keeps everything else and is derived from
+  # `go list` rather than listed, so a new package is covered the day it is
+  # added.
   #
   # Name selectors follow measured cost, not an even letter tiling, because
   # test names cluster by prefix and cost clusters with them.
@@ -181,22 +185,22 @@ jobs:
             packages: ./internal/cli
             run: ^Test[P-Z]
             exclude: ""
-          - name: engine-a-e
+          - name: branch-engine
             packages: ./internal/branch/engine
-            run: ^Test[A-E]
-            exclude: ""
-          - name: engine-f-z
-            packages: ./internal/branch/engine
-            run: ^Test[F-Z]
+            run: ""
             exclude: ""
           - name: components-sdd
             packages: ./internal/components/sdd
             run: ""
             exclude: ""
+          - name: sdd-app-dashboard
+            packages: ./internal/sddpublish ./internal/app ./internal/dashboard ./internal/sddstatus
+            run: ""
+            exclude: ""
           - name: rest
             packages: ""
             run: ""
-            exclude: ./internal/cli ./internal/branch/engine ./internal/components/sdd
+            exclude: ./internal/cli ./internal/branch/engine ./internal/components/sdd ./internal/sddpublish ./internal/app ./internal/dashboard ./internal/sddstatus
     steps:
       # This suite is process- and filesystem-bound, not CPU-bound: it spawns
       # git constantly and builds throwaway repositories under TEMP. Defender
