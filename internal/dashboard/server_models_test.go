@@ -358,7 +358,7 @@ func TestEcosystemModelsPostRejectsInvalidInputWithViolationsAndWritesNothing(t 
 		name, body string
 		want       []string
 	}{
-		{"adaptador desconocido", `{"adapter":"kiro","assignments":{}}`, []string{"no existe"}},
+		{"adaptador desconocido", `{"adapter":"no-existe","assignments":{}}`, []string{"no existe"}},
 		{"alias de Claude inválido", `{"adapter":"claude-code","assignments":{"sdd-apply":{"model":"gpt"},"nope":{"model":"opus"}}}`, []string{"sdd-apply", "fases desconocidas: nope"}},
 		{"esfuerzo no admitido por el modelo", `{"adapter":"claude-code","assignments":{"sdd-apply":{"model":"haiku","effort":"high"}}}`, []string{"esfuerzo"}},
 		{"Copilot con salto de línea", `{"adapter":"copilot","assignments":{"sdd-apply":{"model":"GPT\ntools: []"},"orchestrator":{"model":"x"}}}`, []string{"caracteres de control", "orchestrator"}},

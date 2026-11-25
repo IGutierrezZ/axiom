@@ -18,16 +18,12 @@ import (
 //   - skillsDirPlaceholder: directorio de skills con separador `/`.
 //     Global: `~/<dir de skills del adaptador>`. Workspace: la misma ruta
 //     relativa a la raíz del proyecto.
-//   - skillsDirWindowsPlaceholder: la misma ruta con la grafía de Windows que
-//     usa Kiro en sus agentes (`%USERPROFILE%\\.kiro\\skills`, con barra
-//     invertida doble literal por estar en Markdown).
 const (
-	skillsDirPlaceholder        = "{{AXIOM_SKILLS_DIR}}"
-	skillsDirWindowsPlaceholder = "{{AXIOM_SKILLS_DIR_WIN}}"
+	skillsDirPlaceholder = "{{AXIOM_SKILLS_DIR}}"
 )
 
 // installsInWorkspace indica si la inyección de rootDir cae en el workspace.
-// Un adaptador sin modo workspace (VS Code, Trae, Windsurf, Antigravity)
+// Un adaptador sin modo workspace (VS Code, Trae, Antigravity)
 // recibe el home aunque la instalación pida workspace, y entonces sus assets
 // deben apuntar al home.
 func installsInWorkspace(rootDir string, opts InjectOptions) bool {
@@ -53,8 +49,8 @@ func workspaceRootFor(rootDir string, opts InjectOptions) string {
 //
 // workspaceRoot vacío es el ámbito global: la ruta relativa a la carpeta de
 // usuario con prefijo `~/`. Con una raíz de proyecto es la ruta relativa a esa
-// raíz, tal como la resuelve el adaptador para el proyecto (OpenCode y Kilo la
-// tienen en .opencode/skills y .kilo/skills, no bajo .config).
+// raíz, tal como la resuelve el adaptador para el proyecto (OpenCode la
+// tiene en .opencode/skills y no bajo .config).
 func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, workspaceRoot string) string {
 	if !strings.Contains(content, "{{AXIOM_SKILLS_DIR") {
 		return content
@@ -73,17 +69,14 @@ func resolveSkillsDirPlaceholders(content string, adapter agents.Adapter, worksp
 		return content
 	}
 	posix := "~/" + rel
-	windows := `%USERPROFILE%\\` + strings.ReplaceAll(rel, "/", `\\`)
 	if workspace {
 		posix = rel
-		windows = strings.ReplaceAll(rel, "/", `\\`)
 	}
-	content = strings.ReplaceAll(content, skillsDirWindowsPlaceholder, windows)
 	return strings.ReplaceAll(content, skillsDirPlaceholder, posix)
 }
 
 // resolveOverlaySkillsDir resuelve el marcador de ruta de skills en un overlay
-// JSON de OpenCode o Kilo, donde el marcador vive dentro de cadenas JSON. Reutiliza
+// JSON de OpenCode, donde el marcador vive dentro de cadenas JSON. Reutiliza
 // resolveSkillsDirPlaceholders y comprueba después que el documento sigue siendo
 // JSON válido, de modo que una ruta con caracteres que exigieran escape nunca deje
 // un opencode.json corrupto: es preferible fallar la inyección.

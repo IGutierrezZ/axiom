@@ -9,7 +9,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
@@ -19,9 +19,9 @@ import (
 )
 
 func TestLegacyPromptAdaptersSelectsOnlyRenamedPromptAgents(t *testing.T) {
-	selected := legacyPromptAdapters([]agents.Adapter{claude.NewAdapter(), kiro.NewAdapter()})
-	if len(selected) != 1 || selected[0].Agent() != model.AgentKiroIDE {
-		t.Fatalf("legacyPromptAdapters() = %v, want only kiro-ide", selected)
+	selected := legacyPromptAdapters([]agents.Adapter{claude.NewAdapter(), cursor.NewAdapter()})
+	if len(selected) != 1 || selected[0].Agent() != model.AgentCursor {
+		t.Fatalf("legacyPromptAdapters() = %v, want only cursor", selected)
 	}
 }
 
@@ -30,7 +30,7 @@ func TestLegacyPromptAdaptersSelectsOnlyRenamedPromptAgents(t *testing.T) {
 // from: the removed file as a changed file, the kept one as a warning.
 func TestLegacyPromptRetirementStepReportsRetiredAndKeptFiles(t *testing.T) {
 	home := t.TempDir()
-	adapter := kiro.NewAdapter()
+	adapter := cursor.NewAdapter()
 	if _, err := persona.Inject(home, adapter, model.PersonaGentleman); err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestLegacyPromptRetirementStepReportsRetiredAndKeptFiles(t *testing.T) {
 	if err := os.WriteFile(current, []byte(managed), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	legacy := filepath.Join(filepath.Dir(current), "gentle-ai.md")
+	legacy := filepath.Join(filepath.Dir(current), "gentle-ai.mdc")
 
 	step := legacyPromptRetirementStep{
 		id:        "sync:retire-legacy-prompt-files",
@@ -86,7 +86,7 @@ func TestLegacyPromptRetirementStepReportsRetiredAndKeptFiles(t *testing.T) {
 func TestLegacyPromptFilesAreSnapshottedBeforeInstallAndSync(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	adapter := kiro.NewAdapter()
+	adapter := cursor.NewAdapter()
 	adapters := []agents.Adapter{adapter}
 	if _, err := persona.Inject(home, adapter, model.PersonaGentleman); err != nil {
 		t.Fatal(err)
@@ -100,12 +100,12 @@ func TestLegacyPromptFilesAreSnapshottedBeforeInstallAndSync(t *testing.T) {
 	if err := os.WriteFile(current, []byte(managed), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	legacy := filepath.Join(filepath.Dir(current), "gentle-ai.md")
+	legacy := filepath.Join(filepath.Dir(current), "gentle-ai.mdc")
 	if err := os.WriteFile(legacy, []byte(managed), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	selection := model.Selection{Agents: []model.AgentID{model.AgentKiroIDE}, Components: []model.ComponentID{model.ComponentPersona}}
+	selection := model.Selection{Agents: []model.AgentID{model.AgentCursor}, Components: []model.ComponentID{model.ComponentPersona}}
 	syncTargets, err := syncBackupTargetsScoped(home, workspace, ScopeGlobal, selection, adapters)
 	if err != nil {
 		t.Fatal(err)

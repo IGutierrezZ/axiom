@@ -11,14 +11,13 @@ func ModelConfigOptions() []string {
 	return []string{
 		"Configurar modelos de Claude",
 		"Configurar modelos de OpenCode",
-		"Configurar modelos de Kiro",
 		"Configurar modelos de Codex",
 		"Volver",
 	}
 }
 
 // RenderModelConfig renders the model configuration entry screen in Spanish.
-// It shows a 4-option menu: Claude, OpenCode, Kiro, Codex, Volver.
+// It shows a 3-option menu: Claude, OpenCode, Codex, Volver.
 // cursor indicates which option is currently highlighted.
 func RenderModelConfig(cursor int) string {
 	var b strings.Builder

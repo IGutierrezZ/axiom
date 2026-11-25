@@ -88,7 +88,7 @@ func TestTUIInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 	}
 	t.Cleanup(func() { tuiInstallStagePlan = previous })
 
-	agentsSelected := []model.AgentID{model.AgentClaudeCode, model.AgentAntigravity, model.AgentWindsurf}
+	agentsSelected := []model.AgentID{model.AgentClaudeCode, model.AgentAntigravity, model.AgentTrae}
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(home, model.Selection{Agents: agentsSelected}, planner.ResolvedPlan{Agents: agentsSelected}, system.PlatformProfile{}, model.OpenCodeBackgroundOff, model.PiBackgroundIntent(""), nil)
 	if result.Err != nil {
 		t.Fatalf("ExecuteTUIInstallWithBackgroundAndOrchestrator() error = %v", result.Err)
@@ -102,7 +102,7 @@ func TestTUIInstallWorkspaceOmitsAgentsWithoutWorkspaceMode(t *testing.T) {
 		t.Errorf("la TUI no debe escribir por stderr:\n%s", notices)
 	}
 	joined := strings.Join(result.ManualActions, "\n")
-	for _, id := range []model.AgentID{model.AgentAntigravity, model.AgentWindsurf} {
+	for _, id := range []model.AgentID{model.AgentAntigravity, model.AgentTrae} {
 		if !strings.Contains(joined, string(id)+" omitido") {
 			t.Errorf("falta el aviso de %s entre las acciones manuales:\n%s", id, joined)
 		}
@@ -152,7 +152,7 @@ func TestTUIInstallWorkspaceWithOnlyAgentsWithoutWorkspaceModeFails(t *testing.T
 	}
 	t.Cleanup(func() { tuiInstallStagePlan = previous })
 
-	only := []model.AgentID{model.AgentWindsurf}
+	only := []model.AgentID{model.AgentTrae}
 	result, _ := ExecuteTUIInstallWithBackgroundAndOrchestrator(t.TempDir(), model.Selection{Agents: only}, planner.ResolvedPlan{Agents: only}, system.PlatformProfile{}, model.OpenCodeBackgroundOff, model.PiBackgroundIntent(""), nil)
 	if result.Err == nil || !strings.Contains(result.Err.Error(), "ningún agente") {
 		t.Fatalf("error = %v, want el de ningún agente con modo workspace", result.Err)

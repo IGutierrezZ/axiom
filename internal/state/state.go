@@ -124,11 +124,6 @@ type InstallState struct {
 	// generated without `model` and inherit the conversation's.
 	CopilotPhaseAssignments map[string]CopilotPhaseAssignmentState `json:"copilot_phase_assignments,omitempty"`
 
-	// KiroModelAssignments maps SDD phase names to a Kiro-native model alias.
-	// Values like "opus", "sonnet", and "haiku" remain valid for state files
-	// written before Kiro had its own picker options.
-	KiroModelAssignments map[string]string `json:"kiro_model_assignments,omitempty"`
-
 	// CodexModelAssignments maps SDD phase names to a Codex reasoning_effort value
 	// (low|medium|high|xhigh). Persisted so that `gentle-ai sync` preserves the
 	// user's per-phase effort preset instead of falling back to Recommended.
@@ -163,6 +158,12 @@ type InstallState struct {
 	// PersonaPresent distinguishes an omitted legacy field from an explicit
 	// empty persona, which must fail closed during sync validation.
 	PersonaPresent bool `json:"-"`
+
+	// IgnoredAgents son los agentes de installed_agents que el catálogo ya no conoce
+	// (agentes retirados). El estado los descarta al leerse, para que una instalación
+	// anterior siga cargando y sincronizando el resto, y quien lo lee puede avisar.
+	// No se persiste: la siguiente escritura del estado ya no los incluye.
+	IgnoredAgents []string `json:"-"`
 
 	// LastUpdateCheck records the last time a successful remote update check was
 	// performed. Used by the cooldown gate (UpdateCheckTTL = 6h) to avoid
@@ -212,6 +213,7 @@ func (s *InstallState) UnmarshalJSON(data []byte) error {
 
 	*s = InstallState(decoded)
 	_, s.PersonaPresent = fields["persona"]
+	s.InstalledAgents, s.IgnoredAgents = splitKnownAgents(s.InstalledAgents)
 	return nil
 }
 
@@ -314,7 +316,6 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		ClaudeModelAssignments:      existing.ClaudeModelAssignments,
 		ClaudePhaseAssignments:      existing.ClaudePhaseAssignments,
 		CopilotPhaseAssignments:     existing.CopilotPhaseAssignments,
-		KiroModelAssignments:        existing.KiroModelAssignments,
 		CodexModelAssignments:       existing.CodexModelAssignments,
 		CodexOrchestratorAssignment: existing.CodexOrchestratorAssignment,
 		CodexCarrilModelAssignments: existing.CodexCarrilModelAssignments,
@@ -384,4 +385,21 @@ func marshal(s InstallState) ([]byte, error) {
 		return nil, err
 	}
 	return append(data, '\n'), nil
+}
+
+// splitKnownAgents separa los agentes que el catálogo conoce de los que no (por
+// ejemplo, uno retirado de Axiom). Conserva el orden de los conocidos.
+func splitKnownAgents(ids []string) (known, ignored []string) {
+	if ids == nil {
+		return nil, nil
+	}
+	known = make([]string, 0, len(ids))
+	for _, id := range ids {
+		if model.IsKnownAgentID(model.AgentID(id)) {
+			known = append(known, id)
+			continue
+		}
+		ignored = append(ignored, id)
+	}
+	return known, ignored
 }

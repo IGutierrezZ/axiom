@@ -10,9 +10,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// En workspace, el marcador de skills de los overlays de OpenCode y Kilo se
+// En workspace, el marcador de skills de los overlays de OpenCode se
 // resuelve a la carpeta de skills compartida del proyecto (.agents/skills), que
-// leen los dos agentes y no la de cada uno (.opencode/skills, .kilo/skills),
+// leen los agentes y no la propia (.opencode/skills),
 // no a la carpeta global bajo .config.
 func TestResolveOverlaySkillsDirUsesProjectSkillsOfBoundAdapter(t *testing.T) {
 	const overlay = `{"agent":{"sdd-apply":{"prompt":"Read {{AXIOM_SKILLS_DIR}}/sdd-apply/SKILL.md"}}}`
@@ -23,7 +23,6 @@ func TestResolveOverlaySkillsDirUsesProjectSkillsOfBoundAdapter(t *testing.T) {
 		want  string
 	}{
 		{model.AgentOpenCode, ".agents/skills/sdd-apply/SKILL.md"},
-		{model.AgentKilocode, ".agents/skills/sdd-apply/SKILL.md"},
 	} {
 		adapter, err := agents.NewAdapter(tc.agent)
 		if err != nil {
@@ -82,7 +81,6 @@ func TestInjectWorkspaceMultiWritesSharedPromptsInProject(t *testing.T) {
 		ref       string
 	}{
 		{model.AgentOpenCode, filepath.Join(".opencode", "prompts", "sdd"), "{file:./.opencode/prompts/sdd/sdd-apply.md}"},
-		{model.AgentKilocode, filepath.Join(".kilo", "prompts", "sdd"), "{file:./prompts/sdd/sdd-apply.md}"},
 	} {
 		t.Run(string(tc.agent), func(t *testing.T) {
 			root := t.TempDir()

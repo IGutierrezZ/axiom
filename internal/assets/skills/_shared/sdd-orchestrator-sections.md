@@ -60,17 +60,6 @@ After the writer returns, the parent infers the verification tier from the write
 - Exploration stays a separate delegation only when the parent needs the map to decide or route; reading that prepares a write belongs to the writer doing that write.
 <!-- sdd-orchestrator-section:Delegated Verification Gate (MANDATORY):end -->
 
-<!-- sdd-orchestrator-section:Delegated Verification Gate (Reduced Form):start -->
-For SDD work, run the applicable functional checks and configured TDD, report actual results, and follow the SDD phase instructions. The rules below apply only to non-SDD work.
-
-This runtime has no subagent delegation mechanism, so there is no separate writer or verifier to gate: the orchestrator itself performs the bounded action and its own verification. The tier it infers from the diff of its own change (an unclear tier counts as the highest one) still decides whether verification commands run at all:
-
-- **Passive** (documentation-only or passive content): structural readback only; do not run the `## Verification` commands.
-- **Ordinary code, or security-sensitive, executable, operational, or unclear changes**: run the exact `## Verification` commands yourself, in the foreground, and report `<command>: <observed result>`.
-
-The parent spot check — re-running one reported command before delivery — still applies.
-<!-- sdd-orchestrator-section:Delegated Verification Gate (Reduced Form):end -->
-
 <!-- sdd-orchestrator-section:SDD Change Kickoff and Block Gates:start -->
 **SDD lane selected.** The SDD lane is selected by an explicit request for SDD, by the project lane (`workflow.lane: sdd` in the `workflow` field of `axiom sdd status`), or by an accepted proposal. The lane-selection question is asked only when the project lane is `ask`, when `axiom.yaml` does not exist or is invalid, or when the status cannot be read; with `lane: sdd` it is never asked, and with `lane: odd` SDD is entered only when the user asks for it explicitly. When the `iso` field of the status projects `project: iso`, the project is ISO and only uses SDD: all work, including small, understood work, goes through the SDD lane without asking the lane question, also with `lane: ask`, and a bug goes through SDD with the bug profile (`skills/_shared/sdd-iso-convention.md`).
 
@@ -434,11 +423,3 @@ When executing general (non-SDD) work:
 3. Do NOT rely solely on conversation history — persist important findings to engram for cross-session durability
 <!-- sdd-orchestrator-section:Non-SDD Tasks:end -->
 
-<!-- sdd-orchestrator-section:Skill Resolution Feedback (Kiro and Windsurf):start -->
-After completing each phase, check the `skill_resolution` field in your own result:
-
-- `paths-injected` → all good, exact skill paths were loaded
-- `fallback-registry`, `fallback-path`, or `none` → skill cache was lost (likely compaction). Re-read the registry immediately and load skill paths for all subsequent phases.
-
-This is a self-correction mechanism. Do NOT ignore fallback reports — they indicate you dropped context between phases.
-<!-- sdd-orchestrator-section:Skill Resolution Feedback (Kiro and Windsurf):end -->

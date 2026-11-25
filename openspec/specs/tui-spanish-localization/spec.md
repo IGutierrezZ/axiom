@@ -52,11 +52,12 @@ El menú principal de bienvenida (`WelcomeOptions`) y sus microtextos auxiliares
 - **Y** la barra inferior de ayuda debe mostrar `j/k: navegar • enter: seleccionar • q: salir`.
 ### Requirement: Localización de Submenús y Pantallas de Configuración (REQ-16.3)
 Las pantallas subordinadas de configuración y gestión deben desplegar sus títulos, opciones y botones de acción en castellano.
+(Previously: la pantalla de configuración de modelos ofrecía también `Configurar modelos de Kiro`, agente retirado por C-08-d.)
 
 #### Scenario: Pantalla de Configuración de Modelos
 - **DADO QUE** el usuario navega a "Configurar modelos"
 - **CUANDO** se muestra la lista de opciones
-- **ENTONCES** las opciones deben mostrarse en español (`Configurar modelos de Claude`, `Configurar modelos de OpenCode`, `Configurar modelos de Kiro`, `Configurar modelos de Codex`, y opción "Volver").
+- **ENTONCES** las opciones deben mostrarse en español (`Configurar modelos de Claude`, `Configurar modelos de OpenCode`, `Configurar modelos de Codex`, y opción "Volver").
 
 #### Scenario: Pantalla de Gestión de Respaldos
 - **DADO QUE** el usuario navega a "Gestionar respaldos"
@@ -67,8 +68,6 @@ Las pantallas subordinadas de configuración y gestión deben desplegar sus tít
 - **DADO QUE** el usuario accede a "Desinstalación gestionada" o "Herramientas y plugins comunitarios"
 - **CUANDO** se despliegan los diálogos y confirmaciones
 - **ENTONCES** los textos explicativos y advertencias deben formularse en español peninsular claro y profesional.
-
----
 
 ### Requirement: Determinismo en la Máquina de Estados y Navegación (REQ-16.4)
 La traducción de los textos visibles NO debe alterar los índices numéricos de selección del cursor ni romper los contratos de navegación entre pantallas del modelo Bubbletea.

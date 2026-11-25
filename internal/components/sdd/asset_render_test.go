@@ -23,7 +23,7 @@ func TestPiRenderedOrchestratorUsesOnlyTheClosedChoiceRoute(t *testing.T) {
 			t.Errorf("Pi closed-choice route missing %q", clause)
 		}
 	}
-	if strings.Contains(renderSDDOrchestratorAsset(model.AgentKilocode), "ask_user_choice") {
+	if strings.Contains(renderSDDOrchestratorAsset(model.AgentOpenCode), "ask_user_choice") {
 		t.Fatal("generic fallback-only runtime received the Pi-only closed choice route")
 	}
 }
@@ -37,7 +37,7 @@ func TestPreservedSharedOrchestratorSubstitutesRuntimeAgentIdentity(t *testing.T
 	}, "\n")
 	rendered := renderPreservedOpenCodeOrchestratorPrompt(
 		preserved,
-		model.AgentKilocode,
+		model.AgentOpenCode,
 	)
 	if !strings.Contains(rendered, "Bind this to the dedicated `axiom-orchestrator` agent only.") && !strings.Contains(rendered, "Bind this to the dedicated `gentle-orchestrator` agent only.") {
 		t.Fatalf("preserved prompt lost its migration:\n%s", rendered)
@@ -45,7 +45,7 @@ func TestPreservedSharedOrchestratorSubstitutesRuntimeAgentIdentity(t *testing.T
 	if strings.Contains(rendered, runtimeAgentIDPlaceholder) {
 		t.Fatal("preserved prompt retained runtime agent placeholder")
 	}
-	if !strings.Contains(rendered, string(model.AgentKilocode)) {
+	if !strings.Contains(rendered, string(model.AgentOpenCode)) {
 		t.Fatalf("preserved prompt missing runtime agent identity:\n%s", rendered)
 	}
 }
@@ -62,14 +62,14 @@ func TestPreservedSharedOrchestratorLeavesRetiredWorkCommandsUntouched(t *testin
 	}
 	rendered := renderPreservedOpenCodeOrchestratorPrompt(
 		strings.Join(retired, "\n"),
-		model.AgentKilocode,
+		model.AgentOpenCode,
 	)
 	for _, command := range retired {
 		if !strings.Contains(rendered, command) {
 			t.Fatalf("preserved prompt rewrote retired command %q:\n%s", command, rendered)
 		}
 	}
-	if strings.Contains(rendered, "--agent "+string(model.AgentKilocode)) {
+	if strings.Contains(rendered, "--agent "+string(model.AgentOpenCode)) {
 		t.Fatalf("preserved prompt injected an adapter identity into a retired command:\n%s", rendered)
 	}
 }

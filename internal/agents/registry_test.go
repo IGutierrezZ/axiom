@@ -114,9 +114,7 @@ func TestDefaultRegistryIncludesAllAgents(t *testing.T) {
 		model.AgentVSCodeCopilot,
 		model.AgentCodex,
 		model.AgentAntigravity,
-		model.AgentWindsurf,
 		model.AgentQwenCode,
-		model.AgentHermes,
 		model.AgentGitHubCopilotCLI,
 	} {
 		if _, ok := registry.Get(agent); !ok {

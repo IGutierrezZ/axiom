@@ -57,18 +57,15 @@ Alineación de nombres de archivos de configuración e instrucciones hacia el es
 
 ### Requirement: Rutas de instrucciones con nomenclatura Axiom (REQ-09.4)
 Los adaptadores de agentes DEBEN utilizar rutas y nombres de archivos que contengan el prefijo o identificador `axiom` en lugar de `gentle-ai`.
+(Previously: también fijaba la ruta del steering de Kiro IDE, `~/.kiro/steering/axiom.md`, agente retirado por C-08-d.)
 
 #### Scenario: Archivo de instrucciones en VS Code Copilot
 - **DADO** el adaptador de VS Code Copilot
 - **CUANDO** se consulta la ruta del archivo de system prompt mediante `SystemPromptFile()`
 - **ENTONCES** el nombre del archivo retornado es `axiom.instructions.md` (ubicado en la carpeta de prompts del usuario)
 
-#### Scenario: Archivo de steering en Kiro IDE
-- **DADO** el adaptador de Kiro IDE
-- **CUANDO** se genera el archivo de steering
-- **ENTONCES** la ruta objetivo es `~/.kiro/steering/axiom.md`
-
 #### Scenario: Directorio de modelos en Pi
 - **DADO** el adaptador de Pi
 - **CUANDO** se resuelve la configuración de modelos
 - **ENTONCES** la ruta de configuración apunta a `~/.pi/axiom/`
+

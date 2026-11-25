@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -2488,115 +2487,6 @@ func TestOpenCodePersonaBeforeSDDPreservesAllSections(t *testing.T) {
 	}
 	if strings.Contains(jsonText, `"sdd-orchestrator"`) {
 		t.Error("opencode.json should not contain legacy sdd-orchestrator agent entry")
-	}
-}
-func TestRunInstallKimiBootstrapsHub(t *testing.T) {
-	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-	osUserHomeDir = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = missingBinaryLookPath
-	restoreInstallcmdLookPath := installcmd.OverrideLookPath(func(name string) (string, error) {
-		if name == "uv" {
-			return "/usr/bin/uv", nil
-		}
-		return "", exec.ErrNotFound
-	})
-	t.Cleanup(restoreInstallcmdLookPath)
-
-	// This test targets kimiSystemPromptHubStep bootstrap content, not agent
-	// install behavior, so simulate Kimi as already installed — otherwise
-	// gentle-ai correctly refuses to proceed for an undetected runtime.
-	restoreKimiLookPath := kimi.LookPathOverride
-	kimi.LookPathOverride = func(string) (string, error) { return "/usr/local/bin/kimi", nil }
-	t.Cleanup(func() { kimi.LookPathOverride = restoreKimiLookPath })
-	allowUnselectableAgentsForTest(t)
-
-	// Install Kimi with minimalist component (e.g., permissions only, NO persona).
-	_, err := RunInstall(
-		[]string{"--agent", "kimi", "--component", "permissions"},
-		system.DetectionResult{},
-	)
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	// Verify that KIMI.md was created in the agent's config dir.
-	hubPath := filepath.Join(home, ".kimi", "KIMI.md")
-	if _, err := os.Stat(hubPath); err != nil {
-		t.Fatalf("expected Kimi prompt hub file %q to be bootstrapped: %v", hubPath, err)
-	}
-
-	// Verify content includes sub-modules (basic check).
-	content, err := os.ReadFile(hubPath)
-	if err != nil {
-		t.Fatalf("failed to read bootstrapped hub: %v", err)
-	}
-	if !strings.Contains(string(content), "{% include \"persona.md\" ignore missing %}") {
-		t.Errorf("bootstrapped hub missing modular include: %s", string(content))
-	}
-}
-
-func TestRunInstallKimiAlreadyInstalledDoesNotRequireUV(t *testing.T) {
-	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	cmdLookPath = missingBinaryLookPath
-	recorder := &commandRecorder{}
-	runCommand = recorder.record
-
-	originalKimiLookPath := kimi.LookPathOverride
-	kimi.LookPathOverride = func(name string) (string, error) {
-		if name == "kimi" {
-			return "/usr/local/bin/kimi", nil
-		}
-		return "", exec.ErrNotFound
-	}
-	t.Cleanup(func() { kimi.LookPathOverride = originalKimiLookPath })
-	allowUnselectableAgentsForTest(t)
-
-	restoreInstallcmdLookPath := installcmd.OverrideLookPath(func(name string) (string, error) {
-		if name == "uv" {
-			return "", exec.ErrNotFound
-		}
-		return "/usr/bin/" + name, nil
-	})
-	t.Cleanup(restoreInstallcmdLookPath)
-
-	result, err := RunInstall(
-		[]string{"--agent", "kimi", "--component", "permissions"},
-		macOSDetectionResult(),
-	)
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	if !result.Verify.Ready {
-		t.Fatalf("verification ready = false, report = %#v", result.Verify)
-	}
-
-	hubPath := filepath.Join(home, ".kimi", "KIMI.md")
-	if _, err := os.Stat(hubPath); err != nil {
-		t.Fatalf("expected Kimi prompt hub file %q to be bootstrapped: %v", hubPath, err)
-	}
-
-	if got := recorder.get(); len(got) != 0 {
-		t.Fatalf("expected no install commands when Kimi is already installed, got: %v", got)
 	}
 }
 

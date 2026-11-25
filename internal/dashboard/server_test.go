@@ -752,12 +752,12 @@ func TestAdaptersCatalogListsSelectableAgentsWithWorkspaceSupport(t *testing.T) 
 	if a := byID["claude-code"]; a.Name != "Claude Code" || !a.Workspace || a.Reason != "" {
 		t.Errorf("claude-code = %+v", a)
 	}
-	for _, id := range []string{"pi", "openclaw", "windsurf", "antigravity", "trae-ide"} {
+	for _, id := range []string{"pi", "antigravity", "trae-ide"} {
 		if a, ok := byID[id]; !ok || a.Workspace || a.Reason == "" {
 			t.Errorf("%s debe aparecer sin modo workspace y con motivo: %+v (ok=%v)", id, a, ok)
 		}
 	}
-	for _, id := range []string{"kimi", "qwen-code", "hermes"} {
+	for _, id := range []string{"qwen-code"} {
 		if _, ok := byID[id]; ok {
 			t.Errorf("%s no es seleccionable y no debe listarse", id)
 		}
@@ -773,7 +773,7 @@ func TestProjectsInitRejectsInvalidAdaptersBeforeWriting(t *testing.T) {
 	called := false
 	stubInstallAdapters(t, func(string, []string) ([]string, error) { called = true; return nil, nil })
 
-	body := `{"path":` + quoteJSON(dir) + `,"adapters":["claude-code","no-existe","kimi","pi"],"roles":[{"key":"a","name":"A","repositories":["../fuera"]}]}`
+	body := `{"path":` + quoteJSON(dir) + `,"adapters":["claude-code","no-existe","qwen-code","pi"],"roles":[{"key":"a","name":"A","repositories":["../fuera"]}]}`
 	rr := request(router, http.MethodPost, "/api/projects/init", body)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("POST /api/projects/init = %d, quiero 400: %s", rr.Code, rr.Body.String())
@@ -785,7 +785,7 @@ func TestProjectsInitRejectsInvalidAdaptersBeforeWriting(t *testing.T) {
 		t.Fatal(err)
 	}
 	joined := strings.Join(got.Violations, "\n")
-	for _, want := range []string{`"no-existe" no existe`, `"kimi" no está disponible`, `"pi" no se puede instalar`, "sale de la carpeta del proyecto"} {
+	for _, want := range []string{`"no-existe" no existe`, `"qwen-code" no está disponible`, `"pi" no se puede instalar`, "sale de la carpeta del proyecto"} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("falta la violación %q en:\n%s", want, joined)
 		}

@@ -16,26 +16,22 @@ import (
 var workspaceAgentsNoticeWriter io.Writer = os.Stderr
 
 // isSelectableAgent indica si el agente se puede elegir al instalar. Es una
-// variable para que las pruebas de los adaptadores retirados (Qwen Code, Hermes y
-// Kimi) puedan seguir ejerciendo sus flujos.
+// variable para que las pruebas de los adaptadores retirados (Qwen Code)
+// puedan seguir ejerciendo sus flujos.
 var isSelectableAgent = catalog.IsSelectableAgent
 
 // agentSupportsWorkspace indica si el agente puede alojar su configuración en la
 // raíz del proyecto. Los demás solo tienen configuración global: con
 // --scope workspace se omiten enteros en lugar de escribir en la carpeta de usuario.
-// Los agentes no seleccionables (Qwen Code, Hermes y Kimi) cuentan como sin modo
+// Los agentes no seleccionables (Qwen Code) cuentan como sin modo
 // workspace: un estado de proyecto que los conserve no escribe nada por ellos.
 //
-// Pi y OpenClaw también se omiten, porque lo que Axiom les escribe no cabe del todo
-// en el proyecto:
-//   - Pi: la documentación oficial respalda `pi install -l` (paquetes en
-//     .pi/settings.json), pero `pi-engram init` solo tiene modo de usuario
-//     (~/.pi/agent/mcp.json), Axiom además escribe ~/.pi/npm/package.json y el
-//     APPEND_SYSTEM.md de usuario, y no hay documentación de rutas de proyecto para
-//     esos ficheros.
-//   - OpenClaw: su configuración, incluido el MCP de Engram, vive en
-//     ~/.openclaw/openclaw.json; la documentación oficial
-//     (docs.openclaw.ai/gateway/configuration) no describe configuración por proyecto.
+// Pi también se omite, porque lo que Axiom le escribe no cabe del todo en el
+// proyecto: la documentación oficial respalda `pi install -l` (paquetes en
+// .pi/settings.json), pero `pi-engram init` solo tiene modo de usuario
+// (~/.pi/agent/mcp.json), Axiom además escribe ~/.pi/npm/package.json y el
+// APPEND_SYSTEM.md de usuario, y no hay documentación de rutas de proyecto para
+// esos ficheros.
 //
 // Copilot CLI también se omite. Su configuración de Axiom (copilot-instructions.md,
 // mcp-config.json, settings.json y skills) vive en <COPILOT_HOME|~/.copilot>, y no hay
@@ -49,7 +45,7 @@ func agentSupportsWorkspace(id model.AgentID) bool {
 		return false
 	}
 	switch id {
-	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentOpenClaw, model.AgentGitHubCopilotCLI:
+	case model.AgentTrae, model.AgentAntigravity, model.AgentPi, model.AgentGitHubCopilotCLI:
 		return false
 	default:
 		return true
@@ -96,7 +92,7 @@ func WorkspaceUnsupportedReason(id model.AgentID) string {
 		return ""
 	}
 	switch id {
-	case model.AgentPi, model.AgentOpenClaw:
+	case model.AgentPi:
 		return "su configuración vive en la carpeta de usuario y no cabe en el proyecto"
 	default:
 		return "solo tiene configuración global: no admite el modo workspace"
@@ -151,10 +147,10 @@ func errNoWorkspaceAgents(omitted []model.AgentID) error {
 }
 
 // scopedAdapter liga el adaptador a la raíz del proyecto cuando el ámbito es
-// workspace. OpenCode, Kilo, Gemini, Codex y VS Code Copilot tienen en el proyecto otra
-// distribución que en la carpeta de usuario (opencode.json y .opencode, .kilo,
+// workspace. OpenCode, Gemini, Codex y VS Code Copilot tienen en el proyecto otra
+// distribución que en la carpeta de usuario (opencode.json y .opencode,
 // .gemini/AXIOM.md, .codex/config.toml, .github/ y .vscode/). Además, las skills de proyecto de
-// todos los que leen .agents/skills (esos cinco y Cursor) van a esa carpeta compartida. El
+// todos los que leen .agents/skills (esos cuatro y Cursor) van a esa carpeta compartida. El
 // adaptador ligado devuelve esas rutas para la raíz del proyecto y mantiene la global para
 // cualquier otra carpeta. Con ámbito global, o para el resto de agentes, no cambia nada.
 func scopedAdapter(scope InstallScope, workspaceDir string, adapter agents.Adapter) agents.Adapter {
@@ -180,4 +176,12 @@ func resolveAdaptersScoped(scope InstallScope, workspaceDir string, agentIDs []m
 		adapters[i] = scopedAdapter(scope, workspaceDir, adapter)
 	}
 	return adapters
+}
+
+// noteIgnoredStateAgents avisa de los agentes que el estado guardaba y Axiom ya no
+// conoce (agentes retirados): el sync los ignora y sigue con los demás.
+func noteIgnoredStateAgents(ignored []string) {
+	for _, id := range ignored {
+		fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: el estado incluye el agente %q, que Axiom ya no admite; se ignora y se sincronizan los demás.\n", id)
+	}
 }

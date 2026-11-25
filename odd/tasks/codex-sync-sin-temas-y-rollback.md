@@ -1,5 +1,7 @@
 # ODD: Sincronización de Codex, retirada de temas y rollback propio de Axiom
 
+> **Parcialmente superado (2026-11-25).** Lo que este documento dice de Windsurf (adaptador sin modo workspace en T6) quedó superado por C-08-d (`odd/tasks/retirar-agentes.md`), que retira Windsurf del producto. El resto sigue vigente como historial.
+
 > Documento vivo. Fichero autoritativo: `odd/tasks/codex-sync-sin-temas-y-rollback.md`.
 > Espejo de recuperación: `odd/codex-sync-sin-temas-y-rollback/tasks` (proyecto `axiom`).
 

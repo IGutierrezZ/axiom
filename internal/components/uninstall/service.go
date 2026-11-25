@@ -134,12 +134,6 @@ type Service struct {
 	keepEngramRegistration bool
 }
 
-type workflowCapability interface {
-	SupportsWorkflows() bool
-	WorkflowsDir(workspaceDir string) string
-	EmbeddedWorkflowsDir() string
-}
-
 type opType int
 
 const (
@@ -274,7 +268,7 @@ func (s *Service) root() string {
 }
 
 // adapter devuelve el adaptador del agente ligado al ámbito. En workspace, los que
-// tienen otra distribución de proyecto (OpenCode, Kilo, Gemini, Codex, VS Code y
+// tienen otra distribución de proyecto (OpenCode, Gemini, Codex, VS Code y
 // Cursor) resuelven sus rutas con la raíz del proyecto, igual que la instalación.
 func (s *Service) adapter(agentID model.AgentID) (agents.Adapter, bool) {
 	adapter, ok := s.registry.Get(agentID)
@@ -649,24 +643,6 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 			}
 		}
 		backupTargets[state.Path(s.homeDir)] = struct{}{}
-		if removesAllAgentComponents(componentIDs) {
-			// El steering de Kiro lleva la persona entera, sin marcadores: tras retirar
-			// las secciones con marcadores, solo se borra si lo que queda es de Axiom.
-			for _, agentID := range agentIDs {
-				adapter, ok := s.adapter(agentID)
-				if !ok {
-					continue
-				}
-				for _, path := range s.globalSteeringFiles(adapter) {
-					backupTargets[path] = struct{}{}
-					addPlanOperation(operationsByKey, agentID, s.sweepInstructionsFile(path, true))
-					// Las carpetas que se quedan vacías (steering y la de Kiro), sin
-					// aviso si conservan algo del usuario.
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(filepath.Dir(path)))
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(adapter.GlobalConfigDir(s.homeDir)))
-				}
-			}
-		}
 		if s.completeRun {
 			targets, compatOps, err := s.compatibilitySkillsOperations()
 			if err != nil {
@@ -1034,7 +1010,7 @@ func settingsTargets(homeDir string, adapter agents.Adapter) []string {
 }
 
 // systemPromptFiles lists the prompt file the adapter writes and the earlier
-// names a previous release used (Kiro, VS Code and Cursor renamed theirs), so an
+// names a previous release used (VS Code and Cursor renamed theirs), so an
 // uninstall also clears managed sections from a copy that sync has not retired.
 func systemPromptFiles(adapter agents.Adapter, homeDir string) []string {
 	files := []string{adapter.SystemPromptFile(homeDir)}
@@ -1088,7 +1064,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, rewriteJSONFile(path, jsonPaths...))
 		}
 	case model.ComponentContext7:
-		if s.workspace || usesManagedMCPShape(adapter) {
+		if s.workspace {
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "context7")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1111,7 +1087,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			keptTargets, keptOps := engramOperationsKeepingRegistration(adapter, homeDir)
 			targets = append(targets, keptTargets...)
 			ops = append(ops, keptOps...)
-		case s.workspace || usesManagedMCPShape(adapter):
+		case s.workspace:
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1135,7 +1111,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			// chat.tools.autoApprove) ya no los escribe Axiom: si están, son del
 			// usuario y se quedan.
 			switch adapter.Agent() {
-			case model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode:
+			case model.AgentClaudeCode, model.AgentOpenCode:
 				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
@@ -1233,16 +1209,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
 		}
-		if path := sdd.SkillRegistryHookPath(adapter, homeDir); path != "" {
-			// Axiom owns the whole file; user hooks beside it are left alone.
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
-		}
-		// Kilo usa el mismo formato de configuración que OpenCode (agentes con la marca
-		// de Axiom, plugins y share), así que se retira con el mismo código en el
-		// proyecto y en la carpeta de usuario. Antes la desinstalación global no lo
-		// trataba como tal y dejaba su opencode.json y sus plugins.
-		if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {
 				var defaultPlan *opencodedefault.UninstallPlan
 				if adapter.Agent() == model.AgentOpenCode {
@@ -1300,10 +1267,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeFile(pluginPath))
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
-			if adapter.Agent() == model.AgentKilocode {
-				// La carpeta de Kilo (~/.config/kilo) también se quita si queda vacía.
-				ops = append(ops, quietDirIfEmpty(adapter.GlobalConfigDir(homeDir)))
-			}
 
 			if s.workspace {
 				// Los prompts compartidos de las fases (<proyecto>/.opencode/prompts/sdd).
@@ -1315,7 +1278,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				}
 				ops = append(ops, removeDirIfEmpty(promptDir), removeDirIfEmpty(filepath.Dir(promptDir)))
 			} else if adapter.Agent() == model.AgentOpenCode {
-				// La caché y la dependencia son de OpenCode: Kilo no las usa.
 				// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
 				// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
 				// defecto y en la heredada.
@@ -1346,22 +1308,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeTree(dirPath))
 			}
 			ops = append(ops, removeDirIfEmpty(skillDir))
-		}
-		if cap, ok := adapter.(workflowCapability); ok && cap.SupportsWorkflows() && s.workspaceDir != "" {
-			workflowsDir := cap.WorkflowsDir(s.workspaceDir)
-			entries, err := fs.ReadDir(assets.FS, cap.EmbeddedWorkflowsDir())
-			if err != nil {
-				return nil, nil, fmt.Errorf("read embedded workflows: %w", err)
-			}
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				path := filepath.Join(workflowsDir, entry.Name())
-				targets = append(targets, path)
-				ops = append(ops, removeFile(path))
-			}
-			ops = append(ops, removeDirIfEmpty(workflowsDir), removeDirIfEmpty(filepath.Dir(workflowsDir)))
 		}
 		// Copilot CLI no tiene modo workspace, pero si consta en el estado del proyecto los
 		// agentes de .github/agents son también suyos: los retira si VS Code no los necesita.
