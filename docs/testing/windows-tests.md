@@ -38,7 +38,7 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - Those tests call `testenv.RequireBinaryBuilds(t)` before any `go build` and skip with a message naming `AXIOM_TEST_BUILD_BINARIES`.
   - The variable must be `1` or `true`. It is not implied by `CI`: the workflows set `AXIOM_TEST_BUILD_BINARIES: "1"` explicitly, so CI runs them all.
   - On a machine without such an EDR, opt in with `$env:AXIOM_TEST_BUILD_BINARIES = "1"`.
-  - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
+  - Affected: `internal/app`, `internal/update`, `internal/opencode` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
 - **Tests that launch the Go toolchain skip behind the same variable.** They call `testenv.RequireGoToolchain(t)` before the first `go build`, `go run`, `go test -list` or `go version` subprocess, because each costs minutes on Windows. CI runs them because the workflows set the variable.
   - `internal/update`: `TestCanonicalReleasePublicKeysControlRealLinkerBuild` and the release distribution policy tests (`newReleasePolicyFixture`, which runs `go run ./internal/releasepolicycmd`).
   - `internal/app`: `TestDocumentedInvocationsRunAsDocumented`.

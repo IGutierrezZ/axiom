@@ -8,7 +8,7 @@ Axiom sync refreshes managed agent configuration. Engram memory is personal and 
 
 | Flow | Command surface | Owner | What changes |
 |---|---|---|---|
-| Axiom config sync | `axiom sync` | `internal/cli/sync.go`, components, adapters | Agent prompts, skills, MCP configs, SDD profiles, GGA assets, persona assets, and configured community tool guidance. |
+| Axiom config sync | `axiom sync` | `internal/cli/sync.go`, components, adapters | Agent prompts, skills, MCP configs, SDD profiles, persona assets, and configured community tool guidance. |
 | Engram memory sharing | Not used | External Engram runtime | Nothing in the repository: memory stays in each person's local store; only `.engram/config.json` is versioned. |
 | Cloud sync | Not present in Axiom source | External or future Engram capability | Do not document implementation here without source. |
 | Autosync | Not present in Axiom source | External or future Engram capability | Do not imply background sync exists in this repo. |
@@ -27,7 +27,7 @@ axiom sync
 
 Important behavior from `internal/cli/sync.go`:
 
-- Default sync scope includes SDD, Engram, Context7, GGA, skills, and persona.
+- Default sync scope includes SDD, Engram, Context7, skills, and persona.
 - Persona sync resolves the persisted persona from the scope state (`<workspace root>/.axiom/state.json` in workspace scope, `~/.axiom/state.json` in global scope) when the selection does not set one explicitly; the safe fallback is neutral.
 - Permissions and theme are user-adjacent and not included by default.
 - OpenCode SDD profile flags preserve and update profile model assignments.

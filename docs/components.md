@@ -14,7 +14,6 @@ Esta guía describe los componentes que Axiom puede configurar para los agentes 
 | Context7 | `context7` | Servidor MCP opcional para consultar documentación de frameworks y bibliotecas. |
 | Persona | `persona` | Inyección opcional de la persona de mentor (`gentleman`) o neutral; también puede mantenerse una persona personalizada sin gestión. |
 | Permisos | `permissions` | Valores predeterminados y guardas de seguridad. Solo escribe reglas protectoras: la lista `permissions.deny` de Claude Code, que se une a la del usuario (sus entradas primero y en su orden, sin duplicados), y las reglas `ask` y `deny` de OpenCode. Axiom nunca fija modos de autoaprobación (`bypassPermissions`, `auto_edit`, `chat.tools.autoApprove` ni un `allow` general en OpenCode) ni borra los que el usuario ya tenga, de modo que Gemini CLI, Qwen Code y VS Code Copilot no reciben nada. El destino sigue el ámbito de instalación: con `--scope workspace` (el predeterminado) escribe bajo la raíz del proyecto y con `--scope global`, en el HOME. Un agente sin modo workspace se omite con un aviso y nunca se escribe en el HOME. `axiom sync` lo incluye si figura en la selección guardada o con `--include-permissions`; la TUI añade esa opción por su cuenta al descubrir Codex, sin efecto, porque Codex no tiene overlay de permisos en ningún ámbito. Las rutas sensibles de Claude Code son `.env` y `.env.*`, `**/*.pem`, `**/*.key`, `**/secrets/*` y, ancladas al HOME con `~/` porque Claude Code resuelve el resto respecto al proyecto, `~/.ssh/**`, `~/.credentials/**`, `~/Library/Keychains/**`, `~/.aws/credentials` y `~/.config/gh/hosts.yml` (las reglas antiguas sin `~/` de instalaciones previas se reescriben en su sitio y la desinstalación también las retira). OpenCode deniegan la lectura de `*.env`, `*.env.*`, `**/.env`, `**/.env.*`, `**/secrets/**`, `**/credentials.json`, `**/.ssh/**`, `**/.credentials/**`, `**/Library/Keychains/**`, `**/.aws/credentials`, `**/.config/gh/hosts.yml`, `**/*.pem` y `**/*.key`. |
-| GGA | `gga` | Gentleman Guardian Angel, herramienta externa para cambiar de proveedor de IA. Opcional: ningún preset la instala, hay que pedirla de forma explícita. |
 
 ### Temas visuales
 
@@ -25,23 +24,6 @@ Axiom no incluye temas visuales en sus presets y no los instala ni sincroniza. E
 Las instrucciones de agentes instaladas por Axiom incluyen un límite común para operaciones remotas, independientemente de los componentes opcionales Persona, SDD y Permisos. El acceso local de desarrollo no autoriza ejecutar operaciones remotas, transferir ficheros ni descubrir o reutilizar agentes SSH, sockets ControlMaster, credenciales o sesiones presentes en el entorno. Antes de operar en remoto se requiere autorización expresa para el destino, la operación y la credencial o sesión; la operación autorizada sigue sujeta a restricciones más estrictas del usuario o del entorno.
 
 La primera cobertura incluye los 10 portadores principales de instrucciones distintos de Pi, no todos los roles ejecutores ni perfiles con nombre. La integración de Pi conserva su gestión en los paquetes `gentle-pi`. Estas instrucciones no proporcionan aislamiento del sistema de ficheros ni garantizan una nueva confirmación humana en cada ejecución. Por separado, los valores predeterminados de permisos de OpenCode solicitan autorización para comandos `ssh`, `scp`, `sftp` y `rsync` directos, sin sustituir permisos personales. Las instalaciones existentes deben optar expresamente por sincronizar permisos; consulta el [Inicio rápido](quickstart.md). El seguimiento de las proyecciones iniciales se documentó en el [issue histórico #4324 de Gentle AI](https://github.com/Gentleman-Programming/gentle-ai/issues/4324).
-
-## GGA
-
-GGA es opcional y no forma parte de ningún preset, ni siquiera del predeterminado. `axiom install --component gga` instala o aprovisiona el ejecutable `gga` en el equipo; también puede elegirse en la TUI con el preset personalizado.
-
-Las instalaciones que ya tenían GGA lo conservan: `axiom sync` sigue refrescando su configuración si figura en la selección guardada o, sin selección guardada, si Axiom ya lo aprovisionó en el HOME. Quitar GGA de los presets solo cambia lo que se instala en instalaciones nuevas.
-
-Con `--scope workspace`, GGA sigue escribiendo en tu carpeta de usuario (su configuración en `~/.config/gga`, o en `AppData\Roaming\gga` en Windows; su runtime en `~/.local/share/gga` y, en Windows, los shims de `~/bin`, que se añade al PATH de usuario). Como es una elección explícita, se permite, pero `install` y `sync` lo declaran con un aviso que lista esas rutas, y `axiom doctor` lo muestra en su apartado de huella de máquina.
-
-No configura automáticamente hooks para cada proyecto (`gga init` o `gga install`): esa decisión corresponde al repositorio concreto.
-
-Después de instalar GGA, habilítalo en el proyecto en el que quieras usarlo:
-
-```sh
-gga init
-gga install
-```
 
 ## Skills
 
@@ -101,4 +83,4 @@ Para skills específicas de frameworks (React, Angular, TypeScript, Tailwind, Zo
 
 La persona se elige por separado y se aplica de forma independiente del preset. Ningún preset instala temas visuales.
 
-GGA y CodeGraph son opcionales y ningún preset los incluye. GGA se pide con `--component gga` o con el preset personalizado; CodeGraph, una herramienta de la comunidad, se elige aparte en la TUI y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella igual que la de GGA.
+CodeGraph es opcional y ningún preset lo incluye: es una herramienta de la comunidad que se elige aparte en la TUI y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella con un aviso.

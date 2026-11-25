@@ -37,7 +37,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 
 - [x] T1 · Borrar las lápidas de telemetría: `telemetryruntime`, `sdd/telemetry_retire.go`, el paso de OpenCode en `run`/`sync`, la limpieza de hooks y plugin en `uninstall`, y sus tests.
 - [x] T2 · Retirar GGA del código y sus tests: componente, assets, registro, `installcmd`, `cli`, `uninstall`, TUI, `versions`, `update`, `update/upgrade` y `app`, con el lector tolerante del estado. (Se funde con la antigua T3: `update/upgrade` importaba el paquete `gga` y el commit no compilaría por separado.)
-- [ ] T3 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd retirar-gga-telemetria` y criterio `rg`.
+- [x] T3 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd retirar-gga-telemetria` y criterio `rg`.
 
 Ruta: T1, en línea. T2, código de producción en línea y limpieza de unos 30 ficheros de test delegada en un escritor (disparador: proteger el contexto del padre; ~450 menciones mecánicas). T3, en línea salvo `PRD.md`, delegado en un segundo escritor en paralelo (disparador: paralelismo, superficie disjunta).
 
@@ -74,9 +74,11 @@ Retira la capacidad `gga` entera: Axiom deja de instalar, sincronizar, diagnosti
 ## Progreso
 
 - 2026-11-25: worktree creado desde `origin/main` `9ed8e03c`; documento creado.
-- 2026-11-25: T1 hecha en `ce2fdf4e` (`go test` de `sdd`, `uninstall` y `cli -run OpenCode|Retire|Legacy|Sync` en verde).
+- 2026-11-25: T1 hecha (`go test` de `sdd`, `uninstall` y `cli -run OpenCode|Retire|Legacy|Sync` en verde).
 - 2026-11-26: T2 hecha. `go vet ./...` limpio; `go test` en verde de `app`, `model`, `versions`, `installcmd`, `components/uninstall`, `components/mcp`, `update`, `update/upgrade`, `state`, `catalog`, `tui/screens`, `tui -run Preset|Complete|Uninstall|Model` y `cli -run Doctor|Footprint|OptionalTools|NormalizeInstallFlags|RunNotes|PostInstallNotes|PathGuidance|GoInstallPathNote|WorkspaceAgents|Sync|RunInstall|CheckOneTool|CheckToolBinaries`. Goldens `preset-custom-*` regenerados (solo pierden la fila de GGA). Tests nuevos: `state.TestReadIgnoresComponentsAxiomNoLongerSupports` y `catalog.TestModelKnownComponentsCoverCatalog`. El método genérico `InstallScript` de `update` queda sin herramientas que lo usen; se conserva con sus tests.
+- 2026-11-26: T3 hecha. Docs sin GGA (incluido `PRD.md`, editado por un escritor delegado; borrado `docs/gga-powershell-shim.md`, que entró en el commit de T2), e2e sin los tests de GGA (`bash -n` en verde), notas de limpieza manual completas. `axiom archive integrate --odd retirar-gga-telemetria` vació la capacidad `gga`; se borra `openspec/specs/gga/` y su fila y sección de `openspec/INDEX.md` a mano (53 dominios). Criterio `rg -il "gga|guardian"`: solo históricos, notas de retirada, `CONTRIBUTORS.md`, el lector tolerante y falsos positivos (`PendingGate`, `GovernanceGate`, `ReportingGate`).
+- 2026-11-26: rebase sobre `origin/main` `478e137c` (C-08-i fusionada); conflicto solo en `openspec/INDEX.md`, resuelto sobre la versión de `main` (53 dominios, 527 requisitos, 2134 escenarios). Commits: T1 `60685fb8`, T2 `0600ca30`, T3 = commit de cierre de docs y specs.
 
 ## Siguiente paso
 
-T3: docs, e2e, notas y Spec viva.
+Abrir la PR (`type:refactor`), CI en verde, merge commit y `done`. Antes de instalar esta versión, la persona usuaria limpia a mano lo de `docs/releases/notas-retirada-gga-telemetria.md`.

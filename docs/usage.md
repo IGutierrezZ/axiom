@@ -53,7 +53,7 @@ Configuración inicial: detecta tus herramientas y configura los agentes y compo
 **Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall`, y también la TUI, trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
 
 - Axiom no escribe en tu HOME salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el hub, las copias de seguridad, `bin` y la caché; el estado de cada proyecto vive en `<raíz>/.axiom/state.json`, sin versionar.
-- Lo opcional es opt-in. GGA y CodeGraph no entran en ningún preset y hay que pedirlos expresamente; si los eliges, conservan su huella en HOME y Axiom la avisa.
+- Lo opcional es opt-in. CodeGraph no entra en ningún preset y hay que pedirlo expresamente; si lo eliges, conserva su huella en HOME y Axiom la avisa.
 - El componente de permisos solo añade reglas de denegación (`deny`) y nunca fija modos de autoaprobación. Detalle en [Componentes](components.md).
 - Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama y preflight SDD) no hacen nada fuera de un proyecto así.
 - Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Trae, Antigravity y Pi no tienen modo workspace y se omiten con un aviso; Qwen Code ya no se puede elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
@@ -104,7 +104,7 @@ See [Skill Registry](skill-registry.md) for the full index-first flow and diagra
 
 ### sync
 
-Actualiza los recursos gestionados a la versión vigente. Ejecútalo después de sustituir o actualizar el binario `axiom`, por ejemplo con `axiom upgrade` o `go install`. No reinstala otros binarios (Engram, GGA); solo actualiza el contenido de prompts, las skills, las configuraciones MCP y los orquestadores SDD.
+Actualiza los recursos gestionados a la versión vigente. Ejecútalo después de sustituir o actualizar el binario `axiom`, por ejemplo con `axiom upgrade` o `go install`. No reinstala otros binarios (Engram); solo actualiza el contenido de prompts, las skills, las configuraciones MCP y los orquestadores SDD.
 
 > **Importante:** `axiom sync` actualiza los agentes registrados como instalados por Axiom, no todos los directorios de configuración de agentes de tu equipo.
 >
@@ -127,7 +127,7 @@ Sync is safe and idempotent — running it twice produces no changes the second 
 
 `sync` actualiza el conjunto de componentes gestionados para los agentes seleccionados. No admite `--component`; usa `--include-permissions` para incluir voluntariamente el componente de permisos (solo añade reglas de denegación y sigue el ámbito). La TUI, y el `axiom sync` diferido que Axiom lanza tras una autoactualización, añaden `--include-permissions` por su cuenta cuando descubren Codex; es inocuo, porque Codex no tiene overlay de permisos en ningún ámbito y no se escribe nada para él. La opción heredada `--include-theme` aún se interpreta por compatibilidad, pero no instala ni sincroniza temas.
 
-GGA y CodeGraph son opcionales: ningún preset los instala y `sync` no los añade por su cuenta. Si ya los tenías, `sync` los mantiene: GGA, por la selección guardada o por el aprovisionamiento previo de Axiom en el HOME; CodeGraph, por la selección guardada o por la guía gestionada que Axiom ya escribió.
+CodeGraph es opcional: ningún preset lo instala y `sync` no lo añade por su cuenta. Si ya lo tenías, `sync` lo mantiene por la selección guardada o por la guía gestionada que Axiom ya escribió.
 
 Tras actualizar el binario, `axiom sync --dry-run` previsualiza los destinos seleccionados y `axiom sync` actualiza sus instrucciones principales de autorización remota. Para elegir un cliente gestionado concreto, por ejemplo, usa `axiom sync --agent opencode`. Estas instrucciones de comportamiento se incorporan siempre, sin necesidad de seleccionar persona, SDD o `--include-permissions`. Exigen autorización explícita del destino, la operación y las credenciales o sesión antes de realizar trabajo remoto o descubrir y reutilizar accesos existentes.
 
@@ -199,8 +199,8 @@ Reglas generales:
 
 Revierte lo que Axiom escribió en tu carpeta de usuario con la misma regla de «solo lo de Axiom» (por ejemplo, de `~/.claude/settings.json` solo salen las reglas `deny` de Axiom: tu `deny` y tu `defaultMode` se quedan). Con `--all` retira además:
 
-- **Entradas de PATH gestionadas**, con las funciones que ya usa `install`: el directorio del binario de Engram (solo donde Axiom lo registra en el PATH, es decir, `%LOCALAPPDATA%\engram\bin` en Windows; en Linux y macOS el binario está en carpetas compartidas como `/usr/local/bin` y no se toca), `~/bin` solo si la configuración de GGA es de Axiom, y la carpeta de lanzadores `<estado>/bin`. Las demás entradas del PATH se quedan como estaban y en su orden.
-- **La copia de skills de compatibilidad** de `~/.agents/skills` (solo las skills de Axiom) y los shims y el script del modo PR que Axiom escribe para GGA. El binario y el runtime de GGA no son de Axiom y se quedan.
+- **Entradas de PATH gestionadas**, con las funciones que ya usa `install`: el directorio del binario de Engram (solo donde Axiom lo registra en el PATH, es decir, `%LOCALAPPDATA%\engram\bin` en Windows; en Linux y macOS el binario está en carpetas compartidas como `/usr/local/bin` y no se toca) y la carpeta de lanzadores `<estado>/bin`. Las demás entradas del PATH se quedan como estaban y en su orden.
+- **La copia de skills de compatibilidad** de `~/.agents/skills` (solo las skills de Axiom).
 - Con **`--purge-state`**, la raíz de estado de Axiom (`~/.axiom` o `AXIOM_STATE_DIR`): estado, caché, lanzadores y copias de seguridad, incluida la de esta desinstalación. Nunca se purga por defecto y solo se admite con `--all` y el ámbito global. Si el registro del hub (`workspaces.json`) lista proyectos, el hub se conserva y se borra todo lo demás; para borrarlo también hay que añadir **`--purge-hub`**. Una raíz de estado que contiene `HOME` o el proyecto, o la raíz del disco, no se purga nunca.
 
 `~/.gentle-ai`, el estado de versiones anteriores, no se borra aunque exista (comparte nombre con la herramienta original): el informe te avisa para que lo quites a mano.
@@ -279,10 +279,10 @@ Checks performed:
 
 | Check | What it verifies |
 |-------|-----------------|
-| Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
+| Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first) |
 | Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
-| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade el tipo `duplicado` (véase [Contexto duplicado entre usuario y workspace](#contexto-duplicado-entre-usuario-y-workspace)). No cuenta como aviso ni como fallo |
+| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade el tipo `duplicado` (véase [Contexto duplicado entre usuario y workspace](#contexto-duplicado-entre-usuario-y-workspace)). No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
 | Assets del proyecto (`project:assets`) | Solo si existe `.axiom/state.json` en el proyecto. Compara el digest de los assets gestionados del binario con el que registró la última instalación o sincronización del proyecto. Si difieren, avisa y propone `axiom sync --scope workspace` |
 | Adaptadores del proyecto (`project:adapters`) | Solo si existe `.axiom/state.json`. Comprueba que los agentes registrados en el proyecto siguen presentes en el workspace |
@@ -407,7 +407,7 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 | Flag                          | Description                                                                                                       |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `--agent`, `--agents`         | Agents to configure (comma-separated)                                                                             |
-| `--component`, `--components` | Components to install (comma-separated); `gga` is optional and only installed when listed here                    |
+| `--component`, `--components` | Components to install (comma-separated)                                                                           |
 | `--skill`, `--skills`         | Skills to install (comma-separated)                                                                               |
 | `--persona`                   | Persona mode: `gentleman`, `neutral`, `custom` (`custom` keeps your existing persona unmanaged)                   |
 | `--preset`                    | Preset: `full-gentleman`, `ecosystem-only`, `minimal`, `custom` (`custom` means manual component/skill selection) |
@@ -426,7 +426,7 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 | Limpieza de skills retiradas | Proyecto y HOME | Solo el proyecto |
 | Refresco de plugins de OpenCode en HOME | Se refresca | No se toca; SDD escribe los plugins en el proyecto |
 
-Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que se declara igual que GGA.
+Lo que eliges de forma explícita (CodeGraph, plugins comunitarios de OpenCode) conserva su huella en HOME, porque es consentimiento expreso, pero Axiom la declara con un aviso al terminar: lista las rutas de HOME y, en Windows, la modificación del PATH de usuario. CodeGraph no tiene ubicación de proyecto en Axiom, así que también se declara.
 
 **Raíz de estado de máquina.** Todo lo que Axiom guarda a nivel de máquina cuelga de una única raíz, `~/.axiom` por defecto, que `AXIOM_STATE_DIR` mueve entera:
 

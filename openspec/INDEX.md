@@ -2,7 +2,7 @@
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
 > **Última Sincronización:** 2026-11-25 22:20:50 UTC
-> **Total Dominios:** 54 | **Total Requerimientos:** 530 | **Total Escenarios BDD:** 2142
+> **Total Dominios:** 53 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2134
 
 ---
 
@@ -24,7 +24,6 @@
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 306 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
-| `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
@@ -887,24 +886,6 @@ Define observable behavior for how gentle-ai renders and injects the Engram save
   - *Escenario BDD:* Golden fixtures reflect new output
 - **[REQ-46.10]** Engram Protocol Handles Ambiguous Project
   - *Escenario BDD:* Project ambiguity in the Engram session handshake
-
-### Dominio: `gga` — GGA Specification
-
-Defines the install and runtime behavior of the GGA component, covering the PowerShell shim asset and its Windows-specific install step.
-
-**Archivo:** [`specs/gga/spec.md`](specs/gga/spec.md)
-
-- **[REQ-gga-1]** PowerShell Shim Asset
-  - *Escenario BDD:* Shim delegates to Git Bash
-  - *Escenario BDD:* Arguments containing spaces are forwarded correctly
-  - *Escenario BDD:* Exit code propagation on error
-- **[REQ-gga-2]** Windows Install Step
-  - *Escenario BDD:* First-time install on Windows
-  - *Escenario BDD:* Idempotent re-install (content unchanged)
-  - *Escenario BDD:* Stale shim is updated
-  - *Escenario BDD:* Git Bash not found at install time
-- **[REQ-gga-3]** Non-Windows Systems Unaffected
-  - *Escenario BDD:* Linux/macOS install flow unchanged
 
 ### Dominio: `installer-picker-navigation` — Installer Picker Navigation Specification
 

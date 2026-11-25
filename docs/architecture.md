@@ -20,7 +20,7 @@ internal/
   backup/                  Config snapshot + restore
   assets/                  Embedded skill files + persona templates
   components/              Per-component install/inject logic
-    engram/  sdd/  skills/  mcp/  persona/  theme/  permissions/  gga/
+    engram/  sdd/  skills/  mcp/  persona/  theme/  permissions/
     communitytool/         Community tool install/guidance/config orchestration
     opencodeplugin/        OpenCode TUI plugin registration/local plugin helpers
     uninstall/             Managed uninstall cleanup service
