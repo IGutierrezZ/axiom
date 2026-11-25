@@ -53,12 +53,14 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		ifTokens []string
 	}{
 		// unit-tests is omitted on a PR that only touches planning artifacts
-		// (odd/, openspec/), so it uses !cancelled() instead of always(). A
-		// red go-format still runs it and the guard still fails it.
+		// (odd/, openspec/, docs/plan/), so it uses !cancelled() instead of
+		// always(). A red go-format still runs it and the guard still fails it.
+		// It is the aggregator of the parallel unit jobs; its children do not
+		// wait for go-format, so this guard is what keeps format mandatory.
 		{
 			id:    "unit-tests",
 			next:  "windows-runtime",
-			needs: "[go-format, changes]",
+			needs: "[go-format, changes, go-tests, binary-smoke, deadcode-ratchet]",
 			ifTokens: []string{
 				"!cancelled()",
 				"needs.changes.outputs.artifacts_only != 'true'",

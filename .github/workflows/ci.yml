@@ -27,7 +27,7 @@ env:
   AXIOM_TEST_BUILD_BINARIES: "1"
 
 jobs:
-  # Este job, go-format y unit-tests se omiten en un PR
+  # Este job, go-format, unit-tests y sus jobs hijos se omiten en un PR
   # que solo toca artefactos de planificación (salida `artifacts_only` del job
   # `changes`). Un job omitido cuenta como superado para un check obligatorio;
   # un workflow filtrado por rutas, en cambio, deja el check esperando.
@@ -210,20 +210,43 @@ jobs:
           echo "artifacts_only=$artifacts_only" >> "$GITHUB_OUTPUT"
           echo "Compared $range ($count files): windows=$relevant artifacts_only=$artifacts_only"
 
-  unit-tests:
-    name: Unit Tests
-    needs: [go-format, changes]
-    # `!cancelled()` en lugar de `always()` solo por la omisión de un PR de
-    # artefactos: con go-format en rojo el job sigue corriendo y su primer paso
-    # lo deja en rojo, así que un formato roto no se convierte en una omisión.
+  # `Unit Tests` era un único job secuencial; ahora sus pasos corren en jobs
+  # paralelos y el agregador `unit-tests` conserva el nombre del check
+  # obligatorio del ruleset de `main`. Los hijos solo esperan a `changes`, no a
+  # `go-format`: arrancan a la vez que el formato y el agregador sigue fallando
+  # si el formato falla. Con un PR solo de artefactos se omiten hijos y
+  # agregador, y la omisión cuenta como superada para el check obligatorio.
+  #
+  # Grupos por coste medido en Linux (ejecución 45714038862, 2026-11-25):
+  # internal/cli 97 s; app 62 s, assets 27 s y update 13 s; branch/engine 52 s y
+  # components/sdd 49 s; el resto suma unos 120 s repartidos en muchos paquetes.
+  # `rest` se deriva de `go list ./...` menos lo que nombra su `exclude`, así
+  # que un paquete nuevo queda cubierto el día que se añade.
+  # internal/assets comprueba que `exclude` es exactamente la unión de los
+  # paquetes de los demás grupos: ni huecos ni paquetes repetidos.
+  go-tests:
+    name: Go Tests (${{ matrix.shard.name }})
+    needs: changes
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: cli
+            packages: ./internal/cli
+            exclude: ""
+          - name: app-assets-update
+            packages: ./internal/app ./internal/assets ./internal/update
+            exclude: ""
+          - name: engine-sdd
+            packages: ./internal/branch/engine ./internal/components/sdd
+            exclude: ""
+          - name: rest
+            packages: ""
+            exclude: ./internal/cli ./internal/app ./internal/assets ./internal/update ./internal/branch/engine ./internal/components/sdd
     steps:
-      - name: Require successful Go format
-        if: needs.go-format.result != 'success'
-        run: exit 1
-
       - name: Checkout exact event candidate
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
         with:
@@ -235,58 +258,88 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # El grupo `rest` es `go test ./...` sin los paquetes de los otros grupos.
       - name: Run unit tests
-        run: go test ./...
+        env:
+          SHARD_PACKAGES: ${{ matrix.shard.packages }}
+          SHARD_EXCLUDE: ${{ matrix.shard.exclude }}
+        run: |
+          set -euo pipefail
+          if [ -n "$SHARD_PACKAGES" ]; then
+            read -ra packages <<< "$SHARD_PACKAGES"
+          else
+            # `go list` de un paquete que no existe falla, así que un `exclude`
+            # obsoleto rompe el job en lugar de no excluir nada.
+            read -ra excluded <<< "$SHARD_EXCLUDE"
+            excluded_paths="$(go list "${excluded[@]}")"
+            mapfile -t packages < <(go list ./... | grep -vxF -e "$excluded_paths")
+          fi
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "FAIL: shard resolved to no packages" >&2
+            exit 1
+          fi
+          echo "${#packages[@]} package(s)"
+          go test "${packages[@]}"
 
       # Ninguna prueba debe escribir en el checkout ni dejar ficheros nuevos: con
       # el descubrimiento ascendente del planning home (inc-24), una prueba que
       # resuelve desde el directorio de su paquete llega a la raíz del
-      # repositorio. Este paso compara con un árbol limpio, a diferencia del
-      # paso de humo de más abajo, que conserva su comparación con el estado
-      # previo.
+      # repositorio. Cada grupo compara con un árbol limpio.
       - name: Verify the checkout is clean after the unit tests
         run: |
           if [ -n "$(git status --porcelain)" ]; then
-            echo "FAIL: go test ./... changed the checkout:" >&2
+            echo "FAIL: go test changed the checkout:" >&2
             git status --porcelain >&2
             git diff --stat >&2
             exit 1
           fi
 
-      # Informative window -- cmd/axiom coverage (INC-20 F0, opened 2026-09-19)
-      #
-      # Blocking: init, project, change, workspace, handoff, role, skill,
-      # semantic, archive, and ui in their help or no-argument form -- the
-      # exclusive surface axiom-distribution-identity's build-identity
-      # contract touches (REQ-20.15). The odd verb blocked here too until
-      # this increment's Phase 11 (F6.2a) retired the `axiom odd` command
-      # entirely; it no longer exists, so it no longer appears in this list
-      # or in the smoke table below.
-      #
-      # init and ui use --help instead of the no-argument form: their
-      # no-argument form is NOT inert, confirmed empirically in an isolated
-      # directory while building this step, not assumed from reading the
-      # source. `axiom init` with no arguments really scaffolds axiom.yaml,
-      # openspec/specs/, openspec/changes/ and .axiom/inbox/skills/ under the
-      # current directory (runInit -> hub.Initializer.Init). `axiom ui` with
-      # no arguments starts a real HTTP server that blocks
-      # (runUI -> dashboard.Server.ListenAndServe). Only their help form is
-      # safe to run in a single foreground command. The trailing
-      # `git status --porcelain` check is a second, independent guard: any
-      # verb above that mutates the checkout fails this step loudly instead
-      # of the mutation silently landing.
-      #
-      # Red surface inventoried 2026-09-19, on this step's first CI run, per
-      # design.md open question O-4: `go test ./internal/dashboard/...`
-      # rewrites openspec/INDEX.md, because dashboard_test.go builds
-      # NewService("../..") against the real repository root, which syncs the
-      # living-doc index (LastSync: time.Now). Pre-existing on main, not caused
-      # by this phase -- the guard below therefore compares against the state
-      # captured before the smoke, not against a clean tree. Assumed by INC-21.
-      # design.md D-07 also names codegraph, telemetry, and skill-registry, but REQ-20.15's floor does not; they stay informative here too, assumed by INC-21.
-      #
-      # Successor: INC-21 (docs/ROADMAP.md). This window does not grow: any
-      # new symptom belongs to the successor, not to this list.
+  # Informative window -- cmd/axiom coverage (INC-20 F0, opened 2026-09-19)
+  #
+  # Blocking: init, project, change, workspace, handoff, role, skill,
+  # semantic, archive, and ui in their help or no-argument form -- the
+  # exclusive surface axiom-distribution-identity's build-identity
+  # contract touches (REQ-20.15). The odd verb blocked here too until
+  # this increment's Phase 11 (F6.2a) retired the `axiom odd` command
+  # entirely; it no longer exists, so it no longer appears in this list
+  # or in the smoke table below.
+  #
+  # init and ui use --help instead of the no-argument form: their
+  # no-argument form is NOT inert, confirmed empirically in an isolated
+  # directory while building this step, not assumed from reading the
+  # source. `axiom init` with no arguments really scaffolds axiom.yaml,
+  # openspec/specs/, openspec/changes/ and .axiom/inbox/skills/ under the
+  # current directory (runInit -> hub.Initializer.Init). `axiom ui` with
+  # no arguments starts a real HTTP server that blocks
+  # (runUI -> dashboard.Server.ListenAndServe). Only their help form is
+  # safe to run in a single foreground command. The trailing
+  # `git status --porcelain` check is a second, independent guard: any
+  # verb above that mutates the checkout fails this step loudly instead
+  # of the mutation silently landing.
+  #
+  # Este job ya no va detrás de `go test`, así que el humo parte de un árbol
+  # limpio y la guarda final compara con un árbol limpio.
+  #
+  # Successor: INC-21 (docs/ROADMAP.md). This window does not grow: any
+  # new symptom belongs to the successor, not to this list.
+  binary-smoke:
+    name: Binary Smoke
+    needs: changes
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact event candidate
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+        with:
+          go-version-file: go.mod
+
       - name: Smoke the canonical binary surface
         run: |
           go build -trimpath -o "$RUNNER_TEMP/axiom-canonical-smoke" ./cmd/axiom
@@ -295,7 +348,6 @@ jobs:
           # canonical binary must never emit a retired/deprecated notice for the
           # old name, whatever its exact wording.
           notice_re="gentle-ai.*(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired)|(retirad[oa]|deprecad[oa]|obsolet[oa]|deprecated|retired).*gentle-ai"
-          dirty_before="$(git status --porcelain)"
 
           smoke() {
             local label="$1" want_exit="$2"
@@ -330,22 +382,73 @@ jobs:
           smoke "init --help" 0 init --help
           smoke "ui --help"   0 ui --help
 
-          if [ "$(git status --porcelain)" != "$dirty_before" ]; then
+          if [ -n "$(git status --porcelain)" ]; then
             echo "FAIL: the canonical binary smoke changed the checkout:" >&2
             git status --porcelain >&2
             exit 1
           fi
 
-      # Lives in this job, not the format job, because only Unit Tests is a
-      # required status check on main. A guard that cannot block a merge is
-      # decoration.
-      # Ratchet, not a clean gate: the repository already carries 230 functions
-      # nothing reaches from main, most of them legitimate. This fails only when
-      # a NEW one appears. It exists because InstallCommandsForDep survived with
-      # no callers while the install docs described the dependency remediation
-      # it would have performed.
+  # Ratchet, not a clean gate: the repository already carries 230 functions
+  # nothing reaches from main, most of them legitimate. This fails only when
+  # a NEW one appears. It exists because InstallCommandsForDep survived with
+  # no callers while the install docs described the dependency remediation
+  # it would have performed. It blocks merges through the `Unit Tests`
+  # aggregator, which requires this job to succeed: a guard that cannot block
+  # a merge is decoration.
+  deadcode-ratchet:
+    name: Deadcode Ratchet
+    needs: changes
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact event candidate
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+        with:
+          go-version-file: go.mod
+
       - name: Check for new unreachable functions
         run: ./scripts/deadcode-ratchet.sh
+
+  # Agregador con el nombre del check obligatorio: no ejecuta pruebas, solo
+  # exige que el formato y cada job hijo terminen en `success`. Un hijo
+  # fallido, cancelado u omitido lo deja en rojo.
+  unit-tests:
+    name: Unit Tests
+    needs: [go-format, changes, go-tests, binary-smoke, deadcode-ratchet]
+    # `!cancelled()` en lugar de `always()` solo por la omisión de un PR de
+    # artefactos: con go-format en rojo el job sigue corriendo y su primer paso
+    # lo deja en rojo, así que un formato roto no se convierte en una omisión.
+    if: >-
+      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require successful Go format
+        if: needs.go-format.result != 'success'
+        run: exit 1
+
+      - name: Require every unit job to succeed
+        env:
+          GO_TESTS: ${{ needs.go-tests.result }}
+          BINARY_SMOKE: ${{ needs.binary-smoke.result }}
+          DEADCODE_RATCHET: ${{ needs.deadcode-ratchet.result }}
+        run: |
+          failed=0
+          for job in GO_TESTS BINARY_SMOKE DEADCODE_RATCHET; do
+            result="${!job}"
+            echo "$job: $result"
+            if [ "$result" != success ]; then
+              failed=1
+            fi
+          done
+          exit "$failed"
 
   windows-runtime:
     name: Windows Runtime
