@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -93,6 +94,29 @@ func TestPublicationTargetMonorepoChangeAndRoleBranches(t *testing.T) {
 			t.Fatalf("rechazo %q: %s", refusal.Code, refusal.Message)
 		}
 	})
+}
+
+// REQ-27.13 (C-05-b): en `continuous` con `docs_publication: auto` se publica también al terminar
+// `spec` y `design`, antes de que exista `tasks.md`. El destino no depende de la fase: con solo
+// `proposal.md` y la spec en la rama del cambio, ya es esa rama.
+func TestPublicationTargetResolvesTheChangeBranchBeforeTasks(t *testing.T) {
+	repo := handOffMonorepo(t, "core")
+	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
+	folder := filepath.Join(worktree, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "proposal.md"), "propuesta\n")
+	writeFile(t, filepath.Join(folder, "specs", "demo", "spec.md"), "spec\n")
+	if _, err := os.Stat(filepath.Join(folder, "tasks.md")); !os.IsNotExist(err) {
+		t.Fatalf("el cambio no debía tener tasks.md todavía: %v", err)
+	}
+
+	target, refusal := publicationTarget(t, branch.PublicationRequest{CWD: worktree, Change: "x", Branch: "feat/x"})
+	if refusal != nil {
+		t.Fatalf("rechazo %q: %s", refusal.Code, refusal.Message)
+	}
+	wantSameDirectory(t, "gitRoot", target.GitRoot, worktree)
+	if target.Branch != "feat/x" || target.IntegrationBranch != "main" || target.InPlace || target.PRTarget != "main" {
+		t.Errorf("destino = %+v, se esperaba feat/x hacia main", target)
+	}
 }
 
 // S9, REQ-27.7: la rama de integración de un repositorio que no es el de specs de un multirepo no se
