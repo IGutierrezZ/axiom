@@ -298,7 +298,7 @@ func validateArtifacts(root string, payload []byte, markerTime time.Time) error 
 	// not own it, and the retired gentle-ai binary is no longer built nor
 	// published. Measured against a real snapshot, never inferred from the
 	// configuration.
-	expectedCounts := map[string]int{"Metadata": 1, "Binary": 4, "Archive": 6, "Checksum": 1}
+	expectedCounts := map[string]int{"Metadata": 1, "Binary": 4, "Archive": 5, "Checksum": 1}
 	byType := make(map[string][]artifact)
 	counts := make(map[string]int)
 	paths := make(map[string]struct{})
