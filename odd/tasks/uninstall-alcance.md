@@ -80,7 +80,7 @@ Motivo: ninguna capacidad de `openspec/specs/` describe el alcance de `uninstall
 
 ## Progreso
 
-- T1, T2 y T3 cerradas, un commit por tarea (`a7d995cf`, `4f6788f1` y el de T3).
+- T1, T2 y T3 cerradas, un commit por tarea (`a7d995cf` T1, `4f6788f1` T2, `6a69527f` T3).
 - Comprobaciones: `go test -count=1` de `./internal/components/uninstall/` en `ok`; `./internal/cli` troceado con `-run 'Doctor|EngramReachable|Footprint|Uninstall'` en `ok`. No se ha lanzado la suite completa de `internal/cli` (ronda los 60 min en Windows) ni los paquetes excluidos por las restricciones.
 - No verificado en real: no se puede compilar `axiom` en local (EDR), así que el comportamiento se ha comprobado solo con pruebas en proceso.
 
