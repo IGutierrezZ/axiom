@@ -87,7 +87,13 @@ Motivo: ninguna capacidad de `openspec/specs/` describe el alcance de `uninstall
 ## Seguimientos
 
 - TUI: la pantalla de componentes de la desinstalación preselecciona GGA y Engram (`catalog.MVPComponents()`); con la selección por defecto, el TUI sigue retirando los dos.
-- Aislamiento de `%APPDATA%` fuera de este paquete: `internal/cli/gga_missing_homebrew_test.go` e `internal/update/upgrade/executor_test.go` usan `gga.ConfigPath` y no se ha comprobado si fijan `APPDATA`.
+
+## Revisión del aislamiento de `%APPDATA%` fuera de este paquete
+
+Las otras dos pruebas que usan `gga.ConfigPath` ya están aisladas; no requieren cambios.
+
+- `internal/cli/gga_missing_homebrew_test.go`: el `TestMain` del paquete (`protocol_probe_test.go`, líneas 131-145) apunta `APPDATA`, `LOCALAPPDATA`, `HOME` y `USERPROFILE` a un directorio temporal para todo `internal/cli`. Evidencia: con `APPDATA` redirigido a una carpeta de sonda, `go test ./internal/cli -count=1 -v -run 'TestRunInstallMacOSWithoutHomebrewDefersGGA|TestGGAStep'` ejecuta las cuatro pruebas en `PASS` y no escribe nada de GGA en la sonda (solo la telemetría del propio `go`); `%APPDATA%\gga` real sigue sin existir.
+- `internal/update/upgrade/executor_test.go`: `TestConfigPathsForBackup_GGAExtrasAreIncluded` fija `APPDATA` con `t.Setenv` en Windows antes de usar `gga.ConfigPath`. Revisado leyendo el código; no se ha ejecutado (`internal/update` está excluido).
 
 ## Siguiente paso
 
