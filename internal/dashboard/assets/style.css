@@ -74,9 +74,13 @@ dialog :focus-visible { outline-offset: 1px; }
    ------------------------------------------------------------------------- */
 .app { min-height: 100vh; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--bg); }
 
+/* Fija en anchos amplios: ocupa el alto de la ventana y no se desplaza con la
+   página, así el pie (estado de las specs y Pull) queda siempre a la vista. Si
+   su contenido no cabe, se desplaza dentro de la propia barra. */
 .sidebar {
   flex: 0 0 248px; width: 248px; display: flex; flex-direction: column; gap: 22px;
   padding: 18px 12px; background: var(--side); border-right: 1px solid var(--border);
+  position: sticky; top: 0; height: 100vh; align-self: flex-start; overflow-y: auto; overscroll-behavior: contain;
 }
 .sidebar-head { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
 .sidebar-body { display: flex; flex-direction: column; gap: 22px; flex: 1; }
@@ -462,7 +466,10 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
    Anchos estrechos: la barra lateral se apila arriba y se pliega
    ------------------------------------------------------------------------- */
 @media (max-width: 859px) {
-  .sidebar { flex: 1 1 100%; width: 100%; gap: 12px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar {
+    flex: 1 1 100%; width: 100%; gap: 12px; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--border);
+    position: static; height: auto; overflow: visible;
+  }
   .btn.menu-toggle { display: inline-flex; }
   .sidebar-body { display: none; }
   .sidebar[data-open="true"] .sidebar-body { display: flex; }
