@@ -1,16 +1,15 @@
-// Detalle de incremento: cabecera, pasos de fase, «Siguiente paso» y pestañas
-// Artefactos · Roles y barrera · Handoff, sincronizadas con la ruta por hash.
-// Roles y Handoff viven en detalle-roles.js y detalle-handoff.js.
+// Detalle de incremento: cabecera (con la orden de agente copiable), pasos de fase
+// y pestañas Artefactos · Roles y barrera · Handoff, sincronizadas con la ruta por
+// hash. Roles y Handoff viven en detalle-roles.js y detalle-handoff.js.
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, $all, button, reminder, renderConsole, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
+import { $, $all, button, commandChip, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { continueIncrement, deriveNextStep, detailSteps, formatDate, isArchived, typeChip } from '../core/increment.js';
+import { detailSteps, formatDate, isArchived, nextCommand, typeChip } from '../core/increment.js';
 import { firstParagraph, renderMarkdown } from '../core/markdown.js';
 import { hrefFor } from '../core/router.js';
 import { barrierSummary, renderRoles } from './detalle-roles.js';
 import { initHandoff, renderHandoff } from './detalle-handoff.js';
-import { loadIncrements } from './incrementos.js';
 
 // Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
 const ctx = { change: null, failed: null, detail: null, tab: 'artefactos', token: 0, artifact: null, raw: false };
@@ -29,7 +28,8 @@ function renderHeader(detail) {
     isArchived(s) ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : '',
     `<span class="badge badge-mono">Fase: ${escapeHtml(s.phase)}</span>`,
     s.tasks_total > 0 ? `<span class="badge badge-neutral">Tareas: ${s.tasks_completed}/${s.tasks_total} (${s.progress_pct}%)</span>` : '',
-    date ? `<time class="badge badge-neutral" datetime="${escapeHtml(s.date)}">${escapeHtml(date)}</time>` : ''
+    date ? `<time class="badge badge-neutral" datetime="${escapeHtml(s.date)}">${escapeHtml(date)}</time>` : '',
+    commandChip(nextCommand(s))
   ].filter(Boolean).join('');
   $('#inc-title').textContent = s.name;
   const desc = firstParagraph(detail.proposal);
@@ -50,28 +50,6 @@ function renderStepper(detail) {
       <span class="dt-step-sub mono">${sub}</span>
     </li>`;
   }).join('')}</ol>`;
-}
-
-// ---- Siguiente paso (D5) -------------------------------------------------------------------
-
-function renderNext(detail) {
-  const next = deriveNextStep(detail);
-  const action = next.canContinue
-    ? `<div class="dt-next-actions">${button({ label: 'Continuar con Axiom', iconName: 'play', variant: 'primary', attrs: 'data-action="continue" title="Ejecuta la orden de Axiom que calcula la siguiente instrucción SDD"' })}<span class="field-hint">Axiom calcula la siguiente instrucción SDD y la muestra aquí abajo. No ejecuta fases de agente.</span></div>`
-    : '';
-  const rem = next.reminder ? reminder(next.reminder) : '';
-  $('#inc-next-body').innerHTML = `<div class="dt-next-main"><div class="dt-next-text"><p class="dt-next-title">${escapeHtml(next.title)}</p><p class="muted">${escapeHtml(next.text)}</p></div>${action}</div>${rem}`;
-}
-
-async function runContinue(btn) {
-  const change = ctx.change;
-  if (!change) return;
-  const restore = setBusy(btn, 'Ejecutando…');
-  const result = await continueIncrement(change);
-  renderConsole($('#inc-console'), { title: 'Continuar con Axiom', state: result.ok ? 'ok' : 'error', text: result.text });
-  restore();
-  await loadIncrements();
-  if (ctx.change === change) await reloadDetail();
 }
 
 // ---- Pestañas --------------------------------------------------------------------------------------
@@ -194,7 +172,6 @@ function paintDetail() {
   const detail = ctx.detail;
   renderHeader(detail);
   renderStepper(detail);
-  renderNext(detail);
   renderTabPill(detail);
   renderArtifacts();
 }
@@ -216,7 +193,7 @@ export function refreshDetail() {
   return reloadDetail();
 }
 
-// reloadDetail vuelve a pedir el detalle sin vaciar la pantalla (tras Continuar, Migrar o un handoff).
+// reloadDetail vuelve a pedir el detalle sin vaciar la pantalla (tras Migrar o un handoff).
 async function reloadDetail() {
   const change = ctx.change;
   if (!change) return;
@@ -236,14 +213,13 @@ function showLoading(change) {
   $('#inc-title').textContent = change;
   $('#inc-meta').innerHTML = '';
   $('#inc-desc').hidden = true;
-  $('#inc-stepper').innerHTML = '';
-  $('#inc-next-body').innerHTML = stateLoading('Cargando el incremento…');
+  $('#inc-stepper').innerHTML = stateLoading('Cargando el incremento…');
   $('#inc-tab-roles-pill').hidden = true;
   $('#inc-panel-artefactos').innerHTML = stateLoading('Cargando artefactos…');
 }
 
 function showLoadError(err) {
-  $('#inc-next-body').innerHTML = '';
+  $('#inc-stepper').innerHTML = '';
   $('#inc-panel-artefactos').innerHTML = `${stateError(err.message, 'No se pudo obtener el incremento')}<p class="ix-more">${button({ label: 'Reintentar', iconName: 'refresh', size: 'sm', attrs: 'data-action="retry"' })}</p>`;
 }
 
@@ -255,8 +231,7 @@ export async function enterDetail(route) {
 
   if (ctx.change !== change || !ctx.detail) {
     if (ctx.change !== change) {
-      // La consola, la selección de artefacto y el formato solo se reinician al cambiar de incremento.
-      $('#inc-console').hidden = true;
+      // La selección de artefacto y el formato solo se reinician al cambiar de incremento.
       ctx.artifact = null;
       ctx.raw = false;
     }
@@ -281,11 +256,6 @@ export async function enterDetail(route) {
 }
 
 export function initDetail() {
-  $('#inc-next-body').addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-action="continue"]');
-    if (btn) runContinue(btn);
-  });
-
   $('#inc-panel-artefactos').addEventListener('click', (event) => {
     const art = event.target.closest('[data-artifact]');
     const fmt = event.target.closest('[data-format]');

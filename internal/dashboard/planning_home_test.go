@@ -252,10 +252,6 @@ func TestUnresolvablePlanningHomeIsPropagated(t *testing.T) {
 			_, err := svc.CreateHandoff(CreateHandoffRequest{Change: "inc-99-ejemplo", ExecutiveSummary: "x"})
 			return err
 		},
-		"ContinueIncrement": func() error {
-			_, err := svc.ContinueIncrement("inc-99-ejemplo")
-			return err
-		},
 	}
 	for name, call := range calls {
 		t.Run(name, func(t *testing.T) {

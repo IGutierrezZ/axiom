@@ -836,29 +836,15 @@ func TestInteractiveSDDOrchestrationEndpoints(t *testing.T) {
 		t.Errorf("esperado 400 Bad Request por incremento duplicado, obtenido %d", rr3.Code)
 	}
 
-	// 4. POST /api/increments/continue - Para cambio existente
+	// 4-5. POST /api/increments/continue ya no existe: el dashboard no ejecuta el
+	// despachador SDD sobre un cambio, ni siquiera uno existente (REQ-15.2 retirado).
 	reqBodyContinue, _ := json.Marshal(IncrementActionRequest{Name: "inc-test-auth"})
-	req4 := httptest.NewRequest(http.MethodPost, "/api/increments/continue", bytes.NewReader(reqBodyContinue))
-	rr4 := httptest.NewRecorder()
-	router.ServeHTTP(rr4, req4)
-	if rr4.Code != http.StatusOK {
-		t.Fatalf("POST /api/increments/continue esperado 200 OK, obtenido %d: %s", rr4.Code, rr4.Body.String())
-	}
-	var res4 IncrementActionResponse
-	if err := json.Unmarshal(rr4.Body.Bytes(), &res4); err != nil {
-		t.Fatalf("error decodificando respuesta de continue: %v", err)
-	}
-	if !res4.Success {
-		t.Errorf("esperado success=true en continue")
-	}
-
-	// 5. POST /api/increments/continue - Para cambio inexistente
-	reqBodyContinue404, _ := json.Marshal(IncrementActionRequest{Name: "cambio-fantasma-999"})
-	req5 := httptest.NewRequest(http.MethodPost, "/api/increments/continue", bytes.NewReader(reqBodyContinue404))
+	req5 := httptest.NewRequest(http.MethodPost, "/api/increments/continue", bytes.NewReader(reqBodyContinue))
 	rr5 := httptest.NewRecorder()
 	router.ServeHTTP(rr5, req5)
-	if rr5.Code != http.StatusNotFound {
-		t.Errorf("esperado 404 Not Found para continue con cambio inexistente, obtenido %d", rr5.Code)
+	// Sin ruta propia cae en el servidor de ficheros, que no acepta POST.
+	if rr5.Code != http.StatusNotFound && rr5.Code != http.StatusMethodNotAllowed {
+		t.Errorf("POST /api/increments/continue: esperado 404 o 405 porque el endpoint se retiró, obtenido %d", rr5.Code)
 	}
 
 	// 6. POST /api/increments/verify - Para cambio inexistente

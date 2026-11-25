@@ -1107,38 +1107,6 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 	return s.writeIncrement(planningHome, name, req)
 }
 
-// ContinueIncrement ejecuta la transición del despachador SDD sobre un cambio activo.
-func (s *Service) ContinueIncrement(name string) (*IncrementActionResponse, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return nil, fmt.Errorf("el nombre del incremento es obligatorio")
-	}
-	root := s.getRootPath()
-	if _, err := s.requireActiveIncrement(name); err != nil {
-		return nil, err
-	}
-
-	var stdout bytes.Buffer
-	runErr := cli.RunSDDContinue([]string{name, "--cwd", root}, &stdout)
-	outStr := stdout.String()
-	if runErr != nil && outStr == "" {
-		outStr = runErr.Error()
-	}
-
-	errMsg := ""
-	if runErr != nil {
-		errMsg = runErr.Error()
-	}
-
-	return &IncrementActionResponse{
-		Success:    runErr == nil,
-		ChangeName: name,
-		Action:     "sdd-continue",
-		Output:     outStr,
-		Error:      errMsg,
-	}, nil
-}
-
 // VerifyIncrement valida formalmente el reporte de verificación contra las especificaciones.
 func (s *Service) VerifyIncrement(name string) (*IncrementActionResponse, error) {
 	name = strings.TrimSpace(name)

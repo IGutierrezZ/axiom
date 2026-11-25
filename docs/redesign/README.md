@@ -99,7 +99,7 @@ Todas las rutas existen hoy en `server.go`. Los DTO están en `types.go`.
 | KPI «En verificación» | ídem | `phase == "verify"`; subtítulo con el número de `ready_for_archive` |
 | KPI «Salud del ecosistema» | `GET /api/ecosystem/doctor` | `healthy` y número de comprobaciones con `status != "ok"` |
 | Aviso de specs | `GET /api/workspace/specs/sync-status` | Visible si `behind > 0`; el botón llama a `POST /api/workspace/specs/pull` |
-| Necesita atención | `GET /api/increments` | Prioridad: `ready_for_global_verify` → **Verificar** (`POST /api/increments/verify`); `waiting_roles` → **Ver barrera**; `ready_for_archive` → **Archivar** (ver huecos); `pending_spec` y `ready_for_design` → **Continuar** (`POST /api/increments/continue`) |
+| Necesita atención | `GET /api/increments` | Prioridad: `ready_for_global_verify` → **Verificar** (`POST /api/increments/verify`); `waiting_roles` → **Ver barrera**; `ready_for_archive` → **Archivar** (ver huecos); `pending_spec` y `ready_for_design` → orden de agente copiable. Desde `detalle-chip-roles` cada fila lleva solo la orden copiable de la fase que toca (`nextCommand`) y el enlace a la barrera; ya no hay botón **Continuar** ni `POST /api/increments/continue` |
 | Flujo SDD | `GET /api/increments` | Conteo por `phase` (explore…verify) más los archivados; las barras rojas corresponden a `is_bug` |
 | Axiom te ayuda | `/api/skills/inbox`, `/api/semantic/status`, `/api/archive/specs`, `/api/ecosystem/doctor` | Una fila por fuente; se oculta si no hay nada relevante |
 | Actividad reciente | — | **Hueco** (ver abajo) |
@@ -125,7 +125,7 @@ Todas las rutas existen hoy en `server.go`. Los DTO están en `types.go`.
 | Descripción | `proposal` | Primer párrafo de la propuesta |
 | Lista de artefactos y visor | `proposal`, `spec`, `design`, `tasks_content`, `verify_report`, `archive_report` | El visor tiene un conmutador entre la vista renderizada y el Markdown en bruto |
 | `tasks.md` por rol | `tasks_content` | Agrupar por los encabezados de rol y pintar `- [x]` / `- [ ]` como iconos |
-| Siguiente paso | Derivado | Texto según banderas y barrera; botón **Continuar con Axiom** → `POST /api/increments/continue` |
+| Orden de agente | Derivado (`nextCommand`) | Chip copiable en la fila de etiquetas de la cabecera (`/sdd-continue`, `/sdd-apply`, `/sdd-verify` o `/sdd-archive` con el nombre del cambio). Sustituye a la tarjeta «Siguiente paso» y a su botón **Continuar con Axiom**, retirados en `detalle-chip-roles` |
 | Verificar | `POST /api/increments/verify` | Queda deshabilitado (`aria-disabled` con `title`) mientras la barrera esté bloqueada |
 | Roles y barrera | `GET /api/roles?change=<name>` | `satisfied`, `blockers` y `roles[*].role.{name,gate_policy,repositories,tech}`, `progress`, `verify_verdict`. El rol único `fullstack` muestra el aviso de flujo continuo actual |
 | Migrar rol diferido | `POST /api/increments/migrate-cumulative` `{change, role}` | Solo en roles con `gate_policy == "deferred"` |

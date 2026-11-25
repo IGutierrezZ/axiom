@@ -1,8 +1,8 @@
 // Reglas y piezas de interfaz compartidas por Incrementos y por el detalle:
 // fases SDD, tipo, bandera de estado única, barra de progreso, minipaso y la
-// derivación del «Siguiente paso» (D5: botón solo para lo que ejecuta Axiom).
+// orden de agente que toca en cada incremento.
 
-import { api, escapeHtml } from './api.js';
+import { escapeHtml } from './api.js';
 import { icon } from './icons.js';
 
 export const PHASES = [
@@ -102,11 +102,11 @@ export function miniStepper(inc) {
   return `<span class="mini-stepper" role="img" aria-label="${escapeHtml(label)}">${segs}</span><span class="mini-phase">${escapeHtml(PHASES[current].label)}</span>`;
 }
 
-// ---- Siguiente paso (D5) ---------------------------------------------------------------
+// ---- Orden de agente ---------------------------------------------------------------------
 
 // Órdenes reales: los comandos de barra de las fases de agente están en
 // internal/assets/claude/commands (sdd-continue, sdd-apply, sdd-verify,
-// sdd-archive); la acción de Axiom es `axiom sdd continue` (botón del servidor).
+// sdd-archive). El dashboard no las ejecuta: las muestra para copiarlas.
 export const AGENT_COMMANDS = {
   planning: (name) => `/sdd-continue ${name}`,
   apply: (name) => `/sdd-apply ${name}`,
@@ -114,66 +114,19 @@ export const AGENT_COMMANDS = {
   archive: (name) => `/sdd-archive ${name}`
 };
 
-const REMINDER_TEXT = 'Esta fase la ejecuta un agente. Lánzala desde tu IDE o CLI favorito con esta orden; el dashboard no la ejecuta.';
-
-function reminder(title, command) {
-  return { title, text: REMINDER_TEXT, command };
-}
-
 const PLANNING_PHASES = ['explore', 'spec', 'design', 'tasks'];
 
-// planningStep: qué falta en las fases de planificación (todas de agente).
-function planningStep(s, name) {
-  const cmd = AGENT_COMMANDS.planning(name);
-  switch (s.phase) {
-    case 'explore':
-      return { id: 'propose', title: 'Falta la propuesta', text: 'Todavía no hay proposal.md. Explorar la idea y redactar la propuesta es una fase de agente.', canContinue: true, reminder: reminder('Recordatorio: lanza la fase de propuesta', cmd) };
-    case 'spec':
-      return { id: 'spec', title: 'Falta la especificación', text: 'Hay propuesta pero no spec.md. Redactar requisitos y escenarios es una fase de agente.', canContinue: true, reminder: reminder('Recordatorio: lanza la fase spec', cmd) };
-    case 'design':
-      return { id: 'design', title: 'Listo para el diseño', text: 'La especificación está completa; falta design.md.', canContinue: true, reminder: reminder('Recordatorio: lanza la fase design', cmd) };
-    default:
-      return { id: 'tasks', title: 'Falta el plan de tareas', text: 'Hay diseño pero no tasks.md. Desglosar el trabajo en tareas es una fase de agente.', canContinue: true, reminder: reminder('Recordatorio: lanza la fase tasks', cmd) };
-  }
-}
-
-// deriveNextStep resume qué toca en un incremento a partir de las banderas del
-// resumen y de la barrera. Devuelve {id, title, text, canContinue, reminder}.
-// canContinue activa el botón «Continuar con Axiom» (orden de Axiom, no de agente).
-export function deriveNextStep(detail) {
-  const s = detail.summary;
+// nextCommand devuelve la orden de agente de la fase que toca, o '' si el
+// incremento está archivado. Prioridad: verificación global, planificación (sin
+// tasks.md todos los roles figuran pendientes), roles esperando, archivar y apply.
+export function nextCommand(s) {
+  if (!s || isArchived(s) || s.phase === 'archive') return '';
   const name = s.name;
-  if (isArchived(s) || s.phase === 'archive') {
-    return { id: 'archived', title: 'Incremento archivado', text: 'Este cambio ya está cerrado: sus requisitos pasaron a las specs vivas.', canContinue: false, reminder: null };
-  }
-  const barrier = detail.barrier_report;
-  if (s.ready_for_global_verify) {
-    return {
-      id: 'verify', title: 'Toca la verificación global',
-      text: 'Todos los roles han terminado sus tareas. Falta la fase verify, que valida la implementación frente a spec, design y tareas.',
-      canContinue: true, reminder: reminder('Recordatorio: lanza la fase verify', AGENT_COMMANDS.verify(name))
-    };
-  }
-  // Las fases de planificación mandan sobre la espera de roles: sin tasks.md todos los roles figuran pendientes.
-  if (PLANNING_PHASES.includes(s.phase)) return planningStep(s, name);
-  if (s.waiting_roles) {
-    const roles = (s.pending_roles || []).join(', ');
-    const blockers = barrier && !barrier.satisfied && barrier.blockers && barrier.blockers.length ? ` ${barrier.blockers[0]}` : '';
-    return {
-      id: 'waiting', title: roles ? `Esperando a: ${roles}` : 'Esperando a roles',
-      text: `Estos roles aún tienen tareas pendientes o sin verificar, así que la barrera no se abre.${blockers}`,
-      canContinue: true, reminder: reminder('Recordatorio: continúa la fase apply', AGENT_COMMANDS.apply(name))
-    };
-  }
-  if (s.ready_for_archive) {
-    return {
-      id: 'archive', title: 'Listo para archivar',
-      text: 'Existe verify-report.md. Falta archivar el cambio para integrar sus requisitos en las specs vivas.',
-      canContinue: true, reminder: reminder('Recordatorio: lanza la fase archive', AGENT_COMMANDS.archive(name))
-    };
-  }
-  const progress = s.tasks_total > 0 ? ` Llevas ${s.tasks_completed} de ${s.tasks_total} tareas (${s.progress_pct} %).` : '';
-  return { id: 'apply', title: 'Implementación en curso', text: `El plan de tareas ya existe y se está aplicando.${progress}`, canContinue: true, reminder: reminder('Recordatorio: continúa la fase apply', AGENT_COMMANDS.apply(name)) };
+  if (s.ready_for_global_verify) return AGENT_COMMANDS.verify(name);
+  if (PLANNING_PHASES.includes(s.phase)) return AGENT_COMMANDS.planning(name);
+  if (s.waiting_roles) return AGENT_COMMANDS.apply(name);
+  if (s.ready_for_archive) return AGENT_COMMANDS.archive(name);
+  return AGENT_COMMANDS.apply(name);
 }
 
 // ---- Pasos del detalle ----------------------------------------------------------------
@@ -262,25 +215,4 @@ export function incrementStats(increments) {
     readyForArchive: active.filter(inc => inc.ready_for_archive).length,
     byPhase
   };
-}
-
-// ---- Continuar (orden de Axiom, D5) -----------------------------------------------------
-
-// continueIncrement ejecuta POST /api/increments/continue y devuelve {ok, text}
-// listo para la consola. Lo comparten el detalle y la lista de Inicio.
-export async function continueIncrement(name) {
-  let data = {};
-  let error = '';
-  let ok = false;
-  try {
-    data = (await api('/api/increments/continue', { body: { name } })) || {};
-    ok = data.success !== false;
-  } catch (err) {
-    data = err.data || {};
-    error = err.message;
-  }
-  if (ok) {
-    return { ok, text: `[ACCIÓN SDD: ${data.action || 'continue'}]\n\n${data.output || 'Transición efectuada con éxito.'}` };
-  }
-  return { ok, text: `[ERROR]\n\n${data.error || error || 'Fallo en la transición SDD'}\n\n${data.output || ''}` };
 }

@@ -105,9 +105,15 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 			t.Errorf("index.html no contiene el panel %q", tab)
 		}
 	}
-	for _, marker := range []string{`aria-label="Secciones del incremento"`, `id="inc-stepper"`, `id="inc-next-body"`, `id="inc-console"`} {
+	for _, marker := range []string{`aria-label="Secciones del incremento"`, `id="inc-stepper"`} {
 		if !strings.Contains(html, marker) {
 			t.Errorf("index.html no contiene %q", marker)
+		}
+	}
+	// La tarjeta «Siguiente paso» y su consola se retiraron: el stepper y la orden de la cabecera bastan.
+	for _, gone := range []string{`id="inc-next-body"`, `id="inc-console"`, "Siguiente paso"} {
+		if strings.Contains(html, gone) {
+			t.Errorf("index.html todavía contiene %q", gone)
 		}
 	}
 
@@ -116,15 +122,11 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 		"aria-current", "hrefFor('incremento'", "data-artifact", "data-format", "aria-pressed",
 		"detail.specs", "detail.tasks", "CSS.escape", "verify_report", "archive_report", "no existe todavía",
 		"sectionStats", "withFocus", "ctx.token",
-		"continueIncrement(", "renderConsole(", "aria-current=\"step\"",
+		"commandChip(nextCommand(s))", "aria-current=\"step\"",
 	} {
 		if !strings.Contains(detail, marker) {
 			t.Errorf("detalle.js no contiene %q", marker)
 		}
-	}
-	// La orden de Axiom se lanza desde un único sitio, compartido con Inicio.
-	if !strings.Contains(readAsset(t, "js/core/increment.js"), "/api/increments/continue") {
-		t.Errorf("increment.js debe llamar a /api/increments/continue (continueIncrement)")
 	}
 	roles := readAsset(t, "js/screens/detalle-roles.js")
 	for _, marker := range []string{
@@ -154,22 +156,23 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 	}
 }
 
-// D5: lo que exige una fase de agente es un Recordatorio con su orden, nunca un
-// botón; y las órdenes citadas existen de verdad en el repositorio.
-func TestAgentPhasesAreRemindersNotButtons(t *testing.T) {
+// Las fases de agente se muestran como una orden copiable, nunca como un botón que
+// las ejecute; y las órdenes citadas existen de verdad en el repositorio.
+func TestAgentPhasesAreCopyableCommandsNotButtons(t *testing.T) {
 	all := readAllJS(t)
-	if strings.Contains(all, "/api/increments/verify") {
-		t.Errorf("la interfaz ya no debe llamar a /api/increments/verify (D5: verificar es un recordatorio)")
+	for _, banned := range []string{"/api/increments/verify", "/api/increments/continue", "continueIncrement", "Continuar con Axiom"} {
+		if strings.Contains(all, banned) {
+			t.Errorf("la interfaz ya no debe contener %q: el dashboard no ejecuta fases ni el despachador", banned)
+		}
 	}
 
 	shared := readAsset(t, "js/core/increment.js")
-	detail := readAsset(t, "js/screens/detalle.js")
-	if !strings.Contains(detail, "reminder(next.reminder)") {
-		t.Errorf("detalle.js debe pintar la fase de agente con el componente reminder()")
+	if !strings.Contains(shared, "export function nextCommand(") {
+		t.Errorf("increment.js debe exportar nextCommand, la única fuente de la orden de agente")
 	}
-	// Continuar es el único botón de acción del «Siguiente paso».
-	if got := strings.Count(detail, "label: 'Continuar con Axiom'"); got != 1 {
-		t.Errorf("detalle.js debe tener un único botón Continuar, hay %d", got)
+	comp := readAsset(t, "js/core/components.js")
+	if !strings.Contains(comp, "export function commandChip(") || !strings.Contains(comp, "data-copy=") {
+		t.Errorf("components.js debe ofrecer commandChip con data-copy (lo atiende bindCopyButtons)")
 	}
 	for _, cmd := range []string{"/sdd-continue", "/sdd-apply", "/sdd-verify", "/sdd-archive"} {
 		if !strings.Contains(shared, cmd+" ${name}") {
@@ -181,12 +184,10 @@ func TestAgentPhasesAreRemindersNotButtons(t *testing.T) {
 			t.Errorf("la orden %s no existe en el repositorio (%s): %v", cmd, file, err)
 		}
 	}
-	for _, text := range []string{"IDE o CLI favorito", "No ejecuta fases de agente", "Recordatorio"} {
-		if !strings.Contains(shared+detail, text) {
-			t.Errorf("falta el texto %q del Recordatorio", text)
-		}
+	// El chip explica que la orden se lanza fuera del dashboard.
+	if !strings.Contains(comp, "IDE o CLI") {
+		t.Errorf("commandChip debe decir que la orden se lanza desde el IDE o la CLI")
 	}
-	// El texto del recordatorio no puede estar dentro de un <button> de ejecución.
 	if strings.Contains(shared, "data-action=\"verify\"") || strings.Contains(shared, "data-action=\"archive\"") {
 		t.Errorf("verify y archive no pueden ser botones de ejecución")
 	}

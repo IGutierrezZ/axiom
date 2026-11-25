@@ -1,5 +1,5 @@
 // Inicio: qué necesita atención. Titular accionable, aviso de specs, cuatro
-// indicadores, lista «Necesita atención» (con la acción de D5), flujo SDD por fase
+// indicadores, lista «Necesita atención» (con la orden de agente copiable), flujo SDD por fase
 // y «Axiom te ayuda». Si el proyecto no está configurado (is_configured === false),
 // #zero-config-hero sustituye al contenido.
 //
@@ -8,14 +8,13 @@
 // inventados ni edades relativas (D3).
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, $all, button, consoleBox, renderConsole, reminder, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
+import { $, $all, button, commandChip, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { attentionItems, continueIncrement, deriveNextStep, flagBadge, incrementStats, progressBar, typeChip } from '../core/increment.js';
+import { attentionItems, flagBadge, incrementStats, nextCommand, progressBar, typeChip } from '../core/increment.js';
 import { doctorSummary, refreshOverview } from '../core/overview.js';
 import { hrefFor } from '../core/router.js';
 import { state, on } from '../core/state.js';
 import { pullSpecs } from '../shell.js';
-import { loadIncrements } from './incrementos.js';
 
 let reloadAll = async () => {};
 
@@ -24,9 +23,6 @@ const MAX_ATTENTION = 8;
 // Segmentos máximos por fase en el flujo SDD (el número exacto va siempre en texto).
 const MAX_SEGMENTS = 10;
 
-// Incrementos con «Continuar» en curso: se pintan deshabilitados aunque llegue
-// otro refresco mientras se ejecuta la orden.
-const busy = new Set();
 // Último HTML pintado por bloque: si no cambia no se toca el DOM (conserva foco y estado).
 const painted = new Map();
 
@@ -126,29 +122,19 @@ function healthTile() {
 
 // ---- Necesita atención ----------------------------------------------------------------------------
 
-// attentionRow aplica D5: «Continuar» es el botón de Axiom (calcula el siguiente
-// paso); las fases de agente salen como Recordatorio compacto con la orden copiable.
+// attentionRow: cada fila lleva la orden de agente de la fase que toca, copiable.
+// El dashboard no ejecuta fases: la orden se lanza desde el IDE o la CLI.
 function attentionRow({ inc, flag }) {
   const name = inc.name;
-  const next = deriveNextStep({ summary: inc, barrier_report: null });
   const tasks = inc.tasks_total > 0 ? `${inc.tasks_completed}/${inc.tasks_total} tareas · ${inc.progress_pct} %` : 'Sin tareas todavía';
-  const actions = [];
-  if (next.canContinue) {
-    const running = busy.has(name);
-    actions.push(button({
-      label: running ? 'Ejecutando…' : 'Continuar', iconName: 'play', size: 'sm', variant: flag.id === 'gverify' ? 'primary' : 'secondary',
-      attrs: `data-action="continue" data-name="${escapeHtml(name)}" aria-label="Continuar ${escapeHtml(name)} con Axiom"${running ? ' disabled aria-busy="true"' : ''}`
-    }));
-  }
+  const actions = [commandChip(nextCommand(inc))];
   if (flag.id === 'waiting') {
     actions.push(`<a class="btn btn-secondary btn-sm" href="${hrefFor('incremento', { change: name, tab: 'roles' })}" aria-label="Ver la barrera de ${escapeHtml(name)}">${icon('users', 16)}Ver barrera</a>`);
   }
-  const rem = next.reminder ? `<div class="att-rem">${reminder({ ...next.reminder, compact: true })}</div>` : '';
   return `<li class="row att-row">
     <div class="row-main"><a class="att-name" href="${hrefFor('incremento', { change: name })}">${escapeHtml(name)}</a><span class="att-detail">${escapeHtml(tasks)}</span></div>
     <div class="att-tags">${typeChip(inc)}<span class="badge badge-mono">${escapeHtml(inc.phase)}</span>${flagBadge(inc)}</div>
     <div class="att-actions">${actions.join('')}</div>
-    ${rem}
   </li>`;
 }
 
@@ -167,7 +153,7 @@ function renderAttention() {
   const shown = items.slice(0, MAX_ATTENTION);
   const more = items.length > shown.length ? `Mostrando ${shown.length} de ${items.length}. ` : '';
   paint('#home-attention', `<ul class="row-list" role="list" aria-label="Incrementos que necesitan atención">${shown.map(attentionRow).join('')}</ul>
-    <p class="att-foot">${icon('terminal', 14)}<span>${more}Las fases de agente (propuesta, apply, verify, archive…) no las ejecuta el dashboard: lánzalas desde tu IDE o CLI con la orden de cada fila. «Continuar» solo ejecuta la orden de Axiom que calcula el siguiente paso.</span></p>`);
+    <p class="att-foot">${icon('terminal', 14)}<span>${more}Las fases de agente (propuesta, apply, verify, archive…) no las ejecuta el dashboard: copia la orden de cada fila y lánzala desde tu IDE o CLI.</span></p>`);
 }
 
 // ---- Flujo SDD --------------------------------------------------------------------------------------
@@ -301,32 +287,14 @@ export function renderInicio() {
 
 // ---- Acciones ---------------------------------------------------------------------------------------------------
 
-async function runContinue(name, hadFocus) {
-  if (busy.has(name)) return;
-  busy.add(name);
-  renderBlocks();
-  const result = await continueIncrement(name);
-  renderConsole($('#home-console'), { title: `Continuar con Axiom · ${name}`, state: result.ok ? 'ok' : 'error', text: result.text });
-  busy.delete(name);
-  // loadIncrements actualiza la pantalla de Incrementos y, con ella, la caché de Inicio.
-  await Promise.all([loadIncrements(), refreshOverview(['increments'])]);
-  renderBlocks();
-  // El botón estuvo deshabilitado y el navegador soltó el foco: se devuelve al terminar.
-  if (hadFocus) restoreFocus({ action: 'continue', name });
-}
-
 export function initInicio(reload) {
   reloadAll = reload;
-  $('#home-console-slot').innerHTML = consoleBox('home-console', 'Continuar con Axiom');
   on('overview', renderInicio);
 
   $('#inicio-content').addEventListener('click', (event) => {
     const btn = event.target.closest('[data-action]');
     if (!btn || btn.disabled) return;
     switch (btn.getAttribute('data-action')) {
-      case 'continue':
-        runContinue(btn.getAttribute('data-name'), document.activeElement === btn);
-        break;
       case 'pull':
         pullSpecs(btn);
         break;

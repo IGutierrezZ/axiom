@@ -384,16 +384,19 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
 
 /* -------------------------------------------------------------------------
-   Recordatorio (D5): paso de fase de agente que se lanza desde el IDE o la CLI
+   Orden de agente copiable: se lanza desde el IDE o la CLI, el dashboard no la ejecuta
    ------------------------------------------------------------------------- */
-.reminder {
-  display: flex; gap: 12px; padding: 14px 16px; border-radius: var(--radius-xl); background: var(--accent-soft);
-  border: 1px solid var(--border-strong);
+.cmd-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; padding: 3px 10px;
+  border-radius: var(--radius-full); border: 1px solid var(--border-strong); background: var(--accent-soft);
+  color: var(--accent-text); font: inherit; font-size: 12px; cursor: pointer;
 }
-.reminder > .icon { color: var(--accent-text); margin-top: 2px; }
-.reminder-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
-.reminder-title { font-weight: 650; }
-.reminder-text { color: var(--text-2); }
+.cmd-chip code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--text); }
+.cmd-chip:hover { border-color: var(--accent); }
+.cmd-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cmd-chip .icon { flex: none; }
+
+/* Orden copiable en bloque (informe de adopción): código y botón de copiar. */
 .reminder-cmd { display: flex; align-items: stretch; gap: 8px; min-width: 0; }
 .reminder-cmd code {
   flex: 1; min-width: 0; padding: 7px 10px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--border-strong);
@@ -618,12 +621,6 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .dt-step.is-todo .dt-step-label { color: var(--text-2); }
 .dt-step-sub { font-size: 11px; color: var(--text-3); overflow-wrap: anywhere; }
 
-.dt-next { gap: 12px; }
-.dt-next-main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; }
-.dt-next-text { flex: 1 1 18rem; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.dt-next-title { font-size: 15px; font-weight: 650; }
-.dt-next-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; flex: 0 1 20rem; }
-
 .tab-pill { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--radius-full); }
 .tab-pill-ok { background: var(--ok-soft); color: var(--ok); }
 .tab-pill-warn { background: var(--warn-soft); color: var(--warn); }
@@ -765,17 +762,9 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .att-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .att-row .badge { white-space: normal; }
 .att-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.att-rem { flex: 1 0 100%; min-width: 0; }
-.reminder-compact { padding: 8px 10px; gap: 8px; align-items: center; flex-wrap: wrap; border-radius: var(--radius-lg); }
-.reminder-compact > .icon { margin-top: 0; }
-.reminder-compact .reminder-body { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.reminder-compact .reminder-title { font-size: 12px; font-weight: 600; }
-.reminder-compact .reminder-cmd { flex: 1 1 14rem; }
 .att-foot { display: flex; gap: 8px; align-items: flex-start; padding: 12px 20px 14px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-3); }
 .att-foot .icon { margin-top: 2px; }
 .att-empty { padding: 16px 20px; }
-.home-console { padding: 0 20px; }
-.home-console:has(.console:not([hidden])) { padding-bottom: 16px; }
 
 /* Flujo SDD: cuenta en texto; las barras solo la acompañan */
 .flow-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(92px, 100%), 1fr)); gap: 6px; }
@@ -808,7 +797,6 @@ h5.md-h, h6.md-h { font-size: 13px; }
 @media (max-width: 480px) {
   .att-row, .help-row { padding-left: 14px; padding-right: 14px; }
   .att-foot { padding-left: 14px; padding-right: 14px; }
-  .home-console { padding-left: 14px; padding-right: 14px; }
   .kpi-status { font-size: 20px; }
   #home-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   #home-kpis .kpi { padding: 14px; }
