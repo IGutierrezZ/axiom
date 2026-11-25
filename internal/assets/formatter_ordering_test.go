@@ -164,49 +164,47 @@ func TestOrganicRuntimeE2EUsesInstalledOpenCodePin(t *testing.T) {
 	}
 }
 
-func TestWindowsReleaseBlockerCannotSkipOwnerRebinding(t *testing.T) {
-	workflow, err := os.ReadFile(filepath.Join(
-		"..",
-		"..",
-		".github",
-		"workflows",
-		"ci.yml",
-	))
+// TestWindowsReleaseBlockerPackagesExist guards the Windows release-blocker step
+// of ci.yml against naming a package that no longer exists: a stale entry would
+// make `go test` fail on the runner or, worse, be reworded until it passes
+// vacuously. Every package of `$packages` must resolve in `go list ./...`.
+func TestWindowsReleaseBlockerPackagesExist(t *testing.T) {
+	workflow, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "ci.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, required := range []string{
-		"TestRARPrivateOwnerRemainsTokenUserOnly",
-		`GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER: "1"`,
-	} {
-		if !strings.Contains(string(workflow), required) {
-			t.Fatalf(
-				"Windows release-blocker workflow missing %q",
-				required,
-			)
-		}
+	step := string(workflow)
+	start := strings.Index(step, "- name: Run Windows release-blocker tests")
+	if start < 0 {
+		t.Fatal("ci.yml has no Windows release-blocker step")
 	}
-	if strings.Contains(string(workflow), "internal/deliveryadmission") {
-		t.Fatal(
-			"Windows release-blocker workflow still tests the retired deliveryadmission package",
-		)
+	step = step[start:]
+	declaration := regexp.MustCompile(`\$packages = @\(([^)]*)\)`).FindStringSubmatch(step)
+	if declaration == nil {
+		t.Fatal("the Windows release-blocker step declares no $packages list")
+	}
+	packages := regexp.MustCompile(`'\./([^']+)'`).FindAllStringSubmatch(declaration[1], -1)
+	if len(packages) == 0 {
+		t.Fatal("the Windows release-blocker step lists no package; the guard would pass vacuously")
 	}
 
-	testSource, err := os.ReadFile(filepath.Join(
-		"..",
-		"reviewtransaction",
-		"rar_path_safety_windows_test.go",
-	))
+	command := exec.Command("go", "list", "./...")
+	command.Dir = filepath.Join("..", "..")
+	output, err := command.CombinedOutput()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("go list ./...: %v\n%s", err, output)
 	}
-	if !strings.Contains(
-		string(testSource),
-		`os.Getenv("GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER") == "1"`,
-	) {
-		t.Fatal(
-			"native Windows owner-rebinding test can skip the release precondition",
-		)
+	existing := map[string]bool{}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		line = strings.TrimSpace(line)
+		if index := strings.Index(line, "/internal/"); index >= 0 {
+			existing["internal/"+line[index+len("/internal/"):]] = true
+		}
+	}
+	for _, match := range packages {
+		if !existing[match[1]] {
+			t.Errorf("the Windows release-blocker step lists ./%s, which is not a package of this module", match[1])
+		}
 	}
 }
 
@@ -345,10 +343,6 @@ func TestWindowsFullSuiteShardsCoverEveryTestName(t *testing.T) {
 	}
 	if len(shards) == 0 {
 		t.Fatal("no name-selecting shards found; the guard would pass vacuously")
-	}
-
-	if strings.Contains(string(data), "reviewtransaction-a-k") {
-		t.Fatal("former reviewtransaction-a-k aggregate is still present")
 	}
 
 	byPackage := map[string][]shard{}

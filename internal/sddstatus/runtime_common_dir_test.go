@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // commonDirOracle resuelve el git common dir por la vía independiente que fija D3:
@@ -108,22 +106,5 @@ func TestOpenRuntimeStoreOutsideRepositoryKeepsRequiredError(t *testing.T) {
 	}
 	if _, ok := err.(*RuntimeRepositoryRequiredError); !ok {
 		t.Fatalf("error = %T %v, want *RuntimeRepositoryRequiredError", err, err)
-	}
-}
-
-// Paridad temporal con la sonda RDD que D3 sustituye; se borra con reviewtransaction (C11).
-func TestOpenRuntimeStoreCommonDirParityWithReviewProbe(t *testing.T) {
-	repo := initRuntimeLedgerRepo(t)
-	probe, err := reviewtransaction.CompactAuthoritativeStore(context.Background(), repo, "sdd-runtime-probe")
-	if err != nil {
-		t.Fatal(err)
-	}
-	legacy := filepath.Dir(filepath.Dir(filepath.Dir(filepath.Dir(probe.Dir))))
-	got, err := runtimeGitCommonDir(context.Background(), repo)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != legacy {
-		t.Fatalf("runtimeGitCommonDir = %q, probe-derived = %q", got, legacy)
 	}
 }

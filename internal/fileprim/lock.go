@@ -53,9 +53,9 @@ func NewLockOwner() (LockOwner, error) {
 // the guarded body never ran.
 var ErrLockContended = errors.New("authoritative review store advisory lock is held")
 
-// concurrentUpdateText es el texto de ErrConcurrentUpdate de reviewtransaction.
-// El error de cerrojo ocupado debe renderizar el mismo mensaje que ese paquete
-// ofrecía, sin importarlo.
+// concurrentUpdateText es el texto de ErrConcurrentUpdate del almacén de revisión
+// retirado. El error de cerrojo ocupado debe renderizar el mismo mensaje que ese
+// almacén ofrecía.
 const concurrentUpdateText = "review transaction changed concurrently"
 
 type lockBusyError struct{}

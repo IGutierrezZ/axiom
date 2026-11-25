@@ -8,7 +8,7 @@ import (
 // AncestryChecker is the one-function port VerifyIntegrationEvidence needs
 // to confirm a pr_merged commit is a real local ancestor of the branch it
 // claims to have merged into. It exists so this leaf package never imports
-// internal/reviewtransaction for a single boolean question: the real
+// internal/gitcommon for a single boolean question: the real
 // implementation is backed by gitcommon.IsAncestor, injected by the CLI
 // adapter (phase 21). This package's own tests exercise
 // the four evidence rules against a double instead of the real executor.

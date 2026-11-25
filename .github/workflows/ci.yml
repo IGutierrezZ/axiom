@@ -430,21 +430,6 @@ jobs:
           go test -v ./internal/components/filemerge -count=1 -run $selector
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Every Windows git launch goes through the suspended-start / job-object
-      # / resume sequence; the crashes in #4081, #4128 and #4152 were a Go
-      # runtime fault on that path at roughly one launch in four, so the lane
-      # bursts real launches instead of trusting a single green run.
-      - name: Run native Windows git process tree tests
-        shell: pwsh
-        timeout-minutes: 6
-        run: |
-          $selector = '^(TestStartGitProcessTreeSurvivesRepeatedLaunches|TestStartGitProcessTreeKillsUnboundChildOnFailure|TestRunGitStartsWithoutAttachedConsole|TestRequireNoAttachedConsoleRejectsAttachedConsole)$'
-          $selected = @(go test ./internal/reviewtransaction -list $selector | Where-Object { $_ -match '^Test' })
-          if ($LASTEXITCODE -ne 0) { throw 'Could not list native Windows git process tree tests' }
-          if ($selected.Count -ne 4) { throw "Missing native Windows git process tree tests: $($selected -join ', ')" }
-          go test -v ./internal/reviewtransaction -count=1 -run $selector
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
       # Canonical package: these release-blocker tests read the product's own
       # behavior. The output keeps the legacy "gentle-ai.exe" name: nothing
       # downstream (GENTLE_AI_TEST_BINARY below, the Defender exclusion above)
@@ -458,33 +443,17 @@ jobs:
         timeout-minutes: 10
         env:
           GENTLE_AI_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
-          GENTLE_AI_REQUIRE_DISTINCT_WINDOWS_TOKEN_OWNER: "1"
         run: |
-          $packages = @('./internal/fileprim', './internal/reviewtransaction', './internal/components/engram')
+          $packages = @('./internal/fileprim', './internal/components/engram')
           $expected = @(
-            'TestRARSharedOwnerAcceptsOnlyCurrentWindowsPrincipals',
-            'TestRARPrivateOwnerRemainsTokenUserOnly',
             'TestWindowsSecureOpenRetriesDirectDriveDeviceWithoutWeakeningFlags',
             'TestWindowsSecureOpenDriveFallbackFailsClosed',
             'TestWindowsSecureOpenDoesNotRetryOtherErrors',
-            'TestWindowsStoreLockUsesExistingInodeAdvisoryTruth',
-            'TestRunGitBoundsLocalAndRemoteCommands',
-            'TestRunGitDistinguishesAggregateDeadlineAndTypedExit',
-            'TestStoreLockReportsLiveOwnerAndCannotBeStolen',
-            'TestStoreLockRecoversCrashAndCorruptOwnerRecords',
-            'TestStoreLockIsReleasedWhenOwnerProcessExits',
-            'TestConcurrentStoreLockRecoverersCannotBothWin',
-            'TestAuthorityLockCancellationPreservesSentinelAndCallerDeadline',
-            'TestCompactStatusLoadContextCancelsUnderExclusiveMaintenance',
-            'TestRepairClassifiedAuthorityConcurrentExecutionCommitsAndReplays',
-            'TestRepairClassifiedAuthorityResumesEachDurablePhase',
-            'TestFrozenCandidateReviewerDiffUsesRegularAttributesFileAndIgnoresMutableSources',
             'TestStdioHandshake_TerminatesDescendantOnContextEnd',
             'TestStdioHandshake_PreservesEarlierDeadline',
             'TestStdioHandshake_PreservesCallerCancellation',
             'TestProbeStdio_MissingAbsoluteConfiguredCommandFails',
-            'TestProbeStdio_MissingRelativeWindowsExecutableIsNotInstalled',
-            'TestCompactReceiptAndGateAPIsAreAbsentFromProductionPackages'
+            'TestProbeStdio_MissingRelativeWindowsExecutableIsNotInstalled'
           )
           $selector = '^(' + [string]::Join('|', $expected) + ')$'
           $selected = @(go test $packages -list $selector | Where-Object { $_ -match '^Test' })
@@ -493,10 +462,6 @@ jobs:
           if ($missing.Count -gt 0) { throw "Missing Windows release-blocker tests: $($missing -join ', ')" }
           go test -v $packages -run $selector -count=1 -timeout=8m
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      - name: Stress repository-context sharing retry
-        shell: pwsh
-        run: go test ./internal/reviewtransaction -count=100 -timeout=10m -run '^(TestReadReviewRepositoryContextRetriesTransientWindowsSharingViolation|TestReviewRepositoryContextPublicationConvergesAndRejectsUnsafeEntries)$'
 
       # PR runs the release-blocker subset only; the full Windows suite runs
       # in the separate, honestly-named "Windows Full Suite" workflow.

@@ -1,27 +1,20 @@
 # Guard population declarations
 
-Guard population declarations make the accepted input set of selected production guards explicit at the check itself. The v2.2.1 contract covers ten evidenced guard families in `internal/cli`, `internal/reviewtransaction`, and `internal/sddstatus`.
+Guard population declarations make the accepted input set of selected production guards explicit at the check itself. The contract covers the evidenced guard families in `internal/cli`, `internal/fileprim`, and `internal/sddstatus`; the families of the retired review-transaction package left with it.
 
 ## Review rule
 
 A production Go guard qualifies when all of these are true:
 
 1. It is in one of the three scoped packages.
-2. It decides whether external, repository, filesystem, or persisted review state is legitimate for a security, integrity, admission, repair, or governance boundary.
+2. It decides whether external, repository, filesystem, or persisted state is legitimate for a security, integrity, admission, repair, or governance boundary.
 3. It belongs to one of the registered families below.
 
 Arbitrary control flow does not qualify. Shell and workflow guards are out of scope for v2.2.1.
 
 | Family | Legitimate population under review |
 |---|---|
-| `shared-rar-owner` | Owners allowed to host shared Windows review authority |
 | `darwin-search-ancestor` | Directory permission shapes allowed during secure ancestry traversal |
-| `nested-worktree-scope` | Opaque nested repositories excluded from or admitted to review scope |
-| `authority-repair-removal` | Damaged authority graphs on which one repair may proceed |
-| `result-reopen-state` | Review states eligible to quarantine contaminated reviewer input |
-| `convergent-lock-contention` | Lock contenders allowed to wait rather than fail immediately |
-| `finalize-result-admission` | Reviewer-result sources allowed to govern finalization |
-| `receipt-content-governance` | Terminal receipts admitted as immutable evidence for review-lifecycle validation; they never govern delivery |
 | `persisted-sync-state-integrity` | Persisted sync state admitted before persona mutation |
 
 Reviewers own identification of a new or omitted qualifying guard. The mechanism cannot derive the real-world population from source and MUST NOT be described as semantic completeness.

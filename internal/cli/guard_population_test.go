@@ -20,7 +20,7 @@ import (
 
 const (
 	guardPopulationMarkerHint = "guard:population"
-	guardPopulationCount      = 6
+	guardPopulationCount      = 2
 )
 
 var guardPopulationMarkerPattern = regexp.MustCompile(`^guard:population\s+([a-z0-9-]+)\s+(too-tight|too-loose|fail-closed):\s*(\S.*)$`)
@@ -28,7 +28,6 @@ var guardPopulationMarkerPattern = regexp.MustCompile(`^guard:population\s+([a-z
 var guardPopulationProductionDirs = []struct{ dir, prefix string }{
 	{".", "internal/cli"},
 	{filepath.Join("..", "fileprim"), "internal/fileprim"},
-	{filepath.Join("..", "reviewtransaction"), "internal/reviewtransaction"},
 	{filepath.Join("..", "sddstatus"), "internal/sddstatus"},
 }
 

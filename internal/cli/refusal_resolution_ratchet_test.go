@@ -39,7 +39,7 @@ package cli
 // collectors and their own baseline; nothing here sees them.
 //
 // WHAT THIS RATCHET PROVES: every refusal-origin site in the production
-// sources of internal/cli, internal/reviewtransaction, and internal/sddstatus
+// sources of internal/cli and internal/sddstatus
 // either
 //
 //  (a) names a runnable continuation (a `gentle-ai ...` invocation) in the
@@ -593,12 +593,12 @@ func TestRefusalRatchetReportsFieldCarriedRefusals(t *testing.T) {
 // now name a resolution, are annotated, or are gone" -- and the one that meant
 // LOST COVERAGE read exactly like the two that meant progress.
 func TestRefusalRatchetReportsStaleBaselineEntries(t *testing.T) {
-	const fixed = "internal/reviewtransaction/gate.go\t\"a refusal that now names its exit\""
-	const gone = "internal/reviewtransaction/gate.go\t\"advertised base commit is not available locally; fetch before validation\""
-	const live = "internal/reviewtransaction/gate.go\t\"a refusal still frozen\""
+	const fixed = "internal/cli/synthetic_refusals.go\t\"a refusal that now names its exit\""
+	const gone = "internal/cli/synthetic_refusals.go\t\"advertised base commit is not available locally; fetch before validation\""
+	const live = "internal/cli/synthetic_refusals.go\t\"a refusal still frozen\""
 
 	analyzed := map[string]bool{fixed: true, live: true}
-	current := map[string]refusalRatchetSite{live: {file: "internal/reviewtransaction/gate.go", message: "a refusal still frozen"}}
+	current := map[string]refusalRatchetSite{live: {file: "internal/cli/synthetic_refusals.go", message: "a refusal still frozen"}}
 
 	drift := refusalRatchetClassifyBaselineDrift([]string{fixed, gone, live, ""}, analyzed, current)
 
@@ -623,10 +623,12 @@ func TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign(t *testing.T) {
 
 	total := len(analysis.violations) + analysis.satisfiedNamed + analysis.satisfiedAnnotated + analysis.exemptWraps + len(analysis.unanalyzable)
 	// The survey that motivated this guard counted ~2,500 constructor sites
-	// across these packages. A walk that suddenly sees a fraction of that is
-	// broken, not clean.
-	if total < 1000 {
-		t.Fatalf("enumerated only %d error-constructor sites; the survey found ~2,500, so the walk is broken", total)
+	// across the audited packages. Retiring the review-transaction package
+	// (C-01-e) removed most of them; ~590 remain in internal/cli,
+	// internal/fileprim and internal/sddstatus. A walk that suddenly sees a
+	// fraction of that is broken, not clean.
+	if total < 400 {
+		t.Fatalf("enumerated only %d error-constructor sites; the remaining audited packages hold ~590, so the walk is broken", total)
 	}
 	t.Logf("sites: %d total = %d violations + %d named + %d annotated + %d exempt wraps + %d unanalyzable",
 		total, len(analysis.violations), analysis.satisfiedNamed, analysis.satisfiedAnnotated, analysis.exemptWraps, len(analysis.unanalyzable))
@@ -775,7 +777,6 @@ func refusalRatchetReportFieldCarriedRefusals(t *testing.T, analysis refusalRatc
 var refusalRatchetProductionDirs = []struct{ dir, prefix string }{
 	{".", "internal/cli"},
 	{filepath.Join("..", "fileprim"), "internal/fileprim"},
-	{filepath.Join("..", "reviewtransaction"), "internal/reviewtransaction"},
 	{filepath.Join("..", "sddstatus"), "internal/sddstatus"},
 }
 

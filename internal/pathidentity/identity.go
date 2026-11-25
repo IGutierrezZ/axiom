@@ -42,7 +42,7 @@
 //
 // Identity is a point-in-time answer. A rename racing this call can invalidate
 // it. Callers that need a race-free result must hold an open descriptor, which
-// is what the secure no-follow walks in internal/reviewtransaction already do;
+// is what the secure no-follow walks in internal/fileprim already do;
 // this package is for the decisions those walks are configured from, not a
 // replacement for them.
 //

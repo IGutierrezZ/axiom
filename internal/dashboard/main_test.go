@@ -20,7 +20,7 @@ var sandboxHome string
 // doctor, the skills index mirror and the install state, and several handlers
 // reach tools that write outside the process (sync, upgrade, codegraph). Pointing
 // HOME/USERPROFILE at a throwaway directory for the whole binary — the same
-// pattern as internal/app, internal/cli and internal/reviewtransaction — makes
+// pattern as internal/app and internal/cli — makes
 // those paths hermetic even for a test that forgets to isolate itself.
 // AXIOM_NO_PERSISTENT_PATH keeps any real axiom binary a test starts as a
 // subprocess (not a Go test binary, so it bypasses the in-process guard) from

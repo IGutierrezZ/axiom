@@ -17,7 +17,7 @@ name: Windows Full Suite
 #
 # Everything below is otherwise identical to the ci.yml job it replaces.
 #
-# Cuándo se ejecuta. Son 8 shards de ~30 min en runners Windows, que cuestan el
+# Cuándo se ejecuta. Son 5 shards de hasta 30 min (coste pendiente de volver a medir tras retirar RDD) en runners Windows, que cuestan el
 # doble, así que no se lanza en cada push. A diferencia del job windows-runtime
 # de ci.yml, no reacciona a los cambios de ruta: solo corre
 #   - a mano (workflow_dispatch);
@@ -140,10 +140,10 @@ jobs:
   # change in one package fails a ratchet or contract test that lives in
   # another.
   #
-  # Split by measured cost: internal/cli and internal/reviewtransaction are
-  # ~44% and ~33% of total test time. internal/cli alone exceeded the 30m
-  # go-test timeout, so it takes four shards. `rest` is derived from `go list`
-  # rather than listed, so a new package is covered the day it is added.
+  # Split by measured cost: internal/cli is the only package that exceeded the
+  # 30m go-test timeout, so it takes four shards. `rest` is derived from
+  # `go list` rather than listed, so a new package is covered the day it is
+  # added.
   #
   # The shards are sized from measured per-selector cost, not a letter tiling,
   # because test names cluster by prefix and cost clusters with them. With the
@@ -181,15 +181,6 @@ jobs:
           - name: cli-r
             packages: ./internal/cli
             run: ^TestR
-          - name: reviewtransaction-a-c
-            packages: ./internal/reviewtransaction
-            run: ^Test[A-C]
-          - name: reviewtransaction-d-k
-            packages: ./internal/reviewtransaction
-            run: ^Test[D-K]
-          - name: reviewtransaction-l-z
-            packages: ./internal/reviewtransaction
-            run: ^Test[L-Z]
           - name: rest
             packages: ""
             run: ""
@@ -234,7 +225,7 @@ jobs:
             $packages = @('${{ matrix.shard.packages }}')
           } else {
             $packages = go list ./... | Where-Object {
-              $_ -notmatch '/internal/cli$' -and $_ -notmatch '/internal/reviewtransaction$'
+              $_ -notmatch '/internal/cli$'
             }
           }
           if (-not $packages) { throw 'shard resolved to no packages' }
