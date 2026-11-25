@@ -103,9 +103,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	if !adapter.SupportsSystemPrompt() {
 		return InjectionResult{}, nil
 	}
-	if err := validateOpenClawWorkspacePath(homeDir, adapter); err != nil {
-		return InjectionResult{}, err
-	}
 
 	// Custom persona does nothing — user keeps their own config.
 	if persona == model.PersonaCustom {
@@ -121,9 +118,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	}
 
 	// 1. Inject persona content based on system prompt strategy.
-	if adapter.Agent() == model.AgentOpenClaw {
-		return injectOpenClawSoulPersona(homeDir, content)
-	}
 
 	switch adapter.SystemPromptStrategy() {
 	case model.StrategyMarkdownSections:
@@ -405,7 +399,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	// their paths from this same plan.
 	plan := ResourcePlanFor(persona)
 	style, selectedStyle := plan.OutputStyle()
-	if adapter.Agent() != model.AgentOpenClaw && adapter.SupportsOutputStyles() {
+	if adapter.SupportsOutputStyles() {
 		stylePaths := plan.OutputStylePaths(adapter.OutputStyleDir(homeDir))
 		if selectedStyle && stylePaths.Write != "" {
 			styleResult, err := filemerge.WriteFileAtomic(stylePaths.Write, []byte(assets.MustRead(style.AssetPath)), 0o644)
@@ -454,32 +448,6 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	}
 
 	return InjectionResult{Changed: changed, Files: files}, nil
-}
-
-func validateOpenClawWorkspacePath(workspaceDir string, adapter agents.Adapter) error {
-	if adapter.Agent() == model.AgentOpenClaw && strings.TrimSpace(workspaceDir) == "" {
-		return fmt.Errorf("openclaw workspace path is required for workspace-first injection")
-	}
-	return nil
-}
-
-func injectOpenClawSoulPersona(workspaceDir, content string) (InjectionResult, error) {
-	soulPath := filepath.Join(workspaceDir, "SOUL.md")
-	existing, err := readFileOrEmpty(soulPath)
-	if err != nil {
-		return InjectionResult{}, err
-	}
-
-	healed := filemerge.StripLegacyPersonaBlock(existing)
-	healed = filemerge.StripLegacyATLBlock(healed)
-	updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
-
-	writeResult, err := filemerge.WriteFileAtomic(soulPath, []byte(updated), 0o644)
-	if err != nil {
-		return InjectionResult{}, err
-	}
-
-	return InjectionResult{Changed: writeResult.Changed, Files: []string{soulPath}}, nil
 }
 
 // shouldStripManagedLegacyPersona returns true ONLY when the existing file

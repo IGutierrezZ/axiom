@@ -12,7 +12,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
@@ -34,7 +33,6 @@ var defaultAgentIDs = []model.AgentID{
 	model.AgentKimi,
 	model.AgentQwenCode,
 	model.AgentKiroIDE,
-	model.AgentOpenClaw,
 	model.AgentPi,
 	model.AgentTrae,
 	model.AgentHermes,
@@ -65,8 +63,6 @@ func NewAdapter(agent model.AgentID) (Adapter, error) {
 		return qwen.NewAdapter(), nil
 	case model.AgentKiroIDE:
 		return kiro.NewAdapter(), nil
-	case model.AgentOpenClaw:
-		return openclaw.NewAdapter(), nil
 	case model.AgentPi:
 		return pi.NewAdapter(), nil
 	case model.AgentTrae:

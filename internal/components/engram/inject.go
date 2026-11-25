@@ -118,19 +118,6 @@ func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 				},
 			},
 		}
-	} else if agentID == model.AgentOpenClaw {
-		cfg = map[string]any{
-			"mcp": map[string]any{
-				"servers": map[string]any{
-					"engram": map[string]any{
-						"__replace__": map[string]any{
-							"command": cmd,
-							"args":    []string{"mcp", "--tools=agent"},
-						},
-					},
-				},
-			},
-		}
 	} else {
 		args := []string{"mcp", "--tools=agent"}
 		if agentID == model.AgentAntigravity {
@@ -236,14 +223,6 @@ func InjectWorkspaceWithOptions(workspaceDir string, adapter agents.Adapter, opt
 	return injectWithOptions(workspaceDir, workspaceDir, adapter, opts, false)
 }
 
-// InjectWithPromptDir writes Engram's MCP configuration using configHomeDir and
-// writes prompt protocol files using promptDir. This is needed for agents such
-// as OpenClaw where MCP is loaded from the global config but instructions are
-// read from an active workspace.
-func InjectWithPromptDir(configHomeDir, promptDir string, adapter agents.Adapter) (InjectionResult, error) {
-	return injectWithOptions(configHomeDir, promptDir, adapter, InjectOptions{}, true)
-}
-
 const antigravityEngramPluginJSON = `{
   "name": "gentle-ai-engram",
   "description": "Loads Engram MCP memory tools for Antigravity sessions.",
@@ -332,9 +311,6 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 
 	if !adapter.SupportsMCP() {
 		return InjectionResult{}, nil
-	}
-	if err := validateOpenClawWorkspacePath(promptDir, adapter); err != nil {
-		return InjectionResult{}, err
 	}
 
 	files := make([]string, 0, 2)
@@ -767,13 +743,6 @@ func claudeEngramPluginEnabled(homeDir string) bool {
 	return settings.EnabledPlugins["engram@engram"]
 }
 
-func validateOpenClawWorkspacePath(workspaceDir string, adapter agents.Adapter) error {
-	if adapter.Agent() == model.AgentOpenClaw && strings.TrimSpace(workspaceDir) == "" {
-		return fmt.Errorf("openclaw workspace path is required for workspace-first injection")
-	}
-	return nil
-}
-
 type settingsBootstrapResult struct {
 	Changed bool
 	Path    string
@@ -933,16 +902,6 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 	switch agentID {
 	case model.AgentOpenCode:
 		server, _ = opencode.MCPEntry(root, "engram")
-	case model.AgentOpenClaw:
-		mcp, ok := root["mcp"].(map[string]any)
-		if !ok {
-			return "", false
-		}
-		servers, ok := mcp["servers"].(map[string]any)
-		if !ok {
-			return "", false
-		}
-		server = servers["engram"]
 	case model.AgentVSCodeCopilot:
 		servers, ok := root["servers"].(map[string]any)
 		if !ok {
@@ -988,7 +947,7 @@ func executableFromCommandValue(command any) (string, bool) {
 
 func isStandardAgent(id model.AgentID) bool {
 	switch id {
-	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode, model.AgentOpenClaw, model.AgentHermes,
+	case model.AgentOpenCode, model.AgentQwenCode, model.AgentCodex, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentClaudeCode, model.AgentHermes,
 		// Copilot CLI arranca el servidor desde la terminal y hereda su PATH, como Gemini
 		// o Claude: basta el nombre del binario. VS Code, al ser una aplicación gráfica,
 		// puede no verlo y por eso guarda la ruta absoluta.

@@ -118,7 +118,7 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 	return bindRuntimeAgentIdentity(content, agent)
 }
 
-// Generic is also consumed by Pi, OpenClaw, and Trae. Select by identity,
+// Generic is also consumed by Pi and Trae. Select by identity,
 // not asset path, so this cohort cannot change deferred runtime prompts.
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {

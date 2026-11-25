@@ -10,7 +10,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitidentity"
@@ -33,14 +32,14 @@ import (
 // invocations exactly — see the exact-argv assertions in
 // run_integration_test.go).
 //
-// It does the same for claude/opencode/gemini/qwen/openclaw's own
+// It does the same for claude/opencode/gemini/qwen's own
 // LookPathOverride: since gentle-ai now refuses instead of installing a
 // missing agent runtime (agentInstallStep in run.go), the many tests in this
 // package whose real target is protocol forwarding, engram provisioning,
 // workspace resolution, or config injection — not install/detection
 // behavior — used to pass only because those binaries happened to be on the
-// developer's PATH (openclaw is genuinely on this repo's dev machines, which
-// is exactly the kind of accidental dependency this guards against).
+// developer's PATH, which is exactly the kind of accidental dependency this
+// guards against.
 // Defaulting them to "present" here makes that accidental dependency an
 // intentional, hermetic one; tests that must exercise a genuine absence (the
 // refusal itself) override the relevant package's LookPathOverride back to
@@ -83,7 +82,6 @@ func TestMain(m *testing.M) {
 		opencode.LookPathOverride = agentPresent
 		gemini.LookPathOverride = agentPresent
 		qwen.LookPathOverride = agentPresent
-		openclaw.LookPathOverride = agentPresent
 		// The same routing app.RunArgs performs for the sync subcommand
 		// (internal/app/app.go: cli.RunSync(args[1:]) -- it cannot be imported
 		// here without an import cycle): strip the verb, reject anything else,
@@ -150,7 +148,6 @@ func TestMain(m *testing.M) {
 	opencode.LookPathOverride = agentPresent
 	gemini.LookPathOverride = agentPresent
 	qwen.LookPathOverride = agentPresent
-	openclaw.LookPathOverride = agentPresent
 
 	code := m.Run()
 	_ = os.RemoveAll(testHome)

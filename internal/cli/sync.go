@@ -1001,10 +1001,6 @@ func syncPersonaPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Ins
 			continue
 		}
 		targetDir := componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)
-		if adapter.Agent() == model.AgentOpenClaw {
-			paths = append(paths, filepath.Join(targetDir, "SOUL.md"))
-			continue
-		}
 		if !adapter.SupportsSystemPrompt() {
 			continue
 		}
@@ -1329,15 +1325,11 @@ func (s componentSyncStep) Run() error {
 		for _, adapter := range adapters {
 			var res engram.InjectionResult
 			var err error
-			if adapter.Agent() == model.AgentOpenClaw {
-				res, err = engram.InjectWithPromptDir(s.homeDir, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter)
+			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if s.scope == ScopeWorkspace {
+				res, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
 			} else {
-				targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-				if s.scope == ScopeWorkspace {
-					res, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
-				} else {
-					res, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
-				}
+				res, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
 			}
 			if err != nil {
 				return fmt.Errorf("sync engram for %q: %w", adapter.Agent(), err)

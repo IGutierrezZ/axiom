@@ -1,7 +1,6 @@
 package agents
 
 import (
-	"errors"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -170,7 +169,6 @@ func TestDefaultRegistrySupportedAgentsMatchesFactoryAgents(t *testing.T) {
 		model.AgentHermes,
 		model.AgentKimi,
 		model.AgentKiroIDE,
-		model.AgentOpenClaw,
 		model.AgentOpenCode,
 		model.AgentPi,
 		model.AgentQwenCode,
@@ -208,17 +206,6 @@ func TestDefaultRegistryIncludesHermes(t *testing.T) {
 
 	if got := adapter.Agent(); got != model.AgentHermes {
 		t.Fatalf("registry adapter.Agent() = %q, want %q", got, model.AgentHermes)
-	}
-}
-
-func TestFactoryRejectsUnsupportedOpenClawLookalike(t *testing.T) {
-	_, err := NewAdapter(model.AgentID("openclaw-beta"))
-	if err == nil {
-		t.Fatalf("NewAdapter() expected unsupported agent error")
-	}
-
-	if !errors.Is(err, ErrAgentNotSupported) {
-		t.Fatalf("NewAdapter() error = %v, want ErrAgentNotSupported", err)
 	}
 }
 

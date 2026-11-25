@@ -26,16 +26,12 @@ var isSelectableAgent = catalog.IsSelectableAgent
 // Los agentes no seleccionables (Qwen Code, Hermes y Kimi) cuentan como sin modo
 // workspace: un estado de proyecto que los conserve no escribe nada por ellos.
 //
-// Pi y OpenClaw también se omiten, porque lo que Axiom les escribe no cabe del todo
-// en el proyecto:
-//   - Pi: la documentación oficial respalda `pi install -l` (paquetes en
-//     .pi/settings.json), pero `pi-engram init` solo tiene modo de usuario
-//     (~/.pi/agent/mcp.json), Axiom además escribe ~/.pi/npm/package.json y el
-//     APPEND_SYSTEM.md de usuario, y no hay documentación de rutas de proyecto para
-//     esos ficheros.
-//   - OpenClaw: su configuración, incluido el MCP de Engram, vive en
-//     ~/.openclaw/openclaw.json; la documentación oficial
-//     (docs.openclaw.ai/gateway/configuration) no describe configuración por proyecto.
+// Pi también se omite, porque lo que Axiom le escribe no cabe del todo en el
+// proyecto: la documentación oficial respalda `pi install -l` (paquetes en
+// .pi/settings.json), pero `pi-engram init` solo tiene modo de usuario
+// (~/.pi/agent/mcp.json), Axiom además escribe ~/.pi/npm/package.json y el
+// APPEND_SYSTEM.md de usuario, y no hay documentación de rutas de proyecto para
+// esos ficheros.
 //
 // Copilot CLI también se omite. Su configuración de Axiom (copilot-instructions.md,
 // mcp-config.json, settings.json y skills) vive en <COPILOT_HOME|~/.copilot>, y no hay
@@ -49,7 +45,7 @@ func agentSupportsWorkspace(id model.AgentID) bool {
 		return false
 	}
 	switch id {
-	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentOpenClaw, model.AgentGitHubCopilotCLI:
+	case model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity, model.AgentPi, model.AgentGitHubCopilotCLI:
 		return false
 	default:
 		return true
@@ -96,7 +92,7 @@ func WorkspaceUnsupportedReason(id model.AgentID) string {
 		return ""
 	}
 	switch id {
-	case model.AgentPi, model.AgentOpenClaw:
+	case model.AgentPi:
 		return "su configuración vive en la carpeta de usuario y no cabe en el proyecto"
 	default:
 		return "solo tiene configuración global: no admite el modo workspace"

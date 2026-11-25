@@ -20,7 +20,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
@@ -39,7 +38,6 @@ func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
 func claudeAdapter() agents.Adapter      { return claude.NewAdapter() }
 func hermesAdapter() agents.Adapter      { return hermes.NewAdapter() }
 func kimiAdapter() agents.Adapter        { return kimi.NewAdapter() }
-func openclawAdapter() agents.Adapter    { return openclaw.NewAdapter() }
 func opencodeAdapter() agents.Adapter    { return opencode.NewAdapter() }
 
 func assertOnlyKeys(t *testing.T, path string, object map[string]any, keys ...string) {
@@ -214,76 +212,6 @@ func TestInjectOpenCodeMergesContext7AndIsIdempotent(t *testing.T) {
 	}
 	if strings.Contains(text, `"mcpServers"`) {
 		t.Fatal("opencode.json should use 'mcp' key, not 'mcpServers'")
-	}
-}
-
-func TestInjectOpenClawMergesContext7UnderMCPDotServersAndMigratesLegacyMCPServers(t *testing.T) {
-	home := t.TempDir()
-	adapter := openclawAdapter()
-	configPath := adapter.SettingsPath(home)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll(openclaw config dir) error = %v", err)
-	}
-
-	existing := `{
-  "mcpServers": {
-    "legacyDocs": {
-      "command": "legacy-docs"
-    },
-    "context7": {
-      "command": "old-context7"
-    }
-  },
-  "mcp": {
-    "sessionIdleTtlMs": 120000,
-    "servers": {
-      "context7": {
-        "command": "npx",
-        "args": ["-y", "@upstash/context7-mcp"]
-      }
-    }
-  },
-  "theme": "kanagawa"
-}`
-	if err := os.WriteFile(configPath, []byte(existing), 0o644); err != nil {
-		t.Fatalf("WriteFile(openclaw.json) error = %v", err)
-	}
-
-	first, err := Inject(home, home, adapter)
-	if err != nil {
-		t.Fatalf("Inject(openclaw) first error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatalf("Inject(openclaw) first changed = false")
-	}
-
-	second, err := Inject(home, home, adapter)
-	if err != nil {
-		t.Fatalf("Inject(openclaw) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatalf("Inject(openclaw) second changed = true")
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile(openclaw.json) error = %v", err)
-	}
-	text := string(content)
-	if strings.Contains(text, `"mcpServers"`) {
-		t.Fatalf("openclaw.json must use mcp.servers, not root mcpServers; got:\n%s", text)
-	}
-	if !strings.Contains(text, `"mcp"`) || !strings.Contains(text, `"servers"`) {
-		t.Fatalf("openclaw.json missing mcp.servers; got:\n%s", text)
-	}
-	if !strings.Contains(text, `"legacyDocs"`) {
-		t.Fatalf("openclaw.json should migrate legacy mcpServers entries into mcp.servers; got:\n%s", text)
-	}
-	if !strings.Contains(text, `"sessionIdleTtlMs": 120000`) {
-		t.Fatalf("openclaw.json should preserve existing mcp fields; got:\n%s", text)
-	}
-	if !strings.Contains(text, `"context7"`) || !strings.Contains(text, `@upstash/context7-mcp@`) {
-		t.Fatalf("openclaw.json missing context7 under mcp.servers; got:\n%s", text)
 	}
 }
 

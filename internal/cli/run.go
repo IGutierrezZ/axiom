@@ -1893,15 +1893,11 @@ func (s componentApplyStep) Run() error {
 				Version:                     engramVersion,
 			}
 			var err error
-			if adapter.Agent() == model.AgentOpenClaw {
-				_, err = engram.InjectWithPromptDir(s.homeDir, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter)
+			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if s.scope == ScopeWorkspace {
+				_, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
 			} else {
-				targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-				if s.scope == ScopeWorkspace {
-					_, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
-				} else {
-					_, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
-				}
+				_, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
 			}
 			if err != nil {
 				return fmt.Errorf("inject engram for %q: %w", adapter.Agent(), err)
@@ -2698,15 +2694,8 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					paths = append(paths, adapter.MCPConfigPath(targetDir, "engram"))
 				}
 			case model.StrategyMergeIntoSettings:
-				// For OpenClaw, SettingsPath(targetDir) would yield <workspace>/.openclaw/openclaw.json,
-				// but engram injection writes to the canonical ~/.openclaw/openclaw.json (homeDir).
-				// For other merge-into-settings agents (like OpenCode in workspace scope), injection
-				// writes to targetDir.
-				if adapter.Agent() == model.AgentOpenClaw {
-					if p := adapter.SettingsPath(homeDir); p != "" {
-						paths = append(paths, p)
-					}
-				} else if p := adapter.SettingsPath(targetDir); p != "" {
+				// Merge-into-settings agents (like OpenCode in workspace scope) write to targetDir.
+				if p := adapter.SettingsPath(targetDir); p != "" {
 					paths = append(paths, p)
 				}
 			case model.StrategyMCPConfigFile:
@@ -2872,10 +2861,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			}
 			if adapter.Agent() == model.AgentPi {
 				paths = append(paths, piPersonaConfigPaths(homeDir, workspaceDir, scope)...)
-				break
-			}
-			if adapter.Agent() == model.AgentOpenClaw {
-				paths = append(paths, filepath.Join(targetDir, "SOUL.md"))
 				break
 			}
 			if adapter.SupportsSystemPrompt() && adapter.SystemPromptStrategy() != model.StrategyJinjaModules {

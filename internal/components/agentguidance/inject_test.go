@@ -104,8 +104,8 @@ func TestRemoteAuthorizationPrimaryCarriers(t *testing.T) {
 			}
 		})
 	}
-	if covered != 15 {
-		t.Fatalf("covered %d non-Pi clients, want 15", covered)
+	if covered != 14 {
+		t.Fatalf("covered %d non-Pi clients, want 14", covered)
 	}
 }
 
@@ -644,7 +644,7 @@ func TestInjectRoutingDeliversNoRetiredControlPlaneVocabulary(t *testing.T) {
 
 // markdownSectionAgents lists every supported agent whose guidance is delivered
 // as a marker section inside its own system prompt file — that is, everything
-// except the Jinja router and the orchestrator-scoped OpenCode family.
+// except the Jinja router and the orchestrator-scoped OpenCode.
 func markdownSectionAgents(t *testing.T) []model.AgentID {
 	t.Helper()
 
@@ -662,8 +662,8 @@ func markdownSectionAgents(t *testing.T) []model.AgentID {
 		}
 		selected = append(selected, agent.ID)
 	}
-	if len(selected) != supportedAgentCount-3 {
-		t.Fatalf("selected %d markdown-section agents, want %d", len(selected), supportedAgentCount-3)
+	if len(selected) != supportedAgentCount-2 {
+		t.Fatalf("selected %d markdown-section agents, want %d", len(selected), supportedAgentCount-2)
 	}
 	return selected
 }

@@ -36,7 +36,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · Retirar Kilo Code (adaptador, registro, ramas de la familia OpenCode, instalación, desinstalación, tests). Goldens de OpenCode sin diferencias.
-- [ ] T2 · Retirar OpenClaw.
+- [x] T2 · Retirar OpenClaw.
 - [ ] T3 · Retirar Hermes (incluida la skill `hermes-ephemeral-delegation`).
 - [ ] T4 · Retirar Kimi (assets y agentes `review-*` que queden).
 - [ ] T5 · Retirar Windsurf (assets y goldens).
@@ -61,7 +61,14 @@ Ruta de todas las tareas: inline (borrado guiado por el compilador; sin unidades
 - Borrado `internal/agents/kilocode` y sus ramas: registro, `capabilitymanifest`, `installcmd`, `validate`, familia OpenCode en `components/sdd` (overlay, perfiles, plugins), `persona`, `permissions`, `mcp`, `engram`, `agentguidance`, `uninstall` (restos globales de Kilo), `workspace_instructions`, `skillregistry` y `config_scan`. Funciones muertas retiradas: `stripOpenCodeNativeFallbackAgents`, `cleanupKilocodeProfileJDPermissions`, `restoreKilocodeManagedAgentTools*`, `usesManagedMCPShape`, `kiloPluginNames`, `kiloConfigHasAxiomEntries`.
 - Pruebas: borradas las propias de Kilo; las mixtas se quedan con OpenCode; recuentos de agentes 17 → 16.
 - Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...` (goldens de OpenCode sin diferencias), `skillregistry`, `system`, `opencode`, `assets`, `tui`, `cli`, `app`, `dashboard`, `update/...`, `state` y `workspace`.
+- Commit: `6ead6a2e`.
+
+### T2 · OpenClaw
+
+- Borrado `internal/agents/openclaw`, `components/openclaw_integration_test.go` y `cli/openclaw_orchestration_test.go`; ramas en `mcp` (overlay `mcp.servers` y migración), `engram` (`InjectWithPromptDir`, validación del workspace, sonda), `persona` (`SOUL.md`), `sdd`, `uninstall`, `cli/{run,sync,workspace_agents}` y `skillregistry`; `.openclaw/skills` sale de `PROJECT_MARKERS` de los plugins `skill-registry.ts`.
+- Corrige un recuento que T1 dejó mal en `agentguidance` (`markdownSectionAgents`: los excluidos son OpenCode y el router Jinja).
+- Evidencia: `go vet ./...` limpio; `go test` ok en `agents/...`, `catalog`, `model`, `installcmd`, `components/...`, `skillregistry`, `system`, `assets`, `tui`, `dashboard`, `app`, `update/...` y `cli`.
 
 ## Siguiente paso
 
-T2.
+T3.

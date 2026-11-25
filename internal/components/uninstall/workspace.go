@@ -240,8 +240,6 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 		switch adapter.Agent() {
 		case model.AgentOpenCode:
 			parent = jsonPath{"mcp"}
-		case model.AgentOpenClaw:
-			parent = jsonPath{"mcp", "servers"}
 		}
 		for _, path := range s.settingsTargets(adapter) {
 			targets = append(targets, path)

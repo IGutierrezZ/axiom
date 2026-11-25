@@ -150,7 +150,6 @@ func TestSupportedAgentSDDLanguageMatrix(t *testing.T) {
 		{agent: "kimi", path: "kimi/sdd-orchestrator.md"},
 		{agent: "qwen-code", path: "qwen/sdd-orchestrator.md"},
 		{agent: "kiro-ide", path: "kiro/sdd-orchestrator.md"},
-		{agent: "openclaw", path: "generic/sdd-orchestrator.md"},
 		{agent: "pi", path: "generic/sdd-orchestrator.md"},
 		{agent: "trae-ide", path: "generic/sdd-orchestrator.md"},
 		{agent: "hermes", path: "hermes/sdd-orchestrator.md"},

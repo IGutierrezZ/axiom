@@ -258,9 +258,6 @@ var featureClaimsByAgent = map[model.AgentID]AgentFeatureClaims{
 	model.AgentKiroIDE: {
 		FileSubAgents: true, Skills: true, SystemPrompt: true, MCP: true,
 	},
-	model.AgentOpenClaw: {
-		Skills: true, SystemPrompt: true, MCP: true,
-	},
 	model.AgentOpenCode: {
 		SlashCommands: true, Skills: true, SystemPrompt: true, MCP: true,
 	},

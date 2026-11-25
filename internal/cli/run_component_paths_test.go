@@ -302,63 +302,6 @@ func TestComponentPathsSDDIncludesSkillsAndSharedConventions(t *testing.T) {
 	}
 }
 
-func TestComponentPathsWithWorkspaceOpenClawSDDUsesWorkspaceScopedSkills(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-
-	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentSDD)
-
-	for _, want := range []string{
-		filepath.Join(workspace, ".openclaw", "skills", "_shared", "sdd-phase-common.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-verify", "SKILL.md"),
-	} {
-		if !containsPath(paths, want) {
-			t.Fatalf("componentPathsWithWorkspace(sdd,openclaw) missing workspace-scoped skill path %q\npaths=%v", want, paths)
-		}
-	}
-
-	for _, unwanted := range []string{
-		filepath.Join(home, ".openclaw", "skills", "_shared", "sdd-phase-common.md"),
-		filepath.Join(home, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".openclaw", "skills", "sdd-verify", "SKILL.md"),
-	} {
-		if containsPath(paths, unwanted) {
-			t.Fatalf("componentPathsWithWorkspace(sdd,openclaw) must not include home-scoped SDD skill path %q\npaths=%v", unwanted, paths)
-		}
-	}
-}
-
-func TestComponentPathsOpenClawSkillsSkipsSDDPhaseSkills(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-	selection := model.Selection{
-		Skills: []model.SkillID{
-			model.SkillSDDInit,
-			model.SkillGoTesting,
-			model.SkillSDDOnboard,
-		},
-	}
-
-	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, model.ComponentSkills)
-
-	want := filepath.Join(workspace, ".openclaw", "skills", "go-testing", "SKILL.md")
-	if !containsPath(paths, want) {
-		t.Fatalf("componentPaths(skills,openclaw) missing portable skill path %q\npaths=%v", want, paths)
-	}
-
-	for _, unwanted := range []string{
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(workspace, ".openclaw", "skills", "sdd-onboard", "SKILL.md"),
-	} {
-		if containsPath(paths, unwanted) {
-			t.Fatalf("componentPaths(skills,openclaw) must not verify SDD phase skill path %q\npaths=%v", unwanted, paths)
-		}
-	}
-}
-
 func TestComponentPathsWorkspaceScopedSkillsUsesWorkspaceDir(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
@@ -787,32 +730,6 @@ func TestComponentPathsPermissionsSkipsAgentsWithoutOverlay(t *testing.T) {
 
 	if paths := componentPaths(home, model.Selection{}, adapters, model.ComponentPermission); len(paths) != 0 {
 		t.Fatalf("componentPaths(permissions) = %v, want none", paths)
-	}
-}
-
-// TestComponentPathsEngramOpenClawUsesCanonicalSettingsPath asserts that the
-// engram component path for OpenClaw always resolves to the canonical
-// ~/.openclaw/openclaw.json and never to a workspace-scoped copy.
-//
-// This is a regression test for issue #522: the verifier used to call
-// SettingsPath(workspaceDir) which produced
-// <workspace>/.openclaw/openclaw.json, causing post-sync verification to
-// fail even when the file at the canonical path existed.
-func TestComponentPathsEngramOpenClawUsesCanonicalSettingsPath(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentOpenClaw})
-
-	paths := componentPathsWithWorkspace(home, workspace, model.Selection{}, adapters, model.ComponentEngram)
-
-	canonical := filepath.Join(home, ".openclaw", "openclaw.json")
-	if !containsPath(paths, canonical) {
-		t.Fatalf("componentPathsWithWorkspace(engram,openclaw) missing canonical path %q\npaths=%v", canonical, paths)
-	}
-
-	wrongPath := filepath.Join(workspace, ".openclaw", "openclaw.json")
-	if containsPath(paths, wrongPath) {
-		t.Fatalf("componentPathsWithWorkspace(engram,openclaw) must not include workspace-scoped path %q\npaths=%v", wrongPath, paths)
 	}
 }
 
