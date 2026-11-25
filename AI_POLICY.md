@@ -37,9 +37,9 @@ Maintainers may request an explanation, prompt summary, provenance information, 
 
 AI tools must not receive human attribution, including `Co-Authored-By`, `Reviewed-by`, `Tested-by`, `Signed-off-by`, approval, or equivalent credit. An optional `Assisted-by` trailer may be accepted, but the pull request declaration is sufficient.
 
-## Advisory Review and RDD
+## Advisory Review
 
-Assistance used to produce a contribution is distinct from AI-assisted advisory review and receipt-driven development (RDD). Although materially substantive AI-assisted advisory review remains subject to the disclosure rules above, it remains distinct from contribution authorship. Automated review or RDD receipts do not replace human authorship, provenance, consent, testing, or legal responsibility.
+Assistance used to produce a contribution is distinct from AI-assisted advisory review. Although materially substantive AI-assisted advisory review remains subject to the disclosure rules above, it remains distinct from contribution authorship. Automated review does not replace human authorship, provenance, consent, testing, or legal responsibility.
 
 ## Submission Quality
 

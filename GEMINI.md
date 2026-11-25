@@ -1,7 +1,7 @@
 # Axiom — Reglas Maestras del Proyecto y Guía de Agentes
 
 > **Proyecto:** Axiom (Fork y versión paralela de Gentle-AI)  
-> **Propósito:** Evolución y desarrollo de flujos avanzados de IA, orquestación SDD/RDD y herramientas para agentes de codificación.  
+> **Propósito:** Evolución y desarrollo de flujos avanzados de IA, orquestación SDD y herramientas para agentes de codificación.  
 > **Stack Técnico:** Go 1.25+ (Go 1.27.0 en entorno local), Bubbletea TUI (`charmbracelet/bubbletea`), Lipgloss, arquitectura de paquetes en `internal/`, arnés SDD nativo de Gentle-AI y memoria persistente Engram MCP.
 
 ---
@@ -32,7 +32,7 @@ Reservado para grandes incrementos del sistema, cambios estructurales profundos 
 ```
 1. **File-System como Fuente de la Verdad:** El estado de las fases reside en `openspec/` y `.openspec/`.
 2. **Lossless Blocking Prompts:** Antes de pasar de propuesta a especificación o de diseño a implementación, presentar las decisiones al usuario en español y esperar confirmación.
-3. **Determinación temprana de carril y cuestionario de pre-vuelo (INC-21):** antes de crear `proposal.md`, sellar la modalidad de avance (continua o con paradas), la política de relevos y el roster de roles con `axiom sdd kickoff seal`; sin subdivisión de roles se asigna obligatoriamente el rol único `fullstack`. En modalidad con paradas, cuatro compuertas de bloque (`spec`, `design`, `tasks`, `apply` por rol) exigen una decisión explícita con `axiom sdd gate record --gate <clave> --decision approved|rejected --reason "<motivo>"` antes de avanzar a la siguiente fase o rol; un rechazo exige remediación y vuelve a presentar la misma compuerta. Esta gobernanza es distinta de RDD: una compuerta aprobada nunca es un recibo ni autoriza la entrega por sí misma.
+3. **Determinación temprana de carril y cuestionario de pre-vuelo (INC-21):** antes de crear `proposal.md`, sellar la modalidad de avance (continua o con paradas), la política de relevos y el roster de roles con `axiom sdd kickoff seal`; sin subdivisión de roles se asigna obligatoriamente el rol único `fullstack`. En modalidad con paradas, cuatro compuertas de bloque (`spec`, `design`, `tasks`, `apply` por rol) exigen una decisión explícita con `axiom sdd gate record --gate <clave> --decision approved|rejected --reason "<motivo>"` antes de avanzar a la siguiente fase o rol; un rechazo exige remediación y vuelve a presentar la misma compuerta. Una compuerta aprobada nunca autoriza la entrega por sí misma.
 4. **Comandos Canónicos de Axiom:** Utilizar los comandos integrados en la CLI `axiom`:
    - `axiom sdd kickoff seal|show [cambio]`
    - `axiom sdd gate record|show [cambio]`
