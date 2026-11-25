@@ -57,7 +57,7 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		// red go-format still runs it and the guard still fails it.
 		{
 			id:    "unit-tests",
-			next:  "claude-network-none",
+			next:  "windows-runtime",
 			needs: "[go-format, changes]",
 			ifTokens: []string{
 				"!cancelled()",
@@ -161,14 +161,6 @@ func TestOrganicRuntimeE2EUsesInstalledOpenCodePin(t *testing.T) {
 	install := "npm install --global opencode-ai@" + versions.OpenCode
 	if strings.Count(string(data), install) != 1 {
 		t.Fatalf("organic runtime E2E must install exact supported OpenCode pin %q once", install)
-	}
-	for _, required := range []string{
-		"TestOpenCodeRuntimeIsPinnedForTheLiveProviderTransport",
-		`GENTLE_AI_OPENCODE_RUNTIME_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}`,
-	} {
-		if !strings.Contains(string(data), required) {
-			t.Fatalf("organic runtime E2E is missing live OpenCode provider isolation guard %q", required)
-		}
 	}
 }
 

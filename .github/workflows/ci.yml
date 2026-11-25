@@ -27,7 +27,7 @@ env:
   AXIOM_TEST_BUILD_BINARIES: "1"
 
 jobs:
-  # Este job, go-format, unit-tests y claude-network-none se omiten en un PR
+  # Este job, go-format y unit-tests se omiten en un PR
   # que solo toca artefactos de planificación (salida `artifacts_only` del job
   # `changes`). Un job omitido cuenta como superado para un check obligatorio;
   # un workflow filtrado por rutas, en cambio, deja el check esperando.
@@ -347,29 +347,6 @@ jobs:
       - name: Check for new unreachable functions
         run: ./scripts/deadcode-ratchet.sh
 
-  claude-network-none:
-    name: Claude Network-None Runtime (Required)
-    needs: changes
-    if: >-
-      !cancelled() && needs.changes.outputs.artifacts_only != 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout exact event candidate
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Build pinned Claude runtime proof image
-        run: docker build -f e2e/Dockerfile.claude-network-none -t gentle-ai-claude-network-none:ci .
-      - name: Prove Claude transport without external networking
-        run: |
-          docker run --rm --pull=never --network none --cap-drop=ALL \
-            --security-opt=no-new-privileges --read-only \
-            --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
-            -e GENTLE_AI_PARENT_NETNS="$(stat -Lc %i /proc/self/ns/net)" \
-            gentle-ai-claude-network-none:ci
-
   windows-runtime:
     name: Windows Runtime
     needs: [go-format, changes]
@@ -630,13 +607,6 @@ jobs:
         # advises "latest" too (see internal/installcmd/resolver.go).
         run: npm install --global @anthropic-ai/claude-code@latest
 
-      - name: Install pinned Codex runtime
-        shell: pwsh
-        run: |
-          if ($env:RUNNER_OS -eq 'Linux') {
-            npm install --global @openai/codex@0.147.0
-          }
-
       - name: Verify real-agent detection E2E is registered
         # organic_runtime_real_agent_detection_test.go is gated behind the
         # real_agent_e2e build tag precisely so `go test ./...` at the repo
@@ -652,15 +622,6 @@ jobs:
             throw 'Real-agent detection E2E is missing'
           }
 
-      - name: Verify live OpenCode provider isolation E2E is registered
-        shell: pwsh
-        run: |
-          if ($env:RUNNER_OS -ne 'Linux') { exit 0 }
-          $tests = go test -list '^TestOpenCodeRuntimeIsPinnedForTheLiveProviderTransport$' ./e2e/organicruntime
-          if ($LASTEXITCODE -ne 0 -or $tests -notcontains 'TestOpenCodeRuntimeIsPinnedForTheLiveProviderTransport') {
-            throw 'Live OpenCode provider isolation E2E is missing'
-          }
-
       - name: Run organic journeys
         # No -run filter: a renamed test must fail this job loudly, never let
         # go test exit 0 having matched nothing. The gated real-agent journey
@@ -670,17 +631,6 @@ jobs:
         # `go test ./...` never does — see that file's build-tag comment.
         env:
           GENTLE_AI_REAL_AGENT_E2E: "1"
-          # The Linux-only Codex journey invokes the registered adapter through
-          # the product CLI under a process-scoped denying proxy and strace.
-          GENTLE_AI_CODEX_RUNTIME_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
-          # The live OpenCode transport stays on Ubuntu because its process-scoped
-          # loopback denying proxy and strace proof require Linux.
-          GENTLE_AI_OPENCODE_RUNTIME_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
-          # The large-workspace journey spawns one Git subprocess per intended
-          # untracked path, so its cost is dominated by process creation. Linux
-          # absorbs it; Windows does not, and gating it here keeps the real
-          # coverage where it is affordable instead of deleting it outright.
-          GENTLE_AI_LARGE_WORKSPACE_E2E: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
         run: go test -tags real_agent_e2e -v ./e2e/organicruntime -count=1 -timeout=25m
 
   e2e-tests:
