@@ -469,6 +469,7 @@ Backward navigation MUST be the exact reverse of forward navigation and MUST be 
 - Pruebas nuevas: `state.TestReadIgnoresAgentsTheCatalogNoLongerKnows` y `cli.TestRunSyncWithRetiredAgentInStateWarnsAndSyncsTheRest`.
 - Evidencia: `go vet` limpio; `go test` ok en `state` y en `cli -run` (las dos nuevas y las de agentes persistidos en workspace).
 - Commit: `ceae0caa`. Corrección posterior `40b7fb5d`: `state` no puede importar `catalog` (ciclo en las pruebas de `catalog`); la lista de agentes admitidos pasa a `model.IsKnownAgentID`, y `catalog.TestModelKnownAgentsMatchCatalog` la mantiene igual que la del catálogo.
+- CI de la PR: `TestProjectAdaptersCheckLooksAtTheProjectRoot` usaba un agente inexistente que el lector tolerante ya descarta; pasa a usar `codex`.
 
 ### T8 · Docs, e2e, specs vivas y criterio
 
