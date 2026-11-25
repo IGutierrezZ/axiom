@@ -820,7 +820,7 @@ func TestPiCodeGraphProbeRejectsInvalidInitializeResponses(t *testing.T) {
 			agentDir := filepath.Join(home, "custom-agent")
 			writePiFile(t, filepath.Join(agentDir, "npm", "node_modules", "pi-mcp-adapter", "index.ts"), "export default {}\n")
 			if runtime.GOOS == "windows" {
-				t.Setenv("GENTLE_AI_CODEGRAPH_TEST_RESPONSE", response)
+				t.Setenv("AXIOM_CODEGRAPH_TEST_RESPONSE", response)
 				installFakeCodeGraphHelper(t, "invalid-response")
 			} else {
 				installFakeCodeGraphScript(t, `while IFS= read -r request; do printf '%s\n' '`+response+`'; done`)
@@ -1024,7 +1024,7 @@ func installFakeCodeGraphHelper(t *testing.T, mode string) {
 	if err := os.WriteFile(filepath.Join(binDir, "codegraph.exe"), data, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("GENTLE_AI_CODEGRAPH_TEST_HELPER", mode)
+	t.Setenv("AXIOM_CODEGRAPH_TEST_HELPER", mode)
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 

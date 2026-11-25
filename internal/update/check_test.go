@@ -18,7 +18,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	for _, key := range []string{system.EnvChannelAxiom, system.EnvChannelGentleAI} {
+	for _, key := range []string{system.EnvChannelAxiom, "GENTLE_AI_CHANNEL"} {
 		if err := os.Unsetenv(key); err != nil {
 			panic(err)
 		}
@@ -2027,7 +2027,7 @@ func TestDetectInstalledVersionPs1FallbackInvokesViaPowershell(t *testing.T) {
 func unsetUpdateChannelEnv(t *testing.T) {
 	t.Helper()
 
-	for _, key := range []string{system.EnvChannelAxiom, system.EnvChannelGentleAI} {
+	for _, key := range []string{system.EnvChannelAxiom, "GENTLE_AI_CHANNEL"} {
 		oldValue, hadValue := os.LookupEnv(key)
 		if err := os.Unsetenv(key); err != nil {
 			t.Fatalf("unset %s: %v", key, err)
@@ -2117,7 +2117,7 @@ func mockCmd(name string, args ...string) *exec.Cmd {
 }
 
 // TestIsBetaUpdateChannelPrecedence pins AXIOM_CHANNEL as the primary variable
-// and GENTLE_AI_CHANNEL as the legacy fallback.
+// and the retired GENTLE_AI_CHANNEL as ignored (its literal only proves that).
 func TestIsBetaUpdateChannelPrecedence(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -2126,11 +2126,11 @@ func TestIsBetaUpdateChannelPrecedence(t *testing.T) {
 		wantBeta bool
 	}{
 		{name: "neither set defaults to stable", wantBeta: false},
-		{name: "legacy fallback beta", legacy: "beta", wantBeta: true},
-		{name: "legacy fallback nightly", legacy: "nightly", wantBeta: true},
+		{name: "legacy beta is ignored", legacy: "beta", wantBeta: false},
+		{name: "legacy nightly is ignored", legacy: "nightly", wantBeta: false},
 		{name: "axiom beta", axiom: "beta", wantBeta: true},
-		{name: "axiom stable wins over legacy beta", axiom: "stable", legacy: "beta", wantBeta: false},
-		{name: "axiom beta wins over legacy stable", axiom: "beta", legacy: "stable", wantBeta: true},
+		{name: "axiom stable with legacy beta", axiom: "stable", legacy: "beta", wantBeta: false},
+		{name: "axiom beta with legacy stable", axiom: "beta", legacy: "stable", wantBeta: true},
 	}
 
 	for _, tt := range tests {
@@ -2140,7 +2140,7 @@ func TestIsBetaUpdateChannelPrecedence(t *testing.T) {
 				t.Setenv(system.EnvChannelAxiom, tt.axiom)
 			}
 			if tt.legacy != "" {
-				t.Setenv(system.EnvChannelGentleAI, tt.legacy)
+				t.Setenv("GENTLE_AI_CHANNEL", tt.legacy)
 			}
 
 			if got := isBetaUpdateChannel(); got != tt.wantBeta {

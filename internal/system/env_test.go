@@ -37,9 +37,9 @@ func TestLookupEnv(t *testing.T) {
 		}
 	})
 
-	t.Run("no fallback to GENTLE_AI_ counterpart", func(t *testing.T) {
+	t.Run("no fallback to a legacy counterpart", func(t *testing.T) {
 		const unsetAxiom = "AXIOM_NO_FALLBACK"
-		const setGentle = "GENTLE_AI_NO_FALLBACK"
+		const setGentle = "LEGACY_NO_FALLBACK"
 		t.Setenv(setGentle, "legacy_value")
 
 		got, ok := LookupEnv(unsetAxiom)
@@ -80,9 +80,9 @@ func TestGetenv(t *testing.T) {
 		}
 	})
 
-	t.Run("no automatic fallback to GENTLE_AI_ key", func(t *testing.T) {
+	t.Run("no automatic fallback to a legacy key", func(t *testing.T) {
 		const unsetAxiom = "AXIOM_AUTO_FALLBACK_UNSET"
-		const setGentle = "GENTLE_AI_AUTO_FALLBACK_UNSET"
+		const setGentle = "LEGACY_AUTO_FALLBACK_UNSET"
 		t.Setenv(setGentle, "fallback_value")
 
 		if got := Getenv(unsetAxiom); got != "" {

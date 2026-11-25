@@ -35,7 +35,7 @@ import (
 const (
 	// realAgentE2EEnvironment gates the pinned real-agent journeys, which need a
 	// pinned OpenCode plus network access to the pinned plugin package.
-	realAgentE2EEnvironment = "GENTLE_AI_REAL_AGENT_E2E"
+	realAgentE2EEnvironment = "AXIOM_REAL_AGENT_E2E"
 	pinnedOpenCodeVersion   = versions.OpenCode
 
 	organicCommandWaitDelay = 10 * time.Second
@@ -77,13 +77,13 @@ func scaleOrganicTimeBudgets() error {
 // never escalates its own route. Re-executing the compiled test binary keeps
 // that real without adding a language runtime dependency to the suite.
 const (
-	organicActorRoleEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_ROLE"
-	organicActorRepoEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_REPO"
-	organicActorPathEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_PATH"
-	organicActorBodyEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_BODY"
-	organicActorMessageEnvironment = "GENTLE_AI_ORGANIC_ACTOR_MESSAGE"
-	organicActorBinaryEnvironment  = "GENTLE_AI_ORGANIC_ACTOR_BINARY"
-	organicTestBinaryEnvironment   = "GENTLE_AI_ORGANIC_TEST_BINARY"
+	organicActorRoleEnvironment    = "AXIOM_ORGANIC_ACTOR_ROLE"
+	organicActorRepoEnvironment    = "AXIOM_ORGANIC_ACTOR_REPO"
+	organicActorPathEnvironment    = "AXIOM_ORGANIC_ACTOR_PATH"
+	organicActorBodyEnvironment    = "AXIOM_ORGANIC_ACTOR_BODY"
+	organicActorMessageEnvironment = "AXIOM_ORGANIC_ACTOR_MESSAGE"
+	organicActorBinaryEnvironment  = "AXIOM_ORGANIC_ACTOR_BINARY"
+	organicTestBinaryEnvironment   = "AXIOM_ORGANIC_TEST_BINARY"
 
 	organicActorRoleDirect    = "direct"
 	organicActorRoleDelegated = "delegated"
@@ -916,7 +916,7 @@ func organicLines(prefix string, count int) string {
 // fixture, because a scripted model is what makes an agent journey repeatable.
 func TestRealAgentOrganicJourneys(t *testing.T) {
 	if os.Getenv(realAgentE2EEnvironment) != "1" {
-		t.Skip("set GENTLE_AI_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
+		t.Skip("set AXIOM_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
 	}
 	requireOrganicExecutableVersion(t, "opencode", pinnedOpenCodeVersion)
 	sharedConfig := prepareOpenCodeConfig(t)
@@ -998,8 +998,8 @@ func TestRealAgentOrganicJourneys(t *testing.T) {
 				organicActorBodyEnvironment+"="+body,
 				organicActorMessageEnvironment+"=docs: implement the real-agent outcome",
 				organicActorBinaryEnvironment+"="+organicBinary,
-				"GENTLE_AI_ORGANIC_ACTOR_EXECUTABLE="+os.Args[0],
-				"GENTLE_AI_ORGANIC_BINARY="+organicBinary,
+				"AXIOM_ORGANIC_ACTOR_EXECUTABLE="+os.Args[0],
+				"AXIOM_ORGANIC_BINARY="+organicBinary,
 			)
 
 			ctx, cancel := context.WithTimeout(context.Background(), organicAgentTimeout)
@@ -1033,7 +1033,7 @@ func TestRealAgentOrganicJourneys(t *testing.T) {
 
 func TestRealAgentInstalledSDDApplyExecutorDoesNotDelegate(t *testing.T) {
 	if os.Getenv(realAgentE2EEnvironment) != "1" {
-		t.Skip("set GENTLE_AI_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
+		t.Skip("set AXIOM_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
 	}
 	requireOrganicExecutableVersion(t, "opencode", pinnedOpenCodeVersion)
 
@@ -1198,7 +1198,7 @@ func TestInstalledSDDApplyExecutorRoundTripRejectsUnrelatedBashOutput(t *testing
 // bash tool, so the implementation step is a real child process of a real agent.
 func organicActorToolCommand(t *testing.T) string {
 	t.Helper()
-	return organicToolCommand(t, "GENTLE_AI_ORGANIC_ACTOR_EXECUTABLE")
+	return organicToolCommand(t, "AXIOM_ORGANIC_ACTOR_EXECUTABLE")
 }
 
 // organicToolCommand turns one fixture-authored argv into the string the

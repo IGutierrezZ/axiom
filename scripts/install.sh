@@ -60,7 +60,7 @@ Usage: install.sh [OPTIONS]
 
 Options:
   --method METHOD   Force install method: go, binary (default: binary)
-  --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: AXIOM_CHANNEL, fallback: GENTLE_AI_CHANNEL)
+  --channel CHANNEL Axiom channel: stable (default), beta, or nightly (env: AXIOM_CHANNEL)
   --dir DIR         Custom install directory for binary method
   --insecure        Skip checksum verification (not recommended)
   -h, --help        Show this help
@@ -575,7 +575,7 @@ main() {
     FORCE_METHOD=""
     INSTALL_DIR=""
     INSECURE="false"
-    CHANNEL="${AXIOM_CHANNEL:-${GENTLE_AI_CHANNEL:-stable}}"
+    CHANNEL="${AXIOM_CHANNEL:-stable}"
 
     while [ $# -gt 0 ]; do
         case "$1" in

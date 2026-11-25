@@ -99,9 +99,9 @@ cleanup_test_env() {
 # an `engram` binary already exists on PATH, so this shim keeps coverage of the
 # install pipeline while avoiding flaky GitHub API/rate-limit failures.
 #
-# Set GENTLE_AI_E2E_REAL_ENGRAM=1 to opt out and exercise the live download path.
+# Set AXIOM_E2E_REAL_ENGRAM=1 to opt out and exercise the live download path.
 setup_fake_engram_binary() {
-    if [ "${GENTLE_AI_E2E_REAL_ENGRAM:-0}" = "1" ]; then
+    if [ "${AXIOM_E2E_REAL_ENGRAM:-0}" = "1" ]; then
         log_info "Using real Engram binary/download path for E2E"
         return 0
     fi

@@ -22,7 +22,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if os.Getenv("GENTLE_AI_FAKE_GO") == "1" {
+	if os.Getenv("AXIOM_FAKE_GO") == "1" {
 		data := fmt.Sprintf("GONOSUMDB=%s\nGOPRIVATE=%s\nGONOPROXY=%s\n", os.Getenv("GONOSUMDB"), os.Getenv("GOPRIVATE"), os.Getenv("GONOPROXY"))
 		_ = os.WriteFile(os.Getenv("GO_ENV_RECORD"), []byte(data), 0o600)
 		os.Exit(0)
@@ -1302,7 +1302,7 @@ func TestEngramGoInstallFromMain_BypassesPublicGoProxy(t *testing.T) {
 		if err := os.WriteFile(fakeGo, data, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		t.Setenv("GENTLE_AI_FAKE_GO", "1")
+		t.Setenv("AXIOM_FAKE_GO", "1")
 	} else {
 		script := "#!/usr/bin/env bash\n" +
 			"printf 'GONOSUMDB=%s\\nGOPRIVATE=%s\\nGONOPROXY=%s\\n' \"${GONOSUMDB:-}\" \"${GOPRIVATE:-}\" \"${GONOPROXY:-}\" > \"$GO_ENV_RECORD\"\n"

@@ -41,7 +41,7 @@ await plugin({ worktree: bareDir, directory: "" })
 await plugin({ worktree: projectDir, directory: "" })
 await plugin({ worktree: skillsDir, directory: "" }) // no .git/.atl: a skills dir alone is a project marker
 
-const logPath = process.env.GENTLE_AI_RELAY_LOG
+const logPath = process.env.AXIOM_RELAY_LOG
 const readLines = () => (existsSync(logPath) ? readFileSync(logPath, "utf8").split("\n").filter(Boolean) : [])
 const deadline = Date.now() + 5000
 while (Date.now() < deadline && readLines().length < 2) {
@@ -53,7 +53,7 @@ console.log(JSON.stringify({ project: projectDir, skills: skillsDir, lines: read
 `
 	const relay = `#!/usr/bin/env node
 import { appendFileSync } from "node:fs"
-appendFileSync(process.env.GENTLE_AI_RELAY_LOG, JSON.stringify(process.argv.slice(2)) + "\n")
+appendFileSync(process.env.AXIOM_RELAY_LOG, JSON.stringify(process.argv.slice(2)) + "\n")
 `
 	output, _ := runOpenCodePluginHarness(t, map[string]string{"plugin.mts": string(source)}, harness, relay)
 	// The plugin's stderr skip notices share the combined harness output with
@@ -163,7 +163,7 @@ func runOpenCodePluginHarness(t *testing.T, modules map[string]string, harness, 
 	logPath := filepath.Join(root, "relay.log")
 	command := exec.Command(node, "harness.mts")
 	command.Dir = root
-	command.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"), "GENTLE_AI_RELAY_LOG="+logPath)
+	command.Env = append(os.Environ(), "PATH="+bin+string(os.PathListSeparator)+os.Getenv("PATH"), "AXIOM_RELAY_LOG="+logPath)
 	output, err := command.CombinedOutput()
 	if err != nil {
 		t.Fatalf("plugin harness failed: %v\n%s", err, output)

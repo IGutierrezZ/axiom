@@ -11,7 +11,7 @@ Axiom releases only when the protected `release` environment provides a real Min
    ```bash
    minisign -VQm checksums.txt \
      -x checksums.txt.minisig \
-     -P "$GENTLE_AI_MINISIGN_PUBLIC_KEY"
+     -P "$AXIOM_MINISIGN_PUBLIC_KEY"
    # Must print exactly:
    # repo=IGutierrezZ/axiom;tag=vMAJOR.MINOR.PATCH
 

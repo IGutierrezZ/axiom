@@ -11,10 +11,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
-// updateChannelEnv resolves the release channel from AXIOM_CHANNEL, falling
-// back to the legacy GENTLE_AI_CHANNEL. Tests may replace it.
+// updateChannelEnv resolves the release channel from AXIOM_CHANNEL. Tests may
+// replace it.
 var updateChannelEnv = func() string {
-	return system.Getenv(system.EnvChannelAxiom, system.EnvChannelGentleAI)
+	return system.Getenv(system.EnvChannelAxiom)
 }
 
 // CheckAll runs update checks for all registered tools concurrently.

@@ -5936,7 +5936,6 @@ func TestRunSyncReportsEffectiveScopeAndRoot(t *testing.T) {
 
 	// Default scope (flag and env unset) is the workspace.
 	t.Setenv(ScopeAxiomEnvVar, "")
-	t.Setenv(ScopeGentleAIEnvVar, "")
 
 	dry, err := RunSync(append([]string{"--dry-run"}, base...))
 	if err != nil {

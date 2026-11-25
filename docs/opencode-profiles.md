@@ -27,10 +27,10 @@ axiom install --agent opencode --component sdd --opencode-background-subagents=o
 axiom sync --opencode-background-subagents=off
 ```
 
-The environment equivalent is `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS=auto|on|off` (legacy `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS` is also supported). Resolution precedence is:
+The environment equivalent is `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS=auto|on|off`. Resolution precedence is:
 
 1. CLI flag.
-2. Non-empty `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS` (or legacy `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS`).
+2. Non-empty `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS`.
 3. The prior managed choice in Axiom state.
 4. `auto`.
 

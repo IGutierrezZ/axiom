@@ -73,10 +73,17 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
     - Regresión del bug: `TestSelectSelfToolResultFindsTheRegistryEntry` y `TestSelfToolRegistryNameMatchesTheIdentity` (`internal/update/identity_test.go`); la selección vive en `update.SelectSelfToolResult`, que usa `selfupdate.go`.
     - Verificado solo en CI: pruebas de `internal/app`, `internal/tui`, `internal/dashboard` y `cmd/axiom` (renombrados, literales y `AXIOM_*` ajustados; solo `go vet` y `go build` en local).
     - Decisión: se retira el `init()` de `cmd/axiom/main.go` (el registro ya trae las coordenadas reales) y `selfToolNames`; `update.SelfToolName` es la única fuente del nombre. Quedan fuera de T1 las variables de canal y ámbito (T2), los prefijos de temporales y rutas (T3) y el comentario de `main.go:406` (T7).
-- [ ] T2. Variables de entorno.
+- [x] T2. Variables de entorno.
   - Quitar todos los fallbacks `GENTLE_AI_*`: canal, ámbito de instalación, subagentes en segundo plano de OpenCode y Pi, modo de Engram y `GENTLE_AI_SDD_STATUS_ENGRAM`. Quitar también el helper `lookupEnvWithGentleAIFallback` y `EnvChannelGentleAI`.
   - Scripts de instalación.
   - Variables solo de pruebas y CI pasan a `AXIOM_*`.
+  - Evidencia (commit «refactor(env): retirar las variables GENTLE_AI_*»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
+    - `go build ./...`: correcto.
+    - `go vet` de `./internal/cli ./internal/update/... ./internal/system ./internal/components/engram ./internal/components/communitytool ./internal/sddstatus ./internal/assets ./internal/components/agentguidance ./internal/tui ./internal/app ./internal/filecoord ./internal/fileprim ./e2e/... ./cmd/...`: sin avisos.
+    - `go test` con `-count=1`: `./internal/system`, `./internal/components/engram`, `./internal/components/communitytool`, `./internal/sddstatus`, `./internal/components/agentguidance`, `./internal/update/...` ok; `./internal/cli -run 'Channel|Scope|Install|Background|Sync|Ratchet|Getwd|Guard|Legacy|Protocol'` ok; `./internal/assets ./internal/tui -run 'Getwd|Relay|Guard|Plugin|Runtime|Identity|Forbidden|Productive|Env'` ok.
+    - `gofmt -l` sobre los `.go` modificados: salida vacía.
+    - Verificado solo en CI: `internal/app` (`app_test.go` espera `AXIOM_CHANNEL` en la ayuda; `project_state_test.go` sin la variable vieja), `e2e/organicruntime` (variables `AXIOM_*`), `internal/filecoord` y `internal/fileprim` (solo `go vet`), `cmd/axiom`.
+    - Decisiones: se eliminan `lookupEnvWithGentleAIFallback` y todas las constantes `*GentleAI*`; `system.Getenv` queda con una sola clave. Las pruebas del fallback pasan a comprobar que la variable vieja se ignora y conservan el literal `GENTLE_AI_*` a propósito (cli, engram, sddstatus, update). Se mantienen con literal viejo: `GENTLE_AI_PRODUCTIVE_RUNTIME` y `GENTLE_AI_REVIEW_BINDING` (listas de prohibidas), `GENTLE_AI_STATE_DIR` (prueba negativa) y `GENTLE_AI_CONFIRM_UPDATE` (prueba negativa en `internal/app`). Restos fuera de T2: `gentle-ai.exe` en `ci.yml` (T6), `GENTLE_AI_TELEMETRY` en `internal/components/telemetryruntime/testdata` (fixtures históricas), `{{GENTLE_AI_*}}` (T7), `DISCORD_GENTLE_AI_*` (T6), specs `openspec/specs/axiom-user-state-and-env/spec.md` y `openspec/INDEX.md` REQ-12.3 (T8).
 - [ ] T3. Estado local y su migración.
   - Rutas activas a `axiom`:
     - `<git common dir>/axiom/sdd-runtime`;
@@ -111,8 +118,8 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 
 ## Progreso
 
-T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2-T8 sin empezar.
+T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3-T8 sin empezar.
 
 ## Siguiente paso
 
-T2.
+T3.

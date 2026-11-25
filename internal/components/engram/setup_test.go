@@ -182,6 +182,8 @@ func TestProbeProtocolFlagCommandUsesProvidedBinary(t *testing.T) {
 	}
 }
 
+// The GENTLE_AI_* setup variables are retired; the literals below only prove
+// they are ignored.
 func TestSetupModeFromEnvPrecedence(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -190,14 +192,14 @@ func TestSetupModeFromEnvPrecedence(t *testing.T) {
 		want   SetupMode
 	}{
 		{name: "neither set defaults to supported", want: SetupModeSupported},
-		{name: "legacy fallback", legacy: "off", want: SetupModeOff},
+		{name: "legacy variable is ignored", legacy: "off", want: SetupModeSupported},
 		{name: "axiom primary", axiom: "opencode", want: SetupModeOpenCode},
 		{name: "axiom wins over legacy", axiom: "off", legacy: "opencode", want: SetupModeOff},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(SetupModeEnvVar, tt.axiom)
-			t.Setenv(SetupModeGentleAIEnvVar, tt.legacy)
+			t.Setenv("GENTLE_AI_ENGRAM_SETUP_MODE", tt.legacy)
 			if got := SetupModeFromEnv(); got != tt.want {
 				t.Fatalf("SetupModeFromEnv() = %q, want %q", got, tt.want)
 			}
@@ -213,14 +215,14 @@ func TestSetupStrictFromEnvPrecedence(t *testing.T) {
 		want   bool
 	}{
 		{name: "neither set is not strict", want: false},
-		{name: "legacy fallback", legacy: "1", want: true},
+		{name: "legacy variable is ignored", legacy: "1", want: false},
 		{name: "axiom primary", axiom: "true", want: true},
 		{name: "axiom wins over legacy", axiom: "0", legacy: "1", want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(SetupStrictEnvVar, tt.axiom)
-			t.Setenv(SetupStrictGentleAIEnvVar, tt.legacy)
+			t.Setenv("GENTLE_AI_ENGRAM_SETUP_STRICT", tt.legacy)
 			if got := SetupStrictFromEnv(); got != tt.want {
 				t.Fatalf("SetupStrictFromEnv() = %v, want %v", got, tt.want)
 			}

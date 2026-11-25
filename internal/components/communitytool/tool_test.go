@@ -19,7 +19,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if mode := os.Getenv("GENTLE_AI_CODEGRAPH_TEST_HELPER"); mode != "" {
+	if mode := os.Getenv("AXIOM_CODEGRAPH_TEST_HELPER"); mode != "" {
 		runCodeGraphTestHelper(mode)
 		os.Exit(0)
 	}
@@ -61,7 +61,7 @@ func runCodeGraphTestHelper(mode string) {
 		if mode == "stall-initialize" || mode == "stall-tools-list" && strings.Contains(request, `"id":2`) {
 			time.Sleep(24 * time.Hour)
 		}
-		response := os.Getenv("GENTLE_AI_CODEGRAPH_TEST_RESPONSE")
+		response := os.Getenv("AXIOM_CODEGRAPH_TEST_RESPONSE")
 		if response == "" && strings.Contains(request, `"id":1`) {
 			response = `{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26","capabilities":{},"serverInfo":{"name":"fake","version":"1"}}}`
 		} else if response == "" && strings.Contains(request, `"id":2`) {

@@ -34,13 +34,13 @@ Antes de modificar cualquier fichero gestionado, Axiom crea una copia de segurid
 
 ### Disable TUI spinner animation
 
-Define `AXIOM_NO_ANIMATION=1` para detener la animación del indicador de la TUI. El nombre anterior `GENTLE_AI_NO_ANIMATION` se mantiene como alternativa de compatibilidad:
+Define `AXIOM_NO_ANIMATION=1` para detener la animación del indicador de la TUI:
 
 ```bash
 AXIOM_NO_ANIMATION=1 axiom
 ```
 
-Esto solo detiene la animación del indicador; las operaciones de instalación, actualización, sincronización y desinstalación siguen funcionando con normalidad. Elimina la variable o asígnale un valor distinto de `1` para conservar la animación predeterminada. `AXIOM_NO_ANIMATION` tiene prioridad sobre la variable heredada.
+Esto solo detiene la animación del indicador; las operaciones de instalación, actualización, sincronización y desinstalación siguen funcionando con normalidad. Elimina la variable o asígnale un valor distinto de `1` para conservar la animación predeterminada.
 
 ---
 
@@ -423,7 +423,7 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 | `--persona`                   | Persona mode: `gentleman`, `neutral`, `custom` (`custom` keeps your existing persona unmanaged)                   |
 | `--preset`                    | Preset: `full-gentleman`, `ecosystem-only`, `minimal`, `custom` (`custom` means manual component/skill selection) |
 | `--sdd-mode`                  | SDD orchestrator mode: `single` or `multi`                                                                        |
-| `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`; `GENTLE_AI_INSTALL_SCOPE` es la alternativa heredada para CI y usos no interactivos. |
+| `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`, útil en CI y usos no interactivos. |
 | `--dry-run`                   | Preview the install plan without applying changes                                                                 |
 
 **Raíz del workspace.** Con `--scope workspace` (y con `axiom setup` y `axiom sync` en ese ámbito), la raíz no es la carpeta desde la que lanzas el comando, sino la del proyecto: la carpeta del `axiom.yaml` (o del puntero `.axiom-workspace`) más cercano hacia arriba; si no hay ninguno, la raíz del repositorio git que contiene la carpeta actual, o la del worktree enlazado, nunca la del checkout principal; y si tampoco hay repositorio, la propia carpeta actual. La raíz de un repositorio git que sea tu directorio personal no cuenta. Cuando la raíz difiere de la carpeta actual, Axiom lo avisa por la salida de errores. Así, lanzar `axiom sync` desde `internal/pkg` no crea `internal/pkg/.claude` ni `internal/pkg/.mcp.json`.

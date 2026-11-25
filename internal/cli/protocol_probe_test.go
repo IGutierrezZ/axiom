@@ -75,8 +75,8 @@ func TestMain(m *testing.M) {
 	// from under the captured environment the continuation was emitted
 	// against. The same LookPath stubs as the harness keep agent discovery
 	// hermetic.
-	if os.Getenv("GENTLE_AI_TEST_CLI_STANDIN") == "1" {
-		if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
+	if os.Getenv("AXIOM_TEST_CLI_STANDIN") == "1" {
+		if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 			panic(err)
 		}
 		agentPresent := func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
@@ -101,7 +101,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(0)
 	}
-	if err := os.Unsetenv("GENTLE_AI_CHANNEL"); err != nil {
+	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 		panic(err)
 	}
 	testHome, err := os.MkdirTemp("", "gentle-ai-cli-test-home-*")

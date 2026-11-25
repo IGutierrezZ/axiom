@@ -18,12 +18,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// EnvSDDStatusEngramAxiom opts a workspace into the Engram artifact store;
-// EnvSDDStatusEngramGentleAI is the legacy fallback.
-const (
-	EnvSDDStatusEngramAxiom    = "AXIOM_SDD_STATUS_ENGRAM"
-	EnvSDDStatusEngramGentleAI = "GENTLE_AI_SDD_STATUS_ENGRAM"
-)
+// EnvSDDStatusEngramAxiom opts a workspace into the Engram artifact store.
+const EnvSDDStatusEngramAxiom = "AXIOM_SDD_STATUS_ENGRAM"
 
 const (
 	SchemaName       = "axiom.sdd-status"
@@ -979,7 +975,7 @@ func shouldTryEngram(workspaceRoot string) bool {
 	if declared, ok := declaredArtifactStore(workspaceRoot); ok {
 		return declared == ArtifactStoreEngram || declared == ArtifactStoreHybrid
 	}
-	if system.Getenv(EnvSDDStatusEngramAxiom, EnvSDDStatusEngramGentleAI) != "" {
+	if system.Getenv(EnvSDDStatusEngramAxiom) != "" {
 		return true
 	}
 	if _, err := os.Stat(filepath.Join(workspaceRoot, ".engram")); err == nil {

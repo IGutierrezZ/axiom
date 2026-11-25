@@ -432,7 +432,7 @@ jobs:
 
       # Canonical package: these release-blocker tests read the product's own
       # behavior. The output keeps the legacy "gentle-ai.exe" name: nothing
-      # downstream (GENTLE_AI_TEST_BINARY below, the Defender exclusion above)
+      # downstream (AXIOM_TEST_BINARY below, the Defender exclusion above)
       # needs it renamed, so only the build target changes.
       - name: Build native test binary
         shell: pwsh
@@ -442,7 +442,7 @@ jobs:
         shell: pwsh
         timeout-minutes: 10
         env:
-          GENTLE_AI_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
+          AXIOM_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
         run: |
           $packages = @('./internal/fileprim', './internal/components/engram')
           $expected = @(
@@ -586,7 +586,7 @@ jobs:
         # TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents, which
         # `go test ./...` never does — see that file's build-tag comment.
         env:
-          GENTLE_AI_REAL_AGENT_E2E: "1"
+          AXIOM_REAL_AGENT_E2E: "1"
         run: go test -tags real_agent_e2e -v ./e2e/organicruntime -count=1 -timeout=25m
 
   e2e-tests:
