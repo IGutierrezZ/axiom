@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
@@ -56,7 +56,7 @@ func WithStoreLock(store state.Store, operation func() error) (err error) {
 	if err != nil {
 		return fmt.Errorf("acquire install state lock: %w", err)
 	}
-	lock, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	lock, err := fileprim.AcquireLock(lockPath)
 	if err != nil {
 		return fmt.Errorf("acquire install state lock: %w", err)
 	}

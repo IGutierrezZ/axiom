@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 var (
@@ -345,7 +347,7 @@ func publishPrivateRARImmutable(path string, payload []byte) error {
 	if err := validatePrivateRARFile(tempPath); err != nil {
 		return err
 	}
-	if err := publishNoReplace(tempPath, path); err != nil {
+	if err := fileprim.PublishNoReplace(tempPath, path); err != nil {
 		if !errors.Is(err, fs.ErrExist) {
 			return err
 		}
@@ -438,7 +440,7 @@ func acquireRARAuthorityLock(ctx context.Context, path string) (*storeLock, erro
 }
 
 func acquirePrivateRARLocalStoreLock(path string) (*storeLock, error) {
-	file, err := secureOpenLocalStoreLock(path)
+	file, err := fileprim.SecureOpenLock(path, secureLockRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +459,7 @@ func acquirePrivateRARLocalStoreLock(path string) (*storeLock, error) {
 		}
 		return nil, errRARAuthorityPathReplaced
 	}
-	locked, err := tryLockFile(file)
+	locked, err := fileprim.TryLock(file)
 	if err != nil {
 		_ = file.Close()
 		return nil, err
@@ -468,7 +470,7 @@ func acquirePrivateRARLocalStoreLock(path string) (*storeLock, error) {
 	}
 	owner, err := newStoreLockOwner()
 	if err != nil {
-		_ = unlockFile(file)
+		_ = fileprim.Unlock(file)
 		_ = file.Close()
 		return nil, err
 	}
@@ -487,7 +489,7 @@ func acquirePrivateRARLocalStoreLock(path string) (*storeLock, error) {
 		err = file.Sync()
 	}
 	if err != nil {
-		_ = unlockFile(file)
+		_ = fileprim.Unlock(file)
 		_ = file.Close()
 		return nil, fmt.Errorf("write RAR authority lock owner: %w", err)
 	}

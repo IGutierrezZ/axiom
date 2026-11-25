@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"syscall"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 func rarPathUnsafe(_ string, info fs.FileInfo) bool {
@@ -306,24 +307,7 @@ func rarRepositoryOwnerDescription(path string) string {
 }
 
 func openRARPathNoFollow(path string, directory bool) (*os.File, error) {
-	absolute, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	parentFD, err := secureOpenLockParent(string(filepath.Separator), filepath.Dir(absolute))
-	if err != nil {
-		return nil, err
-	}
-	defer unix.Close(parentFD)
-	flags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
-	if directory {
-		flags |= unix.O_DIRECTORY
-	}
-	fd, err := unix.Openat(parentFD, filepath.Base(absolute), flags, 0)
-	if err != nil {
-		return nil, err
-	}
-	return os.NewFile(uintptr(fd), path), nil
+	return fileprim.OpenNoFollow(path, directory)
 }
 
 func validateRARRepositoryParent(path string) error {

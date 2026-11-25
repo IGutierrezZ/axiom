@@ -11,11 +11,13 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 const ReviewAuthorityStatusSchema = "gentle-ai.review-authority-status/v1"
 
-var probeExistingStoreLock = tryLockFile
+var probeExistingStoreLock = fileprim.TryLock
 
 type AuthorityStatus string
 
@@ -422,7 +424,7 @@ func inventoryLock(version AuthorityVersion, lineage, path string) (AuthorityLoc
 	probeHeld := true
 	defer func() {
 		if probeHeld {
-			_ = unlockFile(file)
+			_ = fileprim.Unlock(file)
 		}
 	}()
 	decoder := json.NewDecoder(file)
@@ -431,7 +433,7 @@ func inventoryLock(version AuthorityVersion, lineage, path string) (AuthorityLoc
 	if err := decoder.Decode(&owner); errors.Is(err, io.EOF) {
 		// An empty payload is a clean release (#2504): the holder cleared its
 		// owner record before unlocking, and the probe just proved no holder.
-		if err := unlockFile(file); err != nil {
+		if err := fileprim.Unlock(file); err != nil {
 			lock.Problem = "release existing lock probe: " + err.Error()
 			return lock, true
 		}
@@ -451,7 +453,7 @@ func inventoryLock(version AuthorityVersion, lineage, path string) (AuthorityLoc
 		lock.Problem = "lock owner metadata is incomplete or invalid"
 		return lock, true
 	}
-	if err := unlockFile(file); err != nil {
+	if err := fileprim.Unlock(file); err != nil {
 		lock.Problem = "release existing lock probe: " + err.Error()
 		return lock, true
 	}

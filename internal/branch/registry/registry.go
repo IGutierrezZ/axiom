@@ -25,8 +25,8 @@ import (
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // Store lee y escribe el registro local.
@@ -46,7 +46,7 @@ func folder(commonDir string, lane branch.Lane) string {
 }
 
 // Lock bloquea en exclusiva el cambio y el carril dados, con `<cambio>.lock` junto al
-// registro, mediante el bloqueo de ficheros de reviewtransaction. No espera: si otra
+// registro, mediante el bloqueo de ficheros de fileprim. No espera: si otra
 // ejecución lo tiene, devuelve ErrBusy. unlock lo libera y puede llamarse más de una vez.
 // Una clave que no puede componer la ruta de un registro, o un contexto ya cancelado,
 // devuelven un error corriente sin crear nada.
@@ -58,9 +58,9 @@ func (*Store) Lock(ctx context.Context, commonDir string, lane branch.Lane, chan
 		return nil, err
 	}
 	path := filepath.Join(folder(commonDir, lane), change+".lock")
-	lock, err := reviewtransaction.AcquireAuthorityFileLock(path)
+	lock, err := fileprim.AcquireLock(path)
 	switch {
-	case errors.Is(err, reviewtransaction.ErrStoreLockContended):
+	case errors.Is(err, fileprim.ErrLockContended):
 		return nil, ErrBusy
 	case err != nil:
 		return nil, &WriteError{Path: path, Cause: fmt.Errorf("no se pudo bloquear el cambio: %w", err)}
@@ -131,10 +131,10 @@ func (*Store) Save(commonDir string, record branch.Record) error {
 	if err := temporary.Close(); err != nil {
 		return &WriteError{Path: path, Cause: err}
 	}
-	if err := reviewtransaction.ReplaceFileAtomic(temporaryPath, path); err != nil {
+	if err := fileprim.ReplaceAtomic(temporaryPath, path); err != nil {
 		return &WriteError{Path: path, Cause: err}
 	}
-	if err := reviewtransaction.SyncReviewDirectory(dir); err != nil {
+	if err := fileprim.SyncDirectory(dir); err != nil {
 		return &WriteError{Path: dir, Cause: err}
 	}
 	return nil
@@ -156,7 +156,7 @@ func (*Store) Delete(commonDir string, lane branch.Lane, change string) error {
 	case err != nil:
 		return &WriteError{Path: path, Cause: err}
 	}
-	if err := reviewtransaction.SyncReviewDirectory(dir); err != nil {
+	if err := fileprim.SyncDirectory(dir); err != nil {
 		return &WriteError{Path: dir, Cause: err}
 	}
 	return nil

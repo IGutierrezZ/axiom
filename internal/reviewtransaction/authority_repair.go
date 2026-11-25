@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 const (
@@ -689,14 +691,14 @@ func probeAuthorityRepairLock(path string) authorityRepairLockStatus {
 		return authorityRepairLockUnknown
 	}
 	defer file.Close()
-	locked, err := tryLockFile(file)
+	locked, err := fileprim.TryLock(file)
 	if err != nil {
 		return authorityRepairLockUnknown
 	}
 	if !locked {
 		return authorityRepairLockHeld
 	}
-	if err := unlockFile(file); err != nil {
+	if err := fileprim.Unlock(file); err != nil {
 		return authorityRepairLockUnknown
 	}
 	return authorityRepairLockReleased

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 const freshV2RerunInstruction = "Start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`."
@@ -471,7 +471,7 @@ func TestConsentPublicationFailuresEmitNoIdentity(t *testing.T) {
 				case "missing-readback":
 					return nil
 				case "publish-error":
-					if err := reviewtransaction.PublishFileNoReplace(source, destination); err != nil {
+					if err := fileprim.PublishNoReplace(source, destination); err != nil {
 						return err
 					}
 					return errors.New("injected uncertain publication")

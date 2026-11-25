@@ -1,6 +1,6 @@
 //go:build windows
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -24,7 +24,7 @@ func TestPublishNoReplaceSupportsExtendedWindowsPaths(t *testing.T) {
 	if err := os.WriteFile(source, []byte("receipt\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := publishNoReplace(source, destination); err != nil {
+	if err := PublishNoReplace(source, destination); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(destination); err != nil {
@@ -34,7 +34,7 @@ func TestPublishNoReplaceSupportsExtendedWindowsPaths(t *testing.T) {
 	if err := os.WriteFile(second, []byte("conflict\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := publishNoReplace(second, destination); !errors.Is(err, fs.ErrExist) {
+	if err := PublishNoReplace(second, destination); !errors.Is(err, fs.ErrExist) {
 		t.Fatalf("existing destination error = %v", err)
 	}
 }
@@ -64,7 +64,7 @@ func TestReplaceFileAtomicSupportsExtendedWindowsPaths(t *testing.T) {
 	if err := os.WriteFile(destination, []byte("old\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := replaceFileAtomic(source, destination); err != nil {
+	if err := ReplaceAtomic(source, destination); err != nil {
 		t.Fatal(err)
 	}
 	payload, err := os.ReadFile(destination)

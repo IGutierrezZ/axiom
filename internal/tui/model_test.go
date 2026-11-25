@@ -21,6 +21,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -9518,7 +9519,7 @@ func TestMarkPendingSyncUnderLockReReadsLatestStateAfterLockContention(t *testin
 	if err != nil {
 		t.Fatalf("install state lock path: %v", err)
 	}
-	held, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	held, err := fileprim.AcquireLock(lockPath)
 	if err != nil {
 		t.Fatal(err)
 	}

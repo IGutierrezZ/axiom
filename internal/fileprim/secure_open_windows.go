@@ -1,6 +1,6 @@
 //go:build windows
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -29,14 +29,18 @@ type ntCreateFileFunc func(
 
 type queryDosDeviceFunc func(string) ([]string, error)
 
-func secureOpenLocalStoreLock(path string) (*os.File, error) {
+// SecureOpenLock opens (creating it when absent) the lock file at path without
+// following links. On POSIX the directory walk starts at the root the anchor
+// resolver names for the absolute path, or at the filesystem root when anchor is
+// nil or reports no root; on Windows the open is atomic and the anchor is unused.
+func SecureOpenLock(path string, anchor AnchorResolver) (*os.File, error) {
 	runSecureOpenLocalStoreLockBeforeOpen(path)
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
-	handle, err := openWindowsStoreLockObject(ntPath(absPath), windows.NtCreateFile, queryWindowsDosDevice)
+	handle, err := openWindowsStoreLockObject(NTPath(absPath), windows.NtCreateFile, queryWindowsDosDevice)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +178,8 @@ func queryWindowsDosDevice(device string) ([]string, error) {
 	return targets, nil
 }
 
-func ntPath(path string) string {
+// NTPath converts a Win32 absolute path into the NT object namespace form.
+func NTPath(path string) string {
 	if strings.HasPrefix(path, `\\?\UNC\`) {
 		return `\??\UNC\` + strings.TrimPrefix(path, `\\?\UNC\`)
 	}

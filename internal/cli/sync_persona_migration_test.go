@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -139,7 +140,7 @@ func TestMigratePersistedPersonaAliasReReadsLatestStateAfterLockContention(t *te
 	home := t.TempDir()
 	persisted := state.InstallState{Persona: string(model.PersonaGentlemanNeutralArtifacts)}
 
-	held, err := reviewtransaction.AcquireAuthorityFileLock(mustInstallStateLockPath(t, home))
+	held, err := fileprim.AcquireLock(mustInstallStateLockPath(t, home))
 	if err != nil {
 		t.Fatal(err)
 	}

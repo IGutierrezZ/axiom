@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
@@ -172,7 +173,7 @@ func TestReviewModeRepositoryRequiredRefusalDoesNotDependOnGitStderrLanguage(t *
 
 func TestWriteGlobalRDDModeSerializesWithInstallStateAndPreservesFreshFields(t *testing.T) {
 	home := reviewModeHome(t)
-	lock, err := reviewtransaction.AcquireAuthorityFileLock(mustInstallStateLockPath(t, home))
+	lock, err := fileprim.AcquireLock(mustInstallStateLockPath(t, home))
 	if err != nil {
 		t.Fatalf("acquire install state lock: %v", err)
 	}

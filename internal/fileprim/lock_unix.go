@@ -1,6 +1,6 @@
 //go:build unix
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -8,9 +8,8 @@ import (
 	"syscall"
 )
 
-func tryLockFile(file *os.File) (bool, error) { return tryLockFileMode(file, true) }
-
-func tryLockFileMode(file *os.File, exclusive bool) (bool, error) {
+// TryLockMode intenta bloquear file sin esperar, de forma exclusiva o compartida.
+func TryLockMode(file *os.File, exclusive bool) (bool, error) {
 	mode := syscall.LOCK_SH
 	if exclusive {
 		mode = syscall.LOCK_EX
@@ -25,6 +24,7 @@ func tryLockFileMode(file *os.File, exclusive bool) (bool, error) {
 	return false, err
 }
 
-func unlockFile(file *os.File) error {
+// Unlock libera el cerrojo de file.
+func Unlock(file *os.File) error {
 	return syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 }

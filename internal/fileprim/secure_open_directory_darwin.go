@@ -1,6 +1,6 @@
 //go:build darwin
 
-package reviewtransaction
+package fileprim
 
 import "golang.org/x/sys/unix"
 

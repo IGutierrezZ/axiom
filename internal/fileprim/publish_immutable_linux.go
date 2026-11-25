@@ -1,6 +1,6 @@
 //go:build linux
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -28,7 +28,7 @@ var (
 	removeImmutablePublication = os.Remove
 )
 
-func publishNoReplace(source, destination string) error {
+func PublishNoReplace(source, destination string) error {
 	err := renameNoReplace(unix.AT_FDCWD, source, unix.AT_FDCWD, destination, unix.RENAME_NOREPLACE)
 	if errors.Is(err, unix.ENOSYS) || errors.Is(err, unix.EINVAL) || errors.Is(err, unix.EOPNOTSUPP) || errors.Is(err, unix.EXDEV) {
 		return publishNoReplaceByCopy(source, destination)
@@ -68,6 +68,6 @@ func publishNoReplaceByCopy(source, destination string) error {
 	return removeImmutablePublication(source)
 }
 
-func replaceFileAtomic(source, destination string) error {
+func ReplaceAtomic(source, destination string) error {
 	return os.Rename(source, destination)
 }

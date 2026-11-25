@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
 // TestEditGrantLockContentionPreservesTheNonMutationProof pins the 1861
@@ -27,7 +27,7 @@ func TestEditGrantLockContentionPreservesTheNonMutationProof(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	held, err := reviewtransaction.AcquireAuthorityFileLock(filepath.Join(store.Dir, "LOCK"))
+	held, err := fileprim.AcquireLock(filepath.Join(store.Dir, "LOCK"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestEditGrantLockContentionPreservesTheNonMutationProof(t *testing.T) {
 	if !errors.Is(err, ErrRuntimeConcurrentUpdate) {
 		t.Fatalf("contended runtime ledger acquisition = %v, want ErrRuntimeConcurrentUpdate", err)
 	}
-	if !errors.Is(err, reviewtransaction.ErrStoreLockContended) {
+	if !errors.Is(err, fileprim.ErrLockContended) {
 		t.Fatalf("contended runtime ledger acquisition lost the non-mutation proof: %v", err)
 	}
 }
@@ -57,14 +57,14 @@ func TestEditGrantMutationContentionIsNotDoubleWrapped(t *testing.T) {
 	if err := store.ensureDirectories(); err != nil {
 		t.Fatal(err)
 	}
-	held, err := reviewtransaction.AcquireAuthorityFileLock(filepath.Join(store.Dir, "LOCK"))
+	held, err := fileprim.AcquireLock(filepath.Join(store.Dir, "LOCK"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = held.Release() }()
 
 	_, mutateErr := store.Grant(context.Background(), request)
-	if !errors.Is(mutateErr, ErrRuntimeConcurrentUpdate) || !errors.Is(mutateErr, reviewtransaction.ErrStoreLockContended) {
+	if !errors.Is(mutateErr, ErrRuntimeConcurrentUpdate) || !errors.Is(mutateErr, fileprim.ErrLockContended) {
 		t.Fatalf("contended runtime ledger mutation = %v, want a mapped contention refusal with its proof intact", mutateErr)
 	}
 	status, err := store.Status()

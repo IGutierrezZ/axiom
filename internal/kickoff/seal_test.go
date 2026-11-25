@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 func sampleKickoff(change string) Kickoff {
@@ -151,7 +151,7 @@ func TestSealPublicationFailureReturnsErrorAndNoIdentity(t *testing.T) {
 }
 
 func TestSealRealPublisherStillHonoursNoReplace(t *testing.T) {
-	// Confirms the production seam (reviewtransaction.PublishFileNoReplace)
+	// Confirms the production seam (fileprim.PublishNoReplace)
 	// is wired, not just the overridable var.
 	if publishKickoff == nil {
 		t.Fatal("publishKickoff seam is nil")
@@ -166,10 +166,10 @@ func TestSealRealPublisherStillHonoursNoReplace(t *testing.T) {
 	if err := os.WriteFile(src2, []byte("dos"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := reviewtransaction.PublishFileNoReplace(src1, dest); err != nil {
+	if err := fileprim.PublishNoReplace(src1, dest); err != nil {
 		t.Fatalf("primera publicacion: %v", err)
 	}
-	err := reviewtransaction.PublishFileNoReplace(src2, dest)
+	err := fileprim.PublishNoReplace(src2, dest)
 	if !errors.Is(err, os.ErrExist) {
 		t.Fatalf("segunda publicacion = %v, se esperaba os.ErrExist", err)
 	}

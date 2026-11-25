@@ -2,18 +2,19 @@ package reviewtransaction
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 )
 
-const storeLockSchema = "gentle-ai.review-store-lock/v1"
+// storeLockSchema y storeLockOwner viven en fileprim: el esquema JSON del registro
+// de propietario es compatibilidad de formato en disco y no cambia.
+const storeLockSchema = fileprim.LockSchema
 
 type maintenanceLockMode bool
 
@@ -24,13 +25,7 @@ const (
 
 const maintenanceLockTimeout = 2 * time.Second
 
-type storeLockOwner struct {
-	Schema     string    `json:"schema"`
-	OwnerID    string    `json:"owner_id"`
-	PID        int       `json:"pid"`
-	Host       string    `json:"host"`
-	AcquiredAt time.Time `json:"acquired_at"`
-}
+type storeLockOwner = fileprim.LockOwner
 
 type storeLock struct {
 	file        *os.File
@@ -43,31 +38,6 @@ type storeLock struct {
 // bounded by maintenanceLockTimeout, including context.Background callers.
 // Callers must always Release the lease.
 type MaintenanceLock struct{ lock *storeLock }
-
-// AuthorityFileLock exposes the hardened, platform-specific no-follow lock
-// primitive to adjacent provider-owned authority stores. It preserves kernel
-// advisory ownership as truth and never treats PID metadata as authorization.
-type AuthorityFileLock struct{ lock *storeLock }
-
-// AcquireAuthorityFileLock opens and exclusively locks one private authority
-// lock path using the same no-follow implementation as the review stores.
-func AcquireAuthorityFileLock(path string) (*AuthorityFileLock, error) {
-	lock, err := acquireLocalStoreLock(path)
-	if err != nil {
-		return nil, err
-	}
-	return &AuthorityFileLock{lock: lock}, nil
-}
-
-// Release relinquishes an AuthorityFileLock.
-func (lock *AuthorityFileLock) Release() error {
-	if lock == nil || lock.lock == nil {
-		return nil
-	}
-	err := lock.lock.release()
-	lock.lock = nil
-	return err
-}
 
 func (lock *MaintenanceLock) Release() error {
 	if lock == nil {
@@ -118,7 +88,7 @@ func (err *AuthorityLockCancelledError) Unwrap() []error {
 // describes a caller that never got in. Only this sentinel is safe to treat as
 // a proven non-mutation, and only when nothing in the same operation committed
 // a native transition first — that remains genuinely unknown.
-var ErrStoreLockContended = errors.New("authoritative review store advisory lock is held")
+var ErrStoreLockContended = fileprim.ErrLockContended
 
 type storeLockBusyError struct{}
 
@@ -134,28 +104,8 @@ func (err storeLockBusyError) Unwrap() []error {
 }
 
 // StoreLockPreAcquisitionError reports a failure that happened before the
-// authoritative store lock was acquired: directory creation, the secure
-// open walk, or the advisory lock syscall itself all fail before any review
-// authority mutation, so callers must classify this as not-started rather
-// than an unknown-mutation outcome (1781).
-type StoreLockPreAcquisitionError struct {
-	Err error
-}
-
-func (err *StoreLockPreAcquisitionError) Error() string {
-	if err == nil || err.Err == nil {
-		// refusal:by-design world-action: this sentence renders only for a degenerately constructed error with no cause, which no operator command can reach; the exit is a code fix at the construction site.
-		return "review store lock could not be acquired"
-	}
-	return fmt.Sprintf("review store lock could not be acquired: %v", err.Err)
-}
-
-func (err *StoreLockPreAcquisitionError) Unwrap() error {
-	if err == nil {
-		return nil
-	}
-	return err.Err
-}
+// authoritative store lock was acquired (1781). El tipo vive en fileprim.
+type StoreLockPreAcquisitionError = fileprim.PreAcquisitionError
 
 func acquireStoreLock(path string) (*storeLock, error) {
 	maintenancePath, err := maintenanceLockPathForStoreLock(path)
@@ -179,51 +129,15 @@ func acquireStoreLock(path string) (*storeLock, error) {
 }
 
 func acquireLocalStoreLock(path string) (*storeLock, error) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return nil, &StoreLockPreAcquisitionError{Err: err}
-	}
-	file, err := secureOpenLocalStoreLock(path)
-	if err != nil {
-		return nil, &StoreLockPreAcquisitionError{Err: err}
-	}
-	locked, err := tryLockFile(file)
-	if err != nil {
-		_ = file.Close()
-		return nil, &StoreLockPreAcquisitionError{Err: fmt.Errorf("acquire bounded review store lock: %w", err)}
-	}
-	if !locked {
-		_ = file.Close()
+	prim, err := fileprim.AcquireLockAnchored(path, secureLockRoot)
+	if errors.Is(err, fileprim.ErrLockContended) {
+		// Conserva ErrConcurrentUpdate en la cadena junto a ErrStoreLockContended.
 		return nil, storeLockBusyError{}
 	}
-
-	owner, err := newStoreLockOwner()
 	if err != nil {
-		_ = unlockFile(file)
-		_ = file.Close()
 		return nil, err
 	}
-	payload, err := json.Marshal(owner)
-	if err != nil {
-		_ = unlockFile(file)
-		_ = file.Close()
-		return nil, err
-	}
-	payload = append(payload, '\n')
-	if err := file.Truncate(0); err == nil {
-		_, err = file.Seek(0, 0)
-	}
-	if err == nil {
-		_, err = file.Write(payload)
-	}
-	if err == nil {
-		err = file.Sync()
-	}
-	if err != nil {
-		_ = unlockFile(file)
-		_ = file.Close()
-		return nil, fmt.Errorf("write review store lock owner: %w", err)
-	}
-	return &storeLock{file: file, owner: owner}, nil
+	return &storeLock{file: prim.File(), owner: prim.Owner()}, nil
 }
 
 func acquireMaintenanceLock(ctx context.Context, path string, mode maintenanceLockMode) (*MaintenanceLock, error) {
@@ -251,7 +165,7 @@ func acquireMaintenanceLockInternal(ctx context.Context, path string, mode maint
 		if err != nil {
 			return nil, err
 		}
-		locked, err := tryLockFileMode(file, bool(mode))
+		locked, err := fileprim.TryLockMode(file, bool(mode))
 		if err != nil {
 			_ = file.Close()
 			return nil, err
@@ -333,16 +247,14 @@ func (lock *storeLock) release() error {
 	// #2504: clear the owner payload while the advisory lock is still held,
 	// so no observer ever reads an exited process as the recorded holder.
 	// Kernel ownership stays the truth; the payload is only ever a hint.
-	truncateErr := lock.file.Truncate(0)
-	unlockErr := unlockFile(lock.file)
-	closeErr := lock.file.Close()
+	fileErr := fileprim.ReleaseLockFile(lock.file)
 	lock.file = nil
 	var maintenanceErr error
 	if lock.maintenance != nil {
 		maintenanceErr = lock.maintenance.Release()
 		lock.maintenance = nil
 	}
-	return errors.Join(truncateErr, unlockErr, closeErr, maintenanceErr)
+	return errors.Join(fileErr, maintenanceErr)
 }
 
 // secureLockRoot locates the repository's Git common directory that this
@@ -398,17 +310,4 @@ func maintenanceLockPathForStoreLock(path string) (string, error) {
 	return filepath.Join(filepath.Dir(authorityRoot), "REVIEW-MAINTENANCE.lock"), nil
 }
 
-func newStoreLockOwner() (storeLockOwner, error) {
-	var token [16]byte
-	if _, err := rand.Read(token[:]); err != nil {
-		return storeLockOwner{}, fmt.Errorf("generate review store lock owner: %w", err)
-	}
-	host, err := os.Hostname()
-	if err != nil {
-		host = "unknown"
-	}
-	return storeLockOwner{
-		Schema: storeLockSchema, OwnerID: hex.EncodeToString(token[:]), PID: os.Getpid(),
-		Host: host, AcquiredAt: time.Now().UTC(),
-	}, nil
-}
+func newStoreLockOwner() (storeLockOwner, error) { return fileprim.NewLockOwner() }

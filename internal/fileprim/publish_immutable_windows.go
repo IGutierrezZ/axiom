@@ -1,6 +1,6 @@
 //go:build windows
 
-package reviewtransaction
+package fileprim
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func publishNoReplace(source, destination string) error {
+func PublishNoReplace(source, destination string) error {
 	if err := moveFile(source, destination, windows.MOVEFILE_WRITE_THROUGH); err != nil {
 		if errors.Is(err, windows.ERROR_ALREADY_EXISTS) || errors.Is(err, windows.ERROR_FILE_EXISTS) {
 			return fs.ErrExist
@@ -21,7 +21,7 @@ func publishNoReplace(source, destination string) error {
 	return nil
 }
 
-func replaceFileAtomic(source, destination string) error {
+func ReplaceAtomic(source, destination string) error {
 	return moveFile(source, destination, windows.MOVEFILE_REPLACE_EXISTING|windows.MOVEFILE_WRITE_THROUGH)
 }
 

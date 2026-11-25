@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
 
 // Issue #2563 (S4b of #2540): the status layer owns the change-instance
@@ -88,7 +88,7 @@ func validChangeInstanceMarker(marker string) bool {
 }
 
 // Test seam for deterministic publication/readback failures; the shared publisher remains unchanged.
-var publishChangeInstanceMarker = reviewtransaction.PublishFileNoReplace
+var publishChangeInstanceMarker = fileprim.PublishNoReplace
 
 // ensureChangeInstanceMarker reads the existing or no-replace publishes and reads back the winner.
 func ensureChangeInstanceMarker(changeRoot string) (string, error) {

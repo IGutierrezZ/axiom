@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 )
@@ -13,13 +13,13 @@ import (
 // holdCanonicalInstallStateLock acquires the real canonical install-state lock
 // for home so a subsequent write site fails fast on contention, mirroring the
 // contention shape used by internal/cli/install_state_lock_test.go.
-func holdCanonicalInstallStateLock(t *testing.T, home string) *reviewtransaction.AuthorityFileLock {
+func holdCanonicalInstallStateLock(t *testing.T, home string) *fileprim.Lock {
 	t.Helper()
 	lockPath, err := statecoord.LockPath(home)
 	if err != nil {
 		t.Fatalf("install state lock path: %v", err)
 	}
-	held, err := reviewtransaction.AcquireAuthorityFileLock(lockPath)
+	held, err := fileprim.AcquireLock(lockPath)
 	if err != nil {
 		t.Fatalf("acquire install state lock for contention: %v", err)
 	}
