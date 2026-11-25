@@ -42,7 +42,11 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
   - `filemerge`: la creación exclusiva (`CREATE_NEW`, la de `os.CreateTemp`) a través de una junction devuelve «file already exists»; la escritura normal sí pasa. Nueva sonda `requireWritableJunction` con `O_EXCL`: si falla, `t.Skipf` con el motivo; donde funciona, la prueba corre entera.
   - `backup`: el socket AF_UNIX se crea, pero no admite `lstat` ni borrado, y la limpieza de `TempDir` falla aunque se omita la prueba. Sin sonda posible, en Windows solo corre en la CI (variable `CI`). Se corrige también el comentario de cabecera, que describía otro test.
   - Evidencia: `go test ./internal/backup/ ./internal/components/filemerge/ -count=1` en `ok`.
-- [ ] T3. `cli`: `TestCheckInstalledAssetVersion_*` y `TestCheckStateJSON_*`. Ruta: inline.
+- [x] T3. `cli`: `TestCheckInstalledAssetVersion_*` y `TestCheckStateJSON_*`. Ruta: inline.
+  - Causa: `EffectiveStateStore` parte del directorio actual. El checkout principal tiene `.axiom/state.json` de proyecto (ignorado por git), así que los tests leían ese estado real en vez del de su `homeDir`. En un worktree recién creado pasan; con una copia de ese fichero fallan cinco (RED observado).
+  - Arreglo: `isolatedStateStore` hace `t.Chdir` a un directorio vacío antes de resolver el almacén; sustituye las 14 llamadas de `doctor_test.go`.
+  - Evidencia: con `.axiom/state.json` copiado al worktree, `-run 'TestCheckInstalledAssetVersion_|TestCheckStateJSON_|TestDoctor|TestRunDoctor'` solo falla en `TestRunDoctor_GGARequiredWhenSelected` y `TestRunDoctor_FootprintShowsSelectedGGAAsOptional`.
+  - Esos dos de GGA fallan por la misma fuga (sin el fichero pasan), pero el plan los deja fuera: desaparecen con C-08-e.
 - [ ] T4. `app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `TestDeferredSyncIncludesCodexPermissionsArgs`. Ruta: inline.
 - [ ] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
 
