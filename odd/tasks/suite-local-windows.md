@@ -77,6 +77,6 @@ Verificación del criterio de terminado (Windows local, 2026-11-25):
   - RDD: `TestCodexReviewAdapterDispatchesSavedRoles`; `TestSDDStatusReEnableSequenceLandsOnTheFreshFullReview`, `TestSDDStatusArchiveNeverTreatsAnEmptyCandidateReviewAsCoverage` y `TestSDDStatusArchiveGateBlocksWhileReviewIsEnabled` («managed reviewer assets are outdated», la familia de `TestManagedReviewerAsset*`; sin el estado del checkout pasan).
   - GGA: `TestRunDoctor_GGARequiredWhenSelected` y `TestRunDoctor_FootprintShowsSelectedGGAAsOptional`.
 - `internal/reviewtransaction` no se toca: es RDD entero y desaparece con C-01-e.
-- Pendiente: el log del job `unit-tests` de la CI con los tests del toolchain ejecutándose (se comprueba en la PR).
+- CI de la PR #301 (run `45529501151`): `Unit Tests` y `Windows Runtime` en verde. El paso «Run unit tests» ejecuta `go test ./...` con `AXIOM_TEST_BUILD_BINARIES: 1`, así que `RequireGoToolchain` deja correr los tests del toolchain (`internal/assets` 96 s, `internal/app` 113 s, `internal/update` 37 s). Evidencia indirecta: sin `-v`, `go test` no imprime los nombres; no se añade `-v` a `ci.yml` porque el plan solo lo toca si cambia la puerta, y la puerta es la misma variable.
 
-Siguiente paso: PR, CI en verde, fusión con merge commit y `done`.
+Siguiente paso: fusión con merge commit y `done`.
