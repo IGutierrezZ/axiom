@@ -47,7 +47,7 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
 ## Tareas
 
 - [x] T1 · Crear `internal/fileprim` con cerrojo, publicación, reemplazo, sincronización de directorio y apertura sin seguir enlaces; mover sus pruebas; `reviewtransaction` delega en él; migrar los consumidores neutrales. Ruta: delegada (protección de contexto del padre: ~3.000 líneas de lectura).
-- [ ] T2 · `SnapshotBuilder` de `sddstatus/runtime_ledger.go` y `cli/sdd_gate_evidence.go` a `gitcommon`. Ruta: inline (<100 líneas).
+- [x] T2 · `SnapshotBuilder` de `sddstatus/runtime_ledger.go` y `cli/sdd_gate_evidence.go` a `gitcommon`. Ruta: inline (<100 líneas).
 - [ ] T3 · Comprobar el criterio de terminado (`rg -l 'internal/reviewtransaction"'`) y `go test` de los paquetes tocados.
 
 ## Criterio de aceptación
@@ -72,3 +72,19 @@ Que ningún paquete ajeno a RDD importe `internal/reviewtransaction` salvo en us
   - `go test` ok en `cli -run 'StateLock|Compatibility|PersonaMigration|SDDGate|Lineage'` y en `cli -run 'ReviewMode|LockContention'`.
   - `reviewtransaction`, por shards: 4 fallos de entorno por falta del privilegio de crear symlinks en Windows (`os.Symlink`). Dos de ellos se reprodujeron también en `main`.
   - `app`: falla solo `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation`, por «OpenCode runtime version unavailable». Es de entorno y falla igual en `main`.
+- Commit: `c13df45b`.
+
+### T2 · consultas de git a `gitcommon`
+
+- `gitcommon.RepositoryRoot` sustituye a `SnapshotBuilder.ResolveRepositoryRoot` en `sddstatus/runtime_ledger.go`, y `gitcommon.IsAncestor` sustituye a `SnapshotBuilder.RevisionIsAncestor` en `cli/sdd_gate_evidence.go`.
+- Desvío del plan: no se mueve el runner de `SnapshotBuilder`. Es el motor git de RDD, de unas 1.900 líneas. Las dos consultas de SDD se reimplementan sobre `gitcommon.Run` y `TopLevel`, que ya existen.
+- Cambian solo dos cosas, ambas de diagnóstico:
+  - el plazo de git pasa de 120 s a 30 s, el de `gitcommon`;
+  - el texto del error, cuando la consulta falla.
+- El resultado de las consultas no cambia: raíz canónica con contención por `pathidentity`, y ancestro sí/no/error según el código de salida 0/1/otro.
+- La sonda `CompactAuthoritativeStore` de `runtime_ledger.go` queda como «parte RDD» y es el único uso de `reviewtransaction` que le queda al fichero.
+- Ruta: inline (menos de 100 líneas).
+- Evidencia:
+  - `go test` ok en `gitcommon`, que incluye las pruebas nuevas de `RepositoryRoot` e `IsAncestor`.
+  - `go test` ok en `sddstatus`.
+  - `go test` ok en `cli -run 'SDDGate|Gate|Runtime|EditGrant'`.

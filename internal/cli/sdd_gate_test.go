@@ -298,8 +298,8 @@ func TestRunSDDGateRecordRejectedRoleApplyNeverEmitsNotice(t *testing.T) {
 // record` (design.md S4.6, S5.7; D-13). newGovernanceGitWorkspace and
 // runGateTestGit exist only for this section: it is the first one in this
 // file that needs a real, hermetic local commit graph for the CLI's real
-// AncestryChecker (reviewtransaction.SnapshotBuilder.RevisionIsAncestor,
-// phase 19) to run against.
+// AncestryChecker (gitcommon.IsAncestor,
+// on the workspace) to run against.
 
 // newGovernanceGitWorkspace mirrors newGovernanceWorkspace but additionally
 // makes root a real, hermetic local git repository on a "main" branch with

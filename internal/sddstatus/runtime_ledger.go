@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 )
@@ -210,7 +211,7 @@ func OpenRuntimeStore(ctx context.Context, repo, change string) (RuntimeStore, e
 	if !validRuntimeChange(change) {
 		return RuntimeStore{}, fmt.Errorf("invalid SDD change name %q; want a non-empty identity of at most 96 characters with no control characters, backslash, colon, or \".\"/\"..\" path segment; run `axiom sdd-status --cwd <repo> --json` to read the resolved changeName", change)
 	}
-	root, err := (reviewtransaction.SnapshotBuilder{Repo: repo}).ResolveRepositoryRoot(ctx)
+	root, err := gitcommon.RepositoryRoot(ctx, repo)
 	if err != nil {
 		if abs, absErr := filepath.Abs(repo); absErr == nil && !workspaceHasGitMetadata(abs) {
 			return RuntimeStore{}, &RuntimeRepositoryRequiredError{Workspace: abs, Cause: err}
