@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -873,7 +874,12 @@ func TestInjectClaudeWorkspaceIsDiscoveredByNativeClaudeMCPList(t *testing.T) {
 
 	cmd := exec.Command(claudePath, "mcp", "list")
 	cmd.Dir = workspace
-	env := os.Environ()
+	// Drop the Bun inspector settings a parent Claude Code session exports
+	// (BUN_INSPECT*): the child claude would try to bind the same debugger
+	// port and exit with EADDRINUSE before listing anything.
+	env := slices.DeleteFunc(os.Environ(), func(value string) bool {
+		return strings.HasPrefix(strings.ToUpper(value), "BUN_INSPECT")
+	})
 	homeReplaced := false
 	userProfileReplaced := false
 	for index, value := range env {

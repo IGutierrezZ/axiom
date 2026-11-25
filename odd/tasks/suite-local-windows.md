@@ -52,6 +52,9 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
   - `TestDeferredSync...`: la misma fuga de T3 (`syncArgsForDiscoveredAgents` usa `EffectiveStateStore` desde el directorio actual). Arreglo: `t.Chdir(t.TempDir())`.
   - Evidencia: con `.axiom/state.json` copiado al worktree, los dos tests en `PASS`; `go test ./internal/opencode/` en `ok`; `GOOS=linux go vet ./internal/opencode/` limpio.
   - Sin impacto en la spec viva: el lanzador sigue invocando el mismo runtime; cambia solo la forma de la ruta escrita.
+- [x] T6. `mcp`: `TestInjectClaudeWorkspaceIsDiscoveredByNativeClaudeMCPList` (aparecido al lanzar la suite desde una sesión de Claude Code). Ruta: inline.
+  - Causa: el test ejecuta el `claude` real y hereda `BUN_INSPECT` de la sesión padre; el hijo intenta abrir el mismo puerto del depurador (9226) y sale con `EADDRINUSE`. Arreglo: quitar `BUN_INSPECT*` del entorno del subproceso.
+  - Evidencia: `go test ./internal/components/mcp/ -count=1` en `ok` desde la misma sesión.
 - [ ] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
 
 ## Criterio de terminado
