@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -3414,7 +3415,7 @@ func (m Model) startUninstall() tea.Cmd {
 	uninstallWithProfilesFn := m.UninstallWithProfilesFn
 	syncFn := m.SyncFn
 	agentIDs := append([]model.AgentID(nil), m.UninstallAgents...)
-	componentIDs := append([]model.ComponentID(nil), m.UninstallComponents...)
+	componentIDs := uninstallComponentsForService(m.UninstallMode, m.UninstallComponents)
 	profileNamesToRemove := append([]string(nil), m.UninstallProfilesToRemove...)
 	engramScope := m.UninstallEngramScope
 	profileSelectionUsed := m.UninstallProfileSelection || len(profileNamesToRemove) > 0
@@ -4829,13 +4830,39 @@ func piOnlyComponents() []model.ComponentID {
 	return []model.ComponentID{model.ComponentEngram}
 }
 
+// defaultUninstallComponents es la selección inicial de la desinstalación
+// parcial: todo el catálogo menos GGA, que es huella de máquina y solo se retira
+// si se marca (como `--components gga` en el CLI). Engram sigue marcado: sin él
+// el agente no saldría de state.json (stateAgentsToRemove).
 func defaultUninstallComponents() []model.ComponentID {
 	options := screens.UninstallComponentOptions()
 	selected := make([]model.ComponentID, 0, len(options))
 	for _, component := range options {
+		if component.ID == model.ComponentGGA {
+			continue
+		}
 		selected = append(selected, component.ID)
 	}
 	return selected
+}
+
+// uninstallComponentsForService decide qué componentes recibe el servicio. En la
+// desinstalación parcial, la selección por defecto viaja vacía, y el servicio
+// aplica lo mismo que `axiom uninstall --agent X` sin `--components`: retira el
+// agente entero y, en el ámbito global, conserva el registro MCP de Engram. Solo
+// cuenta la selección visible; cualquier otra es explícita y viaja tal cual.
+func uninstallComponentsForService(mode model.UninstallMode, selected []model.ComponentID) []model.ComponentID {
+	if mode == model.UninstallModePartial && sameComponentSet(selected, defaultUninstallComponents()) {
+		return nil
+	}
+	return append([]model.ComponentID(nil), selected...)
+}
+
+func sameComponentSet(a, b []model.ComponentID) bool {
+	left, right := slices.Clone(a), slices.Clone(b)
+	slices.Sort(left)
+	slices.Sort(right)
+	return slices.Equal(slices.Compact(left), slices.Compact(right))
 }
 
 func extractMissingDeps(detection system.DetectionResult) []screens.MissingDep {
