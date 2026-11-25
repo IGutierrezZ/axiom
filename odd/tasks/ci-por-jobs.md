@@ -49,7 +49,17 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false`. Comprobaciones:
 
 - [x] T1 · Partir `Unit Tests` en jobs paralelos con agregador (`ci.yml` y tests de guarda).
 - [x] T2 · Rebalancear `windows-full-suite.yml` y ampliar la guarda de la partición.
-- [ ] T3 · Medir la CI de la PR (antes y después) y registrar el resultado aquí.
+- [x] T3 · Medir la CI de la PR (antes y después) y registrar el resultado aquí.
+
+## Tiempos de pared antes y después
+
+| Medida | Antes | Después |
+|---|---|---|
+| CI de PR hasta `Unit Tests` (Linux) | 4:02 (PR #310, ejecución 45714038862) | 2:00 (PR #317, ejecución 45718607813) |
+| Job más lento de Linux | `Unit Tests` 3:23 | `Go Tests (app-assets-update)` 1:39 |
+| Suite completa de Windows, de la puerta al último shard | ~8:56 (ejecución 45650722391, `rest` 7:50 de paso) | ~5:28 (ejecución 45718608075, `cli-p-z` 4:26 de paso; el resto, entre 1:21 y 3:05) |
+
+En la PR #317 corrió además `Windows Runtime` (1:01) porque el diff toca `ci.yml`; en una PR sin rutas de Windows se omite, como antes.
 
 Ruta de todas las tareas: inline (unidades pequeñas sobre ficheros de CI ya leídos).
 
@@ -65,3 +75,8 @@ Ruta de todas las tareas: inline (unidades pequeñas sobre ficheros de CI ya le�
 - T1: agregador `Unit Tests` y jobs `Go Tests (cli | app-assets-update | engine-sdd | rest)`, `Binary Smoke` y `Deadcode Ratchet`. Guardas nuevas en `internal/assets/workflow_shards_test.go`: `TestUnitTestShardsPartitionEveryPackage` (comprobada con la mutación que quita `./internal/update` de `exclude`: falla) y `TestUnitTestsAggregatorRequiresEveryUnitJob`. `windows_distribution_policy_test.go` exige ahora `go list ./...` en lugar de `go test ./...`. `go vet` y `go test ./internal/assets ./internal/update -run` de los tests tocados, en verde.
 - T2: seis shards de Windows (`cli-a-o`, `cli-p-z`, `engine-a-e`, `engine-f-z`, `components-sdd`, `rest`); `rest` excluye por el campo `exclude` y los valores de la matriz llegan al paso por `env`. `TestWindowsFullSuiteShardsCoverEveryTestName` lee la matriz con `yaml.v3`, aplica `checkShardPartition` y mantiene la comprobación contra `go test -list`. En verde con `AXIOM_TEST_BUILD_BINARIES=1 go test ./internal/assets -run`.
 - Primera CI de la PR #317 (ejecuciones 45717424700 y 45717448099), toda en verde. Linux: de la creación de la ejecución al final de `Unit Tests`, 2:01 (antes 4:02). Windows: `rest` siguió marcando el tiempo (paso de 6:04; job de 6:54), con los demás shards entre 2:09 y 4:13 de paso. Ajuste en un commit nuevo: `engine` entero en un shard y shard `sdd-app-dashboard` para los cuatro paquetes más caros de `rest`.
+- T3: segunda CI (commit `57f0946e`) toda en verde, incluida la suite de Windows con `ci:windows`. Tiempos en la tabla de arriba. `cli-p-z` queda como shard más lento; partirlo más ya no compensa el sobrecoste fijo por shard (~40 s). Commits: T1 `cdd67b43`, T2 `d890110d` y `57f0946e`.
+
+## Siguiente paso
+
+Merge commit de la PR #317 y `scripts/axiom-worktree.ps1 done ci-por-jobs -Lane odd`. Sin spec viva: el cambio solo toca CI y pruebas de guarda.
