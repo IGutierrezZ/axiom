@@ -37,8 +37,8 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 
 ## Tareas
 
-- [ ] T1 · Huella de contexto multiagente. Un detector genérico recorre los adaptadores y compara usuario frente a workspace: bloques gestionados del fichero de instrucciones, skills, subagentes, comandos y output style. La huella de `axiom doctor` gana el tipo `duplicado`, con aviso de divergencia cuando las dos copias no coinciden. Ruta: delegada (protección de contexto del padre, sesión larga).
-- [ ] T2 · Preferencia en el hub. `WorkspaceRecord.MCPExclusions` (agente → nombres, `omitempty`), con setter y lectura según el patrón de `hub/rddpref.go`. Ruta: inline (<100 líneas).
+- [x] T1 · Huella de contexto multiagente. Un detector genérico recorre los adaptadores y compara usuario frente a workspace: bloques gestionados del fichero de instrucciones, skills, subagentes, comandos y output style. La huella de `axiom doctor` gana el tipo `duplicado`, con aviso de divergencia cuando las dos copias no coinciden. Ruta: delegada (protección de contexto del padre, sesión larga).
+- [x] T2 · Preferencia en el hub. `WorkspaceRecord.MCPExclusions` (agente → nombres, `omitempty`), con setter y lectura según el patrón de `hub/rddpref.go`. Ruta: inline (<100 líneas).
 - [ ] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
 - [ ] T4 · Dashboard. API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
 - [ ] T5 · Cargado sin uso. Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
@@ -63,7 +63,9 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 ## Progreso y evidencia
 
 - 2026-11-25 · Retirada la instalación global de Axiom en Claude Code (copia `20261125100156.937750600`). Prueba manual de la exclusión en el checkout principal (ver «Hechos verificados»).
+- T1 · commit `fbc977ff`. `internal/components/uninstall/context_duplicates.go`: `ContextDuplicates(home, root)` recorre todos los adaptadores y compara cinco tipos (instrucciones con bloques gestionados, skills, subagentes, comandos y output styles); marca `Diverges` cuando las copias difieren. La huella del doctor gana el tipo `duplicado`. Pruebas con Claude Code, Codex y Cursor. Evidencia: `gofmt -l` limpio; `go vet ./internal/components/uninstall/ ./internal/cli/` sin avisos; `go test ./internal/components/uninstall/...` ok; `go test ./internal/cli/ -run "Footprint|Doctor"` ok (repetido por el padre).
+- T2 · `internal/hub/mcpexclude.go`: `NormalizeMCPExclusions`, `LookupProjectMCPExclusions` (resuelve también desde subcarpetas y worktrees vía `ProjectForRepo`) y `SetProjectMCPExclusions`, que devuelve las exclusiones previas para retirar lo que sobra. Campo `mcp_exclusions` con `omitempty`. Evidencia: `gofmt -l internal/hub` limpio; `go vet ./internal/hub/` sin avisos; `go test ./internal/hub/` ok.
 
 ## Siguiente paso
 
-T1, y en paralelo comprobar en una sesión nueva de escritorio si los conectores excluidos desaparecen.
+T3, y en paralelo comprobar en una sesión nueva de escritorio si los conectores excluidos desaparecen.

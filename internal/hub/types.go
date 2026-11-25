@@ -24,6 +24,10 @@ type WorkspaceRecord struct {
 	// RDDMode es la preferencia personal de revisión (RDD) del proyecto: "on", "off" o vacío
 	// para heredar el interruptor global (rddpref.go). Es del usuario y nunca se versiona.
 	RDDMode string `json:"rdd_mode,omitempty"`
+	// MCPExclusions son las exclusiones personales de servidores MCP y conectores del
+	// proyecto, por agente (mcpexclude.go): ese agente no los carga al trabajar en el
+	// proyecto. Son del usuario y nunca se versionan.
+	MCPExclusions map[string][]string `json:"mcp_exclusions,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.
