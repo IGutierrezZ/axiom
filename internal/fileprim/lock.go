@@ -66,11 +66,6 @@ func (lockBusyError) Error() string {
 
 func (lockBusyError) Unwrap() error { return ErrLockContended }
 
-// NewLockBusyError devuelve el error de cerrojo ocupado, que cumple
-// errors.Is(err, ErrLockContended). Lo usan quienes abren y bloquean el
-// fichero por su cuenta.
-func NewLockBusyError() error { return lockBusyError{} }
-
 // PreAcquisitionError reports a failure that happened before the lock was
 // acquired: directory creation, the secure open walk, or the advisory lock
 // syscall itself all fail before any guarded mutation, so callers must

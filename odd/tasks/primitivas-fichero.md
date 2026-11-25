@@ -127,3 +127,8 @@ Abrir la PR y fusionarla con merge commit.
   - los baselines solo renombran rutas, y no se congela ninguna frase nueva.
 - `fileprim.ErrReparsePoint` pasa a nombrar su salida y lleva la anotación `refusal:by-design`. Antes, `OpenPhysicalPath` devolvía el texto de RAR (`errUnsafeRARAuthorityPath`), que también nombraba la salida. Dentro de RDD, `openRARPathNoFollow` sigue traduciendo este error a `errUnsafeRARAuthorityPath`.
 - Evidencia: `go test ./internal/cli -run 'GuardPopulation|Refusal|Ratchet'` ok, y `go test ./internal/fileprim` ok.
+- Second CI failure, the dead-code ratchet:
+  - `fileprim.NewLockBusyError` had no callers, so it is deleted.
+  - `SnapshotBuilder.RevisionIsAncestor` (RDD) had no consumer once `gitcommon.IsAncestor` replaced it, so it is deleted together with its test.
+  - 27 functions in `reviewtransaction/verification_contract.go` go into `.deadcode-baseline.txt`. On `main` they were reachable only through reflection (`deadcode -whylive`: "reachable only through reflection"), because SDD code converted a `SnapshotBuilder` value to an interface. This PR removed that value; nothing real calls those functions. C-01-e deletes them along with the package.
+  - Evidence: `scripts/deadcode-ratchet.sh` reports "no new unreachable functions".
