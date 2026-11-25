@@ -45,7 +45,7 @@ Naming convention: `axiom-*` skills are repo-specific workflow skills. Unprefixe
 
 | Skill | Trigger / description | Scope | Path |
 | --- | --- | --- | --- |
-| `axiom-branch-pr` | Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/branch-pr/SKILL.md` |
+| `axiom-branch-pr` | Create Axiom pull requests. Trigger: creating, opening, or preparing PRs for review. | project | `skills/axiom-branch-pr/SKILL.md` |
 | `axiom-go-table-tests` | Pruebas unitarias tabulares en Go con structs anónimos y subpruebas t.Run. Trigger: Al crear o modificar suites *_test.go en paquetes Go. | project | `skills/axiom-go-table-tests/SKILL.md` |
 | `axiom-idiomatic-error-wrapping` | Errores envueltos con fmt.Errorf y %w para conservar la causa raíz. Trigger: Al capturar, propagar o formatear errores en paquetes Go. | project | `skills/axiom-idiomatic-error-wrapping/SKILL.md` |
 | `chained-pr` | Trigger: the person asks to chain, stack, or slice pull requests, or delivery_strategy is chained. Plan chained PRs that keep each review focused. | project | `internal/assets/skills/chained-pr/SKILL.md` |
