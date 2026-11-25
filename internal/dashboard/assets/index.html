@@ -500,6 +500,39 @@
               </div>
             </section>
 
+            <section class="card card-flush eco-wide" aria-labelledby="eco-mcp-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-mcp-h">Servidores MCP excluidos en este proyecto</h2>
+                <span class="badge badge-mono">~/.axiom</span>
+              </div>
+              <div id="eco-mcp-body" class="eco-pad">
+                <p class="eco-note">Servidores MCP y conectores que Claude Code no cargará al trabajar en este proyecto ni en sus worktrees. Se guardan en tu Hub (<code>~/.axiom/workspaces.json</code>) y se aplican a <code>.claude/settings.local.json</code>, que git ignora: no modifican <code>axiom.yaml</code> ni ningún fichero versionado. Los conectores de claude.ai se escriben como <code>claude.ai &lt;Nombre&gt;</code> (por ejemplo <code>claude.ai Microsoft 365</code>).</p>
+                <div id="eco-mcp-state">
+                  <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las exclusiones de servidores MCP…</span></div>
+                </div>
+                <form id="form-mcp-exclusions" class="eco-wt-form" hidden novalidate>
+                  <fieldset class="eco-mcp-fieldset">
+                    <legend class="field-hint">Servidores a excluir</legend>
+                    <div id="mcp-excl-list" class="eco-mcp-list"></div>
+                  </fieldset>
+                  <div class="field">
+                    <label for="input-mcp-excl-name">Añadir otro nombre</label>
+                    <div class="eco-wt-actions">
+                      <input type="text" id="input-mcp-excl-name" class="form-input" placeholder="claude.ai Microsoft 365" autocomplete="off" spellcheck="false">
+                      <button type="button" id="btn-add-mcp-excl" class="btn">Añadir</button>
+                    </div>
+                  </div>
+                  <div class="eco-wt-actions">
+                    <button type="submit" id="btn-save-mcp-exclusions" class="btn btn-primary">Guardar exclusiones</button>
+                    <span id="mcp-excl-dirs" class="eco-note"></span>
+                  </div>
+                  <p id="mcp-excl-status" class="field-hint" role="status"></p>
+                  <div id="mcp-excl-report"></div>
+                  <p class="eco-note">El cambio se aplica a las sesiones nuevas. En la app de escritorio, los conectores de claude.ai los entrega la propia app; comprueba en <code>/mcp</code> que no aparecen.</p>
+                </form>
+              </div>
+            </section>
+
             <section class="card card-flush eco-wide" aria-labelledby="eco-models-h">
               <div class="card-head">
                 <h2 class="card-title-h" id="eco-models-h">Modelos</h2>

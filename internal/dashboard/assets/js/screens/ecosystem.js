@@ -20,6 +20,7 @@ import {
 import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
 import { bindModelsEditor, modelsHtml } from './ecosystem-models.js';
+import { initMcpExclusions, loadMcpExclusions } from './ecosystem-mcp.js';
 import { refreshOverview } from '../core/overview.js';
 import { on, state } from '../core/state.js';
 import { loadProjects } from '../projects.js';
@@ -264,7 +265,7 @@ async function saveWorktreePrefs() {
 
 export async function loadEcosystem() {
   // El Doctor lo refresca la caché (overview.js) junto con Actualizar.
-  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs()]);
+  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs(), loadMcpExclusions()]);
 }
 
 // ---- Última operación ----------------------------------------------------------------------
@@ -387,6 +388,7 @@ export function initEcosystem() {
     event.preventDefault();
     saveWorktreePrefs();
   });
+  initMcpExclusions();
   bindModelsEditor($('#eco-models-body'));
   $('#eco-backups-body').addEventListener('click', event => {
     const button = event.target.closest('[data-restore]');

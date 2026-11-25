@@ -1038,6 +1038,9 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-repo-policy th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
 .eco-wt-form { display: flex; flex-direction: column; gap: 14px; }
 .eco-wt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.eco-mcp-fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.eco-mcp-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.eco-mcp-item { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .eco-models-adapter { display: flex; flex-direction: column; gap: 12px; }
 .eco-models-adapter + .eco-models-adapter { padding-top: 16px; border-top: 1px solid var(--border); }
 .eco-models-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }

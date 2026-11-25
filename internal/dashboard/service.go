@@ -44,7 +44,10 @@ type Service struct {
 	rootPath string
 	// modelsMu serializa los guardados de modelos por fase: cada uno lee el estado del
 	// proyecto, lo cambia y regenera ficheros.
-	modelsMu         sync.Mutex
+	modelsMu sync.Mutex
+	// mcpMu serializa los guardados de exclusiones MCP: guardan en el hub y escriben
+	// ficheros del agente en la raíz y en los worktrees.
+	mcpMu            sync.Mutex
 	hubManager       *hub.Manager
 	hubDetector      *hub.Detector
 	autoskillManager *autoskill.Manager
