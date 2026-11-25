@@ -621,6 +621,21 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 .dt-step.is-todo .dt-step-label { color: var(--text-2); }
 .dt-step-sub { font-size: 11px; color: var(--text-3); overflow-wrap: anywhere; }
 
+/* Multirol: avance por rol dentro del paso Apply en curso y estado de la barrera. */
+.dt-step.is-waiting .dt-step-dot { border-color: var(--warn); background: var(--warn-soft); }
+.dt-step.is-waiting .dt-step-core { background: var(--warn); }
+.dt-step-roles { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dt-step-role { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 8px; font-size: 11px; min-width: 0; }
+.dt-step-role-name { font-weight: 600; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-step-role-state { color: var(--text-3); white-space: nowrap; }
+.dt-step-role .progress { grid-column: 1 / -1; }
+.dt-step-role-blocker {
+  font-size: 11px; color: var(--text-3); overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.dt-step-role-link { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+.dt-step.is-waiting .dt-step-role-link { color: var(--warn); }
+
 .tab-pill { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: var(--radius-full); }
 .tab-pill-ok { background: var(--ok-soft); color: var(--ok); }
 .tab-pill-warn { background: var(--warn-soft); color: var(--warn); }

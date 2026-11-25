@@ -58,24 +58,6 @@ El servidor HTTP local DEBE exponer el endpoint `POST /api/increments` para reci
 
 ---
 
-### Requirement: Ejecución y Avance de Fase SDD vía API (REQ-15.2)
-El servidor HTTP local DEBE exponer el endpoint `POST /api/increments/continue` para disparar la siguiente transición del ciclo de vida SDD sobre el incremento especificado en el cuerpo de la petición (`{ "name": "<cambio>" }`). El servidor DEBE invocar el motor de despacho SDD de Axiom (`RunSDDContinue`), capturar el veredicto o salida de acción autorizada y retornarlo al cliente en formato estructurado.
-
-#### Scenario: Avance de fase exitoso con captura de acción autorizada
-- **DADO** un incremento activo en el workspace
-- **CUANDO** se envía una petición `POST /api/increments/continue` con `{ "name": "<nombre-cambio>" }`
-- **ENTONCES** el servidor ejecuta la transición del despachador SDD
-- **Y** responde con código HTTP `200 OK`
-- **Y** la respuesta JSON contiene `"success": true`, el nombre del cambio y la salida o veredicto de la siguiente acción
-
-#### Scenario: Rechazo de avance para un cambio inexistente
-- **DADO** el endpoint `POST /api/increments/continue`
-- **CUANDO** se envía una petición para un cambio que no existe en `openspec/changes/`
-- **ENTONCES** el servidor responde con código HTTP `404 Not Found`
-- **Y** emite un error explicativo en JSON
-
----
-
 ### Requirement: Validación Formal de Verificación vía API (REQ-15.3)
 El servidor HTTP local DEBE exponer el endpoint `POST /api/increments/verify` para validar formalmente el reporte de verificación (`verify-report.md`) de un incremento activo contra los requerimientos y escenarios BDD de las especificaciones vigentes.
 

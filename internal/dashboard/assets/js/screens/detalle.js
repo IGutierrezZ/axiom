@@ -5,7 +5,7 @@
 import { api, escapeHtml } from '../core/api.js';
 import { $, $all, button, commandChip, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { detailSteps, formatDate, isArchived, nextCommand, typeChip } from '../core/increment.js';
+import { detailSteps, formatDate, isArchived, nextCommand, progressBar, typeChip } from '../core/increment.js';
 import { firstParagraph, renderMarkdown } from '../core/markdown.js';
 import { hrefFor } from '../core/router.js';
 import { barrierSummary, renderRoles } from './detalle-roles.js';
@@ -38,16 +38,34 @@ function renderHeader(detail) {
   descEl.textContent = desc;
 }
 
+const ROLE_TONE = { ok: 'text-ok' };
+
+// stepRoles: en multirol, una fila por rol dentro del paso Apply y el enlace a la
+// pestaña «Roles y barrera»; con la barrera cerrada, también su primer bloqueo.
+function stepRoles(st, change) {
+  if (!st.roles) return '';
+  const rows = st.roles.map(r => {
+    const tone = ROLE_TONE[r.status.tone] || '';
+    return `<li class="dt-step-role"><span class="dt-step-role-name" title="${escapeHtml(r.label)}">${escapeHtml(r.label)}</span><span class="dt-step-role-state mono${tone ? ` ${tone}` : ''}">${escapeHtml(r.status.text)}</span>${progressBar(r.pct, `Tareas del rol ${r.label}`)}</li>`;
+  }).join('');
+  const blocker = st.blocker ? `<span class="dt-step-role-blocker" title="${escapeHtml(st.blocker)}">${escapeHtml(st.blocker)}</span>` : '';
+  const link = `<a class="dt-step-role-link" href="${hrefFor('incremento', { change, tab: 'roles' })}">${icon(st.waiting ? 'clock' : 'users', 12)}${st.waiting ? 'Barrera cerrada · ver roles' : 'Ver roles'}</a>`;
+  return `<ul class="dt-step-roles" aria-label="Avance por rol">${rows}</ul>${blocker}${link}`;
+}
+
 function renderStepper(detail) {
   const steps = detailSteps(detail);
+  const change = detail.summary.name;
   const stateText = { done: 'completada', current: 'en curso', todo: 'pendiente' };
   $('#inc-stepper').innerHTML = `<ol class="dt-steps" aria-label="Fases SDD">${steps.map(st => {
     const dot = st.state === 'done' ? icon('check', 12) : st.state === 'current' ? '<span class="dt-step-core"></span>' : '';
     const sub = st.detail ? `${escapeHtml(st.detail)}${st.pct != null ? ` · ${st.pct}%` : ''}` : escapeHtml(st.file);
-    return `<li class="dt-step is-${st.state}"${st.state === 'current' ? ' aria-current="step"' : ''}>
+    const waiting = st.waiting ? ', barrera cerrada' : '';
+    return `<li class="dt-step is-${st.state}${st.waiting ? ' is-waiting' : ''}"${st.state === 'current' ? ' aria-current="step"' : ''}>
       <span class="dt-step-track"><span class="dt-step-dot">${dot}</span><span class="dt-step-bar"></span></span>
-      <span class="dt-step-label">${escapeHtml(st.label)}<span class="sr-only"> — ${stateText[st.state]}</span></span>
+      <span class="dt-step-label">${escapeHtml(st.label)}<span class="sr-only"> — ${stateText[st.state]}${waiting}</span></span>
       <span class="dt-step-sub mono">${sub}</span>
+      ${stepRoles(st, change)}
     </li>`;
   }).join('')}</ol>`;
 }

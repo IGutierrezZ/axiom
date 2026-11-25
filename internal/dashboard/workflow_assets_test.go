@@ -193,6 +193,36 @@ func TestAgentPhasesAreCopyableCommandsNotButtons(t *testing.T) {
 	}
 }
 
+// Multirol: el paso Apply en curso desglosa cada rol de la barrera y enlaza a su
+// pestaña; con un único rol (fullstack) el paso queda como estaba.
+func TestApplyStepShowsPerRoleProgressWhenMultirole(t *testing.T) {
+	shared := readAsset(t, "js/core/increment.js")
+	for _, marker := range []string{
+		"apply.state === 'current' && roles.length > 1", "function roleProgress(", "barrier.satisfied === false",
+		"r.verify_done", "r.tasks_found", "'verificado'", "'sin tasks'",
+	} {
+		if !strings.Contains(shared, marker) {
+			t.Errorf("increment.js no contiene %q", marker)
+		}
+	}
+	detail := readAsset(t, "js/screens/detalle.js")
+	for _, marker := range []string{
+		"function stepRoles(", "stepRoles(st, change)", `aria-label="Avance por rol"`, "is-waiting",
+		"tab: 'roles'", "Barrera cerrada", "progressBar(r.pct", "escapeHtml(r.label)", "escapeHtml(st.blocker)",
+	} {
+		if !strings.Contains(detail, marker) {
+			t.Errorf("detalle.js no contiene %q", marker)
+		}
+	}
+	css := readAsset(t, "style.css")
+	// Clases propias del paso: .dt-role ya es la tarjeta de la pestaña «Roles y barrera».
+	for _, marker := range []string{".dt-step-roles", ".dt-step-role ", ".dt-step.is-waiting .dt-step-dot", ".dt-step-role-link"} {
+		if !strings.Contains(css, marker) {
+			t.Errorf("style.css no contiene %q", marker)
+		}
+	}
+}
+
 // Las pantallas nuevas no dependen de las clases de legacy.css que sustituyen.
 func TestIncrementScreensDoNotUseLegacyStyles(t *testing.T) {
 	legacy := []string{"inc-card", "increments-grid", "role-card", "roles-grid", "barrier-banner", "handoff-card", "section-box", "filter-btn", "badge-feature", "badge-bug", "loading-state"}

@@ -121,7 +121,7 @@ Todas las rutas existen hoy en `server.go`. Los DTO están en `types.go`.
 
 | Bloque | Fuente | Regla |
 |--------|--------|-------|
-| Cabecera y paso a paso de fases | `GET /api/increments/<name>` | `has_proposal`, `has_spec`, `has_design`, `has_tasks`, `has_verify` y `has_archive` marcan cada paso; la fase actual es `summary.phase` |
+| Cabecera y paso a paso de fases | `GET /api/increments/<name>` | `has_proposal`, `has_spec`, `has_design`, `has_tasks`, `has_verify` y `has_archive` marcan cada paso; la fase actual es `summary.phase`. Con más de un rol en `barrier_report.roles`, el paso Apply en curso muestra una fila por rol (tareas, «verificado» o «sin tasks»), el primer bloqueo de la barrera si está cerrada y el enlace a «Roles y barrera» |
 | Descripción | `proposal` | Primer párrafo de la propuesta |
 | Lista de artefactos y visor | `proposal`, `spec`, `design`, `tasks_content`, `verify_report`, `archive_report` | El visor tiene un conmutador entre la vista renderizada y el Markdown en bruto |
 | `tasks.md` por rol | `tasks_content` | Agrupar por los encabezados de rol y pintar `- [x]` / `- [ ]` como iconos |

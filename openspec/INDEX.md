@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-25 16:58:08 UTC
-> **Total Dominios:** 54 | **Total Requerimientos:** 533 | **Total Escenarios BDD:** 2150
+> **Última Sincronización:** 2026-11-25 22:20:50 UTC
+> **Total Dominios:** 54 | **Total Requerimientos:** 532 | **Total Escenarios BDD:** 2148
 
 ---
 
@@ -22,7 +22,7 @@
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 306 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
-| `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 5 | 10 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
+| `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `gga` | GGA Specification | 3 | 8 | [Ver Spec](specs/gga/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
@@ -854,9 +854,6 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Rechazo de creación ante nombre inválido o colisión
   - *Escenario BDD:* Creación de incremento con cuerpo de propuesta ya renderizado
   - *Escenario BDD:* Ausencia de cuerpo sembrado preserva la plantilla vigente
-- **[REQ-15.2]** Ejecución y Avance de Fase SDD vía API
-  - *Escenario BDD:* Avance de fase exitoso con captura de acción autorizada
-  - *Escenario BDD:* Rechazo de avance para un cambio inexistente
 - **[REQ-15.3]** Validación Formal de Verificación vía API
   - *Escenario BDD:* Validación de reporte de verificación existente
 - **[REQ-15.4]** Compositor y Registro de Handoffs Estructurados

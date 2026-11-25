@@ -40,8 +40,8 @@ Desactivado: `axiom.yaml` no declara TDD y nadie lo ha pedido. Se ejecutan las c
   - Fuera: `renderNext`, `runContinue` (detalle e Inicio), `continueIncrement`, `deriveNextStep`, la tarjeta y su consola en `index.html`, el hueco de consola de Inicio, el CSS que queda huérfano, el endpoint y `ContinueIncrement`.
   - Pruebas de assets y de servidor al día; delta `REMOVED` de REQ-15.2 y tablas de `docs/redesign/README.md`.
   - Comprobación: `go test -count=1 ./internal/dashboard/`; `gofmt -l` y `go vet ./internal/dashboard/`.
-- [ ] **T2 · Avance por rol dentro del paso Apply** (ruta: en línea; misma razón)
-  - `detailSteps` añade `roles` al paso Apply cuando hay más de un rol, y el estado `waiting` cuando `barrier_report.satisfied` es falso y el paso es el actual.
+- [x] **T2 · Avance por rol dentro del paso Apply** (ruta: en línea; misma razón)
+  - `detailSteps` añade `roles` al paso Apply cuando hay más de un rol, y la marca `waiting` cuando `barrier_report.satisfied` es falso y el paso es el actual.
   - `renderStepper` pinta una fila por rol (nombre, barra y `n/m` o «verificado» o «sin tasks»), el primer bloqueo como texto y un enlace a la pestaña «Roles y barrera».
   - Prueba de assets que fija el marcado; comprobación visual con un cambio multirol de prueba.
   - Comprobación: `go test -count=1 ./internal/dashboard/`.
@@ -59,7 +59,8 @@ Una sola PR (`single-pr`), con una previsión de unas 350-450 líneas, en su may
 ## Progreso
 
 - 2026-11-25: worktree creado y avanzado a `origin/main` (`3c55c493`); documento creado.
-- 2026-11-25 · T1 hecha. También se retiraron `reminder()` y `consoleBox()` de `components.js`, que se quedaron sin uso; la clase `.reminder-cmd` se mantiene porque la usa el informe de adopción (`projects.js`). Un POST a la ruta retirada cae en el servidor de ficheros y recibe 405, y la prueba acepta 404 o 405. Evidencia: `gofmt -l` vacío, `go vet ./internal/dashboard/` sin avisos, `go test -count=1 ./internal/dashboard/` → `ok` (110 s).
+- 2026-11-25 · T1 hecha. También se retiraron `reminder()` y `consoleBox()` de `components.js`, que se quedaron sin uso; la clase `.reminder-cmd` se mantiene porque la usa el informe de adopción (`projects.js`). Un POST a la ruta retirada cae en el servidor de ficheros y recibe 405, y la prueba acepta 404 o 405. Evidencia: `gofmt -l` vacío, `go vet ./internal/dashboard/` sin avisos, `go test -count=1 ./internal/dashboard/` → `ok` (110 s). Commit `1e701364`.
+- 2026-11-25 · T2 hecha. Las clases del paso son `.dt-step-role*` porque `.dt-role` ya es la tarjeta de la pestaña «Roles y barrera» (la primera vista previa las pintó como tarjetas). Evidencia: `go test -count=1 ./internal/dashboard/` → `ok` (230 s). Comprobación visual con los assets del worktree servidos por un servidor Node con la API simulada (sin compilar binarios, por Cortex): cambio multirol en apply con tres filas (`6/10`, `verificado`, `sin tasks`), punto ámbar, primer bloqueo y «Barrera cerrada · ver roles»; cambio monorol en design sin filas; chip `/sdd-continue marco-integraciones` en la cabecera; Inicio sin botón «Continuar» y con el chip, que copia la orden y muestra «Orden copiada al portapapeles». Los errores de consola de la vista previa vienen de la API simulada (skills y backups reciben `{}`), no de este cambio.
 
 ## Spec viva
 

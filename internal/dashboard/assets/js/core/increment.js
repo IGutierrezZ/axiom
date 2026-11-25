@@ -157,7 +157,29 @@ export function detailSteps(detail) {
     apply.detail = `${s.tasks_completed}/${s.tasks_total} tareas`;
     apply.pct = s.progress_pct;
   }
+  // Multirol: el paso Apply en curso desglosa el avance de cada rol y avisa
+  // cuando la barrera está cerrada. Con un único rol el paso queda como estaba.
+  const barrier = detail.barrier_report;
+  const roles = barrier && Array.isArray(barrier.roles) ? barrier.roles : [];
+  if (apply.state === 'current' && roles.length > 1) {
+    apply.roles = roles.map(roleProgress);
+    apply.waiting = barrier.satisfied === false;
+    apply.blocker = apply.waiting && Array.isArray(barrier.blockers) && barrier.blockers.length ? String(barrier.blockers[0]) : '';
+  }
   return steps;
+}
+
+// roleProgress resume un rol de la barrera para el paso Apply: nombre, porcentaje
+// de tareas y estado en texto (verificado, sin tasks o completadas/total).
+function roleProgress(r) {
+  const t = r.tasks || {};
+  const total = Number(t.total) || 0;
+  const completed = Number(t.completed) || 0;
+  let status;
+  if (r.verify_done) status = { tone: 'ok', text: 'verificado' };
+  else if (!r.tasks_found || total === 0) status = { tone: 'muted', text: 'sin tasks' };
+  else status = { tone: completed >= total ? 'ok' : '', text: `${completed}/${total}` };
+  return { id: r.role, label: r.name || r.role, pct: total > 0 ? Math.round((completed / total) * 100) : 0, status };
 }
 
 // ---- Atención (Inicio) ---------------------------------------------------------------
