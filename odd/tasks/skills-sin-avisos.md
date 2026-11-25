@@ -64,6 +64,10 @@ Hallazgos del entorno, fuera del repositorio:
 - Cierre:
   - `go test ./internal/assets/ ./internal/skillregistry/ ./internal/skillcheck/ ./internal/catalog/ ./internal/components/sdd/ ./internal/components/skills/ -count=1`: todos `ok`.
   - `axiom skill check --path <worktree>`: `33 skills, 0 error(es), 0 aviso(s)`.
+- Rebase sobre `origin/main` (`9ed8e03c`) con el fixup fusionado en T1:
+  - Commits: T1 `3f2dad94`, T2 `f38a1200`, T3 `5e073ba2`.
+  - `go test ./internal/assets/ ./internal/skillregistry/ -count=1`: `ok`.
+  - `axiom skill check --path <worktree>`: `32 skills, 0 error(es), 0 aviso(s)`.
 
 ## Pendiente fuera del repositorio
 
@@ -71,4 +75,4 @@ En el checkout principal, `.claude/skills/judgment-day` y `.claude/skills/sdd-pr
 
 ## Siguiente paso
 
-PR (decisión de la persona).
+PR abierta; tras el merge, `scripts/axiom-worktree.ps1 done skills-sin-avisos -Lane odd`.
