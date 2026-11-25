@@ -108,7 +108,7 @@ func RunDoctor(ctx context.Context, w io.Writer) error {
 	checks, installedState := buildDoctorChecks(doctor.Options{Home: homeDir, Root: root})
 	report := (doctor.Runner{Checks: checks}).Run(ctx)
 
-	footprint := collectMachineFootprint(homeDir, installedState)
+	footprint := collectMachineFootprint(homeDir, root, installedState)
 	renderDoctorReportWithFootprint(w, report, &footprint)
 	return nil
 }

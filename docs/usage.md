@@ -295,7 +295,7 @@ Checks performed:
 | Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
 | Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
-| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. No cuenta como aviso ni como fallo |
+| Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade el tipo `duplicado` (véase [Contexto duplicado entre usuario y workspace](#contexto-duplicado-entre-usuario-y-workspace)). No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
 | Assets del proyecto (`project:assets`) | Solo si existe `.axiom/state.json` en el proyecto. Compara el digest de los assets gestionados del binario con el que registró la última instalación o sincronización del proyecto. Si difieren, avisa y propone `axiom sync --scope workspace` |
 | Adaptadores del proyecto (`project:adapters`) | Solo si existe `.axiom/state.json`. Comprueba que los agentes registrados en el proyecto siguen presentes en el workspace |
@@ -309,6 +309,16 @@ Each check reports **pass**, **warn**, or **fail** with an optional remedy hint.
 Las comprobaciones de proyecto se hacen sobre la raíz del proyecto: en la CLI, la que contiene la carpeta actual; en el dashboard, el proyecto abierto. Ninguna usa la red.
 
 En el dashboard (`axiom ui`), el doctor se ejecuta al abrirlo y cada vez que cambias de proyecto. El informe del proyecto anterior desaparece en cuanto cambias. La pantalla Ecosistema muestra dos secciones, **Global** y **Proyecto**, y el estado general es correcto solo si ninguna comprobación falla.
+
+### Contexto duplicado entre usuario y workspace
+
+En Claude Code, la configuración de usuario y la del proyecto se suman: una instalación de workspace no sustituye a la global, y el agente carga las dos. Con raíz de proyecto, la huella de `axiom doctor` marca como `duplicado`, para cada agente, el contexto de Axiom presente a la vez a nivel de usuario y en el workspace: los bloques gestionados del fichero de instrucciones, las skills, los subagentes, los comandos y el output style.
+
+- Lista las dos rutas y avisa de divergencia cuando las copias no coinciden.
+- Es informativo: no cambia el estado del doctor. Sin duplicados, no añade nada.
+- Un fichero sin marcas de Axiom nunca se informa.
+
+Conserva una de las dos copias (normalmente la del proyecto) y retira la otra.
 
 ### init
 

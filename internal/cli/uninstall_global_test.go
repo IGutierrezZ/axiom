@@ -96,7 +96,7 @@ func TestUninstallGlobalLeavesHomeCleanAndKeepsTheUsersConfig(t *testing.T) {
 
 	// El doctor no debe encontrar restos de Axiom en HOME.
 	leftovers := 0
-	for _, entry := range collectMachineFootprint(home, state.InstallState{}) {
+	for _, entry := range collectMachineFootprint(home, "", state.InstallState{}) {
 		if entry.Kind == footprintGlobalLeftover {
 			leftovers++
 			t.Errorf("resto global tras desinstalar: %s %s", entry.Name, entry.Detail)
@@ -114,7 +114,7 @@ var globalLeftoverNames = []string{"Kilo", "Kiro", "Codex"}
 // footprintLeftovers devuelve las entradas «resto global» del doctor para HOME.
 func footprintLeftovers(home string) []footprintEntry {
 	var leftovers []footprintEntry
-	for _, entry := range collectMachineFootprint(home, state.InstallState{}) {
+	for _, entry := range collectMachineFootprint(home, "", state.InstallState{}) {
 		if entry.Kind == footprintGlobalLeftover {
 			leftovers = append(leftovers, entry)
 		}
