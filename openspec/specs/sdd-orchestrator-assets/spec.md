@@ -388,40 +388,31 @@ Research MUST be optional before selection; no-request changes MUST skip only th
 - WHEN status-v1 is validated
 - THEN no research token is emitted/accepted; the orchestrator gate handles it
 
-### Requirement: Bounded Review Contract Parity Across Catalog Agents
+### Requirement: Optional Research Lifecycle Parity Across Catalog Agents
 
-All 12 source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render the canonical bounded review execution contract, and all 16 supported IDs MUST be covered, including OpenCode/Kilocode sharing and Pi/VS Code Copilot/OpenClaw/Trae using the generic runtime family.
-(Previously: bounded-review parity covered all 16 IDs but not research lifecycle.)
+All 12 source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render that guidance, and all 16 supported IDs MUST be covered, including OpenCode/Kilocode sharing and Pi/VS Code Copilot/OpenClaw/Trae using the generic runtime family.
+(Previously: the requirement also demanded that every rendered variant carry the canonical bounded review execution contract; that contract belonged to RDD and is retired.)
 
 #### Scenario: Catalog-derived parity test renders all agents
 
 - GIVEN the current catalog contains 16 supported AgentIDs
 - WHEN each ID is passed through the real orchestrator asset renderer
-- THEN every rendered variant contains explicit `review/start(target)`, one transaction-wide refuter batch, non-iterative ordinary scoped validation, Judgment Day-only re-judgment, exact persistence references, and user-owned runtime selection
-- AND no variant contains the old standard=1/full-4R=3 refuter fan-out
-- AND optional research guidance does not change these guarantees
+- THEN every rendered variant contains the optional research lifecycle guidance
+- AND no rendered variant contains a `Review Execution Contract` section, its marker, `review/start(target)` or a refuter batch
+- AND optional research guidance is rendered identically across the equivalent runtime families
 
-### Requirement: Shared Contract Expansion
+### Requirement: Read-Only Judgment Day Judges
 
-Reusable bounded-review algorithms MUST live in `skills/_shared/review-ledger-contract.md`. Orchestrator and native review-agent generation MUST expand that canonical source instead of maintaining divergent hand-copied algorithms.
+Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Kiro/Kimi/Cursor assets MUST use their equivalent read-only capability boundary.
+(Previously: the requirement covered every dedicated reviewer, Judgment Day judge, and refuter; reviewers and refuters belonged to RDD and are retired.)
 
-#### Scenario: Dedicated reviewer is installed
+#### Scenario: Judge finishes
 
-- GIVEN an adapter supports native review sub-agents
-- WHEN SDD injection writes the reviewer file
-- THEN the installed prompt contains the canonical bounded contract
-- AND the role-specific source contributes only lens and tool-boundary instructions
-
-### Requirement: Read-Only Reviewer and Refuter Roles
-
-Every dedicated reviewer, Judgment Day judge, and refuter MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Kiro/Kimi/Cursor assets MUST use their equivalent read-only capability boundary.
-
-#### Scenario: Reviewer finishes
-
-- GIVEN a native review lens receives an immutable target
-- WHEN its one sweep completes
-- THEN it returns neutral structured claims and terminates
+- GIVEN a Judgment Day judge receives its target
+- WHEN its sweep completes
+- THEN it returns structured findings and terminates
 - AND it cannot modify files or launch another role
+
 ### Requirement: Guía y Doctrina del Modo ISO, `Cubre:`, la Matriz y el Bug sin Delta, con la Excepción ISO, en Paridad entre Runtimes (REQ-29.17)
 
 Las skills `sdd-*` (sobre todo `sdd-verify`, con su referencia del formato de informe, `sdd-tasks` y `sdd-archive`), la doctrina compartida (`_shared/persistence-contract.md`, `_shared/sdd-status-contract.md` y `_shared/sdd-orchestrator-sections.md`) y los orquestadores proyectados a cada runtime DEBEN describir las opciones de este cambio: el modo ISO y la proyección de `sdd.iso` en el status (REQ-29.2), `kickoff seal` copiando `iso` del proyecto en `kickoff.yaml` (REQ-29.13), la línea `Cubre:` de las tareas, la matriz de verify con sus filas automáticas y manuales y las formas de referencia de prueba admitidas (`ruta/fichero:símbolo` y `TestX`; REQ-29.6 a REQ-29.8), el perfil de bug con sus tres rutas (REQ-29.15): bug con requisito existente (sin delta, con `Cubre:`), bug sin impacto en la spec (sin delta, sin `Cubre:`, con `## Impacto en la spec` y la línea literal `Sin impacto en la spec` más `Motivo:`; en ISO el motivo es la evidencia y la matriz vacía es válida, REQ-29.19) y bug con delta como cambio normal; el formato de `## Informe de bug` (`Observado:` y `Esperado:` obligatorias, `Referencia:` opcional); y la derivación de la traza (REQ-29.9). La guía de bug DEBE reproducir esos textos exactamente, porque el carril ODD usa la misma sección y la misma línea. Las skills describen los formatos; la validación reside en el motor. La doctrina `persistence-contract.md` DEBE conservar íntegra la regla «Missing or failed verification never gates archive» para los cambios no ISO y DEBE declarar la excepción del modo ISO (REQ-29.11) sin reescribir la regla general: en ISO, la matriz de verify válida y con éxito bloquea el archivado, y los hallazgos de revisión siguen siendo informativos. La skill `sdd-verify` DEBE indicar que, en un cambio ISO, la matriz es una sección adicional del informe sin líneas `verdict:`. La skill `sdd-archive` NO DEBE cambiar su descripción del flujo de archivado: la rama `-archive` y el PR documental aparte siguen siendo el único modo. Las skills y la guía de kickoff DEBEN dejar de indicar que se cree a mano la carpeta del cambio antes de `kickoff seal` (REQ-29.12). Toda esa guía DEBE salir de una fuente única, con pines de texto que verifiquen la paridad entre runtimes, y las copias versionadas y los goldens DEBEN regenerarse con la herramienta de actualización, nunca a mano.
@@ -543,7 +534,8 @@ La doctrina de los orquestadores SDD de todos los runtimes (plantillas, copias e
 
 `chained` se mantiene solo en la caché de la sesión del orquestador (como las demás preferencias de sesión, REQ-28.2): NO se escribe en `kickoff.yaml`, en `gates.yaml` ni como campo de `tasks.md`; en una sesión nueva la entrega vuelve a `single-pr`. El bloque de pre-vuelo expresa el valor por defecto de la sesión: un `delivery_strategy: chained` reenviado por el orquestador con su `chain_strategy` prevalece sobre él, y `sdd-apply` solo lo usa para elegir la rama destino y nunca se detiene por ello.
 
-Ninguna doctrina ni skill DEBE contener un presupuesto numérico de revisión ni una parada por carga de revisión. En concreto: la sección `Review Workload Guard` y su bloque de decisión no existen en ningún runtime; `sdd-tasks` conserva solo una previsión cualitativa (tamaño estimado y unidades de trabajo) sin los campos `400-line budget risk`, `Decision needed before apply` ni `Chained PRs recommended`; y `sdd-apply` no contiene el paso de decisión de carga de trabajo ni la regla `workload-decision-required`. Si `delivery.split_hint_lines` está fijada, se aplica el aviso único no bloqueante de REQ-32.2 de `workspace-topology`. Quedan fuera de este requisito, por no ser umbrales de entrega, los literales de migración de prompts antiguos de `internal/components/sdd/inject.go`, el umbral de barrido de `jd-judge-a` y `jd-judge-b` de judgment-day, las lentes `review-*` y `rdd-defect-workflow` de RDD y `internal/reviewtransaction/risk.go`.
+Ninguna doctrina ni skill DEBE contener un presupuesto numérico de revisión ni una parada por carga de revisión. En concreto: la sección `Review Workload Guard` y su bloque de decisión no existen en ningún runtime; `sdd-tasks` conserva solo una previsión cualitativa (tamaño estimado y unidades de trabajo) sin los campos `400-line budget risk`, `Decision needed before apply` ni `Chained PRs recommended`; y `sdd-apply` no contiene el paso de decisión de carga de trabajo ni la regla `workload-decision-required`. Si `delivery.split_hint_lines` está fijada, se aplica el aviso único no bloqueante de REQ-32.2 de `workspace-topology`. Quedan fuera de este requisito, por no ser umbrales de entrega, los literales de migración de prompts antiguos de `internal/components/sdd/inject.go`, el umbral de barrido de `jd-judge-a` y `jd-judge-b` de judgment-day.
+(Previously: la lista de exclusiones citaba también las lentes `review-*` y `rdd-defect-workflow` de RDD y el umbral de riesgo del paquete de revisión de RDD; RDD se retira (C-01-e, P20).)
 
 #### Scenario: La entrega por defecto es `single-pr` y no se pregunta
 
@@ -722,3 +714,54 @@ Las dos copias de la skill `work-unit-commits` (la embebida en `internal/assets/
 - **DADO** una copia con las reglas y otra sin ellas
 - **CUANDO** se ejecuta la prueba de paridad
 - **ENTONCES** falla
+### Requirement: La Doctrina Proyectada No Contiene la Prosa de RDD (REQ-46.3)
+
+La doctrina de los orquestadores SDD y ODD proyectada a los doce runtimes, la fuente compartida `_shared/sdd-orchestrator-sections.md`, las skills `judgment-day` y `sdd-verify`, la convención `openspec-convention.md` y los goldens regenerados NO DEBEN contener la sección `Review Execution Contract` ni su marcador, la sección «Receipt-driven development is user-owned», el vocabulario de revisión por recibos (`lineage`, `receipt`, `acknowledge`, `burn`, `review/start(target)`, `review-refuter`) ni comandos `axiom review`. La prosa de entrega (`single-pr`), de Commit Review y de Judgment Day NO cambia salvo por la retirada de sus menciones a RDD.
+
+#### Scenario: Ningún orquestador contiene la prosa de revisión por recibos
+
+- **DADO** el orquestador renderizado para cada AgentID de `catalog.AllAgents()`
+- **CUANDO** se inspecciona (pin de texto)
+- **ENTONCES** no contiene `Review Execution Contract`, `receipt-driven`, `axiom review`, `review-refuter` ni `rdd-defect-workflow`
+- **Y** conserva intactas las secciones de entrega, Commit Review y Judgment Day
+
+#### Scenario: Las skills compartidas no mencionan RDD
+
+- **DADO** las skills `judgment-day` y `sdd-verify` y la convención `openspec-convention.md`
+- **CUANDO** se inspeccionan (pin de texto)
+- **ENTONCES** no contienen `RDD`, `receipt` ni `axiom review`
+- **Y** `judgment-day` conserva sus dos jueces ciegos y sus artefactos `review-ledger`
+
+### Requirement: `axiom sync` No Instala Agentes, Plugins, Skill ni Hook de RDD (REQ-46.4)
+
+`axiom sync` y la instalación NO DEBEN escribir ningún agente `review-*` (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `review-refuter`, `review-validator`) en ningún runtime, ni sus entradas en los overlays de OpenCode, ni los plugins `opencode-review-transport.ts`, ni la skill `rdd-defect-workflow`, ni ningún hook `Stop` o `SessionStart` cuya orden sea `axiom review stop-hook` (o `gentle-ai review stop-hook`). Tampoco DEBEN modificar ni borrar los que ya estuvieran instalados por una versión anterior: la limpieza es manual (sección de migración manual de la propuesta C-01-e). Los agentes de Judgment Day (`jd-judge-a`, `jd-judge-b`, `jd-fix-agent`) y los demás agentes SDD NO cambian.
+
+#### Scenario: Una instalación limpia no contiene nada de RDD
+
+- **DADO** un directorio de configuración vacío para cada runtime soportado
+- **CUANDO** se ejecuta `axiom sync`
+- **ENTONCES** no existe ningún fichero `review-*` en los directorios de agentes, ni `opencode-review-transport.ts` en los plugins, ni la skill `rdd-defect-workflow`
+- **Y** `settings.json` de Claude Code no contiene ningún hook `Stop` ni `SessionStart` con `review stop-hook`
+- **Y** los agentes `jd-judge-a`, `jd-judge-b` y `jd-fix-agent` y los agentes `sdd-*` se instalan como antes
+
+#### Scenario: Los overlays de OpenCode no definen agentes de revisión
+
+- **DADO** los overlays `sdd-overlay-single.json` y `sdd-overlay-multi.json`
+- **CUANDO** se inspeccionan
+- **ENTONCES** no contienen las definiciones `review-risk`, `review-readability`, `review-reliability`, `review-resilience`, `review-refuter` ni `review-validator`
+- **Y** el resto de definiciones permanece
+
+#### Scenario: Los restos de una versión anterior no se tocan
+
+- **DADO** una instalación con un hook `Stop` y agentes `review-*` dejados por una versión anterior
+- **CUANDO** se ejecuta `axiom sync` o `axiom uninstall`
+- **ENTONCES** no se borra ni se modifica ninguno de esos restos
+- **Y** la ejecución termina sin error
+
+#### Scenario: Una selección persistida con `rdd-defect-workflow` no rompe la carga
+
+- **DADO** un estado persistido cuya selección de skills incluye `rdd-defect-workflow`
+- **CUANDO** se carga y se ejecuta `axiom sync`
+- **ENTONCES** la carga y `sync` terminan sin error
+- **Y** no se instala ninguna skill con ese identificador
+

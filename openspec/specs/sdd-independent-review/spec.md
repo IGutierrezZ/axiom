@@ -499,45 +499,6 @@ La revisión de cobertura, ofrecida o aplicada tras `spec` (revisa el spec contr
 
 ---
 
-### Requirement: Frontera con RDD: Ningún Texto Nuevo Usa su Vocabulario (REQ-28.11)
-
-Las ofertas, la interacción de la preferencia, las skills y los informes que introduce este cambio (solo los pasajes nuevos o modificados; los textos preexistentes que nombran RDD para declarar la frontera no se alteran) NO DEBEN usar el vocabulario ni los verbos de RDD (`lineage`, `candidate`, `acknowledge`, `burn`, `axiom review …`), NO DEBEN emitir recibos, ni pedir consentimiento de RDD, ni depender del estado de RDD, ni reintroducir la oferta de revisión tras el verify que `rdd-post-verify-review-offer` retiró. Las guardas de ausencia de oferta de RDD (`OfferReviewAfterVerify`, `ReviewCore`) NO cambian. El juicio es una skill independiente que no emite recibo. Estar RDD activado o desactivado NO DEBE alterar ninguna oferta de esta capacidad.
-
-#### Scenario: Un pin de texto no encuentra vocabulario RDD en los pasajes nuevos o modificados
-
-- **DADO** únicamente los pasajes que este cambio añade o modifica (la sección compartida de revisión independiente, las instrucciones de cobertura, la referencia de cumplimiento técnico, las secciones nuevas del formato de informe y la sección de objetivo SDD del juicio)
-- **CUANDO** se inspeccionan (pin de texto)
-- **ENTONCES** ninguno contiene `lineage`, `candidate`, `acknowledge`, `burn`, `receipt`, `rdd` ni `axiom review`
-- **Y** ninguno prescribe emitir un recibo
-
-#### Scenario: Los textos preexistentes que nombran RDD a propósito no se tocan
-
-- **DADO** los textos que ya existían y nombran RDD para declarar la frontera (por ejemplo, la frase de `sdd-verify` «SDD never offers or launches RDD» o la mención de recibo en la skill del juicio)
-- **CUANDO** se aplica este cambio
-- **ENTONCES** el pin no los inspecciona ni exige modificarlos
-- **Y** el pin no se implementa como un barrido global de los assets
-
-#### Scenario: Las guardas de ausencia de oferta de RDD siguen pasando
-
-- **DADO** las guardas AST de `internal/sddstatus` sobre `OfferReviewAfterVerify` y `ReviewCore`
-- **CUANDO** se ejecutan tras este cambio
-- **ENTONCES** pasan sin modificación
-
-#### Scenario: RDD activado no altera las ofertas
-
-- **DADO** el mismo cambio con RDD activado y con RDD desactivado
-- **CUANDO** concluye el `apply` de un rol
-- **ENTONCES** las ofertas de verify, juicio y cobertura son idénticas en ambos casos
-
-#### Scenario: El verify limpio no genera un recibo ni lo consume
-
-- **DADO** un verify limpio y un juicio `APPROVED`
-- **CUANDO** el flujo continúa
-- **ENTONCES** no se crea ningún recibo, línea de autoridad ni consentimiento de RDD
-- **Y** no se invoca ningún comando `axiom review`
-
----
-
 ### Requirement: La Verificación Conjunta es el Verify Sin Rol sobre la Unión del Alcance por Repositorio (REQ-28.41)
 
 La verificación conjunta DEBE ser el `verify` global sin rol (REQ-21.15 de `sdd-role-closure-handoff`) y NO un informe ni una fase adicional. Su alcance DEBE ser la **unión por repositorio** de lo que devuelve `axiom branch scope` para el cambio, y DEBE verificar **solo commits**: NO DEBE incluir el árbol de trabajo ni los ficheros sin seguimiento. Los commits ajenos que `axiom branch scope` excluya DEBEN listarse como excluidos, y un aviso `foreign_commits_possible` DEBE reproducirse como aviso; nunca se incluyen en silencio.
@@ -612,6 +573,41 @@ La verificación conjunta NO DEBE bloquear ni condicionar la compuerta `integrat
 - **DADO** un cambio `continuous` con el rol `fullstack`
 - **CUANDO** concluye el flujo
 - **ENTONCES** el orquestador no presenta ninguna parada ni oferta de verificación conjunta
+### Requirement: Juicio Explícito con Dos Jueces Ciegos y Rondas Acotadas (REQ-28.43)
+
+Judgment Day DEBE seleccionarse de forma explícita: por petición de la persona o porque su preferencia de sesión incluye el juicio (`verify-judgment`, REQ-28.2); nunca por iniciativa propia del orquestador ni como efecto de un hito de entrega. Cuando se selecciona, DEBE ejecutar dos jueces distintos, ciegos entre sí y de solo lectura, cuyos resultados se contrastan con un acuerdo o confirmación explícitos antes de dar por corroborado un hallazgo; no se usa ningún refutador adicional. El juicio DEBE permitir como máximo dos rondas de arreglo y dos rejuicios acotados al alcance de los arreglos. Si tras el segundo rejuicio persiste un hallazgo severo confirmado, el veredicto DEBE ser `ESCALATED` y NO DEBE abrirse una tercera ronda. El juicio NO DEBE emitir recibos, ni depender de un estado de revisión nativo, ni invocar comandos `axiom review`, y su veredicto es informativo (REQ-28.3). Sus artefactos (`sdd/{change}/review-ledger`) son los propios de Judgment Day.
+(Trasladado desde el requisito «Explicit Judgment Day replacement» de la capacidad `review-findings-ledger`, retirada con RDD (C-01-e, P20), sin su acoplamiento a la revisión 4R, a `review-refuter`, al estado nativo ni a los recibos.)
+
+#### Scenario: El juicio no se lanza sin selección explícita
+
+- **DADO** un rol con verify limpio y una preferencia de sesión `verify` o `none` y sin petición de la persona
+- **CUANDO** concluye el `apply` del rol
+- **ENTONCES** el orquestador no lanza el juicio
+- **Y** no lo sustituye por ninguna otra revisión automática
+
+#### Scenario: Dos jueces ciegos de solo lectura
+
+- **DADO** un juicio seleccionado de forma explícita sobre el diff de un rol
+- **CUANDO** se lanzan los jueces
+- **ENTONCES** son dos ejecuciones distintas que no ven el veredicto una de otra
+- **Y** ninguna puede modificar ficheros ni lanzar otro rol
+- **Y** un hallazgo solo se da por corroborado cuando ambos coinciden o se confirma de forma explícita
+
+#### Scenario: El juicio no supera la segunda ronda
+
+- **DADO** un hallazgo severo que persiste tras el segundo rejuicio acotado
+- **CUANDO** el orquestador evalúa el presupuesto de rondas
+- **ENTONCES** el veredicto es `ESCALATED`
+- **Y** no se abre una tercera ronda de arreglo ni de rejuicio
+
+#### Scenario: El juicio no emite recibos ni usa comandos de revisión
+
+- **DADO** un juicio `APPROVED` tras un verify limpio
+- **CUANDO** el flujo continúa
+- **ENTONCES** no se crea ningún recibo ni consentimiento
+- **Y** no se invoca ningún comando `axiom review`
+- **Y** el veredicto no condiciona fase, puerta ni archivado
+
 ## Supuestos a confirmar en design
 
 - **A-1.** «Verify limpio» se define como sin hallazgos críticos ni comprobaciones obligatorias fallidas; un verify parcial no es limpio. Design fija cómo se determina mecánicamente (severidades del informe).

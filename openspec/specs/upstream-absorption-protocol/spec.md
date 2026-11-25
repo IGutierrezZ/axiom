@@ -31,21 +31,19 @@ Toda tanda de absorción DEBE derivar su lista de ficheros de `git show <sha-ups
 
 ### Requirement: Verificación sin filtrar (REQ-20.2)
 
-Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...`, `go test ./...` sin la bandera `-run`, y `e2e/e2e_test.sh`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) ni la omisión de `e2e/e2e_test.sh` DEBE aceptarse como evidencia de cierre de una tanda. La cobertura no alcanzada por la suite raíz (el módulo `bench/`, que no tiene `go.work` y por tanto no entra en `go test ./...` desde la raíz) DEBE declararse explícitamente en el registro, nunca omitirse en silencio.
+Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...`, `go test ./...` sin la bandera `-run`, y `e2e/e2e_test.sh`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) ni la omisión de `e2e/e2e_test.sh` DEBE aceptarse como evidencia de cierre de una tanda.
+(Previously: la cláusula que exigía declarar en el registro que `bench/` queda fuera de la cobertura de la suite raíz; el módulo `bench/` se retira (C-01-e, P21).)
 
 #### Scenario: Verificación completa aceptada
 - **DADO** una tanda que completó su absorción
 - **CUANDO** se registra su evidencia de verificación
 - **ENTONCES** el registro cita `go build ./...`, `go vet ./...`, `go test ./...` sin `-run`, y `e2e/e2e_test.sh`, todos en verde
-- **Y** declara explícitamente que `bench/` queda fuera de esa cobertura
 
 #### Scenario: Verificación filtrada rechazada
 - **DADO** una tanda cuya evidencia de verificación cita `go test -run <patrón>` o no incluye `e2e/e2e_test.sh`
 - **CUANDO** se evalúa el cierre de la tanda
 - **ENTONCES** la tanda no se acepta como verificada
 - **Y** no se marca `absorbido` en el registro para ninguno de sus commits
-
----
 
 ### Requirement: Inventario de no-reversión por tanda (REQ-20.3)
 
@@ -62,17 +60,13 @@ El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario d
 ### Requirement: Rutas protegidas fuera de alcance (REQ-20.4)
 
 Ninguna tanda de absorción DEBE contener ficheros bajo `internal/hub/`, `openspec/INDEX.md` u `openspec/config.yaml`. Un diff que toque cualquiera de esas rutas DEBE rechazarse y detener el incremento hasta el último estado verde.
-
-Ninguna tanda de absorción DEBE contener ficheros bajo `bench/`, con la única excepción de una tanda de reconciliación del corpus que alinee `bench/` con la superficie retirada de runtime sin absorber comportamiento nuevo.
+(Previously: el segundo párrafo prohibía ficheros bajo `bench/` salvo una tanda de reconciliación del corpus; el módulo `bench/` se retira (C-01-e, P21).)
 
 #### Scenario: Diff que toca una ruta protegida rechazado
 - **DADO** una tanda cuyo diff incluye un fichero bajo `internal/hub/`
 - **CUANDO** se evalúa la tanda para su cierre
 - **ENTONCES** se rechaza
 - **Y** se revierte hasta el último estado verde
-
----
-
 ### Requirement: Estructura y estados del registro durable de absorción (REQ-20.5)
 
 El sistema DEBE mantener el registro durable de absorción en `docs/upstream-absorption-ledger.md`, con una fila por cada uno de los 91 commits de upstream sin fusiones entre el ancestro común `266574b0` y el techo congelado `82a6de96` (etiqueta `v3.4.0` de upstream), medidos el 2026-09-19. Cada fila DEBE registrar como mínimo: el sha de upstream, la tanda del fork que lo absorbe, su estado (`absorbido`, `descartado-deliberadamente` o `revertido`), su evidencia de verificación, y un motivo escrito cuando el estado sea `descartado-deliberadamente` o `revertido`.

@@ -165,8 +165,9 @@ presented as writable runtime authority.
 When a managed WorkRun and advertised capability exist, instructions MUST
 request the exact typed work-status contract and apply only its zero-or-one
 provider-issued `authorizedTransition` through the typed work-transition
-contract. Instructions MUST NOT reconstruct flags, select review lenses, infer
+contract. Instructions MUST NOT reconstruct flags, infer
 PASS from prose or process exit, or retry stale or mismatched authorization.
+(Previously: the prohibition also covered selecting review lenses; RDD review lenses are retired (C-01-e).)
 
 #### Scenario: Status returns one authorized transition
 
@@ -186,13 +187,13 @@ PASS from prose or process exit, or retry stale or mismatched authorization.
 ### Requirement: Public progress remains outcome-first
 
 Managed routing instructions MUST present only **Working**, **Checking**,
-**Ready**, and **Needs your decision** as normal progress states. Hashes,
-lineages, lenses, receipts, and recovery operations MUST remain internal unless
+**Ready**, and **Needs your decision** as normal progress states. Hashes, internal identifiers, and recovery operations MUST remain internal unless
 maintainer diagnostics are explicitly requested.
+(Previously: the internal-only list also named lineages, lenses, and receipts, and the scenario described provider-owned review; RDD is retired (C-01-e).)
 
-#### Scenario: Provider performs bounded review
+#### Scenario: Functional verification is in progress
 
-- GIVEN implementation has entered provider-owned verification and review
+- GIVEN implementation has entered functional verification (tests, builds, and checks)
 - WHEN progress is presented to the user
 - THEN the visible state is **Checking**
 - AND prompt-level review ceremonies are not exposed as extra workflow states
@@ -201,14 +202,15 @@ maintainer diagnostics are explicitly requested.
 
 Managed routing instructions MUST NOT bind pre-commit, pre-push, pre-PR,
 release, SDD-phase, CI, or schedule events to review actions. They MUST NOT
-select a reviewer, refuter, correction, receipt outcome, or delivery decision.
-Those decisions remain with their typed owner contexts.
+select a delivery decision.
+That decision remains with its typed owner context.
+(Previously: the prohibition also covered selecting a reviewer, refuter, correction, or receipt outcome, and the scenario a lens-selection table; those RDD roles are retired (C-01-e).)
 
 #### Scenario: Managed rules are installed
 
 - GIVEN adapter synchronization renders the managed routing block
 - WHEN the block is inspected
-- THEN it contains no event-to-review binding or lens-selection table
+- THEN it contains no event-to-review binding table
 - AND later gates consume owner-issued evidence and authorization
 
 ### Requirement: Deterministic text-only installation
@@ -526,7 +528,8 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 3. **La unidad de revisión es la tarea, no un conteo de líneas.** La heurística por tarea DEBE describir la tarea como el comportamiento coherente más pequeño con sus tests y su documentación, DEBE prohibir borrar espacios, líneas en blanco, comentarios o tests para ahorrar líneas y partir artificialmente, y NO DEBE contener ningún número de líneas ni referencia a «size gates» de PR.
 4. **Aviso opcional de cambio grande.** Solo si `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1 de `workspace-topology`) y la previsión de líneas del documento de la feature la supera, el orquestador avisa una vez de que el cambio es grande y de que la persona puede pedir PRs encadenadas, y continúa sin esperar respuesta (REQ-32.2 de `workspace-topology`). Sin la clave no hay aviso ni ningún número en el texto.
 
-La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `exception-ok` como estrategias ofrecidas, ni la elección de una estrategia de cadena condicionada a un umbral numérico. Los valores heredados que se lean de un documento existente se tratan con los alias de lectura de REQ-32.3 de `sdd-orchestrator-assets`. El resto del protocolo ODD (rama preparada con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`, TDD configurado) NO cambia. La proyección DEBE seguir siendo determinista. Quedan fuera de este requisito, por no ser umbrales de entrega, `internal/reviewtransaction/risk.go`, las lentes `review-*` y `rdd-defect-workflow` de RDD y el umbral de barrido de judgment-day.
+La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `exception-ok` como estrategias ofrecidas, ni la elección de una estrategia de cadena condicionada a un umbral numérico. Los valores heredados que se lean de un documento existente se tratan con los alias de lectura de REQ-32.3 de `sdd-orchestrator-assets`. El resto del protocolo ODD (rama preparada con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`, TDD configurado) NO cambia. La proyección DEBE seguir siendo determinista. Quedan fuera de este requisito, por no ser umbrales de entrega, el umbral de barrido de judgment-day.
+(Previously: la lista de exclusiones citaba también el umbral de riesgo del paquete de revisión de RDD y las lentes `review-*` y `rdd-defect-workflow` de RDD; RDD se retira (C-01-e, P20).)
 
 #### Scenario: La doctrina ODD declara `single-pr` por defecto sin preguntar
 
@@ -576,7 +579,6 @@ La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `excepti
 - **DADO** la doctrina ODD generada
 - **CUANDO** se compara con la anterior en lo que no es entrega
 - **ENTONCES** conserva la preparación de rama con `axiom branch ensure`, el commit por unidad de trabajo, la reanudación desde `odd/tasks/<feature>.md` y la ausencia de paradas (REQ-27.17)
-
 ### Requirement: La Doctrina ODD Avisa por Commit en el Modo 1 Fijo, sin Preguntas ni Paradas (REQ-33.12)
 
 La doctrina ODD generada (paso 6 del protocolo) DEBE indicar que, al cerrar cada tarea con su commit de unidad de trabajo, el orquestador avisa en el chat con el sha, la tarea y la orden `git show <sha>`, y continúa sin esperar. ODD DEBE funcionar siempre en el comportamiento `notify`: la doctrina ODD NO DEBE preguntar el modo de revisión por commit, NO DEBE ofrecerlo ni aceptarlo a petición en el chat, y NO DEBE contener ninguno de los tokens `stop` o `stop-before-commit` como modo ni vocabulario de paradas, de modo que los pines de REQ-27.17 sigan en verde. La doctrina ODD DEBE incluir además las reglas comunes de REQ-33.9: pedir la PR da por validados todos los commits pendientes y nada la bloquea; solo se registran, en `odd/tasks/<feature>.md`, los commits sobre los que la persona pidió cambios; los cambios sobre un commit ya superado usan `git commit --fixup=<sha>` con autosquash no interactivo diferido antes de abrir la PR si la rama no está publicada, o un commit correctivo nuevo si ya lo está, sin reescribir nunca historia publicada; y se recomienda fusionar sin squash. La doctrina ODD NO DEBE mencionar RDD ni recibos.
