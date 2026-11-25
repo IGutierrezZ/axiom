@@ -41,7 +41,7 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 - [x] T2 · Preferencia en el hub. `WorkspaceRecord.MCPExclusions` (agente → nombres, `omitempty`), con setter y lectura según el patrón de `hub/rddpref.go`. Ruta: inline (<100 líneas).
 - [x] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
 - [ ] T4 · Dashboard (implementada en `8eb0c56d`; pendiente de CI y de verla en el navegador). API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
-- [ ] T5 · Cargado sin uso. Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
+- [ ] T5 · Cargado sin uso (implementada en `02e61754`; la parte del dashboard, pendiente de CI). Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
 - [ ] T6 · Documentación de uso, revisión de la spec viva (`## Spec viva` si `openspec/specs` cubre el doctor o el dashboard) y cierre: `go test` de los paquetes tocados y `axiom doctor`. Ruta: inline.
 
 ## Criterio de aceptación
@@ -87,6 +87,14 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
   - Se añadieron a mano las entradas por id (`b67fe70e-…`, `9d5c639e-…`) en el checkout principal. Falta comprobarlo en otra sesión nueva.
   - Los interruptores de «+ → Conectores» solo valen para la sesión en curso.
 
+- T5 · commit `02e61754`.
+  - `internal/mcpexclusion/usage.go`: `EncodeProjectDir` (cada carácter fuera de `[A-Za-z0-9]` pasa a `-`), `ServerSegment`, `ScanUsage`, `Analyze` y `UnusedCandidates`.
+  - El escáner lee solo los nombres `mcp__<servidor>__*` de los `*.jsonl` de los últimos 30 días, en la raíz, los worktrees y los roles. «Sin datos» significa que no hay ninguna transcripción.
+  - La huella del doctor gana el tipo `sin uso`, con una nota de que es una sugerencia. El DTO del dashboard gana `usage`/`usageData`, y la pantalla muestra la insignia «sin uso en 30 días».
+  - No se pueden casar los conectores que el escritorio nombra por id ni los servidores de plugins: pueden salir como «sin uso» aunque se usen.
+  - Evidencia: `gofmt -l` limpio; `go vet ./internal/mcpexclusion/ ./internal/cli/ ./internal/dashboard/` ok; `go test ./internal/mcpexclusion/` ok (repetido por el padre); `go test ./internal/cli/ -run "Footprint|Doctor"` ok.
+  - **Pendiente:** `go test ./internal/dashboard/...` en CI.
+
 ## Siguiente paso
 
-T5. Según el resultado de la prueba por id, ajustar T3 y T4: escribir los dos nombres de cada conector, o avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión.
+T6. Según el resultado de la prueba por id, ajustar T3 y T4: escribir los dos nombres de cada conector, o avisar en la pantalla de que en escritorio los conectores solo se apagan por sesión.
