@@ -800,8 +800,9 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 
 ### Requirement: Registro Local en el Git Common Dir (REQ-25.14)
 
-`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (REQ-25.8) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (REQ-25.46). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (REQ-25.46), mientras `status` DEBE informar que el cambio no tiene registro. La coexistencia con el estado local actual de RDD (`<git common dir>/gentle-ai/`) se resuelve en `sdd-design` (Q2) y NO DEBE alterar los linajes RDD existentes.
+`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (REQ-25.8) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (REQ-25.46). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (REQ-25.46), mientras `status` DEBE informar que el cambio no tiene registro.
 (Previously: el registro no guardaba el modo de promoción ni su origen y la reconstrucción no consultaba la instantánea)
+(Previously: la cláusula sobre la coexistencia con el estado local de RDD (`<git common dir>/gentle-ai/`) y sus linajes; RDD se retira (C-01-e) y `ensure` ya no tiene nada que preservar de él.)
 
 #### Scenario: El registro se resuelve con el git common dir
 - **DADO** un repositorio cuyo directorio git no se llama `.git` (git dir enlazado)
@@ -838,8 +839,6 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 - **DADO** un cambio con el modo `branch` registrado para `repo-backend`
 - **CUANDO** se ejecuta `ensure --change x --archive` o de nuevo `ensure --change x`
 - **ENTONCES** el modo de `repo-backend` sigue siendo `branch` en el registro
-
----
 
 ### Requirement: `status`: Estado de Ramas y Worktrees del Cambio (REQ-25.15)
 
@@ -954,10 +953,11 @@ Si ninguna capa confirma la fusión, la rama NO se considera fusionada y `done` 
 
 ### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (REQ-25.17)
 
-Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, REQ-27.5) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Si queda abierto un linaje RDD asociado al worktree, `done` DEBE emitir un aviso que nombre el linaje y la acción (`axiom review abandon`), sin impedir la operación. Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
+Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, REQ-27.5) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
 
 En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkout a la rama de integración (también en modo de promoción `branch`) y, después, eliminar la rama local, y solo si el árbol está limpio. En `in_place`, `--force` solo salta la exigencia de fusión confirmada: NUNCA salta la de árbol limpio, de modo que con cambios sin confirmar `done` rechaza con `dirty_worktree` sin cambiar de rama ni eliminar nada.
 (Previously: el `.gates.lock` vacío que deja `gate record` contaba como cambio sin confirmar y `done` se negaba con `dirty_worktree` tras archivar)
+(Previously: si quedaba abierto un linaje RDD asociado al worktree, `done` emitía un aviso que nombraba el linaje y `axiom review abandon`; ese aviso desaparece con RDD (C-01-e) y ningún comando `axiom review` existe ya.)
 
 #### Scenario: Eliminación tras una fusión confirmada
 - **DADO** una rama `feat/x` fusionada, su worktree con el árbol limpio y una rama remota `origin/feat/x`
@@ -1002,11 +1002,11 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **Y** el JSON informa de que se descartaron cambios sin confirmar, indica la punta (SHA) de la rama eliminada y la capa de confirmación es el token `forced`
 - **Y** no se toca ninguna rama remota
 
-#### Scenario: Linaje RDD abierto genera un aviso
-- **DADO** un worktree con un linaje RDD abierto
-- **CUANDO** se ejecuta `axiom branch done --change x` sobre una rama fusionada
-- **ENTONCES** la salida incluye un aviso que nombra el linaje y `axiom review abandon`
-- **Y** la eliminación se realiza
+#### Scenario: `done` no emite ningún aviso de linajes
+- **DADO** un worktree de una rama fusionada en cuyo git common dir sobrevive un directorio `gentle-ai/` con restos de revisiones antiguas
+- **CUANDO** se ejecuta `axiom branch done --change x`
+- **ENTONCES** la salida no incluye ningún aviso sobre linajes ni cita `axiom review`
+- **Y** la eliminación se realiza igual que sin ese directorio
 
 #### Scenario: Ramas de rol y de seguimiento se procesan por separado
 - **DADO** `feat/x-core` fusionada en `feat/x` y `feat/x` aún sin fusionar en `main`

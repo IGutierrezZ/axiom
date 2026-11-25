@@ -25,6 +25,7 @@ El sistema NO debe consultar ni desplegar en la cabecera de la TUI ningún comun
 
 ### Requirement: Localización al Castellano del Menú de Bienvenida (REQ-16.2)
 El menú principal de bienvenida (`WelcomeOptions`) y sus microtextos auxiliares deben presentarse íntegramente en español (castellano peninsular).
+(Previously: la lista de etiquetas incluía «Reiniciar almacén de revisiones» y «Revisión formal RDD»; ambas entradas del menú se retiran con RDD (C-01-e).)
 
 #### Scenario: Visualización de opciones en español
 - **DADO QUE** el usuario se encuentra en la pantalla de bienvenida
@@ -40,8 +41,6 @@ El menú principal de bienvenida (`WelcomeOptions`) y sus microtextos auxiliares
   - "Desinstalar plugin de OpenCode"
   - "Perfiles SDD de OpenCode"
   - "Gestionar respaldos"
-  - "Reiniciar almacén de revisiones"
-  - "Revisión formal RDD"
   - "Desinstalación gestionada"
   - "Herramientas y plugins comunitarios"
   - "Salir"
@@ -51,9 +50,6 @@ El menú principal de bienvenida (`WelcomeOptions`) y sus microtextos auxiliares
 - **CUANDO** se renderizan los textos fijos
 - **ENTONCES** la cabecera de la lista debe mostrar "Menú"
 - **Y** la barra inferior de ayuda debe mostrar `j/k: navegar • enter: seleccionar • q: salir`.
-
----
-
 ### Requirement: Localización de Submenús y Pantallas de Configuración (REQ-16.3)
 Las pantallas subordinadas de configuración y gestión deben desplegar sus títulos, opciones y botones de acción en castellano.
 

@@ -629,6 +629,7 @@ En modalidad `checkpointed`, y solo con el almacén `openspec` o `hybrid`, toda 
 ### Requirement: Las Paradas Presentan los Resultados de la Revisión Independiente cuando Existen (REQ-28.10)
 
 En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto al artefacto que juzga y sin cambiar su semántica ni sus tres salidas (REQ-26.1), los resultados de revisión independiente que existan en ese momento: en `spec`, el informe de cobertura del spec; en `design`, el informe de cobertura de spec y design; en `role-apply:<rol>`, el informe vigente del verify de ese rol (con su sección «Cumplimiento técnico») y, si hubo juicio, su veredicto y los arreglos aplicados (REQ-28.8 de `sdd-independent-review`). La presentación DEBE enumerar los hallazgos abiertos y DEBE indicar explícitamente cuándo una revisión no se ha ejecutado, no ha respondido o no ha sido limpia; NO DEBE presentar como limpio un resultado ausente. Los resultados son informativos: NO DEBEN condicionar la aprobación, NO DEBEN registrarse en `gates.yaml`, ni su existencia o contenido DEBE cambiar el digest que juzga la puerta ni reabrirla. Cuando no existe ninguna revisión para esa puerta, la presentación NO cambia respecto a REQ-21.8, REQ-21.9 y REQ-21.11. Esta capacidad NO cambia REQ-21.7: en `continuous` no existen paradas, y los resultados se resumen al final del cambio según `sdd-independent-review`.
+(Previously: el último escenario remitía a REQ-28.11 de `sdd-independent-review` («Frontera con RDD»), requisito que se retira con RDD (C-01-e); la ausencia de ese vocabulario pasa a REQ-46.3 de `sdd-orchestrator-assets`.)
 
 #### Scenario: La parada de spec presenta el informe de cobertura
 
@@ -683,7 +684,7 @@ En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto a
 - **DADO** los textos de las plantillas de orquestador que describen las compuertas `spec`, `design` y `role-apply`
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** indican presentar los resultados de revisión independiente cuando existen y declarar los ausentes
-- **Y** no contienen vocabulario de RDD (REQ-28.11 de `sdd-independent-review`)
+- **Y** no contienen `axiom review` ni vocabulario de revisión por recibos (REQ-46.3 de `sdd-orchestrator-assets`)
 ### Requirement: Aprobar `spec`, `design` o `role-apply` Emite su Evento de Integración (REQ-43.22)
 
 `axiom sdd gate record` con `--decision approved` DEBE despachar un evento de integración (REQ-43.6) DESPUÉS de persistir la decisión en `gates.yaml` y antes de cualquier código que pueda devolver error: `spec` emite `gate.spec.approved`, `design` emite `gate.design.approved` y `role-apply:<rol>` emite `role.apply.approved` con el rol extraído del sufijo. El evento DEBE llevar el cambio, el actor registrado (REQ-42.1) y la clave de idempotencia de REQ-43.7. La emisión NUNCA DEBE hacer fallar el verbo ni cambiar su código de salida ni su salida (REQ-43.10). Una decisión `rejected` NO DEBE emitir nada.
