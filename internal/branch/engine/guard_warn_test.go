@@ -4,17 +4,20 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas del aviso de la guarda D con git real, entorno aislado y sin red (REQ-25.21 escenarios 3
-// a 8, design D-18 paso 4): con el evento `post` y un fichero que no es un documento de Axiom, avisa
-// sin bloquear cuando el checkout que lo contiene no está en la rama de ningún cambio activo
-// registrado por `ensure`, y no hace nada en cualquier otro caso. Decide solo con lecturas de
-// ficheros: ninguna de estas pruebas observa un proceso de git durante la guarda.
+// Pruebas del aviso de la guarda D con git real, entorno aislado y sin red (REQ-25.21 punto 2 y sus
+// escenarios, design D-18 paso 4): con el evento `post` y un fichero que no es un documento de
+// Axiom, avisa sin bloquear cuando el checkout que lo contiene no está en la rama de ningún cambio
+// activo registrado por `ensure` y git no ignora el fichero, y no hace nada en cualquier otro caso.
+// Decide con lecturas de ficheros; su único proceso es la consulta `git check-ignore` que precede
+// a un aviso (TestGuardWarnLaunchesOnlyOneCheckIgnoreBeforeWarning).
 
 func postWrite(paths ...string) GuardPayload {
 	return GuardPayload{Event: GuardEventPost, Tool: "Write", Paths: paths}
@@ -124,6 +127,80 @@ func TestGuardWarnWarnsOncePerCheckoutOfAPatch(t *testing.T) {
 	if count := strings.Count(decision.Message, "aviso:"); count != 1 {
 		t.Errorf("el aviso aparece %d veces en %q, se esperaba una", count, decision.Message)
 	}
+}
+
+// gitIgnores escribe en la raíz de repo un `.gitignore` con los patrones dados.
+func gitIgnores(t *testing.T, repo string, patterns ...string) {
+	t.Helper()
+	writeFile(t, filepath.Join(repo, ".gitignore"), strings.Join(patterns, "\n")+"\n")
+}
+
+// REQ-25.21, escenarios «Sin aviso en un fichero ignorado por git» y «Un fichero versionado avisa
+// aunque coincida con un patrón de exclusión»: en `main` con el cambio `x` activo, escribir un
+// fichero que git ignora —por su nombre o por un directorio excluido— no avisa; un fichero
+// versionado avisa aunque coincida con un patrón (git no lo cuenta como ignorado), y el resto de
+// ficheros avisan como siempre.
+func TestGuardWarnSkipsFilesIgnoredByGit(t *testing.T) {
+	t.Parallel()
+	repo := inPlaceChange(t)
+	gitIgnores(t, repo, ".claude/settings.local.json", "*.gen.go", "build/")
+	local := filepath.Join(repo, ".claude", "settings.local.json")
+	writeFile(t, local, "{}\n")
+
+	t.Run("un fichero ignorado no avisa", func(t *testing.T) {
+		wantNothing(t, guardOf(t, postWrite(local)))
+	})
+	t.Run("un fichero bajo un directorio ignorado no avisa", func(t *testing.T) {
+		built := filepath.Join(repo, "build", "salida", "app.txt")
+		writeFile(t, built, "binario\n")
+		wantNothing(t, guardOf(t, postWrite(built)))
+	})
+	t.Run("un fichero versionado avisa aunque coincida con un patrón", func(t *testing.T) {
+		generated := filepath.Join(repo, "internal", "foo", "foo.gen.go")
+		writeFile(t, generated, "package foo\n")
+		runGit(t, repo, "add", "-f", "internal/foo/foo.gen.go")
+		wantWarned(t, guardOf(t, postWrite(generated)), generated, "«main»", "rama esperada «feat/x»")
+	})
+	t.Run("un fichero no ignorado avisa como siempre", func(t *testing.T) {
+		wantWarned(t, guardOf(t, postWrite(codeFileOf(repo))), codeFileOf(repo), "rama esperada «feat/x»")
+	})
+	t.Run("un parche con un ignorado y otro que no lo es avisa solo del segundo", func(t *testing.T) {
+		decision := guardOf(t, postWrite(local, codeFileOf(repo)))
+		wantWarned(t, decision, codeFileOf(repo))
+		if strings.Contains(decision.Message, local) {
+			t.Errorf("el aviso no debe nombrar el fichero ignorado: %q", decision.Message)
+		}
+	})
+}
+
+// REQ-25.21, escenario «Si la consulta a git falla, el aviso se emite»: con el índice corrupto,
+// `git check-ignore` termina con error y el fichero, aunque esté excluido, se avisa como antes de
+// existir la consulta. La guarda nunca bloquea por ella.
+func TestGuardWarnWarnsWhenTheIgnoreCheckFails(t *testing.T) {
+	t.Parallel()
+	repo := inPlaceChange(t)
+	gitIgnores(t, repo, "*.local.json")
+	local := filepath.Join(repo, "settings.local.json")
+	writeFile(t, local, "{}\n")
+	wantNothing(t, guardOf(t, postWrite(local)))
+
+	writeFile(t, filepath.Join(repo, ".git", "index"), "esto no es un índice de git\n")
+
+	wantWarned(t, guardOf(t, postWrite(local)), local, "rama esperada «feat/x»")
+}
+
+// REQ-25.21, escenario «Si la consulta a git falla, el aviso se emite»: sin git en el `PATH` la
+// consulta no se puede lanzar y el aviso sale igual. No es paralela: cambia el entorno del proceso.
+func TestGuardWarnWarnsWithoutGit(t *testing.T) {
+	repo := inPlaceChange(t)
+	gitIgnores(t, repo, "*.local.json")
+	local := filepath.Join(repo, "settings.local.json")
+	writeFile(t, local, "{}\n")
+	wantNothing(t, guardOf(t, postWrite(local)))
+
+	t.Setenv("PATH", t.TempDir())
+
+	wantWarned(t, guardOf(t, postWrite(local)), local, "rama esperada «feat/x»")
 }
 
 // Design D-18, paso 5: cada evento tiene una única responsabilidad. `pre` con otro fichero y `post`
@@ -322,20 +399,50 @@ func TestGuardWarnFailsOpen(t *testing.T) {
 	})
 }
 
-// REQ-25.21, escenario «El hook no lanza git ni ningún otro proceso»: ni el aviso ni el silencio
-// lanzan una sola invocación de git. No es paralela: el observador de procesos es global.
-func TestGuardWarnLaunchesNoProcess(t *testing.T) {
+// REQ-25.21, escenarios «Sin motivo de aviso no se lanza ningún proceso» y «Antes de avisar, como
+// mucho una consulta `git check-ignore`»: lo que se decide con ficheros —`pre` en otro fichero, un
+// documento de Axiom con `post`, una ruta fuera de un proyecto, el worktree o la rama correctos— no
+// lanza ni un proceso; cuando los ficheros piden el aviso, se lanza una sola invocación de git,
+// `check-ignore -q` sobre la ruta relativa a la raíz del checkout, avise al final o no. No es
+// paralela: el observador de procesos es global.
+func TestGuardWarnLaunchesOnlyOneCheckIgnoreBeforeWarning(t *testing.T) {
 	repo := inPlaceChange(t)
 	file := codeFileOf(repo)
+	gitIgnores(t, repo, "*.local.json")
+	local := filepath.Join(repo, "settings.local.json")
+	writeFile(t, local, "{}\n")
 	seen := observe(t)
 
-	wantWarned(t, guardOf(t, postWrite(file)))
 	wantNothing(t, guardOf(t, preWrite(file)))
 	wantNothing(t, guardOf(t, postWrite(documentOf(repo))))
 	wantNothing(t, guardOf(t, postWrite(filepath.Join(t.TempDir(), "fuera.go"))))
-
 	if len(*seen) != 0 {
-		t.Errorf("la guarda lanzó procesos de git: %v", *seen)
+		t.Fatalf("sin motivo de aviso la guarda lanzó procesos de git: %v", *seen)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		path     string
+		relative string
+		warns    bool
+	}{
+		{name: "fichero que se avisa", path: file, relative: "internal/foo/foo.go", warns: true},
+		{name: "fichero ignorado", path: local, relative: "settings.local.json", warns: false},
+	} {
+		*seen = nil
+		decision := guardOf(t, postWrite(tc.path))
+		if tc.warns {
+			wantWarned(t, decision)
+		} else {
+			wantNothing(t, decision)
+		}
+		want := []string{"check-ignore", "-q", "--", tc.relative}
+		if len(*seen) != 1 {
+			t.Fatalf("%s: se esperaba una sola invocación de git, el observador vio %v", tc.name, *seen)
+		}
+		if got := (*seen)[0]; !pathidentity.SameDirectory(got[0], repo) || !slices.Equal(got[1:], want) {
+			t.Errorf("%s: invocación %v, se esperaba git %v en %s", tc.name, got, want, repo)
+		}
 	}
 }
 

@@ -25,11 +25,15 @@ que van a un documento de Axiom (la carpeta de un cambio, openspec/changes/<camb
 odd/tasks/<cambio>.md) cuando el repositorio no está en la rama que corresponde al cambio: la rama
 del cambio, una de rol o la de archivado. El mensaje del bloqueo incluye la orden axiom branch ensure
 que pone el repositorio en su rama. Rige en cualquier proyecto Axiom, haya o no un cambio registrado.
+En el resto de ficheros solo avisa, después de la escritura, si el repositorio tiene un cambio activo
+registrado, el checkout no está en su rama y git no ignora el fichero.
 
-Solo lee ficheros (el HEAD lo lee sin lanzar git ni ningún otro proceso), no escribe nada y falla en
+Lee ficheros (el HEAD lo lee sin lanzar git ni ningún otro proceso), no escribe nada y falla en
 abierto: ante una carga ilegible o de más de 256 KiB, una configuración o un registro ilegibles, un
-proyecto que no es de Axiom o 1 s de presupuesto agotado, no bloquea ni avisa. Solo afecta a las
-escrituras del agente a través del runtime, nunca a un editor humano ni a las órdenes de la CLI.
+proyecto que no es de Axiom o 1 s de presupuesto agotado, no bloquea ni avisa. Sin motivo de aviso no
+lanza ningún proceso; antes de avisar lanza una única consulta local git check-ignore, y si esa
+consulta falla, avisa igualmente. Solo afecta a las escrituras del agente a través del runtime, nunca
+a un editor humano ni a las órdenes de la CLI.
 
 Protocolo de salida por runtime:
   claude-code, codex   Código 2 con el motivo por la salida de error si bloquea; 0 en otro caso

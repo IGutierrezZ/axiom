@@ -291,8 +291,9 @@ func TestGuardHookCleansDotDotPathsThatLeaveTheChange(t *testing.T) {
 	}
 }
 
-// REQ-25.21, escenario «El hook no lanza git ni ningún otro proceso»: ni al bloquear ni al dejar
-// pasar se registra una sola invocación de git.
+// REQ-25.21, escenario «Sin motivo de aviso no se lanza ningún proceso»: ni al bloquear ni al dejar
+// pasar se registra una sola invocación de git (la única posible, `git check-ignore` antes de un
+// aviso, la cubre TestGuardWarnLaunchesOnlyOneCheckIgnoreBeforeWarning).
 func TestGuardHookLaunchesNoProcess(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	seen := observe(t)
