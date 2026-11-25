@@ -39,7 +39,7 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 
 - [x] T1 · Huella de contexto multiagente. Un detector genérico recorre los adaptadores y compara usuario frente a workspace: bloques gestionados del fichero de instrucciones, skills, subagentes, comandos y output style. La huella de `axiom doctor` gana el tipo `duplicado`, con aviso de divergencia cuando las dos copias no coinciden. Ruta: delegada (protección de contexto del padre, sesión larga).
 - [x] T2 · Preferencia en el hub. `WorkspaceRecord.MCPExclusions` (agente → nombres, `omitempty`), con setter y lectura según el patrón de `hub/rddpref.go`. Ruta: inline (<100 líneas).
-- [ ] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
+- [x] T3 · Aplicación en Claude Code. Fusión de `deniedMcpServers` en `.claude/settings.local.json` de la raíz y de los worktrees del proyecto: alta, baja y conservación de lo ajeno. Se lanza al guardar la preferencia, en `axiom sync` y en `axiom branch ensure`. Ruta: delegada.
 - [ ] T4 · Dashboard. API `GET/POST /api/projects/active/mcp-exclusions` (solo petición local, 409 sin proyecto registrado) y pantalla para marcar servidores y conectores. Candidatos: los MCP de usuario de `~/.claude.json` (solo nombres) y los nombres que se añadan a mano. Ruta: delegada.
 - [ ] T5 · Cargado sin uso. Recuento de uso por servidor en las transcripciones de Claude Code del proyecto; la huella y la pantalla lo muestran como sugerencia de exclusión. Ruta: delegada.
 - [ ] T6 · Documentación de uso, revisión de la spec viva (`## Spec viva` si `openspec/specs` cubre el doctor o el dashboard) y cierre: `go test` de los paquetes tocados y `axiom doctor`. Ruta: inline.
@@ -66,6 +66,15 @@ Que cada sesión de agente cargue solo el contexto del proyecto en el que trabaj
 - T1 · commit `fbc977ff`. `internal/components/uninstall/context_duplicates.go`: `ContextDuplicates(home, root)` recorre todos los adaptadores y compara cinco tipos (instrucciones con bloques gestionados, skills, subagentes, comandos y output styles); marca `Diverges` cuando las copias difieren. La huella del doctor gana el tipo `duplicado`. Pruebas con Claude Code, Codex y Cursor. Evidencia: `gofmt -l` limpio; `go vet ./internal/components/uninstall/ ./internal/cli/` sin avisos; `go test ./internal/components/uninstall/...` ok; `go test ./internal/cli/ -run "Footprint|Doctor"` ok (repetido por el padre).
 - T2 · `internal/hub/mcpexclude.go`: `NormalizeMCPExclusions`, `LookupProjectMCPExclusions` (resuelve también desde subcarpetas y worktrees vía `ProjectForRepo`) y `SetProjectMCPExclusions`, que devuelve las exclusiones previas para retirar lo que sobra. Campo `mcp_exclusions` con `omitempty`. Evidencia: `gofmt -l internal/hub` limpio; `go vet ./internal/hub/` sin avisos; `go test ./internal/hub/` ok.
 
+- T3 · commit `797744cf`.
+  - `internal/agents/claude/mcpdeny.go` (`ApplyDeniedMCPServers`): fusiona `deniedMcpServers` en `.claude/settings.local.json`. Adopta lo ya presente, retira solo previas∖actuales, conserva lo ajeno y quita la clave vacía. Con un JSON ilegible da error sin tocar el fichero.
+  - `internal/mcpexclusion` (`Apply`, `ApplyCurrent`, `ProjectDirs`, `Report`): aplica en la raíz, en sus worktrees (`gitcli.Git.Worktrees`) y, en multirepo, en los repositorios de rol. Los agentes que no son `claude-code` salen como «no soportado».
+  - Disparadores: paso `sync:mcp-exclusions` en `axiom sync` y `applyMCPExclusionsAfterEnsure` en `axiom branch ensure`. Un fallo se avisa y no hace fallar la orden.
+  - Decisión: `settings.local.json` no entra en `backupTargets` de sync, porque es personal, aditivo e idempotente.
+  - Limitación: al reescribir, las claves de primer nivel quedan ordenadas y se pierden los comentarios JSONC.
+  - Evidencia: `gofmt -l` limpio; `go vet` sin avisos; `go test ./internal/mcpexclusion ./internal/agents/claude` ok (repetido por el padre); `go test ./internal/cli -run "Sync|Ensure|MCPExclusion"` ok.
+- Incidencia 2026-11-25 · Al retirar el global, Engram quedó fuera de las sesiones de Axiom. Su servidor de usuario se había ido, y el de `.mcp.json` está pendiente de aprobación. Se restauró como MCP de usuario por decisión del usuario (`claude mcp add --scope user engram -- engram mcp --tools=agent`); `claude mcp list` lo da conectado.
+
 ## Siguiente paso
 
-T3, y en paralelo comprobar en una sesión nueva de escritorio si los conectores excluidos desaparecen.
+T4, y comprobar en una sesión nueva de escritorio si los conectores excluidos desaparecen.
