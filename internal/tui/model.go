@@ -35,7 +35,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
 	"github.com/IGutierrezZ/axiom/v3/internal/planner"
-	"github.com/IGutierrezZ/axiom/v3/internal/reviewtransaction"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -404,22 +403,6 @@ type OpenCodePluginUninstallDoneMsg struct {
 	Err    error
 }
 
-// ReviewStoreResetSurveyedMsg carries the read-only survey of the review
-// store. Err is non-nil when the store could not be read at all, which is
-// itself a reason to show the screen rather than fail silently.
-type ReviewStoreResetSurveyedMsg struct {
-	Report reviewtransaction.StoreResetReport
-	Err    error
-}
-
-// ReviewStoreResetDoneMsg carries the outcome of an applied reset. Report is
-// populated even when Err is non-nil, because a partial run has to be able to
-// say which categories went away.
-type ReviewStoreResetDoneMsg struct {
-	Report reviewtransaction.StoreResetReport
-	Err    error
-}
-
 type CommunityToolInstallationDoneMsg struct {
 	Results []communitytool.Result
 	Err     error
@@ -490,11 +473,6 @@ type ExecuteFunc func(
 type RestoreFunc func(manifest backup.Manifest) error
 
 // DeleteBackupFunc deletes the entire backup directory.
-// ReviewStoreResetFunc surveys or applies a clone-scoped review store reset.
-// Both directions share one signature because both answer the same question:
-// what is in the store, and what happened to it.
-type ReviewStoreResetFunc func() (reviewtransaction.StoreResetReport, error)
-
 type DeleteBackupFunc func(manifest backup.Manifest) error
 
 // RenameBackupFunc updates the backup's Description field in its manifest file.
@@ -572,13 +550,6 @@ const (
 	// ScreenOpenCodePluginUninstallResult reports the success/failure
 	// summary of the uninstall and returns to Welcome on Enter.
 	ScreenOpenCodePluginUninstallResult
-	// ScreenReviewStoreResetConfirm shows the read-only survey of this
-	// clone's review store and asks before removing any of it. It is the
-	// only place the TUI can start an irreversible review-store removal.
-	ScreenReviewStoreResetConfirm
-	// ScreenReviewStoreResetResult reports what was actually removed,
-	// including a partial run, and returns to Welcome on Enter.
-	ScreenReviewStoreResetResult
 	ScreenGovernance
 	ScreenHubProjects
 	ScreenSDDIncrements
@@ -833,19 +804,6 @@ type Model struct {
 	OpenCodePluginRegistrationResults []opencodeplugin.Result
 	OpenCodePluginRegistrationErr     error
 
-	// ReviewStoreResetSurveyFn reports what a review store reset would
-	// remove, without removing anything. Injected so the TUI never has to
-	// know how a repository is resolved.
-	ReviewStoreResetSurveyFn ReviewStoreResetFunc
-	// ReviewStoreResetFn applies the reset. It is only ever reached from an
-	// explicit confirmation on ScreenReviewStoreResetConfirm.
-	ReviewStoreResetFn ReviewStoreResetFunc
-	// ReviewStoreResetReport holds the most recent survey or result.
-	ReviewStoreResetReport reviewtransaction.StoreResetReport
-	// ReviewStoreResetSurveyErr records a survey that could not be read.
-	ReviewStoreResetSurveyErr error
-	// ReviewStoreResetErr records the outcome of an applied reset.
-	ReviewStoreResetErr error
 	// OpenCodePluginUninstallFn is the async uninstall runner. Returns a
 	// result and error from the 4-layer engine. Defaults to
 	// opencodeplugin.Uninstall if nil.
@@ -1129,31 +1087,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.OpenCodePluginUninstallResult = msg.Result
 		m.OpenCodePluginUninstallErr = msg.Err
 		m.setScreen(ScreenOpenCodePluginUninstallResult)
-		return m, nil
-	case ReviewStoreResetSurveyedMsg:
-		if m.Screen != ScreenReviewStoreResetConfirm {
-			return m, nil
-		}
-		m.OperationRunning = false
-		m.ReviewStoreResetReport = msg.Report
-		m.ReviewStoreResetSurveyErr = msg.Err
-		// The cursor lands on the non-destructive option. Reaching this
-		// screen already costs one Enter from the main menu, so a cursor
-		// resting on "Delete permanently" would make an irreversible
-		// clone-wide removal the second keystroke of a two-keystroke
-		// sequence -- while the CLI equivalent requires typing --confirm.
-		m.Cursor = screens.ReviewStoreResetConfirmDefaultCursor(msg.Report, msg.Err)
-		return m, nil
-	case ReviewStoreResetDoneMsg:
-		// Deliberately not guarded on the current screen. This message reports
-		// an irreversible removal that has already happened; dropping it
-		// because the model moved on would leave the user with a destroyed
-		// store and no statement that anything occurred, which is the one
-		// outcome this flow must never produce.
-		m.OperationRunning = false
-		m.ReviewStoreResetReport = msg.Report
-		m.ReviewStoreResetErr = msg.Err
-		m.setScreen(ScreenReviewStoreResetResult)
 		return m, nil
 	case CommunityToolInstallationDoneMsg:
 		if m.Screen != ScreenCommunityToolInstalling {
@@ -1558,17 +1491,6 @@ func (m Model) View() string {
 		return screens.RenderRestoreConfirm(m.SelectedBackup, m.Cursor)
 	case ScreenRestoreResult:
 		return screens.RenderRestoreResult(m.SelectedBackup, m.RestoreErr)
-	case ScreenReviewStoreResetConfirm:
-		if m.OperationRunning {
-			detail := "Surveying the review store..."
-			if m.ReviewStoreResetReport.Schema != "" {
-				detail = "Removing review store state..."
-			}
-			return screens.RenderOperationRunning("Reset Review Store", detail, m.SpinnerFrame)
-		}
-		return screens.RenderReviewStoreResetConfirm(m.ReviewStoreResetReport, m.ReviewStoreResetSurveyErr, m.Cursor)
-	case ScreenReviewStoreResetResult:
-		return screens.RenderReviewStoreResetResult(m.ReviewStoreResetReport, m.ReviewStoreResetErr)
 	case ScreenDeleteConfirm:
 		return screens.RenderDeleteConfirm(m.SelectedBackup, m.Cursor)
 	case ScreenDeleteResult:
@@ -2124,11 +2046,6 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 			if m.Cursor == next {
 				m.setScreen(ScreenBackups)
 				return m, nil
-			}
-			next++
-
-			if m.Cursor == next {
-				return m.startReviewStoreResetSurvey()
 			}
 			next++
 
@@ -2914,20 +2831,6 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		// Enter on the result screen returns to backup selection.
 		// Refresh the backup list to reflect any changes from the restore.
 		m = m.finishBackupResult(false)
-	case ScreenReviewStoreResetConfirm:
-		// Cursor 0 is "Delete permanently" only when the survey found
-		// something safe to delete; in every other state the sole option is
-		// "Back", so this cannot destroy an open review by cursor position.
-		options := screens.ReviewStoreResetConfirmOptions(m.ReviewStoreResetReport, m.ReviewStoreResetSurveyErr)
-		if m.Cursor == 0 && len(options) == 2 {
-			m.OperationRunning = true
-			return m, tea.Batch(m.startReviewStoreReset(), tickCmd())
-		}
-		m = m.withResetReviewStoreResetState()
-		m.setScreen(ScreenWelcome)
-	case ScreenReviewStoreResetResult:
-		m = m.withResetReviewStoreResetState()
-		m.setScreen(ScreenWelcome)
 	case ScreenDeleteConfirm:
 		// Cursor 0 = "Delete", Cursor 1 = "Cancel".
 		if m.Cursor == 0 {
@@ -3376,50 +3279,6 @@ func (m Model) startOpenCodePluginUninstall() tea.Cmd {
 		result, err := runner(home, id)
 		return OpenCodePluginUninstallDoneMsg{Result: result, Err: err}
 	}
-}
-
-// startReviewStoreResetSurvey moves to the confirmation screen and loads the
-// read-only survey behind a spinner. The screen is entered first on purpose: a
-// survey that fails has to be reportable, and a menu entry that silently does
-// nothing is worse than one that explains itself.
-func (m Model) startReviewStoreResetSurvey() (tea.Model, tea.Cmd) {
-	m = m.withResetReviewStoreResetState()
-	m.OperationRunning = true
-	m.setScreen(ScreenReviewStoreResetConfirm)
-	survey := m.ReviewStoreResetSurveyFn
-	return m, tea.Batch(func() tea.Msg {
-		if survey == nil {
-			return ReviewStoreResetSurveyedMsg{Err: errors.New("review store survey is not available in this build")}
-		}
-		report, err := survey()
-		return ReviewStoreResetSurveyedMsg{Report: report, Err: err}
-	}, tickCmd())
-}
-
-// startReviewStoreReset applies the reset. It is only reachable from an
-// explicit confirmation, and it never falls back to a default runner: a nil
-// injection means this build cannot perform the removal, and inventing one
-// here would be the wrong kind of helpful.
-func (m Model) startReviewStoreReset() tea.Cmd {
-	reset := m.ReviewStoreResetFn
-	return func() tea.Msg {
-		if reset == nil {
-			return ReviewStoreResetDoneMsg{Err: errors.New("review store reset is not available in this build")}
-		}
-		report, err := reset()
-		return ReviewStoreResetDoneMsg{Report: report, Err: err}
-	}
-}
-
-// withResetReviewStoreResetState clears every field the flow owns, so a second
-// visit never shows the previous run's numbers.
-func (m Model) withResetReviewStoreResetState() Model {
-	m.OperationRunning = false
-	m.ReviewStoreResetReport = reviewtransaction.StoreResetReport{}
-	m.ReviewStoreResetSurveyErr = nil
-	m.ReviewStoreResetErr = nil
-	m.Cursor = 0
-	return m
 }
 
 // confirmOpenCodePluginUninstallSelect handles Enter on the Select screen:
@@ -4352,10 +4211,6 @@ func (m Model) optionCount() int {
 	case ScreenDeleteConfirm:
 		return 2 // "Delete" + "Cancel"
 	case ScreenDeleteResult:
-		return 0
-	case ScreenReviewStoreResetConfirm:
-		return screens.ReviewStoreResetConfirmOptionCount(m.ReviewStoreResetReport, m.ReviewStoreResetSurveyErr)
-	case ScreenReviewStoreResetResult:
 		return 0
 	case ScreenRenameBackup:
 		return 0 // text input mode — no cursor navigation

@@ -81,23 +81,23 @@ func TestWelcomeOptions_WithProfiles_CountOne(t *testing.T) {
 	}
 }
 
-// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 14 options when showProfiles=false
+// TestWelcomeOptions_OptionCount_WithoutProfiles verifies 13 options when showProfiles=false
 // and hasEngines=true.
 func TestWelcomeOptions_OptionCount_WithoutProfiles(t *testing.T) {
 	opts := screens.WelcomeOptions(nil, true, false, 0, true)
-	// Includes the Governance entry (no RDD entry while it is suspended).
-	want := 14
+	// Includes the Governance entry.
+	want := 13
 	if len(opts) != want {
 		t.Errorf("WelcomeOptions(showProfiles=false, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
 	}
 }
 
-// TestWelcomeOptions_OptionCount_WithProfiles verifies 15 options when showProfiles=true
+// TestWelcomeOptions_OptionCount_WithProfiles verifies 14 options when showProfiles=true
 // and hasEngines=true.
 func TestWelcomeOptions_OptionCount_WithProfiles(t *testing.T) {
 	opts := screens.WelcomeOptions(nil, true, true, 2, true)
-	// Includes the Governance entry (no RDD entry while it is suspended).
-	want := 15
+	// Includes the Governance entry.
+	want := 14
 	if len(opts) != want {
 		t.Errorf("WelcomeOptions(showProfiles=true, hasEngines=true) = %d options, want %d; opts: %v", len(opts), want, opts)
 	}

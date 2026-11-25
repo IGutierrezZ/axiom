@@ -33,8 +33,6 @@ var linearRoutes = map[Screen]Route{
 	ScreenRestoreConfirm:                 {Backward: ScreenBackups},
 	ScreenRestoreResult:                  {Backward: ScreenBackups},
 	ScreenDeleteConfirm:                  {Backward: ScreenBackups},
-	ScreenReviewStoreResetConfirm:        {Backward: ScreenWelcome},
-	ScreenReviewStoreResetResult:         {Backward: ScreenWelcome},
 	ScreenDeleteResult:                   {Backward: ScreenBackups},
 	ScreenRenameBackup:                   {Backward: ScreenBackups},
 	ScreenUpgrade:                        {Backward: ScreenWelcome},
