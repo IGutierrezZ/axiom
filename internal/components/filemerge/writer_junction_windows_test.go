@@ -20,6 +20,7 @@ func TestWriteFileAtomicFollowsDirectoryJunction(t *testing.T) {
 
 	junction := filepath.Join(root, "junction")
 	createDirectoryJunction(t, junction, target)
+	requireWritableJunction(t, junction)
 
 	content := []byte("junction payload\n")
 	path := filepath.Join(junction, "config.txt")
@@ -46,6 +47,7 @@ func TestWriteFileAtomicFollowsRelativeDirectoryJunction(t *testing.T) {
 
 	junction := filepath.Join(root, "junction")
 	createDirectoryJunction(t, junction, targetName)
+	requireWritableJunction(t, junction)
 
 	content := []byte("relative junction payload\n")
 	path := filepath.Join(junction, "config.txt")
@@ -145,4 +147,26 @@ func createDirectoryJunction(t *testing.T, link, target string) {
 			t.Errorf("Remove(junction) error = %v", err)
 		}
 	})
+}
+
+// requireWritableJunction omite la prueba si el entorno no deja crear en
+// exclusiva (O_EXCL, lo que hace os.CreateTemp) un fichero a través de la
+// junction. Pasa en equipos cuyo software de seguridad protege
+// %LOCALAPPDATA%\Temp: CreateFile con CREATE_NEW a través de una junction creada
+// allí devuelve "file already exists", mientras que la misma prueba con TEMP en
+// cualquier otra carpeta, incluida la raíz del perfil, pasa. Es el entorno, no
+// el escritor; en la CI y en equipos sin esa protección la prueba corre entera.
+func requireWritableJunction(t *testing.T, junction string) {
+	t.Helper()
+	probe := filepath.Join(junction, "junction-probe.txt")
+	file, err := os.OpenFile(probe, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o644)
+	if err != nil {
+		t.Skipf("this environment does not allow exclusive file creation through a directory junction in %s: %v", filepath.Dir(junction), err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("Close(probe) error = %v", err)
+	}
+	if err := os.Remove(probe); err != nil {
+		t.Fatalf("Remove(probe) error = %v", err)
+	}
 }

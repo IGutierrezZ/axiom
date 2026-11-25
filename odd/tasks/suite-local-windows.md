@@ -37,7 +37,11 @@ Modo: desactivado (sin configuración de proyecto ni petición). Comprobaciones 
 - [x] T1. Puerta `testenv.RequireGoToolchain` y aplicarla a los cuatro tests del toolchain. Ruta: inline (unidad pequeña).
   - En `update`, la guarda va en `newReleasePolicyFixture`: cada ejecución de la política es `go run ./internal/releasepolicycmd`, así que cubre también `TestReleaseDistributionPolicyAcceptsSemanticYAMLFormatting` y `TestModifiedReleaseVerifierCannotGainWriteAuthority`, que compilaban por el mismo camino.
   - Evidencia: `go test ./internal/testenv/` ok; con `-v -run` los seis tests salen `SKIP` en local y `update`, `assets` y `app` terminan en `ok`.
-- [ ] T2. `backup` y `filemerge`: aislar del `TEMP` con nombres cortos 8.3. Ruta: inline.
+- [x] T2. `backup` y `filemerge`: fallos del entorno en `%LOCALAPPDATA%\Temp`. Ruta: inline.
+  - Diagnóstico: los tres tests pasan con `TEMP` en `C:\repos\...`, en la raíz del perfil y en `C:\Users\Public`; solo fallan con `TEMP` en `AppData\Local\Temp`, también con la ruta larga. No es el nombre corto 8.3 ni un defecto del producto: el software de seguridad del equipo protege esa carpeta.
+  - `filemerge`: la creación exclusiva (`CREATE_NEW`, la de `os.CreateTemp`) a través de una junction devuelve «file already exists»; la escritura normal sí pasa. Nueva sonda `requireWritableJunction` con `O_EXCL`: si falla, `t.Skipf` con el motivo; donde funciona, la prueba corre entera.
+  - `backup`: el socket AF_UNIX se crea, pero no admite `lstat` ni borrado, y la limpieza de `TempDir` falla aunque se omita la prueba. Sin sonda posible, en Windows solo corre en la CI (variable `CI`). Se corrige también el comentario de cabecera, que describía otro test.
+  - Evidencia: `go test ./internal/backup/ ./internal/components/filemerge/ -count=1` en `ok`.
 - [ ] T3. `cli`: `TestCheckInstalledAssetVersion_*` y `TestCheckStateJSON_*`. Ruta: inline.
 - [ ] T4. `app`: `TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation` y `TestDeferredSyncIncludesCodexPermissionsArgs`. Ruta: inline.
 - [ ] T5. Orden local en `AGENTS.md` y verificación del criterio de terminado. Ruta: inline.
