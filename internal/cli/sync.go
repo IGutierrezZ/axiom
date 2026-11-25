@@ -726,10 +726,6 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 		apply = append(apply, piCodeGraphSyncStep{id: "sync:community-tool:pi-codegraph", homeDir: r.homeDir, workspaceDir: r.workspaceDir, changedFiles: &r.changedFiles})
 	}
 
-	// Retire last so a failing earlier step never leaves the plugin half-removed.
-	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs); telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryRetirementStep{id: "sync:opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
-	}
 	if legacy := legacyPromptAdapters(adapters); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
 			id:       "sync:retire-legacy-prompt-files",

@@ -1521,7 +1521,7 @@ func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 		backup.UserHomeDirFn = restoreBackupHome
 	})
 
-	// Persisted visual themes are ignored and no telemetry plugin is written.
+	// Persisted visual themes are ignored.
 	// The last two entries are the routing guidance targets. Guidance is written
 	// for every configured agent regardless of which components are persisted.
 	wantFiles := []string{

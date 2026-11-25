@@ -19,124 +19,18 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
-
-// writeLegacyTelemetryPair reproduces the plugin and ownership manifest that
-// releases before the telemetry retirement installed. The plugin is no longer
-// shipped, so the vendored copy of its last version stands in for it.
-func writeLegacyTelemetryPair(t *testing.T, configDir string) {
-	t.Helper()
-	content, err := os.ReadFile(filepath.Join("..", "telemetryruntime", "testdata", "telemetry-runtime-axiom-v1.ts"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	paths := telemetryruntime.ManagedPaths(configDir)
-	if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(paths[0], content, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := json.MarshalIndent(map[string]any{
-		"schema": "gentle-ai.telemetry-runtime-ownership/v1",
-		"file": mutationjournal.OwnedFile{
-			After: string(content), AfterHash: fmt.Sprintf("%x", sha256.Sum256(content)), Mode: 0o644,
-		},
-	}, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(paths[1], append(manifest, '\n'), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUninstallOpenCodeTelemetryOwnershipAndScope(t *testing.T) {
-	for _, kind := range []string{"owned", "modified", "modified-after-plan", "unowned", "other-agent", "component-only"} {
-		t.Run(kind, func(t *testing.T) {
-			home := t.TempDir()
-			t.Setenv("HOME", home)
-			t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
-			config := opencode.NewAdapter().GlobalConfigDir(home)
-			paths := telemetryruntime.ManagedPaths(config)
-			if kind != "unowned" {
-				writeLegacyTelemetryPair(t, config)
-			}
-			if kind == "modified" || kind == "unowned" {
-				if err := os.MkdirAll(filepath.Dir(paths[0]), 0700); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(paths[0], []byte("user plugin"), 0600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			sibling := filepath.Join(filepath.Dir(paths[0]), "community.ts")
-			if err := os.WriteFile(sibling, []byte("community"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			svc, err := NewService(home, t.TempDir(), "dev")
-			if err != nil {
-				t.Fatal(err)
-			}
-			agent := model.AgentOpenCode
-			components := allManagedComponents
-			if kind == "other-agent" {
-				agent = model.AgentClaudeCode
-			}
-			if kind == "component-only" {
-				components = []model.ComponentID{model.ComponentSDD}
-			}
-			plan, err := svc.buildPlan([]model.AgentID{agent}, components)
-			var result Result
-			if kind == "modified-after-plan" {
-				if writeErr := os.WriteFile(paths[0], []byte("user plugin"), 0600); writeErr != nil {
-					t.Fatal(writeErr)
-				}
-			}
-			if err == nil {
-				result, err = svc.executePlan(plan, nil)
-			}
-			if strings.HasPrefix(kind, "modified") || kind == "unowned" {
-				if err == nil {
-					t.Fatal("ownership conflict not reported")
-				}
-			} else if err != nil {
-				t.Fatal(err)
-			}
-			if kind == "owned" {
-				for _, path := range paths {
-					if _, err := os.Stat(path); !os.IsNotExist(err) {
-						t.Fatal("owned runtime remains", path)
-					}
-					if !slices.Contains(result.RemovedFiles, path) {
-						t.Fatal("removed file unreported", path)
-					}
-				}
-			} else {
-				if _, err := os.Stat(paths[0]); err != nil {
-					t.Fatal("unrelated/custom runtime removed", err)
-				}
-			}
-			if data, err := os.ReadFile(sibling); err != nil || string(data) != "community" {
-				t.Fatal("community plugin affected")
-			}
-		})
-	}
-}
 
 type stubSnapshotter struct{}
 
@@ -1948,7 +1842,6 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
     "SubagentStop": [
       {
         "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true},
           {"type": "command", "command": "echo subagent keep"}
         ]
       }
@@ -1956,7 +1849,6 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
     "Stop": [
       {
         "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true},
           {"type": "command", "command": "echo stop keep"}
         ]
       }
@@ -1983,7 +1875,7 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(raw)
-	if strings.Contains(text, "gentle-ai skill-registry refresh") || strings.Contains(text, "gentle-ai telemetry runtime codex") {
+	if strings.Contains(text, "gentle-ai skill-registry refresh") {
 		t.Fatalf("managed hook should be removed:\n%s", text)
 	}
 	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "echo pre") || !strings.Contains(text, "echo subagent keep") || !strings.Contains(text, "echo stop keep") {
@@ -2161,41 +2053,6 @@ func TestComponentOperationsSDD_RemovesBranchGuardHooks(t *testing.T) {
 				t.Fatalf("las entradas ajenas, incluida una variante de la orden que Axiom no instala aquí, se conservan:\n%s", text)
 			}
 		})
-	}
-}
-
-func TestComponentOperationsSDD_ClaudeRemovesTelemetryHooks(t *testing.T) {
-	homeDir := t.TempDir()
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	adapter, _ := svc.registry.Get(model.AgentClaudeCode)
-	settingsPath := adapter.SettingsPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	initial := `{"hooks":{"Stop":[{"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true},{"type":"command","command":"echo keep"}]}],"SubagentStop":[{"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true}]}]}}`
-	if err := os.WriteFile(settingsPath, []byte(initial), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ops, _, err := svc.componentOperations(adapter, model.ComponentSDD)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, op := range ops {
-		if op.typeID == opRewriteFile && op.path == settingsPath {
-			if _, _, err := op.apply(op.path); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	raw, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "telemetry runtime claude") || !strings.Contains(string(raw), "echo keep") {
-		t.Fatalf("managed telemetry hook removal failed:\n%s", raw)
 	}
 }
 

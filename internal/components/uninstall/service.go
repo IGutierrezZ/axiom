@@ -26,7 +26,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -673,15 +672,6 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 		}
 	}
 	if !s.workspace && slices.Contains(agentIDs, model.AgentOpenCode) && removesAllAgentComponents(componentIDs) {
-		adapter, _ := s.registry.Get(model.AgentOpenCode)
-		configDir := adapter.GlobalConfigDir(s.homeDir)
-		if err := telemetryruntime.CheckManaged(configDir); err != nil {
-			return plan{}, err
-		}
-		for _, op := range removeOwnedTelemetryRuntime(configDir) {
-			backupTargets[op.path] = struct{}{}
-			operationsByKey[operationKey(op)] = op
-		}
 		allLauncherPaths := append(opencodeactivation.LauncherPaths(s.homeDir, runtime.GOOS), opencodeactivation.LegacyManagedLauncherPaths(s.homeDir, runtime.GOOS)...)
 		for _, path := range allLauncherPaths {
 			backupTargets[path] = struct{}{}
@@ -1742,11 +1732,7 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 					strings.Contains(cmd, "gentle-ai review stop-hook") ||
 					strings.Contains(cmd, "axiom sdd-preflight-hook") ||
 					strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
-					cmd == branchGuardCommand ||
-					cmd == "axiom telemetry runtime claude --json" ||
-					cmd == "gentle-ai telemetry runtime claude --json" ||
-					cmd == "axiom telemetry runtime codex --json" ||
-					cmd == "gentle-ai telemetry runtime codex --json") {
+					cmd == branchGuardCommand) {
 					changed = true
 					continue
 				}
@@ -2228,29 +2214,6 @@ func globalBackupTargets(homeDir string) []string {
 		gga.ConfigPath(homeDir),
 		gga.AgentsTemplatePath(homeDir),
 	}
-}
-
-// One transactional removal of the pair, projected as two file results for the
-// existing uninstall reporter. Validation happens at execution, not plan time.
-func removeOwnedTelemetryRuntime(configDir string) []operation {
-	var attempted bool
-	var removed []string
-	var err error
-	var operations []operation
-	for _, path := range telemetryruntime.ManagedPaths(configDir) {
-		operations = append(operations, operation{
-			typeID: opRemoveFile, path: path, agents: []model.AgentID{model.AgentOpenCode},
-			apply: func(path string) (bool, bool, error) {
-				if !attempted {
-					attempted = true
-					removed, err = telemetryruntime.RemoveManaged(configDir)
-				}
-				changed := slices.Contains(removed, path)
-				return changed, changed, err
-			},
-		})
-	}
-	return operations
 }
 
 func removeOwnedOpenCodeLauncher(path string) operation {

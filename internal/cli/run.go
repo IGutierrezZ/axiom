@@ -34,7 +34,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -733,9 +732,9 @@ type installRuntime struct {
 }
 
 type runtimeState struct {
-	// retiredFiles and retirementNotes carry the outcome of the OpenCode
-	// telemetry plugin retirement: files removed, and non-fatal warnings for
-	// copies kept because ownership could not be proven.
+	// retiredFiles and retirementNotes carry the outcome of the retirement
+	// steps: files removed, and non-fatal warnings for copies kept because
+	// ownership could not be proven.
 	retiredFiles        []string
 	retirementNotes     []string
 	manifest            backup.Manifest
@@ -967,10 +966,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			stepID = "community-tool:pi-codegraph-deselect"
 		}
 		apply = append(apply, piCodeGraphReconcileStep{id: stepID, homeDir: r.homeDir, workspaceDir: r.workspaceDir, selected: selected, state: r.state})
-	}
-	// Retire last so a failing earlier step never leaves the plugin half-removed.
-	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
 	if legacy := legacyPromptAdapters(resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
@@ -1427,35 +1422,6 @@ func openCodeGlobalConfigDir(home, workspace string, scope InstallScope, agentID
 	}
 	adapter := scopedAdapter(scope, workspace, opencodeagent.NewAdapter())
 	return adapter.GlobalConfigDir(componentInjectionDirScoped(home, workspace, scope, adapter))
-}
-
-// openCodeTelemetryRetirementStep removes the OpenCode telemetry plugin that
-// earlier releases installed. Axiom no longer installs it: it shelled out to a
-// `gentle-ai` binary, so an upstream `gentle-ai` on PATH would have received
-// runtime telemetry through it. Retirement is best effort and never fails the
-// run, and it has no rollback because restoring the plugin would reinstall the
-// unwanted behaviour. A copy that is edited or whose ownership cannot be proven
-// is kept and reported as a warning for the user to act on.
-type openCodeTelemetryRetirementStep struct {
-	state     *runtimeState
-	id        string
-	configDir string
-}
-
-func (s openCodeTelemetryRetirementStep) ID() string { return s.id }
-
-func (s openCodeTelemetryRetirementStep) Run() error {
-	removed, err := telemetryruntime.RemoveManaged(s.configDir)
-	if s.state == nil {
-		return nil
-	}
-	s.state.retiredFiles = append(s.state.retiredFiles, removed...)
-	if err != nil {
-		s.state.retirementNotes = append(s.state.retirementNotes, fmt.Sprintf(
-			"The retired OpenCode telemetry plugin was kept (%v). It may still call a 'gentle-ai' binary; review or delete %s manually.",
-			err, filepath.Join(s.configDir, "plugins", "telemetry-runtime.ts")))
-	}
-	return nil
 }
 
 type openCodePluginInstallStep struct {
