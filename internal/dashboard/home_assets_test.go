@@ -51,7 +51,7 @@ func TestHomeAttentionRuleIsDefinedOnce(t *testing.T) {
 			t.Errorf("inicio.js repite la bandera %q: la regla vive en increment.js", flag)
 		}
 	}
-	for _, marker := range []string{"attentionItems(", "incrementStats(", "deriveNextStep(", "doctorSummary("} {
+	for _, marker := range []string{"attentionItems(", "incrementStats(", "nextCommand(", "doctorSummary("} {
 		if !strings.Contains(home, marker) {
 			t.Errorf("inicio.js no usa %q", marker)
 		}
@@ -113,26 +113,19 @@ func TestHomeBlocksHaveLoadingEmptyAndErrorStates(t *testing.T) {
 	}
 }
 
-// D5 en Inicio: Continuar es botón; las fases de agente salen como Recordatorio.
-func TestHomeActionsFollowD5(t *testing.T) {
+// Inicio: cada fila lleva la orden de agente copiable y ningún botón que ejecute fases.
+func TestHomeActionsAreCopyableCommands(t *testing.T) {
 	home := readAsset(t, "js/screens/inicio.js")
-	if !strings.Contains(home, "reminder({ ...next.reminder, compact: true })") {
-		t.Errorf("las fases de agente deben pintarse con el componente reminder() en modo compacto")
-	}
-	if !strings.Contains(home, "continueIncrement(") || !strings.Contains(home, "data-action=\"continue\"") {
-		t.Errorf("Continuar debe usar el helper compartido continueIncrement")
+	if !strings.Contains(home, "commandChip(nextCommand(inc))") {
+		t.Errorf("las filas de «Necesita atención» deben llevar la orden con commandChip(nextCommand(inc))")
 	}
 	if !strings.Contains(home, "tab: 'roles'") {
 		t.Errorf("la fila en espera de roles debe enlazar a la barrera (#/incrementos/<name>/roles)")
 	}
-	for _, banned := range []string{`data-action="verify"`, `data-action="archive"`, "/api/increments/verify", "/api/increments/continue"} {
+	for _, banned := range []string{`data-action="continue"`, `data-action="verify"`, `data-action="archive"`, "/api/increments/verify", "/api/increments/continue", "home-console"} {
 		if strings.Contains(home, banned) {
-			t.Errorf("inicio.js no debe contener %q (D5: verify y archive son recordatorios; la llamada vive en increment.js)", banned)
+			t.Errorf("inicio.js no debe contener %q: el dashboard no ejecuta fases ni el despachador", banned)
 		}
-	}
-	comp := readAsset(t, "js/core/components.js")
-	if !strings.Contains(comp, "compact = false") || !strings.Contains(comp, "reminder-compact") {
-		t.Errorf("components.js debe ofrecer reminder() compacto")
 	}
 	// El pull reutiliza la lógica de la barra lateral.
 	if !strings.Contains(home, "pullSpecs(") || !strings.Contains(readAsset(t, "js/shell.js"), "export async function pullSpecs(") {
@@ -205,7 +198,7 @@ func TestHomeSharedCacheAndDedupe(t *testing.T) {
 func TestHomeStylesUseTokensAndKeepStatesVisible(t *testing.T) {
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{
-		".kpi-link", ".home-grid", ".home-main", ".att-row", ".reminder-compact", ".flow-list", ".flow-seg.is-bug",
+		".kpi-link", ".home-grid", ".home-main", ".att-row", ".cmd-chip", ".flow-list", ".flow-seg.is-bug",
 		".flow-legend", ".help-row", ".nav-dot.is-bad", "repeating-linear-gradient",
 	} {
 		if !strings.Contains(css, marker) {

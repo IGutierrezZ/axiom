@@ -83,7 +83,6 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)
-	s.mux.HandleFunc("/api/increments/continue", s.handleIncrementContinue)
 	s.mux.HandleFunc("/api/increments/verify", s.handleIncrementVerify)
 	s.mux.HandleFunc("/api/increments/migrate-cumulative", s.handleMigrateCumulative)
 	s.mux.HandleFunc("/api/increments/", s.handleIncrementDetail)
@@ -470,24 +469,6 @@ func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 	}
-}
-
-func (s *Server) handleIncrementContinue(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	var req IncrementActionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido: " + err.Error()})
-		return
-	}
-	res, err := s.service.ContinueIncrement(req.Name)
-	if err != nil {
-		s.respondJSON(w, http.StatusNotFound, map[string]string{"error": err.Error()})
-		return
-	}
-	s.respondJSON(w, http.StatusOK, res)
 }
 
 func (s *Server) handleIncrementVerify(w http.ResponseWriter, r *http.Request) {

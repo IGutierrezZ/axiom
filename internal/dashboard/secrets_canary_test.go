@@ -47,7 +47,6 @@ var excludedRoutes = map[string]string{
 	"/api/fs/native-picker":               "selector nativo de carpetas del sistema",
 	"/api/workspace/specs/sync-status":    "estado de git del repositorio de specs; no lee integraciones",
 	"/api/workspace/specs/pull":           "mutación (POST): git pull del repositorio de specs",
-	"/api/increments/continue":            "mutación (POST): ejecuta la transición del despachador",
 	"/api/increments/verify":              "mutación (POST): lanza la verificación",
 	"/api/increments/migrate-cumulative":  "mutación (POST): migra el sumidero acumulativo",
 	"/api/skills/inbox":                   "buzón de skills propuestas; no lee integraciones",
