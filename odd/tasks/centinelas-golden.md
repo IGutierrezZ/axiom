@@ -43,11 +43,11 @@ Fuera de alcance: tests de comportamiento que además comprueban texto (solo se 
 
 Ruta: delegada en paralelo (disparador de escritor por paralelismo: cuatro superficies disjuntas, cada una de varios minutos). Los escritores no hacen commit; el padre revisa el diff y hace el commit de cada tarea.
 
-- [ ] **T1 · `internal/assets`**: centinelas de redacción y lápidas de todos sus `*_test.go`, salvo ISO (`sdd_iso_pins_test.go`) y guardas de CI (`workflow_shards_test.go`).
-- [ ] **T2 · `internal/components/sdd`**: tests de contrato y vocabulario, y aserciones de prosa redundantes de `inject_test.go`.
-- [ ] **T3 · `internal/components/agentguidance` e `internal/workspace`** (`docs_contract_test.go` y lápidas del paquete).
-- [ ] **T4 · Lápidas del resto del repositorio** (`cli`, `persona`, `filemerge`, `sddstatus`, `state`, `uninstall`, `engram` y demás), salvo migraciones y lo excluido.
-- [ ] **T5 · Prueba de la fricción** (no se commitea) y cierre: métricas antes/después.
+- [x] **T1 · `internal/assets`**: centinelas de redacción y lápidas de todos sus `*_test.go`, salvo ISO (`sdd_iso_pins_test.go`) y guardas de CI (`workflow_shards_test.go`). Commit `fc923349`.
+- [x] **T2 · `internal/components/sdd`**: tests de contrato y vocabulario, y aserciones de prosa redundantes de `inject_test.go`. Commit `94e23083`.
+- [x] **T3 · `internal/components/agentguidance` e `internal/workspace`** (`docs_contract_test.go` y lápidas del paquete). Commit `3d751d1f`.
+- [x] **T4 · Lápidas del resto del repositorio** (`cli`, `persona`, `filemerge`, `sddstatus`, `state`, `uninstall`, `engram` y demás), salvo migraciones y lo excluido. Commit `84e46ffe`.
+- [x] **T5 · Prueba de la fricción** (no se commitea) y cierre: métricas antes/después.
 
 ## Criterios de aceptación
 
@@ -61,16 +61,23 @@ Ruta: delegada en paralelo (disparador de escritor por paralelismo: cuatro super
 
 | Medida | Antes (`7464c5a7`) | Después |
 |---|---|---|
-| Líneas de test de `internal/assets` | 8.644 | |
-| Líneas de test de `internal/components/sdd` | 17.315 | |
-| Líneas de test de `agentguidance` + `workspace/docs_contract_test.go` | 2.405 + 668 | |
-| Funciones lápida (`*Retired`…`*NotContain`) | 314 | |
-| Líneas de `*_test.go` del repositorio (sin `bench/`) | 245.031 | |
+| Líneas de test de `internal/assets` | 8.644 | 4.149 |
+| Líneas de test de `internal/components/sdd` | 17.315 | 15.073 |
+| Líneas de test de `agentguidance` + `workspace/docs_contract_test.go` | 2.405 + 668 | 1.370 + 39 |
+| Funciones lápida (`*Retired`…`*NotContain`) | 314 | 286 |
+| Líneas de `*_test.go` del repositorio (sin `bench/`) | 245.031 | 235.824 |
+
+Balance: 63 ficheros, +277 / −9.408 líneas. Queda por debajo de la estimación del plan (10.000-15.000) porque las lápidas restantes se revisaron una a una y ejercitan código vigente de migración, lectores tolerantes, limpieza de `uninstall`/`sync` o rechazos con contrato, que el plan manda conservar. En `components/sdd` se conservan los tests de comportamiento de `Inject` (solo se recortó su prosa redundante).
 
 ## Progreso y evidencias
 
-(pendiente)
+- Ruta: cuatro escritores delegados en paralelo (superficies disjuntas); el padre revisó cada informe, hizo una segunda pasada de T4 revisando las lápidas una a una y commiteó por tarea con la justificación de cada token en el cuerpo del commit.
+- `go vet` y `go test -count=1` en verde de `internal/assets`, `internal/components/sdd`, `internal/components`, `internal/components/agentguidance`, `internal/app`, `internal/sddstatus`, `internal/branch/registry`, `internal/dashboard` e `internal/workspace`; `internal/cli` con `-run` de los tests tocados y compilación del paquete.
+- Goldens: ninguno cambió; no hizo falta `-update`.
+- Workflows y `.refusal-ratchet-baseline.txt`: ningún nombre borrado aparece en ellos.
+- Prueba de la fricción (no commiteada): renombrar el encabezado `#### Step 2c: Branch and Worktree (`axiom branch`)` de `internal/assets/skills/sdd-apply/SKILL.md`, que en `7464c5a7` fijaba `assets_test.go`, y reescribir la frase «Delivery only chooses the target branch…» deja en verde `internal/assets`, `internal/components/sdd`, `internal/components` y `agentguidance`. Revertido.
+- Fallo previo, fuera de alcance: `TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch` (`internal/workspace`, solo Windows con PowerShell) falla igual en `main` (`7464c5a7`): el test llama a `pr` sin `-Label` y el envoltorio lo exige.
 
 ## Siguiente paso
 
-Lanzar T1–T4 en paralelo.
+PR única con `scripts/axiom-worktree.ps1 pr centinelas-golden -Lane odd -Label chore`.
