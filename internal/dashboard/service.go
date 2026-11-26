@@ -25,6 +25,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/doctor"
+	"github.com/IGutierrezZ/axiom/v3/internal/explainer"
 	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
@@ -545,6 +546,7 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 		HasVerify:   fileExists(filepath.Join(path, "verify-report.md")),
 		HasArchive:  fileExists(filepath.Join(path, "archive-report.md")),
 	}
+	dto.Explainer = s.incrementExplainer(path)
 	dto.Specs, dto.Tasks = readArtifactFiles(path)
 	dto.HasSpec = len(dto.Specs) > 0
 	dto.HasTasks = len(dto.Tasks) > 0
@@ -1720,4 +1722,49 @@ func (s *Service) PullSpecsRepository(ctx context.Context) (*SpecsPullResultDTO,
 		Message: "Repositorio de especificaciones sincronizado exitosamente con el remoto.",
 		Output:  outputStr,
 	}, nil
+}
+
+// ErrExplainerNotFound indica que el cambio o su HTML explicativo no existen (o no es un fichero regular).
+var ErrExplainerNotFound = errors.New("resumen explicativo no encontrado")
+
+// ReadExplainer lee el HTML explicativo de un cambio. La ruta se construye con la carpeta del
+// cambio y el nombre de la lista blanca, nunca con texto del cliente.
+func (s *Service) ReadExplainer(name string, kind explainer.Kind) ([]byte, error) {
+	file := explainer.FileName(kind)
+	if file == "" {
+		return nil, ErrExplainerNotFound
+	}
+	location, err := s.locateIncrement(name)
+	if err != nil {
+		return nil, ErrExplainerNotFound
+	}
+	data, err := explainer.ReadFile(filepath.Join(location.path, file))
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, explainer.ErrNotRegular) {
+		return nil, ErrExplainerNotFound
+	}
+	return data, err
+}
+
+// incrementExplainer calcula el DTO con la misma función de frescura que `axiom sdd status`.
+func (s *Service) incrementExplainer(changeRoot string) IncrementExplainerDTO {
+	store := sddstatus.ArtifactStoreOpenSpec
+	if loc, err := workspace.Locate(s.getRootPath()); err == nil {
+		if declared, ok := sddstatus.DeclaredArtifactStore(loc.PlanningHome); ok {
+			store = declared
+		}
+	}
+	r := sddstatus.ExplainerFreshness(changeRoot, store)
+	dto := IncrementExplainerDTO{Sealed: string(r.Sealed), Enabled: r.Enabled, Error: r.Error, Items: []ExplainerDTO{}}
+	if !r.Enabled {
+		return dto
+	}
+	for _, item := range []struct {
+		kind explainer.Kind
+		proj *sddstatus.ExplainerArtifactProjection
+	}{{explainer.KindSpec, r.Spec}, {explainer.KindDesign, r.Design}} {
+		if item.proj != nil {
+			dto.Items = append(dto.Items, ExplainerDTO{Kind: string(item.kind), State: item.proj.State, Error: item.proj.Error})
+		}
+	}
+	return dto
 }

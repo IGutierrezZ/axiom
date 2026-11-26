@@ -75,7 +75,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 4: Dashboard
 
-- [ ] T6 Endpoint `GET|HEAD /api/explainer`, `ReadExplainer`, `ErrExplainerNotFound`, DTO y relleno en `GetIncrementDetail` (decisiones 7, 8, 11 y 13).
+- [x] T6 Endpoint `GET|HEAD /api/explainer`, `ReadExplainer`, `ErrExplainerNotFound`, DTO y relleno en `GetIncrementDetail` (decisiones 7, 8, 11 y 13).
   - Cubre: prov:WEB:1, prov:WEB:2 (DTO)
   - Ficheros: `internal/dashboard/server.go`, `internal/dashboard/service.go`, `internal/dashboard/types.go`, `internal/dashboard/explainer_test.go`
   - Pruebas (RED primero): 200 con `Content-Type`, CSP exacta, `nosniff`, `no-store`, `Referrer-Policy`; CSP y `nosniff` también en 400/404; 400 con `..`, `../x`, `x/..`, `a/b`, `a\b`, `%2e%2e`, `a%2fb`, `%5c`, `C:x`, `%00`, vacío; 400 con `kind` fuera de lista (`spec.md`, `kickoff.yaml`, `tasks`); 404 sin fichero, sin cambio o enlace simbólico (se omite si no se puede crear); 405 con POST, PUT y DELETE; `HEAD`; directorio o fichero no regular → 404; `MaxBytes+1` → 500 con el mensaje y sin bytes del fichero; directorio hermano con `resumen-spec.html` nunca se sirve; con `explainer_html` ausente o `no` y el fichero presente, el endpoint lo sirve (la lista blanca no depende del sellado; hueco spec #3); cambio archivado servido; DTO: `enabled` falso con `no` y sin campo (`items: []`), con `yes` estados iguales a `sddstatus.ExplainerFreshness` del mismo directorio (hueco diseño #11), sin md → `state` vacío, archivado con `yes` mismo cálculo.
