@@ -55,7 +55,15 @@ type RegistryOptions struct {
 type Registry struct {
 	pattern reqid.Pattern
 	byID    map[string][]IDRef
+	byKey   map[identityKey][]IDRef
 	alloc   *reqid.Allocator
+}
+
+// identityKey es la identidad de un ID para el patrón del registro: su serie y su número,
+// de modo que `RF-1` y `RF-001` con `RF-<m>` son el mismo identificador.
+type identityKey struct {
+	series reqid.Series
+	number int
 }
 
 // Pattern devuelve el patrón de identificadores con el que se construyó el registro.
@@ -65,7 +73,7 @@ func (r *Registry) Pattern() reqid.Pattern { return r.pattern }
 // SpecsOnly, de <planningHome>/changes/*/specs/*/spec.md. Una carpeta que no existe no
 // es un error: el registro queda vacío en esa parte.
 func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) {
-	reg := &Registry{pattern: opts.Pattern, byID: map[string][]IDRef{}, alloc: reqid.NewAllocator(opts.Pattern)}
+	reg := &Registry{pattern: opts.Pattern, byID: map[string][]IDRef{}, byKey: map[identityKey][]IDRef{}, alloc: reqid.NewAllocator(opts.Pattern)}
 
 	specsDir := filepath.Join(planningHome, "specs")
 	capabilities, err := subdirectories(specsDir)
@@ -122,6 +130,9 @@ func (r *Registry) add(ref IDRef) {
 		return
 	}
 	r.byID[ref.ID] = append(r.byID[ref.ID], ref)
+	if key, ok := r.keyOf(ref.ID); ok {
+		r.byKey[key] = append(r.byKey[key], ref)
+	}
 	// InTitle solo devuelve identificadores válidos: Occupy no puede fallar aquí.
 	_ = r.alloc.Occupy(ref.ID)
 }
@@ -147,20 +158,34 @@ func (r *Registry) NextFree(series reqid.Series) string {
 	return id
 }
 
-// SeriesRefs devuelve todas las apariciones de identificadores de una serie, en un orden
-// estable (por ruta y después por identificador).
-func (r *Registry) SeriesRefs(series reqid.Series) []IDRef {
-	var refs []IDRef
-	for id, list := range r.byID {
-		if s, ok := r.pattern.Series(id); ok && s == series {
-			refs = append(refs, list...)
-		}
+// keyOf calcula la clave de identidad de un ID válido para el patrón del registro.
+func (r *Registry) keyOf(id string) (identityKey, bool) {
+	series, ok := r.pattern.Series(id)
+	if !ok {
+		return identityKey{}, false
 	}
-	sort.SliceStable(refs, func(i, j int) bool {
-		if refs[i].Path != refs[j].Path {
-			return refs[i].Path < refs[j].Path
+	number, ok := r.pattern.Number(id)
+	if !ok {
+		return identityKey{}, false
+	}
+	return identityKey{series: series, number: number}, true
+}
+
+// LookupIdentity devuelve las apariciones cuyo identificador tiene la misma serie y el
+// mismo número que id según el patrón del registro (`RF-1` y `RF-001` con `RF-<m>` son el
+// mismo), en un orden estable (por ruta y después por identificador). Un id que no es
+// válido para el patrón no tiene clave y no encuentra nada.
+func (r *Registry) LookupIdentity(id string) []IDRef {
+	key, ok := r.keyOf(id)
+	if !ok {
+		return nil
+	}
+	refs := append([]IDRef(nil), r.byKey[key]...)
+	sort.SliceStable(refs, func(a, b int) bool {
+		if refs[a].Path != refs[b].Path {
+			return refs[a].Path < refs[b].Path
 		}
-		return refs[i].ID < refs[j].ID
+		return refs[a].ID < refs[b].ID
 	})
 	return refs
 }

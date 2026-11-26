@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
@@ -21,21 +20,20 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// legacy es el patrón por defecto, `REQ-<n>.<m>`: `adopt check` lo mantiene aunque el
-// proyecto declare otro, hasta que C-03-c lo lea de la declaración (REQ-30.31).
-var legacy = reqid.Default()
-
 // Reglas de Check. Todas se acumulan: el informe lista cada fallo, no solo el primero.
 const (
 	RuleFormat           = "format"
 	RuleUniqueness       = "uniqueness"
-	RuleSeries           = "series"
 	RuleScenarios        = "scenarios"
 	RuleOrigin           = "origin"
 	RuleCoverage         = "coverage"
 	RuleDiscardReason    = "discard_reason"
 	RuleInventoryMissing = "inventory_missing"
 	RuleInventoryStale   = "inventory_stale"
+	// Reglas de conservación del ID del cliente (REQ-30.11 f).
+	RuleOriginID          = "origin_id"
+	RulePatternUndeclared = "pattern_undeclared"
+	RuleForeignIDConflict = "foreign_id_conflict"
 )
 
 // Failure es un fallo tipado: la regla incumplida, el requisito o la unidad que la
@@ -48,9 +46,14 @@ type Failure struct {
 
 // CheckReport es el informe de `axiom archive adopt check`.
 type CheckReport struct {
-	Change   string    `json:"change"`
-	Passed   bool      `json:"passed"`
-	Failures []Failure `json:"failures"`
+	Change string `json:"change"`
+	// IDPattern es la plantilla del patrón efectivo con el que se mide el cambio e
+	// IDPatternDeclared dice si el proyecto la declara en axiom.yaml (`sdd.id_pattern`) o es
+	// el patrón por defecto.
+	IDPattern         string    `json:"id_pattern"`
+	IDPatternDeclared bool      `json:"id_pattern_declared"`
+	Passed            bool      `json:"passed"`
+	Failures          []Failure `json:"failures"`
 }
 
 var scenarioHeading = regexp.MustCompile(`^####[ \t]+Scenario:`)
@@ -61,20 +64,24 @@ var fenceLine = regexp.MustCompile("^ {0,3}(```+|~~~+)")
 type addedRequirement struct {
 	req  openspecdoc.Requirement
 	file string // specs/<capacidad>/spec.md, relativo a la carpeta del cambio
+	id   string // identificador definitivo del título, "" si no lleva uno válido
+	prov string // token provisional compatible del título, "" si no lleva uno
 }
 
 // Check verifica de forma determinista, sin modelo y sin escribir, el cambio de adopción
-// de loc: formato, unicidad, serie, escenarios, procedencia, cobertura del inventario y
-// motivos de los descartes (REQ-30.11 y REQ-30.12). No decide nada de la compuerta
-// `spec` ni juzga la fidelidad semántica de la migración (REQ-30.13).
-func Check(loc workspace.Location, change string) (CheckReport, error) {
+// de loc con el patrón de identificadores efectivo del proyecto (el declarado en
+// `sdd.id_pattern` o el defecto): formato, unicidad por serie y número, escenarios,
+// procedencia, cobertura del inventario y motivos de los descartes (REQ-30.11 y
+// REQ-30.12). No decide nada de la compuerta `spec` ni juzga la fidelidad semántica de la
+// migración (REQ-30.13).
+func Check(loc workspace.Location, change string, pattern reqid.Pattern) (CheckReport, error) {
 	changeRoot := filepath.Join(loc.PlanningHome, "changes", change)
 	if info, err := os.Stat(changeRoot); err != nil || !info.IsDir() {
 		return CheckReport{}, fmt.Errorf("no existe el cambio activo %q en %s; comprueba el nombre con `axiom sdd status --cwd %s`",
 			change, pathquote.Quote(filepath.Join(loc.PlanningHome, "changes")), pathquote.Quote(loc.WorkspaceRoot))
 	}
 	scanCommand := fmt.Sprintf("axiom archive adopt scan --change %s", pathquote.ShellWord(change))
-	c := &checker{loc: loc, change: change, changeRoot: changeRoot, scanCommand: scanCommand}
+	c := &checker{loc: loc, change: change, changeRoot: changeRoot, scanCommand: scanCommand, pattern: pattern}
 
 	if err := c.loadDeltas(); err != nil {
 		return CheckReport{}, err
@@ -84,13 +91,21 @@ func Check(loc workspace.Location, change string) (CheckReport, error) {
 	}
 	c.checkScenarios()
 	covered := c.checkOrigins()
+	c.loadInventory()
+	c.checkOriginIDs()
 	discards, err := adoption.ReadDiscards(changeRoot)
 	if err != nil {
 		return CheckReport{}, err
 	}
 	c.checkCoverage(covered, discards)
+	c.checkProjectIDs(discards)
 
-	report := CheckReport{Change: change, Failures: c.failures}
+	report := CheckReport{
+		Change:            change,
+		IDPattern:         pattern.Template(),
+		IDPatternDeclared: loc.Declarations.SDD != nil && loc.Declarations.SDD.IDPattern != nil,
+		Failures:          c.failures,
+	}
 	if report.Failures == nil {
 		report.Failures = []Failure{}
 	}
@@ -103,9 +118,13 @@ type checker struct {
 	change      string
 	changeRoot  string
 	scanCommand string
+	pattern     reqid.Pattern
 	added       []addedRequirement
 	failures    []Failure
 	units       map[string]map[string]bool // ruta → anclas existentes (nil si no se puede resolver)
+	inv         *adoption.Inventory        // inventario guardado, leído una sola vez (nil si no se lee)
+	invErr      error
+	invUnits    map[string]adoption.Unit // <ruta>#<ancla> → unidad del inventario
 }
 
 func (c *checker) fail(rule, subject, format string, args ...any) {
@@ -149,10 +168,9 @@ func (c *checker) loadDeltas() error {
 				"el encabezado `%s` no es una sección de delta; un cambio de adopción solo admite `## ADDED Requirements`", heading)
 		}
 		for _, r := range delta.Added {
-			if legacy.InTitle(r.Name) == "" {
-				c.fail(RuleFormat, r.Name, "el título del requisito (%s, línea %d) no lleva un identificador `(%s)`; añádelo al título", rel, r.Line, legacy.Compact())
-			}
-			c.added = append(c.added, addedRequirement{req: r, file: rel})
+			a := addedRequirement{req: r, file: rel}
+			a.id, a.prov = c.classifyTitle(a)
+			c.added = append(c.added, a)
 		}
 	}
 	if !found {
@@ -161,73 +179,111 @@ func (c *checker) loadDeltas() error {
 	return nil
 }
 
-// checkIdentifiers aplica las reglas de unicidad (REQ-30.11 b) y de serie (REQ-30.12).
+// lastParen extrae el último "(…)" de un título, sin los paréntesis.
+var lastParen = regexp.MustCompile(`\(([^()]*)\)`)
+
+// classifyTitle aplica la regla de formato (REQ-30.10 y REQ-30.11 a) al título de un
+// requisito ADDED y devuelve su identificador definitivo o su provisional compatible con
+// el patrón efectivo; ambos vacíos si el título incumple (el fallo ya consta).
+func (c *checker) classifyTitle(a addedRequirement) (id, prov string) {
+	name := a.req.Name
+	id = c.pattern.InTitle(name)
+	token, hasProv := reqid.ProvisionalInTitle(name)
+	switch {
+	case id != "" && hasProv:
+		c.fail(RuleFormat, name, "el título del requisito (%s, línea %d) lleva un identificador `(%s)` y un provisional `(%s)` a la vez, lo que es ambiguo; deja solo uno", a.file, a.req.Line, id, token)
+		return "", ""
+	case id != "":
+		return id, ""
+	case hasProv:
+		if _, err := c.pattern.ParseProvisional(token); err != nil {
+			code, reason := "provisional_invalid", err.Error()
+			var perr *reqid.ProvisionalError
+			if errors.As(err, &perr) {
+				code, reason = perr.Code, perr.Reason
+			}
+			c.fail(RuleFormat, name, "el provisional `(%s)` del título (%s, línea %d) no es compatible con el patrón `%s`: %s (código %s); escríbelo como %s",
+				token, a.file, a.req.Line, c.pattern.Template(), reason, code, reqid.ProvisionalText("<clave>", "<ordinal>"))
+			return "", ""
+		}
+		return "", token
+	}
+	found := ""
+	if ms := lastParen.FindAllStringSubmatch(name, -1); len(ms) > 0 {
+		found = fmt.Sprintf(" (el último paréntesis, `(%s)`, no es un identificador del patrón)", ms[len(ms)-1][1])
+	}
+	c.fail(RuleFormat, name, "el título del requisito (%s, línea %d) no lleva un identificador `(%s)` del patrón efectivo ni un provisional `(%s)`%s; añade uno al título",
+		a.file, a.req.Line, c.pattern.Compact(), reqid.ProvisionalText("<clave>", "<ordinal>"), found)
+	return "", ""
+}
+
+// identityKey es la identidad de un identificador definitivo: serie y número del patrón.
+type identityKey struct {
+	series reqid.Series
+	number int
+}
+
+// checkIdentifiers aplica la unicidad (REQ-30.11 b): dentro del cambio por serie y número,
+// los provisionales por token y contra el registro de specs y cambios activos con
+// LookupIdentity.
 func (c *checker) checkIdentifiers() error {
-	byID := map[string][]addedRequirement{}
-	var ids []string
-	seriesSet := map[reqid.Series]bool{}
+	byKey := map[identityKey][]addedRequirement{}
+	var keys []identityKey
+	byToken := map[string][]addedRequirement{}
+	var tokens []string
 	for _, a := range c.added {
-		id := legacy.InTitle(a.req.Name)
-		if id == "" {
-			continue
-		}
-		if len(byID[id]) == 0 {
-			ids = append(ids, id)
-		}
-		byID[id] = append(byID[id], a)
-		if series, ok := legacy.Series(id); ok {
-			seriesSet[series] = true
+		switch {
+		case a.id != "":
+			series, ok := c.pattern.Series(a.id)
+			number, okN := c.pattern.Number(a.id)
+			if !ok || !okN {
+				continue
+			}
+			key := identityKey{series: series, number: number}
+			if len(byKey[key]) == 0 {
+				keys = append(keys, key)
+			}
+			byKey[key] = append(byKey[key], a)
+		case a.prov != "":
+			if len(byToken[a.prov]) == 0 {
+				tokens = append(tokens, a.prov)
+			}
+			byToken[a.prov] = append(byToken[a.prov], a)
 		}
 	}
 
-	all, err := livespec.LoadRegistry(c.loc.PlanningHome, livespec.RegistryOptions{ExcludeChange: c.change})
+	all, err := livespec.LoadRegistry(c.loc.PlanningHome, livespec.RegistryOptions{ExcludeChange: c.change, Pattern: c.pattern})
 	if err != nil {
 		return err
 	}
-	for _, id := range ids {
-		if list := byID[id]; len(list) > 1 {
-			var where []string
+	where := func(list []addedRequirement) string {
+		parts := make([]string, len(list))
+		for i, a := range list {
+			parts[i] = fmt.Sprintf("«%s» (%s, línea %d)", a.req.Name, a.file, a.req.Line)
+		}
+		return strings.Join(parts, " y ")
+	}
+	for _, key := range keys {
+		list := byKey[key]
+		first := list[0].id
+		if len(list) > 1 {
+			same := true
 			for _, a := range list {
-				where = append(where, fmt.Sprintf("«%s» (%s, línea %d)", a.req.Name, a.file, a.req.Line))
+				same = same && a.id == first
 			}
-			c.fail(RuleUniqueness, id, "el identificador se repite dentro del cambio: %s; asigna un identificador distinto a cada requisito", strings.Join(where, " y "))
+			if same {
+				c.fail(RuleUniqueness, first, "el identificador se repite dentro del cambio: %s; asigna un identificador distinto a cada requisito o, si fusiona unidades del cliente, usa un provisional para uno de ellos", where(list))
+			} else {
+				c.fail(RuleUniqueness, first, "dos requisitos comparten serie y número (serie `%s`, número %d): %s; asigna un número distinto a cada requisito", key.series.String(), key.number, where(list))
+			}
 		}
-		for _, ref := range all.Lookup(id) {
-			c.fail(RuleUniqueness, id, "el identificador ya existe en %s (%s); elige un número libre de la serie, por ejemplo con el siguiente de `openspec/specs/`", ref.Where(), filepath.ToSlash(ref.Path))
+		for _, ref := range all.LookupIdentity(first) {
+			c.fail(RuleUniqueness, first, "el identificador ya existe en %s (%s); elige un número libre de la serie, por ejemplo con el siguiente de `openspec/specs/`", ref.Where(), filepath.ToSlash(ref.Path))
 		}
 	}
-
-	var series []reqid.Series
-	for s := range seriesSet {
-		series = append(series, s)
-	}
-	sort.Slice(series, func(i, j int) bool { return series[i].Compare(series[j]) < 0 })
-	if len(series) > 1 {
-		names := make([]string, len(series))
-		for i, s := range series {
-			names[i] = s.Key()
-		}
-		c.fail(RuleSeries, "series", "el cambio mezcla las series %s; usa una única serie `%s` nueva para todo el proyecto migrado", strings.Join(names, " y "), legacy.SeriesCompact())
-	}
-	if len(series) > 0 {
-		specs, err := livespec.LoadRegistry(c.loc.PlanningHome, livespec.RegistryOptions{SpecsOnly: true})
-		if err != nil {
-			return err
-		}
-		for _, s := range series {
-			caps := map[string]bool{}
-			for _, ref := range specs.SeriesRefs(s) {
-				caps[ref.Capability] = true
-			}
-			if len(caps) == 0 {
-				continue
-			}
-			var names []string
-			for name := range caps {
-				names = append(names, "la capacidad "+name)
-			}
-			sort.Strings(names)
-			c.fail(RuleSeries, fmt.Sprintf("serie %s", s.Key()), "la serie ya existe en openspec/specs/ (%s); elige un número de serie que no se use", strings.Join(names, ", "))
+	for _, token := range tokens {
+		if list := byToken[token]; len(list) > 1 {
+			c.fail(RuleUniqueness, token, "el provisional se repite dentro del cambio: %s; usa un ordinal distinto en cada requisito", where(list))
 		}
 	}
 	return nil
@@ -341,7 +397,11 @@ func (c *checker) checkCoverage(origins map[string]bool, discards []adoption.Dis
 		}
 	}
 
-	inv, err := adoption.ReadInventory(c.changeRoot)
+	err := c.invErr
+	inv := adoption.Inventory{}
+	if c.inv != nil {
+		inv = *c.inv
+	}
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		c.fail(RuleInventoryMissing, adoption.InventoryFileName, "el cambio no tiene inventario de adopción; genéralo con `%s`", c.scanCommand)

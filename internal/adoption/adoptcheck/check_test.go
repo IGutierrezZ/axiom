@@ -9,6 +9,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -19,7 +20,7 @@ const (
 
 ## ADDED Requirements
 
-### Requirement: Alta de usuario (REQ-40.1)
+### Requirement: Alta de usuario (RF-001)
 
 El sistema DEBE permitir el alta de un usuario.
 
@@ -30,7 +31,7 @@ Origen: docs/requisitos.md#rf-001-alta-de-usuario (RF-001)
 - **CUANDO** se da de alta
 - **ENTONCES** queda registrado
 
-### Requirement: Baja de usuario (REQ-40.2)
+### Requirement: Baja de usuario (RF-002)
 
 El sistema DEBE permitir la baja de un usuario.
 
@@ -47,6 +48,7 @@ Origen: docs/requisitos.md#rf-002-baja-de-usuario (RF-002)
 type checkFixture struct {
 	loc        workspace.Location
 	changeRoot string
+	pattern    reqid.Pattern
 }
 
 // newCheckFixture crea un workspace con docs/requisitos.md, su inventario y un cambio de
@@ -59,6 +61,7 @@ func newCheckFixture(t *testing.T) *checkFixture {
 		loc:        workspace.Location{WorkspaceRoot: root, PlanningHome: filepath.Join(root, "openspec")},
 		changeRoot: filepath.Join(root, "openspec", "changes", checkChange),
 	}
+	withDeclaredPattern(t, f, "RF-<NNN>")
 	f.writeInventory(t)
 	f.write(t, "specs/proyecto/spec.md", validDelta)
 	f.write(t, adoption.DiscardsFileName, validDiscards)
@@ -82,7 +85,7 @@ func (f *checkFixture) writeInventory(t *testing.T) {
 
 func (f *checkFixture) check(t *testing.T) CheckReport {
 	t.Helper()
-	report, err := Check(f.loc, checkChange)
+	report, err := Check(f.loc, checkChange, f.pattern)
 	if err != nil {
 		t.Fatalf("Check: %v", err)
 	}
@@ -127,7 +130,7 @@ func TestCheck_UnCambioValidoPasa(t *testing.T) {
 
 func TestCheck_UnModifiedSeRechaza(t *testing.T) {
 	f := newCheckFixture(t)
-	f.write(t, "specs/proyecto/spec.md", validDelta+"\n## MODIFIED Requirements\n\n### Requirement: Otro (REQ-40.3)\n\nTexto.\n\nOrigen: docs/requisitos.md#requisitos (RF-1)\n\n#### Scenario: x\n- **DADO** a\n")
+	f.write(t, "specs/proyecto/spec.md", validDelta+"\n## MODIFIED Requirements\n\n### Requirement: Otro (RF-003)\n\nTexto.\n\nOrigen: docs/requisitos.md#requisitos (RF-1)\n\n#### Scenario: x\n- **DADO** a\n")
 	report := f.check(t)
 	if report.Passed {
 		t.Fatal("un MODIFIED no debe pasar")
@@ -144,9 +147,9 @@ func TestCheck_EncabezadoDeNivel2DesconocidoSeRechaza(t *testing.T) {
 
 func TestCheck_RequisitoSinIdentificadorEnElTitulo(t *testing.T) {
 	f := newCheckFixture(t)
-	f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "Alta de usuario (REQ-40.1)", "Alta de usuario", 1))
+	f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "Alta de usuario (RF-001)", "Alta de usuario", 1))
 	report := f.check(t)
-	requireFailure(t, report, RuleFormat, "Alta de usuario", "(REQ-n.m)")
+	requireFailure(t, report, RuleFormat, "Alta de usuario", "(RF-NNN)")
 }
 
 func TestCheck_CambioSinDelta(t *testing.T) {
@@ -160,52 +163,53 @@ func TestCheck_CambioSinDelta(t *testing.T) {
 
 func TestCheck_IdentificadorDuplicadoEnElCambio(t *testing.T) {
 	f := newCheckFixture(t)
-	f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "(REQ-40.2)", "(REQ-40.1)", 1))
+	f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "(RF-002)", "(RF-001)", 1))
 	report := f.check(t)
-	requireFailure(t, report, RuleUniqueness, "REQ-40.1", "Baja de usuario")
+	requireFailure(t, report, RuleUniqueness, "RF-001", "Baja de usuario")
 }
 
 func TestCheck_IdentificadorQueYaEstaEnLasSpecs(t *testing.T) {
 	f := newCheckFixture(t)
 	writeTree(t, f.loc.PlanningHome, map[string]string{
-		"specs/viejo/spec.md": "# Especificación: viejo\n\n## Requirements\n\n### Requirement: Algo (REQ-40.1)\n\nTexto.\n",
+		"specs/viejo/spec.md": "# Especificación: viejo\n\n## Requirements\n\n### Requirement: Algo (RF-001)\n\nTexto.\n",
 	})
 	report := f.check(t)
-	requireFailure(t, report, RuleUniqueness, "REQ-40.1", "la capacidad viejo")
+	requireFailure(t, report, RuleUniqueness, "RF-001", "la capacidad viejo")
 }
 
 func TestCheck_ColisionConOtroCambioActivo(t *testing.T) {
 	f := newCheckFixture(t)
 	writeTree(t, f.loc.PlanningHome, map[string]string{
-		"changes/otro/specs/cap/spec.md": "## ADDED Requirements\n\n### Requirement: Algo (REQ-40.2)\n\nTexto.\n",
+		"changes/otro/specs/cap/spec.md": "## ADDED Requirements\n\n### Requirement: Algo (RF-002)\n\nTexto.\n",
 	})
 	report := f.check(t)
-	requireFailure(t, report, RuleUniqueness, "REQ-40.2", "el cambio activo otro")
+	requireFailure(t, report, RuleUniqueness, "RF-002", "el cambio activo otro")
 }
 
-func TestCheck_MezclaDeSeries(t *testing.T) {
+// REQ-30.12 (C-03-c): ya no hay regla de serie. Un cambio puede mezclar series y usar una
+// serie que ya existe en las specs; solo cuentan el formato y la unicidad por serie y número.
+func TestCheck_YaNoHayReglaDeSerie(t *testing.T) {
 	f := newCheckFixture(t)
-	f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "(REQ-40.2)", "(REQ-41.1)", 1))
-	report := f.check(t)
-	requireFailure(t, report, RuleSeries, "40", "41")
-}
-
-func TestCheck_SerieYaExistenteEnLasSpecs(t *testing.T) {
-	f := newCheckFixture(t)
+	withDeclaredPattern(t, f, "RF-<DOM>-<NN>")
+	f.write(t, "specs/proyecto/spec.md", strings.ReplaceAll(strings.ReplaceAll(validDelta, "(RF-001)", "(RF-USU-01)"), "(RF-002)", "(RF-FAC-01)"))
 	writeTree(t, f.loc.PlanningHome, map[string]string{
-		"specs/vieja/spec.md": "# Especificación: vieja\n\n## Requirements\n\n### Requirement: Algo (REQ-40.77)\n\nTexto.\n",
+		"specs/vieja/spec.md": "# Especificación: vieja\n\n## Requirements\n\n### Requirement: Algo (RF-USU-77)\n\nTexto.\n",
 	})
 	report := f.check(t)
-	requireFailure(t, report, RuleSeries, "serie 40", "la capacidad vieja")
+	for _, f := range report.Failures {
+		if f.Rule == RuleFormat || f.Rule == RuleUniqueness || f.Rule == "series" {
+			t.Fatalf("mezclar series o reutilizar una existente no es un fallo: %+v", report.Failures)
+		}
+	}
 }
 
 func TestCheck_UnaSolaSerieNuevaNoFalla(t *testing.T) {
 	f := newCheckFixture(t)
 	writeTree(t, f.loc.PlanningHome, map[string]string{
-		"specs/otra/spec.md": "# Especificación: otra\n\n## Requirements\n\n### Requirement: Algo (REQ-28.1)\n\nTexto.\n",
+		"specs/otra/spec.md": "# Especificación: otra\n\n## Requirements\n\n### Requirement: Algo (RF-028)\n\nTexto.\n",
 	})
-	if got := failuresOf(f.check(t), RuleSeries); len(got) != 0 {
-		t.Fatalf("no debería haber fallos de serie: %+v", got)
+	if got := failuresOf(f.check(t), RuleUniqueness); len(got) != 0 {
+		t.Fatalf("no debería haber fallos de unicidad: %+v", got)
 	}
 }
 
@@ -325,7 +329,7 @@ func TestCheck_NoEscribeNada(t *testing.T) {
 
 func TestCheck_CambioInexistente(t *testing.T) {
 	f := newCheckFixture(t)
-	if _, err := Check(f.loc, "no-existe"); err == nil || !strings.Contains(err.Error(), "no-existe") {
+	if _, err := Check(f.loc, "no-existe", f.pattern); err == nil || !strings.Contains(err.Error(), "no-existe") {
 		t.Fatalf("esperaba un error que nombre el cambio, got %v", err)
 	}
 }
@@ -348,8 +352,126 @@ func TestCheck_ElOrigenSeConservaTalCualEnLaDelta(t *testing.T) {
 		}
 	}
 	for _, r := range openspecdoc.ParseCanonical(composed) {
-		if strings.Contains(r.Name, "RF-") {
-			t.Errorf("el identificador funcional no es la identidad del requisito: %q", r.Name)
+		if !strings.Contains(r.Name, "(RF-00") && !strings.Contains(r.Name, "(REQ-40.9)") {
+			t.Errorf("la identidad conservada del requisito es el ID del cliente: %q", r.Name)
 		}
 	}
+}
+
+// REQ-30.9: `proposed_id_pattern` no altera la obsolescencia del inventario (solo cuenta
+// el SHA-256 de cada origen) ni el resumen, y editar axiom.yaml tampoco la altera.
+func TestCheck_ElPatronPropuestoNoAlteraLaObsolescencia(t *testing.T) {
+	f := newCheckFixture(t)
+	inv := mustScan(t, f.loc.WorkspaceRoot)
+	if inv.ProposedIDPattern == nil {
+		t.Fatal("el inventario del fixture debería llevar la propuesta")
+	}
+	withField := f.check(t)
+	sumWith := adoption.Summarize(inv)
+
+	stripped := inv
+	stripped.ProposedIDPattern = nil
+	data, err := stripped.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.write(t, adoption.InventoryFileName, string(data))
+	writeTree(t, f.loc.WorkspaceRoot, map[string]string{"axiom.yaml": "sdd:\n  id_pattern: \"RF-<NNN>\"\n"})
+	withoutField := f.check(t)
+
+	if !reflect.DeepEqual(withField, withoutField) {
+		t.Fatalf("el campo no debe alterar el resultado:\ncon: %+v\nsin: %+v", withField, withoutField)
+	}
+	if got := failuresOf(withoutField, RuleInventoryStale); len(got) != 0 {
+		t.Fatalf("no debería haber obsolescencia: %+v", got)
+	}
+	if !reflect.DeepEqual(sumWith, adoption.Summarize(stripped)) {
+		t.Fatal("Summarize no debe depender del campo")
+	}
+}
+
+// REQ-30.10 y REQ-30.11: formato del título (D4): definitivo, provisional compatible o rechazo.
+func TestCheck_FormatoDelTitulo(t *testing.T) {
+	retitle := func(from, to string) string { return strings.Replace(validDelta, "Alta de usuario (RF-001)", to, 1) }
+	cases := []struct {
+		name     string
+		pattern  string
+		title    string
+		wantFail []string // subcadenas del fallo `format`; vacío = sin fallo
+	}{
+		{"definitivo válido", "RF-<NNN>", "Alta de usuario (RF-001)", nil},
+		{"provisional compatible con serie fija", "RF-<NNN>", "Alta de usuario (prov::1)", nil},
+		{"provisional con dominio", "RF-<DOM>-<NN>", "Alta de usuario (prov:USU:1)", nil},
+		{"provisional por defecto con serie", "", "Alta de usuario (prov:40:1)", nil},
+		{"provisional por defecto con etiqueta", "", "Alta de usuario (prov:nueva:1)", nil},
+		{"provisional incompatible", "RF-<NNN>", "Alta de usuario (prov:40:1)", []string{"Alta de usuario", "provisional_malformed"}},
+		{"etiqueta sin serie nueva", "RF-<NNN>", "Alta de usuario (prov:nueva:1)", []string{"Alta de usuario", reqid.CodeProvisionalNewSeriesUnsupported}},
+		{"sin identificador", "RF-<NNN>", "Alta de usuario (algo)", []string{"Alta de usuario", "(algo)", "RF-NNN", reqid.ProvisionalText("<clave>", "<ordinal>")}},
+		{"definitivo y provisional", "RF-<NNN>", "Alta de usuario (RF-009) (prov::1)", []string{"Alta de usuario", "ambiguo"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newCheckFixture(t)
+			if tc.pattern == "" {
+				withoutDeclaredPattern(f)
+			} else {
+				withDeclaredPattern(t, f, tc.pattern)
+			}
+			f.write(t, "specs/proyecto/spec.md", retitle("", tc.title))
+			// Solo se evalúa el primer requisito: el segundo conserva su (RF-002) de fixture.
+			report := f.check(t)
+			var got []Failure
+			for _, fl := range failuresOf(report, RuleFormat) {
+				if strings.HasPrefix(fl.Subject, "Alta de usuario") {
+					got = append(got, fl)
+				}
+			}
+			if len(tc.wantFail) == 0 {
+				if len(got) != 0 {
+					t.Fatalf("no debería haber fallos de formato: %+v", got)
+				}
+				return
+			}
+			requireFailure(t, report, RuleFormat, tc.wantFail...)
+		})
+	}
+}
+
+// REQ-30.11 y REQ-30.12: unicidad por serie y número (D4).
+func TestCheck_UnicidadPorClave(t *testing.T) {
+	t.Run("misma clave con distinto ancho", func(t *testing.T) {
+		f := newCheckFixture(t)
+		withDeclaredPattern(t, f, "RF-<m>")
+		f.write(t, "specs/proyecto/spec.md", strings.Replace(strings.Replace(validDelta, "(RF-001)", "(RF-1)", 1), "(RF-002)", "(RF-001)", 1))
+		requireFailure(t, f.check(t), RuleUniqueness, "Alta de usuario", "Baja de usuario", "serie `RF-*`, número 1")
+	})
+	t.Run("mismo ID conservado en dos requisitos", func(t *testing.T) {
+		f := newCheckFixture(t)
+		f.write(t, "specs/proyecto/spec.md", strings.Replace(validDelta, "(RF-002)", "(RF-001)", 1))
+		requireFailure(t, f.check(t), RuleUniqueness, "RF-001", "Baja de usuario", "provisional")
+	})
+	t.Run("mismo provisional", func(t *testing.T) {
+		f := newCheckFixture(t)
+		f.write(t, "specs/proyecto/spec.md", strings.Replace(strings.Replace(validDelta, "(RF-001)", "(prov::1)", 1), "(RF-002)", "(prov::1)", 1))
+		requireFailure(t, f.check(t), RuleUniqueness, "prov::1", "Baja de usuario")
+	})
+	t.Run("contra el registro", func(t *testing.T) {
+		f := newCheckFixture(t)
+		writeTree(t, f.loc.PlanningHome, map[string]string{
+			"specs/viva/spec.md": "# Especificación: viva\n\n## Requirements\n\n### Requirement: Algo (RF-001)\n\nTexto.\n",
+		})
+		report := f.check(t)
+		requireFailure(t, report, RuleUniqueness, "RF-001", "la capacidad viva")
+		if got := failuresOf(report, RuleUniqueness); len(got) != 1 {
+			t.Fatalf("solo choca RF-001; RF-002 está libre: %+v", got)
+		}
+	})
+	t.Run("con RF-<m> el registro encuentra RF-1", func(t *testing.T) {
+		f := newCheckFixture(t)
+		withDeclaredPattern(t, f, "RF-<m>")
+		writeTree(t, f.loc.PlanningHome, map[string]string{
+			"specs/viva/spec.md": "# Especificación: viva\n\n## Requirements\n\n### Requirement: Algo (RF-1)\n\nTexto.\n",
+		})
+		requireFailure(t, f.check(t), RuleUniqueness, "la capacidad viva")
+	})
 }

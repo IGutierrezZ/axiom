@@ -131,16 +131,27 @@ func TestSDDArchiveComposeUsesTheWorkspacePattern(t *testing.T) {
 	}
 }
 
-// REQ-30.31 y REQ-44.4: `archive adopt` no cambia con un patrón declarado y su ayuda es la de
-// siempre, sin literal de forma fijo en el texto.
-func TestArchiveAdoptHelpIsUnchangedByTheDeclaredPattern(t *testing.T) {
+// REQ-30.9, REQ-30.11 y REQ-44.4: la ayuda de `archive adopt` describe el patrón declarado, la
+// conservación del ID del cliente y la propuesta del escaneo, sin literal de forma fijo.
+func TestArchiveAdoptHelpDescribesTheDeclaredPattern(t *testing.T) {
 	var out bytes.Buffer
 	if err := RunArchiveAdopt([]string{"--help"}, &out); err != nil {
 		t.Fatal(err)
 	}
-	want := "Verifica el cambio de adopción sin escribir ni registrar compuertas: solo ADDED, (REQ-n.m) únicos de una serie nueva, escenarios, Origen: que resuelven"
-	if !strings.Contains(out.String(), want) {
-		t.Errorf("la ayuda debe conservar la frase de siempre:\n%s", out.String())
+	for _, want := range []string{
+		"un identificador del patrón declarado (sdd.id_pattern; sin declaración, (REQ-n.m))",
+		"o un provisional (prov:<clave>:<ordinal>)",
+		"el ID del cliente conservado (origin_id)", "el patrón declarado (pattern_undeclared)",
+		"propone el patrón de identificadores (sdd.id_pattern), sin escribir axiom.yaml",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("la ayuda debe contener %q:\n%s", want, out.String())
+		}
+	}
+	for _, gone := range []string{"de una serie nueva", "C-03-c"} {
+		if strings.Contains(out.String(), gone) {
+			t.Errorf("la ayuda ya no debe contener %q:\n%s", gone, out.String())
+		}
 	}
 
 	var integrate bytes.Buffer

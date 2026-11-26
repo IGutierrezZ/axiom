@@ -36,6 +36,10 @@ type Inventory struct {
 	Sources           []Source           `yaml:"sources" json:"sources"`
 	ContextCandidates []ContextCandidate `yaml:"context_candidates" json:"context_candidates"`
 	Warnings          []string           `yaml:"warnings" json:"warnings"`
+	// ProposedIDPattern es el patrón de identificadores que el escaneo propone a partir de
+	// los identificadores propios de las unidades; nil si no hay ninguno. No entra en
+	// Summarize ni en la obsolescencia del inventario (REQ-30.9).
+	ProposedIDPattern *PatternProposal `yaml:"proposed_id_pattern,omitempty" json:"proposed_id_pattern,omitempty"`
 }
 
 // Source es un fichero de requisitos previos. Path va relativo al workspaceRoot y con `/`.
