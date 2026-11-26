@@ -35,7 +35,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · `internal/testenv`: `IsolateGit`, `RequireGit`, `Git`, `TryGit`, `RepoTemplate` y sus pruebas.
-- [x] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare` y `newMonorepo`, observador por repositorio y `t.Parallel()`.
+- [x] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare`, `newRepoWithRemote` y `newMonorepo`, y `t.Parallel()` (las que observan siguen en serie).
 - [x] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
 - [x] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
 - [x] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
@@ -70,8 +70,10 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 
 ## Progreso
 
-- Worktree creado; documento registrado.
+- T1 a T6 cerradas con su commit: `79126437`, `a8890ec1`, `59d4d19d`, `1bf86564`, `c12ec9d8` y `954e0329`.
+- `-race -shuffle=on`: paso temporal en `ci.yml` (grupos `rest` y `cli` de `Go Tests`), que se retira antes del merge. En Windows local se pasó `-shuffle=on` de cada paquete en verde; `dashboard`, además, con `-count=2`.
+- Comprobado en local: `go vet` y `go test` de `testenv`, `sddpublish`, `sddstatus`, `techcontext` y `dashboard`; en `cli`, las 190 pruebas con git y `-run 'Identity|Actor|Gitconfig|GitConfig|Home'`; en `assets`, las guardas de los workflows.
 
 ## Siguiente paso
 
-T1.
+T7: PR, CI con `-race` en verde, retirar el paso temporal y merge.
