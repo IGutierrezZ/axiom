@@ -2,7 +2,7 @@
 # Exact released SDK check; no lifecycle scripts, global install, or user config.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-fixture=$(mktemp -d "${TMPDIR:-/tmp}/gentle-ai-opencode-v2.XXXXXX")
+fixture=$(mktemp -d "${TMPDIR:-/tmp}/axiom-opencode-v2.XXXXXX")
 fixture=$(cd "$fixture" && pwd -P)
 trap 'rm -rf "$fixture"' EXIT
 node=$(command -v node)

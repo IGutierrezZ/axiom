@@ -26,7 +26,7 @@ import (
 
 // The fork renamed the binary and flattened the verb, so the shipped assets
 // spell the status invocation `axiom sdd status`. Upstream still ships
-// `gentle-ai sdd-status`, and absorbing it must not reopen this contract:
+// `axiom sdd-status`, and absorbing it must not reopen this contract:
 // either spelling satisfies it.
 func containsStatusContinuationInvocation(text string) bool {
 	return strings.Contains(text, "axiom sdd status [change] --cwd <repo> --json --instructions") ||
@@ -37,7 +37,7 @@ func containsStatusContinuationInvocation(text string) bool {
 func assertStatusContinuationContract(t *testing.T, content string) {
 	t.Helper()
 	if !containsStatusContinuationInvocation(content) {
-		t.Errorf("missing status/continuation contract invocation (neither `axiom sdd status` nor `gentle-ai sdd-status` spelling)")
+		t.Errorf("missing status/continuation contract invocation (neither `axiom sdd status` nor `axiom sdd-status` spelling)")
 	}
 	for _, want := range []string{
 		"every declared artifact store, including Engram", "native v2",
@@ -112,7 +112,7 @@ var sharedOrchestratorSectionNames = []string{
 	// INC-21 (design.md S4.7, H-2): the per-change kickoff questionnaire and
 	// the four block-review gates, plus their normative boundary against
 	// RDD (design.md S1.3). Registered here, in Phase 22, ahead of Phase
-	// 23 inserting the {{GENTLE_AI_SDD_SECTION:...}} marker into the
+	// 23 inserting the {{AXIOM_SDD_SECTION:...}} marker into the
 	// every per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
@@ -231,6 +231,22 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
 			t.Errorf("shared section %q canonical body lacks the SDD boundary or the parent spot check", name)
 		}
+		// C-08-j: the independent verifier is reserved for security-sensitive,
+		// executable or operational, and mode-changing changes, and verification
+		// stays on the touched packages; the full suite belongs to CI.
+		for _, want := range []string{
+			"security-sensitive, executable or operational, or mode-changing changes: writer self-verification plus an independent verifier.",
+			"Verification runs the checks of the touched packages or modules; the full suite belongs to CI.",
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("shared section %q lacks %q", name, want)
+			}
+		}
+		for _, stale := range []string{"or unclear changes", "treat it as the highest one"} {
+			if strings.Contains(body, stale) {
+				t.Errorf("shared section %q still carries the retired tier rule %q", name, stale)
+			}
+		}
 		for _, bad := range forbidden {
 			if strings.Contains(body, bad) {
 				t.Errorf("shared section %q still mentions %q", name, bad)
@@ -258,7 +274,7 @@ func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 		model.AgentCodex,
 		model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
-		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{GENTLE_AI_SDD_SECTION:") {
+		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{AXIOM_SDD_SECTION:") {
 			t.Errorf("%s kept a raw shared-section placeholder", agent)
 		}
 	}

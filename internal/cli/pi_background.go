@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
+	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
 // PiBackgroundSubagentsEnv is the environment source for the managed Pi
@@ -19,14 +21,12 @@ import (
 // already-installed pi-subagents extension reading a projected policy file.
 const (
 	PiBackgroundSubagentsAxiomEnv = "AXIOM_PI_BACKGROUND_SUBAGENTS"
-	// PiBackgroundSubagentsGentleAIEnv is the documented fallback read when the AXIOM_ variable is unset or empty.
-	PiBackgroundSubagentsGentleAIEnv = "GENTLE_AI_PI_BACKGROUND_SUBAGENTS"
 
 	PiBackgroundSubagentsEnv = PiBackgroundSubagentsAxiomEnv
 )
 
 func lookupPiBackgroundEnv() (string, bool) {
-	return lookupEnvWithGentleAIFallback(PiBackgroundSubagentsAxiomEnv, PiBackgroundSubagentsGentleAIEnv)
+	return system.LookupEnv(PiBackgroundSubagentsAxiomEnv)
 }
 
 // PiConfigHomeEnv overrides gentle-pi's config base directory (default
@@ -145,14 +145,20 @@ func resolvePiBackgroundCLI(set bool, raw string, persisted state.InstallState) 
 }
 
 // piBackgroundPolicyPath resolves the gentle-pi-readable policy location:
-// <base>/gentle-ai/background-subagents.json where base is
+// <base>/axiom/background-subagents.json where base is
 // GENTLE_PI_CONFIG_HOME when set, otherwise ~/.pi.
 func piBackgroundPolicyPath(homeDir string) string {
 	base := strings.TrimSpace(os.Getenv(PiConfigHomeEnv))
 	if base == "" {
 		base = filepath.Join(homeDir, ".pi")
 	}
-	return filepath.Join(base, "gentle-ai", "background-subagents.json")
+	return filepath.Join(base, "axiom", "background-subagents.json")
+}
+
+// legacyPiBackgroundPolicyPath es la ruta heredada <base>/gentle-ai/... del mismo
+// fichero. Solo la usa Apply para migrarlo a la ruta nueva.
+func legacyPiBackgroundPolicyPath(homeDir string) string {
+	return filepath.Join(filepath.Dir(filepath.Dir(piBackgroundPolicyPath(homeDir))), "gentle-ai", "background-subagents.json")
 }
 
 // piBackgroundProjectionPlan writes the RESOLVED effective on/off policy to
@@ -161,8 +167,9 @@ func piBackgroundPolicyPath(homeDir string) string {
 // file-only and snapshot/restore based, mirroring the shape of the OpenCode
 // activation plan minus all launcher plumbing.
 type piBackgroundProjectionPlan struct {
-	path   string
-	policy model.PiBackgroundIntent
+	path       string
+	legacyPath string
+	policy     model.PiBackgroundIntent
 
 	applied     bool
 	changed     bool
@@ -178,8 +185,9 @@ func preparePiBackgroundProjection(homeDir string, resolution *PiBackgroundResol
 		return nil
 	}
 	plan := &piBackgroundProjectionPlan{
-		path:   piBackgroundPolicyPath(homeDir),
-		policy: resolution.Effective,
+		path:       piBackgroundPolicyPath(homeDir),
+		legacyPath: legacyPiBackgroundPolicyPath(homeDir),
+		policy:     resolution.Effective,
 	}
 	resolution.projectionPlan = plan
 	return plan
@@ -189,6 +197,11 @@ func preparePiBackgroundProjection(homeDir string, resolution *PiBackgroundResol
 // A pre-existing file is only replaced when it carries the managed schema
 // marker; deactivation writes policy off instead of deleting user files.
 func (p *piBackgroundProjectionPlan) Apply() error {
+	if p.legacyPath != "" {
+		if _, err := legacyhome.MoveIfAbsent(p.legacyPath, p.path); err != nil {
+			return fmt.Errorf("migrate legacy Pi background policy: %w", err)
+		}
+	}
 	desired, err := json.MarshalIndent(map[string]string{
 		"schema": piBackgroundPolicySchema,
 		"policy": string(p.policy),

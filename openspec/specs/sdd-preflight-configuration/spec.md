@@ -478,7 +478,7 @@ Ni el almacén de artefactos ni la estrategia de entrega se preguntan en ninguna
 
 ### Requirement: Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados (REQ-28.16)
 
-El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de grupo>:`, con el id estable en minúsculas (`pace` para el único grupo requerido vigente) y el prefijo vigente `Axiom SDD preflight` o el heredado `Gentle AI SDD preflight`, ambos aceptados. Durante la transición, hasta que la persona ejecute `axiom sync`, el hook del runtime DEBE seguir aceptando los marcadores numerados heredados (`N/3`), con el mapeo posicional heredado 1 → `pace`, 2 → `artifacts` y 3 → `pr-strategy`; un cuestionario heredado puede mezclarse con marcadores nominales siempre que cada grupo requerido tenga exactamente un marcador. Las respuestas de los grupos heredados `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) DEBEN aceptarse e ignorarse: nunca determinan el almacén ni la estrategia de entrega del bloque derivado, y no se valida su contenido. Un grupo requerido con más de un marcador, o con ninguno, DEBE denegarse con una causa que nombre el grupo.
+El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de grupo>:`, con el id estable en minúsculas (`pace` para el único grupo requerido vigente) y el prefijo `Axiom SDD preflight`; el prefijo anterior `Gentle AI SDD preflight` ya no se acepta. Durante la transición, hasta que la persona ejecute `axiom sync`, el hook del runtime DEBE seguir aceptando los marcadores numerados heredados (`N/3`), con el mapeo posicional heredado 1 → `pace`, 2 → `artifacts` y 3 → `pr-strategy`; un cuestionario heredado puede mezclarse con marcadores nominales siempre que cada grupo requerido tenga exactamente un marcador. Las respuestas de los grupos heredados `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) DEBEN aceptarse e ignorarse: nunca determinan el almacén ni la estrategia de entrega del bloque derivado, y no se valida su contenido. Un grupo requerido con más de un marcador, o con ninguno, DEBE denegarse con una causa que nombre el grupo.
 (Previously: `pr-strategy` era un grupo requerido y solo `artifacts` era heredado; ahora ambos son heredados, tolerados e ignorados)
 
 #### Scenario: Marcador nominal aceptado con cualquiera de los dos prefijos
@@ -527,8 +527,7 @@ El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de g
 - **DADO** una llamada de la interacción de la preferencia de revisión independiente (REQ-28.14)
 - **CUANDO** el hook busca marcadores de grupo
 - **ENTONCES** no encuentra ninguno y la ignora
-
----
+(Previously: se aceptaban el prefijo `Axiom SDD preflight` y el heredado `Gentle AI SDD preflight`.)
 
 ### Requirement: El Hook Valida el Significado del Pre-Vuelo según la Topología, no su Presentación (REQ-28.17)
 

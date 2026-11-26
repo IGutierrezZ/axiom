@@ -11,13 +11,17 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 )
 
 const (
 	ManagedAgent       = "axiom-orchestrator"
 	LegacyManagedAgent = "gentle-orchestrator"
-	schema             = "gentle-ai.opencode-default-agent"
-	version            = 1
+	schema             = "axiom.opencode-default-agent"
+	// legacySchema es el nombre de los ficheros de propiedad ya escritos en disco;
+	// se acepta al leer y se reescribe con schema cuando se vuelva a escribir.
+	legacySchema = "gentle-ai.opencode-default-agent"
+	version      = 1
 )
 
 type ownership struct {
@@ -45,7 +49,18 @@ type UninstallPlan struct {
 }
 
 func OwnershipPath(settingsPath string) string {
-	return filepath.Join(filepath.Dir(settingsPath), ".gentle-ai-default-agent.json")
+	return filepath.Join(filepath.Dir(settingsPath), ".axiom-default-agent.json")
+}
+
+// migrateLegacyOwnership renombra el marcador heredado
+// `.gentle-ai-default-agent.json` a `.axiom-default-agent.json` si el nuevo no
+// existe. Existe solo para retirar el nombre heredado; nunca pisa.
+func migrateLegacyOwnership(settingsPath string) error {
+	legacy := filepath.Join(filepath.Dir(settingsPath), ".gentle-ai-default-agent.json")
+	if _, err := legacyhome.MoveIfAbsent(legacy, OwnershipPath(settingsPath)); err != nil {
+		return fmt.Errorf("migrate legacy default-agent ownership: %w", err)
+	}
+	return nil
 }
 
 // PrepareInstall prepara la escritura de default_agent en la configuración global:
@@ -62,6 +77,9 @@ func PrepareInstallPreservingJSONC(settingsPath string) (*InstallPlan, error) {
 }
 
 func prepareInstall(settingsPath string, preserveJSONC bool) (*InstallPlan, error) {
+	if err := migrateLegacyOwnership(settingsPath); err != nil {
+		return nil, err
+	}
 	root, _, exists, _, err := readSettings(settingsPath)
 	if err != nil {
 		return nil, err
@@ -107,6 +125,9 @@ func (p *InstallPlan) Apply() (bool, error) {
 	return changed, nil
 }
 func PrepareUninstall(settingsPath string) (*UninstallPlan, error) {
+	if err := migrateLegacyOwnership(settingsPath); err != nil {
+		return nil, err
+	}
 	_, _, exists, current, err := readSettings(settingsPath)
 	if err != nil {
 		return nil, err
@@ -194,7 +215,7 @@ func readOwnership(path string) (*ownership, error) {
 		return nil, fmt.Errorf("decode OpenCode default ownership %q: trailing data", path)
 	}
 	validPrevious := owned.PreviousState == "absent" && owned.PreviousDefault == "" || owned.PreviousState == "value"
-	if owned.Schema != schema || owned.Version != version || owned.State != "managed" || !validPrevious {
+	if (owned.Schema != schema && owned.Schema != legacySchema) || owned.Version != version || owned.State != "managed" || !validPrevious {
 		return nil, fmt.Errorf("invalid OpenCode default ownership %q", path)
 	}
 	return &owned, nil

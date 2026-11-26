@@ -299,7 +299,8 @@ La capacidad de subir una rama a un remoto DEBE vivir en un puerto de publicaci�
 
 ### Requirement: Publicación Automática en el Estilo `continuous` Solo con Autorización Sellada (REQ-27.13)
 
-En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publicar los documentos con `axiom sdd publish`, sin preguntar, exactamente en dos momentos: una vez al cerrar la fase `tasks` y una vez al archivar (REQ-27.14), y solo si `kickoff.yaml` registra la autorización de publicación del cambio (`docs_publication: auto`, REQ-27.4 de `sdd-lane-kickoff`). Un kickoff sin ese campo (incluidos los sellados antes de este cambio) NO DEBE publicar nada de forma automática: el orquestador DEBE ofrecer `axiom sdd publish --change <x>` como siguiente paso y esperar la decisión de la persona. En el estilo `continuous` NO DEBE existir ninguna parada adicional por la publicación (REQ-21.7 de `sdd-block-review-gates`). Una negativa de `publish` en este flujo es informativa: el orquestador la presenta y no interrumpe el encadenado de fases.
+En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publicar los documentos con `axiom sdd publish`, sin preguntar, exactamente en cuatro momentos: una vez al terminar la fase `spec`, una vez al terminar la fase `design`, una vez al cerrar la fase `tasks` y una vez al archivar (REQ-27.14), y solo si `kickoff.yaml` registra la autorización de publicación del cambio (`docs_publication: auto`, REQ-27.4 de `sdd-lane-kickoff`). Un kickoff sellado con `docs_publication: auto` antes de que existieran los momentos de `spec` y `design` los hereda sin volver a preguntar ni a sellar: la autorización sigue siendo publicar solo documentos. Un kickoff sin ese campo (incluidos los sellados antes de este cambio) NO DEBE publicar nada de forma automática: el orquestador DEBE ofrecer `axiom sdd publish --change <x>` como siguiente paso y esperar la decisión de la persona. En el estilo `continuous` NO DEBE existir ninguna parada adicional por la publicación (REQ-21.7 de `sdd-block-review-gates`). Una negativa de `publish` en este flujo es informativa: el orquestador la presenta y no interrumpe el encadenado de fases.
+(Previously: con la autorización sellada se publicaba solo en dos momentos, al cerrar `tasks` y al archivar)
 
 #### Scenario: Con autorización sellada se publica al cerrar `tasks`
 
@@ -321,10 +322,24 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 - **ENTONCES** no ejecuta `publish`
 - **Y** ofrece `axiom sdd publish --change <x>` como siguiente paso
 
-#### Scenario: No se publica entre otras fases
+#### Scenario: Con autorización sellada se publica al terminar `spec` y al terminar `design`
+
+- **DADO** un cambio `continuous` con `docs_publication: auto` y la fase `spec` o la fase `design` recién completada
+- **CUANDO** el orquestador cierra la fase
+- **ENTONCES** ejecuta `axiom sdd publish --change <x>` sin preguntar
+- **Y** continúa con la fase siguiente sin presentar ninguna parada
+
+#### Scenario: Un kickoff sellado antes hereda los momentos nuevos
+
+- **DADO** un cambio `continuous` sellado con `docs_publication: auto` antes de que se publicara tras `spec` y `design`
+- **CUANDO** el orquestador cierra la fase `spec`
+- **ENTONCES** ejecuta `axiom sdd publish --change <x>` sin preguntar
+- **Y** no vuelve a preguntar ni a sellar el kickoff
+
+#### Scenario: No se publica tras `apply`
 
 - **DADO** un cambio `continuous` con `docs_publication: auto`
-- **CUANDO** concluyen las fases `spec`, `design` o `apply`
+- **CUANDO** concluye la fase `apply`
 - **ENTONCES** el orquestador no ejecuta `publish`
 
 #### Scenario: Una negativa no interrumpe el encadenado
@@ -339,6 +354,7 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 - **DADO** un cambio `continuous` con `docs_publication: auto` y almacén `engram`
 - **CUANDO** el orquestador cierra la fase `tasks`
 - **ENTONCES** no ejecuta `publish`
+
 ### Requirement: `sdd publish --archive` Confirmado Emite `archive` (REQ-43.26)
 
 `axiom sdd publish --change <x> --archive` DEBE despachar el evento `archive` (REQ-43.6) cuando el resultado de la publicación NO es un rechazo, es decir, cuando el archivado queda confirmado. La operación DEBE encolarse de forma duradera en `.integrations-outbox.yaml` en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<x>/`, REQ-43.28), con la clave de idempotencia `archive/<cambio>/<carpeta archivada>` (REQ-43.7), e intentar la entrega inmediata acotada. Un resultado rechazado NO DEBE emitir. Sin `--archive`, NO DEBE emitir. La emisión NUNCA DEBE alterar el resultado, el código de salida ni la salida de `publish` (REQ-43.10), y NO DEBE impedir ni retrasar la publicación ya confirmada.

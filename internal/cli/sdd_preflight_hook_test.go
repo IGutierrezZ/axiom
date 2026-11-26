@@ -161,7 +161,7 @@ func TestSDDPreflightHookAllowsCorroboratedCanonicalPreflight(t *testing.T) {
 }
 
 // rewriteSDDPreflightTranscriptPrefix rewrites every preflight question and
-// answer key in the transcript to the given brand prefix ("Gentle AI" or
+// answer key in the transcript to the given brand prefix ("Axiom" or
 // "Axiom"), whichever brand the fixture constants currently use.
 func rewriteSDDPreflightTranscriptPrefix(t *testing.T, path, brand string) {
 	t.Helper()
@@ -176,12 +176,11 @@ func rewriteSDDPreflightTranscriptPrefix(t *testing.T, path, brand string) {
 	}
 }
 
-// TestSDDPreflightHookAcceptsLegacyAndAxiomPrefix pins that the hook accepts
-// the preflight under both the legacy "Gentle AI" prefix and the "Axiom"
-// prefix: installed plugins and agent instructions already on users' machines
-// keep asking with the legacy prefix until the next sync.
-func TestSDDPreflightHookAcceptsLegacyAndAxiomPrefix(t *testing.T) {
-	for _, brand := range []string{"Gentle AI", "Axiom"} {
+// TestSDDPreflightHookAcceptsTheAxiomPrefix pins that the hook accepts the
+// preflight under the "Axiom" prefix; the prefix of the previous product name
+// is covered by TestSDDPreflightHookRejectsThePrefixOfThePreviousName.
+func TestSDDPreflightHookAcceptsTheAxiomPrefix(t *testing.T) {
+	for _, brand := range []string{"Axiom"} {
 		t.Run(brand, func(t *testing.T) {
 			dir := t.TempDir()
 			sessionID := "sess-prefix"
@@ -218,10 +217,39 @@ func TestSDDPreflightHookAcceptsLegacyAndAxiomPrefix(t *testing.T) {
 	}
 }
 
+// TestSDDPreflightHookRejectsThePrefixOfThePreviousName pins that a preflight
+// asked under the retired "Gentle AI" prefix no longer creates authority.
+func TestSDDPreflightHookRejectsThePrefixOfThePreviousName(t *testing.T) {
+	dir := t.TempDir()
+	sessionID := "sess-retired-prefix"
+	transcript := writeSDDPreflightTranscript(t, dir, sessionID, []struct {
+		toolUseID  string
+		sidechain  bool
+		sessionID  string
+		answersRaw string
+		isError    bool
+	}{
+		{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+	})
+	rewriteSDDPreflightTranscriptPrefix(t, transcript, "Gentle AI")
+	pre := preToolUseAgentPayload(sessionID, transcript, "sdd-explore", "Explore the request", "")
+	out, err := runSDDPreflightHookTest(t, pre)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode output %q: %v", out, err)
+	}
+	if decision := got["hookSpecificOutput"].(map[string]any)["permissionDecision"]; decision != "deny" {
+		t.Fatalf("retired prefix: decision = %v, want deny", decision)
+	}
+}
+
 // TestSDDPreflightHookRejectsMalformedMarkerUnderEveryPrefix pins that the
 // per-question N/3 marker stays enforced under both accepted prefixes.
 func TestSDDPreflightHookRejectsMalformedMarkerUnderEveryPrefix(t *testing.T) {
-	for _, brand := range []string{"Gentle AI", "Axiom"} {
+	for _, brand := range []string{"Axiom"} {
 		t.Run(brand, func(t *testing.T) {
 			dir := t.TempDir()
 			sessionID := "sess-marker"

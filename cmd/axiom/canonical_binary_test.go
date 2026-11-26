@@ -43,7 +43,7 @@ func repositoryRoot(t *testing.T) string {
 // directory segment. A filepath.Join call outside the owning internal/backup
 // package must never spell either of them out as a literal argument
 // immediately followed by the "backups" state-subdirectory literal: doing so
-// bypasses backup.BackupRootFor/backup.LegacyBackupRootFor/backup.BackupRoots
+// bypasses backup.BackupRootFor/backup.BackupRoots
 // and reproduces the exact defect measured by design decisions D-03/D-04
 // (inc-20-upstream-reconciliation).
 var backupRootLiteralDirectories = map[string]bool{
@@ -84,7 +84,7 @@ const backupRootOwningPackageDir = "internal/backup"
 // subdirectory literal — via filepath.Join, string concatenation, an
 // fmt.Sprintf format string, or a single fully-spelled-out literal — instead
 // of resolving it through
-// backup.BackupRootFor/backup.LegacyBackupRootFor/backup.BackupRoots.
+// backup.BackupRootFor/backup.BackupRoots.
 //
 // Phase F0.a (inc-20-upstream-reconciliation) ran this guard for real,
 // scoped to the filepath.Join form only, and observed it fail, listing every
@@ -111,7 +111,7 @@ func TestUserStateRootsResolveThroughOwningPackage(t *testing.T) {
 	}
 
 	for _, violation := range violations {
-		t.Errorf("%s: production code outside %s must resolve the backup root through backup.BackupRootFor/backup.LegacyBackupRootFor/backup.BackupRoots, not the literal %q", violation.position, backupRootOwningPackageDir, violation.literal)
+		t.Errorf("%s: production code outside %s must resolve the backup root through backup.BackupRootFor/backup.BackupRoots, not the literal %q", violation.position, backupRootOwningPackageDir, violation.literal)
 	}
 }
 
@@ -268,7 +268,7 @@ type goreleaserConfig struct {
 // publishes a build whose main package is canonicalBinaryPath under the
 // "axiom" binary name [D-04, D-08]. Phase F0.a and F0.b ran this guard
 // before it existed; this phase (F0.c1) adds it RED (only
-// main: ./cmd/gentle-ai published) and turned it GREEN by splitting
+// main: ./cmd/axiom published) and turned it GREEN by splitting
 // .goreleaser.yaml's single build. The retired ./cmd/gentle-ai build has since
 // been removed, leaving the canonical build as the only one.
 func TestReleaseArtifactBuildsCanonicalBinary(t *testing.T) {

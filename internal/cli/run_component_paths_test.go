@@ -159,18 +159,18 @@ func TestComponentPathsPiPersonaUsesResolvedScopePath(t *testing.T) {
 	selection := model.Selection{}
 
 	global := componentPathsWithWorkspaceScoped(home, workspace, ScopeGlobal, selection, adapters, model.ComponentPersona)
-	if !containsPath(global, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
+	if !containsPath(global, filepath.Join(home, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("global Pi persona paths = %v, missing home-scoped config", global)
 	}
-	if containsPath(global, filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")) {
+	if containsPath(global, filepath.Join(workspace, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("global Pi persona paths = %v, includes active workspace config", global)
 	}
 
 	workspacePaths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, model.ComponentPersona)
-	if !containsPath(workspacePaths, filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")) {
+	if !containsPath(workspacePaths, filepath.Join(workspace, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("workspace Pi persona paths = %v, missing workspace-scoped config", workspacePaths)
 	}
-	if containsPath(workspacePaths, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
+	if containsPath(workspacePaths, filepath.Join(home, ".pi", "axiom", "persona.json")) {
 		t.Fatalf("workspace Pi persona paths = %v, unexpectedly contains home config", workspacePaths)
 	}
 }
@@ -203,11 +203,11 @@ func TestInstallPiPersonaWritesManagedScopePaths(t *testing.T) {
 				t.Fatalf("componentApplyStep.Run() error = %v", err)
 			}
 
-			want := filepath.Join(root, ".pi", "gentle-ai", "persona.json")
+			want := filepath.Join(root, ".pi", "axiom", "persona.json")
 			if _, err := os.Stat(want); err != nil {
 				t.Fatalf("Pi persona config %q was not written: %v", want, err)
 			}
-			unwanted := filepath.Join(other, ".pi", "gentle-ai", "persona.json")
+			unwanted := filepath.Join(other, ".pi", "axiom", "persona.json")
 			if _, err := os.Stat(unwanted); !os.IsNotExist(err) {
 				t.Fatalf("workspace-scoped Pi persona config %q was written outside scope; stat err = %v", unwanted, err)
 			}
@@ -509,7 +509,7 @@ func TestComponentPathsSDDCodexIncludesHooksJSONOnlyForCodex(t *testing.T) {
 }
 
 // TestComponentPathsPermissionsCodexContributesNoPaths pins that the
-// Permission component claims nothing under ~/.codex. gentle-ai does not write
+// Permission component claims nothing under ~/.codex. axiom does not write
 // Codex's permissions config — not a profile, and not the legacy cleanup that
 // used to strip one — so there is no injection target to verify and nothing to
 // snapshot for rollback. A path reappearing here would mean something started
@@ -946,7 +946,7 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 
 // TestAgentRoutingGuidanceStepRetiresPiManagedBlocks covers issue #3508: Pi
 // owns APPEND_SYSTEM.md, so routing never injects a new block but does remove
-// the paired stale block an older gentle-ai release wrote.
+// the paired stale block an older axiom release wrote.
 func TestAgentRoutingGuidanceStepRetiresPiManagedBlocks(t *testing.T) {
 	home := t.TempDir()
 	promptPath := systemPromptFileFor(t, home, model.AgentPi)

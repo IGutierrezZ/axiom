@@ -1,6 +1,7 @@
 package sdd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -872,6 +873,7 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 			return nil, err
 		}
 		if existingPrompt != "" {
+			existingPrompt = upgradeLegacyOpenCodeBackgroundPolicy(existingPrompt)
 			if strings.Contains(existingPrompt, openCodeBackgroundPolicyMarker) || strings.Contains(existingPrompt, openCodeBackgroundPolicyEnd) {
 				if err := validateOpenCodeBackgroundPolicy(existingPrompt, false); err != nil {
 					return nil, fmt.Errorf("validate preserved OpenCode background policy: %w", err)
@@ -1073,7 +1075,7 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	agent model.AgentID,
 	options ...OrchestratorRenderOptions,
 ) string {
-	migrated := migratePreservedOpenCodeOrchestratorPrompt(prompt)
+	migrated := migratePreservedOpenCodeOrchestratorPrompt(upgradeLegacyOpenCodeBackgroundPolicy(prompt))
 	var renderOptions OrchestratorRenderOptions
 	if len(options) > 0 {
 		renderOptions = options[0]
@@ -1086,7 +1088,7 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	return strings.ReplaceAll(migrated, runtimeAgentIDPlaceholder, string(agent))
 }
 
-// stripOpenCodeBackgroundPolicy removes only the complete Gentle AI-owned block.
+// stripOpenCodeBackgroundPolicy removes only the complete Axiom-owned block.
 // Callers validate marker integrity before preserving a prompt from disk.
 func stripOpenCodeBackgroundPolicy(content string) string {
 	start := strings.Index(content, openCodeBackgroundPolicyMarker)
@@ -1201,7 +1203,18 @@ func removeStaleGeneratedReviewLines(prompt string) string {
 	return strings.Join(kept, "\n")
 }
 
+// Marcadores del bloque de delegación que escribieron las versiones con el nombre
+// anterior: solo se reconocen para reescribirlos con los actuales.
+const (
+	legacyDelegationHardGatesStart = "<!-- gentle-ai:delegation-hard-gates-migration -->"
+	legacyDelegationHardGatesEnd   = "<!-- /gentle-ai:delegation-hard-gates-migration -->"
+	delegationHardGatesStart       = "<!-- axiom:delegation-hard-gates-migration -->"
+	delegationHardGatesEnd         = "<!-- /axiom:delegation-hard-gates-migration -->"
+)
+
 func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
+	prompt = strings.ReplaceAll(prompt, legacyDelegationHardGatesStart, delegationHardGatesStart)
+	prompt = strings.ReplaceAll(prompt, legacyDelegationHardGatesEnd, delegationHardGatesEnd)
 	prompt = removeRetiredWorkRoutingAuthorityRule(prompt)
 	prompt = migrateLegacyMandatoryWordingInDelegationHardGates(prompt)
 	// Unmarked v1 prompts predate managed ownership boundaries. Migrate only
@@ -1217,16 +1230,16 @@ func ensurePreservedOpenCodeDelegationHardGates(prompt string) string {
 	// delegationBlockSignature, so it is rewritten between its markers.
 	delegation := `
 
-<!-- gentle-ai:delegation-hard-gates-migration -->
+` + delegationHardGatesStart + `
 ### Mandatory Delegation Triggers (Conditional)
 
 Semantic guard: **delegate** means using OpenCode's native Task tool to invoke a configured sub-agent. Running local scripts, Python, or Bash inline is execution, not delegation.
 
 ` + agentguidance.DelegationTriggers() + `
-<!-- /gentle-ai:delegation-hard-gates-migration -->
+` + delegationHardGatesEnd + `
 `
 
-	if strings.Contains(prompt, "<!-- gentle-ai:delegation-hard-gates-migration -->") &&
+	if strings.Contains(prompt, delegationHardGatesStart) &&
 		strings.Contains(prompt, delegationBlockSignature) &&
 		strings.Contains(prompt, "Mapping trigger") &&
 		strings.Contains(prompt, "Writer trigger") &&
@@ -1240,8 +1253,8 @@ Semantic guard: **delegate** means using OpenCode's native Task tool to invoke a
 		return prompt
 	}
 
-	start := "<!-- gentle-ai:delegation-hard-gates-migration -->"
-	end := "<!-- /gentle-ai:delegation-hard-gates-migration -->"
+	start := delegationHardGatesStart
+	end := delegationHardGatesEnd
 	if startIdx := strings.Index(prompt, start); startIdx >= 0 {
 		if relEndIdx := strings.Index(prompt[startIdx:], end); relEndIdx >= 0 {
 			endIdx := startIdx + relEndIdx + len(end)
@@ -1278,8 +1291,8 @@ func removeRetiredWorkRoutingAuthorityRule(prompt string) string {
 
 func migrateLegacyMandatoryWordingInDelegationHardGates(prompt string) string {
 	const (
-		startMarker = "<!-- gentle-ai:delegation-hard-gates-migration -->"
-		endMarker   = "<!-- /gentle-ai:delegation-hard-gates-migration -->"
+		startMarker = delegationHardGatesStart
+		endMarker   = delegationHardGatesEnd
 	)
 
 	start := strings.Index(prompt, startMarker)
@@ -1398,6 +1411,17 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 			return InjectionResult{}, fmt.Errorf("install Codex branch guard hook: %w", err)
 		}
 		return InjectionResult{Changed: changed || branchGuardChanged, Files: []string{hooksPath}}, nil
+	}
+	if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
+		hooksPath := provider.BranchGuardHooksFile(homeDir)
+		if hooksPath == "" {
+			return InjectionResult{}, nil
+		}
+		write, err := filemerge.WriteFileAtomic(hooksPath, VSCodeBranchGuardHooksJSON(adapter.Agent()), 0o644)
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("install VS Code branch guard hook: %w", err)
+		}
+		return InjectionResult{Changed: write.Changed, Files: []string{hooksPath}}, nil
 	}
 	if adapter.Agent() != model.AgentClaudeCode {
 		return InjectionResult{}, nil
@@ -1763,6 +1787,63 @@ func BranchGuardHookCommand(agentID model.AgentID) string {
 	return fmt.Sprintf("axiom branch guard --agent %s", agentID)
 }
 
+// copilotBranchGuardMatcher son las herramientas de escritura del arnés de Copilot
+// (`toolName`); el arnés ancla la expresión (`^(?:…)$`).
+const copilotBranchGuardMatcher = "create|edit|str_replace_editor|apply_patch"
+
+// copilotBranchGuardTimeoutSec es el límite del arnés para cada ejecución. Un tiempo
+// agotado es fail-open en el arnés de Copilot, también en `preToolUse`.
+const copilotBranchGuardTimeoutSec = 10
+
+// copilotHookEntry es una entrada `type: command` de .github/hooks/*.json.
+type copilotHookEntry struct {
+	Type       string `json:"type"`
+	Bash       string `json:"bash"`
+	PowerShell string `json:"powershell"`
+	Matcher    string `json:"matcher"`
+	TimeoutSec int    `json:"timeoutSec"`
+}
+
+// VSCodeBranchGuardHooksJSON es el contenido de .github/hooks/axiom-branch-guard.json:
+// la guarda de rama en `preToolUse` (bloquea los documentos de Axiom en la rama
+// equivocada) y `postToolUse` (avisa del resto), con el formato del arnés de Copilot
+// (docs.github.com/en/copilot/reference/hooks-reference).
+//
+// En `preToolUse` del arnés, cualquier código de salida distinto de 0 deniega la
+// escritura: un `axiom` ausente del PATH o sin `--agent vscode-copilot` bloquearía
+// todas las escrituras. Por eso la orden termina siempre con 0 (`|| true` en bash,
+// `; exit 0` en PowerShell): la decisión va solo por la salida estándar, y un fallo
+// deja la escritura permitida (fail-open). El fichero es entero de Axiom: sync lo
+// reescribe y la desinstalación lo borra si no cambió.
+func VSCodeBranchGuardHooksJSON(agentID model.AgentID) []byte {
+	entry := func(event string) []copilotHookEntry {
+		command := fmt.Sprintf("%s --event %s", BranchGuardHookCommand(agentID), event)
+		return []copilotHookEntry{{
+			Type:       "command",
+			Bash:       command + " || true",
+			PowerShell: command + "; exit 0",
+			Matcher:    copilotBranchGuardMatcher,
+			TimeoutSec: copilotBranchGuardTimeoutSec,
+		}}
+	}
+	document := struct {
+		Version int `json:"version"`
+		Hooks   struct {
+			PreToolUse  []copilotHookEntry `json:"preToolUse"`
+			PostToolUse []copilotHookEntry `json:"postToolUse"`
+		} `json:"hooks"`
+	}{Version: 1}
+	document.Hooks.PreToolUse = entry("pre")
+	document.Hooks.PostToolUse = entry("post")
+
+	var out bytes.Buffer
+	encoder := json.NewEncoder(&out)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(document)
+	return out.Bytes()
+}
+
 // ensureClaudeBranchGuardHook installs the `axiom branch guard` PreToolUse
 // (blocks Axiom documents on the wrong branch) and PostToolUse (warns about any
 // other file) entries in the Claude Code settings file. The entry identity is
@@ -1877,7 +1958,7 @@ func claudeHookListContains(hookEntries []any, command string) bool {
 	return false
 }
 
-// ManagedOpenCodePluginNames lists every OpenCode plugin gentle-ai manages as
+// ManagedOpenCodePluginNames lists every OpenCode plugin axiom manages as
 // versioned runtime artifacts. Their content is tied to the installed binary
 // version: install writes them and sync must keep already-installed copies
 // byte-equal to the embedded assets (issue #1440).
@@ -1954,7 +2035,7 @@ func RefreshInstalledOpenCodePlugins(homeDir string, adapter agents.Adapter) (In
 	return InjectionResult{Changed: changed, Files: files}, nil
 }
 
-// installOpenCodePluginsDirectory copies the OpenCode-compatible plugins that gentle-ai
+// installOpenCodePluginsDirectory copies the OpenCode-compatible plugins that axiom
 // still manages by default. Native OpenCode subagents replace the legacy
 // background-agents plugin, so that legacy cleanup is scoped to OpenCode only.
 func installOpenCodePluginsDirectory(homeDir string, adapter agents.Adapter, assetDir string) (InjectionResult, error) {
@@ -2652,7 +2733,7 @@ func stripBareOrchestratorForFilePrompt(content string) string {
 
 // legacyPiSystemPromptSectionIDs are the only marker pairs this cleanup owns.
 // Pi's package owns APPEND_SYSTEM.md, so unmarked and non-allowlisted content
-// must never be interpreted as Gentle AI content.
+// must never be interpreted as Axiom content.
 var legacyPiSystemPromptSectionIDs = []string{
 	"persona", "engram-protocol", "sdd-orchestrator", "strict-tdd-mode",
 	"agent-routing", "trigger-rules", "codegraph-guidance",
@@ -2892,19 +2973,11 @@ func injectClaudeModelAssignments(content string, assignments map[string]model.C
 func injectClaudePhaseAssignments(content string, legacyAssignments map[string]model.ClaudeModelAlias, phaseAssignments map[string]model.ClaudePhaseAssignment) (string, error) {
 	const axiomOpenMarker = "<!-- axiom:sdd-model-assignments -->"
 	const axiomCloseMarker = "<!-- /axiom:sdd-model-assignments -->"
-	const legacyOpenMarker = "<!-- gentle-ai:sdd-model-assignments -->"
-	const legacyCloseMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
 
 	openMarker := axiomOpenMarker
 	closeMarker := axiomCloseMarker
 	start := strings.Index(content, openMarker)
 	end := strings.Index(content, closeMarker)
-	if start == -1 || end == -1 || end < start {
-		openMarker = legacyOpenMarker
-		closeMarker = legacyCloseMarker
-		start = strings.Index(content, openMarker)
-		end = strings.Index(content, closeMarker)
-	}
 	if start == -1 || end == -1 || end < start {
 		return "", fmt.Errorf("sdd orchestrator asset missing model assignment markers")
 	}

@@ -136,7 +136,7 @@ func ManagedCodeGraphGuidanceFiles(homeDir string) []string {
 		if err != nil {
 			continue
 		}
-		if strings.Contains(string(data), "<!-- gentle-ai:"+codeGraphGuidanceSectionID+" -->") {
+		if hasManagedCodeGraphSection(string(data)) {
 			files = append(files, path)
 		}
 	}
@@ -571,13 +571,20 @@ func collapseBlankLines(content string) string {
 	return content
 }
 
+// hasManagedCodeGraphSection reconoce la sección gestionada con el marcador
+// actual o con el del nombre anterior (que la siguiente sincronización sustituye).
+func hasManagedCodeGraphSection(content string) bool {
+	return strings.Contains(content, "<!-- axiom:"+codeGraphGuidanceSectionID+" -->") ||
+		strings.Contains(content, "<!-- gentle-ai:"+codeGraphGuidanceSectionID+" -->")
+}
+
 func hasCodeGraphGuidance(path string) bool {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return false
 	}
 	content := strings.ToLower(string(data))
-	return strings.Contains(content, "gentle-ai:"+codeGraphGuidanceSectionID) ||
+	return hasManagedCodeGraphSection(content) ||
 		(strings.Contains(content, "codegraph") &&
 			(strings.Contains(content, "axiom codegraph init --cwd <project-root>") ||
 				strings.Contains(content, "gentle-ai codegraph init --cwd <project-root>")))

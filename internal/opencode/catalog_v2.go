@@ -19,7 +19,7 @@ const catalogSizeCheckInterval = 100 * time.Millisecond
 // catalogCommand construye el comando de descubrimiento para la versión mayor.
 // V2 usa la API interna de modelos acotada al directorio del proyecto; la
 // forma exacta (`api get` con `location[directory]` codificado) sigue a
-// gentle-ai. V1 y cualquier versión no reconocida usan `models --verbose`.
+// axiom. V1 y cualquier versión no reconocida usan `models --verbose`.
 func catalogCommand(major RuntimeMajor, projectDir string) Command {
 	args := []string{"models", "--verbose"}
 	if major == RuntimeV2 {
@@ -120,7 +120,7 @@ func catalogJSONError(err error) error {
 // fileCatalogCommand lanza el comando con stdout redirigido a un fichero
 // temporal regular y devuelve un lector sobre ese fichero. OpenCode V2 trunca a
 // 262144 bytes la salida de `api get` cuando stdout es una tubería, mientras que
-// el mismo comando contra un fichero entrega la respuesta completa (gentle-ai
+// el mismo comando contra un fichero entrega la respuesta completa (axiom
 // #5833), de ahí que V2 no use la tubería de streamCatalogCommand. Stderr se
 // descarta: CatalogError nunca expone la salida del comando. Un monitor cancela
 // al hijo si el fichero supera el techo. El lector devuelto debe cerrarse: Close

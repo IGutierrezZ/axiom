@@ -114,7 +114,7 @@ func TestRunInstallReturnsStatePersistenceFailure(t *testing.T) {
 	// Deliberately off the state directory: the point is that state.json is a
 	// symlink pointing somewhere else. Since the rename of the state directory
 	// to .axiom, this target's parent no longer exists incidentally, so create it.
-	target := filepath.Join(home, ".gentle-ai", "persisted-state.json")
+	target := filepath.Join(home, "state-elsewhere", "persisted-state.json")
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -1270,7 +1270,7 @@ func TestRunInstallEngramFallsBackToInjectWhenSetupFails(t *testing.T) {
 }
 
 func TestRunInstallEngramSetupStrictFailsWhenSetupFails(t *testing.T) {
-	t.Setenv("GENTLE_AI_ENGRAM_SETUP_STRICT", "1")
+	t.Setenv("AXIOM_ENGRAM_SETUP_STRICT", "1")
 
 	home := t.TempDir()
 	restoreHome := osUserHomeDir
@@ -1402,7 +1402,7 @@ func TestRunInstallAntigravityInitializesCLISettingsAfterEngramSetup(t *testing.
 	// This test targets antigravity settings initialization after engram
 	// setup, not agent install behavior, so simulate Antigravity as already
 	// installed (its Detect looks for ~/.gemini/antigravity) — otherwise
-	// gentle-ai correctly refuses to proceed for an undetected agent.
+	// axiom correctly refuses to proceed for an undetected agent.
 	if err := os.MkdirAll(filepath.Join(home, ".gemini", "antigravity"), 0o755); err != nil {
 		t.Fatalf("MkdirAll(.gemini/antigravity): %v", err)
 	}
@@ -1461,7 +1461,7 @@ func TestRunInstallDeduplicatesSharedEngramSetupSlugs(t *testing.T) {
 
 	// This test targets shared-slug engram setup dedup, not agent install
 	// behavior, so simulate Antigravity as already installed (its Detect
-	// looks for ~/.gemini/antigravity) — otherwise gentle-ai correctly
+	// looks for ~/.gemini/antigravity) — otherwise axiom correctly
 	// refuses to proceed for an undetected agent.
 	if err := os.MkdirAll(filepath.Join(home, ".gemini", "antigravity"), 0o755); err != nil {
 		t.Fatalf("MkdirAll(.gemini/antigravity): %v", err)
@@ -2237,7 +2237,7 @@ func TestOpenCodePersonaBeforeSDDPreservesAllSections(t *testing.T) {
 
 	// AGENTS.md must NOT have sdd-orchestrator markers — OpenCode uses
 	// opencode.json overlay. Check both spellings: matching only the retired
-	// `gentle-ai:` namespace would make this pass vacuously, which is a false
+	// `axiom:` namespace would make this pass vacuously, which is a false
 	// green rather than a check.
 	if strings.Contains(text, "<!-- axiom:sdd-orchestrator -->") ||
 		strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->") {

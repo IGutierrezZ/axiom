@@ -52,7 +52,7 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 - **`axiom upgrade` updates itself automatically on release channels when Go 1.25.10+ is on `PATH`.** It runs `go install …/cmd/axiom@vX.Y.Z` pinned to the exact release tag. The module is verified against the Go checksum database (`sum.golang.org`) — a different trust anchor than the minisign signature used for the Linux/macOS release binaries, not a missing one.
   Because `go install` writes to `GOBIN` (or `GOPATH\bin`), which is not necessarily the directory your shell resolves, the upgrade checks the destination afterwards and warns — naming both full paths — if a different `axiom.exe` earlier on `PATH` would keep running.
    On the beta/development channel, `$env:AXIOM_CHANNEL="beta"; axiom upgrade` advances the binary from `main` and refreshes managed tools. If a manual source install sees stale `main` commits, run `GOPROXY=direct go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main` (PowerShell: `$env:GOPROXY="direct"; go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main`).
-   Re-running either installer defaults to stable, so preserve beta explicitly: `curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash -s -- --channel beta` on macOS/Linux, or `$env:AXIOM_CHANNEL="beta"; irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1 | iex` in PowerShell. Both installers (and `axiom upgrade`) read `AXIOM_CHANNEL` first and fall back to the legacy `GENTLE_AI_CHANNEL`.
+   Re-running either installer defaults to stable, so preserve beta explicitly: `curl -fsSL https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.sh | bash -s -- --channel beta` on macOS/Linux, or `$env:AXIOM_CHANNEL="beta"; irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1 | iex` in PowerShell. Both installers (and `axiom upgrade`) read `AXIOM_CHANNEL`.
 - **Without Go on `PATH`, the upgrader fails closed.** It downloads and executes nothing, and prints the runnable `go install` command instead.
 - **Scoop and official Windows binaries are still temporarily unavailable.** No unsigned artifact is ever downloaded and `axiom upgrade` never executes a remote update script.
 - **npm global installs** do not require `sudo` on Windows (user-writable by default).
@@ -66,7 +66,7 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 
 ## Windows Config Paths (ámbito global)
 
-Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Trae, Antigravity, Pi y GitHub Copilot CLI solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
+Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `opencode.json` y `.opencode/`, `.mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Trae, Antigravity, Pi y GitHub Copilot CLI solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
 
 | Agent | Windows Config Path |
 |-------|-------------------|
@@ -74,9 +74,9 @@ Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `work
 | OpenCode | `%USERPROFILE%\.config\opencode\` |
 | Gemini CLI | `%USERPROFILE%\.gemini\` |
 | Cursor | `%USERPROFILE%\.cursor\` |
-| VS Code Copilot | `%APPDATA%\Code\User\` (settings, MCP, prompts) + `%USERPROFILE%\.copilot\` (skills) |
+| VS Code Copilot | `%APPDATA%\Code\User\` (settings, prompts) + `%USERPROFILE%\.copilot\` (skills) + `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (`mcp-config.json`, compartido con Copilot CLI) |
 | GitHub Copilot CLI (solo global) | `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (instrucciones, `settings.json`, `mcp-config.json` y skills) |
 | Codex | `%USERPROFILE%\.codex\` |
 | Antigravity (solo global) | `%USERPROFILE%\.gemini\antigravity\` |
 | Trae (solo global) | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
-| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Gentle AI support assets) |
+| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Axiom support assets) |

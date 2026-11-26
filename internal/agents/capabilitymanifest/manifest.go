@@ -1,5 +1,5 @@
 // Package capabilitymanifest owns the canonical, provider-neutral capability
-// facts advertised by Gentle AI agent adapters.
+// facts advertised by Axiom agent adapters.
 package capabilitymanifest
 
 import (
@@ -14,11 +14,11 @@ import (
 
 type SchemaVersion string
 
-const SchemaV1 SchemaVersion = "gentle-ai.agent-capability-manifest/v1"
+const SchemaV1 SchemaVersion = "axiom.agent-capability-manifest/v1"
 
 type ContractID string
 
-const ContractWorkRoutingV1 ContractID = "gentle-ai.work-routing/v1"
+const ContractWorkRoutingV1 ContractID = "axiom.work-routing/v1"
 
 type ContractExposure string
 
@@ -45,7 +45,7 @@ type AgentCapabilityManifest struct {
 }
 
 // AgentFeatureClaims describes adapter integration mechanisms. FileSubAgents
-// means the adapter consumes Gentle AI's file-based subagent projection; it
+// means the adapter consumes Axiom's file-based subagent projection; it
 // does not infer whether the runtime can perform some other form of delegation.
 type AgentFeatureClaims struct {
 	OutputStyles  bool `json:"outputStyles"`
@@ -207,7 +207,7 @@ func (m AgentCapabilityManifest) Digest() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return digest("gentle-ai.agent-capability-manifest/v1", payload), nil
+	return digest("axiom.agent-capability-manifest/v1", payload), nil
 }
 
 func (m AgentCapabilityManifest) RoutingDigest() (string, error) {
@@ -218,7 +218,7 @@ func (m AgentCapabilityManifest) RoutingDigest() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal implementation routing facts: %w", err)
 	}
-	return digest("gentle-ai.implementation-routing/v1", payload), nil
+	return digest("axiom.implementation-routing/v1", payload), nil
 }
 
 func digest(domain string, payload []byte) string {

@@ -1,6 +1,6 @@
 # Copias de seguridad y restauración
 
-Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. Las copias de Axiom se distinguen de las copias históricas de Gentle AI por su carpeta de origen; la restauración se hace con `axiom restore`.
+Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. Axiom migra una vez las copias antiguas de `~/.gentle-ai/backups/` a la raíz de estado.
 
 ## Qué se guarda
 
@@ -13,11 +13,11 @@ Cada operación de escritura:
 
 Un `sync` que termina bien sin escribir ningún fichero («no changes needed») descarta la copia que acababa de crear: sería idéntica al estado actual y no sirve de punto de restauración, así que las sincronizaciones sin cambios no acumulan copias. Un `sync` que sí escribe conserva su copia previa.
 
-Las copias de Axiom viven en `<raíz de estado>/backups/`, donde la raíz de estado es `~/.axiom` o, si defines `AXIOM_STATE_DIR`, esa carpeta. Con la variable definida, las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco); las históricas de Gentle AI en `~/.gentle-ai/backups/` se siguen leyendo.
+Las copias de Axiom viven en `<raíz de estado>/backups/`, donde la raíz de estado es `~/.axiom` o, si defines `AXIOM_STATE_DIR`, esa carpeta. Con la variable definida, las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco).
 
 El manifiesto registra el origen, la fecha, el número de ficheros, la huella y si una ruta existía antes de la operación. Las copias antiguas, anteriores al formato comprimido, conservan un directorio `files/`; Axiom también las admite al restaurar.
 
-El alcance de un respaldo de sincronización depende de los agentes registrados como instalados por Axiom. No presupongas que incluye los directorios de agentes configurados manualmente fuera de Axiom. Las copias de Axiom (`~/.axiom/backups/`) y las históricas de Gentle AI (`~/.gentle-ai/backups/`) mantienen su procedencia, aunque tengan identificadores repetidos.
+El alcance de un respaldo de sincronización depende de los agentes registrados como instalados por Axiom. No presupongas que incluye los directorios de agentes configurados manualmente fuera de Axiom.
 
 ## Retención
 
@@ -38,7 +38,7 @@ axiom restore <id>
 axiom restore latest
 ```
 
-`axiom restore` pide confirmación; `--yes` la omite. Elige expresamente una copia histórica de Gentle AI solo si quieres recuperar ese estado histórico, y no deduzcas el origen solo por el ID, porque puede repetirse entre Axiom y Gentle AI.
+`axiom restore` pide confirmación; `--yes` la omite.
 
 ## Semántica de restauración
 
@@ -58,4 +58,3 @@ axiom restore latest
 ## Límites
 
 - Las instalaciones realizadas mediante `brew`, `apt-get`, `pacman` o `dnf` no se desinstalan al restaurar una copia de configuración. Usa el gestor de paquetes correspondiente si también quieres retirarlas.
-- No selecciones una copia histórica de Gentle AI por ser la más reciente en conjunto: comprueba su origen antes de confirmar.

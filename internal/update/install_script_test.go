@@ -234,7 +234,7 @@ func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
 // a module-major migration that only rewrites the literal module string
 // (e.g. a blanket search-and-replace of the old "gentle-ai" + "/v2" pair)
 // misses this line, because it hardcodes the version suffix separately from
-// the "gentle-ai" literal. The expected major is derived from go.mod so the
+// the "axiom" literal. The expected major is derived from go.mod so the
 // next migration fails here first.
 func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 	goMod, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))
@@ -281,16 +281,16 @@ func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 	}
 }
 
-// TestInstallScriptsReadAxiomChannelBeforeLegacy pins the same precedence in
-// both installers as in the Go resolvers: AXIOM_CHANNEL first, then the legacy
-// GENTLE_AI_CHANNEL, then stable.
-func TestInstallScriptsReadAxiomChannelBeforeLegacy(t *testing.T) {
+// TestInstallScriptsReadOnlyAxiomChannel pins that both installers resolve the
+// channel from AXIOM_CHANNEL alone, then stable; the retired GENTLE_AI_CHANNEL
+// is no longer read.
+func TestInstallScriptsReadOnlyAxiomChannel(t *testing.T) {
 	tests := []struct {
 		script string
 		want   string
 	}{
-		{"install.sh", `CHANNEL="${AXIOM_CHANNEL:-${GENTLE_AI_CHANNEL:-stable}}"`},
-		{"install.ps1", `if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } elseif ($env:GENTLE_AI_CHANNEL) { $env:GENTLE_AI_CHANNEL } else { "stable" }`},
+		{"install.sh", `CHANNEL="${AXIOM_CHANNEL:-stable}"`},
+		{"install.ps1", `if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } else { "stable" }`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.script, func(t *testing.T) {
@@ -300,6 +300,9 @@ func TestInstallScriptsReadAxiomChannelBeforeLegacy(t *testing.T) {
 			}
 			if !strings.Contains(string(content), tc.want) {
 				t.Fatalf("scripts/%s does not resolve the channel as %q", tc.script, tc.want)
+			}
+			if strings.Contains(string(content), "GENTLE_AI_CHANNEL") {
+				t.Fatalf("scripts/%s still reads the retired GENTLE_AI_CHANNEL", tc.script)
 			}
 		})
 	}

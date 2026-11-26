@@ -14,15 +14,13 @@ const (
 	ChannelBeta   InstallChannel = "beta"
 
 	ChannelAxiomEnvVar = "AXIOM_CHANNEL"
-	// ChannelGentleAIEnvVar is the documented fallback read when ChannelAxiomEnvVar is unset or empty.
-	ChannelGentleAIEnvVar = "GENTLE_AI_CHANNEL"
-	channelEnvVar         = ChannelAxiomEnvVar
+	channelEnvVar      = ChannelAxiomEnvVar
 )
 
 func ResolveInstallChannel(flagValue string) (InstallChannel, error) {
 	raw := strings.TrimSpace(flagValue)
 	if raw == "" {
-		raw = strings.TrimSpace(system.Getenv(ChannelAxiomEnvVar, ChannelGentleAIEnvVar))
+		raw = strings.TrimSpace(system.Getenv(ChannelAxiomEnvVar))
 	}
 	if raw == "" {
 		return ChannelStable, nil

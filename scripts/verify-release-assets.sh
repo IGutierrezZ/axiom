@@ -27,8 +27,8 @@ version=${tag#v}
 
 archives=(
   # El nombre lo da la plantilla {{ .ProjectName }}_... y este fork se llama
-  # axiom. El archivo de procedencia (más abajo) conserva el prefijo gentle-ai porque
-  # su name_template es explicito y no deriva del nombre del proyecto.
+  # axiom. El archivo de procedencia (más abajo) usa el mismo prefijo, aunque
+  # su name_template es explícito y no deriva del nombre del proyecto.
   "axiom_${version}_darwin_amd64.tar.gz"
   "axiom_${version}_darwin_arm64.tar.gz"
   "axiom_${version}_linux_amd64.tar.gz"
@@ -37,7 +37,7 @@ archives=(
   # archive like the others: the publication policy requires it, so the
   # verifier must expect it too, or every stable after v2.4.0 fails here
   # before a single byte is checked (#4016).
-  "gentle-ai-release-provenance-v1.tar.gz"
+  "axiom-release-provenance-v1.tar.gz"
 )
 expected_assets=("${archives[@]}" checksums.txt checksums.txt.minisig)
 

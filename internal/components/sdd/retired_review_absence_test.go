@@ -52,8 +52,10 @@ func TestRenderedOrchestratorsCarryNoRDDProse(t *testing.T) {
 					t.Errorf("%s orchestrator still renders retired review prose %q", agent, forbidden)
 				}
 			}
-			if strings.Contains(rendered, "{{GENTLE_AI_") {
-				t.Errorf("%s orchestrator kept a raw placeholder", agent)
+			for _, raw := range []string{"{{AXIOM_SDD_SECTION", "{{AXIOM_RUNTIME_AGENT_ID", "{{AXIOM_RESEARCH_LIFECYCLE"} {
+				if strings.Contains(rendered, raw) {
+					t.Errorf("%s orchestrator kept a raw placeholder %q", agent, raw)
+				}
 			}
 			if agent == model.AgentOpenCode && !strings.Contains(rendered, "- Native route: The classified native question UI is `question`.") {
 				t.Errorf("%s lost the generic native question route", agent)
@@ -71,7 +73,7 @@ func TestApplyCommandsCarryNoReviewLifecycle(t *testing.T) {
 		"opencode/commands/sdd-apply.md": model.AgentOpenCode,
 	} {
 		rendered := renderManagedAsset(agent, file)
-		for _, forbidden := range []string{"{{GENTLE_AI_", "Authority-First Terminal Procedure", "acknowledgement continuation", "burns authority", "review lineage"} {
+		for _, forbidden := range []string{"{{AXIOM_SDD_SECTION", "{{AXIOM_RUNTIME_AGENT_ID", "{{AXIOM_RESEARCH_LIFECYCLE", "Authority-First Terminal Procedure", "acknowledgement continuation", "burns authority", "review lineage"} {
 			if strings.Contains(rendered, forbidden) {
 				t.Errorf("%s still renders review lifecycle prose %q", file, forbidden)
 			}

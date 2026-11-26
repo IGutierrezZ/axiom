@@ -78,11 +78,11 @@ func RunArgs(args []string, stdout io.Writer) error {
 	}
 
 	// Propagate the build-time version to the CLI and upgrade layers so backup
-	// manifests record which version of gentle-ai created them.
+	// manifests record which version of axiom created them.
 	cli.AppVersion = Version
 	upgrade.AppVersion = Version
 
-	// --yes as a global CLI flag for self-update is handled via GENTLE_AI_YES=1.
+	// --yes as a global CLI flag for self-update is handled via AXIOM_YES=1.
 	// Per-subcommand --yes flags (e.g. restore --yes) are parsed by each subcommand.
 
 	// Platform-independent commands: no system detection, self-update, or
@@ -175,7 +175,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 		return profile
 	}
 
-	// Self-update: check for a newer gentle-ai release and apply it before
+	// Self-update: check for a newer axiom release and apply it before
 	// CLI dispatch. Errors are non-fatal — logged and swallowed.
 	// Skip auto-upgrade on bare start (len(args) == 0) to avoid silently
 	// replacing the binary while the user expects a clean UI launch (#696).
@@ -211,7 +211,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 			}
 		}
 
-		// Deferred sync: if a previous gentle-ai self-upgrade set PendingSync=true,
+		// Deferred sync: if a previous axiom self-upgrade set PendingSync=true,
 		// run sync now with the new binary before opening the UI. On success,
 		// clear the flag. On failure, log and leave the flag set for idempotent
 		// retry on the next launch (per spec scenario "deferred sync fails → retry").
@@ -229,7 +229,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 					_, _ = fmt.Fprintf(stdout, "Warning: failed to clear PendingSync flag: %v\n", writeErr)
 				}
 			}
-			// Self-update path: the previous launch completed a gentle-ai
+			// Self-update path: the previous launch completed a axiom
 			// self-upgrade under the old binary and set PendingSync=true. We are
 			// now running under the new binary; print the doctor advisory so the
 			// user can verify ecosystem health against the post-upgrade state.
@@ -393,13 +393,13 @@ func runUpdate(ctx context.Context, currentVersion string, profile system.Platfo
 	return nil
 }
 
-// runUpgrade handles the `gentle-ai upgrade [--dry-run] [tool...]` command.
+// runUpgrade handles the `axiom upgrade [--dry-run] [tool...]` command.
 //
 // This command:
-//   - Checks for available updates for managed tools (gentle-ai, engram)
+//   - Checks for available updates for managed tools (axiom, engram)
 //   - Snapshots agent config paths before execution (config preservation by design)
 //   - Executes binary-only upgrades; does NOT invoke install or sync pipelines
-//   - Skips gentle-ai itself when running as a dev build (version="dev")
+//   - Skips axiom itself when running as a dev build (version="dev")
 //   - Falls back to source-install guidance where official binaries are unavailable
 //
 // Issue #535: runUpgrade consumes a structured upgradeArgs value parsed once

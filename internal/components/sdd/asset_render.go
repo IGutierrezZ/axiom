@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	runtimeAgentIDPlaceholder    = "{{GENTLE_AI_RUNTIME_AGENT_ID}}"
-	researchLifecyclePlaceholder = "{{GENTLE_AI_RESEARCH_LIFECYCLE}}"
+	runtimeAgentIDPlaceholder    = "{{AXIOM_RUNTIME_AGENT_ID}}"
+	researchLifecyclePlaceholder = "{{AXIOM_RESEARCH_LIFECYCLE}}"
 )
 
 // nativeReviewerResultSchema is the shape a Judgment Day judge returns.

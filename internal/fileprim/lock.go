@@ -15,7 +15,7 @@ import (
 // fichero de cerrojo. El valor conserva el nombre histórico del almacén de
 // revisión porque es compatibilidad de formato en disco: cambiarlo dejaría
 // ilegibles los cerrojos ya existentes.
-const LockSchema = "gentle-ai.review-store-lock/v1"
+const LockSchema = "axiom.review-store-lock/v1"
 
 // LockCoordinationBytes is the byte range the Windows lock primitive
 // coordinates. POSIX flock remains whole-file advisory.

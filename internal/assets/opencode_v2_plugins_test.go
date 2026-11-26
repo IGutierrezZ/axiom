@@ -59,10 +59,10 @@ const ctx={location,model:{async list(){if(!subscribed)throw Error("snapshot bef
 const cleanup=await plugin.setup(ctx);
 // Poll for the observable condition instead of sleeping a fixed time: the plugin writes <cache>.<hex>.tmp and renames it, so a slow machine may expose a temporary or half-written file.
 const waitFor=async(label,probe)=>{const deadline=Date.now()+15000;let last;while(Date.now()<deadline){try{if(await probe())return}catch(error){last=error}await new Promise(r=>setTimeout(r,20))}throw Error(label+' timed out'+(last?': '+last.message:''))};
-const dir=path.join(root,'.gentle-ai','cache','opencode-v2');const finals=async()=>(await fs.readdir(dir)).filter(f=>!f.endsWith('.tmp')).sort();
+const dir=path.join(root,'.axiom','cache','opencode-v2');const finals=async()=>(await fs.readdir(dir)).filter(f=>!f.endsWith('.tmp')).sort();
 const firstVariant=async()=>{const names=await finals();return names.length?JSON.parse(await fs.readFile(path.join(dir,names[0]),'utf8')).openai?.model?.[0]:undefined};
 await waitFor('catalog',async()=>(await firstVariant())==='low');revision=1;queue.push({type:'model.updated',location});wake?.();await waitFor('refresh',async()=>(await firstVariant())==='high');
-if(await fs.stat(path.join(root,'.gentle-ai','cache','model-variants.json')).then(()=>true,()=>false))throw Error('legacy cache overwritten');await cleanup();if(!signal.aborted)throw Error('catalog disposal');
+if(await fs.stat(path.join(root,'.axiom','cache','model-variants.json')).then(()=>true,()=>false))throw Error('legacy cache overwritten');await cleanup();if(!signal.aborted)throw Error('catalog disposal');
 const second=await plugin.setup({location:{...location,workspaceID:'two'},model:ctx.model,event:{subscribe(opts){return {[Symbol.asyncIterator]:async function*(){await new Promise(r=>opts.signal.addEventListener('abort',r))}}}}});
 await waitFor('workspace caches',async()=>(await finals()).length===2);await second();await fs.rm(root,{recursive:true});
 `)

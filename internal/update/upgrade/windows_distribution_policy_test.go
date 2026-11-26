@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
-func TestGentleAIWindowsUpgradeFailsClosedToSourceInstall(t *testing.T) {
+func TestAxiomWindowsUpgradeFailsClosedToSourceInstall(t *testing.T) {
 	originalExec := execCommand
 	t.Cleanup(func() { execCommand = originalExec })
 	originalLookPathCommand := lookPathCommand
@@ -42,14 +42,14 @@ func TestGentleAIWindowsUpgradeFailsClosedToSourceInstall(t *testing.T) {
 			// No declared GoModulePath: REQ-22.2 forbids emitting a go install
 			// the toolchain cannot resolve, so the manual way degrades to
 			// clone-and-build (D-04) and must stay off any releases page.
-			wantInstall: "git clone https://github.com/Gentleman-Programming/gentle-ai && cd gentle-ai && go build -o gentle-ai ./cmd/gentle-ai",
+			wantInstall: "git clone https://github.com/Gentleman-Programming/gentle-ai && cd gentle-ai && go build -o axiom ./cmd/axiom",
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			r := update.UpdateResult{
 				Tool: update.ToolInfo{
-					Name:          "gentle-ai",
+					Name:          "axiom",
 					Owner:         "Gentleman-Programming",
 					Repo:          "gentle-ai",
 					InstallMethod: update.InstallBinary,
@@ -92,7 +92,7 @@ func TestGentleAIWindowsUpgradeFailsClosedToSourceInstall(t *testing.T) {
 	}
 }
 
-func TestWindowsBetaGentleAIUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
+func TestWindowsBetaAxiomUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
 	const (
 		mainSHA = "abc1234"
 		module  = "github.com/IGutierrezZ/axiom/v3"
@@ -100,17 +100,17 @@ func TestWindowsBetaGentleAIUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
 
 	var tool update.ToolInfo
 	for _, candidate := range update.Tools {
-		if candidate.Name == "gentle-ai" {
+		if candidate.Name == "axiom" {
 			tool = candidate
 			break
 		}
 	}
 	if tool.GoImportPath == "" {
-		t.Fatal("shipped gentle-ai registry entry must declare GoImportPath")
+		t.Fatal("shipped axiom registry entry must declare GoImportPath")
 	}
 
 	gobin := t.TempDir()
-	destination := writeFakeBinary(t, gobin, "gentle-ai.exe")
+	destination := writeFakeBinary(t, gobin, "axiom.exe")
 	originalLookPath := lookPathFn
 	t.Cleanup(func() { lookPathFn = originalLookPath })
 	lookPathFn = func(string) (string, error) { return destination, nil }

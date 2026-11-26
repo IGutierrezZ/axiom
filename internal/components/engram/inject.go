@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
@@ -131,31 +132,19 @@ func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 	return append(b, '\n')
 }
 
-// vsCodeEngramOverlayJSON is the VS Code mcp.json overlay using the "servers" key.
-// Uses --tools=agent per engram contract.
-// VS Code uses a fixed "servers" key structure rather than mcpServers, so it
-// is kept as a separate helper.
-func vsCodeEngramOverlayJSON(cmd string) []byte {
-	cfg := map[string]any{
-		"servers": map[string]any{
-			"engram": map[string]any{
-				"command": cmd,
-				"args":    []string{"mcp", "--tools=agent"},
-			},
-		},
-	}
-	b, _ := json.MarshalIndent(cfg, "", "  ")
-	return append(b, '\n')
-}
-
-// copilotCLIEngramOverlayJSON es la entrada de Engram en mcp-config.json de
-// Copilot CLI: raíz `mcpServers`, `type: "local"` (proceso hijo por stdio) y
-// `tools: ["*"]`. Lleva el mismo comando y argumentos que el resto de agentes.
-func copilotCLIEngramOverlayJSON(cmd string) []byte {
+// copilotEngramOverlayJSON es la entrada de Engram del arnés de Copilot, la misma en
+// todos sus ficheros: <COPILOT_HOME|~/.copilot>/mcp-config.json, que comparten VS Code
+// Copilot y Copilot CLI, y <proyecto>/.mcp.json, que VS Code Copilot comparte con
+// Claude Code. Lleva la raíz `mcpServers`, la orden y los argumentos del resto de
+// agentes, `type: "stdio"` y `tools: ["*"]`. `stdio` es el único valor que documentan
+// a la vez VS Code (code.visualstudio.com/docs/agents/reference/mcp-configuration) y
+// Copilot CLI (`copilot mcp add --transport stdio`); `local` solo sale en los ejemplos
+// de GitHub. Claude Code acepta las dos claves.
+func copilotEngramOverlayJSON(cmd string) []byte {
 	cfg := map[string]any{
 		"mcpServers": map[string]any{
 			"engram": map[string]any{
-				"type":    "local",
+				"type":    "stdio",
 				"command": cmd,
 				"args":    []string{"mcp", "--tools=agent"},
 				"tools":   []string{"*"},
@@ -217,7 +206,7 @@ func InjectWorkspaceWithOptions(workspaceDir string, adapter agents.Adapter, opt
 }
 
 const antigravityEngramPluginJSON = `{
-  "name": "gentle-ai-engram",
+  "name": "axiom-engram",
   "description": "Loads Engram MCP memory tools for Antigravity sessions.",
   "version": "0.1.0"
 }
@@ -227,7 +216,7 @@ const antigravityEngramToolsMessage = "CRITICAL FIRST ACTION — Ensure these En
 
 func antigravityEngramHooksJSON() []byte {
 	cfg := map[string]any{
-		"gentle-ai-engram-tools": map[string]any{
+		"axiom-engram-tools": map[string]any{
 			"PreInvocation": []any{
 				map[string]any{
 					"type": "command",
@@ -262,9 +251,22 @@ func ensureJSONFileIfMissing(path string) (filemerge.WriteResult, error) {
 }
 
 func installAntigravityEngramPlugin(homeDir, engramCommand string) (bool, []string, error) {
-	pluginDir := filepath.Join(homeDir, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram")
+	pluginsDir := filepath.Join(homeDir, ".gemini", "antigravity-cli", "plugins")
+	pluginDir := filepath.Join(pluginsDir, "axiom-engram")
 	files := make([]string, 0, 3)
 	changed := false
+
+	// Migración: el plugin que escribieron las versiones con el nombre anterior
+	// se retira para que no queden dos plugins de Engram cargados.
+	legacyPluginDir := filepath.Join(pluginsDir, "gentle-ai-engram")
+	if _, err := os.Lstat(legacyPluginDir); err == nil {
+		if err := os.RemoveAll(legacyPluginDir); err != nil {
+			return false, nil, fmt.Errorf("remove legacy Antigravity Engram plugin: %w", err)
+		}
+		changed = true
+	} else if !os.IsNotExist(err) {
+		return false, nil, fmt.Errorf("stat legacy Antigravity Engram plugin: %w", err)
+	}
 
 	pluginPath := filepath.Join(pluginDir, "plugin.json")
 	pluginWrite, err := filemerge.WriteFileAtomic(pluginPath, []byte(antigravityEngramPluginJSON), 0o644)
@@ -333,7 +335,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			break
 		}
 		// Engram v1.10.3+ writes an absolute path for the command field when
-		// `engram setup <agent>` is invoked. gentle-ai's Inject() runs after
+		// `engram setup <agent>` is invoked. axiom's Inject() runs after
 		// engram setup, so we must preserve any absolute command path already
 		// present instead of silently overwriting it with the relative "engram".
 		// See: https://github.com/Gentleman-Programming/gentle-ai/issues (engram absolute path regression)
@@ -373,11 +375,15 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			break
 		}
 		engramCommand := stableEngramCommandForMergedConfig(mcpPath, adapter.Agent())
+		legacyPath := ""
+		if provider, ok := adapter.(agents.LegacyMCPConfigProvider); ok {
+			legacyPath = provider.LegacyMCPConfigPath(configHomeDir)
+		}
 		var overlay []byte
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			overlay = vsCodeEngramOverlayJSON(engramCommand)
-		} else if adapter.Agent() == model.AgentGitHubCopilotCLI {
-			overlay = copilotCLIEngramOverlayJSON(engramCommand)
+		if adapter.Agent() == model.AgentVSCodeCopilot || adapter.Agent() == model.AgentGitHubCopilotCLI {
+			// VS Code comparte <proyecto>/.mcp.json con Claude Code y
+			// <COPILOT_HOME|~/.copilot>/mcp-config.json con Copilot CLI.
+			overlay = copilotEngramOverlayJSON(engramCommand)
 		} else {
 			overlay = engramOverlayJSON(adapter.Agent(), engramCommand)
 		}
@@ -388,6 +394,17 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		}
 		changed = changed || mcpWrite.Changed
 		files = append(files, mcpPath)
+
+		if legacyPath != "" {
+			retired, err := mcp.RetireLegacyVSCodeServer(legacyPath, "engram")
+			if err != nil {
+				return InjectionResult{}, err
+			}
+			if retired {
+				changed = true
+				files = append(files, legacyPath)
+			}
+		}
 
 		if adapter.Agent() == model.AgentAntigravity {
 			settingsTarget := adapter.SettingsPath(configHomeDir)
@@ -491,7 +508,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		changed = changed || tomlWrite.Changed
 		files = append(files, configPath)
 
-		// Write gentle-ai SDD model-selection profile files only when Codex is
+		// Write axiom SDD model-selection profile files only when Codex is
 		// installed and supports GPT-5.6. Without the executable, shared config
 		// still works, but existing CLI-only profiles must remain untouched.
 		if runtimeErr == nil {
@@ -589,7 +606,7 @@ func upsertCodexTableKeyBeforeMCPServers(content, section, key, rawValue string)
 func injectClaudeUserConfig(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	// The plugin and direct MCP entry expose the same Engram tools. When the
 	// plugin is enabled, suppress direct registration without deleting any
-	// existing entry: matching config shape is not proof that gentle-ai owns it.
+	// existing entry: matching config shape is not proof that axiom owns it.
 	if claudeEngramPluginEnabled(homeDir) {
 		return InjectionResult{}, nil
 	}
@@ -850,12 +867,6 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 	switch agentID {
 	case model.AgentOpenCode:
 		server, _ = opencode.MCPEntry(root, "engram")
-	case model.AgentVSCodeCopilot:
-		servers, ok := root["servers"].(map[string]any)
-		if !ok {
-			return "", false
-		}
-		server = servers["engram"]
 	default:
 		mcpServers, ok := root["mcpServers"].(map[string]any)
 		if !ok {
@@ -911,7 +922,7 @@ func isStandardAgent(id model.AgentID) bool {
 // Code).
 //
 // Engram v1.10.3+ writes an absolute command path when `engram setup` is run.
-// gentle-ai runs Inject() after setup, so we must not overwrite that absolute
+// axiom runs Inject() after setup, so we must not overwrite that absolute
 // path with the relative "engram" string from defaultEngramServerJSON.
 //
 // Logic:
@@ -972,14 +983,14 @@ func managedLegacyClaudeEngramCommand(content []byte) (string, bool) {
 }
 
 // IsManagedLegacyClaudeConfig reports whether content has the exact legacy
-// standalone Engram server shape emitted by Gentle AI.
+// standalone Engram server shape emitted by Axiom.
 func IsManagedLegacyClaudeConfig(content []byte) bool {
 	_, ok := managedLegacyClaudeEngramCommand(content)
 	return ok
 }
 
 // RemoveManagedLegacyClaudeConfig removes only the exact standalone shape
-// emitted by Gentle AI. Its parent is removed only when the same real directory
+// emitted by Axiom. Its parent is removed only when the same real directory
 // remains empty after that managed file is deleted; symlinks are never unlinked.
 func RemoveManagedLegacyClaudeConfig(path string) (bool, error) {
 	info, err := os.Lstat(path)

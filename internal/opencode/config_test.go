@@ -124,8 +124,8 @@ func TestResolveEffectiveConfigSelectsOpenCodeConfigFile(t *testing.T) {
 	}
 
 	// Regression for CodeRabbit r3952255572: when JSON has a user-owned agent
-	// with the managed shape (hidden + prompt + permission) but no Gentle AI
-	// ownership marker, and JSONC has the real Gentle AI-managed config with
+	// with the managed shape (hidden + prompt + permission) but no Axiom
+	// ownership marker, and JSONC has the real Axiom-managed config with
 	// the marker, the resolver must select JSONC.
 	t.Run("json user-owned managed shape without marker selects jsonc with marker", func(t *testing.T) {
 		home := t.TempDir()
@@ -154,7 +154,7 @@ func TestResolveEffectiveConfigSelectsOpenCodeConfigFile(t *testing.T) {
 		}
 
 		jsoncPath := filepath.Join(projectDir, "opencode.jsonc")
-		// Real Gentle AI managed config with the ownership marker.
+		// Real Axiom managed config with the ownership marker.
 		if err := os.WriteFile(jsoncPath, []byte(`{
   "agent": {
     "gentle-orchestrator": {

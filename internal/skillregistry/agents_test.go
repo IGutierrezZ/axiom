@@ -9,7 +9,7 @@ import (
 )
 
 // agentsFixture is a realistic AGENTS.md (~46 lines) shaped like the live one:
-// document header, REGLA SUPREMA section, the Gentle AI index, How to Use, and
+// document header, REGLA SUPREMA section, the Axiom index, How to Use, and
 // an unmarked three-column `## Skills` table at the end (H-5).
 const agentsFixture = `# Axiom — Reglas Maestras del Proyecto y Guía de Agentes
 
@@ -23,11 +23,11 @@ const agentsFixture = `# Axiom — Reglas Maestras del Proyecto y Guía de Agent
 
 ---
 
-# Gentle AI™ — Agent Skills Index
+# Axiom™ — Agent Skills Index
 
 When working on this project, load the relevant skill(s) BEFORE writing any code.
 
-Naming convention: ` + "`gentle-ai-*`" + ` skills are repo-specific.
+Naming convention: ` + "`axiom-*`" + ` skills are repo-specific.
 
 ## How to Use
 
@@ -219,7 +219,7 @@ func TestAgentsOutsideMarkersSurviveByteIdentical(t *testing.T) {
 	if after != origAfter {
 		t.Fatalf("bytes after the markers changed:\ngot  %q\nwant %q", after, origAfter)
 	}
-	for _, want := range []string{"## REGLA SUPREMA: IDIOMA OBLIGATORIO — ESPAÑOL (CASTELLANO)", "# Gentle AI™ — Agent Skills Index", "## How to Use"} {
+	for _, want := range []string{"## REGLA SUPREMA: IDIOMA OBLIGATORIO — ESPAÑOL (CASTELLANO)", "# Axiom™ — Agent Skills Index", "## How to Use"} {
 		if !strings.Contains(merged, want) {
 			t.Fatalf("sister section %q was altered:\n%s", want, merged)
 		}

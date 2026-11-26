@@ -29,7 +29,7 @@ var retiredWorkRunCeremonyTokens = []string{
 	"Capability stop rule",
 	"connectorSessionRef",
 	"GENTLE_AI_PRODUCTIVE_RUNTIME",
-	"{{GENTLE_AI_RUNTIME_AGENT_ID}}",
+	"{{AXIOM_RUNTIME_AGENT_ID}}",
 	"--contract gentle-ai.work-",
 }
 
@@ -119,7 +119,7 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 // TestEveryRuntimeRendersTheSharedSections confirms the resolved body
 // actually reaches the rendered prompt once this marker exists.
 func TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker(t *testing.T) {
-	const marker = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
+	const marker = "{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
 	paths := allSDDOrchestratorAssetPaths(t)
 	if len(paths) != orchestratorTemplateCount {
 		t.Fatalf("orchestrator coverage sees %d assets, want %d", len(paths), orchestratorTemplateCount)
@@ -520,8 +520,8 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 func TestOpenCodeBackgroundPolicyMarkersAreBalanced(t *testing.T) {
 	content := mustReadResolved("opencode/background-subagents.md")
 	const (
-		start = "<!-- gentle-ai:opencode-background-subagents -->"
-		end   = "<!-- /gentle-ai:opencode-background-subagents -->"
+		start = "<!-- axiom:opencode-background-subagents -->"
+		end   = "<!-- /axiom:opencode-background-subagents -->"
 	)
 	trimmed := strings.TrimSpace(content)
 	if strings.Count(trimmed, start) != 1 || strings.Count(trimmed, end) != 1 {
@@ -537,7 +537,7 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Axiom SDD preflight `, `Gentle AI SDD preflight `, `SDD_PREFLIGHT_ACCEPTED_PREFIXES`, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
+	for _, want := range []string{`const SDD_PHASES`, `"sdd-research"`, `const SDD_TASK_FAILURE_PREFIX`, `failedSDDSessions`, `confirmedPreflights`, `client.session.get({ path: { id: sessionID } })`, `only the interactive root session may carry parent-confirmed`, `Axiom SDD preflight `, `SDD_PREFLIGHT_ACCEPTED_PREFIXES`, `model-authored preflight text cannot create parent-confirmed authority`, "output.args.prompt = `${preflight}\\n\\n${output.args.prompt}`", `export default SDDTaskResultArtifactsPlugin`,
 		`canonicalizeSDDPreflightQuestions`, `input.tool === "question"`,
 		`{ label: "Interactive", description:`, `{ label: "Automatic", description:`,
 		`{ label: "OpenSpec", description:`, `{ label: "Engram", description:`, `{ label: "Both", description:`,
@@ -730,7 +730,7 @@ func TestSkillRegistryPluginContract(t *testing.T) {
 			t.Fatalf("skill-registry.ts missing %q", want)
 		}
 	}
-	// stdout belongs to OpenCode commands whose output gentle-ai parses
+	// stdout belongs to OpenCode commands whose output axiom parses
 	// (`opencode models --verbose`); plugin logging must stay on stderr.
 	for _, forbidden := range []string{"console.info", "console.log"} {
 		if strings.Contains(src, forbidden) {
@@ -1215,9 +1215,9 @@ func TestSDDStatusContractPreservesFrozenExternalV2Projection(t *testing.T) {
 
 	for _, want := range []string{
 		"exact frozen external `StatusV2Projection`",
-		"schemaName: gentle-ai.sdd-status",
+		"schemaName: axiom.sdd-status",
 		"schemaVersion: 2",
-		"gentle-ai.sdd-status/v2",
+		"axiom.sdd-status/v2",
 		"changeName: <change-name-or-null>",
 		// #3636: hybrid reaches the public v2 document; kept in lockstep with statusV2ArtifactStore.
 		"artifactStore: openspec | engram | hybrid | none",
@@ -1738,9 +1738,10 @@ func TestSharedGateSectionPresentsAndRemediatesTheContextDelta(t *testing.T) {
 		"(1) \"With review stops (`checkpointed`)\"",
 		"(2) \"No stops, local (`continuous`)\"",
 		"(3) \"No stops, sharing documents (`continuous` + publication)\"",
-		"I push the change documents to `origin/<branch>` when `tasks` closes and after archive",
+		"I push the change documents to `origin/<branch>` when `spec`, `design` and `tasks` close and after archive",
 		"never improvise other descriptions",
 		"`docsPublication: auto`",
+		"without asking once when `spec` ends, once when `design` ends, and once when `tasks` is done and before launching `apply`",
 		"axiom sdd publish --cwd <archive-root> --change <name> --archive --json",
 		"The phase skills never commit or push",
 		"The `integration` gate keeps its two exits: approve with the merge evidence it requires, or reject.",
@@ -3823,7 +3824,7 @@ func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 	if len(paths) != orchestratorTemplateCount {
 		t.Fatalf("expected %d orchestrators, got %d: %v", orchestratorTemplateCount, len(paths), paths)
 	}
-	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
+	const block = "### Commit Review\n\n{{AXIOM_SDD_SECTION:Commit Review}}"
 	for _, path := range paths {
 		content := MustRead(path)
 		if strings.Count(content, block) != 1 {

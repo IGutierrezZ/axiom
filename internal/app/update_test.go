@@ -105,10 +105,10 @@ func TestRunUpgrade_ReturnsErrorBeforeExecutingWhenChecksFail(t *testing.T) {
 	}
 }
 
-// TestRunUpgrade_RestartsAfterGentleAIUpgrade verifies that `gentle-ai upgrade`
-// prints the restart guidance message after a successful gentle-ai upgrade.
+// TestRunUpgrade_RestartsAfteraxiomUpgrade verifies that `axiom upgrade`
+// prints the restart guidance message after a successful axiom upgrade.
 // After task 4.6, no re-exec occurs on any OS — the message is always printed.
-func TestRunUpgrade_RestartsAfterGentleAIUpgrade(t *testing.T) {
+func TestRunUpgrade_RestartsAfterAxiomUpgrade(t *testing.T) {
 	unsetEnv(t, envSelfUpdateDone)
 
 	origCheckFiltered := updateCheckFiltered
@@ -120,7 +120,7 @@ func TestRunUpgrade_RestartsAfterGentleAIUpgrade(t *testing.T) {
 
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
 		return []update.UpdateResult{{
-			Tool:             update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+			Tool:             update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 			InstalledVersion: "1.36.1",
 			LatestVersion:    "1.36.2",
 			Status:           update.UpdateAvailable,
@@ -128,7 +128,7 @@ func TestRunUpgrade_RestartsAfterGentleAIUpgrade(t *testing.T) {
 	}
 	upgradeExecuteWithOptions = func(context.Context, []update.UpdateResult, system.PlatformProfile, string, bool, upgrade.ExecuteOptions) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{{
-			ToolName:   "gentle-ai",
+			ToolName:   "axiom",
 			OldVersion: "1.36.1",
 			NewVersion: "1.36.2",
 			Status:     upgrade.UpgradeSucceeded,
@@ -146,16 +146,16 @@ func TestRunUpgrade_RestartsAfterGentleAIUpgrade(t *testing.T) {
 	}
 }
 
-// TestRestartAfterGentleAIUpgrade_PrintsRestartGuidance verifies that
-// restartAfterGentleAIUpgrade (converged in task 4.6) always prints
+// TestRestartAfterAxiomUpgrade_PrintsRestartGuidance verifies that
+// restartAfterSelfUpgrade (converged in task 4.6) always prints
 // the restart guidance message and never re-execs, on any OS.
-func TestRestartAfterGentleAIUpgrade_PrintsRestartGuidance(t *testing.T) {
+func TestRestartAfterAxiomUpgrade_PrintsRestartGuidance(t *testing.T) {
 	unsetEnv(t, envSelfUpdateDone)
 
 	var buf bytes.Buffer
-	err := restartAfterGentleAIUpgrade("1.36.2", &buf)
+	err := restartAfterSelfUpgrade("1.36.2", &buf)
 	if err != nil {
-		t.Fatalf("restartAfterGentleAIUpgrade() error = %v", err)
+		t.Fatalf("restartAfterSelfUpgrade() error = %v", err)
 	}
 	out := buf.String()
 	// Must contain version and "restart" guidance.
@@ -176,11 +176,11 @@ func envContains(values []string, needle string) bool {
 	return false
 }
 
-// TestRunUpgrade_DryRunDoesNotRestartAfterGentleAIUpgrade verifies that a dry-run
+// TestRunUpgrade_DryRunDoesNotRestartAfterAxiomUpgrade verifies that a dry-run
 // upgrade does not trigger the restart-guidance message (no actual upgrade occurred).
-// reExec was removed in task 4.6; restartAfterGentleAIUpgrade now prints+returns.
+// reExec was removed in task 4.6; restartAfterSelfUpgrade now prints+returns.
 // Dry-run skips that path entirely, so no restart message should appear.
-func TestRunUpgrade_DryRunDoesNotRestartAfterGentleAIUpgrade(t *testing.T) {
+func TestRunUpgrade_DryRunDoesNotRestartAfterAxiomUpgrade(t *testing.T) {
 	origCheckFiltered := updateCheckFiltered
 	origUpgradeExecuteWithOptions := upgradeExecuteWithOptions
 	t.Cleanup(func() {
@@ -189,10 +189,10 @@ func TestRunUpgrade_DryRunDoesNotRestartAfterGentleAIUpgrade(t *testing.T) {
 	})
 
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
-		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "gentle-ai"}, Status: update.UpdateAvailable}}
+		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "axiom"}, Status: update.UpdateAvailable}}
 	}
 	upgradeExecuteWithOptions = func(context.Context, []update.UpdateResult, system.PlatformProfile, string, bool, upgrade.ExecuteOptions) upgrade.UpgradeReport {
-		return upgrade.UpgradeReport{DryRun: true, Results: []upgrade.ToolUpgradeResult{{ToolName: "gentle-ai", NewVersion: "1.36.2", Status: upgrade.UpgradeSucceeded}}}
+		return upgrade.UpgradeReport{DryRun: true, Results: []upgrade.ToolUpgradeResult{{ToolName: "axiom", NewVersion: "1.36.2", Status: upgrade.UpgradeSucceeded}}}
 	}
 
 	var buf bytes.Buffer
@@ -223,7 +223,7 @@ func TestRunUpgrade_ForwardsParsedArgsOnceWithoutReparsing(t *testing.T) {
 	updateCheckFiltered = func(_ context.Context, _ string, _ system.PlatformProfile, filters []string) []update.UpdateResult {
 		checkCalls++
 		checkFilters = filters
-		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "gentle-ai"}, Status: update.UpToDate}}
+		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "axiom"}, Status: update.UpToDate}}
 	}
 
 	var execDryRun, execSkipBackup bool
@@ -262,7 +262,7 @@ func TestRunUpgrade_ForwardsParsedArgsOnceWithoutReparsing(t *testing.T) {
 
 // TestPrintPostUpgradeDoctorAdvisory_OutputFormat verifies the advisory
 // message format: starts with a newline, has the [info] tag, and names the
-// `gentle-ai doctor` command. The exact wording is part of the public contract
+// `axiom doctor` command. The exact wording is part of the public contract
 // because the issue (#1901) specifies the literal expected output.
 func TestPrintPostUpgradeDoctorAdvisory_OutputFormat(t *testing.T) {
 	var buf bytes.Buffer
@@ -280,11 +280,11 @@ func TestPrintPostUpgradeDoctorAdvisory_OutputFormat(t *testing.T) {
 	}
 }
 
-// TestRunUpgrade_PrintsDoctorAdvisoryAfterGentleAIUpgrade verifies that a
-// successful `gentle-ai upgrade` of the gentle-ai binary prints the doctor
+// TestRunUpgrade_PrintsDoctorAdvisoryAfterAxiomUpgrade verifies that a
+// successful `axiom upgrade` of the axiom binary prints the doctor
 // advisory (per #1901). The advisory must appear AFTER the restart message
 // and must NOT appear in dry-run mode.
-func TestRunUpgrade_PrintsDoctorAdvisoryAfterGentleAIUpgrade(t *testing.T) {
+func TestRunUpgrade_PrintsDoctorAdvisoryAfterAxiomUpgrade(t *testing.T) {
 	unsetEnv(t, envSelfUpdateDone)
 
 	origCheckFiltered := updateCheckFiltered
@@ -296,7 +296,7 @@ func TestRunUpgrade_PrintsDoctorAdvisoryAfterGentleAIUpgrade(t *testing.T) {
 
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
 		return []update.UpdateResult{{
-			Tool:             update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+			Tool:             update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 			InstalledVersion: "1.36.1",
 			LatestVersion:    "1.36.2",
 			Status:           update.UpdateAvailable,
@@ -304,7 +304,7 @@ func TestRunUpgrade_PrintsDoctorAdvisoryAfterGentleAIUpgrade(t *testing.T) {
 	}
 	upgradeExecuteWithOptions = func(context.Context, []update.UpdateResult, system.PlatformProfile, string, bool, upgrade.ExecuteOptions) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{{
-			ToolName:   "gentle-ai",
+			ToolName:   "axiom",
 			OldVersion: "1.36.1",
 			NewVersion: "1.36.2",
 			Status:     upgrade.UpgradeSucceeded,
@@ -343,10 +343,10 @@ func TestRunUpgrade_DryRunDoesNotPrintDoctorAdvisory(t *testing.T) {
 	})
 
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
-		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "gentle-ai"}, Status: update.UpdateAvailable}}
+		return []update.UpdateResult{{Tool: update.ToolInfo{Name: "axiom"}, Status: update.UpdateAvailable}}
 	}
 	upgradeExecuteWithOptions = func(context.Context, []update.UpdateResult, system.PlatformProfile, string, bool, upgrade.ExecuteOptions) upgrade.UpgradeReport {
-		return upgrade.UpgradeReport{DryRun: true, Results: []upgrade.ToolUpgradeResult{{ToolName: "gentle-ai", NewVersion: "1.36.2", Status: upgrade.UpgradeSucceeded}}}
+		return upgrade.UpgradeReport{DryRun: true, Results: []upgrade.ToolUpgradeResult{{ToolName: "axiom", NewVersion: "1.36.2", Status: upgrade.UpgradeSucceeded}}}
 	}
 
 	var buf bytes.Buffer
@@ -359,10 +359,10 @@ func TestRunUpgrade_DryRunDoesNotPrintDoctorAdvisory(t *testing.T) {
 	}
 }
 
-// TestRunUpgrade_NonGentleAIUpgradeDoesNotPrintDoctorAdvisory verifies that
-// upgrading a tool other than gentle-ai (e.g. engram, opencode-subagent-statusline) does NOT trigger
-// the doctor advisory. The advisory is gated on gentle-ai specifically.
-func TestRunUpgrade_NonGentleAIUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
+// TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory verifies that
+// upgrading a tool other than axiom (e.g. engram, opencode-subagent-statusline) does NOT trigger
+// the doctor advisory. The advisory is gated on axiom specifically.
+func TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
 	origCheckFiltered := updateCheckFiltered
 	origUpgradeExecuteWithOptions := upgradeExecuteWithOptions
 	t.Cleanup(func() {
@@ -393,6 +393,6 @@ func TestRunUpgrade_NonGentleAIUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
 		t.Fatalf("runUpgrade() error = %v", err)
 	}
 	if strings.Contains(buf.String(), "ecosystem health after upgrade") {
-		t.Fatalf("non-gentle-ai upgrade must NOT print post-upgrade doctor advisory:\n%s", buf.String())
+		t.Fatalf("non-axiom upgrade must NOT print post-upgrade doctor advisory:\n%s", buf.String())
 	}
 }

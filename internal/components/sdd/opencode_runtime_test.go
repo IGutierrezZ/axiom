@@ -94,12 +94,11 @@ func TestOpenCodeManagedPluginAssetsSpawnAxiom(t *testing.T) {
 
 func TestHistoricalOpenCodePluginDigestTable(t *testing.T) {
 	want := map[string]map[string]int{
-		"skill-registry.ts":            {"v1": 5, "v2": 1},
-		"model-variants.ts":            {"v1": 6},
-		"sdd-task-result-artifacts.ts": {"v1": 10, "v2": 5},
-		// Plugin nuevo (inc-25): sin revisiones anteriores que reconocer; la entrada existe porque
-		// la tabla se indexa por plugin gestionado.
-		"axiom-branch-guard.ts": {},
+		"skill-registry.ts":            {"v1": 6, "v2": 2},
+		"model-variants.ts":            {"v1": 8, "v2": 2},
+		"sdd-task-result-artifacts.ts": {"v1": 11, "v2": 6},
+		// La revisión con el id de plugin del nombre anterior se reconoce para sustituirla.
+		"axiom-branch-guard.ts": {"v2": 1},
 	}
 	seen := map[string]bool{}
 	for name, generations := range want {

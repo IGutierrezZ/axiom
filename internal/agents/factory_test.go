@@ -179,7 +179,7 @@ func TestDefaultRegistrySupportedAgentsMatchesFactoryAgents(t *testing.T) {
 }
 
 // BindWorkspace liga VS Code Copilot a la raíz del proyecto: instrucciones y skills
-// van a .github/ y el MCP a .vscode/mcp.json, no al perfil de usuario de VS Code.
+// van a .github/ y el MCP a .mcp.json, no al perfil de usuario de VS Code.
 func TestBindWorkspaceBindsVSCode(t *testing.T) {
 	root := t.TempDir()
 	vscode, err := NewAdapter(model.AgentVSCodeCopilot)
@@ -188,7 +188,7 @@ func TestBindWorkspaceBindsVSCode(t *testing.T) {
 	}
 	bound := BindWorkspace(vscode, root)
 	if _, ok := bound.(WorkspaceUserConfigFilesProvider); !ok {
-		t.Errorf("VS Code ligado debe indicar .vscode/mcp.json como fichero de usuario")
+		t.Errorf("VS Code ligado debe indicar .mcp.json como fichero de usuario")
 	}
 	if scoped, ok := bound.(WorkspaceScopedProvider); !ok || !scoped.InWorkspace(root) {
 		t.Errorf("VS Code ligado debe saber que está ligado a la raíz")

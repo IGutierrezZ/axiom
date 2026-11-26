@@ -33,32 +33,25 @@ El sistema DEBE utilizar la carpeta `~/.axiom/` para almacenar `state.json`, los
 Migración transparente y sin pérdida de datos para entornos preexistentes.
 
 ### Requirement: Migración defensiva desde ~/.gentle-ai (REQ-12.2)
-Si al resolver el estado no existe `~/.axiom/state.json` pero existe `~/.gentle-ai/state.json`, el sistema DEBE migrar automáticamente los contenidos hacia `~/.axiom/` antes de procesar la solicitud.
+Al arrancar, el sistema DEBE mover una sola vez el estado heredado de `~/.gentle-ai/` a `~/.axiom/`: `state.json`, `pi-codegraph.json` y `backups/` (cada respaldo por su id, sin pisar los existentes). Solo mueve lo que no existe ya en el destino, es idempotente, descarta la caché heredada, no toca `bin/` y retira `~/.gentle-ai` únicamente si queda vacío. Tras migrar, ninguna ruta de lectura DEBE consultar `~/.gentle-ai/`.
 
 #### Scenario: Migración automática en el primer arranque
-- **DADO** un equipo con `~/.gentle-ai/state.json` configurado y sin carpeta `~/.axiom/state.json`
-- **CUANDO** se invoca cualquier comando de Axiom que lee el estado
-- **ENTONCES** el archivo es copiado a `~/.axiom/state.json`
-- **Y** la ejecución continúa normalmente utilizando el nuevo archivo migrado
+- **DADO** un equipo con `~/.gentle-ai/state.json` configurado y sin `~/.axiom/state.json`
+- **CUANDO** se invoca cualquier comando de Axiom
+- **ENTONCES** el archivo se mueve a `~/.axiom/state.json`
+- **Y** la ejecución continúa normalmente utilizando el nuevo archivo
 
----
+#### Scenario: La migración no pisa el destino y es idempotente
+- **DADO** un `~/.axiom/state.json` existente y un `~/.gentle-ai/state.json`
+- **CUANDO** se repite el arranque
+- **ENTONCES** `~/.axiom/state.json` conserva su contenido
+- **Y** la segunda ejecución no cambia nada
+(Previously: la migración copiaba solo `state.json` al resolver el estado y las lecturas conservaban `~/.gentle-ai/state.json` como alternativa.)
 
 ## 3. Capacidad: `axiom-env-priority`
 
 Prioridad y compatibilidad hacia atrás en variables de entorno del sistema.
 
-### Requirement: Precedencia de variables AXIOM_* sobre GENTLE_AI_* (REQ-12.3)
-Para cada variable de configuración soportada, el sistema DEBE comprobar primero el valor con prefijo `AXIOM_*`. Si no está definido, evaluará el valor con prefijo `GENTLE_AI_*` como respaldo.
-
-#### Scenario: Variable AXIOM_* toma precedencia
-- **DADO** `AXIOM_NO_ANIMATION=1` y `GENTLE_AI_NO_ANIMATION=0` definidos en el entorno
-- **CUANDO** se consulta la política de animación de la interfaz
-- **ENTONCES** el sistema adopta el valor `1` (animación desactivada) proveniente de `AXIOM_NO_ANIMATION`
-
-#### Scenario: Fallback a GENTLE_AI_* si AXIOM_* no está definido
-- **DADO** únicamente `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS=true` definido en el entorno
-- **CUANDO** se resuelve la intención de subagentes en segundo plano
-- **ENTONCES** el sistema adopta el valor `true`
 ### Requirement: La Lectura del Estado Tolera Restos de RDD (REQ-46.5)
 
 La carga de `state.json` (estado global y estado del hub) DEBE ignorar sin error el campo `rdd_mode` (y `rdd_mode_recorded_at`) y cualquier identificador de skill que ya no exista en el catálogo, entre ellos `rdd-defect-workflow`, tanto en la selección persistida como en el modelo de selección de `sync`. El sistema NO DEBE emitir aviso ni error por ello, NO DEBE instalar la skill desconocida y NO DEBE volver a escribir esos campos: en la siguiente escritura del estado desaparecen. El resto de campos del estado se conserva sin cambios.
@@ -95,3 +88,16 @@ La resolución de rutas de perfiles de agentes y persona DEBE realizarse contra 
 - **DADO** un workspace de Axiom e invocación desde un subdirectorio
 - **CUANDO** se ejecuta una sincronización (`axiom sync`)
 - **ENTONCES** los archivos se escriben en sus ubicaciones canónicas absolutas sin crear artefactos relativos al CWD
+### Requirement: Variables de entorno exclusivamente AXIOM_* (REQ-12.4)
+El sistema DEBE leer la configuración del entorno únicamente de variables con prefijo `AXIOM_*`. Las variables `GENTLE_AI_*` NO DEBEN leerse como alternativa ni tener efecto alguno.
+
+#### Scenario: Variable AXIOM_* toma el valor
+- **DADO** `AXIOM_NO_ANIMATION=1` definido en el entorno
+- **CUANDO** se consulta la política de animación de la interfaz
+- **ENTONCES** el sistema adopta el valor `1` (animación desactivada)
+
+#### Scenario: GENTLE_AI_* se ignora
+- **DADO** únicamente `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS=true` definido en el entorno
+- **CUANDO** se resuelve la intención de subagentes en segundo plano
+- **ENTONCES** el sistema no adopta ese valor
+

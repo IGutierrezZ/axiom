@@ -2,13 +2,17 @@ name: PR Validation
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, labeled, unlabeled]
+    # Sin `edited` (C-08-k): las dos comprobaciones (una sola etiqueta `type:*`
+    # y autor de confianza o `safe:external`) no miran ni el título ni la
+    # descripción, así que editarlos no puede cambiar el resultado.
+    # `unlabeled` se queda: quitar una etiqueta sobrante o `safe:external`
+    # tiene que revalidar.
+    types: [opened, synchronize, labeled, unlabeled]
 
 # Una ejecución nueva deja obsoleta a la anterior del mismo disparador sobre la
 # misma referencia, así que se cancela en lugar de encolarse detrás. El nombre
-# del evento forma parte de la clave para que un push no cancele la ejecución
-# diaria de seguridad ni un workflow_dispatch manual, que es la única vía de
-# re-ejecutar cuando el fichero del workflow ha cambiado.
+# del evento forma parte de la clave para que una etiqueta no cancele la
+# validación de un push a la PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true

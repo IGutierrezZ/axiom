@@ -40,7 +40,7 @@ func New() *Store { return &Store{} }
 var ErrBusy = errors.New("otra ejecución de `axiom branch` está modificando el cambio")
 
 // folder es la carpeta del registro de un carril: `<common dir>/axiom/branch/v1/<carril>`.
-// El registro y su bloqueo viven aquí y nunca bajo `<common dir>/gentle-ai/` (design D-07).
+// El registro y su bloqueo viven aquí y nunca bajo `<common dir>/axiom/` (design D-07).
 func folder(commonDir string, lane branch.Lane) string {
 	return filepath.Join(commonDir, "axiom", "branch", "v1", string(lane))
 }

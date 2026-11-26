@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -397,6 +398,116 @@ func TestSkillsDirStaysInUseWhileAnotherAgentOfTheProjectUsesIt(t *testing.T) {
 	}
 	if !slices.Contains(svc.otherAgentsInProject(), model.AgentClaudeCode) {
 		t.Errorf("otherAgentsInProject() = %v, want claude-code", svc.otherAgentsInProject())
+	}
+}
+
+// El fichero de hooks de la guarda de VS Code Copilot se borra si no cambió; editado por el
+// usuario, se conserva con un aviso. Los demás ficheros de .github/hooks no se tocan.
+func TestWorkspaceVSCodeUninstallRemovesTheManagedBranchGuardHooksFile(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		content   []byte
+		wantGone  bool
+		wantNotes int
+	}{
+		{name: "sin cambios", content: sdd.VSCodeBranchGuardHooksJSON(model.AgentVSCodeCopilot), wantGone: true},
+		{name: "editado", content: []byte(`{"version":1,"hooks":{}}`), wantGone: false, wantNotes: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			hooksDir := filepath.Join(workspace, ".github", "hooks")
+			if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			managed := filepath.Join(hooksDir, "axiom-branch-guard.json")
+			team := filepath.Join(hooksDir, "equipo.json")
+			if err := os.WriteFile(managed, tc.content, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(team, []byte(`{"version":1}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			svc, err := NewScopedService(t.TempDir(), workspace, "dev", Options{Scope: ScopeWorkspace})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			op := svc.removeManagedBranchGuardHooksFile(managed, model.AgentVSCodeCopilot)
+			if _, _, err := op.apply(op.path); err != nil {
+				t.Fatalf("apply error = %v", err)
+			}
+			if _, statErr := os.Stat(managed); os.IsNotExist(statErr) != tc.wantGone {
+				t.Errorf("borrado = %v, want %v", os.IsNotExist(statErr), tc.wantGone)
+			}
+			if _, statErr := os.Stat(team); statErr != nil {
+				t.Errorf("el hook del equipo debe conservarse: %v", statErr)
+			}
+			if len(svc.notices) != tc.wantNotes {
+				t.Errorf("notices = %v, want %d", svc.notices, tc.wantNotes)
+			}
+		})
+	}
+}
+
+// VS Code Copilot y Claude Code comparten <proyecto>/.mcp.json. Al desinstalar VS Code
+// con Claude instalado, las entradas de Axiom de .mcp.json se quedan para Claude; las
+// de .vscode/mcp.json, de instalaciones anteriores, se retiran igualmente. Sin otro
+// agente que lo use, .mcp.json también se limpia.
+func TestWorkspaceVSCodeUninstallKeepsProjectMCPJSONWhileClaudeUsesIt(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		installed string
+		wantKept  bool
+	}{
+		{name: "con Claude instalado", installed: `["vscode-copilot","claude-code"]`, wantKept: true},
+		{name: "solo VS Code", installed: `["vscode-copilot"]`, wantKept: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			statePath := filepath.Join(workspace, ".axiom", "state.json")
+			if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(statePath, []byte(`{"installed_agents":`+tc.installed+`}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			projectMCP := filepath.Join(workspace, ".mcp.json")
+			if err := os.WriteFile(projectMCP, []byte(`{"mcpServers":{"engram":{"type":"stdio","command":"engram","args":["mcp","--tools=agent"],"tools":["*"]}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			legacyMCP := filepath.Join(workspace, ".vscode", "mcp.json")
+			if err := os.MkdirAll(filepath.Dir(legacyMCP), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(legacyMCP, []byte(`{"servers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]},"mio":{"command":"node"}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			svc, err := NewScopedService(t.TempDir(), workspace, "dev", Options{Scope: ScopeWorkspace})
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc.removing = []model.AgentID{model.AgentVSCodeCopilot}
+			adapter, _ := svc.adapter(model.AgentVSCodeCopilot)
+
+			_, ops := svc.managedMCPOperations(adapter, "engram")
+			for _, op := range ops {
+				if _, _, err := op.apply(op.path); err != nil {
+					t.Fatalf("operation on %q error = %v", op.path, err)
+				}
+			}
+
+			legacyServers := readJSONFileForTest(t, legacyMCP)["servers"].(map[string]any)
+			if _, gone := legacyServers["engram"]; gone {
+				t.Errorf("el engram de Axiom de .vscode/mcp.json debe retirarse: %#v", legacyServers)
+			}
+			if _, kept := legacyServers["mio"]; !kept {
+				t.Errorf("el servidor del usuario debe conservarse: %#v", legacyServers)
+			}
+			_, statErr := os.Stat(projectMCP)
+			if kept := statErr == nil; kept != tc.wantKept {
+				t.Errorf(".mcp.json conservado = %v, want %v (stat: %v)", kept, tc.wantKept, statErr)
+			}
+		})
 	}
 }
 

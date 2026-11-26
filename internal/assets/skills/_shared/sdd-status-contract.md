@@ -15,7 +15,7 @@ Commands that select, continue, apply, verify, or archive an SDD change MUST fir
 
 ## Native Engine
 
-Native `gentle-ai.sdd-status/v2` is the sole status contract. A request for v1 or another prior contract fails read-only with one instruction: start a fresh implementation state and rerun `axiom sdd status --contract gentle-ai.sdd-status/v2`. Research is optional and does not add a proposal-admission gate. Ask about real unresolved product decisions; pause only dependent work.
+Native `axiom.sdd-status/v2` is the sole status contract. A request for v1 or another prior contract fails read-only with one instruction: start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`. Research is optional and does not add a proposal-admission gate. Ask about real unresolved product decisions; pause only dependent work.
 
 - When the `axiom` binary is available, prefer `axiom sdd status [change] --cwd <repo> --json --instructions` for read-only status and `axiom sdd continue [change] --cwd <repo>` only for explicit authorized continuation. This holds for every artifact store: the dispatcher resolves the declared store itself.
 - The native dispatcher resolves the artifact store the workspace DECLARES in `openspec/config.yaml` and reports it in `artifactStore`. A declared store is authoritative in both directions: it selects the resolver, and an empty declared store reports as empty rather than silently serving the other store's artifacts. Never re-resolve artifact status yourself, and never branch on the store: read the locators the dispatcher returned in `artifactPaths`.
@@ -30,7 +30,7 @@ Native `gentle-ai.sdd-status/v2` is the sole status contract. A request for v1 o
 Render the native projection as markdown or JSON. These fields document the exact frozen external `StatusV2Projection`, not permission to reconstruct native readiness:
 
 ```yaml
-schemaName: gentle-ai.sdd-status
+schemaName: axiom.sdd-status
 schemaVersion: 2
 changeName: <change-name-or-null>
 artifactStore: openspec | engram | hybrid | none
@@ -181,7 +181,7 @@ governance:
 ```
 
 - `roster` is present for every sealed change, in both execution styles, so a multi-role change (for example `backend` and `frontend`) is visible even when it runs `continuous`. Task progress per role is not a separate field: `taskProgress` is the aggregate over every role's `tasks.<role>.md`, and `artifactPaths.tasks` lists those files in roster order.
-- `kickoff.docsPublication` is `auto` only in a `continuous` change whose kickoff was sealed with `--docs-publication auto`: the orchestrator then runs `axiom sdd publish` without asking when `tasks` closes and after archive. It is absent otherwise, and a kickoff sealed before this field never publishes automatically.
+- `kickoff.docsPublication` is `auto` only in a `continuous` change whose kickoff was sealed with `--docs-publication auto`: the orchestrator then runs `axiom sdd publish` without asking when `spec`, `design` and `tasks` close and after archive. It is absent otherwise, and a kickoff sealed before this field never publishes automatically.
 - `gates` is populated only when `kickoff.executionStyle` is `checkpointed`. Under `continuous` it is always `[]`: no gate is evaluated or presented, and the orchestrator chains phases without stopping.
 - `handedOff` and `handedOffTo` appear on a gate approved with exit 2 of its stop (approve, publish and stop): `handedOffTo` names the phase handed to another person (`design`, `tasks`, `apply`, `apply:<role>,<role>` for the roles still pending, or `verify` after the last role). Both are absent on exits 1 and 3. They are information only: the route (`nextRecommended`) is the one an ordinary approval yields, and nothing is blocked by them.
 - `commitReview` appears only on the `tasks` gate once it is `approved`, in a `checkpointed` change: it is the per-commit review mode recorded with that approval (`notify`, `stop` or `stop-before-commit`), or `notify` when the record carries none. Its absence on any consumer means `notify`: it is absent on a pending `tasks` gate, on every other gate and under `continuous`. It survives exit 2 (`handedOff`) and is information only: it never changes `nextRecommended` or the dependencies.

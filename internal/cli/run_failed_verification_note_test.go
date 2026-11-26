@@ -13,7 +13,7 @@ import (
 // of the install/sync surface audit: "Run repair on failed checks" named a
 // command that does not exist anywhere in the CLI dispatcher
 // (internal/app/app.go has no `repair` case). The honest retry command for
-// the install path is `gentle-ai install --agent <agent>`.
+// the install path is `axiom install --agent <agent>`.
 func TestWithPostInstallNotesNamesARunnableRetryCommandOnFailure(t *testing.T) {
 	report := verify.Report{Ready: false, FinalNote: verify.VerificationIssuesMessage}
 	resolved := planner.ResolvedPlan{Agents: []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode}}
@@ -24,7 +24,7 @@ func TestWithPostInstallNotesNamesARunnableRetryCommandOnFailure(t *testing.T) {
 		t.Fatalf("FinalNote still names the nonexistent repair command: %q", updated.FinalNote)
 	}
 	want := "axiom install --agent claude-code,opencode"
-	wantFallback := "gentle-ai install --agent claude-code,opencode"
+	wantFallback := "axiom install --agent claude-code,opencode"
 	if !strings.Contains(updated.FinalNote, want) && !strings.Contains(updated.FinalNote, wantFallback) {
 		t.Fatalf("FinalNote = %q, want it to contain %q", updated.FinalNote, want)
 	}

@@ -196,7 +196,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 
 ## Origen y Evolución
 
-**Axiom** es una plataforma independiente de ingeniería aumentada que evolucionó a partir de una bifurcación de *Gentle AI*. Conserva atribución e identificadores heredados cuando son necesarios para la compatibilidad, y desarrolla por separado su producto, su CLI y su gobernanza multi-rol y multi-repositorio.
+**Axiom** es una plataforma independiente de ingeniería aumentada que evolucionó a partir de una bifurcación de *Gentle AI*. Conserva la atribución al proyecto original y desarrolla por separado su producto, su CLI y su gobernanza multi-rol y multi-repositorio.
 
 <div align="center">
 

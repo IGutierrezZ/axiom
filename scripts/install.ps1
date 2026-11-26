@@ -254,11 +254,11 @@ function Test-Installation {
         return
     }
 
-    # The binary only honors GENTLE_AI_NO_SELF_UPDATE (internal/app/selfupdate.go);
+    # The binary only honors AXIOM_NO_SELF_UPDATE (internal/app/selfupdate.go);
     # any other name would let this version check trigger a self-update.
-    $env:GENTLE_AI_NO_SELF_UPDATE = "1"
+    $env:AXIOM_NO_SELF_UPDATE = "1"
     $versionOutput = & $binaryPath --version 2>&1
-    Remove-Item Env:GENTLE_AI_NO_SELF_UPDATE -ErrorAction SilentlyContinue
+    Remove-Item Env:AXIOM_NO_SELF_UPDATE -ErrorAction SilentlyContinue
     Write-Success "$BINARY_NAME installed at $binaryPath`: $versionOutput"
     return $binaryPath
 }
@@ -395,7 +395,7 @@ function Main {
         [string]$Method = "auto",
 
         [ValidateSet("stable", "beta", "nightly")]
-        [string]$Channel = $(if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } elseif ($env:GENTLE_AI_CHANNEL) { $env:GENTLE_AI_CHANNEL } else { "stable" }),
+        [string]$Channel = $(if ($env:AXIOM_CHANNEL) { $env:AXIOM_CHANNEL } else { "stable" }),
 
         [string]$InstallDir = "",
 

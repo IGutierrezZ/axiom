@@ -35,7 +35,7 @@ import (
 const (
 	// realAgentE2EEnvironment gates the pinned real-agent journeys, which need a
 	// pinned OpenCode plus network access to the pinned plugin package.
-	realAgentE2EEnvironment = "GENTLE_AI_REAL_AGENT_E2E"
+	realAgentE2EEnvironment = "AXIOM_REAL_AGENT_E2E"
 	pinnedOpenCodeVersion   = versions.OpenCode
 
 	organicCommandWaitDelay = 10 * time.Second
@@ -77,13 +77,13 @@ func scaleOrganicTimeBudgets() error {
 // never escalates its own route. Re-executing the compiled test binary keeps
 // that real without adding a language runtime dependency to the suite.
 const (
-	organicActorRoleEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_ROLE"
-	organicActorRepoEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_REPO"
-	organicActorPathEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_PATH"
-	organicActorBodyEnvironment    = "GENTLE_AI_ORGANIC_ACTOR_BODY"
-	organicActorMessageEnvironment = "GENTLE_AI_ORGANIC_ACTOR_MESSAGE"
-	organicActorBinaryEnvironment  = "GENTLE_AI_ORGANIC_ACTOR_BINARY"
-	organicTestBinaryEnvironment   = "GENTLE_AI_ORGANIC_TEST_BINARY"
+	organicActorRoleEnvironment    = "AXIOM_ORGANIC_ACTOR_ROLE"
+	organicActorRepoEnvironment    = "AXIOM_ORGANIC_ACTOR_REPO"
+	organicActorPathEnvironment    = "AXIOM_ORGANIC_ACTOR_PATH"
+	organicActorBodyEnvironment    = "AXIOM_ORGANIC_ACTOR_BODY"
+	organicActorMessageEnvironment = "AXIOM_ORGANIC_ACTOR_MESSAGE"
+	organicActorBinaryEnvironment  = "AXIOM_ORGANIC_ACTOR_BINARY"
+	organicTestBinaryEnvironment   = "AXIOM_ORGANIC_TEST_BINARY"
 
 	organicActorRoleDirect    = "direct"
 	organicActorRoleDelegated = "delegated"
@@ -290,7 +290,7 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceCursor(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Cursor's Detect looks for ~/.cursor, which this fake isolated HOME
-	// never has. Simulate Cursor as already installed so gentle-ai does not
+	// never has. Simulate Cursor as already installed so axiom does not
 	// correctly refuse an undetected agent here — this test targets
 	// routing-guidance delivery, not agent install behavior.
 	if err := os.MkdirAll(filepath.Join(home, ".cursor"), 0o755); err != nil {
@@ -479,11 +479,11 @@ func TestOrganicEnvironmentDisablesPersistentPathWrites(t *testing.T) {
 	t.Fatalf("organicEnvironment() does not contain %q; journeys could write the real persistent PATH", want)
 }
 
-func (harness *organicHarness) gentle(arguments ...string) []byte {
+func (harness *organicHarness) axiom(arguments ...string) []byte {
 	harness.t.Helper()
 	stdout, stderr, err := runOrganicCommand(harness.t, organicBinary, harness.repo.worktree, harness.environment(), arguments...)
 	if err != nil {
-		harness.t.Fatalf("gentle-ai %v: %v\nstdout:\n%s\nstderr:\n%s", arguments, err, stdout, stderr)
+		harness.t.Fatalf("axiom %v: %v\nstdout:\n%s\nstderr:\n%s", arguments, err, stdout, stderr)
 	}
 	return []byte(stdout)
 }
@@ -515,7 +515,7 @@ type organicSDDStatus struct {
 
 func (harness *organicHarness) sddStatus(change string) organicSDDStatus {
 	harness.t.Helper()
-	payload := harness.gentle("sdd-status", change, "--cwd", harness.repo.worktree, "--json")
+	payload := harness.axiom("sdd-status", change, "--cwd", harness.repo.worktree, "--json")
 	var status organicSDDStatus
 	if err := json.Unmarshal(payload, &status); err != nil {
 		harness.t.Fatalf("decode sdd-status: %v\n%s", err, payload)
@@ -575,7 +575,7 @@ func (harness *organicHarness) assertNoSDDArtifacts() {
 
 func (harness *organicHarness) sddArtifact() (string, bool) {
 	harness.t.Helper()
-	root := filepath.Join(harness.commonDir(), "gentle-ai")
+	root := filepath.Join(harness.commonDir(), "axiom")
 	entries, err := os.ReadDir(root)
 	if os.IsNotExist(err) {
 		return "", false
@@ -869,33 +869,7 @@ func buildOrganicBinary(workspace string) (string, error) {
 	if err != nil || !info.Mode().IsRegular() {
 		return "", fmt.Errorf("built axiom binary %q is unusable: %v", path, err)
 	}
-	// Publish the same canonical binary under the legacy name too. The
-	// harness puts this directory on PATH, and the shipped reviewer assets
-	// still spell the invocation `gentle-ai`, so an agent-launched reviewer
-	// resolves that name from PATH and fails with "Executable not found" when
-	// only `axiom` exists. Both names stay on the canonical dispatcher.
-	if err := copyOrganicBinary(path, filepath.Join(workspace, legacyOrganicBinaryName())); err != nil {
-		return "", err
-	}
 	return path, nil
-}
-
-func legacyOrganicBinaryName() string {
-	if runtime.GOOS == "windows" {
-		return "gentle-ai.exe"
-	}
-	return "gentle-ai"
-}
-
-func copyOrganicBinary(source, destination string) error {
-	payload, err := os.ReadFile(source)
-	if err != nil {
-		return fmt.Errorf("read built binary %q: %w", source, err)
-	}
-	if err := os.WriteFile(destination, payload, 0o755); err != nil {
-		return fmt.Errorf("publish binary under the retired name %q: %w", destination, err)
-	}
-	return nil
 }
 
 func organicLines(prefix string, count int) string {
@@ -912,11 +886,11 @@ func organicLines(prefix string, count int) string {
 
 // TestRealAgentOrganicJourneys runs the same organic journeys through a real
 // configured agent. The agent runtime, its sub-agent mechanism, its tool calls,
-// the gentle-ai binary, and the repository are all real; only the model is a
+// the axiom binary, and the repository are all real; only the model is a
 // fixture, because a scripted model is what makes an agent journey repeatable.
 func TestRealAgentOrganicJourneys(t *testing.T) {
 	if os.Getenv(realAgentE2EEnvironment) != "1" {
-		t.Skip("set GENTLE_AI_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
+		t.Skip("set AXIOM_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
 	}
 	requireOrganicExecutableVersion(t, "opencode", pinnedOpenCodeVersion)
 	sharedConfig := prepareOpenCodeConfig(t)
@@ -998,8 +972,8 @@ func TestRealAgentOrganicJourneys(t *testing.T) {
 				organicActorBodyEnvironment+"="+body,
 				organicActorMessageEnvironment+"=docs: implement the real-agent outcome",
 				organicActorBinaryEnvironment+"="+organicBinary,
-				"GENTLE_AI_ORGANIC_ACTOR_EXECUTABLE="+os.Args[0],
-				"GENTLE_AI_ORGANIC_BINARY="+organicBinary,
+				"AXIOM_ORGANIC_ACTOR_EXECUTABLE="+os.Args[0],
+				"AXIOM_ORGANIC_BINARY="+organicBinary,
 			)
 
 			ctx, cancel := context.WithTimeout(context.Background(), organicAgentTimeout)
@@ -1033,7 +1007,7 @@ func TestRealAgentOrganicJourneys(t *testing.T) {
 
 func TestRealAgentInstalledSDDApplyExecutorDoesNotDelegate(t *testing.T) {
 	if os.Getenv(realAgentE2EEnvironment) != "1" {
-		t.Skip("set GENTLE_AI_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
+		t.Skip("set AXIOM_REAL_AGENT_E2E=1 to run the pinned real-agent journeys")
 	}
 	requireOrganicExecutableVersion(t, "opencode", pinnedOpenCodeVersion)
 
@@ -1198,7 +1172,7 @@ func TestInstalledSDDApplyExecutorRoundTripRejectsUnrelatedBashOutput(t *testing
 // bash tool, so the implementation step is a real child process of a real agent.
 func organicActorToolCommand(t *testing.T) string {
 	t.Helper()
-	return organicToolCommand(t, "GENTLE_AI_ORGANIC_ACTOR_EXECUTABLE")
+	return organicToolCommand(t, "AXIOM_ORGANIC_ACTOR_EXECUTABLE")
 }
 
 // organicToolCommand turns one fixture-authored argv into the string the

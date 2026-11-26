@@ -37,8 +37,8 @@ func assertRuntimeCommonDir(t *testing.T, open, oracleDir string) {
 	if store.commonDir != want {
 		t.Fatalf("commonDir = %q, want %q", store.commonDir, want)
 	}
-	if !strings.HasPrefix(store.Dir, filepath.Join(want, "gentle-ai", "sdd-runtime")+string(filepath.Separator)) {
-		t.Fatalf("Dir = %q, want under %q", store.Dir, filepath.Join(want, "gentle-ai", "sdd-runtime"))
+	if !strings.HasPrefix(store.Dir, filepath.Join(want, "axiom", "sdd-runtime")+string(filepath.Separator)) {
+		t.Fatalf("Dir = %q, want under %q", store.Dir, filepath.Join(want, "axiom", "sdd-runtime"))
 	}
 	got, err := runtimeGitCommonDir(context.Background(), open)
 	if err != nil {

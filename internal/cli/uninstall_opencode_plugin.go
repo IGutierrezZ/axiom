@@ -14,7 +14,7 @@ import (
 )
 
 // UninstallOpenCodePluginFlags are the parsed flags for the
-// `gentle-ai uninstall opencode-plugin <id>` sub-command.
+// `axiom uninstall opencode-plugin <id>` sub-command.
 type UninstallOpenCodePluginFlags struct {
 	PluginID model.OpenCodeCommunityPluginID
 	Yes      bool
@@ -33,7 +33,7 @@ var validOpenCodePluginIDs = []model.OpenCodeCommunityPluginID{
 // Expects exactly one positional argument (the plugin id). --yes/-y are hoisted
 // before flag.Parse because Go's flag package stops scanning flags at the
 // first non-flag argument, and the natural usage
-// `gentle-ai uninstall opencode-plugin <id> --yes` puts the flag after the id.
+// `axiom uninstall opencode-plugin <id> --yes` puts the flag after the id.
 func ParseUninstallOpenCodePluginFlags(args []string) (UninstallOpenCodePluginFlags, error) {
 	var opts UninstallOpenCodePluginFlags
 

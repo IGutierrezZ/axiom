@@ -85,7 +85,7 @@ func (a *Adapter) SystemPromptDir(homeDir string) string {
 }
 
 // SystemPromptFile returns the personal rules file that Trae reads.
-// gentle-ai injects its sections via StrategyMarkdownSections markers.
+// axiom injects its sections via StrategyMarkdownSections markers.
 func (a *Adapter) SystemPromptFile(homeDir string) string {
 	return filepath.Join(a.traeUserDir(homeDir), "user_rules.md")
 }

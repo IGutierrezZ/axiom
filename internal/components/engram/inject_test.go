@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -533,11 +534,23 @@ func TestInjectCursorWithMalformedMCPJsonRecovery(t *testing.T) {
 	}
 }
 
+// En global, VS Code declara Engram en <COPILOT_HOME|~/.copilot>/mcp-config.json
+// (`mcpServers`, la entrada de Copilot CLI) y retira la que Axiom dejó en el mcp.json
+// del perfil de usuario (`servers`), sin tocar los servidores del usuario.
 func TestInjectVSCodeMergesEngramToMCPConfigFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	adapter := vscode.NewAdapter()
+	profile := adapter.LegacyMCPConfigPath(home)
+	writeFile(t, profile, `{
+  // del usuario
+  "servers": {
+    "mio": {"command": "mio"},
+    "engram": {"command": "/opt/engram", "args": ["mcp", "--tools=agent"]}
+  }
+}
+`)
 
 	result, err := Inject(home, adapter)
 	if err != nil {
@@ -548,26 +561,30 @@ func TestInjectVSCodeMergesEngramToMCPConfigFile(t *testing.T) {
 	}
 
 	mcpPath := adapter.MCPConfigPath(home, "engram")
+	if mcpPath != filepath.Join(home, ".copilot", "mcp-config.json") {
+		t.Fatalf("MCPConfigPath = %q, quiero ~/.copilot/mcp-config.json", mcpPath)
+	}
+	var root map[string]any
 	content, err := os.ReadFile(mcpPath)
-	if err != nil {
-		t.Fatalf("ReadFile(mcp.json) error = %v", err)
+	if err != nil || json.Unmarshal(content, &root) != nil {
+		t.Fatalf("mcp-config.json ilegible: %v\n%s", err, content)
 	}
-
-	text := string(content)
-	if !strings.Contains(text, `"servers"`) {
-		t.Fatal("mcp.json missing servers key")
+	if _, legacyShape := root["servers"]; legacyShape {
+		t.Fatal("mcp-config.json no debe usar la raíz `servers` del arnés Local")
 	}
-	if !strings.Contains(text, `"engram"`) {
-		t.Fatal("mcp.json missing engram server")
+	entry, _ := root["mcpServers"].(map[string]any)["engram"].(map[string]any)
+	if entry["type"] != "stdio" || !reflect.DeepEqual(entry["tools"], []any{"*"}) {
+		t.Fatalf("engram debe llevar type stdio y tools [*]: %v", entry)
 	}
-	if !strings.Contains(text, `"mcp"`) {
-		t.Fatal("mcp.json missing engram args mcp")
-	}
-	if strings.Contains(text, `"mcpServers"`) {
-		t.Fatal("mcp.json should use 'servers' key, not 'mcpServers'")
-	}
-	// RED: VS Code overlay must include --tools=agent
 	assertArgsHaveToolsAgent(t, mcpPath)
+
+	legacy, err := os.ReadFile(profile)
+	if err != nil {
+		t.Fatalf("el mcp.json del perfil, con un servidor del usuario, debe seguir ahí: %v", err)
+	}
+	if strings.Contains(string(legacy), `"engram"`) || !strings.Contains(string(legacy), `"mio"`) || !strings.Contains(string(legacy), "// del usuario") {
+		t.Fatalf("del perfil solo se retira la entrada de Axiom:\n%s", legacy)
+	}
 }
 
 // ─── Gemini tests ─────────────────────────────────────────────────────────────
@@ -603,6 +620,14 @@ func TestInjectGeminiToolsFlagPresent(t *testing.T) {
 
 func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 	home := t.TempDir()
+	// Plugin escrito por una versión con el nombre anterior: se retira al inyectar.
+	legacyDir := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram")
+	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) error = %v", legacyDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(legacyDir, "plugin.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatalf("WriteFile legacy plugin error = %v", err)
+	}
 
 	result, err := Inject(home, antigravityAdapter())
 	if err != nil {
@@ -625,12 +650,12 @@ func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 		t.Fatalf("Antigravity should use Engram's default MCP invocation without tool-profile flags; got:\n%s", text)
 	}
 
-	pluginPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "plugin.json")
+	pluginPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "plugin.json")
 	if _, err := os.Stat(pluginPath); err != nil {
 		t.Fatalf("Antigravity Engram plugin manifest missing: %v", err)
 	}
 
-	pluginMCPPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "mcp_config.json")
+	pluginMCPPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "mcp_config.json")
 	pluginMCPContent, err := os.ReadFile(pluginMCPPath)
 	if err != nil {
 		t.Fatalf("ReadFile(%q) error = %v", pluginMCPPath, err)
@@ -640,7 +665,14 @@ func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 		t.Fatalf("Antigravity Engram plugin MCP config should expose default Engram MCP tools; got:\n%s", pluginMCPText)
 	}
 
-	hooksPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "hooks.json")
+	if _, err := os.Stat(legacyDir); !os.IsNotExist(err) {
+		t.Fatalf("legacy Antigravity Engram plugin directory must be retired; stat error = %v", err)
+	}
+	if again, err := Inject(home, antigravityAdapter()); err != nil || again.Changed {
+		t.Fatalf("second Inject must be idempotent; changed = %v, error = %v", again.Changed, err)
+	}
+
+	hooksPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "hooks.json")
 	hooksContent, err := os.ReadFile(hooksPath)
 	if err != nil {
 		t.Fatalf("ReadFile(%q) error = %v", hooksPath, err)
@@ -866,7 +898,7 @@ func TestInjectClaudePreservesAbsoluteCommandFromEngramSetup(t *testing.T) {
 }
 
 // TestInjectClaudeSkipsMCPServersEngramWhenPluginEnabled reproduces issue
-// #4188: gentle-ai sync must not add mcpServers.engram to ~/.claude.json
+// #4188: axiom sync must not add mcpServers.engram to ~/.claude.json
 // when the Engram plugin is already enabled via
 // ~/.claude/settings.json's enabledPlugins["engram@engram"], because the
 // plugin already exposes the same 18 tools under a different prefix.
@@ -902,7 +934,7 @@ func TestInjectClaudeSkipsMCPServersEngramWhenPluginEnabled(t *testing.T) {
 // TestInjectClaudePreservesIdenticalManualRegistrationsWhenPluginEnabled
 // verifies that sync never infers ownership from an Engram registration's
 // shape. A user can author exactly the same registry and legacy entries that
-// gentle-ai would write, so plugin detection must only suppress new writes.
+// axiom would write, so plugin detection must only suppress new writes.
 func TestInjectClaudePreservesIdenticalManualRegistrationsWhenPluginEnabled(t *testing.T) {
 	home := t.TempDir()
 	mockEngramLookPath(t, "/opt/homebrew/bin/engram", "")
@@ -1213,7 +1245,7 @@ func TestInjectCodexIsIdempotent(t *testing.T) {
 // ─── Codex profile injection tests ───────────────────────────────────────────
 
 // TestInjectCodexWritesProfiles asserts that Inject for the Codex adapter
-// writes the three gentle-ai SDD profile files into ~/.codex/.
+// writes the three axiom SDD profile files into ~/.codex/.
 func TestInjectCodexWritesProfiles(t *testing.T) {
 	validCodexRuntime(t)
 	home := t.TempDir()

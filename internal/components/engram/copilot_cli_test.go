@@ -7,7 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/copilotcli"
+	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 )
 
 // copilotCLIHome aísla un home que es además el home real del proceso (COPILOT_HOME
@@ -22,7 +24,7 @@ func copilotCLIHome(t *testing.T) string {
 }
 
 // El MCP de Engram en Copilot CLI va en <raíz>/mcp-config.json, bajo `mcpServers`
-// (no `servers`, la raíz de VS Code), con `type: "local"` y `tools: ["*"]`.
+// (no `servers`, la del arnés Local de VS Code), con `type: "stdio"` y `tools: ["*"]`.
 func TestInjectCopilotCLIWritesEngramMCPConfigShape(t *testing.T) {
 	home := copilotCLIHome(t)
 	mockEngramLookPath(t, "", "not found")
@@ -49,8 +51,8 @@ func TestInjectCopilotCLIWritesEngramMCPConfigShape(t *testing.T) {
 	if !ok {
 		t.Fatalf("falta la entrada engram: %v", servers)
 	}
-	if entry["type"] != "local" {
-		t.Errorf("type = %v, want local", entry["type"])
+	if entry["type"] != "stdio" {
+		t.Errorf("type = %v, want stdio", entry["type"])
 	}
 	if !reflect.DeepEqual(entry["tools"], []any{"*"}) {
 		t.Errorf("tools = %v, want [*]", entry["tools"])
@@ -121,6 +123,68 @@ func TestInjectCopilotCLIPreservesUserServersAndAbsoluteEngramCommand(t *testing
 	engramEntry := servers["engram"].(map[string]any)
 	if got := engramEntry["command"]; got != "/opt/custom/engram" {
 		t.Errorf("command = %v, want la ruta absoluta existente", got)
+	}
+	if got := engramEntry["type"]; got != "stdio" {
+		t.Errorf("type = %v, want stdio: sync migra el `local` de instalaciones anteriores", got)
+	}
+}
+
+// VS Code Copilot y Copilot CLI comparten <raíz>/mcp-config.json con la misma entrada:
+// en cualquier orden, la primera orden de Engram que se escribe se conserva y sync
+// deja el fichero idéntico byte a byte.
+func TestInjectVSCodeAndCopilotCLIShareMCPConfig(t *testing.T) {
+	for name, order := range map[string][]agents.Adapter{
+		"vscode-primero": {vscode.NewAdapter(), copilotcli.NewAdapter()},
+		"cli-primero":    {copilotcli.NewAdapter(), vscode.NewAdapter()},
+	} {
+		t.Run(name, func(t *testing.T) {
+			home := copilotCLIHome(t)
+			t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
+			t.Setenv("XDG_CONFIG_HOME", "")
+			mockEngramLookPath(t, "/usr/local/bin/engram", "")
+			path := filepath.Join(home, ".copilot", "mcp-config.json")
+
+			for _, adapter := range order {
+				if _, err := Inject(home, adapter); err != nil {
+					t.Fatalf("Inject(%s) error = %v", adapter.Agent(), err)
+				}
+			}
+			first, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, adapter := range order {
+				result, err := Inject(home, adapter)
+				if err != nil {
+					t.Fatalf("Inject(%s) error = %v", adapter.Agent(), err)
+				}
+				if result.Changed {
+					t.Errorf("el segundo sync de %s cambió algo", adapter.Agent())
+				}
+			}
+			if again, _ := os.ReadFile(path); string(again) != string(first) {
+				t.Fatalf("mcp-config.json cambió entre syncs:\n%s\n---\n%s", first, again)
+			}
+			entry := readJSONFile(t, path)["mcpServers"].(map[string]any)["engram"].(map[string]any)
+			if entry["type"] != "stdio" || !reflect.DeepEqual(entry["tools"], []any{"*"}) {
+				t.Fatalf("entrada compartida inesperada: %v", entry)
+			}
+		})
+	}
+}
+
+// La sonda de salud de VS Code lee el mismo mcp-config.json que escribe el adaptador.
+func TestReadPersistedStdioCommandsReadsVSCodeCopilotMCPConfig(t *testing.T) {
+	home := copilotCLIHome(t)
+	writeFile(t, filepath.Join(home, ".copilot", "mcp-config.json"),
+		`{"mcpServers":{"engram":{"type":"stdio","command":"/configured/engram","args":["mcp","--tools=agent"],"tools":["*"]}}}`)
+
+	commands, err := ReadPersistedStdioCommands(home, []string{string(vscode.NewAdapter().Agent())})
+	if err != nil {
+		t.Fatalf("ReadPersistedStdioCommands() error = %v", err)
+	}
+	if len(commands) != 1 || commands[0].Command != "/configured/engram" {
+		t.Fatalf("commands = %+v", commands)
 	}
 }
 

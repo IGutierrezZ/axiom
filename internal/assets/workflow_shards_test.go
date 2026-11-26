@@ -1,9 +1,15 @@
 package assets
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -23,6 +29,7 @@ type workflowShard struct {
 type workflowStep struct {
 	Name string            `yaml:"name"`
 	Env  map[string]string `yaml:"env"`
+	Run  string            `yaml:"run"`
 }
 
 type workflowJob struct {
@@ -166,7 +173,7 @@ func TestUnitTestsAggregatorRequiresEveryUnitJob(t *testing.T) {
 			checked = append(checked, value)
 		}
 	}
-	for _, child := range []string{"go-tests", "binary-smoke", "deadcode-ratchet"} {
+	for _, child := range []string{"go-tests", "binary-smoke", "deadcode-ratchet", "toolchain-meta-tests"} {
 		if _, ok := jobs[child]; !ok {
 			t.Errorf("ci.yml has no %s job", child)
 			continue
@@ -178,4 +185,168 @@ func TestUnitTestsAggregatorRequiresEveryUnitJob(t *testing.T) {
 			t.Errorf("unit-tests does not check %s", want)
 		}
 	}
+}
+
+// TestToolchainMetaTestsRunInExactlyOneJob guards the split of the toolchain
+// meta-tests out of the unit jobs (C-08-k). `Go Tests` skips the workflow's
+// TOOLCHAIN_META_TESTS selector and `Toolchain Meta Tests` runs that same
+// selector over its META_PACKAGES. Both failure modes are silent: a selected
+// name declared outside those packages is skipped by `Go Tests` and run by
+// nobody, and a new test in those packages that launches the toolchain lands
+// back in every PR without anyone noticing.
+func TestToolchainMetaTestsRunInExactlyOneJob(t *testing.T) {
+	root := filepath.Join("..", "..")
+	data, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "ci.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Env  map[string]string      `yaml:"env"`
+		Jobs map[string]workflowJob `yaml:"jobs"`
+	}
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatalf("parse ci.yml: %v", err)
+	}
+	selector := workflow.Env["TOOLCHAIN_META_TESTS"]
+	if selector == "" {
+		t.Fatal("ci.yml declares no workflow-level TOOLCHAIN_META_TESTS selector")
+	}
+	matcher, err := regexp.Compile(selector)
+	if err != nil {
+		t.Fatalf("TOOLCHAIN_META_TESTS %q does not compile as a -run regex: %v", selector, err)
+	}
+
+	stepRunning := func(job, command string) workflowStep {
+		t.Helper()
+		for _, step := range workflow.Jobs[job].Steps {
+			if strings.Contains(step.Run, command) {
+				return step
+			}
+		}
+		t.Fatalf("ci.yml job %s has no step running %q", job, command)
+		return workflowStep{}
+	}
+	stepRunning("go-tests", `go test "${packages[@]}" -skip "$TOOLCHAIN_META_TESTS"`)
+	metaStep := stepRunning("toolchain-meta-tests", `-run "$TOOLCHAIN_META_TESTS"`)
+	metaDirs := map[string]bool{}
+	for _, pkg := range strings.Fields(metaStep.Env["META_PACKAGES"]) {
+		metaDirs[filepath.FromSlash(strings.TrimPrefix(pkg, "./"))] = true
+	}
+	if len(metaDirs) == 0 {
+		t.Fatal("toolchain-meta-tests names no META_PACKAGES")
+	}
+
+	declared := regexp.MustCompile(`(?m)^func (Test\w*)\(`)
+	selected := 0
+	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			switch entry.Name() {
+			case ".git", "node_modules", "testdata", "vendor":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		for _, match := range declared.FindAllStringSubmatch(string(content), -1) {
+			if !matcher.MatchString(match[1]) {
+				continue
+			}
+			selected++
+			dir, relErr := filepath.Rel(root, filepath.Dir(path))
+			if relErr != nil {
+				return relErr
+			}
+			if !metaDirs[dir] {
+				t.Errorf("%s declares %s, selected by TOOLCHAIN_META_TESTS outside META_PACKAGES: Go Tests skips it and Toolchain Meta Tests never runs it", filepath.ToSlash(dir), match[1])
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if selected == 0 {
+		t.Fatal("TOOLCHAIN_META_TESTS selects no declared test; the split would pass vacuously")
+	}
+
+	fileSet := token.NewFileSet()
+	for dir := range metaDirs {
+		files, err := filepath.Glob(filepath.Join(root, dir, "*_test.go"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range files {
+			parsed, err := parser.ParseFile(fileSet, file, nil, parser.SkipObjectResolution)
+			if err != nil {
+				t.Fatalf("parse %s: %v", file, err)
+			}
+			for _, decl := range parsed.Decls {
+				fn, ok := decl.(*ast.FuncDecl)
+				if !ok || fn.Recv != nil || fn.Body == nil || !strings.HasPrefix(fn.Name.Name, "Test") {
+					continue
+				}
+				if launchesGoToolchain(fn.Body) && !matcher.MatchString(fn.Name.Name) {
+					t.Errorf("%s launches the Go toolchain but TOOLCHAIN_META_TESTS does not select it, so every PR pays for it", fn.Name.Name)
+				}
+			}
+		}
+	}
+}
+
+// launchesGoToolchain reports whether a test body calls the toolchain gate,
+// the release-policy fixture (`go run`), or `go build|run|test` directly.
+func launchesGoToolchain(body *ast.BlockStmt) bool {
+	found := false
+	ast.Inspect(body, func(node ast.Node) bool {
+		if found {
+			return false
+		}
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		switch fun := call.Fun.(type) {
+		case *ast.Ident:
+			found = fun.Name == "newReleasePolicyFixture"
+		case *ast.SelectorExpr:
+			switch fun.Sel.Name {
+			case "RequireGoToolchain":
+				found = true
+			case "Command", "CommandContext":
+				args := call.Args
+				if fun.Sel.Name == "CommandContext" && len(args) > 0 {
+					args = args[1:]
+				}
+				if len(args) >= 2 && goStringLiteral(args[0]) == "go" {
+					switch goStringLiteral(args[1]) {
+					case "build", "run", "test":
+						found = true
+					}
+				}
+			}
+		}
+		return !found
+	})
+	return found
+}
+
+func goStringLiteral(expr ast.Expr) string {
+	literal, ok := expr.(*ast.BasicLit)
+	if !ok || literal.Kind != token.STRING {
+		return ""
+	}
+	value, err := strconv.Unquote(literal.Value)
+	if err != nil {
+		return ""
+	}
+	return value
 }

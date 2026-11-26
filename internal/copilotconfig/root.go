@@ -38,7 +38,8 @@ func isRealUserHome(homeDir string) bool {
 // (docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference).
 //
 // Quedan fuera a propósito las entradas que comparte con VS Code Copilot, que lee
-// ~/.copilot/skills y ~/.copilot/agents (code.visualstudio.com/docs/copilot): su
+// ~/.copilot/skills, ~/.copilot/agents y mcp-config.json
+// (code.visualstudio.com/docs/copilot; Axiom escribe ahí el MCP de VS Code): su
 // presencia no distingue a un agente del otro. También queda fuera cualquier
 // entrada desconocida, para que un fichero ajeno no convierta a un usuario de VS
 // Code en usuario del CLI.
@@ -56,11 +57,10 @@ var cliStateEntries = map[string]bool{
 	// Solo las lee el CLI: las escribe el usuario, Axiom o CodeGraph para él.
 	"settings.json":           true,
 	"copilot-instructions.md": true,
-	"mcp-config.json":         true,
 }
 
 // HasCLIState dice si root contiene alguna entrada propia de Copilot CLI (su
-// estado, sus ajustes, su MCP o su prompt global).
+// estado, sus ajustes o su prompt global).
 //
 // Existe porque la sola presencia de ~/.copilot no distingue al CLI de VS Code
 // Copilot: Axiom escribe ahí las skills de VS Code. Sin esta comprobación, quien

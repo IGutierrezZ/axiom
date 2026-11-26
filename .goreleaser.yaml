@@ -39,7 +39,7 @@ archives:
     meta: true
     formats:
       - tar.gz
-    name_template: "gentle-ai-release-provenance-v1"
+    name_template: "axiom-release-provenance-v1"
     files:
       - src: .goreleaser-provenance/manifest.json
         strip_parent: true
@@ -67,7 +67,7 @@ signs:
       - "-x"
       - "${signature}"
       - "-c"
-      - "signature from gentle-ai release"
+      - "signature from axiom release"
       - "-t"
       - "repo=IGutierrezZ/axiom;tag={{ .Tag }}"
     output: true

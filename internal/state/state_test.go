@@ -307,7 +307,7 @@ func TestLegacyPersonaIsIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
 	}
 }
 
-// TestWriteCreatesStateDir verifies that Write creates the .gentle-ai directory
+// TestWriteCreatesStateDir verifies that Write creates the .axiom directory
 // when it does not exist yet.
 func TestWriteCreatesStateDir(t *testing.T) {
 	home := t.TempDir()

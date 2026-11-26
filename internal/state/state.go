@@ -3,7 +3,6 @@ package state
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +15,6 @@ import (
 )
 
 const stateDir = ".axiom"
-const legacyStateDir = ".gentle-ai"
 const stateFile = "state.json"
 
 // DefaultUpstreamVersion is the frozen upstream ceiling this fork is reconciled
@@ -103,7 +101,7 @@ type InstallState struct {
 	Skills                 []model.SkillID     `json:"skills,omitempty"`
 	SDDMode                model.SDDModeID     `json:"sdd_mode,omitempty"`
 	StrictTDD              bool                `json:"strict_tdd,omitempty"`
-	// CommunityTools records optional tools explicitly selected in the Gentle AI
+	// CommunityTools records optional tools explicitly selected in the Axiom
 	// installer. Configured distinguishes a completed empty selection from legacy
 	// state files that predate persistence of this choice.
 	CommunityTools           []string `json:"community_tools,omitempty"`
@@ -111,7 +109,7 @@ type InstallState struct {
 
 	// ClaudeModelAssignments maps SDD phase names (e.g. "sdd-explore") to a
 	// Claude model alias ("fable", "opus", "sonnet", "haiku"). Persisted so that
-	// `gentle-ai sync` preserves the user's model choices instead of falling
+	// `axiom sync` preserves the user's model choices instead of falling
 	// back to the "balanced" preset every time.
 	ClaudeModelAssignments map[string]string `json:"claude_model_assignments,omitempty"`
 
@@ -125,7 +123,7 @@ type InstallState struct {
 	CopilotPhaseAssignments map[string]CopilotPhaseAssignmentState `json:"copilot_phase_assignments,omitempty"`
 
 	// CodexModelAssignments maps SDD phase names to a Codex reasoning_effort value
-	// (low|medium|high|xhigh). Persisted so that `gentle-ai sync` preserves the
+	// (low|medium|high|xhigh). Persisted so that `axiom sync` preserves the
 	// user's per-phase effort preset instead of falling back to Recommended.
 	CodexModelAssignments map[string]string `json:"codexModelAssignments,omitempty"`
 
@@ -134,7 +132,7 @@ type InstallState struct {
 
 	// CodexCarrilModelAssignments maps the three carril profile names
 	// (sdd-strong|sdd-mid|sdd-cheap) to OpenAI subscription model IDs
-	// (e.g. "gpt-5.6-sol", "gpt-5.6-luna"). Persisted so that `gentle-ai sync`
+	// (e.g. "gpt-5.6-sol", "gpt-5.6-luna"). Persisted so that `axiom sync`
 	// regenerates profile files with the user's chosen model per tier.
 	// Absent/empty = resolve to DefaultCarrilModels at runtime (backward-compat).
 	CodexCarrilModelAssignments map[string]string `json:"codexCarrilModelAssignments,omitempty"`
@@ -180,7 +178,7 @@ type InstallState struct {
 	// state files that lack the field entirely).
 	LastUpdateCheck *time.Time `json:"last_update_check,omitempty"`
 
-	// PendingSync is set to true when a gentle-ai self-upgrade succeeded and
+	// PendingSync is set to true when a axiom self-upgrade succeeded and
 	// the process is about to exit (restart required). The next launch reads
 	// this flag and runs sync automatically before entering the normal flow,
 	// then clears the flag on success. On sync failure the flag is left set
@@ -271,18 +269,7 @@ func Bootstrap(homeDir string) error {
 // Read reads and unmarshals the state file from the given home directory.
 // Returns an error if the file does not exist or cannot be decoded.
 func Read(homeDir string) (InstallState, error) {
-	canonicalPath := Path(homeDir)
-	s, err := readStateFile(canonicalPath)
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		legacyPath := filepath.Join(homeDir, legacyStateDir, stateFile)
-		if legacyData, legacyErr := os.ReadFile(legacyPath); legacyErr == nil {
-			var legacy InstallState
-			if err := json.Unmarshal(legacyData, &legacy); err == nil {
-				return legacy, nil
-			}
-		}
-	}
-	return s, err
+	return readStateFile(Path(homeDir))
 }
 
 // readStateFile lee y decodifica el documento de estado de una ruta concreta.

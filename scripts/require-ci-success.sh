@@ -34,8 +34,10 @@ runs=$(gh api --paginate \
   --jq '.workflow_runs[] | [.created_at, .id, .status, (.conclusion // "none"), .html_url] | @tsv') ||
   die "could not read workflow runs for $GITHUB_SHA"
 
+# ci.yml no longer runs on push to main, only on pull requests, nightly and on
+# demand, so a freshly merged commit usually has no run yet.
 if [[ -z "$runs" ]]; then
-  die "no $workflow_name run exists for $GITHUB_SHA. Push the commit to a branch that runs $workflow_name, wait for it to finish, then re-run this release from the same tag"
+  die "no $workflow_name run exists for $GITHUB_SHA. $workflow_name does not run on push to main: while main is at this commit, run 'gh workflow run $workflow_ref --ref main' (or tag the commit the nightly run covered), wait for it to finish, then re-run this release from the same tag"
 fi
 
 # A commit can carry several runs of the same workflow: a re-run, or a retry

@@ -578,7 +578,7 @@ func TestWriteTextPrintsTheModeAndTheRegistry(t *testing.T) {
 
 // Regla 11: toda negativa nombra una continuación ejecutable (una orden `axiom ...`).
 func TestResultEveryRefusalNamesAnExecutableContinuation(t *testing.T) {
-	executable := regexp.MustCompile("(?:gentle-ai|axiom) [a-z][a-z-]*")
+	executable := regexp.MustCompile("axiom [a-z][a-z-]*")
 	refusals := map[string]*Refusal{
 		"NotAGitRepository":  NotAGitRepository("status", `C:\x`),
 		"UnusableDirectory":  UnusableDirectory("status", "razón"),

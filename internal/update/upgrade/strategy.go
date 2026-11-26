@@ -65,7 +65,7 @@ type strategyOutcome struct {
 //   - brew profile → brewUpgrade for tools Homebrew owns (never Axiom itself)
 //   - go-install method + apt/pacman/other → goInstallUpgrade
 //   - binary method + linux/darwin → binaryUpgrade
-//   - binary method + windows → manualFallback (gentle-ai explains the signed-distribution hold)
+//   - binary method + windows → manualFallback (axiom explains the signed-distribution hold)
 //   - script method + linux/darwin + other → scriptUpgrade (curl | bash install.sh)
 //   - script method + windows → manualFallback
 //   - OpenCode plugin method → update materialized package in ~/.config/opencode when possible
@@ -540,7 +540,7 @@ func homebrewFailureAdvice(toolName string, output string, detected ...update.Ho
 // goInstallUpgrade runs `go install <importPath>@v<version>`.
 //
 // Generic Go-managed tools retain the post-install warning because the new
-// binary was genuinely written. Windows gentle-ai self-upgrades are different:
+// binary was genuinely written. Windows axiom self-upgrades are different:
 // they must prove that Go owns the active executable before writing, or skip to
 // a manual recovery instead of creating a second PATH-visible binary.
 func goInstallUpgrade(ctx context.Context, r update.UpdateResult, profile system.PlatformProfile, preflightDestination string) error {
@@ -577,7 +577,7 @@ func goInstallUpgrade(ctx context.Context, r update.UpdateResult, profile system
 	cmd := execCommand("go", "install", target)
 	cmd.Stdin = nil
 	if betaSelf {
-		cmd.Env = goProxyBypassEnv(cmd.Env, gentleAIModulePath(tool))
+		cmd.Env = goProxyBypassEnv(cmd.Env, selfToolModulePath(tool))
 	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("go install %s: %w (output: %s)", target, err, string(out))
@@ -596,7 +596,7 @@ func firstString(values []string) string {
 
 // IsSelfBetaUpgrade reports whether the update result targets the self-tool's
 // beta channel (a main-head build advertised as main@<sha>). It detects the
-// channel for both historical names: axiom and gentle-ai (REQ-22.3).
+// channel through the self-tool identity predicate (REQ-22.3).
 func IsSelfBetaUpgrade(r update.UpdateResult) bool {
 	return update.IsSelfTool(r.Tool) &&
 		strings.HasPrefix(strings.TrimSpace(r.LatestVersion), "main@")
@@ -616,7 +616,7 @@ func goInstallMainUpgrade(tool update.ToolInfo) error {
 		}
 	}
 
-	module := gentleAIModulePath(tool)
+	module := selfToolModulePath(tool)
 
 	destDir, destErr := goInstallDestinationDir()
 
@@ -632,9 +632,9 @@ func goInstallMainUpgrade(tool update.ToolInfo) error {
 	return nil
 }
 
-// gentleAIModulePath returns the declared GoModulePath (D-01). It never derives
+// selfToolModulePath returns the declared GoModulePath (D-01). It never derives
 // the module from Owner/Repo — only the declared module decides resolvability.
-func gentleAIModulePath(tool update.ToolInfo) string {
+func selfToolModulePath(tool update.ToolInfo) string {
 	return strings.TrimSpace(tool.GoModulePath)
 }
 
@@ -694,7 +694,7 @@ func prependGoPattern(existing, pattern string) string {
 // ManualFallbackError so the executor surfaces them as UpgradeSkipped.
 func binaryUpgrade(ctx context.Context, r update.UpdateResult, profile system.PlatformProfile) error {
 	if profile.OS == "windows" && update.IsSelfTool(r.Tool) {
-		return &ManualFallbackError{Hint: gentleAIWindowsSourceInstallHint(r)}
+		return &ManualFallbackError{Hint: selfWindowsSourceInstallHint(r)}
 	}
 
 	// engram: always use its dedicated binary downloader regardless of platform
@@ -720,7 +720,7 @@ func binaryUpgrade(ctx context.Context, r update.UpdateResult, profile system.Pl
 	return downloadAndReplace(ctx, r, profile)
 }
 
-func gentleAIWindowsSourceInstallHint(r update.UpdateResult) string {
+func selfWindowsSourceInstallHint(r update.UpdateResult) string {
 	return update.WindowsDistributionHoldMessage + " " +
 		"No binary or remote script was downloaded or executed. Install/update from source with Go 1.25.10+:\n  " +
 		update.SourceInstallCommand(r.Tool, r.LatestVersion)

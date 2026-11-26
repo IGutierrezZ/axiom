@@ -1,4 +1,4 @@
-<!-- gentle-ai:opencode-background-subagents -->
+<!-- axiom:opencode-background-subagents -->
 ### OpenCode Background Subagent Policy
 
 Use OpenCode's Task tool with `background: true` only for independent, read-only exploration, audit, or review work where the parent can continue non-overlapping work.
@@ -10,4 +10,4 @@ Use foreground tasks when the result is needed before the next action, for user 
 Do not duplicate launches or work, and do not overlap files or topics. Never run parallel writers in one worktree.
 
 Background jobs are process-local and non-durable. A restart loses them; make no recovery claim. If `background` is absent from the Task tool schema, or the capability is disabled or unknown, omit `background` and run the task in the foreground.
-<!-- /gentle-ai:opencode-background-subagents -->
+<!-- /axiom:opencode-background-subagents -->

@@ -111,13 +111,13 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 		{
 			name: "missing release provenance archive",
 			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "  {\"name\":\"gentle-ai-release-provenance-v1.tar.gz\",\"path\":\"dist/gentle-ai-release-provenance-v1.tar.gz\",\"type\":\"Archive\",\"extra\":{\"Binaries\":[],\"Format\":\"tar.gz\",\"ID\":\"release-provenance\"}},\n", "")
+				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "  {\"name\":\"axiom-release-provenance-v1.tar.gz\",\"path\":\"dist/axiom-release-provenance-v1.tar.gz\",\"type\":\"Archive\",\"extra\":{\"Binaries\":[],\"Format\":\"tar.gz\",\"ID\":\"release-provenance\"}},\n", "")
 			},
 		},
 		{
 			name: "extra release provenance archive",
 			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {\"name\":\"gentle-ai-release-provenance-v1-copy.tar.gz\",\"path\":\"dist/gentle-ai-release-provenance-v1-copy.tar.gz\",\"type\":\"Archive\",\"extra\":{\"Binaries\":[],\"Format\":\"tar.gz\",\"ID\":\"release-provenance\"}}\n]")
+				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {\"name\":\"axiom-release-provenance-v1-copy.tar.gz\",\"path\":\"dist/axiom-release-provenance-v1-copy.tar.gz\",\"type\":\"Archive\",\"extra\":{\"Binaries\":[],\"Format\":\"tar.gz\",\"ID\":\"release-provenance\"}}\n]")
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 		{
 			name: "unexpected resolved Windows artifact",
 			mutate: func(t *testing.T, root string) {
-				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {"+`"name":"gentle-ai","path":"dist/gentle-ai_windows_amd64_v1/gentle-ai.exe","goos":"windows","goarch":"amd64","target":"windows_amd64_v1","type":"Binary","extra":{"Binary":"gentle-ai","ID":"gentle-ai"}`+"}\n]")
+				replaceReleasePolicyFile(t, root, filepath.Join("dist", "artifacts.json"), "\n]", ",\n  {"+`"name":"axiom","path":"dist/gentle-ai_windows_amd64_v1/gentle-ai.exe","goos":"windows","goarch":"amd64","target":"windows_amd64_v1","type":"Binary","extra":{"Binary":"axiom","ID":"axiom"}`+"}\n]")
 			},
 		},
 		{
@@ -294,7 +294,7 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 			mutate: func(t *testing.T, root string) {
 				replaceReleasePolicyFile(t, root, filepath.Join(".github", "workflows", "release.yml"),
 					"      - name: Verify published assets from GitHub\n",
-					"      - name: Create release through GitHub API\n        run: gh api --method POST repos/Gentleman-Programming/gentle-ai/releases\n\n      - name: Verify published assets from GitHub\n")
+					"      - name: Create release through GitHub API\n        run: gh api --method POST repos/IGutierrezZ/axiom/releases\n\n      - name: Verify published assets from GitHub\n")
 			},
 		},
 	} {
@@ -328,7 +328,7 @@ func TestModifiedReleaseVerifierCannotGainWriteAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := file.WriteString("\ngh api --method POST repos/Gentleman-Programming/gentle-ai/releases\n"); err != nil {
+	if _, err := file.WriteString("\ngh api --method POST repos/IGutierrezZ/axiom/releases\n"); err != nil {
 		_ = file.Close()
 		t.Fatal(err)
 	}
@@ -547,7 +547,7 @@ const releasePolicyArtifactsFixture = `[
   {"name":"axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_linux_arm64.tar.gz","goos":"linux","goarch":"arm64","target":"linux_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_amd64.tar.gz","goos":"darwin","goarch":"amd64","target":"darwin_amd64_v1","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
   {"name":"axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","path":"dist/axiom_0.0.0-SNAPSHOT_darwin_arm64.tar.gz","goos":"darwin","goarch":"arm64","target":"darwin_arm64_v8.0","type":"Archive","extra":{"Binaries":["axiom"],"Format":"tar.gz","ID":"default"}},
-  {"name":"gentle-ai-release-provenance-v1.tar.gz","path":"dist/gentle-ai-release-provenance-v1.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"release-provenance"}},
+  {"name":"axiom-release-provenance-v1.tar.gz","path":"dist/axiom-release-provenance-v1.tar.gz","type":"Archive","extra":{"Binaries":[],"Format":"tar.gz","ID":"release-provenance"}},
   {"name":"checksums.txt","path":"dist/checksums.txt","type":"Checksum","extra":{}}
 ]`
 

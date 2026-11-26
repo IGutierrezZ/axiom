@@ -17,10 +17,11 @@ El sistema DEBE clasificar cada superficie de nombre publicado en exactamente un
 (Previously: el escenario usaba el esquema `contracts/review-integration/v2/schemas/status.schema.json`, que se retira con RDD (C-01-e); se sustituye por el esquema de consentimiento de `contracts/sdd-integration`, que permanece.)
 
 #### Scenario: El namespace de contracts/** se clasifica como interoperabilidad
-- **DADO** el fichero `contracts/sdd-integration/v1/schemas/consent.schema.json` con `"$id": "https://gentle-ai.dev/contracts/sdd-integration/v1/schemas/consent.schema.json"`
+- **DADO** el fichero `contracts/sdd-integration/v1/schemas/consent.schema.json` con `"$id": "urn:axiom:contracts:sdd-integration:v1:consent"`
 - **CUANDO** se clasifica esa superficie
 - **ENTONCES** se clasifica como interoperabilidad
 - **Y** ninguna tanda de identidad la modifica
+(Previously: el escenario citaba el `$id` `https://gentle-ai.dev/contracts/sdd-integration/v1/schemas/consent.schema.json`, retirado al pasar el contrato de consentimiento a la identidad `axiom`.)
 
 ### Requirement: Publicación y compuertas de release bajo identidad propia (REQ-20.8)
 
@@ -47,27 +48,26 @@ La ruta de módulo Go DEBE migrar de `github.com/gentleman-programming/gentle-ai
 ---
 
 ### Requirement: Namespace de protocolo en contracts/** sin cambios (REQ-20.10)
-
-El sistema NO DEBE modificar el namespace de protocolo bajo `contracts/**`: los valores `$id`, los prefijos de contrato (`axiom.sdd-integration/v1`, `axiom.sdd-integration.consent/v1` y equivalentes) y los esquemas asociados DEBEN permanecer byte a byte idénticos.
-(Previously: los prefijos de ejemplo eran `gentle-ai.review-integration/v2` y `gentle-ai.sdd-status/v2`, ya sin ficheros bajo `contracts/**` tras retirar `contracts/review-integration` y `contracts/review-provider-contract` (C-01-e); el escenario hablaba de «agentes y revisores».)
+El sistema NO DEBE modificar el namespace de protocolo bajo `contracts/**` fuera de un cambio de contrato deliberado: los valores `$id` (el del consentimiento es `urn:axiom:contracts:sdd-integration:v1:consent`), los prefijos de contrato (`axiom.sdd-integration/v1`, `axiom.sdd-integration.consent/v1` y equivalentes) y los esquemas asociados DEBEN permanecer byte a byte idénticos a la versión publicada con la identidad `axiom`, cuyo digest fija `internal/consentenvelope/consent_contract_test.go`. Ningún nombre `gentle-ai` DEBE aparecer en un `$id` ni en un prefijo de contrato.
 
 #### Scenario: contracts/** permanece sin cambios
 - **DADO** el estado de `contracts/**/*.schema.json`
 - **CUANDO** se auditan los esquemas
-- **ENTONCES** cada fichero bajo `contracts/**` es byte a byte idéntico
+- **ENTONCES** cada fichero bajo `contracts/**` coincide con el digest fijado en la prueba del contrato
+- **Y** ningún `$id` ni prefijo de contrato contiene `gentle-ai`
 - **Y** los agentes y demás consumidores continúan interoperando con el formato publicado
+(Previously: el `$id` y los prefijos de ejemplo eran los del namespace `gentle-ai` y el escenario exigía identidad byte a byte sin referencia al digest del contrato.)
 
 ### Requirement: Binario gentle-ai retirado y shim de crosslane conservado (REQ-20.11)
 
-El sistema NO DEBE compilar ni publicar el binario `gentle-ai`: el paquete `cmd/gentle-ai` y el build `gentle-ai-deprecated` de `.goreleaser.yaml` se retiraron por decisión de producto (ODD `seguimientos-restos-upstream`). El sistema DEBE conservar sin cambios de comportamiento el shim ejecutable `gentle-ai` en `$PATH` que generan `scripts/crosslane/battery.go` y `scripts/crosslane/host.go`, que es un reconocedor del nombre heredado y no un producto.
+El sistema NO DEBE compilar ni publicar el binario `gentle-ai`: el paquete `cmd/gentle-ai` y el build `gentle-ai-deprecated` de `.goreleaser.yaml` se retiraron por decisión de producto (ODD `seguimientos-restos-upstream`). El shim ejecutable `gentle-ai` de `scripts/crosslane` ya no existe en el repositorio.
 
 #### Scenario: El release publica solo el binario canónico
 - **DADO** la configuración de release `.goreleaser.yaml`
 - **CUANDO** se resuelven sus builds
 - **ENTONCES** el único build es el que compila `./cmd/axiom` como `axiom`
 - **Y** ningún build, archivo ni compuerta de release referencia `cmd/gentle-ai` ni un binario `gentle-ai`
-
----
+(Previously: el requisito obligaba a conservar el shim `gentle-ai` de `scripts/crosslane/battery.go` y `host.go`; esos ficheros ya no existen y ningún artefacto del producto usa el nombre `gentle-ai`.)
 
 ### Requirement: Nombres de servicio de telemetría de despliegue (REQ-20.12) — RETIRADO
 
@@ -84,14 +84,13 @@ Los nombres de servicio de despliegue de telemetría (`deploy/telemetry/axiom-te
 
 ### Requirement: Raíz de respaldos resuelta exclusivamente a través de internal/backup (REQ-20.13)
 
-Todo escritor de producción que cree o localice el directorio raíz de respaldos DEBE resolverlo invocando la función de resolución canónica exportada de `internal/backup` (`backup.BackupRootFor(homeDir)`), y NO DEBE construir esa ruta mediante un literal `filepath.Join` propio. Los respaldos ya existentes bajo `~/.gentle-ai/backups` DEBEN seguir siendo legibles por `ListBackups` sin migración obligatoria.
+Todo escritor de producción que cree o localice el directorio raíz de respaldos DEBE resolverlo invocando la función de resolución canónica exportada de `internal/backup` (`backup.BackupRootFor(homeDir)`), y NO DEBE construir esa ruta mediante un literal `filepath.Join` propio. Los respaldos que sobrevivan bajo `~/.gentle-ai/backups` DEBEN moverse una sola vez, en el arranque, a la raíz de respaldos de Axiom sin pisar los existentes y reescribiendo `root_dir` y `snapshot_path` de su manifiesto; `ListBackups` NO DEBE leer ninguna segunda raíz.
 
 #### Scenario: Un escritor de producción resuelve la raíz a través del paquete
 - **DADO** cualquier componente de backup, sync, run, upgrade o uninstall
 - **CUANDO** necesita el directorio raíz de respaldos
 - **ENTONCES** lo obtiene invocando la función de resolución canónica de `internal/backup`
-
----
+(Previously: los respaldos de `~/.gentle-ai/backups` seguían siendo legibles por `ListBackups` sin migración obligatoria.)
 
 ### Requirement: Guarda ejecutable contra rutas literales de raíz de respaldos (REQ-20.14)
 
@@ -124,3 +123,18 @@ La configuración de GoReleaser, los workflows `release.yml` y `promote-stable-r
 - **CUANDO** se listan los subdirectorios de `contracts/`
 - **ENTONCES** solo existe `sdd-integration`
 - **Y** sus ficheros son idénticos a los de antes de la retirada
+### Requirement: Procedencia, firma y CI de release con identidad axiom (REQ-20.17)
+
+El archivo de procedencia de release DEBE llamarse `axiom-release-provenance-v1.tar.gz` y sus esquemas DEBEN ser `axiom.release-provenance/v1` y `axiom.release-provenance/local-build`. Las claves de firma del runner DEBEN llamarse `axiom-release.key` y `axiom-release.pub`, el ejecutable de CI en Windows `axiom.exe` y las imágenes de los e2e `axiom-e2e-*`. `.goreleaser.yaml`, `internal/releasepolicy`, `internal/releaseprovenance` y los scripts de verificación y promoción NO DEBEN esperar ni producir ningún nombre `gentle-ai`. `scripts/promote-stable-preflight.sh` DEBE consultar la existencia de la release estable en el repositorio propio (`$GITHUB_REPOSITORY`).
+
+#### Scenario: La procedencia y la firma usan la identidad axiom
+- **DADO** una release simulada con los artefactos `axiom_*`
+- **CUANDO** se ejecutan la verificación de assets y las pruebas de `internal/releasepolicy` e `internal/releaseprovenance`
+- **ENTONCES** esperan `axiom-release-provenance-v1.tar.gz` con el esquema `axiom.release-provenance/v1`
+- **Y** ningún fichero de política ni script de release contiene un nombre de artefacto `gentle-ai`
+
+#### Scenario: La promoción consulta el repositorio propio
+- **DADO** `GITHUB_REPOSITORY=IGutierrezZ/axiom`
+- **CUANDO** `promote-stable-preflight.sh` comprueba si la release estable ya existe
+- **ENTONCES** la consulta usa ese propietario y nombre de repositorio
+

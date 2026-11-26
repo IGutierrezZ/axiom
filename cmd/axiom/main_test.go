@@ -113,7 +113,7 @@ func isolateSDDStatusFromCheckout(t *testing.T) {
 	t.Helper()
 	t.Chdir(t.TempDir())
 	t.Setenv("AXIOM_SDD_STATUS_ENGRAM", "")
-	t.Setenv("GENTLE_AI_SDD_STATUS_ENGRAM", "")
+	t.Setenv("AXIOM_SDD_STATUS_ENGRAM", "")
 }
 
 func TestRunSDDStatusJSON(t *testing.T) {

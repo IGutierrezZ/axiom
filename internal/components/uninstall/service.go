@@ -573,7 +573,7 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 
 		// Pi's SupportsSystemPrompt() gate keeps componentOperations() from
 		// ever queuing a rewrite for its SystemPromptFile, so a stale
-		// gentle-ai block left there by an older install is never cleaned up
+		// axiom block left there by an older install is never cleaned up
 		// by the generic persona/SDD rewrite ops above. Retire it directly.
 		if piAdapter, ok := s.registry.Get(model.AgentPi); ok {
 			promptPath := piAdapter.SystemPromptFile(s.homeDir)
@@ -736,18 +736,20 @@ func firstOrEmpty(items []string) string {
 }
 
 // retainedPiResources returns existing Pi-owned runtime and configuration paths
-// that gentle-ai deliberately leaves intact because they can be shared with Pi,
+// that axiom deliberately leaves intact because they can be shared with Pi,
 // gentle-pi packages, or user-managed configuration.
 func retainedPiResources(homeDir, workspaceDir string) []string {
 	paths := []string{
 		filepath.Join(homeDir, ".pi", "agent", "agents"),
 		filepath.Join(homeDir, ".pi", "agent", "chains"),
 		filepath.Join(homeDir, ".pi", "agent", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "agent", "axiom"),
 		filepath.Join(homeDir, ".pi", "agent", "subagents.json"),
 		filepath.Join(homeDir, ".pi", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "axiom"),
 	}
 	if workspaceDir != "" {
-		paths = append(paths, filepath.Join(workspaceDir, ".pi", "gentle-ai"))
+		paths = append(paths, filepath.Join(workspaceDir, ".pi", "gentle-ai"), filepath.Join(workspaceDir, ".pi", "axiom"))
 	}
 
 	retained := make([]string, 0, len(paths))
@@ -868,6 +870,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, workspaceOps...)
 			break
 		}
+		if adapter.MCPStrategy() == model.StrategyMCPConfigFile {
+			fileTargets, fileOps := s.globalMCPConfigFileOperations(adapter, "context7")
+			targets = append(targets, fileTargets...)
+			ops = append(ops, fileOps...)
+			break
+		}
 		targets = append(targets, context7Targets(adapter, homeDir)...)
 		ops = append(ops, context7Operations(adapter, homeDir)...)
 	case model.ComponentEngram:
@@ -889,6 +897,10 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
+		case adapter.MCPStrategy() == model.StrategyMCPConfigFile:
+			fileTargets, fileOps := s.globalMCPConfigFileOperations(adapter, "engram")
+			targets = append(targets, fileTargets...)
+			ops = append(ops, fileOps...)
 		default:
 			targets = append(targets, engramTargets(adapter, homeDir)...)
 			ops = append(ops, engramOperations(adapter, homeDir)...)
@@ -976,6 +988,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			path := filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
+		}
+		if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
+			if path := provider.BranchGuardHooksFile(homeDir); path != "" {
+				targets = append(targets, path)
+				ops = append(ops, s.removeManagedBranchGuardHooksFile(path, adapter.Agent()), quietDirIfEmpty(filepath.Dir(path)))
+			}
 		}
 		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {
@@ -1117,7 +1135,7 @@ func context7Targets(adapter agents.Adapter, homeDir string) []string {
 			return []string{claude.UserConfigPath(homeDir), adapter.SettingsPath(homeDir), adapter.MCPConfigPath(homeDir, "context7")}
 		}
 		return []string{adapter.MCPConfigPath(homeDir, "context7")}
-	case model.StrategyMergeIntoSettings, model.StrategyMCPConfigFile:
+	case model.StrategyMergeIntoSettings:
 		if adapter.Agent() == model.AgentOpenCode {
 			return settingsTargets(homeDir, adapter)
 		}
@@ -1148,12 +1166,6 @@ func context7Operations(adapter agents.Adapter, homeDir string) []operation {
 		}
 		path := adapter.SettingsPath(homeDir)
 		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
-	case model.StrategyMCPConfigFile:
-		path := adapter.MCPConfigPath(homeDir, "context7")
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "context7")}
-		}
-		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
 	case model.StrategyTOMLFile:
 		// Codex: la tabla [mcp_servers.context7], solo si es la del servidor remoto de
 		// Axiom.
@@ -1175,8 +1187,6 @@ func engramTargets(adapter agents.Adapter, homeDir string) []string {
 		targets = append(targets, adapter.MCPConfigPath(homeDir, "engram"))
 	case model.StrategyMergeIntoSettings:
 		targets = append(targets, settingsTargets(homeDir, adapter)...)
-	case model.StrategyMCPConfigFile:
-		targets = append(targets, adapter.MCPConfigPath(homeDir, "engram"))
 	case model.StrategyTOMLFile:
 		targets = append(targets,
 			adapter.MCPConfigPath(homeDir, "engram"),
@@ -1204,12 +1214,6 @@ func engramOperations(adapter agents.Adapter, homeDir string) []operation {
 			return ops
 		}
 		path := adapter.SettingsPath(homeDir)
-		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
-	case model.StrategyMCPConfigFile:
-		path := adapter.MCPConfigPath(homeDir, "engram")
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "engram")}
-		}
 		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
 	case model.StrategyTOMLFile:
 		configPath := adapter.MCPConfigPath(homeDir, "engram")

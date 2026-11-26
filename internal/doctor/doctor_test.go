@@ -13,7 +13,7 @@ func TestToolCheckID(t *testing.T) {
 		tool string
 		want CheckID
 	}{
-		{tool: "gentle-ai", want: "tool:gentle-ai"},
+		{tool: "axiom", want: "tool:axiom"},
 		{tool: "engram", want: "tool:engram"},
 	}
 	for _, tt := range tests {

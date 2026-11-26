@@ -197,13 +197,13 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 		// resolved is "" here: there is no PATH-resolved copy to name or to
 		// compare against, but the executable running THIS check is still
 		// independently derivable (osExecutableDoctor does not depend on
-		// PATH lookup succeeding). doctorInvokedGentleAIClause("") names it
+		// PATH lookup succeeding). doctorInvokedAxiomClause("") names it
 		// without fabricating a comparison that has nothing to compare
 		// against (organic-dx recovery: the clause must render on every
-		// derivable gentle-ai branch, not only the healthy one).
+		// derivable axiom branch, not only the healthy one).
 		detail := tool + " not found in PATH"
-		if tool == "axiom" || tool == "gentle-ai" {
-			detail += doctorInvokedGentleAIClause(resolved)
+		if tool == "axiom" {
+			detail += doctorInvokedAxiomClause(resolved)
 		}
 		return CheckResult{
 			Name:   doctor.ToolCheckID(tool),
@@ -230,8 +230,8 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 		if shadowed {
 			detail += "; the launcher is shadowed by the resolved copy, so background subagents will not apply"
 		}
-		if tool == "axiom" || tool == "gentle-ai" {
-			detail += doctorInvokedGentleAIClause(resolved)
+		if tool == "axiom" {
+			detail += doctorInvokedAxiomClause(resolved)
 		}
 		return CheckResult{
 			Name:   doctor.ToolCheckID(tool),
@@ -258,8 +258,8 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 	if launcherNote != "" {
 		detail += " (" + launcherNote + ")"
 	}
-	if tool == "axiom" || tool == "gentle-ai" {
-		detail += doctorInvokedGentleAIClause(resolved)
+	if tool == "axiom" {
+		detail += doctorInvokedAxiomClause(resolved)
 	}
 	return CheckResult{
 		Name:   doctor.ToolCheckID(tool),
@@ -268,21 +268,21 @@ func checkOneTool(tool string, pathDirs []string) CheckResult {
 	}
 }
 
-// doctorInvokedGentleAIClause names the exact executable and version that is
-// running THIS doctor check, alongside the PATH-resolved gentle-ai reported
-// above. An RC tester who invokes gentle-ai by an absolute path may have a
-// different gentle-ai earlier on PATH; without this, doctor would report only
+// doctorInvokedAxiomClause names the exact executable and version that is
+// running THIS doctor check, alongside the PATH-resolved axiom reported
+// above. An RC tester who invokes axiom by an absolute path may have a
+// different axiom earlier on PATH; without this, doctor would report only
 // that other, unexercised copy as healthy, leaving the report ambiguous about
 // which build was actually under test (organic-dx Phase 3f task 3f.5).
 //
-// It must render on every gentle-ai branch where it is derivable -- not only
+// It must render on every axiom branch where it is derivable -- not only
 // the healthy one -- since PATH duplicates are exactly the situation where
 // knowing which build is actually running matters most. pathResolved may be
-// "" when the tool check has no PATH-resolved copy to name (e.g. gentle-ai
+// "" when the tool check has no PATH-resolved copy to name (e.g. axiom
 // itself is not found on PATH); in that case the clause still names the
 // invoked executable but skips the comparison, since there is honestly
 // nothing to compare it against.
-func doctorInvokedGentleAIClause(pathResolved string) string {
+func doctorInvokedAxiomClause(pathResolved string) string {
 	invoked, err := osExecutableDoctor()
 	if err != nil {
 		return ""
@@ -347,7 +347,7 @@ func doctorToolCopies(tool string, pathDirs []string) []string {
 
 // executableExtensions returns the filename suffixes to probe when scanning a
 // PATH directory for a tool binary. On Windows it mirrors exec.LookPath, which
-// resolves a bare name like "gentle-ai" to "gentle-ai.exe"/".cmd" via PATHEXT;
+// resolves a bare name like "axiom" to "axiom.exe"/".cmd" via PATHEXT;
 // on other platforms the bare name is used as-is. Without this, the duplicate
 // scan never matches real Windows binaries and PATH shadowing goes unreported.
 func executableExtensions() []string {
@@ -380,7 +380,7 @@ func executableExtensionsFor(goos, pathext string) []string {
 // exec.LookPath (used for the resolved path). On non-Windows platforms the
 // candidate must also have at least one execute bit set — files without the
 // execute bit (or directories whose name happens to match a tool, e.g. a
-// PATH entry named "gentle-ai") are not counted as binaries (#709).
+// PATH entry named "axiom") are not counted as binaries (#709).
 //
 // Windows executable resolution (#177, PATHEXT gaps) is intentionally out of
 // scope here; an extension match is treated as sufficient on Windows because
@@ -421,7 +421,7 @@ func appendUniqueExt(exts []string, ext string) []string {
 	return append(exts, ext)
 }
 
-// checkStateJSON validates ~/.gentle-ai/state.json and agent config dirs.
+// checkStateJSON validates ~/.axiom/state.json and agent config dirs.
 func checkStateJSON(homeDir string, store state.Store) CheckResult {
 	const id = doctor.CheckStateJSON
 	statePath := store.Path()
@@ -524,7 +524,7 @@ func checkStateJSON(homeDir string, store state.Store) CheckResult {
 // is missing. It returns "" when every existing ancestor resolves (the path is
 // then genuinely missing) and an error when an ancestor exists but cannot be
 // inspected, mirroring the unreadable treatment of the final path. Ancestors
-// at or above homeDir are never inspected: they are not managed by gentle-ai,
+// at or above homeDir are never inspected: they are not managed by axiom,
 // and a broken home directory would have failed the state read already.
 func danglingAncestor(homeDir, path string) (string, error) {
 	home := filepath.Clean(homeDir)
@@ -699,11 +699,7 @@ func checkDiskSpace(homeDir string) CheckResult {
 	const id = doctor.CheckDiskSpace
 	dir := system.AxiomDir(homeDir)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if _, errLegacy := os.Stat(filepath.Join(homeDir, ".gentle-ai")); errLegacy == nil {
-			dir = filepath.Join(homeDir, ".gentle-ai")
-		} else {
-			dir = homeDir
-		}
+		dir = homeDir
 	}
 
 	free, err := availableBytesFn(dir)

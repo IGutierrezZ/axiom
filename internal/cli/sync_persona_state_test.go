@@ -54,7 +54,7 @@ func TestRunSyncWithSelectionPiWritesAxiomPersona(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "gentle-ai", "persona.json")
+	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
 	mustWriteFile(t, piPath, []byte("{\n  \"mode\": \"gentleman\"\n}\n"))
 	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"]}`))
 
@@ -64,7 +64,7 @@ func TestRunSyncWithSelectionPiWritesAxiomPersona(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("RunSyncWithSelection() error = %v", err)
 	}
-	homePiPath := filepath.Join(home, ".pi", "gentle-ai", "persona.json")
+	homePiPath := filepath.Join(home, ".pi", "axiom", "persona.json")
 	if got, want := readTextFile(t, homePiPath), "{\n  \"mode\": \"axiom\"\n}\n"; got != want {
 		t.Fatalf("global Pi persona config = %q, want %q", got, want)
 	}

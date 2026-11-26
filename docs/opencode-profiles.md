@@ -27,10 +27,10 @@ axiom install --agent opencode --component sdd --opencode-background-subagents=o
 axiom sync --opencode-background-subagents=off
 ```
 
-The environment equivalent is `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS=auto|on|off` (legacy `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS` is also supported). Resolution precedence is:
+The environment equivalent is `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS=auto|on|off`. Resolution precedence is:
 
 1. CLI flag.
-2. Non-empty `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS` (or legacy `GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS`).
+2. Non-empty `AXIOM_OPENCODE_BACKGROUND_SUBAGENTS`.
 3. The prior managed choice in Axiom state.
 4. `auto`.
 
@@ -62,8 +62,8 @@ The bundled `model-variants` OpenCode plugin also writes a cache of those varian
 
 | Plugin | Cache path |
 | --- | --- |
-| v1 | `~/.axiom/cache/model-variants.json` (earlier versions used `~/.gentle-ai/cache/model-variants.json`) |
-| v2 | `~/.gentle-ai/cache/opencode-v2/<hash>.json`, one file per project location |
+| v1 | `~/.axiom/cache/model-variants.json` |
+| v2 | `~/.axiom/cache/opencode-v2/<hash>.json`, one file per project location |
 
 Removing the OpenCode `sdd` component with `axiom uninstall --scope global` deletes the v1 cache file (`model-variants.json`); a workspace uninstall and the v2 files are left alone. With `--scope workspace`, the plugin itself lives in the project (`.opencode/plugins/`), not in `~/.config/opencode/plugins/`.
 

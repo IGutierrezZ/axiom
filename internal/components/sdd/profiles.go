@@ -368,7 +368,7 @@ func GenerateProfileOverlay(profile model.Profile, homeDir, settingsPath string,
 		}
 		// Issue #557: consult fallback when the profile did not set the phase,
 		// so generated *-{name} agents stay consistent with what the user sees
-		// in the gentle-ai TUI. Profile-level assignments still win.
+		// in the axiom TUI. Profile-level assignments still win.
 		assignment := resolveProfileAssignment(profile, fallbackPhaseAssignments, phase)
 		if assignment.ProviderID != "" && assignment.ModelID != "" {
 			entry["model"] = assignment.FullID()
@@ -428,7 +428,7 @@ func GenerateProfileOverlay(profile model.Profile, homeDir, settingsPath string,
 // Issue #557 motivated this helper: prior to the fix, the profile overlay
 // silently emitted agents without a model field whenever the user did not
 // re-touch the phase inside the profile picker — surfacing as "Unassigned"
-// in OpenCode while gentle-ai's UI showed the phase as assigned.
+// in OpenCode while axiom's UI showed the phase as assigned.
 func resolveProfileAssignment(profile model.Profile, fallback map[string]model.ModelAssignment, phase string) model.ModelAssignment {
 	if assignment, ok := profile.PhaseAssignments[phase]; ok && assignment.ProviderID != "" && assignment.ModelID != "" {
 		return assignment
@@ -564,19 +564,11 @@ func buildProfileOrchestratorPrompt(profile model.Profile, options ...Orchestrat
 	// Inject model assignments table.
 	const axiomOpenMarker = "<!-- axiom:sdd-model-assignments -->"
 	const axiomCloseMarker = "<!-- /axiom:sdd-model-assignments -->"
-	const legacyOpenMarker = "<!-- gentle-ai:sdd-model-assignments -->"
-	const legacyCloseMarker = "<!-- /gentle-ai:sdd-model-assignments -->"
 
 	openMarker := axiomOpenMarker
 	closeMarker := axiomCloseMarker
 	start := strings.Index(base, openMarker)
 	end := strings.Index(base, closeMarker)
-	if start == -1 || end == -1 || end <= start {
-		openMarker = legacyOpenMarker
-		closeMarker = legacyCloseMarker
-		start = strings.Index(base, openMarker)
-		end = strings.Index(base, closeMarker)
-	}
 
 	if start != -1 && end != -1 && end > start {
 		table := renderProfileModelAssignmentsSection(profile)

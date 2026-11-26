@@ -16,7 +16,6 @@ import (
 func projectStateTUIFixture(t *testing.T) (root, home string) {
 	t.Helper()
 	t.Setenv(cli.ScopeAxiomEnvVar, "")
-	t.Setenv(cli.ScopeGentleAIEnvVar, "")
 	t.Setenv("AXIOM_STATE_DIR", "")
 	home, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {

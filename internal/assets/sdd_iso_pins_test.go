@@ -273,7 +273,7 @@ func TestSDDISOPins(t *testing.T) {
 		composed := 0
 		for _, path := range allSDDOrchestratorAssetPaths(t) {
 			raw := MustRead(path)
-			if !strings.Contains(raw, "{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}") {
+			if !strings.Contains(raw, "{{AXIOM_SDD_SECTION:SDD Independent Review}}") {
 				continue
 			}
 			composed++
@@ -285,7 +285,7 @@ func TestSDDISOPins(t *testing.T) {
 					"the project is ISO and only uses SDD",
 					"never create the folder by hand beforehand",
 				)
-				if strings.Contains(raw, "{{GENTLE_AI_SDD_SECTION:Dependency Graph}}") {
+				if strings.Contains(raw, "{{AXIOM_SDD_SECTION:Dependency Graph}}") {
 					requireContains(t, path, resolved,
 						"In an ISO change (`iso.change: iso`), verify is mandatory before archive",
 						"Every other change keeps verification opt-in.",

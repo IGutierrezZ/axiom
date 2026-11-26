@@ -16,7 +16,7 @@ import (
 // machine was enough to have their prompt files rewritten on every sync.
 
 // selectOnlyOpenCodeWithCodexAndCursorPresent builds the reported environment:
-// three agents installed on disk, only OpenCode selected in Gentle AI.
+// three agents installed on disk, only OpenCode selected in Axiom.
 func selectOnlyOpenCodeWithCodexAndCursorPresent(t *testing.T) (home, opencodeDir, codexPrompt, cursorPrompt string) {
 	t.Helper()
 	home = t.TempDir()

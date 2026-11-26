@@ -2,6 +2,7 @@ package uninstall
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -64,6 +65,43 @@ func mcpEntryIsManaged(raw []byte, parent jsonPath, name string) bool {
 	}
 	entry, declared := servers[name]
 	return declared && isManagedMCPServer(name, entry)
+}
+
+// globalMCPConfigFileOperations retira el servidor MCP name (engram o context7) del
+// fichero MCP de usuario de un agente con la estrategia StrategyMCPConfigFile, bajo
+// `mcpServers`. Si otro agente que sigue instalado lee el mismo fichero, la entrada se
+// queda para él: VS Code Copilot y Copilot CLI comparten
+// <COPILOT_HOME|~/.copilot>/mcp-config.json. VS Code Copilot retira además la entrada
+// del mcp.json de su perfil de usuario (`servers`, del arnés Local), donde la
+// declaraban las instalaciones anteriores.
+func (s *Service) globalMCPConfigFileOperations(adapter agents.Adapter, name string) (targets []string, ops []operation) {
+	if provider, ok := adapter.(agents.LegacyMCPConfigProvider); ok {
+		if legacy := provider.LegacyMCPConfigPath(s.homeDir); legacy != "" {
+			targets = append(targets, legacy)
+			ops = append(ops, rewriteMCPServerEntry(legacy, jsonPath{"servers"}, name))
+		}
+	}
+	path := adapter.MCPConfigPath(s.homeDir, name)
+	if path == "" || s.mcpConfigStaysInUse(path) {
+		return targets, ops
+	}
+	return append(targets, path), append(ops, rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, name))
+}
+
+// mcpConfigStaysInUse dice si el fichero MCP de usuario path sigue siendo de otro
+// agente que permanece instalado en el ámbito global, como skillsDirStaysInUse con la
+// carpeta de skills.
+func (s *Service) mcpConfigStaysInUse(path string) bool {
+	for _, other := range s.otherInstalledAgentsInScope() {
+		adapter, ok := s.adapter(other)
+		if !ok || !adapter.SupportsMCP() || adapter.MCPStrategy() != model.StrategyMCPConfigFile {
+			continue
+		}
+		if filepath.Clean(adapter.MCPConfigPath(s.homeDir, "")) == filepath.Clean(path) {
+			return true
+		}
+	}
+	return false
 }
 
 // isManagedPromptFileContent dice si un fichero de instrucciones conserva solo lo que

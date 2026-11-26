@@ -11,7 +11,7 @@ Axiom releases only when the protected `release` environment provides a real Min
    ```bash
    minisign -VQm checksums.txt \
      -x checksums.txt.minisig \
-     -P "$GENTLE_AI_MINISIGN_PUBLIC_KEY"
+     -P "$AXIOM_MINISIGN_PUBLIC_KEY"
    # Must print exactly:
    # repo=IGutierrezZ/axiom;tag=vMAJOR.MINOR.PATCH
 
@@ -27,17 +27,17 @@ The public key is not secret, but its provenance is security-critical. A key fet
 1. Generate the production pair on a controlled maintainer system. The CI key must be unencrypted because the runner is non-interactive; GitHub's protected environment secret provides encryption at rest and access control.
 
    ```bash
-   minisign -G -W -p gentle-ai-release.pub -s gentle-ai-release.key
+   minisign -G -W -p axiom-release.pub -s axiom-release.key
    ```
 
-2. Extract the base64 payload from line 2 of `gentle-ai-release.pub`. Publish that payload and a separately computed fingerprint through the project website or another maintainer-authenticated channel **before** publishing the first signed release.
+2. Extract the base64 payload from line 2 of `axiom-release.pub`. Publish that payload and a separately computed fingerprint through the project website or another maintainer-authenticated channel **before** publishing the first signed release.
 3. Create or protect the GitHub Actions environment named `release`. Require appropriate reviewers and restrict it to protected stable-version tags.
 4. Configure the public trust anchor as a repository Actions variable so the read-only preflight job can validate it. Configure the private key only inside the protected `release` environment:
 
    | Name | Kind | Exact value |
    |---|---|---|
    | `MINISIGN_PUBLIC_KEYS` | Repository Actions variable | One canonical Minisign base64 public-key payload; during rotation, exactly two distinct payloads separated by one comma, with no whitespace or trailing separator |
-   | `MINISIGN_SECRET_KEY_BASE64` | Protected `release` environment secret | Base64 of the complete `gentle-ai-release.key` file |
+   | `MINISIGN_SECRET_KEY_BASE64` | Protected `release` environment secret | Base64 of the complete `axiom-release.key` file |
 
 5. Keep the existing `HOMEBREW_TAP_TOKEN` environment secret. Do not add the Minisign private key to repository variables, files, logs, artifacts, caches, or command-line arguments.
 6. Run no release until `scripts/release-signing-preflight.sh` proves that the private key derives one configured public key, rejects the isolated test key, and signs/verifies an exact repository/tag canary.
@@ -118,9 +118,27 @@ The tag workflow fails unless all of these hold:
 
 - the event is an annotated exact `vMAJOR.MINOR.PATCH` tag;
 - the event SHA, tag target, checkout, remote tag, and current `origin/main` are identical;
+- the newest `ci.yml` run on that exact SHA concluded `success` (`scripts/require-ci-success.sh`);
 - the worktree and module graph remain immutable (`go mod tidy -diff`);
 - tests, vet, and format checks pass under read-only token permissions;
 - the protected signing key matches a non-test injected trust anchor;
 - the Windows/Scoop omission policy passes before any publication;
 - GoReleaser signs the full `${artifact}` path with the exact trusted comment;
 - the published GitHub asset set is exact, the remote signature is valid, and every remote checksum verifies.
+
+### Before tagging: a green CI run on the exact SHA
+
+`ci.yml` does not run on push to `main`. It runs on pull requests, once a night on `main` when there are new commits, and on demand. A freshly merged commit therefore has no `ci.yml` run of its own, and the release CI gate rejects its tag.
+
+Before tagging, while `main` is at the commit you will tag:
+
+1. Start CI on `main`:
+
+   ```powershell
+   gh workflow run ci.yml --ref main
+   ```
+
+2. Wait until that run concludes `success` on the same SHA.
+3. Create and push the annotated tag on that SHA.
+
+If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed.

@@ -15,24 +15,12 @@ import (
 
 const (
 	OpenCodeBackgroundSubagentsAxiomEnv = "AXIOM_OPENCODE_BACKGROUND_SUBAGENTS"
-	// OpenCodeBackgroundSubagentsGentleAIEnv is the documented fallback read when the AXIOM_ variable is unset or empty.
-	OpenCodeBackgroundSubagentsGentleAIEnv = "GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS"
 
 	OpenCodeBackgroundSubagentsEnv = OpenCodeBackgroundSubagentsAxiomEnv
 )
 
 func lookupOpenCodeBackgroundEnv() (string, bool) {
-	return lookupEnvWithGentleAIFallback(OpenCodeBackgroundSubagentsAxiomEnv, OpenCodeBackgroundSubagentsGentleAIEnv)
-}
-
-// lookupEnvWithGentleAIFallback reads the AXIOM_ variable and, when it is unset
-// or empty, the documented GENTLE_AI_ fallback. An empty AXIOM_ value never
-// decides the policy, so it must not shadow a fallback that carries one.
-func lookupEnvWithGentleAIFallback(axiomKey, gentleAIKey string) (string, bool) {
-	if value, ok := system.LookupEnv(axiomKey); ok && value != "" {
-		return value, true
-	}
-	return system.LookupEnv(gentleAIKey)
+	return system.LookupEnv(OpenCodeBackgroundSubagentsAxiomEnv)
 }
 
 // OpenCodeBackgroundResolveInput contains already-discovered sources. The

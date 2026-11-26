@@ -237,6 +237,40 @@ func TestMergeJSONObjectsPreserveJSONCExistingFinalMemberIdempotent(t *testing.T
 	}
 }
 
+func TestRemoveJSONCObjectMemberKeepsUnrelatedText(t *testing.T) {
+	base := []byte("// equipo\n{\n  \"servers\": {\n    \"mio\": {\"command\": \"node\"},\n    \"engram\": {\"command\": \"engram\"}\n  },\n  // entradas\n  \"inputs\": [],\n}\n")
+
+	updated, changed, err := RemoveJSONCObjectMember(base, "servers", "engram")
+	if err != nil || !changed {
+		t.Fatalf("RemoveJSONCObjectMember() = %v, %v; want changed", changed, err)
+	}
+	text := string(updated)
+	for _, want := range []string{"// equipo", "// entradas", "\"mio\"", "\"inputs\": [],"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("se perdió %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "engram") {
+		t.Errorf("engram debe desaparecer:\n%s", text)
+	}
+
+	emptied, changed, err := RemoveJSONCObjectMember(updated, "servers", "mio")
+	if err != nil || !changed {
+		t.Fatalf("RemoveJSONCObjectMember() = %v, %v; want changed", changed, err)
+	}
+	if root, err := UnmarshalJSONObject(emptied); err != nil || root["servers"] != nil || root["inputs"] == nil {
+		t.Errorf("un servers vacío se retira y el resto queda: %v, %v\n%s", root, err, emptied)
+	}
+
+	if same, changed, err := RemoveJSONCObjectMember(base, "servers", "ausente"); err != nil || changed || string(same) != string(base) {
+		t.Errorf("un miembro ausente no cambia nada: %v, %v", changed, err)
+	}
+	broken := []byte("{\"servers\": [")
+	if same, changed, err := RemoveJSONCObjectMember(broken, "servers", "engram"); err == nil || changed || string(same) != string(broken) {
+		t.Errorf("un documento ilegible es un error y no se toca: %v, %v", changed, err)
+	}
+}
+
 func TestMergeJSONObjectsPreserveJSONCRejectsMalformedInputWithoutReplacingBytes(t *testing.T) {
 	base := []byte("// interrupted user edit\n{\n  \"mcp\": {\n")
 	overlay := []byte(`{"mcp":{"context7":{"type":"remote"}}}`)

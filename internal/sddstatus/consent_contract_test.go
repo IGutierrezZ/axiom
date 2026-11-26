@@ -18,7 +18,7 @@ import (
 // --change-instance (added by S5) and admitting the optional
 // --expected-revision a widening grant chains on:
 //
-//	gentle-ai sdd-attempt grant --cwd <repo> --change <name> [--expected-revision <rev>] --root <path>... --actor <actor> --reason <reason> --request-id <id> --change-instance <token>
+//	axiom sdd-attempt grant --cwd <repo> --change <name> [--expected-revision <rev>] --root <path>... --actor <actor> --reason <reason> --request-id <id> --change-instance <token>
 var sddConsentGrantInvocationShape = regexp.MustCompile(
 	`^axiom sdd-attempt grant --cwd \S+ --change \S+( --expected-revision \S+)?( --root \S+)+ --actor \S+ --reason \S+ --request-id \S+ --change-instance \S+$`)
 
@@ -32,7 +32,7 @@ func TestSDDIntegrationConsentContractsArePinned(t *testing.T) {
 	root := filepath.Join("..", "..", "contracts", "sdd-integration", "v1")
 	want := map[string]string{
 		"fixtures/consent.fixture.json": "829e763673af2e084f572000803a6f749d33de8c0fa98d28e5b751f7fc719368",
-		"schemas/consent.schema.json":   "19581e533f582e51b6da780db4c8a87553d2fe31b7b8894ed1086f9a91386c1e",
+		"schemas/consent.schema.json":   "785b57d32dd7669b6ff8dd0779d566f30defa4703568784657c452d31c5f062c",
 	}
 	for name, expected := range want {
 		payload, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))

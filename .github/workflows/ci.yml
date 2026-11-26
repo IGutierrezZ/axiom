@@ -2,20 +2,26 @@ name: CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
+  # Sin `push` a `main` (C-08-k, P24): la batería completa ya pasó en la PR, así
+  # que tras fusionar solo corre una vez al día, de noche, y solo si `main` tiene
+  # commits que ninguna ejecución correcta ha cubierto. La puerta está en el job
+  # `changes`.
+  schedule:
+    - cron: '40 2 * * *'
   # Manual re-run. `gh run rerun` refuses a run whose workflow file has changed
   # since, which is exactly when a re-run is needed most: a known-flaky failure
   # on a commit that is otherwise ready to tag, right after the workflow moved.
   # Without this the only way to re-run CI on main is to push another commit.
+  # It is also how a sha gets the green ci.yml run that the release gate
+  # requires before it is tagged: `gh workflow run ci.yml --ref main`.
   workflow_dispatch:
 
 # Una ejecución nueva deja obsoleta a la anterior del mismo disparador sobre la
 # misma referencia, así que se cancela en lugar de encolarse detrás. El nombre
-# del evento forma parte de la clave para que un push no cancele la ejecución
-# diaria de seguridad ni un workflow_dispatch manual, que es la única vía de
-# re-ejecutar cuando el fichero del workflow ha cambiado.
+# del evento forma parte de la clave para que un PR no cancele la ejecución
+# nocturna ni un workflow_dispatch manual, que es la única vía de re-ejecutar
+# cuando el fichero del workflow ha cambiado o de validar un sha antes de
+# etiquetarlo (scripts/require-ci-success.sh).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
@@ -23,8 +29,16 @@ concurrency:
 # Las pruebas que compilan y ejecutan binarios propios se omiten por defecto
 # porque el EDR de los equipos de desarrollo los bloquea. La CI las ejecuta
 # todas, así que lo activa de forma explícita.
+#
+# TOOLCHAIN_META_TESTS es el único selector de los meta-tests que compilan o
+# lanzan el toolchain de Go (C-08-k). `Go Tests` los omite con `-skip` y
+# `Toolchain Meta Tests` los ejecuta con `-run`, así que un nombre no puede
+# quedar fuera de los dos jobs. internal/assets comprueba que esos nombres
+# solo se declaran en los paquetes del job nuevo y que todo test de esos
+# paquetes que lanza el toolchain está en el selector.
 env:
   AXIOM_TEST_BUILD_BINARIES: "1"
+  TOOLCHAIN_META_TESTS: '^(TestDocumentedInvocationsRunAsDocumented|TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea|TestWindowsFullSuiteShardsCoverEveryTestName|TestCanonicalReleasePublicKeysControlRealLinkerBuild|TestReleaseDistributionPolicyAssertionFailsClosed|TestReleaseDistributionPolicyAcceptsSemanticYAMLFormatting|TestModifiedReleaseVerifierCannotGainWriteAuthority)$'
 
 jobs:
   # Este job, go-format, unit-tests y sus jobs hijos se omiten en un PR
@@ -36,6 +50,7 @@ jobs:
     needs: changes
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -57,6 +72,7 @@ jobs:
     # formato se comprueba igualmente en lugar de omitirse.
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -91,19 +107,37 @@ jobs:
   # Entonces se omiten las pruebas, para que corregir un estado olvidado no
   # espere a la suite completa. Ninguna prueba lee `odd/` ni `docs/plan/`, y las
   # que leen el `openspec/` real dependen de cambios archivados hace tiempo. El
-  # resto de `docs/` no entra: hay pruebas que leen documentación real. El push a `main` nunca es `true`: tras fusionar
-  # corre la suite completa. Ante cualquier duda (diff roto, PR vacío, etiqueta
+  # resto de `docs/` no entra: hay pruebas que leen documentación real. Fuera de
+  # un PR nunca es `true`. Ante cualquier duda (diff roto, PR vacío, etiqueta
   # `ci:windows`, que exige go-format) el resultado es `false`.
+  #
+  # Decide también `up_to_date`: `true` solo en la nocturna (`schedule`) cuando
+  # el último `headSha` en verde de este workflow en `main` es el actual. Es la
+  # misma puerta que windows-full-suite.yml, y entonces se omiten todos los
+  # jobs. Si `main` se ha movido, el diff para Windows va del último sha en verde
+  # al actual, como hacía el push. Falla abierto: sin historial legible, o sin
+  # ninguna ejecución correcta en `main`, se ejecuta todo.
+  #
+  # Decide también `toolchain`: `true` cuando hay que ejecutar los meta-tests
+  # del toolchain. En un PR, solo si toca sus entradas (workflows,
+  # `.goreleaser.yaml`, `internal/update/`, `scripts/`, `cmd/axiom/`, la
+  # documentación de comandos que lee TestDocumentedInvocationsRunAsDocumented,
+  # `go.mod`, `go.sum` o los propios ficheros de los meta-tests); en la
+  # nocturna con commits nuevos, a mano o fallando abierto, siempre.
   changes:
     name: Detect Windows-relevant changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    # Solo lee la historia: no necesita más permisos ni conservar credenciales.
+    # Solo lee la historia y, en la nocturna, el historial de ejecuciones; no
+    # necesita más permisos ni conservar credenciales.
     permissions:
       contents: read
+      actions: read
     outputs:
       windows: ${{ steps.detect.outputs.windows }}
       artifacts_only: ${{ steps.detect.outputs.artifacts_only }}
+      up_to_date: ${{ steps.detect.outputs.up_to_date }}
+      toolchain: ${{ steps.detect.outputs.toolchain }}
     steps:
       # Checkout por defecto, no el del candidato: en un PR es la referencia de
       # fusión del repositorio base, que contiene el SHA base y el del PR aunque
@@ -121,8 +155,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PUSH_BEFORE_SHA: ${{ github.event.before }}
-          PUSH_AFTER_SHA: ${{ github.sha }}
+          CURRENT_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           PR_HAS_WINDOWS_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'ci:windows') }}
         run: |
           # Un fichero justifica ejecutar Windows. El `*` de `case` también
@@ -148,10 +183,27 @@ jobs:
             return 1
           }
 
+          # Una entrada de los meta-tests del toolchain (TOOLCHAIN_META_TESTS).
+          # docs/audits queda fuera: TestDocumentedInvocationsRunAsDocumented
+          # no la lee.
+          is_toolchain_input() {
+            case "$1" in
+              docs/audits/*) return 1 ;;
+              .github/workflows/* | .goreleaser.yaml | go.mod | go.sum) return 0 ;;
+              internal/update/* | scripts/* | cmd/axiom/*) return 0 ;;
+              docs/*.md | internal/assets/*.md) return 0 ;;
+              internal/app/documented_invocation_test.go | internal/app/tty_boundary_test.go) return 0 ;;
+              internal/assets/formatter_ordering_test.go | internal/assets/workflow_shards_test.go) return 0 ;;
+            esac
+            return 1
+          }
+
           fail_open() {
             echo "::warning::$1; running the Windows lane and every check."
             echo 'windows=true' >> "$GITHUB_OUTPUT"
             echo 'artifacts_only=false' >> "$GITHUB_OUTPUT"
+            echo 'up_to_date=false' >> "$GITHUB_OUTPUT"
+            echo 'toolchain=true' >> "$GITHUB_OUTPUT"
             exit 0
           }
 
@@ -159,6 +211,8 @@ jobs:
             workflow_dispatch)
               echo 'windows=true' >> "$GITHUB_OUTPUT"
               echo 'artifacts_only=false' >> "$GITHUB_OUTPUT"
+              echo 'up_to_date=false' >> "$GITHUB_OUTPUT"
+              echo 'toolchain=true' >> "$GITHUB_OUTPUT"
               exit 0
               ;;
             pull_request)
@@ -166,11 +220,24 @@ jobs:
               # lo que aporta el PR aunque la base haya avanzado.
               range="$PR_BASE_SHA...$PR_HEAD_SHA"
               ;;
-            push)
-              if [[ "$PUSH_BEFORE_SHA" =~ ^0+$ ]]; then
-                fail_open 'push without a previous commit (new branch)'
+            schedule)
+              if ! last="$(gh run list --workflow ci.yml --branch main \
+                --status success --limit 1 --json headSha --jq '.[0].headSha // ""')"; then
+                fail_open 'could not read the run history'
               fi
-              range="$PUSH_BEFORE_SHA..$PUSH_AFTER_SHA"
+              if [ -z "$last" ]; then
+                fail_open 'no successful run on main yet'
+              fi
+              if [ "$last" = "$CURRENT_SHA" ]; then
+                echo "main has no new commits since the last successful run ($last); every job is skipped."
+                echo 'windows=false' >> "$GITHUB_OUTPUT"
+                echo 'artifacts_only=false' >> "$GITHUB_OUTPUT"
+                echo 'up_to_date=true' >> "$GITHUB_OUTPUT"
+                echo 'toolchain=false' >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "main moved from $last to $CURRENT_SHA"
+              range="$last..$CURRENT_SHA"
               ;;
             *)
               fail_open "unexpected event $EVENT_NAME"
@@ -185,6 +252,7 @@ jobs:
 
           relevant=false
           artifacts_only=true
+          toolchain=false
           count=0
           while IFS= read -r file; do
             if [ -z "$file" ]; then
@@ -198,6 +266,10 @@ jobs:
             if ! is_planning_artifact "$file"; then
               artifacts_only=false
             fi
+            if is_toolchain_input "$file"; then
+              echo "Toolchain meta-test input: $file"
+              toolchain=true
+            fi
           done <<< "$files"
 
           # Sin ficheros nada demuestra que el PR sea solo de artefactos; fuera
@@ -205,10 +277,17 @@ jobs:
           if [ "$count" -eq 0 ] || [ "$EVENT_NAME" != pull_request ] || [ "$PR_HAS_WINDOWS_LABEL" = true ]; then
             artifacts_only=false
           fi
+          # Fuera de un PR (la nocturna con commits nuevos) los meta-tests
+          # corren siempre.
+          if [ "$EVENT_NAME" != pull_request ]; then
+            toolchain=true
+          fi
 
           echo "windows=$relevant" >> "$GITHUB_OUTPUT"
           echo "artifacts_only=$artifacts_only" >> "$GITHUB_OUTPUT"
-          echo "Compared $range ($count files): windows=$relevant artifacts_only=$artifacts_only"
+          echo 'up_to_date=false' >> "$GITHUB_OUTPUT"
+          echo "toolchain=$toolchain" >> "$GITHUB_OUTPUT"
+          echo "Compared $range ($count files): windows=$relevant artifacts_only=$artifacts_only toolchain=$toolchain"
 
   # `Unit Tests` era un único job secuencial; ahora sus pasos corren en jobs
   # paralelos y el agregador `unit-tests` conserva el nombre del check
@@ -229,6 +308,7 @@ jobs:
     needs: changes
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -259,6 +339,8 @@ jobs:
           go-version-file: go.mod
 
       # El grupo `rest` es `go test ./...` sin los paquetes de los otros grupos.
+      # Los meta-tests del toolchain se omiten aquí y corren en
+      # `toolchain-meta-tests` (TOOLCHAIN_META_TESTS, en el env del workflow).
       - name: Run unit tests
         env:
           SHARD_PACKAGES: ${{ matrix.shard.packages }}
@@ -279,7 +361,7 @@ jobs:
             exit 1
           fi
           echo "${#packages[@]} package(s)"
-          go test "${packages[@]}"
+          go test "${packages[@]}" -skip "$TOOLCHAIN_META_TESTS"
 
       # Ninguna prueba debe escribir en el checkout ni dejar ficheros nuevos: con
       # el descubrimiento ascendente del planning home (inc-24), una prueba que
@@ -327,6 +409,7 @@ jobs:
     needs: changes
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -400,6 +483,7 @@ jobs:
     needs: changes
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact event candidate
@@ -416,17 +500,75 @@ jobs:
       - name: Check for new unreachable functions
         run: ./scripts/deadcode-ratchet.sh
 
+  # Meta-tests que compilan o lanzan el toolchain de Go (C-08-k): los únicos de
+  # la batería que dependen de los workflows, la release y la documentación de
+  # comandos más que del código que cambia una PR normal. Corren aquí, con el
+  # mismo selector que `Go Tests` omite, en la nocturna, a mano y en las PR
+  # que tocan sus entradas (salida `toolchain` del job `changes`). Si `changes`
+  # falla, corren igualmente.
+  toolchain-meta-tests:
+    name: Toolchain Meta Tests
+    needs: changes
+    if: >-
+      !cancelled() && needs.changes.outputs.up_to_date != 'true'
+      && (needs.changes.result != 'success' || needs.changes.outputs.toolchain == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact event candidate
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c  # v6.4.0
+        with:
+          go-version-file: go.mod
+
+      # `-run` con un patrón que no casa nada sale con 0, y un meta-test omitido
+      # también: el paso exige que al menos uno pase y que ninguno se omita.
+      - name: Run toolchain meta-tests
+        env:
+          META_PACKAGES: ./internal/app ./internal/assets ./internal/update
+        run: |
+          set -euo pipefail
+          read -ra packages <<< "$META_PACKAGES"
+          log="$RUNNER_TEMP/toolchain-meta-tests.log"
+          go test "${packages[@]}" -run "$TOOLCHAIN_META_TESTS" -count=1 -v | tee "$log"
+          if grep -E '^--- SKIP: Test' "$log"; then
+            echo "FAIL: a toolchain meta-test skipped instead of running" >&2
+            exit 1
+          fi
+          passed="$(grep -cE '^--- PASS: Test' "$log" || true)"
+          if [ "$passed" -eq 0 ]; then
+            echo "FAIL: TOOLCHAIN_META_TESTS matched no test" >&2
+            exit 1
+          fi
+          echo "$passed toolchain meta-test(s) passed"
+
+      - name: Verify the checkout is clean after the meta-tests
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "FAIL: go test changed the checkout:" >&2
+            git status --porcelain >&2
+            git diff --stat >&2
+            exit 1
+          fi
+
   # Agregador con el nombre del check obligatorio: no ejecuta pruebas, solo
   # exige que el formato y cada job hijo terminen en `success`. Un hijo
-  # fallido, cancelado u omitido lo deja en rojo.
+  # fallido, cancelado u omitido lo deja en rojo. La única omisión aceptada es
+  # la de `toolchain-meta-tests` cuando `changes` decidió con éxito que la PR
+  # no toca sus entradas.
   unit-tests:
     name: Unit Tests
-    needs: [go-format, changes, go-tests, binary-smoke, deadcode-ratchet]
+    needs: [go-format, changes, go-tests, binary-smoke, deadcode-ratchet, toolchain-meta-tests]
     # `!cancelled()` en lugar de `always()` solo por la omisión de un PR de
     # artefactos: con go-format en rojo el job sigue corriendo y su primer paso
     # lo deja en rojo, así que un formato roto no se convierte en una omisión.
     if: >-
       !cancelled() && needs.changes.outputs.artifacts_only != 'true'
+      && needs.changes.outputs.up_to_date != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -439,11 +581,19 @@ jobs:
           GO_TESTS: ${{ needs.go-tests.result }}
           BINARY_SMOKE: ${{ needs.binary-smoke.result }}
           DEADCODE_RATCHET: ${{ needs.deadcode-ratchet.result }}
+          TOOLCHAIN_META: ${{ needs.toolchain-meta-tests.result }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          TOOLCHAIN_SELECTED: ${{ needs.changes.outputs.toolchain }}
         run: |
           failed=0
-          for job in GO_TESTS BINARY_SMOKE DEADCODE_RATCHET; do
+          for job in GO_TESTS BINARY_SMOKE DEADCODE_RATCHET TOOLCHAIN_META; do
             result="${!job}"
             echo "$job: $result"
+            if [ "$job" = TOOLCHAIN_META ] && [ "$result" = skipped ] &&
+              [ "$CHANGES_RESULT" = success ] && [ "$TOOLCHAIN_SELECTED" = false ]; then
+              echo "TOOLCHAIN_META: not selected for this change"
+              continue
+            fi
             if [ "$result" != success ]; then
               failed=1
             fi
@@ -453,10 +603,11 @@ jobs:
   windows-runtime:
     name: Windows Runtime
     needs: [go-format, changes]
-    # Los runners Windows cuestan el doble, así que no corre en cada PR o push.
-    # Corre cuando:
+    # Los runners Windows cuestan el doble, así que no corre en cada PR ni en
+    # cada nocturna. Corre cuando:
     #   - se lanza a mano (workflow_dispatch);
-    #   - el diff toca rutas de Windows (job `changes`);
+    #   - el diff toca rutas de Windows (job `changes`): el de la PR o, en la
+    #     nocturna, el de los commits nuevos de `main`;
     #   - el PR lleva la etiqueta `ci:windows`, que lo fuerza aunque el diff no
     #     toque esas rutas. Se lee la etiqueta que el PR tiene al abrirse,
     #     sincronizarse o reabrirse; una etiqueta añadida después la atiende
@@ -501,7 +652,7 @@ jobs:
         run: |
           Add-MpPreference -ExclusionPath $env:GITHUB_WORKSPACE -ErrorAction SilentlyContinue
           Add-MpPreference -ExclusionPath $env:RUNNER_TEMP -ErrorAction SilentlyContinue
-          Add-MpPreference -ExclusionProcess 'git.exe','go.exe','gentle-ai.exe' -ErrorAction SilentlyContinue
+          Add-MpPreference -ExclusionProcess 'git.exe','go.exe','axiom.exe' -ErrorAction SilentlyContinue
 
       - name: Checkout exact event candidate
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
@@ -534,18 +685,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # Canonical package: these release-blocker tests read the product's own
-      # behavior. The output keeps the legacy "gentle-ai.exe" name: nothing
-      # downstream (GENTLE_AI_TEST_BINARY below, the Defender exclusion above)
-      # needs it renamed, so only the build target changes.
+      # behavior. The output is named axiom.exe, the same name the Defender exclusion
+      # above and AXIOM_TEST_BINARY below use.
       - name: Build native test binary
         shell: pwsh
-        run: go build -trimpath -ldflags="-s -w -X main.version=ci" -o "$env:RUNNER_TEMP\gentle-ai.exe" ./cmd/axiom
+        run: go build -trimpath -ldflags="-s -w -X main.version=ci" -o "$env:RUNNER_TEMP\axiom.exe" ./cmd/axiom
 
       - name: Run Windows release-blocker tests
         shell: pwsh
         timeout-minutes: 10
         env:
-          GENTLE_AI_TEST_BINARY: ${{ runner.temp }}\gentle-ai.exe
+          AXIOM_TEST_BINARY: ${{ runner.temp }}\axiom.exe
         run: |
           $packages = @('./internal/fileprim', './internal/components/engram')
           $expected = @(
@@ -656,13 +806,13 @@ jobs:
 
       - name: Install Claude Code runtime
         # This suite drives the real install pipeline end to end, so it needs
-        # the real binary the same way it needs OpenCode above — gentle-ai
+        # the real binary the same way it needs OpenCode above — axiom
         # itself no longer installs this (agentInstallStep in
         # internal/cli/run.go refuses instead), so CI installs what it needs
         # to test, same as any other test dependency. No exact-pin test
         # applies here the way TestOrganicRuntimeE2EUsesInstalledOpenCodePin
         # asserts for OpenCode: there is no versions.go constant backing this
-        # one, since gentle-ai's own display-only refusal for Claude Code
+        # one, since axiom's own display-only refusal for Claude Code
         # advises "latest" too (see internal/installcmd/resolver.go).
         run: npm install --global @anthropic-ai/claude-code@latest
 
@@ -689,7 +839,7 @@ jobs:
         # TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents, which
         # `go test ./...` never does — see that file's build-tag comment.
         env:
-          GENTLE_AI_REAL_AGENT_E2E: "1"
+          AXIOM_REAL_AGENT_E2E: "1"
         run: go test -tags real_agent_e2e -v ./e2e/organicruntime -count=1 -timeout=25m
 
   e2e-tests:
@@ -728,7 +878,7 @@ jobs:
         with:
           context: .
           file: e2e/${{ matrix.platform.dockerfile }}
-          tags: gentle-ai-e2e-${{ matrix.platform.name }}:ci
+          tags: axiom-e2e-${{ matrix.platform.name }}:ci
           load: true
           cache-from: type=gha,scope=e2e-${{ matrix.platform.name }}
           cache-to: type=gha,mode=max,scope=e2e-${{ matrix.platform.name }}
@@ -742,7 +892,7 @@ jobs:
       - name: Diagnose pinned OpenCode runtime before E2E
         run: |
           docker run --rm --pull=never --network none --entrypoint /bin/bash \
-            gentle-ai-e2e-${{ matrix.platform.name }}:ci -c '
+            axiom-e2e-${{ matrix.platform.name }}:ci -c '
               set -u
               export HOME=$(mktemp -d)
               export XDG_CONFIG_HOME="$HOME/config" XDG_DATA_HOME="$HOME/data"
@@ -765,4 +915,4 @@ jobs:
             -e RUN_FULL_E2E \
             -e RUN_BACKUP_TESTS \
             -e GITHUB_TOKEN \
-            gentle-ai-e2e-${{ matrix.platform.name }}:ci
+            axiom-e2e-${{ matrix.platform.name }}:ci

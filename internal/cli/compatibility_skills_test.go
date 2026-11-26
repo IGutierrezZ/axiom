@@ -22,7 +22,7 @@ func temporaryUserHome(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	home, err := os.MkdirTemp(root, ".gentle-ai-compatibility-test-")
+	home, err := os.MkdirTemp(root, ".axiom-compatibility-test-")
 	if err != nil {
 		t.Fatal(err)
 	}

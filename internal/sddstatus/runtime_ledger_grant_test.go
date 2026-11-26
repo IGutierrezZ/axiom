@@ -158,7 +158,7 @@ func TestRuntimeLedgerGrantReplayRefusesForgedWidenedRecord(t *testing.T) {
 	forgedRecord := runtimeRecord{
 		Schema: runtimeRecordSchema, Change: store.Change, PreviousRevision: granted.Revision,
 		Operation: runtimeOperationGrant, RequestID: request.RequestID,
-		RequestDigest: runtimeValueHash("gentle-ai.sdd-runtime-grant-request/v1", request),
+		RequestDigest: runtimeValueHash(runtimeGrantRequestDomain, request),
 		Grant: &runtimeGrantEvent{
 			Roots: []string{root, widened}, Actor: "attacker",
 			Reason: "forged widened grant", GrantedAt: "2026-08-05T00:00:00Z",
@@ -381,7 +381,7 @@ func TestRuntimeLedgerGrantReplayRefusesForgedInstanceMarker(t *testing.T) {
 		forgedRecord := runtimeRecord{
 			Schema: runtimeRecordSchema, Change: store.Change, PreviousRevision: granted.Revision,
 			Operation: runtimeOperationGrant, RequestID: requestID,
-			RequestDigest: runtimeValueHash("gentle-ai.sdd-runtime-grant-request/v1", forgedRequest),
+			RequestDigest: runtimeValueHash(runtimeGrantRequestDomain, forgedRequest),
 			Grant: &runtimeGrantEvent{
 				Roots: []string{root}, Actor: "maintainer",
 				Reason: "maintainer authorized one sibling repository", GrantedAt: "2026-08-05T00:00:00Z",

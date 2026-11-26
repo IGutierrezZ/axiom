@@ -167,7 +167,7 @@ func removeLineStartMarkers(content, marker string) string {
 }
 
 // StripLegacyATLBlock removes the legacy Agent Teams Lite block that was
-// written by the standalone ATL installer before gentle-ai superseded it.
+// written by the standalone ATL installer before axiom superseded it.
 // The block is wrapped in <!-- BEGIN:agent-teams-lite --> / <!-- END:agent-teams-lite -->
 // HTML comment markers. Its content is now provided by the canonical
 // <!-- gentle-ai:sdd-orchestrator --> section, so keeping both wastes ~150

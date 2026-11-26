@@ -14,7 +14,7 @@ import (
 // Contract checks inspect shipped and installed instructions, not live backend behavior.
 func assertPersistenceRecovery(t *testing.T, content string) {
 	t.Helper()
-	for _, stale := range []string{"{{GENTLE_AI_SDD_SECTION:", "If unsure which mode to use, default", "Engram (primary)", "Engram first", "simultaneously", "both writes MUST succeed", "persists DAG state after each phase", "parse YAML → restore state", "If you return without calling mem_save", "update DAG state", "Update it after each phase completes", "- proposal.md ✅", "- specs/ ✅", "- design.md ✅"} {
+	for _, stale := range []string{"{{AXIOM_SDD_SECTION:", "If unsure which mode to use, default", "Engram (primary)", "Engram first", "simultaneously", "both writes MUST succeed", "persists DAG state after each phase", "parse YAML → restore state", "If you return without calling mem_save", "update DAG state", "Update it after each phase completes", "- proposal.md ✅", "- specs/ ✅", "- design.md ✅"} {
 		if strings.Contains(content, stale) {
 			t.Errorf("retired persistence obligation: %q", stale)
 		}

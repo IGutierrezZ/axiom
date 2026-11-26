@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# e2e_test.sh — End-to-end tests for gentle-ai installer
+# e2e_test.sh — End-to-end tests for Axiom installer
 #
 # Test tiers (controlled by environment variables):
 #   (default)            Tier 1: binary existence + dry-run tests (fast, no side-effects)

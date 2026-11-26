@@ -58,8 +58,8 @@ func assertNoLeftovers(t *testing.T, dir string, allowed ...string) {
 // updater reported an applied upgrade over an unchanged binary.
 func TestAtomicReplaceFailsWhenTheBinaryIsNotReplaced(t *testing.T) {
 	dir := t.TempDir()
-	src := filepath.Join(dir, "gentle-ai.new")
-	dst := filepath.Join(dir, "gentle-ai")
+	src := filepath.Join(dir, "axiom.new")
+	dst := filepath.Join(dir, "axiom")
 	installed := []byte("the binary that is already installed")
 	if err := os.WriteFile(src, []byte("the replacement binary"), 0o755); err != nil {
 		t.Fatalf("write src: %v", err)
@@ -90,8 +90,8 @@ func TestAtomicReplaceFailsWhenTheBinaryIsNotReplaced(t *testing.T) {
 // staged, so the upgrade did not happen.
 func TestAtomicReplaceFailsWhenTheDestinationHoldsDifferentBytes(t *testing.T) {
 	dir := t.TempDir()
-	src := filepath.Join(dir, "gentle-ai.new")
-	dst := filepath.Join(dir, "gentle-ai")
+	src := filepath.Join(dir, "axiom.new")
+	dst := filepath.Join(dir, "axiom")
 	if err := os.WriteFile(src, []byte("the replacement binary"), 0o755); err != nil {
 		t.Fatalf("write src: %v", err)
 	}
@@ -114,8 +114,8 @@ func TestAtomicReplaceFailsWhenTheDestinationHoldsDifferentBytes(t *testing.T) {
 // read-back cannot be satisfied by refusing everything.
 func TestAtomicReplacePublishesTheStagedBinary(t *testing.T) {
 	dir := t.TempDir()
-	src := filepath.Join(dir, "gentle-ai.new")
-	dst := filepath.Join(dir, "gentle-ai")
+	src := filepath.Join(dir, "axiom.new")
+	dst := filepath.Join(dir, "axiom")
 	replacement := []byte("the replacement binary")
 	if err := os.WriteFile(src, replacement, 0o755); err != nil {
 		t.Fatalf("write src: %v", err)
@@ -134,7 +134,7 @@ func TestAtomicReplacePublishesTheStagedBinary(t *testing.T) {
 	if string(onDisk) != string(replacement) {
 		t.Errorf("dst = %q, want %q", onDisk, replacement)
 	}
-	assertNoLeftovers(t, dir, "gentle-ai")
+	assertNoLeftovers(t, dir, "axiom")
 }
 
 // TestWriteExecutableLeavesNoBinaryWhenTheCopyFails is the #2216 self-update
@@ -143,7 +143,7 @@ func TestAtomicReplacePublishesTheStagedBinary(t *testing.T) {
 // a partial file behind.
 func TestWriteExecutableLeavesNoBinaryWhenTheCopyFails(t *testing.T) {
 	dir := t.TempDir()
-	outPath := filepath.Join(dir, "gentle-ai.new")
+	outPath := filepath.Join(dir, "axiom.new")
 	previous := []byte("a previously staged binary")
 	if err := os.WriteFile(outPath, previous, 0o755); err != nil {
 		t.Fatalf("seed: %v", err)
@@ -161,15 +161,15 @@ func TestWriteExecutableLeavesNoBinaryWhenTheCopyFails(t *testing.T) {
 	if string(onDisk) != string(previous) {
 		t.Errorf("destination = %q, want the untouched %q", onDisk, previous)
 	}
-	assertNoLeftovers(t, dir, "gentle-ai.new")
+	assertNoLeftovers(t, dir, "axiom.new")
 }
 
 // TestWriteExecutablePublishesAnExecutable pins the happy path, including the
 // mode the installer depends on.
 func TestWriteExecutablePublishesAnExecutable(t *testing.T) {
 	dir := t.TempDir()
-	outPath := filepath.Join(dir, "nested", "gentle-ai.new")
-	content := []byte("#!/bin/sh\necho gentle-ai\n")
+	outPath := filepath.Join(dir, "nested", "axiom.new")
+	content := []byte("#!/bin/sh\necho axiom\n")
 
 	if err := writeExecutable(strings.NewReader(string(content)), outPath); err != nil {
 		t.Fatalf("writeExecutable: %v", err)

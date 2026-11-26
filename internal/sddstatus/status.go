@@ -18,18 +18,13 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// EnvSDDStatusEngramAxiom opts a workspace into the Engram artifact store;
-// EnvSDDStatusEngramGentleAI is the legacy fallback.
-const (
-	EnvSDDStatusEngramAxiom    = "AXIOM_SDD_STATUS_ENGRAM"
-	EnvSDDStatusEngramGentleAI = "GENTLE_AI_SDD_STATUS_ENGRAM"
-)
+// EnvSDDStatusEngramAxiom opts a workspace into the Engram artifact store.
+const EnvSDDStatusEngramAxiom = "AXIOM_SDD_STATUS_ENGRAM"
 
 const (
-	SchemaName       = "axiom.sdd-status"
-	LegacySchemaName = "gentle-ai.sdd-status"
-	AxiomSchemaName  = "axiom.sdd-status"
-	SchemaVersion    = 2
+	SchemaName      = "axiom.sdd-status"
+	AxiomSchemaName = "axiom.sdd-status"
+	SchemaVersion   = 2
 )
 
 type ArtifactStore string
@@ -179,7 +174,7 @@ type Status struct {
 	Relationships Relationships            `json:"relationships"`
 	// Consent is #2563's (S4b of #2540) edit-authority consent question:
 	// present exactly when the status reports blocked(edit_authority_missing),
-	// carrying the typed gentle-ai.sdd-integration.consent/v1 envelope whose
+	// carrying the typed axiom.sdd-integration.consent/v1 envelope whose
 	// granted choice names the exact runnable grant invocation. Structural
 	// absence (nil, omitempty) everywhere else.
 	Consent *SDDIntegrationConsentResult `json:"consent,omitempty"`
@@ -361,7 +356,7 @@ func ParseCommandArgs(args []string) (CommandArgs, error) {
 }
 
 func validateStatusContract(contract string) error {
-	if contract == StatusContractV2 || contract == LegacyStatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
+	if contract == StatusContractV2 || contract == AxiomStatusContractV2 || contract == AxiomStatusContractV1 {
 		return nil
 	}
 	return fmt.Errorf("unsupported sdd-status contract %q. Start a fresh implementation state and rerun `axiom sdd status --contract axiom.sdd-status/v2`.", contract)
@@ -979,7 +974,7 @@ func shouldTryEngram(workspaceRoot string) bool {
 	if declared, ok := declaredArtifactStore(workspaceRoot); ok {
 		return declared == ArtifactStoreEngram || declared == ArtifactStoreHybrid
 	}
-	if system.Getenv(EnvSDDStatusEngramAxiom, EnvSDDStatusEngramGentleAI) != "" {
+	if system.Getenv(EnvSDDStatusEngramAxiom) != "" {
 		return true
 	}
 	if _, err := os.Stat(filepath.Join(workspaceRoot, ".engram")); err == nil {
@@ -1015,7 +1010,7 @@ func declaredArtifactStore(workspaceRoot string) (ArtifactStore, bool) {
 }
 
 func exportEngramObservations(workspaceRoot string) ([]engramObservation, error) {
-	tmp, err := os.CreateTemp("", "gentle-ai-sdd-engram-*.json")
+	tmp, err := os.CreateTemp("", "axiom-sdd-engram-*.json")
 	if err != nil {
 		return nil, err
 	}
@@ -1428,14 +1423,14 @@ func resolveExplicitWorkspaceRoot(workspaceRoot string) (string, error) {
 // The markdown dispatcher already spelled these commands out, but --json never
 // reaches it, and --json is what machine consumers read. #2117 step 5 is the
 // cost: the SDD task-failure envelope hands back
-// `gentle-ai sdd-status --cwd <cwd> --json` as its continuation, which lands
+// `axiom sdd-status --cwd <cwd> --json` as its continuation, which lands
 // here whenever more than one change is active, and the caller found a reason
 // that listed options and named no command. The list stays first because it is
 // what a human scanning the refusal wants; the commands follow because that is
 // what makes the refusal runnable.
 //
 // The selector is positional: ParseCommandArgs has no --change flag, so the
-// emitted spelling must be `gentle-ai sdd-status <change> --cwd <root>`. The
+// emitted spelling must be `axiom sdd-status <change> --cwd <root>`. The
 // first shipped spelling used `--change` and every emitted command was
 // rejected by the very parser it targets (#3278, #2790), burning the
 // operator's single sanctioned observation on a syntax error. The guard test

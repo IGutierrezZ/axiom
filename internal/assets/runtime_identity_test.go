@@ -71,4 +71,4 @@ func TestEmbeddedAssetsBindNoLiteralRuntimeIdentity(t *testing.T) {
 // internal/components/sdd.runtimeAgentIDPlaceholder, which is unexported and in
 // another package. TestAssetPlaceholderMatchesTheRenderer keeps the two from
 // drifting apart.
-const runtimeAgentIDPlaceholderForAssets = "{{GENTLE_AI_RUNTIME_AGENT_ID}}"
+const runtimeAgentIDPlaceholderForAssets = "{{AXIOM_RUNTIME_AGENT_ID}}"

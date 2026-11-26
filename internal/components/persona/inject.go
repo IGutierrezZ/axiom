@@ -10,6 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -22,6 +23,12 @@ type InjectionResult struct {
 // Pi resolves this file relative to the active agent configuration root, which
 // is the user's home for global install and the workspace for workspace install.
 func PiPersonaConfigPath(rootDir string) string {
+	return filepath.Join(rootDir, ".pi", "axiom", "persona.json")
+}
+
+// legacyPiPersonaConfigPath es la ruta heredada .pi/gentle-ai/persona.json. Solo
+// se usa para migrarla a PiPersonaConfigPath.
+func legacyPiPersonaConfigPath(rootDir string) string {
 	return filepath.Join(rootDir, ".pi", "gentle-ai", "persona.json")
 }
 
@@ -31,6 +38,10 @@ func InjectPiPersona(rootDir string) (InjectionResult, error) {
 	if strings.TrimSpace(rootDir) == "" {
 		return InjectionResult{}, fmt.Errorf("Pi persona root must not be empty")
 	}
+	if _, err := legacyhome.MoveIfAbsent(legacyPiPersonaConfigPath(rootDir), PiPersonaConfigPath(rootDir)); err != nil {
+		return InjectionResult{}, fmt.Errorf("migrate legacy Pi persona config: %w", err)
+	}
+
 	mode := "axiom"
 	content, err := json.MarshalIndent(struct {
 		Mode string `json:"mode"`
@@ -300,7 +311,7 @@ var osReadFile = func(path string) ([]byte, error) {
 }
 
 // preserveManagedSections checks whether the existing file content has
-// gentle-ai managed sections (SDD orchestrator, engram protocol, etc.) and
+// axiom managed sections (SDD orchestrator, engram protocol, etc.) and
 // returns new content that preserves those sections while replacing only the
 // persona text before them. Returns ("", false) when no preservation is needed
 // (empty file or no managed markers found).

@@ -60,7 +60,7 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		{
 			id:    "unit-tests",
 			next:  "windows-runtime",
-			needs: "[go-format, changes, go-tests, binary-smoke, deadcode-ratchet]",
+			needs: "[go-format, changes, go-tests, binary-smoke, deadcode-ratchet, toolchain-meta-tests]",
 			ifTokens: []string{
 				"!cancelled()",
 				"needs.changes.outputs.artifacts_only != 'true'",

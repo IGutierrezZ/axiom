@@ -19,7 +19,11 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 	// Plugin nuevo (inc-25, REQ-25.22): no hay ninguna revisión anterior que reconocer. La entrada
 	// vacía existe porque la tabla se indexa por plugin gestionado; la primera revisión que lo
 	// sustituya deberá añadir aquí el resumen de esta.
-	"axiom-branch-guard.ts": {},
+	"axiom-branch-guard.ts": {
+		"v2": {
+			"5c18a72a6083739791d6690e1e95c2b35277a84ed357355a662a3322e8046fd3", // 9181af32
+		},
+	},
 	"skill-registry.ts": {
 		"v1": {
 			"12dcf0eb388ebbb000d8ac318b906a3ab3f7880049fcc0ceed2012143271c4cd", // 8c2f2633
@@ -27,9 +31,11 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"af143abb8250087431110739af3e6ae7b16c963f200968b777e1f38b3e58d8ff", // 0efb8b92
 			"b24f83e90d455807dbd122f12a953952e7ff6550e3a0d733030c22843f0ce148", // 682d3fe4
 			"d402d2414b3c9ec5b31cad6f85787d152037e76148c3cea18fd443c1d7f5eab4", // e23b27b6
+			"9fb2486c7cd25722adc1511b9b2ec5926530d8479eaf7dc0ec375b901d923766", // 0873b436
 		},
 		"v2": {
 			"c2b4382c014c2c15d4b18c70df8d65c272e557d2639e2b2f1ad8d9236142dc48", // 5a395e45
+			"f698f04ce87f87675d9a1dc13674a3ab618ffc5ba5d5a674e19b78ce75116238", // 79e44f43
 		},
 	},
 	"model-variants.ts": {
@@ -40,6 +46,12 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"a54d36130a695ef1383f0e8bb6c559e99a48aceda52170f51a051324321fa741", // 3a30b25f
 			"f34c4e9c33848d5c34792a65a36a2279063ccb8e071f24cb6d9b2e83bce6e01b", // a517efde
 			"fdcbf9c6e4c398216c32394abf4c1ee2f9ed17eb96b1238c226bf5dd6a08416f", // 27fc25ec
+			"52367d825a500d97c066af36f13fb8ca58ce85c7f156a7d4d05478d5e645bec1", // 3c55c493
+			"ad88348ee64c5632fc99fc13f9bb5851803edabd52c1ebfe6c6025d3cbb75af2", // 0873b436
+		},
+		"v2": {
+			"6c894d141b97b67f2689b41afc79579ce3be2f3aa57aa2de9586645fbf0b18f4", // 3c55c493
+			"11557954fe39155337b717b689b4be759cc641fbccbd1c1b97f0214d754cec64", // ca458a6c
 		},
 	},
 	"sdd-task-result-artifacts.ts": {
@@ -54,6 +66,7 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"bfd291ff60c7d186d3e727327a9cc038a8ac4275128bcb8b406cb322858eb6f6", // 229332a8
 			"c6e03fc1c7a03725cc1645b8285018f5dacd53fba8eb03cd51dfb26fe63fc28e", // 43094d2d
 			"e497b37070f5178fcab110bd964b7fd0af6e299c467eb630093f9c4d9ca7e404", // 7a45a34c
+			"58b631f746885f8aeb2f9ab1a3748a87675f20a75a3c1f6cde7fad588f4d1cea", // 020de4a2
 		},
 		"v2": {
 			"14457d4666937185349e4c64c44610493f690405e0afb3e32b352c6e2d772156", // 98aea408
@@ -61,6 +74,7 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"8c8bf972f4334dba3f8c947ef9b82eb34d6e931828887fb41b31271bd333d155", // 43094d2d
 			"bbc54a174975eb52a2fe92794bf49dcb9b3d979bfdd4bb9414a5aaf141f48e10", // 77c7523f
 			"e12ef869fafafb8022a89bfc88a73c312c76b63dc26199d293f602e4355de188", // 386e0cc0
+			"51cdbafab7c66e74b9e4dbc6742420b4b5dc6f3231b39fc44133ef5ba4f95fc4", // 020de4a2
 		},
 	},
 }

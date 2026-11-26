@@ -1337,12 +1337,13 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientra
 
 ### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (REQ-25.22)
 
-`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex y OpenCode) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2).
+`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex, OpenCode y VS Code Copilot) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2). En VS Code Copilot el hook se instala solo con el ámbito `workspace`, en un fichero propio de Axiom (`.github/hooks/axiom-branch-guard.json`, con el formato del arnés de Copilot) que no altera los demás ficheros de `.github/hooks`. Como en `preToolUse` de ese arnés cualquier código de salida distinto de 0 deniega la escritura, la orden instalada DEBE terminar con código 0 aunque `axiom` falte o falle, y la decisión DEBE ir solo por la salida estándar.
+(Previously: los runtimes con hook eran Claude Code, Codex y OpenCode)
 (Previously: la inercia exigida era solo fuera de proyectos Axiom)
 (Previously: la inercia se justificaba solo por la configuración global de Claude Code y un `openspec/` suelto valía como marcador de proyecto Axiom)
 
-#### Scenario: Instalación en los tres runtimes
-- **DADO** una máquina con Claude Code, Codex y OpenCode configurados
+#### Scenario: Instalación en los runtimes con hooks
+- **DADO** un proyecto con Claude Code, Codex, OpenCode y VS Code Copilot configurados
 - **CUANDO** se ejecuta `axiom sync`
 - **ENTONCES** cada uno incluye una entrada de hook que invoca `axiom branch guard`
 
@@ -1371,7 +1372,17 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientra
 - **CUANDO** el runtime invoca el hook para escribir en ese repositorio
 - **ENTONCES** el hook no bloquea, no avisa, no lanza procesos y no escribe nada
 
----
+#### Scenario: VS Code Copilot recibe un fichero de hooks propio que nunca deniega por fallo
+- **DADO** un proyecto con VS Code Copilot y un fichero de hooks del equipo en `.github/hooks/`
+- **CUANDO** se ejecuta `axiom sync` con el ámbito `workspace`
+- **ENTONCES** `.github/hooks/axiom-branch-guard.json` declara `axiom branch guard --agent vscode-copilot` en `preToolUse` y en `postToolUse` para las herramientas de escritura
+- **Y** la orden termina con código 0 aunque `axiom` no esté en el `PATH`
+- **Y** el fichero de hooks del equipo queda byte a byte igual
+
+#### Scenario: Con el ámbito global VS Code Copilot no recibe hooks
+- **DADO** VS Code Copilot configurado
+- **CUANDO** se ejecuta `axiom sync --scope global`
+- **ENTONCES** no se escribe ningún fichero de hooks de VS Code Copilot
 
 ### Requirement: Las Skills y la Doctrina Delegan en el Verbo (REQ-25.23)
 
