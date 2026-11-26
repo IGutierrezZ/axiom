@@ -794,7 +794,7 @@ Una sola PR (`single-pr`), un commit por unidad, pruebas focalizadas por paquete
 
 Resueltos por la corrección de la spec (se conservan como historial): los códigos `usage_invalid`, `git_repository_required` y `write_failed` (cabecera y prov:74:1); el `Content-Type` genérico y la firma (prov:74:12); la etiqueta de un cambio archivado en la fase 2 (prov:74:15); la categoría de estado desconocida (prov:74:6); el aviso de `axiom.yaml` inválido (prov:74:2). `odd-living-document` RF-ODO-01 y `dashboard-sdd-orchestration` RF-DSO-04 siguen sin necesitar delta.
 
-Abiertos (el diseño decide; conviene recogerlos en la spec al archivar):
+Los nueve huecos siguientes están recogidos en la spec (T0 de `apply`); las decisiones D-xx no cambian:
 
 1. **Formas de URL de prov:74:4** (hueco 17 de la revisión): la spec no define URL de tablero, consulta, fragmento, barra final, URL de la API ni si el proyecto de la URL debe coincidir. El diseño acepta las formas de D-29 y exige el proyecto configurado cuando la URL lo nombra.
 2. **Orden de los pasos 2 y 4 de prov:74:14**: con el orden fijo, la primera adopción de un repositorio tiene una ventana (solo ante la muerte del proceso) en la que `context/` existe sin la entrada de `info/exclude` (D-25). Poner el paso 4 antes del 2 la cerraría; la spec debería permitirlo.

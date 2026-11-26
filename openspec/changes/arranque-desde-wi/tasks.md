@@ -33,16 +33,16 @@
 
 Commit: `docs(spec): alinear las deltas de arranque-desde-wi con los huecos del diseño`. Ruta: inline. Sin tocar IDs `prov:74:*`.
 
-- [ ] 0.1 `openspec/changes/arranque-desde-wi/specs/change-start-from-work-item/spec.md` (prov:74:4): añadir las formas de referencia de D-29 (identificador `^[1-9][0-9]{0,9}$` ≤ 2147483647; URL `_workitems/edit`, `_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` con `workitem={id}`; fragmento y barra final ignorados; proyecto de la URL igual al configurado; `{org}.visualstudio.com` no aceptado) con escenarios de tablero, otro proyecto y `visualstudio.com`. Hueco 1.
-- [ ] 0.2 Mismo fichero (prov:74:14): permitir ejecutar el paso 4 (`info/exclude`) antes del paso 2 sin cambiar el orden observable del resto, o declarar explícitamente la ventana por muerte del proceso; sustituir «renombrar y caer a copia» por «copiar y verificar siempre; el staging queda intacto hasta el paso 6». Huecos 2 y 3.
-- [ ] 0.3 Mismo fichero (prov:74:13/14, `already_adopted`): definir `already_adopted` también en la fase 1 (cambio del mismo nombre con el WI ya adoptado, sin descarga ni escrituras, aviso con `--adopt` si `backlink` no es `done`). Hueco 4.
-- [ ] 0.4 Mismo fichero (prov:74:14, paso 6): fallo al retirar el staging = aviso `staging_not_retired` con salida 0 y reintento de `--adopt`. Hueco 5.
-- [ ] 0.5 Mismo fichero (prov:74:17): añadir el cerrojo por identidad del WI (`item-<plugin>-<id>`) junto al del cambio, con orden fijo WI → cambio → integraciones. Hueco 6.
-- [ ] 0.6 Mismo fichero (prov:74:7): una etiqueta `axiom:<otro>` sin rastro local cuenta como abierta; el mensaje dice que el cambio no consta en este equipo y la continuación ofrece retirar la etiqueta o actualizar el checkout principal. Hueco 7.
-- [ ] 0.7 Mismo fichero (prov:74:9): perfil `bug` solo cuando el tipo mapeado es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos); nota de que otros nombres de tipo de defecto dan `incremento`. Hueco 8.
-- [ ] 0.8 Mismo fichero (prov:74:1): `git_repository_required` para `--from` no vacío, `--adopt` y `--discard` fuera de un repositorio git; la consulta sin argumentos y `--from` vacío no lo exigen. Hueco 9.
-- [ ] 0.9 `openspec/changes/arranque-desde-wi/design.md`: marcar en «Huecos de spec» los nueve huecos como «recogidos en la spec» sin alterar las decisiones D-xx.
-- [ ] 0.10 Verificación: `Grep` de `prov:74:` en `specs/` devuelve los mismos 27 identificadores sin duplicados ni pérdidas; relectura estructural de cada escenario nuevo (WHEN/THEN) y commit.
+- [x] 0.1 `openspec/changes/arranque-desde-wi/specs/change-start-from-work-item/spec.md` (prov:74:4): añadir las formas de referencia de D-29 (identificador `^[1-9][0-9]{0,9}$` ≤ 2147483647; URL `_workitems/edit`, `_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` con `workitem={id}`; fragmento y barra final ignorados; proyecto de la URL igual al configurado; `{org}.visualstudio.com` no aceptado) con escenarios de tablero, otro proyecto y `visualstudio.com`. Hueco 1.
+- [x] 0.2 Mismo fichero (prov:74:14): permitir ejecutar el paso 4 (`info/exclude`) antes del paso 2 sin cambiar el orden observable del resto, o declarar explícitamente la ventana por muerte del proceso; sustituir «renombrar y caer a copia» por «copiar y verificar siempre; el staging queda intacto hasta el paso 6». Huecos 2 y 3.
+- [x] 0.3 Mismo fichero (prov:74:13/14, `already_adopted`): definir `already_adopted` también en la fase 1 (cambio del mismo nombre con el WI ya adoptado, sin descarga ni escrituras, aviso con `--adopt` si `backlink` no es `done`). Hueco 4.
+- [x] 0.4 Mismo fichero (prov:74:14, paso 6): fallo al retirar el staging = aviso `staging_not_retired` con salida 0 y reintento de `--adopt`. Hueco 5.
+- [x] 0.5 Mismo fichero (prov:74:17): añadir el cerrojo por identidad del WI (`item-<plugin>-<id>`) junto al del cambio, con orden fijo WI → cambio → integraciones. Hueco 6.
+- [x] 0.6 Mismo fichero (prov:74:7): una etiqueta `axiom:<otro>` sin rastro local cuenta como abierta; el mensaje dice que el cambio no consta en este equipo y la continuación ofrece retirar la etiqueta o actualizar el checkout principal. Hueco 7.
+- [x] 0.7 Mismo fichero (prov:74:9): perfil `bug` solo cuando el tipo mapeado es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos); nota de que otros nombres de tipo de defecto dan `incremento`. Hueco 8.
+- [x] 0.8 Mismo fichero (prov:74:1): `git_repository_required` para `--from` no vacío, `--adopt` y `--discard` fuera de un repositorio git; la consulta sin argumentos y `--from` vacío no lo exigen. Hueco 9.
+- [x] 0.9 `openspec/changes/arranque-desde-wi/design.md`: marcar en «Huecos de spec» los nueve huecos como «recogidos en la spec» sin alterar las decisiones D-xx.
+- [x] 0.10 Verificación: `Grep` de `prov:74:` en `specs/` devuelve los mismos 27 identificadores sin duplicados ni pérdidas; relectura estructural de cada escenario nuevo (WHEN/THEN) y commit.
 
 Cubre: prov:74:1, prov:74:4, prov:74:7, prov:74:9, prov:74:13, prov:74:14, prov:74:17 (alineación, sin IDs nuevos).
 

@@ -11,7 +11,7 @@
 
 ### Requirement: Verbo `axiom change start` en Dos Fases con Salida Versionada (prov:74:1)
 
-La CLI MUST ofrecer el subcomando `axiom change start`, delegado desde `axiom change`, con las banderas `--from <id|url>`, `--adopt`, `--discard`, `--change <nombre>`, `--lane sdd|odd`, `--cwd` y `--json`. Los modos `--from`, `--adopt` y `--discard` MUST ser mutuamente excluyentes; combinarlos MUST rechazarse como uso incorrecto con el código tipado `usage_invalid`, salida 2 y sin ninguna operación de red ni escritura. `--adopt` y `--discard` MUST exigir `--change`, y `--change` MUST NOT aceptarse con `--from`. `--lane` MUST valer `sdd` por defecto y solo MUST aceptarse con `--adopt`: `--lane` junto a `--from` o `--discard`, o con un valor distinto de `sdd` y `odd`, MUST rechazarse con `usage_invalid` y salida 2. Las banderas desconocidas, los argumentos posicionales y un `--change` que no sea un componente de nombre de cambio válido MUST rechazarse también con `usage_invalid`. Estas comprobaciones de uso MUST preceder a la de aplicabilidad. Si, con plugin activo, `--cwd` no pertenece a un repositorio git (no se resuelve un common dir), el verbo MUST rechazar con `git_repository_required` (salida 1), sin red y sin escrituras, y la continuación MUST nombrar `axiom change start … --cwd <repositorio>`. Con `--json` la salida MUST ser un único documento con el campo `schema: axiom.change-start/v1`, la fase ejecutada, el resultado (o el rechazo tipado con su código, mensaje y continuación) y la lista de avisos. El verbo MUST NOT ejecutar `axiom branch ensure` ni `axiom sdd kickoff seal`, MUST NOT crear `proposal.md` ni el documento ODD y MUST NOT ejecutar `git commit`, `git push` ni ninguna operación de git remota.
+La CLI MUST ofrecer el subcomando `axiom change start`, delegado desde `axiom change`, con las banderas `--from <id|url>`, `--adopt`, `--discard`, `--change <nombre>`, `--lane sdd|odd`, `--cwd` y `--json`. Los modos `--from`, `--adopt` y `--discard` MUST ser mutuamente excluyentes; combinarlos MUST rechazarse como uso incorrecto con el código tipado `usage_invalid`, salida 2 y sin ninguna operación de red ni escritura. `--adopt` y `--discard` MUST exigir `--change`, y `--change` MUST NOT aceptarse con `--from`. `--lane` MUST valer `sdd` por defecto y solo MUST aceptarse con `--adopt`: `--lane` junto a `--from` o `--discard`, o con un valor distinto de `sdd` y `odd`, MUST rechazarse con `usage_invalid` y salida 2. Las banderas desconocidas, los argumentos posicionales y un `--change` que no sea un componente de nombre de cambio válido MUST rechazarse también con `usage_invalid`. Estas comprobaciones de uso MUST preceder a la de aplicabilidad. Si, con plugin activo, `--from` no vacío, `--adopt` o `--discard` se ejecutan con un `--cwd` que no pertenece a un repositorio git (no se resuelve un common dir), el verbo MUST rechazar con `git_repository_required` (salida 1), sin red y sin escrituras, y la continuación MUST nombrar `axiom change start … --cwd <repositorio>`; la consulta sin argumentos y `--from` vacío MUST NOT exigir git. Con `--json` la salida MUST ser un único documento con el campo `schema: axiom.change-start/v1`, la fase ejecutada, el resultado (o el rechazo tipado con su código, mensaje y continuación) y la lista de avisos. El verbo MUST NOT ejecutar `axiom branch ensure` ni `axiom sdd kickoff seal`, MUST NOT crear `proposal.md` ni el documento ODD y MUST NOT ejecutar `git commit`, `git push` ni ninguna operación de git remota.
 
 #### Scenario: La ayuda de `axiom change` lista `start`
 - **DADO** el binario `axiom`
@@ -103,7 +103,7 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 
 ### Requirement: Resolución del WI por ID o por URL del Host y la Organización Configurados (prov:74:4)
 
-`--from` MUST aceptar un identificador numérico positivo o una URL `https` cuyo host y organización coincidan con los configurados en `integrations.azure-devops`, y cuyo último segmento de ruta de work item sea un identificador numérico. Una URL de otro host u otra organización, una URL con `userinfo`, un esquema distinto de `https` o un valor que no sea ni número ni URL MUST rechazarse con el código `work_item_reference_invalid`, sin ninguna petición de red, y su continuación MUST nombrar `axiom change start --from <id|url>`. La URL rechazada MUST NOT enviarse al tracker ni escribirse.
+`--from` MUST aceptar un identificador numérico positivo o una URL `https` cuyo host y organización coincidan con los configurados en `integrations.azure-devops`, y cuyo último segmento de ruta de work item sea un identificador numérico. El identificador MUST cumplir `^[1-9][0-9]{0,9}$` y ser como máximo 2147483647; `0`, los ceros a la izquierda, los signos y los decimales MUST rechazarse. Las formas de URL aceptadas MUST ser `/{org}[/{project}]/_workitems/edit/{id}`, `/{org}[/{project}]/_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` cuya consulta lleve exactamente un parámetro `workitem={id}` (tableros, backlogs y sprints); el fragmento y la barra final MUST ignorarse. Si la ruta nombra un proyecto, MUST coincidir con el `project` configurado (sin distinguir mayúsculas); `{org}.visualstudio.com` MUST NOT aceptarse. Una URL de otro host u otra organización, una URL con `userinfo`, un esquema distinto de `https` o un valor que no sea ni número ni URL MUST rechazarse con el código `work_item_reference_invalid`, sin ninguna petición de red, y su continuación MUST nombrar `axiom change start --from <id|url>`. La URL rechazada MUST NOT enviarse al tracker ni escribirse.
 
 #### Scenario: ID numérico
 - **DADO** un plugin activo y un WI 2525 simulado
@@ -120,6 +120,21 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 - **CUANDO** se ejecuta `axiom change start --from https://dev.azure.com/otra/P/_workitems/edit/9`
 - **ENTONCES** se rechaza con `work_item_reference_invalid`, con código 1 y sin ninguna petición de red
 
+#### Scenario: URL de tablero con `workitem=`
+- **DADO** la organización `acme` y el proyecto `Proyecto` configurados
+- **CUANDO** se ejecuta `axiom change start --from "https://dev.azure.com/acme/Proyecto/_boards/board/t/Equipo/Stories?workitem=2525"`
+- **ENTONCES** se solicita el WI 2525
+
+#### Scenario: URL de otro proyecto de la misma organización
+- **DADO** el proyecto `Proyecto` configurado
+- **CUANDO** se ejecuta `axiom change start --from https://dev.azure.com/acme/Otro/_workitems/edit/9`
+- **ENTONCES** se rechaza con `work_item_reference_invalid` y sin ninguna petición de red
+
+#### Scenario: Host `visualstudio.com` no aceptado
+- **DADO** la organización `acme` configurada
+- **CUANDO** se ejecuta `axiom change start --from https://acme.visualstudio.com/P/_workitems/edit/9`
+- **ENTONCES** se rechaza con `work_item_reference_invalid` y sin ninguna petición de red
+
 #### Scenario: Valor que no es un WI
 - **DADO** un plugin activo
 - **CUANDO** se ejecuta `axiom change start --from abc` o `--from 0` o `--from http://dev.azure.com/acme/P/_workitems/edit/9`
@@ -127,7 +142,13 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 
 ### Requirement: La Fase 1 Solo Escribe en Staging bajo el Common Dir de Git (prov:74:5)
 
-La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar el resultado en staging bajo el common dir de git, en `<common>/axiom/change-start/v1/<cambio>/` (el WI normalizado en JSON y la carpeta `context/`). MUST NOT escribir en el árbol de trabajo del repositorio ni en el WI del tracker, MUST NOT crear ficheros fuera del common dir y MUST devolver el nombre derivado, el perfil y la `external_ref` (`<alias>:<id>`, con el alias de referencia del manifiesto). La escritura del staging MUST ser atómica: un fallo a mitad MUST NOT dejar un staging parcial que la fase 2 pueda adoptar, y un fallo de escritura MUST rechazarse con `write_failed` (salida 1), con continuación «reintenta `axiom change start …`». La detección de un staging existente MUST hacerse por identidad del WI (plugin e id guardados en su `work-item.json`) y no solo por nombre: tras derivar el nombre, MUST buscarse un staging válido de ese nombre y, si no lo hay, de cualquier otro nombre con el mismo WI (por ejemplo, porque el título cambió entre dos fases 1). Si ya existe un staging del mismo WI, con el mismo nombre o con otro, la fase 1 MUST informar de ello (estado `already_staged`, aviso con la ruta y el nombre de ese staging) sin descargar nada, sin pisarlo, sin crear otro y con código 0; el nombre devuelto MUST ser el del staging existente. Si el staging existente de ese mismo nombre corresponde a otro WI, MUST rechazar con `staging_conflict` y la continuación MUST nombrar `axiom change start --discard --change <cambio>`. Un directorio de staging sin `work-item.json` legible MUST tratarse como inexistente y sustituirse, porque no lo dejó una fase 1 completa.
+La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar el resultado en staging bajo el common dir de git, en `<common>/axiom/change-start/v1/<cambio>/` (el WI normalizado en JSON y la carpeta `context/`). MUST NOT escribir en el árbol de trabajo del repositorio ni en el WI del tracker, MUST NOT crear ficheros fuera del common dir y MUST devolver el nombre derivado, el perfil y la `external_ref` (`<alias>:<id>`, con el alias de referencia del manifiesto). La escritura del staging MUST ser atómica: un fallo a mitad MUST NOT dejar un staging parcial que la fase 2 pueda adoptar, y un fallo de escritura MUST rechazarse con `write_failed` (salida 1), con continuación «reintenta `axiom change start …`». La detección de un staging existente MUST hacerse por identidad del WI (plugin e id guardados en su `work-item.json`) y no solo por nombre: tras derivar el nombre, MUST buscarse un staging válido de ese nombre y, si no lo hay, de cualquier otro nombre con el mismo WI (por ejemplo, porque el título cambió entre dos fases 1). Si ya existe un staging del mismo WI, con el mismo nombre o con otro, la fase 1 MUST informar de ello (estado `already_staged`, aviso con la ruta y el nombre de ese staging) sin descargar nada, sin pisarlo, sin crear otro y con código 0; el nombre devuelto MUST ser el del staging existente. Si el staging existente de ese mismo nombre corresponde a otro WI, MUST rechazar con `staging_conflict` y la continuación MUST nombrar `axiom change start --discard --change <cambio>`. Un directorio de staging sin `work-item.json` legible MUST tratarse como inexistente y sustituirse, porque no lo dejó una fase 1 completa. Si no hay staging pero el cambio del mismo nombre ya adoptó el mismo WI (vínculo local o `context/work-item.json` del mismo plugin e id), la fase 1 MUST responder `already_adopted` con código 0, sin descargar nada ni escribir nada, y, si el `backlink` no es `done`, con un aviso que nombre `axiom change start --adopt --change <cambio>` (con `--lane odd` en ODD).
+
+#### Scenario: Fase 1 sobre un WI ya adoptado por el mismo cambio
+- **DADO** un cambio `US-2525-alta-usuarios` que ya adoptó el WI 2525 y sin staging
+- **CUANDO** se repite `axiom change start --from 2525 --json`
+- **ENTONCES** el estado es `already_adopted`, el código 0 y no se hace ninguna descarga ni escritura
+- **Y** si `backlink` es `pending`, un aviso nombra `axiom change start --adopt --change US-2525-alta-usuarios`
 
 #### Scenario: Fase 1 correcta no toca el repositorio ni el WI
 - **DADO** un WI simulado válido y un repositorio con el árbol limpio
@@ -233,7 +254,7 @@ La fase 1 MUST validar, en este orden y con una sola lectura del tracker: (1) el
 
 ### Requirement: Un WI Enlazado a Otro Cambio Abierto se Rechaza (prov:74:7)
 
-La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enlazado a otro cambio abierto, comprobando (a) las etiquetas `axiom:<otro>` de `System.Tags` del WI (verdad entre máquinas) y (b) los vínculos locales de los cambios abiertos del registro local de ramas (`<common>/axiom/branch/v1/…`): los vínculos `kind: work_item` de su `integrations.yaml` en el carril SDD y el `context/work-item.json` adoptado de su carpeta `odd/context/<cambio>/` en el carril ODD (que no escribe `integrations.yaml`). Si ambas fuentes discrepan, MUST mandar el WI. La misma etiqueta del mismo cambio MUST NOT ser conflicto, y un cambio archivado localmente MUST contar como cerrado. El mensaje MUST nombrar la etiqueta o el cambio que reclama el WI y la continuación MUST nombrar la salida (retirar la etiqueta en el tracker o cerrar el otro cambio con `axiom branch done --change <otro>`).
+La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enlazado a otro cambio abierto, comprobando (a) las etiquetas `axiom:<otro>` de `System.Tags` del WI (verdad entre máquinas) y (b) los vínculos locales de los cambios abiertos del registro local de ramas (`<common>/axiom/branch/v1/…`): los vínculos `kind: work_item` de su `integrations.yaml` en el carril SDD y el `context/work-item.json` adoptado de su carpeta `odd/context/<cambio>/` en el carril ODD (que no escribe `integrations.yaml`). Si ambas fuentes discrepan, MUST mandar el WI. La misma etiqueta del mismo cambio MUST NOT ser conflicto, y un cambio archivado localmente MUST contar como cerrado. Una etiqueta `axiom:<otro>` de la que no hay ningún rastro local (ni registro ni archivo ni documento ODD) MUST contar como cambio abierto, porque este equipo no puede distinguir un cambio abierto en otra máquina de uno cerrado allí y aún no traído; el mensaje MUST decir que el cambio no consta en este equipo y la continuación MUST ofrecer retirar la etiqueta en el tracker o actualizar el checkout principal y repetir `axiom change start --from <id|url>`. El mensaje MUST nombrar la etiqueta o el cambio que reclama el WI y la continuación MUST nombrar la salida (retirar la etiqueta en el tracker o cerrar el otro cambio con `axiom branch done --change <otro>`).
 
 #### Scenario: Etiqueta de otro cambio en el WI
 - **DADO** un WI con la etiqueta `axiom:otro-cambio` y `otro-cambio` abierto en el registro local
@@ -250,6 +271,11 @@ La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enl
 - **DADO** un WI sin etiquetas `axiom:*` y un cambio ODD abierto del registro local cuyo `odd/context/<cambio>/work-item.json` corresponde a ese WI
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** se rechaza con `work_item_linked` nombrando el cambio local
+
+#### Scenario: Etiqueta de un cambio sin rastro local
+- **DADO** un WI con la etiqueta `axiom:remoto` y ningún rastro local de `remoto`
+- **CUANDO** se ejecuta la fase 1
+- **ENTONCES** se rechaza con `work_item_linked`, el mensaje dice que el cambio no consta en este equipo y la continuación ofrece retirar la etiqueta o actualizar el checkout principal
 
 #### Scenario: Etiqueta de un cambio ya archivado
 - **DADO** un WI con la etiqueta `axiom:viejo` y el cambio `viejo` archivado localmente
@@ -298,7 +324,7 @@ El nombre del cambio MUST derivarse como `<prefijo>-<id>-<slug>`, con el prefijo
 
 ### Requirement: Perfil del Cambio según el Tipo del WI (prov:74:9)
 
-El resultado de la fase 1 MUST declarar el perfil: `bug` si el tipo del WI es `Bug` según `item_keys`, e `incremento` para cualquier otro tipo mapeado. El verbo MUST NOT inventar los campos `Observado:` ni `Esperado:` del informe de bug: los pasos de reproducción y los criterios del WI se importan como contexto y es la skill quien redacta el informe y pregunta lo que falte.
+El resultado de la fase 1 MUST declarar el perfil: `bug` solo si el tipo del WI, ya mapeado en `item_keys`, es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos), e `incremento` para cualquier otro tipo mapeado (otros nombres de tipo de defecto, como `Defect`, producen `incremento`, y esto se documenta). El verbo MUST NOT inventar los campos `Observado:` ni `Esperado:` del informe de bug: los pasos de reproducción y los criterios del WI se importan como contexto y es la skill quien redacta el informe y pregunta lo que falte.
 
 #### Scenario: User Story produce incremento
 - **DADO** un WI válido de tipo `User Story` mapeado
@@ -467,7 +493,7 @@ Antes de construir cualquier petición con credencial para un adjunto o una imag
 
 ### Requirement: Fase 2 `--adopt` Mueve el Contexto, Vincula el WI y es Idempotente (prov:74:14)
 
-`axiom change start --adopt --change <cambio> [--lane sdd|odd]` MUST comprobar, antes de escribir nada, que el cambio está preparado y que existe qué adoptar, y MUST ejecutar la adopción bajo el cerrojo del cambio en este orden fijo: (1) comprobar la preparación; (2) mover `context/` desde el staging a `openspec/changes/<cambio>/context/` (carril `sdd`) o a `odd/context/<cambio>/` (carril `odd`), con renombrado y caída a copia verificada y borrado si origen y destino están en volúmenes distintos; (3) en el carril `sdd`, escribir el vínculo `kind: work_item` en `integrations.yaml` (RF-INT-09) con `plugin`, `id`, `url` y `source: change.start` (en el carril `odd` MUST NOT crear `integrations.yaml`); (4) asegurar las entradas de `.git/info/exclude`; (5) registrar en `context/work-item.json` del destino el carril y el enlace de vuelta como pendiente; (6) retirar el staging; (7) añadir el enlace de vuelta (requisito siguiente) y registrar su resultado (`done`, `pending` o `conflict`) en `context/work-item.json`.
+`axiom change start --adopt --change <cambio> [--lane sdd|odd]` MUST comprobar, antes de escribir nada, que el cambio está preparado y que existe qué adoptar, y MUST ejecutar la adopción bajo el cerrojo del cambio en este orden fijo: (1) comprobar la preparación; (2) copiar y verificar `context/` desde el staging a `openspec/changes/<cambio>/context/` (carril `sdd`) o a `odd/context/<cambio>/` (carril `odd`): se copia siempre a un temporal del mismo árbol y volumen que el destino, se verifica (rutas, tamaño y SHA-256) y se publica con un único renombrado, de modo que el resultado es idéntico en uno o dos volúmenes; el staging queda intacto hasta el paso 6; (3) en el carril `sdd`, escribir el vínculo `kind: work_item` en `integrations.yaml` (RF-INT-09) con `plugin`, `id`, `url` y `source: change.start` (en el carril `odd` MUST NOT crear `integrations.yaml`); (4) asegurar las entradas de `.git/info/exclude`; (5) registrar en `context/work-item.json` del destino el carril y el enlace de vuelta como pendiente; (6) retirar el staging; (7) añadir el enlace de vuelta (requisito siguiente) y registrar su resultado (`done`, `pending` o `conflict`) en `context/work-item.json`. La implementación MAY ejecutar el paso 4 antes del paso 2 sin cambiar el orden observable del resto; si no lo hace, la única ventana en la que `context/` puede ser visible para git es la muerte del proceso entre los pasos 2 y 4, que ningún fallo controlado deja abierta y que el siguiente `--adopt` cierra. Si el retirado del staging (paso 6) falla, MUST avisar con `staging_not_retired` (nombrando `axiom change start --adopt --change <cambio>`), terminar con código 0 y continuar con el paso 7; el reintento retira el staging.
 
 **Cambio preparado.** El cambio está preparado cuando existe su registro del carril en `<common>/axiom/branch/v1/<carril>/<cambio>.json` y, en el carril `sdd`, existe `openspec/changes/<cambio>/` bajo el planning home; además, el HEAD del checkout de `--cwd`, leído de ficheros sin ejecutar git, MUST ser la rama del cambio (o de uno de sus roles) registrada para ese repositorio, salvo cuando el repositorio es el de especificaciones en el sitio de un multirepo, que solo exige registro y carpeta. Si el HEAD no puede leerse sin git, basta con registro y carpeta y se avisa. En el carril `odd`, el cambio está preparado con el registro y el HEAD: `ensure --lane odd` no crea `odd/context/<cambio>/` ni exige ninguna carpeta previa, y la carpeta de destino la crea la propia adopción. Si algo falta, o si `--lane` no coincide con el carril del registro del cambio (por ejemplo `--lane sdd` por defecto sobre un cambio que solo tiene registro `odd`), MUST rechazar con `change_not_prepared`, sin tocar el staging, con la continuación `axiom branch ensure --change <cambio> --json` (con `--lane odd` en ODD) y, si el registro tiene worktree, el mensaje MUST nombrar `axiom change start --adopt --change <cambio> --cwd <worktree>`.
 
@@ -533,10 +559,16 @@ Antes de construir cualquier petición con credencial para un adjunto o una imag
 - **CUANDO** se ejecuta `--adopt`
 - **ENTONCES** se rechaza con `change_not_prepared` y no se escribe nada
 
-#### Scenario: Movimiento entre volúmenes
-- **DADO** un renombrado que falla por estar origen y destino en volúmenes distintos
+#### Scenario: Staging y destino en volúmenes distintos
+- **DADO** un staging y un destino en volúmenes distintos
 - **CUANDO** se ejecuta `--adopt`
-- **ENTONCES** el contexto se copia, se verifica y el origen se borra, con el mismo resultado final
+- **ENTONCES** el contexto se copia y se verifica siempre, con el mismo resultado final que en un solo volumen, y el staging permanece intacto hasta el paso 6
+
+#### Scenario: Fallo al retirar el staging
+- **DADO** un fallo simulado al renombrar el staging en el paso 6
+- **CUANDO** se ejecuta `--adopt`
+- **ENTONCES** el verbo termina con código 0 y un aviso `staging_not_retired` que nombra `axiom change start --adopt --change <cambio>`
+- **Y** un `--adopt` posterior retira el staging
 
 #### Scenario: Vínculo concurrente con una entrega
 - **DADO** una escritura de `integrations.yaml` por una entrega mientras `--adopt` vincula el WI
@@ -599,12 +631,17 @@ En la fase 2, tras mover el contexto y vincular, el verbo MUST releer el WI y MU
 
 ### Requirement: Un Cerrojo Local por Cambio Evita Arranques Simultáneos (prov:74:17)
 
-Las fases 1 y 2 y `--discard` MUST tomar un cerrojo local por cambio en el common dir. Dos invocaciones simultáneas sobre el mismo cambio MUST serializarse o rechazar la segunda con el código `change_start_busy` y continuación «reintenta `axiom change start …`»; en ningún caso MUST producir un staging corrupto ni un vínculo duplicado. Un cerrojo huérfano de un proceso que ya no existe MUST poder recuperarse sin intervención manual.
+Las fases 1 y 2 y `--discard` MUST tomar un cerrojo local por cambio en el common dir. La fase 1 MUST tomar además, antes de leer el WI, un cerrojo por identidad del WI (`item-<plugin>-<id>`), con orden fijo WI, cambio, integraciones; la fase 2 y el descarte MUST NOT pedir el del WI. Dos invocaciones simultáneas sobre el mismo cambio MUST serializarse o rechazar la segunda con el código `change_start_busy` y continuación «reintenta `axiom change start …`»; en ningún caso MUST producir un staging corrupto ni un vínculo duplicado. Un cerrojo huérfano de un proceso que ya no existe MUST poder recuperarse sin intervención manual.
 
 #### Scenario: Dos fases 1 simultáneas
 - **DADO** dos invocaciones concurrentes de la fase 1 para el mismo WI
 - **CUANDO** ambas terminan
 - **ENTONCES** existe un único staging íntegro y la segunda informó del staging existente o fue rechazada con `change_start_busy`
+
+#### Scenario: Dos fases 1 del mismo WI con títulos distintos
+- **DADO** dos invocaciones concurrentes de la fase 1 para el mismo WI que derivarían nombres distintos por un título cambiado
+- **CUANDO** ambas terminan
+- **ENTONCES** existe un único staging y la segunda informó de él (`already_staged`) por el cerrojo del WI
 
 #### Scenario: Cerrojo huérfano
 - **DADO** un cerrojo de un proceso inexistente
