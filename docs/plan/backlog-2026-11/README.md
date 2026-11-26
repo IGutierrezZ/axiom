@@ -1,6 +1,6 @@
 # Plan maestro del backlog 2026-11
 
-Índice, orden de ejecución y protocolo de las 8 secciones de análisis. Rutas y líneas de las secciones 01 a 07 verificadas contra `main` en `5f6b05b4`; la sección 08 (adelgazamiento, 2026-11-24) y la corrección de C-01-e, contra `d580368d`. Total: 47 cambios. Versión integrada con la revisión cruzada de las 7 sesiones y con las revisiones 08 y 09 (ver «Registro de revisión»).
+Índice, orden de ejecución y protocolo de las 8 secciones de análisis. Rutas y líneas de las secciones 01 a 07 verificadas contra `main` en `5f6b05b4`; la sección 08 (adelgazamiento, 2026-11-24) y la corrección de C-01-e, contra `d580368d`. Total: 50 cambios. Versión integrada con la revisión cruzada de las 7 sesiones y con las revisiones 08, 09 y 10 (ver «Registro de revisión»).
 
 ## 1. Propósito y reglas de uso
 
@@ -64,10 +64,13 @@ Tamaños: S, M, L, XL. «(blanda)» = dependencia de la que la sección dice «c
 | C-08-c | Extraer de `reviewtransaction` las primitivas que usan otros paquetes | [08](08-adelgazamiento.md) | ODD | M | — | `primitivas-fichero` |
 | C-08-d | Retirar los agentes que no se usan (Kiro, Windsurf, Kimi, Hermes, OpenClaw y Kilo Code; se quedan otros once) | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | L | C-01-e; P20 | `retirar-agentes` |
 | C-08-e | Retirar GGA y las lápidas de telemetría | [08](08-adelgazamiento.md) | ODD (`## Spec viva`) | S-M | C-08-d; P20 | `retirar-gga-telemetria` |
-| C-08-f | Arranque mínimo: retirar persona, presets, temas, agent builder y logo heredados | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | L | C-08-d, C-08-e; P18, P19 | `arranque-minimo` |
-| C-08-g | Pruebas en paralelo y repositorios git de plantilla | [08](08-adelgazamiento.md) | ODD | L | C-01-e, C-08-d, C-08-f | `pruebas-paralelas` |
-| C-08-h | Centinelas de prosa a goldens | [08](08-adelgazamiento.md) | ODD | M | C-01-e, C-08-d, C-08-f, C-08-g | `centinelas-golden` |
+| C-08-f | Arranque mínimo: retirar persona, presets, temas, agent builder, logo heredados y la TUI (`axiom` sin argumentos abre la UI; revisión 10) | [08](08-adelgazamiento.md) | ODD (`## Spec viva`; SDD si reescribe requisitos) | XL | C-08-d, C-08-e; P18, P19, P22 | `arranque-minimo` |
+| C-08-g | Pruebas en paralelo y repositorios git de plantilla (orden por cociente Windows/Linux medido) | [08](08-adelgazamiento.md) | ODD | L | C-01-e, C-08-d, C-08-f, C-08-h, C-08-l | `pruebas-paralelas` |
+| C-08-h | Centinelas de prosa: borrar los que fijan redacción y las lápidas (revisión 10; slug conservado) | [08](08-adelgazamiento.md) | ODD | M | C-01-e, C-08-d, C-08-f | `centinelas-golden` |
 | C-08-i | CI de PR por jobs y shards de Windows rebalanceados | [08](08-adelgazamiento.md) | ODD | S | C-01-e; P21 | `ci-por-jobs` |
+| C-08-j | Política de pruebas: en local solo los paquetes tocados; la suite completa, en la CI | [08](08-adelgazamiento.md) | ODD | S | — | `politica-pruebas` |
+| C-08-k | CI ágil: nocturna en `main` si hay commits, meta-tests en un job aparte y `pr-check` sin `edited` | [08](08-adelgazamiento.md) | ODD | S | C-08-i; P24 | `ci-agil` |
+| C-08-l | Retirar `knowledge` y `semantic` (CodeGraph en uso directo) | [08](08-adelgazamiento.md) | ODD (`## Spec viva`) | M | C-08-f; P23 | `retirar-knowledge-semantic` |
 
 ## 3. Grafo de dependencias
 
@@ -160,9 +163,13 @@ graph TD
   C01e --> C08g["C-08-g pruebas paralelas"]
   C08d --> C08g
   C08f --> C08g
-  C08g --> C08h["C-08-h centinelas a goldens"]
-  C08f --> C08h
+  C08f --> C08h["C-08-h borrar centinelas"]
+  C08h --> C08g
   C01e --> C08i["C-08-i CI por jobs"]
+  C08i --> C08k["C-08-k CI ágil"]
+  C08j["C-08-j política de pruebas"]
+  C08f --> C08l["C-08-l retirar knowledge y semantic"]
+  C08l --> C08g
   C08d --> C06g["C-06-g agentes en la UI"]
   C08f --> C06g
 ```
@@ -182,7 +189,9 @@ Dependencias inferidas y su razón:
 | C-07-b → C-06-e | Contradicción abierta. La 07 dice que C-07-b bloquea a C-06-e (que registraría las claves `integrations.<plugin>`). La 06 dice que C-06-e no depende de C-07-b: esas claves las registra C-07-h. Con las olas adoptadas no cambia nada (C-07-b va antes). |
 | C-08-d ← C-01-e | Solape duro: `components/sdd/inject.go`, los agentes `review-*` por agente, `tui/model.go`, los tests de `cli` y los goldens. |
 | C-08-e ← C-08-d; C-08-f ← C-08-e | Solape duro en `cli/run.go`, `cli/sync.go`, `components/uninstall`, `model/types.go`, `model/presets.go`, `catalog/components.go` y la pantalla de presets. |
-| C-08-g, C-08-h ← C-01-e, C-08-d, C-08-f | No se paraleliza ni se reescribe lo que se va a borrar. C-08-h va tras C-08-g porque los dos tocan ficheros de test de `components/sdd`. |
+| C-08-g, C-08-h ← C-01-e, C-08-d, C-08-f | No se paraleliza ni se reescribe lo que se va a borrar. **Revisión 10:** C-08-h pasa delante de C-08-g (antes iba detrás porque los dos tocan ficheros de test de `components/sdd`); por el mismo motivo C-08-g espera también a C-08-l. |
+| C-08-l ← C-08-f | Las dos tocan `cmd/axiom/main.go` y el dashboard. |
+| C-08-k ← C-08-i | Las dos tocan `ci.yml` y sus guardas; C-08-i está fusionada (#317). |
 | C-06-g ← C-08-d, C-08-f | La vista lista los agentes que quedan tras C-08-d y ofrece la instalación que deja C-08-f (presets y arranque mínimo). Hacerla antes obligaría a rehacerla. |
 | Funcionales pendientes ← C-08-c, C-01-e | C-03-b, C-05-c, C-06-b, C-06-c y C-06-f arrancan desde un `main` con las primitivas ya movidas y RDD retirado. No hay arista dura: es el motivo del orden de las olas. |
 
@@ -233,10 +242,12 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `internal/autoskill`, `internal/assets/skills_frontmatter_test.go` | duro | C-04-a, C-04-d |
 | `internal/state/state.go`, `internal/kickoff/rdd_boundary_test.go` | duro | C-01-c, C-01-e. C-05-c respeta la guarda de vocabulario del test (no lo edita); si C-01-e lo retira, la restricción desaparece |
 | `internal/assets/assets_test.go` | blando | C-02-c, C-03-e, C-04-c, C-05-d |
-| `cmd/axiom/main.go` | blando | C-01-d, C-03-d, C-04-b (solo si P6 conserva el comando), C-04-d, C-06-c, C-07-b, C-07-d |
-| `testdata/golden/*` | blando | casi todos los cambios de doctrina: C-01-b, C-01-c, C-02-b, C-02-c, C-02-d, C-03-a (89), C-03-b, C-03-e, C-05-b, C-05-c, C-05-d, C-06-b, C-06-c, C-06-d, C-07-d, C-07-e, C-07-g. C-04-b y C-04-c no tocan goldens (comprobado en la revisión) |
+| `cmd/axiom/main.go` | blando | C-01-d, C-03-d, C-04-b (solo si P6 conserva el comando), C-04-d, C-06-c, C-07-b, C-07-d, C-08-f (`axiom` sin argumentos abre la UI), C-08-l (casos `knowledge` y `semantic`) |
+| `testdata/golden/*` | blando | casi todos los cambios de doctrina: C-01-b, C-01-c, C-02-b, C-02-c, C-02-d, C-03-a (89), C-03-b, C-03-e, C-05-b, C-05-c, C-05-d, C-06-b, C-06-c, C-06-d, C-07-d, C-07-e, C-07-g, C-08-f (persona), C-08-j (regla de proporcionalidad). C-04-b y C-04-c no tocan goldens (comprobado en la revisión) |
+| `internal/components/agentguidance/delegation.go` y la plantilla del «Delegated Verification Gate» | duro | C-08-j |
+| `openspec/config.yaml` | blando | C-08-j |
 | `axiom.example.yaml` | blando | C-01-d (`:149`), C-02-a, C-03-a, C-06-b, C-06-c, C-06-e, C-07-b, C-07-f |
-| `AGENTS.md` | blando | C-01-d (`:59-60`), C-02-c, C-05-a (`:17`), C-05-d (`:17,:20`); `GEMINI.md`: C-05-a, C-05-d |
+| `AGENTS.md` | blando | C-01-d (`:59-60`), C-02-c, C-05-a (`:17`), C-05-d (`:17,:20`), C-08-j (`:21`, `:25`); `GEMINI.md`: C-05-a, C-05-d |
 | `docs/` | blando | `manual-de-inicio.md`: C-01-d, C-02-a, C-03-c, C-03-d, C-05-d (`:226,236,243`); `usage.md`/`components.md`: C-02-c; `engram.md`: C-05-a; `intended-usage.md` y `codebase/sync-and-cloud.md`: C-05-a (sujeto a P7) |
 | `.gitignore` | blando | C-05-a, C-07-d |
 | `openspec/specs/change-branch-lifecycle/` | duro | C-01-b, C-02-a, C-05-d (REQ-25.10), C-07-f |
@@ -247,17 +258,19 @@ Dos grados. **Duro**: el mismo fichero de lógica o la misma prosa (doctrina, sk
 | `openspec/specs/local-web-dashboard/` | duro | C-06-b, C-06-d, C-06-e, C-06-f, C-06-g, C-07-h |
 | `openspec/specs/` otras | duro | `sdd-preflight-configuration`: C-01-b, C-06-b; `workspace-topology`: C-06-c, C-06-e; `sdd-orchestrator-assets`: C-02-c; `rdd-*`: C-01-c, C-01-e; `sdd-iso-evidence` (REQ-29.3): C-03-a |
 | `openspec/specs/**` entero e `INDEX.md` | duro | C-03-e (+ C-01-d, que retira menciones de Serena) |
-| `.github/workflows/` | duro | `ci.yml`: C-01-e, C-08-b (solo si cambia la puerta de los tests del toolchain), C-08-i; `windows-full-suite.yml`: C-01-e, C-08-i; `release.yml` y `promote-stable-rc.yml`: C-01-e; `pr-check.yml` y la plantilla de PR: C-02-e |
+| `.github/workflows/` | duro | `ci.yml`: C-01-e, C-08-b (solo si cambia la puerta de los tests del toolchain), C-08-i, C-08-k; `windows-full-suite.yml`: C-01-e, C-08-i; `release.yml` y `promote-stable-rc.yml`: C-01-e; `pr-check.yml` y la plantilla de PR: C-02-e, C-08-k (`edited`) |
+| `internal/assets/workflow_shards_test.go`, `internal/update/windows_distribution_policy_test.go` | duro | C-08-i, C-08-k |
+| `internal/knowledge`, `internal/semantic`, panel semántico del dashboard, `internal/workspace/types.go` (`SemanticAnalysis`), `internal/hub/init.go` | duro | C-08-l |
 | `scripts/axiom-worktree.ps1` y `.sh` | duro | C-02-a |
 | `internal/model/types.go`, `model/presets.go`, `internal/catalog/` | duro | C-08-d (agentes), C-08-e (GGA), C-08-f (persona y presets) |
 | `internal/agents/` (`factory.go`, `capability_manifest.go`, `discovery.go`, paquetes por agente), `internal/installcmd/resolver.go` | duro | C-08-d |
 | `internal/cli/run.go`, `sync.go`, `doctor*.go`, `validate.go` | duro | C-01-e, C-08-d, C-08-e, C-08-f |
 | `internal/components/uninstall/` | duro | C-01-e (lápidas), C-08-d, C-08-e, C-08-f |
-| `internal/tui/model.go`, `router.go`, `screens/` | duro | C-01-e (pantallas RDD), C-08-d (selector de modelo de Kiro), C-08-e (`preset`, `complete`, `upgrade_sync`), C-08-f (persona, preset, welcome, agent builder) |
+| `internal/tui/` entero, `internal/app/app.go` | duro | C-01-e (pantallas RDD), C-08-d (selector de modelo de Kiro), C-08-e (`preset`, `complete`, `upgrade_sync`), C-08-f (persona, preset, welcome y agent builder; desde la revisión 10 retira la TUI entera) |
 | `internal/components/persona`, `theme`, `opencodedefault`, `internal/agentbuilder` | duro | C-08-d (ramas por agente), C-08-f |
 | `internal/testenv`, `TestMain` y helpers `isolate*` | duro | C-08-b (puerta del toolchain), C-08-g |
 | `internal/assets/formatter_ordering_test.go` | duro | C-08-b, C-08-i |
-| `internal/assets/*_test.go`, tests de contrato de `components/sdd` | duro | C-01-e, C-08-d, C-08-f (borran), C-08-h (reescribe lo que quede) |
+| `internal/assets/*_test.go`, tests de contrato de `components/sdd` | duro | C-01-e, C-08-d, C-08-f (borran), C-08-h (borra los centinelas de redacción que queden) |
 | `e2e/`, `scripts/crosslane` | blando | C-01-e, C-08-d, C-08-e |
 | `bench/` | duro | C-01-e (según P21), C-08-i |
 
@@ -276,9 +289,9 @@ Reglas: máximo 3 cambios por ola. En paralelo solo si no comparten ficheros con
 | A2 | C-01-e | XL. Va sola: toca CI, `cli`, `components/sdd`, TUI, dashboard, hub, assets, contratos, specs y `bench/`. Requiere C-08-c fusionado, P20 y P21. |
 | A3 | C-08-d | L. Va sola: toca todos los registros y `switch` por agente, la TUI, los componentes, los goldens y e2e. Requiere P20. |
 | A4 | C-08-e, C-08-i | GGA y telemetría (`cli/run.go`, `sync.go`, `uninstall`, `model`, e2e) y CI por jobs (`ci.yml`, `windows-full-suite.yml`) son disjuntos. Requiere P20 y P21. |
-| A5 | C-08-f | Comparte `model`, `catalog` y la pantalla de presets con C-08-e. Requiere P18 y P19. |
-| A6 | C-08-g | Paraleliza lo que queda tras los borrados. |
-| A7 | C-08-h | Va tras C-08-g: los dos tocan ficheros de test de `components/sdd`. Después se reanuda la ola 7. |
+| A5 | C-08-f, C-08-j, C-08-k | C-08-f comparte `model`, `catalog` y la pantalla de presets con C-08-e. Requiere P18, P19 y P22. **Revisión 10:** se suman C-08-j (`agentguidance`, la plantilla de verificación, `AGENTS.md` y `openspec/config.yaml`) y C-08-k (workflows y sus guardas). Son disjuntos con C-08-f salvo los goldens, que son solape blando: el segundo en fusionarse rebasa y regenera. C-08-j va primero porque acelera todas las sesiones que vienen detrás. |
+| A6 | C-08-l, C-08-h | **Revisión 10.** C-08-l espera a C-08-f porque comparten `cmd/axiom/main.go` y el dashboard. C-08-h deja fuera los tests de `knowledge`, `semantic` y el panel semántico, así que son disjuntos. C-08-h pasa delante de C-08-g: no se paralelizan tests que se van a borrar. |
+| A7 | C-08-g | Paraleliza lo que queda tras todos los borrados, por orden del cociente Windows/Linux medido. Después se reanuda la ola 7. |
 | 7 | C-03-b, C-05-b, C-06-g | IDs provisionales y publicación tras spec y design no comparten ficheros duros. C-05-b va antes que C-06-b y C-05-c. El adaptador ADO (C-07-c) estaba en esta ola y ya está fusionado. C-06-g (revisión 09) ocupa su hueco: dashboard, `internal/agents` y estado del proyecto, sin solape duro con C-03-b ni C-05-b. |
 | 8 | C-03-c, C-03-d, C-05-c | La sección 03 admite C-03-c ∥ C-03-d. C-05-c toca `sddstatus`, el motor de ramas, la doctrina (`sdd-orchestrator-sections.md:82,88`), `sdd_gate_handoff.go`, `sdd-docs-publication` y goldens, sin solape duro con ellos. |
 | 9 | C-03-e | XL mecánico. La sección 03 exige una ventana sin cambios SDD abiertos: va solo. |
@@ -306,6 +319,11 @@ Diferencias con el orden temático de referencia y con la versión anterior de e
   - El motivo para dejar C-01-e al final era que movía primitivas que reescriben C-03-b, C-05-c, C-06-b, C-06-c y C-06-f. Desaparece con C-08-c, que las mueve antes en un cambio propio, y porque esos cambios aún no han empezado.
   - La ola 7 queda con C-03-b y C-05-b, porque C-07-c ya está fusionado.
   - Si el usuario prefiere intercalar, de la A4 en adelante pueden alternarse con olas funcionales que no compartan ficheros con solape duro.
+- **Agilidad (revisión 10, 2026-11-26).** El análisis midió que la CI de Linux no es el cuello de botella (2:21). Lo son las pruebas en Windows local (de 11 a 33 veces más lentas por los procesos git), las reglas que piden baterías completas y los centinelas que hay que tocar en cada cambio de redacción.
+  - La A5 suma C-08-j y C-08-k.
+  - La A6 pasa a ser C-08-l y C-08-h, y la A7 es C-08-g, que antes iba en la A6.
+  - C-08-f absorbe la retirada de la TUI.
+  - No se recorta ningún cambio del backlog (decisión del usuario).
 
 ## 6. Decisiones pendientes del usuario
 
@@ -327,6 +345,7 @@ Las decisiones P1 a P16 quedaron resueltas por el usuario el 2026-11-17 (apartad
 | Id | Resolución y evidencia |
 |---|---|
 | P17 | **Resuelta por el usuario (2026-11-24): Copilot CLI se queda.** En la misma conversación fija qué agentes se retiran: de los 13 restantes, todos menos Gemini CLI, Codex, Cursor, Antigravity y Pi, y sin quitar «los que prácticamente no ahorramos nada quitándolos». Aplicada la regla con la medición de la sección 08, se retiran Kiro, Windsurf, Kimi, Hermes, OpenClaw y Kilo Code, y se quedan Trae y Qwen (este, oculto). C-08-d pasa de XL a L y de SDD a ODD con `## Spec viva`. |
+| P22-P25 | **Resueltas por el usuario (2026-11-26, revisión 10).** P22: sin la TUI, `axiom` sin argumentos abre la UI. P23: el panel semántico del dashboard no se reimplementa sobre CodeGraph. P24: la batería completa en `main` corre «una vez al día a la noche si ha habido commits». P25: el modo ISO se queda como está. Detalle en la sección 08. |
 | P9 (parte C-05-b) | La pregunta de carril la hace la doctrina al arrancar. Evidencia: `axiom.yaml:18` declara `workflow.lane: ask`. |
 | P11 (solo lectura de `integrations.tracker`) | `integrations.<plugin>` se edita desde la UI y lo hace C-07-h. Evidencia: el usuario dijo «todas las configuraciones que hablamos a nivel de proyecto o lo que sea tienen que estar en la ui» (Engram `analisis-backlog/integraciones-terceros` v2, 2026-11-16). |
 | P11 (ciclo C-06-e ↔ C-07-h) | Con C-06-e sin dependencia de C-07-b (la 06) el ciclo desaparece: es planificación, no del usuario. Queda abierta la contradicción de la arista (apartado 6.3). |
@@ -500,6 +519,9 @@ Para la sesión padre que coordine el plan.
 | C-08-g | pendiente | | | |
 | C-08-h | pendiente | | | |
 | C-08-i | pendiente | | | |
+| C-08-j | pendiente | | | |
+| C-08-k | pendiente | | | |
+| C-08-l | pendiente | | | |
 
 ## 9. Registro de revisión
 
@@ -523,3 +545,11 @@ Para la sesión padre que coordine el plan.
   - Se añade C-06-g (agentes del proyecto en la UI), a petición del usuario y detrás de C-08-f.
   - Va en la ola 7 con C-03-b y C-05-b, en el hueco de C-07-c, ya fusionado. No cambia el orden de C-03-b.
   - Filas de solapes con C-06-g: `server.go`, `service.go` y `types.go` del dashboard, `ecosystem.js` y `openspec/specs/local-web-dashboard/`.
+- **Revisión 10 (2026-11-26, `f85ae071`; agilidad):**
+  - Diagnóstico nuevo en la sección 08 («Diagnóstico de agilidad»): tiempos de CI, cocientes Windows/Linux, reglas que piden baterías, acoplamiento entre prosa y tests y lápidas.
+  - C-08-f amplía su alcance a la TUI entera (XL), con `axiom` sin argumentos abriendo la UI (P22). La sesión en curso recibió la ampliación el mismo día.
+  - C-08-h cambia de enfoque: borra los centinelas de redacción y las lápidas en lugar de pasarlos a goldens, y pasa delante de C-08-g.
+  - C-08-g se ordena por el cociente medido y espera a C-08-h y C-08-l.
+  - Se añaden C-08-j (política de pruebas), C-08-k (CI nocturna, meta-tests aparte y `pr-check` sin `edited`; P24) y C-08-l (retirar `knowledge` y `semantic`; P23).
+  - Olas: A5 = C-08-f, C-08-j y C-08-k; A6 = C-08-l y C-08-h; A7 = C-08-g.
+  - No se recorta ningún cambio del backlog. El modo ISO se queda (P25). `unlabeled` sigue en `pr-check.yml`.

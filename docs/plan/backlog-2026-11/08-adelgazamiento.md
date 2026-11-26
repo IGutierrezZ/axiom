@@ -1,5 +1,7 @@
 # 08 · Adelgazamiento
 
+Revisión 10 (2026-11-26, agilidad): amplía C-08-f con la TUI, reorienta C-08-g y C-08-h, y añade C-08-j, C-08-k y C-08-l. Su diagnóstico está en «Diagnóstico de agilidad».
+
 Análisis de solo lectura del 2026-11-24 contra `main` en `d580368d`. Incluye tres exploraciones (RDD, GGA y telemetría; agentes y componentes; pruebas y CI) y una ejecución completa de `go test ./... -count=1` en Windows. Las rutas y líneas salen de ese inventario y la sesión hija las confirma antes de tocar nada. Detalle en Engram: `analisis/adelgazamiento-2026-11`.
 
 ## Origen
@@ -14,6 +16,14 @@ En palabras del usuario, resumidas:
    - «Copilot CLI se queda.»
    - De los otros 13, se van todos menos Gemini CLI, Codex, Cursor, Antigravity y Pi.
    - «De los que se van, que no se vayan los que prácticamente no ahorramos nada quitándolos.»
+6. (2026-11-26, revisión 10) «Necesito aplicar más medidas para agilizar los desarrollos: el lanzamiento de los test está siendo un infierno de tiempo. Llevo días o semanas para implementar, y la mayoría es por tener sobreingeniería y test que tardan un siglo, más políticas de lanzarlos a cada pequeño paso, más los lanza la CI.»
+7. (2026-11-26) Sobre el análisis de agilidad:
+   - Aplicar la política de pruebas (C-08-j), borrar los centinelas de redacción (C-08-h) y sacar los meta-tests del toolchain a un job aparte (C-08-k).
+   - CI en `main`: «una vez al día a la noche si ha habido commits» (C-08-k).
+   - «Quitamos knowledge y semantic, revisamos en semantic que ahora se use directamente codegraph» (C-08-l).
+   - «La tui no la uso y estoy metiendo el contenido que me interesa todo en el dashboard, por lo que tui se puede quitar lo que quieras y test más aún.» Va en C-08-f, y `axiom` sin argumentos abrirá la UI.
+   - Modo ISO: «nada, dejamos como está; ya se analizará más a fondo».
+   - «Del plan no quiero recortar nada.»
 
 ## Diagnóstico
 
@@ -40,6 +50,28 @@ Peso de lo que sobra:
 | Paquetes sin importadores (C-08-a) | 2.345 | 1.677 | |
 
 En conjunto, en torno a un tercio del Go del repositorio.
+
+### Diagnóstico de agilidad (revisión 10, 2026-11-26)
+
+Análisis de solo lectura contra `main` en `f85ae071`, con A1 a A3 fusionadas. Se basa en cuatro exploraciones (tiempos, necesidad de los tests, mapa de código y políticas de ejecución) y en los logs de CI. No se ejecutó ninguna batería local. Detalle en Engram: `analisis/agilidad-tests-2026-11`.
+
+| Medida | Valor |
+|---|---|
+| Go de producción y de test | 141.853 y 270.146 líneas (1,9 de test por línea de código); 7.268 `func Test`, 319 `t.Parallel()` y 739 `t.Setenv` |
+| CI de Linux | `Unit Tests` 2:21 en `main` (ejecución 45718033589). De apertura a merge, 3-17 min en 14 de las últimas 20 PRs. No es el cuello de botella |
+| Windows frente a Linux, por paquete | `sddstatus` 33× (2,1 → 70 s), `sddpublish` 26× (4,7 → 122 s), `techcontext` 24×, `dashboard` 11×, `update` 5,5×. `internal/cli`: 52 s en Linux y más de 10 min en Windows local. La causa son los procesos git por test; por ejemplo, `sddpublish/helpers_test.go:84` lanza cuatro por repositorio y el paquete no tiene `TestMain` |
+| Reglas que obligan a lanzar baterías | `internal/components/agentguidance/delegation.go:67` («all applicable full checks when a task closes», que llega a todos los agentes); el tier más alto del verificador independiente cuando no está claro; `AGENTS.md:25` (toda la suite por paquetes, con 20 y 60 min de límite); `openspec/config.yaml:39-40` (`go test ./...`) |
+| Acoplamiento de prosa y test | 18 de los 21 commits que solo tocaban prosa de `internal/assets` tuvieron que tocar tests (86 %). Los ocho ficheros de test que más cambian son centinelas; `assets_test.go`, 23 commits en 20 días |
+| Tests de lo retirado | 314 funciones de ausencia o lápida (unas 3.600 líneas) |
+| CI en el push a `main` | Repite la batería entera tras cada merge (media de 529 s) |
+
+Peso de lo que retira la revisión 10:
+
+| Bloque | Producción | Tests |
+|---|---|---|
+| TUI (C-08-f ampliada) | 13.181 | 17.471 |
+| `knowledge` y `semantic` (C-08-l) | ~2.900, más comandos de `cmd/axiom` y el panel del dashboard | ~2.000 |
+| Centinelas de redacción y lápidas (C-08-h) | — | ~10.000-15.000 (estimación) |
 
 ## Cambios resultantes
 
@@ -260,11 +292,15 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - Tests en verde.
 - **Riesgos y avisos.** GGA deja huella del usuario en `~/.config` y shims en Windows, que hoy gestionan `uninstall` y `doctor_footprint`. Hay que fijar qué se borra y qué se documenta.
 
-### C-08-f · Arranque mínimo: retirar los componentes de inicio heredados
+### C-08-f · Arranque mínimo: retirar los componentes de inicio heredados y la TUI
 
-- **Objetivo.** Que la instalación sea detectar agentes, elegir componentes e instalar, sin pasos heredados de gentle-ai.
+- **Objetivo.** Que la instalación sea detectar agentes, elegir componentes e instalar, sin pasos heredados de gentle-ai. Desde la revisión 10, además, que no quede TUI: la única interfaz interactiva es la UI web (dashboard).
 - **Decisiones.**
   - (Usuario) «Me sobran muchos de inicio.»
+  - (Usuario, 2026-11-26, revisión 10) «La tui no la uso y estoy metiendo el contenido que me interesa todo en el dashboard, por lo que tui se puede quitar lo que quieras y test más aún.» Y sobre dónde va: «quitamos la tui y si es en c-08-f ya está en marcha una sesión con ello». La sesión en curso recibió la ampliación el 2026-11-26, con T1 (agent builder) ya cerrada.
+  - (Usuario, 2026-11-26) `axiom` sin argumentos en una terminal abre la UI, igual que `axiom ui` (`cmd/axiom/main.go:414`). Sin TTY se conserva el comportamiento actual (`internal/app/app.go:85`).
+  - (Análisis, revisión 10) Se retira `internal/tui` entero (`screens`, `styles` y `testdata`) con sus tests, más el arranque desde `internal/app/app.go` (`runTUI`, `tui.NewModel` en `:251` y los envoltorios `tuiSync`, `tuiUpgrade`, `tuiUninstall` y `tuiUninstallWithProfiles` que solo use la TUI). Con ello caen las pantallas de persona, presets, bienvenida y agent builder, así que las tareas de persona y presets se quedan en lo que no es TUI: flags, componentes, assets y lectores tolerantes.
+  - (Análisis, revisión 10) `install`, `sync`, `upgrade`, `uninstall` y `backup` siguen como comandos de la CLI. La instalación de agentes desde la UI llega con C-06-g (ola 7); no se adelanta.
   - (Análisis, según P19) Persona: se conserva solo la de Axiom (`persona-axiom.md` y `output-style-axiom.md`), que define la voz del orquestador. Se retiran `gentleman` y `neutral` y la pantalla de elección.
   - (Análisis) Presets: los cuatro actuales (`model/types.go:203-209`: `full-gentleman`, `ecosystem-only`, `minimal` y `custom`) se sustituyen por un conjunto por defecto con el núcleo más la selección manual. Los nombres los fija la sesión.
   - (Análisis) Se retiran el código de migración de temas (`components/theme`, ya fuera de los presets) y `components/opencodedefault` (`ComponentOpenCodeGentleLogo`).
@@ -272,12 +308,12 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - (Análisis) Se quitan las entradas de `ScreenWelcome` que llevan a lo retirado.
   - (Análisis) La lectura es tolerante: un estado con persona o preset retirados carga con un aviso.
 - **Fuera de alcance.** Los componentes del núcleo: SDD/ODD, skills, Engram, guías, MCP, permisos y CodeGraph.
-- **Carril propuesto.** ODD con `## Spec viva`. Si al implantar hay que reescribir requisitos de `openspec/specs/persona-behavior-contract`, pasa a SDD (misma regla que C-01-c).
-- **Tamaño.** L. Unas 13.500-14.500 líneas.
+- **Carril propuesto.** ODD con `## Spec viva`. Si al implantar hay que reescribir requisitos de `openspec/specs/persona-behavior-contract`, o los de la TUI en lugar de retirarlos, pasa a SDD (misma regla que C-01-c).
+- **Tamaño.** XL desde la revisión 10, casi todo borrado: unas 13.500-14.500 líneas de inicio heredado más las de la TUI (13.181 de producción y 17.471 de test, que se solapan en parte con las anteriores).
 - **Depende de / bloquea a.**
   - Depende de C-08-d y C-08-e, con las que comparte `catalog/components.go`, `model/presets.go` y la pantalla de presets.
-  - Depende de P18 y P19.
-  - Bloquea a C-08-g y C-08-h.
+  - Depende de P18, P19 y P22.
+  - Bloquea a C-08-g, C-08-h y C-08-l.
 - **Ficheros y paquetes que toca.**
   - **Componentes.** `internal/components/persona` (1.243 + 3.922), `theme` (221 + 182) y `opencodedefault` (261 + 108).
   - **Agent builder.**
@@ -292,29 +328,45 @@ En conjunto, en torno a un tercio del Go del repositorio.
     - `generic/persona-*.md`. Los de Hermes se van con C-08-d.
   - **Goldens.** `persona-*` (~600 líneas).
   - **Tests.** `tui/preset_flow_test.go`, con `TestPresetSelectionNextScreenFlowMatrix`.
+  - **TUI (revisión 10).**
+    - `internal/tui` entero e `internal/app/app.go`.
+    - Tests de paridad: `internal/app/parity_test.go` e `internal/dashboard/listing_tui_parity_test.go`.
+    - La entrada `internal/tui` de `writerRoots` en `internal/branch/engine/writer_inventory_test.go:56`.
+    - Specs vivas que se retiran (REMOVED con `(Reason: ...)`): `axiom-tui-branding`, `installer-picker-navigation`, `tui-spanish-localization` y `tui-ui-parity`. Se añade un requisito para «`axiom` sin argumentos abre la UI».
 - **Criterio de terminado.**
-  - El flujo de la TUI va de agentes al árbol de dependencias sin pasar por persona ni presets.
+  - No queda `internal/tui`, y `bubbletea` y sus dependencias salen de `go.mod` si ningún otro paquete las usa.
+  - `axiom` sin argumentos en una terminal abre la UI; sin TTY, el error de hoy.
   - Solo se instala la persona de Axiom.
   - Un estado con persona o preset retirados carga con un aviso.
   - `rg -il gentleman` sin resultados fuera de los históricos y del lector tolerante.
   - Tests en verde.
 - **Riesgos y avisos.**
   - Los usuarios con el output style `gentleman` instalado: `sync` debe sustituirlo por el de Axiom o dejarlo como no gestionado. Lo decide la sesión y lo documenta.
+  - Hasta C-06-g no hay instalador interactivo: la primera instalación se hace con `axiom install --agent ...`. Se documenta en las notas de la versión.
 
 ### C-08-g · Pruebas en paralelo y repositorios git de plantilla
 
 - **Objetivo.** Bajar el tiempo de pared de la suite: paralelizar los paquetes que hoy no lo hacen y abaratar la creación de repositorios git en los tests.
 - **Decisiones.**
-  - (Análisis, de inc-25) El patrón que funcionó en `internal/branch/engine` dio ×2,4 en Windows (327 s → ~137 s): entorno fijado una sola vez en `TestMain` (HOME aislado, gitconfig, autor) y `t.Parallel()`. Se extiende por orden de tiempo medido a `cli`, `components`, `app`, `update`, `sddpublish`, `dashboard`, `sddstatus`, `techcontext`, `workspace` y `tui`.
+  - (Análisis, de inc-25) El patrón que funcionó en `internal/branch/engine` dio ×2,4 en Windows (327 s → ~137 s): entorno fijado una sola vez en `TestMain` (HOME aislado, gitconfig, autor) y `t.Parallel()`.
+  - (Análisis, revisión 10) El orden sale del cociente medido entre Windows y Linux, que señala dónde pesan los procesos git:
+    1. `sddpublish` (26×; sin `TestMain`; `newRepo` en `helpers_test.go:84`).
+    2. `sddstatus` (33×; su `TestMain` no aísla git).
+    3. `dashboard` (11×).
+    4. `techcontext` (24×; ya tiene `treeTemplate`, pero solo para un fixture).
+    5. `cli`: 232 `t.Setenv` y unos 125 usos de `isolateIntegrateGit`.
+    6. Después, si compensa, `components/sdd`, `app` y `update`.
+  - (Análisis, revisión 10) Además de HOME y gitconfig, el `TestMain` desactiva `fsync`, `gc`, el mantenimiento y `fsmonitor`, como ya hace `cli`.
+  - (Análisis, revisión 10) `tui` sale de la lista: la retira C-08-f.
   - (Análisis) `t.Setenv` impide `t.Parallel()`. Se sustituye en los helpers `isolate*` por entorno inyectado o fijado en `TestMain`. Los helpers son `isolateIntegrateGit` (`cli/gittest_helpers_test.go:16`), `isolateBranchGit` e `isolateGateGitEnv` (`cli/sdd_gate_planning_home_test.go:20`).
   - (Análisis) Un helper común de repositorio de plantilla en `internal/testenv`:
     - Inicializa una vez por paquete y copia el directorio (o hace `git clone --local`), en lugar de `git init` y commits en cada test.
     - Unifica 12 `runGit`, 7 `requireGit`, 4 `newRepository` y 3 `newRepo` duplicados.
-  - (Análisis) Va después de C-01-e, C-08-d y C-08-f, para no paralelizar tests que se van a borrar.
+  - (Análisis) Va después de C-01-e, C-08-d y C-08-f, para no paralelizar tests que se van a borrar. Desde la revisión 10 va también después de C-08-h y C-08-l, por el mismo motivo.
 - **Fuera de alcance.** Cambiar comportamiento de producción. Si un paquete lee entorno global y hay que inyectarlo, se anota en el documento ODD.
 - **Carril propuesto.** ODD.
 - **Tamaño.** L.
-- **Depende de / bloquea a.** Depende de C-01-e, C-08-d y C-08-f. No bloquea nada.
+- **Depende de / bloquea a.** Depende de C-01-e, C-08-d, C-08-f, C-08-h y C-08-l. No bloquea nada.
 - **Ficheros y paquetes que toca.**
   - Los `TestMain` y helpers de los paquetes citados, e `internal/testenv`.
   - Los mayores consumidores de git: `sddpublish/publish_test.go` y `gitport_test.go`; `branch/engine/{ensure,archive,done}_test.go`; `branch/gitcli/ops_write_test.go`.
@@ -326,22 +378,36 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - Bloqueos de ficheros en Windows al copiar plantillas.
   - `-race` no está disponible en Windows local sin gcc, así que se comprueba en Linux.
 
-### C-08-h · Centinelas de prosa a goldens
+### C-08-h · Centinelas de prosa: borrar los que fijan redacción
 
-- **Objetivo.** Reducir los tests que fijan literales de markdown a goldens revisables por diff y a unas pocas guardas de ausencia. Hoy son unas 20.000-25.000 líneas en unos 50 ficheros.
+- **Objetivo.** Que cambiar la redacción de una skill, de una instrucción o de un asset no obligue a tocar tests. Se borran los centinelas que fijan redacción y las lápidas de ausencia, y se conservan solo los contratos que lee el código. Hoy son unas 20.000-25.000 líneas en unos 50 ficheros.
 - **Decisiones.**
-  - (Análisis) Se conserva lo que protege una regresión real. Las listas de subcadenas por asset se cambian por:
-    - un golden del asset renderizado, o
-    - una guarda de ausencia agregada para la prosa retirada (RDD, Serena, telemetría).
-  - (Análisis) Antes de quitar un token se mira con `git log -S` por qué entró.
+  - (Usuario, 2026-11-26, revisión 10) Se aplica la medida de borrar en lugar de pasar a goldens. Un golden traslada la fricción a `-update` y a revisar el diff, pero no la quita: el 86 % de los commits que solo tocaban prosa tuvo que tocar tests.
+  - (Análisis, revisión 10) Se **borran**:
+    - las aserciones de ausencia de frases retiradas (por ejemplo, `internal/assets/assets_test.go:75`);
+    - los `Contains` sobre redacción libre que ningún código consume;
+    - la misma frase comprobada en varios paquetes (se deja como mucho una);
+    - los tests de funcionalidades retiradas que no protegen una migración;
+    - las lápidas de ficheros: 314 funciones `*Retired`, `*Removed`, `*Absent`, `*NoLonger`, `*Legacy` y `*NotContain`, unas 3.600 líneas, salvo las de migración.
+  - (Análisis, revisión 10) Se **conservan**:
+    - los tokens y marcadores que parsea el código (`{{AXIOM_*}}`, `axiom.sdd-integration.consent/v1`, `granted` y `declined`, nombres de comandos y flags, claves YAML);
+    - las invariantes de seguridad (permisos, nada de push sin autorización);
+    - la paridad de plantillas entre runtimes;
+    - la tolerancia a estado antiguo (por ejemplo, `state/retired_rdd_roles_test.go`);
+    - los goldens que ya renderizan el asset completo.
+  - (Análisis) Antes de quitar un token se mira con `git log -S` por qué entró, y el commit lo justifica.
   - (Análisis) Va tras C-01-e, C-08-d y C-08-f: muchas de estas pruebas ya habrán desaparecido y este cambio trata lo que quede.
-- **Fuera de alcance.** Los tests de comportamiento que además comprueban texto (por ejemplo, los que llaman a `Inject`). Solo se recortan sus aserciones de prosa redundantes.
+  - (Análisis, revisión 10) Pasa delante de C-08-g: no se paralelizan tests que se van a borrar, y este cambio quita antes la fricción diaria.
+- **Fuera de alcance.**
+  - Los tests de comportamiento que además comprueban texto (por ejemplo, los que llaman a `Inject`). Solo se recortan sus aserciones de prosa redundantes.
+  - Los tests de `internal/knowledge`, `internal/semantic` y el panel semántico del dashboard (`knowledge_assets_test.go`): los borra C-08-l.
+  - Los tests del modo ISO: el usuario lo deja como está.
 - **Carril propuesto.** ODD.
 - **Tamaño.** M.
 - **Depende de / bloquea a.**
   - Depende de C-01-e, C-08-d y C-08-f.
-  - Va tras C-08-g, porque los dos tocan ficheros de test de `components/sdd`.
-  - No bloquea nada.
+  - Va en paralelo con C-08-l (ficheros disjuntos según el fuera de alcance) y antes que C-08-g.
+  - Bloquea a C-08-g.
 - **Ficheros y paquetes que toca.**
   - `internal/assets/assets_test.go` (4.622 líneas):
     - `:36` es `TestSDDOrchestratorsCarryNoRetiredWorkRunCeremony`: 12 orquestadores × 15 tokens = 180 subtests.
@@ -354,9 +420,10 @@ En conjunto, en torno a un tercio del Go del repositorio.
 - **Criterio de terminado.**
   - Líneas de test de `internal/assets` y de los contratos de `components/sdd` antes y después, registradas en el documento ODD.
   - Cada token retirado lleva su justificación en el commit.
-  - Goldens regenerados con `-update` y revisados.
+  - Los goldens que queden, regenerados con `-update` y revisados.
   - Tests en verde.
-- **Riesgos y avisos.** Perder guardas que impiden reintroducir prosa retirada. Se conservan como guardas de ausencia agregadas.
+  - Prueba de la fricción: reescribir una frase de `internal/assets/skills/sdd-apply/SKILL.md` que no sea un contrato solo hace fallar, como mucho, goldens que se regeneran. Se registra en el documento ODD y no se commitea.
+- **Riesgos y avisos.** Volver a meter prosa retirada sin que nada lo detecte. Se acepta: ningún test comprueba el comportamiento del modelo, y esas guardas pesaban más de lo que protegían. Lo que se reintroduzca se corrige en la revisión de la PR.
 
 ### C-08-i · CI de PR por jobs
 
@@ -383,6 +450,94 @@ En conjunto, en torno a un tercio del Go del repositorio.
   - Lista de pasos antes y después sin pérdidas no justificadas.
 - **Riesgos y avisos.** Si cambia el nombre del check requerido, se rompe la protección de rama.
 
+### C-08-j · Política de pruebas: en local, solo lo tocado
+
+- **Objetivo.** Que ni las instrucciones que genera Axiom ni las de este repositorio pidan baterías completas en local. Al iterar y al cerrar una tarea se prueban los paquetes tocados; la suite completa es de la CI. Así se acelera cada sesión de las olas siguientes y de cualquier proyecto que use Axiom.
+- **Decisiones.**
+  - (Usuario, 2026-11-26) «Me interesa aplicar» la política de pruebas del análisis de agilidad.
+  - (Análisis) La regla de proporcionalidad de `internal/components/agentguidance/delegation.go:67` cambia «run focused checks while iterating and all applicable full checks when a task closes» por: comprobaciones de los paquetes tocados al iterar y al cerrar la tarea, y la suite completa solo en la CI. Llega a todos los agentes por los goldens (`testdata/golden/*`) y por el `.claude/CLAUDE.md` versionado de este repositorio.
+  - (Análisis) El verificador independiente del «Delegated Verification Gate» queda para cambios de seguridad, ejecutables operativos o de modo. Sale la regla «si no está claro, el tier más alto», que en un repositorio de código lo activaba casi siempre. La autoverificación del escritor y la comprobación del padre se mantienen.
+  - (Análisis) En este repositorio:
+    - `AGENTS.md:21` define «verificar en PASS» como los tests de los paquetes tocados.
+    - `AGENTS.md:25` deja de pedir toda la suite por paquetes y pide paquetes tocados con `-run`, nunca `internal/cli` entero.
+    - `openspec/config.yaml:39-40,50,72` cambia `go test ./...` por los paquetes tocados y quita lo desfasado (las skills `gentleman-*`).
+  - (Análisis) La memoria del usuario («Pruebas localizadas») ya lo aplica en la práctica: este cambio lo convierte en la regla escrita.
+- **Fuera de alcance.** CI (C-08-k). Las skills `sdd-verify` y `work-unit-commits` ya piden comprobaciones focalizadas: solo se tocan si contradicen la regla nueva.
+- **Carril propuesto.** ODD. Si una spec viva fija la regla de proporcionalidad o los tiers de verificación, va con `## Spec viva`.
+- **Tamaño.** S.
+- **Depende de / bloquea a.** No depende de nada. No bloquea nada. Va en la A5, en paralelo con C-08-f y C-08-k.
+- **Ficheros y paquetes que toca.**
+  - `internal/components/agentguidance/delegation.go` y sus tests.
+  - La plantilla del «Delegated Verification Gate» (la localiza la sesión dentro de `internal/assets`).
+  - `testdata/golden/*` (regenerados).
+  - `.claude/CLAUDE.md`, `AGENTS.md` y `openspec/config.yaml`.
+- **Criterio de terminado.**
+  - `rg 'all applicable full checks'` sin resultados.
+  - Goldens regenerados y revisados.
+  - Tests de `agentguidance` y de los paquetes de goldens en verde.
+- **Riesgos y avisos.**
+  - Solape blando con C-08-f en los goldens: el segundo en fusionarse rebasa y regenera.
+  - Una regresión que se escapa en local la encuentra la CI de la PR. Es el precio aceptado.
+
+### C-08-k · CI ágil: nocturna en `main`, meta-tests aparte y menos disparadores
+
+- **Objetivo.** Que la CI no repita trabajo: ni la batería completa tras cada merge a `main`, ni los meta-tests del toolchain en cada PR que no los afecta, ni ejecuciones de `PR Validation` que no pueden cambiar el resultado.
+- **Decisiones.**
+  - (Usuario, 2026-11-26) En `main`: «una vez al día a la noche si ha habido commits». `ci.yml` deja el disparador `push` a `main` y gana un `schedule` nocturno con la misma puerta que `windows-full-suite.yml` (salta si el último `headSha` en verde de `main` es el actual; si no puede leer el historial, ejecuta). Se conserva `workflow_dispatch`.
+  - (Análisis) `pr-check.yml` deja `edited`: sus dos comprobaciones (una sola etiqueta `type:*` y autor de confianza o `safe:external`) no miran ni el título ni la descripción. **`unlabeled` se queda**: quitar una etiqueta sobrante o `safe:external` tiene que revalidar.
+  - (Análisis) Los meta-tests que compilan o lanzan el toolchain salen de los jobs `Go Tests` y van a un job propio. Ese job corre en `schedule`, en `workflow_dispatch` y en las PR que tocan sus entradas (`.github/workflows/**`, `.goreleaser.yaml`, `internal/update/**`, `scripts/**`, la documentación de comandos y `cmd/axiom/**`). Son estos:
+    - `TestDocumentedInvocationsRunAsDocumented` (`internal/app/documented_invocation_test.go:610`);
+    - `TestReleaseDistributionPolicyAssertionFailsClosed` (`internal/update/windows_distribution_policy_test.go:83`);
+    - `TestCanonicalReleasePublicKeysControlRealLinkerBuild` (`internal/update/release_security_test.go:636`);
+    - `TestWindowsFullSuiteShardsCoverEveryTestName` (`internal/assets/formatter_ordering_test.go:293`);
+    - el `go build` de `internal/app/tty_boundary_test.go`, si sobrevive a C-08-f.
+  - (Análisis) La separación se hace en los workflows con `-skip` en los `Go Tests` y `-run` en el job nuevo, sin tocar los ficheros de test. Así no solapa con C-08-f.
+  - (Análisis) Las guardas de la partición (`internal/assets/workflow_shards_test.go`, `formatter_ordering_test.go` y `internal/update/windows_distribution_policy_test.go`) se amplían para que ningún meta-test quede fuera de todos los jobs.
+- **Fuera de alcance.** `windows-full-suite.yml`, que ya solo corre con etiqueta, a mano o los lunes. Los jobs manuales.
+- **Carril propuesto.** ODD.
+- **Tamaño.** S.
+- **Depende de / bloquea a.** Depende de C-08-i (fusionada en #317). No bloquea nada. Va en la A5, en paralelo con C-08-f y C-08-j.
+- **Ficheros y paquetes que toca.** `.github/workflows/ci.yml`, `.github/workflows/pr-check.yml`, las guardas citadas, `docs/testing/` y la documentación de release.
+- **Criterio de terminado.**
+  - Un merge a `main` no lanza la CI; la nocturna salta si no hay commits nuevos y corre si los hay.
+  - En una PR que no toca las entradas del job, los meta-tests no corren; en una que las toca, sí.
+  - `Unit Tests` conserva el nombre y la semántica de agregador.
+  - Tiempos antes y después registrados en el documento ODD.
+- **Riesgos y avisos.**
+  - **Release.** `scripts/require-ci-success.sh` exige una ejecución de `ci.yml` en verde sobre el sha exacto que se etiqueta, sea cual sea el evento. Sin `push` a `main`, antes de etiquetar hay que lanzar `gh workflow run ci.yml --ref main` o etiquetar el sha que pasó la nocturna. Se documenta en la guía de release, y el mensaje de error del script lo indica.
+  - Dos PR que pasan por separado y fallan juntas se detectan en la nocturna, no al fusionar.
+
+### C-08-l · Retirar `knowledge` y `semantic`
+
+- **Objetivo.** Retirar los comandos `axiom knowledge` (`sweep`, `crawl` y `query`/`ask`) y `axiom semantic` (`status`, `symbols`, `inspect` y `reindex`) con sus paquetes, y dejar CodeGraph como la única vía de análisis semántico, usado directamente por los agentes.
+- **Decisiones.**
+  - (Usuario, 2026-11-26) «Quitamos knowledge y semantic, revisamos en semantic que ahora se use directamente codegraph.»
+  - (Análisis) `internal/knowledge` solo lo importa `cmd/axiom`. `internal/semantic` lo importan `cmd/axiom` y el dashboard (`internal/dashboard/service.go:51` y `server.go:96-99`). Ninguna skill ni instrucción de `internal/assets` menciona `axiom knowledge` ni `axiom semantic`. Solo aparecen en `docs/manual-de-inicio.md:310,776`.
+  - (Análisis, propuesta aceptada por el usuario el 2026-11-26) El panel semántico del dashboard (`/api/semantic/status`, `symbols`, `dependencies` y `reindex`) se retira y no se reimplementa llamando a CodeGraph: los agentes ya lo usan por su MCP y su CLI.
+  - (Análisis) Comprobación de que CodeGraph queda en uso directo: lo que instala y registra `internal/components/communitytool` (MCP y, si existe, el bloque de instrucciones) sigue intacto y sin referencias a `semantic`.
+  - (Análisis) `governance.semantic_analysis` de `axiom.yaml` (`internal/workspace/types.go:47`) se sigue leyendo, se ignora con un aviso, y `internal/hub/init.go:451` deja de escribirlo.
+  - (Análisis) Specs vivas que se retiran: `knowledge-query-engine`, `knowledge-sweep-command` y `semantic-code`. **`knowledge-profile-init` se queda**: es el perfil `knowledge` (`spec-only`) de `axiom init` y no usa el paquete.
+- **Fuera de alcance.** El perfil `knowledge` de `axiom init`, CodeGraph y `communitytool`.
+- **Carril propuesto.** ODD con `## Spec viva`.
+- **Tamaño.** M. Unas 2.900 líneas de producción y 2.000 de test en los paquetes, más los comandos de `cmd/axiom`, el panel del dashboard (Go, JS y tests) y la documentación.
+- **Depende de / bloquea a.**
+  - Depende de C-08-f: las dos tocan `cmd/axiom/main.go` y el dashboard.
+  - Va en paralelo con C-08-h.
+  - Bloquea a C-08-g.
+- **Ficheros y paquetes que toca.**
+  - `internal/knowledge` e `internal/semantic`.
+  - `cmd/axiom/main.go`: los casos `knowledge` y `semantic`, `runKnowledge` y `runSemantic*`.
+  - `internal/dashboard`: `service.go`, `server.go`, el panel y sus tests (`dashboard_test.go:421-531`, `knowledge_assets_test.go`, `home_assets_test.go:175` y `secrets_canary_test.go:56-59`).
+  - `internal/workspace/types.go` e `internal/hub/init.go`.
+  - `docs/manual-de-inicio.md`.
+  - `openspec/specs/{knowledge-query-engine,knowledge-sweep-command,semantic-code}`.
+- **Criterio de terminado.**
+  - `rg -l 'internal/(knowledge|semantic)"' -g '*.go'` sin resultados.
+  - `axiom knowledge` y `axiom semantic` responden como un comando desconocido.
+  - Un `axiom.yaml` con `semantic_analysis` carga con un aviso.
+  - Tests de los paquetes tocados en verde.
+- **Riesgos y avisos.** Alguien que use `axiom knowledge query` a mano pierde el comando. Se documenta en las notas de la versión.
+
 ## Decisiones pendientes
 
 Las pregunta la sesión padre, una cada vez, antes de lanzar la ola que bloquean. Se recogen también en el apartado 6.1 del README.
@@ -394,10 +549,17 @@ Las pregunta la sesión padre, una cada vez, antes de lanzar la ola que bloquean
 | P19 | ¿Se conserva solo la persona de Axiom y se retiran `gentleman` y `neutral`? | La persona y el output style de Axiom definen la voz del orquestador. Las otras son herencia | Sí, solo Axiom | C-08-f (A5) |
 | P20 | ¿Cuánto viven las lápidas de retirada? Son tres grupos: (a) RDD (`rdd_retire.go` y `axiom review stop-hook` como no-op); (b) telemetría (`telemetryruntime` y `telemetry_retire.go`); (c) limpieza en `uninstall` de agentes, GGA y personas retirados | Sin ellas, las instalaciones antiguas se quedan con hooks, plugins o ficheros gestionados huérfanos | Mantener cada lápida hasta la primera versión estable publicada después de su retirada y borrarla en el cambio siguiente. La sesión comprueba si (b) ya lo cumple | C-01-e (A2), C-08-d (A3), C-08-e (A4) |
 | P21 | ¿Sobrevive `bench/` a RDD? | Es un módulo Go propio (`bench/go.mod`) que mide la fricción del ciclo de revisión. 91 de unos 120 journeys usan RDD, y en cada PR se compila, se prueba y hace 5 corridas en `unit-tests` | Retirarlo entero en C-01-e, salvo que el usuario use sus informes | C-01-e (A2), C-08-i (A4) |
+| P22 | ¿Qué hace `axiom` sin argumentos sin la TUI? | La TUI se retira en C-08-f (revisión 10) | **Resuelta por el usuario (2026-11-26): abre la UI** («axiom sí abrirá la ui») | — |
+| P23 | ¿Se reimplementa el panel semántico del dashboard sobre CodeGraph? | C-08-l retira `semantic`, que alimenta ese panel | **Resuelta (2026-11-26): no se reimplementa.** Propuesta aceptada por el usuario con «Sí, adelante» | — |
+| P24 | ¿Cuándo corre la batería completa en `main`? | Hoy se repite tras cada merge (media de 529 s) | **Resuelta por el usuario (2026-11-26): «una vez al día a la noche si ha habido commits»** (C-08-k) | — |
+| P25 | ¿Se adelgaza el modo ISO? | 2.951 líneas de producción y 4.864 de test para los 10 requisitos de `sdd-iso-evidence` | **Resuelta por el usuario (2026-11-26): se queda como está**; «ya se analizará más a fondo» | — |
 
 ## Descartado
 
 - **Paralelizar antes de borrar.** Paralelizar `internal/cli` y `reviewtransaction` ahora obligaría a refactorizar el entorno de unos 50.000 tests de RDD que C-01-e borra. C-08-g va después.
 - **Partir C-01-e en varias PR encadenadas.** El plan prohíbe las PR encadenadas. La parte que no era borrado (las primitivas) sale a C-08-c, que es un cambio propio con su PR.
 - **Retirar las lápidas sin plazo.** Dejaría huérfanos los hooks y plugins de las instalaciones antiguas. Se decide en P20.
+- **Recortar cambios del backlog (revisión 10).** El análisis de agilidad propuso recortar o simplificar C-06-d, C-06-f, C-07-e a C-07-h, C-03-e y C-05-c. El usuario lo descarta: «del plan no quiero recortar nada».
+- **Quitar `unlabeled` de `pr-check.yml` (revisión 10).** Se propuso por error: hace falta para revalidar al quitar una etiqueta `type:*` o `safe:external`.
+- **Pasar los centinelas a goldens (revisión 10).** Era el enfoque inicial de C-08-h. Traslada la fricción en vez de quitarla.
 - **Retirar `consentenvelope` con RDD.** Lo usa el consentimiento de edición de SDD (`sddstatus/consent_contract.go:8`, `governance.go:10`, `governance_handoff.go:11` y `edit_authority_consent.go:13`). Solo `cli/review_consent_contract.go:8` es de RDD.
