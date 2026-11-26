@@ -206,7 +206,7 @@ async function renderTabContent() {
   } else if (tab === 'explicacion') {
     renderExplainer($('#inc-panel-explicacion'), { change, detail });
   } else if (tab === 'pruebas') {
-    renderAcceptanceTests($('#inc-panel-pruebas'), { detail });
+    renderAcceptanceTests($('#inc-panel-pruebas'), { detail, change });
   } else if (tab === 'handoff') {
     await renderHandoff($('#inc-panel-handoff'), change, { archived: isArchived(detail.summary), isCurrent });
   }

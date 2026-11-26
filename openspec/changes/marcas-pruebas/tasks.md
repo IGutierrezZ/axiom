@@ -88,11 +88,11 @@ U1 -> (U2 ∥ U3) -> U4 -> (U5 ∥ U6); U7 depende solo de U2 y puede ir tras U2
 
 ## Phase 6: UI (U6; depende de U4)
 
-- [ ] 6.1 RED: `internal/dashboard/marks_assets_test.go` (`TestAcceptanceMarksAssets`): `detalle-pruebas.js` escapa notas y `commit` con `escapeHtml`; envía `confirm: true` y `branch` solo tras `confirmDialog`; no ofrece control en celdas no aplicables.
-- [ ] 6.2 Modificar `internal/dashboard/assets/js/screens/detalle-pruebas.js` (y su comentario de cabecera): con `available == false` tabla de solo lectura y `stateEmpty` con el motivo; con `available == true` matriz casos x entornos con badge, nota, `commit`, «caducada: <resultado>» y formulario con `maxlength` del DTO; bloque «Publicar marcas» con remoto, rama, número y lista de pendientes; botón con `confirmDialog`, deshabilitado con 0 pendientes o con `pendingUnavailable`; con `pendingUnavailable` o `other_commits_unpublished` se muestra el rechazo tipado con su `continuation`; `toast` con resultado y avisos de `uncommittedDocs`; repintado con el `marks` devuelto.
+- [x] 6.1 RED: `internal/dashboard/marks_assets_test.go` (`TestAcceptanceMarksAssets`): `detalle-pruebas.js` escapa notas y `commit` con `escapeHtml`; envía `confirm: true` y `branch` solo tras `confirmDialog`; no ofrece control en celdas no aplicables.
+- [x] 6.2 Modificar `internal/dashboard/assets/js/screens/detalle-pruebas.js` (y su comentario de cabecera): con `available == false` tabla de solo lectura y `stateEmpty` con el motivo; con `available == true` matriz casos x entornos con badge, nota, `commit`, «caducada: <resultado>» y formulario con `maxlength` del DTO; bloque «Publicar marcas» con remoto, rama, número y lista de pendientes; botón con `confirmDialog`, deshabilitado con 0 pendientes o con `pendingUnavailable`; con `pendingUnavailable` o `other_commits_unpublished` se muestra el rechazo tipado con su `continuation`; `toast` con resultado y avisos de `uncommittedDocs`; repintado con el `marks` devuelto.
   Cubre: prov:WEB:1, prov:WEB:3, prov:WEB:4, RF-WEB-17
   Comprobación: `go test ./internal/dashboard -run 'TestAcceptanceMarksAssets|TestMarks'`
-- [ ] 6.3 Cierre U6: commit `feat(dashboard): matriz de marcas y publicación en la pestaña Pruebas`.
+- [x] 6.3 Cierre U6: commit `feat(dashboard): matriz de marcas y publicación en la pestaña Pruebas`.
 
 ## Phase 7: Doctrina y goldens (U7; depende de U2)
 

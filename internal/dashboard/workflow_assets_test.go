@@ -405,7 +405,7 @@ func TestAcceptanceTestsTab(t *testing.T) {
 	}
 
 	src := readAsset(t, "js/screens/detalle-pruebas.js")
-	for _, forbidden := range []string{"renderMarkdown", "<button", "<textarea", "<input", "contenteditable", "method: 'POST'", "fetch(", "Guardar", "Ejecutar"} {
+	for _, forbidden := range []string{"renderMarkdown", "<textarea", "contenteditable", "method: 'POST'", "fetch(", "Guardar", "Ejecutar"} {
 		if strings.Contains(src, forbidden) {
 			t.Errorf("detalle-pruebas.js no debe contener %q", forbidden)
 		}
