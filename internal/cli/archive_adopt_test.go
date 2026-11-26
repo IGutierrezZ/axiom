@@ -14,6 +14,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption"
 	"github.com/IGutierrezZ/axiom/v3/internal/adoption/adoptcheck"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
@@ -388,5 +389,78 @@ func TestArchiveAdoptHelp(t *testing.T) {
 				t.Errorf("la ayuda %v debe contener %q:\n%s", args, want, stdout)
 			}
 		}
+	}
+}
+
+// declareAdoptPattern añade el bloque `sdd` dado al axiom.yaml del fixture.
+func declareAdoptPattern(t *testing.T, ws workspacetest.Workspace, block string) {
+	t.Helper()
+	path := filepath.Join(ws.Master, "axiom.yaml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspacetest.WriteFile(t, path, string(data)+block)
+}
+
+// REQ-30.11 y REQ-44.4: `check` mide con el patrón declarado y no escribe nada, axiom.yaml incluido.
+func TestArchiveAdoptCheckMeasuresWithTheDeclaredPattern(t *testing.T) {
+	f := newAdoptCheckFixture(t)
+	declareAdoptPattern(t, f.ws, "sdd:\n  id_pattern: \"RF-<NNN>\"\n")
+	delta := strings.NewReplacer("(REQ-40.1)", "(RF-001)", "(REQ-40.2)", "(RF-002)").Replace(adoptCLIDelta)
+	workspacetest.WriteFile(t, filepath.Join(adoptChangeRoot(f.ws), "specs", "proyecto", "spec.md"), delta)
+	before := adoptSnapshot(t, f.ws.Master)
+
+	stdout, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
+	if err != nil {
+		t.Fatalf("con (RF-001) y RF-<NNN> declarado el cambio pasa: %v\n%s", err, stdout)
+	}
+	var report adoptcheck.CheckReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.IDPattern != "RF-<NNN>" || !report.IDPatternDeclared || !report.Passed {
+		t.Fatalf("informe = %+v", report)
+	}
+	text, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange)
+	if err != nil || !strings.Contains(text, "Patrón de identificadores: RF-<NNN> (declarado en axiom.yaml)") {
+		t.Fatalf("el texto abre con el patrón efectivo: %q (%v)", text, err)
+	}
+	if after := adoptSnapshot(t, f.ws.Master); !reflect.DeepEqual(before, after) {
+		t.Fatalf("check no escribe nada, axiom.yaml incluido: %v", contextCLIChanged(before, after))
+	}
+
+	// El patrón declarado no cae al defecto: los REQ-n.m de la delta original ya no valen.
+	workspacetest.WriteFile(t, filepath.Join(adoptChangeRoot(f.ws), "specs", "proyecto", "spec.md"), adoptCLIDelta)
+	if _, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json"); err == nil {
+		t.Fatal("con RF-<NNN> declarado, un (REQ-40.1) no es un identificador")
+	}
+}
+
+func TestArchiveAdoptCheckWithoutDeclarationReportsTheDefaultPattern(t *testing.T) {
+	f := newAdoptCheckFixture(t)
+	stdout, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
+	if err != nil {
+		t.Fatalf("archive adopt check: %v\n%s", err, stdout)
+	}
+	var report adoptcheck.CheckReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.IDPatternDeclared || report.IDPattern != reqid.Default().Template() {
+		t.Fatalf("sin declaración rige el defecto: %+v", report)
+	}
+}
+
+// REQ-44.9: con el patrón inválido, `check` se niega con el mismo error y la misma
+// continuación que el resto de verbos, sin escribir.
+func TestArchiveAdoptCheckRefusesAnInvalidDeclaredPattern(t *testing.T) {
+	f := newAdoptCheckFixture(t)
+	declareAdoptPattern(t, f.ws, "sdd:\n  id_pattern: \"<m><m>\"\n")
+	before := adoptSnapshot(t, f.ws.Master)
+	_, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange)
+	wantValidateContinuation(t, err, "sdd.id_pattern")
+	if after := adoptSnapshot(t, f.ws.Master); !reflect.DeepEqual(before, after) {
+		t.Fatalf("la negativa no escribe: %v", contextCLIChanged(before, after))
 	}
 }

@@ -250,7 +250,11 @@ func runArchiveAdoptCheck(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	report, err := adoptcheck.Check(loc, parsed.change)
+	pattern, err := projectIDPattern("archive adopt check", loc)
+	if err != nil {
+		return err
+	}
+	report, err := adoptcheck.Check(loc, parsed.change, pattern)
 	if err != nil {
 		return fmt.Errorf("archive adopt check: %w; vuelve a ejecutar `axiom archive adopt check --path %s --change %s`", err, pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(parsed.change))
 	}
@@ -270,6 +274,11 @@ func runArchiveAdoptCheck(args []string, stdout io.Writer) error {
 
 func adoptCheckText(report adoptcheck.CheckReport) string {
 	var b strings.Builder
+	origin := "por defecto"
+	if report.IDPatternDeclared {
+		origin = "declarado en axiom.yaml"
+	}
+	fmt.Fprintf(&b, "Patrón de identificadores: %s (%s)\n", report.IDPattern, origin)
 	if report.Passed {
 		fmt.Fprintf(&b, "Verificación de la adopción del cambio %s: superada\n", report.Change)
 		b.WriteString("Un humano debe aprobar en la compuerta `spec` la fidelidad de la migración; esta verificación solo comprueba forma y cobertura.\n")
