@@ -93,7 +93,15 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 		// swallowed into its predecessor's section, and its own guard step
 		// then reads as the predecessor bypassing the format gate.
 		{id: "darwin-runtime", next: "organic-runtime-e2e"},
-		{id: "organic-runtime-e2e"},
+		// organic-runtime-e2e runs nightly as well as on a manual full run,
+		// so a regression surfaces the next day instead of on demand only.
+		{
+			id: "organic-runtime-e2e",
+			ifTokens: []string{
+				"github.event_name == 'schedule'",
+				"(github.event_name == 'workflow_dispatch' && inputs.full)",
+			},
+		},
 	}
 	for _, job := range jobs {
 		t.Run(job.id, func(t *testing.T) {

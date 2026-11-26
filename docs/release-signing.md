@@ -143,4 +143,4 @@ Before tagging, while `main` is at the commit you will tag:
 2. Wait until that run concludes `success` on the same SHA.
 3. Create and push the annotated tag on that SHA.
 
-If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed.
+If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed. The nightly run also includes Organic Runtime E2E: if that job failed, the nightly run is red for the SHA, so run step 1, whose newer run is the one the gate reads.

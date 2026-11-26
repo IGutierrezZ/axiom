@@ -17,7 +17,7 @@ on:
   # Sin `full`, la ejecución manual corre los mismos jobs que una PR y es la
   # que valida el sha antes de etiquetar. Con `-f full=true` añade los jobs
   # pesados (Darwin Runtime y Organic Runtime E2E), que no forman parte de la
-  # puerta de release.
+  # puerta de release. Organic Runtime E2E corre además en la nocturna.
   workflow_dispatch:
     inputs:
       full:
@@ -777,8 +777,13 @@ jobs:
   organic-runtime-e2e:
     name: Organic Runtime E2E (${{ matrix.os }})
     needs: go-format
-    # Restringido a ejecución manual bajo demanda para evitar consumo masivo en PRs cotidianos
-    if: github.event_name == 'workflow_dispatch' && inputs.full
+    # Fuera de las PR para no alargarlas, pero no solo a mano: corre en la
+    # nocturna, para que una regresión se vea al día siguiente, y a mano con
+    # `full=true`. En la nocturna sin commits nuevos `go-format` se omite y
+    # este job con él.
+    if: >-
+      github.event_name == 'schedule'
+      || (github.event_name == 'workflow_dispatch' && inputs.full)
     runs-on: ${{ matrix.os }}
     # Issue #3185: the Windows suite legitimately runs 11-13 minutes; a 15m
     # go-test budget flaked on slow runners with every test passing. The job

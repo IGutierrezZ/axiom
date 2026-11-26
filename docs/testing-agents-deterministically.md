@@ -237,7 +237,7 @@ AXIOM_REAL_AGENT_E2E=1 \
 
 Without `AXIOM_REAL_AGENT_E2E=1` the test skips, so ordinary `go test ./...` runs stay fast. A version mismatch on the `opencode` executable fails rather than silently testing a different runtime.
 
-In CI the `organic-runtime-e2e` job runs this across a matrix of `ubuntu-latest` and `windows-latest`, installing the pinned OpenCode runtime first.
+In CI the `organic-runtime-e2e` job runs this on `ubuntu-latest`, installing the pinned OpenCode runtime and Claude Code first. It runs in the nightly build, when `main` has commits no green run has covered, and on a manual run with `gh workflow run ci.yml -f full=true`; pull requests skip it.
 
 ---
 

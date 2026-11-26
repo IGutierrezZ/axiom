@@ -42,7 +42,7 @@ Fuera de alcance: `Darwin Runtime` (fallo de red, no de prueba), `internal/cli/*
 - [x] **T2 · Corregir el subtest de OpenCode en Organic Runtime** — ruta: inline (una prueba de unas 20 líneas).
   - Esperar la guía en `<proyecto>/opencode.json` y comprobar que `~/.config/opencode/opencode.json` no existe.
   - Checks: `go vet -tags real_agent_e2e ./e2e/organicruntime`; la ejecución real, en CI.
-- [ ] **T3 · Organic Runtime en la nocturna** — ruta: inline (cambio de `if:` y su prueba).
+- [x] **T3 · Organic Runtime en la nocturna** — ruta: inline (cambio de `if:` y su prueba).
   - `if:` acepta `schedule` además de `workflow_dispatch && inputs.full`; actualizar `formatter_ordering_test.go` y la documentación (`docs/release-signing.md`, `docs/testing-agents-deterministically.md`).
   - Checks: `go test ./internal/assets -run TestFormatter`.
 
@@ -80,8 +80,9 @@ Toda tanda de absorción DEBE presentar como evidencia de verificación `go buil
 ## Progreso y evidencias
 
 - **T1** — commit `3c528612`. `go test ./internal/assets -run 'TestRequiredChecksFailClosedWhenFormatFails|TestOrganicRuntimeE2EUsesInstalledOpenCodePin' -count=1` → ok. `git grep` de `e2e/e2e_test.sh`, `docker-test.sh`, los Dockerfiles, `RUN_FULL_E2E`, `e2e-tests` y `docker-e2e-testing`: sin referencias vivas fuera de documentos históricos y de la spec `upstream-absorption-protocol`, cuya delta va en `## Spec viva`. También se actualiza `openspec/config.yaml` (capa e2e).
-- **T2** — `go vet -tags real_agent_e2e ./e2e/organicruntime` → ok; `gofmt -l` limpio. La ejecución real (OpenCode y Claude Code instalados) queda para la CI: en local no hay OpenCode y no se compilan binarios (Cortex).
+- **T2** — commit `a9b7b592`. `go vet -tags real_agent_e2e ./e2e/organicruntime` → ok; `gofmt -l` limpio. **Pendiente:** la ejecución real (OpenCode y Claude Code instalados) queda para la CI: en local no hay OpenCode y no se compilan binarios (Cortex).
+- **T3** — `go test ./internal/assets -run 'TestRequiredChecksFailClosedWhenFormatFails|TestOrganicRuntimeE2EUsesInstalledOpenCodePin|TestUnitTestShardsPartitionEveryPackage|TestUnitTestsAggregatorRequiresEveryUnitJob|TestToolchainMetaTestsRunInExactlyOneJob|TestWindowsReleaseBlockerPackagesExist' -count=1` → ok (incluye el subtest `organic-runtime-e2e` con el nuevo `if:`). `axiom archive integrate --odd e2e-adelgazar` → `upstream-absorption-protocol: composed`, escribe la spec y `openspec/INDEX.md`. `TestDocumentedInvocationsRunAsDocumented` lee `docs/`, pero compila el toolchain: queda para el job `Toolchain Meta Tests` de la CI.
 
 ## Siguiente paso
 
-T3.
+PR con la etiqueta `type:refactor` (`scripts/axiom-worktree.ps1 pr e2e-adelgazar -Lane odd -Label refactor`), y lanzar a mano `gh workflow run ci.yml --ref refactor/e2e-adelgazar -f full=true` para ver Organic Runtime en verde antes de fusionar.
