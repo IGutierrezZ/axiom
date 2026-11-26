@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests/marks"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
@@ -185,4 +186,82 @@ func publishShortSHA(sha string) string {
 		return sha[:7]
 	}
 	return sha
+}
+
+// MarksPublishRequest es la petición del dashboard para publicar las marcas de pruebas de un
+// cambio (C-06-d): CWD es el workspaceRoot, Change el cambio y Branch la rama que la persona vio
+// en la pantalla (vacía si no se ata).
+type MarksPublishRequest struct{ CWD, Change, Branch string }
+
+// MarksPublishRefusal es una negativa tipada de la publicación de marcas, con el código, la
+// etiqueta, el mensaje y la continuación que da sddpublish.
+type MarksPublishRefusal struct {
+	Code         string
+	Label        string
+	Message      string
+	Continuation string
+	Details      map[string]any
+}
+
+// MarksPublishResult es el resultado de publicar las marcas. Status es `published`, `up_to_date`
+// o `refused`; con Refusal, Status es `refused`. Commit es el SHA del commit de marcas y
+// PushedSHA el SHA subido; GitRoot es el repositorio donde se publicó.
+type MarksPublishResult struct {
+	Status, Remote, Branch, GitRoot, Commit, PushedSHA string
+	Replayed                                           bool
+	UncommittedDocs                                    []string
+	Refusal                                            *MarksPublishRefusal
+}
+
+// MarksPublisher es el publicador de marcas que el dashboard recibe por inyección (C-06-d,
+// prov:WEB:3): el dashboard no ejecuta git ni importa sddpublish. Publica solo
+// `pruebas-estado.yaml` con la publicación acotada de sddpublish y, ante `push_non_fast_forward`,
+// su reproducción única con marks.Merge (prov:PUB:1, prov:PUB:2). Vive en este fichero para que el
+// verbo siga siendo el único importador de sddpublish (RF-PUB-07).
+type MarksPublisher struct {
+	publisher *sddpublish.Publisher
+}
+
+// NewMarksPublisher crea el publicador con el puerto git real y el motor de ramas.
+func NewMarksPublisher() *MarksPublisher {
+	return &MarksPublisher{publisher: &sddpublish.Publisher{Git: sddpublish.NewGit(), Targets: engine.Default()}}
+}
+
+// MarksIdentity devuelve el autor `Nombre <email>` de la configuración git de dir o, si falta
+// alguna parte, las claves de git que faltan.
+func (*MarksPublisher) MarksIdentity(ctx context.Context, dir string) (string, []string) {
+	identity := resolveActorIdentity(ctx, dir)
+	if actor, ok := identity.Actor(); ok {
+		return actor, nil
+	}
+	return "", identity.Missing()
+}
+
+// PublishMarks confirma y sube solo `pruebas-estado.yaml` del cambio. Toda negativa de la
+// publicación viaja tipada en Refusal, con su código, etiqueta y continuación.
+func (m *MarksPublisher) PublishMarks(ctx context.Context, req MarksPublishRequest) MarksPublishResult {
+	result := m.publisher.Run(ctx, sddpublish.Request{
+		CWD: req.CWD, Change: req.Change, Branch: req.Branch,
+		Only: []string{marks.FileName}, Replay: marks.Merge,
+	})
+	out := MarksPublishResult{
+		Status: string(result.Status), Remote: result.Remote, Branch: result.Branch,
+		Replayed: result.Replayed, UncommittedDocs: result.UncommittedDocs,
+	}
+	if result.Repository != nil {
+		out.GitRoot = result.Repository.GitRoot
+	}
+	if result.Commit != nil {
+		out.Commit = result.Commit.SHA
+	}
+	if result.Push != nil {
+		out.PushedSHA = result.Push.SHA
+	}
+	if refusal := result.Refusal; refusal != nil {
+		out.Refusal = &MarksPublishRefusal{
+			Code: string(refusal.Code), Label: refusal.Label, Message: refusal.Message,
+			Continuation: refusal.Continuation, Details: refusal.Details,
+		}
+	}
+	return out
 }

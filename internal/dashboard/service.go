@@ -65,6 +65,13 @@ type Service struct {
 
 	// restartFn lo registra el Server: relanza el dashboard tras autoactualizarse.
 	restartFn func(sync *UpdateSyncSummary)
+
+	// marksMu protege marksPub; marksLocks es el cerrojo por cambio compartido entre marcar y
+	// publicar (D7) y marksClock el reloj inyectable de las marcas (service_marks.go).
+	marksMu    sync.Mutex
+	marksPub   MarksPublisher
+	marksLocks sync.Map
+	marksClock marksClockState
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.
@@ -1791,6 +1798,7 @@ func (s *Service) incrementAcceptanceTests(changeRoot string) *IncrementAcceptan
 	for _, f := range r.Findings {
 		dto.Findings = append(dto.Findings, AcceptanceFindingDTO{Code: string(f.Code), File: f.File, Line: f.Line, Message: f.Message})
 	}
+	dto.Marks = s.incrementAcceptanceMarks(loc, filepath.Base(changeRoot))
 	return dto
 }
 

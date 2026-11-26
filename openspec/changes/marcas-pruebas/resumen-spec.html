@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:2fe1cfd9656493c346d37d30961b119a62dc925e45bc551d8d6217d7ad37382c">
+<title>Resumen de la spec: marcas de pruebas por entorno</title>
+<style>
+body { font-family: sans-serif; max-width: 52rem; margin: 2rem auto; line-height: 1.5; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.5rem; }
+.aviso { background: #fffbea; padding: 0.75rem; }
+code { background: #edf2f7; padding: 0 0.2rem; }
+</style>
+</head>
+<body>
+<h1>Marcas de pruebas por entorno</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+<h2>Qué cambia</h2>
+<p>Hoy la batería de pruebas es un plan, pero no hay forma de anotar qué casos se han ejecutado en cada entorno. Con este cambio, una persona marca desde el panel el resultado (<code>ok</code>, <code>ko</code>, <code>blocked</code> o <code>n/a</code>) y, cuando quiere, publica las marcas para todo el equipo. Solo aplica a proyectos con repositorio de specs separado (multirepo).</p>
+
+<section data-axiom-ref="prov:WEB:1">
+<h2>prov:WEB:1: Tabla de marcas</h2>
+<p>La pestaña «Pruebas» muestra una tabla de casos con una columna por entorno. Si el plan cambia después de marcar, las marcas antiguas se ven como caducadas y no cuentan.</p>
+</section>
+<section data-axiom-ref="prov:WEB:2">
+<h2>prov:WEB:2: Marcar un caso</h2>
+<p>Marcar solo guarda la anotación en el equipo local, con la identidad de git de quien marca. El servidor rechaza casos, entornos o resultados que no existan. Nada se borra: una corrección es una marca nueva.</p>
+</section>
+<section data-axiom-ref="prov:WEB:3">
+<h2>prov:WEB:3: Publicar marcas</h2>
+<p>Antes de publicar se ve el remoto, la rama y las marcas pendientes. Publicar exige confirmar de forma explícita; sin confirmación no se ejecuta nada de git.</p>
+</section>
+<section data-axiom-ref="prov:WEB:4">
+<h2>prov:WEB:4: Dónde está disponible</h2>
+<p>Solo en multirepo y en cambios SDD activos con batería. En monorepo el panel responde claramente «no disponible».</p>
+</section>
+<section data-axiom-ref="prov:WEB:5">
+<h2>prov:WEB:5: Seguridad del panel</h2>
+<p>Las dos acciones nuevas quedan clasificadas como mutaciones en la prueba de secretos del panel.</p>
+</section>
+<section data-axiom-ref="RF-WEB-17">
+<h2>RF-WEB-17: La pestaña «Pruebas» deja de ser solo lectura</h2>
+<p>Donde las marcas están disponibles, la pestaña permite marcar; en los demás casos sigue siendo solo de lectura.</p>
+</section>
+<section data-axiom-ref="prov:KOF:1">
+<h2>prov:KOF:1: Fichero de marcas y caducidad</h2>
+<p>Las marcas viven en <code>pruebas-estado.yaml</code>, separado del plan, solo se añaden y caducan cuando el plan cambia.</p>
+</section>
+<section data-axiom-ref="RF-KOF-22">
+<h2>RF-KOF-22: Resumen por entorno en el estado</h2>
+<p>El estado del cambio muestra, por entorno, cuántos casos están en <code>ok</code> (por ejemplo «pre: 5/5 ok») y cuántas marcas han caducado. Es solo información: no cambia el siguiente paso.</p>
+</section>
+<section data-axiom-ref="prov:PUB:1">
+<h2>prov:PUB:1: Publicación acotada</h2>
+<p>Se sube únicamente el fichero de marcas a la rama de integración del repositorio de specs. Otros documentos sin guardar no se tocan y solo se avisa de ellos.</p>
+</section>
+<section data-axiom-ref="prov:PUB:2">
+<h2>prov:PUB:2: Un reintento si alguien publicó antes</h2>
+<p>Si otra persona subió cambios mientras tanto, se reintenta una sola vez volviendo a añadir las marcas pendientes. Si vuelve a fallar, se explica el motivo y las marcas siguen guardadas en local.</p>
+</section>
+<section data-axiom-ref="RF-PUB-01">
+<h2>RF-PUB-01, RF-PUB-05 y RF-PUB-07: reglas de publicación</h2>
+<p>El comando ordinario de publicar no cambia. La excepción del reintento y la subida de marcas son exclusivas del publicador de marcas, que se inyecta en el panel sin que este ejecute git.</p>
+</section>
+<section data-axiom-ref="prov:GAT:1">
+<h2>prov:GAT:1: Resumen en la revisión de integración</h2>
+<p>Al revisar la integración se muestra el resumen de marcas como información. No bloquea ni cambia las salidas de la revisión.</p>
+</section>
+<section data-axiom-ref="prov:ARC:1">
+<h2>prov:ARC:1: Informe de archivado</h2>
+<p>El informe de archivado incluye el resumen de marcas. Las marcas nunca impiden archivar.</p>
+</section>
+
+<svg width="520" height="70" role="img" aria-label="Flujo: marcar en local, publicar con confirmación, equipo ve las marcas">
+<rect x="5" y="15" width="140" height="40" fill="#bee3f8"/>
+<text x="15" y="40">Marcar (local)</text>
+<rect x="190" y="15" width="150" height="40" fill="#fefcbf"/>
+<text x="200" y="40">Publicar (confirmar)</text>
+<rect x="385" y="15" width="130" height="40" fill="#c6f6d5"/>
+<text x="395" y="40">Equipo las ve</text>
+<line x1="145" y1="35" x2="190" y2="35" stroke="#333"/>
+<line x1="340" y1="35" x2="385" y2="35" stroke="#333"/>
+</svg>
+
+<h2>Glosario</h2>
+<dl>
+<dt>Marca</dt><dd>Anotación del resultado de un caso de prueba en un entorno.</dd>
+<dt>Caducada</dt><dd>Marca hecha sobre una versión anterior del plan de pruebas.</dd>
+<dt>Integración</dt><dd>Rama principal compartida del repositorio de specs.</dd>
+</dl>
+</body>
+</html>

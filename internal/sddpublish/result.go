@@ -23,6 +23,14 @@ type Request struct {
 	Change  string
 	Archive bool   // plan de archivado (rama `-archive` o integración in situ)
 	Branch  string // opcional: la rama que autorizó la persona
+	// Only restringe la publicación a estos nombres, relativos a la carpeta del cambio, y solo
+	// acepta los que da docpaths.ExactAllowed (hoy `pruebas-estado.yaml`). Exige el repositorio de
+	// specs in situ y no admite Archive. Solo lo usa el publicador de marcas del dashboard; el verbo
+	// `axiom sdd publish` nunca lo rellena.
+	Only []string
+	// Replay, con Only, habilita un único reintento por reproducción ante `push_non_fast_forward`:
+	// recibe el contenido local y el remoto del fichero y devuelve el fusionado. Sin Only se rechaza.
+	Replay func(local, remote []byte) ([]byte, error)
 }
 
 // Status es el estado de una publicación.
@@ -62,6 +70,10 @@ const (
 	CodePushHookRejected        Code = "push_hook_rejected"
 	CodeRemoteUnavailable       Code = "remote_unavailable"
 	CodePushFailed              Code = "push_failed"
+	CodeOnlyPathRejected        Code = "only_path_rejected"
+	CodeOnlyRequiresInPlace     Code = "only_requires_in_place"
+	CodeOtherCommitsUnpublished Code = "other_commits_unpublished"
+	CodeReplayFailed            Code = "replay_failed"
 )
 
 // labels son las etiquetas en castellano de los códigos propios de la publicación.
@@ -79,6 +91,10 @@ var labels = map[Code]string{
 	CodePushHookRejected:        "un hook (local o remoto) rechazó el push",
 	CodeRemoteUnavailable:       "remoto inalcanzable o sin credenciales",
 	CodePushFailed:              "el push falló",
+	CodeOnlyPathRejected:        "ruta no permitida en la publicación acotada",
+	CodeOnlyRequiresInPlace:     "la publicación acotada exige el repositorio de specs in situ",
+	CodeOtherCommitsUnpublished: "hay otros commits sin subir",
+	CodeReplayFailed:            "la reproducción del push falló",
 }
 
 // Label devuelve la etiqueta en castellano de un código: la propia de la publicación o, si es
@@ -157,8 +173,13 @@ type Result struct {
 	// que lo impiden.
 	UnpublishedCommits []string `json:"unpublishedCommits,omitempty"`
 	// Resume es lo que ejecuta quien siga con el cambio publicado.
-	Resume  []string `json:"resume,omitempty"`
-	Refusal *Refusal `json:"refusal"`
+	Resume []string `json:"resume,omitempty"`
+	// UncommittedDocs son los demás documentos del cambio con cambios sin confirmar que la
+	// publicación acotada no tocó. Solo aparece con Only.
+	UncommittedDocs []string `json:"uncommittedDocs,omitempty"`
+	// Replayed dice que el push se hizo tras la reproducción única. Solo aparece con Only y Replay.
+	Replayed bool     `json:"replayed,omitempty"`
+	Refusal  *Refusal `json:"refusal"`
 }
 
 // ExitCode es el código de salida de la orden: 0 con `published` y `up_to_date`, 1 con `refused`.

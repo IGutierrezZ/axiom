@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:a7e9836bb75a5bbb0e1f94ff3f5c88a94ebb643b75d25958f17c483390ad2932">
+<title>Resumen del diseño: marcas de ejecución de las pruebas por entorno</title>
+<style>
+body { font-family: sans-serif; max-width: 52rem; margin: 2rem auto; line-height: 1.55; color: #1a202c; padding: 0 1rem; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.5rem; }
+.aviso { background: #fffbea; padding: 0.75rem; border: 1px solid #f6e05e; }
+.ref { font-size: 0.85rem; color: #4a5568; font-family: monospace; }
+table { border-collapse: collapse; width: 100%; margin: 0.5rem 0; }
+th, td { border: 1px solid #cbd5e0; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+th { background: #edf2f7; }
+dt { font-weight: bold; margin-top: 0.5rem; }
+</style>
+</head>
+<body>
+<h1>Marcas de ejecución de las pruebas por entorno (C-06-d): cómo se construye</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<section data-axiom-ref="prov:WEB:1">
+<p class="ref">prov:WEB:1 · prov:WEB:2</p>
+<h2>Qué cambia</h2>
+<p>En la pestaña «Pruebas» del detalle de un cambio, una persona podrá anotar, caso a caso y entorno a entorno, si la prueba salió bien (<code>ok</code>), mal (<code>ko</code>), quedó bloqueada (<code>blocked</code>) o no aplica (<code>n/a</code>). Cada anotación se guarda primero solo en su equipo, en un fichero nuevo llamado <code>pruebas-estado.yaml</code>, sin enviar nada a ningún servidor.</p>
+</section>
+
+<section data-axiom-ref="prov:WEB:3">
+<p class="ref">prov:WEB:3 · prov:PUB:1</p>
+<h2>Para quién y cómo se comparte</h2>
+<p>Para el equipo que prueba un cambio en varios entornos. Cuando la persona pulsa «Publicar marcas», la pantalla le enseña antes a dónde se envían (el servidor <code>origin</code> y la rama principal del repositorio de especificaciones) y qué anotaciones faltan por enviar. Solo tras confirmar se envía ese único fichero; cualquier otro documento a medio editar se queda como estaba y se avisa de ello.</p>
+</section>
+
+<section data-axiom-ref="D3">
+<p class="ref">D3</p>
+<h2>Qué cuenta como «pendiente»</h2>
+<p>Una anotación está pendiente si está en el fichero del equipo pero no en la última copia conocida del servidor. Así, después de publicar con éxito, el contador vuelve a cero, y lo que otras personas hayan publicado nunca aparece como pendiente propio.</p>
+</section>
+
+<section data-axiom-ref="D10">
+<p class="ref">D10 · prov:PUB:2</p>
+<h2>Si otra persona publicó antes</h2>
+<p>Si el servidor ya tenía anotaciones nuevas de otra persona, el sistema lo intenta una sola vez más: trae la versión del servidor, añade al final solo las anotaciones propias que faltaban (sin repetir ninguna) y vuelve a enviar. Si tampoco funciona, explica el motivo y qué hacer, y las anotaciones siguen guardadas en el equipo.</p>
+</section>
+
+<section data-axiom-ref="D4">
+<p class="ref">D4 · RF-KOF-22</p>
+<h2>El resumen por entorno</h2>
+<p>Para cada entorno se cuenta cuántos casos aplicables están en <code>ok</code> sobre el total, y aparte los que están en <code>ko</code>, bloqueados, <code>n/a</code>, sin anotar o con una anotación caducada. Por ejemplo: <em>pre: 5/5 ok; local: 1/2 ok, 1 caducada</em>. Una anotación caduca cuando cambia el plan de pruebas. Este mismo texto aparece en el estado del cambio, al revisar la integración y en el informe de archivado; nunca bloquea nada.</p>
+</section>
+
+<section data-axiom-ref="prov:WEB:4">
+<p class="ref">prov:WEB:4 · D14</p>
+<h2>Cuándo no está disponible</h2>
+<p>Las anotaciones solo existen en proyectos con varios repositorios y con las pruebas de aceptación activadas, para cambios en curso que tienen plan de pruebas. En los demás casos la pantalla dice claramente por qué no está disponible, en lugar de dar un error genérico.</p>
+</section>
+
+<section data-axiom-ref="D5">
+<p class="ref">D5 · D7</p>
+<h2>Protecciones</h2>
+<table>
+<tr><th>Situación</th><th>Qué hace el sistema</th></tr>
+<tr><td>Falta el nombre o el correo de la persona en git</td><td>No guarda la anotación y explica cómo configurarlo.</td></tr>
+<tr><td>Nota de más de 500 caracteres o con saltos de línea</td><td>No guarda la anotación y pide corregirla.</td></tr>
+<tr><td>Dos anotaciones a la vez</td><td>Se guardan las dos, una detrás de otra.</td></tr>
+<tr><td>Doble clic en «Publicar» o anotar mientras se publica</td><td>Responde «ocupado, repite al terminar».</td></tr>
+<tr><td>Petición que no viene del propio panel</td><td>La rechaza sin escribir nada.</td></tr>
+</table>
+</section>
+
+<section data-axiom-ref="D15">
+<p class="ref">D15</p>
+<h2>Flujo antes y después</h2>
+<p>Antes: la pestaña «Pruebas» solo mostraba el plan. Después: muestra además una tabla de casos por entornos con su estado, permite anotar y ofrece «Publicar marcas» con confirmación.</p>
+<svg width="640" height="90" role="img" aria-label="Flujo: anotar, guardar en el equipo, confirmar, publicar en el repositorio de especificaciones">
+<rect x="5" y="20" width="130" height="50" fill="#bee3f8"/>
+<text x="20" y="50">Anotar caso</text>
+<rect x="170" y="20" width="140" height="50" fill="#c6f6d5"/>
+<text x="180" y="50">Guardado local</text>
+<rect x="345" y="20" width="120" height="50" fill="#fefcbf"/>
+<text x="358" y="50">Confirmar</text>
+<rect x="500" y="20" width="135" height="50" fill="#fed7d7"/>
+<text x="512" y="50">Publicar</text>
+<line x1="135" y1="45" x2="170" y2="45" stroke="#333"/>
+<line x1="310" y1="45" x2="345" y2="45" stroke="#333"/>
+<line x1="465" y1="45" x2="500" y2="45" stroke="#333"/>
+</svg>
+</section>
+
+<section data-axiom-ref="prov:ARC:1">
+<p class="ref">prov:ARC:1 · prov:GAT:1</p>
+<h2>Al revisar la integración y al archivar</h2>
+<p>La revisión de la integración y el informe de archivado muestran el resumen por entorno como información. Si quedan anotaciones sin publicar al archivar, el informe lo avisa; nada de esto impide archivar.</p>
+</section>
+
+<h2>Glosario</h2>
+<dl>
+<dt>Marca o anotación</dt><dd>Resultado de ejecutar un caso de prueba en un entorno concreto.</dd>
+<dt>Entorno</dt><dd>Lugar donde se prueba, como <code>local</code>, <code>pre</code> o <code>pro</code>.</dd>
+<dt>Caducada</dt><dd>Anotación hecha sobre una versión anterior del plan de pruebas.</dd>
+<dt>Repositorio de especificaciones</dt><dd>Almacén compartido donde el equipo guarda los documentos del cambio.</dd>
+<dt>Publicar</dt><dd>Enviar las anotaciones al almacén compartido para que el resto del equipo las vea.</dd>
+</dl>
+</body>
+</html>

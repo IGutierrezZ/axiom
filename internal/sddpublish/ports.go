@@ -54,6 +54,17 @@ type Git interface {
 	// sin `+`, sin `--force*` y sin `--no-verify`. Un rechazo no es un error: llega en el
 	// resultado, que clasifica quien llama.
 	Push(ctx context.Context, dir, remote, branch string, setUpstream bool) (PushOutcome, error)
+	// Fetch trae una sola rama a su referencia de seguimiento: `git fetch --no-tags <remote>
+	// refs/heads/<b>:refs/remotes/<remote>/<b>`, con el mismo tiempo máximo que el push. Solo lo
+	// usa la reproducción única de la publicación acotada. Un fallo de red no es un error: llega en
+	// el resultado, que clasifica quien llama.
+	Fetch(ctx context.Context, dir, remote, branch string) (PushOutcome, error)
+	// FileAt lee el fichero rel (relativo a la raíz git) en rev sin tocar el árbol de trabajo
+	// (`git ls-tree` y `git cat-file blob`). Un fichero que no existe en rev no es un error.
+	FileAt(ctx context.Context, dir, rev, rel string) (content []byte, exists bool, err error)
+	// ResetKeep mueve la rama actual a rev con `git reset --keep <rev>`: no pisa cambios locales y
+	// aborta sin tocar nada si alguno choca con el destino.
+	ResetKeep(ctx context.Context, dir, rev string) error
 }
 
 // PushOutcome es lo que devolvió `git push`: el código de salida, la salida `--porcelain` y
