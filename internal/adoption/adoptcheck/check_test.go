@@ -353,3 +353,35 @@ func TestCheck_ElOrigenSeConservaTalCualEnLaDelta(t *testing.T) {
 		}
 	}
 }
+
+// REQ-30.9: `proposed_id_pattern` no altera la obsolescencia del inventario (solo cuenta
+// el SHA-256 de cada origen) ni el resumen, y editar axiom.yaml tampoco la altera.
+func TestCheck_ElPatronPropuestoNoAlteraLaObsolescencia(t *testing.T) {
+	f := newCheckFixture(t)
+	inv := mustScan(t, f.loc.WorkspaceRoot)
+	if inv.ProposedIDPattern == nil {
+		t.Fatal("el inventario del fixture debería llevar la propuesta")
+	}
+	withField := f.check(t)
+	sumWith := adoption.Summarize(inv)
+
+	stripped := inv
+	stripped.ProposedIDPattern = nil
+	data, err := stripped.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.write(t, adoption.InventoryFileName, string(data))
+	writeTree(t, f.loc.WorkspaceRoot, map[string]string{"axiom.yaml": "sdd:\n  id_pattern: \"RF-<NNN>\"\n"})
+	withoutField := f.check(t)
+
+	if !reflect.DeepEqual(withField, withoutField) {
+		t.Fatalf("el campo no debe alterar el resultado:\ncon: %+v\nsin: %+v", withField, withoutField)
+	}
+	if got := failuresOf(withoutField, RuleInventoryStale); len(got) != 0 {
+		t.Fatalf("no debería haber obsolescencia: %+v", got)
+	}
+	if !reflect.DeepEqual(sumWith, adoption.Summarize(stripped)) {
+		t.Fatal("Summarize no debe depender del campo")
+	}
+}

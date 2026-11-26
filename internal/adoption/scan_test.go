@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // writeTree escribe ficheros (ruta con `/` → contenido) bajo root.
@@ -321,5 +323,92 @@ func TestSummarize(t *testing.T) {
 	}
 	if empty := Summarize(Inventory{}); empty.SourceCount != 0 || empty.UnitCount != 0 || empty.Sources == nil || empty.ContextCandidates == nil {
 		t.Fatalf("un inventario vacío da un resumen vacío con listas no nulas: %+v", empty)
+	}
+}
+
+func TestScan_ProponeElPatronDelCliente(t *testing.T) {
+	var doc strings.Builder
+	doc.WriteString("# Requisitos\n\n")
+	for i := 1; i <= 120; i++ {
+		fmt.Fprintf(&doc, "## RF-%03d Requisito %d\n\nTexto.\n\n", i, i)
+	}
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": doc.String()})
+	inv := mustScan(t, root)
+	if inv.ProposedIDPattern == nil || inv.ProposedIDPattern.Template != "RF-<NNN>" || inv.ProposedIDPattern.IDs != 120 {
+		t.Fatalf("propuesta = %+v", inv.ProposedIDPattern)
+	}
+	if len(inv.ProposedIDPattern.Conflicts) != 0 {
+		t.Fatalf("no debería haber conflictos: %+v", inv.ProposedIDPattern.Conflicts)
+	}
+}
+
+func TestScan_ProponeRFConM(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": "# R\n\n## RF-1 Alta\n\n## RF-2 Baja\n\n## RF-10 Otra\n"})
+	if p := mustScan(t, root).ProposedIDPattern; p == nil || p.Template != "RF-<m>" {
+		t.Fatalf("propuesta = %+v", p)
+	}
+}
+
+func TestScan_ConflictoDePrefijos(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": "# R\n\n## RF-001 Alta\n\n## RNF-001 Rendimiento\n"})
+	p := mustScan(t, root).ProposedIDPattern
+	if p == nil || p.Template != "" || len(p.SchemeConflicts()) != 1 || p.SchemeConflicts()[0].Code != ConflictMixedPrefixes {
+		t.Fatalf("propuesta = %+v", p)
+	}
+}
+
+func TestScan_SinIdentificadoresNoHayPropuesta(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": "# Requisitos\n\n## Alta de usuario\n\nTexto.\n"})
+	inv := mustScan(t, root)
+	if inv.ProposedIDPattern != nil {
+		t.Fatalf("sin IDs no hay propuesta: %+v", inv.ProposedIDPattern)
+	}
+	data, err := inv.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "proposed_id_pattern") {
+		t.Fatalf("el campo es omitempty:\n%s", data)
+	}
+}
+
+func TestScan_PropuestaDeterminista(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": requisitosDoc})
+	a, b := mustScan(t, root), mustScan(t, root)
+	da, _ := a.Marshal()
+	db, _ := b.Marshal()
+	if string(da) != string(db) || !strings.Contains(string(da), "proposed_id_pattern") {
+		t.Fatalf("dos Scan idénticos deben dar el mismo inventario con la propuesta:\n%s\n%s", da, db)
+	}
+}
+
+func TestInventory_LectoresV1YElCampoNuevo(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, map[string]string{"docs/requisitos.md": requisitosDoc})
+	inv := mustScan(t, root)
+	data, err := inv.Marshal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Un lector v1 (sin el campo nuevo) lee el inventario sin error.
+	var v1 struct {
+		Schema  string   `yaml:"schema"`
+		Sources []Source `yaml:"sources"`
+	}
+	if err := yaml.Unmarshal(data, &v1); err != nil || v1.Schema != InventorySchema || len(v1.Sources) != 1 {
+		t.Fatalf("lector v1: %v %+v", err, v1)
+	}
+	// Un inventario v1 sin el campo se lee con ProposedIDPattern nil.
+	change := t.TempDir()
+	old := "schema: " + InventorySchema + "\nsources: []\ncontext_candidates: []\nwarnings: []\n"
+	writeTree(t, change, map[string]string{InventoryFileName: old})
+	got, err := ReadInventory(change)
+	if err != nil || got.ProposedIDPattern != nil {
+		t.Fatalf("ReadInventory v1: %v %+v", err, got.ProposedIDPattern)
 	}
 }

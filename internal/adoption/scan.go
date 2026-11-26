@@ -152,6 +152,7 @@ func Scan(root string) (Inventory, error) {
 	}
 	sort.SliceStable(inv.Sources, func(i, j int) bool { return inv.Sources[i].Path < inv.Sources[j].Path })
 	sort.SliceStable(inv.ContextCandidates, func(i, j int) bool { return inv.ContextCandidates[i].Path < inv.ContextCandidates[j].Path })
+	inv.ProposedIDPattern = ProposePattern(inv.Sources)
 	return inv, nil
 }
 
