@@ -97,13 +97,3 @@ func AppendTrackerNote(f Folder, note TrackerNote) error {
 	}
 	return f.writeAtomic(TrackerNotesFile, notesTempPattern, payload)
 }
-
-// TrackerNotes devuelve los sucesos del diario en el orden en que se añadieron, sin tomar el
-// cerrojo. Sin fichero, ninguno.
-func TrackerNotes(f Folder) ([]TrackerNote, error) {
-	doc, err := readNotes(f)
-	if err != nil {
-		return nil, err
-	}
-	return doc.Notes, nil
-}

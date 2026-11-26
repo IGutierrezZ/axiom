@@ -10,6 +10,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/azuredevops/adotest"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/integrationstest"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
@@ -239,7 +240,7 @@ func TestIntegrationsSummaryPushArchivedFolderResendsDefinitiveIDs(t *testing.T)
 		t.Errorf("etiquetas finales: %v", tags)
 	}
 	// El diario traído de la carpeta ordinaria (el primer envío) no crece: la archivada no se escribe.
-	notes, err := integrations.TrackerNotes(integrations.Folder{WorkspaceRoot: e.root, Root: archived})
+	notes, err := integrationstest.TrackerNotes(integrations.Folder{WorkspaceRoot: e.root, Root: archived})
 	if err != nil || len(notes) != 1 {
 		t.Errorf("la carpeta archivada no se escribe: %d anotaciones (%v)", len(notes), err)
 	}

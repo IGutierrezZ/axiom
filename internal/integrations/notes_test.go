@@ -11,7 +11,7 @@ func TestTrackerNotesAreAppendOnlyAndOrdered(t *testing.T) {
 	f := newWorkspace(t)
 	folder := f.Folder()
 
-	if notes, err := TrackerNotes(folder); err != nil || len(notes) != 0 {
+	if notes, err := trackerNotesOf(folder); err != nil || len(notes) != 0 {
 		t.Fatalf("sin diario: %v %v", notes, err)
 	}
 	events := []TrackerNote{
@@ -24,7 +24,7 @@ func TestTrackerNotesAreAppendOnlyAndOrdered(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got, err := TrackerNotes(folder)
+	got, err := trackerNotesOf(folder)
 	if err != nil || len(got) != 3 {
 		t.Fatalf("notes = %+v, %v", got, err)
 	}
@@ -41,7 +41,7 @@ func TestTrackerNotesAreAppendOnlyAndOrdered(t *testing.T) {
 	if err := AppendTrackerNote(folder, TrackerNote{At: fixedNow.Add(time.Hour), Verb: "time propose", Code: "done"}); err != nil {
 		t.Fatal(err)
 	}
-	after, _ := TrackerNotes(folder)
+	after, _ := trackerNotesOf(folder)
 	if len(after) != 4 || after[3].Verb != "time propose" {
 		t.Fatalf("el nuevo suceso va al final: %+v", after)
 	}
@@ -64,7 +64,7 @@ func TestAppendTrackerNoteValidatesAndStampsTime(t *testing.T) {
 	if err := AppendTrackerNote(folder, TrackerNote{Verb: "tasks create", Code: "done"}); err != nil {
 		t.Fatal(err)
 	}
-	notes, _ := TrackerNotes(folder)
+	notes, _ := trackerNotesOf(folder)
 	if len(notes) != 1 || notes[0].At.IsZero() {
 		t.Fatalf("la hora vacía se completa: %+v", notes)
 	}
@@ -85,7 +85,7 @@ func TestTrackerNotesUnderTheChangeLockAreNotLost(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	notes, err := TrackerNotes(folder)
+	notes, err := trackerNotesOf(folder)
 	if err != nil || len(notes) != writers {
 		t.Fatalf("ningún suceso se pierde: %d de %d (%v)", len(notes), writers, err)
 	}
@@ -95,11 +95,21 @@ func TestTrackerNotesRejectCorruptAndArchivedFolders(t *testing.T) {
 	f := newWorkspace(t)
 	folder := f.Folder()
 	writeTestFile(t, folder.path(TrackerNotesFile), "schema: axiom.integrations-tracker-notes/v9\nchange: x\n")
-	if _, err := TrackerNotes(folder); err == nil || !strings.Contains(err.Error(), "v9") {
+	if _, err := trackerNotesOf(folder); err == nil || !strings.Contains(err.Error(), "v9") {
 		t.Fatalf("esquema ajeno: %v", err)
 	}
 	archived := archivedFolderOf(t, newGitWorkspace(t), "2026-11-19-x")
 	if err := AppendTrackerNote(archived, TrackerNote{Verb: "summary push", Code: "done"}); err == nil || !strings.Contains(err.Error(), "RF-ARC-03") {
 		t.Fatalf("la archivada es inmutable: %v", err)
 	}
+}
+
+// trackerNotesOf lee los sucesos del diario sin tomar el cerrojo (ayudante de pruebas: la producción
+// solo añade al diario).
+func trackerNotesOf(f Folder) ([]TrackerNote, error) {
+	doc, err := readNotes(f)
+	if err != nil {
+		return nil, err
+	}
+	return doc.Notes, nil
 }

@@ -12,6 +12,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/azuredevops/adotest"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/integrationstest"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
@@ -191,7 +192,7 @@ func roleResult(t *testing.T, got tasksJSON, role string) tasksRoleJSON {
 
 func notesOf(t *testing.T, e *tasksEnv) []integrations.TrackerNote {
 	t.Helper()
-	notes, err := integrations.TrackerNotes(e.folder)
+	notes, err := integrationstest.TrackerNotes(e.folder)
 	if err != nil {
 		t.Fatalf("TrackerNotes: %v", err)
 	}
