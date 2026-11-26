@@ -34,7 +34,7 @@ internal/
     upgrade/               Tool upgrade execution and reporting
   verify/                  Post-apply health checks + reporting
 scripts/                   Installer, release, and maintainer scripts (install.sh, release preflights, cross-lane battery)
-e2e/                       Docker-based E2E tests (Ubuntu + Arch)
+e2e/organicruntime/        Organic Runtime E2E against real agent binaries (real_agent_e2e tag)
 testdata/                  Golden test fixtures
 ```
 
@@ -46,9 +46,6 @@ testdata/                  Golden test fixtures
 # Unit tests
 go test ./...
 
-# Docker E2E (Ubuntu + Arch, requires Docker)
-RUN_FULL_E2E=1 RUN_BACKUP_TESTS=1 ./e2e/docker-test.sh
-
 # Dry-run smoke test (macOS/Linux)
 axiom install --dry-run --agent claude-code --component engram,sdd
 
@@ -59,7 +56,7 @@ axiom.exe install --dry-run --agent claude-code --component engram,sdd
 Test coverage is broad and changes frequently. Keep this section qualitative unless counts are generated automatically:
 
 - Unit tests cover agent adapters, components, system detection, app dispatch, and update/upgrade behavior.
-- Docker E2E tests exercise Ubuntu and Arch paths when `RUN_FULL_E2E=1` is enabled.
+- The Organic Runtime E2E suite (`e2e/organicruntime`) drives real Claude Code and OpenCode binaries through the installed routing guidance; see [Testing agents deterministically](./testing-agents-deterministically.md).
 - Golden fixtures snapshot generated component output under `testdata/`.
 - Full pipeline paths are tested: detection, planning, execution, backup, restore, and verification.
 - Agent adapter tests include cross-platform path validation.

@@ -25,18 +25,13 @@ A test with those properties gets disabled within a month. The solution is to ke
 
 ---
 
-## Two E2E suites
+## One E2E suite
 
 | Suite | Location | Platforms | What it proves |
 |---|---|---|---|
-| Installer E2E | `e2e/docker-test.sh` | Ubuntu, Arch, Fedora (Docker) | Installation, layout, idempotency, optional SDD |
-| Organic Runtime E2E | `e2e/organicruntime/` | Ubuntu, Windows (native runners) | A real agent driving the real CLI through the full work lifecycle |
+| Organic Runtime E2E | `e2e/organicruntime/` | Ubuntu (native runner) | A real agent driving the real CLI through the full work lifecycle |
 
-The installer suite is documented separately in [Docker E2E Testing](./docker-e2e-testing.md). This document covers the Organic Runtime suite.
-
-### Test scope by trigger
-
-The installer suite runs all platform checks on every trigger; only depth changes. On `pull_request` it runs with `RUN_FULL_E2E=0` for fast feedback; on `push` and `schedule` it runs the full suite.
+The Docker installer suite inherited from gentle-ai was retired: it exercised presets, themes and agents Axiom no longer ships. Installation, file layout, idempotency and backups are covered by the Go tests of `internal/cli` and `internal/components`, which run on every pull request.
 
 ---
 
@@ -242,7 +237,7 @@ AXIOM_REAL_AGENT_E2E=1 \
 
 Without `AXIOM_REAL_AGENT_E2E=1` the test skips, so ordinary `go test ./...` runs stay fast. A version mismatch on the `opencode` executable fails rather than silently testing a different runtime.
 
-In CI the `organic-runtime-e2e` job runs this across a matrix of `ubuntu-latest` and `windows-latest`, installing the pinned OpenCode runtime first.
+In CI the `organic-runtime-e2e` job runs this on `ubuntu-latest`, installing the pinned OpenCode runtime and Claude Code first. It runs in the nightly build, when `main` has commits no green run has covered, and on a manual run with `gh workflow run ci.yml -f full=true`; pull requests skip it.
 
 ---
 
@@ -270,5 +265,4 @@ The approach generalizes to any agent-driven system:
 
 ## References
 
-- [Docker E2E Testing](./docker-e2e-testing.md) — the installer suite
 - [Organic Recovery Architecture and Implementation Plan](./audits/2026-07-23-organic-recovery-implementation-plan.md) — the routes, verification axes, and acceptance criteria this suite exercises

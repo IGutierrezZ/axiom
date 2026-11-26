@@ -138,9 +138,9 @@ Before tagging, while `main` is at the commit you will tag:
    gh workflow run ci.yml --ref main
    ```
 
-   Without inputs it runs the same jobs as a pull request, which is what the release gate needs. The heavy jobs (Darwin Runtime, Organic Runtime E2E and the container E2E suites) only run with `gh workflow run ci.yml --ref main -f full=true` and are not part of the release gate.
+   Without inputs it runs the same jobs as a pull request, which is what the release gate needs. The heavy jobs (Darwin Runtime and Organic Runtime E2E) only run with `gh workflow run ci.yml --ref main -f full=true` and are not part of the release gate.
 
 2. Wait until that run concludes `success` on the same SHA.
 3. Create and push the annotated tag on that SHA.
 
-If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed.
+If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed. The nightly run also includes Organic Runtime E2E: if that job failed, the nightly run is red for the SHA, so run step 1, whose newer run is the one the gate reads.

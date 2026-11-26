@@ -31,16 +31,16 @@ Toda tanda de absorción DEBE derivar su lista de ficheros de `git show <sha-ups
 
 ### Requirement: Verificación sin filtrar (REQ-20.2)
 
-Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...`, `go test ./...` sin la bandera `-run`, y `e2e/e2e_test.sh`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) ni la omisión de `e2e/e2e_test.sh` DEBE aceptarse como evidencia de cierre de una tanda.
-(Previously: la cláusula que exigía declarar en el registro que `bench/` queda fuera de la cobertura de la suite raíz; el módulo `bench/` se retira (C-01-e, P21).)
+Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...` y `go test ./...` sin la bandera `-run`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) DEBE aceptarse como evidencia de cierre de una tanda.
+(Previously: exigía además `e2e/e2e_test.sh` en verde, que se retira con la suite e2e en contenedores; antes, la cláusula que exigía declarar que `bench/` quedaba fuera de la suite raíz, retirada con el módulo `bench/` (C-01-e, P21).)
 
 #### Scenario: Verificación completa aceptada
 - **DADO** una tanda que completó su absorción
 - **CUANDO** se registra su evidencia de verificación
-- **ENTONCES** el registro cita `go build ./...`, `go vet ./...`, `go test ./...` sin `-run`, y `e2e/e2e_test.sh`, todos en verde
+- **ENTONCES** el registro cita `go build ./...`, `go vet ./...` y `go test ./...` sin `-run`, todos en verde
 
 #### Scenario: Verificación filtrada rechazada
-- **DADO** una tanda cuya evidencia de verificación cita `go test -run <patrón>` o no incluye `e2e/e2e_test.sh`
+- **DADO** una tanda cuya evidencia de verificación cita `go test -run <patrón>`
 - **CUANDO** se evalúa el cierre de la tanda
 - **ENTONCES** la tanda no se acepta como verificada
 - **Y** no se marca `absorbido` en el registro para ninguno de sus commits

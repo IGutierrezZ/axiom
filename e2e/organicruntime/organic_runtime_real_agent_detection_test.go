@@ -41,17 +41,21 @@ import (
 // for why they moved here.
 func TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents(t *testing.T) {
 	t.Parallel()
-	// The orchestrator prompt lives in the home settings document even under
-	// workspace scope, because that is the only settings document the
-	// OpenCode family ever loads (issue #1825).
+	// Under workspace scope OpenCode receives the orchestrator prompt in the
+	// project's own opencode.json, which OpenCode loads from the project root,
+	// and the user's settings stay untouched (the same contract as
+	// TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome in
+	// internal/cli).
 	agents := []struct {
 		name    string
 		agentID string
 		path    string
-		inHome  bool
+		// untouchedInHome, when set, is the home settings document a
+		// workspace-scoped install must not create.
+		untouchedInHome string
 	}{
 		{name: "markdown section", agentID: "claude-code", path: ".claude/CLAUDE.md"},
-		{name: "orchestrator prompt", agentID: "opencode", path: ".config/opencode/opencode.json", inHome: true},
+		{name: "orchestrator prompt", agentID: "opencode", path: "opencode.json", untouchedInHome: ".config/opencode/opencode.json"},
 	}
 	for _, agent := range agents {
 		t.Run(agent.name, func(t *testing.T) {
@@ -68,11 +72,7 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents(t *testing.T) {
 			if err != nil {
 				t.Fatalf("install %s: %v\nstdout:\n%s\nstderr:\n%s", agent.agentID, err, output, stderr)
 			}
-			root := workspace
-			if agent.inHome {
-				root = home
-			}
-			rendered, readErr := os.ReadFile(filepath.Join(root, filepath.FromSlash(agent.path)))
+			rendered, readErr := os.ReadFile(filepath.Join(workspace, filepath.FromSlash(agent.path)))
 			if readErr != nil {
 				t.Fatalf("configured agent %s received no routing guidance at %s: %v", agent.agentID, agent.path, readErr)
 			}
@@ -86,10 +86,10 @@ func TestOrganicConfiguredAgentReceivesRoutingGuidanceRealAgents(t *testing.T) {
 					t.Fatalf("routing guidance for %s still carries RDD prose %q:\n%s", agent.agentID, fragment, rendered)
 				}
 			}
-			if agent.inHome {
-				stranded := filepath.Join(workspace, filepath.FromSlash(agent.path))
-				if _, statErr := os.Stat(stranded); !os.IsNotExist(statErr) {
-					t.Fatalf("workspace-scoped install stranded a settings document the agent never loads at %s (stat err = %v)", stranded, statErr)
+			if agent.untouchedInHome != "" {
+				homeSettings := filepath.Join(home, filepath.FromSlash(agent.untouchedInHome))
+				if _, statErr := os.Stat(homeSettings); !os.IsNotExist(statErr) {
+					t.Fatalf("workspace-scoped install wrote the user's settings at %s (stat err = %v)", homeSettings, statErr)
 				}
 			}
 		})

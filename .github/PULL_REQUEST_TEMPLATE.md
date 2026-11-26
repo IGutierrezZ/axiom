@@ -58,14 +58,8 @@ go test ./...
 go run ./internal/gofmtcheck
 ```
 
-**E2E Tests** (Docker required)
-```bash
-cd e2e && ./docker-test.sh
-```
-
 - [ ] Unit tests pass (`go test ./...`)
 - [ ] Go format passes (`go run ./internal/gofmtcheck`)
-- [ ] E2E tests pass (`cd e2e && ./docker-test.sh`)
 - [ ] Manually tested locally
 
 <!-- Describe any additional manual testing steps if needed. -->
@@ -81,7 +75,6 @@ The following checks run automatically on this PR:
 | Check PR Has `type:*` Label | ⏳ | Exactly one `type:*` label must be applied |
 | Unit Tests | ⏳ | `go test ./...` must pass |
 | Go Format | ⏳ | `go run ./internal/gofmtcheck` must pass |
-| E2E Tests | ⏳ | `cd e2e && ./docker-test.sh` must pass |
 
 ---
 
@@ -90,7 +83,6 @@ The following checks run automatically on this PR:
 - [ ] I have added the appropriate `type:*` label to this PR
 - [ ] Unit tests pass (`go test ./...`)
 - [ ] Go format passes (`go run ./internal/gofmtcheck`)
-- [ ] E2E tests pass (`cd e2e && ./docker-test.sh`)
 - [ ] I have updated documentation if necessary
 - [ ] My commits follow [Conventional Commits](https://www.conventionalcommits.org/) format
 - [ ] I understand, reviewed, and take responsibility for the complete submission
