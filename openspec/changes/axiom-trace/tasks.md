@@ -55,10 +55,10 @@ Depende de: nada. Paquete: `internal/reqtrace`.
 
 Depende de: Fase 1.
 
-- [ ] 2.1 Crear `alias.go`: `AliasResolver`, `NoAliases`, lectura de trazas con `livespec.ParseTrace` (`ids.yaml`) y `livespec.ExtractODDTrace`, semillas, cierre hasta punto fijo, `resolvedIds` en orden de bytes y conjunto de coincidencia por fuente (el provisional de otra fuente no cuenta). Una traza ilegible da `trace_invalid` y se ignora. Pruebas con `fstest.MapFS`: provisional y definitivo dan el mismo conjunto, cadena A→B→C, ciclo, `Previous` compartido, alias inyectado que cumple el patrón y alias que no lo cumple (descartado), `NoAliases` (solo el propio ID), ID sin traza.
+- [x] 2.1 Crear `alias.go`: `AliasResolver`, `NoAliases`, lectura de trazas con `livespec.ParseTrace` (`ids.yaml`) y `livespec.ExtractODDTrace`, semillas, cierre hasta punto fijo, `resolvedIds` en orden de bytes y conjunto de coincidencia por fuente (el provisional de otra fuente no cuenta). Una traza ilegible da `trace_invalid` y se ignora. Pruebas con `fstest.MapFS`: provisional y definitivo dan el mismo conjunto, cadena A→B→C, ciclo, `Previous` compartido, alias inyectado que cumple el patrón y alias que no lo cumple (descartado), `NoAliases` (solo el propio ID), ID sin traza.
   Cubre: prov:trace:3, prov:trace:4
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
-- [ ] 2.2 Provisional con varios definitivos: se añaden todos y se emite `provisional_ambiguous` con las fuentes; el mismo provisional repetido en cambios distintos no trae falsos positivos de la otra fuente (hueco spec 4, hueco design 11).
+- [x] 2.2 Provisional con varios definitivos: se añaden todos y se emite `provisional_ambiguous` con las fuentes; el mismo provisional repetido en cambios distintos no trae falsos positivos de la otra fuente (hueco spec 4, hueco design 11).
   Cubre: prov:trace:3
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
 
