@@ -39,6 +39,7 @@ const copilot = {
 `
 
 func TestPhaseModelsLogicRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"phasemodels"},
 		"import * as pm from './phasemodels.mjs';\n"+phaseModelsFixtureJS+
 			"console.log(JSON.stringify({\n"+
@@ -120,6 +121,7 @@ func TestPhaseModelsLogicRuntime(t *testing.T) {
 }
 
 func TestPhaseModelsValidationAndPatchRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"phasemodels"},
 		"import * as pm from './phasemodels.mjs';\n"+phaseModelsFixtureJS+
 			"const unchanged = pm.rowsFor(claude);\n"+
@@ -222,6 +224,7 @@ func wantContains(t *testing.T, name string, got, wants []string) {
 // La pantalla pinta una tabla por adaptador, valida con el módulo puro antes de enviar y usa
 // solo las rutas del propio servidor (sin CDN).
 func TestPhaseModelsUIWiring(t *testing.T) {
+	t.Parallel()
 	eco, screen, html, css := readAsset(t, "js/screens/ecosystem.js"), readAsset(t, "js/screens/ecosystem-models.js"), readAsset(t, "index.html"), readAsset(t, "style.css")
 	for _, marker := range []string{"from './ecosystem-models.js'", "modelsHtml(data.adapters)", "bindModelsEditor("} {
 		if !strings.Contains(eco, marker) {

@@ -9,6 +9,7 @@ import (
 // «restarting» (dura menos que el intervalo de sondeo): también se recarga cuando
 // responde un proceso distinto (otro from_version) o tras fallos de red previos.
 func TestUpdateJobUIReloadDoesNotDependOnObservingRestarting(t *testing.T) {
+	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
 		"function newProcessAnswered(job)",

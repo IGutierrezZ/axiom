@@ -12,6 +12,7 @@ import (
 // «Verificación conjunta» en `verify-report.md`, limpia o no, no cambia `nextRecommended`, las
 // dependencias ni las razones de bloqueo de `axiom sdd status`; `status` no la lee ni la digiere.
 func TestJointVerifyNonblocking(t *testing.T) {
+	t.Parallel()
 	const spec = "### Requirement: Auth\n#### Scenario: Expected behavior\n"
 	base := testVerifyEnvelope("pass", 0, 0, "13/13", "46/46", 0, 0)
 	rounds := map[string]string{

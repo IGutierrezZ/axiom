@@ -50,6 +50,7 @@ func resolveFrom(t *testing.T, cwd, change string) Status {
 // REQ-24.4: el layout embebido resuelve igual con cualquier specs_repository y
 // también sin axiom.yaml, sin claves nuevas, sin notas y sin bloquear archive.
 func TestResolveEmbeddedLayoutIsEquivalentForEverySpecsRepository(t *testing.T) {
+	t.Parallel()
 	type layout struct {
 		name string
 		root string
@@ -96,6 +97,7 @@ func TestResolveEmbeddedLayoutIsEquivalentForEverySpecsRepository(t *testing.T) 
 // REQ-24.8: el mismo planning home desde la carpeta maestra, el repositorio de
 // especificaciones y un repositorio de código del espacio canónico.
 func TestResolveCanonicalWorkspaceFromThreeStartingPoints(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t)
 	seedReadyChange(t, ws.Specs, "inc-demo", planningHomeTasks)
 
@@ -135,6 +137,7 @@ func TestResolveCanonicalWorkspaceFromThreeStartingPoints(t *testing.T) {
 }
 
 func TestResolveRejectsAnAmbiguousPlanningHomeFromEveryStartingPoint(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t, workspacetest.WithMasterOpenSpec())
 	for name, start := range map[string]string{
 		"carpeta maestra":       ws.Master,
@@ -151,6 +154,7 @@ func TestResolveRejectsAnAmbiguousPlanningHomeFromEveryStartingPoint(t *testing.
 }
 
 func TestResolveRejectsAnInvalidStartingDirectory(t *testing.T) {
+	t.Parallel()
 	_, err := Resolve(ResolveOptions{CWD: filepath.Join(t.TempDir(), "no-existe")})
 	var locateErr *workspace.LocateError
 	if !errors.As(err, &locateErr) || locateErr.Kind != workspace.LocateStartInvalid {
@@ -161,6 +165,7 @@ func TestResolveRejectsAnInvalidStartingDirectory(t *testing.T) {
 // REQ-24.7, caso 3: un axiom.yaml directo que no se puede cargar conserva la
 // resolución embebida y el status lo avisa sin bloquear.
 func TestResolveReportsLocationNotesWithoutBlocking(t *testing.T) {
+	t.Parallel()
 	t.Run("axiom.yaml directo no cargable", func(t *testing.T) {
 		dir := t.TempDir()
 		workspacetest.WriteFile(t, filepath.Join(dir, "axiom.yaml"), "workspace: {name: x, topology: monorepo-embedded}\n")

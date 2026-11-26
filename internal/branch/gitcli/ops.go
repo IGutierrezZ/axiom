@@ -505,3 +505,58 @@ func pathspecArgument(relPath string) error {
 func commandFailed(dir string, result gitcommon.Result, args ...string) error {
 	return fmt.Errorf("git %s en %s terminó con el código %d: %s", strings.Join(args, " "), dir, result.ExitCode, result.Stderr)
 }
+
+// RemoteConfigured dice si el remoto tiene URL configurada (`git config --get remote.<r>.url`). Es
+// una lectura de la configuración local: no toca la red. Un remoto sin URL no es un error: devuelve
+// false.
+func (*Git) RemoteConfigured(ctx context.Context, dir, remote string) (bool, error) {
+	if err := plainArgument(remote); err != nil {
+		return false, err
+	}
+	args := []string{"config", "--get", "remote." + remote + ".url"}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return false, err
+	}
+	switch result.ExitCode {
+	case 0:
+		return strings.TrimSpace(string(result.Stdout)) != "", nil
+	case 1:
+		return false, nil
+	}
+	return false, commandFailed(dir, result, args...)
+}
+
+// DirtyPathsUnder devuelve las rutas con cambios sin confirmar bajo las rutas dadas, relativas a la
+// raíz git de dir: modificadas, borradas, preparadas y sin seguimiento (`git status --porcelain=v1
+// -z --untracked-files=all --no-renames -- :(top,literal)<ruta>...`). A diferencia de DirtyPaths, una
+// carpeta sin seguimiento se expande a sus ficheros, así que quien filtra puede distinguir un
+// documento del estado local. Cada ruta se cita como literal desde la raíz: ningún carácter se
+// interpreta como patrón. Es una lectura que no refresca el índice (`GIT_OPTIONAL_LOCKS=0`).
+func (*Git) DirtyPathsUnder(ctx context.Context, dir string, paths []string) ([]string, error) {
+	args := []string{"status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames", "--"}
+	for _, rel := range paths {
+		if err := pathspecArgument(rel); err != nil {
+			return nil, err
+		}
+		args = append(args, ":(top,literal)"+rel)
+	}
+	if len(paths) == 0 {
+		return nil, errors.New("falta al menos una ruta para consultar el estado")
+	}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, err
+	}
+	if result.ExitCode != 0 {
+		return nil, commandFailed(dir, result, args...)
+	}
+	var dirty []string
+	for _, entry := range strings.Split(string(result.Stdout), "\x00") {
+		// «XY ruta»: dos columnas de estado, un espacio y la ruta, relativa a la raíz git.
+		if len(entry) > 3 {
+			dirty = append(dirty, entry[3:])
+		}
+	}
+	return dirty, nil
+}

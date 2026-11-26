@@ -12,6 +12,7 @@ import (
 // Clasificación de las negativas de `git push` y `git commit` con entradas `--porcelain` y `stderr`
 // fijas (`LC_ALL=C`), sin ejecutar git (DD-09, paso 10).
 func TestClassifyPush(t *testing.T) {
+	t.Parallel()
 	const b = "inc/x"
 	rejected := func(reason string) string {
 		return "To /remoto\n!\trefs/heads/inc/x:refs/heads/inc/x\t[rejected] (" + reason + ")\nDone\n"
@@ -61,6 +62,7 @@ func TestClassifyPush(t *testing.T) {
 }
 
 func TestClassifyCommit(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name string
 		fail CommandError
@@ -90,6 +92,7 @@ func TestClassifyCommit(t *testing.T) {
 }
 
 func TestClassifyKeepsOnlyTheTailOfStderr(t *testing.T) {
+	t.Parallel()
 	var lines []string
 	for i := 1; i <= 30; i++ {
 		lines = append(lines, "línea "+string(rune('a'+i%26)))
@@ -102,6 +105,7 @@ func TestClassifyKeepsOnlyTheTailOfStderr(t *testing.T) {
 
 // Los códigos propios tienen etiqueta en castellano y los reenviados de `branch` conservan la suya.
 func TestResultLabels(t *testing.T) {
+	t.Parallel()
 	for code := range labels {
 		if Label(code) == "" || Label(code) == string(code) {
 			t.Errorf("el código %s no tiene etiqueta en castellano", code)
@@ -121,6 +125,7 @@ func TestResultLabels(t *testing.T) {
 
 // El JSON es estable: `commit` y `push` se omiten cuando no ocurrieron y `refusal` es null sin negativa.
 func TestResultJSONIsStable(t *testing.T) {
+	t.Parallel()
 	published := Result{
 		Schema: Schema, Change: "x", Context: ContextChange, Status: StatusPublished,
 		Repository: &RepositoryRef{Name: "axiom", GitRoot: "/r"}, Remote: Remote, Branch: "inc/x",

@@ -22,6 +22,7 @@ import (
 // stay candidates.
 
 func TestExplorationOnlyDirectoryDoesNotMakeSelectionAmbiguous(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-widget", "- [ ] 1.1 Wire widget\n")
 	write(t, filepath.Join(root, "openspec", "changes", "explore-widget-idea", "exploration.md"), "# Exploration\n")
@@ -42,6 +43,7 @@ func TestExplorationOnlyDirectoryDoesNotMakeSelectionAmbiguous(t *testing.T) {
 }
 
 func TestTwoFullChangesStayAmbiguousBesideExplorationOnlyDirectory(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "first", "- [ ] 1.1 Work\n")
 	seedReadyChange(t, root, "second", "- [ ] 1.1 Work\n")
@@ -64,6 +66,7 @@ func TestTwoFullChangesStayAmbiguousBesideExplorationOnlyDirectory(t *testing.T)
 }
 
 func TestExplorationOnlyDirectoryStillResolvesWhenExplicitlyNamed(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-widget", "- [ ] 1.1 Wire widget\n")
 	write(t, filepath.Join(root, "openspec", "changes", "explore-widget-idea", "exploration.md"), "# Exploration\n")
@@ -85,6 +88,7 @@ func TestExplorationOnlyDirectoryStillResolvesWhenExplicitlyNamed(t *testing.T) 
 }
 
 func TestAllExplorationOnlyDirectoriesBlockAsNoActiveChanges(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "explore-widget-idea", "exploration.md"), "# Exploration\n")
 
@@ -105,6 +109,7 @@ func TestAllExplorationOnlyDirectoriesBlockAsNoActiveChanges(t *testing.T) {
 }
 
 func TestUnstatableMarkerKeepsChangeAnActiveCandidate(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("relies on POSIX symlink semantics to force a non-ErrNotExist stat error")
 	}
@@ -133,6 +138,7 @@ func TestUnstatableMarkerKeepsChangeAnActiveCandidate(t *testing.T) {
 }
 
 func TestExplorationBesideRealArtifactsStaysASelectionCandidate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	// exploration.md beside a proposal is a change that finished exploring;
 	// it must keep counting as active.

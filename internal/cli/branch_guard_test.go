@@ -126,6 +126,7 @@ func (r failingReader) Read([]byte) (int, error) {
 // de Axiom en la rama correcta», con el protocolo de salida de cada runtime: Claude Code y Codex
 // salen con 2 y el motivo por stderr; OpenCode siempre con 0 y el JSON por stdout.
 func TestBranchGuardBlocksADocumentOnTheWrongBranchWithTheProtocolOfEachRuntime(t *testing.T) {
+	t.Parallel()
 	repo := branchGuardProject(t)
 	payloads := guardPayloads(t, repo)
 
@@ -166,6 +167,7 @@ func TestBranchGuardBlocksADocumentOnTheWrongBranchWithTheProtocolOfEachRuntime(
 // El hook falla en abierto: una carga ilegible o de un proyecto que no es de Axiom no bloquea, no
 // avisa y no escribe nada.
 func TestBranchGuardFailsOpenAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	repo := branchGuardProject(t)
 	elsewhere := branchOutsideGit(t)
 	outsidePayload := guardPayloads(t, elsewhere)
@@ -196,6 +198,7 @@ func TestBranchGuardFailsOpenAndWritesNothing(t *testing.T) {
 // `axiom.yaml` no bloquea ni avisa en ningún runtime, sale con 0 y no escribe nada. En el mismo
 // repositorio, con `axiom.yaml`, sí bloquea: solo cambia el criterio de proyecto.
 func TestBranchGuardIsInertInAForeignRepositoryWithABareOpenSpec(t *testing.T) {
+	t.Parallel()
 	foreign := newBranchRepository(t)
 	if err := os.MkdirAll(filepath.Join(foreign, "openspec", "changes", "x"), 0o755); err != nil {
 		t.Fatal(err)

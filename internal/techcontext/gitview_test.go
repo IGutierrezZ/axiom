@@ -80,6 +80,7 @@ func changedRelative(t testing.TB, repo, base string) []string {
 // Amenaza «estado de commit» (REQ-30.6, D7): ChangedSince une los cuatro estados
 // en los que una edición puede estar, y una prueba fija cada uno.
 func TestGitViewReportsEachCommitState(t *testing.T) {
+	t.Parallel()
 	t.Run("confirmado en la rama de la feature", func(t *testing.T) {
 		repo := newRepo(t)
 		base := runGit(t, repo, "rev-parse", "HEAD")[:40]
@@ -153,6 +154,7 @@ func TestGitViewReportsEachCommitState(t *testing.T) {
 }
 
 func TestGitViewWithoutBaseComparesAgainstTheEmptyTree(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	runGit(t, dir, "init", "-q", "-b", "main")
 	writeTestFile(t, filepath.Join(dir, "uno.md"), "# uno\n")
@@ -164,6 +166,7 @@ func TestGitViewWithoutBaseComparesAgainstTheEmptyTree(t *testing.T) {
 }
 
 func TestGitViewIsReadOnly(t *testing.T) {
+	t.Parallel()
 	repo := newRepo(t)
 	base := runGit(t, repo, "rev-parse", "HEAD")[:40]
 	writeTestFile(t, filepath.Join(repo, "a.txt"), "cambiado\n")
@@ -186,6 +189,7 @@ func TestGitViewIsReadOnly(t *testing.T) {
 }
 
 func TestGitViewRejectsABaseThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	repo := newRepo(t)
 	if _, err := ChangedSince(context.Background(), repo, "no-existe-esta-rama"); err == nil {
 		t.Fatal("una base irresoluble debe fallar cerrada, no devolver un conjunto vacío")
@@ -206,6 +210,7 @@ func TestGitViewUsesTheRepositoryOfThePathNotTheProcessDirectory(t *testing.T) {
 }
 
 func TestGitViewOutsideARepositoryFails(t *testing.T) {
+	t.Parallel()
 	if _, err := ChangedSince(context.Background(), t.TempDir(), ""); err == nil {
 		t.Fatal("fuera de un repositorio git debe fallar")
 	}

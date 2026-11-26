@@ -11,6 +11,7 @@ import (
 // castellano, enlace seguro).
 
 func TestUpdateBannerAssetsAreServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	if rr := getAsset(t, h, "/js/update.js"); rr.Code != 200 {
 		t.Fatalf("GET /js/update.js = %d, se esperaba 200", rr.Code)
@@ -29,6 +30,7 @@ func TestUpdateBannerAssetsAreServed(t *testing.T) {
 }
 
 func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
+	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
 		// Solo se muestra con update_available; al día, dev_build y check_failed lo ocultan.
@@ -58,6 +60,7 @@ func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
 // El botón «Actualizar» lanza un trabajo asíncrono y la UI consulta su estado: la
 // petición no depende del tiempo de espera del servidor y cada fase se ve.
 func TestUpdateJobUIPollsStatusAndShowsEveryPhase(t *testing.T) {
+	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
 		"/api/system/update/status",
@@ -84,6 +87,7 @@ func TestUpdateJobUIPollsStatusAndShowsEveryPhase(t *testing.T) {
 // Durante el reinicio la UI sigue consultando la versión hasta que el servidor
 // responde con otra distinta y entonces recarga; si no vuelve, muestra el comando.
 func TestUpdateJobUIReloadsWhenTheNewVersionAnswers(t *testing.T) {
+	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
 		"job.phase === 'restarting'",
@@ -105,6 +109,7 @@ func TestUpdateJobUIReloadsWhenTheNewVersionAnswers(t *testing.T) {
 // Tras recargar, la UI recupera el estado del trabajo y muestra el resultado de la
 // sincronización posterior a la actualización.
 func TestUpdateJobUIShowsThePostUpdateSyncResult(t *testing.T) {
+	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
 		"function syncSummary(sync)",

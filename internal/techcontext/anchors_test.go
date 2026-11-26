@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseAnchor(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		text string
@@ -48,6 +49,7 @@ func TestParseAnchor(t *testing.T) {
 }
 
 func TestAnchorStringRoundTrips(t *testing.T) {
+	t.Parallel()
 	for _, text := range []string{"Título", "Padre > Título", "Abuelo > Padre > Título #2"} {
 		anchor, err := ParseAnchor(text)
 		if err != nil {
@@ -95,6 +97,7 @@ func headingPaths(refs []HeadingRef) []string {
 }
 
 func TestResolveAnchor(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		anchor string
@@ -139,6 +142,7 @@ func TestResolveAnchor(t *testing.T) {
 }
 
 func TestResolveAnchorIgnoresFencesAndSetext(t *testing.T) {
+	t.Parallel()
 	doc := []byte("# Guía\n\n```\n## Pagos\n```\n\nPagos\n=====\n\n## Pagos\n")
 	anchor, _ := ParseAnchor("Pagos")
 	got := ResolveAnchor(doc, anchor)
@@ -148,6 +152,7 @@ func TestResolveAnchorIgnoresFencesAndSetext(t *testing.T) {
 }
 
 func TestResolveAnchorSkipsHeadingLevels(t *testing.T) {
+	t.Parallel()
 	doc := []byte("# Raíz\n\n### Profundo\n\n## Medio\n\n### Hijo\n")
 	deep, _ := ParseAnchor("Raíz > Profundo")
 	if got := ResolveAnchor(doc, deep); len(got) != 1 {
@@ -172,6 +177,7 @@ func newEntry(action Action, anchor string) Entry {
 }
 
 func TestCheckAnchorMissingDocument(t *testing.T) {
+	t.Parallel()
 	create, err := CheckAnchor(newEntry(Add, "Pagos"), nil, false)
 	if err != nil || !create {
 		t.Fatalf("add sobre un documento inexistente debe crearlo: create=%v err=%v", create, err)
@@ -185,6 +191,7 @@ func TestCheckAnchorMissingDocument(t *testing.T) {
 }
 
 func TestCheckAnchorAgainstTheDocument(t *testing.T) {
+	t.Parallel()
 	doc := []byte(anchorsDocument)
 	tests := []struct {
 		name   string
@@ -232,6 +239,7 @@ func TestCheckAnchorAgainstTheDocument(t *testing.T) {
 // R33: lo que el formato no puede anclar se rechaza nombrando las apariciones,
 // también con la acción add, que de otro modo aceptaría un ancla sin coincidencia.
 func TestCheckAnchorNamesTheOccurrencesItCannotAddress(t *testing.T) {
+	t.Parallel()
 	doc := []byte("# Guía\n\n## Entrada > Salida\n\nTexto.\n\nReintentos\n----------\n\nOtro texto.\n\nNotas del servicio\n==================\n")
 	tests := []struct {
 		name   string
@@ -255,6 +263,7 @@ func TestCheckAnchorNamesTheOccurrencesItCannotAddress(t *testing.T) {
 }
 
 func TestCheckAnchorDoesNotMistakeSeparatorsForSetext(t *testing.T) {
+	t.Parallel()
 	// Una línea `---` tras un encabezado ATX o tras una línea en blanco es una
 	// regla horizontal, no un subrayado setext.
 	doc := []byte("# Guía\n\n---\n\n## Pagos\n---\n\nTexto\n")

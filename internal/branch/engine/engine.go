@@ -44,6 +44,8 @@ type gitReader interface {
 	BranchExists(ctx context.Context, dir, name string) (bool, error)
 	Worktrees(ctx context.Context, dir string) ([]branch.WorktreeEntry, error)
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
+	RemoteConfigured(ctx context.Context, dir, remote string) (bool, error)
+	DirtyPathsUnder(ctx context.Context, dir string, paths []string) ([]string, error)
 	AheadBehind(ctx context.Context, dir, base, branch string) (ahead, behind int, err error)
 	TreeDirs(ctx context.Context, dir, rev, relPath string) (dirs []string, exists bool, err error)
 	FileAt(ctx context.Context, dir, rev, relPath string) (content []byte, exists bool, err error)

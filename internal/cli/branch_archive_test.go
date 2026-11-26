@@ -48,6 +48,7 @@ func TestBranchEnsureHelpDocumentsArchive(t *testing.T) {
 // banderas y la orden que sí vale); `--branch` y `--base` llegan al motor y son `plan_conflict`
 // (código 1); el carril ODD no tiene rama de archivado (código 1). Ningún caso crea nada.
 func TestBranchEnsureArchiveFlagsAreValidated(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branches := branchGitOutput(t, repo, "branch", "--list")
 
@@ -102,6 +103,7 @@ func TestBranchEnsureArchiveFlagsAreValidated(t *testing.T) {
 // traído con su worktree y `fetched` verdadero; repetirlo da el mismo JSON byte a byte, el mismo
 // estado de ramas y worktrees y no publica la rama; en texto, la salida nombra la rama de archivado.
 func TestBranchEnsureArchiveRefusesWithoutFetchAndCreatesTheBranchWithIt(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	remote := t.TempDir()
 	branchTestGit(t, remote, "init", "-q", "--bare", "-b", "main")

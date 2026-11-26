@@ -15,6 +15,7 @@ import (
 // symlink-evaluated roots into RuntimeStatus.GrantedRoots, and a second
 // grant chains and accumulates.
 func TestRuntimeLedgerGrantCommitsAndProjectsGrantedRoots(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "grant-roots")
 	if err != nil {
@@ -82,6 +83,7 @@ func TestRuntimeLedgerGrantCommitsAndProjectsGrantedRoots(t *testing.T) {
 // RequestID/RequestDigest contract: an exact replay returns the committed
 // revision without a new record; reuse with different inputs is refused.
 func TestRuntimeLedgerGrantDuplicateRequestIsIdempotent(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "grant-idempotent")
 	if err != nil {
@@ -125,6 +127,7 @@ func TestRuntimeLedgerGrantDuplicateRequestIsIdempotent(t *testing.T) {
 // longer match the RequestDigest the original request bound, so replay's
 // digest recompute refuses the chain.
 func TestRuntimeLedgerGrantReplayRefusesForgedWidenedRecord(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "grant-forged-replay")
 	if err != nil {
@@ -189,6 +192,7 @@ func TestRuntimeLedgerGrantReplayRefusesForgedWidenedRecord(t *testing.T) {
 // replays exactly as before, projects no granted roots, and serializes no
 // granted_roots member (omitempty is load-bearing).
 func TestRuntimeLedgerLegacyChainWithoutGrantsReplaysUnchanged(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	store, err := OpenRuntimeStore(context.Background(), repo, "grant-legacy-chain")
 	if err != nil {
@@ -231,6 +235,7 @@ func TestRuntimeLedgerLegacyChainWithoutGrantsReplaysUnchanged(t *testing.T) {
 // grants: per-change authority must not become workspace-permanent authority
 // through the back door.
 func TestRuntimeLedgerArchivedNameReuseDoesNotResurrectGrantedRoots(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "reused-change-name")
 	if err != nil {
@@ -307,6 +312,7 @@ func TestRuntimeLedgerArchivedNameReuseDoesNotResurrectGrantedRoots(t *testing.T
 // authority at all, and an incoherent caller-supplied instance is refused
 // rather than silently rebound.
 func TestRuntimeLedgerGrantRequiresChangeInstance(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "grant-instance-required")
 	if err != nil {
@@ -348,6 +354,7 @@ func TestRuntimeLedgerGrantRequiresChangeInstance(t *testing.T) {
 // original request bound, so replay refuses the chain instead of projecting
 // the grant into another instance.
 func TestRuntimeLedgerGrantReplayRefusesForgedInstanceMarker(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "grant-instance-forgery")
 	if err != nil {

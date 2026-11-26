@@ -63,6 +63,7 @@ func TestBranchEnsureExceptionFlagsUsageErrorsExitWithCode2(t *testing.T) {
 // `plan_conflict`, con la continuación que repite la excepción registrada y sin cambiar nada; un
 // nombre inválido sale con 1 e `invalid_name` sin efectos.
 func TestBranchEnsureExceptionBranchIsIdempotentAndAContradictionExitsWithCode1(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, first, stderr := runBranchCLI(t, "ensure", "--change", "x", "--branch", "inc/x", "--mode", "in_place", "--json", "--cwd", repo)
@@ -120,6 +121,7 @@ func TestBranchEnsureExceptionBranchIsIdempotentAndAContradictionExitsWithCode1(
 // ruta que no existe se omite con `not_a_git_repository` sin impedir el resto, y el documento ODD
 // y la ausencia de kickoff se mantienen.
 func TestBranchEnsureOddLaneRepoFlagSkipsAPathThatIsNotARepository(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "mi-feature", "--lane", "odd", "--repo", "no-existe", "--mode", "in_place", "--json", "--cwd", repo)

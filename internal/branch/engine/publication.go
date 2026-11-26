@@ -28,17 +28,25 @@ import (
 //  4. Con Branch no vacío y distinto de la rama permitida: `wrong_branch`. Así la publicación queda
 //     atada a la rama que nombró la autorización.
 func (e *Engine) PublicationTarget(ctx context.Context, req branch.PublicationRequest) (branch.PublicationTarget, *branch.Refusal) {
+	target, _, refusal := e.resolvePublication(ctx, req)
+	return target, refusal
+}
+
+// resolvePublication es el cuerpo de PublicationTarget: además del destino devuelve la ubicación del
+// proyecto que resolvió, para que PublicationState no vuelva a leerla. No cambia ni el destino ni las
+// negativas ni su orden.
+func (e *Engine) resolvePublication(ctx context.Context, req branch.PublicationRequest) (branch.PublicationTarget, workspace.Location, *branch.Refusal) {
 	// Las continuaciones de los rechazos del plan repiten `axiom branch <operation>`: `status` es la
 	// orden real que describe el mismo plan.
 	const operation = "status"
 
 	facts, refusal := e.gather(ctx, operation, req.CWD, req.Change, branch.LaneSDD)
 	if refusal != nil {
-		return branch.PublicationTarget{}, refusal
+		return branch.PublicationTarget{}, workspace.Location{}, refusal
 	}
 	ordinary, refusal := branch.Plan(facts.input)
 	if refusal != nil {
-		return branch.PublicationTarget{}, refusal
+		return branch.PublicationTarget{}, workspace.Location{}, refusal
 	}
 
 	// Un multirepo no tiene rama de archivado: el archivado se hace in situ, en la integración del
@@ -48,24 +56,24 @@ func (e *Engine) PublicationTarget(ctx context.Context, req branch.PublicationRe
 	if req.Archive && archiveApplies {
 		archiveFacts := facts
 		if refusal := useArchivePlan(&archiveFacts, EnsureRequest{}); refusal != nil {
-			return branch.PublicationTarget{}, refusal
+			return branch.PublicationTarget{}, workspace.Location{}, refusal
 		}
 		archived, refusal := branch.Plan(archiveFacts.input)
 		if refusal != nil {
-			return branch.PublicationTarget{}, refusal
+			return branch.PublicationTarget{}, workspace.Location{}, refusal
 		}
 		plan, usesArchive = archived, true
 	}
 
 	index, planningRel := planningHomeRepository(plan, facts.location.PlanningHome)
 	if index < 0 {
-		return branch.PublicationTarget{}, branch.PlanningHomeOutsideRepository(facts.input.Master, plan.PlanningHome, plan.Repositories[0])
+		return branch.PublicationTarget{}, workspace.Location{}, branch.PlanningHomeOutsideRepository(facts.input.Master, plan.PlanningHome, plan.Repositories[0])
 	}
 	repo := plan.Repositories[index]
 
 	current, detached, err := gitcommon.ReadHead(repo.GitRoot)
 	if err != nil || detached || current == "" {
-		return branch.PublicationTarget{}, branch.PublicationDetachedHead(req.Change, facts.input.Master, repo)
+		return branch.PublicationTarget{}, workspace.Location{}, branch.PublicationDetachedHead(req.Change, facts.input.Master, repo)
 	}
 
 	target := branch.PublicationTarget{
@@ -79,25 +87,25 @@ func (e *Engine) PublicationTarget(ctx context.Context, req branch.PublicationRe
 
 	if repo.Role == branch.RepoSpecsInPlace {
 		if current != repo.IntegrationBranch {
-			return branch.PublicationTarget{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, []string{repo.IntegrationBranch}, req.Archive, "")
+			return branch.PublicationTarget{}, workspace.Location{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, []string{repo.IntegrationBranch}, req.Archive, "")
 		}
 		target.InPlace = true
 	} else {
 		if current == repo.IntegrationBranch {
-			return branch.PublicationTarget{}, branch.PublicationIntegrationBranch(req.Change, facts.input.Master, repo, current)
+			return branch.PublicationTarget{}, workspace.Location{}, branch.PublicationIntegrationBranch(req.Change, facts.input.Master, repo, current)
 		}
 		planned, expected := plannedBranch(repo, current)
 		if planned == nil {
 			hint := e.archiveFlagHint(facts, ordinary, usesArchive, archiveApplies, current)
-			return branch.PublicationTarget{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, expected, usesArchive, hint)
+			return branch.PublicationTarget{}, workspace.Location{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, expected, usesArchive, hint)
 		}
 		target.PRTarget = planned.PRTarget
 	}
 
 	if req.Branch != "" && req.Branch != target.Branch {
-		return branch.PublicationTarget{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, []string{req.Branch}, usesArchive, "")
+		return branch.PublicationTarget{}, workspace.Location{}, branch.PublicationWrongBranch(req.Change, facts.input.Master, repo, current, []string{req.Branch}, usesArchive, "")
 	}
-	return target, nil
+	return target, facts.location, nil
 }
 
 // planningHomeRepository devuelve la posición, en el plan, del repositorio cuya raíz git contiene el

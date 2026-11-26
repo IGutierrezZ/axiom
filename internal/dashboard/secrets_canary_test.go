@@ -103,6 +103,7 @@ func registeredRoutes(t *testing.T) []string {
 
 // La guarda falla si aparece una ruta nueva sin clasificar como cubierta o excluida con motivo.
 func TestEveryDashboardRouteIsClassifiedForTheSecretsCanary(t *testing.T) {
+	t.Parallel()
 	routes := registeredRoutes(t)
 	if len(routes) < 20 {
 		t.Fatalf("la lectura de server.go solo encontró %d rutas: %v", len(routes), routes)

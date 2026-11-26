@@ -11,6 +11,7 @@ import (
 )
 
 func TestProjectStatusV2RejectsUnsupportedValues(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		mutate func(*Status)
@@ -52,6 +53,7 @@ func TestProjectStatusV2RejectsUnsupportedValues(t *testing.T) {
 }
 
 func TestStatusRenderersEmbedOnlyStatusV2Projection(t *testing.T) {
+	t.Parallel()
 	status := baseStatus(ArtifactStoreOpenSpec, "/repo", nil, nil, nil, "apply", nil)
 
 	rendered := map[string]string{
@@ -85,6 +87,7 @@ func TestStatusRenderersEmbedOnlyStatusV2Projection(t *testing.T) {
 // change with no gate decision yet projects a non-nil Governance carrying
 // kickoff, gates, and roster.
 func TestProjectStatusV2GovernancePresentWithSealAndPendingGate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-pending"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -127,6 +130,7 @@ func TestProjectStatusV2GovernancePresentWithSealAndPendingGate(t *testing.T) {
 // names "governance" in the serialized document (omitempty), not merely a
 // nil Go field.
 func TestProjectStatusV2GovernanceAbsentWithoutSealOmitsJSONKey(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-unsealed"
 	seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -156,6 +160,7 @@ func TestProjectStatusV2GovernanceAbsentWithoutSealOmitsJSONKey(t *testing.T) {
 // chains phases without ever presenting a gate, so the projected governance
 // carries the roster and an empty gate list, never a gate or a gate question.
 func TestProjectStatusV2GovernanceProjectsRosterWithoutGatesForContinuousSeal(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-continuous"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -213,6 +218,7 @@ func sealKickoffWithHandoffPolicy(t *testing.T, changeRoot, changeName string, p
 // JSON, an old value is echoed only as data, and none of the values changes
 // the route or the gate question.
 func TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute(t *testing.T) {
+	t.Parallel()
 	project := func(t *testing.T, policy kickoff.HandoffPolicy) (StatusV2Projection, string) {
 		t.Helper()
 		root := t.TempDir()
@@ -265,6 +271,7 @@ func TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute(t *testi
 // shape carries D-09's exact registered rejection reason, not a paraphrase,
 // through the v2 gateV2 projection.
 func TestProjectStatusV2GovernanceSurfacesRejectedGateReason(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-rejected"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -314,6 +321,7 @@ func TestProjectStatusV2GovernanceSurfacesRejectedGateReason(t *testing.T) {
 // opened yet, ordinary routing resumes exactly as it would without
 // governance -- an approved gate must never block or reroute.
 func TestProjectStatusV2GovernanceApprovedGatesDoNotOverrideRouting(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-approved"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -360,6 +368,7 @@ func TestProjectStatusV2GovernanceApprovedGatesDoNotOverrideRouting(t *testing.T
 // one to record a decision -- exactly as the existing "select-change" case
 // already does for its own two re-entry commands.
 func TestNonPhaseRoutingInstructionsPrintsAwaitGateInvocations(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-instructions"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -400,6 +409,7 @@ func TestNonPhaseRoutingInstructionsPrintsAwaitGateInvocations(t *testing.T) {
 // and assigns a valid gate-question envelope for the exact gate
 // firstOpenGate names when NextRecommended is "await-gate".
 func TestResolveAssignsGateQuestionForPendingGate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-gate-question-pending"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -432,6 +442,7 @@ func TestResolveAssignsGateQuestionForPendingGate(t *testing.T) {
 // (D-09), and must never carry a fresh approve/reject question of its own
 // even though Governance itself stays populated.
 func TestResolveGateQuestionNilWhenRejectedGateRoutesToOwningPhase(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-gate-question-rejected"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -469,6 +480,7 @@ func TestResolveGateQuestionNilWhenRejectedGateRoutesToOwningPhase(t *testing.T)
 // SDDGovernanceGateResult directly (no *V2 translation type), exactly as
 // Consent already does for its own sibling schema.
 func TestProjectStatusV2GateQuestionPresentWithPendingGate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-gate-question-pending"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -495,6 +507,7 @@ func TestProjectStatusV2GateQuestionPresentWithPendingGate(t *testing.T) {
 // names "gateQuestion" in the serialized document (omitempty), not merely a
 // nil Go field.
 func TestProjectStatusV2GateQuestionAbsentWithoutSealOmitsJSONKey(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-v2-gate-question-unsealed"
 	seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -523,6 +536,7 @@ func TestProjectStatusV2GateQuestionAbsentWithoutSealOmitsJSONKey(t *testing.T) 
 // aparece en `governance.kickoff` (v2) y en la reflexión de v1 cuando el kickoff lo lleva, y está
 // ausente cuando no.
 func TestProjectStatusV2ProjectsDocsPublication(t *testing.T) {
+	t.Parallel()
 	seal := func(t *testing.T, publication kickoff.DocsPublication) StatusV2Projection {
 		t.Helper()
 		root := t.TempDir()

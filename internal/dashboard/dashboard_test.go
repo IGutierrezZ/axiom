@@ -20,6 +20,7 @@ import (
 )
 
 func TestServiceWorkspace(t *testing.T) {
+	t.Parallel()
 	// Usamos la raíz del repositorio de Axiom (..)
 	svc := NewService("../..")
 	ws, err := svc.GetWorkspace()
@@ -39,6 +40,7 @@ func TestServiceWorkspace(t *testing.T) {
 }
 
 func TestServiceIncrements(t *testing.T) {
+	t.Parallel()
 	svc := NewService("../..")
 	list, _, err := svc.GetIncrements()
 	if err != nil {
@@ -66,6 +68,7 @@ func TestServiceIncrements(t *testing.T) {
 }
 
 func TestServiceIncrementDetail(t *testing.T) {
+	t.Parallel()
 	svc := NewService("../..")
 
 	// 1. Probar con incremento existente (INC-03 archivado)
@@ -89,6 +92,7 @@ func TestServiceIncrementDetail(t *testing.T) {
 }
 
 func TestServiceRoleStatus(t *testing.T) {
+	t.Parallel()
 	svc := NewService("../..")
 	barrier, err := svc.GetRoleStatus("inc-03-multi-role-sdd-fan-out")
 	if err != nil {
@@ -104,6 +108,7 @@ func TestServiceRoleStatus(t *testing.T) {
 }
 
 func TestServiceSkills(t *testing.T) {
+	t.Parallel()
 	svc := NewService("../..")
 	skills, err := svc.GetSkills()
 	if err != nil {
@@ -116,6 +121,7 @@ func TestServiceSkills(t *testing.T) {
 }
 
 func TestHTTPEndpoints(t *testing.T) {
+	t.Parallel()
 	svc := NewService("../..")
 	server := NewServer(svc)
 	ts := httptest.NewServer(server.Router())
@@ -210,6 +216,7 @@ func TestListenAndServeNoReassign(t *testing.T) {
 }
 
 func TestHealthEndpoint(t *testing.T) {
+	t.Parallel()
 	s := NewServer(NewService(t.TempDir()))
 	s.SetVersion("v9.9.9")
 	router := s.Router()
@@ -235,6 +242,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestDefaultPort(t *testing.T) {
+	t.Parallel()
 	if DefaultPort != 47700 {
 		t.Errorf("DefaultPort = %d, se esperaba 47700", DefaultPort)
 	}
@@ -271,6 +279,7 @@ func TestProbeAxiom(t *testing.T) {
 }
 
 func TestServiceHandoff(t *testing.T) {
+	t.Parallel()
 	// Crear handoff temporal en directorio temporal
 	tmpDir := t.TempDir()
 	changeDir := filepath.Join(tmpDir, "openspec", "changes", "test-ho")
@@ -322,6 +331,7 @@ Proceder con tasks.
 }
 
 func TestSkillsInboxEndpoints(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 
 	// Crear una propuesta en el buzón dentro de tmpDir
@@ -403,6 +413,7 @@ func TestSkillsInboxEndpoints(t *testing.T) {
 // regenerates openspec/INDEX.md, which on the repository checkout rewrites the
 // tracked catalog.
 func TestArchiveEndpoints(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	writeFixtureFile(t, root, "openspec/specs/sample-domain/spec.md",
 		"# Sample Domain\n\nCapability used by the archive endpoint tests.\n\n"+
@@ -458,6 +469,7 @@ func TestArchiveEndpoints(t *testing.T) {
 }
 
 func TestProjectsEndpoints(t *testing.T) {
+	t.Parallel()
 	tempDir, err := os.MkdirTemp("", "axiom-dashboard-projects-test-*")
 	if err != nil {
 		t.Fatalf("error creando tempDir: %v", err)
@@ -568,6 +580,7 @@ func TestProjectsEndpoints(t *testing.T) {
 }
 
 func TestMigrateCumulativeEndpoint(t *testing.T) {
+	t.Parallel()
 	tempDir, err := os.MkdirTemp("", "axiom-cumulative-test-*")
 	if err != nil {
 		t.Fatalf("error creando tempDir: %v", err)
@@ -888,6 +901,7 @@ func TestEcosystemEndpoints(t *testing.T) {
 // sync (restart-required / upgrade-failed) y la instrucción de reinicio cuando
 // el binario en ejecución fue reemplazado.
 func TestEcosystemUpgradePresentsBothPhases(t *testing.T) {
+	t.Parallel()
 	// La presentación vive en js/core/ecosystem.js (lógica pura, probada con Node en
 	// platform_assets_test.go) y la pantalla la cablea a la acción de upgrade.
 	js := readAsset(t, "js/core/ecosystem.js") + "\n" + readAsset(t, "js/screens/ecosystem.js")
@@ -923,6 +937,7 @@ func TestEcosystemUpgradePresentsBothPhases(t *testing.T) {
 // TestIncrementSummaryOperationalFlagsAndRoleFiltering verifica que inspectIncrement y GetIncrements
 // clasifiquen fielmente los incrementos según las banderas operacionales de ODD-2.1 y ODD-2.2.
 func TestIncrementSummaryOperationalFlagsAndRoleFiltering(t *testing.T) {
+	t.Parallel()
 	tmp := t.TempDir()
 	changesDir := filepath.Join(tmp, "openspec", "changes")
 
@@ -1041,6 +1056,7 @@ func TestIncrementSummaryOperationalFlagsAndRoleFiltering(t *testing.T) {
 // remote: on a checkout that has one, the endpoint runs `git fetch`, which
 // contacts the network and rewrites refs in the shared .git directory.
 func TestSpecsSyncStatusEndpoint(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	initGitFixture(t, root)
 
@@ -1073,6 +1089,7 @@ func TestSpecsSyncStatusEndpoint(t *testing.T) {
 }
 
 func TestDashboardWorktreeExclusion(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	hubConfigPath := filepath.Join(tempDir, ".axiom", "workspaces.json")
 	hubMgr, err := hub.NewManager(hubConfigPath)
@@ -1120,6 +1137,7 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 // iniciado, sin ningún commit), GetSpecsSyncStatus informa la rama de integración resuelta del
 // proyecto y no un `main` fijo.
 func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git no está disponible en el PATH")
 	}
@@ -1150,6 +1168,7 @@ func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {
 // TestServiceWorkspaceReportsRealGatePolicy fija G4.4: GetWorkspace devuelve el
 // gate_policy real de cada rol y `blocking` cuando el rol no lo declara.
 func TestServiceWorkspaceReportsRealGatePolicy(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	for _, dir := range []string{"openspec", "app", "docs", "e2e"} {
 		if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {

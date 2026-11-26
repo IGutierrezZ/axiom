@@ -9,6 +9,7 @@ import (
 
 // ChangeArtifactPaths devuelve las specs de dominio ordenadas y, sin ellas, el spec.md plano.
 func TestChangeArtifactPathsSpecsOrderedAndFlatFallback(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	for _, rel := range []string{"specs/b/spec.md", "specs/a/spec.md", "tasks.md"} {
 		path := filepath.Join(root, filepath.FromSlash(rel))

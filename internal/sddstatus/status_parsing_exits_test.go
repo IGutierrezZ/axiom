@@ -7,6 +7,7 @@ import (
 
 // #2480: a checkbox row inside a fenced code block is an example, not a task.
 func TestCountTaskProgressSkipsFencedCodeBlocks(t *testing.T) {
+	t.Parallel()
 	progress := countTaskProgressText("- [ ] 1.1 Real task\n\n~~~text\n- [ ] example row\n~~~\n\n```markdown\n- [x] another example\n```\n")
 	if progress.Total != 1 || progress.Pending != 1 || progress.Completed != 0 {
 		t.Fatalf("progress = %#v, want exactly the one task outside the fences", progress)
@@ -17,6 +18,7 @@ func TestCountTaskProgressSkipsFencedCodeBlocks(t *testing.T) {
 // directory whose subdirectories hold changes, is not a change and must not
 // make selection ambiguous. Empty scaffolds keep their historical standing.
 func TestChangeContainersDoNotMakeSelectionAmbiguous(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "feat-x", "- [ ] 1.1 Work\n")
 	write(t, filepath.Join(root, "openspec", "changes", "active", "legacy-change", "proposal.md"), "# Proposal\n")

@@ -11,6 +11,7 @@ import (
 // exit; the same line without it keeps blocking, and the blocked reason names
 // the marker as the third exit next to the two it already names.
 func TestReadOnlyMarkedSiblingPathDoesNotBlockApply(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceB := filepath.Join(workspace, "service-b")
@@ -34,6 +35,7 @@ func TestReadOnlyMarkedSiblingPathDoesNotBlockApply(t *testing.T) {
 }
 
 func TestUnmarkedSiblingPathStillBlocksAndReasonNamesReadOnlyMarker(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceB := filepath.Join(workspace, "service-b")
@@ -65,6 +67,7 @@ func TestUnmarkedSiblingPathStillBlocksAndReasonNamesReadOnlyMarker(t *testing.T
 // an unmarked out-of-root write target keeps blocking on the unmarked path,
 // and a marker placed elsewhere on the line annotates nothing.
 func TestReadOnlyMarkerIsTokenScoped(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceB := filepath.Join(workspace, "service-b")
@@ -106,6 +109,7 @@ func TestReadOnlyMarkerIsTokenScoped(t *testing.T) {
 // #3504: a resolved absolute path outside every allowed edit root is an
 // unauthorized root whether or not it belongs to a Git repository.
 func TestNonGitDirectoryOutsideAllowedRootsBlocksApply(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	external := filepath.Join(workspace, "external-config")
@@ -139,6 +143,7 @@ func TestNonGitDirectoryOutsideAllowedRootsBlocksApply(t *testing.T) {
 }
 
 func TestDetectUnauthorizedEditRootsNamesNonGitOutsidePathsOnly(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	external := filepath.Join(workspace, "external-config")

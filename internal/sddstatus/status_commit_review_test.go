@@ -70,6 +70,7 @@ func planningApproved(tasks ...func(*kickoff.GateRecord)) []kickoff.GateRecord {
 }
 
 func TestStatusProjectsTheRecordedCommitReviewMode(t *testing.T) {
+	t.Parallel()
 	for _, mode := range kickoff.CommitReviewModes() {
 		t.Run(string(mode), func(t *testing.T) {
 			_, projection := commitReviewFixture(t, kickoff.ExecutionCheckpointed, planningApproved(withCommitReview(mode))...)
@@ -85,6 +86,7 @@ func TestStatusProjectsTheRecordedCommitReviewMode(t *testing.T) {
 }
 
 func TestStatusProjectsNotifyWhenTheApprovalCarriesNoMode(t *testing.T) {
+	t.Parallel()
 	_, projection := commitReviewFixture(t, kickoff.ExecutionCheckpointed, planningApproved()...)
 	tasks := gateV2ByKey(t, projection, kickoff.GateTasks)
 	if tasks.Status != "approved" || tasks.CommitReview != "notify" {
@@ -93,6 +95,7 @@ func TestStatusProjectsNotifyWhenTheApprovalCarriesNoMode(t *testing.T) {
 }
 
 func TestStatusCommitReviewSurvivesTheHandOff(t *testing.T) {
+	t.Parallel()
 	_, projection := commitReviewFixture(t, kickoff.ExecutionCheckpointed,
 		planningApproved(withHandOff, withCommitReview(kickoff.CommitReviewStopBeforeCommit))...)
 	tasks := gateV2ByKey(t, projection, kickoff.GateTasks)
@@ -103,6 +106,7 @@ func TestStatusCommitReviewSurvivesTheHandOff(t *testing.T) {
 
 // REQ-33.4: ni una puerta tasks pendiente, ni otra puerta aprobada, ni un cambio continuo lo proyectan.
 func TestStatusOmitsCommitReviewWhereItDoesNotApply(t *testing.T) {
+	t.Parallel()
 	t.Run("tasks pendiente", func(t *testing.T) {
 		_, projection := commitReviewFixture(t, kickoff.ExecutionCheckpointed,
 			approvedGate(kickoff.GateSpec), approvedGate(kickoff.GateDesign))
@@ -139,6 +143,7 @@ func TestStatusOmitsCommitReviewWhereItDoesNotApply(t *testing.T) {
 
 // REQ-33.6: un rechazo posterior a la aprobación no cambia el modo proyectado.
 func TestStatusCommitReviewIsNotChangedByALaterRejection(t *testing.T) {
+	t.Parallel()
 	records := append(planningApproved(withCommitReview(kickoff.CommitReviewStop)),
 		kickoff.GateRecord{Gate: kickoff.GateTasks, Decision: kickoff.DecisionRejected, Reason: "tarde", Actor: "reviewer"})
 	_, projection := commitReviewFixture(t, kickoff.ExecutionCheckpointed, records...)
@@ -149,6 +154,7 @@ func TestStatusCommitReviewIsNotChangedByALaterRejection(t *testing.T) {
 
 // REQ-33.4: la proyección es informativa; la ruta, las dependencias y los avisos no cambian.
 func TestStatusCommitReviewNeverChangesTheRoute(t *testing.T) {
+	t.Parallel()
 	plain, _ := commitReviewFixture(t, kickoff.ExecutionCheckpointed, planningApproved()...)
 	for _, mode := range kickoff.CommitReviewModes() {
 		t.Run(string(mode), func(t *testing.T) {
@@ -168,6 +174,7 @@ func TestStatusCommitReviewNeverChangesTheRoute(t *testing.T) {
 
 // REQ-33.5: la pregunta tipada de la puerta `tasks` conserva sus tres opciones y no menciona el modo.
 func TestTasksGateQuestionKeepsThreeOptionsAndNeverMentionsTheMode(t *testing.T) {
+	t.Parallel()
 	status, _ := commitReviewFixture(t, kickoff.ExecutionCheckpointed,
 		approvedGate(kickoff.GateSpec), approvedGate(kickoff.GateDesign))
 	if status.GateQuestion == nil {

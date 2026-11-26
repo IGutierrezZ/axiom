@@ -29,6 +29,7 @@ var sddConsentDeclineInvocationShape = regexp.MustCompile(
 	`^axiom sdd-status \S+ --cwd \S+$`)
 
 func TestSDDIntegrationConsentContractsArePinned(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join("..", "..", "contracts", "sdd-integration", "v1")
 	want := map[string]string{
 		"fixtures/consent.fixture.json": "829e763673af2e084f572000803a6f749d33de8c0fa98d28e5b751f7fc719368",
@@ -47,6 +48,7 @@ func TestSDDIntegrationConsentContractsArePinned(t *testing.T) {
 }
 
 func TestSDDIntegrationConsentSchemaIsStrictAndBound(t *testing.T) {
+	t.Parallel()
 	payload, err := os.ReadFile(filepath.Join("..", "..", "contracts", "sdd-integration", "v1", "schemas", "consent.schema.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -84,6 +86,7 @@ func TestSDDIntegrationConsentSchemaIsStrictAndBound(t *testing.T) {
 }
 
 func TestSDDIntegrationConsentFixtureValidates(t *testing.T) {
+	t.Parallel()
 	payload, err := os.ReadFile(filepath.Join("..", "..", "contracts", "sdd-integration", "v1", "fixtures", "consent.fixture.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -121,6 +124,7 @@ func TestSDDIntegrationConsentFixtureValidates(t *testing.T) {
 }
 
 func TestSDDIntegrationConsentValidateRejectsIncompleteEnvelopes(t *testing.T) {
+	t.Parallel()
 	valid := validSDDConsentResult()
 	if err := valid.Validate(); err != nil {
 		t.Fatalf("valid envelope: %v", err)
@@ -190,6 +194,7 @@ func validSDDConsentResult() SDDIntegrationConsentResult {
 // revision is the fresh-ledger case the consent flow grants against; a
 // widening grant embeds the committed revision, covered by the shape pin.
 func TestEditAuthorityConsentBuilderMatchesFixture(t *testing.T) {
+	t.Parallel()
 	built := newEditAuthorityConsent(
 		"multi-repo-rollout", "/workspace/planning",
 		[]string{"/workspace/service-a", "/workspace/service-b"},

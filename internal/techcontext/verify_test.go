@@ -99,6 +99,7 @@ func TestVerifyPassesAndMarksTheEntriesAsIntegrated(t *testing.T) {
 }
 
 func TestVerifyRecordsCreatedDocuments(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	f.writeChange(t, DeltaFileName, "## Entrada: context/NUEVO.md\n\n- Ancla: Pagos\n- Acción: add\n- Motivo: documento nuevo\n")
 	commitAll(t, f.specs, "delta nuevo")
@@ -116,6 +117,7 @@ func TestVerifyRecordsCreatedDocuments(t *testing.T) {
 }
 
 func TestVerifyDoesNotHideACommitMadeBetweenPrepareAndVerify(t *testing.T) {
+	t.Parallel()
 	f := preparedFixture(t)
 	f.applyEdits(t)
 	commitAll(t, f.specs, "contexto")
@@ -126,6 +128,7 @@ func TestVerifyDoesNotHideACommitMadeBetweenPrepareAndVerify(t *testing.T) {
 }
 
 func TestVerifyTrace(t *testing.T) {
+	t.Parallel()
 	t.Run("sin plan", func(t *testing.T) {
 		f := newFixture(t, false)
 		report := f.verify(t)
@@ -156,6 +159,7 @@ func TestVerifyTrace(t *testing.T) {
 // REQ-30.19 y REQ-30.30: la verificación falla cerrada ante una declaración
 // inválida o un almacén sin ficheros.
 func TestVerifyFailsClosedOnTheDeclarationAndTheArtifactStore(t *testing.T) {
+	t.Parallel()
 	t.Run("almacén sin ficheros", func(t *testing.T) {
 		f := preparedFixture(t)
 		f.applyEdits(t)
@@ -181,6 +185,7 @@ func TestVerifyFailsClosedOnTheDeclarationAndTheArtifactStore(t *testing.T) {
 }
 
 func TestVerifyPresence(t *testing.T) {
+	t.Parallel()
 	t.Run("las ediciones no se hicieron", func(t *testing.T) {
 		f := preparedFixture(t)
 		report := f.verify(t)
@@ -214,6 +219,7 @@ func TestVerifyPresence(t *testing.T) {
 }
 
 func TestVerifyAnchors(t *testing.T) {
+	t.Parallel()
 	t.Run("la sección no existe tras la edición", func(t *testing.T) {
 		f := preparedFixture(t)
 		f.applyEdits(t)
@@ -243,6 +249,7 @@ func TestVerifyAnchors(t *testing.T) {
 }
 
 func TestVerifyScope(t *testing.T) {
+	t.Parallel()
 	t.Run("ruta de referencia", func(t *testing.T) {
 		f := preparedFixture(t)
 		f.applyEdits(t)
@@ -312,6 +319,7 @@ func TestVerifyScope(t *testing.T) {
 }
 
 func TestVerifyFailureLeavesTheTraceUntouched(t *testing.T) {
+	t.Parallel()
 	f := preparedFixture(t)
 	planFile := filepath.Join(f.changeRoot, TraceFileName)
 	before, _ := os.ReadFile(planFile)

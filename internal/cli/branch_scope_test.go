@@ -99,6 +99,7 @@ func TestBranchScopeHelpDocumentsOnlyItsFlags(t *testing.T) {
 
 // REQ-25.51: sin kickoff ni documento ODD el cambio no está sellado; sale con 1.
 func TestBranchScopeRefusesAChangeWithoutKickoff(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	writeBranchConfig(t, repo, "")
 
@@ -111,6 +112,7 @@ func TestBranchScopeRefusesAChangeWithoutKickoff(t *testing.T) {
 
 // REQ-25.51: un cambio con documento ODD no es aplicable; sale con 1.
 func TestBranchScopeIsNotApplicableToAnOddChange(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	writeBranchConfig(t, repo, "")
 	if err := os.MkdirAll(filepath.Join(repo, "odd", "tasks"), 0o755); err != nil {

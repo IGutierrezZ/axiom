@@ -23,6 +23,7 @@ import (
 // comparing; every other byte -- key order, field presence, indentation --
 // is compared literally.
 func TestKickoffAbsenceRegressionMatchesPreGovernanceGolden(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "regression-no-kickoff"
 	seedReadyChange(t, root, changeName, "- [x] 1.1 Done\n- [ ] 1.2 Pending\n")

@@ -39,6 +39,7 @@ func plannedBranchWorktree(t *testing.T, repo, change string) string {
 // REQ-25.7, REQ-25.8 y REQ-25.2: `ensure --change x --json --cwd <ruta>` crea la rama y el
 // worktree, imprime el estado final como `axiom.branch-result/v1` y sale con 0.
 func TestBranchEnsureCreatesTheBranchAndTheWorktreeAndExitsWithZero(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	head := branchGitOutput(t, repo, "rev-parse", "HEAD")
 
@@ -78,6 +79,7 @@ func TestBranchEnsureCreatesTheBranchAndTheWorktreeAndExitsWithZero(t *testing.T
 // REQ-25.7: dos ejecuciones dan el mismo JSON byte a byte (salvo `createdFrom` y `createdFromRef`, REQ-27.15, que solo describen la ejecución que crea la rama) y el mismo
 // `git worktree list --porcelain`; el resultado de texto también es estable.
 func TestBranchEnsureIsIdempotent(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	_, first, _ := runBranchCLI(t, "ensure", "--change", "x", "--json", "--cwd", repo)
@@ -103,6 +105,7 @@ func TestBranchEnsureIsIdempotent(t *testing.T) {
 
 // Sin `--json` la salida es texto en castellano con el estado final.
 func TestBranchEnsurePrintsSpanishTextWithoutJSON(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--cwd", repo)
@@ -122,6 +125,7 @@ func TestBranchEnsurePrintsSpanishTextWithoutJSON(t *testing.T) {
 
 // REQ-25.13: `--lane odd` se admite y el resultado nombra el documento de la feature.
 func TestBranchEnsureAcceptsTheOddLane(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, _ := runBranchCLI(t, "ensure", "--change", "mi-feature", "--lane", "odd", "--json", "--cwd", repo)
@@ -141,6 +145,7 @@ func TestBranchEnsureAcceptsTheOddLane(t *testing.T) {
 // REQ-25.2: cada rechazo sale con código 1, un resultado tipado en JSON o un mensaje en
 // texto por stderr, y una continuación con la orden de `ensure` y las rutas citadas.
 func TestBranchEnsureRefusalsExitWithCode1AndNameTheContinuation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		setup        func(t *testing.T) (cwd string)
@@ -303,6 +308,7 @@ func newBranchRemote(t *testing.T, repo string) string {
 // resolver la base, de modo que contra un remoto desnudo local que avanzó la base alcanza el
 // commit nuevo y el JSON devuelve `fetched: true`; sin la bandera, no.
 func TestBranchEnsureFetchReachesTheNewRemoteCommit(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	remote := newBranchRemote(t, repo)
 	scratch := t.TempDir()
@@ -343,6 +349,7 @@ func TestBranchEnsureFetchReachesTheNewRemoteCommit(t *testing.T) {
 // REQ-25.10, escenario «`--fetch` fallido no deja efectos»: contra un remoto que no existe,
 // código de salida 1, `fetch_failed` en JSON y en texto, y ni rama, ni worktree, ni registro.
 func TestBranchEnsureFetchFailedExitsWithCode1AndCreatesNothing(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchGitOutput(t, repo, "remote", "add", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
 
@@ -411,6 +418,7 @@ func withoutCreatedFrom(t *testing.T, stdout string) string {
 // `createdFrom: remote` y el texto, «adoptada desde origin/<rama> (seguimiento configurado)».
 // Sin ella, crea desde la base y el texto sugiere `git fetch origin`.
 func TestBranchEnsureAdoptsThePublishedBranchAndTextSaysSo(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	remote := newBranchRemote(t, repo)
 	scratch := t.TempDir()

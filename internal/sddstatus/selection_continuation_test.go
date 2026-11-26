@@ -79,6 +79,7 @@ func splitQuotedFields(command string) []string {
 // root contains spaces: split like a shell, each one parses back to the exact
 // root and to the change it names.
 func TestAmbiguityContinuationsQuoteSpacedWorkspaceRoot(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join(t.TempDir(), "mi carpeta", "repo con espacios")
 	mkdir(t, root)
 	seedReadyChange(t, root, "first", "- [ ] 1.1 Work\n")
@@ -108,6 +109,7 @@ func TestAmbiguityContinuationsQuoteSpacedWorkspaceRoot(t *testing.T) {
 }
 
 func TestOpenSpecAmbiguityContinuationsParseAndCarryTheSelector(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "first", "- [ ] 1.1 Work\n")
 	seedReadyChange(t, root, "second", "- [ ] 1.1 Work\n")
@@ -155,6 +157,7 @@ func TestEngramAmbiguityContinuationsParseAndCarryTheSelector(t *testing.T) {
 }
 
 func TestExplorationOnlyRefusalContinuationParses(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "explore-widget-idea", "exploration.md"), "# Exploration\n")
 

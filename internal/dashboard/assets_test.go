@@ -74,6 +74,7 @@ func readAllJS(t *testing.T) string {
 }
 
 func TestAssetsAreServedWithTheirContentType(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 
 	want := map[string]string{
@@ -130,6 +131,7 @@ var fontURLPattern = regexp.MustCompile(`url\("(/fonts/[^"]+\.woff2)"\)`)
 // Las fuentes viven embebidas en assets/fonts/: cada @font-face apunta a un
 // .woff2 servido como font/woff2, y cada familia lleva su licencia OFL.
 func TestEmbeddedFontsAreServed(t *testing.T) {
+	t.Parallel()
 	if got := mime.TypeByExtension(".woff2"); got != "font/woff2" {
 		t.Errorf("mime.TypeByExtension(.woff2) = %q, se esperaba font/woff2", got)
 	}
@@ -173,6 +175,7 @@ var importPattern = regexp.MustCompile(`(?m)^\s*import\s[^;]*?from\s+'([^']+)'`)
 // Cada import relativo de un módulo debe apuntar a un fichero embebido: sin
 // navegador en las pruebas, es la comprobación que atrapa una ruta rota.
 func TestJSModuleImportsResolve(t *testing.T) {
+	t.Parallel()
 	modules := 0
 	for _, f := range embeddedFiles(t) {
 		if !strings.HasSuffix(f, ".js") {
@@ -198,6 +201,7 @@ func TestJSModuleImportsResolve(t *testing.T) {
 }
 
 func TestIndexHTMLShell(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	rr := getAsset(t, h, "/")
 	if rr.Code != http.StatusOK {
@@ -271,6 +275,7 @@ func TestIndexHTMLShell(t *testing.T) {
 }
 
 func TestRouterDefinesEveryRoute(t *testing.T) {
+	t.Parallel()
 	router := readAsset(t, "js/core/router.js")
 	for _, marker := range []string{
 		"'inicio'", "'incrementos'", "'specs'", "'skills'", "'ecosistema'",
@@ -284,6 +289,7 @@ func TestRouterDefinesEveryRoute(t *testing.T) {
 }
 
 func TestThemeModule(t *testing.T) {
+	t.Parallel()
 	theme := readAsset(t, "js/core/theme.js")
 	for _, marker := range []string{
 		"'axiom.theme'", "'light'", "'dark'", "'system'",
@@ -301,6 +307,7 @@ func TestThemeModule(t *testing.T) {
 
 // El dashboard debe funcionar sin red: ningún recurso apunta a un servidor externo.
 func TestAssetsHaveNoExternalResources(t *testing.T) {
+	t.Parallel()
 	external := regexp.MustCompile(`(?i)(href|src)\s*=\s*["']https?://|url\(\s*["']?https?://|@import\s+["']?https?://|fonts\.googleapis|cdn\.|unpkg\.com|jsdelivr`)
 	for _, f := range embeddedFiles(t) {
 		if !strings.HasSuffix(f, ".html") && !strings.HasSuffix(f, ".css") && !strings.HasSuffix(f, ".js") {
@@ -314,6 +321,7 @@ func TestAssetsHaveNoExternalResources(t *testing.T) {
 
 // Ninguna vista usa emojis como iconos: el conjunto SVG de icons.js los sustituye.
 func TestAssetsDoNotUseEmojis(t *testing.T) {
+	t.Parallel()
 	emoji := regexp.MustCompile("[\U0001F300-\U0001FAFF☀-➿⏩-⏿]")
 	for _, f := range embeddedFiles(t) {
 		if !strings.HasSuffix(f, ".html") && !strings.HasSuffix(f, ".css") && !strings.HasSuffix(f, ".js") {
@@ -328,6 +336,7 @@ func TestAssetsDoNotUseEmojis(t *testing.T) {
 // Se conserva la cobertura del selector de carpetas: la lógica vive ahora en
 // js/projects.js y el estilo en style.css.
 func TestFolderPickerIsServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 
 	js := getAsset(t, h, "/js/projects.js").Body.String()
@@ -346,6 +355,7 @@ func TestFolderPickerIsServed(t *testing.T) {
 
 // Accesibilidad: nada quita el contorno de foco sin sustituirlo.
 func TestStylesKeepVisibleFocus(t *testing.T) {
+	t.Parallel()
 	css := readAsset(t, "style.css")
 	if !strings.Contains(css, ":focus-visible { outline: 2px solid var(--accent)") {
 		t.Errorf("style.css debe definir el foco visible de 2 px en el acento")
@@ -364,6 +374,7 @@ func TestStylesKeepVisibleFocus(t *testing.T) {
 
 // El helper api() es el único punto de fetch del código nuevo y normaliza los errores.
 func TestAPIHelperNormalisesErrors(t *testing.T) {
+	t.Parallel()
 	api := readAsset(t, "js/core/api.js")
 	for _, marker := range []string{"export async function api(", "class ApiError", "data.error", "data.message", "export function escapeHtml("} {
 		if !strings.Contains(api, marker) {
@@ -374,6 +385,7 @@ func TestAPIHelperNormalisesErrors(t *testing.T) {
 
 // Los componentes comunes que reutilizarán las pantallas de T3 a T6.
 func TestCommonComponentsExist(t *testing.T) {
+	t.Parallel()
 	components := readAsset(t, "js/core/components.js")
 	for _, marker := range []string{
 		"export function button(", "export function iconButton(", "export function chip(", "export function badge(",
@@ -401,6 +413,7 @@ func TestCommonComponentsExist(t *testing.T) {
 
 // A 390 px la barra lateral se apila y se pliega, y no hay desplazamiento horizontal de página.
 func TestNarrowWidthRules(t *testing.T) {
+	t.Parallel()
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{"@media (max-width: 859px)", ".btn.menu-toggle { display: inline-flex; }", ".sidebar-body { display: none; }", "overflow-x: auto"} {
 		if !strings.Contains(css, marker) {

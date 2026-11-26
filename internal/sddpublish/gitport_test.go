@@ -19,6 +19,7 @@ import (
 // repositorios y remotos desnudos temporales y sin red.
 
 func TestGitPortRemoteAndResolveCommit(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo, _ := newRepoWithRemote(t)
@@ -77,6 +78,7 @@ func TestGitPortAdapterRejectsArgumentsGitCouldReadAsOptions(t *testing.T) {
 // Matriz «Estado del commit»: DirtyPaths incluye modificados, borrados, preparados y sin
 // seguimiento fichero a fichero, no sigue los renombrados y cita las rutas como literales.
 func TestGitPortDirtyPathsIncludesDeletionsAndDoesNotFollowRenames(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)
@@ -119,6 +121,7 @@ func TestGitPortDirtyPathsIncludesDeletionsAndDoesNotFollowRenames(t *testing.T)
 }
 
 func TestGitPortUnpublishedCommitsHonoursLimitAndExclusions(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo, _ := newRepoWithRemote(t)
@@ -151,6 +154,7 @@ func TestGitPortUnpublishedCommitsHonoursLimitAndExclusions(t *testing.T) {
 
 // El diff combinado (`--cc`) deja de una fusión solo lo que la fusión resolvió por su cuenta.
 func TestGitPortCommitPathsOfAMergeUsesTheCombinedDiff(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)
@@ -194,6 +198,7 @@ func TestGitPortCommitPathsOfAMergeUsesTheCombinedDiff(t *testing.T) {
 // Matriz «Estado del commit»: el código preparado sigue preparado, el no preparado sigue intacto, los
 // borrados se confirman y la exclusión deja fuera el estado local.
 func TestGitPortCommitConfirmsOnlyTheGivenPaths(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)
@@ -237,6 +242,7 @@ func TestGitPortCommitConfirmsOnlyTheGivenPaths(t *testing.T) {
 
 // Un fallo del commit es un *CommandError con el paso y el `stderr`.
 func TestGitPortCommitReportsTheFailingStep(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)
@@ -268,6 +274,7 @@ func TestGitPortCommitReportsTheFailingStep(t *testing.T) {
 // defecto deja de contar cuando `core.hooksPath` lo sustituye, y uno del directorio configurado
 // cuenta.
 func TestGitPortHookPresentRespectsCoreHooksPath(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)
@@ -453,6 +460,7 @@ func TestPublishIgnoresGitDirEnvironment(t *testing.T) {
 // (sin seguimiento, o preparada a mano) nunca entra en el commit y queda como estaba, igual que
 // `.gates.lock` en la carpeta ordinaria.
 func TestCommitExcludesArchivedLocalState(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	ctx := context.Background()
 	repo := newRepo(t)

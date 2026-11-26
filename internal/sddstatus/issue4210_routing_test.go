@@ -9,6 +9,7 @@ import (
 // #4210: verification evidence cannot block implementation that has not yet
 // completed its tasks. Optional verification no longer gates archive either.
 func TestHistoricalVerificationEvidenceDoesNotBlockPendingApply(t *testing.T) {
+	t.Parallel()
 	partialFailure := testVerifyEnvelope("fail", 1, 0, "0/1", "0/1", 1, 0)
 
 	for _, tt := range []struct {
@@ -41,6 +42,7 @@ func TestHistoricalVerificationEvidenceDoesNotBlockPendingApply(t *testing.T) {
 }
 
 func TestHistoricalVerificationEvidenceDoesNotBlockArchive(t *testing.T) {
+	t.Parallel()
 	partialFailure := testVerifyEnvelope("fail", 1, 0, "0/1", "0/1", 1, 0)
 	for _, tt := range []struct {
 		name   string

@@ -22,6 +22,7 @@ func isoDefaultProject(t *testing.T) workspacetest.Workspace {
 
 // REQ-29.3 y REQ-29.4 (C-03-b): un ADDED con provisional, citado por `Cubre:`, no bloquea.
 func TestISOAcceptsAProvisionalInAnAddedAndInCubre(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": provDeltaOK}, provTasks, "")
 	status := resolveFrom(t, ws.Master, "demo")
@@ -33,6 +34,7 @@ func TestISOAcceptsAProvisionalInAnAddedAndInCubre(t *testing.T) {
 
 // REQ-29.3: un provisional fuera de un ADDED bloquea con iso_requirement_id.
 func TestISORejectsAProvisionalOutsideAdded(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	delta := strings.Replace(provDeltaOK, "ADDED", "MODIFIED", 1)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": delta}, provTasks, "")
@@ -48,6 +50,7 @@ func TestISORejectsAProvisionalOutsideAdded(t *testing.T) {
 // REQ-29.4: un provisional citado que ningún ADDED declara bloquea con iso_cubre_unknown, y
 // el ADDED sin cita bloquea por cobertura.
 func TestISOCubreOfAnUndeclaredProvisional(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": provDeltaOK}, "- [ ] 1.1 Trabajo\n  Cubre: prov:30:1, prov:30:9\n", "")
 	status := resolveFrom(t, ws.Master, "demo")
@@ -63,6 +66,7 @@ func TestISOCubreOfAnUndeclaredProvisional(t *testing.T) {
 
 // REQ-29.3: dos ADDED con el mismo provisional, en dominios distintos, bloquean.
 func TestISORejectsADuplicatedProvisional(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": provDeltaOK, "envios": provDeltaOK}, provTasks, "")
 	status := resolveFrom(t, ws.Master, "demo")

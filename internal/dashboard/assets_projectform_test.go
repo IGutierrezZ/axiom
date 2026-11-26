@@ -10,6 +10,7 @@ import (
 // G4.1 y G4.3: la validación del formulario de alta vive en un módulo puro de
 // js/core/ y se ejecuta con Node, igual que la lógica de worktrees.
 func TestProjectFormValidationRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"projectform"},
 		"import { validateProjectForm, buildRoles, repoPathProblem, violationsFromError, splitList } from './projectform.mjs';\n"+
 			"const card = (o) => ({ key: '', name: '', repos: '', tech: '', nonBlocking: false, ...o });\n"+
@@ -130,6 +131,7 @@ func TestProjectFormValidationRuntime(t *testing.T) {
 
 // El modal envía `tech` por rol y muestra la lista de violaciones del servidor.
 func TestAddProjectModalWiresTechAndViolations(t *testing.T) {
+	t.Parallel()
 	projects := readAsset(t, "js/projects.js")
 	for _, marker := range []string{
 		"role-tech-input", "validateProjectForm(", "violationsFromError(", "showViolations(",
@@ -145,6 +147,7 @@ func TestAddProjectModalWiresTechAndViolations(t *testing.T) {
 
 // G4.2: el repositorio de specs es obligatorio y admisible solo en multirepo.
 func TestProjectFormMultirepoSpecsRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"projectform"},
 		"import { validateProjectForm, specsRepositoryProblem } from './projectform.mjs';\n"+
 			"const v = (o) => validateProjectForm({ path: '/p', cards: [], ...o });\n"+
@@ -193,6 +196,7 @@ func TestProjectFormMultirepoSpecsRuntime(t *testing.T) {
 
 // El campo del repositorio de specs está en el modal, oculto salvo en multirepo.
 func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
+	t.Parallel()
 	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
 	modal := html[strings.Index(html, `id="modal-add-project"`):]
 	modal = modal[:strings.Index(modal, "</dialog>")]
@@ -213,6 +217,7 @@ func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
 // G4.6: el catálogo de adaptadores deshabilita los que no admiten workspace y el
 // fallo parcial de la instalación se convierte en un aviso.
 func TestProjectFormAdaptersRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"projectform"},
 		"import { adapterOptions, adapterWarning } from './projectform.mjs';\n"+
 			"console.log(JSON.stringify({\n"+
@@ -257,6 +262,7 @@ func TestProjectFormAdaptersRuntime(t *testing.T) {
 }
 
 func TestAddProjectModalOffersAdapters(t *testing.T) {
+	t.Parallel()
 	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
 	modal := html[strings.Index(html, `id="modal-add-project"`):]
 	modal = modal[:strings.Index(modal, "</dialog>")]

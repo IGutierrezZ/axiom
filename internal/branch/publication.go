@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/docpaths"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -82,4 +83,46 @@ func PublicationWrongBranch(change, master string, repo RepoPlan, current string
 		Continuation: continuation,
 		Details:      map[string]string{"change": change, "repository": repo.GitRoot, "current": current, "expected": strings.Join(expected, ", ")},
 	}
+}
+
+// DocPaths compone la lista cerrada de documentación del cambio (REQ-27.5) en el repositorio del
+// destino: desempaqueta `technical_context` de las declaraciones de axiom.yaml, cuyas rutas son
+// relativas al workspaceRoot, y delega en `docpaths.FromWorkspace`. Es el único punto de
+// composición, compartido por `axiom sdd publish` y por el estado de publicación del status.
+func (t PublicationTarget) DocPaths(declarations workspace.Declarations, change string) (docpaths.Set, error) {
+	var maintained, reference []string
+	if technical := declarations.TechnicalContext; technical != nil {
+		if technical.Maintained != nil {
+			maintained = technical.Maintained.Paths
+		}
+		if technical.Reference != nil {
+			reference = technical.Reference.Paths
+		}
+	}
+	return docpaths.FromWorkspace(t.PlanningRel, change, maintained, reference)
+}
+
+// PublicationCodeRangeUnknown es el código con el que `axiom sdd publish` se niega cuando no existe
+// la rama de integración ni en el remoto ni en local y no puede calcular qué commits faltan por
+// subir. El estado de publicación del status lo proyecta como `unavailable` con el mismo código.
+// Vale lo mismo que `sddpublish.CodeUnpublishedRangeUnknown`; una prueba fija la igualdad.
+const PublicationCodeRangeUnknown Code = "unpublished_range_unknown"
+
+// PublicationMaxUnpushed es el máximo de commits sin subir que se examinan uno a uno: por encima, el
+// rango es demasiado grande y se deja a la persona. Es el mismo umbral que usa `axiom sdd publish`.
+const PublicationMaxUnpushed = 500
+
+// PublicationState son los hechos, de solo lectura y sin red, que dicen si hay algo que
+// `axiom sdd publish` haría ahora: documentación sin confirmar o commits sin subir. Lo calcula
+// `Engine.PublicationState` con las mismas reglas que `publish` (REQ-27.5 y REQ-27.8): la lista
+// cerrada de rutas y el mismo rango de exclusiones. No decide qué hacer con ellos: eso es del status.
+type PublicationState struct {
+	Target        PublicationTarget
+	RemoteMissing bool     // origin sin URL: no hay publicación posible
+	RangeUnknown  bool     // ni origin/<integración> ni la rama de integración local
+	RemoteBranch  bool     // existe refs/remotes/origin/<Branch>
+	DirtyDocs     []string // documentación sin confirmar, sin estado local, ordenada
+	Unpushed      int      // commits de HEAD fuera de las exclusiones de REQ-27.8
+	CodeCommits   []string // SHA cortos (7) de los commits sin subir que tocan código, del más antiguo al más reciente
+	RangeTooBig   bool     // Unpushed > PublicationMaxUnpushed
 }

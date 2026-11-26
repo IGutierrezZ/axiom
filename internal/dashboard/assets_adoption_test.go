@@ -10,6 +10,7 @@ import (
 // REQ-30.27: el panel de adopción que aparece tras el alta se calcula en un módulo puro de
 // js/core/ (se ejecuta con Node) y la UI solo lo muestra: sin ejecutar nada, sin CDN externos.
 func TestAdoptionAssetPanelModelRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"projectform"},
 		"import { adoptionPanel } from './projectform.mjs';\n"+
 			"const full = { adoption: { source_count: 1, unit_count: 3, sources: [{ path: 'docs/requisitos.md', kind: 'markdown', units: 3 }],\n"+
@@ -67,6 +68,7 @@ func TestAdoptionAssetPanelModelRuntime(t *testing.T) {
 }
 
 func TestAdoptionAssetPanelIsWiredAfterTheProjectInit(t *testing.T) {
+	t.Parallel()
 	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
 
 	dialog := html[strings.Index(html, `id="modal-adoption"`):]

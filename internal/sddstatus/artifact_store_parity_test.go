@@ -15,6 +15,7 @@ import (
 // internal/workspace más la forma anidada (`sdd:` / `artifact_store:`) que usan
 // las pruebas existentes de este paquete.
 func TestArtifactStoreReadersAgree(t *testing.T) {
+	t.Parallel()
 	fixtures := []struct {
 		name  string
 		files map[string]string // nombre dentro de openspec/ -> contenido

@@ -34,6 +34,7 @@ func gateStatuses(t *testing.T, status Status) map[string]string {
 }
 
 func TestGateApprovalsSurviveTheArchiveIntegrateRewrite(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "archive-integrate-gates"
 	changeRoot := seedReadyChange(t, root, changeName, gateIntegrateTasksBefore)
@@ -78,6 +79,7 @@ func TestGateApprovalsSurviveTheArchiveIntegrateRewrite(t *testing.T) {
 }
 
 func TestGateContinuousChangeDoesNotEvaluateGatesAcrossTheRewrite(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "archive-integrate-continuous"
 	changeRoot := seedReadyChange(t, root, changeName, gateIntegrateTasksBefore)

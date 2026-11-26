@@ -50,11 +50,13 @@ func assertRuntimeCommonDir(t *testing.T, open, oracleDir string) {
 }
 
 func TestOpenRuntimeStoreCommonDirMainCheckout(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	assertRuntimeCommonDir(t, repo, repo)
 }
 
 func TestOpenRuntimeStoreCommonDirLinkedWorktree(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	linked := filepath.Join(t.TempDir(), "linked")
 	runRuntimeLedgerGit(t, repo, "worktree", "add", "-q", "-b", "linked-branch", linked)
@@ -73,6 +75,7 @@ func TestOpenRuntimeStoreCommonDirLinkedWorktree(t *testing.T) {
 }
 
 func TestOpenRuntimeStoreCommonDirSymlinkedPath(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(repo, link); err != nil {
@@ -82,6 +85,7 @@ func TestOpenRuntimeStoreCommonDirSymlinkedPath(t *testing.T) {
 }
 
 func TestOpenRuntimeStoreCommonDirShortTempName(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS != "windows" {
 		t.Skip("8.3 short names exist only on Windows")
 	}
@@ -91,6 +95,7 @@ func TestOpenRuntimeStoreCommonDirShortTempName(t *testing.T) {
 }
 
 func TestOpenRuntimeStoreCommonDirFromSubdirectory(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	sub := filepath.Join(repo, "nested", "deeper")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
@@ -100,6 +105,7 @@ func TestOpenRuntimeStoreCommonDirFromSubdirectory(t *testing.T) {
 }
 
 func TestOpenRuntimeStoreOutsideRepositoryKeepsRequiredError(t *testing.T) {
+	t.Parallel()
 	_, err := OpenRuntimeStore(context.Background(), t.TempDir(), "common-dir-change")
 	if err == nil {
 		t.Fatal("expected an error outside a repository")

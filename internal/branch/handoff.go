@@ -105,3 +105,9 @@ func HandOffWrongBranch(change, master string, repo RepoPlan, current string, ex
 		Details:      map[string]string{"change": change, "repository": repo.GitRoot, "current": current, "expected": strings.Join(expected, ", ")},
 	}
 }
+
+// PublishArchiveInvocation es la orden que publica el archivado del cambio: la de
+// `PublishInvocation` más `--archive`, que `axiom sdd publish` acepta junto a `--branch`.
+func PublishArchiveInvocation(workspaceRoot, change, branchName string) string {
+	return PublishInvocation(workspaceRoot, change, branchName) + " --archive"
+}

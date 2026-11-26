@@ -207,3 +207,55 @@ func (s Set) LocalStateGlobs() []string {
 		s.archiveDir + "/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-" + s.change + "/.*",
 	}
 }
+
+// FromWorkspace compone el conjunto a partir de lo que declara axiom.yaml: las rutas de
+// `technical_context` son relativas al workspaceRoot y se convierten aquí a relativas a la raíz
+// git. planningRel es el planning home relativo a la raíz git, que siempre es
+// `<workspaceRoot>/openspec`, así que el workspaceRoot se deriva de él. Las rutas declaradas que
+// caen fuera de la raíz git o son la propia raíz se descartan. Es el único punto que compone la
+// lista cerrada: `axiom sdd publish` y el estado de publicación del status la comparten, de modo
+// que no pueden divergir.
+func FromWorkspace(planningRel, change string, maintained, reference []string) (Set, error) {
+	wsRel := workspaceRelative(planningRel)
+	return New(planningRel, change, rebase(wsRel, maintained), rebase(wsRel, reference))
+}
+
+// rebase convierte cada ruta declarada a relativa a la raíz git y descarta las que no caben.
+func rebase(wsRel string, declared []string) []string {
+	var rebased []string
+	for _, raw := range declared {
+		if rel, ok := fromWorkspace(wsRel, raw); ok {
+			rebased = append(rebased, rel)
+		}
+	}
+	return rebased
+}
+
+// workspaceRelative es el workspaceRoot relativo a la raíz git, derivado del planning home, que es
+// siempre `<workspaceRoot>/openspec`: vacío si ambos coinciden con la raíz.
+func workspaceRelative(planningRel string) string {
+	if planningRel == "" {
+		return ""
+	}
+	if dir := path.Dir(planningRel); dir != "." {
+		return dir
+	}
+	return ""
+}
+
+// fromWorkspace convierte una ruta declarada, relativa al workspaceRoot, a una relativa a la raíz
+// git. Las que caen fuera de la raíz git o son la propia raíz se descartan.
+func fromWorkspace(wsRel, declared string) (string, bool) {
+	clean := path.Clean(strings.ReplaceAll(strings.TrimSpace(declared), `\`, "/"))
+	switch {
+	case clean == "." || clean == "" || path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../"):
+		return "", false
+	case len(clean) > 1 && clean[1] == ':':
+		return "", false
+	}
+	joined := path.Join(wsRel, clean)
+	if joined == ".." || strings.HasPrefix(joined, "../") {
+		return "", false
+	}
+	return joined, true
+}

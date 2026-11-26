@@ -44,6 +44,7 @@ func isoOf(t *testing.T, status Status) *ISOProjection {
 // bloque `sdd:` o con un cambio ISO; un `sdd:` inválido se proyecta `invalid`
 // con su `reason` aunque no haya cambio; la instantánea manda sobre axiom.yaml.
 func TestISOProjection(t *testing.T) {
+	t.Parallel()
 	isoSnapshot := &kickoff.SDDSnapshot{ISO: true}
 	tests := []struct {
 		name       string
@@ -147,6 +148,7 @@ func TestISOProjection(t *testing.T) {
 
 // El contrato v1 interno y el v2 público proyectan lo mismo.
 func TestISOProjectionV1AndV2Agree(t *testing.T) {
+	t.Parallel()
 	ws := embeddedWithDeclaration(t, "sdd:\n  iso: true\n")
 	status := resolveFrom(t, ws.Master, "demo")
 	if status.ISO == nil || status.ISO.Project != "iso" || status.ISO.Change != "not_iso" {
@@ -161,6 +163,7 @@ func TestISOProjectionV1AndV2Agree(t *testing.T) {
 // blockedReasons cuando la ruta sería archive; con trabajo pendiente la ruta no
 // cambia y el motivo queda en notes.
 func TestDecorateISO(t *testing.T) {
+	t.Parallel()
 	t.Run("ruta archive con declaración inválida", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, ".")
 		workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+"sdd:\n  iso: quizás\n")

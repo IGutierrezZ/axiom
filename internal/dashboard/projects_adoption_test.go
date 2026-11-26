@@ -40,6 +40,7 @@ func writeAdoptionFile(t *testing.T, root, rel, content string) {
 }
 
 func TestProjectsInitReturnsTheAdoptionReportAndInstruction(t *testing.T) {
+	t.Parallel()
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	dir := filepath.Join(t.TempDir(), "con-requisitos")
 	writeAdoptionFile(t, dir, "docs/requisitos.md", "# Requisitos\n\n## RF-001 Alta\n\nTexto.\n")
@@ -70,6 +71,7 @@ func TestProjectsInitReturnsTheAdoptionReportAndInstruction(t *testing.T) {
 }
 
 func TestProjectsInitWithoutSourcesOmitsTheAdoptionInstruction(t *testing.T) {
+	t.Parallel()
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	dir := filepath.Join(t.TempDir(), "vacio")
 

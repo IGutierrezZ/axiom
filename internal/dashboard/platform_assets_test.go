@@ -16,6 +16,7 @@ import (
 // demás es estructural, porque `go test` no trae un motor de DOM.
 
 func TestPlatformAssetsAreServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	for _, target := range []string{"/js/core/ecosystem.js", "/js/screens/ecosystem.js"} {
 		rr := getAsset(t, h, target)
@@ -32,6 +33,7 @@ func TestPlatformAssetsAreServed(t *testing.T) {
 // Todo id que consulta el JavaScript existe en el HTML (o lo genera el propio módulo), y las
 // clases del bloque de Ecosistema están definidas en style.css.
 func TestEcosystemMarkupMatchesTheScreen(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	js := readAsset(t, "js/screens/ecosystem.js")
 	start, end := strings.Index(html, `id="view-ecosistema"`), strings.Index(html, "</main>")
@@ -68,6 +70,7 @@ func TestEcosystemMarkupMatchesTheScreen(t *testing.T) {
 
 // El Doctor se lee de la caché compartida; la pantalla no lo consulta por su cuenta.
 func TestEcosystemUsesTheSharedDoctorCache(t *testing.T) {
+	t.Parallel()
 	js := readAsset(t, "js/screens/ecosystem.js")
 	if strings.Contains(js, "api('/api/ecosystem/doctor')") {
 		t.Errorf("ecosystem.js consulta el Doctor directamente; debe usar la caché de overview.js")
@@ -94,6 +97,7 @@ func TestEcosystemUsesTheSharedDoctorCache(t *testing.T) {
 
 // Restaurar un respaldo pide confirmación explícita, con las consecuencias, antes de llamar a la API.
 func TestRestoreBackupAsksForConfirmationBeforeCallingTheAPI(t *testing.T) {
+	t.Parallel()
 	js := readAsset(t, "js/screens/ecosystem.js")
 	body := functionBody(t, js, "async function restoreBackup(")
 	confirm := strings.Index(body, "confirmDialog(")
@@ -141,6 +145,7 @@ func functionBody(t *testing.T, src, header string) string {
 
 // La lógica pura de Ecosistema se ejecuta de verdad con Node.
 func TestEcosystemLogicRuntime(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite la prueba de ejecución de la lógica de Ecosistema")

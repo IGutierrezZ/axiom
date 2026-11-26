@@ -45,6 +45,7 @@ entries:
 `
 
 func TestReadTraceToleratesTheEmptyBaselineFieldsOfAV1Plan(t *testing.T) {
+	t.Parallel()
 	trace, err := DecodeTrace([]byte(planV1))
 	if err != nil {
 		t.Fatalf("DecodeTrace: %v", err)
@@ -62,6 +63,7 @@ func TestReadTraceToleratesTheEmptyBaselineFieldsOfAV1Plan(t *testing.T) {
 }
 
 func TestDecodeTraceRejectsForeignPlans(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		mutate func(string) string
@@ -96,6 +98,7 @@ func TestDecodeTraceRejectsForeignPlans(t *testing.T) {
 }
 
 func TestDecodeTraceRejectsMalformedPlans(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		text string
@@ -125,6 +128,7 @@ func TestDecodeTraceRejectsMalformedPlans(t *testing.T) {
 }
 
 func TestTraceMarshalIsDeterministicAndRoundTrips(t *testing.T) {
+	t.Parallel()
 	trace, err := DecodeTrace([]byte(planV1))
 	if err != nil {
 		t.Fatal(err)
@@ -150,6 +154,7 @@ func TestTraceMarshalIsDeterministicAndRoundTrips(t *testing.T) {
 }
 
 func TestReadAndWriteTrace(t *testing.T) {
+	t.Parallel()
 	file := filepath.Join(t.TempDir(), TraceFileName)
 	if _, err := ReadTrace(file); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("un plan que no existe envuelve fs.ErrNotExist: %v", err)
@@ -199,6 +204,7 @@ func TestWriteTraceIsAtomic(t *testing.T) {
 }
 
 func TestRenderTrace(t *testing.T) {
+	t.Parallel()
 	trace, _ := DecodeTrace([]byte(planV1))
 	t.Run("markdown", func(t *testing.T) {
 		data, err := RenderTrace(trace, TraceFormatMarkdown)
@@ -250,6 +256,7 @@ func TestRenderTrace(t *testing.T) {
 }
 
 func TestTraceTimesAreUTC(t *testing.T) {
+	t.Parallel()
 	trace, _ := DecodeTrace([]byte(planV1))
 	zone := time.FixedZone("x", 3600)
 	trace.PreparedAt = time.Date(2026, 1, 2, 4, 4, 5, 0, zone)

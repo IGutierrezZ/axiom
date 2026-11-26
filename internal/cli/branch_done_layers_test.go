@@ -51,6 +51,7 @@ func branchCommitFile(t *testing.T, dir, name, message string) {
 // borra la rama local y el registro, sale con 0 y no hace nada remoto. Registra la versión de git y
 // el JSON exacto con t.Log.
 func TestBranchDoneHarnessConfirmsASquashByEquivalentTree(t *testing.T) {
+	t.Parallel()
 	version := requireBranchMergeTree(t)
 	repo := newBranchRepository(t)
 	if code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--cwd", repo); code != 0 {
@@ -88,6 +89,7 @@ func TestBranchDoneHarnessConfirmsASquashByEquivalentTree(t *testing.T) {
 // `done` ignora sin aviso un almacén de revisiones residual `<git common dir>/gentle-ai/...` de la
 // retirada de RDD: elimina la rama fusionada, sale con 0 y no añade avisos.
 func TestBranchDoneIgnoresAResidualReviewStoreWithoutWarning(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	if code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--mode", "in_place", "--cwd", repo); code != 0 {
 		t.Fatalf("ensure: código %d, stderr %q\n%s", code, stderr, stdout)

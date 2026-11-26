@@ -17,6 +17,7 @@ import (
 // El renderizador de Markdown, además, se ejecuta de verdad si hay Node.
 
 func TestWorkflowAssetsAreServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	for _, target := range []string{
 		"/js/core/markdown.js", "/js/core/increment.js",
@@ -36,6 +37,7 @@ func TestWorkflowAssetsAreServed(t *testing.T) {
 
 // El tablero cubre las siete fases, pliega las columnas vacías y recuerda la vista y el filtro.
 func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
+	t.Parallel()
 	inc := readAsset(t, "js/screens/incrementos.js")
 	for _, marker := range []string{
 		"ix-board", "ix-col", "is-collapsed", "ALWAYS_OPEN", "Ver los ${archivedAll.length} archivados",
@@ -96,6 +98,7 @@ func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
 
 // Las rutas del detalle, sus pestañas y su sincronización con el hash.
 func TestIncrementDetailTabsAndRoutes(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	for _, tab := range []string{"artefactos", "roles", "handoff"} {
 		if !strings.Contains(html, `data-tab="`+tab+`"`) {
@@ -159,6 +162,7 @@ func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 // Las fases de agente se muestran como una orden copiable, nunca como un botón que
 // las ejecute; y las órdenes citadas existen de verdad en el repositorio.
 func TestAgentPhasesAreCopyableCommandsNotButtons(t *testing.T) {
+	t.Parallel()
 	all := readAllJS(t)
 	for _, banned := range []string{"/api/increments/verify", "/api/increments/continue", "continueIncrement", "Continuar con Axiom"} {
 		if strings.Contains(all, banned) {
@@ -196,6 +200,7 @@ func TestAgentPhasesAreCopyableCommandsNotButtons(t *testing.T) {
 // Multirol: el paso Apply en curso desglosa cada rol de la barrera y enlaza a su
 // pestaña; con un único rol (fullstack) el paso queda como estaba.
 func TestApplyStepShowsPerRoleProgressWhenMultirole(t *testing.T) {
+	t.Parallel()
 	shared := readAsset(t, "js/core/increment.js")
 	for _, marker := range []string{
 		"apply.state === 'current' && roles.length > 1", "function roleProgress(", "barrier.satisfied === false",
@@ -225,6 +230,7 @@ func TestApplyStepShowsPerRoleProgressWhenMultirole(t *testing.T) {
 
 // La hoja de estilos de incrementos define sus componentes y solo usa tokens.
 func TestIncrementStylesDefineTheirComponentsWithTokens(t *testing.T) {
+	t.Parallel()
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{".ix-board", ".ix-col.is-collapsed", ".mini-stepper", ".type-chip", ".dt-steps", ".dt-banner", ".dt-role", ".md-tasks", ".md-code", ".tab-pill", "@media (max-width: 640px)"} {
 		if !strings.Contains(css, marker) {
@@ -239,6 +245,7 @@ func TestIncrementStylesDefineTheirComponentsWithTokens(t *testing.T) {
 
 // El renderizador de Markdown no inyecta HTML: lo escapa todo y solo enlaza http(s).
 func TestMarkdownRendererIsSafeStructurally(t *testing.T) {
+	t.Parallel()
 	md := readAsset(t, "js/core/markdown.js")
 	for _, marker := range []string{"escapeHtml", "safeHref", "rel=\"noopener noreferrer\"", `(https?:\/\/|mailto:)`, "export function renderMarkdown(", "export function firstParagraph("} {
 		if !strings.Contains(md, marker) {
@@ -254,6 +261,7 @@ func TestMarkdownRendererIsSafeStructurally(t *testing.T) {
 
 // Si hay Node, el renderizador se ejecuta de verdad sobre entradas hostiles.
 func TestMarkdownRendererRuntime(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite la prueba de ejecución del renderizador")
@@ -318,6 +326,7 @@ console.log(JSON.stringify({
 // Las features ODD llevan su propio chip «ODD», no enlazan a un detalle SDD y no cuentan en el flujo
 // SDD de Inicio; el subtítulo del tablero ya no habla solo de SDD.
 func TestIncrementsODDChipAndHomeStatsRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api", "icons", "increment"},
 		"import { typeInfo, typeChip, incrementStats, statusFlag } from './increment.mjs';\n"+
 			"const odd = { name: 'mi-feature', type: 'active', phase: 'apply', change_type: 'odd', tasks_total: 4, tasks_completed: 1 };\n"+

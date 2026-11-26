@@ -16,6 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
@@ -25,22 +26,11 @@ import (
 // worktree en el hub del HOME de pruebas y la raíz de worktrees también temporal. Ninguna crea
 // worktrees del repositorio real.
 
-// requireGit omite la prueba con -short o sin git, y aísla git de la configuración del desarrollador.
+// requireGit omite la prueba con -short o sin git. TestMain ya aisló git de la configuración del
+// desarrollador (testenv.IsolateGit).
 func requireGit(t *testing.T) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("prueba con git real: se omite con -short")
-	}
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skipf("git no está instalado: %v", err)
-	}
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(t.TempDir(), "gitconfig"))
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
-	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
-	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	testenv.RequireGit(t)
 }
 
 // runGit ejecuta git en dir y devuelve su salida sin el salto de línea final.
@@ -353,6 +343,7 @@ func TestCreateIncrementRefusesAnUnknownMode(t *testing.T) {
 // REQ-25.32 escenario 5: en un multirepo el repositorio de specs se trabaja in situ, en su rama de
 // integración: la creación escribe allí por HTTP, sin worktree ni rama de cambio.
 func TestCreateIncrementInMultirepoWritesInSituInTheSpecsRepository(t *testing.T) {
+	t.Parallel()
 	svc, ws := canonicalService(t, startAtMaster)
 	commitGitRepo(t, ws.Specs)
 

@@ -17,6 +17,7 @@ import (
 // dots (3.14), spaces and "@" (a human-readable Engram identity), and a
 // nested/topic-namespaced identity containing "/".
 func TestOpenRuntimeStoreAcceptsChangeIdentitiesResolvedBySDDStatus(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	for _, change := range []string{
 		"kebab-case",
@@ -45,6 +46,7 @@ func TestOpenRuntimeStoreAcceptsChangeIdentitiesResolvedBySDDStatus(t *testing.T
 // extra directory levels (which "/" would create verbatim) or resolve
 // outside the runtime store's own base directory.
 func TestOpenRuntimeStoreEncodesPathLikeChangeAsOneFlatComponent(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	for _, change := range []string{"features/sub-change", "3.14", "a.b/c.d"} {
 		store, err := OpenRuntimeStore(context.Background(), repo, change)
@@ -68,6 +70,7 @@ func TestOpenRuntimeStoreEncodesPathLikeChangeAsOneFlatComponent(t *testing.T) {
 // becomes unreachable after it: it cannot be settled, its max-attempts
 // budget silently resets, and its request-id replay is lost.
 func TestOpenRuntimeStoreEncodedLabelIsStableForPreviouslyValidIdentities(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	for _, change := range []string{"DEC-EXAMPLE-CHANGE", "MixedCase_And-Digits2", "tag_improvement-v2"} {
 		store, err := OpenRuntimeStore(context.Background(), repo, change)
@@ -86,6 +89,7 @@ func TestOpenRuntimeStoreEncodedLabelIsStableForPreviouslyValidIdentities(t *tes
 // change name cannot be "..", cannot escape via a "../" segment, and the
 // filesystem/JSON hazards below have no legitimate identity behind them).
 func TestOpenRuntimeStoreRejectsUnsafeChangeName(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	for _, change := range []string{
 		"",
@@ -107,6 +111,7 @@ func TestOpenRuntimeStoreRejectsUnsafeChangeName(t *testing.T) {
 // The rejection has to say which value failed and what shape is expected,
 // otherwise callers are left guessing the flag contract.
 func TestOpenRuntimeStoreRejectionNamesValueAndShape(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	_, err := OpenRuntimeStore(context.Background(), repo, "has:colon")
 	if err == nil {
@@ -130,6 +135,7 @@ func TestOpenRuntimeStoreRejectionNamesValueAndShape(t *testing.T) {
 // ledger directory. Wider and the leaf stops being addressable on Windows,
 // where an identity at the length limit already crowds the path ceiling.
 func TestOpenRuntimeStoreEncodedSuffixKeepsItsPinnedWidth(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	store, err := OpenRuntimeStore(context.Background(), repo, "DEC-EXAMPLE-CHANGE")
 	if err != nil {
@@ -148,6 +154,7 @@ func TestOpenRuntimeStoreEncodedSuffixKeepsItsPinnedWidth(t *testing.T) {
 // Ledgers already on disk live at v1/<change>. A kebab-case identity must keep
 // resolving to that exact directory or every existing attempt chain is orphaned.
 func TestOpenRuntimeStoreKeepsLegacyDirectoryForKebabChange(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	store, err := OpenRuntimeStore(context.Background(), repo, "legacy-kebab-change")
 	if err != nil {
@@ -161,6 +168,7 @@ func TestOpenRuntimeStoreKeepsLegacyDirectoryForKebabChange(t *testing.T) {
 // On case-insensitive filesystems two identities differing only in case would
 // share one ledger directory, silently merging unrelated attempt chains.
 func TestOpenRuntimeStoreSeparatesCaseVariantChangeDirectories(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	upper, err := OpenRuntimeStore(context.Background(), repo, "Case-Variant")
 	if err != nil {
@@ -178,6 +186,7 @@ func TestOpenRuntimeStoreSeparatesCaseVariantChangeDirectories(t *testing.T) {
 // The encoded namespace must be unreachable as a legacy identity, so an
 // encoded directory can never collide with a kebab-case change's ledger.
 func TestOpenRuntimeStoreEncodedNamespaceIsNotAValidLegacyIdentity(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	store, err := OpenRuntimeStore(context.Background(), repo, "DEC-EXAMPLE-CHANGE")
 	if err != nil {

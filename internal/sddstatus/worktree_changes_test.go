@@ -118,6 +118,7 @@ func notesAbout(status Status, fragment string) []string {
 // REQ-25.44, escenario «Status desde el checkout principal resuelve el worktree»: con nombre, el
 // cambio que solo vive en su worktree registrado se resuelve en él.
 func TestResolveFromTheMainCheckoutResolvesTheRegisteredWorktree(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	worktree := linkedWorktree(t, main, "x", tasksPending)
 	registerChange(t, main, "x", kindBranch("feat/x", branch.KindChange, worktree))
@@ -138,6 +139,7 @@ func TestResolveFromTheMainCheckoutResolvesTheRegisteredWorktree(t *testing.T) {
 
 // REQ-25.44, escenario «Sin nombre de cambio se consideran los worktrees registrados».
 func TestResolveWithoutANameConsidersTheRegisteredWorktrees(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	worktree := linkedWorktree(t, main, "x", tasksPending)
 	registerChange(t, main, "x", kindBranch("feat/x", branch.KindChange, worktree))
@@ -153,6 +155,7 @@ func TestResolveWithoutANameConsidersTheRegisteredWorktrees(t *testing.T) {
 // Sin nombre y con varios candidatos, el `select-change` de hoy se hace sobre la unión del checkout
 // principal y los worktrees, y cada continuación se resuelve por nombre.
 func TestResolveWithoutANameSelectsOverTheUnionOfCandidates(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "y", tasksPending)
 	worktree := linkedWorktree(t, main, "x", tasksPending)
@@ -173,6 +176,7 @@ func TestResolveWithoutANameSelectsOverTheUnionOfCandidates(t *testing.T) {
 
 // Dos cambios que solo viven en worktrees registrados también son ambiguos sin nombre.
 func TestResolveWithoutANameIsAmbiguousBetweenTwoRegisteredWorktrees(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	one := linkedWorktree(t, main, "x", tasksPending)
 	two := linkedWorktree(t, main, "z", tasksPending)
@@ -188,6 +192,7 @@ func TestResolveWithoutANameIsAmbiguousBetweenTwoRegisteredWorktrees(t *testing.
 
 // REQ-25.44, escenario «El worktree prevalece sobre el checkout principal».
 func TestResolveTheWorktreePrevailsOverTheMainCheckout(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "x", tasksPending)
 	worktree := linkedWorktree(t, main, "x", tasksDone)
@@ -205,6 +210,7 @@ func TestResolveTheWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 
 // REQ-25.44, escenario «El worktree de la rama de archivado prevalece sobre el de la rama del cambio».
 func TestResolveTheArchiveWorktreePrevailsOverTheChangeWorktree(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	changeWorktree := linkedWorktree(t, main, "x", tasksPending)
 	archiveWorktree := linkedWorktree(t, main, "x", tasksDone)
@@ -219,6 +225,7 @@ func TestResolveTheArchiveWorktreePrevailsOverTheChangeWorktree(t *testing.T) {
 // Si el worktree de archivado aún no tiene la carpeta del cambio, prevalece el del cambio; y sin la
 // carpeta en ningún worktree el status se queda en el checkout principal.
 func TestResolveSkipsWorktreesWithoutTheChangeFolder(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "x", tasksPending)
 	changeWorktree := linkedWorktree(t, main, "x", tasksDone)
@@ -236,6 +243,7 @@ func TestResolveSkipsWorktreesWithoutTheChangeFolder(t *testing.T) {
 // REQ-25.44, escenario «Un worktree desaparecido se omite con aviso»: el status se devuelve sin ese
 // cambio y con un aviso que nombra la ruta ausente y la continuación.
 func TestResolveOmitsAMissingWorktreeWithANote(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "y", tasksPending)
 	missing := filepath.Join(realPath(t, t.TempDir()), "ya-no-existe")
@@ -256,6 +264,7 @@ func TestResolveOmitsAMissingWorktreeWithANote(t *testing.T) {
 // REQ-25.44: con `--cwd` dentro de un worktree, el cambio se resuelve en su propio árbol, aunque otro
 // worktree registrado (el de archivado) tuviera precedencia desde el checkout principal.
 func TestResolveInsideAWorktreeKeepsItsOwnTree(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	changeWorktree := linkedWorktree(t, main, "x", tasksPending)
 	archiveWorktree := linkedWorktree(t, main, "x", tasksDone)
@@ -274,6 +283,7 @@ func TestResolveInsideAWorktreeKeepsItsOwnTree(t *testing.T) {
 
 // Una raíz de workspace explícita (las llamadas internas que ya conocen su raíz) nunca se reenraíza.
 func TestResolveWithAnExplicitWorkspaceRootIsNotRerooted(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "x", tasksPending)
 	worktree := linkedWorktree(t, main, "x", tasksDone)
@@ -289,6 +299,7 @@ func TestResolveWithAnExplicitWorkspaceRootIsNotRerooted(t *testing.T) {
 
 // Sin registro, o sin ramas con worktree, el status es el de antes del incremento: sin avisos nuevos.
 func TestResolveWithoutRegisteredWorktreesIsUnchanged(t *testing.T) {
+	t.Parallel()
 	main := mainCheckout(t)
 	seedReadyChange(t, main, "x", tasksPending)
 

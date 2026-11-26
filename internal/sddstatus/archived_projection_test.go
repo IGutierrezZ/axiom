@@ -53,6 +53,7 @@ func assertArchivedTerminal(t *testing.T, status Status, wantPath string) {
 }
 
 func TestNamedArchivedOpenSpecChangeProjectsPositiveTerminal(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "archive", "2026-08-30-wave-one", "proposal.md"), "# Proposal\n")
 
@@ -70,6 +71,7 @@ func TestNamedArchivedOpenSpecChangeProjectsPositiveTerminal(t *testing.T) {
 }
 
 func TestArchivedOpenSpecChangeNewestDateWins(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "2026-01-02-wave-one"))
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "2026-03-04-wave-one"))
@@ -88,6 +90,7 @@ func TestArchivedOpenSpecChangeNewestDateWins(t *testing.T) {
 // claim "2026-01-01-foo-bar", and an entry without a date prefix is not an
 // archive entry.
 func TestArchivedOpenSpecChangeRequiresExactSuffix(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "2026-01-01-foo-bar-baz"))
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "foo-bar"))
@@ -107,6 +110,7 @@ func TestArchivedOpenSpecChangeRequiresExactSuffix(t *testing.T) {
 // change with no active folder and no archive entry: the exact not-found
 // block, byte for byte.
 func TestNeverExistedChangeKeepsNotFoundBlock(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "2026-08-30-wave-one"))
 
@@ -126,6 +130,7 @@ func TestNeverExistedChangeKeepsNotFoundBlock(t *testing.T) {
 }
 
 func TestStatusV2ProjectionCarriesArchivedField(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "archive", "2026-08-30-wave-one"))
 
@@ -157,6 +162,7 @@ func TestStatusV2ProjectionCarriesArchivedField(t *testing.T) {
 // structurally absent everywhere else — the optional-block discipline
 // ReviewOffer established.
 func TestStatusV2ProjectionOmitsArchivedForActiveChange(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "in-flight", "- [ ] 1.1 Work\n")
 

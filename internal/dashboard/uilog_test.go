@@ -8,6 +8,7 @@ import (
 
 // El hijo relanzado escribe en ui.log en modo añadir: no pisa lo anterior.
 func TestOpenUILogAppends(t *testing.T) {
+	t.Parallel()
 	f, path, err := OpenUILog()
 	if err != nil {
 		t.Fatal(err)

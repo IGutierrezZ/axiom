@@ -8,6 +8,7 @@ import (
 )
 
 func TestResolveSpecDiscoveryPrecedenceAndFallback(t *testing.T) {
+	t.Parallel()
 	flatSpec := "### Requirement: flat\n#### Scenario: present\n"
 	emptyFlat := ""
 	tests := []struct {
@@ -101,6 +102,7 @@ func TestResolveSpecDiscoveryPrecedenceAndFallback(t *testing.T) {
 }
 
 func TestPlanningSpecInstructionsDescribeBothLayouts(t *testing.T) {
+	t.Parallel()
 	instructions := strings.Join(planningInstructionsForPhase(Status{}, PhaseSpec), "\n")
 	if !strings.Contains(instructions, "Create spec.md or specs/<domain>/spec.md with requirements and scenarios.") {
 		t.Fatalf("spec planning instructions = %q, want both spec layouts", instructions)
