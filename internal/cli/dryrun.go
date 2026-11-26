@@ -16,7 +16,6 @@ func RenderDryRun(result InstallResult) string {
 	_, _ = fmt.Fprintln(b, "=====================")
 	_, _ = fmt.Fprintf(b, "Agents: %s\n", joinAgentIDs(result.Resolved.Agents))
 	_, _ = fmt.Fprintf(b, "Unsupported agents: %s\n", joinAgentIDs(result.Resolved.UnsupportedAgents))
-	_, _ = fmt.Fprintf(b, "Preset: %s\n", result.Selection.Preset)
 	if result.Selection.SDDMode != "" {
 		_, _ = fmt.Fprintf(b, "SDD mode: %s\n", result.Selection.SDDMode)
 	}

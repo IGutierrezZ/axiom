@@ -1967,39 +1967,9 @@ func TestRunInstallUpgradeIdempotency(t *testing.T) {
 	}
 }
 
-// --- Custom preset integration tests ---
+// --- Explicit component and skill selection integration tests ---
 
-func TestRunInstallCustomPresetNoComponentsIsNoop(t *testing.T) {
-	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = missingBinaryLookPath
-
-	result, err := RunInstall(
-		[]string{"--agent", "claude-code", "--preset", "custom"},
-		system.DetectionResult{},
-	)
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	// Custom preset with no components should resolve to zero ordered components.
-	if len(result.Resolved.OrderedComponents) != 0 {
-		t.Fatalf("expected 0 ordered components for custom preset, got %d: %v",
-			len(result.Resolved.OrderedComponents), result.Resolved.OrderedComponents)
-	}
-}
-
-func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T) {
+func TestRunInstallExplicitSkillsFlagPopulatesSelection(t *testing.T) {
 	home := t.TempDir()
 	restoreHome := osUserHomeDir
 	restoreCommand := runCommand
@@ -2019,7 +1989,6 @@ func TestRunInstallCustomPresetExplicitSkillsFlagPopulatesSelection(t *testing.T
 	result, err := RunInstall(
 		[]string{
 			"--agent", "claude-code",
-			"--preset", "custom",
 			"--component", "skills",
 			"--skills", "go-testing,work-unit-commits",
 		},
@@ -2091,7 +2060,7 @@ func TestRunInstallSelectionWithSkillWithoutEmbeddedAssetIsIgnored(t *testing.T)
 		return "/usr/local/bin/" + name, nil
 	}
 
-	args := []string{"--agent", "claude-code", "--preset", "custom", "--component", "skills", "--skills", "go-testing"}
+	args := []string{"--agent", "claude-code", "--component", "skills", "--skills", "go-testing"}
 	flags, err := ParseInstallFlags(args)
 	if err != nil {
 		t.Fatal(err)
@@ -2119,62 +2088,6 @@ func TestRunInstallSelectionWithSkillWithoutEmbeddedAssetIsIgnored(t *testing.T)
 	}
 }
 
-func TestRunInstallCustomPresetSkillsNoFlagInstallsNothing(t *testing.T) {
-	home := t.TempDir()
-	restoreHome := osUserHomeDir
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	osUserHomeDir = func() (string, error) { return home, nil }
-	runCommand = func(string, ...string) error { return nil }
-	cmdLookPath = func(name string) (string, error) {
-		return "/usr/local/bin/" + name, nil
-	}
-
-	result, err := RunInstall(
-		[]string{
-			"--agent", "claude-code",
-			"--preset", "custom",
-			"--component", "skills",
-		},
-		system.DetectionResult{},
-	)
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	if !result.Verify.Ready {
-		t.Fatalf("verification ready = false, report = %#v", result.Verify)
-	}
-
-	// Regression guard for #3554: skills has no hard dependency on sdd, so
-	// selecting only --component skills without --skills (which leaves
-	// selectedSkillIDs() empty for the custom preset) truly installs nothing —
-	// sdd is not auto-resolved and its skills are not written.
-	skillsDir := filepath.Join(home, ".claude", "skills")
-	// Count SKILL.md files (one per skill, excluding _shared and other non-skill dirs).
-	var skillCount int
-	if entries, readErr := os.ReadDir(skillsDir); readErr == nil {
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			skillMD := filepath.Join(skillsDir, entry.Name(), "SKILL.md")
-			if _, statErr := os.Stat(skillMD); statErr == nil {
-				skillCount++
-			}
-		}
-	}
-	if skillCount != 0 {
-		t.Fatalf("expected 0 skill files (skills has no hard dependency on sdd), got %d", skillCount)
-	}
-}
-
 // TestRunInstallSkillsAndSDDBothSelectedNoDuplicateSkillFiles guards #3554
 // review finding: skills+sdd together must write every sdd-* skill exactly
 // once plus the requested standalone skill — no duplicates, no clobbering.
@@ -2189,7 +2102,7 @@ func TestRunInstallSkillsAndSDDBothSelectedNoDuplicateSkillFiles(t *testing.T) {
 	cmdLookPath = func(name string) (string, error) { return "/usr/local/bin/" + name, nil }
 
 	result, err := RunInstall([]string{
-		"--agent", "claude-code", "--preset", "custom",
+		"--agent", "claude-code",
 		"--component", "skills,sdd", "--skills", "go-testing",
 	}, system.DetectionResult{})
 	if err != nil || !result.Verify.Ready {
@@ -2217,39 +2130,10 @@ func TestRunInstallSkillsAndSDDBothSelectedNoDuplicateSkillFiles(t *testing.T) {
 	}
 }
 
-func TestRunInstallCustomPresetDryRunShowsCustomPreset(t *testing.T) {
-	result, err := RunInstall(
-		[]string{"--agent", "claude-code", "--preset", "custom", "--dry-run"},
-		system.DetectionResult{},
-	)
-	if err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
-	}
-
-	if !result.DryRun {
-		t.Fatalf("expected DryRun=true")
-	}
-
-	if result.Selection.Preset != model.PresetCustom {
-		t.Fatalf("preset = %q, want %q", result.Selection.Preset, model.PresetCustom)
-	}
-
-	// Zero components when no --component flags provided.
-	if len(result.Resolved.OrderedComponents) != 0 {
-		t.Fatalf("expected 0 ordered components, got %d", len(result.Resolved.OrderedComponents))
-	}
-
-	output := RenderDryRun(result)
-	if !strings.Contains(output, "custom") {
-		t.Fatalf("dry-run output missing 'custom' preset name:\n%s", output)
-	}
-}
-
-func TestRunInstallCustomPresetExplicitComponentsResolveCorrectly(t *testing.T) {
+func TestRunInstallExplicitComponentsResolveCorrectly(t *testing.T) {
 	result, err := RunInstall(
 		[]string{
 			"--agent", "claude-code",
-			"--preset", "custom",
 			"--component", "engram",
 			"--component", "sdd",
 			"--component", "permissions",
@@ -2417,7 +2301,6 @@ func TestRunInstallWorkspaceScopeVerification(t *testing.T) {
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "skills",
-		"--preset", "custom",
 		"--skill", "go-testing,work-unit-commits",
 	}
 
@@ -2484,7 +2367,6 @@ func TestRunInstall_Context7WorkspaceScope_PersistsToWorkspace(t *testing.T) {
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "context7",
-		"--preset", "custom",
 	}
 
 	result, err := RunInstall(args, system.DetectionResult{})
@@ -2565,7 +2447,6 @@ func TestRunInstall_Context7WorkspaceScope_FailurePath(t *testing.T) {
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "context7",
-		"--preset", "custom",
 	}
 
 	_, err = RunInstall(args, system.DetectionResult{})

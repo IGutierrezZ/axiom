@@ -168,15 +168,6 @@ const (
 	StrategyTOMLFile
 )
 
-type PresetID string
-
-const (
-	PresetFullGentleman PresetID = "full-gentleman"
-	PresetEcosystemOnly PresetID = "ecosystem-only"
-	PresetMinimal       PresetID = "minimal"
-	PresetCustom        PresetID = "custom"
-)
-
 type SDDModeID string
 
 const (

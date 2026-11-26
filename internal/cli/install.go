@@ -11,7 +11,6 @@ type InstallFlags struct {
 	Agents     []string
 	Components []string
 	Skills     []string
-	Preset     string
 	SDDMode    string
 	Scope      string
 	Channel    string
@@ -34,7 +33,6 @@ FLAGS
   --agent, --agents <list>           Agents to install
   --component, --components <list>   Components to install
   --skill, --skills <list>           Skills to install
-  --preset <name>                    Preset to apply
   --sdd-mode single|multi            SDD orchestrator mode
   --scope global|workspace           Install scope (env: AXIOM_INSTALL_SCOPE, fallback: GENTLE_AI_INSTALL_SCOPE)
   --channel stable|beta|nightly      Release channel; nightly is an alias for beta (env: AXIOM_CHANNEL, fallback: GENTLE_AI_CHANNEL)
@@ -60,7 +58,6 @@ func ParseInstallFlags(args []string) (InstallFlags, error) {
 	registerListFlag(fs, "components", &opts.Components)
 	registerListFlag(fs, "skill", &opts.Skills)
 	registerListFlag(fs, "skills", &opts.Skills)
-	fs.StringVar(&opts.Preset, "preset", "", "preset to apply")
 	fs.StringVar(&opts.SDDMode, "sdd-mode", "", "SDD orchestrator mode: single or multi (default: single)")
 	fs.StringVar(&opts.Scope, "scope", "", "install scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE (fallback: GENTLE_AI_INSTALL_SCOPE)")
 	fs.StringVar(&opts.Channel, "channel", "", installChannelHelp)

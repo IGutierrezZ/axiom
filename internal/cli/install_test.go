@@ -16,7 +16,6 @@ func TestParseInstallFlagsSupportsCSVAndRepeated(t *testing.T) {
 		"--component", "engram,sdd",
 		"--component", "skills",
 		"--skill", "sdd-apply",
-		"--preset", "minimal",
 		"--channel", "beta",
 		"--dry-run",
 	})
@@ -69,7 +68,6 @@ func TestNormalizeInstallFlagsDefaults(t *testing.T) {
 
 	want := model.Selection{
 		Agents: []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI},
-		Preset: model.PresetFullGentleman,
 		Components: []model.ComponentID{
 			model.ComponentEngram,
 			model.ComponentSDD,
@@ -141,23 +139,6 @@ func TestNormalizeInstallFlagsPiOnlyRespectsExplicitComponents(t *testing.T) {
 	}
 
 	want := []model.ComponentID{model.ComponentEngram}
-	if !reflect.DeepEqual(input.Selection.Components, want) {
-		t.Fatalf("components = %#v, want %#v", input.Selection.Components, want)
-	}
-}
-
-func TestNormalizeInstallFlagsPiOnlyRespectsExplicitPreset(t *testing.T) {
-	input, err := NormalizeInstallFlags(InstallFlags{
-		Agents: []string{string(model.AgentPi)},
-		Preset: string(model.PresetMinimal),
-	}, system.DetectionResult{})
-	if err != nil {
-		t.Fatalf("NormalizeInstallFlags() error = %v", err)
-	}
-
-	// Pi + explicit minimal preset with default gentleman persona now includes ComponentPersona.
-	// Persona is persona-screen-driven; preset only controls the ecosystem stack.
-	want := []model.ComponentID{model.ComponentEngram, model.ComponentPersona}
 	if !reflect.DeepEqual(input.Selection.Components, want) {
 		t.Fatalf("components = %#v, want %#v", input.Selection.Components, want)
 	}

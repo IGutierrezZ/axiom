@@ -6,66 +6,31 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-func TestSkillsForPresetMinimalReturnsSDDOnly(t *testing.T) {
-	skills := SkillsForPreset(model.PresetMinimal)
-	if len(skills) == 0 {
-		t.Fatalf("SkillsForPreset(minimal) returned empty")
+func TestDefaultSkillsIncludeSDDAndFoundationSkills(t *testing.T) {
+	present := make(map[model.SkillID]bool)
+	for _, skill := range DefaultSkills() {
+		present[skill] = true
 	}
 
-	// Orchestration skills that are always bundled with SDD.
-	orchestrationSkills := map[model.SkillID]bool{
-		model.SkillJudgmentDay: true,
-	}
-
-	for _, skill := range skills {
-		isSDD := len(skill) >= 4 && skill[:3] == "sdd"
-		if !isSDD && !orchestrationSkills[skill] {
-			t.Fatalf("minimal preset should only contain SDD/orchestration skills, got %q", skill)
+	for _, want := range []model.SkillID{model.SkillSDDInit, model.SkillJudgmentDay, model.SkillGoTesting, model.SkillCreator} {
+		if !present[want] {
+			t.Fatalf("el conjunto por defecto debe incluir %q", want)
 		}
 	}
 }
 
-func TestSkillsForPresetEcosystemIncludesFrameworks(t *testing.T) {
-	skills := SkillsForPreset(model.PresetEcosystemOnly)
-
-	hasGoTesting := false
-	hasSkillCreator := false
-	hasSDDInit := false
-	for _, skill := range skills {
-		if skill == model.SkillGoTesting {
-			hasGoTesting = true
-		}
-		if skill == model.SkillCreator {
-			hasSkillCreator = true
-		}
-		if skill == model.SkillSDDInit {
-			hasSDDInit = true
-		}
-	}
-
-	if !hasGoTesting {
-		t.Fatalf("ecosystem preset should include go-testing")
-	}
-	if !hasSDDInit {
-		t.Fatalf("ecosystem preset should include sdd-init")
-	}
-	if !hasSkillCreator {
-		t.Fatalf("ecosystem preset should include skill-creator")
-	}
-}
-
-func TestSkillsForPresetFullIncludesAll(t *testing.T) {
-	preset := SkillsForPreset(model.PresetFullGentleman)
+func TestDefaultSkillsCoverEverySelectableSkillExceptContributorOnes(t *testing.T) {
+	defaults := DefaultSkills()
 	all := AllSkillIDs()
 
-	presetSet := make(map[model.SkillID]bool, len(preset))
-	for _, id := range preset {
-		presetSet[id] = true
+	defaultSet := make(map[model.SkillID]bool, len(defaults))
+	for _, id := range defaults {
+		defaultSet[id] = true
 	}
 
 	var selectableOnly []model.SkillID
 	for _, id := range all {
-		if !presetSet[id] {
+		if !defaultSet[id] {
 			selectableOnly = append(selectableOnly, id)
 		}
 	}
@@ -76,16 +41,16 @@ func TestSkillsForPresetFullIncludesAll(t *testing.T) {
 		model.SkillSystemicIssueTriage: true,
 	}
 	if len(selectableOnly) != len(contributorOnly) {
-		t.Fatalf("selectable inventory has %d skills outside the full preset (%v), want exactly the %d contributor skills", len(selectableOnly), selectableOnly, len(contributorOnly))
+		t.Fatalf("el inventario seleccionable tiene %d skills fuera del conjunto por defecto (%v), want exactamente las %d de colaboradores", len(selectableOnly), selectableOnly, len(contributorOnly))
 	}
 	for _, id := range selectableOnly {
 		if !contributorOnly[id] {
-			t.Fatalf("selectable inventory contains unexpected non-preset skill %q; only contributor skills may live outside the presets", id)
+			t.Fatalf("el inventario seleccionable contiene la skill %q fuera del conjunto por defecto; solo las de colaboradores pueden quedar fuera", id)
 		}
 	}
 }
 
-func TestSkillsForPresetExcludesContributorSkills(t *testing.T) {
+func TestDefaultSkillsExcludeContributorSkills(t *testing.T) {
 	excluded := []model.SkillID{
 		model.SkillIssueCreation,
 		model.SkillSystemicIssueTriage,
@@ -97,30 +62,27 @@ func TestSkillsForPresetExcludesContributorSkills(t *testing.T) {
 		model.SkillWorkUnitCommits,
 		model.SkillCognitiveDoc,
 	}
-	for _, preset := range []model.PresetID{model.PresetFullGentleman, model.PresetEcosystemOnly, "", "unknown"} {
-		t.Run(string(preset), func(t *testing.T) {
-			present := make(map[model.SkillID]bool)
-			for _, skill := range SkillsForPreset(preset) {
-				present[skill] = true
-			}
-			for _, skill := range excluded {
-				if present[skill] {
-					t.Errorf("SkillsForPreset(%q) includes contributor skill %q", preset, skill)
-				}
-			}
-			for _, skill := range required {
-				if !present[skill] {
-					t.Errorf("SkillsForPreset(%q) missing product skill %q", preset, skill)
-				}
-			}
-		})
+	present := make(map[model.SkillID]bool)
+	for _, skill := range DefaultSkills() {
+		present[skill] = true
+	}
+	for _, skill := range excluded {
+		if present[skill] {
+			t.Errorf("DefaultSkills() incluye la skill de colaboradores %q", skill)
+		}
+	}
+	for _, skill := range required {
+		if !present[skill] {
+			t.Errorf("DefaultSkills() no incluye la skill de producto %q", skill)
+		}
 	}
 }
 
-func TestSkillsForPresetCustomReturnsNil(t *testing.T) {
-	skills := SkillsForPreset(model.PresetCustom)
-	if skills != nil {
-		t.Fatalf("custom preset should return nil, got %v", skills)
+func TestDefaultSkillsReturnsAFreshSlice(t *testing.T) {
+	first := DefaultSkills()
+	first[0] = model.SkillCreator
+	if got := DefaultSkills()[0]; got != model.SkillSDDInit {
+		t.Fatalf("DefaultSkills()[0] = %q tras modificar un resultado anterior, want %q", got, model.SkillSDDInit)
 	}
 }
 
@@ -151,7 +113,7 @@ func TestAllSkillIDsIncludesEveryKnownSkill(t *testing.T) {
 	}
 }
 
-func TestRequestedBundledSkillsAreInPresetSkillSets(t *testing.T) {
+func TestRequestedBundledSkillsAreInDefaultSkillSet(t *testing.T) {
 	required := []model.SkillID{
 		model.SkillCreator,
 		model.SkillSkillRegistry,
@@ -161,18 +123,14 @@ func TestRequestedBundledSkillsAreInPresetSkillSets(t *testing.T) {
 		model.SkillImprover,
 	}
 
-	for _, preset := range []model.PresetID{model.PresetEcosystemOnly, model.PresetFullGentleman} {
-		t.Run(string(preset), func(t *testing.T) {
-			skillSet := make(map[model.SkillID]struct{})
-			for _, skill := range SkillsForPreset(preset) {
-				skillSet[skill] = struct{}{}
-			}
+	skillSet := make(map[model.SkillID]struct{})
+	for _, skill := range DefaultSkills() {
+		skillSet[skill] = struct{}{}
+	}
 
-			for _, req := range required {
-				if _, ok := skillSet[req]; !ok {
-					t.Fatalf("SkillsForPreset(%q) missing requested bundled skill %q", preset, req)
-				}
-			}
-		})
+	for _, req := range required {
+		if _, ok := skillSet[req]; !ok {
+			t.Fatalf("DefaultSkills() missing requested bundled skill %q", req)
+		}
 	}
 }

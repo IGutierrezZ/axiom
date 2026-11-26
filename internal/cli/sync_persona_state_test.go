@@ -3,6 +3,7 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -69,5 +70,37 @@ func TestRunSyncWithSelectionPiWritesAxiomPersona(t *testing.T) {
 	}
 	if got, want := readTextFile(t, piPath), "{\n  \"mode\": \"gentleman\"\n}\n"; got != want {
 		t.Fatalf("workspace Pi persona config changed = %q, want %q", got, want)
+	}
+}
+
+// TestRunSyncWarnsAboutRetiredPresetInState verifica el lector tolerante: un
+// estado con un preset retirado carga, sync avisa y la escritura posterior del
+// estado ya no conserva la clave ni deja de sincronizar la selección guardada.
+func TestRunSyncWarnsAboutRetiredPresetInState(t *testing.T) {
+	for _, preset := range []string{"full-gentleman", "ecosystem-only", "minimal", "custom"} {
+		t.Run(preset, func(t *testing.T) {
+			home := t.TempDir()
+			setSyncTestHome(t, home)
+			notice := captureWorkspaceAgentsNotice(t)
+			if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+				t.Fatalf("MkdirAll: %v", err)
+			}
+			mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["claude-code"],"selection_configured":true,"components":["persona"],"preset":"`+preset+`"}`))
+
+			result, err := RunSync([]string{"--agents", "claude-code", "--sdd-mode", "single"})
+			if err != nil {
+				t.Fatalf("RunSync() error = %v", err)
+			}
+
+			if want := "el preset \"" + preset + "\" guardado en el estado ya no existe"; !strings.Contains(notice.String(), want) {
+				t.Fatalf("falta el aviso %q; salida: %q", want, notice.String())
+			}
+			if !reflect.DeepEqual(result.Selection.Components, []model.ComponentID{model.ComponentPersona}) {
+				t.Fatalf("componentes sincronizados = %v, want [persona]", result.Selection.Components)
+			}
+			if got := readTextFile(t, state.Path(home)); strings.Contains(got, `"preset"`) {
+				t.Fatalf("la escritura del estado conserva el preset retirado:\n%s", got)
+			}
+		})
 	}
 }

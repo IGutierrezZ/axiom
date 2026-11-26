@@ -383,7 +383,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	merged := existing
 	merged.InstalledAgents = fresh.InstalledAgents
 	merged.SelectionConfigured, merged.Components, merged.Skills = fresh.SelectionConfigured, fresh.Components, fresh.Skills
-	merged.Preset, merged.SDDMode, merged.StrictTDD = fresh.Preset, fresh.SDDMode, fresh.StrictTDD
+	merged.SDDMode, merged.StrictTDD = fresh.SDDMode, fresh.StrictTDD
 	merged.CommunityTools, merged.CommunityToolsConfigured = fresh.CommunityTools, fresh.CommunityToolsConfigured
 	merged.ClaudeModelAssignments, merged.ClaudePhaseAssignments = fresh.ClaudeModelAssignments, fresh.ClaudePhaseAssignments
 	merged.CodexModelAssignments = fresh.CodexModelAssignments
@@ -458,9 +458,6 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 		}
 		if len(flags.Skills) > 0 {
 			merged.Skills = newState.Skills
-		}
-		if flags.Preset != "" {
-			merged.Preset = newState.Preset
 		}
 		if flags.SDDMode != "" {
 			merged.SDDMode = newState.SDDMode
@@ -2111,17 +2108,17 @@ func executeCommand(name string, args ...string) error {
 }
 
 // selectedSkillIDs returns the skill IDs to install. If the selection
-// has explicit skills, those are used; otherwise skills are derived from the preset.
+// has explicit skills, those are used; otherwise the default skill set applies.
 func selectedSkillIDs(selection model.Selection) []model.SkillID {
 	if len(selection.Skills) > 0 {
 		// Retired skills (#70) and any id without an embedded asset are never
 		// written by injection, so verification must not require them.
 		// Filtering after the length check keeps an explicit list made only of
-		// such IDs empty instead of falling back to the preset.
+		// such IDs empty instead of falling back to the default set.
 		return skills.Installable(selection.Skills)
 	}
 
-	return skills.SkillsForPreset(selection.Preset)
+	return skills.DefaultSkills()
 }
 
 func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, resolved planner.ResolvedPlan) ([]string, error) {

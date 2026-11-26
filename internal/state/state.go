@@ -101,7 +101,6 @@ type InstallState struct {
 	SelectionConfigured    bool                `json:"selection_configured,omitempty"`
 	Components             []model.ComponentID `json:"components,omitempty"`
 	Skills                 []model.SkillID     `json:"skills,omitempty"`
-	Preset                 model.PresetID      `json:"preset,omitempty"`
 	SDDMode                model.SDDModeID     `json:"sdd_mode,omitempty"`
 	StrictTDD              bool                `json:"strict_tdd,omitempty"`
 	// CommunityTools records optional tools explicitly selected in the Gentle AI
@@ -156,6 +155,13 @@ type InstallState struct {
 	// persiste, así que la siguiente escritura ya no incluye la clave.
 	IgnoredPersona string `json:"-"`
 
+	// IgnoredPreset es el preset guardado por una versión anterior
+	// ("full-gentleman", "ecosystem-only", "minimal", "custom") que Axiom ya no
+	// admite: instala el conjunto de componentes por defecto o los que se elijan.
+	// Igual que IgnoredPersona: se descarta al leer, quien lo lee puede avisar y no
+	// se persiste.
+	IgnoredPreset string `json:"-"`
+
 	// IgnoredAgents son los agentes de installed_agents que el catálogo ya no conoce
 	// (agentes retirados). El estado los descarta al leerse, para que una instalación
 	// anterior siga cargando y sincronizando el resto, y quien lo lee puede avisar.
@@ -199,8 +205,8 @@ type InstallState struct {
 	UpstreamVersion string `json:"upstream_version,omitempty"`
 }
 
-// UnmarshalJSON descarta los agentes, los componentes y la persona retirados y
-// los deja en los campos Ignored*, para que el estado siga cargando.
+// UnmarshalJSON descarta los agentes, los componentes, la persona y el preset
+// retirados y los deja en los campos Ignored*, para que el estado siga cargando.
 func (s *InstallState) UnmarshalJSON(data []byte) error {
 	type plainInstallState InstallState
 	var decoded plainInstallState
@@ -215,6 +221,7 @@ func (s *InstallState) UnmarshalJSON(data []byte) error {
 
 	*s = InstallState(decoded)
 	s.IgnoredPersona = ignoredPersona(fields["persona"])
+	s.IgnoredPreset = ignoredPreset(fields["preset"])
 	s.InstalledAgents, s.IgnoredAgents = splitKnownAgents(s.InstalledAgents)
 	s.Components, s.IgnoredComponents = splitKnownComponents(s.Components)
 	return nil
@@ -235,6 +242,19 @@ func ignoredPersona(raw json.RawMessage) string {
 		return ""
 	}
 	return value
+}
+
+// ignoredPreset devuelve el preset guardado en el estado cuando no está vacío:
+// ninguno de los presets existe ya.
+func ignoredPreset(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(value)
 }
 
 // Path returns the absolute path to the canonical Axiom state file for the given home directory.
@@ -282,7 +302,7 @@ func (s *InstallState) SetSelection(selection model.Selection) {
 	s.SelectionConfigured = true
 	s.Components = append([]model.ComponentID(nil), selection.Components...)
 	s.Skills = append([]model.SkillID(nil), selection.Skills...)
-	s.Preset, s.SDDMode, s.StrictTDD = selection.Preset, selection.SDDMode, selection.StrictTDD
+	s.SDDMode, s.StrictTDD = selection.SDDMode, selection.StrictTDD
 }
 
 func (s InstallState) RestoreSelection(selection *model.Selection) {
@@ -291,7 +311,7 @@ func (s InstallState) RestoreSelection(selection *model.Selection) {
 	}
 	selection.Components = append([]model.ComponentID(nil), s.Components...)
 	selection.Skills = append([]model.SkillID(nil), s.Skills...)
-	selection.Preset, selection.SDDMode, selection.StrictTDD = s.Preset, s.SDDMode, s.StrictTDD
+	selection.SDDMode, selection.StrictTDD = s.SDDMode, s.StrictTDD
 }
 
 // MergeAgents returns a new InstallState that combines existing with the
@@ -327,7 +347,6 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		SelectionConfigured:         existing.SelectionConfigured,
 		Components:                  existing.Components,
 		Skills:                      existing.Skills,
-		Preset:                      existing.Preset,
 		SDDMode:                     existing.SDDMode,
 		StrictTDD:                   existing.StrictTDD,
 		CommunityTools:              existing.CommunityTools,

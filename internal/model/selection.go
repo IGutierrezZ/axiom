@@ -4,7 +4,6 @@ type Selection struct {
 	Agents                           []AgentID
 	Components                       []ComponentID
 	Skills                           []SkillID
-	Preset                           PresetID
 	SDDMode                          SDDModeID
 	SDDProfileStrategy               SDDProfileStrategyID
 	StrictTDD                        bool

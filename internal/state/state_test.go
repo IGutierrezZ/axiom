@@ -56,7 +56,6 @@ func fullyPopulatedInstallState() InstallState {
 		SelectionConfigured:      true,
 		Components:               []model.ComponentID{model.ComponentEngram, model.ComponentSDD},
 		Skills:                   []model.SkillID{model.SkillSDDInit, model.SkillWorkUnitCommits},
-		Preset:                   model.PresetCustom,
 		SDDMode:                  model.SDDModeMulti,
 		StrictTDD:                true,
 		CommunityTools:           []string{"codegraph", "jq"},
@@ -224,8 +223,8 @@ func TestCommunityToolsRoundTrip(t *testing.T) {
 
 func TestSelectionRoundTripPreservesPresenceAndExplicitEmpty(t *testing.T) {
 	tests := []InstallState{
-		{SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, Preset: model.PresetCustom, SDDMode: model.SDDModeMulti, StrictTDD: true},
-		{SelectionConfigured: true, Components: []model.ComponentID{}, Skills: []model.SkillID{}, Preset: model.PresetCustom},
+		{SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, SDDMode: model.SDDModeMulti, StrictTDD: true},
+		{SelectionConfigured: true, Components: []model.ComponentID{}, Skills: []model.SkillID{}},
 		{InstalledAgents: []string{"opencode"}},
 	}
 	for i, want := range tests {
@@ -234,7 +233,7 @@ func TestSelectionRoundTripPreservesPresenceAndExplicitEmpty(t *testing.T) {
 			t.Fatal(err)
 		}
 		got, err := Read(home)
-		if err != nil || got.SelectionConfigured != want.SelectionConfigured || !slices.Equal(got.Components, want.Components) || !slices.Equal(got.Skills, want.Skills) || got.Preset != want.Preset || got.SDDMode != want.SDDMode || got.StrictTDD != want.StrictTDD {
+		if err != nil || got.SelectionConfigured != want.SelectionConfigured || !slices.Equal(got.Components, want.Components) || !slices.Equal(got.Skills, want.Skills) || got.SDDMode != want.SDDMode || got.StrictTDD != want.StrictTDD {
 			t.Errorf("case %d selection = %#v, want %#v", i, got, want)
 		}
 	}
@@ -1543,5 +1542,53 @@ func TestReadIgnoresRetiredVisualComponents(t *testing.T) {
 	}
 	if want := []model.ComponentID{"theme", "claude-theme", "opencode-gentle-logo"}; !reflect.DeepEqual(s.IgnoredComponents, want) {
 		t.Errorf("IgnoredComponents = %v, want %v", s.IgnoredComponents, want)
+	}
+}
+
+// TestLegacyPresetIsIgnoredAndDroppedOnTheNextWrite verifica que un estado con un
+// preset retirado carga, deja el valor en IgnoredPreset para que el llamador avise
+// y la siguiente escritura ya no guarda la clave. El resto de la selección se
+// conserva y un estado sin preset no avisa.
+func TestLegacyPresetIsIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
+	for _, tc := range []struct {
+		preset      string
+		wantIgnored string
+	}{
+		{preset: "full-gentleman", wantIgnored: "full-gentleman"},
+		{preset: "ecosystem-only", wantIgnored: "ecosystem-only"},
+		{preset: "minimal", wantIgnored: "minimal"},
+		{preset: "custom", wantIgnored: "custom"},
+		{preset: "", wantIgnored: ""},
+	} {
+		t.Run("preset="+tc.preset, func(t *testing.T) {
+			home := writeLegacyState(t, `{"installed_agents":["claude-code"],"selection_configured":true,"components":["engram"],"preset":"`+tc.preset+`","sdd_mode":"multi"}`)
+			got, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() error = %v", err)
+			}
+			if got.IgnoredPreset != tc.wantIgnored {
+				t.Fatalf("IgnoredPreset = %q, want %q", got.IgnoredPreset, tc.wantIgnored)
+			}
+			if !got.SelectionConfigured || !slices.Equal(got.Components, []model.ComponentID{model.ComponentEngram}) || got.SDDMode != model.SDDModeMulti {
+				t.Fatalf("Read() perdió la selección: %+v", got)
+			}
+			if err := Write(home, got); err != nil {
+				t.Fatalf("Write() error = %v", err)
+			}
+			data, err := os.ReadFile(Path(home))
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			if strings.Contains(string(data), "preset") {
+				t.Fatalf("la escritura conserva la clave preset: %s", data)
+			}
+			again, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() tras escribir error = %v", err)
+			}
+			if again.IgnoredPreset != "" {
+				t.Fatalf("IgnoredPreset tras reescribir = %q, want vacío", again.IgnoredPreset)
+			}
+		})
 	}
 }

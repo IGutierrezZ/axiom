@@ -35,7 +35,7 @@ func projectStateFixture(t *testing.T) (rootA, rootB, home string) {
 func installInProject(t *testing.T, root string, extra ...string) {
 	t.Helper()
 	t.Chdir(root)
-	args := append([]string{"--scope", "workspace", "--agent", "claude-code", "--preset", "custom"}, extra...)
+	args := append([]string{"--scope", "workspace", "--agent", "claude-code"}, extra...)
 	result, err := RunInstall(args, system.DetectionResult{})
 	if err != nil {
 		t.Fatalf("RunInstall(%s) error = %v", root, err)
@@ -106,7 +106,7 @@ func TestInstallGlobalScopeKeepsUsingTheUserState(t *testing.T) {
 	rootA, _, home := projectStateFixture(t)
 	t.Chdir(rootA)
 
-	result, err := RunInstall([]string{"--scope", "global", "--agent", "claude-code", "--component", "engram", "--preset", "custom"}, system.DetectionResult{})
+	result, err := RunInstall([]string{"--scope", "global", "--agent", "claude-code", "--component", "engram"}, system.DetectionResult{})
 	if err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}

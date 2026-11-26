@@ -402,9 +402,6 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 		StrictTDD:          flags.StrictTDD,
 		Skills:             skillIDs,
 		Profiles:           flags.Profiles,
-		// Preset is set to full-gentleman so selectedSkillIDs() returns the
-		// correct default skill set when no explicit skills are provided.
-		Preset: model.PresetFullGentleman,
 	}
 }
 
@@ -1915,6 +1912,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	noteIgnoredStateAgents(persistedState.IgnoredAgents)
 	noteIgnoredStateComponents(persistedState.IgnoredComponents)
 	noteIgnoredStatePersona(persistedState.IgnoredPersona)
+	noteIgnoredStatePreset(persistedState.IgnoredPreset)
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}

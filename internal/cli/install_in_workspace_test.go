@@ -22,7 +22,7 @@ func TestInstallInWorkspaceInstallsInTheExplicitRootWhateverTheCwd(t *testing.T)
 	}
 	mustWriteFile(t, filepath.Join(project, "axiom.yaml"), []byte(workspaceRootAxiomYAML))
 
-	result, err := InstallInWorkspace(project, []string{"--agent", "claude-code", "--component", "engram", "--preset", "custom"}, system.DetectionResult{})
+	result, err := InstallInWorkspace(project, []string{"--agent", "claude-code", "--component", "engram"}, system.DetectionResult{})
 	if err != nil {
 		t.Fatalf("InstallInWorkspace() error = %v", err)
 	}

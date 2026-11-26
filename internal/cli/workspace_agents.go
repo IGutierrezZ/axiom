@@ -188,6 +188,16 @@ func noteIgnoredStatePersona(ignored string) {
 	fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: la persona %q guardada en el estado ya no existe; Axiom solo instala su propia persona (componente persona).\n", ignored)
 }
 
+// noteIgnoredStatePreset avisa del preset retirado que figuraba en el estado y
+// que la lectura ha descartado: Axiom instala el conjunto de componentes por
+// defecto o los que se elijan.
+func noteIgnoredStatePreset(ignored string) {
+	if ignored == "" {
+		return
+	}
+	fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: el preset %q guardado en el estado ya no existe; Axiom instala el conjunto de componentes por defecto o los que elijas.\n", ignored)
+}
+
 // noteIgnoredStateAgents avisa de los agentes que el estado guardaba y Axiom ya no
 // conoce (agentes retirados): el sync los ignora y sigue con los demás.
 func noteIgnoredStateAgents(ignored []string) {

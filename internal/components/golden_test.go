@@ -42,21 +42,14 @@ func antigravityAdapter() agents.Adapter { return antigravity.NewAdapter() }
 // ---------------------------------------------------------------------------
 
 func TestGoldenConfigs(t *testing.T) {
-	type presetMapping struct {
-		Preset string   `json:"preset"`
+	defaultSkills := struct {
 		Skills []string `json:"skills"`
-	}
-
-	presets := []presetMapping{
-		{Preset: "full-gentleman", Skills: toStringSlice(skills.SkillsForPreset("full-gentleman"))},
-		{Preset: "ecosystem-only", Skills: toStringSlice(skills.SkillsForPreset("ecosystem-only"))},
-		{Preset: "minimal", Skills: toStringSlice(skills.SkillsForPreset("minimal"))},
-	}
-	presetsJSON, err := json.MarshalIndent(presets, "", "  ")
+	}{Skills: toStringSlice(skills.DefaultSkills())}
+	defaultSkillsJSON, err := json.MarshalIndent(defaultSkills, "", "  ")
 	if err != nil {
 		t.Fatalf("MarshalIndent() error = %v", err)
 	}
-	presetsJSON = append(presetsJSON, '\n')
+	defaultSkillsJSON = append(defaultSkillsJSON, '\n')
 
 	commands := sdd.OpenCodeCommands()
 	if len(commands) == 0 {
@@ -71,7 +64,7 @@ func TestGoldenConfigs(t *testing.T) {
 	}{
 		{name: "context7 server", path: "context7-server.json", content: mcp.DefaultContext7ServerJSON()},
 		{name: "context7 overlay", path: "context7-overlay.json", content: mcp.DefaultContext7OverlayJSON()},
-		{name: "skills presets", path: "skills-presets.json", content: presetsJSON},
+		{name: "default skills", path: "skills-default.json", content: defaultSkillsJSON},
 		{name: "sdd command markdown", path: "sdd-command-sdd-init.md", content: commandMarkdown},
 	}
 

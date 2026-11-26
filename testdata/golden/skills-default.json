@@ -1,0 +1,23 @@
+{
+  "skills": [
+    "sdd-init",
+    "sdd-explore",
+    "sdd-research",
+    "sdd-propose",
+    "sdd-spec",
+    "sdd-design",
+    "sdd-tasks",
+    "sdd-apply",
+    "sdd-verify",
+    "sdd-archive",
+    "sdd-onboard",
+    "judgment-day",
+    "go-testing",
+    "skill-creator",
+    "skill-improver",
+    "skill-registry",
+    "chained-pr",
+    "cognitive-doc-design",
+    "work-unit-commits"
+  ]
+}

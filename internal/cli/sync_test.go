@@ -3909,14 +3909,14 @@ func TestBuildSyncSelectionStrictTDD(t *testing.T) {
 
 func TestRunSyncRestoresConfiguredSelectionAndExplicitOverrides(t *testing.T) {
 	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"cursor"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}, Preset: model.PresetCustom}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"cursor"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}}); err != nil {
 		t.Fatal(err)
 	}
 	original := osUserHomeDir
 	osUserHomeDir = func() (string, error) { return home, nil }
 	t.Cleanup(func() { osUserHomeDir = original })
 	plain, err := RunSync([]string{"--dry-run"})
-	if err != nil || !reflect.DeepEqual(plain.Selection.Components, []model.ComponentID{model.ComponentEngram}) || !reflect.DeepEqual(plain.Selection.Skills, []model.SkillID{model.SkillCommentWriter}) || plain.Selection.Preset != model.PresetCustom {
+	if err != nil || !reflect.DeepEqual(plain.Selection.Components, []model.ComponentID{model.ComponentEngram}) || !reflect.DeepEqual(plain.Selection.Skills, []model.SkillID{model.SkillCommentWriter}) {
 		t.Fatalf("plain sync selection = %#v, err = %v", plain.Selection, err)
 	}
 	overridden, err := RunSync([]string{"--dry-run", "--skill", "sdd-init", "--sdd-mode", "multi", "--strict-tdd"})
@@ -3927,7 +3927,7 @@ func TestRunSyncRestoresConfiguredSelectionAndExplicitOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := RunSync([]string{"--dry-run"})
-	if err != nil || result.Selection.Preset != model.PresetFullGentleman || !result.Selection.HasComponent(model.ComponentSkills) {
+	if err != nil || !result.Selection.HasComponent(model.ComponentSkills) {
 		t.Fatalf("legacy sync selection = %#v, err = %v", result.Selection, err)
 	}
 }

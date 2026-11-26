@@ -145,7 +145,6 @@ func TestRunInstallWorkspaceScopeWritesToTheProjectRoot(t *testing.T) {
 				"--scope", "workspace",
 				"--agent", "claude-code",
 				"--component", "engram",
-				"--preset", "custom",
 			}, system.DetectionResult{})
 			if err != nil {
 				t.Fatalf("RunInstall() error = %v", err)
@@ -183,7 +182,6 @@ func TestRunInstallWorkspaceScopeOutsideAnyProjectUsesTheCurrentDirectory(t *tes
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "engram",
-		"--preset", "custom",
 	}, system.DetectionResult{}); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
