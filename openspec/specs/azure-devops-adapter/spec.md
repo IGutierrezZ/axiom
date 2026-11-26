@@ -2,7 +2,15 @@
 
 ## Purpose
 
-Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devops`, su manifiesto, un cliente REST 7.1 único y robusto (autenticación por PAT, timeouts, límites de tasa, errores tipados y saneados), la lectura de work items, la escritura protegida por `/rev`, el descubrimiento del proceso del proyecto, la identidad de la persona en Azure DevOps y los verbos `axiom integrations connect` y `discover`. No emite ningún evento del ciclo de vida hacia Azure DevOps (C-07-d y C-07-e), no crea work items, no ofrece interfaz (C-07-h), no usa Entra ID y no soporta Azure DevOps Server on-premises. Todo se verifica con un servidor `httptest`: ninguna prueba llama a Azure DevOps real.
+Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devops`, su manifiesto, un cliente REST 7.1 único y robusto (autenticación por PAT, timeouts, límites de tasa, errores tipados y saneados), la lectura de work items, la escritura protegida por `/rev`, el descubrimiento del proceso del proyecto, la identidad de la persona en Azure DevOps y los verbos `axiom integrations connect` y `discover`. Desde C-07-e escribe además en el ciclo de vida:
+- una Task hija por rol, con marca determinista y sin duplicados;
+- la estimación y la imputación de horas, con `test /rev`;
+- el resumen de la spec en la descripción del work item;
+- los IDs funcionales como etiquetas aparte;
+- el estado y la asignación de la Task en `role.start` y `role.apply.approved`;
+- la transición del work item al archivar.
+
+Solo crea work items de tipo Task, hijos del work item de origen. No ofrece interfaz (C-07-h), no usa Entra ID y no soporta Azure DevOps Server on-premises. Todo se verifica con un servidor `httptest`: ninguna prueba llama a Azure DevOps real.
 
 ## Requirements
 

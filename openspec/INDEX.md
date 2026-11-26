@@ -1,7 +1,7 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 17:59:32 UTC
+> **Última Sincronización:** 2026-11-26 18:00:37 UTC
 > **Total Dominios:** 50 | **Total Requerimientos:** 602 | **Total Escenarios BDD:** 2920
 
 ---
@@ -356,7 +356,7 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
 
 ### Dominio: `azure-devops-adapter` — Especificación de azure-devops-adapter
 
-Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devops`, su manifiesto, un cliente REST 7.1 único y robusto (autenticación por PAT, timeouts, límites de tasa, errores tipados y saneados), la lectura de work items, la escritura protegida por `/rev`, el descubrimiento del proceso del proyecto, la identidad de la persona en Azure DevOps y los verbos `axiom integrations connect` y `discover`. No emite ningún evento del ciclo de vida hacia Azure DevOps (C-07-d y C-07-e), no crea work items, no ofrece interfaz (C-07-h), no usa Entra ID y no soporta Azure DevOps Server on-premises. Todo se verifica con un servidor `httptest`: ninguna prueba llama a Azure DevOps real.
+Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devops`, su manifiesto, un cliente REST 7.1 único y robusto (autenticación por PAT, timeouts, límites de tasa, errores tipados y saneados), la lectura de work items, la escritura protegida por `/rev`, el descubrimiento del proceso del proyecto, la identidad de la persona en Azure DevOps y los verbos `axiom integrations connect` y `discover`. Desde C-07-e escribe además en el ciclo de vida:
 
 **Archivo:** [`specs/azure-devops-adapter/spec.md`](specs/azure-devops-adapter/spec.md)
 
