@@ -1,6 +1,6 @@
 # Delta para sdd-iso-evidence
 
-En un cambio ISO, un ADDED puede llevar un identificador provisional como forma válida de su identificador (REQ-29.3), y `Cubre:` acepta los provisionales declarados por la propia delta y se reescribe al archivar (REQ-29.4).
+En un cambio ISO, un ADDED puede llevar un identificador provisional como forma válida de su identificador (REQ-29.3), que la matriz de verify cita hasta archivar, y `Cubre:` acepta los provisionales declarados por la propia delta y se reescribe al archivar (REQ-29.4).
 
 Notación de los escenarios: `«prov-a»`, `«prov-b»` son marcadores neutros de un identificador provisional; NO son el formato real, que fija el diseño (véase REQ-47.1 de `requirement-identifiers`).
 
@@ -8,8 +8,8 @@ Notación de los escenarios: `«prov-a»`, `«prov-b»` son marcadores neutros d
 
 ### Requirement: Identificador Válido según el Patrón Declarado en el Nombre de los Requisitos de la Delta (REQ-29.3)
 
-En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; sin declaración, el valor por defecto de REQ-44.2, que admite exactamente `REQ-<n>.<m>` con `<n>` y `<m>` enteros decimales sin signo). La única excepción es el ADDED, cuyo nombre PUEDE llevar en su lugar un identificador provisional (REQ-47.1 de `requirement-identifiers`), que la integración sustituye por el definitivo al archivar (REQ-47.8 de `sdd-archive-lifecycle`). Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6). La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. El análisis del nombre (qué es un identificador, un candidato mal formado o una ausencia) lo hace el puerto único (REQ-44.4 y REQ-44.5 de `requirement-identifiers`). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
-(Previously: el nombre debía contener siempre un identificador válido según el patrón declarado del proyecto, también el ADDED; ahora el ADDED admite además un identificador provisional de la propia delta, y un provisional fuera de ADDED bloquea.)
+En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; sin declaración, el valor por defecto de REQ-44.2, que admite exactamente `REQ-<n>.<m>` con `<n>` y `<m>` enteros decimales sin signo). La única excepción es el ADDED, cuyo nombre PUEDE llevar en su lugar un identificador provisional (REQ-47.1 de `requirement-identifiers`), que la integración sustituye por el definitivo al archivar (REQ-47.8 de `sdd-archive-lifecycle`). Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6): hasta archivar, las filas de la matriz de los escenarios de un ADDED provisional citan el provisional, y el paso de archivado las reescribe al definitivo junto con la delta (REQ-47.4 de `requirement-identifiers`), de modo que la comprobación de la matriz al archivar o al reanudar un archivado compara siempre la misma forma del identificador. La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. El análisis del nombre (qué es un identificador, un candidato mal formado o una ausencia) lo hace el puerto único (REQ-44.4 y REQ-44.5 de `requirement-identifiers`). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
+(Previously: el nombre debía contener siempre un identificador válido según el patrón declarado del proyecto, también el ADDED; ahora el ADDED admite además un identificador provisional de la propia delta, que la matriz de verify cita hasta archivar, y un provisional fuera de ADDED bloquea.)
 
 | Caso | Regla |
 |---|---|
@@ -181,6 +181,13 @@ Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la secci�
 - **DADO** un cambio ISO y un ADDED llamado `Cobro con IVA («prov-a», REQ-30.1)`
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que indica que el nombre es ambiguo
+
+#### Scenario: La matriz de verify cita el provisional hasta archivar
+
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA («prov-a»)` con un escenario y un `verify-report.md` cuya matriz tiene la fila de ese escenario con `«prov-a»` en la columna del requisito
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json` y después `axiom sdd archive-check`
+- **ENTONCES** la fila cuenta como la del escenario afectado y no se proyecta ningún motivo de matriz por el provisional
+- **Y** tras el paso de archivado la fila cita el definitivo asignado y una reanudación de `archive-check` sigue sin motivos de matriz
 
 ---
 

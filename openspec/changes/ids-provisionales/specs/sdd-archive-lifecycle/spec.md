@@ -11,15 +11,23 @@ Notación de los escenarios: `«prov-a»`, `«prov-b»` son marcadores neutros d
 El archivado SDD DEBE disponer de un paso nativo (verbo o modo; el nombre lo fija el diseño) que cubra todo el cambio y que, antes de la instantánea y del movimiento de la carpeta del cambio a `openspec/changes/archive/`, DEBE:
 
 1. Planificar las asignaciones de todos los identificadores provisionales de todas las capacidades del cambio en un plan único (REQ-47.3, REQ-47.2), validado antes de escribir.
-2. Componer todas las capacidades del cambio sobre la spec viva, tanto las que modifican una especificación existente como las capacidades nuevas (sin spec canónica), que hoy se copian sin pasar por Go y dejarían los provisionales en `openspec/specs/`. Una capacidad nueva con ADDED provisionales se archiva con identificadores definitivos, incluida la apertura de una serie nueva (`REQ-<n>.<m>` y `RF-<DOM>-<NN>`).
-3. Reescribir las líneas `Cubre:` de los ficheros de tareas del cambio y las deltas del cambio (REQ-47.4).
+2. Componer todas las capacidades del cambio sobre la spec viva, tanto las que modifican una especificación existente como las capacidades nuevas (sin spec canónica), que hoy se copian sin pasar por Go y dejarían los provisionales en `openspec/specs/`. Una capacidad nueva con ADDED provisionales se archiva con identificadores definitivos, incluida la apertura de una serie nueva (`REQ-<n>.<m>` y `RF-<DOM>-<NN>`). Una capacidad nueva cuya delta trae MODIFIED, REMOVED o RENAMED se rechaza con el error tipado de capacidad inexistente (REQ-47.3), en lugar de copiarse.
+3. Reescribir las líneas `Cubre:` de los ficheros de tareas del cambio, las deltas del cambio y la columna del requisito de la matriz de los informes de verify (REQ-47.4).
 4. Escribir la traza del mapa de provisional a definitivo con la capacidad de cada entrada en la carpeta del cambio (REQ-47.6).
 
-Todo el paso DEBE ser atómico (REQ-47.4): un fallo en cualquier punto no deja a medias la spec viva, las tareas, las deltas ni la traza. Las reescrituras DEBEN ocurrir antes de la instantánea previa al movimiento de la carpeta, de modo que los ficheros del cambio archivado conservan, byte a byte, el contenido de esa instantánea (`diff -r` de la skill de archivado). Un cambio sin provisionales produce la misma spec viva, las mismas tareas y las mismas deltas que producía el archivado por dominio hasta hoy.
+Las opciones de superación (`--supersede`, `--superseded-requirements`) de REQ-30.22 se aplican a todo el cambio: `--supersede` actúa sobre los REMOVED de todas las capacidades, y cada nombre de `--superseded-requirements` DEBE casar por título exacto en la especificación canónica de exactamente una capacidad del cambio, o llevar el prefijo `<capacidad>/` que la fija; un nombre que no casa en ninguna, o que casa en varias sin prefijo, DEBE rechazarse sin escribir con un error tipado que lo nombre.
+
+Una capacidad cuyos requisitos ya están todos integrados (REQ-30.3, con la misma clasificación que la integración ODD) se informa como ya integrada y no se escribe; una capacidad parcialmente integrada (por ejemplo, por un archivado anterior interrumpido o por una composición manual de parte del cambio) se completa componiendo solo lo pendiente, de modo que el archivado siempre es reanudable. Una capacidad sin nada integrado se compone con la delta entera, igual que `axiom sdd archive-compose`.
+
+El paso DEBE emitir un informe, legible y en JSON, con: por capacidad, su resultado (creada, compuesta, reanudada o ya integrada); el mapa de provisional a definitivo con la capacidad, el requisito y el estado de cada entrada (`assigned`, `kept` o `reassigned`); los duplicados detectados (REQ-47.5), con su carácter bloqueante o informativo; y los ficheros escritos. El informe de la fase de archivado (`archive-report.md`) DEBE incluir la tabla del mapa. El paso DEBE ofrecer una opción de solo lectura que ejecute las mismas comprobaciones y emita el mismo informe sin escribir nada (equivalente a REQ-47.7) y que, sobre un cambio ya archivado, compruebe que cada definitivo de su mapa aparece una sola vez en la spec viva y en su capacidad.
+
+Todo el paso DEBE ser atómico (REQ-47.4): un fallo en cualquier punto no deja a medias la spec viva, las tareas, las deltas, los informes de verify ni la traza. Las reescrituras DEBEN ocurrir antes de la instantánea previa al movimiento de la carpeta, de modo que los ficheros del cambio archivado conservan, byte a byte, el contenido de esa instantánea (`diff -r` de la skill de archivado). Un cambio sin provisionales produce la misma spec viva, las mismas tareas y las mismas deltas que producía el archivado por dominio hasta hoy.
 
 El archivado interrumpido DEBE ser reanudable: `axiom sdd archive-check` DEBE reconocer la asignación ya hecha usando el mapa guardado (REQ-47.6) y no volver a asignar números, de modo que tras una interrupción la reejecución del paso termina el archivado sin duplicar requisitos ni cambiar los identificadores ya asignados. Si el estado del cambio reevalúa puertas por el digest de las tareas o de la delta, la reescritura NO DEBE dejar la reejecución bloqueada por puertas en `pending`.
 
 Dos cambios SDD que se archivan uno tras otro con ADDED provisionales en la misma capacidad DEBEN recibir números distintos sin que el autor renumere a mano: el segundo calcula el siguiente libre sobre la spec viva que ya contiene el primero.
+
+Si dos ramas de archivado asignaron el mismo número y la segunda se rebasa sobre la rama de integración que ya contiene la primera, la opción de solo lectura del paso sobre el cambio archivado DEBE detectar el duplicado (REQ-47.5) con un error tipado cuya continuación es descartar la rama de archivado y rehacer el archivado desde la rama de integración. El cambio archivado es inmutable (REQ-21.18) y NO se reasigna en sitio; en la rama de integración la carpeta del cambio conserva los provisionales, y la reejecución del paso asigna el siguiente libre.
 
 #### Scenario: Se archiva un cambio con ADDED provisionales en una capacidad existente
 
@@ -94,11 +102,54 @@ Dos cambios SDD que se archivan uno tras otro con ADDED provisionales en la mism
 - **ENTONCES** la spec viva resultante es idéntica byte a byte a la que producía el archivado por dominio
 - **Y** las tareas y las deltas conservan sus bytes y no se escribe ninguna traza de asignación
 
+#### Scenario: Una capacidad nueva con un MODIFIED se rechaza en lugar de copiarse
+
+- **DADO** un cambio con una capacidad nueva `pagos`, sin spec canónica, cuya delta trae un MODIFIED
+- **CUANDO** se ejecuta el paso de archivado del cambio
+- **ENTONCES** se rechaza con el error tipado de capacidad inexistente que nombra `pagos`, la sección MODIFIED y el requisito
+- **Y** no se crea `openspec/specs/pagos/spec.md` ni cambia ningún otro fichero
+
+#### Scenario: Una capacidad parcialmente integrada se completa
+
+- **DADO** un cambio con dos ADDED en una capacidad existente, uno de los cuales ya está en la spec viva con el mismo cuerpo por un archivado anterior interrumpido, y una capacidad nueva ya escrita con el mismo contenido
+- **CUANDO** se ejecuta el paso de archivado del cambio
+- **ENTONCES** la capacidad existente se completa con el ADDED pendiente y se informa como reanudada
+- **Y** la capacidad nueva se informa como ya integrada y no se reescribe
+- **Y** ningún requisito queda duplicado
+
+#### Scenario: El informe del paso lista capacidades, mapa, duplicados y ficheros
+
+- **DADO** un cambio con un ADDED provisional en una capacidad existente y otro en una capacidad nueva
+- **CUANDO** se ejecuta el paso de archivado del cambio con salida JSON
+- **ENTONCES** el informe contiene el resultado de cada capacidad, las dos entradas del mapa con su provisional, su definitivo, su capacidad, su requisito y el estado `assigned`, y la lista de ficheros escritos
+- **Y** `archive-report.md` incluye la tabla del mapa
+
+#### Scenario: La opción de solo lectura no escribe
+
+- **DADO** un cambio con provisionales
+- **CUANDO** se ejecuta el paso de archivado del cambio con su opción de solo lectura
+- **ENTONCES** el informe es el mismo que el de la ejecución real, salvo los ficheros escritos
+- **Y** ningún fichero del árbol cambia
+
+#### Scenario: Una segunda rama de archivado rebasada detecta el duplicado y se rehace
+
+- **DADO** dos cambios archivados en ramas de archivado distintas que asignaron `REQ-31.2` en la misma capacidad, la primera ya fusionada en la rama de integración
+- **CUANDO** la segunda rama de archivado se rebasa y se ejecuta la opción de solo lectura del paso sobre su cambio archivado
+- **ENTONCES** finaliza con el error tipado de duplicado que nombra `REQ-31.2` y la continuación de rehacer el archivado desde la rama de integración
+- **Y** al rehacerlo, el cambio recibe `REQ-31.3` sin que el autor renumere a mano
+
+#### Scenario: Un nombre superado que no casa se rechaza
+
+- **DADO** un cambio con dos capacidades existentes y `--superseded-requirements "Cobro"`, cuando `Cobro` existe en las dos canónicas o en ninguna
+- **CUANDO** se ejecuta el paso de archivado del cambio
+- **ENTONCES** se rechaza con un error tipado que nombra `Cobro` y la continuación de fijar la capacidad con el prefijo `<capacidad>/`
+- **Y** no se escribe nada
+
 ## MODIFIED Requirements
 
 ### Requirement: Contenido del Archivado (REQ-21.17)
 
-Al ejecutarse `archive` con su precondición satisfecha (REQ-21.16), el sistema DEBE: (1) integrar los deltas del incremento en la spec viva `openspec/specs/`, sin crear nunca una segunda spec viva, asignando antes el número definitivo de los identificadores provisionales de todas las capacidades en un plan único, componiendo también las capacidades nuevas, reescribiendo el provisional en la spec viva, las líneas `Cubre:` de las tareas y las deltas del cambio y escribiendo la traza del mapa de provisional a definitivo (REQ-47.8); (2) con `technical_context.maintained` declarado, integrar el delta de contexto del cambio en las rutas mantenidas con el mismo mecanismo de edición dirigida con verificación nativa, registrando la traza por entrada (REQ-24.55), sin modificar nunca las rutas del modo `reference` (REQ-24.30); (3) transferir el incremento a `openspec/changes/archive/`; y (4) actualizar el inventario maestro (`openspec/INDEX.md`) y los roadmaps declarados que referencien el incremento. Las integraciones (1) y (2), incluida la asignación y la reescritura, DEBEN completarse y verificarse antes de la transferencia (3), porque un incremento archivado es inmutable (REQ-21.18).
+Al ejecutarse `archive` con su precondición satisfecha (REQ-21.16), el sistema DEBE: (1) integrar los deltas del incremento en la spec viva `openspec/specs/`, sin crear nunca una segunda spec viva, asignando antes el número definitivo de los identificadores provisionales de todas las capacidades en un plan único, componiendo también las capacidades nuevas, reescribiendo el provisional en la spec viva, las líneas `Cubre:` de las tareas, las deltas del cambio y la matriz de los informes de verify, y escribiendo la traza del mapa de provisional a definitivo (REQ-47.8); (2) con `technical_context.maintained` declarado, integrar el delta de contexto del cambio en las rutas mantenidas con el mismo mecanismo de edición dirigida con verificación nativa, registrando la traza por entrada (REQ-24.55), sin modificar nunca las rutas del modo `reference` (REQ-24.30); (3) transferir el incremento a `openspec/changes/archive/`; y (4) actualizar el inventario maestro (`openspec/INDEX.md`) y los roadmaps declarados que referencien el incremento. Las integraciones (1) y (2), incluida la asignación y la reescritura, DEBEN completarse y verificarse antes de la transferencia (3), porque un incremento archivado es inmutable (REQ-21.18).
 (Previously: la integración (1) solo componía los deltas por dominio; no asignaba identificadores provisionales, no reescribía las tareas ni las deltas, no dejaba traza y las capacidades nuevas se copiaban sin pasar por la composición nativa)
 
 #### Scenario: Archivado exitoso actualiza incremento, especificación viva e inventario
@@ -147,7 +198,7 @@ La composición de una delta sobre una especificación canónica y `axiom sdd ar
 
 **Por título exacto, sin cambios.** ADDED (existencia previa), la colisión del nombre nuevo de un RENAMED y `--superseded-requirements` siguen emparejándose por título exacto: el compositor no rechaza un ADDED ni un nuevo nombre de RENAMED cuyo identificador ya figura bajo otro título; esa unicidad la imponen antes de componer REQ-29.3 (ISO) y REQ-30.4 (ODD).
 
-**Provisionales.** `axiom sdd archive-compose` NO DEBE aceptar un ADDED cuyo nombre lleve un identificador provisional (REQ-47.1): DEBE rechazarlo sin escribir con un error tipado que remita al paso de archivado del cambio (REQ-47.8), que es el que asigna el número. Tampoco DEBE aceptar un provisional en MODIFIED, REMOVED o RENAMED. La composición de una delta sin provisionales no cambia.
+**Provisionales.** `axiom sdd archive-compose` NO DEBE aceptar un ADDED cuyo nombre lleve un identificador provisional (REQ-47.1): DEBE rechazarlo sin escribir con un error tipado que remita al paso de archivado del cambio (REQ-47.8), que es el que asigna el número. Tampoco DEBE aceptar un provisional en MODIFIED, REMOVED o RENAMED, ni un token con la forma de un provisional (bien o mal formado) en el cuerpo de cualquier requisito de la delta, porque el cuerpo llega a la spec viva: la composición rechaza la delta entera con el mismo error tipado, que nombra la sección, el requisito y el token. La composición de una delta sin provisionales no cambia.
 
 **Archivado interrumpido (D17).** `axiom sdd archive-check` calcula «ya compuesto» por nombre para ADDED, MODIFIED y RENAMED, y por la misma resolución por identificador para REMOVED (un REMOVED se da por compuesto cuando ya no se resuelve en la canónica); con provisionales, reconoce la asignación ya hecha por el mapa guardado (REQ-47.8). La clasificación idempotente de la integración ODD (REQ-30.2) resuelve MODIFIED y REMOVED con esa misma resolución: un MODIFIED integrado deja la canónica con el nombre nuevo y una segunda ejecución informa `already`. Compositor, `archive-check` y clasificación ODD DEBEN coincidir siempre.
 
@@ -289,6 +340,12 @@ Supuesto: se conservan sin cambios las pruebas nativas de composición de `--can
 - **DADO** una delta con un MODIFIED cuyo nombre lleva `«prov-a»`
 - **CUANDO** se compone
 - **ENTONCES** finaliza con código distinto de cero con un error tipado que nombra la sección MODIFIED y `«prov-a»`
+- **Y** no se escribe el fichero de salida
+
+#### Scenario: Un provisional solo en el cuerpo se rechaza
+- **DADO** una delta con un ADDED `Cobro (REQ-30.5)` cuyo cuerpo cita `«prov-a»`
+- **CUANDO** se ejecuta `axiom sdd archive-compose --canonical <ruta> --delta <ruta> --output <ruta>`
+- **ENTONCES** finaliza con código distinto de cero con el error tipado de provisional, que nombra la sección ADDED, el requisito y `«prov-a»`
 - **Y** no se escribe el fichero de salida
 
 #### Scenario: Un REMOVED con un identificador inexistente tiene su error tipado
