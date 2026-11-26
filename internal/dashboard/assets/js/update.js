@@ -109,19 +109,31 @@ export function renderUpdateBanner() {
     return;
   }
   const info = state.version;
-  if (!info || info.status !== 'update_available' || !info.update_available) {
+  // restart_required: el binario instalado ya no es el de este proceso y no hay nada
+  // más reciente que instalar; basta con reiniciar, no se ofrece actualizar.
+  const restartOnly = !!info && info.status === 'restart_required';
+  const updatable = !!info && info.status === 'update_available' && info.update_available;
+  if (!restartOnly && !updatable) {
     banner.hidden = true;
     banner.innerHTML = '';
     return;
   }
-  const release = safeReleaseUrl(info.release_url);
-  const link = release ? `<a class="link-btn" href="${escapeHtml(release)}" target="_blank" rel="noopener noreferrer">Ver la release</a>` : '';
   banner.className = 'alert alert-warn update-banner';
   banner.setAttribute('role', 'status');
   banner.hidden = false;
-  banner.innerHTML = `${icon('download', 18)}<p class="grow">Hay una versión nueva de Axiom: <span class="mono">${escapeHtml(info.current)}</span> → <strong class="mono">${escapeHtml(info.latest)}</strong>. ${link}</p>`
+  const recheckButton = button({ label: 'Comprobar de nuevo', iconName: 'refresh', size: 'sm', attrs: 'data-action="update-recheck"' });
+  if (restartOnly) {
+    banner.innerHTML = `${icon('refresh', 18)}<p class="grow">Axiom ya está instalado en otra versión (<strong class="mono">${escapeHtml(info.installed)}</strong>) y este dashboard sigue con la <span class="mono">${escapeHtml(info.current)}</span>. Reinicia el dashboard para usarla.</p>`
+      + button({ label: 'Reiniciar', iconName: 'refresh', variant: 'primary', size: 'sm', attrs: 'data-action="update-now"' })
+      + recheckButton;
+    return;
+  }
+  const release = safeReleaseUrl(info.release_url);
+  const link = release ? `<a class="link-btn" href="${escapeHtml(release)}" target="_blank" rel="noopener noreferrer">Ver la release</a>` : '';
+  const from = info.installed || info.current;
+  banner.innerHTML = `${icon('download', 18)}<p class="grow">Hay una versión nueva de Axiom: <span class="mono">${escapeHtml(from)}</span> → <strong class="mono">${escapeHtml(info.latest)}</strong>. ${link}</p>`
     + button({ label: 'Actualizar', iconName: 'download', variant: 'primary', size: 'sm', attrs: 'data-action="update-now"' })
-    + button({ label: 'Comprobar de nuevo', iconName: 'refresh', size: 'sm', attrs: 'data-action="update-recheck"' });
+    + recheckButton;
 }
 
 // checkVersion consulta la versión. Un fallo de red o de la API se queda en silencio:
@@ -141,7 +153,7 @@ async function recheck(btn) {
   const restore = setBusy(btn, 'Comprobando…');
   const info = await checkVersion({ refresh: true });
   restore();
-  if (info && info.status === 'update_available') return;
+  if (info && (info.status === 'update_available' || info.status === 'restart_required')) return;
   if (info && info.status === 'up_to_date') toast('Axiom ya está en la última versión.', 'ok');
   else if (info && info.status === 'dev_build') toast('Esta es una compilación de desarrollo: no se compara con las releases.', 'warn');
   else toast('No se pudo comprobar la versión nueva. Inténtalo más tarde.', 'bad');
@@ -249,7 +261,7 @@ async function pollUpdate() {
       set('updateJob', {
         phase: 'failed', running: false, sync: null,
         message: 'Se perdió la conexión con el dashboard durante la actualización.',
-        manual_hint: 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest'
+        manual_hint: manualUpdateCommand()
       });
       return;
     }
@@ -257,8 +269,19 @@ async function pollUpdate() {
   }
 }
 
+// manualUpdateCommand es el comando manual del canal en uso: la comprobación beta
+// anuncia main@<sha> e instala la cabeza de main, no la última release.
+const MANUAL_UPDATE = 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest';
+const MANUAL_UPDATE_BETA = 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main';
+
+function manualUpdateCommand() {
+  const latest = state.version && state.version.latest;
+  return typeof latest === 'string' && latest.startsWith('main@') ? MANUAL_UPDATE_BETA : MANUAL_UPDATE;
+}
+
 async function startUpdate(btn) {
-  const restore = setBusy(btn, 'Actualizando…');
+  const restartOnly = state.version && state.version.status === 'restart_required';
+  const restore = setBusy(btn, restartOnly ? 'Reiniciando…' : 'Actualizando…');
   try {
     const job = await api('/api/system/update', { method: 'POST' });
     pollErrors = 0;

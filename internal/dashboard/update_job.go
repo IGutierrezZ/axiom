@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
@@ -24,6 +25,19 @@ const (
 // manualUpdateHint es el comando manual que se ofrece cuando la actualización
 // automática no puede completarse y la herramienta no aporta uno propio.
 const manualUpdateHint = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest"
+
+// manualBetaUpdateHint es el comando manual del canal beta, que instala la cabeza
+// de main y no la última release.
+const manualBetaUpdateHint = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main"
+
+// manualUpdateHintFor devuelve el comando manual del canal al que pertenece latest:
+// la comprobación beta anuncia `main@<sha>`.
+func manualUpdateHintFor(latest string) string {
+	if strings.HasPrefix(strings.TrimSpace(latest), "main@") {
+		return manualBetaUpdateHint
+	}
+	return manualUpdateHint
+}
 
 // UpdateSyncSummary es el resultado de la sincronización del workspace asociada a
 // la actualización. Executed es false cuando se omitió (y SkippedReason dice por qué).
@@ -156,6 +170,11 @@ func (s *Service) runUpdateJob() {
 	info := s.versions.Get(context.Background(), true)
 	switch info.Status {
 	case versionStatusUpdateAvailable:
+	case versionStatusRestartRequired:
+		// El binario instalado ya no es el de este proceso y no hay nada más reciente
+		// que instalar: basta con relanzar el dashboard (prov:UPD:1).
+		s.restartWithInstalled(info)
+		return
 	case versionStatusUpToDate:
 		j.finish(updatePhaseDone, "Axiom ya está en la última versión.", "", nil)
 		return
@@ -168,14 +187,18 @@ func (s *Service) runUpdateJob() {
 	}
 
 	// 2. Actualizar con la misma cadena que el botón de Ecosistema (upgrade -> sync).
-	j.setPhase(updatePhaseUpgrading, fmt.Sprintf("Actualizando Axiom de %s a %s…", info.Current, info.Latest))
+	from := info.Current
+	if info.Installed != "" {
+		from = info.Installed
+	}
+	j.setPhase(updatePhaseUpgrading, fmt.Sprintf("Actualizando Axiom de %s a %s…", from, info.Latest))
 	resp, err := s.RunUpgradeSequence()
 	if err != nil || resp == nil || resp.Phases == nil {
 		msg := "La actualización no produjo resultado."
 		if err != nil {
 			msg = err.Error()
 		}
-		j.finish(updatePhaseFailed, msg, manualUpdateHint, nil)
+		j.finish(updatePhaseFailed, msg, manualUpdateHintFor(info.Latest), nil)
 		return
 	}
 	upgrade := resp.Phases.Upgrade
@@ -184,12 +207,12 @@ func (s *Service) runUpdateJob() {
 		if msg == "" {
 			msg = resp.Message
 		}
-		j.finish(updatePhaseFailed, msg, hintOrDefault(upgrade.ManualHint), nil)
+		j.finish(updatePhaseFailed, msg, hintOrDefault(upgrade.ManualHint, info.Latest), nil)
 		return
 	}
 	// «skipped»: la herramienta propia terminó en un relevo manual y no se reemplazó.
 	if upgrade.Status == app.UpgradeStatusSkipped && !upgrade.RestartRequired {
-		j.finish(updatePhaseFailed, "Axiom no se pudo actualizar automáticamente.", hintOrDefault(upgrade.ManualHint), nil)
+		j.finish(updatePhaseFailed, "Axiom no se pudo actualizar automáticamente.", hintOrDefault(upgrade.ManualHint, info.Latest), nil)
 		return
 	}
 
@@ -216,11 +239,25 @@ func (s *Service) afterSelfUpgrade(sync *UpdateSyncSummary) {
 	s.update.finish(updatePhaseDone, "Axiom se ha actualizado. Reinicia el dashboard para usar la versión nueva.", "", sync)
 }
 
-func hintOrDefault(hint string) string {
+// restartWithInstalled relanza el dashboard con el binario instalado, sin
+// instalar nada. El proceso nuevo sincroniza el workspace al arrancar
+// (--post-update-sync).
+func (s *Service) restartWithInstalled(info VersionInfo) {
+	msg := "Reiniciando el dashboard con el binario instalado…"
+	if info.Installed != "" && info.Installed != info.Current {
+		msg = fmt.Sprintf("El binario instalado (%s) es distinto del que sirve el dashboard (%s). Reiniciando con el instalado…", info.Installed, info.Current)
+	}
+	s.update.setRestarting(msg, manualRelaunchHint(s.getRootPath()))
+	s.afterSelfUpgrade(nil)
+}
+
+// hintOrDefault devuelve la pista de la herramienta o, sin ella, el comando
+// manual del canal de latest.
+func hintOrDefault(hint, latest string) string {
 	if hint != "" {
 		return hint
 	}
-	return manualUpdateHint
+	return manualUpdateHintFor(latest)
 }
 
 func summarizeUpdateSync(p SyncPhaseReport) *UpdateSyncSummary {

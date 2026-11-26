@@ -44,14 +44,14 @@ Sin configuración de TDD en el proyecto (`axiom sdd status`: `tdd: null`) ni en
 
 - [x] T1 · Instalación propia en Windows independiente de `axiom.exe~`: `go install` con `GOBIN` temporal dentro del destino, sustitución con nombre único `.old`, restauración si falla y limpieza de restos, con pruebas. Ruta: inline (una sola unidad, sin decisiones abiertas). Evidencia: `go vet ./internal/update/upgrade/` limpio; `go test ./internal/update/upgrade/ -run 'SelfWindows|SwapSelfBinary|UniqueAside|WindowsBeta|AxiomWindows|GoInstall|RunStrategy|SelfUpgrade'` ok. `TestGoInstallSelfWindowsStagesTheBuildAndSwapsItIn` mantiene abierto `axiom.exe~` y la sustitución funciona igual. `TestWindowsBetaAxiomUpgradeUsesShippedRegistryGoTarget` se adapta: su `go install` simulado deja el binario en el directorio temporal.
   Cubre: prov:UPD:3
-- [ ] T2 · Reinicio pendiente: sonda de la versión instalada, estado `restart_required` y campos `installed`, `restart_required` e `instance` en `GET /api/system/version`; el trabajo de actualización reinicia sin reinstalar; orden manual según el canal; aviso «Reiniciar» en `update.js`; pruebas. Ruta: inline.
+- [x] T2 · Reinicio pendiente: sonda de la versión instalada, estado `restart_required` y campos `installed` y `restart_required` en `GET /api/system/version`; el trabajo de actualización reinicia sin reinstalar; orden manual según el canal; aviso «Reiniciar» en `update.js`; pruebas. Ruta: inline. El campo `instance` pasa a T3, que es quien lo necesita. Evidencia: `go vet ./internal/dashboard/` limpio; `go test ./internal/dashboard/ -run 'Version|Update|Restart|Relaunch|ParseVersion|ManualUpdateHint|SandboxHome'` ok (nuevas en `restart_required_test.go`, más `TestUpdateBannerOffersRestartWhenTheInstalledBinaryDiffers`); `node --check` de `update.js` ok. `TestMain` sustituye la sonda para no ejecutar el binario de pruebas.
   Cubre: prov:UPD:1
 - [ ] T3 · Botón «Reiniciar con la última versión»: `POST /api/system/restart` con trabajo forzado, botón en el pie de la barra lateral y en el aviso de fallo, recarga por cambio de instancia; pruebas. Ruta: inline.
   Cubre: prov:UPD:2
 
 ## Progreso
 
-Documento creado. Siguiente paso: T1.
+T1 hecha en `0b2b7e75e`. T2 hecha (commit en el registro de la rama). Siguiente paso: T3.
 
 ## Criterio de terminado
 
