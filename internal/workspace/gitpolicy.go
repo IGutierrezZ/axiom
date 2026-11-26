@@ -4,12 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/nametemplate"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
@@ -47,6 +49,9 @@ type GitConfig struct {
 	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
 	MainBranch        string `yaml:"main_branch,omitempty"` // sin defecto: vacío = una etapa
 	Promotion         string `yaml:"promotion,omitempty"`   // branch | release | ask; vacío = defecto del motor
+	// BranchTemplate es la plantilla de nombre de la rama del cambio (C-07-f): vacía
+	// significa «sin plantilla», y rige `<prefijo>/<cambio>`.
+	BranchTemplate string `yaml:"branch_template,omitempty"`
 }
 
 // RepositoryPolicy es una entrada del bloque `repositories:` de axiom.yaml
@@ -63,12 +68,13 @@ type RepositoryPolicy struct {
 	IntegrationBranch string `yaml:"integration_branch,omitempty"`
 	BranchPrefix      string `yaml:"branch_prefix,omitempty"`
 	Promotion         string `yaml:"promotion,omitempty"`
+	BranchTemplate    string `yaml:"branch_template,omitempty"` // sustituye a git.branch_template en este repositorio
 }
 
 // Listas cerradas de claves de los bloques de política de ramas (D-03).
 var (
-	gitKeys        = []string{"integration_branch", "branch_prefix", "main_branch", "promotion"}
-	repositoryKeys = []string{"path", "integration_branch", "branch_prefix", "promotion"}
+	gitKeys        = []string{"integration_branch", "branch_prefix", "main_branch", "promotion", "branch_template"}
+	repositoryKeys = []string{"path", "integration_branch", "branch_prefix", "promotion", "branch_template"}
 )
 
 // resolveGit devuelve la política de ramas efectiva a partir de lo declarado, que
@@ -85,6 +91,7 @@ func resolveGit(declared *GitConfig) *GitConfig {
 		}
 		resolved.MainBranch = declared.MainBranch
 		resolved.Promotion = declared.Promotion
+		resolved.BranchTemplate = declared.BranchTemplate
 	}
 	return &resolved
 }
@@ -103,7 +110,7 @@ func resolveGit(declared *GitConfig) *GitConfig {
 func decodeGit(node *yaml.Node) (*GitConfig, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.MappingNode {
-		return nil, errors.New("el bloque 'git' debe ser un mapeo con las claves opcionales 'integration_branch', 'branch_prefix', 'main_branch' y 'promotion'; para usar los valores por defecto, elimina el bloque")
+		return nil, errors.New("el bloque 'git' debe ser un mapeo con las claves opcionales 'integration_branch', 'branch_prefix', 'main_branch', 'promotion' y 'branch_template'; para usar los valores por defecto, elimina el bloque")
 	}
 
 	values, errs := decodeStringKeys(node, "git", gitKeys, branchValidator)
@@ -115,12 +122,13 @@ func decodeGit(node *yaml.Node) (*GitConfig, error) {
 		BranchPrefix:      values["branch_prefix"],
 		MainBranch:        values["main_branch"],
 		Promotion:         values["promotion"],
+		BranchTemplate:    values["branch_template"],
 	}, nil
 }
 
 // decodeRepositories decodifica y valida el bloque `repositories:` con el mismo
 // patrón que decodeGit (RF-TOP-10): una lista de mapeos, cada uno recorrido contra
-// la lista cerrada de claves `path`, `integration_branch`, `branch_prefix` y `promotion`, con
+// la lista cerrada de claves `path`, `integration_branch`, `branch_prefix`, `promotion` y `branch_template`, con
 // los errores acumulados. Cada error nombra la entrada (`repositories[0]`), la
 // clave y, si procede, el valor y la regla incumplida.
 //
@@ -133,7 +141,7 @@ func decodeGit(node *yaml.Node) (*GitConfig, error) {
 func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.SequenceNode {
-		return nil, errors.New("el bloque 'repositories' debe ser una lista de entradas con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix' y 'promotion'; para usar los valores del bloque 'git', elimina el bloque")
+		return nil, errors.New("el bloque 'repositories' debe ser una lista de entradas con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix', 'promotion' y 'branch_template'; para usar los valores del bloque 'git', elimina el bloque")
 	}
 
 	type declaredPath struct {
@@ -147,7 +155,7 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 		label := fmt.Sprintf("repositories[%d]", i)
 		item = resolveAlias(item)
 		if item == nil || item.Kind != yaml.MappingNode {
-			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix' y 'promotion'", label))
+			errs = append(errs, fmt.Errorf("%s debe ser un mapeo con 'path' y, opcionalmente, 'integration_branch', 'branch_prefix', 'promotion' y 'branch_template'", label))
 			continue
 		}
 
@@ -178,6 +186,7 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 			IntegrationBranch: values["integration_branch"],
 			BranchPrefix:      values["branch_prefix"],
 			Promotion:         values["promotion"],
+			BranchTemplate:    values["branch_template"],
 		})
 	}
 
@@ -192,9 +201,12 @@ func decodeRepositories(node *yaml.Node) ([]RepositoryPolicy, error) {
 
 // branchValidator devuelve la validación del valor de una clave de rama:
 // `branch_prefix` sigue gitref.ValidPrefix, `promotion` validPromotion y
-// `integration_branch` y `main_branch`, gitref.ValidRefName.
+// `branch_template`, ValidateBranchTemplate, e `integration_branch` y `main_branch`,
+// gitref.ValidRefName.
 func branchValidator(key string) func(string) error {
 	switch key {
+	case "branch_template":
+		return ValidateBranchTemplate
 	case "branch_prefix":
 		return gitref.ValidPrefix
 	case "promotion":
@@ -417,4 +429,127 @@ func ValidateRepositoryPolicies(cfg *WorkspaceConfig, master string) (errs, warn
 		}
 	}
 	return errs, warnings
+}
+
+// ValidateBranchTemplate comprueba una plantilla de nombre de rama (C-07-f): su
+// sintaxis, que use al menos una variable distintiva y que, renderizada con
+// valores de muestra seguros, dé un nombre de referencia git válido. Es pura. La
+// comparten el decodificador de `git:` y de `repositories:` y la validación de las
+// plantillas de rol.
+func ValidateBranchTemplate(raw string) error {
+	parsed, err := nametemplate.Parse(raw)
+	if err != nil {
+		return err
+	}
+	if err := nametemplate.CheckDistinguishing(parsed); err != nil {
+		return err
+	}
+	return nametemplate.CheckSample(parsed)
+}
+
+// checkBranchTemplates valida lo que depende de los roles y de la topología
+// (D-02), una vez que la configuración base es válida: la plantilla de cada rol y
+// la regla de la rama que aloja `openspec/`. Acumula los errores y cada uno nombra
+// su clave; devuelve nil si no hay ninguno. git y repos son lo declarado y pueden
+// ser nil o vacíos (sin bloque, o con un bloque inválido, ya reportado aparte).
+func checkBranchTemplates(cfg *WorkspaceConfig, git *GitConfig, repos []RepositoryPolicy) error {
+	var errs []error
+
+	ids := make([]string, 0, len(cfg.Roles))
+	for id := range cfg.Roles {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	for _, id := range ids {
+		raw := cfg.Roles[id].BranchTemplate
+		if raw == "" {
+			continue
+		}
+		if err := ValidateBranchTemplate(raw); err != nil {
+			errs = append(errs, fmt.Errorf("roles.%s.branch_template: el valor '%s' no es válido: %w", id, raw, err))
+		}
+	}
+
+	key, raw := openspecBranchTemplate(cfg, git, repos)
+	if raw != "" {
+		// Una plantilla que no se analiza ya está reportada por su propio canal.
+		if parsed, err := nametemplate.Parse(raw); err == nil {
+			var used []string
+			for _, variable := range []nametemplate.Variable{nametemplate.VarRole, nametemplate.VarTaskRef} {
+				if parsed.Uses(variable) {
+					used = append(used, "{"+string(variable)+"}")
+				}
+			}
+			if len(used) > 0 {
+				errs = append(errs, fmt.Errorf("%s: la plantilla '%s' rige la rama que aloja 'openspec/' y no puede usar %s, porque esa rama es compartida por todos los roles; quita la variable o declara en 'repositories' una plantilla propia para el repositorio que aloja 'openspec/'",
+					key, raw, strings.Join(used, " ni ")))
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// openspecBranchTemplate devuelve la clave y el valor de la plantilla efectiva de
+// la rama que aloja `openspec/` (D-02, S11), usando solo la configuración:
+//   - la de la entrada de `repositories:` del repositorio que la aloja, si existe y
+//     declara `branch_template`;
+//   - si no, la de `git:`.
+//
+// La entrada se identifica por su ruta normalizada: `.` en monorepo-embedded y, en
+// multirepo, el desplazamiento léxico del repositorio de specs. Con un
+// `specs_repository` absoluto no hay desplazamiento léxico y se toma `git:`. Sin
+// plantilla devuelve cadenas vacías.
+func openspecBranchTemplate(cfg *WorkspaceConfig, git *GitConfig, repos []RepositoryPolicy) (key, raw string) {
+	if host, ok := openspecHostPath(cfg); ok {
+		for i, entry := range repos {
+			clean, err := checkRepositoryPath(entry.Path)
+			if err != nil || entry.BranchTemplate == "" || clean != host {
+				continue
+			}
+			return fmt.Sprintf("repositories[%d].branch_template", i), entry.BranchTemplate
+		}
+	}
+	if git != nil && git.BranchTemplate != "" {
+		return "git.branch_template", git.BranchTemplate
+	}
+	return "", ""
+}
+
+// openspecHostPath es la ruta normalizada, relativa a la carpeta maestra, del
+// repositorio que aloja `openspec/`; false si no se puede deducir solo con la
+// configuración (specs_repository absoluto).
+func openspecHostPath(cfg *WorkspaceConfig) (string, bool) {
+	if !separatesSpecs(cfg) {
+		return ".", true
+	}
+	raw := strings.TrimSpace(cfg.Workspace.SpecsRepository)
+	if filepath.IsAbs(raw) || hasDriveLetter(strings.ReplaceAll(raw, `\`, "/")) {
+		return "", false
+	}
+	if displacement := lexicalDisplacement(cfg); displacement != "" {
+		return path.Clean(displacement), true
+	}
+	return ".", true
+}
+
+// BranchTemplateWarnings devuelve los avisos de `workspace validate` sobre las
+// plantillas de rama (C-07-f). Nunca invalidan la configuración: en
+// monorepo-embedded no hay ramas de rol, así que `roles.<id>.branch_template` no
+// tiene efecto. Es pura.
+func BranchTemplateWarnings(cfg *WorkspaceConfig) []string {
+	if cfg == nil || separatesSpecs(cfg) {
+		return nil
+	}
+	ids := make([]string, 0, len(cfg.Roles))
+	for id, role := range cfg.Roles {
+		if role.BranchTemplate != "" {
+			ids = append(ids, id)
+		}
+	}
+	slices.Sort(ids)
+	var warnings []string
+	for _, id := range ids {
+		warnings = append(warnings, fmt.Sprintf("'roles.%s.branch_template' no tiene efecto en %s: sin ramas de rol, solo rige en multirepo", id, TopologyMonorepoEmbedded))
+	}
+	return warnings
 }

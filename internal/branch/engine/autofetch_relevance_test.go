@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"context"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -8,8 +10,11 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/nametemplate"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
@@ -311,4 +316,109 @@ func TestAutofetchRelevanceOnlyLocalReads(t *testing.T) {
 		t.Errorf("se esperaba un único fetch: %v", fetches)
 	}
 	noRemoteOperations(t, *seen)
+}
+
+// templatedHandoffProject es un proyecto embebido con `git.branch_template` y su remoto.
+func templatedHandoffProject(t *testing.T, template string) (repo, remote string) {
+	t.Helper()
+	repo = newProject(t, configWithRoles(map[string][]string{"core": {"."}}, "git:\n  integration_branch: main\n  branch_template: \""+template+"\"\n"))
+	return repo, remoteWithMain(t, repo)
+}
+
+// sealedKickoffOf devuelve el `kickoff.yaml` de un cambio sellado con la rama del cambio dada.
+func sealedKickoffOf(t *testing.T, change, changeBranch string) string {
+	t.Helper()
+	dir := t.TempDir()
+	sealWithSnapshot(t, dir, change, &kickoff.GitSnapshot{
+		IntegrationBranch: "main", BranchPrefix: "inc", ChangeBranch: changeBranch,
+		Repositories: []kickoff.GitSnapshotRepo{{
+			Path: ".", Name: "r", Role: "specs_in_place", IntegrationBranch: "main", Base: "main",
+			Branches: []kickoff.GitSnapshotBranch{{Name: changeBranch, Kind: "change", Template: "feature/{change}"}},
+		}},
+	}, "fullstack")
+	data, err := os.ReadFile(filepath.Join(dir, "openspec", "changes", change, "kickoff.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func publishHandoff(t *testing.T, remote, change, changeBranch string) {
+	t.Helper()
+	publishFromClone(t, remote, changeBranch, map[string]string{"openspec/changes/" + change + "/kickoff.yaml": sealedKickoffOf(t, change, changeBranch)}, "cesión "+change)
+}
+
+// D-16: con plantilla, la cesión `feature/…` se reconoce por la instantánea y no por el nombre.
+func TestAutofetchHandoffTemplateRecognisesTheChangeBySnapshot(t *testing.T) {
+	repo, remote := templatedHandoffProject(t, "feature/{change}")
+	publishHandoff(t, remote, "x", "feature/x")
+	publishFromClone(t, remote, "feature/otra", map[string]string{"otra.txt": "o\n"}, "sin kickoff")
+
+	result := autofetchRun(t, autofetchOn, repo, relevanceClock)
+
+	if result.Change == nil || result.Change.Name != "x" || len(noticesOf(result, branch.AutofetchNoticeChangeBranchNotAdopted)) != 1 {
+		t.Fatalf("resultado %+v, se esperaba la cesión x", result)
+	}
+	if got := noticesOf(result, branch.AutofetchNoticeChangeBranchNotAdopted)[0].Branch; got != "feature/x" {
+		t.Errorf("rama %q, se esperaba feature/x", got)
+	}
+	if out := runGit(t, repo, "branch", "--list", "feature/*"); strings.TrimSpace(out) != "" {
+		t.Errorf("la regla 3 creó ramas locales: %q", out)
+	}
+}
+
+// Una referencia cuyo kickoff nombra otra rama (o cuyo nombre no coincide) no es candidata.
+func TestAutofetchHandoffTemplateIgnoresAKickoffThatNamesAnotherBranch(t *testing.T) {
+	repo, remote := templatedHandoffProject(t, "feature/{change}")
+	publishFromClone(t, remote, "feature/y", map[string]string{"openspec/changes/x/kickoff.yaml": sealedKickoffOf(t, "x", "feature/x")}, "otra rama")
+
+	result := autofetchRun(t, autofetchOn, repo, relevanceClock)
+
+	if result.Change != nil {
+		t.Errorf("resultado %+v, se esperaba sin cambio actual", result.Change)
+	}
+}
+
+// Con dos candidatos no hay cambio actual.
+func TestAutofetchHandoffTemplateStopsAtTheSecondCandidate(t *testing.T) {
+	repo, remote := templatedHandoffProject(t, "feature/{change}")
+	publishHandoff(t, remote, "x", "feature/x")
+	publishHandoff(t, remote, "y", "feature/y")
+
+	result := autofetchRun(t, autofetchOn, repo, relevanceClock)
+
+	if result.Change != nil || len(result.Notices) != 0 {
+		t.Errorf("con dos cesiones: %+v, se esperaba sin cambio actual", result)
+	}
+}
+
+// Sin prefijo literal la regla 3 no aplica y queda un aviso.
+func TestAutofetchHandoffTemplateWithoutLiteralPrefixWarns(t *testing.T) {
+	repo, remote := templatedHandoffProject(t, "{change}-feature")
+	publishHandoff(t, remote, "x", "x-feature")
+
+	result := autofetchRun(t, autofetchOn, repo, relevanceClock)
+
+	if result.Change != nil {
+		t.Errorf("resultado %+v, se esperaba sin cambio actual", result.Change)
+	}
+	if !slices.ContainsFunc(result.Warnings, func(w string) bool { return strings.Contains(w, "no tiene prefijo literal") }) {
+		t.Errorf("avisos %v, se esperaba el de plantilla sin prefijo literal", result.Warnings)
+	}
+}
+
+// Los prefijos literales que la regla 3 pasa a git son argumentos simples.
+func TestAutofetchHandoffTemplateLiteralPrefixesArePlainArguments(t *testing.T) {
+	repo, _ := templatedHandoffProject(t, "feature/{change}")
+	for _, raw := range []string{"feature/{change}", "{prefix}/{change}", "{kind}/{slug}", "a/b/TASK-{change}"} {
+		parsed, err := nametemplate.Parse(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, prefix := range nametemplate.LiteralPrefixes(parsed, "inc") {
+			if _, err := gitcli.New().RemoteBranches(context.Background(), repo, prefix); err != nil {
+				t.Errorf("%s: el prefijo %q no pasa plainArgument: %v", raw, prefix, err)
+			}
+		}
+	}
 }

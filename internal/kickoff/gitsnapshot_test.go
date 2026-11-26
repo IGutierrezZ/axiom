@@ -311,3 +311,130 @@ func TestGitSnapshotWithoutPromotionFieldsEmitsNoNewKeysAndReadsOldDocuments(t *
 		t.Fatalf("Load() = (%+v, %v), se esperaba una instantánea sin los campos", loaded, err)
 	}
 }
+
+// templatedSnapshot es la instantánea de un multirepo con plantilla: una rama del cambio con su
+// plantilla cruda, una rama de rol pendiente (usa `{task_ref}`) y los valores congelados.
+func templatedSnapshot() *GitSnapshot {
+	g := sampleSnapshot()
+	g.Repositories[0].Branches[0].Template = "{kind}/{change}"
+	g.Repositories[0].PendingBranches = []GitSnapshotPendingBranch{
+		{Kind: "role", Role: "core", Template: "{kind}/{task_ref}-{role}", Prefix: "feat"},
+	}
+	g.TemplateValues = &GitTemplateValues{Kind: "feature", Ref: "2525"}
+	return g
+}
+
+// RF-KOF-06 (R1): la plantilla, las ramas pendientes y los valores sobreviven al ciclo YAML.
+func TestGitSnapshotTemplateFieldsRoundTrip(t *testing.T) {
+	changeRoot := t.TempDir()
+	k := sampleKickoff("x")
+	k.Git = templatedSnapshot()
+	sealed, _, err := Seal(changeRoot, k)
+	if err != nil {
+		t.Fatalf("Seal() = %v", err)
+	}
+	loaded, err := Load(changeRoot)
+	if err != nil || loaded == nil {
+		t.Fatalf("Load() = (%+v, %v)", loaded, err)
+	}
+	if !reflect.DeepEqual(loaded.Git, templatedSnapshot()) || !reflect.DeepEqual(sealed.Git, loaded.Git) {
+		t.Errorf("la instantánea con plantilla no sobrevive: %+v", loaded.Git)
+	}
+	data, _ := os.ReadFile(filepath.Join(changeRoot, KickoffFileName))
+	for _, key := range []string{"pending_branches:", "template_values:", "template: '{kind}/{change}'"} {
+		if !strings.Contains(string(data), key) {
+			t.Errorf("falta %q en:\n%s", key, data)
+		}
+	}
+}
+
+// D-06: sin plantilla no se emite ninguna clave nueva, así que el YAML no cambia ni un byte.
+func TestGitSnapshotWithoutTemplateEmitsNoTemplateKeys(t *testing.T) {
+	data, err := yaml.Marshal(snapshotKickoff("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, unwanted := range []string{"template", "pending_branches", "template_values"} {
+		if strings.Contains(string(data), unwanted) {
+			t.Errorf("sin plantilla no se emite %q:\n%s", unwanted, data)
+		}
+	}
+}
+
+// D-06: un binario anterior (estructuras previas) ignora `pending_branches` y `template_values`
+// sin error y conserva el resto.
+func TestGitSnapshotTemplateFieldsAreIgnoredByAnOlderBinary(t *testing.T) {
+	k := sampleKickoff("x")
+	k.Git = templatedSnapshot()
+	data, err := yaml.Marshal(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	type olderBranch struct {
+		Name string `yaml:"name"`
+		Kind string `yaml:"kind"`
+		Role string `yaml:"role,omitempty"`
+	}
+	type olderRepo struct {
+		Path     string        `yaml:"path"`
+		Branches []olderBranch `yaml:"branches,omitempty"`
+	}
+	var older struct {
+		Git struct {
+			ChangeBranch string      `yaml:"change_branch"`
+			Repositories []olderRepo `yaml:"repositories"`
+		} `yaml:"git"`
+	}
+	if err := yaml.Unmarshal(data, &older); err != nil {
+		t.Fatalf("un binario anterior debe ignorar los campos nuevos: %v", err)
+	}
+	if older.Git.ChangeBranch != "inc/x" || len(older.Git.Repositories[0].Branches) != 3 {
+		t.Errorf("el resto de la instantánea se conserva: %+v", older.Git)
+	}
+	// Las ramas pendientes no viven en `branches`: la validación del binario anterior (name no
+	// vacío) no las ve.
+	for _, b := range older.Git.Repositories[0].Branches {
+		if b.Name == "" {
+			t.Errorf("ninguna rama de `branches` carece de name: %+v", b)
+		}
+	}
+}
+
+// RF-KOF-06: Validate comprueba cada campo nuevo y mantiene el rechazo del name vacío.
+func TestGitSnapshotValidateChecksTheTemplateFields(t *testing.T) {
+	mutations := map[string]func(g *GitSnapshot){
+		"plantilla de rama con sintaxis inválida":    func(g *GitSnapshot) { g.Repositories[0].Branches[0].Template = "{kind/{change}" },
+		"plantilla de rama con variable desconocida": func(g *GitSnapshot) { g.Repositories[0].Branches[0].Template = "{nope}/{change}" },
+		"plantilla de rama constante":                func(g *GitSnapshot) { g.Repositories[0].Branches[0].Template = "feature/fijo" },
+		"pendiente con plantilla inválida":           func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Template = "{task_ref" },
+		"pendiente constante":                        func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Template = "feature/fijo" },
+		"pendiente sin task_ref":                     func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Template = "{kind}/{change}" },
+		"pendiente sin rol":                          func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Role = "" },
+		"pendiente con kind desconocido":             func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Kind = "archive" },
+		"pendiente con kind vacío":                   func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Kind = "" },
+		"pendiente con prefijo inválido":             func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Prefix = "a b" },
+		"pendiente con prefijo vacío":                func(g *GitSnapshot) { g.Repositories[0].PendingBranches[0].Prefix = "" },
+		"valores con kind desconocido":               func(g *GitSnapshot) { g.TemplateValues.Kind = "chore" },
+		"valores con kind vacío":                     func(g *GitSnapshot) { g.TemplateValues.Kind = "" },
+		"valores con ref inválido":                   func(g *GitSnapshot) { g.TemplateValues.Ref = "a b" },
+		"name vacío en branches":                     func(g *GitSnapshot) { g.Repositories[0].Branches[0].Name = "" },
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			g := templatedSnapshot()
+			mutate(g)
+			if err := g.Validate(); err == nil {
+				t.Fatalf("Validate() = nil, se esperaba rechazar: %+v", g)
+			}
+		})
+	}
+	if err := templatedSnapshot().Validate(); err != nil {
+		t.Errorf("la instantánea con plantilla es válida: %v", err)
+	}
+	// `ref` desconocido no se escribe: TemplateValues con solo kind es válido.
+	g := templatedSnapshot()
+	g.TemplateValues.Ref = ""
+	if err := g.Validate(); err != nil {
+		t.Errorf("template_values sin ref es válido: %v", err)
+	}
+}

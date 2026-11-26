@@ -45,6 +45,30 @@ type RepoFacts struct {
 	// entrega los de los roles sellados del cambio (todos los declarados, con
 	// `fullstack`) y el planificador los cruza con los roles del kickoff.
 	Roles []string
+	// Frozen son las ramas con nombre congelado por plantilla que guarda el registro local del
+	// cambio para este repositorio (C-07-f, design D-09): solo las entradas con plantilla. El
+	// motor las entrega ya emparejadas por la identidad del git common dir.
+	Frozen []FrozenBranch
+}
+
+// FrozenBranch es una rama cuyo nombre se renderizó con una plantilla y quedó congelado en el
+// registro: el nombre manda aunque la plantilla o la Task cambien después.
+type FrozenBranch struct {
+	Kind     BranchKind
+	RoleID   string
+	Name     string
+	Template string
+}
+
+// TemplateValues son los valores de las variables de plantilla que el motor resuelve solo con
+// lecturas de ficheros (design D-13). Los campos vacíos no tienen valor.
+type TemplateValues struct {
+	Kind       string            // "feature" | "fix"; "" significa feature
+	Ref        string            // "" significa desconocido
+	KindFrozen bool              // Kind sale de la instantánea del kickoff
+	RefFrozen  bool              // Ref sale de la instantánea del kickoff
+	TaskRefs   map[string]string // rol en minúsculas -> id de su Task
+	LinksErr   error             // integrations.yaml ilegible con un plugin activo
 }
 
 // SkippedPath es una ruta declarada por un rol que se omite del plan sin abortarlo:
@@ -115,6 +139,18 @@ type PlanInput struct {
 	// (ResolvePromotion). Un repositorio que falta se planifica como de una sola etapa a efectos
 	// de base. Nil, el plan es idéntico al que no conoce la promoción.
 	Promotions map[string]ResolvedPromotion
+	// EnteringRole es el rol de `ensure --role`: solo él hace salir de «pendiente» a su rama con
+	// `{task_ref}` (design D-07 y D-08). Vacío en `ensure` sin rol, `status` y el sellado.
+	EnteringRole string
+	// Sealing dice que el plan es el del sellado: aunque el cambio ya figure con kickoff, aún no
+	// tiene instantánea y rige la plantilla de la política.
+	Sealing bool
+	// TemplateValues son los valores de las variables de la plantilla (C-07-f).
+	TemplateValues TemplateValues
+	// Describe es solo de `status`: un `branch_template_unresolved` o un
+	// `integrations_links_invalid` de una rama concreta la deja pendiente con su rechazo en lugar
+	// de rechazar el plan entero (design D-15).
+	Describe bool
 }
 
 // ChangePlan es el plan de un cambio: sus repositorios en orden estable (primero el
@@ -162,6 +198,23 @@ type RepoPlan struct {
 	// Base() la completa. BaseRef sigue prevaleciendo sobre todo.
 	BaseBranch string
 	Branches   []BranchPlan
+	// Pending son las ramas de plantilla que aún no tienen nombre: no se crean, no se registran,
+	// no se miden ni se colocan (design D-07).
+	Pending []PendingBranch
+}
+
+// PendingBranch es una rama cuyo nombre aún no se puede resolver: su plantilla usa `{task_ref}` y
+// su rol no entra en este plan, o (solo en `status`) una variable no tiene valor todavía.
+type PendingBranch struct {
+	Kind     BranchKind
+	RoleID   string // rol atribuido; vacío solo en una rama sin rol con una variable sin valor
+	Template string
+	Key      string // clave de axiom.yaml o localizador del kickoff.yaml de la plantilla
+	Prefix   string // `{prefix}` efectivo, que la instantánea congela
+	// Candidate es el nombre renderizado cuando la Task del rol ya existe; vacío si no.
+	Candidate string
+	// Refusal es solo de `status`: por qué la rama no se puede resolver todavía.
+	Refusal *Refusal
 }
 
 // TwoStage dice que el repositorio tiene dos ramas permanentes: `main_branch` declarada y
@@ -189,6 +242,9 @@ type BranchPlan struct {
 	From     string
 	Worktree string // absoluta
 	PRTarget string
+	// Template es la plantilla efectiva con la que se renderizó Name (o la congelada que lo
+	// nombra); vacía sin plantilla.
+	Template string
 }
 
 // Plan calcula el plan de un cambio en monorepo embebido o en multirepo (RF-BRA-04,
@@ -409,40 +465,58 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 			return RepoPlan{}, refusal
 		}
 	}
-	changeBranch := prefix + "/" + in.Change
-	if in.Exceptions.Branch != "" {
-		changeBranch = in.Exceptions.Branch
+	// Precedencia del nombre de cada rama (design D-05): `--branch` (solo la del cambio),
+	// instantánea, nombre congelado en el registro, plantilla efectiva y composición por defecto.
+	naming := newRepoNaming(in, selection, effective, name, prefix)
+	change, refusal := naming.changeBranch()
+	if refusal != nil {
+		return RepoPlan{}, refusal
 	}
-	// Con instantánea, sus nombres prevalecen sobre la política y las excepciones (D-10).
-	snapshot, hasSnapshot := snapshotRepo(in, facts)
-	if named := snapshotBranch(snapshot, KindChange, ""); hasSnapshot && named != "" {
-		changeBranch = named
+	if change.pending != nil {
+		// Solo `status` (Describe) deja la rama del cambio pendiente con su rechazo, o un único
+		// rol cuya Task aún no existe: la rama no se crea, no se mide ni se coloca.
+		repo.Pending = append(repo.Pending, *change.pending)
+		if len(selection.roles) >= 2 {
+			for _, role := range selection.roles {
+				repo.Pending = append(repo.Pending, PendingBranch{Kind: KindRole, RoleID: role, Template: change.pending.Template, Key: change.pending.Key, Prefix: change.pending.Prefix, Refusal: change.pending.Refusal})
+			}
+		}
+		return repo, nil
 	}
+	changeBranch := change.name
 	repo.Branches = []BranchPlan{{
 		Name:     changeBranch,
 		Kind:     KindChange,
 		PRTarget: effective.IntegrationBranch,
 		Worktree: plannedWorktree(in, in.Change, name),
+		Template: change.template,
 	}}
-	if len(selection.roles) < 2 {
-		return repo, nil
+	if len(selection.roles) >= 2 {
+		for _, role := range selection.roles {
+			if refusal := validateRoleName(in, role, changeBranch); refusal != nil {
+				return RepoPlan{}, refusal
+			}
+			roleBranch, refusal := naming.roleBranch(role, changeBranch)
+			if refusal != nil {
+				return RepoPlan{}, refusal
+			}
+			if roleBranch.pending != nil {
+				repo.Pending = append(repo.Pending, *roleBranch.pending)
+				continue
+			}
+			repo.Branches = append(repo.Branches, BranchPlan{
+				Name:     roleBranch.name,
+				Kind:     KindRole,
+				RoleID:   role,
+				From:     changeBranch,
+				PRTarget: changeBranch,
+				Worktree: plannedWorktree(in, in.Change+"-"+role, name),
+				Template: roleBranch.template,
+			})
+		}
 	}
-	for _, role := range selection.roles {
-		if refusal := validateRoleName(in, role, changeBranch); refusal != nil {
-			return RepoPlan{}, refusal
-		}
-		roleBranch := changeBranch + "-" + role
-		if named := snapshotBranch(snapshot, KindRole, role); hasSnapshot && named != "" {
-			roleBranch = named
-		}
-		repo.Branches = append(repo.Branches, BranchPlan{
-			Name:     roleBranch,
-			Kind:     KindRole,
-			RoleID:   role,
-			From:     changeBranch,
-			PRTarget: changeBranch,
-			Worktree: plannedWorktree(in, in.Change+"-"+role, name),
-		})
+	if refusal := checkTemplateCollisions(in, repo, effective); refusal != nil {
+		return RepoPlan{}, refusal
 	}
 	return repo, nil
 }

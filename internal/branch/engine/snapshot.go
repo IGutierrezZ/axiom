@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -49,6 +50,7 @@ func (e *Engine) Snapshot(ctx context.Context, loc workspace.Location, change st
 	if refusal != nil {
 		return nil, &branch.RefusalError{Refusal: *refusal}
 	}
+	inPlay := false
 	for index, repo := range plan.Repositories {
 		if repo.RelPath == "" {
 			continue
@@ -70,15 +72,23 @@ func (e *Engine) Snapshot(ctx context.Context, loc workspace.Location, change st
 			entry.Promotion = string(resolved.Mode)
 		}
 		for _, planned := range repo.Branches {
-			entry.Branches = append(entry.Branches, kickoff.GitSnapshotBranch{Name: planned.Name, Kind: string(planned.Kind), Role: planned.RoleID})
+			entry.Branches = append(entry.Branches, kickoff.GitSnapshotBranch{Name: planned.Name, Kind: string(planned.Kind), Role: planned.RoleID, Template: planned.Template})
+			inPlay = inPlay || planned.Template != ""
 			if snapshot.ChangeBranch == "" && planned.Kind == branch.KindChange {
 				snapshot.ChangeBranch = planned.Name
 			}
+		}
+		for _, pending := range repo.Pending {
+			entry.PendingBranches = append(entry.PendingBranches, kickoff.GitSnapshotPendingBranch{Kind: string(pending.Kind), Role: pending.RoleID, Template: pending.Template, Prefix: pending.Prefix})
+			inPlay = true
 		}
 		if index == 0 && archive != "" {
 			entry.Branches = append(entry.Branches, kickoff.GitSnapshotBranch{Name: archive, Kind: string(branch.KindArchive)})
 		}
 		snapshot.Repositories = append(snapshot.Repositories, entry)
+	}
+	if inPlay {
+		snapshot.TemplateValues = templateValuesFor(facts.input.TemplateValues)
 	}
 	return snapshot, nil
 }
@@ -105,4 +115,19 @@ func archiveBranchOf(facts changeFacts, plan branch.ChangePlan) (string, *branch
 		}
 	}
 	return archive.Repositories[0].Branches[0].Name, nil
+}
+
+// templateValuesFor son los valores que el sellado congela cuando alguna plantilla interviene (D-06):
+// `kind` siempre (`fix` solo si el work item declara el perfil `bug`, y `feature` en cualquier otro
+// caso) y `ref` solo si se conoce y es un componente de rama seguro; un `ref` desconocido o no
+// seguro no se escribe.
+func templateValuesFor(values branch.TemplateValues) *kickoff.GitTemplateValues {
+	frozen := &kickoff.GitTemplateValues{Kind: values.Kind}
+	if frozen.Kind == "" {
+		frozen.Kind = "feature"
+	}
+	if values.Ref != "" && gitref.ValidBranchComponent(values.Ref) == nil {
+		frozen.Ref = values.Ref
+	}
+	return frozen
 }

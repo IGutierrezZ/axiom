@@ -208,3 +208,32 @@ func (e Env) retireReporting(dir, change string) (removeErr, err error) {
 }
 
 func isNotExist(err error) bool { return errors.Is(err, os.ErrNotExist) }
+
+// WorkItemOrigin son los datos del work item de origen de un cambio que necesita el motor de ramas
+// para renderizar `{ref}` y `{kind}` (C-07-f): el plugin, el identificador y el perfil declarado
+// (`bug` da `{kind}` = `fix`).
+type WorkItemOrigin struct {
+	Plugin, ID, Profile string
+}
+
+// WorkItemFacts lee, solo de ficheros, el work item de origen de un cambio: primero su staging
+// (<commonDir>/axiom/change-start/v1/<cambio>, antes de `--adopt`) y, sin él, el work-item.json que
+// ya adoptó el cambio en adoptedDir (SDD: <raíz del cambio>/context; ODD: odd/context/<cambio>). ok es
+// false si no hay ninguno legible. No toma cerrojos ni escribe nada.
+func WorkItemFacts(commonDir, change, adoptedDir string) (WorkItemOrigin, bool) {
+	if commonDir != "" {
+		if staging, ok := (Env{CommonDir: commonDir}).stagingFor(change); ok {
+			return originOf(staging.Doc), true
+		}
+	}
+	if adoptedDir != "" {
+		if doc, err := readContextDoc(filepath.Join(adoptedDir, "work-item.json")); err == nil {
+			return originOf(doc), true
+		}
+	}
+	return WorkItemOrigin{}, false
+}
+
+func originOf(doc ContextDoc) WorkItemOrigin {
+	return WorkItemOrigin{Plugin: doc.Plugin, ID: doc.ID, Profile: doc.Profile}
+}

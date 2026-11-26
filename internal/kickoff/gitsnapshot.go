@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/nametemplate"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 )
 
@@ -35,6 +36,16 @@ type GitSnapshot struct {
 	// cuyo único repositorio sellado es el de specs, que se trabaja in situ).
 	ChangeBranch string            `yaml:"change_branch"`
 	Repositories []GitSnapshotRepo `yaml:"repositories"`
+	// TemplateValues son los valores de `{kind}` y `{ref}` congelados al sellar cuando alguna
+	// plantilla interviene (D-06); nil sin plantilla. Un binario anterior lo ignora.
+	TemplateValues *GitTemplateValues `yaml:"template_values,omitempty"`
+}
+
+// GitTemplateValues son los valores de las variables de plantilla que no se derivan del nombre del
+// cambio. Kind es `feature` o `fix`; Ref se congela solo si se conoce al sellar.
+type GitTemplateValues struct {
+	Kind string `yaml:"kind"`
+	Ref  string `yaml:"ref,omitempty"`
 }
 
 // GitExceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`).
@@ -58,6 +69,21 @@ type GitSnapshotRepo struct {
 	// materializado al sellar; vacío si la rama del cambio aún no existía.
 	Promotion string              `yaml:"promotion,omitempty"`
 	Branches  []GitSnapshotBranch `yaml:"branches,omitempty"`
+	// PendingBranches son las ramas cuya plantilla usa `{task_ref}`: aún no tienen nombre. Van en
+	// una lista aparte (sin `name`) para que el `Validate()` de un binario anterior, que exige un
+	// nombre en `branches`, no falle al cargar el kickoff (D-06).
+	PendingBranches []GitSnapshotPendingBranch `yaml:"pending_branches,omitempty"`
+}
+
+// GitSnapshotPendingBranch es una rama del cambio pendiente de nombre: la plantilla cruda y el
+// `{prefix}` efectivo del repositorio al sellar.
+type GitSnapshotPendingBranch struct {
+	// Kind es el tipo de rama: change o role.
+	Kind string `yaml:"kind"`
+	// Role es el rol al que pertenece la rama; obligatorio.
+	Role     string `yaml:"role"`
+	Template string `yaml:"template"`
+	Prefix   string `yaml:"prefix"`
 }
 
 // GitSnapshotBranch es una rama derivada del cambio.
@@ -67,6 +93,9 @@ type GitSnapshotBranch struct {
 	Kind string `yaml:"kind"`
 	// Role es el rol de una rama de rol; vacío en las demás.
 	Role string `yaml:"role,omitempty"`
+	// Template es la plantilla cruda con la que se nombró la rama: informativa y auditable, el
+	// nombre sigue mandando. Vacía sin plantilla.
+	Template string `yaml:"template,omitempty"`
 }
 
 // Papeles de repositorio y tipos de rama de la instantánea: los tokens de internal/branch
@@ -77,6 +106,10 @@ var (
 	// validSnapshotPromotions son los modos de promoción que la instantánea puede congelar: `ask` es
 	// una pregunta pendiente, nunca un modo materializado.
 	validSnapshotPromotions = map[string]bool{"branch": true, "release": true}
+	// validPendingKinds son los tipos de una rama pendiente: la de archivo nunca lleva plantilla.
+	validPendingKinds = map[string]bool{"change": true, "role": true}
+	// validTemplateKinds son los valores congelables de `{kind}`.
+	validTemplateKinds = map[string]bool{"feature": true, "fix": true}
 )
 
 // Validate comprueba la forma de la instantánea con las reglas de gitref (ramas y prefijos),
@@ -121,7 +154,29 @@ func (g GitSnapshot) Validate() error {
 			return fmt.Errorf("kickoff: git.repositories[%d]: %w", i, err)
 		}
 	}
+	if v := g.TemplateValues; v != nil {
+		if !validTemplateKinds[v.Kind] {
+			return fmt.Errorf("kickoff: git.template_values.kind %q no es válido: debe ser `feature` o `fix`", v.Kind)
+		}
+		if v.Ref != "" {
+			if err := gitref.ValidBranchComponent(v.Ref); err != nil {
+				return fmt.Errorf("kickoff: git.template_values.ref %q no es válido: %w", v.Ref, err)
+			}
+		}
+	}
 	return nil
+}
+
+// validTemplate analiza una plantilla congelada y exige una variable distintiva.
+func validTemplate(raw string) (nametemplate.Template, error) {
+	t, err := nametemplate.Parse(raw)
+	if err != nil {
+		return nametemplate.Template{}, err
+	}
+	if err := nametemplate.CheckDistinguishing(t); err != nil {
+		return nametemplate.Template{}, err
+	}
+	return t, nil
 }
 
 func (r GitSnapshotRepo) validate() error {
@@ -153,6 +208,36 @@ func (r GitSnapshotRepo) validate() error {
 		if (branch.Kind == "role") != (branch.Role != "") {
 			return fmt.Errorf("la rama %q de tipo %s debe llevar role si y solo si es de rol", branch.Name, branch.Kind)
 		}
+		if branch.Template != "" {
+			if _, err := validTemplate(branch.Template); err != nil {
+				return fmt.Errorf("la plantilla %q de la rama %q no es válida: %w", branch.Template, branch.Name, err)
+			}
+		}
+	}
+	for i, pending := range r.PendingBranches {
+		if err := pending.validate(); err != nil {
+			return fmt.Errorf("pending_branches[%d]: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func (p GitSnapshotPendingBranch) validate() error {
+	if !validPendingKinds[p.Kind] {
+		return fmt.Errorf("kind desconocido %q: debe ser `change` o `role`", p.Kind)
+	}
+	if strings.TrimSpace(p.Role) == "" {
+		return fmt.Errorf("la rama pendiente de plantilla %q debe llevar role", p.Template)
+	}
+	t, err := validTemplate(p.Template)
+	if err != nil {
+		return fmt.Errorf("la plantilla %q no es válida: %w", p.Template, err)
+	}
+	if !t.Uses(nametemplate.VarTaskRef) {
+		return fmt.Errorf("la plantilla %q de una rama pendiente debe usar {task_ref}", p.Template)
+	}
+	if err := gitref.ValidPrefix(p.Prefix); err != nil {
+		return fmt.Errorf("prefix %q no es válido: %w", p.Prefix, err)
 	}
 	return nil
 }
