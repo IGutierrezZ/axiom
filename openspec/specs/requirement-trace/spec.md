@@ -91,6 +91,7 @@ La resolución de equivalentes MUST pasar por un punto de extensión de alias su
 3. La coincidencia de un ID antiguo en los incrementos archivados MUST acotarse por la capacidad: un ID antiguo que aparece en el título de una delta archivada de la capacidad `C` (carpeta `specs/C/`), o en una línea `Cubre:` o una entrada de `ids.yaml` cuyo contexto nombra `C`, equivale solo al ID nuevo de (`C`, ID antiguo). MUST NOT contar como incremento del ID nuevo de otra capacidad que usaba el mismo ID antiguo.
 4. Consultar por un ID nuevo MUST traer los incrementos archivados que tocaron su ID antiguo en su capacidad, con los roles de RF-TRC-05, además de los que citan el ID nuevo.
 5. Consultar por el ID nuevo de una entrada del mapa sin ID antiguo (la que lleva el título) MUST traer también los incrementos, SDD archivados u ODD, cuya delta de esa misma capacidad nombra un requisito con ese título exacto (sin espacios al principio ni al final), con los roles de RF-TRC-05; en RENAMED cuentan el nombre origen y el destino. Una delta de otra capacidad con el mismo título MUST NOT contar, y las líneas `Cubre:` no casan por título.
+6. Una cita de un ID antiguo cuyo contexto (la capacidad de la delta, las capacidades del cambio archivado o las `### Capacidad:` del documento ODD) no nombra ninguna capacidad del mapa para ese ID antiguo cuenta como el ID nuevo de su única capacidad cuando el ID antiguo figura solo en una, y cuenta siempre cuando se consulta ese mismo ID antiguo. Si el ID antiguo figura en varias capacidades y se consulta uno de sus IDs nuevos, la cita MUST NOT contar como incremento y `warnings` MUST incluir una advertencia `legacy_ambiguous` que nombre la fuente, el ID antiguo y las capacidades candidatas, y que proponga consultar por el ID antiguo. Consultar un ID antiguo que figura en varias capacidades MUST añadir a `warnings` una advertencia `legacy_ambiguous` que nombre sus IDs nuevos y sus capacidades.
 
 Un alias que no sea válido bajo el patrón del proyecto MUST aceptarse cuando proviene del mapa de identificadores heredados.
 
@@ -112,6 +113,7 @@ Un alias que no sea válido bajo el patrón del proyecto MUST aceptarse cuando p
 - **DADO** el mapa con `REQ-1.1` en siete capacidades
 - **CUANDO** se consulta `axiom trace REQ-1.1`
 - **ENTONCES** los IDs resueltos incluyen el ID nuevo de cada una de las siete capacidades y el propio `REQ-1.1`
+- **Y** `warnings` contiene una advertencia `legacy_ambiguous` que nombra los siete IDs nuevos y sus capacidades
 
 #### Scenario: Un ID antiguo no ambiguo resuelve a su ID nuevo
 
@@ -138,6 +140,15 @@ Un alias que no sea válido bajo el patrón del proyecto MUST aceptarse cuando p
 - **CUANDO** se consulta `«ID-nuevo»`
 - **ENTONCES** el resultado incluye el primer cambio con el rol `modified`
 - **Y** no incluye el segundo
+
+
+#### Scenario: Una cita heredada sin contexto de capacidad no cuenta y avisa
+
+- **DADO** el mapa con `REQ-1.1` en `autoskills` y en `workspace-topology`, y un cambio archivado sin deltas cuya línea `Cubre:` cita `REQ-1.1`
+- **CUANDO** se consulta el ID nuevo de `workspace-topology` para ese requisito
+- **ENTONCES** el resultado no incluye ese cambio
+- **Y** `warnings` contiene una advertencia `legacy_ambiguous` que nombra el cambio y las capacidades `autoskills` y `workspace-topology`
+- **Y** al consultar `REQ-1.1` el resultado sí incluye ese cambio
 
 ### Requirement: Incrementos SDD Archivados como Fuente (RF-TRC-05)
 
