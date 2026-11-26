@@ -1,10 +1,12 @@
 package settings
 
 import (
+	"fmt"
 	"path"
 	"slices"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -38,6 +40,10 @@ type Entry struct {
 	Default        string    // descripción del valor por defecto del motor
 	Declared       bool      //
 	Value          any       // string, bool, int, []string o nil
+	Plugin         string    // id del plugin de integración; vacío fuera de integrations[<plugin>]
+	Format         string    // formato declarado por el manifiesto (string y string_list)
+	Min            *int      // cota inferior inclusiva de un entero del manifiesto
+	Max            *int      // cota superior inclusiva de un entero del manifiesto
 }
 
 // onlyNewChanges es el aviso común de toda clave editable: ajustar el proyecto no
@@ -53,9 +59,10 @@ const (
 type scopeKind int
 
 const (
-	scopeBlock scopeKind = iota // una única clave, p. ej. git.promotion
-	scopeRepo                   // repositories[<ruta>].<campo>
-	scopeRole                   // roles[<id>].<campo>
+	scopeBlock  scopeKind = iota // una única clave, p. ej. git.promotion
+	scopeRepo                    // repositories[<ruta>].<campo>
+	scopeRole                    // roles[<id>].<campo>
+	scopePlugin                  // integrations[<plugin>].<campo>, derivado del manifiesto
 )
 
 // keySpec es una fila de la tabla del catálogo. La plantilla de las claves por
@@ -74,6 +81,10 @@ type keySpec struct {
 	def           func() string
 	multirepoOnly bool
 	scope         scopeKind
+	plugin        string // id del plugin (scopePlugin)
+	format        string
+	min, max      *int
+	uiRequired    bool // obligatoriedad del manifiesto, solo informativa
 }
 
 // vocabulary devuelve el vocabulario cerrado de la clave, sin filtrar por ISO, o
@@ -159,7 +170,7 @@ func parseKey(key string) parsedKey {
 	for _, prefix := range []struct {
 		name  string
 		scope scopeKind
-	}{{"repositories[", scopeRepo}, {"roles[", scopeRole}} {
+	}{{"repositories[", scopeRepo}, {"roles[", scopeRole}, {"integrations[", scopePlugin}} {
 		if !strings.HasPrefix(key, prefix.name) {
 			continue
 		}
@@ -180,4 +191,83 @@ func findSpec(template string) (keySpec, bool) {
 		return keySpec{}, false
 	}
 	return editableSpecs[i], true
+}
+
+// pluginTemplate es la plantilla de las claves de un plugin: `integrations[].<campo>`.
+func pluginTemplate(field string) string { return "integrations[]." + field }
+
+// pluginKey es la clave concreta de un campo de un plugin.
+func pluginKey(plugin, field string) string { return "integrations[" + plugin + "]." + field }
+
+// pluginSpecs deriva del manifiesto las filas de un plugin: `enabled` y una por cada campo
+// de su configuración. La obligatoriedad es condicional a `enabled`, así que el parche no la
+// exige (required false) y el decodificador estricto la revalida sobre el documento
+// resultante. Los secretos del manifiesto no son campos de Config y nunca aparecen aquí.
+func pluginSpecs(m manifest.Manifest) []keySpec {
+	specs := []keySpec{{
+		key: pluginTemplate(manifest.ReservedConfigKey), section: "integrations", label: manifest.ReservedConfigKey,
+		description: "Activa o desactiva el plugin " + m.ID + ".", effect: "Activa o desactiva la integración. " + onlyNewChanges,
+		typ: TypeBool, engineChecked: true, scope: scopePlugin, plugin: m.ID,
+		def: staticDefault("false"),
+	}}
+	for _, f := range m.Config {
+		spec := keySpec{
+			key: pluginTemplate(f.Key), section: "integrations", label: f.Key, description: f.Description,
+			effect:        "Cambia la configuración de la integración. " + onlyNewChanges,
+			engineChecked: true, uiRequired: f.Required, scope: scopePlugin, plugin: m.ID, format: string(f.Format), min: f.Min, max: f.Max,
+			def: staticDefault(describeDefault(f.Default)),
+		}
+		switch f.Type {
+		case manifest.FieldBool:
+			spec.typ = TypeBool
+		case manifest.FieldInt:
+			spec.typ = TypeInt
+		case manifest.FieldStringList:
+			spec.typ = TypeStringList
+		default:
+			spec.typ = TypeString
+			if len(f.Enum) > 0 {
+				spec.typ = TypeEnum
+			}
+		}
+		if len(f.Enum) > 0 {
+			enum := slices.Clone(f.Enum)
+			spec.allowed = func() []string { return slices.Clone(enum) }
+		}
+		specs = append(specs, spec)
+	}
+	return specs
+}
+
+// describeDefault describe el valor por defecto de un campo del manifiesto.
+func describeDefault(v any) string {
+	switch d := v.(type) {
+	case nil:
+		return ""
+	case []string:
+		return strings.Join(d, ", ")
+	case []any:
+		parts := make([]string, len(d))
+		for i, e := range d {
+			parts[i] = fmt.Sprint(e)
+		}
+		return strings.Join(parts, ", ")
+	}
+	return fmt.Sprint(v)
+}
+
+// findPluginSpec devuelve la fila de un campo de un plugin del catálogo de manifiestos.
+// Un plugin ajeno al catálogo, un campo que el manifiesto no declara y el nombre de un
+// secreto devuelven false.
+func findPluginSpec(plugin, field string) (keySpec, bool) {
+	m, ok := manifest.Lookup(plugin)
+	if !ok || slices.ContainsFunc(m.Secrets, func(s manifest.SecretSpec) bool { return s.Name == field }) {
+		return keySpec{}, false
+	}
+	for _, spec := range pluginSpecs(m) {
+		if spec.key == pluginTemplate(field) {
+			return spec, true
+		}
+	}
+	return keySpec{}, false
 }

@@ -93,29 +93,62 @@ func (s settingsJSON) value(key string) (any, bool) {
 	return nil, false
 }
 
-// RF-WEB-18: el GET no devuelve el bloque integrations ni ningún valor que contenga. No usa
+// RF-WEB-18, RF-TOP-21: el GET publica las claves `integrations[<plugin>].<clave>` derivadas del
+// manifiesto con su valor y su plugin, y un PUT de otra clave conserva el bloque. No usa
 // t.Parallel: registra un plugin de integraciones de prueba en el registro del proceso.
-func TestSettingsGetDoesNotExposeIntegrations(t *testing.T) {
+func TestSettingsGetExposesIntegrationsFromTheManifest(t *testing.T) {
 	integrationstest.Install(t, integrationstest.NewFake())
-	root := newSettingsProject(t, settingsProjectYAML+"\nintegrations:\n  fake:\n    project: \"p-secreto-no-visible\"\n")
+	root := newSettingsProject(t, settingsProjectYAML+"\nintegrations:\n  fake:\n    project: \"p-visible\"\n")
 	router, _, _ := newPrefsServer(t, root)
 	rr := request(router, http.MethodGet, "/api/settings", "")
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET = %d: %s", rr.Code, rr.Body.String())
 	}
-	for _, banned := range []string{"integrations", "p-secreto-no-visible"} {
-		if strings.Contains(rr.Body.String(), banned) {
-			t.Errorf("el cuerpo no debe contener %q:\n%s", banned, rr.Body.String())
+	var dto struct {
+		Entries []struct {
+			Key     string `json:"key"`
+			Plugin  string `json:"plugin"`
+			Section string `json:"section"`
+			Value   any    `json:"value"`
+		} `json:"entries"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("JSON inválido: %v", err)
+	}
+	found := false
+	for _, e := range dto.Entries {
+		if e.Key == "integrations[fake].project" {
+			found = e.Plugin == "fake" && e.Section == "integrations" && e.Value == "p-visible"
 		}
 	}
+	if !found {
+		t.Errorf("falta integrations[fake].project con su plugin y valor:\n%s", rr.Body.String())
+	}
 	// Escribir otra clave conserva el bloque integrations intacto en el fichero.
-	dto := getSettings(t, router)
-	if rr := putSettings(router, dto.Revision, `{"workflow.lane":"sdd"}`); rr.Code != http.StatusOK {
+	settings := getSettings(t, router)
+	if rr := putSettings(router, settings.Revision, `{"workflow.lane":"sdd"}`); rr.Code != http.StatusOK {
 		t.Fatalf("PUT = %d: %s", rr.Code, rr.Body.String())
 	}
 	data, _ := os.ReadFile(filepath.Join(root, "axiom.yaml"))
-	if !strings.Contains(string(data), "project: \"p-secreto-no-visible\"") {
+	if !strings.Contains(string(data), "project: \"p-visible\"") {
 		t.Errorf("integrations debe conservarse:\n%s", data)
+	}
+}
+
+// RF-WEB-18: lo que el manifiesto no declara (un plugin ajeno al catálogo y su secreto) no llega al
+// cuerpo del GET. No usa t.Parallel por el registro de plugins del proceso.
+func TestSettingsGetNeverExposesUndeclaredIntegrationKeys(t *testing.T) {
+	integrationstest.Install(t, integrationstest.NewFake())
+	root := newSettingsProject(t, settingsProjectYAML+"\nintegrations:\n  jira:\n    token: \"valor-secreto-no-visible\"\n")
+	router, _, _ := newPrefsServer(t, root)
+	rr := request(router, http.MethodGet, "/api/settings", "")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET = %d: %s", rr.Code, rr.Body.String())
+	}
+	for _, banned := range []string{"valor-secreto-no-visible"} {
+		if strings.Contains(rr.Body.String(), banned) {
+			t.Errorf("el cuerpo no debe contener %q", banned)
+		}
 	}
 }
 

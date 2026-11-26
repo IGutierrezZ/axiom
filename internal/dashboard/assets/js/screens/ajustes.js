@@ -47,7 +47,12 @@ function renderSettings(data) {
   $('#settings-config-path').textContent = data.configPath || 'axiom.yaml';
   const disabled = !data.writable;
   const ids = new Map(data.entries.map((e, i) => [e.key, `${settingId(e.key)}-${i}`]));
-  const groups = groupBySection(data.entries).map(group => {
+  // La sección de integraciones se edita en su propia pantalla: aquí solo se enlaza.
+  const hasIntegrations = data.entries.some(e => e.section === 'integrations');
+  const integrationsLink = hasIntegrations
+    ? '<p class="eco-note">Las integraciones con otras herramientas se configuran en <a href="#/integraciones">Integraciones</a>.</p>'
+    : '';
+  const groups = groupBySection(data.entries.filter(e => e.section !== 'integrations')).map(group => {
     const fields = group.entries.map(entry => (entry.editable
       ? controlHtml(entry, ids.get(entry.key), { disabled })
       : readOnlyHtml(entry, data.configPath))).join('');
@@ -57,7 +62,7 @@ function renderSettings(data) {
   const save = data.writable
     ? '<div class="eco-wt-actions"><button type="submit" id="btn-save-settings" class="btn btn-primary">Guardar ajustes</button><span class="eco-note">Se escribe en axiom.yaml y queda sin confirmar en git.</span></div>'
     : '';
-  $('#settings-body').innerHTML = `${documentNotes(data)}${topology}<form id="form-settings" novalidate>${groups}${save}</form><div id="settings-status" role="status" aria-live="polite"></div>`;
+  $('#settings-body').innerHTML = `${documentNotes(data)}${topology}<form id="form-settings" novalidate>${groups}${integrationsLink}${save}</form><div id="settings-status" role="status" aria-live="polite"></div>`;
 }
 
 // loadCatalog lee el catálogo. Sin axiom.yaml (404 config_missing) se dice y no se ofrece nada.

@@ -6,6 +6,7 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 
 - [x] 1.1 Barrera de red en `internal/dashboard/server.go` (D-02).
 - [x] 1.2 Retirar estilos y script de tema en línea (D-01).
+- [x] 2.1 Ámbito `integrations[<plugin>].<clave>` en el catálogo de ajustes (D-03).
 
 ## Evidencia de la unidad 1.1
 
@@ -40,3 +41,13 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 | Arnés | Sin ejecutor de JS: comprobación visual en navegador queda para `verify` (H-05). |
 
 Decisiones: `applyCssData` se llama también de forma síncrona tras pintar el tablero de incrementos (hueco 11); `--ix-cols` tiene valor por defecto `repeat(auto-fit, minmax(9.25rem, 1fr))` y `.progress > span` parte de `width: 0`. Las barras de progreso en otras pantallas dependen del observador (microtarea, previa al pintado). RED no observado antes del GREEN (las pruebas se escribieron tras el cambio de assets).
+
+## Evidencia de la unidad 2.1
+
+| Evidencia | Valor |
+|---|---|
+| RED | Con el catálogo ya derivado, fallaron las pruebas de exclusión que pasan a inclusión (`TestCatalogReadOnlyAndExclusions`, `TestReadDoesNotWalkIntegrations`): el bloque `integrations` aparecía en el catálogo y un ancla en él bloqueaba la escritura. |
+| GREEN | `go test ./internal/settings -count=1`: ok. `go test ./internal/dashboard -run 'Settings\|Ajustes\|Assets\|Canary' -count=1`: ok. `go test ./internal/integrations -run 'TestImportsDirection' -count=1`: ok (con subprueba nueva: `settings` solo importa la hoja `manifest`). `go test ./internal/workspace -run 'Integrations' -count=1`: ok. `go vet` de `settings` y `dashboard`: limpio. |
+| Arnés | `settings.Write` sobre `t.TempDir()`; sin binarios sueltos ni ADO real. |
+
+Decisiones: `keySpec.uiRequired` lleva la obligatoriedad del manifiesto solo para la interfaz (`required` queda a false para poder retirar el plugin entero); `pluginSpecs` y `findPluginSpec` se construyen al vuelo desde `manifest.Catalog()`/`Lookup`, sin tabla estática; un secreto del manifiesto da `unknown_key`. La pantalla de ajustes omite la sección `integrations` y enlaza a `#/integraciones` (la pantalla llega en 4.1); el control `int` usa `min`/`max` del catálogo (1 por defecto). Riesgo: un plugin con ancla, alias o `<<` en `integrations` ahora hace el documento no escribible (RF-TOP-22, intencionado).

@@ -19,7 +19,7 @@ type Patch map[string]any
 // canonicalBlocks es el orden canónico de los bloques de primer nivel que el escritor
 // crea. Coincide con el axiom.yaml del repositorio y deja los bloques nuevos antes
 // de `roles` y `governance` en los ficheros que genera el alta.
-var canonicalBlocks = []string{"workspace", "git", "repositories", "workflow", "sdd", "delivery", "acceptance_tests"}
+var canonicalBlocks = []string{"workspace", "git", "repositories", "workflow", "sdd", "delivery", "acceptance_tests", "integrations"}
 
 // operation es un cambio ya resuelto contra el catálogo y el documento.
 type operation struct {
@@ -71,7 +71,13 @@ func (d *document) resolve(key string, raw any, topology workspace.TopologyType)
 		return operation{}, newError(CodeKeyNotEditable, fmt.Sprintf("la clave %q es de solo lectura: edítala a mano en axiom.yaml", key))
 	}
 	parsed := parseKey(key)
-	spec, ok := findSpec(parsed.template)
+	var spec keySpec
+	var ok bool
+	if parsed.scope == scopePlugin {
+		spec, ok = findPluginSpec(parsed.selector, parsed.field)
+	} else {
+		spec, ok = findSpec(parsed.template)
+	}
 	if !ok {
 		return operation{}, newError(CodeUnknownKey, fmt.Sprintf("la clave %q no figura en el catálogo de ajustes del proyecto", key))
 	}
@@ -79,6 +85,8 @@ func (d *document) resolve(key string, raw any, topology workspace.TopologyType)
 		return operation{}, newError(CodeKeyNotApplicable, fmt.Sprintf("la clave %q solo aplica a proyectos multirepo", key))
 	}
 	switch spec.scope {
+	case scopePlugin:
+		// el plugin y el campo ya se comprobaron contra el manifiesto
 	case scopeRepo:
 		selector := normalizeRepoPath(parsed.selector)
 		if !slices.Contains(d.repositoryCandidates(), selector) {
@@ -172,6 +180,8 @@ func (d *document) apply(op operation) *Error {
 	switch op.spec.scope {
 	case scopeRepo:
 		return d.applyRepository(op)
+	case scopePlugin:
+		return d.applyPlugin(op)
 	case scopeRole:
 		roles, _ := mapValue(d.root, "roles")
 		role, _ := mapValue(roles, op.parse.selector)
@@ -223,6 +233,46 @@ func (d *document) applyRepository(op operation) *Error {
 		seq.Content = append(seq.Content, entry)
 	}
 	setValue(entry, op.parse.field, op.spec.typ, op.value)
+	return nil
+}
+
+// applyPlugin aplica un campo de `integrations[<plugin>]`: crea el bloque y la entrada del
+// plugin si faltan (un mapeo en estilo de flujo, como `{}`, pasa a estilo de bloque) y, al
+// retirar, borra la entrada del plugin y el bloque que queden vacíos.
+func (d *document) applyPlugin(op operation) *Error {
+	if op.value == nil {
+		block, _ := mapValue(d.root, "integrations")
+		plugin, _ := mapValue(block, op.parse.selector)
+		if plugin == nil || plugin.Kind != yaml.MappingNode {
+			return nil
+		}
+		removeKey(plugin, op.parse.field)
+		if len(plugin.Content) == 0 {
+			removeKey(block, op.parse.selector)
+		}
+		if len(block.Content) == 0 {
+			removeKey(d.root, "integrations")
+		}
+		return nil
+	}
+	block := d.ensureBlock("integrations", yaml.MappingNode)
+	block.Style &^= yaml.FlowStyle
+	plugin, _ := mapValue(block, op.parse.selector)
+	if plugin == nil || plugin.Kind != yaml.MappingNode {
+		plugin = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		replaced := false
+		for i := 0; i+1 < len(block.Content); i += 2 {
+			if block.Content[i].Value == op.parse.selector {
+				block.Content[i+1] = plugin
+				replaced = true
+			}
+		}
+		if !replaced {
+			block.Content = append(block.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: op.parse.selector}, plugin)
+		}
+	}
+	plugin.Style &^= yaml.FlowStyle
+	setValue(plugin, op.parse.field, op.spec.typ, op.value)
 	return nil
 }
 

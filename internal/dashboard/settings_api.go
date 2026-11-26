@@ -129,6 +129,7 @@ func readSettingsDTO(configPath string) (*SettingsDTO, error) {
 			Key: e.Key, Section: e.Section, Label: e.Label, Description: e.Description, Effect: e.Effect,
 			Type: string(e.Type), Allowed: e.Allowed, Topologies: e.Topologies, Editable: e.Editable,
 			ReadOnlyReason: e.ReadOnlyReason, Required: e.Required, Default: e.Default, Declared: e.Declared, Value: e.Value,
+			Plugin: e.Plugin, Format: e.Format, Min: e.Min, Max: e.Max,
 		})
 	}
 	return dto, nil

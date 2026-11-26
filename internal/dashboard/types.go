@@ -41,6 +41,10 @@ type SettingDTO struct {
 	Default        string   `json:"default,omitempty"`
 	Declared       bool     `json:"declared"`
 	Value          any      `json:"value"`
+	Plugin         string   `json:"plugin,omitempty"`
+	Format         string   `json:"format,omitempty"`
+	Min            *int     `json:"min,omitempty"`
+	Max            *int     `json:"max,omitempty"`
 }
 
 // SettingsDTO es la respuesta de `GET /api/settings`: el catálogo expandido para el axiom.yaml

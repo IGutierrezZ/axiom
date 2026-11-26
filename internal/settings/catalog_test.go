@@ -210,7 +210,7 @@ integrations:
 		}
 	}
 	for _, e := range snap.Entries {
-		for _, banned := range []string{"integrations", "artifact_store", "rdd", "commit_review", "docs_publication"} {
+		for _, banned := range []string{"artifact_store", "rdd", "commit_review", "docs_publication"} {
 			if strings.Contains(e.Key, banned) {
 				t.Errorf("el catálogo no debe contener %q (%s)", banned, e.Key)
 			}
