@@ -5,15 +5,19 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
+	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
 // archiveCheckSchema identifica la salida JSON de `axiom sdd archive-check`.
@@ -90,6 +94,13 @@ func RunSDDArchiveCheck(args []string, stdout io.Writer) error {
 		}
 		report.Domains = alreadyComposed(delta, baseline, pattern)
 	}
+	if report.Error == "" {
+		assignments, pending, idErr := archiveCheckIdentifiers(loc, changeRoot)
+		if idErr != nil {
+			report.Error = idErr.Error()
+		}
+		report.Assignments, report.PendingProvisionals = assignments, pending
+	}
 	report.OK = report.Error == "" && len(report.Findings) == 0
 
 	if err := renderArchiveCheck(stdout, *asJSON, report); err != nil {
@@ -112,7 +123,11 @@ type archiveCheckReport struct {
 	OK       bool                  `json:"ok"`
 	Error    string                `json:"error,omitempty"`
 	Findings []archiveCheckFinding `json:"findings"`
-	Domains  []archiveCheckDomain  `json:"domains"`
+	// Assignments es el mapa de provisional a definitivo guardado en ids.yaml y PendingProvisionals
+	// los provisionales que las deltas declaran y aún no tienen número (REQ-47.6, REQ-47.8).
+	Assignments         []livespec.AssignmentReport `json:"assignments,omitempty"`
+	PendingProvisionals []string                    `json:"pendingProvisionals,omitempty"`
+	Domains             []archiveCheckDomain        `json:"domains"`
 }
 
 type archiveCheckFinding struct {
@@ -146,6 +161,12 @@ func renderArchiveCheck(stdout io.Writer, asJSON bool, report archiveCheckReport
 		if report.Error != "" {
 			fmt.Fprintf(&b, "  - %s\n", report.Error)
 		}
+	}
+	for _, a := range report.Assignments {
+		fmt.Fprintf(&b, "Asignación guardada: %s → %s (%s)\n", a.Provisional, a.Definitive, a.Capability)
+	}
+	for _, token := range report.PendingProvisionals {
+		fmt.Fprintf(&b, "Provisional pendiente de asignar: %s\n", token)
 	}
 	for _, domain := range report.Domains {
 		name := domain.Domain
@@ -229,6 +250,52 @@ func renderSDDArchiveCheckHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Comprueba, sin escribir nada, si un cambio ISO puede archivarse: declaración válida, al menos un escenario por requisito")
 	_, _ = fmt.Fprintln(stdout, "y matriz de verificación válida y de éxito. Sale con error y los motivos tipados si hay hallazgos; un cambio no ISO sale sin error.")
 	_, _ = fmt.Fprintln(stdout, "Informa por dominio alreadyComposed: la baseline ya contiene la delta entera (reanudación de un archivado interrumpido).")
+	_, _ = fmt.Fprintln(stdout, "Informa además assignments (el mapa guardado en ids.yaml) y pendingProvisionals (provisionales de las deltas sin número todavía).")
 	_, _ = fmt.Fprintln(stdout, "  --json        Salida JSON ("+archiveCheckSchema+").")
 	return nil
+}
+
+// archiveCheckIdentifiers lee lo que el cambio dice de sus identificadores provisionales
+// (REQ-47.6, REQ-47.8): el mapa guardado en `ids.yaml`, que reconoce una asignación ya hecha
+// tras un archivado interrumpido, y los provisionales que sus deltas declaran en un ADDED y
+// el mapa aún no asigna. Con el patrón inaccesible no decide nada (lo reporta la rama ISO); una
+// traza ilegible es un error tipado.
+func archiveCheckIdentifiers(loc workspace.Location, changeRoot string) (assignments []livespec.AssignmentReport, pending []string, err error) {
+	if _, patternErr := loc.Declarations.IDPattern(); patternErr != nil {
+		return nil, nil, nil
+	}
+	trace, err := livespec.ReadTraceFile(filepath.Join(changeRoot, "ids.yaml"))
+	if err != nil {
+		return nil, nil, err
+	}
+	assigned := map[string]bool{}
+	for _, e := range trace.Assignments {
+		assigned[e.Provisional] = true
+		assignments = append(assignments, livespec.AssignmentReport{
+			Provisional: e.Provisional, Definitive: e.Definitive, Capability: e.Capability,
+			Requirement: e.Requirement, State: livespec.StateKept, Previous: e.Previous,
+		})
+	}
+	entries, readErr := os.ReadDir(filepath.Join(changeRoot, "specs"))
+	if readErr != nil {
+		return assignments, nil, nil
+	}
+	seen := map[string]bool{}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		data, readErr := os.ReadFile(filepath.Join(changeRoot, "specs", entry.Name(), "spec.md"))
+		if readErr != nil {
+			continue
+		}
+		delta, _ := openspecdoc.ParseChangeSpec(string(data))
+		for _, r := range delta.Added {
+			if token, ok := reqid.ProvisionalInTitle(r.Name); ok && !assigned[token] && !seen[token] {
+				seen[token] = true
+				pending = append(pending, token)
+			}
+		}
+	}
+	return assignments, pending, nil
 }

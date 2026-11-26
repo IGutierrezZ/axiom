@@ -186,34 +186,34 @@ Depende de: U4. Paquetes: `internal/livespec`, `internal/cli/archive_integrate.g
 
 Depende de: U4. Paquetes: `internal/livespec`, `internal/cli`, `cmd/axiom`, `internal/sddstatus`, `internal/kickoff`.
 
-- [ ] 6.1 RED: en `internal/livespec/change_test.go`, `PlanChange`: capacidad existente (`composed`), capacidad nueva (`created`, y sin provisionales byte a byte igual al `cp` de hoy y sin `ids.yaml`), serie nueva con los patrones `REQ-<n>.<m>` y `RF-<DOM>-<NN>`, capacidad parcialmente integrada (`resumed` con `skipped[]`), ya integrada (`already_integrated`), capacidad nueva con MODIFIED (`capability_missing`), paridad byte a byte con `archive-compose` para toda composición aceptada hasta hoy.
+- [x] 6.1 RED: en `internal/livespec/change_test.go`, `PlanChange`: capacidad existente (`composed`), capacidad nueva (`created`, y sin provisionales byte a byte igual al `cp` de hoy y sin `ids.yaml`), serie nueva con los patrones `REQ-<n>.<m>` y `RF-<DOM>-<NN>`, capacidad parcialmente integrada (`resumed` con `skipped[]`), ya integrada (`already_integrated`), capacidad nueva con MODIFIED (`capability_missing`), paridad byte a byte con `archive-compose` para toda composición aceptada hasta hoy.
   Cubre: REQ-47.8, REQ-30.22, REQ-21.17
   Verificación: `go test ./internal/livespec -run 'PlanChange'`
-- [ ] 6.2 GREEN: crear `internal/livespec/change.go` con `ChangeOptions`, `PlanChange` y `ChangeIntegration.Apply` (composición con la delta sustituida entera, reanudación con `reducedDelta`, copia de capacidad nueva, escritura por `writeSet`; reescrituras de deltas, `Cubre:` de `tasks.md` y `tasks.<rol>.md`, columna `Requisito` de `verify-report*.md` y `ids.yaml`, solo con mapa no vacío).
+- [x] 6.2 GREEN: crear `internal/livespec/change.go` con `ChangeOptions`, `PlanChange` y `ChangeIntegration.Apply` (composición con la delta sustituida entera, reanudación con `reducedDelta`, copia de capacidad nueva, escritura por `writeSet`; reescrituras de deltas, `Cubre:` de `tasks.md` y `tasks.<rol>.md`, columna `Requisito` de `verify-report*.md` y `ids.yaml`, solo con mapa no vacío).
   Cubre: REQ-47.8, REQ-47.4, REQ-21.17
   Verificación: `go test ./internal/livespec -run 'PlanChange|Change'`
-- [ ] 6.3 RED: superación: `--supersede` para los REMOVED de todas las capacidades; nombres de `--superseded-requirements` con y sin prefijo `<capacidad>/`; nombre inexistente da `superseded_requirement_unknown`; nombre ambiguo da `superseded_requirement_ambiguous` con la continuación del prefijo; `archive-compose` conserva su comportamiento (REQ-30.23).
+- [x] 6.3 RED: superación: `--supersede` para los REMOVED de todas las capacidades; nombres de `--superseded-requirements` con y sin prefijo `<capacidad>/`; nombre inexistente da `superseded_requirement_unknown`; nombre ambiguo da `superseded_requirement_ambiguous` con la continuación del prefijo; `archive-compose` conserva su comportamiento (REQ-30.23).
   Cubre: REQ-47.8, REQ-30.23
   Verificación: `go test ./internal/livespec -run 'Supersed'`
-- [ ] 6.4 RED: `internal/cli/sdd_archive_integrate_test.go`: esquema `axiom.sdd-archive-integrate/v1` completo (`capabilities`, `requirements`, `assignments`, `duplicates`, `written`, `nothingToIntegrate`, `error`); guardas en orden (baseline residual, patrón inaccesible, negativa ISO, guarda A `guardChangeWriter` con contexto `archive`); `--check` omite solo la guarda A; guarda A en rama ajena rechaza y el árbol queda intacto; ejecución con `--cwd` absoluto desde otro directorio solo cambia ficheros del workspace; reejecución idempotente; delta plana `specs/spec.md` da `flat_delta_unsupported`; fallo inyectado sin estado a medias.
+- [x] 6.4 RED: `internal/cli/sdd_archive_integrate_test.go`: esquema `axiom.sdd-archive-integrate/v1` completo (`capabilities`, `requirements`, `assignments`, `duplicates`, `written`, `nothingToIntegrate`, `error`); guardas en orden (baseline residual, patrón inaccesible, negativa ISO, guarda A `guardChangeWriter` con contexto `archive`); `--check` omite solo la guarda A; guarda A en rama ajena rechaza y el árbol queda intacto; ejecución con `--cwd` absoluto desde otro directorio solo cambia ficheros del workspace; reejecución idempotente; delta plana `specs/spec.md` da `flat_delta_unsupported`; fallo inyectado sin estado a medias.
   Cubre: REQ-47.8, REQ-21.17, REQ-47.3
   Verificación: `go test ./internal/cli -run 'SDDArchiveIntegrate'`
-- [ ] 6.5 GREEN: crear `internal/cli/sdd_archive_integrate.go` con el verbo `axiom sdd archive-integrate --cwd --change [--supersede] [--superseded-requirements] [--check] [--json]`, sin reutilizar la lápida `sdd integrate`.
+- [x] 6.5 GREEN: crear `internal/cli/sdd_archive_integrate.go` con el verbo `axiom sdd archive-integrate --cwd --change [--supersede] [--superseded-requirements] [--check] [--json]`, sin reutilizar la lápida `sdd integrate`.
   Cubre: REQ-47.8
   Verificación: `go test ./internal/cli -run 'SDDArchiveIntegrate'`
-- [ ] 6.6 RED y GREEN: modificar `internal/cli/sdd_archive_check.go` para que `archive-check` devuelva `assignments` (de `ids.yaml`) y `pendingProvisionals`, y reconozca una asignación ya hecha tras un archivado interrumpido; `--check` sobre un cambio archivado (`changes/archive/*-<cambio>/ids.yaml`) da `duplicate_assigned_id` si un definitivo de la traza aparece más de una vez en la spec viva o fuera de su capacidad, con la continuación de D5; traza legible tras archivar.
+- [x] 6.6 RED y GREEN: modificar `internal/cli/sdd_archive_check.go` para que `archive-check` devuelva `assignments` (de `ids.yaml`) y `pendingProvisionals`, y reconozca una asignación ya hecha tras un archivado interrumpido; `--check` sobre un cambio archivado (`changes/archive/*-<cambio>/ids.yaml`) da `duplicate_assigned_id` si un definitivo de la traza aparece más de una vez en la spec viva o fuera de su capacidad, con la continuación de D5; traza legible tras archivar.
   Cubre: REQ-47.6, REQ-47.8, REQ-47.5
   Verificación: `go test ./internal/cli -run 'SDDArchiveCheck|ArchivedTrace'`
-- [ ] 6.7 RED y GREEN: en `cmd/axiom/main.go` y `cmd/axiom/main_test.go`, registro del subcomando, texto de ayuda (`:171` y `:2211`) y lista de subcomandos (`main_test.go:52`).
+- [x] 6.7 RED y GREEN: en `cmd/axiom/main.go` y `cmd/axiom/main_test.go`, registro del subcomando, texto de ayuda (`:171` y `:2211`) y lista de subcomandos (`main_test.go:52`).
   Cubre: REQ-47.8
   Verificación: `go test ./cmd/axiom -run 'Help'`
-- [ ] 6.8 RED (G1): en `internal/sddstatus` y `internal/kickoff`, con un cambio `checkpointed` y las puertas aprobadas, tras ejecutar el verbo (que reescribe tareas, deltas y `verify-report.md`) las puertas siguen `approved` y `nextRecommended` no cambia; en `kickoff/machine.go` (`resolveGateStatus`) una aprobación es terminal con independencia del digest; `continuous` no evalúa puertas.
+- [x] 6.8 RED (G1): en `internal/sddstatus` y `internal/kickoff`, con un cambio `checkpointed` y las puertas aprobadas, tras ejecutar el verbo (que reescribe tareas, deltas y `verify-report.md`) las puertas siguen `approved` y `nextRecommended` no cambia; en `kickoff/machine.go` (`resolveGateStatus`) una aprobación es terminal con independencia del digest; `continuous` no evalúa puertas.
   Cubre: REQ-47.8, REQ-21.17
   Verificación: `go test ./internal/sddstatus -run 'Gate'` y `go test ./internal/kickoff/... -run 'Gate|Digest'`
-- [ ] 6.9 GREEN (G1): si 6.8 lo exige, modificar `internal/kickoff/machine.go` para que la aprobación sea terminal con independencia del digest; si ya lo es, solo se conserva la prueba de regresión y se anota en el commit.
+- [x] 6.9 GREEN (G1): si 6.8 lo exige, modificar `internal/kickoff/machine.go` para que la aprobación sea terminal con independencia del digest; si ya lo es, solo se conserva la prueba de regresión y se anota en el commit.
   Cubre: REQ-47.8
   Verificación: `go test ./internal/kickoff/... ./internal/sddstatus -run 'Gate|Digest'`
-- [ ] 6.10 Cierre de U6: `go vet ./internal/livespec/... ./internal/cli ./cmd/axiom ./internal/sddstatus/... ./internal/kickoff/...` y commit `feat(sdd): verbo archive-integrate que asigna IDs y compone todo el cambio`.
+- [x] 6.10 Cierre de U6: `go vet ./internal/livespec/... ./internal/cli ./cmd/axiom ./internal/sddstatus/... ./internal/kickoff/...` y commit `feat(sdd): verbo archive-integrate que asigna IDs y compone todo el cambio`.
   Cubre: REQ-47.8, REQ-21.17, REQ-47.5, REQ-47.6
   Verificación: `go test ./internal/livespec/... ./internal/kickoff/...` y `go test ./internal/cli -run 'SDDArchive'`
 

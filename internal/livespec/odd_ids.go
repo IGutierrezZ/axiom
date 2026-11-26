@@ -16,7 +16,7 @@ import (
 func oddDocRel(feature string) string { return "odd/tasks/" + feature + ".md" }
 
 // readCanonical lee la especificación canónica de una capacidad; existed es falso si no existe.
-func readCanonical(loc workspace.Location, capability string) (path, text string, existed bool, err error) {
+func readCanonical(loc workspace.Location, capability, retry string) (path, text string, existed bool, err error) {
 	path = specPath(loc, capability)
 	data, readErr := os.ReadFile(path)
 	switch {
@@ -25,7 +25,7 @@ func readCanonical(loc workspace.Location, capability string) (path, text string
 	case os.IsNotExist(readErr):
 		return path, "", false, nil
 	default:
-		return path, "", false, &CapabilityError{Capability: capability, Err: fmt.Errorf("no se puede leer %s: %w; comprueba los permisos del fichero y vuelve a ejecutar `axiom archive integrate --odd <feature>`", path, readErr)}
+		return path, "", false, &CapabilityError{Capability: capability, Err: fmt.Errorf("no se puede leer %s: %w; comprueba los permisos del fichero y vuelve a ejecutar `%s`", path, readErr, retry)}
 	}
 }
 

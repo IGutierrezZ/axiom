@@ -49,7 +49,7 @@ func TestRunSDDHelp(t *testing.T) {
 			if !strings.Contains(out, "Uso: axiom sdd <subcomando>") {
 				t.Fatalf("la salida no contiene el uso esperado:\n%s", out)
 			}
-			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "archive-check", "trace", "integrate", "task-result", "preflight-hook", "publish"}
+			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "archive-check", "archive-integrate", "trace", "integrate", "task-result", "preflight-hook", "publish"}
 			for _, sub := range expectedSubcmds {
 				if !strings.Contains(out, sub) {
 					t.Fatalf("la ayuda de sdd no documenta el subcomando %q:\n%s", sub, out)
@@ -64,7 +64,7 @@ func TestRunSDDHelp(t *testing.T) {
 // verbo propio falla con su mensaje, no con «subcomando no reconocido», y ambos
 // aparecen en la ayuda.
 func TestSDDVerbRouting(t *testing.T) {
-	for _, verb := range []string{"archive-check", "trace"} {
+	for _, verb := range []string{"archive-check", "archive-integrate", "trace"} {
 		t.Run(verb, func(t *testing.T) {
 			var stdout, stderr bytes.Buffer
 			if code := runSDD([]string{verb}, &stdout, &stderr); code != 1 {
@@ -83,7 +83,7 @@ func TestSDDVerbRouting(t *testing.T) {
 
 	var help bytes.Buffer
 	runSDD([]string{"--help"}, &help, &bytes.Buffer{})
-	for _, verb := range []string{"archive-check", "trace"} {
+	for _, verb := range []string{"archive-check", "archive-integrate", "trace"} {
 		if !strings.Contains(help.String(), verb) {
 			t.Errorf("la ayuda de sdd no documenta %q:\n%s", verb, help.String())
 		}

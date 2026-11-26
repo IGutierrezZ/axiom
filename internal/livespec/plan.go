@@ -19,6 +19,8 @@ const (
 	OutcomeCreated Outcome = "created"
 	// OutcomeComposed: la delta se compone sobre la especificación existente.
 	OutcomeComposed Outcome = "composed"
+	// OutcomeResumed: la capacidad estaba parcialmente integrada y se completa con lo pendiente.
+	OutcomeResumed Outcome = "resumed"
 	// OutcomeAlready: la especificación ya contiene la delta; no se escribe nada.
 	OutcomeAlready Outcome = "already_integrated"
 )
@@ -43,6 +45,15 @@ type CapabilityPlan struct {
 	Content string
 	// Existed dice si la especificación ya existía antes de la integración.
 	Existed bool
+	// Skipped son los requisitos ya integrados que una capacidad reanudada no vuelve a
+	// componer (solo con OutcomeResumed).
+	Skipped []SkippedRequirement
+}
+
+// SkippedRequirement es un requisito que una reanudación omite por estar ya integrado.
+type SkippedRequirement struct {
+	Section     string `json:"section"`
+	Requirement string `json:"requirement"`
 }
 
 // Integration es el resultado, calculado en memoria, de integrar un documento ODD. No se
@@ -176,7 +187,7 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 	}
 	sources := make([]CapabilitySource, 0, len(doc.Capabilities))
 	for _, c := range doc.Capabilities {
-		path, canonical, existed, err := readCanonical(loc, c.Name)
+		path, canonical, existed, err := readCanonical(loc, c.Name, "axiom archive integrate --odd "+doc.Feature)
 		if err != nil {
 			return Integration{}, err
 		}
