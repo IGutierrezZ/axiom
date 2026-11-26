@@ -46,7 +46,7 @@ Modo TDD: desactivado (`openspec/config.yaml`, `strict_tdd: false`). Ruta: todas
 - [x] **T1.** `ci.yml`: sin `push`, con nocturna y puerta en `changes`; documentación de Windows actualizada.
 - [x] **T2.** Job `Toolchain Meta Tests` con `-skip`/`-run`, agregador y guardas ampliadas.
 - [x] **T3.** `pr-check.yml` sin `edited`.
-- [ ] **T4.** Release: mensaje de `require-ci-success.sh` y guía en `docs/release-signing.md`.
+- [x] **T4.** Release: mensaje de `require-ci-success.sh` y guía en `docs/release-signing.md`.
 
 ## Comprobaciones
 

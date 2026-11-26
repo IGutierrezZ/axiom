@@ -118,9 +118,27 @@ The tag workflow fails unless all of these hold:
 
 - the event is an annotated exact `vMAJOR.MINOR.PATCH` tag;
 - the event SHA, tag target, checkout, remote tag, and current `origin/main` are identical;
+- the newest `ci.yml` run on that exact SHA concluded `success` (`scripts/require-ci-success.sh`);
 - the worktree and module graph remain immutable (`go mod tidy -diff`);
 - tests, vet, and format checks pass under read-only token permissions;
 - the protected signing key matches a non-test injected trust anchor;
 - the Windows/Scoop omission policy passes before any publication;
 - GoReleaser signs the full `${artifact}` path with the exact trusted comment;
 - the published GitHub asset set is exact, the remote signature is valid, and every remote checksum verifies.
+
+### Before tagging: a green CI run on the exact SHA
+
+`ci.yml` does not run on push to `main`. It runs on pull requests, once a night on `main` when there are new commits, and on demand. A freshly merged commit therefore has no `ci.yml` run of its own, and the release CI gate rejects its tag.
+
+Before tagging, while `main` is at the commit you will tag:
+
+1. Start CI on `main`:
+
+   ```powershell
+   gh workflow run ci.yml --ref main
+   ```
+
+2. Wait until that run concludes `success` on the same SHA.
+3. Create and push the annotated tag on that SHA.
+
+If `main` has not moved since the last nightly run, that run already covers the SHA and step 1 is not needed.
