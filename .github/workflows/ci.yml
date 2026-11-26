@@ -372,20 +372,6 @@ jobs:
           echo "${#packages[@]} package(s)"
           go test "${packages[@]}" -skip "$TOOLCHAIN_META_TESTS"
 
-      # Temporal (C-08-g, pruebas-paralelas): -race y -shuffle de los paquetes cuyas
-      # pruebas pasan a t.Parallel(). Se retira antes del merge.
-      - name: Race check of the parallelized packages
-        if: matrix.shard.name == 'rest' || matrix.shard.name == 'cli'
-        env:
-          SHARD_NAME: ${{ matrix.shard.name }}
-        run: |
-          set -euo pipefail
-          if [ "$SHARD_NAME" = cli ]; then
-            go test -race -shuffle=on -count=1 -run '^Test(Branch|ArchiveContext|SDDPublish|SDDGate|SDDWrongBranch)' ./internal/cli
-          else
-            go test -race -shuffle=on -count=1 ./internal/testenv ./internal/sddpublish ./internal/sddstatus ./internal/techcontext ./internal/dashboard
-          fi
-
       # Ninguna prueba debe escribir en el checkout ni dejar ficheros nuevos: con
       # el descubrimiento ascendente del planning home (inc-24), una prueba que
       # resuelve desde el directorio de su paquete llega a la raíz del

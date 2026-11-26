@@ -40,7 +40,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
 - [x] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
 - [x] T6 · `cli`: `isolateIntegrateGit`, `isolateBranchGit` e `isolateGateGitEnv` sin `t.Setenv`, entorno de git en `TestMain` y `t.Parallel()` en sus pruebas.
-- [ ] T7 · Cierre: tiempos antes y después por paquete, CI en verde.
+- [x] T7 · Cierre: tiempos antes y después por paquete, CI en verde.
 
 Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requiere un mapeo que exceda el presupuesto de evidencia ni hay motivo nombrado para delegar un escritor).
 
@@ -71,9 +71,9 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 ## Progreso
 
 - T1 a T6 cerradas con su commit: `79126437`, `a8890ec1`, `59d4d19d`, `1bf86564`, `c12ec9d8` y `954e0329`.
-- `-race -shuffle=on`: paso temporal en `ci.yml` (grupos `rest` y `cli` de `Go Tests`), que se retira antes del merge. En Windows local se pasó `-shuffle=on` de cada paquete en verde; `dashboard`, además, con `-count=2`. La primera ejecución detectó tres pruebas paralelas que sustituían variables del paquete en bloques `var (...)` que el primer inventario no leía; el inventario se rehízo en los cinco paquetes y esas tres volvieron a serie.
+- `-race -shuffle=on`: paso temporal en `ci.yml` (grupos `rest` y `cli` de `Go Tests`), en verde en la ejecución del head `dc229260`; retirado antes del merge. En Windows local se pasó `-shuffle=on` de cada paquete en verde; `dashboard`, además, con `-count=2`. La primera ejecución detectó tres pruebas paralelas que sustituían variables del paquete en bloques `var (...)` que el primer inventario no leía; el inventario se rehízo en los cinco paquetes y esas tres volvieron a serie.
 - Comprobado en local: `go vet` y `go test` de `testenv`, `sddpublish`, `sddstatus`, `techcontext` y `dashboard`; en `cli`, las 190 pruebas con git y `-run 'Identity|Actor|Gitconfig|GitConfig|Home'`; en `assets`, las guardas de los workflows.
 
 ## Siguiente paso
 
-T7: PR, CI con `-race` en verde, retirar el paso temporal y merge.
+Merge de la PR #338 con merge commit y `done -Lane odd`.
