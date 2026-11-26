@@ -121,7 +121,7 @@ Recordatorio de CI: cadenas JS de `server_test.go:447` y `assets_branch_test.go`
 
 - [x] 8.1 `docs/usage.md`: subsección «Ajustes del proyecto desde el dashboard» con claves editables, claves de solo lectura, «solo afecta a cambios nuevos», endpoints con sus códigos, petición local y autofetch.
 - [x] 8.2 `docs/codebase/dashboard.md`: invariante de que `axiom.yaml` solo se escribe por `/api/settings` mediante `internal/settings` y de que toda escritura exige `isLocalRequest`.
-- [x] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario.
+- [x] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario. Evidencia: commit 979545eb7 (ajusta también `internal/idmigration/residues.yaml`: el token REQ-25.33 de las pruebas del dashboard caducó al citar RF-WEB-10).
 
 Cubre: RF-WEB-10, RF-WEB-18, RF-TOP-21, RF-TOP-22
 
@@ -131,8 +131,15 @@ Recordatorio de CI: fixtures y documentación sin `REQ-` nuevos (`internal/idmig
 
 ## Fase 9: Cierre de verificación
 
-- [ ] 9.1 Ejecutar los comandos localizados agregados, sin la suite completa: `go test ./internal/settings`; `go test ./internal/workspace ./internal/multirole ./internal/hub -run 'Promotion|WorkflowLane|ExplainerHTML|GatePolic|PolicyViolations'`; `go test ./internal/dashboard -run 'Settings|WorktreePrefs|BranchPolicy|Ecosystem|SecretsCanary|Classified|WorkspaceIsReadOnly|Assets'`. Registrar el resultado observado de cada uno.
-- [ ] 9.2 Comprobar manualmente, sin ejecutar CI completa: ningún `REQ-` nuevo fuera de `residues.yaml`, ninguna exportación sin consumidor de producción (trinquete de código muerto), `kickoff.yaml`/`gates.yaml` sin tocar y sin binarios sueltos compilados.
-- [ ] 9.3 Confirmar la cobertura de requisitos: RF-TOP-21, RF-TOP-22, RF-TOP-23, RF-WEB-01, RF-WEB-07, RF-WEB-10, RF-WEB-18, RF-WEB-19, RF-WEB-20 y RF-WEB-21 aparecen en alguna línea `Cubre:` y en alguna prueba que pasa.
+- [x] 9.1 Ejecutar los comandos localizados agregados, sin la suite completa: `go test ./internal/settings`; `go test ./internal/workspace ./internal/multirole ./internal/hub -run 'Promotion|WorkflowLane|ExplainerHTML|GatePolic|PolicyViolations'`; `go test ./internal/dashboard -run 'Settings|WorktreePrefs|BranchPolicy|Ecosystem|SecretsCanary|Classified|WorkspaceIsReadOnly|Assets'`. Registrar el resultado observado de cada uno.
+- [x] 9.2 Comprobar manualmente, sin ejecutar CI completa: ningún `REQ-` nuevo fuera de `residues.yaml`, ninguna exportación sin consumidor de producción (trinquete de código muerto), `kickoff.yaml`/`gates.yaml` sin tocar y sin binarios sueltos compilados.
+- [x] 9.3 Confirmar la cobertura de requisitos: RF-TOP-21, RF-TOP-22, RF-TOP-23, RF-WEB-01, RF-WEB-07, RF-WEB-10, RF-WEB-18, RF-WEB-19, RF-WEB-20 y RF-WEB-21 aparecen en alguna línea `Cubre:` y en alguna prueba que pasa.
+
+Evidencia de cierre (2026-11-26, verificación localizada, sin suite completa ni binarios sueltos):
+
+- Commits: 1 `71c56d0ff`, 2 `b6e0fbff6`, 3 `717a013b7`, 4 `af2d8507c`, 5 `aae568291`, 6 `a1299919d`, 7 `82a825cde`, 8 `979545eb7`.
+- `go test ./internal/settings`: ok. `go test ./internal/workspace ./internal/multirole ./internal/hub -run 'Promotion|WorkflowLane|ExplainerHTML|GatePolic|PolicyViolations'`: ok. `go test ./internal/dashboard -run 'Settings|WorktreePrefs|BranchPolicy|Ecosystem|SecretsCanary|Classified|WorkspaceIsReadOnly|Assets'`: ok. `go test ./internal/idmigration -run TestRepositoryLegacyIDResidues`: ok. `go vet` de los cinco paquetes y `gofmt -l`: sin salida.
+- Sin `REQ-` nuevos en `internal/settings` ni en los ficheros nuevos del dashboard; `kickoff.yaml` y `gates.yaml` sin tocar; sin binarios sueltos; los símbolos exportados nuevos (`settings.Read`, `settings.Write`, los cuatro accesores de vocabulario) tienen consumidor de producción.
+- Cobertura: cada requisito de la lista de 9.3 figura en una línea `Cubre:` de las fases 1 a 8 y en pruebas que pasan (`internal/settings`, `settings_api_test.go`, `assets_settings_test.go`, `assets_branch_test.go`).
 
 Cubre: RF-TOP-21, RF-TOP-22, RF-TOP-23, RF-WEB-01, RF-WEB-07, RF-WEB-10, RF-WEB-18, RF-WEB-19, RF-WEB-20, RF-WEB-21
