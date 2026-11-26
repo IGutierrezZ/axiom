@@ -78,13 +78,13 @@ U1 -> (U2 ∥ U3) -> U4 -> (U5 ∥ U6); U7 depende solo de U2 y puede ir tras U2
 
 ## Phase 5: Publicador CLI e inyección (U5; depende de U3 y U4)
 
-- [ ] 5.1 RED: `internal/cli/sdd_publish_marks_test.go` (`TestMarksPublisher`, siempre con `-run`): repo multirepo de fixture con remoto local; identidad ausente; `other_commits_unpublished`; destino no in situ; resultado tipado de rechazos.
-- [ ] 5.2 Modificar `internal/cli/sdd_publish.go` (no crear otro fichero que importe `sddpublish`): `MarksPublisher`, `NewMarksPublisher`, `MarksPublishRequest`, `MarksPublishResult`, `MarksIdentity` (con `gitidentity.Actor`) y `PublishMarks` (`Only: [marks.FileName]`, `Replay: marks.Merge`, `Branch`). Cada rechazo nuevo declara resolución (`TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`). La ayuda del verbo no cambia.
+- [x] 5.1 RED: `internal/cli/sdd_publish_marks_test.go` (`TestMarksPublisher`, siempre con `-run`): repo multirepo de fixture con remoto local; identidad ausente; `other_commits_unpublished`; destino no in situ; resultado tipado de rechazos.
+- [x] 5.2 Modificar `internal/cli/sdd_publish.go` (no crear otro fichero que importe `sddpublish`): `MarksPublisher`, `NewMarksPublisher`, `MarksPublishRequest`, `MarksPublishResult`, `MarksIdentity` (con `gitidentity.Actor`) y `PublishMarks` (`Only: [marks.FileName]`, `Replay: marks.Merge`, `Branch`). Cada rechazo nuevo declara resolución (`TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`). La ayuda del verbo no cambia.
   Cubre: prov:PUB:1, prov:PUB:2, prov:WEB:3, RF-PUB-07
-- [ ] 5.3 Modificar `cmd/axiom/main.go` (~l. 1207): `svc.SetMarksPublisher(cli.NewMarksPublisher())` tras `NewServiceWithHub`.
+- [x] 5.3 Modificar `cmd/axiom/main.go` (~l. 1207): `svc.SetMarksPublisher(cli.NewMarksPublisher())` tras `NewServiceWithHub`.
   Comprobación: `go test ./internal/cli -run 'TestMarksPublisher|TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign'` y `go test ./internal/sddpublish -run TestIsolation`
-- [ ] 5.4 Comprobar el trinquete de código muerto: todo lo exportado de U1-U4 tiene ya uso real (`marks.*` en `sddstatus`/`dashboard`/`cli`; `PublishedChangeFile` en `sddstatus`; `NewMarksPublisher` y `SetMarksPublisher` en `cmd/axiom`). `internal/idmigration/residues.yaml` no cambia mientras los fixtures usen `RF-`, nunca `REQ-`; si un fixture de `marks` usara `REQ-`, añadir su entrada.
-- [ ] 5.5 Cierre U5: commit `feat(cli): publicador de marcas inyectado en el dashboard`.
+- [x] 5.4 Comprobar el trinquete de código muerto: todo lo exportado de U1-U4 tiene ya uso real (`marks.*` en `sddstatus`/`dashboard`/`cli`; `PublishedChangeFile` en `sddstatus`; `NewMarksPublisher` y `SetMarksPublisher` en `cmd/axiom`). `internal/idmigration/residues.yaml` no cambia mientras los fixtures usen `RF-`, nunca `REQ-`; si un fixture de `marks` usara `REQ-`, añadir su entrada.
+- [x] 5.5 Cierre U5: commit `feat(cli): publicador de marcas inyectado en el dashboard`.
 
 ## Phase 6: UI (U6; depende de U4)
 
