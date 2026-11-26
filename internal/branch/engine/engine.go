@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
@@ -55,6 +56,7 @@ type gitReader interface {
 	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]branch.CommitPaths, error)
 	MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error)
 	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)
+	RemoteBranches(ctx context.Context, dir, prefix string) ([]string, error)
 }
 
 var _ gitReader = (*gitcli.Git)(nil)
@@ -76,6 +78,8 @@ type gitWriter interface {
 	RemoveEmptyDir(ctx context.Context, path string) error
 	DeleteBranch(ctx context.Context, dir, name string) error
 	Fetch(ctx context.Context, dir, remote string) error
+	FetchWithin(ctx context.Context, dir, remote string, timeout time.Duration) error
+	FastForward(ctx context.Context, dir, ref string) error
 }
 
 var _ gitWriter = (*gitcli.Git)(nil)
@@ -92,6 +96,8 @@ type Engine struct {
 	// goos es el sistema operativo cuyas reglas de rutas aplica el planificador
 	// (branch.PathRules): en Windows rige el límite de longitud de los worktrees.
 	goos string
+	// now es el reloj del autofetch (sello e intervalo); nil equivale a time.Now.
+	now func() time.Time
 }
 
 // Default monta el motor con las operaciones reales de git, el registro local y las reglas

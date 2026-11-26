@@ -659,3 +659,6 @@ func (f *fakeGit) MergeResolvedPaths(context.Context, string, string) ([]string,
 func (f *fakeGit) BranchCreation(context.Context, string, string) (string, string, bool, error) {
 	return "", "", false, errors.New("no se usa")
 }
+func (f *fakeGit) RemoteBranches(context.Context, string, string) ([]string, error) {
+	return nil, errors.New("no se usa")
+}

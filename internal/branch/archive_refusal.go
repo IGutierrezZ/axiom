@@ -58,13 +58,17 @@ func ArchiveOptionsConflict(in PlanInput) *Refusal {
 // locales y no se crea ninguna rama ni worktree. Nombra la base evaluada (`base`, como
 // `origin/main` o `main`) y la carpeta que falta (`changePath`, relativa a la raíz del
 // repositorio, con «/»). `fetched` dice si la invocación ya traía el remoto: sin `--fetch` la
-// continuación lo sugiere (no hay fetch implícito, RF-BRA-10); con él, la base sigue sin el
-// cambio y lo que falta es fusionar su PR. `archivedEntry` es, si la base ya contiene el cambio
+// continuación lo sugiere (sin autofetch no hay fetch implícito, RF-BRA-10); con él, la base sigue sin el
+// cambio y lo que falta es fusionar su PR. `autofetch` dice que el fetch es el implícito del
+// interruptor: ni el mensaje ni la orden de reintento sugieren `--fetch`. `archivedEntry` es, si la base ya contiene el cambio
 // archivado (G-13), la entrada `changes/archive/<fecha>-<cambio>/` que lo prueba: el mensaje la
 // nombra y dice que no hay nada que archivar. prefix es el `--prefix` de la invocación, que la
 // continuación conserva.
-func ChangeNotIntegrated(change, master, prefix string, repo RepoPlan, base, changePath, archivedEntry string, fetched bool) *Refusal {
-	retry := fmt.Sprintf("axiom branch ensure --cwd %s --change %s --archive --fetch", pathquote.Quote(master), change)
+func ChangeNotIntegrated(change, master, prefix string, repo RepoPlan, base, changePath, archivedEntry string, fetched, autofetch bool) *Refusal {
+	retry := fmt.Sprintf("axiom branch ensure --cwd %s --change %s --archive", pathquote.Quote(master), change)
+	if !autofetch {
+		retry += " --fetch"
+	}
 	if prefix != "" {
 		retry += " --prefix " + prefix
 	}
@@ -86,6 +90,16 @@ func ChangeNotIntegrated(change, master, prefix string, repo RepoPlan, base, cha
 		message = fmt.Sprintf("el cambio %s no está integrado en la base %s del repositorio %s ni tras el --fetch: su carpeta %s no existe en ese árbol; no se ha creado ninguna rama ni worktree",
 			change, base, repo.Name, changePath)
 		continuation = fmt.Sprintf("fusiona el PR del cambio en %s y repite `%s`", repo.IntegrationBranch, retry)
+	}
+	// Con el autofetch encendido el fetch es implícito: ni el mensaje ni la orden de reintento
+	// llevan `--fetch` (RF-BRA-13, D-04).
+	if autofetch {
+		if fetched {
+			message = fmt.Sprintf("el cambio %s no está integrado en la base %s del repositorio %s ni tras el fetch del autofetch: su carpeta %s no existe en ese árbol; no se ha creado ninguna rama ni worktree",
+				change, base, repo.Name, changePath)
+		} else {
+			continuation = fmt.Sprintf("el autofetch no pudo traer el remoto; comprueba la red y repite `%s`, o fusiona antes el PR del cambio en %s", retry, repo.IntegrationBranch)
+		}
 	}
 	return &Refusal{Code: CodeChangeNotIntegrated, Message: message, Continuation: continuation, Details: details}
 }

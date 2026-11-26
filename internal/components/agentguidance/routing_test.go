@@ -116,7 +116,7 @@ func TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection(t *testing.T) {
 			}
 
 			// Security invariant: no fetch without the user's authorization.
-			if !strings.Contains(section, "Never pass `--fetch` without the explicit authorization of the user.") {
+			if !strings.Contains(section, "Never pass `--fetch` without the explicit authorization of the user, unless the user enabled autofetch (`axiom autofetch enable`).") {
 				t.Fatalf("RenderRouting(%q) subsection lost the --fetch authorization rule:\n%s", agent.ID, section)
 			}
 

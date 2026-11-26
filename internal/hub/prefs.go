@@ -1,6 +1,7 @@
 package hub
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -110,6 +111,56 @@ func (m *Manager) SetWorktreePrefs(idOrPath string, p WorktreePrefs) (*Workspace
 		return &cfg.Workspaces[i], nil
 	}
 	return nil, fmt.Errorf("el proyecto «%s» no está registrado en %s", idOrPath, m.configPath)
+}
+
+// ErrProjectNotRegistered es el error de SetAutofetch cuando el proyecto no tiene entrada en el
+// hub; se reconoce con errors.Is.
+var ErrProjectNotRegistered = errors.New("el proyecto no está registrado en el hub")
+
+// LookupAutofetch dice si el autofetch está encendido para el proyecto cuya carpeta maestra es
+// projectPath y si el proyecto está registrado (RF-HUB-13, design D-03). La entrada se busca con
+// sameProject. Un hub que todavía no existe equivale a un proyecto no registrado; un hub que
+// no se puede leer es un error y no se modifica nada.
+func (m *Manager) LookupAutofetch(projectPath string) (enabled, registered bool, err error) {
+	cfg, err := m.Load()
+	if err != nil {
+		return false, false, err
+	}
+	for _, record := range cfg.Workspaces {
+		if sameProject(record.Path, projectPath) {
+			return record.Autofetch, true, nil
+		}
+	}
+	return false, false, nil
+}
+
+// SetAutofetch enciende o apaga el autofetch del proyecto registrado que idOrPath nombra, por id
+// o por ruta (sameProject). Devuelve la entrada resultante y si el valor cambió: sin cambio no
+// escribe, de modo que repetir la orden deja `workspaces.json` byte a byte igual. Un proyecto
+// no registrado devuelve un error que cumple errors.Is(err, ErrProjectNotRegistered) y un hub
+// ilegible, el error de lectura; ninguno escribe.
+func (m *Manager) SetAutofetch(idOrPath string, enabled bool) (*WorkspaceRecord, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	cfg, err := m.loadUnlocked()
+	if err != nil {
+		return nil, false, err
+	}
+	for i := range cfg.Workspaces {
+		if cfg.Workspaces[i].ID != idOrPath && !sameProject(cfg.Workspaces[i].Path, idOrPath) {
+			continue
+		}
+		if cfg.Workspaces[i].Autofetch == enabled {
+			return &cfg.Workspaces[i], false, nil
+		}
+		cfg.Workspaces[i].Autofetch = enabled
+		if err := m.saveUnlocked(cfg); err != nil {
+			return nil, false, err
+		}
+		return &cfg.Workspaces[i], true, nil
+	}
+	return nil, false, fmt.Errorf("«%s» en %s: %w", idOrPath, m.configPath, ErrProjectNotRegistered)
 }
 
 // sameProject dice si dos rutas son la misma carpeta de proyecto: la misma carpeta existente

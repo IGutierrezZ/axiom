@@ -1,6 +1,9 @@
 package branch
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Puertos del dominio (design §4.1). El motor los consume y los adaptadores los
 // implementan: `branch/gitcli` implementa Git sobre gitcommon.Run, `branch/registry`
@@ -37,7 +40,10 @@ type Git interface {
 	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]CommitPaths, error)            // log -z --no-renames --name-only
 	MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error)                          // diff-tree --cc: rutas que resolvió la fusión
 	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)        // reflog show, entrada más antigua
-	Fetch(ctx context.Context, dir, remote string) error                                                // la única operación remota
+	Fetch(ctx context.Context, dir, remote string) error                                                // operación remota: solo trae referencias
+	FetchWithin(ctx context.Context, dir, remote string, timeout time.Duration) error                   // Fetch con tiempo máximo propio (autofetch)
+	FastForward(ctx context.Context, dir, ref string) error                                             // merge --ff-only <ref>, sin crear fusiones
+	RemoteBranches(ctx context.Context, dir, prefix string) ([]string, error)                           // for-each-ref refs/remotes/origin/<prefix>/, sin red
 }
 
 // Registry es el registro local de los planes materializados, en el git common dir
@@ -50,7 +56,23 @@ type Registry interface {
 	List(commonDir string, lane Lane) ([]Record, error) // los del carril, ordenados por cambio
 }
 
-// Prefs son las preferencias personales de worktree del hub (RF-BRA-08).
+// AutofetchPrefState es el estado de la preferencia `autofetch` de un proyecto en el hub
+// (RF-HUB-13, design D-03).
+type AutofetchPrefState string
+
+const (
+	AutofetchEnabled      AutofetchPrefState = "enabled"
+	AutofetchDisabled     AutofetchPrefState = "disabled"
+	AutofetchUnregistered AutofetchPrefState = "unregistered"
+	AutofetchUnreadable   AutofetchPrefState = "unreadable"
+)
+
+// Prefs son las preferencias personales del hub: las de worktree (RF-BRA-08) y el interruptor
+// del autofetch (RF-HUB-13).
 type Prefs interface {
 	WorktreePrefs(projectMaster string) (mode Mode, root string, source string, warning string)
+	// Autofetch dice si el autofetch está encendido para el proyecto de esa carpeta maestra.
+	// Un proyecto no registrado o un hub ilegible dan enabled=false, el estado que lo explica
+	// y un aviso en castellano; el puerto solo lo devuelve y cada orden decide si lo muestra.
+	Autofetch(projectMaster string) (enabled bool, state AutofetchPrefState, warning string)
 }

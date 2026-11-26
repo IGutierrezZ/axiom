@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
@@ -543,6 +544,14 @@ func (f failingWriter) DeleteBranch(ctx context.Context, dir, name string) error
 
 func (f failingWriter) Fetch(ctx context.Context, dir, remote string) error {
 	return f.real.Fetch(ctx, dir, remote)
+}
+
+func (f failingWriter) FetchWithin(ctx context.Context, dir, remote string, timeout time.Duration) error {
+	return f.real.FetchWithin(ctx, dir, remote, timeout)
+}
+
+func (f failingWriter) FastForward(ctx context.Context, dir, ref string) error {
+	return f.real.FastForward(ctx, dir, ref)
 }
 
 // RF-BRA-02 y D-05: un fallo de git durante la aplicación es `git_failed`, que nombra la

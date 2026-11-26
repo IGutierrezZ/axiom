@@ -2,9 +2,13 @@ package gitcli
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 )
 
 // Pruebas de las escrituras de `ensure` (INC-25, S3.4): CreateBranch y AddWorktree. Son
@@ -319,5 +323,163 @@ func TestCreateTrackingBranchRejectsMismatchedOrUnplainArguments(t *testing.T) {
 	}
 	if len(*seen) != 0 {
 		t.Errorf("el rechazo es previo a lanzar git, pero el observador vio %v", *seen)
+	}
+}
+
+// remoteWithClone deja repo con `origin` (un remoto desnudo local) y devuelve también un clon
+// de apoyo desde el que se publican avances del remoto.
+func remoteWithClone(t *testing.T) (repo, clone string) {
+	t.Helper()
+	repo = newRepository(t)
+	remote := t.TempDir()
+	runGit(t, remote, "init", "-q", "--bare", "-b", "main")
+	runGit(t, repo, "remote", "add", "origin", remote)
+	runGit(t, repo, "push", "-q", "-u", "origin", "main")
+	scratch := t.TempDir()
+	clone = filepath.Join(scratch, "clon")
+	runGit(t, scratch, "clone", "-q", remote, clone)
+	return repo, clone
+}
+
+// FetchWithin lanza únicamente `git fetch origin` (sin `--prune` ni refspec) y trae las
+// referencias del remoto sin mover la rama local.
+func TestFetchWithinLaunchesOnlyFetchOriginWithoutPrune(t *testing.T) {
+	repo, clone := remoteWithClone(t)
+	commit(t, clone, "avance del remoto")
+	runGit(t, clone, "push", "-q", "origin", "main")
+	advanced := runGit(t, clone, "rev-parse", "HEAD")
+	local := runGit(t, repo, "rev-parse", "main")
+	seen := observe(t)
+
+	if err := New().FetchWithin(context.Background(), repo, "origin", 30*time.Second); err != nil {
+		t.Fatalf("FetchWithin: %v", err)
+	}
+
+	if got := runGit(t, repo, "rev-parse", "refs/remotes/origin/main"); got != advanced {
+		t.Errorf("origin/main apunta a %s, se esperaba %s", got, advanced)
+	}
+	if got := runGit(t, repo, "rev-parse", "main"); got != local {
+		t.Errorf("fetch no mueve la rama local: pasó de %s a %s", local, got)
+	}
+	if len(*seen) != 1 || (*seen)[0][0] != repo || strings.Join((*seen)[0][1:], " ") != "fetch origin" {
+		t.Errorf("se esperaba una única invocación `git fetch origin` en %s, el observador vio %v", repo, *seen)
+	}
+}
+
+// Con el tiempo agotado el error envuelve gitcommon.ErrTimeout, que quien llama distingue con
+// errors.Is; un plazo de un nanosegundo es determinista, sin depender de un remoto lento.
+func TestFetchWithinWrapsErrTimeoutWhenTheTimeIsExhausted(t *testing.T) {
+	repo, _ := remoteWithClone(t)
+
+	err := New().FetchWithin(context.Background(), repo, "origin", time.Nanosecond)
+
+	if !errors.Is(err, gitcommon.ErrTimeout) {
+		t.Errorf("error = %v; debía envolver gitcommon.ErrTimeout", err)
+	}
+}
+
+// Un remoto inexistente falla con el comando y el directorio, y un remoto que parece una
+// opción se rechaza antes de lanzar git.
+func TestFetchWithinFailureNamesTheCommandAndRejectsOptionLikeRemotes(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	runGit(t, repo, "remote", "add", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
+
+	err := New().FetchWithin(ctx, repo, "origin", 30*time.Second)
+	if err == nil || errors.Is(err, gitcommon.ErrTimeout) || !strings.Contains(err.Error(), "git fetch origin") || !strings.Contains(err.Error(), repo) {
+		t.Errorf("error = %v; debía nombrar `git fetch origin` y %s sin ser un tiempo agotado", err, repo)
+	}
+
+	seen := observe(t)
+	for _, remote := range []string{"--all", "-v", ""} {
+		if err := New().FetchWithin(ctx, repo, remote, time.Second); err == nil {
+			t.Errorf("el remoto %q debía rechazarse", remote)
+		}
+	}
+	if len(*seen) != 0 {
+		t.Errorf("el rechazo es previo a lanzar git, pero el observador vio %v", *seen)
+	}
+}
+
+// FastForward avanza la rama desplegada por `merge --ff-only` sin crear commits de fusión.
+func TestFastForwardAdvancesTheDeployedBranchWithoutCreatingCommits(t *testing.T) {
+	ctx := context.Background()
+	repo, clone := remoteWithClone(t)
+	commit(t, clone, "avance del remoto")
+	runGit(t, clone, "push", "-q", "origin", "main")
+	want := runGit(t, clone, "rev-parse", "HEAD")
+	runGit(t, repo, "fetch", "-q", "origin")
+	seen := observe(t)
+
+	if err := New().FastForward(ctx, repo, "refs/remotes/origin/main"); err != nil {
+		t.Fatalf("FastForward: %v", err)
+	}
+
+	if got := runGit(t, repo, "rev-parse", "HEAD"); got != want {
+		t.Errorf("HEAD = %s, se esperaba el commit del remoto %s", got, want)
+	}
+	if len(*seen) != 1 || strings.Join((*seen)[0][1:], " ") != "merge --ff-only refs/remotes/origin/main" {
+		t.Errorf("se esperaba una única invocación `git merge --ff-only`, el observador vio %v", *seen)
+	}
+}
+
+// Ante una divergencia FastForward falla y deja la rama donde estaba: no crea una fusión.
+func TestFastForwardRejectsDivergenceWithoutCreatingAMerge(t *testing.T) {
+	ctx := context.Background()
+	repo, clone := remoteWithClone(t)
+	commit(t, clone, "avance del remoto")
+	runGit(t, clone, "push", "-q", "origin", "main")
+	commit(t, repo, "avance local distinto")
+	local := runGit(t, repo, "rev-parse", "HEAD")
+	runGit(t, repo, "fetch", "-q", "origin")
+
+	err := New().FastForward(ctx, repo, "refs/remotes/origin/main")
+
+	if err == nil || !strings.Contains(err.Error(), "merge --ff-only") {
+		t.Errorf("error = %v; debía rechazar la divergencia nombrando `merge --ff-only`", err)
+	}
+	if got := runGit(t, repo, "rev-parse", "HEAD"); got != local {
+		t.Errorf("la rama pasó de %s a %s: no debía moverse", local, got)
+	}
+	if merges := runGit(t, repo, "rev-list", "--merges", "HEAD"); merges != "" {
+		t.Errorf("no debía crearse ninguna fusión, hay %s", merges)
+	}
+	if err := New().FastForward(ctx, repo, "--all"); err == nil {
+		t.Error("una referencia que parece una opción debía rechazarse")
+	}
+}
+
+// RemoteBranches lista las referencias remotas locales bajo el prefijo sin lanzar ninguna
+// operación remota (for-each-ref es una lectura local).
+func TestRemoteBranchesListsLocalRemoteRefsWithoutNetwork(t *testing.T) {
+	ctx := context.Background()
+	repo, clone := remoteWithClone(t)
+	runGit(t, clone, "switch", "-q", "-c", "inc/uno")
+	commit(t, clone, "uno")
+	runGit(t, clone, "push", "-q", "origin", "inc/uno")
+	runGit(t, clone, "switch", "-q", "-c", "feat/otra")
+	commit(t, clone, "otra")
+	runGit(t, clone, "push", "-q", "origin", "feat/otra")
+	runGit(t, repo, "fetch", "-q", "origin")
+	seen := observe(t)
+
+	refs, err := New().RemoteBranches(ctx, repo, "inc")
+	if err != nil {
+		t.Fatalf("RemoteBranches: %v", err)
+	}
+
+	if len(refs) != 1 || refs[0] != "refs/remotes/origin/inc/uno" {
+		t.Errorf("refs = %v; se esperaba solo refs/remotes/origin/inc/uno", refs)
+	}
+	for _, call := range *seen {
+		if remoteOperationFor(call[1:]) {
+			t.Errorf("RemoteBranches no debe lanzar operaciones remotas: %v", call)
+		}
+	}
+	if none, err := New().RemoteBranches(ctx, repo, "fix"); err != nil || len(none) != 0 {
+		t.Errorf("un prefijo sin ramas devuelve una lista vacía: %v, %v", none, err)
+	}
+	if _, err := New().RemoteBranches(ctx, repo, "-x"); err == nil {
+		t.Error("un prefijo que parece una opción debía rechazarse")
 	}
 }

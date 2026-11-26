@@ -141,7 +141,7 @@ func RenderRouting(agent model.AgentID) (string, error) {
 	output.WriteString("- Before the first write of `odd/tasks/<feature-name>.md` or of any code, run `axiom branch ensure --lane odd --change <feature-name> --json`. It prepares the branch and, when the effective mode asks for it, the worktree; repeating it when you resume is idempotent.\n")
 	output.WriteString("- Use the absolute paths of its JSON as `--cwd` of every later `axiom` command, as the repository of every `git -C` command, and as the root of every file you write.\n")
 	output.WriteString("- `decision_required` is the only interaction this rule can add: present the decision it returns, then repeat the same command with the answer; do not add a governance question of your own.\n")
-	output.WriteString("- Never pass `--fetch` without the explicit authorization of the user.\n")
+	output.WriteString("- Never pass `--fetch` without the explicit authorization of the user, unless the user enabled autofetch (`axiom autofetch enable`).\n")
 	output.WriteString("- Never use `EnterWorktree` or `ExitWorktree`; work in another worktree only through the absolute paths that `axiom branch ensure` returns, with `--cwd`, `git -C`, and absolute paths.\n")
 
 	// Informed approval and continuity (upstream #5850, #5486): one source in

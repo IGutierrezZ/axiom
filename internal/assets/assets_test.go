@@ -1093,14 +1093,14 @@ func TestBranchDoctrineNeverFetchesWithoutAuthorization(t *testing.T) {
 	if from < 0 || to < from {
 		t.Fatal("sdd-orchestrator-sections.md has no SDD Change Kickoff and Block Gates section")
 	}
-	if !strings.Contains(shared[from:to], "Never pass `--fetch` without the explicit authorization of the user.") {
+	if !strings.Contains(shared[from:to], "Never pass `--fetch` without the explicit authorization of the user, unless the user enabled autofetch (`axiom autofetch enable`).") {
 		t.Error("the shared kickoff section must forbid `--fetch` without the explicit authorization of the user")
 	}
 	if !strings.Contains(commitReviewSection(t), "never fetch") {
 		t.Error("the Commit Review section must keep `never fetch`")
 	}
 	capable := extractModelSectionForTest(mustReadResolved("skills/sdd-apply/SKILL.md"), "capable")
-	if !strings.Contains(capable, "Never pass `--fetch` without the explicit authorization of the user.") {
+	if !strings.Contains(capable, "Never pass `--fetch` without the explicit authorization of the user, unless the user enabled autofetch (`axiom autofetch enable`).") {
 		t.Error("sdd-apply must forbid `--fetch` without the explicit authorization of the user")
 	}
 }
