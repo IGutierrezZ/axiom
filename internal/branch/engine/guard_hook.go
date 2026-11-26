@@ -23,10 +23,18 @@ const (
 	GuardAgentClaudeCode = "claude-code"
 	GuardAgentCodex      = "codex"
 	GuardAgentOpenCode   = "opencode"
+	// GuardAgentVSCode es VS Code Copilot (el arnés de Copilot, hooks de .github/hooks/*.json).
+	GuardAgentVSCode = "vscode-copilot"
 )
 
 // GuardAgents son los valores admitidos de `--agent`.
-var GuardAgents = []string{GuardAgentClaudeCode, GuardAgentCodex, GuardAgentOpenCode}
+var GuardAgents = []string{GuardAgentClaudeCode, GuardAgentCodex, GuardAgentOpenCode, GuardAgentVSCode}
+
+// GuardAgentNeedsEvent dice si la carga del runtime no trae el evento y la orden del hook debe
+// declararlo con `--event pre|post` (VS Code Copilot).
+func GuardAgentNeedsEvent(agent string) bool {
+	return agent == GuardAgentVSCode
+}
 
 const (
 	// GuardMaxPayload es el tamaño máximo de la carga que se lee de la entrada estándar: 256 KiB.
@@ -50,10 +58,26 @@ const (
 //     `tool_input` porque la forma de la carga, tomada de la documentación oficial de Codex, no
 //     está verificada en una ejecución real (A-2, spike-guard-runtimes.md).
 //   - OpenCode: `{event, tool, filePath, cwd}`, que envía su plugin (`event` es `pre` o `post`).
+//   - VS Code Copilot: véase ParseGuardPayloadForEvent.
 //
 // Una carga demasiado grande, JSON inválido o un agente desconocido es un error: quien llama falla
 // en abierto.
 func ParseGuardPayload(agent string, r io.Reader) (GuardPayload, error) {
+	return ParseGuardPayloadForEvent(agent, "", r)
+}
+
+// ParseGuardPayloadForEvent es ParseGuardPayload con el evento que declara la orden del hook, para
+// los runtimes cuya carga no lo trae (GuardAgentNeedsEvent). Con los demás, event se ignora.
+//
+// VS Code Copilot (hooks camelCase `preToolUse` y `postToolUse` del arnés de Copilot,
+// docs.github.com/en/copilot/reference/hooks-reference) envía `{sessionId, timestamp, cwd,
+// toolName, toolArgs}`, y en `postToolUse` además `toolResult`. `toolArgs` llega como cadena con
+// JSON dentro (o como objeto), y la documentación no fija los campos de cada herramienta: se leen
+// `path`, `file_path` y `filePath`, y las cabeceras de parche de `apply_patch`, venga el parche en
+// un campo o como cadena entera. Solo cuentan las herramientas de escritura del arnés (`create`,
+// `edit`, `str_replace_editor` salvo su orden `view`, `apply_patch`); con cualquier otra no hay
+// rutas y la guarda no hace nada.
+func ParseGuardPayloadForEvent(agent, event string, r io.Reader) (GuardPayload, error) {
 	data, err := io.ReadAll(io.LimitReader(r, GuardMaxPayload+1))
 	if err != nil {
 		return GuardPayload{}, fmt.Errorf("no se pudo leer la carga del hook: %w", err)
@@ -96,6 +120,20 @@ func ParseGuardPayload(agent string, r io.Reader) (GuardPayload, error) {
 			payload.Event = raw.Event
 		}
 		paths = []string{raw.FilePath}
+	case GuardAgentVSCode:
+		var raw struct {
+			CWD  string          `json:"cwd"`
+			Tool string          `json:"toolName"`
+			Args json.RawMessage `json:"toolArgs"`
+		}
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return GuardPayload{}, fmt.Errorf("la carga del hook no es JSON válido: %w", err)
+		}
+		payload = GuardPayload{CWD: raw.CWD, Tool: raw.Tool}
+		if event == GuardEventPre || event == GuardEventPost {
+			payload.Event = event
+		}
+		paths = vscodePaths(raw.Tool, raw.Args)
 	default:
 		return GuardPayload{}, fmt.Errorf("el agente %q no es uno de %s", agent, strings.Join(GuardAgents, ", "))
 	}
@@ -141,6 +179,46 @@ func codexPaths(input json.RawMessage) []string {
 	if json.Unmarshal(input, &decoded) != nil {
 		return nil
 	}
+	return patchPathsIn(decoded)
+}
+
+// vscodeWriteTools son las herramientas de escritura del arnés de Copilot que vigila la guarda.
+var vscodeWriteTools = []string{"create", "edit", "str_replace_editor", "apply_patch"}
+
+// vscodePaths son los destinos de una herramienta de escritura de VS Code Copilot. args es
+// `toolArgs`: una cadena con JSON dentro, un objeto o, en `apply_patch`, el parche en crudo.
+func vscodePaths(tool string, args json.RawMessage) []string {
+	if !slices.Contains(vscodeWriteTools, tool) {
+		return nil
+	}
+	var decoded any
+	if json.Unmarshal(args, &decoded) != nil {
+		return nil
+	}
+	if text, ok := decoded.(string); ok {
+		var inner any
+		if json.Unmarshal([]byte(text), &inner) != nil {
+			return patchHeaders(text)
+		}
+		decoded = inner
+	}
+	var paths []string
+	if object, ok := decoded.(map[string]any); ok {
+		if command, _ := object["command"].(string); tool == "str_replace_editor" && command == "view" {
+			return nil
+		}
+		for _, key := range []string{"path", "file_path", "filePath"} {
+			if path, ok := object[key].(string); ok {
+				paths = append(paths, path)
+			}
+		}
+	}
+	return append(paths, patchPathsIn(decoded)...)
+}
+
+// patchPathsIn son los ficheros que nombran las cabeceras de parche de todos los textos de un
+// valor JSON decodificado, en orden estable.
+func patchPathsIn(decoded any) []string {
 	var paths []string
 	var walk func(value any)
 	walk = func(value any) {
@@ -209,20 +287,42 @@ type guardOutput struct {
 // el protocolo del runtime, todo dentro de GuardBudget y en abierto. Devuelve el código de salida:
 // con `--agent claude-code` y `--agent codex`, 2 con el motivo por `stderr` si bloquea o avisa y 0
 // en otro caso; con `--agent opencode`, siempre 0 con `{"action":"none|block|warn","message":"…"}`
-// por `stdout`.
+// por `stdout`; con `--agent vscode-copilot`, véase RunGuardForEvent.
 func RunGuard(agent string, stdin io.Reader, stdout, stderr io.Writer) int {
-	return runGuard(Default(), GuardBudget, agent, stdin, stdout, stderr)
+	return RunGuardForEvent(agent, "", stdin, stdout, stderr)
+}
+
+// RunGuardForEvent es RunGuard con el evento que declara la orden del hook (`pre` o `post`), para
+// los runtimes cuya carga no lo trae. Con `--agent vscode-copilot` devuelve siempre 0: en
+// `preToolUse` del arnés de Copilot, cualquier código distinto de 0 deniega la escritura, así que
+// el bloqueo va por `stdout` como `{"permissionDecision":"deny","permissionDecisionReason":"…"}` y
+// el aviso como `{"additionalContext":"…"}`, que el modelo lee tras el resultado de la herramienta.
+// Sin nada que decir no escribe nada.
+func RunGuardForEvent(agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
+	return runGuardForEvent(Default(), GuardBudget, agent, event, stdin, stdout, stderr)
 }
 
 func runGuard(e *Engine, budget time.Duration, agent string, stdin io.Reader, stdout, stderr io.Writer) int {
+	return runGuardForEvent(e, budget, agent, "", stdin, stdout, stderr)
+}
+
+func runGuardForEvent(e *Engine, budget time.Duration, agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
 	decision := guardWithin(budget, func(ctx context.Context) GuardDecision {
-		payload, err := ParseGuardPayload(agent, stdin)
+		payload, err := ParseGuardPayloadForEvent(agent, event, stdin)
 		if err != nil {
 			return guardNone
 		}
 		return e.Guard(ctx, payload)
 	})
 	return writeGuardDecision(agent, decision, stdout, stderr)
+}
+
+// vscodeGuardOutput es la salida de `--agent vscode-copilot`: la decisión de `preToolUse` o el
+// contexto adicional de `postToolUse` del arnés de Copilot.
+type vscodeGuardOutput struct {
+	PermissionDecision       string `json:"permissionDecision,omitempty"`
+	PermissionDecisionReason string `json:"permissionDecisionReason,omitempty"`
+	AdditionalContext        string `json:"additionalContext,omitempty"`
 }
 
 // guardWithin ejecuta work con un presupuesto de tiempo: si se agota, o si work entra en pánico,
@@ -251,6 +351,24 @@ func guardWithin(budget time.Duration, work func(context.Context) GuardDecision)
 // writeGuardDecision escribe la decisión con el protocolo del runtime y devuelve el código de
 // salida (véase RunGuard).
 func writeGuardDecision(agent string, decision GuardDecision, stdout, stderr io.Writer) int {
+	if agent == GuardAgentVSCode {
+		var output vscodeGuardOutput
+		switch decision.Action {
+		case GuardActionBlock:
+			output = vscodeGuardOutput{PermissionDecision: "deny", PermissionDecisionReason: decision.Message}
+		case GuardActionWarn:
+			output = vscodeGuardOutput{AdditionalContext: decision.Message}
+		default:
+			return 0
+		}
+		var out bytes.Buffer
+		encoder := json.NewEncoder(&out)
+		encoder.SetEscapeHTML(false)
+		if encoder.Encode(output) == nil {
+			_, _ = stdout.Write(out.Bytes())
+		}
+		return 0
+	}
 	if agent == GuardAgentOpenCode {
 		var out bytes.Buffer
 		encoder := json.NewEncoder(&out)

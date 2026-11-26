@@ -27,6 +27,33 @@ func runGuardFor(t *testing.T, agent, input string) (code int, stdout, stderr st
 	return code, out.String(), errOut.String()
 }
 
+// runGuardEventFor es runGuardFor con el evento que declara la orden del hook, para los runtimes
+// cuya carga no lo trae (VS Code Copilot); con el resto, el evento va en la carga.
+func runGuardEventFor(t *testing.T, agent, event, input string) (code int, stdout, stderr string) {
+	t.Helper()
+	if !GuardAgentNeedsEvent(agent) {
+		event = ""
+	}
+	var out, errOut bytes.Buffer
+	code = runGuardForEvent(Default(), testGuardBudget, agent, event, strings.NewReader(input), &out, &errOut)
+	return code, out.String(), errOut.String()
+}
+
+// vscodeWrite es la carga camelCase de `preToolUse`/`postToolUse` del arnés de Copilot
+// (docs.github.com/en/copilot/reference/hooks-reference): `toolArgs` es una cadena con JSON dentro.
+func vscodeWrite(t *testing.T, tool, cwd string, args map[string]any) string {
+	t.Helper()
+	encodedArgs, err := json.Marshal(args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(map[string]any{"sessionId": "s-1", "timestamp": 1704614400000, "cwd": cwd, "toolName": tool, "toolArgs": string(encodedArgs)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
 func claudeWrite(t *testing.T, event, cwd, path string) string {
 	t.Helper()
 	data, err := json.Marshal(map[string]any{"cwd": cwd, "hook_event_name": event, "tool_name": "Write", "tool_input": map[string]any{"file_path": path}})
@@ -58,7 +85,8 @@ func codexPatch(t *testing.T, event, cwd, path string) string {
 }
 
 // REQ-25.21 y D-18, protocolo de salida: Claude Code y Codex bloquean con salida 2 y el motivo por
-// `stderr`; OpenCode sale siempre con 0 y entrega `{"action","message"}` por `stdout`.
+// `stderr`; OpenCode sale siempre con 0 y entrega `{"action","message"}` por `stdout`; VS Code
+// Copilot sale siempre con 0 y bloquea con `{"permissionDecision":"deny",…}` por `stdout`.
 func TestGuardHookOutputProtocolOfEachRuntime(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	document := documentOf(repo)
@@ -70,25 +98,35 @@ func TestGuardHookOutputProtocolOfEachRuntime(t *testing.T) {
 			return codexPatch(t, map[string]string{GuardEventPre: "PreToolUse", GuardEventPost: "PostToolUse"}[event], repo, document)
 		},
 		GuardAgentOpenCode: func(event string) string { return openCodeWrite(t, event, repo, document) },
+		GuardAgentVSCode: func(string) string {
+			return vscodeWrite(t, "create", repo, map[string]any{"path": document, "file_text": "hola"})
+		},
 	}
 
 	for _, agent := range GuardAgents {
 		t.Run(agent+" bloquea en la rama equivocada", func(t *testing.T) {
-			code, stdout, stderr := runGuardFor(t, agent, payloads[agent](GuardEventPre))
-			if agent == GuardAgentOpenCode {
+			code, stdout, stderr := runGuardEventFor(t, agent, GuardEventPre, payloads[agent](GuardEventPre))
+			switch agent {
+			case GuardAgentOpenCode:
 				var out guardOutput
 				if code != 0 || stderr != "" || json.Unmarshal([]byte(stdout), &out) != nil || out.Action != GuardActionBlock ||
 					!strings.Contains(out.Message, "axiom branch ensure --cwd ") {
 					t.Fatalf("código %d, stdout %q, stderr %q; se esperaba 0, stdout con action=block y stderr vacío", code, stdout, stderr)
 				}
-				return
-			}
-			if code != 2 || stdout != "" || !strings.Contains(stderr, "axiom branch ensure --cwd ") {
-				t.Fatalf("código %d, stdout %q, stderr %q; se esperaba 2, stdout vacío y el motivo por stderr", code, stdout, stderr)
+			case GuardAgentVSCode:
+				var out vscodeGuardOutput
+				if code != 0 || stderr != "" || json.Unmarshal([]byte(stdout), &out) != nil || out.PermissionDecision != "deny" ||
+					!strings.Contains(out.PermissionDecisionReason, "axiom branch ensure --cwd ") || out.AdditionalContext != "" {
+					t.Fatalf("código %d, stdout %q, stderr %q; se esperaba 0, permissionDecision=deny con el motivo y stderr vacío", code, stdout, stderr)
+				}
+			default:
+				if code != 2 || stdout != "" || !strings.Contains(stderr, "axiom branch ensure --cwd ") {
+					t.Fatalf("código %d, stdout %q, stderr %q; se esperaba 2, stdout vacío y el motivo por stderr", code, stdout, stderr)
+				}
 			}
 		})
 		t.Run(agent+" no hace nada con el evento post de un documento", func(t *testing.T) {
-			code, stdout, stderr := runGuardFor(t, agent, payloads[agent](GuardEventPost))
+			code, stdout, stderr := runGuardEventFor(t, agent, GuardEventPost, payloads[agent](GuardEventPost))
 			if code != 0 || stderr != "" {
 				t.Fatalf("código %d, stderr %q; se esperaba 0 y stderr vacío", code, stderr)
 			}
@@ -105,9 +143,73 @@ func TestGuardHookOutputProtocolOfEachRuntime(t *testing.T) {
 	runGit(t, repo, "switch", "-q", "-c", "feat/x")
 	for _, agent := range GuardAgents {
 		t.Run(agent+" permite en la rama del cambio", func(t *testing.T) {
-			code, _, stderr := runGuardFor(t, agent, payloads[agent](GuardEventPre))
+			code, stdout, stderr := runGuardEventFor(t, agent, GuardEventPre, payloads[agent](GuardEventPre))
 			if code != 0 || stderr != "" {
 				t.Errorf("código %d, stderr %q; se esperaba 0 y stderr vacío", code, stderr)
+			}
+			if agent == GuardAgentVSCode && stdout != "" {
+				t.Errorf("stdout %q, se esperaba vacío: sin decisión, el arnés de Copilot permite", stdout)
+			}
+		})
+	}
+}
+
+// VS Code Copilot: la carga camelCase no trae el evento, así que sin `--event` (o con uno
+// desconocido) no hay evento de la guarda y no se bloquea. Las herramientas que no escriben, la
+// orden `view` de `str_replace_editor` y una herramienta de escritura sin ruta tampoco bloquean.
+// Las rutas se leen de `path`, `file_path`, `filePath`, de un objeto en lugar de una cadena y de las
+// cabeceras de `apply_patch`, venga el parche en un campo o como cadena entera.
+func TestGuardHookVSCodeCopilotPayloads(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	document := documentOf(repo)
+	relative, err := filepath.Rel(repo, document)
+	if err != nil {
+		t.Fatal(err)
+	}
+	patch := "*** Begin Patch\n*** Update File: " + filepath.ToSlash(relative) + "\n+hola\n*** End Patch\n"
+	rawPatch, err := json.Marshal(map[string]any{"cwd": repo, "toolName": "apply_patch", "toolArgs": patch})
+	if err != nil {
+		t.Fatal(err)
+	}
+	objectArgs, err := json.Marshal(map[string]any{"cwd": repo, "toolName": "edit", "toolArgs": map[string]any{"filePath": document}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	blocks := map[string]string{
+		"create con path":             vscodeWrite(t, "create", repo, map[string]any{"path": document}),
+		"edit con file_path":          vscodeWrite(t, "edit", repo, map[string]any{"file_path": document, "old_str": "a", "new_str": "b"}),
+		"str_replace_editor relativo": vscodeWrite(t, "str_replace_editor", repo, map[string]any{"command": "str_replace", "path": relative}),
+		"apply_patch en un campo":     vscodeWrite(t, "apply_patch", repo, map[string]any{"input": patch}),
+		"apply_patch en crudo":        string(rawPatch),
+		"toolArgs como objeto":        string(objectArgs),
+	}
+	for name, input := range blocks {
+		t.Run("bloquea: "+name, func(t *testing.T) {
+			code, stdout, stderr := runGuardEventFor(t, GuardAgentVSCode, GuardEventPre, input)
+			if code != 0 || stderr != "" || !strings.Contains(stdout, `"permissionDecision":"deny"`) {
+				t.Errorf("código %d, stdout %q, stderr %q; se esperaba 0 y permissionDecision=deny", code, stdout, stderr)
+			}
+		})
+	}
+
+	nothing := map[string]struct{ event, input string }{
+		"sin --event":                {"", vscodeWrite(t, "create", repo, map[string]any{"path": document})},
+		"evento desconocido":         {"later", vscodeWrite(t, "create", repo, map[string]any{"path": document})},
+		"herramienta de lectura":     {GuardEventPre, vscodeWrite(t, "view", repo, map[string]any{"path": document})},
+		"view de str_replace_editor": {GuardEventPre, vscodeWrite(t, "str_replace_editor", repo, map[string]any{"command": "view", "path": document})},
+		"bash":                       {GuardEventPre, vscodeWrite(t, "bash", repo, map[string]any{"command": "echo > " + document})},
+		"escritura sin ruta":         {GuardEventPre, vscodeWrite(t, "create", repo, map[string]any{"file_text": "hola"})},
+		"toolArgs que no es JSON":    {GuardEventPre, `{"cwd":"` + filepath.ToSlash(repo) + `","toolName":"create","toolArgs":"no es json"}`},
+		"carga que no es JSON":       {GuardEventPre, `no es json`},
+		"carga de Claude Code":       {GuardEventPre, claudeWrite(t, "PreToolUse", repo, document)},
+	}
+	for name, tc := range nothing {
+		t.Run("no hace nada: "+name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			code := runGuardForEvent(Default(), testGuardBudget, GuardAgentVSCode, tc.event, strings.NewReader(tc.input), &out, &errOut)
+			if code != 0 || out.Len() != 0 || errOut.Len() != 0 {
+				t.Errorf("código %d, stdout %q, stderr %q; se esperaba 0 y sin salida", code, out.String(), errOut.String())
 			}
 		})
 	}
@@ -171,6 +273,14 @@ func TestGuardHookOutputProtocolOfAWarning(t *testing.T) {
 	if code := writeGuardDecision(GuardAgentOpenCode, warning, &out, &errOut); code != 0 || errOut.Len() != 0 ||
 		out.String() != `{"action":"warn","message":"estás en la rama equivocada"}`+"\n" {
 		t.Errorf("OpenCode: código %d, stdout %q, stderr %q", code, out.String(), errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	// VS Code Copilot: el aviso llega al modelo como `additionalContext` de `postToolUse`, con
+	// salida 0 (en el arnés de Copilot, la salida 2 de `postToolUse` solo queda en el registro).
+	if code := writeGuardDecision(GuardAgentVSCode, warning, &out, &errOut); code != 0 || errOut.Len() != 0 ||
+		out.String() != `{"additionalContext":"estás en la rama equivocada"}`+"\n" {
+		t.Errorf("VS Code Copilot: código %d, stdout %q, stderr %q", code, out.String(), errOut.String())
 	}
 }
 
