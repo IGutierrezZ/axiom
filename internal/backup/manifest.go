@@ -316,26 +316,3 @@ func DeleteBackup(manifest Manifest) error {
 	}
 	return os.RemoveAll(manifest.RootDir)
 }
-
-// RenameBackup updates the backup's Description field in the manifest file.
-// This does not rename the directory — it updates the human-readable description.
-func RenameBackup(manifest Manifest, newDescription string) error {
-	if manifest.RootDir == "" {
-		return fmt.Errorf("backup has no root directory")
-	}
-	manifest.Description = newDescription
-	manifestPath := filepath.Join(manifest.RootDir, ManifestFilename)
-	return WriteManifest(manifestPath, manifest)
-}
-
-// TogglePin flips the Pinned field of the manifest and rewrites the manifest.json
-// file inside the backup's RootDir. Pinned backups are excluded from retention
-// pruning. Returns an error if RootDir is empty or the write fails.
-func TogglePin(manifest Manifest) error {
-	if manifest.RootDir == "" {
-		return fmt.Errorf("backup has no root directory")
-	}
-	manifest.Pinned = !manifest.Pinned
-	manifestPath := filepath.Join(manifest.RootDir, ManifestFilename)
-	return WriteManifest(manifestPath, manifest)
-}

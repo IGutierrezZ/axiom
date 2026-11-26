@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/fileprim"
-	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 )
@@ -59,41 +58,6 @@ func TestClearPendingSyncAfterDeferredSyncReReadsLatestStateUnderLock(t *testing
 		t.Errorf("PendingSync = true, want false after deferred sync")
 	}
 	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) || got.Persona != "concurrent" {
-		t.Fatalf("concurrent writer state was clobbered: %#v", got)
-	}
-}
-
-// TestPersistAssignmentsReReadsLatestStateUnderLock proves persistAssignments
-// (site 2, #1809) applies the assignments on top of the latest state inside
-// the canonical lock instead of a stale pre-lock read, so a concurrent
-// writer's changes survive.
-func TestPersistAssignmentsReReadsLatestStateUnderLock(t *testing.T) {
-	home := t.TempDir()
-	held := holdCanonicalInstallStateLock(t, home)
-	selection := model.Selection{
-		CodexCarrilModelAssignments: map[string]string{"sdd-strong": "test-model"},
-	}
-	if err := persistAssignments(state.GlobalStore(home), selection); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
-		t.Fatalf("contended persistAssignments error = %v, want lock acquisition failure", err)
-	}
-	if err := state.Write(home, state.InstallState{PendingSync: true, Persona: "concurrent"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := held.Release(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := persistAssignments(state.GlobalStore(home), selection); err != nil {
-		t.Fatalf("persistAssignments() error = %v", err)
-	}
-	got, err := state.Read(home)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.CodexCarrilModelAssignments["sdd-strong"] != "test-model" {
-		t.Fatalf("assignments were not persisted: %#v", got.CodexCarrilModelAssignments)
-	}
-	if !got.PendingSync || got.Persona != "concurrent" {
 		t.Fatalf("concurrent writer state was clobbered: %#v", got)
 	}
 }

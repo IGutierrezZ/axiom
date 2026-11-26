@@ -50,12 +50,6 @@ var definitions = []Definition{
 	},
 }
 
-func Definitions() []Definition {
-	out := make([]Definition, len(definitions))
-	copy(out, definitions)
-	return out
-}
-
 func DefinitionFor(id model.OpenCodeCommunityPluginID) (Definition, bool) {
 	for _, def := range definitions {
 		if def.ID == id {

@@ -99,14 +99,6 @@ func WorkspaceUnsupportedReason(id model.AgentID) string {
 	}
 }
 
-// AgentsForScope devuelve los agentes que se instalan en el ámbito dado: con
-// --scope workspace, sin los que no admiten ese ámbito. Lo usa la TUI para que el
-// estado persistido coincida con lo que realmente se instaló.
-func AgentsForScope(scope InstallScope, agentIDs []model.AgentID) []model.AgentID {
-	kept, _ := splitAgentsForScope(scope, agentIDs)
-	return kept
-}
-
 // omittedWorkspaceAgentNotice es el aviso de un agente omitido en ámbito workspace.
 func omittedWorkspaceAgentNotice(id model.AgentID) string {
 	if !isSelectableAgent(id) {

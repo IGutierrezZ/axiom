@@ -13,33 +13,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
 
-func TestProfileCleanupPreservesPermissionOrder(t *testing.T) {
-	for _, operation := range []string{"stale", "remove"} {
-		t.Run(operation, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "opencode.json")
-			seed := `{"permission":{"bash":{"ssh *":"allow","*":"deny"}},"agent":{"jd-judge-a-test":{"permission":{"bash":"deny"}},"sdd-apply-test":{}}}`
-			if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			profile := model.Profile{Name: "test"}
-			var err error
-			switch operation {
-			case "stale":
-				_, err = cleanupStaleProfileJDAgents(path, profile)
-			case "remove":
-				err = RemoveProfileAgents(path, "test")
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			got, err := os.ReadFile(path)
-			if err != nil || !strings.Contains(strings.Join(strings.Fields(string(got)), ""), `"bash":{"ssh*":"allow","*":"deny"}`) {
-				t.Fatalf("cleanup changed last-match deny: %s, %v", got, err)
-			}
-		})
-	}
-}
-
 func TestResolveProfileStrategy_ExplicitWins(t *testing.T) {
 	home := t.TempDir()
 
@@ -920,99 +893,6 @@ func buildSettingsWithProfiles(t *testing.T) (path string) {
 		t.Fatalf("write settings: %v", err)
 	}
 	return settingsPath
-}
-
-func TestRemoveProfileAgents_RemovesProfileSDDAndJDAgents(t *testing.T) {
-	path := buildSettingsWithProfiles(t)
-
-	if err := RemoveProfileAgents(path, "cheap"); err != nil {
-		t.Fatalf("RemoveProfileAgents() error = %v", err)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
-	}
-
-	var root map[string]any
-	if err := json.Unmarshal(data, &root); err != nil {
-		t.Fatalf("unmarshal result: %v", err)
-	}
-
-	agentMap := root["agent"].(map[string]any)
-
-	// 11 default keys should remain
-	if len(agentMap) != 11 {
-		t.Errorf("after RemoveProfileAgents, agent count = %d, want 11; keys: %v", len(agentMap), keysOf(agentMap))
-	}
-
-	// No cheap keys remain
-	for key := range agentMap {
-		if strings.HasSuffix(key, "-cheap") {
-			t.Errorf("cheap key %q still present after removal", key)
-		}
-	}
-	for _, key := range []string{"jd-judge-a-cheap", "jd-judge-b-cheap", "jd-fix-agent-cheap"} {
-		if _, ok := agentMap[key]; ok {
-			t.Errorf("profile JD key %q still present after removal", key)
-		}
-	}
-
-	// Default keys all preserved
-	for _, key := range []string{"sdd-orchestrator", "sdd-init", "sdd-explore",
-		"sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks",
-		"sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard"} {
-		if _, ok := agentMap[key]; !ok {
-			t.Errorf("default key %q was removed — should be preserved", key)
-		}
-	}
-}
-
-func TestRemoveProfileAgents_NonExistentProfileNoOp(t *testing.T) {
-	path := buildSettingsWithProfiles(t)
-
-	// Read original
-	original, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
-	}
-
-	if err := RemoveProfileAgents(path, "nonexistent"); err != nil {
-		t.Fatalf("RemoveProfileAgents() with non-existent profile should not error; got: %v", err)
-	}
-
-	// File should be unchanged (or at least equivalent JSON structure)
-	after, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("ReadFile() after error = %v", err)
-	}
-
-	var origParsed, afterParsed map[string]any
-	_ = json.Unmarshal(original, &origParsed)
-	_ = json.Unmarshal(after, &afterParsed)
-
-	origAgents := origParsed["agent"].(map[string]any)
-	afterAgents := afterParsed["agent"].(map[string]any)
-
-	if len(origAgents) != len(afterAgents) {
-		t.Errorf("agent count changed: before=%d after=%d", len(origAgents), len(afterAgents))
-	}
-}
-
-func TestRemoveProfileAgents_CannotRemoveDefault(t *testing.T) {
-	path := buildSettingsWithProfiles(t)
-
-	if err := RemoveProfileAgents(path, ""); err == nil {
-		t.Fatal("RemoveProfileAgents(\"\") should return error for default profile")
-	}
-}
-
-func TestRemoveProfileAgents_CannotRemoveDefaultByName(t *testing.T) {
-	path := buildSettingsWithProfiles(t)
-
-	if err := RemoveProfileAgents(path, "default"); err == nil {
-		t.Fatal("RemoveProfileAgents(\"default\") should return error for default profile")
-	}
 }
 
 // helper

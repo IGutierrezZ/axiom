@@ -347,7 +347,7 @@ func TestGoldenSDD_Codex_LowCost(t *testing.T) {
 	home := t.TempDir()
 
 	result, err := sdd.Inject(home, codexAdapter(), "", sdd.InjectOptions{
-		CodexModelAssignments:       model.CodexModelPresetLowCost(),
+		CodexModelAssignments:       codexPresetEffortsForTest("low-cost"),
 		CodexCarrilModelAssignments: model.CodexCarrilModelsForPreset("low-cost"),
 	})
 	if err != nil {
@@ -365,7 +365,7 @@ func TestGoldenSDD_Codex_Powerful(t *testing.T) {
 	home := t.TempDir()
 
 	result, err := sdd.Inject(home, codexAdapter(), "", sdd.InjectOptions{
-		CodexModelAssignments:       model.CodexModelPresetPowerful(),
+		CodexModelAssignments:       codexPresetEffortsForTest("powerful"),
 		CodexCarrilModelAssignments: model.CodexCarrilModelsForPreset("powerful"),
 	})
 	if err != nil {
@@ -797,4 +797,22 @@ func pinGoldenOpenCodeV1(t *testing.T) {
 	runtimeopencode.VersionRunnerOverride = func(context.Context, runtimeopencode.Command) (runtimeopencode.CommandOutput, error) {
 		return runtimeopencode.CommandOutput{Stdout: []byte("1.18.30")}, nil
 	}
+}
+
+// codexPresetEffortsForTest reproduce los esfuerzos por fase de un preset de Codex:
+// la TUI que los ofrecía se retiró, pero las pruebas de inyección los usan de fixture.
+func codexPresetEffortsForTest(preset string) map[string]model.CodexEffort {
+	groups := map[string][]string{
+		"sdd-strong": {"sdd-explore", "sdd-research", "sdd-propose", "sdd-design", "sdd-verify", "jd-judge-a", "jd-judge-b", "default"},
+		"sdd-mid":    {"sdd-apply", "jd-fix-agent"},
+		"sdd-cheap":  {"sdd-spec", "sdd-tasks", "sdd-archive", "sdd-onboard"},
+	}
+	defaults := model.CodexPresetCarrilDefaults(preset)
+	out := make(map[string]model.CodexEffort)
+	for carril, phases := range groups {
+		for _, phase := range phases {
+			out[phase] = defaults[carril].Effort
+		}
+	}
+	return out
 }

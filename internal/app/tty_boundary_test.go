@@ -16,7 +16,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 func assumeInteractiveTTY(t *testing.T) {
@@ -58,14 +57,12 @@ func TestRunArgsNoArgumentRequiresInteractiveStdinAndStdout(t *testing.T) {
 			origDetect := detectSystem
 			origSelfUpdate := selfUpdateFn
 			origDeferredSync := deferredSyncFn
-			origRunTUI := runTUI
 			t.Cleanup(func() {
 				isattyFn = origIsatty
 				ensureCurrentOSSupported = origEnsure
 				detectSystem = origDetect
 				selfUpdateFn = origSelfUpdate
 				deferredSyncFn = origDeferredSync
-				runTUI = origRunTUI
 			})
 
 			var calls []string
@@ -93,10 +90,6 @@ func TestRunArgsNoArgumentRequiresInteractiveStdinAndStdout(t *testing.T) {
 			deferredSyncFn = func() error {
 				record("deferred sync")
 				return nil
-			}
-			runTUI = func(tea.Model, ...tea.ProgramOption) (tea.Model, error) {
-				record("Bubble Tea")
-				return nil, nil
 			}
 
 			var output bytes.Buffer
@@ -127,13 +120,11 @@ func TestRunArgsNoArgumentAllowsInteractiveStdinAndStdout(t *testing.T) {
 	origEnsure := ensureCurrentOSSupported
 	origDetect := detectSystem
 	origSelfUpdate := selfUpdateFn
-	origRunTUI := runTUI
 	t.Cleanup(func() {
 		isattyFn = origIsatty
 		ensureCurrentOSSupported = origEnsure
 		detectSystem = origDetect
 		selfUpdateFn = origSelfUpdate
-		runTUI = origRunTUI
 	})
 
 	var calls []string
@@ -159,10 +150,6 @@ func TestRunArgsNoArgumentAllowsInteractiveStdinAndStdout(t *testing.T) {
 		calls = append(calls, "self-update")
 		return nil
 	}
-	runTUI = func(tea.Model, ...tea.ProgramOption) (tea.Model, error) {
-		calls = append(calls, "Bubble Tea")
-		return nil, nil
-	}
 
 	var output bytes.Buffer
 	if err := RunArgs(nil, &output); err != nil {
@@ -171,7 +158,7 @@ func TestRunArgsNoArgumentAllowsInteractiveStdinAndStdout(t *testing.T) {
 	if isattyCalls != 2 {
 		t.Fatalf("terminal predicate called %d times, want once for stdin and once for stdout", isattyCalls)
 	}
-	for _, want := range []string{"platform validation", "system detection", "Bubble Tea"} {
+	for _, want := range []string{"platform validation", "system detection"} {
 		if !slicesContains(calls, want) {
 			t.Fatalf("RunArgs(nil) did not reach %s; calls = %v", want, calls)
 		}
@@ -222,7 +209,7 @@ func TestRunArgsExplicitCommandsBypassTTYBoundary(t *testing.T) {
 	}
 }
 
-func TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea(t *testing.T) {
+func TestBuiltBinaryClosedStdinRefusesBeforeUI(t *testing.T) {
 	if testing.Short() {
 		t.Skip("built-binary process coverage is not run in short mode")
 	}
@@ -270,7 +257,7 @@ func TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea(t *testing.T) {
 		}
 	}
 	if strings.Contains(strings.ToLower(combined), "/dev/tty") {
-		t.Fatalf("built binary reached Bubble Tea /dev/tty error: %q", combined)
+		t.Fatalf("built binary reached a /dev/tty error: %q", combined)
 	}
 }
 

@@ -144,20 +144,6 @@ func resolvePiBackgroundCLI(set bool, raw string, persisted state.InstallState) 
 	})
 }
 
-// ResolvePiBackgroundInteractive resolves the TUI's environment and persisted
-// sources with interactive auto behavior. CLI flags are absent from the TUI
-// flow, so a missing prior and missing environment decision is the only case
-// that requests the TUI choice screen.
-func ResolvePiBackgroundInteractive(prior model.PiBackgroundIntent) (PiBackgroundResolution, error) {
-	envValue, envSet := lookupPiBackgroundEnv()
-	return ResolvePiBackground(PiBackgroundResolveInput{
-		EnvSet:       envSet,
-		EnvValue:     envValue,
-		PriorManaged: prior,
-		Interactive:  true,
-	})
-}
-
 // piBackgroundPolicyPath resolves the gentle-pi-readable policy location:
 // <base>/gentle-ai/background-subagents.json where base is
 // GENTLE_PI_CONFIG_HOME when set, otherwise ~/.pi.

@@ -1,10 +1,7 @@
 package model
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -28,15 +25,6 @@ var codexModelCatalog = []string{
 	"gpt-5.2-codex",
 }
 
-// CodexAvailableModels returns Gentle AI's curated selectable Codex model
-// catalog for per-phase Custom picker assignments. The slice is a copy —
-// mutations do not affect the canonical catalog.
-func CodexAvailableModels() []string {
-	out := make([]string, len(codexModelCatalog))
-	copy(out, codexModelCatalog)
-	return out
-}
-
 var codexModelDiscoveryTimeout = 3 * time.Second
 
 const codexModelDiscoveryOutputLimit = 1 << 20
@@ -50,20 +38,6 @@ type codexDiscoveryOutput struct {
 	overflow bool
 }
 
-func (w *codexDiscoveryOutput) Write(p []byte) (int, error) {
-	remaining := w.limit - w.data.Len()
-	if remaining <= 0 {
-		w.overflow = true
-		return 0, io.ErrShortWrite
-	}
-	if len(p) > remaining {
-		_, _ = w.data.Write(p[:remaining])
-		w.overflow = true
-		return remaining, io.ErrShortWrite
-	}
-	return w.data.Write(p)
-}
-
 type codexDiscoveredModelCatalog struct {
 	Models []codexCatalogModel `json:"models"`
 }
@@ -72,64 +46,6 @@ type codexCatalogModel struct {
 	Slug           string `json:"slug"`
 	Visibility     string `json:"visibility"`
 	SupportedInAPI *bool  `json:"supported_in_api"`
-}
-
-// DiscoverCodexModels returns selectable models from the locally installed Codex
-// CLI. It falls back to the curated catalog if Codex is unavailable, times out,
-// returns invalid JSON, or reports no selectable models.
-func DiscoverCodexModels(ctx context.Context) []string {
-	discoveryCtx, cancel := context.WithTimeout(ctx, codexModelDiscoveryTimeout)
-	defer cancel()
-
-	codexPath, err := codexLookPath("codex")
-	if err != nil {
-		return CodexAvailableModels()
-	}
-	cmd := codexCommand(discoveryCtx, codexPath, "debug", "models")
-	output := &codexDiscoveryOutput{limit: codexModelDiscoveryOutputLimit}
-	cmd.Stdout = output
-	if err := cmd.Run(); err != nil || output.overflow {
-		return CodexAvailableModels()
-	}
-
-	var catalog codexDiscoveredModelCatalog
-	if err := json.Unmarshal([]byte(output.data.String()), &catalog); err != nil {
-		return CodexAvailableModels()
-	}
-
-	models := make([]string, 0, len(catalog.Models))
-	seen := make(map[string]struct{}, len(catalog.Models))
-	for _, entry := range catalog.Models {
-		slug := strings.TrimSpace(entry.Slug)
-		if slug == "" || (entry.Visibility != "" && entry.Visibility != "list") || (entry.SupportedInAPI != nil && !*entry.SupportedInAPI) {
-			continue
-		}
-		if _, ok := seen[slug]; ok {
-			continue
-		}
-		seen[slug] = struct{}{}
-		models = append(models, slug)
-	}
-	if len(models) == 0 {
-		return CodexAvailableModels()
-	}
-	return models
-}
-
-// FilterCodexModelList returns the subset of models whose ID contains query as a
-// case-insensitive substring. An empty query returns a copy of models.
-func FilterCodexModelList(models []string, query string) []string {
-	if strings.TrimSpace(query) == "" {
-		return append([]string(nil), models...)
-	}
-	q := strings.ToLower(query)
-	out := make([]string, 0, len(models))
-	for _, m := range models {
-		if strings.Contains(strings.ToLower(m), q) {
-			out = append(out, m)
-		}
-	}
-	return out
 }
 
 // CodexEffort represents an OpenAI reasoning_effort level used for Codex
@@ -202,11 +118,6 @@ var codexODDRoles = []struct{ Role, Carril string }{
 	{"odd-verify", "sdd-strong"},
 }
 
-// CodexODDRoleCarrils returns the worker-class to preset-lane mapping.
-func CodexODDRoleCarrils() []struct{ Role, Carril string } {
-	return append([]struct{ Role, Carril string }(nil), codexODDRoles...)
-}
-
 // RenderCodexODDAssignments provides spawn_agent arguments for ODD work.
 func RenderCodexODDAssignments(phaseModels map[string]string, efforts map[string]CodexEffort, carrilModels map[string]string) string {
 	if len(carrilModels) == 0 {
@@ -255,20 +166,6 @@ func RenderCodexODDAssignments(phaseModels map[string]string, efforts map[string
 type CodexOrchestratorAssignment struct {
 	Model  string
 	Effort CodexEffort
-}
-
-// CodexPresetOrchestratorAssignment returns the main-session policy for a
-// named preset. Every preset runs the orchestrator at medium effort: it plans,
-// routes and adjudicates rather than doing the delegated work, so low effort
-// made it the weakest link in the chain while medium keeps it responsive and
-// still routes correctly. The model does vary — see codexPresetOrchestrator.
-// Unknown keys intentionally fall back to Recommended.
-func CodexPresetOrchestratorAssignment(preset string) *CodexOrchestratorAssignment {
-	assignment, ok := codexPresetOrchestrator[CodexPresetKey(preset)]
-	if !ok {
-		assignment = codexPresetOrchestrator[CodexPresetRecommended]
-	}
-	return &assignment
 }
 
 // CodexPresetCarrilDefaults returns a defensive copy of the selected preset's
@@ -330,16 +227,6 @@ func codexPresetEfforts(preset string) map[string]CodexEffort {
 // CodexModelPresetRecommended returns the Recommended preset.
 func CodexModelPresetRecommended() map[string]CodexEffort {
 	return codexPresetEfforts(string(CodexPresetRecommended))
-}
-
-// CodexModelPresetPowerful returns the Powerful preset.
-func CodexModelPresetPowerful() map[string]CodexEffort {
-	return codexPresetEfforts(string(CodexPresetPowerful))
-}
-
-// CodexModelPresetLowCost returns the Low-cost preset.
-func CodexModelPresetLowCost() map[string]CodexEffort {
-	return codexPresetEfforts(string(CodexPresetLowCost))
 }
 
 // CodexTierGroup defines one CLI profile tier: the profile filename (without

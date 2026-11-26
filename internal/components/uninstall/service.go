@@ -292,27 +292,6 @@ func PartialUninstallScoped(homeDir, workspaceDir, appVersion string, opts Optio
 	return svc.PartialUninstall(agentsTyped, componentsTyped)
 }
 
-// PartialUninstallWithProfileSelectionScoped es PartialUninstallScoped con la
-// selección de perfiles de SDD y el ámbito de los datos de Engram.
-func PartialUninstallWithProfileSelectionScoped(homeDir, workspaceDir, appVersion string, opts Options, agentIDs []string, componentIDs []string, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
-	svc, err := NewScopedService(homeDir, workspaceDir, appVersion, opts)
-	if err != nil {
-		return Result{}, err
-	}
-
-	agentsTyped := make([]model.AgentID, 0, len(agentIDs))
-	for _, agentID := range agentIDs {
-		agentsTyped = append(agentsTyped, model.AgentID(agentID))
-	}
-
-	componentsTyped := make([]model.ComponentID, 0, len(componentIDs))
-	for _, componentID := range componentIDs {
-		componentsTyped = append(componentsTyped, model.ComponentID(componentID))
-	}
-
-	return svc.PartialUninstallWithProfiles(agentsTyped, componentsTyped, profileNames, engramScope)
-}
-
 // CompleteUninstallScoped retira todo lo gestionado de todos los agentes del ámbito
 // de opts.
 func CompleteUninstallScoped(homeDir, workspaceDir, appVersion string, opts Options) (Result, error) {
@@ -327,18 +306,6 @@ func (s *Service) PartialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	s.profileNamesToRemove = nil
 	s.profileSelectionScoped = false
 	s.engramUninstallScope = model.EngramUninstallScopeGlobal
-
-	return s.partialUninstall(agentIDs, componentIDs)
-}
-
-func (s *Service) PartialUninstallWithProfiles(agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
-	s.SetProfileNamesToRemove(profileNames)
-	s.SetEngramUninstallScope(engramScope)
-	defer func() {
-		s.profileNamesToRemove = nil
-		s.profileSelectionScoped = false
-		s.engramUninstallScope = model.EngramUninstallScopeGlobal
-	}()
 
 	return s.partialUninstall(agentIDs, componentIDs)
 }
@@ -407,19 +374,6 @@ func keptEngramRegistrationNote(homeDir string, agentIDs []model.AgentID) string
 // to the "unreadable state" path.
 func isStateNotFound(err error) bool {
 	return errors.Is(err, fs.ErrNotExist)
-}
-
-func (s *Service) SetProfileNamesToRemove(profileNames []string) {
-	s.profileNamesToRemove = dedupeSortedStrings(profileNames)
-	s.profileSelectionScoped = true
-}
-
-func (s *Service) SetEngramUninstallScope(scope model.EngramUninstallScope) {
-	if scope == model.EngramUninstallScopeProject {
-		s.engramUninstallScope = model.EngramUninstallScopeProject
-		return
-	}
-	s.engramUninstallScope = model.EngramUninstallScopeGlobal
 }
 
 func (s *Service) CompleteUninstall() (Result, error) {

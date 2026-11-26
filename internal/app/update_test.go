@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -203,26 +202,6 @@ func TestRunUpgrade_DryRunDoesNotRestartAfterGentleAIUpgrade(t *testing.T) {
 	}
 	if strings.Contains(buf.String(), "restarting") {
 		t.Fatalf("dry-run output should not mention restart:\n%s", buf.String())
-	}
-}
-
-// TestTUIUpgrade_DoesNotRestartBeforeModelCanRenderReport verifies that the
-// TUI upgrade path returns the UpgradeReport without triggering any side-effects
-// (e.g. exit or restart) before the UI has a chance to render the result.
-// reExec was removed in task 4.6; tuiUpgrade must still return the report intact.
-func TestTUIUpgrade_DoesNotRestartBeforeModelCanRenderReport(t *testing.T) {
-	origUpgradeExecute := upgradeExecute
-	t.Cleanup(func() {
-		upgradeExecute = origUpgradeExecute
-	})
-
-	upgradeExecute = func(context.Context, []update.UpdateResult, system.PlatformProfile, string, bool, ...io.Writer) upgrade.UpgradeReport {
-		return upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{{ToolName: "gentle-ai", NewVersion: "1.36.2", Status: upgrade.UpgradeSucceeded}}}
-	}
-
-	report := tuiUpgrade(system.PlatformProfile{OS: "darwin", PackageManager: "brew"}, os.TempDir())(context.Background(), nil)
-	if len(report.Results) != 1 || report.Results[0].ToolName != "gentle-ai" {
-		t.Fatalf("tuiUpgrade() report = %#v", report)
 	}
 }
 

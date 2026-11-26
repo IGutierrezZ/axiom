@@ -1722,38 +1722,6 @@ func validatePersistedSyncState(persisted state.InstallState, readErr error) err
 	return nil
 }
 
-// RunSyncWithSelection is the programmatic entry point for sync.
-// It skips flag parsing and agent discovery — the caller provides the homeDir
-// and a fully-built Selection (agents + components + options).
-// This is the function the TUI calls directly to avoid CLI flag parsing.
-func RunSyncWithSelection(homeDir string, selection model.Selection) (SyncResult, error) {
-	return RunSyncWithSelectionScoped(homeDir, "", ScopeGlobal, selection)
-}
-
-func RunSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (SyncResult, error) {
-	if workspaceDir == "" {
-		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
-	}
-	persistedState, persistedStateErr := StateStoreFor(scope, homeDir, workspaceDir).Read()
-	if persistedStateErr != nil && !os.IsNotExist(persistedStateErr) {
-		return SyncResult{Agents: selection.Agents, Selection: selection}, fmt.Errorf("read persisted installation state: %w", persistedStateErr)
-	}
-	background, err := resolveOpenCodeBackgroundCLI(false, "", persistedState)
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection}, err
-	}
-	background.activationPlan, err = prepareOpenCodeBackgroundActivation(homeDir, &background, containsAgent(selection.Agents, model.AgentOpenCode))
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection, Background: background}, fmt.Errorf("prepare OpenCode background activation: %w", err)
-	}
-	piBackground, err := resolvePiBackgroundCLI(false, "", persistedState)
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection, Background: background}, err
-	}
-	preparePiBackgroundProjection(homeDir, &piBackground, containsAgent(selection.Agents, model.AgentPi))
-	return runSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection, background, piBackground)
-}
-
 func runSyncWithSelection(homeDir string, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
 	return runSyncWithSelectionScoped(homeDir, "", ScopeGlobal, selection, background, piBackground)
 }
@@ -2315,18 +2283,6 @@ func (r SyncResult) noteWarnings() []string {
 		}
 	}
 	return warnings
-}
-
-// Warnings lists every warning a completed sync raised, in the order the CLI
-// report prints them, without the "WARNING:" prefix. It is the single source of
-// truth shared by RenderSyncReport and the TUI, which shows them on its sync
-// result screen.
-func (r SyncResult) Warnings() []string {
-	var warnings []string
-	if !r.SkillRegistryRefreshed && r.SkillRegistryError != "" {
-		warnings = append(warnings, skillIndexRefreshWarning(r.SkillRegistryError))
-	}
-	return append(warnings, r.noteWarnings()...)
 }
 
 // RenderSyncReport renders a human-readable summary of a sync execution.

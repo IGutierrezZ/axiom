@@ -6959,8 +6959,8 @@ func containsPath(paths []string, want string) bool {
 func TestInjectCodexFallbackProfilesRemainIdempotent(t *testing.T) {
 	for name, opts := range map[string]InjectOptions{
 		"recommended": {CodexModelAssignments: model.CodexModelPresetRecommended()},
-		"low-cost":    {CodexModelAssignments: model.CodexModelPresetLowCost()},
-		"powerful":    {CodexModelAssignments: model.CodexModelPresetPowerful()},
+		"low-cost":    {CodexModelAssignments: codexPresetEffortsForTest("low-cost")},
+		"powerful":    {CodexModelAssignments: codexPresetEffortsForTest("powerful")},
 		"custom":      {CodexModelAssignments: model.CodexModelPresetRecommended(), CodexPhaseModelAssignments: map[string]string{"sdd-propose": "gpt-5.4"}},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -8166,4 +8166,22 @@ func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.
 			}
 		})
 	}
+}
+
+// codexPresetEffortsForTest reproduce los esfuerzos por fase de un preset de Codex:
+// la TUI que los ofrecía se retiró, pero las pruebas de inyección los usan de fixture.
+func codexPresetEffortsForTest(preset string) map[string]model.CodexEffort {
+	groups := map[string][]string{
+		"sdd-strong": {"sdd-explore", "sdd-research", "sdd-propose", "sdd-design", "sdd-verify", "jd-judge-a", "jd-judge-b", "default"},
+		"sdd-mid":    {"sdd-apply", "jd-fix-agent"},
+		"sdd-cheap":  {"sdd-spec", "sdd-tasks", "sdd-archive", "sdd-onboard"},
+	}
+	defaults := model.CodexPresetCarrilDefaults(preset)
+	out := make(map[string]model.CodexEffort)
+	for carril, phases := range groups {
+		for _, phase := range phases {
+			out[phase] = defaults[carril].Effort
+		}
+	}
+	return out
 }

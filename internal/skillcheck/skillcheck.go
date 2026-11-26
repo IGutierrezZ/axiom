@@ -118,17 +118,6 @@ func filter(fs []Finding, s Severity) []Finding {
 	return out
 }
 
-// FormatErrors resume los errores en una línea por hallazgo (`regla: mensaje`).
-func FormatErrors(fs []Finding) string {
-	var lines []string
-	for _, f := range fs {
-		if f.Severity == SeverityError {
-			lines = append(lines, f.Rule+": "+f.Message)
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
 // IsReservedName replica las exclusiones silenciosas del registro de skills.
 func IsReservedName(name string) bool {
 	return name == "_shared" || name == "skill-registry" || strings.HasPrefix(name, "sdd-")

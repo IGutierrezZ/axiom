@@ -2270,7 +2270,7 @@ func TestInjectWithOptionsReInjectConvergesFullToSlimAndBack(t *testing.T) {
 func TestInjectCodexOrchestratorAssignmentWritesTopLevelModel(t *testing.T) {
 	validCodexRuntime(t)
 	home := t.TempDir()
-	opts := InjectOptions{CodexOrchestratorAssignment: model.CodexPresetOrchestratorAssignment(string(model.CodexPresetRecommended))}
+	opts := InjectOptions{CodexOrchestratorAssignment: &model.CodexOrchestratorAssignment{Model: "gpt-6-sol", Effort: model.CodexEffortMedium}}
 	if _, err := InjectWithOptions(home, codexAdapter(), opts); err != nil {
 		t.Fatal(err)
 	}
@@ -2303,7 +2303,7 @@ experimental_compact_prompt_file = "nested-compact.md"
 		t.Fatal(err)
 	}
 
-	opts := InjectOptions{CodexOrchestratorAssignment: model.CodexPresetOrchestratorAssignment(string(model.CodexPresetRecommended))}
+	opts := InjectOptions{CodexOrchestratorAssignment: &model.CodexOrchestratorAssignment{Model: "gpt-6-sol", Effort: model.CodexEffortMedium}}
 	if _, err := InjectWithOptions(home, codexAdapter(), opts); err != nil {
 		t.Fatal(err)
 	}

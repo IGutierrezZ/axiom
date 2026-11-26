@@ -108,16 +108,6 @@ var (
 	AppVersion = "dev"
 )
 
-// SetCommandOutputStreaming toggles whether command stdout/stderr is streamed
-// directly to the terminal. It returns a restore function.
-func SetCommandOutputStreaming(enabled bool) func() {
-	previous := streamCommandOutput
-	streamCommandOutput = enabled
-	return func() {
-		streamCommandOutput = previous
-	}
-}
-
 func RunInstall(args []string, detection system.DetectionResult) (InstallResult, error) {
 	flags, err := ParseInstallFlags(args)
 	if err != nil {
@@ -790,13 +780,6 @@ func (s *runtimeState) compatibilityChangedFiles() []string {
 		return nil
 	}
 	return s.compatibilityTransaction.ChangedFiles()
-}
-
-func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
-	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
-	// se lanzó el comando. El aviso al usuario lo emite quien llama.
-	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
-	return newInstallRuntimeAt(homeDir, workspaceDir, scope, channel, selection, resolved, profile)
 }
 
 // newInstallRuntimeAt es newInstallRuntime con la raíz del workspace ya resuelta.
@@ -1925,66 +1908,6 @@ func windowsGoCandidates() []string {
 // the public TUI execution boundary and the real compatibility writer.
 var tuiInstallStagePlan = func(runtime *installRuntime) pipeline.StagePlan {
 	return runtime.stagePlan()
-}
-
-// ExecuteTUIInstallWithBackgroundAndOrchestrator runs a TUI install and returns
-// the orchestrator so a downstream state-persistence failure can be compensated.
-func ExecuteTUIInstallWithBackgroundAndOrchestrator(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	return executeTUIInstallWithBackground(homeDir, selection, resolved, profile, background, piBackground, onProgress)
-}
-
-func executeTUIInstallWithBackground(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	// La TUI sigue la misma regla de ámbito que la CLI: workspace por defecto y
-	// global solo cuando se pide de forma explícita (AXIOM_INSTALL_SCOPE=global).
-	scope, err := ResolveInstallScope("")
-	if err != nil {
-		return pipeline.ExecutionResult{Err: err}, nil
-	}
-	// Mismo filtro que la CLI. La TUI ocupa la terminal: el aviso no sale por stderr,
-	// se devuelve entre las acciones manuales del resultado.
-	selectionAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
-	if len(omittedAgents) > 0 {
-		if len(selectionAgents) == 0 {
-			return pipeline.ExecutionResult{Err: errNoWorkspaceAgents(omittedAgents)}, nil
-		}
-		selection.Agents = selectionAgents
-		resolved.Agents = AgentsForScope(scope, resolved.Agents)
-	}
-	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
-	if err != nil {
-		return pipeline.ExecutionResult{Err: err}, nil
-	}
-	defer runtime.state.cleanupCompatibilityTransaction()
-	backgroundResolution := OpenCodeBackgroundResolution{
-		Intent:    background,
-		Effective: background,
-	}
-	backgroundActivation, err := prepareOpenCodeBackgroundActivation(homeDir, &backgroundResolution, containsAgent(resolved.Agents, model.AgentOpenCode))
-	if err != nil {
-		return pipeline.ExecutionResult{Err: fmt.Errorf("prepare OpenCode background activation: %w", err)}, nil
-	}
-	runtime.background = backgroundResolution
-	runtime.progress = onProgress
-	runtime.backgroundActivation = backgroundActivation
-	runtime.runtimeReady = backgroundActivation != nil && backgroundActivation.Capability().Ready()
-	piBackgroundResolution := PiBackgroundResolution{
-		Intent:    piBackground,
-		Effective: piBackground,
-		managed:   piBackground == model.PiBackgroundOn || piBackground == model.PiBackgroundOff,
-	}
-	runtime.piBackgroundProjection = preparePiBackgroundProjection(homeDir, &piBackgroundResolution, containsAgent(resolved.Agents, model.AgentPi))
-	orchestrator := pipeline.NewOrchestrator(pipeline.DefaultRollbackPolicy(), pipeline.WithFailurePolicy(pipeline.ContinueOnError), pipeline.WithProgressFunc(onProgress))
-	result := orchestrator.Execute(tuiInstallStagePlan(runtime))
-	runtime.state.cleanupRollbackSnapshot()
-	if runtime.state.piCodeGraph != nil {
-		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
-	}
-	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
-	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
-	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
-	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
-	result.ManualActions = append(result.ManualActions, workspaceTrustNotes(scope, resolved.Agents)...)
-	return result, orchestrator
 }
 
 // RenderInstallManualActions renders non-fatal completion actions after the

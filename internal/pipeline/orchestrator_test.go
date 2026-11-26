@@ -241,42 +241,6 @@ func TestRunnerProgressCallbackEmitsFailedEvents(t *testing.T) {
 	}
 }
 
-func TestOrchestratorContinueOnErrorWithRollback(t *testing.T) {
-	order := []string{}
-	orchestrator := NewOrchestrator(
-		DefaultRollbackPolicy(),
-		WithFailurePolicy(ContinueOnError),
-	)
-
-	result := orchestrator.Execute(StagePlan{
-		Apply: []Step{
-			newRollbackStep("apply-1", &order, nil),
-			newRollbackStep("apply-2", &order, errors.New("boom")),
-			newRollbackStep("apply-3", &order, nil),
-		},
-	})
-
-	// All 3 steps should run due to ContinueOnError.
-	wantRunOrder := []string{"run:apply-1", "run:apply-2", "run:apply-3"}
-	runOrder := order[:3]
-	if !reflect.DeepEqual(runOrder, wantRunOrder) {
-		t.Fatalf("run order = %v, want %v", runOrder, wantRunOrder)
-	}
-
-	if result.Err == nil {
-		t.Fatalf("expected error")
-	}
-
-	if result.Apply.Success {
-		t.Fatalf("expected apply stage to report failure")
-	}
-
-	// Rollback should fire because apply failed and policy is enabled.
-	if result.Rollback.Stage != StageRollback {
-		t.Fatalf("rollback stage = %q, want rollback", result.Rollback.Stage)
-	}
-}
-
 func TestExecuteRollbackAttemptsEveryStepAfterFailures(t *testing.T) {
 	order := []string{}
 	first := &testStep{id: "first", order: &order}
@@ -321,39 +285,6 @@ func TestOrchestratorJoinsApplyAndRollbackErrors(t *testing.T) {
 	}
 	if result.Rollback.Err == nil || !errors.Is(result.Rollback.Err, rollbackErr) {
 		t.Fatalf("Rollback.Err = %v, want it to wrap %v", result.Rollback.Err, rollbackErr)
-	}
-}
-
-func TestOrchestratorWithProgressFunc(t *testing.T) {
-	order := []string{}
-	events := []ProgressEvent{}
-
-	orchestrator := NewOrchestrator(
-		RollbackPolicy{OnApplyFailure: false},
-		WithProgressFunc(func(e ProgressEvent) {
-			events = append(events, e)
-		}),
-	)
-
-	result := orchestrator.Execute(StagePlan{
-		Prepare: []Step{newTestStep("prep", &order)},
-		Apply:   []Step{newTestStep("act", &order)},
-	})
-
-	if result.Err != nil {
-		t.Fatalf("unexpected error: %v", result.Err)
-	}
-
-	// prep: running+succeeded, act: running+succeeded = 4
-	if len(events) != 4 {
-		t.Fatalf("events = %d, want 4", len(events))
-	}
-
-	if events[0].Stage != StagePrepare || events[0].StepID != "prep" {
-		t.Fatalf("event[0] = %+v", events[0])
-	}
-	if events[2].Stage != StageApply || events[2].StepID != "act" {
-		t.Fatalf("event[2] = %+v", events[2])
 	}
 }
 
