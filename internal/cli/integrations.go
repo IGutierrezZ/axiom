@@ -50,6 +50,7 @@ Subcomandos:
   discover  Imprime el proceso del tracker: tipos, estados, campos, iteraciones y miembros (--plugin, --json)
   tasks     Crea (create) o vincula a mano (bind) la Task hija del work item de origen de cada rol (--change, --estimate, --replace)
   summary   Escribe (push) el resumen de la spec y las etiquetas de requisito en el work item de origen del cambio (--change)
+  time      Propone (propose) e imputa (record) las horas del rol en su Task, con diario pendiente (--change, --role, --hours)
 
 Ejecuta ` + "`axiom integrations <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
@@ -157,8 +158,10 @@ func RunIntegrations(args []string, stdin io.Reader, stdout, stderr io.Writer) i
 		return runIntegrationsSummary(rest, stdout, stderr)
 	case "tasks":
 		return runIntegrationsTasks(rest, stdout, stderr)
+	case "time":
+		return runIntegrationsTime(rest, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit, secret, connect, discover, tasks y summary.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit, secret, connect, discover, tasks, summary y time.\n", subcommand)
 		fmt.Fprint(stdout, integrationsHelp)
 		return integrationsExitUsage
 	}

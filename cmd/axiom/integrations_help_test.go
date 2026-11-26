@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
-var integrationsVerbs = []string{"sync", "emit", "secret", "connect", "discover", "tasks", "summary"}
+var integrationsVerbs = []string{"sync", "emit", "secret", "connect", "discover", "tasks", "summary", "time"}
 
 // RF-INT-18: la ayuda global lista los verbos de integraciones, con el texto del diseño y sus
 // descripciones alineadas en la misma columna.

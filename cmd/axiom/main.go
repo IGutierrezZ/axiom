@@ -108,6 +108,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   integrations discover  Imprime el proceso del tracker: tipos, estados, campos, iteraciones y miembros (--plugin, --json)
   integrations tasks     Crea (create) o vincula a mano (bind) la Task hija del work item de origen de cada rol (--change, --estimate, --replace)
   integrations summary   Escribe (push) el resumen de la spec y las etiquetas de requisito en el work item de origen del cambio (--change)
+  integrations time      Propone (propose) e imputa (record) las horas del rol en su Task, con diario pendiente (--change, --role, --hours)
   project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub
