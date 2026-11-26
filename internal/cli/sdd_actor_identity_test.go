@@ -477,7 +477,9 @@ func TestKickoffSealRealGitIdentity(t *testing.T) {
 
 func TestGateRecordRealGitIdentityNonRepository(t *testing.T) {
 	isolateIntegrateGit(t)
-	global := os.Getenv("GIT_CONFIG_GLOBAL")
+	// Un gitconfig global propio: el de TestMain lo comparten todas las pruebas del paquete.
+	global := filepath.Join(t.TempDir(), "gitconfig")
+	t.Setenv("GIT_CONFIG_GLOBAL", global)
 	if err := os.WriteFile(global, []byte("[user]\n\tname = Global Pérez\n\temail = global@example.com\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
