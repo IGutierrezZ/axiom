@@ -1,0 +1,107 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:ADO:1
+    definitive: RF-ADO-20
+    capability: azure-devops-adapter
+    requirement: Creación de una Task Hija con Marca Determinista y sin Duplicados (RF-ADO-20)
+  - provisional: prov:ADO:2
+    definitive: RF-ADO-21
+    capability: azure-devops-adapter
+    requirement: Validación de la Task Vinculada a Mano (RF-ADO-21)
+  - provisional: prov:ADO:3
+    definitive: RF-ADO-22
+    capability: azure-devops-adapter
+    requirement: Lectura y Escritura de Horas con `test /rev` (RF-ADO-22)
+  - provisional: prov:ADO:4
+    definitive: RF-ADO-23
+    capability: azure-devops-adapter
+    requirement: Sustitución Idempotente de `System.Description` (RF-ADO-23)
+  - provisional: prov:ADO:5
+    definitive: RF-ADO-24
+    capability: azure-devops-adapter
+    requirement: Etiquetas de IDs Funcionales como Conjunto Idempotente (RF-ADO-24)
+  - provisional: prov:ADO:6
+    definitive: RF-ADO-25
+    capability: azure-devops-adapter
+    requirement: Estado y Asignación de la Task por Evento (RF-ADO-25)
+  - provisional: prov:ADO:7
+    definitive: RF-ADO-26
+    capability: azure-devops-adapter
+    requirement: Transición del Work Item al Archivar (RF-ADO-26)
+  - provisional: prov:ADO:8
+    definitive: RF-ADO-27
+    capability: azure-devops-adapter
+    requirement: Las Escrituras Nuevas Son Herméticas y No Filtran el PAT (RF-ADO-27)
+  - provisional: prov:BRA:1
+    definitive: RF-BRA-41
+    capability: change-branch-lifecycle
+    requirement: '`ensure --role` Registra el Inicio del Rol la Primera Vez que Queda Listo (RF-BRA-41)'
+  - provisional: prov:INT:1
+    definitive: RF-INT-25
+    capability: integration-plugins
+    requirement: Puerto Opcional de Tasks por Rol (RF-INT-25)
+  - provisional: prov:INT:2
+    definitive: RF-INT-26
+    capability: integration-plugins
+    requirement: Verbo `axiom integrations tasks create` (RF-INT-26)
+  - provisional: prov:INT:3
+    definitive: RF-INT-27
+    capability: integration-plugins
+    requirement: Verbo `axiom integrations tasks bind` (RF-INT-27)
+  - provisional: prov:INT:4
+    definitive: RF-INT-28
+    capability: integration-plugins
+    requirement: Verbo `axiom integrations summary push` (RF-INT-28)
+  - provisional: prov:INT:5
+    definitive: RF-INT-29
+    capability: integration-plugins
+    requirement: Renderizador Determinista del Resumen de la Spec (RF-INT-29)
+  - provisional: prov:INT:6
+    definitive: RF-INT-30
+    capability: integration-plugins
+    requirement: Estimación por Rol en `design.md` (RF-INT-30)
+  - provisional: prov:INT:7
+    definitive: RF-INT-31
+    capability: integration-plugins
+    requirement: Verbo `axiom integrations time propose` (RF-INT-31)
+  - provisional: prov:INT:8
+    definitive: RF-INT-32
+    capability: integration-plugins
+    requirement: Verbo `axiom integrations time record` (RF-INT-32)
+  - provisional: prov:INT:9
+    definitive: RF-INT-33
+    capability: integration-plugins
+    requirement: Precondiciones por Estilo, Carril ODD y Plugin Activo de los Verbos Nuevos (RF-INT-33)
+  - provisional: prov:INT:10
+    definitive: RF-INT-34
+    capability: integration-plugins
+    requirement: Salida JSON Versionada y Sin Secretos de los Verbos Nuevos (RF-INT-34)
+  - provisional: prov:ARC:1
+    definitive: RF-ARC-16
+    capability: sdd-archive-lifecycle
+    requirement: Con Tracker Activo el Archivado Reenvía el Resumen con los IDs Definitivos (RF-ARC-16)
+  - provisional: prov:ARC:2
+    definitive: RF-ARC-17
+    capability: sdd-archive-lifecycle
+    requirement: Resumen Final de `continuous` con Estimaciones, Horas, Quién y Cuándo (RF-ARC-17)
+  - provisional: prov:ORQ:1
+    definitive: RF-ORQ-29
+    capability: sdd-orchestrator-assets
+    requirement: El Orquestador Invoca los Verbos de Tasks y de Resumen con Tracker Activo (RF-ORQ-29)
+  - provisional: prov:ORQ:2
+    definitive: RF-ORQ-30
+    capability: sdd-orchestrator-assets
+    requirement: '`ensure --role` Antes del Apply con Tracker Activo (RF-ORQ-30)'
+  - provisional: prov:ORQ:3
+    definitive: RF-ORQ-31
+    capability: sdd-orchestrator-assets
+    requirement: '`sdd-design` Propone la Estimación por Rol (RF-ORQ-31)'
+  - provisional: prov:ORQ:4
+    definitive: RF-ORQ-32
+    capability: sdd-orchestrator-assets
+    requirement: '`sdd-apply` Propone e Imputa las Horas al Cerrar el Rol (RF-ORQ-32)'
+  - provisional: prov:ORQ:5
+    definitive: RF-ORQ-33
+    capability: sdd-orchestrator-assets
+    requirement: Doctrina de los Verbos de Integración en Paridad entre Runtimes y Goldens (RF-ORQ-33)

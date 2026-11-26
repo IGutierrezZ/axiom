@@ -6,7 +6,6 @@
 package azuredevops
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,7 +22,10 @@ type Plugin struct {
 	sessions map[string]*orgState // clave: organización en minúsculas
 }
 
-var _ integrations.Plugin = (*Plugin)(nil)
+var (
+	_ integrations.Plugin      = (*Plugin)(nil)
+	_ integrations.TaskTracker = (*Plugin)(nil)
+)
 
 // New construye el plugin.
 func New(opts Options) *Plugin {
@@ -32,13 +34,6 @@ func New(opts Options) *Plugin {
 
 // Manifest devuelve el manifiesto del catálogo cerrado.
 func (p *Plugin) Manifest() manifest.Manifest { return manifest.AzureDevOps() }
-
-// Deliver no entrega nada: devuelve un error permanente sin tocar la red ni el disco. El manifiesto
-// solo escucha change.start, que ningún verbo emite todavía; si algo lo encolara, Permanent lo deja
-// abandonado en el primer intento, sin bucle de reintentos.
-func (p *Plugin) Deliver(context.Context, integrations.Delivery) (integrations.Outcome, error) {
-	return integrations.Outcome{}, integrations.Permanent(ErrLifecycleUnsupported)
-}
 
 // session devuelve el estado de la organización, creándolo la primera vez. Las organizaciones de
 // Azure DevOps no distinguen mayúsculas: la clave va en minúsculas.

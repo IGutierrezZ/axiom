@@ -287,7 +287,13 @@ func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 			t.Fatalf("decodeIntegrations = %+v, %v", got, err)
 		}
 		p := got.Plugins[0]
-		want := map[string]any{"organization": "contoso", "project": "Fabrikam", "team": "Fabrikam Team", "item_keys": []string{"User Story=US", "Bug=BUG"}}
+		want := map[string]any{
+			"organization": "contoso", "project": "Fabrikam", "team": "Fabrikam Team",
+			"item_keys":        []string{"User Story=US", "Bug=BUG"},
+			"task_state_start": "Active", "task_state_apply_approved": "Tech Review",
+			"req_tag_prefix": "req:", "req_tag_max": 50, "workday_hours": 8,
+			"workdays": []string{"mon", "tue", "wed", "thu", "fri"},
+		}
 		if p.ID != "azure-devops" || !p.Enabled || !reflect.DeepEqual(p.Values, want) {
 			t.Fatalf("plugin = %+v", p)
 		}
@@ -295,7 +301,7 @@ func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 
 	t.Run("clave desconocida base_url", func(t *testing.T) {
 		_, err := decodeIntegrations(integrationsNode(t, valid+"    base_url: https://example.test\n"))
-		wantErrorContains(t, err, "clave desconocida 'base_url'", "claves admitidas: enabled, organization, project, team, item_keys")
+		wantErrorContains(t, err, "clave desconocida 'base_url'", "claves admitidas: enabled, organization, project, team, item_keys, task_state_start")
 	})
 
 	t.Run("pat no es una clave de configuración", func(t *testing.T) {
@@ -366,4 +372,102 @@ func TestItemKeysPrefixInvalid(t *testing.T) {
 	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
 	_, err := decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Bug=B-G\n"))
 	wantErrorContains(t, err, "Bug=B-G", "prefijo")
+}
+
+// Claves de ciclo de vida del plugin azure-devops (RF-ADO-02): rangos y formatos validados al cargar.
+func TestIntegrationsLifecycleKeysFormats(t *testing.T) {
+	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
+
+	t.Run("valores propios", func(t *testing.T) {
+		got, err := decodeIntegrations(integrationsNode(t, head+
+			"    task_state_start: Doing\n    task_state_close: Done\n    work_item_state_archive: Closed\n"+
+			"    req_tag_prefix: 'rq-'\n    req_tag_max: 100\n    workday_hours: 24\n    workdays: [mon, sun]\n"))
+		if err != nil {
+			t.Fatalf("decodeIntegrations: %v", err)
+		}
+		v := got.Plugins[0].Values
+		if v["task_state_start"] != "Doing" || v["task_state_close"] != "Done" || v["work_item_state_archive"] != "Closed" ||
+			v["req_tag_prefix"] != "rq-" || v["req_tag_max"] != 100 || v["workday_hours"] != 24 ||
+			!reflect.DeepEqual(v["workdays"], []string{"mon", "sun"}) {
+			t.Fatalf("valores = %+v", v)
+		}
+	})
+
+	t.Run("sin estado de cierre ni de archivo no hay valor", func(t *testing.T) {
+		got, err := decodeIntegrations(integrationsNode(t, head))
+		if err != nil {
+			t.Fatalf("decodeIntegrations: %v", err)
+		}
+		for _, k := range []string{"task_state_close", "work_item_state_archive"} {
+			if _, ok := got.Plugins[0].Values[k]; ok {
+				t.Errorf("%s no debe tener valor por defecto", k)
+			}
+		}
+	})
+
+	for name, tc := range map[string]struct {
+		extra string
+		want  []string
+	}{
+		"req_tag_max 101":             {"    req_tag_max: 101\n", []string{"integrations.azure-devops.req_tag_max", "101", "de 1 a 100"}},
+		"req_tag_max 0":               {"    req_tag_max: 0\n", []string{"req_tag_max", "fuera del rango"}},
+		"workday_hours 25":            {"    workday_hours: 25\n", []string{"workday_hours", "25", "de 1 a 24"}},
+		"workday_hours 0":             {"    workday_hours: 0\n", []string{"workday_hours", "fuera del rango"}},
+		"estado vacío":                {"    task_state_start: \"  \"\n", []string{"task_state_start", "no puede estar vacío"}},
+		"prefijo axiom:":              {"    req_tag_prefix: 'AXIOM:x'\n", []string{"req_tag_prefix", "AXIOM:x", "axiom:"}},
+		"prefijo axiom-task:":         {"    req_tag_prefix: 'axiom-task:'\n", []string{"req_tag_prefix", "axiom-task:"}},
+		"prefijo con coma":            {"    req_tag_prefix: 'a,b'\n", []string{"req_tag_prefix", "','"}},
+		"prefijo con punto y coma":    {"    req_tag_prefix: 'a;b'\n", []string{"req_tag_prefix", "';'"}},
+		"prefijo vacío":               {"    req_tag_prefix: ''\n", []string{"req_tag_prefix", "no puede estar vacío"}},
+		"prefijo de 101":              {"    req_tag_prefix: '" + strings.Repeat("a", 101) + "'\n", []string{"req_tag_prefix", "100 caracteres"}},
+		"workdays repetidos":          {"    workdays: [mon, mon]\n", []string{"workdays", "mon", "repetido"}},
+		"workdays desconocido":        {"    workdays: [mon, lunes]\n", []string{"workdays", "lunes", "admitidos"}},
+		"workdays vacío":              {"    workdays: []\n", []string{"workdays", "no puede estar vacía"}},
+		"req_tag_max no entero":       {"    req_tag_max: mucho\n", []string{"req_tag_max", "entero"}},
+		"estado de archivo en blanco": {"    work_item_state_archive: ' '\n", []string{"work_item_state_archive", "no puede estar vacío"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := decodeIntegrations(integrationsNode(t, head+tc.extra))
+			wantErrorContains(t, err, tc.want...)
+		})
+	}
+}
+
+// axiom.example.yaml documenta las claves nuevas y, descomentado el bloque, carga sin error.
+func TestExampleYAMLIntegrationsBlockLoads(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "axiom.example.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var block []string
+	in := false
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.HasPrefix(line, "# integrations:") {
+			in = true
+		}
+		if in {
+			if !strings.HasPrefix(line, "#") {
+				break
+			}
+			block = append(block, strings.TrimPrefix(strings.TrimPrefix(line, "#"), " "))
+		}
+	}
+	if len(block) == 0 {
+		t.Fatal("no se encontró el bloque integrations comentado")
+	}
+	// La línea "integrations:" va sin sangría; el resto conserva la suya (un espacio menos).
+	src := strings.Join(block, "\n") + "\n"
+	got, err := decodeIntegrations(integrationsNode(t, src))
+	if err != nil {
+		t.Fatalf("el ejemplo no carga: %v\n%s", err, src)
+	}
+	v := got.Plugins[0].Values
+	if v["task_state_apply_approved"] != "Tech Review" || v["req_tag_max"] != 50 || v["req_tag_prefix"] != "req:" {
+		t.Fatalf("valores del ejemplo = %+v", v)
+	}
+	for _, key := range []string{"task_state_start", "task_state_apply_approved", "task_state_close", "work_item_state_archive", "req_tag_prefix", "req_tag_max", "workday_hours", "workdays"} {
+		if !strings.Contains(string(raw), key) {
+			t.Errorf("axiom.example.yaml no documenta %s", key)
+		}
+	}
 }

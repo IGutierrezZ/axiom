@@ -57,7 +57,7 @@ func TestReadLinksIsStrict(t *testing.T) {
 		yaml  string
 		wants string
 	}{
-		{"esquema distinto", strings.Replace(validLinksYAML, "axiom.integrations/v1", "axiom.integrations/v2", 1), "esquema"},
+		{"esquema distinto", strings.Replace(validLinksYAML, "axiom.integrations/v1", "axiom.integrations/v9", 1), "axiom.integrations/v9"},
 		{"sin esquema", strings.Replace(validLinksYAML, "schema: axiom.integrations/v1\n", "", 1), "esquema"},
 		{"clave desconocida en la raíz", validLinksYAML + "attempts: 3\n", "attempts"},
 		{"clave desconocida en un vínculo", strings.Replace(validLinksYAML, "    kind: work_item\n", "    kind: work_item\n    last_error: boom\n", 1), "last_error"},
@@ -227,7 +227,7 @@ func TestLinksFileHoldsNoAttemptsErrorsOrOperations(t *testing.T) {
 			t.Errorf("integrations.yaml no guarda %q:\n%s", forbidden, content)
 		}
 	}
-	if !strings.HasPrefix(content, "schema: axiom.integrations/v1\nchange: x\n") {
+	if !strings.HasPrefix(content, "schema: axiom.integrations/v2\nchange: x\n") {
 		t.Errorf("cabecera inesperada:\n%s", content)
 	}
 }

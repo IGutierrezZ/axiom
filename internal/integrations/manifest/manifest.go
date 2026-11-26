@@ -98,8 +98,11 @@ type ConfigField struct {
 	Description string    `json:"description"`
 	Default     any       `json:"default,omitempty"`
 	Enum        []string  `json:"enum,omitempty"`
-	// Format declara el formato de los elementos de un string_list (lista cerrada).
+	// Format declara el formato del valor (string) o de los elementos (string_list); lista cerrada.
 	Format ValueFormat `json:"format,omitempty"`
+	// Min y Max acotan un campo int (ambos inclusivos); nil significa sin cota.
+	Min *int `json:"min,omitempty"`
+	Max *int `json:"max,omitempty"`
 }
 
 // SecretSpec declara un secreto que el plugin necesita. Su valor nunca vive en axiom.yaml.
@@ -266,23 +269,74 @@ func validateField(f ConfigField) []string {
 	if f.Format != "" {
 		p = append(p, validateFormat(f)...)
 	}
+	p = append(p, validateBounds(f)...)
 	return p
+}
+
+func validateBounds(f ConfigField) []string {
+	if f.Min == nil && f.Max == nil {
+		return nil
+	}
+	if f.Type != FieldInt {
+		return []string{fmt.Sprintf("la clave %q: min y max solo se admiten en el tipo int", f.Key)}
+	}
+	if f.Min != nil && f.Max != nil && *f.Min > *f.Max {
+		return []string{fmt.Sprintf("la clave %q: min (%d) no puede superar max (%d)", f.Key, *f.Min, *f.Max)}
+	}
+	if n, ok := defaultInt(f.Default); ok {
+		if f.Min != nil && n < *f.Min || f.Max != nil && n > *f.Max {
+			return []string{fmt.Sprintf("la clave %q: el valor por defecto %d queda fuera del rango declarado", f.Key, n)}
+		}
+	}
+	return nil
+}
+
+func defaultInt(v any) (int, bool) {
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int64:
+		return int(n), true
+	case float64:
+		return int(n), n == float64(int64(n))
+	}
+	return 0, false
 }
 
 func validateFormat(f ConfigField) []string {
 	if !ValidFormat(f.Format) {
-		return []string{fmt.Sprintf("la clave %q: formato %q no admitido; admitido: %s", f.Key, f.Format, FormatTypePrefixPairs)}
+		return []string{fmt.Sprintf("la clave %q: formato %q no admitido; admitidos: %s", f.Key, f.Format, FormatNames())}
 	}
-	if f.Type != FieldStringList {
-		return []string{fmt.Sprintf("la clave %q: el formato %q solo se admite en el tipo string_list", f.Key, f.Format)}
+	if want := FormatType(f.Format); f.Type != want {
+		return []string{fmt.Sprintf("la clave %q: el formato %q solo se admite en el tipo %s", f.Key, f.Format, want)}
 	}
-	values, ok := defaultStrings(f.Default)
-	if !ok {
-		return nil // sin valor por defecto, o ya reportado por defaultMatchesType
+	var reasons []FormatProblem
+	switch f.Format {
+	case FormatNonEmpty, FormatTagPrefix:
+		s, ok := f.Default.(string)
+		if !ok {
+			return nil // sin valor por defecto, o ya reportado por defaultMatchesType
+		}
+		check := CheckNonEmpty
+		if f.Format == FormatTagPrefix {
+			check = CheckTagPrefix
+		}
+		if r := check(s); r != "" {
+			reasons = append(reasons, FormatProblem{Element: s, Reason: r})
+		}
+	default:
+		values, ok := defaultStrings(f.Default)
+		if !ok {
+			return nil
+		}
+		if f.Format == FormatWeekdaySet {
+			reasons = ParseWeekdaySet(values)
+		} else {
+			_, reasons = ParseTypePrefixes(values)
+		}
 	}
 	var p []string
-	_, problems := ParseTypePrefixes(values)
-	for _, pr := range problems {
+	for _, pr := range reasons {
 		p = append(p, fmt.Sprintf("la clave %q: el valor por defecto %q no cumple el formato %s: %s", f.Key, pr.Element, f.Format, pr.Reason))
 	}
 	return p
@@ -405,6 +459,8 @@ func (m Manifest) Clone() Manifest {
 		for i, f := range m.Config {
 			f.Enum = cloneSlice(f.Enum)
 			f.Default = cloneDefault(f.Default)
+			f.Min = cloneInt(f.Min)
+			f.Max = cloneInt(f.Max)
 			out.Config[i] = f
 		}
 	}
@@ -416,6 +472,14 @@ func cloneSlice[T any](s []T) []T {
 		return nil
 	}
 	return append(make([]T, 0, len(s)), s...)
+}
+
+func cloneInt(p *int) *int {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
 }
 
 func cloneDefault(v any) any {

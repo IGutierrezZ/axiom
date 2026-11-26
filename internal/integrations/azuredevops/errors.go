@@ -20,9 +20,9 @@ var (
 	// valida el bloque: este error cubre a quien llama al plugin con una configuración construida a
 	// mano y los nombres que llegan de la API.
 	ErrConfig = errors.New("configuración de azure-devops inválida")
-	// ErrLifecycleUnsupported marca la entrega de eventos del ciclo de vida: este adaptador todavía
-	// no entrega ninguno; llegan con C-07-d y C-07-e.
-	ErrLifecycleUnsupported = errors.New("el plugin azure-devops no entrega eventos del ciclo de vida en esta versión; llegan con C-07-d y C-07-e")
+	// ErrLifecycleUnsupported marca la entrega de un evento del ciclo de vida que este adaptador no
+	// entrega: solo role.start, role.apply.approved y archive.
+	ErrLifecycleUnsupported = errors.New("el plugin azure-devops solo entrega los eventos role.start, role.apply.approved y archive")
 
 	ErrAuth            = errors.New("azure devops rechazó la autenticación")
 	ErrNotFound        = errors.New("azure devops no encontró el recurso")

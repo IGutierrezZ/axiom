@@ -50,6 +50,10 @@ type Dispatcher struct {
 	// (la guarda A de ramas, RF-BRA-20, la pone la capa de verbos). Dispatch lo deja en Report.Err y
 	// Sync salta la carpeta con un aviso.
 	Guard func(Folder) error
+	// Deliverer es la identidad git de quien entrega; Identities consulta las identidades guardadas
+	// del tracker. Ambos viajan en cada Delivery y solo se leen (nil/vacío: sin identidad).
+	Deliverer  string
+	Identities IdentityLookup
 }
 
 // OperationReport describe una operación en un informe. Nunca lleva secretos: LastError ya está
@@ -329,6 +333,9 @@ func (d *Dispatcher) attempt(ctx context.Context, folder Folder, op *Operation, 
 		Config:  values,
 		Links:   append([]Link(nil), links.Links...),
 		Secrets: newScopedSecrets(plugin.Manifest(), d.Secrets, tracker),
+
+		Deliverer:  d.Deliverer,
+		Identities: d.Identities,
 	}
 
 	result := call(ctx, plugin, delivery)
@@ -341,6 +348,12 @@ func (d *Dispatcher) attempt(ctx context.Context, folder Folder, op *Operation, 
 		}
 	} else if n := len(result.outcome.Links) + len(result.outcome.TimeEntries); n > 0 {
 		*warnings = append(*warnings, fmt.Sprintf("se descartan %d vínculo(s) o imputación(es) devueltos por %s: este evento no escribe %s", n, op.Event.Type, LinksFile))
+	}
+	// Los avisos solo cuentan si la entrega se completó (también la fusión de vínculos).
+	for _, w := range result.outcome.Warnings {
+		if text := sanitizeText(w, tracker); text != "" {
+			*warnings = append(*warnings, text)
+		}
 	}
 	return true
 }
