@@ -136,16 +136,16 @@ Depende de: Fase 6. Paquete: `internal/cli`.
 
 Depende de: Fase 7. Fichero: `internal/cli/trace_flow_test.go`.
 
-- [ ] 8.1 Ayudantes `traceRepo`, `traceIntegrate` (merge, squash, rebase), `traceDiverge`, sin reutilizar nombres de `sdd_trace_flow_test.go`. Caso SDD archivado que añade el ID y ODD que lo modifica integrados por los tres métodos: ambos `found: true`, SDD antes que ODD; bug SDD con `## Informe de bug` y `Cubre:` como `bug`/`covered`; consulta por provisional y por definitivo iguales; ODD que no parsea (advertencia, salida 0); ODD no integrado omitido; ID válido sin apariciones.
+- [x] 8.1 Ayudantes `traceRepo`, `traceIntegrate` (merge, squash, rebase), `traceDiverge`, sin reutilizar nombres de `sdd_trace_flow_test.go`. Caso SDD archivado que añade el ID y ODD que lo modifica integrados por los tres métodos: ambos `found: true`, SDD antes que ODD; bug SDD con `## Informe de bug` y `Cubre:` como `bug`/`covered`; consulta por provisional y por definitivo iguales; ODD que no parsea (advertencia, salida 0); ODD no integrado omitido; ID válido sin apariciones.
   Cubre: prov:trace:6, prov:trace:7, prov:trace:8, prov:trace:11, prov:trace:15
   Verificación: `go test ./internal/cli -run AxiomTrace -count=1`
-- [ ] 8.2 Rama: inexistente (error con `--integration-branch`, sin `fetch`) y explícita (`integrationBranch` del JSON igual a ella). Orden determinista: dos ejecuciones con `--json` idénticas byte a byte.
+- [x] 8.2 Rama: inexistente (error con `--integration-branch`, sin `fetch`) y explícita (`integrationBranch` del JSON igual a ella). Orden determinista: dos ejecuciones con `--json` idénticas byte a byte.
   Cubre: prov:trace:12, prov:trace:13
   Verificación: `go test ./internal/cli -run AxiomTrace -count=1`
-- [ ] 8.3 Solo lectura: con `observeGit`, solo `rev-parse`, `log`, `ls-tree` y `merge-base`; árbol, índice y lista de ficheros idénticos antes y después (`treeSnapshotWithoutGit`, `git status --porcelain`), con y sin `--json`. Con `t.Chdir` a un repositorio ajeno, git solo en el del proyecto. Nombres inseguros (`2026-01-01-a*`, `-x.md`, `a[1].md`) omitidos sin llamada git con esa ruta.
+- [x] 8.3 Solo lectura: con `observeGit`, solo `rev-parse`, `log`, `ls-tree` y `merge-base`; árbol, índice y lista de ficheros idénticos antes y después (`treeSnapshotWithoutGit`, `git status --porcelain`), con y sin `--json`. Con `t.Chdir` a un repositorio ajeno, git solo en el del proyecto. Nombres inseguros (`2026-01-01-a*`, `-x.md`, `a[1].md`) omitidos sin llamada git con esa ruta.
   Cubre: prov:trace:10
   Verificación: `go test ./internal/cli -run Trace -count=1`
-- [ ] 8.4 Multirepo con `multirepoSealProject`: carpeta archivada y documento ODD en el repositorio de specs, commits de su historia y rutas relativas a su raíz, git solo en ese repositorio. Variante `specs_repository: openspec` (planning home y `odd/tasks` en repositorios distintos): cada incremento toma el commit de su historia; sin git en la carpeta maestra, `odd_repository_unavailable`. Los `TestSDDTrace*` existentes siguen pasando sin cambios (hueco spec 13).
+- [x] 8.4 Multirepo con `multirepoSealProject`: carpeta archivada y documento ODD en el repositorio de specs, commits de su historia y rutas relativas a su raíz, git solo en ese repositorio. Variante `specs_repository: openspec` (planning home y `odd/tasks` en repositorios distintos): cada incremento toma el commit de su historia; sin git en la carpeta maestra, `odd_repository_unavailable`. Los `TestSDDTrace*` existentes siguen pasando sin cambios (hueco spec 13).
   Cubre: prov:trace:14
   Verificación: `go test ./internal/cli -run Trace -count=1`
 
