@@ -1,0 +1,43 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:WEB:1
+    definitive: RF-WEB-22
+    capability: local-web-dashboard
+    requirement: Pantalla de Marcas por Caso y Entorno con Caducidad en la Pestaña «Pruebas» (RF-WEB-22)
+  - provisional: prov:WEB:2
+    definitive: RF-WEB-23
+    capability: local-web-dashboard
+    requirement: Ruta de Marca con Validación en Servidor y Escritura Local de Solo Añadir (RF-WEB-23)
+  - provisional: prov:WEB:3
+    definitive: RF-WEB-24
+    capability: local-web-dashboard
+    requirement: Ruta de Publicación de Marcas con Confirmación Explícita y Resultado Tipado (RF-WEB-24)
+  - provisional: prov:WEB:4
+    definitive: RF-WEB-25
+    capability: local-web-dashboard
+    requirement: Marcas Solo en Multirepo SDD con Estado «No Disponible» Explícito (RF-WEB-25)
+  - provisional: prov:WEB:5
+    definitive: RF-WEB-26
+    capability: local-web-dashboard
+    requirement: Rutas de Marcas Clasificadas en el Canario de Secretos (RF-WEB-26)
+  - provisional: prov:ARC:1
+    definitive: RF-ARC-18
+    capability: sdd-archive-lifecycle
+    requirement: El `archive-report` Incluye el Resumen de Marcas y las Marcas Nunca Bloquean el Archivado (RF-ARC-18)
+  - provisional: prov:GAT:1
+    definitive: RF-GAT-33
+    capability: sdd-block-review-gates
+    requirement: La Presentación de `integration` Muestra el Resumen de Marcas por Entorno como Información (RF-GAT-33)
+  - provisional: prov:PUB:1
+    definitive: RF-PUB-13
+    capability: sdd-docs-publication
+    requirement: Publicación de Marcas en la Integración del Repositorio de Specs, Acotada a `pruebas-estado.yaml` (RF-PUB-13)
+  - provisional: prov:PUB:2
+    definitive: RF-PUB-14
+    capability: sdd-docs-publication
+    requirement: Un Único Reintento por Reproducción ante *non-fast-forward* en el Publicador de Marcas (RF-PUB-14)
+  - provisional: prov:KOF:1
+    definitive: RF-KOF-25
+    capability: sdd-lane-kickoff
+    requirement: Formato de `pruebas-estado.yaml` de Solo Añadir y Caducidad por `plan_digest` (RF-KOF-25)

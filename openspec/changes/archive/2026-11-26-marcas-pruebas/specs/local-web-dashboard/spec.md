@@ -5,9 +5,9 @@
 
 ## ADDED Requirements
 
-### Requirement: Pantalla de Marcas por Caso y Entorno con Caducidad en la Pestaña «Pruebas» (prov:WEB:1)
+### Requirement: Pantalla de Marcas por Caso y Entorno con Caducidad en la Pestaña «Pruebas» (RF-WEB-22)
 
-Cuando las marcas están disponibles (prov:WEB:4), la pestaña «Pruebas» DEBE mostrar una tabla de casos con una columna por entorno de `acceptance_tests.environments`. Cada celda DEBE mostrar la última marca vigente del par caso-entorno (resultado y nota), o su ausencia. Una marca cuyo `plan_digest` difiere del digest actual de `pruebas.md` (prov:KOF:1) DEBE mostrarse como caducada y NO DEBE contar como vigente. La pestaña DEBE ofrecer en cada celda aplicable el control para marcar `ok`, `ko`, `blocked` o `n/a`, con un campo opcional `commit` (vacío por defecto) y un campo opcional `note`. DEBE listar las entradas pendientes de publicar. Todo texto de marcas, notas y `pruebas.md` DEBE insertarse como texto, nunca como HTML. Las celdas de un entorno no aplicable al caso NO DEBEN ofrecer el control de marca.
+Cuando las marcas están disponibles (RF-WEB-25), la pestaña «Pruebas» DEBE mostrar una tabla de casos con una columna por entorno de `acceptance_tests.environments`. Cada celda DEBE mostrar la última marca vigente del par caso-entorno (resultado y nota), o su ausencia. Una marca cuyo `plan_digest` difiere del digest actual de `pruebas.md` (RF-KOF-25) DEBE mostrarse como caducada y NO DEBE contar como vigente. La pestaña DEBE ofrecer en cada celda aplicable el control para marcar `ok`, `ko`, `blocked` o `n/a`, con un campo opcional `commit` (vacío por defecto) y un campo opcional `note`. DEBE listar las entradas pendientes de publicar. Todo texto de marcas, notas y `pruebas.md` DEBE insertarse como texto, nunca como HTML. Las celdas de un entorno no aplicable al caso NO DEBEN ofrecer el control de marca.
 
 #### Scenario: Celda con marca vigente
 - **DADO** un cambio con `pruebas.md` y una marca `ok` del caso `P-01` en `pre` con el `plan_digest` actual
@@ -34,9 +34,9 @@ Cuando las marcas están disponibles (prov:WEB:4), la pestaña «Pruebas» DEBE 
 - **CUANDO** se abre la pestaña «Pruebas»
 - **ENTONCES** se listan ambas como pendientes de publicar
 
-### Requirement: Ruta de Marca con Validación en Servidor y Escritura Local de Solo Añadir (prov:WEB:2)
+### Requirement: Ruta de Marca con Validación en Servidor y Escritura Local de Solo Añadir (RF-WEB-23)
 
-El dashboard DEBE exponer una ruta POST de marca, protegida con `isLocalRequest` y con cuerpo JSON, que añada una entrada a `pruebas-estado.yaml` del cambio (formato en prov:KOF:1). La ruta DEBE validar en el servidor, sin escribir nada si falla: que el cambio exista, no esté archivado y tenga `pruebas.md`; que `case` exista en `pruebas.md`; que `environment` pertenezca a `acceptance_tests.environments` y a los entornos aplicables del caso; que `result` pertenezca a `ok|ko|blocked|n/a`; y que `note` no supere la longitud máxima. DEBE rellenar `by` con la identidad git (`user.name` y `user.email`) del repositorio de specs, `at` con la fecha y hora, y `plan_digest` con el digest actual de `pruebas.md`; `commit` es el valor opcional que da la persona y queda vacío por defecto, y NUNCA se infiere del repositorio de código. La escritura DEBE ser atómica y con exclusión mutua por cambio, y el fichero DEBE ser de solo añadir: la ruta NO DEBE editar ni borrar entradas existentes y una corrección es una entrada nueva. La ruta NO DEBE ejecutar ninguna operación git de escritura ni de red. Cada rechazo DEBE tener código tipado, mensaje en castellano y continuación.
+El dashboard DEBE exponer una ruta POST de marca, protegida con `isLocalRequest` y con cuerpo JSON, que añada una entrada a `pruebas-estado.yaml` del cambio (formato en RF-KOF-25). La ruta DEBE validar en el servidor, sin escribir nada si falla: que el cambio exista, no esté archivado y tenga `pruebas.md`; que `case` exista en `pruebas.md`; que `environment` pertenezca a `acceptance_tests.environments` y a los entornos aplicables del caso; que `result` pertenezca a `ok|ko|blocked|n/a`; y que `note` no supere la longitud máxima. DEBE rellenar `by` con la identidad git (`user.name` y `user.email`) del repositorio de specs, `at` con la fecha y hora, y `plan_digest` con el digest actual de `pruebas.md`; `commit` es el valor opcional que da la persona y queda vacío por defecto, y NUNCA se infiere del repositorio de código. La escritura DEBE ser atómica y con exclusión mutua por cambio, y el fichero DEBE ser de solo añadir: la ruta NO DEBE editar ni borrar entradas existentes y una corrección es una entrada nueva. La ruta NO DEBE ejecutar ninguna operación git de escritura ni de red. Cada rechazo DEBE tener código tipado, mensaje en castellano y continuación.
 
 #### Scenario: Marca válida añade una entrada
 - **DADO** un cambio SDD multirepo con `pruebas.md` con el caso `P-01` aplicable a `pre`
@@ -83,9 +83,9 @@ El dashboard DEBE exponer una ruta POST de marca, protegida con `isLocalRequest`
 - **CUANDO** el servidor las procesa
 - **ENTONCES** `pruebas-estado.yaml` contiene ambas entradas íntegras y bien formadas
 
-### Requirement: Ruta de Publicación de Marcas con Confirmación Explícita y Resultado Tipado (prov:WEB:3)
+### Requirement: Ruta de Publicación de Marcas con Confirmación Explícita y Resultado Tipado (RF-WEB-24)
 
-El dashboard DEBE exponer una ruta POST «Publicar marcas», protegida con `isLocalRequest` y con cuerpo JSON, que exija el campo `confirm` verdadero en el cuerpo. Sin `confirm`, DEBE rechazarse con un código tipado y NO DEBE ejecutar ninguna operación git. Antes del clic, la UI DEBE mostrar el remoto, la rama de integración del repositorio de specs y las entradas pendientes. Con `confirm`, el dashboard DEBE delegar la publicación en un publicador de marcas definido por una interfaz propia del dashboard e inyectado desde fuera; el dashboard NO DEBE importar `sddpublish` ni ejecutar git por su cuenta (RF-PUB-07). La respuesta DEBE mostrar el resultado (commit, rama y remoto) o el rechazo tipado con su etiqueta en castellano y su continuación, y DEBE avisar de los demás documentos sucios del repositorio de specs que no se confirmaron (prov:PUB:1). Sin entradas pendientes, la respuesta DEBE indicar que no hay nada que publicar y no hacer commit. Nunca DEBE haber push sin el clic de confirmación.
+El dashboard DEBE exponer una ruta POST «Publicar marcas», protegida con `isLocalRequest` y con cuerpo JSON, que exija el campo `confirm` verdadero en el cuerpo. Sin `confirm`, DEBE rechazarse con un código tipado y NO DEBE ejecutar ninguna operación git. Antes del clic, la UI DEBE mostrar el remoto, la rama de integración del repositorio de specs y las entradas pendientes. Con `confirm`, el dashboard DEBE delegar la publicación en un publicador de marcas definido por una interfaz propia del dashboard e inyectado desde fuera; el dashboard NO DEBE importar `sddpublish` ni ejecutar git por su cuenta (RF-PUB-07). La respuesta DEBE mostrar el resultado (commit, rama y remoto) o el rechazo tipado con su etiqueta en castellano y su continuación, y DEBE avisar de los demás documentos sucios del repositorio de specs que no se confirmaron (RF-PUB-13). Sin entradas pendientes, la respuesta DEBE indicar que no hay nada que publicar y no hacer commit. Nunca DEBE haber push sin el clic de confirmación.
 
 #### Scenario: Publicar sin confirm no ejecuta git
 - **DADO** entradas pendientes y un observador de git
@@ -119,7 +119,7 @@ El dashboard DEBE exponer una ruta POST «Publicar marcas», protegida con `isLo
 - **CUANDO** se ejecuta la prueba de aislamiento de RF-PUB-07
 - **ENTONCES** el paquete del dashboard no importa `sddpublish` y la prueba sigue en verde
 
-### Requirement: Marcas Solo en Multirepo SDD con Estado «No Disponible» Explícito (prov:WEB:4)
+### Requirement: Marcas Solo en Multirepo SDD con Estado «No Disponible» Explícito (RF-WEB-25)
 
 Las marcas y sus dos rutas DEBEN estar disponibles únicamente para un cambio SDD activo con `pruebas.md` en un proyecto `multirepo` con `acceptance_tests` activo. En `monorepo-embedded`, la pestaña y las dos rutas DEBEN responder un estado «no disponible» explícito con código tipado y motivo en castellano, NO un 404 ni un error genérico. Para un cambio ODD, un cambio archivado, un cambio sin `pruebas.md` o un proyecto sin `acceptance_tests` activo, DEBEN responder igualmente «no disponible» con su motivo y NO DEBEN escribir nada. Las marcas NO DEBEN usar ninguna clave nueva de `axiom.yaml`: reutilizan `acceptance_tests.environments`.
 
@@ -144,7 +144,7 @@ Las marcas y sus dos rutas DEBEN estar disponibles únicamente para un cambio SD
 - **CUANDO** se envía una marca
 - **ENTONCES** se responde «no disponible» por función no activa
 
-### Requirement: Rutas de Marcas Clasificadas en el Canario de Secretos (prov:WEB:5)
+### Requirement: Rutas de Marcas Clasificadas en el Canario de Secretos (RF-WEB-26)
 
 Las dos rutas POST nuevas DEBEN clasificarse en el canario de secretos como excluidas con el motivo «mutación (POST)», de modo que la prueba que exige clasificar toda ruta de `server.go` siga en verde. Ningún DTO de marcas DEBE contener secretos, y las pruebas de pines de pestañas y de assets DEBEN seguir en verde.
 
@@ -162,10 +162,10 @@ Las dos rutas POST nuevas DEBEN clasificarse en el canario de secretos como excl
 
 ### Requirement: Pestaña «Pruebas» en el Detalle del Incremento, con Marcas por Entorno solo en Multirepo (RF-WEB-17)
 
-`GET /api/increments/<n>` DEBE incluir en el detalle de un incremento SDD un campo de la batería de pruebas con el contenido de `pruebas.md` y su cobertura, calculada con el mismo `acceptancetests.Check` que usan `axiom sdd tests check` y `axiom sdd status` (RF-KOF-20). El campo DEBE incluir los casos de la tabla, las cifras de escenarios M/M, requisitos M/M y número de casos, y los hallazgos. Sin `pruebas.md`, el campo DEBE indicar su ausencia y, si la función está activa, el aviso de RF-KOF-22. La lectura NO DEBE añadir ninguna ruta, y el endpoint de ficheros de RF-WEB-15 NO DEBE ampliar su lista blanca. Las únicas rutas añadidas son las dos rutas POST de marcas (prov:WEB:2 y prov:WEB:3).
+`GET /api/increments/<n>` DEBE incluir en el detalle de un incremento SDD un campo de la batería de pruebas con el contenido de `pruebas.md` y su cobertura, calculada con el mismo `acceptancetests.Check` que usan `axiom sdd tests check` y `axiom sdd status` (RF-KOF-20). El campo DEBE incluir los casos de la tabla, las cifras de escenarios M/M, requisitos M/M y número de casos, y los hallazgos. Sin `pruebas.md`, el campo DEBE indicar su ausencia y, si la función está activa, el aviso de RF-KOF-22. La lectura NO DEBE añadir ninguna ruta, y el endpoint de ficheros de RF-WEB-15 NO DEBE ampliar su lista blanca. Las únicas rutas añadidas son las dos rutas POST de marcas (RF-WEB-23 y RF-WEB-24).
 (Previously: la pestaña era de solo lectura y el requisito prohibía añadir cualquier ruta)
 
-El detalle DEBE incluir una pestaña «Pruebas»: muestra la tabla de casos con sus columnas, la cobertura y los hallazgos; no ofrece edición de `pruebas.md` ni ejecución. Las marcas por entorno (prov:WEB:1) solo se ofrecen cuando están disponibles (prov:WEB:4); en los demás casos la pestaña sigue siendo de solo lectura. Todo texto proveniente de `pruebas.md` DEBE insertarse como texto, nunca como HTML. Con la función no activa y sin `pruebas.md`, la pestaña DEBE indicar que las pruebas de aceptación no están activadas para el proyecto. Los hallazgos nunca bloquean ninguna otra acción del detalle. Las pruebas de pines de pestañas y de assets, y el canario de secretos, DEBEN seguir en verde.
+El detalle DEBE incluir una pestaña «Pruebas»: muestra la tabla de casos con sus columnas, la cobertura y los hallazgos; no ofrece edición de `pruebas.md` ni ejecución. Las marcas por entorno (RF-WEB-22) solo se ofrecen cuando están disponibles (RF-WEB-25); en los demás casos la pestaña sigue siendo de solo lectura. Todo texto proveniente de `pruebas.md` DEBE insertarse como texto, nunca como HTML. Con la función no activa y sin `pruebas.md`, la pestaña DEBE indicar que las pruebas de aceptación no están activadas para el proyecto. Los hallazgos nunca bloquean ninguna otra acción del detalle. Las pruebas de pines de pestañas y de assets, y el canario de secretos, DEBEN seguir en verde.
 
 #### Scenario: El detalle devuelve la batería y su cobertura
 - **DADO** un incremento con `pruebas.md` válido y su cobertura completa
