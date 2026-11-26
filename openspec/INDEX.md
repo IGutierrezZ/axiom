@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 19:23:41 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 605 | **Total Escenarios BDD:** 2926
+> **Última Sincronización:** 2026-11-26 20:31:31 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 615 | **Total Escenarios BDD:** 2983
 
 ---
 
@@ -28,7 +28,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 34 | 194 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 21 | 108 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 26 | 133 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -44,12 +44,12 @@
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 17 | 51 | [Ver Spec](specs/requirement-trace/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 17 | 124 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 32 | 152 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 18 | 129 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 33 | 156 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 14 | 101 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 24 | 149 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 25 | 158 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 33 | 120 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -1550,14 +1550,14 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Cambio sin explicación activada
   - *Escenario BDD:* La frescura del dashboard coincide con la del status
   - *Escenario BDD:* Sin acciones de escritura
-- **[RF-WEB-17]** Pestaña «Pruebas» de Solo Lectura en el Detalle del Incremento, sin Ruta Nueva
+- **[RF-WEB-17]** Pestaña «Pruebas» en el Detalle del Incremento, con Marcas por Entorno solo en Multirepo
   - *Escenario BDD:* El detalle devuelve la batería y su cobertura
   - *Escenario BDD:* La cobertura coincide con la del verbo
-  - *Escenario BDD:* La pestaña es de solo lectura
+  - *Escenario BDD:* La pestaña es de solo lectura donde las marcas no están disponibles
   - *Escenario BDD:* Contenido hostil se muestra como texto
   - *Escenario BDD:* Función no activada
   - *Escenario BDD:* Activa y sin fichero
-  - *Escenario BDD:* Sin ruta nueva
+  - *Escenario BDD:* La lectura no añade rutas y las de marcas son solo POST
 - **[RF-WEB-18]** Pantalla «Ajustes del Proyecto» Generada desde el Catálogo, con Reglas por Topología e ISO y sin Controles de RDD
   - *Escenario BDD:* La pantalla se genera desde el catálogo
   - *Escenario BDD:* Aviso de que solo afecta a cambios nuevos
@@ -1602,6 +1602,36 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Ecosistema enlaza a Ajustes
   - *Escenario BDD:* El selector de proyecto enlaza a Ajustes
   - *Escenario BDD:* Las pruebas de assets reflejan la retirada
+- **[RF-WEB-22]** Pantalla de Marcas por Caso y Entorno con Caducidad en la Pestaña «Pruebas»
+  - *Escenario BDD:* Celda con marca vigente
+  - *Escenario BDD:* Marca caducada tras cambiar `pruebas.md`
+  - *Escenario BDD:* Entorno no aplicable al caso
+  - *Escenario BDD:* Contenido hostil en una nota
+  - *Escenario BDD:* Entradas pendientes visibles
+- **[RF-WEB-23]** Ruta de Marca con Validación en Servidor y Escritura Local de Solo Añadir
+  - *Escenario BDD:* Marca válida añade una entrada
+  - *Escenario BDD:* Caso inexistente
+  - *Escenario BDD:* Entorno no válido
+  - *Escenario BDD:* Resultado fuera de dominio
+  - *Escenario BDD:* Nota demasiado larga
+  - *Escenario BDD:* Solo añadir
+  - *Escenario BDD:* Petición no local
+  - *Escenario BDD:* Escrituras concurrentes del mismo cambio
+- **[RF-WEB-24]** Ruta de Publicación de Marcas con Confirmación Explícita y Resultado Tipado
+  - *Escenario BDD:* Publicar sin confirm no ejecuta git
+  - *Escenario BDD:* Publicar con confirm muestra el resultado
+  - *Escenario BDD:* Datos visibles antes del clic
+  - *Escenario BDD:* Rechazo tipado visible
+  - *Escenario BDD:* Sin entradas pendientes
+  - *Escenario BDD:* El dashboard no importa el publicador
+- **[RF-WEB-25]** Marcas Solo en Multirepo SDD con Estado «No Disponible» Explícito
+  - *Escenario BDD:* Monorepo responde no disponible
+  - *Escenario BDD:* Cambio archivado
+  - *Escenario BDD:* Sin `pruebas.md`
+  - *Escenario BDD:* Función `acceptance_tests` no activa
+- **[RF-WEB-26]** Rutas de Marcas Clasificadas en el Canario de Secretos
+  - *Escenario BDD:* Rutas clasificadas
+  - *Escenario BDD:* Una ruta nueva sin clasificar falla
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -2616,6 +2646,12 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* Avisos recogidos
   - *Escenario BDD:* Cambios que no lo llevan
   - *Escenario BDD:* Sin red
+- **[RF-ARC-18]** El `archive-report` Incluye el Resumen de Marcas y las Marcas Nunca Bloquean el Archivado
+  - *Escenario BDD:* El informe incluye el resumen
+  - *Escenario BDD:* Marcas `ko` o caducadas no bloquean
+  - *Escenario BDD:* Sin marcas no hay sección
+  - *Escenario BDD:* Fichero ilegible
+  - *Escenario BDD:* El fichero se archiva intacto
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -2807,6 +2843,11 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* Parada `tasks` con `pruebas.md`
   - *Escenario BDD:* Función activa y `pruebas.md` ausente
   - *Escenario BDD:* Función no activa
+- **[RF-GAT-33]** La Presentación de `integration` Muestra el Resumen de Marcas por Entorno como Información
+  - *Escenario BDD:* Resumen presente en `integration`
+  - *Escenario BDD:* Marcas pendientes o fallidas se declaran tal cual
+  - *Escenario BDD:* Sin marcas no se menciona
+  - *Escenario BDD:* No condiciona las salidas
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2822,6 +2863,9 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Sin `--change` la orden se rechaza
   - *Escenario BDD:* El estado local de la raíz no se publica
   - *Escenario BDD:* Un fichero con punto anidado sigue siendo documentación
+  - *Escenario BDD:* La lista exacta admite solo `pruebas-estado.yaml`
+  - *Escenario BDD:* La lista exacta rechaza otras rutas
+  - *Escenario BDD:* El verbo no ofrece la lista exacta
 - **[RF-PUB-02]** `publish` Confirma Solo las Rutas de Documentación del Cambio
   - *Escenario BDD:* El commit contiene solo documentación
   - *Escenario BDD:* El índice de la persona queda intacto
@@ -2849,6 +2893,7 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Identidad de autor ausente
   - *Escenario BDD:* Remoto inexistente
   - *Escenario BDD:* Una negativa no modifica los registros
+  - *Escenario BDD:* La excepción es solo del publicador de marcas
 - **[RF-PUB-06]** Disponibilidad según el Almacén de Artefactos
   - *Escenario BDD:* Almacén engram rechaza la publicación
   - *Escenario BDD:* Almacén none rechaza la publicación
@@ -2857,6 +2902,7 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* `ensure`, `done` y `status` no publican
   - *Escenario BDD:* `gate record` no ejecuta git
   - *Escenario BDD:* Una prueba de dependencias fija el aislamiento
+  - *Escenario BDD:* El dashboard no ejecuta git
 - **[RF-PUB-08]** Publicación Automática en el Estilo `continuous` Solo con Autorización Sellada
   - *Escenario BDD:* Con autorización sellada se publica al cerrar `tasks`
   - *Escenario BDD:* Con autorización sellada se publica al archivar
@@ -2913,6 +2959,17 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* `unavailable` se presenta como información
   - *Escenario BDD:* El campo nunca cambia el enrutado
   - *Escenario BDD:* Sin proyección no se publica por esta regla
+- **[RF-PUB-13]** Publicación de Marcas en la Integración del Repositorio de Specs, Acotada a `pruebas-estado.yaml`
+  - *Escenario BDD:* Solo se confirma `pruebas-estado.yaml`
+  - *Escenario BDD:* Publica en la integración, no en un worktree
+  - *Escenario BDD:* Rama distinta de la integración
+  - *Escenario BDD:* Identidad ausente o remoto inexistente
+  - *Escenario BDD:* Monorepo no publica
+- **[RF-PUB-14]** Un Único Reintento por Reproducción ante *non-fast-forward* en el Publicador de Marcas
+  - *Escenario BDD:* El reintento resuelve el rechazo
+  - *Escenario BDD:* El reintento falla también
+  - *Escenario BDD:* Otros rechazos no se reintentan
+  - *Escenario BDD:* `axiom sdd publish` ordinario sigue sin reintentar
 
 ### Dominio: `sdd-independent-review` — Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura)
 
@@ -3315,6 +3372,9 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Aviso por ausencia sin bloqueo
   - *Escenario BDD:* Función no activa
   - *Escenario BDD:* Declaración inválida
+  - *Escenario BDD:* Resumen por entorno
+  - *Escenario BDD:* Sin marcas no hay clave
+  - *Escenario BDD:* Las marcas no alteran el enrutado
 - **[RF-KOF-23]** El Archivado Reescribe los Provisionales de la Columna `Cubre` de `pruebas.md`
   - *Escenario BDD:* Provisionales reescritos en `Cubre`
   - *Escenario BDD:* El resto del fichero no cambia
@@ -3331,6 +3391,13 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* El explore recibe el contexto
   - *Escenario BDD:* Proyecto ISO y bug
   - *Escenario BDD:* Sin plugin activo no cambia nada
+- **[RF-KOF-25]** Formato de `pruebas-estado.yaml` de Solo Añadir y Caducidad por `plan_digest`
+  - *Escenario BDD:* Entrada con todos los campos
+  - *Escenario BDD:* Caducidad al cambiar `pruebas.md`
+  - *Escenario BDD:* Finales de línea no caducan
+  - *Escenario BDD:* Gana la última entrada vigente
+  - *Escenario BDD:* Fichero ausente
+  - *Escenario BDD:* Fichero inválido
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
