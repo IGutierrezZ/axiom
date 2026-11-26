@@ -44,6 +44,12 @@
 - Tests: `internal/cli/sdd_tests_test.go` (9 casos: texto/JSON, hallazgos, ausente, inactiva sin fichero, inactiva con fichero sin validar entornos, antes de tasks, errores de uso, declaración inválida, solo lectura).
 - Verificación: `go test ./internal/cli -run SDDTests`, `go test ./cmd/axiom -run 'RunSDDHelp|SDDVerbRouting|SDDTests|RunSDDUnknown'` ok; `go vet ./internal/cli ./cmd/axiom`; `go build ./...` ok.
 
+## T7 completada: archivado reescribe `Cubre` de `pruebas.md`
+
+- `internal/livespec/change.go`: tercer `changeFileKind` (`kindAcceptanceTests`) para `acceptancetests.FileName`; `changeArtifacts` extrae como citas los provisionales de la parte ID de cada entrada de `Cubre` (línea de la fila, vía `acceptancetests.Parse`); la reescritura usa `acceptancetests.RewriteCubre`. Tabla inválida: sin citas, sin reescritura, sin error propio; provisional sin correspondencia lo rechaza `PlanIDs`. Comentario de `changeArtifacts` actualizado.
+- Tests en `internal/livespec/change_acceptance_tests_test.go`: reescritura solo de `Cubre` (con `ID#nombre`, ID suelto, mezcla; byte a byte fuera, CRLF), idempotencia, definitivos y ausencia de fichero, provisional no declarado rechazado con la línea de la fila, tabla inválida.
+- Verificación: `go test ./internal/livespec -run 'AcceptanceTests|ChangeArtifacts|PlanChange' -count=1` ok; `go vet ./internal/livespec` ok.
+
 ## Pendientes
 
-T7 a T10.
+T8 a T10.

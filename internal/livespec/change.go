@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests"
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
@@ -61,6 +62,7 @@ type changeFileKind int
 const (
 	kindTasks changeFileKind = iota
 	kindVerify
+	kindAcceptanceTests
 )
 
 // PlanChange calcula en memoria la integración de todas las capacidades de un cambio SDD
@@ -176,9 +178,12 @@ func PlanChange(loc workspace.Location, change string, opts ChangeOptions, reg *
 	if idPlan.Map.Count() > 0 {
 		for _, a := range artifacts {
 			rewritten := a.text
-			if a.kind == kindTasks {
+			switch a.kind {
+			case kindTasks:
 				rewritten = isoevidence.RewriteCubre(a.text, idPlan.Map)
-			} else {
+			case kindAcceptanceTests:
+				rewritten = acceptancetests.RewriteCubre(a.text, idPlan.Map)
+			default:
 				rewritten = isoevidence.RewriteMatrix(a.text, idPlan.Map)
 			}
 			if rewritten != a.text {
@@ -202,8 +207,11 @@ type changeArtifact struct {
 // changeArtifacts lee los ficheros de tareas (`tasks.md`, `tasks.<rol>.md`) y los informes de
 // verify (`verify-report.md`, `verify-report.<rol>.md`) del cambio, y devuelve las citas que
 // el plan valida (D6): los provisionales de las líneas `Cubre:` de un fichero de tareas y
-// los de la columna `Requisito` de la matriz de cada informe de verify. El resto de esos
-// ficheros no se valida (RF-RID-12).
+// los de la columna `Requisito` de la matriz de cada informe de verify, y los de la parte ID
+// de cada entrada de la columna `Cubre` de `pruebas.md` (RF-KOF-23). El resto de esos
+// ficheros no se valida (RF-RID-12): una tabla inválida de `pruebas.md` no produce citas, no
+// se reescribe y no da error propio; un provisional citado sin correspondencia lo rechaza
+// PlanIDs, igual que en tareas y verify.
 func changeArtifacts(changeRoot string, relative func(string) string) ([]changeArtifact, []Citation, error) {
 	entries, err := os.ReadDir(changeRoot)
 	if err != nil {
@@ -222,6 +230,8 @@ func changeArtifacts(changeRoot string, relative func(string) string) ([]changeA
 			kind = kindTasks
 		case name == "verify-report.md" || strings.HasPrefix(name, "verify-report."):
 			kind = kindVerify
+		case name == acceptancetests.FileName:
+			kind = kindAcceptanceTests
 		default:
 			continue
 		}
@@ -235,6 +245,16 @@ func changeArtifacts(changeRoot string, relative func(string) string) ([]changeA
 		file := relative(path)
 		if kind == kindTasks {
 			citations = append(citations, cubreCitations(file, text)...)
+			continue
+		}
+		if kind == kindAcceptanceTests {
+			for _, c := range acceptancetests.Parse(text).Cases {
+				for _, entry := range c.Cubre {
+					for _, span := range reqid.ScanProvisional(entry.ID) {
+						citations = append(citations, Citation{File: file, Line: c.Line, Token: span.Token})
+					}
+				}
+			}
 			continue
 		}
 		for _, row := range isoevidence.ParseMatrix(text).Rows {
