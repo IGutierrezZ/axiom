@@ -44,7 +44,7 @@ Que el agente consulte Azure DevOps (contexto, duplicados, ayuda a la redacción
   - `versions.AzureDevOpsMCP` con comentario de renovate y alta en `TestPinnedVersionsAreDefined`.
   - `azuredevops.go`: overlays por estrategia (Claude `.mcp.json`, OpenCode `mcp` local, Gemini/Cursor `mcpServers`, Codex TOML) e `InjectAzureDevOps`.
   - Pruebas: entrada por agente, idempotencia, convivencia con Context7, organización inválida rechazada, ámbito de usuario sin escritura.
-- [ ] **T2 · Inyección condicionada al plugin activo (`internal/cli/sync.go`, `run.go`)** — ruta: inline.
+- [x] **T2 · Inyección condicionada al plugin activo (`internal/cli/sync.go`, `run.go`)** — ruta: inline.
   - Resolver la organización desde `workspace.Locate(s.workspaceDir)` → `Declarations.Integrations.Active()`.
   - Pruebas: con plugin activo en workspace se escribe; sin plugin o en ámbito de usuario, nada cambia.
 - [ ] **T3 · Doctrina de frontera agente/binario y goldens** — ruta: inline.
@@ -61,11 +61,13 @@ Que el agente consulte Azure DevOps (contexto, duplicados, ayuda a la redacción
 
 - Worktree creado con `scripts/axiom-worktree.ps1 new mcp-ado -Lane odd`.
 - T1: `go test ./internal/versions ./internal/components/mcp -run 'AzureDevOps|TestPinnedVersions'` → ok (6 pruebas, 6 agentes); `gofmt -l` y `go vet` limpios.
+- T2: `go test ./internal/cli -run 'TestRunInstallWorkspaceInjectsAzureDevOpsMCPOnlyWithThePlugin|TestAzureDevOpsMCPOrganization|Context7'` → ok; `go vet ./internal/cli` limpio.
 
 ## Commits
 
 | Tarea | Commit |
 |---|---|
+| T1 | `e3dfd9f0` |
 
 ## Siguiente paso
 
