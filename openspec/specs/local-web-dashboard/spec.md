@@ -294,3 +294,59 @@ El servidor del Dashboard NO DEBE exponer el endpoint `/api/project/review-mode`
 - **DADO** los recursos estáticos del Dashboard
 - **CUANDO** se listan
 - **ENTONCES** no existe `reviewmode.js` ni ninguna referencia a él en las páginas
+### Requirement: Endpoint de Agentes del Proyecto Activo (REQ-1.6)
+
+El servidor DEBE responder a `GET /api/agents` con la lista de agentes del catálogo de Axiom, en el orden del catálogo, y para cada uno: su identificador y nombre, si Axiom lo admite (`supported`, agente seleccionable), si se detecta en el equipo (`detected`, su carpeta de configuración global existe), si está instalado en el proyecto activo (`installed`), si admite el ámbito workspace (`workspace`) y, cuando no se puede instalar en el proyecto, el motivo en castellano (`reason`). La respuesta DEBE indicar además la raíz del proyecto activo, si esa raíz es un proyecto de Axiom (`project`, tiene en sí misma un marcador de workspace) y si el estado del proyecto registra su lista de agentes (`recorded`). Un agente solo figura como instalado cuando el proyecto ha registrado su lista (`installed_agents` no nulo en `.axiom/state.json` del proyecto) y lo incluye: la lista del estado global no cuenta. La consulta es de solo lectura y NO DEBE ejecutar subprocesos ni escribir ficheros. Si el estado del proyecto no se puede leer, la respuesta DEBE ser `200` con el motivo en `state_error` y ningún agente marcado como instalado.
+
+#### Scenario: Las tres marcas de cada agente
+
+- **DADO** un proyecto activo cuyo estado registra `installed_agents: ["claude-code"]` y un equipo donde existe la configuración global de Claude Code y de Cursor
+- **CUANDO** se solicita `GET /api/agents`
+- **ENTONCES** la respuesta es `200` y `recorded` es verdadero
+- **Y** `claude-code` figura como admitido, detectado e instalado
+- **Y** `cursor` figura como admitido y detectado, pero no instalado
+
+#### Scenario: Un proyecto sin lista registrada no hereda la global
+
+- **DADO** un proyecto activo sin `.axiom/state.json` propio y un estado global con `installed_agents: ["claude-code"]`
+- **CUANDO** se solicita `GET /api/agents`
+- **ENTONCES** `recorded` es falso y ningún agente figura como instalado
+
+#### Scenario: Un agente sin modo workspace lleva el motivo
+
+- **DADO** el catálogo de agentes
+- **CUANDO** se solicita `GET /api/agents`
+- **ENTONCES** `github-copilot-cli` figura con `workspace` falso y un `reason` no vacío
+
+### Requirement: Instalar un Agente en el Proyecto Activo desde el Dashboard (REQ-1.7)
+
+El servidor DEBE exponer `POST /api/agents/install` con un cuerpo `{"agent": "<id>"}` que instala ese único agente en el proyecto activo con el mismo núcleo que `axiom install --scope workspace --agent <id>`, sin depender del directorio actual del proceso. La instalación DEBE añadir el agente a `installed_agents` del estado del proyecto sin quitar los ya registrados. Antes de escribir nada, el servidor DEBE rechazar con `400` y el motivo un agente vacío, desconocido, no seleccionable o sin modo workspace, y con `409` una petición cuya raíz activa no es un proyecto de Axiom (sin marcador de workspace en ella). Un fallo de la instalación DEBE responder `500` con `success: false` y el error. Las instalaciones concurrentes DEBEN ejecutarse de una en una.
+
+La pantalla Ecosistema DEBE mostrar un bloque «Agentes» con las tres marcas de cada agente y un botón «Instalar» solo en los agentes admitidos, con modo workspace y no instalados; los que no admiten el ámbito workspace DEBEN mostrar el motivo en lugar del botón. Antes de llamar a la API, la interfaz DEBE pedir confirmación explicando que la instalación escribe en el repositorio y, según el agente, en la carpeta de usuario. Tras instalar, la interfaz DEBE refrescar la lista y el diagnóstico del Doctor.
+
+#### Scenario: Instalar un agente lo registra sin pisar los demás
+
+- **DADO** un proyecto activo cuyo estado registra `installed_agents: ["claude-code"]`
+- **CUANDO** se envía `POST /api/agents/install` con `{"agent": "cursor"}` y la instalación termina bien
+- **ENTONCES** la respuesta es `200` con `success: true`
+- **Y** `installed_agents` del proyecto contiene `claude-code` y `cursor`
+
+#### Scenario: Un agente sin modo workspace se rechaza antes de escribir
+
+- **DADO** un proyecto activo
+- **CUANDO** se envía `POST /api/agents/install` con `{"agent": "github-copilot-cli"}`
+- **ENTONCES** la respuesta es `400` con el motivo
+- **Y** no se ejecuta ninguna instalación
+
+#### Scenario: Sin proyecto activo no se instala
+
+- **DADO** el dashboard con una raíz activa sin marcador de workspace
+- **CUANDO** se envía `POST /api/agents/install` con un agente válido
+- **ENTONCES** la respuesta es `409` y no se ejecuta ninguna instalación
+
+#### Scenario: La interfaz no ofrece el botón a un agente sin modo workspace
+
+- **DADO** la pantalla Ecosistema con la lista de agentes cargada
+- **CUANDO** se pinta la fila de un agente con `workspace` falso
+- **ENTONCES** la fila muestra el motivo y no tiene botón «Instalar»
+

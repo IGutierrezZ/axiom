@@ -338,6 +338,27 @@ Los adaptadores se instalan después de escribir el proyecto, en su carpeta y co
 
 `POST /api/projects/init` solo acepta peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin hacer nada.
 
+#### Agentes del proyecto desde el dashboard
+
+En **Ecosistema → Agentes** aparece cada agente del catálogo con tres marcas:
+
+- **Admitido**: Axiom lo soporta (es seleccionable al instalar).
+- **Detectado**: su configuración global existe en este equipo.
+- **En el proyecto**: figura en `installed_agents` del `.axiom/state.json` del proyecto abierto. La lista del estado global no cuenta.
+
+Mientras el proyecto no registra su lista (solo la escribe `axiom install`), `axiom sync` trabaja con los agentes que detecta en la carpeta de usuario sin guardarlos, y `axiom doctor` avisa en `state:json`. La pantalla lo dice.
+
+El botón **Instalar** solo aparece en los agentes que admiten el ámbito workspace y aún no están en el proyecto. Los que no lo admiten (Trae, Antigravity, Pi y Copilot CLI) muestran el motivo en su lugar. Antes de instalar, la pantalla pide confirmación: la instalación escribe en el repositorio y, según el agente, en la carpeta de usuario.
+
+La instalación equivale a `axiom install --scope workspace --agent <id>` en la carpeta del proyecto, con el conjunto de componentes por defecto. Añade el agente a `installed_agents` sin quitar los ya registrados. Desinstalar y la instalación global no se hacen desde la UI.
+
+`GET /api/agents` devuelve la lista con las tres marcas (`supported`, `detected` e `installed`), `workspace`, `reason`, `project` y `recorded`. `POST /api/agents/install` con `{"agent": "<id>"}` instala un agente, y las instalaciones se ejecutan de una en una. Responde así:
+
+- `400` si el agente falta, no existe, no está disponible o no admite el modo workspace;
+- `409` si la carpeta activa no es un proyecto de Axiom;
+- `500` con `success: false` si la instalación falla;
+- `403` sin hacer nada a una petición con un `Origin` o `Host` ajenos.
+
 #### Modelo por fase desde el dashboard
 
 En **Ecosistema → Modelos** hay una tabla editable por cada adaptador instalado en el proyecto abierto, con una fila por fase SDD (y por agente de Judgment Day) y dos columnas: modelo y esfuerzo. Admiten asignación por fase:

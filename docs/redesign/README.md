@@ -163,6 +163,7 @@ Retirada (C-08-l, decisión P23): el dashboard ya no tiene esta pantalla ni las 
 | Operaciones | `POST /api/ecosystem/sync`, `POST /api/ecosystem/upgrade` `{channel}` y `POST /api/ecosystem/backups/create` |
 | Última operación | Respuesta de la operación (`EcosystemActionResponse`, con `phases` cuando hay `upgrade → sync`) en un `<details>` |
 | Topología | `GET /api/workspace` (`name`, `topology`, `specs_repository`, `roles`) |
+| Agentes | `GET /api/agents` (admitido, detectado y en el proyecto); instalar con `POST /api/agents/install` `{agent}` |
 | Modelos | `GET /api/ecosystem/models` (`active_persona`, `assignments`) |
 | Respaldos | `GET /api/ecosystem/backups`; restaurar con `POST /api/ecosystem/backups/restore` |
 
