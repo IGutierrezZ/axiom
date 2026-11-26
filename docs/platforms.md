@@ -74,7 +74,7 @@ Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `work
 | OpenCode | `%USERPROFILE%\.config\opencode\` |
 | Gemini CLI | `%USERPROFILE%\.gemini\` |
 | Cursor | `%USERPROFILE%\.cursor\` |
-| VS Code Copilot | `%APPDATA%\Code\User\` (settings, prompts) + `%USERPROFILE%\.copilot\` (skills) + `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (`mcp-config.json`, compartido con Copilot CLI) |
+| VS Code Copilot | `%APPDATA%\Code\User\` (settings, prompts) + `%USERPROFILE%\.copilot\` (skills, aunque `COPILOT_HOME` esté definida) + `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (`mcp-config.json`, compartido con Copilot CLI) |
 | GitHub Copilot CLI (solo global) | `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (instrucciones, `settings.json`, `mcp-config.json` y skills) |
 | Codex | `%USERPROFILE%\.codex\` |
 | Antigravity (solo global) | `%USERPROFILE%\.gemini\antigravity\` |
