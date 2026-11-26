@@ -56,7 +56,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
   - Dependencia: 2.1.
   - Commit: `feat(settings): filas de branch_template en el catálogo`.
 
-- [ ] 2.3 **Unidad 4. Instantánea del kickoff.**
+- [x] 2.3 **Unidad 4. Instantánea del kickoff.**
   - Ficheros: `internal/kickoff/gitsnapshot.go` y su prueba en `internal/kickoff/`.
   - Qué: `GitSnapshotBranch.Template`, `GitSnapshotRepo.PendingBranches []GitSnapshotPendingBranch{Kind, Role, Template, Prefix}`, `GitSnapshot.TemplateValues *GitTemplateValues{Kind, Ref}`, todo `omitempty`; `Validate()` con `nametemplate.Parse` + `CheckDistinguishing`, pendiente con `role` y `{task_ref}`, `kind` ∈ {change, role}, `TemplateValues.Kind` ∈ {feature, fix}, `Ref` con `ValidBranchComponent`, `Prefix` con `ValidPrefix`.
   - RED previstos: validación de cada campo; un binario anterior (struct previo) ignora `pending_branches` y `template_values` sin error; el rechazo de `name` vacío en `branches` se mantiene; sin plantilla, el YAML es idéntico byte a byte.

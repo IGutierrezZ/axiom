@@ -7,9 +7,11 @@
 
 - [x] 2.2 Tres filas `branch_template` en el catálogo de Ajustes (`git.`, `repositories[].`, `roles[].`). Commit `feat(settings): filas de branch_template en el catálogo`. RED observado (3 pruebas fallan sin las filas); GREEN: `go test ./internal/settings/ -run 'Catalog|Patch|Write'` y `go test ./internal/dashboard/ -run Settings` ok; goldens sin cambios.
 
+- [x] 2.3 Instantánea del kickoff: `GitSnapshotBranch.Template`, `GitSnapshotRepo.PendingBranches`, `GitSnapshot.TemplateValues` y su `Validate()`. Commit `feat(kickoff): la instantánea congela plantilla, pendientes y valores`. RED observado (fallo de compilación); GREEN: `go test ./internal/kickoff/ -run 'GitSnapshot|Snapshot'` ok, `go vet ./internal/kickoff/` ok, sin plantilla no se emite ninguna clave nueva.
+
 ## Pendientes
 
-2.3, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1.
+3.1, 3.2, 3.3, 4.1, 4.2, 5.1.
 
 ## Desviaciones
 
