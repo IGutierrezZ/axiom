@@ -136,7 +136,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
 
 ## Phase 4: Cierre
 
-- [ ] T10 Ratchet de código muerto y canario de secretos de `/api`.
+- [x] T10 Ratchet de código muerto y canario de secretos de `/api`.
   - Ejecutar `scripts/deadcode-ratchet.sh` si es ejecutable en Git Bash; si no, revisar a mano que toda función exportada nueva (`acceptancetests.*`, `workspace.EffectiveAcceptanceTests`, `sddstatus.TasksGateArtifactPaths`, `sddstatus.AcceptanceTestsFor`, `cli.RunSDDTests`, `Report.OK`, `MissingFinding`, ayudantes de `isoevidence` exportados) es alcanzable desde `./cmd/axiom`. Eliminar lo inalcanzable.
   - Ejecutar `go test ./internal/dashboard -run Canary -count=1`.
   - Cubre: RF-WEB-17 (sin ruta nueva ni fuga de secretos), higiene de RF-KOF-21.

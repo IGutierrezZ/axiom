@@ -63,6 +63,19 @@
 - No se tocaron `sdd-orchestrator-sections.md` ni la skill `sdd-apply`. Riesgo anotado: la frase de la parada `tasks` del orquestador (RF-GAT-32) queda fuera; se cumple vía skill y status.
 - Verificación: `go test ./internal/assets -run 'AcceptanceTestsDoctrine|TestOrchestratorSectionDriftDoesNotGrow|Explainer'` ok; goldens con y sin `-update` ok; `go vet ./internal/assets` ok.
 
+## T10 completada: ratchet de código muerto y canario
+
+- `scripts/deadcode-ratchet.sh` compila la herramienta `deadcode`, y la regla del proyecto prohíbe compilar binarios sueltos (Cortex XDR), así que no se ejecutó en local. La medición real la hace la CI.
+- Revisión manual: las 39 funciones nuevas o renombradas fuera de los tests tienen llamantes de producción. Son alcanzables desde `./cmd/axiom` por estas vías:
+  - `runSDD` → `RunSDDTests` → `runSDDTestsCheck` (con `Report.OK()`);
+  - `Resolve` → `decorateAcceptanceTests` → `AcceptanceTestsFor`;
+  - el dashboard → `incrementAcceptanceTests`;
+  - `livespec` → `acceptancetests.Parse` y `RewriteCubre`;
+  - el digest de cli y de `sddstatus` → `TasksGateArtifactPaths`.
+- Canario: `go test ./internal/dashboard -run Canary -count=1` ok. No hay ruta `/api` nueva.
+- `go vet` de `acceptancetests`, `workspace`, `sddstatus`, `livespec`, `dashboard`, `cli`, `isoevidence`, `hub`, `assets` y `cmd/axiom`: ok. `gofmt -l internal cmd`: sin salida.
+- Sintaxis de `detalle-pruebas.js` y `detalle.js` comprobada como módulo ES con `node --check`: ok.
+
 ## Pendientes
 
-T10.
+Ninguna tarea. Queda como riesgo la frase de la parada `tasks` del orquestador (RF-GAT-32), aplazada por C-05-d.
