@@ -13,26 +13,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
-// TestSDDOrchestratorsCarryNoFormatterOrderingContract: the normalization ordering
-// rule only protected the frozen candidate of the native review, which is
-// suspended (C-01-c), so no orchestrator projects it.
-func TestSDDOrchestratorsCarryNoFormatterOrderingContract(t *testing.T) {
-	for _, path := range allSDDOrchestratorAssetPaths(t) {
-		t.Run(path, func(t *testing.T) {
-			content := mustReadResolved(path)
-			for _, retired := range []string{
-				"Normalization ordering rule",
-				"before review START and its identity freeze",
-				"any byte, path, or mode change invalidates the receipt",
-			} {
-				if strings.Contains(content, retired) {
-					t.Fatalf("%s retains formatter-ordering contract %q", path, retired)
-				}
-			}
-		})
-	}
-}
-
 func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", ".github", "workflows", "ci.yml"))
 	if err != nil {

@@ -1,0 +1,76 @@
+# ODD: Centinelas de prosa: borrar los que fijan redacción (C-08-h)
+
+> **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/centinelas-golden.md`.
+> Espejo de recuperación en Engram: topic `odd/centinelas-golden/tasks`, proyecto `axiom`.
+> Fuente: `docs/plan/backlog-2026-11/08-adelgazamiento.md`, entrada C-08-h (revisión 10), y apartado 6.2 del README del plan. El slug `centinelas-golden` se conserva aunque el enfoque ya no es pasar a goldens.
+
+## Objetivo
+
+Que cambiar la redacción de una skill, de una instrucción o de un asset no obligue a tocar tests. Se borran los centinelas que fijan redacción y las lápidas de ausencia; se conservan solo los contratos que lee el código.
+
+## Problema y porqué
+
+El 86 % de los commits que solo tocaban prosa de `internal/assets` tuvo que tocar tests (diagnóstico de agilidad, revisión 10). Un golden traslada la fricción a `-update`, no la quita: el usuario decidió borrar (2026-11-26).
+
+## Alcance
+
+Se **borran**:
+
+- aserciones de ausencia de frases retiradas;
+- `Contains` sobre redacción libre que ningún código consume;
+- la misma frase comprobada en varios paquetes (como mucho, una);
+- tests de funcionalidades retiradas que no protegen una migración;
+- lápidas `*Retired`, `*Removed`, `*Absent`, `*NoLonger`, `*Legacy`, `*NotContain`, salvo las de migración.
+
+Se **conservan**:
+
+- tokens y marcadores que parsea el código (`{{AXIOM_*}}`, `axiom.sdd-integration.consent/v1`, `granted`/`declined`, comandos y flags, claves YAML);
+- invariantes de seguridad (permisos, nada de push sin autorización);
+- paridad de plantillas entre runtimes;
+- tolerancia a estado antiguo y migraciones (por ejemplo, `state/retired_rdd_roles_test.go`, limpieza en `uninstall`);
+- goldens que ya renderizan el asset completo.
+
+Fuera de alcance: tests de comportamiento que además comprueban texto (solo se recortan sus aserciones de prosa redundantes); tests de `internal/knowledge`, `internal/semantic` y `dashboard/knowledge_assets_test.go` (C-08-l); tests del modo ISO; paralelizar tests (C-08-g).
+
+## Restricciones
+
+- Carril ODD, una sola PR, commit por tarea, Conventional Commits.
+- Pruebas localizadas (paquetes tocados y `-run`); la batería completa la pasa la CI.
+- Cada token retirado se justifica en el commit (por grupo cuando comparten motivo).
+- TDD: desactivado (sin configuración en `axiom.yaml`; cambio de borrado). Comprobaciones funcionales: `go vet` y `go test` de los paquetes tocados.
+
+## Tareas
+
+Ruta: delegada en paralelo (disparador de escritor por paralelismo: cuatro superficies disjuntas, cada una de varios minutos). Los escritores no hacen commit; el padre revisa el diff y hace el commit de cada tarea.
+
+- [ ] **T1 · `internal/assets`**: centinelas de redacción y lápidas de todos sus `*_test.go`, salvo ISO (`sdd_iso_pins_test.go`) y guardas de CI (`workflow_shards_test.go`).
+- [ ] **T2 · `internal/components/sdd`**: tests de contrato y vocabulario, y aserciones de prosa redundantes de `inject_test.go`.
+- [ ] **T3 · `internal/components/agentguidance` e `internal/workspace`** (`docs_contract_test.go` y lápidas del paquete).
+- [ ] **T4 · Lápidas del resto del repositorio** (`cli`, `persona`, `filemerge`, `sddstatus`, `state`, `uninstall`, `engram` y demás), salvo migraciones y lo excluido.
+- [ ] **T5 · Prueba de la fricción** (no se commitea) y cierre: métricas antes/después.
+
+## Criterios de aceptación
+
+- Líneas de test de `internal/assets` y de `components/sdd` antes y después, registradas aquí.
+- Cada token retirado con su justificación en el commit.
+- Goldens que queden, regenerados con `-update` y revisados (si alguno cambia).
+- Tests de los paquetes tocados en verde.
+- Reescribir una frase no contractual de `internal/assets/skills/sdd-apply/SKILL.md` hace fallar como mucho goldens regenerables.
+
+## Métricas
+
+| Medida | Antes (`7464c5a7`) | Después |
+|---|---|---|
+| Líneas de test de `internal/assets` | 8.644 | |
+| Líneas de test de `internal/components/sdd` | 17.315 | |
+| Líneas de test de `agentguidance` + `workspace/docs_contract_test.go` | 2.405 + 668 | |
+| Funciones lápida (`*Retired`…`*NotContain`) | 314 | |
+| Líneas de `*_test.go` del repositorio (sin `bench/`) | 245.031 | |
+
+## Progreso y evidencias
+
+(pendiente)
+
+## Siguiente paso
+
+Lanzar T1–T4 en paralelo.
