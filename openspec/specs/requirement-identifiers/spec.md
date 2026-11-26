@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia; la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no conserva los identificadores de un cliente al adoptar (C-03-c) ni migra las specs de Axiom (C-03-e).
+Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no migra las specs de Axiom (C-03-e).
 
 ## Términos
 
@@ -235,7 +235,8 @@ La serie de un identificador es todo lo que no es el número de secuencia y su c
 
 El parseo del identificador de un título de requisito, la detección de candidatos, la validación, la extracción de serie y número, el formato del siguiente identificador, las notaciones del patrón y el identificador sintético DEBEN residir en un único paquete hoja (`internal/reqid`, solo biblioteca estándar) que no depende de ningún otro paquete de Axiom. `openspecdoc` e `isoevidence` solo pueden importar ese paquete entre los internos. El identificador de un título es el último identificador válido entre paréntesis (`(ID)`); el campo `ID` precalculado de los requisitos de `openspecdoc` desaparece, de modo que ningún consumidor lee un identificador calculado con un patrón por defecto oculto.
 
-Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingdoc` y la CLI (`archive integrate`, `sdd archive-compose`, `sdd archive-check`, `sdd trace`) DEBEN obtener el patrón efectivo del workspace cuando lo tienen y recibirlo por parámetro u opción cuando no, con el valor por defecto si no se pasa. Ningún consumidor DEBE conservar una expresión regular, una constante ni un `Sprintf` propios del formato del identificador. **Excepción deliberada y temporal (A-03-2, REQ-30.31):** `internal/adoption/adoptcheck` y `axiom archive adopt` siguen usando el patrón por defecto `REQ-<n>.<m>` hasta C-03-c, sea cual sea el patrón declarado por el proyecto; sus reglas (`RuleFormat`, `RuleUniqueness`, `RuleSeries`), textos y notaciones no cambian y NO leen `sdd.id_pattern`.
+Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingdoc`, `internal/adoption/adoptcheck` y la CLI (`archive integrate`, `archive adopt`, `sdd archive-compose`, `sdd archive-check`, `sdd trace`) DEBEN obtener el patrón efectivo del workspace cuando lo tienen y recibirlo por parámetro u opción cuando no, con el valor por defecto si no se pasa. Ningún consumidor DEBE conservar una expresión regular, una constante ni un `Sprintf` propios del formato del identificador. NO existe ninguna excepción: `axiom archive adopt check` y los textos de `axiom archive adopt` leen `sdd.id_pattern` y miden con el patrón efectivo; un patrón declarado inaccesible o inválido da el mismo error accionable que en el resto de consumidores.
+(Previously: excepción deliberada y temporal (A-03-2, REQ-30.31) por la que `internal/adoption/adoptcheck` y `axiom archive adopt` seguían usando el patrón por defecto `REQ-<n>.<m>` hasta C-03-c, sin leer `sdd.id_pattern`.)
 
 **Criterio de terminado ejecutable** (decisión del 2026-11-23): `rg -n 'REQ-[^0-9]' --type go internal cmd -g '!*_test.go'` solo coincide en `internal/reqid` y en comentarios, y la prueba de arquitectura `TestNoRequirementIDFormatOutsideReqid` falla si un literal de texto de un `.go` de producción de `internal/` o `cmd/` contiene `REQ-` seguido de algo que no sea una cifra fuera de `internal/reqid` (los comentarios quedan fuera). Las citas de requisitos de Axiom con cifras (`REQ-21.18`) en mensajes y la plantilla de borrador de `internal/knowledge/sweep.go` quedan fuera de este criterio y para C-03-e.
 
@@ -271,21 +272,24 @@ Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingd
 - **CUANDO** procesa un título con `(REQ-30.4)`
 - **ENTONCES** reconoce `REQ-30.4`, con el patrón por defecto
 
-#### Scenario: `adoptcheck` no cambia sus reglas con el defecto
+#### Scenario: `adoptcheck` con el defecto se comporta como un proyecto por defecto
 
-- **DADO** una adopción con el patrón por defecto
+- **DADO** un proyecto sin `sdd.id_pattern` y un cambio de adopción con identificadores `REQ-<n>.<m>`
 - **CUANDO** se ejecuta `axiom archive adopt check`
-- **ENTONCES** las violaciones de formato, unicidad y serie se reportan exactamente como antes de este cambio
+- **ENTONCES** los identificadores se validan con el patrón por defecto `REQ-<n>.<m>` y los fallos de formato y unicidad se reportan con las reglas de REQ-30.11
 
-#### Scenario: `adoptcheck` y `archive adopt` siguen en el defecto con un patrón declarado
+#### Scenario: `adoptcheck` y `archive adopt` leen el patrón declarado
 
-- **DADO** un proyecto con `sdd: {id_pattern: "RF-<DOM>-<NN>"}`
+- **DADO** un proyecto con `sdd: {id_pattern: "RF-<NNN>"}` y un título de requisito `(RF-001)`
 - **CUANDO** se ejecuta `axiom archive adopt check` o `axiom archive adopt`
-- **ENTONCES** se aplican las reglas y los textos con el patrón por defecto `REQ-<n>.<m>`, igual que sin declaración
-- **Y** no se lee `sdd.id_pattern` hasta C-03-c
+- **ENTONCES** se mide y se informa con el patrón `RF-<NNN>`, sin fallo de formato por el identificador `RF-001`
+- **Y** los textos y la ayuda de `axiom archive adopt` citan el patrón declarado y no la excepción «hasta C-03-c»
 
----
+#### Scenario: Un patrón declarado inválido da el error accionable en la adopción
 
+- **DADO** un proyecto con un `sdd.id_pattern` que no es un patrón válido
+- **CUANDO** se ejecuta `axiom archive adopt check`
+- **ENTONCES** falla con el mismo error accionable que el resto de verbos, nombrando el patrón
 ### Requirement: Candidato frente a Válido con Errores Tipados y Continuaciones Conservadas (REQ-44.5)
 
 El sistema DEBE distinguir entre un texto candidato y un identificador válido. El candidato empieza, en límite de palabra, por el literal inicial del patrón efectivo y sigue con letras, cifras y los caracteres no alfanuméricos de los literales posteriores del patrón, terminando en una letra o una cifra; para el patrón por defecto es exactamente `\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`. Un candidato que no casa por completo con el patrón efectivo DEBE reportarse como candidato mal formado, con un error tipado que nombre el texto encontrado, el patrón efectivo en su texto legible y la continuación (corregirlo según el patrón). La búsqueda devuelve los candidatos sin repetidos y en orden de aparición, separados en válidos y mal formados. Los demás casos (nombre sin identificador, nombre con más de un identificador distinto y repetición de un identificador entre requisitos) conservan su error tipado y su continuación, formulados con el patrón efectivo (REQ-29.3 de `sdd-iso-evidence`). La puntuación final que no forma parte del identificador (una coma, un punto o un paréntesis de cierre tras `REQ-30.1`) NO DEBE contarse como parte del candidato. Con el patrón por defecto, las clasificaciones, los textos y las continuaciones coinciden con los de antes de este cambio.
