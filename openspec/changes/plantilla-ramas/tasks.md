@@ -120,7 +120,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
 
 ## Fase 5: Autofetch
 
-- [ ] 5.1 **Unidad 9. Regla 3 del autofetch con plantilla (RED primero).**
+- [x] 5.1 **Unidad 9. Regla 3 del autofetch con plantilla (RED primero).**
   - Ficheros: `internal/branch/engine/autofetch_relevance.go` y su prueba.
   - Qué: con plantilla efectiva en la rama del cambio del repositorio de specs, `handedOffChange` lista las referencias remotas bajo el prefijo literal (`{prefix}/` → prefijo efectivo; `{kind}/` → `feature/` y `fix/`), con la cota `autofetchHandoffLimit`, lee `TreeDirs` y `FileAt` del `kickoff.yaml` y toma el cambio cuya instantánea nombra esa rama; se detiene en el segundo candidato; sin prefijo literal no aplica y deja un aviso en `result.Warnings`. Sin plantilla, igual que hoy.
   - RED previstos: cambio cedido `feature/…` reconocido por la instantánea; dos candidatos; plantilla sin prefijo literal (aviso); sin plantilla (igual); la regla 3 con plantilla no crea ninguna rama local (matriz de amenazas); el prefijo literal pasa `plainArgument`.
@@ -128,6 +128,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
   - Verificación: `go test ./internal/branch/engine/ -run 'Autofetch\|HandedOff'`; `go vet ./internal/branch/engine/`; `scripts/deadcode-ratchet.sh`.
   - Dependencia: 3.3.
   - Commit: `feat(branch): el autofetch reconoce un cambio cedido con plantilla`.
+  - Evidencia: hecho. Ruta: inline. TDD: las pruebas se escribieron junto con el código (sin RED separado); GREEN observado. `nametemplate.LiteralPrefixes` (prefijo literal, `{prefix}` efectivo y `{kind}` en `feature`/`fix`) y `templatedHandedOffChange` en `autofetch_relevance.go` (cota `autofetchHandoffLimit` sobre las referencias, `TreeDirs` + `FileAt` + `kickoff.ParseKickoff`, candidato si `Git.ChangeBranch` es la rama, parada en el segundo, comprobación local con el nombre resuelto, aviso en `result.Warnings` sin prefijo literal). Sin plantilla, el camino es el de antes. Pruebas: cesión reconocida por la instantánea sin crear ramas locales, kickoff que nombra otra rama, dos candidatos, sin prefijo literal (aviso), prefijos aceptados por `plainArgument`, `TestLiteralPrefixes`. `go test ./internal/branch/engine/ ./internal/branch/nametemplate/ -run Autofetch|HandedOff|Relevance|LiteralPrefixes` ok; `go vet` limpio; `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` ok; `deadcode-ratchet.sh`: «no new unreachable functions».
 
 ## Orden de implementación y paralelismo
 

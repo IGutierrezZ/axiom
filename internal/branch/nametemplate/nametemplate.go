@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
@@ -298,3 +299,45 @@ func (e *InvalidNameError) Error() string {
 }
 
 func (e *InvalidNameError) Unwrap() error { return e.Cause }
+
+// LiteralPrefixes devuelve los prefijos literales de ramas bajo los que puede vivir un nombre
+// renderizado con t: el texto fijo hasta la última «/» anterior a la primera variable que no sea
+// `{prefix}` ni `{kind}`. `{prefix}` se sustituye por prefix y `{kind}` se bifurca en `feature` y
+// `fix`. El resultado va sin «/» final, ordenado y sin repetir; vacío cuando la plantilla no tiene
+// prefijo literal (empieza por otra variable, o no hay «/» antes de ella) o `{prefix}` va con
+// prefix vacío.
+func LiteralPrefixes(t Template, prefix string) []string {
+	heads := []string{""}
+loop:
+	for _, s := range t.segments {
+		switch {
+		case s.variable == "":
+			for i := range heads {
+				heads[i] += s.literal
+			}
+		case s.variable == VarPrefix:
+			if prefix == "" {
+				return nil
+			}
+			for i := range heads {
+				heads[i] += prefix
+			}
+		case s.variable == VarKind:
+			forked := make([]string, 0, 2*len(heads))
+			for _, h := range heads {
+				forked = append(forked, h+"feature", h+"fix")
+			}
+			heads = forked
+		default:
+			break loop
+		}
+	}
+	var found []string
+	for _, h := range heads {
+		if cut := strings.LastIndex(h, "/"); cut > 0 {
+			found = append(found, h[:cut])
+		}
+	}
+	slices.Sort(found)
+	return slices.Compact(found)
+}
