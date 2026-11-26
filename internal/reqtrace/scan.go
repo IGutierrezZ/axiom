@@ -22,6 +22,9 @@ type Source struct {
 	// History es el puerto de git del repositorio de la fuente; nil con Files indica que la
 	// fuente no está en un repositorio git.
 	History isoevidence.History
+	// Repo identifica el repositorio git de la fuente (su raíz): dos fuentes con el mismo Repo
+	// comparten historia y sus commits son comparables entre sí.
+	Repo string
 }
 
 var (
