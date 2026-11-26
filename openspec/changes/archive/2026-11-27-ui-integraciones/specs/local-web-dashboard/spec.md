@@ -2,7 +2,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Cabeceras de Seguridad Generales con CSP Fija, sin CORS y sin Respuesta Genérica a `OPTIONS` (prov:WEB:1)
+### Requirement: Cabeceras de Seguridad Generales con CSP Fija, sin CORS y sin Respuesta Genérica a `OPTIONS` (RF-WEB-27)
 
 Toda respuesta del servidor del dashboard DEBE llevar una `Content-Security-Policy` general con exactamente estas directivas: `default-src 'self'`, `script-src 'self'`, `img-src 'self' data:`, `font-src 'self'`, `connect-src 'self'`, `object-src 'none'`, `base-uri 'none'`, `form-action 'self'` y `frame-ancestors 'none'`, más una directiva `style-src` (cuyo valor fija el diseño). La política NO DEBE incluir `'unsafe-inline'` ni `'unsafe-eval'` en `script-src`, ni ningún origen externo. El script de tema de `index.html` DEBE cargarse desde un fichero propio embebido, de forma síncrona en `<head>`, y `index.html` NO DEBE contener ningún `<script>` con código en línea.
 
@@ -37,7 +37,7 @@ La ruta `/api/explainer` DEBE conservar su CSP propia (RF-WEB-15), que prevalece
 - **ENTONCES** lleva la CSP propia de RF-WEB-15 una sola vez
 - **Y** no se le añade la CSP general
 
-### Requirement: `Host` y `Origin` Locales en las Rutas que Mutan y en Todas las Rutas `/api/integrations*` (prov:WEB:2)
+### Requirement: `Host` y `Origin` Locales en las Rutas que Mutan y en Todas las Rutas `/api/integrations*` (RF-WEB-28)
 
 Toda ruta que muta estado (cualquier método distinto de `GET`, `HEAD` y `OPTIONS`) y toda ruta `/api/integrations*`, también con `GET`, DEBEN exigir que la cabecera `Host` designe un destino local (bucle local o el `Host` del propio servidor) y que, si la petición lleva `Origin`, este sea local. Una petición con `Host` u `Origin` ajeno DEBE rechazarse con `403` antes de leer el cuerpo, de resolver secretos o de escribir nada. Esta comprobación se suma a la de petición local de RF-WEB-10.
 
@@ -68,7 +68,7 @@ Toda ruta que muta estado (cualquier método distinto de `GET`, `HEAD` y `OPTION
 - **CUANDO** el cliente consulta `GET /api/integrations`
 - **ENTONCES** el servidor la atiende con normalidad
 
-### Requirement: `GET /api/integrations` Devuelve Manifiesto, Valores, Estado del Secreto e Identidad sin Revelar Nunca un Secreto (prov:WEB:3)
+### Requirement: `GET /api/integrations` Devuelve Manifiesto, Valores, Estado del Secreto e Identidad sin Revelar Nunca un Secreto (RF-WEB-29)
 
 `GET /api/integrations` DEBE devolver, para cada plugin de integración disponible, su manifiesto (campos de configuración, tipos de work item, eventos, estados y jornada), los valores actuales de `integrations.<plugin>` leídos de `axiom.yaml`, el estado del secreto y la identidad resuelta persistida. El estado del secreto DEBE limitarse a su procedencia (`source`), con uno de los valores `env`, `keyring`, `missing` o `keyring_unavailable`, y NUNCA incluir el valor del secreto, un fragmento ni su longitud. El descubrimiento de proyectos, tipos y estados DEBE servirse bajo demanda y no en la consulta general.
 
@@ -111,7 +111,7 @@ La respuesta NO DEBE contener el PAT ni ningún valor derivado de él, tampoco e
 - **CUANDO** el cliente envía `POST`, `PUT` o `DELETE` a `/api/integrations`
 - **ENTONCES** responde `405`
 
-### Requirement: Guardar y Eliminar el PAT por Endpoints Propios que Responden Solo `source`, con Guía de Variable de Entorno cuando No Hay Almacén (prov:WEB:4)
+### Requirement: Guardar y Eliminar el PAT por Endpoints Propios que Responden Solo `source`, con Guía de Variable de Entorno cuando No Hay Almacén (RF-WEB-30)
 
 El dashboard DEBE ofrecer un endpoint propio para guardar el PAT (`POST`, solo JSON, cuerpo acotado, petición local con `Host` y `Origin` locales) y otro para eliminarlo. El PAT DEBE guardarse únicamente en el almacén de secretos del sistema y las dos operaciones DEBEN responder solo con la procedencia (`source`) resultante, nunca con el valor. El PAT NO DEBE escribirse en `axiom.yaml`, en ningún otro fichero versionado, en logs ni en ninguna respuesta HTTP, y NO DEBE ser clave del catálogo de ajustes.
 
@@ -155,7 +155,7 @@ Cuando el sistema no tiene un almacén escribible (por ejemplo, Linux sin servic
 - **CUANDO** se busca cualquier clave de PAT o secreto
 - **ENTONCES** no existe, y una escritura por `PUT /api/settings` que la nombre se rechaza como clave desconocida
 
-### Requirement: «Probar Conexión» Resuelve y Persiste la Identidad con la Misma Semántica que `axiom integrations connect` (prov:WEB:5)
+### Requirement: «Probar Conexión» Resuelve y Persiste la Identidad con la Misma Semántica que `axiom integrations connect` (RF-WEB-31)
 
 El dashboard DEBE ofrecer una ruta para probar la conexión de un plugin con la misma semántica que `axiom integrations connect`: resolver la identidad con el secreto disponible, mostrarla y persistirla en la identidad local no versionada del usuario (`~/.axiom/integration-identities.json`), nunca en `axiom.yaml`. La ruta DEBE exigir petición local con `Host` y `Origin` locales y DEBE acotar su duración con un plazo propio inferior a la espera de escritura del servidor.
 
@@ -189,7 +189,7 @@ Cuando la resolución produce varios candidatos (`IdentitySelectionError`), la r
 - **CUANDO** el cliente prueba la conexión
 - **ENTONCES** responde `403` sin resolver ningún secreto
 
-### Requirement: «Descubrir» Rellena los Desplegables con el Descubrimiento del Plugin (prov:WEB:6)
+### Requirement: «Descubrir» Rellena los Desplegables con el Descubrimiento del Plugin (RF-WEB-32)
 
 El dashboard DEBE ofrecer una ruta de descubrimiento que, bajo demanda y con el secreto disponible, devuelva las opciones que el plugin descubre (por ejemplo proyectos, tipos de work item y estados) para rellenar los desplegables de la pantalla de integraciones. La ruta DEBE exigir `Host` y `Origin` locales, acotar su duración con un plazo propio y devolver errores tipados en castellano sin revelar el secreto. Descubrir NO DEBE escribir `axiom.yaml`: la configuración solo se escribe con `PUT /api/settings`.
 
@@ -209,7 +209,7 @@ El dashboard DEBE ofrecer una ruta de descubrimiento que, bajo demanda y con el 
 - **CUANDO** el cliente pide descubrir
 - **ENTONCES** responde con un error tipado de plazo agotado y los desplegables conservan su valor anterior
 
-### Requirement: Pantalla «Integraciones» Generada desde el Manifiesto del Plugin, Genérica por Plugin (prov:WEB:7)
+### Requirement: Pantalla «Integraciones» Generada desde el Manifiesto del Plugin, Genérica por Plugin (RF-WEB-33)
 
 El dashboard DEBE ofrecer una pantalla «Integraciones» con entrada en la navegación y ruta por *hash*, generada desde el manifiesto que devuelve `GET /api/integrations` sin conocer ningún plugin concreto. Por cada plugin DEBE ofrecer: activación (`integrations[<plugin>].enabled`), conexión (guardar y eliminar el PAT, mostrar `source`, «Probar conexión» e identidad), y los campos del manifiesto (tipos, eventos, estados, tags y jornada) con un control acorde a su tipo, obligatoriedad, valores permitidos, formato y límites. Los valores se guardan por `PUT /api/settings` en un lote validado por el decodificador estricto (RF-WEB-19). Todo texto del manifiesto, de la configuración y del servicio externo DEBE insertarse como texto, nunca como HTML.
 
@@ -258,7 +258,7 @@ La pantalla NO DEBE duplicar los controles de `branch_template`: DEBE enlazar a 
 - **CUANDO** se abre la pantalla
 - **ENTONCES** el valor aparece literal y no se interpreta como HTML
 
-### Requirement: Pestaña «Integraciones» en el Detalle del Cambio con WI, Tasks por Rol, Outbox y Actores (prov:WEB:8)
+### Requirement: Pestaña «Integraciones» en el Detalle del Cambio con WI, Tasks por Rol, Outbox y Actores (RF-WEB-34)
 
 El detalle del cambio DEBE incluir una pestaña «Integraciones», también para cambios archivados (`Folder`), que muestre: el work item enlazado (identificador, título si existe y enlace); por cada rol, su Task enlazada con la estimación y las imputaciones de tiempo registradas y el tiempo pendiente de imputar; las operaciones pendientes de la outbox del cambio (de solo lectura); y los actores por fase (quién selló el kickoff, quién decidió cada puerta y quién imputó cada tiempo). La pestaña NO DEBE ejecutar ni reintentar operaciones de la outbox ni modificar vínculos. Sin vínculos ni plugin activo, DEBE mostrar un estado vacío explícito. Los datos NO DEBEN contener secretos y todo texto DEBE insertarse como texto.
 
@@ -293,7 +293,7 @@ El detalle del cambio DEBE incluir una pestaña «Integraciones», también para
 - **CUANDO** se consulta el detalle del cambio
 - **ENTONCES** la respuesta no contiene el centinela
 
-### Requirement: Alta de Incremento con Work Item de Origen: Campo ID/URL con Plugin Activo, Mismas Fases que `change start` y Fallos con Salidas Explícitas (prov:WEB:9)
+### Requirement: Alta de Incremento con Work Item de Origen: Campo ID/URL con Plugin Activo, Mismas Fases que `change start` y Fallos con Salidas Explícitas (RF-WEB-35)
 
 Con un plugin de work items activo, el alta de incremento del dashboard DEBE mostrar un campo de identificador o URL del work item, y el alta DEBE ejecutar las mismas fases que `axiom change start` (fase 1, preparación de la rama con el nombre derivado, creación guardada de la carpeta del cambio y fase 2), sin reimplementar su lógica. Como el alta manual, el alta con work item NO DEBE sellar `kickoff.yaml`: el estilo de ejecución es una decisión de gobierno que el dashboard no pregunta, y el kickoff se sella después al retomar el cambio. Sin plugin activo, el alta DEBE comportarse exactamente como antes y NO DEBE mostrar el campo.
 
@@ -348,7 +348,7 @@ Un rechazo de la fase 1 NO DEBE dejar rama, carpeta del cambio ni `kickoff.yaml`
 - **CUANDO** el servidor la procesa
 - **ENTONCES** responde `403` sin ejecutar ninguna fase
 
-### Requirement: Enlace «Abrir en Azure DevOps» con URL Validada (prov:WEB:10)
+### Requirement: Enlace «Abrir en Azure DevOps» con URL Validada (RF-WEB-36)
 
 Cuando un work item enlazado tiene `Link.URL`, el dashboard DEBE mostrar un enlace «Abrir en Azure DevOps» a esa URL. El enlace DEBE mostrarse solo si la URL es absoluta con esquema `http` o `https`, DEBE llevar `target="_blank"` y `rel="noopener noreferrer"`, y NO DEBE mostrarse (ni como texto activo) para cualquier otro esquema (por ejemplo `javascript:` o `data:`) ni para una URL no analizable. La URL se inserta como atributo del DOM, nunca como HTML.
 
@@ -367,7 +367,7 @@ Cuando un work item enlazado tiene `Link.URL`, el dashboard DEBE mostrar un enla
 - **CUANDO** se muestra el WI
 - **ENTONCES** no aparece el enlace
 
-### Requirement: Rutas de Integraciones Clasificadas en el Canario de Secretos (prov:WEB:11)
+### Requirement: Rutas de Integraciones Clasificadas en el Canario de Secretos (RF-WEB-37)
 
 Toda ruta nueva de integraciones y de arranque desde un work item DEBE clasificarse en el canario de secretos, como cubierta (`coveredRoutes`) cuando devuelve datos o como excluida con motivo (`excludedRoutes`) cuando solo muta, de modo que la prueba que exige clasificar toda ruta de `server.go` siga en verde. El canario DEBE ejercitar con un PAT centinela las rutas cubiertas (incluida `GET /api/integrations`) y comprobar que ninguna respuesta lo contiene. Las pruebas de pines de pestañas, de assets y de cadenas del JS DEBEN seguir en verde. Esta exigencia complementa a RF-WEB-26, que no cambia.
 
@@ -398,9 +398,9 @@ La interfaz web en `index.html` y `app.js` DEBE estructurarse en una experiencia
    - **Visor de Handoffs:** renderizado claro de relevos con sus metadatos y acordeón de secciones.
    - **Topología y Salud:** inspección de repositorios asociados y repositorio de especificaciones, sin mostrar la política de ramas (que se consulta y edita en «Ajustes del proyecto»); la tarjeta de Topología de Ecosistema y el selector de proyecto enlazan a esa pantalla.
    - **Ajustes del proyecto:** pantalla de consulta y edición de las claves de `axiom.yaml` (RF-WEB-18), con entrada propia en la navegación.
-   - **Integraciones:** pantalla de activación y configuración de los plugins de integración, generada desde su manifiesto (prov:WEB:7), con entrada propia en la navegación.
+   - **Integraciones:** pantalla de activación y configuración de los plugins de integración, generada desde su manifiesto (RF-WEB-33), con entrada propia en la navegación.
    - **Catálogo de Skills:** visor de skills disponibles en el proyecto.
-3. El detalle del cambio incluye una pestaña «Integraciones» con el work item enlazado, las Tasks por rol, la outbox y los actores (prov:WEB:8).
+3. El detalle del cambio incluye una pestaña «Integraciones» con el work item enlazado, las Tasks por rol, la outbox y los actores (RF-WEB-34).
 
 (Previously: la navegación no incluía «Integraciones» ni el detalle del cambio tenía pestaña de integraciones.)
 
@@ -435,9 +435,9 @@ La interfaz web en `index.html` y `app.js` DEBE estructurarse en una experiencia
 
 ### Requirement: Las Claves de `axiom.yaml` se Editan Solo por `/api/settings`; `/api/workspace` Sigue de Solo Lectura y Toda Escritura Exige Petición Local (RF-WEB-10)
 
-El dashboard NO DEBE editar `axiom.yaml` por ninguna ruta que no sea `PUT /api/settings` (RF-WEB-19), que aplica el catálogo y el escritor de `workspace-topology` (RF-TOP-21 a RF-TOP-23) con validación del documento completo y revisión esperada. Esto incluye el bloque `integrations.<plugin>`: se edita solo por esa ruta. El PAT se guarda y se elimina por sus endpoints propios (prov:WEB:4) en el almacén de secretos del sistema y NUNCA toca `axiom.yaml`. `GET /api/workspace` DEBE seguir siendo de solo lectura: `POST`, `PUT`, `PATCH` y `DELETE` sobre `/api/workspace` DEBEN responder `405`. Las claves de solo lectura del catálogo (incluidas `workspace.topology` y `workspace.specs_repository`) NO DEBEN poder editarse desde el dashboard.
+El dashboard NO DEBE editar `axiom.yaml` por ninguna ruta que no sea `PUT /api/settings` (RF-WEB-19), que aplica el catálogo y el escritor de `workspace-topology` (RF-TOP-21 a RF-TOP-23) con validación del documento completo y revisión esperada. Esto incluye el bloque `integrations.<plugin>`: se edita solo por esa ruta. El PAT se guarda y se elimina por sus endpoints propios (RF-WEB-30) en el almacén de secretos del sistema y NUNCA toca `axiom.yaml`. `GET /api/workspace` DEBE seguir siendo de solo lectura: `POST`, `PUT`, `PATCH` y `DELETE` sobre `/api/workspace` DEBEN responder `405`. Las claves de solo lectura del catálogo (incluidas `workspace.topology` y `workspace.specs_repository`) NO DEBEN poder editarse desde el dashboard.
 
-Las preferencias personales editables desde el dashboard son las del hub: modo de trabajo y raíz de worktrees (RF-HUB-07), mediante `worktree-prefs`, y el autofetch del proyecto (RF-HUB-13), mediante `/api/settings/personal` (RF-WEB-20), siempre sobre el proyecto activo y con la validación de RF-HUB-07. Editar las preferencias personales NO DEBE modificar ningún fichero del proyecto. Toda ruta del servidor que escribe, sea `PUT /api/settings`, `PUT /api/settings/personal`, `PUT /api/projects/active/worktree-prefs`, el guardado o la eliminación del PAT, la conexión o el alta con work item, DEBE exigir una petición local (`isLocalRequest`) con `Host` y `Origin` locales (prov:WEB:2) y rechazar cualquier otra con `403` antes de leer el cuerpo o escribir.
+Las preferencias personales editables desde el dashboard son las del hub: modo de trabajo y raíz de worktrees (RF-HUB-07), mediante `worktree-prefs`, y el autofetch del proyecto (RF-HUB-13), mediante `/api/settings/personal` (RF-WEB-20), siempre sobre el proyecto activo y con la validación de RF-HUB-07. Editar las preferencias personales NO DEBE modificar ningún fichero del proyecto. Toda ruta del servidor que escribe, sea `PUT /api/settings`, `PUT /api/settings/personal`, `PUT /api/projects/active/worktree-prefs`, el guardado o la eliminación del PAT, la conexión o el alta con work item, DEBE exigir una petición local (`isLocalRequest`) con `Host` y `Origin` locales (RF-WEB-28) y rechazar cualquier otra con `403` antes de leer el cuerpo o escribir.
 
 (Previously: `integrations.*` no era editable desde el dashboard, el PAT no tenía endpoint y la exigencia de petición local no incluía `Host` ni las rutas de integraciones.)
 
@@ -501,7 +501,7 @@ La pantalla DEBE mostrar de forma visible el aviso «Editar solo afecta a cambio
 
 Las claves con `editable: false` (`technical_context`, `workspace.root`, `skill_roots`, `governance.*`, `workspace.topology`, `workspace.specs_repository`) DEBEN mostrarse sin control de edición, con su valor y la acción «Abrir en el editor»: un enlace `vscode://file/<ruta absoluta de axiom.yaml>` etiquetado «Abrir en el editor», más un botón «Copiar ruta» que copia esa ruta absoluta. El servidor NO DEBE lanzar ningún proceso para abrir el editor.
 
-La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch (RF-WEB-20) y `worktree_mode` y `worktree_root` (estos dos sobre `worktree-prefs`, RF-WEB-10), identificado como personal y no versionado. En `monorepo-embedded` la pantalla NO DEBE mostrar `roles`, `gate_policy`, `repositories` ni `acceptance_tests`; en `multirepo` DEBE mostrar `repositories[]`, `acceptance_tests` y `roles[].gate_policy` con `optional` entre sus opciones. En un proyecto ISO, `workflow.lane` NO DEBE ofrecer `odd`. La pantalla NO DEBE incluir ningún control de RDD (global, por proyecto o por clon), ni `commit_review`, ni `docs_publication`. Tampoco DEBE pintar el bloque `integrations`: DEBE enlazar a «Integraciones» (prov:WEB:7), que es donde se consulta y edita.
+La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch (RF-WEB-20) y `worktree_mode` y `worktree_root` (estos dos sobre `worktree-prefs`, RF-WEB-10), identificado como personal y no versionado. En `monorepo-embedded` la pantalla NO DEBE mostrar `roles`, `gate_policy`, `repositories` ni `acceptance_tests`; en `multirepo` DEBE mostrar `repositories[]`, `acceptance_tests` y `roles[].gate_policy` con `optional` entre sus opciones. En un proyecto ISO, `workflow.lane` NO DEBE ofrecer `odd`. La pantalla NO DEBE incluir ningún control de RDD (global, por proyecto o por clon), ni `commit_review`, ni `docs_publication`. Tampoco DEBE pintar el bloque `integrations`: DEBE enlazar a «Integraciones» (RF-WEB-33), que es donde se consulta y edita.
 
 (Previously: la pantalla excluía `integrations.*` sin ofrecer enlace a ningún sitio donde editarlo.)
 
@@ -583,7 +583,7 @@ La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch 
 
 ### Requirement: Endpoint `GET|PUT /api/settings` con Catálogo, Revisión, Escritura Validada y Errores Tipados en Castellano (RF-WEB-19)
 
-`GET /api/settings` DEBE devolver el catálogo (RF-TOP-21) ya filtrado por la topología y el carácter ISO del proyecto activo, con el valor actual de cada clave, la revisión de `axiom.yaml` (RF-TOP-23) y la ruta absoluta del fichero (la de `Locate().ConfigPath`). La respuesta incluye `integrations`: sus entradas (`integrations[<plugin>].<clave>` y `integrations[<plugin>].enabled`) con su valor leído de `axiom.yaml`, derivadas del manifiesto del plugin (RF-TOP-21). La respuesta NO DEBE contener valor alguno de credenciales o secretos: el PAT no es clave del catálogo y los secretos solo se informan por su procedencia en `GET /api/integrations` (prov:WEB:3).
+`GET /api/settings` DEBE devolver el catálogo (RF-TOP-21) ya filtrado por la topología y el carácter ISO del proyecto activo, con el valor actual de cada clave, la revisión de `axiom.yaml` (RF-TOP-23) y la ruta absoluta del fichero (la de `Locate().ConfigPath`). La respuesta incluye `integrations`: sus entradas (`integrations[<plugin>].<clave>` y `integrations[<plugin>].enabled`) con su valor leído de `axiom.yaml`, derivadas del manifiesto del plugin (RF-TOP-21). La respuesta NO DEBE contener valor alguno de credenciales o secretos: el PAT no es clave del catálogo y los secretos solo se informan por su procedencia en `GET /api/integrations` (RF-WEB-29).
 
 (Previously: la respuesta no contenía `integrations` y `integrations.*` era `unknown_key`.)
 

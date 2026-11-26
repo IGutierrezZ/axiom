@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 21:45:42 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 622 | **Total Escenarios BDD:** 3105
+> **Última Sincronización:** 2026-11-26 23:51:24 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 633 | **Total Escenarios BDD:** 3185
 
 ---
 
@@ -28,7 +28,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 34 | 194 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 26 | 133 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 37 | 203 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -59,7 +59,7 @@
 | `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 24 | 167 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 24 | 177 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -1581,6 +1581,8 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 - **[RF-WEB-07]** Estructura de Navegación y Vistas en la Web UI
   - *Escenario BDD:* Navegación interactiva entre vistas del dashboard
   - *Escenario BDD:* «Ajustes del proyecto» tiene entrada de navegación y ruta propia
+  - *Escenario BDD:* «Integraciones» tiene entrada de navegación y ruta propia
+  - *Escenario BDD:* El detalle del cambio ofrece la pestaña «Integraciones»
   - *Escenario BDD:* Topología no muestra la política de ramas
 - **[RF-WEB-08]** Subcomando axiom ui y Control del Servidor
   - *Escenario BDD:* Inicio del servidor en puerto por defecto con apertura de navegador
@@ -1599,6 +1601,9 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Una preferencia inválida se rechaza
   - *Escenario BDD:* El `PUT` de `worktree-prefs` exige petición local
   - *Escenario BDD:* Toda escritura nueva exige petición local
+  - *Escenario BDD:* `integrations.<plugin>` se edita solo por `/api/settings`
+  - *Escenario BDD:* El PAT nunca toca `axiom.yaml`
+  - *Escenario BDD:* Las rutas de integraciones que escriben exigen petición local con `Host` y `Origin` locales
 - **[RF-WEB-11]** Los Listados Agregan los Cambios de los Worktrees Registrados
   - *Escenario BDD:* Un cambio de un worktree figura en el listado
   - *Escenario BDD:* El detalle de un cambio en worktree se resuelve
@@ -1653,7 +1658,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Monorepo sin claves de multirepo
   - *Escenario BDD:* Multirepo con `gate_policy` incluido `optional`
   - *Escenario BDD:* ISO no ofrece `odd`
-  - *Escenario BDD:* Ningún control de RDD ni de integraciones
+  - *Escenario BDD:* Ningún control de RDD ni de integraciones, con enlace a «Integraciones»
   - *Escenario BDD:* Lo guardado queda sin confirmar en git
   - *Escenario BDD:* Documento no editable deshabilita los controles
   - *Escenario BDD:* Texto hostil se muestra como texto
@@ -1665,6 +1670,10 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Valor inválido devuelve 422 con el error del validador
   - *Escenario BDD:* `odd` en ISO se rechaza
   - *Escenario BDD:* Clave no editable devuelve 422
+  - *Escenario BDD:* Una clave de integración del manifiesto se escribe
+  - *Escenario BDD:* Una clave de integración no declarada por el manifiesto devuelve 422
+  - *Escenario BDD:* Un valor fuera del manifiesto devuelve 422
+  - *Escenario BDD:* El PAT no es clave del catálogo
   - *Escenario BDD:* Cuerpo mal formado o sin revisión devuelve 400
   - *Escenario BDD:* Petición no local devuelve 403
   - *Escenario BDD:* Sin proyecto activo o sin fichero devuelve 404
@@ -1717,6 +1726,78 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 - **[RF-WEB-26]** Rutas de Marcas Clasificadas en el Canario de Secretos
   - *Escenario BDD:* Rutas clasificadas
   - *Escenario BDD:* Una ruta nueva sin clasificar falla
+- **[RF-WEB-27]** Cabeceras de Seguridad Generales con CSP Fija, sin CORS y sin Respuesta Genérica a `OPTIONS`
+  - *Escenario BDD:* Toda respuesta lleva la CSP general
+  - *Escenario BDD:* Ninguna respuesta lleva cabeceras CORS
+  - *Escenario BDD:* `OPTIONS` no responde con CORS ni con un 200 genérico
+  - *Escenario BDD:* El script de tema ya no está en línea
+  - *Escenario BDD:* `/api/explainer` conserva su CSP propia
+- **[RF-WEB-28]** `Host` y `Origin` Locales en las Rutas que Mutan y en Todas las Rutas `/api/integrations*`
+  - *Escenario BDD:* `Origin` ajeno a una ruta que muta se rechaza
+  - *Escenario BDD:* `Host` ajeno a una ruta que muta se rechaza
+  - *Escenario BDD:* `Host` ajeno a `GET /api/integrations` se rechaza
+  - *Escenario BDD:* `Origin` ajeno a `GET /api/integrations/...` se rechaza
+  - *Escenario BDD:* Una petición local sin `Origin` se atiende
+- **[RF-WEB-29]** `GET /api/integrations` Devuelve Manifiesto, Valores, Estado del Secreto e Identidad sin Revelar Nunca un Secreto
+  - *Escenario BDD:* El estado del secreto es solo la procedencia
+  - *Escenario BDD:* Una variable de entorno que tapa el almacén se indica
+  - *Escenario BDD:* Sin PAT disponible
+  - *Escenario BDD:* Almacén no disponible
+  - *Escenario BDD:* Centinela de secreto no aparece en la respuesta
+  - *Escenario BDD:* Sin proyecto activo
+  - *Escenario BDD:* Métodos no admitidos
+- **[RF-WEB-30]** Guardar y Eliminar el PAT por Endpoints Propios que Responden Solo `source`, con Guía de Variable de Entorno cuando No Hay Almacén
+  - *Escenario BDD:* Guardar el PAT responde solo `source`
+  - *Escenario BDD:* El PAT no llega a `axiom.yaml`
+  - *Escenario BDD:* Linux sin almacén escribible guía a la variable de entorno
+  - *Escenario BDD:* Eliminar el PAT
+  - *Escenario BDD:* Petición con `Origin` ajeno no guarda
+  - *Escenario BDD:* Cuerpo inválido o vacío
+  - *Escenario BDD:* El PAT no es clave editable
+- **[RF-WEB-31]** «Probar Conexión» Resuelve y Persiste la Identidad con la Misma Semántica que `axiom integrations connect`
+  - *Escenario BDD:* Conexión correcta muestra y persiste la identidad
+  - *Escenario BDD:* Varios candidatos permiten elegir
+  - *Escenario BDD:* Sin PAT disponible
+  - *Escenario BDD:* Plazo agotado
+  - *Escenario BDD:* Petición con `Host` ajeno
+- **[RF-WEB-32]** «Descubrir» Rellena los Desplegables con el Descubrimiento del Plugin
+  - *Escenario BDD:* Descubrimiento correcto
+  - *Escenario BDD:* Sin PAT disponible
+  - *Escenario BDD:* Plazo agotado
+- **[RF-WEB-33]** Pantalla «Integraciones» Generada desde el Manifiesto del Plugin, Genérica por Plugin
+  - *Escenario BDD:* La pantalla se genera desde el manifiesto
+  - *Escenario BDD:* Activar y configurar solo desde la UI
+  - *Escenario BDD:* Un valor inválido no pierde lo tecleado
+  - *Escenario BDD:* Entrada de navegación y ruta propia
+  - *Escenario BDD:* Las plantillas de rama no se duplican
+  - *Escenario BDD:* Linux sin almacén muestra la guía y no simula guardado
+  - *Escenario BDD:* Variable de entorno que tapa el almacén
+  - *Escenario BDD:* Texto hostil del manifiesto o del servicio externo se muestra como texto
+- **[RF-WEB-34]** Pestaña «Integraciones» en el Detalle del Cambio con WI, Tasks por Rol, Outbox y Actores
+  - *Escenario BDD:* Cambio con WI y Tasks por rol
+  - *Escenario BDD:* Outbox pendiente
+  - *Escenario BDD:* Actores por fase
+  - *Escenario BDD:* Cambio archivado
+  - *Escenario BDD:* Cambio sin integración
+  - *Escenario BDD:* Ningún secreto en los datos de la pestaña
+- **[RF-WEB-35]** Alta de Incremento con Work Item de Origen: Campo ID/URL con Plugin Activo, Mismas Fases que `change start` y Fallos con Salidas Explícitas
+  - *Escenario BDD:* Alta con WI crea el cambio con el nombre derivado
+  - *Escenario BDD:* Alta con URL del WI
+  - *Escenario BDD:* Sin plugin activo el alta no cambia
+  - *Escenario BDD:* Rechazo de la fase 1 no deja rastro
+  - *Escenario BDD:* Fallo posterior conserva el staging y ofrece reintentar o descartar
+  - *Escenario BDD:* El descarte solo se ejecuta por acción explícita
+  - *Escenario BDD:* Reintentar no repite la fase 1
+  - *Escenario BDD:* Advertencia de la fase 2
+  - *Escenario BDD:* Petición con `Origin` ajeno no crea nada
+- **[RF-WEB-36]** Enlace «Abrir en Azure DevOps» con URL Validada
+  - *Escenario BDD:* URL https válida
+  - *Escenario BDD:* Esquema no permitido
+  - *Escenario BDD:* Sin URL
+- **[RF-WEB-37]** Rutas de Integraciones Clasificadas en el Canario de Secretos
+  - *Escenario BDD:* Las rutas nuevas están clasificadas
+  - *Escenario BDD:* Una ruta de integraciones sin clasificar falla
+  - *Escenario BDD:* El canario no encuentra el centinela
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -4097,12 +4178,16 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Exclusiones del catálogo
   - *Escenario BDD:* Claves registradas de cambios anteriores
   - *Escenario BDD:* ISO no ofrece `odd`
+  - *Escenario BDD:* El catálogo incluye las claves de integración derivadas del manifiesto
+  - *Escenario BDD:* Un campo nuevo del manifiesto aparece sin editar el catálogo
+  - *Escenario BDD:* Una prueba de coherencia falla ante una divergencia con el decodificador
   - *Escenario BDD:* Las tres claves `branch_template` figuran en el catálogo
   - *Escenario BDD:* Una plantilla inválida enviada como ajuste se rechaza
   - *Escenario BDD:* Una plantilla inválida de repositorio o de rol se rechaza con la ruta del elemento
   - *Escenario BDD:* Una plantilla válida de repositorio o de rol enviada como ajuste se escribe
   - *Escenario BDD:* Una plantilla con `{role}` en la rama con `openspec/` se rechaza por la API
   - *Escenario BDD:* Una plantilla de rol enviada en `monorepo-embedded` no está disponible
+  - *Escenario BDD:* Una clave de integración enviada como ajuste se valida con el decodificador estricto
   - *Escenario BDD:* Una plantilla válida enviada como ajuste se escribe
 - **[RF-TOP-22]** Escritor de Round-Trip de `axiom.yaml` que Conserva Comentarios y Orden y Revalida el Documento Completo
   - *Escenario BDD:* El round-trip conserva comentarios y orden (golden)
@@ -4117,6 +4202,12 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Valor inválido rechazado con el error del validador
   - *Escenario BDD:* Un parche válido por bloque pero inválido en conjunto se rechaza
   - *Escenario BDD:* Clave no editable rechazada
+  - *Escenario BDD:* Se edita `integrations` conservando comentarios y orden
+  - *Escenario BDD:* Se activa un plugin que no estaba en el fichero
+  - *Escenario BDD:* Retirar la última clave borra la entrada y el bloque
+  - *Escenario BDD:* Un bloque `integrations` con ancla, alias o `<<` se rechaza
+  - *Escenario BDD:* Un lote de integración inválido en conjunto se rechaza
+  - *Escenario BDD:* Un plugin con guion en su identificador se direcciona entero
   - *Escenario BDD:* Escritura atómica
   - *Escenario BDD:* Multirepo escribe el fichero del repositorio de specs
 - **[RF-TOP-23]** Revisión SHA-256 del Fichero con Recomprobación Justo Antes del Reemplazo

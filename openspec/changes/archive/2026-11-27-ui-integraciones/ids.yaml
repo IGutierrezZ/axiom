@@ -1,0 +1,47 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:WEB:1
+    definitive: RF-WEB-27
+    capability: local-web-dashboard
+    requirement: Cabeceras de Seguridad Generales con CSP Fija, sin CORS y sin Respuesta Genérica a `OPTIONS` (RF-WEB-27)
+  - provisional: prov:WEB:2
+    definitive: RF-WEB-28
+    capability: local-web-dashboard
+    requirement: '`Host` y `Origin` Locales en las Rutas que Mutan y en Todas las Rutas `/api/integrations*` (RF-WEB-28)'
+  - provisional: prov:WEB:3
+    definitive: RF-WEB-29
+    capability: local-web-dashboard
+    requirement: '`GET /api/integrations` Devuelve Manifiesto, Valores, Estado del Secreto e Identidad sin Revelar Nunca un Secreto (RF-WEB-29)'
+  - provisional: prov:WEB:4
+    definitive: RF-WEB-30
+    capability: local-web-dashboard
+    requirement: Guardar y Eliminar el PAT por Endpoints Propios que Responden Solo `source`, con Guía de Variable de Entorno cuando No Hay Almacén (RF-WEB-30)
+  - provisional: prov:WEB:5
+    definitive: RF-WEB-31
+    capability: local-web-dashboard
+    requirement: «Probar Conexión» Resuelve y Persiste la Identidad con la Misma Semántica que `axiom integrations connect` (RF-WEB-31)
+  - provisional: prov:WEB:6
+    definitive: RF-WEB-32
+    capability: local-web-dashboard
+    requirement: «Descubrir» Rellena los Desplegables con el Descubrimiento del Plugin (RF-WEB-32)
+  - provisional: prov:WEB:7
+    definitive: RF-WEB-33
+    capability: local-web-dashboard
+    requirement: Pantalla «Integraciones» Generada desde el Manifiesto del Plugin, Genérica por Plugin (RF-WEB-33)
+  - provisional: prov:WEB:8
+    definitive: RF-WEB-34
+    capability: local-web-dashboard
+    requirement: Pestaña «Integraciones» en el Detalle del Cambio con WI, Tasks por Rol, Outbox y Actores (RF-WEB-34)
+  - provisional: prov:WEB:9
+    definitive: RF-WEB-35
+    capability: local-web-dashboard
+    requirement: 'Alta de Incremento con Work Item de Origen: Campo ID/URL con Plugin Activo, Mismas Fases que `change start` y Fallos con Salidas Explícitas (RF-WEB-35)'
+  - provisional: prov:WEB:10
+    definitive: RF-WEB-36
+    capability: local-web-dashboard
+    requirement: Enlace «Abrir en Azure DevOps» con URL Validada (RF-WEB-36)
+  - provisional: prov:WEB:11
+    definitive: RF-WEB-37
+    capability: local-web-dashboard
+    requirement: Rutas de Integraciones Clasificadas en el Canario de Secretos (RF-WEB-37)
