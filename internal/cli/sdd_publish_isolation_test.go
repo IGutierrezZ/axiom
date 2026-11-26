@@ -35,15 +35,17 @@ func TestPublishIsolationNoVerbButPublishPushesCommitsOrFetches(t *testing.T) {
 		{"--gate", "spec", "--decision", "rejected", "--reason", "falta un escenario"},
 		{"--gate", "spec", "--decision", "approved", "--hand-off"},
 		{"--gate", "design", "--decision", "approved"},
+		{"--gate", "tasks", "--decision", "approved"},
+		{"--gate", "role-apply:core", "--decision", "approved"},
+		{"--gate", "role-apply:qa", "--decision", "approved"},
 	} {
 		if _, err := gateRecord(t, ws, args...); err != nil {
 			t.Fatalf("gate record %v: %v", args, err)
 		}
 	}
 
-	// Con la compuerta spec aprobada y su ledger sin confirmar, el status proyecta la publicación
-	// pendiente (REQ-27.18) solo con lecturas: lo que el bucle de abajo comprueba es que no hubo
-	// `push`, `commit` ni `fetch`.
+	// Con todas las compuertas aprobadas salvo integration y su ledger sin confirmar, el status proyecta la publicación pendiente (REQ-27.18) solo con lecturas: lo que el bucle de
+	// abajo comprueba es que no hubo `push`, `commit` ni `fetch`.
 	var projected bytes.Buffer
 	if err := RunSDDStatus([]string{"x", "--cwd", ws.Master, "--json"}, &projected); err != nil {
 		t.Fatalf("RunSDDStatus tras aprobar las compuertas: %v", err)
