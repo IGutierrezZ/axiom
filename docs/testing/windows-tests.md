@@ -48,9 +48,11 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
 
 Windows tests do not run on every PR or merge. Linux runs the full suite on every PR. Windows runs when a change needs it, on request, or once a week.
 
+A merge to `main` does not start `ci.yml`: the PR already ran it. `ci.yml` runs on `main` once a night at 02:40 UTC, and only when `main` has commits that no successful run has covered; otherwise every job is skipped. It also runs on `workflow_dispatch`.
+
 | Workflow | Runs on |
 |---|---|
-| `ci.yml`, job `windows-runtime` | `workflow_dispatch`, plus any PR or push to `main` whose diff touches a Windows-relevant path, plus any PR carrying the `ci:windows` label. |
+| `ci.yml`, job `windows-runtime` | `workflow_dispatch`, plus any PR whose diff touches a Windows-relevant path, plus the nightly run on `main` when its new commits touch one, plus any PR carrying the `ci:windows` label. |
 | `windows-full-suite.yml` | `workflow_dispatch`, plus the `ci:windows` label, plus a weekly schedule on Mondays at 03:20 UTC. |
 
 The Windows-relevant paths are:

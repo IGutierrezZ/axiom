@@ -1,0 +1,66 @@
+# ODD: CI ágil (C-08-k)
+
+> **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/ci-agil.md`, en la rama `inc/ci-agil` (worktree `C:\repos\axiom-wt\ci-agil\axiom`, creado desde `origin/main` `3193c716` el 2026-11-26).
+> Espejo de recuperación en Engram: topic `odd/ci-agil/tasks`, proyecto `axiom`.
+> Fuente: plan del backlog 2026-11, revisión 10, sección 08, entrada C-08-k; P24 resuelta en el apartado 6.2.
+
+## Objetivo
+
+Que la CI no repita trabajo:
+
+- ni la batería completa tras cada merge a `main`;
+- ni los meta-tests del toolchain en cada PR que no los afecta;
+- ni ejecuciones de `PR Validation` que no pueden cambiar el resultado.
+
+## Decisiones (del plan; no se reabren)
+
+- `ci.yml` deja `push` a `main` y gana una nocturna con la puerta de `windows-full-suite.yml`: salta si el último `headSha` en verde de `ci.yml` en `main` es el actual; si no puede leer el historial, ejecuta. Se conserva `workflow_dispatch`.
+- `pr-check.yml` deja `edited`; `unlabeled` se queda.
+- Los meta-tests que compilan o lanzan el toolchain salen de `Go Tests` (`-skip`) y van a un job propio (`-run`), sin tocar los ficheros de test. Corre en `schedule`, `workflow_dispatch` y en las PR que tocan sus entradas.
+- Las guardas de la partición se amplían para que ningún meta-test quede fuera de todos los jobs.
+- `Unit Tests` conserva el nombre y la semántica de agregador.
+
+## Decisiones de implementación
+
+- **Puerta nocturna en `changes`.** El job `changes` ya decide por evento; con `schedule` consulta `gh run list --workflow ci.yml --branch main --status success`. Si `main` no se ha movido, publica `up_to_date=true` y todos los jobs se omiten. Si se ha movido, el rango para Windows es `<último sha en verde>..<sha actual>`, igual que hacía el `push`. Sin historial legible, falla abierto.
+- **Un único selector.** `TOOLCHAIN_META_TESTS` se define una vez en el `env` del workflow. `Go Tests` lo usa en `-skip` y el job nuevo en `-run`, así que no pueden divergir.
+- **Paquetes del job nuevo.** Corre sobre `./internal/app ./internal/assets ./internal/update`. La guarda comprueba que los nombres del selector solo se declaran en esos paquetes; si no, un homónimo en otro paquete quedaría omitido en `Go Tests` sin correr en el job nuevo.
+- **Entradas del job nuevo.** Las del plan (`.github/workflows/**`, `.goreleaser.yaml`, `internal/update/**`, `scripts/**`, la documentación de comandos y `cmd/axiom/**`) más los propios ficheros de los meta-tests, `go.mod` y `go.sum`: un cambio en el test o en la versión de Go cambia su resultado.
+- **Agregador.** `Unit Tests` necesita el job nuevo y lo acepta omitido solo cuando `changes` dice que no tocaba (`toolchain != 'true'`).
+- **`TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea`** (`internal/app/tty_boundary_test.go`) entra en el selector mientras exista. Si C-08-f lo borra, su nombre queda sin efecto en el selector: la guarda no exige que cada nombre exista, solo que alguno exista, para no obligar a C-08-f a tocar los workflows.
+
+## Alcance autorizado
+
+`.github/workflows/ci.yml`, `.github/workflows/pr-check.yml`, `internal/assets/workflow_shards_test.go`, `internal/assets/formatter_ordering_test.go`, `scripts/require-ci-success.sh`, `docs/testing/windows-tests.md`, `docs/release-signing.md` y este documento.
+
+Fuera: `windows-full-suite.yml` y los jobs manuales.
+
+## Tareas
+
+Modo TDD: desactivado (`openspec/config.yaml`, `strict_tdd: false`). Ruta: todas inline (unidades pequeñas, sin disparador de delegación).
+
+- [x] **T1.** `ci.yml`: sin `push`, con nocturna y puerta en `changes`; documentación de Windows actualizada.
+- [ ] **T2.** Job `Toolchain Meta Tests` con `-skip`/`-run`, agregador y guardas ampliadas.
+- [ ] **T3.** `pr-check.yml` sin `edited`.
+- [ ] **T4.** Release: mensaje de `require-ci-success.sh` y guía en `docs/release-signing.md`.
+
+## Comprobaciones
+
+- Localizadas: `go test ./internal/assets -run 'TestUnitTestShards|TestUnitTestsAggregator|TestRequiredChecksFailClosed|TestToolchainMeta' -count=1` y `go test ./internal/update -run TestRequireCISuccess -count=1`.
+- La CI de la PR valida los workflows: debe aparecer `Toolchain Meta Tests` (la PR toca `.github/workflows/**`) y `Unit Tests` en verde.
+
+## Tiempos
+
+| Medida | Antes (ejecución 45725054482, PR) | Después |
+|---|---|---|
+| CI de PR hasta `Unit Tests` | 1:59 | pendiente |
+| `Go Tests (app-assets-update)` | 1:04 | pendiente |
+| Ejecuciones de `ci.yml` por merge a `main` | 1 (≈2:00 cada una) | 0; una nocturna si hay commits |
+
+## Progreso
+
+- 2026-11-26: worktree creado; documento abierto.
+
+## Siguiente paso
+
+T1.
