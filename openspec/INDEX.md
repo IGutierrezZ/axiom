@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 04:38:13 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 511 | **Total Escenarios BDD:** 2231
+> **Última Sincronización:** 2026-11-26 04:39:50 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 511 | **Total Escenarios BDD:** 2261
 
 ---
 
@@ -35,13 +35,13 @@
 | `odd-living-spec-integration` | Especificación de Requerimientos: Integración del Carril ODD en la Spec Viva de OpenSpec (REQ-30.1 a REQ-30.8) | 10 | 71 | [Ver Spec](specs/odd-living-spec-integration/spec.md) |
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
-| `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
+| `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 53 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
 | `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 69 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
-| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 122 | [Ver Spec](specs/requirement-identifiers/spec.md) |
+| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 123 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
@@ -49,7 +49,7 @@
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 118 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 90 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 92 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
@@ -1376,28 +1376,55 @@ Definir cómo un proyecto que llega con documentación de requisitos previa, en 
   - *Escenario BDD:* `adopt scan --change` se niega fuera de rama
   - *Escenario BDD:* Sin orígenes candidatos
   - *Escenario BDD:* Candidatos a `technical_context`
+  - *Escenario BDD:* Se propone `RF-<NNN>` para `RF-001`…`RF-120`
+  - *Escenario BDD:* Anchos mixtos del mismo esquema proponen `RF-<m>`
+  - *Escenario BDD:* Prefijos distintos son un conflicto nombrado
+  - *Escenario BDD:* Esquemas incompatibles son un conflicto
+  - *Escenario BDD:* Sin identificadores ajenos no hay propuesta
+  - *Escenario BDD:* `scan` nunca escribe `axiom.yaml`
 - **[REQ-30.10]** Formato del Cambio de Adopción
   - *Escenario BDD:* Requisito migrado con su procedencia
+  - *Escenario BDD:* Requisito con patrón por defecto
+  - *Escenario BDD:* Requisito de un origen sin identificador con provisional
   - *Escenario BDD:* Una unidad descartada con motivo
   - *Escenario BDD:* Un requisito puede citar varios orígenes
 - **[REQ-30.11]** `axiom archive adopt check --change <cambio>` Verifica el Cambio de Adopción
   - *Escenario BDD:* Un cambio válido pasa
+  - *Escenario BDD:* Identificadores del cliente con el patrón declarado pasan
   - *Escenario BDD:* Un MODIFIED se rechaza
-  - *Escenario BDD:* Identificador duplicado
+  - *Escenario BDD:* Identificador fuera del patrón declarado
+  - *Escenario BDD:* Identificador duplicado dentro del cambio
+  - *Escenario BDD:* Colisión con la spec viva o con otro cambio activo
+  - *Escenario BDD:* Anchos distintos del mismo número son duplicado
+  - *Escenario BDD:* Una mezcla que no cubre el patrón declarado se rechaza
+  - *Escenario BDD:* Coincidencia del identificador original con el del título
+  - *Escenario BDD:* Con varios orígenes basta que el título coincida con alguno
+  - *Escenario BDD:* Con varios orígenes ninguno coincide
+  - *Escenario BDD:* Un provisional cuyo `Origen:` trae identificador se rechaza
+  - *Escenario BDD:* Un provisional con origen sin identificador pasa
+  - *Escenario BDD:* `pattern_undeclared` sin patrón declarado
+  - *Escenario BDD:* `pattern_undeclared` con un patrón declarado que no cubre el origen
+  - *Escenario BDD:* `pattern_undeclared` con un inventario anterior a este cambio
+  - *Escenario BDD:* Origen sin identificadores no exige declarar patrón
+  - *Escenario BDD:* Ya no hay regla de serie única
   - *Escenario BDD:* Requisito sin escenario
   - *Escenario BDD:* `Origen:` que no resuelve
   - *Escenario BDD:* Unidad sin cubrir ni descartar
   - *Escenario BDD:* Descartado sin motivo
   - *Escenario BDD:* Se reportan todos los fallos
   - *Escenario BDD:* Sin inventario
+  - *Escenario BDD:* `check` no escribe
 - **[REQ-30.12]** Series de Identificadores de la Migración
-  - *Escenario BDD:* Una sola serie nueva
-  - *Escenario BDD:* Mezcla de series
-  - *Escenario BDD:* Serie ya existente
-  - *Escenario BDD:* El identificador funcional no es la identidad
+  - *Escenario BDD:* Los identificadores del cliente se conservan
+  - *Escenario BDD:* Un requisito nuevo continúa la serie del cliente
+  - *Escenario BDD:* Origen sin identificadores recibe identificadores del patrón por defecto
+  - *Escenario BDD:* Anchos mixtos con `<m>`
+  - *Escenario BDD:* Una mezcla no admitida bloquea la adopción hasta que la persona normaliza
 - **[REQ-30.13]** Aprobación Humana de la Migración y Conservación de `Origen:` al Archivar
   - *Escenario BDD:* `adopt check` no registra decisiones de compuerta
   - *Escenario BDD:* El archivado conserva `Origen:`
+  - *Escenario BDD:* Archivar un cambio con identificadores conservados y provisionales
+  - *Escenario BDD:* La guía no ordena `archive-compose` para la adopción
 - **[REQ-30.14]** En Multirepo la Adopción Opera sobre el Repositorio de Especificaciones
   - *Escenario BDD:* Multirepo inventaría el repositorio de especificaciones
   - *Escenario BDD:* Monorepo embebido
@@ -1730,7 +1757,7 @@ Definir el contexto técnico del proyecto como concepto de primera clase: cómo 
 
 ### Dominio: `requirement-identifiers` — Especificación de requirement-identifiers
 
-Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia; la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no conserva los identificadores de un cliente al adoptar (C-03-c) ni migra las specs de Axiom (C-03-e).
+Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no migra las specs de Axiom (C-03-e).
 
 **Archivo:** [`specs/requirement-identifiers/spec.md`](specs/requirement-identifiers/spec.md)
 
@@ -1771,8 +1798,9 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* Todos los consumidores coinciden ante la misma entrada
   - *Escenario BDD:* El puerto y los consumidores de la hoja respetan las importaciones
   - *Escenario BDD:* Sin patrón pasado, un consumidor usa el defecto
-  - *Escenario BDD:* `adoptcheck` no cambia sus reglas con el defecto
-  - *Escenario BDD:* `adoptcheck` y `archive adopt` siguen en el defecto con un patrón declarado
+  - *Escenario BDD:* `adoptcheck` con el defecto se comporta como un proyecto por defecto
+  - *Escenario BDD:* `adoptcheck` y `archive adopt` leen el patrón declarado
+  - *Escenario BDD:* Un patrón declarado inválido da el error accionable en la adopción
 - **[REQ-44.5]** Candidato frente a Válido con Errores Tipados y Continuaciones Conservadas
   - *Escenario BDD:* Un candidato mal formado se distingue de la ausencia
   - *Escenario BDD:* Un candidato mal formado con un patrón declarado
@@ -2706,6 +2734,8 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Paridad entre runtimes
 - **[REQ-30.31]** Skill o Referencia de Adopción de OpenSpec
   - *Escenario BDD:* La guía de adopción describe el flujo completo
+  - *Escenario BDD:* La guía conserva los identificadores del cliente
+  - *Escenario BDD:* La guía ya no fija una serie nueva ni la excepción temporal
   - *Escenario BDD:* La guía no atribuye a Go la fidelidad semántica
   - *Escenario BDD:* Paridad entre runtimes
 - **[REQ-32.3]** La Entrega es `single-pr` por Defecto sin Preguntar, `chained` Solo a Petición y se Leen los Valores Heredados mediante Alias
