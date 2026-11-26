@@ -58,7 +58,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 3: Proyección y puertas
 
-- [ ] T4 `sddstatus`: `ExplainerFreshness`, `DeclaredArtifactStore`, `decorateExplainer`, `Status.Explainer`, `StatusV2Projection.Explainer` y `kickoffV2.ExplainerHTML` (decisiones 2, 3, 4, 10 y 11).
+- [x] T4 `sddstatus`: `ExplainerFreshness`, `DeclaredArtifactStore`, `decorateExplainer`, `Status.Explainer`, `StatusV2Projection.Explainer` y `kickoffV2.ExplainerHTML` (decisiones 2, 3, 4, 10 y 11).
   - Cubre: prov:KOF:4, prov:GAT:4, prov:GAT:3, RF-ISO-01
   - Ficheros: `internal/sddstatus/explainer.go`, `internal/sddstatus/explainer_test.go`, `internal/sddstatus/status.go`, `internal/sddstatus/status_v2.go`
   - Pruebas (RED primero): con `yes`, fresh → stale al editar el md → missing al borrar; meta vacía → stale; varios `spec.md` por dominio y alta/baja de dominio cambian el digest (hueco spec #10); sin md de origen → tipo omitido; HTML de `MaxBytes+1` → `error` sin `state`; `specs/` ilegible o kickoff corrupto → `explainer.error`; con `no`, sin campo o con almacén `engram`/`none` no hay frescura aunque exista el HTML; `continuous` proyecta; `nextRecommended`, `dependencies` y `blockedReasons` idénticos con `yes`/`no` y con/sin HTML; valor de proyecto sin cambio seleccionado; `invalid` con `reason` (hueco diseño #7); `governance.kickoff.explainerHtml`; copia en v2; claves exactas de `status_v2_clean_break_test.go` intactas; `TestExplainerISO`: cambio ISO con HTML `stale` y `missing` no bloquea y `dependencies.archive` e `iso` idénticos a los de `fresh` (hueco diseño #10).
