@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: El Orquestador Invoca los Verbos de Tasks y de Resumen con Tracker Activo (prov:ORQ:1)
+### Requirement: El Orquestador Invoca los Verbos de Tasks y de Resumen con Tracker Activo (RF-ORQ-29)
 
 Cuando el cambio tiene un vínculo `kind: work_item` y `axiom change start --json` no responde `not_applicable` (hay un plugin de work items activo), la doctrina DEBE ordenar al orquestador invocar los verbos de `axiom integrations` en estos momentos, con el mismo contenido en `checkpointed` y en `continuous` y sin añadir ninguna pregunta de gobierno: al terminar `spec`, `summary push`; al terminar `design`, `tasks create` (con la estimación de la sección `## Estimación por rol` de `design.md`, sin `--estimate` salvo que la persona pida cambiarla); al cerrar cada rol, `time propose` y `time record`; y al terminar `archive`, `summary push` sobre la carpeta archivada. En `checkpointed` DEBE invocarlos tras registrar la compuerta correspondiente (`gate record`), nunca antes ni sustituyéndola; en `continuous` DEBE invocarlos al terminar la fase, sin parada. Sin vínculo de WI o sin plugin activo la doctrina NO DEBE invocar ninguno ni anunciarlo. La doctrina NO DEBE ordenar ninguno de estos verbos en el carril ODD. Un fallo de un verbo NO DEBE deshacer ni repetir la aprobación de la compuerta: en `checkpointed` el orquestador presenta el rechazo tipado con sus resoluciones y la parada ofrece sus tres salidas habituales; en `continuous` no se detiene por el fallo de `summary push`, de `time record` ni de la transición de estado, y los recoge para el resumen final.
 
@@ -40,7 +40,7 @@ Cuando el cambio tiene un vínculo `kind: work_item` y `axiom change start --jso
 - **CUANDO** el orquestador sigue la doctrina de ODD
 - **ENTONCES** no invoca ninguno de los verbos nuevos
 
-### Requirement: `ensure --role` Antes del Apply con Tracker Activo (prov:ORQ:2)
+### Requirement: `ensure --role` Antes del Apply con Tracker Activo (RF-ORQ-30)
 
 Con tracker activo y vínculo `kind: work_item`, la doctrina DEBE ordenar al orquestador invocar `axiom branch ensure --change <cambio> --role <rol>` antes de lanzar `apply` de cada rol, también con el único rol `fullstack` y en ambos estilos de ejecución, para que la barrera `task_not_bound` y el registro de `started_at` ocurran siempre. Si `ensure --role` rechaza con `task_not_bound`, el orquestador DEBE NO lanzar `apply`, presentar el rechazo con sus dos resoluciones (`tasks create` y `tasks bind`) y esperar: es un bloqueo reportado a la persona, no una parada de compuerta, y se produce igualmente en `continuous`. Sin tracker activo NO DEBE invocarlo por esta regla.
 
@@ -59,7 +59,7 @@ Con tracker activo y vínculo `kind: work_item`, la doctrina DEBE ordenar al orq
 - **CUANDO** el orquestador va a lanzar `apply`
 - **ENTONCES** no añade el `ensure --role` por esta regla
 
-### Requirement: `sdd-design` Propone la Estimación por Rol (prov:ORQ:3)
+### Requirement: `sdd-design` Propone la Estimación por Rol (RF-ORQ-31)
 
 Con tracker activo, la skill `sdd-design` DEBE escribir en `design.md` la sección fija `## Estimación por rol` con una línea `- <rol>: <horas> h` por cada rol del roster sellado, con horas decimales positivas y una justificación breve fuera de las líneas de datos. En `checkpointed`, la aprobación de la compuerta `design` confirma esas horas porque forman parte de su digest; para cambiarlas se itera el diseño o se pasa `--estimate`, que prevalece. Sin tracker activo la skill NO DEBE escribir la sección.
 
@@ -78,7 +78,7 @@ Con tracker activo, la skill `sdd-design` DEBE escribir en `design.md` la secci�
 - **CUANDO** `sdd-design` escribe la sección
 - **ENTONCES** hay exactamente una línea por cada uno de los dos roles
 
-### Requirement: `sdd-apply` Propone e Imputa las Horas al Cerrar el Rol (prov:ORQ:4)
+### Requirement: `sdd-apply` Propone e Imputa las Horas al Cerrar el Rol (RF-ORQ-32)
 
 Con tracker activo, al cerrar el apply de un rol la doctrina DEBE ordenar `axiom integrations time propose --change <cambio> --role <rol>` y después `time record` con las horas definitivas. En `checkpointed` DEBE presentar la propuesta a la persona, aceptar sus horas (que PUEDEN diferir de la propuesta) y llamar a `time record` solo tras esa confirmación, y solo con la compuerta `role-apply:<rol>` aprobada. En `continuous` DEBE llamar a `time record` con las horas de la propuesta, sin parada y sin pedir confirmación. Un `rev_conflict` NO DEBE reintentarse ni reaplicarse automáticamente: se presenta con los valores releídos y la decisión es de la persona (en `continuous` queda en el resumen final como imputación pendiente). La skill NO DEBE imputar en el carril ODD ni sin tracker activo.
 
@@ -102,7 +102,7 @@ Con tracker activo, al cerrar el apply de un rol la doctrina DEBE ordenar `axiom
 - **CUANDO** se cierra el rol o la característica
 - **ENTONCES** no se propone ni se imputa ninguna hora
 
-### Requirement: Doctrina de los Verbos de Integración en Paridad entre Runtimes y Goldens (prov:ORQ:5)
+### Requirement: Doctrina de los Verbos de Integración en Paridad entre Runtimes y Goldens (RF-ORQ-33)
 
 La doctrina de los requisitos anteriores DEBE tener una única fuente proyectada a todos los runtimes que proyectan el orquestador (junto al texto de `axiom change start` en el enrutado), de modo que el orquestador, `sdd-design`, `sdd-apply` y `sdd-archive` contengan las mismas reglas con las mismas palabras de comando en cada runtime, y las copias espejo y los goldens DEBEN regenerarse con ellas. La doctrina NO DEBE nombrar ni valores de secretos ni rutas del tracker.
 

@@ -9,7 +9,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Puerto Opcional de Tasks por Rol (prov:INT:1)
+### Requirement: Puerto Opcional de Tasks por Rol (RF-INT-25)
 
 El marco DEBE ofrecer un puerto opcional de Tasks por rol, detectado por aserción de tipo sobre el plugin (mismo patrón que RF-INT-23 y RF-INT-24), sin añadir métodos a `Plugin` ni alterar los plugins que no lo implementan. El puerto DEBE exponer, con tipos neutrales propios del marco: (a) la lectura de las Tasks hijas de un work item; (b) la creación de una Task hija con marca, estimación y relación al padre; (c) la lectura de una Task con su tipo, su padre, su estado, su `rev` y sus horas; (d) la actualización de horas con control optimista de revisión; (e) el cambio de estado y la asignación; (f) la sustitución de la descripción; y (g) la sustitución de un conjunto de etiquetas con prefijo. La invocación DEBE pasar por `invokePort`: recupera los pánicos del plugin como error tipado y sanea de secretos todo error devuelto. Si el plugin no implementa el puerto, DEBE devolver el error tipado `port_unsupported` que nombra el plugin y el puerto, sin red. El puerto DEBE estar conectado a los verbos de los requisitos siguientes, alcanzables desde `cmd/axiom`.
 
@@ -39,7 +39,7 @@ El marco DEBE ofrecer un puerto opcional de Tasks por rol, detectado por aserci�
 - **CUANDO** se compila y se registra
 - **ENTONCES** compila sin cambios y se registra sin error
 
-### Requirement: Verbo `axiom integrations tasks create` (prov:INT:2)
+### Requirement: Verbo `axiom integrations tasks create` (RF-INT-26)
 
 `axiom integrations tasks create --change <cambio> [--estimate <rol>=<horas> ...]` DEBE crear o reutilizar la Task hija del WI de origen de cada rol del roster sellado del cambio. Es un verbo síncrono, fuera de la outbox. Para cada rol DEBE: (1) reutilizar el vínculo `kind: task` ya registrado en `integrations.yaml` sin crear nada (solo toca el tracker para actualizar una estimación confirmada distinta, como se describe al final); (2) si no hay vínculo, buscar por la marca `axiom-task:<cambio>:<rol>` entre las Tasks hijas del WI y vincular la coincidente, y con varias coincidencias negarse con `task_ambiguous` nombrando `axiom integrations tasks bind --change <cambio> --role <rol>=<id>`; (3) solo con cero coincidencias crear la Task con la marca, la relación al WI y la estimación, y registrar el vínculo en cuanto recibe la respuesta, con `source: tasks.create`. La estimación de cada rol DEBE ser la de `--estimate` si se da, y si no la de la sección de `design.md` (requisito de estimación por rol); sin ninguna de las dos para un rol DEBE negarse para ese rol con `estimate_missing`. Un valor de estimación no numérico, cero o negativo DEBE rechazarse como error de uso. El vínculo DEBE guardar `estimate_hours`. Un rol cuya creación falla NO DEBE impedir procesar los demás roles; el verbo DEBE terminar con código distinto de cero y la salida DEBE listar, por rol, su resultado y, para cada fallo, el rechazo tipado y su resolución nombrada, que DEBE incluir `axiom integrations tasks create --change <cambio>` (reintento) y `axiom integrations tasks bind --change <cambio> --role <rol>=<id>`. El fallo NO DEBE alterar el registro de la compuerta `design` (la aprobación ya registrada permanece) ni ningún otro fichero del cambio. Repetir el verbo con todos los vínculos presentes y, para cada rol, la misma estimación confirmada que guarda su vínculo en `estimate_hours` NO DEBE hacer ninguna escritura ni en el tracker ni en `integrations.yaml`. Si un rol ya tiene vínculo y su estimación confirmada (la de `--estimate` o, si falta, la de `design.md`) difiere de su `estimate_hours`, el verbo DEBE leer la Task y, en una sola modificación con `test /rev`, fijar `OriginalEstimate` en la nueva estimación y `RemainingWork` en el máximo entre cero y la nueva estimación menos el `CompletedWork` leído. Solo tras esa escritura con éxito DEBE actualizar `estimate_hours` en el vínculo. Un conflicto de `rev` DEBE rechazar ese rol con `rev_conflict`, sin reaplicar ni actualizar el vínculo, con la resolución `axiom integrations tasks create --change <cambio>`.
 
@@ -108,7 +108,7 @@ El marco DEBE ofrecer un puerto opcional de Tasks por rol, detectado por aserci�
 - **CUANDO** se ejecuta `tasks create --change x`
 - **ENTONCES** termina con error de uso y no se hace ninguna petición ni escritura
 
-### Requirement: Verbo `axiom integrations tasks bind` (prov:INT:3)
+### Requirement: Verbo `axiom integrations tasks bind` (RF-INT-27)
 
 `axiom integrations tasks bind --change <cambio> --role <rol>=<id> [--estimate <rol>=<horas>] [--replace]` DEBE vincular a mano una Task existente al rol. DEBE rechazar un rol ausente del roster sellado con `role_not_in_roster`, y validar con el adaptador, antes de escribir, que el elemento existe (`task_not_found`), que es de tipo Task (`not_a_task`) y que cuelga del WI del cambio (`not_child_of_work_item`); un fallo de validación NO DEBE escribir `integrations.yaml` ni el tracker. Con éxito DEBE escribir el vínculo `kind: task` con `source: tasks.bind` y su `estimate_hours` (de `--estimate` o, si falta, de la sección de `design.md`; sin ninguna, el vínculo se escribe sin `estimate_hours` y la salida avisa de ello). Con una estimación y una Task sin `OriginalEstimate`, DEBE escribir `OriginalEstimate` y `RemainingWork` con esa estimación; si la Task ya tenía `OriginalEstimate`, NO DEBE tocar las horas del tracker. Vincular de nuevo la misma Task al mismo rol NO DEBE cambiar el fichero. Vincular otra Task a un rol que ya tiene vínculo sin `--replace` DEBE rechazarse con `task_already_bound`, sin escribir nada; su resolución nombra `axiom integrations tasks bind --change <cambio> --role <rol>=<id> --replace`. Con `--replace`, el verbo DEBE revalidar la Task nueva con las mismas comprobaciones y los mismos rechazos (`task_not_found`, `not_a_task`, `not_child_of_work_item`) y, solo si pasa, sustituir bajo el cerrojo del cambio el vínculo `kind: task` de ese rol por el de la Task nueva con `source: tasks.bind`. La sustitución conserva el `started_at` del vínculo anterior y todas las imputaciones ya registradas, que mantienen su `item_id` original. Conserva también su `estimate_hours` cuando no hay ni `--estimate` ni sección de `design.md`. Las horas de la Task nueva siguen la regla de estimación de este requisito. Un fallo de validación con `--replace` NO DEBE modificar el vínculo existente. `--replace` sin vínculo previo del rol equivale a un `bind` normal, y `--replace` con la misma Task ya vinculada NO DEBE cambiar el fichero.
 
@@ -172,7 +172,7 @@ El marco DEBE ofrecer un puerto opcional de Tasks por rol, detectado por aserci�
 - **CUANDO** se repite `tasks bind --change x --role fullstack=205`
 - **ENTONCES** `integrations.yaml` no cambia
 
-### Requirement: Verbo `axiom integrations summary push` (prov:INT:4)
+### Requirement: Verbo `axiom integrations summary push` (RF-INT-28)
 
 `axiom integrations summary push --change <cambio>` DEBE sustituir `System.Description` del WI de origen por el resumen HTML de la spec del cambio (renderizador del requisito siguiente) y sincronizar las etiquetas de IDs funcionales (etiquetas con el prefijo configurado, una por ID) en una sola escritura, sin tocar `integrations.yaml`. Los IDs funcionales DEBEN extraerse de los títulos `### Requirement:` de las deltas del cambio: con provisionales antes de archivar y definitivos tras archivar. Sobre la carpeta archivada del cambio DEBE leer los IDs definitivos de la propia carpeta (sus deltas reescritas y su `ids.yaml`) y NO DEBE emitir ningún identificador provisional; si queda alguno sin resolver DEBE rechazar con `provisional_ids_unresolved`. Si el HTML y las etiquetas no cambian respecto del tracker, DEBE terminar con código 0 sin ninguna escritura. Un tope de etiquetas superado DEBE terminar con código 0, con la descripción actualizada y el aviso tipado `req_tags_over_limit` en la salida. Un cambio sin ninguna delta de spec DEBE rechazarse con `artifact_missing`. NO DEBE modificar ningún otro campo del WI.
 
@@ -214,7 +214,7 @@ El marco DEBE ofrecer un puerto opcional de Tasks por rol, detectado por aserci�
 - **CUANDO** se ejecuta `summary push --change x`
 - **ENTONCES** el título, el estado y el asignado no cambian
 
-### Requirement: Renderizador Determinista del Resumen de la Spec (prov:INT:5)
+### Requirement: Renderizador Determinista del Resumen de la Spec (RF-INT-29)
 
 El resumen de la spec DEBE generarse con un renderizador en un paquete hoja propio, sin red y sin reutilizar `resumen-spec.html`, a partir de las deltas del cambio. Por cada capacidad, en orden alfabético, DEBE emitir un `h2` con su nombre y, por cada requisito en el orden del fichero, un `h3` con su título (que incluye su ID) y un `p` con su primer párrafo normativo, con el marcado en línea `` `código` `` convertido a `code` y `**texto**` a `strong`. El HTML SOLO DEBE emplear las etiquetas `h2`, `h3`, `p`, `ul`, `li`, `code` y `strong`, sin ningún atributo, y todo el texto DEBE ir escapado (`&`, `<`, `>`, `"` y `'`): nunca `style`, SVG ni scripts. A igual entrada DEBE producir la misma salida byte a byte. Una delta cuyo texto contenga marcado HTML DEBE emitirlo escapado como texto.
 
@@ -244,7 +244,7 @@ El resumen de la spec DEBE generarse con un renderizador en un paquete hoja prop
 - **CUANDO** se renderiza el resumen
 - **ENTONCES** el HTML contiene `<code>ensure</code>` y `<strong>DEBE</strong>`
 
-### Requirement: Estimación por Rol en `design.md` (prov:INT:6)
+### Requirement: Estimación por Rol en `design.md` (RF-INT-30)
 
 El diseño del cambio DEBE llevar la sección fija `## Estimación por rol` con una línea `- <rol>: <horas> h` por cada rol del roster sellado, con horas decimales positivas. Los verbos `tasks create` y `tasks bind` DEBEN leer esa sección cuando no se pasa `--estimate`. Una línea malformada, un valor no positivo, un rol repetido o un rol fuera del roster DEBE rechazarse con `estimate_invalid` que nombra la línea; la ausencia de la sección NO es un error por sí sola (solo lo es la falta de estimación del rol concreto, `estimate_missing`). El contenido de la sección forma parte del digest de la compuerta `design`.
 
@@ -273,7 +273,7 @@ El diseño del cambio DEBE llevar la sección fija `## Estimación por rol` con 
 - **CUANDO** se edita una hora de la sección `## Estimación por rol`
 - **ENTONCES** el digest de `design.md` cambia y la compuerta vuelve a `pending`
 
-### Requirement: Verbo `axiom integrations time propose` (prov:INT:7)
+### Requirement: Verbo `axiom integrations time propose` (RF-INT-31)
 
 `axiom integrations time propose --change <cambio> --role <rol>` DEBE ser de solo lectura: no escribe en el tracker ni en `integrations.yaml`. DEBE exigir el vínculo `kind: task` del rol con `started_at` registrado (si falta la Task, `task_not_bound`; si falta `started_at`, `role_not_started` cuya resolución nombra `axiom branch ensure --change <cambio> --role <rol>`). DEBE mostrar: el reloj desde `started_at` hasta ahora, recortado a la jornada; la estimación del vínculo; y `OriginalEstimate`, `RemainingWork` y `CompletedWork` leídos del tracker en ese momento, que incluyen las horas metidas a mano en Azure DevOps. El recorte DEBE sumar, por cada día natural del intervalo en la zona horaria local, como máximo las horas de la jornada configurada (`workday_hours`) y solo si el día pertenece a `workdays`; los demás días no suman. El redondeo y la zona horaria los fija el diseño y se documentan. La propuesta NO DEBE ser vinculante: `time record` toma las horas de su propio `--hours`.
 
@@ -308,7 +308,7 @@ El diseño del cambio DEBE llevar la sección fija `## Estimación por rol` con 
 - **CUANDO** se ejecuta `time propose`
 - **ENTONCES** se rechaza con `role_not_started` cuya resolución nombra `axiom branch ensure --change x --role fullstack`
 
-### Requirement: Verbo `axiom integrations time record` (prov:INT:8)
+### Requirement: Verbo `axiom integrations time record` (RF-INT-32)
 
 `axiom integrations time record --change <cambio> --role <rol> (--hours <horas> | --resolve-pending applied|discarded | --close-only)` DEBE imputar las horas a la Task del rol: leer su `rev`, sumar las horas a `CompletedWork`, fijar `RemainingWork` en el máximo entre cero y su valor menos las horas, y escribir con `test /rev` (RF-ADO-07 y la imputación del adaptador). Las horas DEBEN ser un número positivo; cero, negativo o no numérico es un error de uso sin ninguna petición. Solo tras una escritura con éxito DEBE registrar en `integrations.yaml` una imputación con `actor` (la identidad git de la persona, la de `change-actor-identity`), `minutes` (las horas por 60 redondeadas al minuto), `date` (la fecha de la imputación), `role`, `item_id` y un `source` único por cierre con la forma `role.close/<rol>/<n>`, con `<n>` correlativo desde 1 entre las imputaciones del rol. Con un conflicto de `rev` DEBE terminar con código distinto de cero y `rev_conflict`, mostrar los valores releídos, NO DEBE reaplicar la escritura ni registrar la imputación, y la resolución nombra `axiom integrations time propose` para volver a decidir las horas. Un fallo del tracker (red, 5xx, campo ausente) NO DEBE registrar la imputación. En `checkpointed`, `time record` NO DEBE tocar el estado de la Task (lo aplica el evento `role.apply.approved`); en `continuous` DEBE, tras la imputación, pasar la Task al estado `task_state_close` con la misma operación idempotente del adaptador, y un fallo de esa transición NO DEBE deshacer la imputación ni su registro y se informa como aviso tipado. En `continuous`, la misma transición de cierre DEBE aplicarse también:
 - tras registrar una imputación recuperada (`time_record_recovered`);
@@ -421,7 +421,7 @@ Para no perder ni duplicar una imputación cuyo `PATCH` se aplicó pero cuyo reg
 - **ENTONCES** la Task queda en `Tech Review` y no se registra ninguna imputación
 - **Y** en un cambio `checkpointed` la misma invocación es un error de uso sin ninguna petición
 
-### Requirement: Precondiciones por Estilo, Carril ODD y Plugin Activo de los Verbos Nuevos (prov:INT:9)
+### Requirement: Precondiciones por Estilo, Carril ODD y Plugin Activo de los Verbos Nuevos (RF-INT-33)
 
 Los verbos `tasks create`, `tasks bind`, `summary push`, `time propose` y `time record` DEBEN comprobar, antes de cualquier petición o escritura y por este orden: (1) que el cambio es del carril SDD; el nombre de un cambio del carril ODD (con `odd/tasks/<nombre>.md` y sin carpeta SDD) DEBE rechazarse con `odd_lane_not_supported` y ningún camino de ODD crea Tasks, horas ni escribe `integrations.yaml`; (2) que hay un plugin activo con el puerto de Tasks, y sin él DEBEN responder `not_applicable`, con código 0, sin red y sin crear ficheros; (3) que el cambio tiene un vínculo `kind: work_item`, y sin él DEBEN rechazar con `work_item_not_linked` (sin Task que colgar de un WI inexistente, y sin crear el WI); (4) la precondición del estilo sellado. En `checkpointed`, `summary push` exige la compuerta `spec` con su última decisión `approved`, `tasks create` la `design` y `time propose` y `time record` la `role-apply:<rol>`, y sin ella DEBEN rechazar con `gate_not_approved` que nombra la compuerta y la resolución `axiom sdd gate show --change <cambio>`. En `continuous`, que no tiene compuertas, basta con que el artefacto exista: las deltas para `summary push` y `design.md` para `tasks create`, y sin él DEBEN rechazar con `artifact_missing`. Para `time propose` y `time record`, el artefacto es el vínculo `kind: task` del rol, y su ausencia se rechaza en ambos estilos con `task_not_bound` (requisito de `time propose`), nunca con `artifact_missing`. Los verbos NO DEBEN fabricar aprobaciones ni registrar compuertas. Sobre la carpeta archivada, `summary push` NO exige compuerta alguna. Toda continuación de un rechazo DEBE nombrar un comando `axiom` o declarar explícitamente que es de diseño sin resolución.
 
@@ -478,7 +478,7 @@ Los verbos `tasks create`, `tasks bind`, `summary push`, `time propose` y `time 
 - **CUANDO** se ejecuta `summary push --change x`
 - **ENTONCES** el verbo no exige ninguna compuerta y procede
 
-### Requirement: Salida JSON Versionada y Sin Secretos de los Verbos Nuevos (prov:INT:10)
+### Requirement: Salida JSON Versionada y Sin Secretos de los Verbos Nuevos (RF-INT-34)
 
 Los verbos `tasks create`, `tasks bind`, `summary push`, `time propose` y `time record` DEBEN aceptar `--cwd` y `--change` y ofrecer salida legible y salida `--json` con un esquema versionado propio por familia (`axiom.integrations-tasks/v1`, `axiom.integrations-summary/v1` y `axiom.integrations-time/v1`). La salida JSON DEBE incluir el estado (`done`, `partial`, `refused` o `not_applicable`), el detalle por rol cuando aplique, los avisos tipados y, para cada rechazo, su código y su resolución. Ni la salida, ni los errores, ni `integrations.yaml` DEBEN contener el PAT ni ninguna credencial (RF-INT-16): los canarios de secretos del marco y del adaptador DEBEN cubrir los verbos nuevos. Todo rechazo nuevo DEBE nombrar en su continuación un comando `axiom` concreto o declararse de diseño sin resolución.
 

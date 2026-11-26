@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: `ensure --role` Registra el Inicio del Rol la Primera Vez que Queda Listo (prov:BRA:1)
+### Requirement: `ensure --role` Registra el Inicio del Rol la Primera Vez que Queda Listo (RF-BRA-41)
 
 Cuando el cambio tiene el vínculo `kind: task` del rol en `integrations.yaml` y un `ensure --role <id>` termina con estado `ready`, el adaptador CLI DEBE registrar `started_at` (instante actual, RFC 3339 en UTC) en ese vínculo SOLO si aún no lo tiene; un `started_at` ya registrado NO DEBE sobrescribirse, de modo que el reloj de la imputación parte de la primera entrada del rol. El registro DEBE hacerse con la fusión de vínculos bajo el mismo cerrojo que las demás escrituras de `integrations.yaml` (RF-INT-09). NO DEBE registrarse con un estado distinto de `ready`, sin `--role`, sin vínculo de Task del rol ni desde el dashboard. Un fallo al escribir `started_at` NO DEBE hacer fallar el verbo: avisa con un aviso tipado y `time propose` lo rechazará después con `role_not_started` (RF-INT-10). Sin plugin activo con el puerto de Tasks, la salida y los ficheros de `ensure --role` NO DEBEN cambiar.
 

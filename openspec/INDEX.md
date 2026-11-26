@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 14:47:41 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 576 | **Total Escenarios BDD:** 2744
+> **Última Sincronización:** 2026-11-26 17:59:32 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 602 | **Total Escenarios BDD:** 2920
 
 ---
 
@@ -19,13 +19,13 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 3 | 7 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 8 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
-| `azure-devops-adapter` | Especificación de azure-devops-adapter | 19 | 92 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
+| `azure-devops-adapter` | Especificación de azure-devops-adapter | 27 | 140 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 40 | 350 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 41 | 362 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `change-start-from-work-item` | Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
-| `integration-plugins` | Especificación de integration-plugins | 24 | 107 | [Ver Spec](specs/integration-plugins/spec.md) |
+| `integration-plugins` | Especificación de integration-plugins | 34 | 194 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 21 | 108 | [Ver Spec](specs/local-web-dashboard/spec.md) |
@@ -44,13 +44,13 @@
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 17 | 51 | [Ver Spec](specs/requirement-trace/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 17 | 124 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 32 | 152 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 24 | 149 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 28 | 101 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 33 | 120 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
@@ -363,7 +363,7 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
 - **[RF-ADO-01]** Manifiesto y Alta del Plugin `azure-devops`
   - *Escenario BDD:* El manifiesto es válido e idéntico al del catálogo
   - *Escenario BDD:* Variable de entorno del secreto
-  - *Escenario BDD:* Ninguna capacidad de escritura del ciclo de vida
+  - *Escenario BDD:* Capacidades de escritura del ciclo de vida
   - *Escenario BDD:* Alias de referencia y clave `item_keys` en el manifiesto
 - **[RF-ADO-02]** Configuración `integrations.azure-devops` y Secreto `pat`
   - *Escenario BDD:* Bloque válido
@@ -375,6 +375,12 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
   - *Escenario BDD:* `item_keys` malformado
   - *Escenario BDD:* Prefijo o tipo duplicado
   - *Escenario BDD:* Prefijo no apto para una rama
+  - *Escenario BDD:* Valores por defecto de las claves nuevas
+  - *Escenario BDD:* Claves nuevas válidas
+  - *Escenario BDD:* Jornada fuera de dominio
+  - *Escenario BDD:* Día laborable desconocido o repetido
+  - *Escenario BDD:* Prefijo de etiquetas en conflicto con las marcas de Axiom
+  - *Escenario BDD:* Tope de etiquetas fuera de dominio
 - **[RF-ADO-03]** Cliente REST con Autenticación, Versión y Timeout
   - *Escenario BDD:* Versión y autenticación en toda petición
   - *Escenario BDD:* Timeout por petición
@@ -442,9 +448,12 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
   - *Escenario BDD:* Salida legible
   - *Escenario BDD:* Sin escritura de ficheros
   - *Escenario BDD:* Fallo de autorización
-- **[RF-ADO-14]** `Deliver` sin Efectos del Ciclo de Vida
-  - *Escenario BDD:* `Deliver` devuelve error permanente
-  - *Escenario BDD:* Verbos de despacho sin cambios
+- **[RF-ADO-14]** `Deliver` Aplica los Eventos de Rol y de Archivo
+  - *Escenario BDD:* `Deliver` de `change.start` devuelve error permanente
+  - *Escenario BDD:* Eventos de rol y de archivo actúan
+  - *Escenario BDD:* Evento fuera de la lista
+  - *Escenario BDD:* Verbos de compuerta sin cambios
+  - *Escenario BDD:* Un fallo de entrega no rompe el verbo de origen
 - **[RF-ADO-15]** El PAT No Aparece en Ninguna Salida
   - *Escenario BDD:* Canario en el flujo completo
   - *Escenario BDD:* Eco del servidor
@@ -471,6 +480,53 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
   - *Escenario BDD:* Conflicto de revisión
   - *Escenario BDD:* Conflicto persistente
   - *Escenario BDD:* Sin relaciones ni Hyperlinks
+- **[RF-ADO-20]** Creación de una Task Hija con Marca Determinista y sin Duplicados
+  - *Escenario BDD:* Creación con marca, relación y horas
+  - *Escenario BDD:* Una Task con la marca se reutiliza
+  - *Escenario BDD:* Respuesta perdida tras la creación
+  - *Escenario BDD:* Marcas duplicadas
+  - *Escenario BDD:* El título no decide el duplicado
+  - *Escenario BDD:* Falta un campo de horas en el proceso
+- **[RF-ADO-21]** Validación de la Task Vinculada a Mano
+  - *Escenario BDD:* Task válida
+  - *Escenario BDD:* Identificador inexistente
+  - *Escenario BDD:* El elemento no es una Task
+  - *Escenario BDD:* La Task cuelga de otro WI
+  - *Escenario BDD:* Task sin padre
+- **[RF-ADO-22]** Lectura y Escritura de Horas con `test /rev`
+  - *Escenario BDD:* Imputación con `rev` vigente
+  - *Escenario BDD:* Lo que resta no baja de cero
+  - *Escenario BDD:* Horas imputadas a mano en Azure DevOps entre la lectura y la escritura
+  - *Escenario BDD:* Campo ausente en el valor
+  - *Escenario BDD:* Campo ausente en el proceso
+- **[RF-ADO-23]** Sustitución Idempotente de `System.Description`
+  - *Escenario BDD:* Sustitución de la descripción
+  - *Escenario BDD:* Sin cambios no hay escritura
+  - *Escenario BDD:* Solo se toca la descripción
+- **[RF-ADO-24]** Etiquetas de IDs Funcionales como Conjunto Idempotente
+  - *Escenario BDD:* Primera sincronización
+  - *Escenario BDD:* Se retiran las obsoletas y se conservan las ajenas
+  - *Escenario BDD:* Repetir no escribe
+  - *Escenario BDD:* Se supera el tope configurado
+  - *Escenario BDD:* Se superaría el límite de 100 etiquetas del WI
+  - *Escenario BDD:* Prefijo configurado
+  - *Escenario BDD:* Conflicto de `rev` al sincronizar
+- **[RF-ADO-25]** Estado y Asignación de la Task por Evento
+  - *Escenario BDD:* Inicio del rol
+  - *Escenario BDD:* Entrega repetida
+  - *Escenario BDD:* Apply aprobado
+  - *Escenario BDD:* Estado inexistente en el proceso
+  - *Escenario BDD:* Evento originado por otra persona
+  - *Escenario BDD:* Sin identidad guardada
+  - *Escenario BDD:* Rol sin Task vinculada
+- **[RF-ADO-26]** Transición del Work Item al Archivar
+  - *Escenario BDD:* Transición configurada
+  - *Escenario BDD:* Sin estado configurado
+  - *Escenario BDD:* WI ya en el estado destino
+  - *Escenario BDD:* La entrega no devuelve vínculos
+- **[RF-ADO-27]** Las Escrituras Nuevas Son Herméticas y No Filtran el PAT
+  - *Escenario BDD:* Ninguna petición sale de los servidores locales
+  - *Escenario BDD:* El PAT no aparece en los errores de las escrituras
 
 ### Dominio: `change-actor-identity` — Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09)
 
@@ -856,6 +912,11 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Fuera del carril `sdd`
   - *Escenario BDD:* Sin kickoff sellado
   - *Escenario BDD:* El motor no conoce el rol
+  - *Escenario BDD:* Rol sin Task vinculada con tracker activo
+  - *Escenario BDD:* Con la Task vinculada la barrera se levanta
+  - *Escenario BDD:* El rechazo de roster precede a la barrera
+  - *Escenario BDD:* Cambio sin vínculo de WI
+  - *Escenario BDD:* Sin plugin activo con `items.create`
 - **[RF-BRA-34]** `ensure --role` Listo Emite `role.start` Idempotente
   - *Escenario BDD:* Primera entrada al rol
   - *Escenario BDD:* `ensure` repetido
@@ -917,6 +978,14 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Los avisos llegan por el contexto adicional solo si hay algo relevante
   - *Escenario BDD:* Los runtimes sin hook demostrado quedan solo con la doctrina
   - *Escenario BDD:* La doctrina condiciona la regla de `--fetch` al autofetch
+- **[RF-BRA-41]** `ensure --role` Registra el Inicio del Rol la Primera Vez que Queda Listo
+  - *Escenario BDD:* Primera entrada al rol
+  - *Escenario BDD:* Reentrada al rol
+  - *Escenario BDD:* Estado distinto de `ready`
+  - *Escenario BDD:* Sin `--role`
+  - *Escenario BDD:* El dashboard no registra el inicio
+  - *Escenario BDD:* Fallo al escribir el inicio
+  - *Escenario BDD:* Sin plugin activo
 
 ### Dominio: `change-start-from-work-item` — Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19)
 
@@ -1161,6 +1230,12 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
   - *Escenario BDD:* Vincular dos veces el mismo work item
   - *Escenario BDD:* El vínculo convive con los de las entregas
   - *Escenario BDD:* URL del work item con credenciales
+  - *Escenario BDD:* Lectura de un fichero `v1`
+  - *Escenario BDD:* Esquema desconocido
+  - *Escenario BDD:* Vínculo de Task con estimación e inicio
+  - *Escenario BDD:* Actualizar la estimación de un vínculo
+  - *Escenario BDD:* Dos imputaciones del mismo rol no chocan
+  - *Escenario BDD:* Imputación con actor
 - **[RF-INT-10]** La Emisión Nunca Hace Fallar el Verbo de Origen
   - *Escenario BDD:* Fallo del plugin no rompe el verbo
   - *Escenario BDD:* Bloque `integrations` inválido
@@ -1208,6 +1283,7 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
   - *Escenario BDD:* Reintento tras fallo
 - **[RF-INT-18]** Alta del Verbo `integrations` en la CLI y la Ayuda
   - *Escenario BDD:* Ayuda global
+  - *Escenario BDD:* Ayuda de los verbos nuevos
   - *Escenario BDD:* Subcomando desconocido
 - **[RF-INT-19]** `archive` se Encola de Forma Duradera en la Carpeta Archivada
   - *Escenario BDD:* La operación se encola en la carpeta archivada
@@ -1236,6 +1312,96 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
   - *Escenario BDD:* Pánico del plugin
   - *Escenario BDD:* Los errores no llevan secretos
   - *Escenario BDD:* La interfaz `Plugin` no cambia
+- **[RF-INT-25]** Puerto Opcional de Tasks por Rol
+  - *Escenario BDD:* Plugin que ofrece el puerto
+  - *Escenario BDD:* Plugin sin el puerto
+  - *Escenario BDD:* Pánico del plugin
+  - *Escenario BDD:* Los errores no llevan secretos
+  - *Escenario BDD:* La interfaz `Plugin` no cambia
+- **[RF-INT-26]** Verbo `axiom integrations tasks create`
+  - *Escenario BDD:* Creación de una Task por rol
+  - *Escenario BDD:* `--estimate` prevalece sobre `design.md`
+  - *Escenario BDD:* Repetir tras respuesta perdida no duplica
+  - *Escenario BDD:* Vínculo ya registrado
+  - *Escenario BDD:* Estimación confirmada distinta con el vínculo ya registrado
+  - *Escenario BDD:* Conflicto de `rev` al actualizar la estimación
+  - *Escenario BDD:* Marcas duplicadas
+  - *Escenario BDD:* Sin estimación para un rol
+  - *Escenario BDD:* Fallo de creación con la aprobación registrada
+  - *Escenario BDD:* Un fallo no impide los demás roles
+  - *Escenario BDD:* Estimación inválida
+- **[RF-INT-27]** Verbo `axiom integrations tasks bind`
+  - *Escenario BDD:* Vínculo manual válido
+  - *Escenario BDD:* Identificador inexistente
+  - *Escenario BDD:* El elemento no es Task
+  - *Escenario BDD:* La Task cuelga de otro WI
+  - *Escenario BDD:* Rol fuera del roster
+  - *Escenario BDD:* Estimación sobre una Task sin horas
+  - *Escenario BDD:* Estimación sobre una Task con horas
+  - *Escenario BDD:* Otra Task en un rol ya vinculado
+  - *Escenario BDD:* Sustituir el vínculo de un rol
+  - *Escenario BDD:* Sustitución con una Task que no valida
+  - *Escenario BDD:* Vincular dos veces la misma Task
+- **[RF-INT-28]** Verbo `axiom integrations summary push`
+  - *Escenario BDD:* Resumen antes de archivar
+  - *Escenario BDD:* Resumen sobre la carpeta archivada
+  - *Escenario BDD:* Repetición sin cambios
+  - *Escenario BDD:* Tope de etiquetas superado
+  - *Escenario BDD:* Provisional sin resolver en la carpeta archivada
+  - *Escenario BDD:* Sin spec
+  - *Escenario BDD:* Solo la descripción y las etiquetas
+- **[RF-INT-29]** Renderizador Determinista del Resumen de la Spec
+  - *Escenario BDD:* Estructura del resumen
+  - *Escenario BDD:* Solo etiquetas de la lista blanca y sin atributos
+  - *Escenario BDD:* Escape del texto
+  - *Escenario BDD:* Determinismo
+  - *Escenario BDD:* Marcado en línea
+- **[RF-INT-30]** Estimación por Rol en `design.md`
+  - *Escenario BDD:* Lectura de la sección
+  - *Escenario BDD:* Horas decimales
+  - *Escenario BDD:* Línea malformada
+  - *Escenario BDD:* Rol repetido o fuera del roster
+  - *Escenario BDD:* Cambiar la sección cambia el digest
+- **[RF-INT-31]** Verbo `axiom integrations time propose`
+  - *Escenario BDD:* Propuesta recortada a la jornada
+  - *Escenario BDD:* Un día entero no pasa de la jornada
+  - *Escenario BDD:* Fin de semana sin suma
+  - *Escenario BDD:* Muestra los valores del tracker
+  - *Escenario BDD:* Rol sin Task vinculada
+  - *Escenario BDD:* Rol sin inicio registrado
+- **[RF-INT-32]** Verbo `axiom integrations time record`
+  - *Escenario BDD:* Imputación correcta
+  - *Escenario BDD:* Conflicto de `rev`
+  - *Escenario BDD:* Segundo cierre del mismo rol
+  - *Escenario BDD:* Horas inválidas
+  - *Escenario BDD:* Fallo del tracker
+  - *Escenario BDD:* `checkpointed` no toca el estado
+  - *Escenario BDD:* `continuous` aplica el estado de cierre
+  - *Escenario BDD:* Fallo de la transición en `continuous`
+  - *Escenario BDD:* `PATCH` aplicado y registro local fallido
+  - *Escenario BDD:* Intención no aplicada
+  - *Escenario BDD:* Intención ambigua
+  - *Escenario BDD:* Resolver la intención a mano
+  - *Escenario BDD:* La intención es estado local
+  - *Escenario BDD:* `time propose` no reconcilia
+  - *Escenario BDD:* Fallo de transporte sin respuesta
+  - *Escenario BDD:* La reconciliación usa la Task de la intención
+  - *Escenario BDD:* Cierre sin horas en `continuous`
+- **[RF-INT-33]** Precondiciones por Estilo, Carril ODD y Plugin Activo de los Verbos Nuevos
+  - *Escenario BDD:* Nombre del carril ODD
+  - *Escenario BDD:* ODD no escribe `integrations.yaml`
+  - *Escenario BDD:* Sin plugin activo
+  - *Escenario BDD:* Cambio sin vínculo de WI
+  - *Escenario BDD:* `checkpointed` exige la compuerta
+  - *Escenario BDD:* `checkpointed` con la compuerta rechazada
+  - *Escenario BDD:* `continuous` basta con el artefacto
+  - *Escenario BDD:* `continuous` sin artefacto
+  - *Escenario BDD:* `continuous` sin vínculo de Task del rol
+  - *Escenario BDD:* `summary push` sobre la carpeta archivada
+- **[RF-INT-34]** Salida JSON Versionada y Sin Secretos de los Verbos Nuevos
+  - *Escenario BDD:* Esquema versionado
+  - *Escenario BDD:* Rechazo con resolución nombrada
+  - *Escenario BDD:* Ningún secreto en la salida
 
 ### Dominio: `knowledge-profile-init` — Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23)
 
@@ -2429,6 +2595,18 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* La opción de solo lectura no escribe
   - *Escenario BDD:* Una segunda rama de archivado rebasada detecta el duplicado y se rehace
   - *Escenario BDD:* Un nombre superado que no casa se rechaza
+- **[RF-ARC-16]** Con Tracker Activo el Archivado Reenvía el Resumen con los IDs Definitivos
+  - *Escenario BDD:* IDs definitivos tras archivar
+  - *Escenario BDD:* La carpeta archivada no cambia
+  - *Escenario BDD:* Fallo del reenvío
+  - *Escenario BDD:* Sin tracker
+- **[RF-ARC-17]** Resumen Final de `continuous` con Estimaciones, Horas, Quién y Cuándo
+  - *Escenario BDD:* Resumen con una imputación
+  - *Escenario BDD:* Dos cierres del mismo rol
+  - *Escenario BDD:* Rol sin imputación
+  - *Escenario BDD:* Avisos recogidos
+  - *Escenario BDD:* Cambios que no lo llevan
+  - *Escenario BDD:* Sin red
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -3280,6 +3458,30 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Falta información del bug
   - *Escenario BDD:* Sin vínculo no hay referencia
   - *Escenario BDD:* La referencia no condiciona el estado
+- **[RF-ORQ-29]** El Orquestador Invoca los Verbos de Tasks y de Resumen con Tracker Activo
+  - *Escenario BDD:* `checkpointed` tras la compuerta
+  - *Escenario BDD:* `continuous` sin parada
+  - *Escenario BDD:* Sin tracker activo no se invoca nada
+  - *Escenario BDD:* Fallo de `tasks create` en `checkpointed`
+  - *Escenario BDD:* Fallo de `summary push` en `continuous`
+  - *Escenario BDD:* Carril ODD
+- **[RF-ORQ-30]** `ensure --role` Antes del Apply con Tracker Activo
+  - *Escenario BDD:* Apply del rol único
+  - *Escenario BDD:* Bloqueo por Task sin vincular
+  - *Escenario BDD:* Sin tracker
+- **[RF-ORQ-31]** `sdd-design` Propone la Estimación por Rol
+  - *Escenario BDD:* Sección presente con tracker activo
+  - *Escenario BDD:* Sin tracker
+  - *Escenario BDD:* Una línea por rol del roster
+- **[RF-ORQ-32]** `sdd-apply` Propone e Imputa las Horas al Cerrar el Rol
+  - *Escenario BDD:* `checkpointed` con confirmación
+  - *Escenario BDD:* `continuous` sin parada
+  - *Escenario BDD:* Conflicto de revisión
+  - *Escenario BDD:* Sin tracker o en ODD
+- **[RF-ORQ-33]** Doctrina de los Verbos de Integración en Paridad entre Runtimes y Goldens
+  - *Escenario BDD:* Todos los runtimes contienen la doctrina
+  - *Escenario BDD:* Goldens actualizados
+  - *Escenario BDD:* Sin secretos en la doctrina
 
 ### Dominio: `sdd-preflight-configuration` — Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21)
 
