@@ -14,7 +14,16 @@ on:
   # Without this the only way to re-run CI on main is to push another commit.
   # It is also how a sha gets the green ci.yml run that the release gate
   # requires before it is tagged: `gh workflow run ci.yml --ref main`.
+  # Sin `full`, la ejecución manual corre los mismos jobs que una PR y es la
+  # que valida el sha antes de etiquetar. Con `-f full=true` añade los jobs
+  # pesados (Darwin Runtime, Organic Runtime E2E y E2E en contenedores), que
+  # no forman parte de la puerta de release.
   workflow_dispatch:
+    inputs:
+      full:
+        description: "Añadir Darwin Runtime, Organic Runtime E2E y los E2E en contenedores"
+        type: boolean
+        default: false
 
 # Una ejecución nueva deja obsoleta a la anterior del mismo disparador sobre la
 # misma referencia, así que se cancela en lugar de encolarse detrás. El nombre
@@ -733,7 +742,7 @@ jobs:
     name: Darwin Runtime
     needs: go-format
     # Restringido a ejecución manual bajo demanda para evitar consumo masivo de runners macOS (factor 10x)
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.full
     runs-on: macos-latest
     timeout-minutes: 25
     steps:
@@ -769,7 +778,7 @@ jobs:
     name: Organic Runtime E2E (${{ matrix.os }})
     needs: go-format
     # Restringido a ejecución manual bajo demanda para evitar consumo masivo en PRs cotidianos
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.full
     runs-on: ${{ matrix.os }}
     # Issue #3185: the Windows suite legitimately runs 11-13 minutes; a 15m
     # go-test budget flaked on slow runners with every test passing. The job
@@ -846,7 +855,7 @@ jobs:
     name: E2E Tests (${{ matrix.platform.name }})
     needs: go-format
     # Restringido a ejecución manual bajo demanda para evitar construcción pesada de 3 contenedores docker en PRs
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && inputs.full
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
