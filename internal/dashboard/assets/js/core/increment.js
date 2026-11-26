@@ -87,7 +87,7 @@ export function formatDate(iso) {
 // progressBar: verde al llegar al 100 %; el valor también va en texto y en aria.
 export function progressBar(pct, label = 'Tareas completadas') {
   const v = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
-  return `<div class="progress${v >= 100 ? ' is-done' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${escapeHtml(label)}"><span style="width:${v}%"></span></div>`;
+  return `<div class="progress${v >= 100 ? ' is-done' : ''}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}" aria-label="${escapeHtml(label)}"><span data-pct="${v}"></span></div>`;
 }
 
 // miniStepper: 7 segmentos; la fase actual se anuncia con texto accesible.

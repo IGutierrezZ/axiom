@@ -122,6 +122,12 @@ func TestImportsDirection(t *testing.T) {
 		}, "workspace solo puede depender de la hoja manifest")
 	})
 
+	t.Run("internal/settings solo importa la hoja manifest de integraciones", func(t *testing.T) {
+		assertNoImporters(t, filepath.Join(root, "internal", "settings"), func(p string) bool {
+			return pkg("internal/integrations")(p) && !pkgExact("internal/integrations/manifest")(p)
+		}, "settings solo puede depender de la hoja manifest")
+	})
+
 	t.Run("solo internal/integrations/secrets importa go-keyring", func(t *testing.T) {
 		isKeyring := func(p string) bool {
 			return p == "github.com/zalando/go-keyring" || strings.HasPrefix(p, "github.com/zalando/go-keyring/")

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:bfddc99fa9a6e0d7d63ac13cbd02162444e90f7e5b4fa009852705a45180c96c">
+<title>Resumen del diseño: integraciones en el panel de Axiom</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1a202c; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.2rem; margin-top: 2rem; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.4rem; }
+section.aviso-desvio { border-left-color: #c05621; }
+.aviso { background: #fffbea; border: 1px solid #ecc94b; padding: 0.75rem; }
+.id { font-family: ui-monospace, monospace; font-size: 0.85rem; color: #4a5568; }
+table { border-collapse: collapse; width: 100%; margin: 0.5rem 0 1rem; }
+th, td { border: 1px solid #cbd5e0; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+th { background: #edf2f7; }
+dt { font-weight: 600; margin-top: 0.6rem; }
+</style>
+</head>
+<body>
+<h1>Integraciones en el panel de Axiom: cómo se va a construir</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<h2>Qué cambia</h2>
+<p>Hoy, conectar Axiom con Azure DevOps exige editar un fichero de configuración a mano y escribir órdenes en la terminal. Con este cambio, la persona lo hace todo desde el panel web: activa la integración, guarda su clave de acceso, prueba la conexión y arranca un cambio a partir de una tarea de Azure DevOps. Antes de que el panel maneje esa clave, se refuerza su seguridad.</p>
+
+<h2>Para quién</h2>
+<p>Para quien coordina el trabajo y quiere configurar la integración sin tocar ficheros, y para cualquier persona que quiera ver, en cada cambio, la tarea de origen, las horas imputadas y lo que queda pendiente de enviar a Azure DevOps.</p>
+
+<h2>El proceso, antes y después</h2>
+<table>
+<tr><th>Antes</th><th>Después</th></tr>
+<tr><td>Se edita el fichero de configuración a mano.</td><td>Se rellena un formulario que comprueba cada valor antes de guardarlo.</td></tr>
+<tr><td>La clave de acceso se guarda desde la terminal.</td><td>Se escribe una vez en el panel y queda en el almacén seguro del sistema; nunca vuelve a mostrarse.</td></tr>
+<tr><td>Arrancar desde una tarea exige varias órdenes.</td><td>Se pega el número o el enlace de la tarea al crear el cambio.</td></tr>
+<tr><td>El panel acepta peticiones de cualquier página web.</td><td>Solo acepta las del propio panel en el propio ordenador.</td></tr>
+</table>
+
+<svg width="640" height="150" role="img" aria-label="Flujo: navegador, barrera de seguridad, panel, almacén seguro y Azure DevOps">
+<rect x="5" y="50" width="110" height="50" rx="6" fill="#bee3f8"/>
+<text x="20" y="80" font-size="13">Navegador</text>
+<rect x="145" y="50" width="130" height="50" rx="6" fill="#fed7d7"/>
+<text x="157" y="72" font-size="13">Barrera de</text>
+<text x="157" y="90" font-size="13">seguridad</text>
+<rect x="305" y="50" width="110" height="50" rx="6" fill="#c6f6d5"/>
+<text x="330" y="80" font-size="13">Panel</text>
+<rect x="445" y="5" width="190" height="40" rx="6" fill="#faf089"/>
+<text x="455" y="30" font-size="13">Almacén seguro (clave)</text>
+<rect x="445" y="60" width="190" height="40" rx="6" fill="#e9d8fd"/>
+<text x="455" y="85" font-size="13">Fichero de configuración</text>
+<rect x="445" y="110" width="190" height="35" rx="6" fill="#feebc8"/>
+<text x="455" y="132" font-size="13">Azure DevOps</text>
+<line x1="115" y1="75" x2="145" y2="75" stroke="#333"/>
+<line x1="275" y1="75" x2="305" y2="75" stroke="#333"/>
+<line x1="415" y1="70" x2="445" y2="25" stroke="#333"/>
+<line x1="415" y1="75" x2="445" y2="80" stroke="#333"/>
+<line x1="415" y1="85" x2="445" y2="127" stroke="#333"/>
+</svg>
+
+<h2>Las decisiones principales</h2>
+
+<section data-axiom-ref="D-01">
+<p class="id">D-01 · prov:WEB:1</p>
+<h3>Una política de contenido estricta</h3>
+<p>El panel solo cargará código y estilos propios. Para lograrlo se retiran los ocho sitios que tenían estilos escritos dentro de la propia página y el pequeño programa que elige el tema claro u oscuro pasa a su propio fichero. Una prueba automática impide que vuelvan a aparecer.</p>
+</section>
+
+<section data-axiom-ref="D-02">
+<p class="id">D-02 · prov:WEB:1 · prov:WEB:2</p>
+<h3>Una única barrera de seguridad para todo el panel</h3>
+<p>Toda respuesta del panel lleva las mismas protecciones, también las de error. Cualquier petición que cambie algo, y cualquier consulta de integraciones, debe venir del propio ordenador y del propio panel; si no, se rechaza antes de leerla. Esto también protege acciones que ya existían y hoy no lo comprobaban.</p>
+</section>
+
+<section data-axiom-ref="D-03">
+<p class="id">D-03 · RF-TOP-21 · RF-TOP-22</p>
+<h3>La configuración de la integración, en el mismo catálogo de ajustes</h3>
+<p>Los campos de Azure DevOps se generan a partir de la descripción del propio plugin, sin repetir sus valores a mano. Se guardan por la misma vía que el resto de ajustes, que conserva los comentarios del fichero y lo valida entero antes de escribirlo. La clave de acceso nunca forma parte de ese catálogo.</p>
+</section>
+
+<section data-axiom-ref="D-04">
+<p class="id">D-04</p>
+<h3>Reutilizar lo que ya hace la terminal</h3>
+<p>Probar la conexión, descubrir los tipos y estados de Azure DevOps y arrancar un cambio desde una tarea reutilizan exactamente la lógica de las órdenes de terminal, a través de una pieza intercambiable. En las pruebas esa pieza se sustituye por un doble, así que nunca se llama al servicio real.</p>
+</section>
+
+<section data-axiom-ref="D-05">
+<p class="id">D-05 · prov:WEB:5 · prov:WEB:6</p>
+<h3>Esperas acotadas</h3>
+<p>Las operaciones que hablan con Azure DevOps tienen un tiempo máximo propio (45 segundos para probar o descubrir y 120 para arrancar un cambio). Si se supera, la persona recibe un aviso claro. Si cierra la página, la operación se detiene. Un doble clic no lanza dos operaciones a la vez.</p>
+</section>
+
+<section data-axiom-ref="D-06">
+<p class="id">D-06 · prov:WEB:3 · prov:WEB:4</p>
+<h3>La clave de acceso solo entra, nunca sale</h3>
+<p>La clave viaja una sola vez hacia el panel y se guarda en el almacén seguro del sistema. Las respuestas solo dicen de dónde se obtiene (variable de entorno, almacén, ausente o almacén no disponible). Borrarla exige una confirmación explícita, porque la comparten todos los proyectos de la persona. Si el sistema no tiene almacén, el panel explica qué variable de entorno usar.</p>
+</section>
+
+<section data-axiom-ref="D-07">
+<p class="id">D-07 · prov:WEB:8</p>
+<h3>Una pestaña de integración en cada cambio</h3>
+<p>Cada cambio, también los archivados, muestra su tarea de origen, la tarea de cada rol con su estimación y sus horas, lo que falta por imputar, lo que queda pendiente de enviar y quién decidió cada paso. Lo pendiente de enviar se muestra de forma resumida, sin datos internos ni mensajes técnicos.</p>
+</section>
+
+<section data-axiom-ref="D-08" class="aviso-desvio">
+<p class="id">D-08 · prov:WEB:9 · H-20</p>
+<h3>Arrancar un cambio desde una tarea de Azure DevOps</h3>
+<p>Al crear un cambio se puede pegar el número o el enlace de una tarea. El panel sigue los mismos pasos que la terminal. Si algo falla después del primer paso, ofrece «Reintentar» y «Descartar», y descartar siempre pide confirmación. Igual que el alta actual del panel, no fija todavía el modo de trabajo del cambio: lo fija después el asistente al retomarlo. Esta lectura se declara como desviación del texto del requisito y se revisará en la verificación.</p>
+</section>
+
+<section data-axiom-ref="D-09">
+<p class="id">D-09 · prov:WEB:10</p>
+<h3>Enlaces seguros a la tarea</h3>
+<p>El enlace «Abrir en Azure DevOps» solo aparece si la dirección es una dirección web normal y segura, y se abre en otra pestaña. El nombre del servicio sale de la descripción del plugin, no está escrito a mano.</p>
+</section>
+
+<section data-axiom-ref="D-10">
+<p class="id">D-10 · prov:WEB:7 · RF-WEB-18</p>
+<h3>Una pantalla «Integraciones» que no conoce ningún servicio concreto</h3>
+<p>La pantalla se dibuja a partir de la descripción de cada plugin. Probar y descubrir usan siempre lo que ya está guardado. Lo descubierto se ofrece como sugerencia y nunca borra un valor ya configurado. Los ajustes de nombres de rama siguen en «Ajustes del proyecto», con un enlace desde aquí.</p>
+</section>
+
+<h2>Lo que queda fuera o a medias</h2>
+<section data-axiom-ref="H-05">
+<p class="id">H-05</p>
+<p>No hay forma automática de abrir un navegador real en las pruebas: que el panel se vea bien con la nueva política se comprobará a mano en la verificación.</p>
+</section>
+<section data-axiom-ref="H-09">
+<p class="id">H-09</p>
+<p>Una clave rechazada y un fallo de red comparten el mismo código de error; el mensaje sí los distingue.</p>
+</section>
+<section data-axiom-ref="H-12">
+<p class="id">H-12</p>
+<p>No se limita la frecuencia de las peticiones: el panel es local y de una sola persona.</p>
+</section>
+<section data-axiom-ref="H-19">
+<p class="id">H-19</p>
+<p>Si se recarga la página a mitad de un arranque, se recupera volviendo a dar la misma tarea; no hay una lista de arranques a medias.</p>
+</section>
+
+<h2>Cómo se entrega</h2>
+<p>En seis bloques, cada uno con sus pruebas: seguridad (el primero), catálogo, conexión con el servicio, pantalla, pestaña del cambio y arranque desde una tarea. Todo va en una única propuesta de integración del código.</p>
+
+<h2>Glosario</h2>
+<dl>
+<dt>Clave de acceso (PAT)</dt><dd>Contraseña personal que Azure DevOps entrega para que Axiom actúe en nombre de la persona.</dd>
+<dt>Plugin</dt><dd>Pieza que conecta Axiom con un servicio externo concreto; hoy, Azure DevOps.</dd>
+<dt>Política de contenido (CSP)</dt><dd>Lista que indica al navegador qué código y qué estilos puede cargar la página.</dd>
+<dt>Almacén seguro</dt><dd>Lugar del sistema operativo donde se guardan contraseñas de forma protegida.</dd>
+<dt>Pendiente de enviar (outbox)</dt><dd>Avisos que Axiom tiene preparados para Azure DevOps y aún no ha podido entregar.</dd>
+</dl>
+</body>
+</html>

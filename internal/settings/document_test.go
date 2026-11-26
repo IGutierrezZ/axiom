@@ -115,21 +115,6 @@ func TestReadBlocksUnsupportedConstructs(t *testing.T) {
 	}
 }
 
-// RF-TOP-22: el bloque `integrations` no se recorre, así que sus construcciones no
-// bloquean ni sus valores llegan al catálogo.
-func TestReadDoesNotWalkIntegrations(t *testing.T) {
-	doc := monoDoc + "integrations:\n  jira: &j\n    token: secreto-uno\n  otra: *j\n"
-	snap := readSnapshot(t, doc)
-	if !snap.Writable {
-		t.Errorf("integrations no debe bloquear: %s", snap.WriteBlockedReason)
-	}
-	for _, e := range snap.Entries {
-		if strings.Contains(e.Key, "integrations") {
-			t.Errorf("entrada de integrations en el catálogo: %+v", e)
-		}
-	}
-}
-
 // RF-TOP-22: un fichero inexistente es config_missing.
 func TestReadMissingFileIsConfigMissing(t *testing.T) {
 	_, err := Read(filepath.Join(t.TempDir(), "axiom.yaml"))

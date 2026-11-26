@@ -16,6 +16,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -92,14 +93,11 @@ func firstLine(s string) string {
 
 // unsupportedConstruct devuelve el motivo de rechazo de la primera construcción no
 // soportada del árbol, con su línea, o "" si no hay ninguna. El bloque
-// `integrations` no se recorre: nunca se lee ni se edita desde aquí.
+// `integrations` se recorre como los demás: se edita desde aquí.
 func unsupportedConstruct(root *yaml.Node) string {
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		if reason := keyConstruct(root, root.Content[i]); reason != "" {
 			return reason
-		}
-		if root.Content[i].Value == "integrations" {
-			continue
 		}
 		if reason := walkConstructs(root.Content[i+1]); reason != "" {
 			return reason
@@ -412,6 +410,16 @@ func (d *document) entries(topology workspace.TopologyType, iso bool) []Entry {
 				node, _ := mapValue(role, field)
 				out = append(out, build(spec, "roles["+id+"]."+field, node, true))
 			}
+		}
+	}
+	integrations, _ := mapValue(d.root, "integrations")
+	for _, m := range manifest.Catalog() {
+		plugin, _ := mapValue(integrations, m.ID)
+		for _, spec := range pluginSpecs(m) {
+			node, _ := mapValue(plugin, spec.label)
+			entry := build(spec, pluginKey(m.ID, spec.label), node, true)
+			entry.Plugin, entry.Format, entry.Min, entry.Max, entry.Required = m.ID, spec.format, spec.min, spec.max, spec.uiRequired
+			out = append(out, entry)
 		}
 	}
 	tc, _ := mapValue(d.root, "technical_context")

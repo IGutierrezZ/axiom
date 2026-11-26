@@ -342,13 +342,13 @@ func TestIntegrationsSecretSetRejections(t *testing.T) {
 		}
 		untouched()
 	})
-	t.Run("más de 4 KiB", func(t *testing.T) {
-		code, _, errOut := runIntegrationsCLI(t, strings.Repeat("a", 4097), "secret", "set", "--plugin", "fake", "--name", "token")
-		if code != 1 || !strings.Contains(errOut, "4096") {
+	t.Run("más de 2 KiB", func(t *testing.T) {
+		code, _, errOut := runIntegrationsCLI(t, strings.Repeat("a", secrets.MaxValueBytes+1), "secret", "set", "--plugin", "fake", "--name", "token")
+		if code != 1 || !strings.Contains(errOut, "2048") {
 			t.Fatalf("%d %q", code, errOut)
 		}
-		if code, _, _ := runIntegrationsCLI(t, strings.Repeat("a", 4096), "secret", "set", "--plugin", "fake", "--name", "token"); code != 0 {
-			t.Fatalf("4 KiB exactos caben: %d", code)
+		if code, _, _ := runIntegrationsCLI(t, strings.Repeat("a", secrets.MaxValueBytes), "secret", "set", "--plugin", "fake", "--name", "token"); code != 0 {
+			t.Fatalf("el límite exacto cabe: %d", code)
 		}
 		_ = mem.Delete(context.Background(), secrets.Ref{Plugin: "fake", Name: "token"})
 	})

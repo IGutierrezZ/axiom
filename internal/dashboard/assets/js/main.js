@@ -8,12 +8,14 @@ import { startRouter } from './core/router.js';
 import { refreshOverview } from './core/overview.js';
 import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
+import { observeCssData } from './core/cssvars.js';
 import { initInstallButton, registerServiceWorker } from './core/pwa.js';
 import { initProjects, loadProjects } from './projects.js';
 import { initUpdate } from './update.js';
 import { initShell, setActiveNav, renderBreadcrumb, routeLabel, closeMenu } from './shell.js';
 import { initDetail, enterDetail, refreshDetail } from './screens/detalle.js';
 import { initSettings, loadSettings } from './screens/ajustes.js';
+import { initIntegrations, loadIntegrations } from './screens/integraciones.js';
 import { initEcosystem, loadEcosystem } from './screens/ecosystem.js';
 import { initIncrements, loadIncrements, renderIncrements } from './screens/incrementos.js';
 import { initInicio, renderInicio } from './screens/inicio.js';
@@ -28,6 +30,7 @@ const VIEW_BY_ROUTE = {
   specs: 'view-specs',
   skills: 'view-skills',
   ecosistema: 'view-ecosistema',
+  integraciones: 'view-integraciones',
   ajustes: 'view-ajustes'
 };
 
@@ -57,6 +60,7 @@ async function loadAllData() {
     loadLivingDocs(),
     loadEcosystem(),
     loadSettings(),
+    loadIntegrations(),
     // Inicio y la barra lateral: las rutas que otras pantallas ya piden en este
     // mismo instante se comparten (api() agrupa los GET simultáneos).
     refreshOverview()
@@ -92,6 +96,7 @@ function showView(route, { initial }) {
 
 function boot() {
   initTheme();
+  observeCssData();
   hydrateIcons();
   initInstallButton();
   registerServiceWorker();
@@ -106,6 +111,7 @@ function boot() {
   initLivingDocs();
   initEcosystem();
   initSettings();
+  initIntegrations();
   initUpdate();
 
   // Las pantallas que dependen del workspace se repintan cuando llega.

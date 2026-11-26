@@ -125,13 +125,20 @@ func readSettingsDTO(configPath string) (*SettingsDTO, error) {
 		Entries:            make([]SettingDTO, 0, len(snap.Entries)),
 	}
 	for _, e := range snap.Entries {
-		dto.Entries = append(dto.Entries, SettingDTO{
-			Key: e.Key, Section: e.Section, Label: e.Label, Description: e.Description, Effect: e.Effect,
-			Type: string(e.Type), Allowed: e.Allowed, Topologies: e.Topologies, Editable: e.Editable,
-			ReadOnlyReason: e.ReadOnlyReason, Required: e.Required, Default: e.Default, Declared: e.Declared, Value: e.Value,
-		})
+		dto.Entries = append(dto.Entries, settingDTOFrom(e))
 	}
 	return dto, nil
+}
+
+// settingDTOFrom traduce una fila del catálogo de ajustes a su DTO; la comparten /api/settings y
+// /api/integrations.
+func settingDTOFrom(e settings.Entry) SettingDTO {
+	return SettingDTO{
+		Key: e.Key, Section: e.Section, Label: e.Label, Description: e.Description, Effect: e.Effect,
+		Type: string(e.Type), Allowed: e.Allowed, Topologies: e.Topologies, Editable: e.Editable,
+		ReadOnlyReason: e.ReadOnlyReason, Required: e.Required, Default: e.Default, Declared: e.Declared, Value: e.Value,
+		Plugin: e.Plugin, Format: e.Format, Min: e.Min, Max: e.Max,
+	}
 }
 
 // PutSettings aplica un lote de cambios sobre el axiom.yaml del proyecto, bajo settingsMu.

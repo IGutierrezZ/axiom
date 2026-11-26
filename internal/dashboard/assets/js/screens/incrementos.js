@@ -8,9 +8,11 @@
 // servidor pide decidir cómo trabajarlo, se presenta la decisión en un diálogo.
 
 import { api, apiWithHeaders, escapeHtml } from '../core/api.js';
-import { branchBadge, createWithDecision, parseNotes, pendingArchiveBadge } from '../core/branches.js';
-import { $, $all, openDialog, closeDialog, setBusy, chip, button, stateEmpty, stateError, tableWrap } from '../core/components.js';
+import { branchBadge, createWithDecision, parseNotes, pendingArchiveBadge, startFromWorkItem, WorkItemStartError } from '../core/branches.js';
+import { workItemsApplicable } from '../core/integrations.js';
+import { $, $all, openDialog, closeDialog, setBusy, confirmDialog, chip, button, stateEmpty, stateError, tableWrap } from '../core/components.js';
 import { icon } from '../core/icons.js';
+import { applyCssData } from '../core/cssvars.js';
 import { PHASES, phaseIndex, typeInfo, typeChip, flagBadge, progressBar, miniStepper, formatDate, isArchived } from '../core/increment.js';
 import { hrefFor, navigate } from '../core/router.js';
 import { state, set } from '../core/state.js';
@@ -170,7 +172,7 @@ function boardHtml(items, archivedExtra) {
     return { collapsed, html: `<section class="ix-col${collapsed ? ' is-collapsed' : ''}" aria-labelledby="ix-h-${phase.id}">${head}${body}</section>` };
   });
   const template = cols.map(c => (c.collapsed ? '3.25rem' : 'minmax(9.25rem, 1fr)')).join(' ');
-  return `<div class="ix-board-wrap" role="region" aria-label="Tablero de incrementos por fase" tabindex="0"><div class="ix-board" style="--ix-cols:${template}">${cols.map(c => c.html).join('')}</div></div>`;
+  return `<div class="ix-board-wrap" role="region" aria-label="Tablero de incrementos por fase" tabindex="0"><div class="ix-board" data-ix-cols="${template}">${cols.map(c => c.html).join('')}</div></div>`;
 }
 
 function listHtml(items) {
@@ -269,6 +271,7 @@ function paint() {
     more = button({ label: `Ver los ${archivedAll.length} archivados`, iconName: 'archive', size: 'sm', variant: 'ghost', attrs: 'data-action="archived"' });
   }
   container.innerHTML = body + (more ? `<p class="ix-more">${more}</p>` : '');
+  applyCssData(container); // síncrono: evita el parpadeo hasta que actúe el observador
 
   const n = items.length;
   announce(`${n} ${n === 1 ? 'incremento' : 'incrementos'} en ${activeFilter().label}`);
@@ -389,6 +392,15 @@ function initNewIncrement() {
   const intent = $('#input-inc-intent');
   const errorBox = $('#new-inc-error');
   const submit = $('#btn-submit-new-increment');
+  const wiField = $('#field-inc-workitem');
+  const wiInput = $('#input-inc-workitem');
+  const notesBox = $('#new-inc-notes');
+  const recovery = $('#new-inc-recovery');
+  const retryBtn = $('#btn-wi-retry');
+  const discardBtn = $('#btn-wi-discard');
+  const submitLabel = submit.textContent;
+  let staged = '';   // cambio con staging tras un fallo posterior a la fase 1
+  let opened = '';   // cambio dado de alta con avisos, pendiente de abrir
 
   const clearInvalid = () => {
     name.removeAttribute('aria-invalid');
@@ -403,19 +415,131 @@ function initNewIncrement() {
       field.focus();
     }
   };
+  // showNotes pinta avisos como texto (pueden derivar del tracker); sin avisos oculta la región.
+  const showNotes = (lines) => {
+    notesBox.textContent = '';
+    lines.forEach((line) => {
+      const p = document.createElement('p');
+      p.textContent = line;
+      notesBox.appendChild(p);
+    });
+    notesBox.hidden = lines.length === 0;
+  };
+  const showRecovery = (change, actions) => {
+    staged = change || '';
+    recovery.hidden = !staged || actions.length === 0;
+    retryBtn.hidden = !actions.includes('retry');
+    discardBtn.hidden = !actions.includes('discard');
+  };
+  const reset = () => {
+    staged = '';
+    opened = '';
+    errorBox.hidden = true;
+    showNotes([]);
+    showRecovery('', []);
+    submit.textContent = submitLabel;
+    clearInvalid();
+  };
+  const finish = async (change) => {
+    closeDialog(dialog);
+    await loadIncrements();
+    navigate('incremento', { change });
+  };
+  const cleanWarnings = (done) => (done && Array.isArray(done.warnings) ? done.warnings.filter(w => typeof w === 'string' && w) : []);
+
+  // runWorkItemStart da el alta (o la reanuda con `change`) y gestiona éxito, avisos y fallos.
+  const runWorkItemStart = async (payload, busyButton, busyText) => {
+    errorBox.hidden = true;
+    showNotes([]);
+    let created = null;
+    const restore = setBusy(busyButton, busyText);
+    try {
+      created = await startFromWorkItem(
+        body => api('/api/integrations/start', { body }),
+        askIncrementDecision,
+        payload
+      );
+    } catch (err) {
+      if (err instanceof WorkItemStartError) {
+        fail(err.message);
+        showRecovery(err.change, err.actions);
+      } else {
+        fail(`Error: ${err.message}`);
+      }
+    } finally {
+      restore();
+    }
+    if (!created) return;
+    showRecovery('', []);
+    const warnings = cleanWarnings(created);
+    if (warnings.length > 0) {
+      // Las advertencias no detienen el alta: se muestran y el cambio se abre al confirmarlo.
+      opened = created.name;
+      showNotes(warnings);
+      submit.textContent = 'Abrir el cambio';
+      return;
+    }
+    await finish(created.name);
+  };
 
   $('#btn-new-increment').addEventListener('click', () => {
     name.value = '';
     intent.value = '';
+    wiInput.value = '';
     type.value = 'feature';
-    errorBox.hidden = true;
-    clearInvalid();
+    reset();
+    // El campo del work item solo aparece con un plugin aplicable; si la consulta falla, el alta
+    // manual funciona igual y el campo queda oculto.
+    wiField.hidden = true;
+    api('/api/integrations').then((data) => {
+      wiField.hidden = !workItemsApplicable(data);
+    }).catch(() => {
+      wiField.hidden = true;
+    });
     openDialog(dialog, '#input-inc-name');
   });
 
+  retryBtn.addEventListener('click', () => {
+    if (!staged) return;
+    runWorkItemStart({ change: staged, intent: intent.value.trim(), type: type.value }, retryBtn, 'Reintentando…');
+  });
+
+  discardBtn.addEventListener('click', async () => {
+    if (!staged) return;
+    const change = staged;
+    const sure = await confirmDialog({
+      title: 'Descartar el alta',
+      message: `Se retirará la preparación del alta del cambio «${change}». El work item no se modifica. ¿Descartar?`,
+      confirmLabel: 'Descartar',
+      danger: true
+    });
+    if (!sure) return;
+    const restore = setBusy(discardBtn, 'Descartando…');
+    try {
+      const done = await api('/api/integrations/start/discard', { body: { change, confirm: true } });
+      errorBox.hidden = true;
+      showRecovery('', []);
+      showNotes([`Alta descartada: ${change}.`, ...cleanWarnings(done)]);
+    } catch (err) {
+      fail(`Error: ${err.message}`);
+    } finally {
+      restore();
+    }
+  });
+
   submit.addEventListener('click', async () => {
+    if (opened) {
+      await finish(opened);
+      return;
+    }
     const nameVal = name.value.trim();
     const intentVal = intent.value.trim();
+    const refVal = wiField.hidden ? '' : wiInput.value.trim();
+    if (refVal) {
+      // Con work item, el nombre se deriva de él: el campo de nombre no se valida ni se envía.
+      await runWorkItemStart({ ref: refVal, intent: intentVal, type: type.value }, submit, 'Creando…');
+      return;
+    }
     if (!nameVal || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(nameVal)) {
       fail('El nombre del incremento debe seguir el formato kebab-case (ej. inc-16-metricas-rendimiento).', name);
       return;

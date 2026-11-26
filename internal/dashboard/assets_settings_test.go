@@ -83,9 +83,6 @@ func TestSettingsAssetsViewStructure(t *testing.T) {
 		if rdd.MatchString(text) {
 			t.Errorf("%s no debe ofrecer controles de RDD", name)
 		}
-		if strings.Contains(strings.ToLower(text), "integrations") {
-			t.Errorf("%s no debe tratar el bloque integrations", name)
-		}
 	}
 	if strings.Contains(html, "integration_branch") || strings.Contains(html, "branch_prefix") {
 		t.Error("index.html no debe contener claves de git: la pantalla se genera del catálogo (RF-WEB-10)")
@@ -287,4 +284,27 @@ func equalJSON(a, b any) bool {
 	left, _ := json.Marshal(a)
 	right, _ := json.Marshal(b)
 	return string(left) == string(right)
+}
+
+// RF-WEB-18, RF-WEB-19: la pantalla de ajustes no pinta la sección de integraciones (la editará
+// la pantalla de integraciones), enlaza a ella y los controles numéricos usan las cotas del
+// catálogo; ningún secreto del manifiesto es una clave de la pantalla.
+func TestSettingsAssetsOmitIntegrationsAndLinkToTheirScreen(t *testing.T) {
+	t.Parallel()
+	screen := readAsset(t, "js/screens/ajustes.js")
+	render := funcBody(t, screen, "renderSettings")
+	for _, marker := range []string{"e.section !== 'integrations'", "#/integraciones"} {
+		if !strings.Contains(render, marker) {
+			t.Errorf("renderSettings debe contener %q:\n%s", marker, render)
+		}
+	}
+	core := readAsset(t, "js/core/settings.js")
+	for _, marker := range []string{"entry.min", "entry.max"} {
+		if !strings.Contains(core, marker) {
+			t.Errorf("core/settings.js debe usar %q del catálogo", marker)
+		}
+	}
+	if strings.Contains(strings.ToLower(screen+core), "azure") {
+		t.Error("la pantalla no conoce ningún plugin: todo sale del catálogo")
+	}
 }

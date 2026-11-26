@@ -161,3 +161,38 @@ func TestChainWriteFailureIsKeyringUnavailable(t *testing.T) {
 		t.Fatalf("Delete con fallo: %v", err)
 	}
 }
+
+// Un valor por encima de MaxValueBytes (cabe en todos los almacenes del sistema) falla con un error
+// tipado que guía hacia la variable de entorno y nunca refleja el valor.
+func TestChainSetRejectsAValueAboveMaxValueBytesWithATypedError(t *testing.T) {
+	ref := Ref{Plugin: "fake", Name: "token"}
+	mem := NewMemory()
+	chain := NewChain(Env{}, mem)
+	value := strings.Repeat("x", MaxValueBytes+1)
+
+	err := chain.Set(context.Background(), ref, NewSecret(value))
+
+	var tooLarge *ValueTooLargeError
+	if !errors.As(err, &tooLarge) {
+		t.Fatalf("debe devolver *ValueTooLargeError, no %T: %v", err, err)
+	}
+	if tooLarge.Max != MaxValueBytes || tooLarge.EnvVar != ref.EnvVar() {
+		t.Errorf("error = %+v", tooLarge)
+	}
+	msg := err.Error()
+	if strings.Contains(msg, value) || !strings.Contains(msg, ref.EnvVar()) {
+		t.Errorf("el mensaje debe guiar hacia %s y no contener el valor: %q", ref.EnvVar(), msg)
+	}
+	if _, _, getErr := mem.Get(context.Background(), ref); !errors.Is(getErr, ErrNotFound) {
+		t.Error("un valor rechazado no se guarda")
+	}
+}
+
+func TestChainSetAcceptsAValueOfExactlyMaxValueBytes(t *testing.T) {
+	ref := Ref{Plugin: "fake", Name: "token"}
+	chain := NewChain(Env{}, NewMemory())
+
+	if err := chain.Set(context.Background(), ref, NewSecret(strings.Repeat("x", MaxValueBytes))); err != nil {
+		t.Fatalf("el límite exacto debe caber: %v", err)
+	}
+}

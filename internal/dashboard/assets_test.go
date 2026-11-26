@@ -224,15 +224,10 @@ func TestIndexHTMLShell(t *testing.T) {
 		last = idx
 	}
 
-	// Script anti-parpadeo: antes de la primera hoja de estilo y con la lógica de tema.
-	script := strings.Index(body, "axiom.theme")
+	// Script anti-parpadeo externo: antes de la primera hoja de estilo (la lógica va en theme-init.js).
+	script := strings.Index(body, `<script src="/js/theme-init.js"></script>`)
 	if script < 0 || script > strings.Index(body, `href="/tokens.css"`) {
-		t.Errorf("el script anti-parpadeo debe estar en <head> antes de las hojas de estilo")
-	}
-	for _, marker := range []string{"matchMedia('(prefers-color-scheme: dark)')", "dataset.theme", "try {"} {
-		if !strings.Contains(body, marker) {
-			t.Errorf("el script anti-parpadeo no contiene %q", marker)
-		}
+		t.Errorf("el script anti-parpadeo externo debe estar en <head> antes de las hojas de estilo")
 	}
 
 	// Estructura: tres grupos, rutas por hash, miga, Actualizar con aria-label y selector de tema.
@@ -419,5 +414,66 @@ func TestNarrowWidthRules(t *testing.T) {
 		if !strings.Contains(css, marker) {
 			t.Errorf("style.css no contiene la regla de ancho estrecho %q", marker)
 		}
+	}
+}
+
+// La CSP style-src 'self' bloquea style= y setAttribute('style'); tampoco hay script en línea.
+func TestNoInlineStyleOrScriptInAssets(t *testing.T) {
+	t.Parallel()
+	styleAttr := regexp.MustCompile(`(?i)\sstyle\s*=`)
+	setStyle := regexp.MustCompile(`setAttribute\(\s*['"]style['"]`)
+	inlineScript := regexp.MustCompile(`(?is)<script(?:\s[^>]*)?>\s*[^<\s][^<]*</script>`)
+	for _, f := range embeddedFiles(t) {
+		if !strings.HasSuffix(f, ".html") && !strings.HasSuffix(f, ".js") {
+			continue
+		}
+		src := readAsset(t, f)
+		if styleAttr.MatchString(src) {
+			t.Errorf("%s contiene un atributo style en línea", f)
+		}
+		if setStyle.MatchString(src) {
+			t.Errorf("%s usa setAttribute('style')", f)
+		}
+		if strings.HasSuffix(f, ".html") && inlineScript.MatchString(src) {
+			t.Errorf("%s contiene un <script> con cuerpo", f)
+		}
+	}
+}
+
+func TestThemeInitScriptIsExternalAndFirst(t *testing.T) {
+	t.Parallel()
+	h := assetServer(t)
+	rr := getAsset(t, h, "/js/theme-init.js")
+	if rr.Code != http.StatusOK || !strings.HasPrefix(rr.Header().Get("Content-Type"), "text/javascript") {
+		t.Fatalf("GET /js/theme-init.js = %d, %q", rr.Code, rr.Header().Get("Content-Type"))
+	}
+	for _, marker := range []string{"axiom.theme", "matchMedia('(prefers-color-scheme: dark)')", "dataset.theme", "try {"} {
+		if !strings.Contains(rr.Body.String(), marker) {
+			t.Errorf("theme-init.js no contiene %q", marker)
+		}
+	}
+	body := readAsset(t, "index.html")
+	head := body[:strings.Index(body, "</head>")]
+	init := strings.Index(head, `src="/js/theme-init.js"`)
+	if init < 0 {
+		t.Fatal("index.html no carga theme-init.js en <head>")
+	}
+	for _, later := range []string{`rel="manifest"`, `href="/tokens.css"`, `href="/style.css"`} {
+		if idx := strings.Index(head, later); idx >= 0 && idx < init {
+			t.Errorf("theme-init.js debe ir antes de %s", later)
+		}
+	}
+}
+
+func TestCssVarsModuleBoundsItsInput(t *testing.T) {
+	t.Parallel()
+	mod := readAsset(t, "js/core/cssvars.js")
+	for _, marker := range []string{"data-pct", "data-ix-cols", "Math.min(100", "^[0-9a-z().,% -]+$", "style.setProperty", "MutationObserver"} {
+		if !strings.Contains(mod, marker) {
+			t.Errorf("cssvars.js no contiene %q", marker)
+		}
+	}
+	if !strings.Contains(readAsset(t, "js/main.js"), "observeCssData()") {
+		t.Error("main.js no instala observeCssData")
 	}
 }

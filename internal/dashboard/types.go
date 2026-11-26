@@ -2,7 +2,9 @@ package dashboard
 
 import (
 	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests/marks"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 )
 
 // WorkspaceDTO representa el estado global y configuración del espacio de trabajo.
@@ -41,6 +43,10 @@ type SettingDTO struct {
 	Default        string   `json:"default,omitempty"`
 	Declared       bool     `json:"declared"`
 	Value          any      `json:"value"`
+	Plugin         string   `json:"plugin,omitempty"`
+	Format         string   `json:"format,omitempty"`
+	Min            *int     `json:"min,omitempty"`
+	Max            *int     `json:"max,omitempty"`
 }
 
 // SettingsDTO es la respuesta de `GET /api/settings`: el catálogo expandido para el axiom.yaml
@@ -764,4 +770,222 @@ type ExplainerDTO struct {
 	Kind  string `json:"kind"`            // spec|design
 	State string `json:"state,omitempty"` // fresh|stale|missing; vacío sin md de origen o con error
 	Error string `json:"error,omitempty"`
+}
+
+// IntegrationsDTO es la respuesta de `GET /api/integrations` (prov:WEB:3): el manifiesto de cada
+// plugin, sus valores de axiom.yaml, la procedencia de sus secretos y la identidad persistida.
+// Nunca lleva el valor de un secreto, un fragmento ni su longitud.
+type IntegrationsDTO struct {
+	ConfigPath     string                   `json:"configPath"`
+	Revision       string                   `json:"revision"`
+	Writable       bool                     `json:"writable"`
+	WriteBlocked   string                   `json:"writeBlockedReason,omitempty"`
+	DocumentErrors []string                 `json:"documentErrors"`
+	Plugins        []IntegrationPluginDTO   `json:"plugins"`
+	WorkItems      WorkItemApplicabilityDTO `json:"workItems"`
+}
+
+// IntegrationPluginDTO es el estado de un plugin del catálogo.
+type IntegrationPluginDTO struct {
+	Manifest      manifest.Manifest `json:"manifest"`
+	Enabled       bool              `json:"enabled"`
+	Declared      bool              `json:"declared"`
+	Entries       []SettingDTO      `json:"entries"`
+	Secrets       []SecretStatusDTO `json:"secrets"`
+	Identities    []IdentityDTO     `json:"identities"`
+	IdentityError string            `json:"identityError,omitempty"`
+}
+
+// SecretStatusDTO es la procedencia de un secreto declarado: solo `source`, nunca el valor.
+type SecretStatusDTO struct {
+	Name     string `json:"name"`
+	Source   string `json:"source"`
+	EnvVar   string `json:"envVar"`
+	Required bool   `json:"required"`
+}
+
+// IdentityDTO es una identidad resuelta y persistida en el almacén local de identidades.
+type IdentityDTO struct {
+	Account     string `json:"account"`
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+	Source      string `json:"source"`
+	ResolvedAt  string `json:"resolvedAt"`
+}
+
+// WorkItemApplicabilityDTO dice si el alta desde un work item aplica y, si no, por qué.
+type WorkItemApplicabilityDTO struct {
+	Applicable bool   `json:"applicable"`
+	Plugin     string `json:"plugin,omitempty"`
+	RefAlias   string `json:"refAlias,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// IntegrationSecretResponse es la respuesta de guardar o eliminar un PAT: solo la procedencia
+// resultante. ShadowedByEnv es true cuando una variable de entorno tapa el valor del almacén.
+type IntegrationSecretResponse struct {
+	Plugin        string `json:"plugin"`
+	Name          string `json:"name"`
+	Source        string `json:"source"`
+	EnvVar        string `json:"envVar"`
+	ShadowedByEnv bool   `json:"shadowedByEnv"`
+}
+
+// IntegrationConnectResponse es la respuesta de «Probar conexión»: la identidad resuelta y
+// persistida y, si la organización ya tenía una, la que se sustituye.
+type IntegrationConnectResponse struct {
+	Identity   IdentityDTO  `json:"identity"`
+	ResolvedAt string       `json:"resolvedAt"`
+	Replaced   *IdentityDTO `json:"replaced,omitempty"`
+}
+
+// IntegrationCandidateDTO es un miembro del equipo entre los que elegir la identidad.
+type IntegrationCandidateDTO struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+}
+
+// integrationsErrorBody es el cuerpo de error de /api/integrations*: código tipado, mensaje en
+// castellano y, según el caso, la variable de entorno que guía al usuario o los candidatos de
+// identidad. Nada de lo que contiene deriva de un secreto.
+type integrationsErrorBody struct {
+	Code       string                    `json:"code"`
+	Error      string                    `json:"error"`
+	EnvVar     string                    `json:"envVar,omitempty"`
+	Candidates []IntegrationCandidateDTO `json:"candidates,omitempty"`
+}
+
+// ChangeIntegrationsDTO es la pestaña «Integraciones» de un cambio (D-07): vínculos, tasks por
+// rol, outbox de solo lectura y actores por fase. Nunca lleva payloads, claves de idempotencia,
+// errores crudos del tracker ni secretos. Cada lectura que falla deja vacía su sección y añade una
+// frase fija a Errors.
+type ChangeIntegrationsDTO struct {
+	Name            string                `json:"name"`
+	Archived        bool                  `json:"archived"`
+	Empty           bool                  `json:"empty"`
+	WorkItems       []ChangeLinkDTO       `json:"workItems"`
+	Roles           []ChangeRoleDTO       `json:"roles"`
+	Outbox          []ChangeOperationDTO  `json:"outbox"`
+	OutboxTotal     int                   `json:"outboxTotal"`
+	OutboxTruncated bool                  `json:"outboxTruncated"`
+	Kickoff         ChangeKickoffActorDTO `json:"kickoff"`
+	Gates           []ChangeGateActorDTO  `json:"gates"`
+	Errors          []string              `json:"errors"`
+}
+
+// ChangeLinkDTO es un work item o una Task enlazados. URL solo se publica si supera safeExternalURL;
+// PluginTitle sale del manifiesto («Abrir en <PluginTitle>») y cae en el id del plugin si el
+// manifiesto ya no está en el catálogo.
+type ChangeLinkDTO struct {
+	Plugin        string   `json:"plugin"`
+	PluginTitle   string   `json:"pluginTitle"`
+	Kind          string   `json:"kind"`
+	ID            string   `json:"id"`
+	URL           string   `json:"url,omitempty"`
+	EstimateHours *float64 `json:"estimateHours,omitempty"`
+	StartedAt     string   `json:"startedAt,omitempty"`
+}
+
+// ChangeRoleDTO agrupa por rol su Task (nil: «sin Task»), sus imputaciones y el tiempo pendiente.
+type ChangeRoleDTO struct {
+	Role    string                `json:"role"`
+	Task    *ChangeLinkDTO        `json:"task"`
+	Entries []ChangeTimeEntryDTO  `json:"entries"`
+	Pending *ChangePendingTimeDTO `json:"pending"`
+}
+
+// ChangeTimeEntryDTO es una imputación registrada. Actor vacío: «sin registrar».
+type ChangeTimeEntryDTO struct {
+	Plugin  string `json:"plugin"`
+	ItemID  string `json:"itemId"`
+	Minutes int    `json:"minutes"`
+	Date    string `json:"date"`
+	Actor   string `json:"actor"`
+}
+
+// ChangePendingTimeDTO es el tiempo pendiente de imputar de un rol: solo minutos, fecha y elemento.
+type ChangePendingTimeDTO struct {
+	Minutes int    `json:"minutes"`
+	Date    string `json:"date"`
+	ItemID  string `json:"itemId"`
+}
+
+// ChangeOperationDTO es una operación de la outbox, de solo lectura y redactada.
+type ChangeOperationDTO struct {
+	Plugin        string `json:"plugin"`
+	Event         string `json:"event"`
+	Role          string `json:"role,omitempty"`
+	Gate          string `json:"gate,omitempty"`
+	State         string `json:"state"`
+	Attempts      int    `json:"attempts"`
+	EnqueuedAt    string `json:"enqueuedAt"`
+	LastAttemptAt string `json:"lastAttemptAt,omitempty"`
+	Reason        string `json:"reason,omitempty"`
+}
+
+// ChangeKickoffActorDTO dice quién selló el kickoff. Sealed false: el cambio no tiene
+// kickoff.yaml (por ejemplo, un cambio creado desde el dashboard); SealedBy vacío con Sealed true
+// es un kickoff anterior a C-07-a. El cliente muestra «sin sellar» y «sin registrar».
+type ChangeKickoffActorDTO struct {
+	Sealed   bool   `json:"sealed"`
+	SealedBy string `json:"sealedBy"`
+}
+
+// ChangeGateActorDTO es una decisión del registro de puertas con su autor (vacío: «sin registrar»).
+type ChangeGateActorDTO struct {
+	Gate       string `json:"gate"`
+	Decision   string `json:"decision"`
+	Actor      string `json:"actor"`
+	RecordedAt string `json:"recordedAt,omitempty"`
+}
+
+// WorkItemStartRequest es el cuerpo de `POST /api/integrations/start` (D-08): exactamente uno de Ref
+// (primer intento, ejecuta la fase 1) o Change (reintento sobre un staging existente, sin repetir la
+// fase 1). Mode responde a un `decision_required` de `ensure`.
+type WorkItemStartRequest struct {
+	Ref    string `json:"ref,omitempty"`
+	Change string `json:"change,omitempty"`
+	Intent string `json:"intent,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Mode   string `json:"mode,omitempty"`
+}
+
+// WorkItemStartResponse es el alta correcta. Warnings reúne los avisos de las fases 1 y 2.
+type WorkItemStartResponse struct {
+	Success     bool     `json:"success"`
+	Name        string   `json:"name"`
+	Path        string   `json:"path"`
+	ExternalRef string   `json:"externalRef"`
+	Warnings    []string `json:"warnings"`
+}
+
+// WorkItemDiscardRequest es el cuerpo de `POST /api/integrations/start/discard`.
+type WorkItemDiscardRequest struct {
+	Change  string `json:"change"`
+	Confirm bool   `json:"confirm"`
+}
+
+// WorkItemDiscardResponse es el descarte correcto del staging.
+type WorkItemDiscardResponse struct {
+	Change   string   `json:"change"`
+	Status   string   `json:"status"`
+	Warnings []string `json:"warnings"`
+}
+
+// workItemErrorBody es el cuerpo de error del alta: código tipado, mensaje y continuación, la etapa
+// que falló (start, ensure, folder, adopt), el cambio derivado y, tras la fase 1, las acciones que la
+// interfaz ofrece (`retry`, `discard`). En `decision_required` lleva además la decisión de `ensure`.
+// Nada de lo que contiene deriva de un secreto ni de texto del work item.
+type workItemErrorBody struct {
+	Code         string           `json:"code"`
+	Error        string           `json:"error"`
+	Continuation string           `json:"continuation,omitempty"`
+	Stage        string           `json:"stage,omitempty"`
+	Change       string           `json:"change,omitempty"`
+	Reason       string           `json:"reason,omitempty"`
+	Actions      []string         `json:"actions,omitempty"`
+	EnvVar       string           `json:"envVar,omitempty"`
+	Status       string           `json:"status,omitempty"`
+	StatusLabel  string           `json:"statusLabel,omitempty"`
+	Decision     *branch.Decision `json:"decision,omitempty"`
 }

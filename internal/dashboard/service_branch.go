@@ -30,12 +30,12 @@ import (
 // (el del registro, el de las preferencias del hub o `worktree`); con valor, `ensure` lo aplica y lo
 // registra para este cambio. Cualquier resultado que no sea `ready` (incluido `decision_required`)
 // se devuelve como *branch.RefusalError, sin escribir nada.
-func (s *Service) ensureIncrementBranch(name, mode string) (string, error) {
+func (s *Service) ensureIncrementBranch(ctx context.Context, name, mode string) (string, error) {
 	cwd, err := filepath.Abs(s.getRootPath())
 	if err != nil {
 		return "", fmt.Errorf("no se pudo resolver la ruta del proyecto: %w", err)
 	}
-	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
+	result := engine.Default().Ensure(ctx, engine.EnsureRequest{
 		CWD:    cwd,
 		Change: name,
 		Lane:   branch.LaneSDD,
@@ -75,17 +75,42 @@ func ensureRefusal(result branch.Result, name, cwd string) *branch.RefusalError 
 // `<planningHome>/changes/<name>`. Consulta la guarda A antes de crear la carpeta: invocado sin
 // `ensure` en una rama que no es la del cambio, se niega con `wrong_branch` y no crea nada.
 func (s *Service) writeIncrement(planningHome, name string, req CreateIncrementRequest) (*CreateIncrementResponse, error) {
-	activePath := filepath.Join(planningHome, "changes", name)
-	if err := cli.GuardChangeWriter(activePath, name, "crear el incremento"); err != nil {
+	activePath, err := prepareIncrementFolder(planningHome, name, false)
+	if err != nil {
 		return nil, err
 	}
-	if _, err := os.Stat(activePath); err == nil {
-		return nil, fmt.Errorf("el incremento %q ya existe como cambio activo", name)
+	return writeIncrementProposal(activePath, name, req)
+}
+
+// incrementExistsError es el rechazo de crear un cambio cuya carpeta activa ya existe. Conserva el
+// texto de siempre del alta manual; el alta desde un work item lo distingue para responder
+// `change_exists`.
+type incrementExistsError struct{ name string }
+
+func (e *incrementExistsError) Error() string {
+	return fmt.Sprintf("el incremento %q ya existe como cambio activo", e.name)
+}
+
+// prepareIncrementFolder es la primera mitad del escritor guardado: consulta la guarda A y crea la
+// carpeta del cambio bajo `<planningHome>/changes/<name>`. Con reuse, una carpeta ya existente se
+// reutiliza (reintento del alta desde un work item, cuya fase 2 la exige); sin reuse, existir es un
+// *incrementExistsError.
+func prepareIncrementFolder(planningHome, name string, reuse bool) (string, error) {
+	activePath := filepath.Join(planningHome, "changes", name)
+	if err := cli.GuardChangeWriter(activePath, name, "crear el incremento"); err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(activePath); err == nil && !reuse {
+		return "", &incrementExistsError{name: name}
 	}
 	if err := os.MkdirAll(activePath, 0755); err != nil {
-		return nil, fmt.Errorf("error al crear el directorio del incremento: %w", err)
+		return "", fmt.Errorf("error al crear el directorio del incremento: %w", err)
 	}
+	return activePath, nil
+}
 
+// writeIncrementProposal es la segunda mitad: escribe `proposal.md` en la carpeta ya preparada.
+func writeIncrementProposal(activePath, name string, req CreateIncrementRequest) (*CreateIncrementResponse, error) {
 	intent := strings.TrimSpace(req.Intent)
 	if intent == "" {
 		intent = fmt.Sprintf("Implementación e integración de la funcionalidad %s bajo la metodología SDD.", name)

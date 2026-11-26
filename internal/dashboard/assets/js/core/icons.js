@@ -65,9 +65,8 @@ export function hydrateIcons(root = document) {
     const tpl = document.createElement('template');
     tpl.innerHTML = icon(el.getAttribute('data-icon'), size);
     const svg = tpl.content.firstChild;
-    // Conserva las clases y el estilo escritos en el marcador.
+    // Conserva las clases del marcador (el atributo style no se copia: lo bloquea la CSP).
     if (el.className) svg.setAttribute('class', `${svg.getAttribute('class')} ${el.className}`);
-    if (el.getAttribute('style')) svg.setAttribute('style', el.getAttribute('style'));
     el.replaceWith(svg);
   });
 }

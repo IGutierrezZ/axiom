@@ -36,6 +36,24 @@ var ErrNotFound = errors.New("secreto no encontrado")
 // ErrNoWritableStore indica que no hay almacén en el que guardar o borrar un secreto.
 var ErrNoWritableStore = errors.New("este sistema no tiene almacén de secretos propio (solo Windows y macOS): usa la variable de entorno, Axiom nunca escribe secretos en texto plano")
 
+// MaxValueBytes es el tamaño máximo del valor de un secreto. Se fija en 2 KiB, por debajo de lo que
+// admite el almacén de credenciales de Windows (unos 2,5 KB), para que un valor aceptado quepa en
+// todos los almacenes en lugar de fallar en el sistema con un error opaco.
+const MaxValueBytes = 2048
+
+// ValueTooLargeError indica que el valor supera MaxValueBytes. Nunca lleva el valor.
+type ValueTooLargeError struct {
+	Ref    Ref
+	Max    int
+	EnvVar string
+}
+
+func (e *ValueTooLargeError) Error() string {
+	return fmt.Sprintf(
+		"el valor del secreto %s supera el máximo de %d bytes que admiten los almacenes del sistema: reduce su longitud o define la variable de entorno %s",
+		e.Ref, e.Max, e.EnvVar)
+}
+
 // Store resuelve secretos. La fuente se devuelve siempre, también con error.
 type Store interface {
 	Get(ctx context.Context, ref Ref) (Secret, Source, error)

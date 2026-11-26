@@ -4,23 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axiom — Dashboard de ingeniería SDD</title>
-  <!-- Anti-parpadeo: fija el tema antes de pintar. Lee axiom.theme (light|dark|system,
-       por defecto system) y resuelve system con matchMedia. Todo en try/catch. -->
-  <script>
-    (function () {
-      var pref = 'system';
-      try {
-        var stored = window.localStorage.getItem('axiom.theme');
-        if (stored === 'light' || stored === 'dark' || stored === 'system') pref = stored;
-      } catch (e) { /* sin almacenamiento: system */ }
-      var theme = pref;
-      if (pref === 'system') {
-        try { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
-        catch (e) { theme = 'light'; }
-      }
-      document.documentElement.dataset.theme = theme;
-    })();
-  </script>
+  <!-- Anti-parpadeo: fija el tema antes de pintar (script externo por la CSP). -->
+  <script src="/js/theme-init.js"></script>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0E0F12">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -87,6 +72,7 @@
           <div class="nav-group">
             <span class="nav-label">Plataforma</span>
             <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span><span id="badge-ecosistema" hidden></span></a>
+            <a class="nav-item" href="#/integraciones" data-nav="integraciones"><i data-icon="handoff" data-size="18"></i><span class="grow">Integraciones</span></a>
             <a class="nav-item" href="#/ajustes" data-nav="ajustes"><i data-icon="settings" data-size="18"></i><span class="grow">Ajustes</span></a>
           </div>
         </nav>
@@ -94,7 +80,7 @@
         <div class="sidebar-foot">
           <!-- Aviso de specs por detrás del remoto (ODD-5.4); oculto salvo que haya commits pendientes -->
           <div id="specs-sync-banner" class="sync-box" hidden role="status">
-            <i data-icon="download" style="color: var(--warn)"></i>
+            <i data-icon="download" class="icon-warn"></i>
             <span class="grow" id="specs-sync-text">Specs por detrás del remoto.</span>
             <button type="button" id="btn-specs-pull" class="link-btn" title="Hacer pull del repositorio de specs">Pull</button>
           </div>
@@ -237,6 +223,7 @@
             <a class="tab-link" href="#" data-tab="handoff">Handoff</a>
             <a class="tab-link" href="#" data-tab="explicacion">Explicación</a>
             <a class="tab-link" href="#" data-tab="pruebas">Pruebas</a>
+            <a class="tab-link" href="#" data-tab="integraciones">Integraciones</a>
           </nav>
 
           <div id="inc-panel-artefactos" data-panel="artefactos"></div>
@@ -244,6 +231,7 @@
           <div id="inc-panel-handoff" data-panel="handoff" hidden></div>
           <div id="inc-panel-explicacion" data-panel="explicacion" hidden></div>
           <div id="inc-panel-pruebas" data-panel="pruebas" hidden></div>
+          <div id="inc-panel-integraciones" data-panel="integraciones" hidden></div>
         </section>
 
         <!-- ===== Specs vivas ===== -->
@@ -422,6 +410,22 @@
           </div>
         </section>
 
+        <!-- ===== Integraciones ===== -->
+        <section id="view-integraciones" class="view" hidden aria-labelledby="integraciones-title">
+          <div class="page-header">
+            <div>
+              <h1 id="integraciones-title" class="page-title" tabindex="-1">Integraciones</h1>
+              <p class="page-sub">Conecta Axiom con herramientas externas: la configuración vive en <code>axiom.yaml</code> y tus credenciales, en tu equipo.</p>
+            </div>
+            <span class="badge badge-mono" id="integrations-config-path">axiom.yaml</span>
+          </div>
+          <p class="alert alert-warn" role="note"><span class="grow">El PAT es tuyo: se guarda en el almacén de secretos de tu sistema, nunca en <code>axiom.yaml</code>, y no se vuelve a mostrar. Editar la configuración solo afecta a cambios nuevos.</span></p>
+          <p id="integrations-announce" class="sr-only" role="status" aria-live="polite"></p>
+          <div id="integrations-body">
+            <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las integraciones…</span></div>
+          </div>
+        </section>
+
         <!-- ===== Ajustes del proyecto ===== -->
         <section id="view-ajustes" class="view" hidden aria-labelledby="ajustes-title">
           <div class="page-header">
@@ -541,6 +545,11 @@
       <button type="button" class="btn btn-ghost btn-icon btn-sm" data-close id="btn-close-new-increment" aria-label="Cerrar"><i data-icon="x"></i></button>
     </div>
     <div class="modal-body form-stack">
+      <div class="field" id="field-inc-workitem" hidden>
+        <label for="input-inc-workitem">Work item de origen (ID o URL, opcional)</label>
+        <input type="text" id="input-inc-workitem" class="form-input" placeholder="ej. 1234 o la URL del work item" autocomplete="off" spellcheck="false" maxlength="512">
+        <span class="field-hint">Con un work item, el nombre del cambio se deriva de él y el campo de nombre se ignora.</span>
+      </div>
       <div class="field">
         <label for="input-inc-name">Nombre del incremento (kebab-case)</label>
         <input type="text" id="input-inc-name" class="form-input" placeholder="ej. inc-16-metricas-rendimiento" autocomplete="off">
@@ -560,6 +569,11 @@
         <textarea id="input-inc-intent" class="form-textarea" placeholder="Describe el objetivo técnico y el valor que introduce este incremento…"></textarea>
       </div>
       <div class="alert alert-bad" id="new-inc-error" role="alert" hidden></div>
+      <div class="alert alert-warn" id="new-inc-notes" role="status" hidden></div>
+      <div class="field" id="new-inc-recovery" hidden>
+        <button type="button" id="btn-wi-retry" class="btn btn-primary btn-sm" hidden>Reintentar</button>
+        <button type="button" id="btn-wi-discard" class="btn btn-danger btn-sm" hidden>Descartar</button>
+      </div>
     </div>
     <div class="modal-foot">
       <button type="button" id="btn-cancel-new-increment" class="btn" data-close>Cancelar</button>
@@ -617,15 +631,15 @@
       </div>
       <p class="field-hint">Preferencias personales: se guardan en tu Hub, no en <code>axiom.yaml</code>. Si dejas la raíz vacía se usa la ruta por defecto.</p>
       <!-- Solo en multirepo: monorepo-embedded solo admite el rol fullstack -->
-      <div class="form-stack" id="field-project-roles" hidden style="border-top: 1px solid var(--border); padding-top: 14px">
-        <div class="field-row" style="justify-content: space-between">
+      <div class="form-stack form-stack--divided" id="field-project-roles" hidden>
+        <div class="field-row field-row--between">
           <span class="field-label">Roles del proyecto (opcional)</span>
           <button type="button" id="btn-add-role-row" class="btn btn-sm"><i data-icon="plus" data-size="14"></i>Agregar rol</button>
         </div>
         <p class="field-hint">Si no configuras roles específicos, Axiom creará un único rol <strong>fullstack</strong> que gobernará todo el repositorio.</p>
         <div id="roles-builder-container" class="form-stack"></div>
       </div>
-      <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
+      <div class="form-stack form-stack--divided">
         <span class="field-label">Adaptadores (opcional)</span>
         <p class="field-hint">Se instalan en el proyecto, en modo workspace. Si no eliges ninguno, el proyecto queda sin adaptadores y puedes instalarlos después. Los que solo tienen configuración global aparecen deshabilitados.</p>
         <div id="adapters-container" class="form-stack"></div>

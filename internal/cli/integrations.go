@@ -32,9 +32,6 @@ const (
 	integrationsExitFail  = 1
 	integrationsExitUsage = 2
 
-	// maxSecretBytes es el tamaño máximo del valor de `secret set` (4 KiB).
-	maxSecretBytes = 4096
-
 	integrationsSyncSchema         = "axiom.integrations-sync/v1"
 	integrationsEmitSchema         = "axiom.integrations-emit/v1"
 	integrationsSecretStatusSchema = "axiom.integrations-secret-status/v1"
@@ -584,13 +581,13 @@ func runIntegrationsSecretSet(args []string, stdin io.Reader, stdout, stderr io.
 		fmt.Fprintf(stderr, "Error: stdin es un terminal y el valor nunca se pide por argumento. Canaliza el valor, por ejemplo: Read-Host -MaskInput | axiom integrations secret set --plugin %s --name %s   (o: printf '%%s' \"$VALOR\" | axiom integrations secret set ...)\n", *plugin, *name)
 		return integrationsExitFail
 	}
-	data, err := io.ReadAll(io.LimitReader(stdin, maxSecretBytes+1))
+	data, err := io.ReadAll(io.LimitReader(stdin, secrets.MaxValueBytes+1))
 	if err != nil {
 		fmt.Fprintf(stderr, "Error: no se pudo leer stdin: %v\n", err)
 		return integrationsExitFail
 	}
-	if len(data) > maxSecretBytes {
-		fmt.Fprintf(stderr, "Error: el valor supera el máximo de %d bytes.\n", maxSecretBytes)
+	if len(data) > secrets.MaxValueBytes {
+		fmt.Fprintf(stderr, "Error: el valor supera el máximo de %d bytes; si es más largo, define la variable de entorno del plugin en lugar de guardarlo.\n", secrets.MaxValueBytes)
 		return integrationsExitFail
 	}
 	value := strings.TrimSuffix(strings.TrimSuffix(string(data), "\n"), "\r")

@@ -10,9 +10,11 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf16"
@@ -52,13 +54,25 @@ type Server struct {
 	listener   net.Listener
 	port       int
 	version    string
+
+	// integrationsLock es el cerrojo de connect y discover (D-05): una petición solapada responde
+	// 409 integration_busy. integrationBudget es su plazo; las pruebas lo reducen.
+	integrationsLock  sync.Mutex
+	integrationBudget time.Duration
+
+	// workItemLock es el cerrojo propio del alta desde un work item y de su descarte (D-08);
+	// workItemBudget es su plazo (las pruebas lo reducen).
+	workItemLock   sync.Mutex
+	workItemBudget time.Duration
 }
 
 // NewServer inicializa el servidor HTTP y configura las rutas de la API y assets estáticos.
 func NewServer(svc *Service) *Server {
 	s := &Server{
-		service: svc,
-		mux:     http.NewServeMux(),
+		service:           svc,
+		mux:               http.NewServeMux(),
+		integrationBudget: defaultIntegrationBudget,
+		workItemBudget:    defaultWorkItemBudget,
 	}
 	svc.restartFn = s.relaunchAfterUpdate
 	s.registerRoutes()
@@ -68,6 +82,12 @@ func NewServer(svc *Service) *Server {
 // Router retorna el ServeMux para pruebas unitarias con httptest.
 func (s *Server) Router() http.Handler {
 	return s.mux
+}
+
+// handler es el servidor completo: el mux dentro de la cadena de seguridad de withHeaders. Lo usan
+// serve() y las pruebas de seguridad; Router() se conserva sin envoltorio para el resto de pruebas.
+func (s *Server) handler() http.Handler {
+	return s.withHeaders(s.mux)
 }
 
 func (s *Server) registerRoutes() {
@@ -86,6 +106,14 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
 	s.mux.HandleFunc("/api/settings", s.handleSettings)
 	s.mux.HandleFunc("/api/settings/personal", s.handleSettingsPersonal)
+	s.mux.HandleFunc("/api/integrations", s.handleIntegrations)
+	s.mux.HandleFunc("/api/integrations/secret", s.handleIntegrationsSecret)
+	s.mux.HandleFunc("/api/integrations/secret/delete", s.handleIntegrationsSecretDelete)
+	s.mux.HandleFunc("/api/integrations/connect", s.handleIntegrationsConnect)
+	s.mux.HandleFunc("/api/integrations/discover", s.handleIntegrationsDiscover)
+	s.mux.HandleFunc("/api/integrations/change", s.handleChangeIntegrations)
+	s.mux.HandleFunc("/api/integrations/start", s.handleWorkItemStart)
+	s.mux.HandleFunc("/api/integrations/start/discard", s.handleWorkItemDiscard)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)
@@ -174,7 +202,7 @@ func (s *Server) serve(listener net.Listener, port int) {
 	s.port = listener.Addr().(*net.TCPAddr).Port
 
 	s.httpServer = &http.Server{
-		Handler:      s.withHeaders(s.mux),
+		Handler:      s.handler(),
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 	}
@@ -216,16 +244,57 @@ func isAddrInUse(err error) bool {
 		strings.Contains(msg, "forbidden by its access permissions")
 }
 
+// dashboardCSP es la política general de toda respuesta (prov:WEB:1, D-01): todo del propio
+// origen, sin scripts ni estilos en línea, sin plugins y sin poder ser enmarcado. /api/explainer
+// la sustituye por la suya (explainerCSP, RF-WEB-15) con Header().Set, de modo que sale una sola.
+const dashboardCSP = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+	"font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; " +
+	"frame-ancestors 'none'"
+
+// isIntegrationsPath dice si la ruta es /api/integrations o cuelga de ella.
+func isIntegrationsPath(path string) bool {
+	return path == "/api/integrations" || strings.HasPrefix(path, "/api/integrations/")
+}
+
+// needsLocalGuard decide qué peticiones exigen Host y Origin locales (prov:WEB:2): toda la API
+// con cualquier método (la lectura de /api/settings o /api/integrations también expone estado
+// de integración y es el blanco del DNS rebinding) y cualquier método que mute en cualquier ruta.
+// El resto (GET y HEAD de los assets estáticos) no expone nada que no sea público en el binario.
+func needsLocalGuard(r *http.Request) bool {
+	if strings.HasPrefix(r.URL.Path, "/api/") || isIntegrationsPath(r.URL.Path) {
+		return true
+	}
+	switch r.Method {
+	case http.MethodGet, http.MethodHead, http.MethodOptions:
+		return false
+	}
+	return true
+}
+
+// withHeaders es la cadena de seguridad única de todas las respuestas: fija las cabeceras antes
+// de llamar al handler (así las llevan también los 403, 404, 405, 500, 304 y HEAD), no emite
+// ninguna cabecera Access-Control-* (el dashboard es de un solo origen), rechaza con 403 las
+// peticiones sin Host y Origin locales antes de leer el cuerpo y responde 405 a OPTIONS.
 func (s *Server) withHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		// La SPA lee los avisos de los listados (RF-WEB-11) de esta cabecera.
-		w.Header().Set("Access-Control-Expose-Headers", notesHeaderName)
+		h := w.Header()
+		h.Set("Content-Security-Policy", dashboardCSP)
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		if isIntegrationsPath(r.URL.Path) {
+			h.Set("Cache-Control", "no-store")
+		}
 
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+		if needsLocalGuard(r) && !s.isLocalRequest(r) {
+			s.respondJSON(w, http.StatusForbidden, map[string]string{
+				"code":  "forbidden_origin",
+				"error": "Petición rechazada: solo se admiten peticiones del propio dashboard",
+			})
+			return
+		}
+
+		if r.Method == http.MethodOptions {
+			http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 			return
 		}
 
@@ -961,32 +1030,45 @@ func conflictBody(refusal *branch.RefusalError) any {
 	return refusalBody{Code: refusal.Code, Error: refusal.Message, Continuation: refusal.Continuation}
 }
 
-// isLocalRequest protege las rutas que cambian estado frente a CSRF y DNS rebinding:
-// withHeaders permite cualquier origen para lectura, así que aquí se exige que Host y,
-// si viene, Origin sean el propio dashboard (127.0.0.1 o localhost en el puerto
-// realmente enlazado). Sin servidor escuchando (puerto 0, pruebas con httptest) se
-// acepta cualquier puerto, pero solo con esos nombres de host.
+// isLocalRequest protege frente a CSRF y DNS rebinding: exige que Host y, si viene, Origin sean
+// el propio dashboard, con una lista cerrada de nombres (127.0.0.1, localhost y ::1, sin
+// distinguir mayúsculas y con el punto final de un FQDN) en el puerto realmente enlazado. Un
+// Host vacío se rechaza y cualquier otro nombre DNS también, aunque resuelva a bucle local. Sin
+// servidor escuchando (puerto 0, pruebas con httptest) se acepta cualquier puerto, pero solo con
+// esos nombres de host. Origin debe ser exactamente http://<host local>[:puerto], sin ruta,
+// credenciales, consulta ni fragmento (rechaza «null» y https).
 func (s *Server) isLocalRequest(r *http.Request) bool {
-	allowed := func(hostport string) bool {
-		host, port, err := net.SplitHostPort(hostport)
-		if err != nil {
-			host, port = hostport, ""
-		}
-		if host != "127.0.0.1" && host != "localhost" {
-			return false
-		}
-		return s.port == 0 || port == strconv.Itoa(s.port)
-	}
-	if !allowed(r.Host) {
+	if !s.localHostPort(r.Host) {
 		return false
 	}
-	if origin := r.Header.Get("Origin"); origin != "" {
-		rest, ok := strings.CutPrefix(origin, "http://")
-		if !ok || !allowed(rest) {
-			return false
-		}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
 	}
-	return true
+	u, err := url.Parse(origin)
+	if err != nil || u.Scheme != "http" || u.User != nil || u.Opaque != "" ||
+		u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.ForceQuery {
+		return false
+	}
+	return s.localHostPort(u.Host)
+}
+
+// localHostPort valida un «host[:puerto]» contra la lista cerrada de nombres locales.
+// net.SplitHostPort devuelve el host de «[::1]:80» sin corchetes; sin puerto, «[::1]» se
+// recorta a mano.
+func (s *Server) localHostPort(hostport string) bool {
+	if hostport == "" {
+		return false
+	}
+	host, port, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host, port = strings.TrimSuffix(strings.TrimPrefix(hostport, "["), "]"), ""
+	}
+	host = strings.TrimSuffix(strings.ToLower(host), ".")
+	if host != "127.0.0.1" && host != "localhost" && host != "::1" {
+		return false
+	}
+	return s.port == 0 || port == strconv.Itoa(s.port)
 }
 
 func (s *Server) respondJSON(w http.ResponseWriter, code int, data interface{}) {
@@ -1027,7 +1109,8 @@ func notesHeader(notes []string) string {
 }
 
 // explainerCSP es la política del HTML explicativo: sin scripts, sin recursos externos y solo
-// imágenes data:. Va en el handler y no en withHeaders (decisión 8 del diseño).
+// imágenes data:. Va en el handler (decisión 8 del diseño) y sustituye a dashboardCSP, que no
+// lleva frame-ancestors 'none' aquí porque este documento se enmarca en un iframe del mismo origen.
 const explainerCSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
 
 var explainerChangeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$`)

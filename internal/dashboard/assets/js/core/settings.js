@@ -19,7 +19,8 @@ const SECTION_LABELS = {
   acceptance_tests: 'Pruebas de aceptación',
   roles: 'Roles',
   technical_context: 'Contexto técnico',
-  governance: 'Gobierno'
+  governance: 'Gobierno',
+  integrations: 'Integraciones'
 };
 const SECTION_ORDER = Object.keys(SECTION_LABELS);
 
@@ -88,7 +89,7 @@ export function controlHtml(entry, id = settingId(entry.key), { disabled = false
       break;
     }
     case 'int':
-      control = `<input type="number" min="1" step="1" ${attrs} class="form-input" value="${escapeHtml(current)}">`;
+      control = `<input type="number" min="${Number.isInteger(entry.min) ? entry.min : 1}"${Number.isInteger(entry.max) ? ` max="${entry.max}"` : ''} step="1" ${attrs} class="form-input" value="${escapeHtml(current)}">`;
       break;
     case 'stringList':
       control = `<textarea rows="3" ${attrs} class="form-textarea">${escapeHtml(current)}</textarea>`;

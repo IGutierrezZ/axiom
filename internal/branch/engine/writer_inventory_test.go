@@ -118,7 +118,7 @@ var guardedWriters = map[string]writerEntry{
 	// --- cmd/axiom ---
 	"cmd/axiom.runHandoffCreate": {status: statusGuarded, reason: "handoff create: contexto ordinary; los sumideros cumulative-<rol> quedan exentos por nombre dentro de la guarda"},
 	// --- dashboard (S8-c4) ---
-	"internal/dashboard.Service.writeIncrement":                     {status: statusGuarded, reason: "carpeta de un cambio nuevo: guarda A tras ensure"},
+	"internal/dashboard.prepareIncrementFolder":                     {status: statusGuarded, reason: "carpeta de un cambio nuevo o del alta desde un work item: guarda A tras ensure"},
 	"internal/dashboard.Service.CreateHandoff":                      {status: statusGuarded, reason: "handoff.md de un cambio existente"},
 	"internal/dashboard.Service.MigrateIncompleteTasksToCumulative": {status: statusGuarded, reason: "guarda el cambio de origen activo; el destino cumulative-<rol> es un sumidero exento por nombre"},
 }
