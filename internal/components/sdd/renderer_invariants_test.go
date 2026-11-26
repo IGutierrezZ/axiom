@@ -29,109 +29,25 @@ func sectionBodyHasSentinel(sectionBody, sentinel string) bool {
 	return false
 }
 
-// These are stable contract boundaries, not a snapshot of prompt prose. They
-// protect the current OpenCode-only behavior while the renderer is composed in
-// later slices.
+// Solo se fijan los encabezados que el renderizador usa como anclas y su orden,
+// más el identificador del contrato de consentimiento que parsea el código. La
+// redacción de cada sección es libre.
 var currentOpenCodeOrchestratorSections = []orchestratorContractSection{
+	{name: "blocking prompts", marker: "### Lossless Blocking Prompts (MANDATORY)"},
 	{
-		name:   "blocking prompts",
-		marker: "### Lossless Blocking Prompts (MANDATORY)",
-		sentinels: []string{
-			"complete user-facing choice envelope",
-			"Never summarize, abbreviate, reorder, relabel, merge, or omit choices",
-			"exact allowed-answer domain",
-			"Then STOP",
-		},
+		name:      "edit-authority consent relay",
+		marker:    "#### SDD Edit-Authority Consent Relay (MANDATORY)",
+		sentinels: []string{"axiom.sdd-integration.consent/v1"},
 	},
-	{
-		name:   "edit-authority consent relay",
-		marker: "#### SDD Edit-Authority Consent Relay (MANDATORY)",
-		sentinels: []string{
-			"axiom.sdd-integration.consent/v1",
-			"never run the grant unprompted",
-			"re-enter through native status",
-		},
-	},
-	{
-		name:   "dispatcher guard",
-		marker: "### Native SDD Dispatcher Guard",
-		sentinels: []string{
-			// #3814: these used to pin the store-branching prose. The dispatcher
-			// resolves the declared store itself, so the invariant is now that
-			// the guard tells the actor NOT to re-derive it.
-			"invoke the native dispatcher",
-			"Do NOT determine the artifact store yourself, and do NOT branch on it",
-			"Route only by `nextRecommended` and dependency states",
-		},
-	},
-	{
-		name:   "session preflight",
-		marker: "### SDD Session Preflight (HARD GATE)",
-		sentinels: []string{
-			"never collect these answers as typed chat text",
-			"no sequential wizard and no separate calls",
-			"cache choices for the session",
-		},
-	},
-	{
-		name:   "lifecycle routing",
-		marker: "### SDD Entry Routing (MANDATORY)",
-		sentinels: []string{
-			"Never launch `sdd-apply` just because the user asked to implement a feature",
-			"Only launch `sdd-apply` when all are true",
-			"Session preflight is complete",
-		},
-	},
-	{
-		name:   "initialization gate",
-		marker: "### SDD Init Guard (MANDATORY)",
-		sentinels: []string{
-			"Search Engram",
-			"mem_search(query: \"sdd-init/{project}\"",
-			"run `sdd-init` FIRST",
-		},
-	},
-	{
-		name:   "automatic gatekeeper",
-		marker: "### Automatic Mode Gatekeeper (MANDATORY)",
-		sentinels: []string{
-			"gatekeeper runs after every phase",
-			"re-run the same phase exactly once",
-			"Do not advance to dependent phases on a failed gate",
-		},
-	},
-	{
-		name:   "delivery strategy",
-		marker: "### Delivery Strategy",
-		sentinels: []string{
-			"`single-pr`",
-			"`chained`",
-			"Pass the resolved `delivery_strategy`",
-		},
-	},
-	{
-		name:   "skill resolution",
-		marker: "### Sub-Agent Launch Pattern",
-		sentinels: []string{
-			"pre-resolved skill paths from the skill registry",
-			"exact path",
-			"BEFORE task-specific work",
-		},
-	},
-	{
-		name:      "skill resolution feedback",
-		marker:    "### Skill Resolution Feedback",
-		sentinels: []string{"`paths-injected`", "fallback-registry", "re-read the registry"},
-	},
-	{
-		name:   "sub-agent context protocol",
-		marker: "### Sub-Agent Context Protocol",
-		sentinels: []string{
-			"Sub-agents get a fresh context with NO memory",
-			"Sub-agent does NOT search engram itself",
-			"save significant discoveries, decisions, or bug fixes to engram",
-		},
-	},
+	{name: "dispatcher guard", marker: "### Native SDD Dispatcher Guard"},
+	{name: "session preflight", marker: "### SDD Session Preflight (HARD GATE)"},
+	{name: "lifecycle routing", marker: "### SDD Entry Routing (MANDATORY)"},
+	{name: "initialization gate", marker: "### SDD Init Guard (MANDATORY)"},
+	{name: "automatic gatekeeper", marker: "### Automatic Mode Gatekeeper (MANDATORY)"},
+	{name: "delivery strategy", marker: "### Delivery Strategy"},
+	{name: "skill resolution", marker: "### Sub-Agent Launch Pattern"},
+	{name: "skill resolution feedback", marker: "### Skill Resolution Feedback"},
+	{name: "sub-agent context protocol", marker: "### Sub-Agent Context Protocol"},
 }
 
 func assertCurrentOpenCodeOrchestratorContract(t *testing.T, label string, content string, agent model.AgentID, profileName string) {
@@ -174,18 +90,9 @@ func assertCurrentOpenCodeOrchestratorContract(t *testing.T, label string, conte
 		}
 	}
 
-	for _, forbidden := range []string{"Review Execution Contract", "axiom review", "Selectorless STATUS"} {
-		if strings.Contains(content, forbidden) {
-			t.Errorf("%s still carries review-by-receipt prose %q", label, forbidden)
-		}
-	}
 	if profileName == "" {
 		assertTextContainsClauses(t, label+" model assignment contract", content, []string{
 			"<!-- axiom:sdd-model-assignments -->",
-			"## Model Assignments",
-			"agent.gentle-orchestrator.model",
-			"agent.sdd-<phase>.model",
-			"default OpenCode runtime model",
 		})
 	}
 }
@@ -200,9 +107,6 @@ func TestOpenCodeBaseOrchestratorPreservesCurrentContract(t *testing.T) {
 	visibilityMarker := "<!-- axiom:" + openCodeDelegationVisibilitySectionID + " -->"
 	for _, required := range []string{
 		visibilityMarker,
-		"#### Delegation Visibility (OpenCode Desktop)",
-		"assistant-visible status line immediately before the call",
-		"15 tokens or fewer",
 	} {
 		if !strings.Contains(content, required) {
 			t.Errorf("OpenCode base orchestrator lost current Desktop delegation section sentinel %q", required)
@@ -274,7 +178,6 @@ func TestOpenCodeNamedProfileOrchestratorPreservesCurrentContract(t *testing.T) 
 	assertTextContainsClauses(t, "OpenCode named profile model assignments", content, []string{
 		"<!-- axiom:sdd-model-assignments -->",
 		"<!-- /axiom:sdd-model-assignments -->",
-		"## Model Assignments",
 		"| orchestrator | openai/gpt-5.1 |",
 		"| sdd-apply-" + profileName + " | anthropic/claude-sonnet-4-5 |",
 	})

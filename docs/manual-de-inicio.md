@@ -38,7 +38,7 @@
    - [Compuertas de Bloque e Integración Pre-Archive](#b-carril-formal-sdd-spec-driven-development)
 10. [Relevos Estructurados entre Roles y Fases (Handoffs)](#10-relevos-estructurados-entre-roles-y-fases-handoffs)
 11. [Mantenimiento, Actualizaciones y Sincronización](#11-mantenimiento-actualizaciones-y-sincronización)
-   - [Mantenimiento Semántico del CodeGraph](#mantenimiento-semántico-del-codegraph-axiom-semantic-reindex)
+   - [CodeGraph en Uso Directo](#codegraph-en-uso-directo)
    - [Automatización Post-Archivado y Scripts de Soporte](#automatización-post-archivado-y-scripts-de-soporte)
 
 ---
@@ -114,7 +114,6 @@ axiom doctor
 * Binarios requeridos en el `PATH` (Git, Go, Node.js, npm, etc.).
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
-* Integridad de herramientas semánticas (CodeGraph, motor nativo).
 * Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto). Con raíz de proyecto añade, solo como información, el contexto de Axiom `duplicado` entre usuario y workspace ([Uso: contexto duplicado](usage.md#contexto-duplicado-entre-usuario-y-workspace)).
 
 ---
@@ -307,7 +306,6 @@ roles:
 governance:
   language: "es"                  # Idioma obligatorio de comunicación y artefactos
   shared_memory: "engram"         # Conector de memoria persistente
-  semantic_analysis: "auto"    # auto (CodeGraph si está disponible; si no, motor nativo) | codegraph | native-ast
 ```
 
 `workspace.skill_roots` es opcional. Sirve para proyectos que guardan sus skills canónicas fuera de `skills/`: cada ruta debe ser relativa a la carpeta maestra y quedar dentro de ella (no se admiten rutas absolutas, `..` ni `.`). Esas raíces se escanean justo después de `skills/` y antes de los directorios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que el índice de skills de `AGENTS.md` apunta a la copia versionada y no a una copia local.
@@ -776,16 +774,9 @@ axiom sync --scope=workspace
 
 Este comando asegura que los prompts, agentes locales (`opencode.json`) y herramientas del proyecto reflejen las últimas directivas sin tocar tu configuración global de usuario en `~/.config/opencode/`. Usa la raíz del proyecto aunque lo lances desde una subcarpeta y actualiza el estado de `<raíz>/.axiom/state.json`.
 
-### Mantenimiento Semántico del CodeGraph (`axiom semantic reindex`)
+### CodeGraph en Uso Directo
 
-Axiom integra análisis semántico del código fuente mediante CodeGraph y el motor AST nativo de Go. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
-* **Por Línea de Comandos:**
-  ```bash
-  axiom semantic reindex
-  ```
-  Actualiza incrementalmente el grafo de dependencias, tipos, funciones y llamadas del workspace sin necesidad de reiniciar la sesión.
-* **Por Panel Web (`axiom ui`):**
-  En la barra de herramientas superior del dashboard, el botón **"Reindexar CodeGraph"** ejecuta el proceso en segundo plano informando visualmente del progreso y completitud en tiempo real.
+Los agentes consultan el código con CodeGraph directamente: por su MCP, que Axiom registra cuando eliges CodeGraph al instalar (no se instala por defecto), y por su CLI (`codegraph explore "<consulta>"`). Axiom no tiene comandos ni panel propios de análisis semántico. Para preparar o refrescar el índice de un proyecto, usa la CLI de CodeGraph en su raíz: `codegraph init` la primera vez y `codegraph index` después de refactorizaciones mayores.
 
 ### Automatización Post-Archivado y Scripts de Soporte
 

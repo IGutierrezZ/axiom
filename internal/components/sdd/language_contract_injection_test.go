@@ -95,8 +95,6 @@ func TestRemoteAuthorizationProjectionPreservesMetadata(t *testing.T) {
 	}
 }
 
-const preWriteArtifactLanguageCheck = "Before any Write/Edit whose content is an artifact, re-verify these artifact language rules."
-
 // TestInjectLanguageContractIntoPromptAppendsCanonicalBlock pins defect 4 of
 // issue #1702: every rendered sub-agent prompt must carry the canonical
 // executor language contract, injected from one source at render time.
@@ -113,9 +111,6 @@ func TestInjectLanguageContractIntoPromptAppendsCanonicalBlock(t *testing.T) {
 	}
 	if !strings.Contains(got, "agent-language-contract") {
 		t.Fatalf("managed section marker missing — injection must be marker-bound for idempotence:\n%s", got)
-	}
-	if !strings.Contains(got, preWriteArtifactLanguageCheck) {
-		t.Fatalf("pre-write artifact language check missing from injected prompt:\n%s", got)
 	}
 }
 
@@ -153,11 +148,11 @@ func TestInjectLanguageContractIntoOpenCodeSubagentPrompts(t *testing.T) {
 	injectLanguageContractIntoOpenCodeSubagentPrompts(agentMap)
 
 	apply := agentMap["sdd-apply"].(map[string]any)["prompt"].(string)
-	if !strings.Contains(apply, "default to English") {
+	if !strings.Contains(apply, strings.TrimSpace(agentLanguageContract())) {
 		t.Fatalf("subagent prompt missing contract:\n%s", apply)
 	}
 	primary := agentMap["gentleman"].(map[string]any)["prompt"].(string)
-	if strings.Contains(primary, "default to English") {
+	if strings.Contains(primary, strings.TrimSpace(agentLanguageContract())) {
 		t.Fatal("primary-mode agent must not receive the executor contract")
 	}
 	verify := agentMap["sdd-verify"].(map[string]any)["prompt"].(string)

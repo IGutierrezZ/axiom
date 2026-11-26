@@ -111,31 +111,6 @@ func TestManualDocumentsTheISOMode(t *testing.T) {
 // catálogo por defecto.
 func TestExampleConfigDocumentsIntegrations(t *testing.T) {
 	example := readExampleConfig(t)
-	for _, want := range []string{
-		"# Integraciones con Trackers (opcional)",
-		"# integrations:",
-		"#   azure-devops:",
-		"#     organization:",
-		"#     project:",
-		"#     team:",
-		"Los secretos (tokens, PAT, contraseñas) NUNCA se escriben aquí",
-		"axiom integrations secret set",
-		"AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>",
-		"AXIOM_INTEGRATION_AZURE_DEVOPS_PAT",
-		"una sola organización",
-		"vso.work_write (work items; vso.work, que cubre las",
-		"vso.project y vso.code",
-		"'axiom integrations connect --plugin azure-devops'",
-		"'axiom integrations discover --plugin azure-devops'",
-		"'integrations: {}' es válido y no configura nada",
-	} {
-		if !strings.Contains(example, want) {
-			t.Errorf("axiom.example.yaml debe contener %q", want)
-		}
-	}
-	if strings.Contains(example, "está vacío") {
-		t.Error("la plantilla ya no debe afirmar que el catálogo de plugins está vacío")
-	}
 	if _, baseErr, declarations := parseLayered([]byte(example)); baseErr != nil || declarations.IntegrationsErr != nil || declarations.Integrations != nil {
 		t.Fatalf("con el bloque comentado la plantilla no declara integraciones: base=%v integrations=%v", baseErr, declarations.IntegrationsErr)
 	}

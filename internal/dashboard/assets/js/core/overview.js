@@ -17,7 +17,6 @@ export const SOURCES = {
   doctor: '/api/ecosystem/doctor',
   sync: '/api/workspace/specs/sync-status',
   inbox: '/api/skills/inbox',
-  semantic: '/api/semantic/status',
   specs: '/api/archive/specs'
 };
 
@@ -25,7 +24,7 @@ export const SOURCES = {
 const LIST_SOURCES = new Set(['increments', 'inbox']);
 
 // El sondeo de 60 s solo repite lo que alimenta las insignias y el aviso de specs;
-// el estado semántico y el catálogo de specs se actualizan al cargar y con Actualizar.
+// el catálogo de specs se actualiza al cargar y con Actualizar.
 export const POLLED_SOURCES = ['increments', 'doctor', 'sync', 'inbox'];
 
 state.overview = Object.fromEntries(Object.keys(SOURCES).map(key => [key, { status: 'loading', data: null, error: '' }]));

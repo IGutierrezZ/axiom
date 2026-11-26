@@ -676,43 +676,6 @@ func TestSaveRefusesARecordThatLoadWouldRejectWithoutWritingAnything(t *testing.
 	}
 }
 
-// design D-07, «Coexistencia con axiom/»: espacios de nombres separados. Guardar y
-// bloquear el registro nunca toca `<git common dir>/axiom/`.
-func TestTheRegistryNeverTouchesTheLegacyFolder(t *testing.T) {
-	root, commonDir := newRepository(t)
-	lineage := filepath.Join(commonDir, "gentle-ai", "review-transactions", "linaje-1", "estado.json")
-	writeFile(t, lineage, `{"linaje":"abierto"}`)
-	old := time.Date(2002, time.March, 4, 5, 6, 7, 0, time.UTC)
-	if err := os.Chtimes(lineage, old, old); err != nil {
-		t.Fatal(err)
-	}
-
-	unlock, err := New().Lock(context.Background(), commonDir, branch.LaneSDD, "x")
-	if err != nil {
-		t.Fatalf("Lock: %v", err)
-	}
-	saveErr := New().Save(commonDir, validRecord(root, commonDir))
-	unlock()
-	if saveErr != nil {
-		t.Fatalf("Save: %v", saveErr)
-	}
-
-	data, err := os.ReadFile(lineage)
-	if err != nil || string(data) != `{"linaje":"abierto"}` {
-		t.Fatalf("el linaje de RDD cambió: %q, %v", data, err)
-	}
-	if info, err := os.Stat(lineage); err != nil || !info.ModTime().Equal(old) {
-		t.Errorf("el linaje de RDD no debe tocarse (%v, %v)", info, err)
-	}
-	entries, err := os.ReadDir(filepath.Join(commonDir, "gentle-ai"))
-	if err != nil || len(entries) != 1 || entries[0].Name() != "review-transactions" {
-		t.Errorf("gentle-ai/ no debe ganar ni perder entradas: %v, %v", entries, err)
-	}
-	if _, err := os.Stat(recordFile(commonDir, "sdd", "x")); err != nil {
-		t.Errorf("el registro vive en axiom/branch/v1: %v", err)
-	}
-}
-
 // REQ-25.14 y design D-05: el bloqueo es exclusivo por cambio y carril, no es reentrante
 // (un segundo `ensure` del mismo cambio lo encuentra ocupado), no bloquea otros cambios ni
 // el otro carril, se libera al terminar y liberarlo dos veces es inocuo.

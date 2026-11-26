@@ -63,23 +63,10 @@ func TestIssueCreationAuthorityBoundary(t *testing.T) {
 			t.Fatalf("AGENTS.md row `issue-creation` points to %q, want the embedded authority %q", path, canonicalIssueCreationPath)
 		}
 	}
-	for _, stale := range []string{"gentle-ai-issue-creation", "[`skills/issue-creation/SKILL.md`](skills/issue-creation/SKILL.md)"} {
-		if strings.Contains(string(agents), stale) {
-			t.Fatalf("AGENTS.md still references stale issue-creation authority %q", stale)
-		}
-	}
 
 	canonical := MustRead("skills/issue-creation/SKILL.md")
 	if !strings.Contains(canonical, "\nname: issue-creation\n") {
 		t.Fatal("embedded issue-creation authority must retain canonical frontmatter identity name: issue-creation")
-	}
-
-	branch, err := os.ReadFile(filepath.Join(repositoryRoot, "skills", "axiom-branch-pr", "SKILL.md"))
-	if err != nil {
-		t.Fatalf("read axiom-branch-pr skill: %v", err)
-	}
-	if strings.Contains(string(branch), "Wait for maintainer to add `status:approved` to the issue") {
-		t.Fatal("branch-pr skill retains stale maintainer-only approval instruction")
 	}
 }
 
@@ -110,94 +97,5 @@ func TestSkillsIndexRowPathsAcceptsEveryPathFormat(t *testing.T) {
 		"| `issue-creation-extra` | Otra skill. | project | `skills/issue-creation-extra/SKILL.md` |\n"
 	if got := skillsIndexRowPaths(otherRows, "issue-creation"); len(got) != 0 {
 		t.Fatalf("skillsIndexRowPaths() = %q, want none: only the name cell identifies the row", got)
-	}
-}
-
-func TestPRLabelMutationsUseCanonicalIssueCreationAuthority(t *testing.T) {
-	repositoryRoot := filepath.Join("..", "..")
-	for _, path := range []string{
-		filepath.Join(repositoryRoot, "skills", "axiom-branch-pr", "SKILL.md"),
-	} {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("read %s: %v", path, err)
-		}
-		text := string(content)
-		for _, required := range []string{"canonical issue-creation workflow contract", "current direct human instruction binds the exact target/action", "target-host capability", "one bounded mutation and target-host readback", "Ordinary `type:*` categorization", "Protected policy labels", "verified policy authority", "target-host `viewerPermission` `MAINTAIN` or `ADMIN`", "`size:exception` additionally requires documented over-budget rationale"} {
-			if !strings.Contains(text, required) {
-				t.Errorf("%s must require canonical PR-label authority marker %q", path, required)
-			}
-		}
-		for _, stale := range []string{"| Apply `type:*` label to a PR | ❌ | ✅ |", "| Apply `size:exception` label | ❌ | ✅ |", "maintainer-applied `size:exception`", "Ask a maintainer to add the correct label; remove extras", "gh pr edit"} {
-			if strings.Contains(text, stale) {
-				t.Errorf("%s retains stale or unguarded PR-label guidance %q", path, stale)
-			}
-		}
-	}
-}
-
-func TestDelegatedWorkflowMutationContract(t *testing.T) {
-	repositoryRoot := filepath.Join("..", "..")
-	const delegatedWorkflowReference = "skills/issue-creation/references/delegated-workflow-actions.md"
-	reference := MustRead(delegatedWorkflowReference)
-	if readReference, err := Read(delegatedWorkflowReference); err != nil || readReference != reference {
-		t.Fatalf("Read(%q) differs from MustRead: %v", delegatedWorkflowReference, err)
-	}
-	// Axiom no tiene guía de contribución: CONTRIBUTING.md se retira porque
-	// describía el flujo de issues del upstream, y este repositorio tiene las
-	// issues deshabilitadas. Solo queda el workflow por vigilar.
-	workflow, err := os.ReadFile(filepath.Join(repositoryRoot, ".github", "workflows", "pr-check.yml"))
-	if err != nil {
-		t.Fatalf("read pr-check workflow: %v", err)
-	}
-	for _, stale := range []string{"a maintainer will add the `status:approved` label", "has been approved by a maintainer", "Issues must be approved by a maintainer before work begins.", "Please comment on the issue and wait for it to be labelled status:approved."} {
-		if strings.Contains(string(workflow), stale) {
-			t.Errorf(".github/workflows/pr-check.yml retains stale maintainer-only approval authority %q", stale)
-		}
-	}
-	// La puerta de presupuesto de revisión (400 líneas y `size:exception`) se
-	// retiró con C-02-e: una sola PR por cambio es la entrega por defecto y la
-	// división se hace en commits, no en PRs. Que no vuelva.
-	for _, removed := range []string{"check-pr-size", "size:exception", "const limit = 400"} {
-		if strings.Contains(string(workflow), removed) {
-			t.Errorf("pr-check workflow vuelve a referenciar %q; el check de tamaño de PR se retiró con C-02-e", removed)
-		}
-	}
-	// Contrapartida de haber retirado la puerta: que la retirada sea completa y
-	// siga siéndolo. Una restauración a medias dejaría el workflow exigiendo una
-	// etiqueta sobre issues que aquí no existen, y ningún PR podría pasar.
-	for _, removed := range []string{"status:approved", "check-issue-reference", "check-issue-approved"} {
-		if strings.Contains(string(workflow), removed) {
-			t.Errorf("pr-check workflow vuelve a referenciar %q; las issues están deshabilitadas en este repositorio y esa puerta no puede satisfacerse", removed)
-		}
-	}
-}
-
-// La política de formato del repositorio destino manda: formulario YAML,
-// plantilla Markdown o ruta sin plantilla. La skill no impone un único formato
-// ni añade reglas propias para el repositorio de Axiom, que no recibe issues.
-func TestIssueCreationFollowsDestinationRepositoryPolicy(t *testing.T) {
-	text := MustRead("skills/issue-creation/SKILL.md")
-	for _, scenario := range []struct {
-		name  string
-		terms []string
-	}{
-		{"formulario YAML requerido", []string{"When the target uses YAML Issue Forms", "Never bypass a required form", "omit `markdown` guidance"}},
-		{"plantilla Markdown", []string{"When the target uses a Markdown template", "preserve its required structure"}},
-		{"sin plantilla", []string{"When the target has no issue template", "do not block publication solely because YAML forms are absent", "labels permitted by repository policy"}},
-		{"detección en el destino", []string{"`.github/ISSUE_TEMPLATE/`"}},
-	} {
-		t.Run(scenario.name, func(t *testing.T) {
-			for _, term := range scenario.terms {
-				if !strings.Contains(text, term) {
-					t.Errorf("issue-creation skill is missing destination-policy marker %q", term)
-				}
-			}
-		})
-	}
-	for _, stale := range []string{"Never use Markdown, a blank body", "single format authority", "IGutierrezZ/axiom", "branch-pr"} {
-		if strings.Contains(text, stale) {
-			t.Errorf("issue-creation skill must not contain %q", stale)
-		}
 	}
 }

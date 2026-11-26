@@ -324,60 +324,6 @@ func TestWriteSharedPromptFilesContent(t *testing.T) {
 			t.Errorf("prompt file %q content too short (%d bytes), want >= 200", tc.file, len(content))
 		}
 
-		// Each file must contain the ORCHESTRATOR gate/note (present in all skill files)
-		// or "do not delegate" (present in some skill files).
-		hasGate := strings.Contains(content, "ORCHESTRATOR GATE") || strings.Contains(content, "ORCHESTRATOR NOTE")
-		hasDoNotDelegate := strings.Contains(strings.ToLower(content), "do not delegate")
-		if !hasGate && !hasDoNotDelegate {
-			t.Errorf("prompt file %q missing expected skill content (ORCHESTRATOR GATE/NOTE or do not delegate)", tc.file)
-		}
-	}
-}
-
-func TestWriteSharedPromptFilesLanguageContract(t *testing.T) {
-	phases := []string{
-		"sdd-init.md",
-		"sdd-explore.md",
-		"sdd-research.md",
-		"sdd-propose.md",
-		"sdd-spec.md",
-		"sdd-design.md",
-		"sdd-tasks.md",
-		"sdd-apply.md",
-		"sdd-verify.md",
-		"sdd-archive.md",
-		"sdd-onboard.md",
-	}
-
-	for _, capability := range []string{"capable", "small"} {
-		t.Run(capability, func(t *testing.T) {
-			home := t.TempDir()
-			phaseCapabilities := make(map[string]string, len(phases))
-			for _, fileName := range phases {
-				phaseCapabilities[strings.TrimSuffix(fileName, ".md")] = capability
-			}
-			if _, err := WriteSharedPromptFiles(SharedPromptDir(home), phaseCapabilities); err != nil {
-				t.Fatalf("WriteSharedPromptFiles(%s) error = %v", capability, err)
-			}
-
-			for _, fileName := range phases {
-				path := filepath.Join(SharedPromptDir(home), fileName)
-				content, err := os.ReadFile(path)
-				if err != nil {
-					t.Fatalf("ReadFile(%q) error = %v", path, err)
-				}
-				text := string(content)
-				for _, required := range []string{
-					"Generated technical artifacts default to English",
-					"If technical artifacts are explicitly requested in another language, use a neutral/professional register",
-					"Public/contextual comments follow the target context language",
-				} {
-					if !strings.Contains(text, required) {
-						t.Fatalf("%s/%s missing delegated prompt language contract %q", capability, fileName, required)
-					}
-				}
-			}
-		})
 	}
 }
 
@@ -415,16 +361,6 @@ func TestWriteSharedPromptFilesWithCapabilities(t *testing.T) {
 	// The two contents should differ (different skill sections).
 	if string(capableContent) == string(smallContent) {
 		t.Fatal("sdd-apply.md content should differ between 'capable' and 'small' sections")
-	}
-
-	// Small section should mention "max 3 files" (small model constraint).
-	if !strings.Contains(string(smallContent), "max 3 files") {
-		t.Error("small section should contain 'max 3 files'")
-	}
-
-	// Capable section should NOT mention "max 3 files" (no such constraint).
-	if strings.Contains(string(capableContent), "max 3 files") {
-		t.Error("capable section should NOT contain 'max 3 files'")
 	}
 }
 

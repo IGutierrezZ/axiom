@@ -34,12 +34,6 @@ func TestSDDTaskResultPluginIsOpenCodeOnlyAndCanonicallySynced(t *testing.T) {
 				if got := sddOrchestratorAsset(tc.agent); got != tc.assetPath {
 					t.Fatalf("sddOrchestratorAsset(%q) = %q, want %q", tc.agent, got, tc.assetPath)
 				}
-				content := assets.MustRead(tc.assetPath)
-				for _, forbidden := range []string{"task_result", "sdd_task_result", sddTaskResultPluginName, "tool.execute.after"} {
-					if strings.Contains(content, forbidden) {
-						t.Fatalf("%s completion transport depends on the OpenCode task envelope hook via %q", tc.name, forbidden)
-					}
-				}
 			}
 		})
 	}
@@ -62,14 +56,6 @@ func TestSDDTaskResultPluginIsOpenCodeOnlyAndCanonicallySynced(t *testing.T) {
 	} {
 		if !strings.Contains(canonical, required) {
 			t.Fatalf("%s is missing OpenCode task transport contract %q", assetPath, required)
-		}
-	}
-	for _, path := range []string{"opencode/sdd-orchestrator.md", "skills/_shared/sdd-phase-common.md"} {
-		content := assets.MustRead(path)
-		for _, required := range []string{"terminal", "background: true", "must not produce either transport failure or a session latch"} {
-			if !strings.Contains(content, required) {
-				t.Fatalf("%s is missing nonterminal background transport guidance %q", path, required)
-			}
 		}
 	}
 

@@ -195,3 +195,8 @@ Archivar con `axiom sdd archive-integrate` (C-03-b), que compone solo los bloque
 3. `openspec/specs/requirement-identifiers/spec.md:5` (`## Purpose`): quitar «la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4)» y «no conserva los identificadores de un cliente al adoptar (C-03-c)». La delta de `requirement-identifiers` no lo anota: es una corrección del texto vivo.
 4. Texto del escenario `mixed_separators` de la delta de `openspec-adoption`: la spec dice `RF.001`, que `foreignIDPattern` no reconoce; el comportamiento implementado y probado usa `RF-001` frente a `RF_001`. Corregir el texto del escenario en la spec viva al archivar (corrección de texto, sin cambio de comportamiento).
 5. Seguimiento (R3): `livespec/ids.go:427` compara colisiones por cadena y no por clave de identidad; proponerlo para C-03-d o un cambio de `livespec`.
+
+## Integración de main (2026-11-26)
+
+- La PR #335 tenía conflictos con `main` por C-08-l (#332) y C-08-h (#333). Se resolvieron con un merge de `origin/main`, sin rebase porque la rama ya está publicada.
+- C-08-h borró `internal/workspace/docs_pin_test.go` y `TestSDDSpecAdoptionReferenceDescribesTheWholeFlow` de `internal/assets/assets_test.go`, que eran centinelas de redacción. Se aceptan los dos borrados, de modo que los pins de U6 (guía y manual) desaparecen. La guía y el manual reescritos se conservan.

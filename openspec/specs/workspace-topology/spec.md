@@ -30,8 +30,8 @@ El ejecutable `axiom` DEBE soportar la bandera `--version`, `-v` y el subcomando
 
 ### Requirement: Subcomando axiom workspace validate (REQ-1.2)
 
-El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, REQ-30.19), DEBE rechazar un bloque `baseline:` residual con el error tipado de REQ-30.21 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de REQ-25.25.
-(Previously: validaba el bloque `baseline` y reportaba el almacén sin ficheros también para una baseline del proyecto; ahora un `baseline:` se rechaza)
+El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, REQ-30.19), DEBE rechazar un bloque `baseline:` residual con el error tipado de REQ-30.21 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de REQ-25.25. Una clave `governance.semantic_analysis` residual NO DEBE invalidar la configuración: se sigue leyendo, se ignora y DEBE reportarse como advertencia que nombra la clave y no altera el resultado.
+(Previously: `governance.semantic_analysis` elegía el conector de `axiom semantic` y se validaba en silencio; C-08-l retira ese comando y la clave pasa a advertencia.)
 
 #### Scenario: Validación de espacio de trabajo conforme
 - **DADO** un directorio con un archivo `axiom.yaml` válido y las carpetas de repositorios existentes
@@ -81,7 +81,12 @@ El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, e
 - **ENTONCES** la salida indica en español que la topología fue retirada y que debe sustituirse por `multirepo`
 - **Y** el proceso finaliza con código de salida `1`
 
----
+
+#### Scenario: Clave `governance.semantic_analysis` residual solo avisa
+- **DADO** un `axiom.yaml` conforme que declara `governance.semantic_analysis`
+- **CUANDO** el usuario ejecuta `axiom workspace validate`
+- **ENTONCES** la salida incluye una advertencia que nombra `governance.semantic_analysis` y reporta `COMPLIANT`
+- **Y** el código de salida del proceso es `0`
 
 ## 2. Capacidad: `workspace-topology-engine`
 

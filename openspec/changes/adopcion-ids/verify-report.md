@@ -61,7 +61,7 @@ Código muerto: todas las funciones exportadas nuevas tienen al menos una llamad
 | REQ-30.12 | `adoptcheck/check_pattern_test.go`; `TestArchiveAdoptCheck*` |
 | REQ-30.13 | `TestAdoptIDs*` (archivado con `archive-integrate`) |
 | REQ-44.4 | `livespec/registry_pattern_test.go`; `TestRegistryLookupIdentity*` |
-| REQ-30.31 | `internal/assets/assets_test.go`; `TestDocsPinManualAdopcionConservaLosIDs`; `TestArchiveAdoptHelpDescribesTheDeclaredPattern` |
+| REQ-30.31 | `TestArchiveAdoptHelpDescribesTheDeclaredPattern`. Los pins de la guía (`assets_test.go`) y del manual (`TestDocsPinManualAdopcionConservaLosIDs`) se retiraron al integrar `main`, en coherencia con C-08-h (#333), que borró los centinelas de redacción |
 
 La matriz es por requisito: no se revisó cada escenario de la delta frente a su prueba línea a línea.
 

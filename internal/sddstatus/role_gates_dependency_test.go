@@ -3,9 +3,7 @@ package sddstatus
 import (
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/handoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
@@ -28,23 +26,6 @@ func sealPerCheckpointFullstackKickoff(t *testing.T, changeRoot, changeName stri
 	})
 	if err != nil || !ok {
 		t.Fatalf("sealPerCheckpointFullstackKickoff: kickoff.Seal() = (ok=%v, err=%v), want a successful preparation seal", ok, err)
-	}
-}
-
-func writeLegacyIntegrationHandoff(t *testing.T, changeRoot, change string, status handoff.Status) {
-	t.Helper()
-	h := &handoff.Handoff{
-		Metadata: handoff.Metadata{
-			Change: change, FromPhase: handoff.PhaseApply, ToPhase: handoff.PhaseVerify,
-			FromRole: "core", ToRole: "web", Timestamp: time.Now().UTC(), Status: status,
-		},
-		Sections: handoff.Sections{
-			ExecutiveSummary: "resumen", Artifacts: "artefactos", Decisions: "decisiones",
-			RisksAndBlockers: "riesgos", DirectInstructions: "instrucciones",
-		},
-	}
-	if err := handoff.WriteFile(changeRoot+"/handoff.md", h); err != nil {
-		t.Fatalf("handoff.WriteFile() error = %v", err)
 	}
 }
 
@@ -111,29 +92,6 @@ func TestVerifyReadyOnceEveryRoleApprovedWithoutAHandoffFile(t *testing.T) {
 	// integration gate, which this change does not touch.
 	if reasons := strings.Join(status.BlockedReasons, "\n"); strings.Contains(reasons, "handoff.md") || strings.Contains(reasons, "verify") {
 		t.Fatalf("BlockedReasons = %v, want no mention of handoff.md", status.BlockedReasons)
-	}
-}
-
-// A handoff.md that older versions wrote is ignored in either status.
-func TestVerifyIgnoresALegacyHandoffFile(t *testing.T) {
-	for _, status := range []handoff.Status{handoff.StatusBlocked, handoff.StatusNeedsClarification} {
-		resolved := resolveTwoRoleChange(t, "two-roles-legacy", func(changeRoot string) {
-			approveGates(t, changeRoot, kickoff.RoleApplyGate("core"), kickoff.RoleApplyGate("web"))
-			writeLegacyIntegrationHandoff(t, changeRoot, "two-roles-legacy", status)
-		})
-		if resolved.Dependencies.Verify != DependencyReady {
-			t.Fatalf("handoff.md %q: Dependencies.Verify = %q, want ready", status, resolved.Dependencies.Verify)
-		}
-		if reasons := strings.Join(resolved.BlockedReasons, "\n"); strings.Contains(reasons, "relevo") {
-			t.Fatalf("handoff.md %q: BlockedReasons = %v, want no relay reason", status, resolved.BlockedReasons)
-		}
-	}
-	open := resolveTwoRoleChange(t, "two-roles-legacy-open", func(changeRoot string) {
-		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
-		writeLegacyIntegrationHandoff(t, changeRoot, "two-roles-legacy-open", handoff.StatusReady)
-	})
-	if open.Dependencies.Verify != DependencyBlocked {
-		t.Fatalf("a ready handoff.md must not unblock verify while web is open: Dependencies.Verify = %q", open.Dependencies.Verify)
 	}
 }
 

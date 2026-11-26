@@ -84,11 +84,11 @@ func TestHomeBlocksHaveLoadingEmptyAndErrorStates(t *testing.T) {
 	home := readAsset(t, "js/screens/inicio.js")
 	for _, marker := range []string{
 		"stateLoading(", "stateError(", "stateEmpty(", "data-action=\"retry\"",
-		"source('increments')", "source('doctor')", "source('sync')", "check('inbox'", "check('semantic'", "check('specs'",
+		"source('increments')", "source('doctor')", "source('sync')", "check('inbox'", "check('specs'",
 		"incrementos necesitan", "Nada necesita atención", "No se pudo consultar",
 		"home-attention", "home-flow", "home-kpis", "home-help", "home-sync",
 		"flow-list", "flow-seg", "is-bug", "sr-only", "aria-label=\"Incrementos activos por fase SDD\"",
-		"href: '#/skills'", "href: '#/codigo'", "href: '#/specs'", "href: '#/ecosistema'",
+		"href: '#/skills'", "href: '#/specs'", "href: '#/ecosistema'",
 		"card.hidden = rows.length === 0 && waiting === 0",
 	} {
 		if !strings.Contains(home, marker) {
@@ -172,7 +172,7 @@ func TestHomeSharedCacheAndDedupe(t *testing.T) {
 	over := readAsset(t, "js/core/overview.js")
 	for _, route := range []string{
 		"/api/increments", "/api/ecosystem/doctor", "/api/workspace/specs/sync-status",
-		"/api/skills/inbox", "/api/semantic/status", "/api/archive/specs",
+		"/api/skills/inbox", "/api/archive/specs",
 	} {
 		if !strings.Contains(over, "'"+route+"'") {
 			t.Errorf("overview.js no declara la fuente %s", route)
@@ -189,7 +189,7 @@ func TestHomeSharedCacheAndDedupe(t *testing.T) {
 	}
 	// Inicio no hace fetch propio de las fuentes cacheadas.
 	home := readAsset(t, "js/screens/inicio.js")
-	if loc := regexp.MustCompile(`api\('/api/(increments|ecosystem|workspace|skills|semantic|archive)`).FindString(home); loc != "" {
+	if loc := regexp.MustCompile(`api\('/api/(increments|ecosystem|workspace|skills|archive)`).FindString(home); loc != "" {
 		t.Errorf("inicio.js consulta %q directamente; debe usar la caché de overview.js", loc)
 	}
 }
@@ -249,7 +249,6 @@ const routes = {
   '/api/skills/inbox': 'null',
   '/api/ecosystem/doctor': JSON.stringify({ healthy: false, checks: [{ name: 'a', status: 'ok' }, { name: 'b', status: 'warning' }, { name: 'c', status: 'error' }] }),
   '/api/workspace/specs/sync-status': JSON.stringify({ is_git_repo: true, behind: 2 }),
-  '/api/archive/specs': JSON.stringify({ specs: [] }),
 };
 const calls = [];
 globalThis.fetch = async (path) => {
@@ -276,7 +275,7 @@ await refreshOverview();
 out.full = calls.length;
 out.overview = Object.fromEntries(Object.entries(state.overview).map(([k, v]) => [k, v.status]));
 out.inbox = sourceData('inbox');
-out.semanticError = state.overview.semantic.error;
+out.specsError = state.overview.specs.error;
 console.log(JSON.stringify(out));
 `
 	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
@@ -311,12 +310,12 @@ console.log(JSON.stringify(out));
 			Errors   int `json:"errors"`
 			Warnings int `json:"warnings"`
 		} `json:"doctor"`
-		Simultaneous  int               `json:"simultaneous"`
-		Sequential    int               `json:"sequential"`
-		Full          int               `json:"full"`
-		Overview      map[string]string `json:"overview"`
-		Inbox         []any             `json:"inbox"`
-		SemanticError string            `json:"semanticError"`
+		Simultaneous int               `json:"simultaneous"`
+		Sequential   int               `json:"sequential"`
+		Full         int               `json:"full"`
+		Overview     map[string]string `json:"overview"`
+		Inbox        []any             `json:"inbox"`
+		SpecsError   string            `json:"specsError"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
 		t.Fatalf("salida de node ilegible: %v\n%s", err, raw)
@@ -354,14 +353,14 @@ console.log(JSON.stringify(out));
 	if res.Sequential != 2 {
 		t.Errorf("tras terminar, una consulta nueva debe repetir la petición (total %d, se esperaba 2)", res.Sequential)
 	}
-	if res.Full != 6 {
-		t.Errorf("refreshOverview() hizo %d peticiones, se esperaban 6 (una por fuente)", res.Full)
+	if res.Full != 5 {
+		t.Errorf("refreshOverview() hizo %d peticiones, se esperaban 5 (una por fuente)", res.Full)
 	}
 	// Una fuente que falla no afecta a las demás; null de una lista pasa a [].
-	if res.Overview["semantic"] != "error" || res.SemanticError != "boom" {
-		t.Errorf("la fuente semantic debe quedar en error con su mensaje: %v / %q", res.Overview["semantic"], res.SemanticError)
+	if res.Overview["specs"] != "error" || res.SpecsError != "boom" {
+		t.Errorf("la fuente specs debe quedar en error con su mensaje: %v / %q", res.Overview["specs"], res.SpecsError)
 	}
-	for _, key := range []string{"increments", "doctor", "sync", "inbox", "specs"} {
+	for _, key := range []string{"increments", "doctor", "sync", "inbox"} {
 		if res.Overview[key] != "ready" {
 			t.Errorf("la fuente %s debe quedar lista aunque otra falle (estado %q)", key, res.Overview[key])
 		}

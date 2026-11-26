@@ -515,7 +515,7 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 			want string
 		}{
 			{"new", []string{"-Prefix", "fix"}, `(?m)^axiom branch ensure --cwd \S*proj --change demo --lane odd --mode worktree --prefix fix --json\s*$`},
-			{"pr", nil, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json\s*$`},
+			{"pr", []string{"-Label", "chore"}, `(?m)^axiom branch status --cwd \S*proj --change demo --lane odd --json\s*$`},
 			{"done", []string{"-Force"}, `(?m)^axiom branch done --cwd \S*proj --change demo --lane odd --fetch --force\s*$`},
 		} {
 			if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
@@ -537,13 +537,29 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		}
 	})
 
+	t.Run("pr sin -Label", func(t *testing.T) {
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		stdout, _, code := f.run(t, powershell, powerShellArgs(script, "pr", "demo")...)
+		if code == 0 || !strings.Contains(stdout, "Falta -Label") {
+			t.Fatalf("pr sin -Label debía rechazarse, salió con %d:\n%s", code, stdout)
+		}
+		if strings.Contains(f.logText(t), "gh pr create") {
+			t.Error("pr abrió un PR sin etiqueta type:*")
+		}
+	})
+
 	t.Run("pr", func(t *testing.T) {
-		stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, "pr", "demo")...)
+		stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, "pr", "demo", "-Label", "chore")...)
 		if code != 0 {
 			t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 		}
 		if !strings.Contains(f.logText(t), "--base release --head inc/demo") {
 			t.Errorf("pr no tomó la base de prTarget (release):\n%s", f.logText(t))
+		}
+		if !strings.Contains(f.logText(t), "--label type:chore") {
+			t.Errorf("pr no creó el PR con su etiqueta type:chore:\n%s", f.logText(t))
 		}
 		if got := f.git(t, f.remote, "branch", "--list", "inc/demo"); !strings.Contains(got, "inc/demo") {
 			t.Errorf("pr no publicó la rama en origin:\n%s", got)
