@@ -53,25 +53,25 @@ Previsión de revisión: la PR es grande; la revisión por commit (un commit por
 
 Depende de: nada. Paquetes: `internal/reqid`, `internal/livespec/registry.go`.
 
-- [ ] 1.1 RED: en `internal/reqid/provisional_test.go`, tabla de la gramática de D1: `prov:30:1`, `prov:a:1`, `prov:USU:1`, `prov:USU-3:1`, `prov:USU-b:1` y `prov::1` con los cinco patrones (`REQ-<n>.<m>`, `RF-<DOM>-<NN>`, `RF-<m>`, `HU-<NNN>`, `RF-<DOM>-<n>.<m>`); dominio no admitido por la plantilla, etiqueta con patrón con `<DOM>` y componentes de distinto número o clase dan `provisional_malformed` (`*ProvisionalError`). Prueba además que un provisional nunca es `Valid`, nunca lo devuelve `InTitle` ni `TrailingCandidate`, y que `Scan` no lo devuelve como candidato (también con `RF-<DOM>-<n>.<m>` y dominio `RF`, clave `RF-3`).
+- [x] 1.1 RED: en `internal/reqid/provisional_test.go`, tabla de la gramática de D1: `prov:30:1`, `prov:a:1`, `prov:USU:1`, `prov:USU-3:1`, `prov:USU-b:1` y `prov::1` con los cinco patrones (`REQ-<n>.<m>`, `RF-<DOM>-<NN>`, `RF-<m>`, `HU-<NNN>`, `RF-<DOM>-<n>.<m>`); dominio no admitido por la plantilla, etiqueta con patrón con `<DOM>` y componentes de distinto número o clase dan `provisional_malformed` (`*ProvisionalError`). Prueba además que un provisional nunca es `Valid`, nunca lo devuelve `InTitle` ni `TrailingCandidate`, y que `Scan` no lo devuelve como candidato (también con `RF-<DOM>-<n>.<m>` y dominio `RF`, clave `RF-3`).
   Cubre: REQ-47.1, REQ-47.3
   Verificación: `go test ./internal/reqid -run 'Provisional'`
-- [ ] 1.2 GREEN: crear `internal/reqid/provisional.go` con `Provisional` (`String`, `Label`), `Pattern.ParseProvisional`, `ParseProvisionalToken`, `ProvisionalInTitle`, `ScanProvisional` con la forma laxa y la regla de token completo (ni precedido ni seguido de letra, cifra, `_` o `-`), y `ProvisionalError{Token, Reason}`. Modificar `internal/reqid/reqid.go` para que `Scan` enmascare los tokens provisionales antes de buscar candidatos (REQ-47.1.1).
+- [x] 1.2 GREEN: crear `internal/reqid/provisional.go` con `Provisional` (`String`, `Label`), `Pattern.ParseProvisional`, `ParseProvisionalToken`, `ProvisionalInTitle`, `ScanProvisional` con la forma laxa y la regla de token completo (ni precedido ni seguido de letra, cifra, `_` o `-`), y `ProvisionalError{Token, Reason}`. Modificar `internal/reqid/reqid.go` para que `Scan` enmascare los tokens provisionales antes de buscar candidatos (REQ-47.1.1).
   Cubre: REQ-47.1
   Verificación: `go test ./internal/reqid -run 'Provisional|Scan'`
-- [ ] 1.3 RED y GREEN: en `internal/reqid/allocate_test.go` y `internal/reqid/allocate.go`, `Pattern.SeriesOf`, `Allocator` (`Occupy`, `Next`, `NewSeries`) y `AllocationError`. Casos: `Next` en serie vacía da `1` con el relleno de la plantilla; `NewSeries` toma el siguiente `<n>` libre y nunca una serie ocupada ni fijada por el propio cambio; desbordamiento y formato no `Valid` dan `*AllocationError`; ocupación por definitivos repetidos no altera el máximo.
+- [x] 1.3 RED y GREEN: en `internal/reqid/allocate_test.go` y `internal/reqid/allocate.go`, `Pattern.SeriesOf`, `Allocator` (`Occupy`, `Next`, `NewSeries`) y `AllocationError`. Casos: `Next` en serie vacía da `1` con el relleno de la plantilla; `NewSeries` toma el siguiente `<n>` libre y nunca una serie ocupada ni fijada por el propio cambio; desbordamiento y formato no `Valid` dan `*AllocationError`; ocupación por definitivos repetidos no altera el máximo.
   Cubre: REQ-47.2
   Verificación: `go test ./internal/reqid -run 'Allocat|NewSeries|SeriesOf'`
-- [ ] 1.4 RED y GREEN: en `internal/reqid/idmap_test.go` y `internal/reqid/idmap.go`, `IDMap`, `Assignment`, `NewIDMap`, `Substitute` por token completo (el más largo primero, una sola pasada, con claves provisionales y definitivas para la reasignación D→D') y `Count`. Casos: `prov:30:1` no altera `prov:30:11`; token pegado a letra, cifra, `_` o `-` no se sustituye; sustitución idempotente.
+- [x] 1.4 RED y GREEN: en `internal/reqid/idmap_test.go` y `internal/reqid/idmap.go`, `IDMap`, `Assignment`, `NewIDMap`, `Substitute` por token completo (el más largo primero, una sola pasada, con claves provisionales y definitivas para la reasignación D→D') y `Count`. Casos: `prov:30:1` no altera `prov:30:11`; token pegado a letra, cifra, `_` o `-` no se sustituye; sustitución idempotente.
   Cubre: REQ-47.4
   Verificación: `go test ./internal/reqid -run 'IDMap|Substitute'`
-- [ ] 1.5 RED y GREEN: en `internal/reqid/arch_test.go`, regla «el literal `prov:` solo aparece en código de producción de `internal/reqid`» y conservación de la prueba de hoja (solo biblioteca estándar); en `internal/reqid/fuzz_test.go`, propiedad «provisional ⇒ no válido, ni título, ni candidato».
+- [x] 1.5 RED y GREEN: en `internal/reqid/arch_test.go`, regla «el literal `prov:` solo aparece en código de producción de `internal/reqid`» y conservación de la prueba de hoja (solo biblioteca estándar); en `internal/reqid/fuzz_test.go`, propiedad «provisional ⇒ no válido, ni título, ni candidato».
   Cubre: REQ-47.1
   Verificación: `go test ./internal/reqid -run 'Arch|Fuzz'`
-- [ ] 1.6 RED y GREEN: modificar `internal/livespec/registry.go` para que `Registry.NextFree` delegue en `reqid.Allocator`; las pruebas existentes `registry_test.go` y `registry_pattern_test.go` se conservan sin cambios (regresión de comportamiento).
+- [x] 1.6 RED y GREEN: modificar `internal/livespec/registry.go` para que `Registry.NextFree` delegue en `reqid.Allocator`; las pruebas existentes `registry_test.go` y `registry_pattern_test.go` se conservan sin cambios (regresión de comportamiento).
   Cubre: REQ-47.2
   Verificación: `go test ./internal/livespec -run 'Registry|NextFree'`
-- [ ] 1.7 Cierre de U1: `go vet ./internal/reqid/... ./internal/livespec/...` y commit `feat(reqid): forma provisional, IDMap y Allocator para asignar el siguiente número libre`.
+- [x] 1.7 Cierre de U1: `go vet ./internal/reqid/... ./internal/livespec/...` y commit `feat(reqid): forma provisional, IDMap y Allocator para asignar el siguiente número libre`.
   Cubre: REQ-47.1, REQ-47.2, REQ-47.4
   Verificación: `go test ./internal/reqid/...`
 
