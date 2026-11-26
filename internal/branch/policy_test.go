@@ -156,6 +156,12 @@ func configLocation(gitErr, repositoriesErr, configErr error) workspace.Location
 	}
 }
 
+// withBranchTemplatesErr añade el canal de error de las plantillas de rama.
+func withBranchTemplatesErr(loc workspace.Location, err error) workspace.Location {
+	loc.Declarations.BranchTemplatesErr = err
+	return loc
+}
+
 // RF-BRA-03: un valor inválido o una configuración ilegible en `axiom.yaml` se
 // rechaza con `config_invalid` (nunca con `invalid_name`, que es de la invocación) y
 // la continuación ejecutable cita la carpeta maestra.
@@ -168,6 +174,7 @@ func TestPolicyConfigRefusalIsConfigInvalidAndNamesTheCause(t *testing.T) {
 		{"bloque git inválido", configLocation(errors.New("git.branch_prefix: valor «a b»"), nil, nil), []string{"git.branch_prefix"}},
 		{"bloque repositories inválido", configLocation(nil, errors.New("repositories[0].path: sale de la carpeta maestra"), nil), []string{"repositories[0].path"}},
 		{"configuración ilegible", configLocation(nil, nil, errors.New("error al parsear axiom.yaml")), []string{"error al parsear axiom.yaml"}},
+		{"plantilla de rama inválida", withBranchTemplatesErr(configLocation(nil, nil, nil), errors.New("roles.backend.branch_template: plantilla inválida")), []string{"roles.backend.branch_template"}},
 		{"varias causas", configLocation(errors.New("causa-git\ncausa-git-2"), errors.New("causa-repos"), nil), []string{"causa-git", "causa-git-2", "causa-repos"}},
 	}
 	for _, tc := range tests {

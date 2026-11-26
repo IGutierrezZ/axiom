@@ -44,6 +44,26 @@ workspace:
 #   branch_prefix: feat
 #   # main_branch: master
 #   # promotion: branch
+#   branch_template: "{prefix}/{change}"
+# Plantilla del nombre de la rama (opcional): 'branch_template' sustituye al nombre por
+# defecto '<branch_prefix>/<cambio>'. Una llave sin cerrar, una llave suelta, unas llaves
+# anidadas o una variable desconocida son un error, y no hay escape para llaves literales.
+# Variables:
+#   {prefix}    el prefijo efectivo (branch_prefix del repositorio o de 'git').
+#   {kind}      'feature' o 'fix' (este último si el work item de origen es un Bug).
+#   {change}    el nombre del cambio.
+#   {slug}      el nombre del cambio sin el prefijo '<tipo>-<ref>-' (us-2525-login con
+#               ref 2525 da 'login'); si no casa, el propio nombre del cambio.
+#   {role}      el rol que entra; solo en la plantilla de un rol.
+#   {ref}       el identificador del work item de origen (p. ej. 2525).
+#   {task_ref}  el identificador de la Task del rol; difiere la rama hasta que el rol
+#               entra con 'axiom branch ensure --role'.
+# Toda plantilla debe usar al menos una variable distintiva ({change}, {slug}, {ref} o
+# {task_ref}); si no, todos los cambios compartirían un nombre constante. El nombre
+# resultante y cada valor deben ser válidos como referencia git y no se sanean: un valor
+# no seguro se rechaza. Precedencia: rol > repositorio > 'git'. La rama que aloja
+# 'openspec/' no admite {role} ni {task_ref}. Más abajo, 'repositories' y 'roles' la
+# repiten con ejemplos.
 # Promoción en dos etapas (opcional): 'main_branch' es la rama principal a la que
 # se promueve lo ya integrado; sin ella, o igual a la rama de integración, el
 # trabajo se integra en una sola etapa. 'promotion' admite 'branch' (la rama del
@@ -188,10 +208,13 @@ workspace:
 # repositories:
 #   - path: backend-api
 #     integration_branch: release
+#     branch_template: "feature/TASK-{task_ref}"
 #   - path: frontend-portal
 #     branch_prefix: ui
 #     promotion: ask
 # 'promotion' (branch, release o ask) sustituye a git.promotion en ese repositorio.
+# 'branch_template' sustituye a git.branch_template en ese repositorio. Con {task_ref} la
+# rama de cada rol se crea al entrar el rol y no al arrancar el cambio.
 
 # ------------------------------------------------------------------------------
 # Contexto Técnico (opcional)
@@ -230,6 +253,9 @@ roles:
     name: "Desarrollo Core API y Servicios"
     repositories:
       - path: "backend-api"
+    # La plantilla de un rol (solo multirepo) rige las ramas de ese rol y sí admite
+    # {role} y {task_ref}. Descomenta la línea siguiente quitando "# #":
+    # # branch_template: "feature/{role}-{task_ref}"
     tech:
       - "go"
       - "postgresql"

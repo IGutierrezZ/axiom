@@ -40,7 +40,7 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 	if declarations.BaselineRetiredErr != nil {
 		candidates = append(candidates, declarations.BaselineRetiredErr)
 	}
-	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.DeliveryErr, declarations.IntegrationsErr, declarations.AcceptanceTestsErr, declarations.RepositoriesErr) {
+	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.DeliveryErr, declarations.IntegrationsErr, declarations.AcceptanceTestsErr, declarations.RepositoriesErr, declarations.BranchTemplatesErr) {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -99,6 +99,9 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	if baseErr != nil {
 		return nil, baseErr, declarations
 	}
+	// Las plantillas de rama que dependen de los roles y de la topología se validan
+	// con la base ya válida: una plantilla de rol rota no invalida la base.
+	declarations.BranchTemplatesErr = checkBranchTemplates(&cfg, declarations.Git, declarations.Repositories)
 	if declarations.TechnicalContextErr == nil {
 		cfg.TechnicalContext = declarations.TechnicalContext
 	}

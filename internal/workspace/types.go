@@ -38,6 +38,9 @@ type RoleConfig struct {
 	Repositories []RepositoryEntry `yaml:"repositories"`
 	Tech         []string          `yaml:"tech,omitempty"`
 	GatePolicy   string            `yaml:"gate_policy,omitempty"` // blocking, deferred u optional (vocabulario de multirole)
+	// BranchTemplate es la plantilla de nombre de la rama de este rol (C-07-f); solo
+	// rige en multirepo. Se valida en Declarations.BranchTemplatesErr.
+	BranchTemplate string `yaml:"branch_template,omitempty"`
 }
 
 // GovernanceConfig define configuraciones transversales del proyecto.

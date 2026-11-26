@@ -385,8 +385,8 @@ La pantalla **Ajustes** (`#/ajustes`, también desde el selector de proyecto) ed
 
 **Claves editables**
 
-- Siempre: `workspace.name`, `git.integration_branch`, `git.branch_prefix`, `git.main_branch`, `git.promotion`, `workflow.lane`, `delivery.split_hint_lines`, `sdd.iso`, `sdd.id_pattern` y `sdd.explainer_html`.
-- Solo en `multirepo`: `repositories[<ruta>].integration_branch`, `.branch_prefix` y `.promotion`, `acceptance_tests.enabled`, `acceptance_tests.environments` y `roles[<id>].gate_policy` (`blocking`, `deferred` u `optional`).
+- Siempre: `workspace.name`, `git.integration_branch`, `git.branch_prefix`, `git.main_branch`, `git.promotion`, `git.branch_template`, `workflow.lane`, `delivery.split_hint_lines`, `sdd.iso`, `sdd.id_pattern` y `sdd.explainer_html`.
+- Solo en `multirepo`: `repositories[<ruta>].integration_branch`, `.branch_prefix`, `.promotion` y `.branch_template`, `roles[<id>].branch_template`, `acceptance_tests.enabled`, `acceptance_tests.environments` y `roles[<id>].gate_policy` (`blocking`, `deferred` u `optional`).
 - Los vocabularios cerrados (`promotion`, `lane`, `explainer_html`, `gate_policy`) salen de las constantes del esquema: una opción nueva aparece sin tocar la pantalla. En un proyecto ISO (`sdd.iso: true`), `workflow.lane` no ofrece `odd`.
 - `sdd.iso` hace que todo el trabajo pase por SDD y que `verify` sea obligatorio antes de archivar. `sdd.id_pattern` solo lo usan los requisitos nuevos: los existentes no se renombran.
 
@@ -413,6 +413,49 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 4. **Servidor con Windows.** El instalador registra la tarea programada de usuario `Axiom` (al iniciar sesión, con 30 s de retraso, sin elevación) que ejecuta `axiom ui --detach --no-browser`, y la arranca una vez al instalar. Con `-NoAutostart` no se registra; entonces, arranca el servidor con `axiom ui --detach` o con el acceso directo. Para quitarla: `Unregister-ScheduledTask -TaskName Axiom -Confirm:$false`. No hay desinstalador del acceso directo: bórralo a mano del menú Inicio.
 5. **Origen exacto.** La instalación queda ligada a `http://127.0.0.1:47700`: `localhost` u otro puerto serían otra aplicación distinta, con su propia instalación.
 6. **Registro y parada.** `--detach` escribe el registro en `%LOCALAPPDATA%\axiom\ui.log`. No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas (la tarea `Axiom` no lo relanza hasta el próximo inicio de sesión, salvo que falle).
+
+---
+
+## Plantillas de nombre de rama (`branch_template`)
+
+El bloque `git:` de `axiom.yaml` fija la política de ramas del proyecto. Sin más, la rama de un cambio se llama `<branch_prefix>/<cambio>`. La clave opcional `branch_template` la sustituye por una plantilla, de modo que la rama pueda seguir la convención del equipo (`feature/TASK-1235`, `fix/2525-alta-de-usuarios`). Sin plantilla, nada cambia: ni los nombres, ni el registro, ni la instantánea del kickoff.
+
+```yaml
+git:
+  branch_template: "{prefix}/{change}"
+repositories:
+  - path: backend-api
+    branch_template: "feature/TASK-{task_ref}"
+roles:
+  backend:
+    branch_template: "feature/{role}-{task_ref}"   # solo multirepo
+```
+
+**Variables.** Son exactamente siete. Una llave sin cerrar, una llave suelta, unas llaves anidadas o una variable desconocida son un error de carga, y no hay escape para llaves literales.
+
+| Variable | Valor |
+|----------|-------|
+| `{prefix}` | El prefijo efectivo: el de la entrada de `repositories` o, si no la hay, `git.branch_prefix` (o el de `--prefix`). |
+| `{kind}` | `feature` o `fix`; `fix` si el work item de origen se arrancó con el perfil `bug`. |
+| `{change}` | El nombre del cambio. |
+| `{slug}` | El nombre del cambio sin el prefijo `<tipo>-<ref>-` (`us-2525-login` con `ref` `2525` da `login`); si no casa, el propio nombre. |
+| `{role}` | El rol que entra; solo en la plantilla de un rol. |
+| `{ref}` | El identificador del work item de origen (por ejemplo `2525`). |
+| `{task_ref}` | El identificador de la Task del rol. |
+
+**Variable distintiva.** Toda plantilla debe usar al menos una de `{change}`, `{slug}`, `{ref}` o `{task_ref}`: si no, todos los cambios compartirían un nombre constante y `axiom workspace validate` y la carga fallan con `config_invalid`. El nombre resultante y cada valor sustituido deben ser nombres de referencia git válidos y **no se sanean**: un valor no seguro (por ejemplo, un `{task_ref}` que empiece por `-`) se rechaza con `invalid_name` antes de crear nada.
+
+**Precedencia.** Para la rama del cambio de un repositorio de código tocado por un solo rol rige: la plantilla del rol, si la declara, sobre la de la entrada de `repositories`, sobre la de `git:`. `roles.<id>.branch_template` solo se aplica en `multirepo`; en `monorepo-embedded` `workspace validate` avisa de que no tiene efecto. Cada clave se edita también desde **Ajustes** del dashboard.
+
+**Rama que aloja `openspec/`.** Su plantilla efectiva es la de la entrada de `repositories` de ese repositorio si existe y declara `branch_template`, y si no la de `git:`. No puede usar `{role}` ni `{task_ref}`, porque esa rama la comparten todos los roles; la carga lo rechaza nombrando la clave. En `multirepo` la regla se aplica también si el repositorio de specs trabaja en su propia carpeta: un `git.branch_template` con `{task_ref}` solo es válido si el repositorio de specs declara su propia plantilla. Con un `specs_repository` absoluto se aplica la de `git:`.
+
+**Diferido por rol (`{task_ref}`).** Una rama cuya plantilla usa `{task_ref}` no se crea al arrancar el cambio: queda pendiente hasta que el rol entra con `axiom branch ensure --role <rol>`, que exige la Task vinculada (`axiom integrations tasks create|bind`).
+
+**Limitaciones.**
+- Con el registro de ramas borrado, si la plantilla o la Task cambiaron después de crear la rama, el nombre renderizado puede no coincidir con el de la rama existente; la salida es fijar el nombre con `--branch` o restaurar el vínculo de la Task.
+- La colisión con la rama de otro cambio activo no se detecta; sí la de dos ramas del mismo repositorio, la de la rama de integración y la de `main_branch`.
+- El autofetch reconoce un cambio cedido por su prefijo literal: una plantilla que empieza por `{ref}`, `{change}` o `{slug}` no lo permite y deja un aviso.
+- Un binario anterior rechaza `branch_template` como clave desconocida en `git:` y en `repositories:`. Quien use `{task_ref}` debe actualizar todos los binarios del equipo antes de sellar un cambio con esa plantilla.
 
 ---
 

@@ -49,6 +49,10 @@ type Declarations struct {
 	RepositoriesErr     error
 	AcceptanceTests     *AcceptanceTestsConfig // lo declarado en `acceptance_tests:`; nil sin bloque o con bloque inválido (RF-TOP-19)
 	AcceptanceTestsErr  error
+	// BranchTemplatesErr reúne lo de `branch_template` que depende de los roles y de
+	// la topología (C-07-f): las plantillas de `roles.<id>` y la regla de la rama que
+	// aloja `openspec/`. Solo se calcula con la configuración base válida.
+	BranchTemplatesErr error
 }
 
 // IDPattern devuelve la plantilla de identificadores de requisito del proyecto

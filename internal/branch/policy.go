@@ -126,7 +126,7 @@ func repoKey(path string) string {
 
 // ConfigRefusal devuelve el rechazo `config_invalid` cuando la configuración del
 // proyecto impide planificar las ramas (RF-BRA-03): un axiom.yaml ilegible, o un
-// bloque `git:` o `repositories:` inválido. Es nil cuando no hay nada que rechazar,
+// bloque `git:` o `repositories:` inválido, o una plantilla de rama inválida. Es nil cuando no hay nada que rechazar,
 // también sin axiom.yaml, donde rigen los valores por defecto. Los errores de otras
 // declaraciones (baseline, technical_context) no son asunto de la política de ramas.
 //
@@ -134,7 +134,7 @@ func repoKey(path string) string {
 // inválido de la invocación (`invalid_name`): este último nace en el planificador.
 func ConfigRefusal(loc workspace.Location) *Refusal {
 	var causes []string
-	for _, err := range []error{loc.ConfigErr, loc.Declarations.GitErr, loc.Declarations.RepositoriesErr} {
+	for _, err := range []error{loc.ConfigErr, loc.Declarations.GitErr, loc.Declarations.RepositoriesErr, loc.Declarations.BranchTemplatesErr} {
 		if err != nil {
 			causes = append(causes, singleLine(err))
 		}

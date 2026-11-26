@@ -2,13 +2,16 @@
 
 ## Tareas completadas
 
-- [x] 1.1 Motor `nametemplate` (paquete puro `internal/branch/nametemplate`). Commit `feat(branch): motor puro de plantillas de nombre de rama`.
+- [x] 1.1 Motor `nametemplate` (paquete puro `internal/branch/nametemplate`). Commit `feat(branch): motor puro de plantillas de nombre de rama` (bba16f6d4).
+- [x] 2.1 Esquema y carga de `branch_template` (`GitConfig`, `RepositoryPolicy`, `RoleConfig`, `Declarations.BranchTemplatesErr`, `ValidateBranchTemplate`, `BranchTemplateWarnings`, `ConfigRefusal`), `axiom.example.yaml` y `docs/usage.md`. Commit `feat(workspace): branch_template en git, repositories y roles`.
 
 ## Pendientes
 
-2.1, 2.2, 2.3, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1.
+2.2, 2.3, 3.1, 3.2, 3.3, 4.1, 4.2, 5.1.
 
 ## Desviaciones
 
 - Constantes de variable con prefijo `Var*` (`VarSlug`, etc.) en lugar de `Slug`, que chocaba con la función `Slug` del mismo paquete. Las tareas posteriores deben usar `nametemplate.VarRef`, etc.
-- TDD: la implementación y las pruebas se escribieron juntas; no se observó un RED separado.
+- TDD: en 1.1 la implementación y las pruebas se escribieron juntas; en 2.1 se observó RED (fallo de compilación de las pruebas) antes de implementar.
+- 2.1: `openspecHostPath` trata `specs_repository` vacío, `.` u `openspec` como entrada `.` (el desplazamiento léxico vacío del repositorio de specs es la propia carpeta maestra); solo un `specs_repository` absoluto cae a `git:`.
+- 2.1: la sección de usuario se añadió como `## Plantillas de nombre de rama (branch_template)` en `docs/usage.md` y la lista de claves editables ya cita las tres claves, aunque las filas del catálogo llegan en 2.2 (misma PR).

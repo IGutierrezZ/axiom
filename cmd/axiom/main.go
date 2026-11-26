@@ -552,6 +552,9 @@ func runWorkspaceValidate(args []string) {
 	// sin invalidar la configuración (RF-TOP-09).
 	report.Warnings = append(report.Warnings, workspace.PromotionWarnings(cfg)...)
 
+	// Una plantilla de rol no tiene efecto en monorepo-embedded: se avisa (C-07-f).
+	report.Warnings = append(report.Warnings, workspace.BranchTemplateWarnings(cfg)...)
+
 	if !report.Valid {
 		fmt.Printf("[ERROR] Espacio de trabajo NO CONFORME (Topología: %s)\n", report.Topology)
 		fmt.Printf("Directorio evaluado: %s\n\n", report.WorkspaceRoot)
