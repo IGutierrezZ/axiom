@@ -134,7 +134,7 @@ func gather(t Target, report *Report) (*gathered, bool) {
 	report.Context.Declared = g.maintained
 
 	if g.maintained && (t.ArtifactStore == "engram" || t.ArtifactStore == "none") {
-		report.fail("el contexto técnico mantenido ('technical_context.maintained') exige un almacén de artefactos de ficheros y el almacén de este cambio es %q: sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar (REQ-24.62). Continuación: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración", t.ArtifactStore)
+		report.fail("el contexto técnico mantenido ('technical_context.maintained') exige un almacén de artefactos de ficheros y el almacén de este cambio es %q: sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar (REQ-30.19). Continuación: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración", t.ArtifactStore)
 		return g, false
 	}
 

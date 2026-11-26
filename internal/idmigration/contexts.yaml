@@ -1,0 +1,118 @@
+# Tabla de contexto de la migración de identificadores (C-03-e, D3 regla 5). Resuelve los IDs
+# antiguos ambiguos que ninguna regla automática decide: cada entrada fija la capacidad de un
+# token en un fichero, con la evidencia que la justifica. Solo se aplica si la capacidad figura
+# entre las candidatas del token en openspec/id-map.yaml.
+schema: axiom.id-contexts/v1
+entries:
+  - path: cmd/axiom/baseline_guard_cli_test.go
+    token: REQ-1.1
+    capability: living-documentation
+    reason: "La prueba ejercita `archive list` con un `baseline:` residual; el requisito es el escaneo de especificaciones vivas, cuya spec fija el aviso del bloque retirado."
+  - path: cmd/axiom/baseline_guard_cli_test.go
+    token: REQ-2.2
+    capability: multi-project-hub
+    reason: "La prueba ejercita `axiom init` sobre un `axiom.yaml` con `baseline:` residual; el punto 4 de ese requisito de multi-project-hub rechaza el bloque con el error tipado."
+  - path: cmd/axiom/ui_archive_planning_home_test.go
+    token: REQ-3.1
+    capability: living-documentation
+    reason: "La prueba trata `archive list` y el aviso de la ubicación antigua divergente, escenario de living-documentation; numeración aproximada dentro de la misma capacidad."
+  - path: cmd/axiom/workspace_validate_test.go
+    token: REQ-1.2
+    capability: workspace-topology
+    reason: "Cita los escenarios de `axiom workspace validate` (topología retirada, bloques `git:` y `repositories:`), requisito del subcomando en workspace-topology."
+  - path: internal/branch/engine/status_test.go
+    token: REQ-2.2
+    capability: workspace-topology
+    reason: "El comentario lo atribuye a `workspace-topology` en la línea siguiente (salto de línea): el único rol de monorepo-embedded es fullstack."
+  - path: internal/branch/planner_test.go
+    token: REQ-2.2
+    capability: workspace-topology
+    reason: "El comentario lo atribuye a `workspace-topology` en la línea siguiente (salto de línea): monorepo-embedded solo admite el rol fullstack."
+  - path: internal/branch/verdict_test.go
+    token: REQ-2.2
+    capability: workspace-topology
+    reason: "El comentario lo atribuye a `workspace-topology` en la línea siguiente (salto de línea): en un monorepo el único rol es fullstack."
+  - path: internal/dashboard/assets/js/core/projectform.js
+    token: REQ-3.3
+    capability: multi-project-hub
+    reason: "El formulario de alta del dashboard solo ofrece roles en multirepo: es el requisito REQ-3.3 de multi-project-hub, que lleva ese título."
+  - path: internal/dashboard/assets_projectform_test.go
+    token: REQ-3.3
+    capability: multi-project-hub
+    reason: "Prueba del formulario de alta del dashboard (roles solo en multirepo): requisito de multi-project-hub con ese título."
+  - path: internal/dashboard/server.go
+    token: REQ-1.1
+    capability: local-web-dashboard
+    reason: "El comentario describe `GET /api/workspace`, el endpoint REST de información del workspace de local-web-dashboard."
+  - path: internal/dashboard/service_branch.go
+    token: REQ-1.1
+    capability: local-web-dashboard
+    reason: "Proyecta la política de ramas para `GET /api/workspace`: endpoint REST de información del workspace de local-web-dashboard."
+  - path: internal/dashboard/types.go
+    token: REQ-1.1
+    capability: local-web-dashboard
+    reason: "DTO de `GET /api/workspace` (política de ramas y repositorios): requisito del endpoint de información del workspace de local-web-dashboard."
+  - path: internal/dashboard/server_test.go
+    token: REQ-3.1
+    capability: multi-project-hub
+    reason: "Preferencias personales de worktree en `POST /api/projects/add` e `init`: los endpoints REST de gestión multi-proyecto de multi-project-hub los recogen."
+  - path: internal/dashboard/server_test.go
+    token: REQ-3.2
+    capability: multi-project-hub
+    reason: "Preferencias de worktree en el modal de registro y el selector de proyectos: requisito de la pantalla de bienvenida de multi-project-hub."
+  - path: internal/dashboard/worktree_prefs.go
+    token: REQ-3.1
+    capability: multi-project-hub
+    reason: "Preferencias de worktree en el dashboard, recogidas por los endpoints REST de gestión multi-proyecto de multi-project-hub."
+  - path: internal/hub/init.go
+    token: REQ-2.2
+    capability: multi-project-hub
+    reason: "El comentario cita el punto 4 de `axiom init` (validar el `axiom.yaml` existente), requisito de generación de andamiaje de multi-project-hub."
+  - path: internal/hub/init_baseline_test.go
+    token: REQ-2.2
+    capability: multi-project-hub
+    reason: "Pruebas de `axiom init` (puntero, `baseline:` residual, validación): requisito de andamiaje y registro de multi-project-hub."
+  - path: internal/livingdoc/service_planning_home_test.go
+    token: REQ-1.1
+    capability: living-documentation
+    reason: "La prueba cubre la raíz de las especificaciones y el índice desde el planning home: escaneo de especificaciones vivas de living-documentation."
+  - path: internal/livingdoc/service_planning_home_test.go
+    token: REQ-1.2
+    capability: living-documentation
+    reason: "La prueba cubre la generación del índice desde el planning home: requisito de `INDEX.md` determinista de living-documentation."
+  - path: internal/multirole/roster.go
+    token: REQ-1.1
+    capability: multi-role-fan-out
+    reason: "El comentario cita `DetectRoles` y el motor multi-role-fan-out: requisito de declaración y detección de roles de multi-role-fan-out."
+  - path: internal/workspace/gitpolicy_test.go
+    token: REQ-1.2
+    capability: workspace-topology
+    reason: "Pruebas de `LoadConfig`, la carga de `workspace validate`: requisito del subcomando en workspace-topology."
+  - path: internal/workspace/gitpolicy_test.go
+    token: REQ-2.1
+    capability: workspace-topology
+    reason: "Escenarios de bloques opcionales y claves desconocidas del esquema `axiom.yaml`: requisito de estructura del esquema de workspace-topology."
+  - path: internal/workspace/loader.go
+    token: REQ-2.1
+    capability: workspace-topology
+    reason: "Mensaje de topología no admitida con los valores del esquema de `axiom.yaml`: requisito de estructura del esquema de workspace-topology."
+  - path: internal/workspace/loader_test.go
+    token: REQ-2.1
+    capability: workspace-topology
+    reason: "El comentario cita el escenario de topología retirada junto a workspace-topology en la misma frase: esquema de `axiom.yaml`."
+  - path: internal/workspace/planning_home_identity.go
+    token: REQ-2.2
+    capability: multi-project-hub
+    reason: "Compara planning homes sin exigir que existan porque `axiom init` crea `<ruta>/openspec`: requisito de `axiom init` de multi-project-hub."
+  - path: internal/workspace/planning_home_identity_test.go
+    token: REQ-2.2
+    capability: multi-project-hub
+    reason: "Misma comparación de planning homes para el rechazo de `axiom init` con puntero hacia otro planning home: multi-project-hub."
+  - path: internal/workspace/validator.go
+    token: REQ-2.2
+    capability: workspace-topology
+    reason: "En monorepo-embedded el único rol admitido es fullstack: requisito de la topología monorepo embebido de workspace-topology."
+  - path: internal/workspace/validator_test.go
+    token: REQ-2.2
+    capability: workspace-topology
+    reason: "Prueba de que monorepo-embedded rechaza roles especializados: requisito de la topología monorepo embebido de workspace-topology."

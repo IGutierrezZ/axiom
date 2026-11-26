@@ -508,6 +508,21 @@ func TestResidueInputFilesNeitherKeepEntriesAliveNorNeedResidues(t *testing.T) {
 	}
 }
 
+// Un `.go` bajo testdata es un fixture: su literal se puede declarar residuo, a diferencia del de
+// un `.go` de producción.
+func TestResidueTestdataGoFileIsAFixtureNotProduction(t *testing.T) {
+	files := map[string]string{"internal/foo/testdata/foo.go": "package foo\n\nconst m = \"REQ-1.1\"\n"}
+	res := []residueEntry{residue([]string{"internal/foo/testdata/**"}, scopeAll, "default-pattern-fixture", "fixture")}
+	if fails := checkResidues(files, res); len(fails) != 0 {
+		t.Fatalf("un fixture Go bajo testdata admite residuo: %v", fails)
+	}
+	prod := map[string]string{"internal/foo/foo.go": "package foo\n\nconst m = \"REQ-1.1\"\n"}
+	resProd := []residueEntry{residue([]string{"internal/foo/*.go"}, scopeComment, "legacy-citation", "cita", "REQ-1.1")}
+	if fails := checkResidues(prod, resProd); len(fails) == 0 {
+		t.Fatal("el literal de un .go de producción nunca queda cubierto por un residuo de comentarios")
+	}
+}
+
 func TestResidueRejectsProductionLiteralsAndEmbeddedAssets(t *testing.T) {
 	prod := residue([]string{"internal/techcontext/plan.go"}, scopeString, "legacy-citation", "cita", "REQ-24.62")
 	if err := validateResidue(prod); err == nil || !strings.Contains(err.Error(), "producción") {

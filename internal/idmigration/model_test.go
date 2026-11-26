@@ -487,6 +487,11 @@ func classify(p string) (fileKind, string) {
 	if m := specPathRe.FindStringSubmatch(p); m != nil {
 		return kindSpec, m[1]
 	}
+	// Un `.go` bajo testdata es un fixture, nunca código de producción: el árbol miniatura de
+	// la propia herramienta lleva uno con un literal que el residuo de fixtures debe poder cubrir.
+	if strings.Contains("/"+p, "/testdata/") && strings.HasSuffix(p, ".go") {
+		return kindText, ""
+	}
 	switch {
 	case strings.HasPrefix(p, "odd/tasks/") && strings.HasSuffix(p, ".md") && !strings.Contains(p[len("odd/tasks/"):], "/"):
 		return kindODD, ""

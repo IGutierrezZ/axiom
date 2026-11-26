@@ -1,0 +1,459 @@
+# Lista de residuos de la migración de identificadores (C-03-e, D7). Declara las citas de IDs
+# `REQ-n.m` que se conservan tras migrar, con la categoría del conjunto cerrado de RF-RID-16,
+# el ámbito y los tokens exactos. Ningún residuo alcanza literales de Go de producción ni los
+# assets embebidos de producción salvo el ejemplo del patrón por defecto.
+schema: axiom.id-residues/v1
+entries:
+  - paths: ["openspec/changes/migrar-ids-rf/**", "openspec/changes/archive/*-migrar-ids-rf/**"]
+    scope: all
+    category: legacy-citation
+    reason: "Documentos de este cambio: citan los IDs antiguos como tales (D12)."
+  - paths: ["docs/manual-de-inicio.md"]
+    scope: all
+    tokens: [REQ-1.1, REQ-1.2]
+    category: default-pattern-example
+    reason: "Ejemplo del argumento `--superseded-requirements` con el patrón por defecto, dirigido a otros proyectos."
+  - paths: ["internal/reqtrace/alias.go"]
+    scope: go-comment
+    tokens: [REQ-1.1]
+    category: legacy-citation
+    reason: "El comentario usa un ID heredado como ejemplo de la coincidencia acotada por capacidad."
+  - paths: ["internal/reqtrace/classify.go"]
+    scope: go-comment
+    tokens: [REQ-1.1, REQ-1.10]
+    category: legacy-citation
+    reason: "El comentario explica con dos IDs heredados que la coincidencia es por token completo."
+  - paths: ["cmd/axiom/main.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["cmd/axiom/workspace_validate_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.17, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/app/upgrade_report.go"]
+    scope: go-comment
+    tokens: [REQ-22.6]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/cli/archive_context.go"]
+    scope: go-comment
+    tokens: [REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/cli/sdd_archive_compose.go"]
+    scope: go-comment
+    tokens: [REQ-24.47]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/cli/sdd_archive_compose_iso.go"]
+    scope: go-comment
+    tokens: [REQ-24.38]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/cli/sdd_archive_compose_iso_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.38]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/components/agentguidance/stop_exits_test.go"]
+    scope: go-comment
+    tokens: [REQ-26.10]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/dashboard/dashboard_test.go"]
+    scope: go-comment
+    tokens: [REQ-15.2]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/dashboard/service.go"]
+    scope: go-comment
+    tokens: [REQ-22.6]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/hub/init.go"]
+    scope: go-comment
+    tokens: [REQ-24.23]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/sddstatus/declarations_archive_block_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.18, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/sddstatus/declarations_status_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.18, REQ-24.19, REQ-24.20, REQ-24.21]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/sddstatus/workspace_declarations.go"]
+    scope: go-comment
+    tokens: [REQ-24.18, REQ-24.19, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/techcontext/plan.go"]
+    scope: go-comment
+    tokens: [REQ-24.42, REQ-24.49, REQ-24.59, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/techcontext/trace.go"]
+    scope: go-comment
+    tokens: [REQ-24.52]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/techcontext/verify.go"]
+    scope: go-comment
+    tokens: [REQ-24.51]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/declarations.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/declarations_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/gitpolicy_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/loader.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/locate_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.18]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/validator.go"]
+    scope: go-comment
+    tokens: [REQ-24.14, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/validator_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/workspace/workflow_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/arranque-minimo.md"]
+    scope: all
+    tokens: [REQ-12.3, REQ-18.5]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/detalle-chip-roles.md"]
+    scope: all
+    tokens: [REQ-15.2]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/inc-24-seguimientos-w1-s4.md"]
+    scope: all
+    tokens: [REQ-24.16, REQ-24.44]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/prov-ids-arreglo.md"]
+    scope: all
+    tokens: [REQ-30.03]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/rdd-apagado.md"]
+    scope: all
+    tokens: [REQ-18.2]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/retirar-gentle-ai.md"]
+    scope: all
+    tokens: [REQ-12.3]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["odd/tasks/saneamiento-ci-main.md"]
+    scope: all
+    tokens: [REQ-09.2]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/axiom-sdd-cli-integration/spec.md"]
+    scope: all
+    tokens: [REQ-18.3]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/axiom-skills-index-governance/spec.md"]
+    scope: all
+    tokens: [REQ-18.5]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/axiom-user-state-and-env/spec.md"]
+    scope: all
+    tokens: [REQ-18.4]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/engram-protocol-injection/spec.md"]
+    scope: all
+    tokens: [REQ-18.6]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/planning-home-resolution/spec.md"]
+    scope: all
+    tokens: [REQ-24.18]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/project-technical-context/spec.md"]
+    scope: all
+    tokens: [REQ-24.18, REQ-24.21, REQ-24.49, REQ-24.50, REQ-24.51, REQ-24.52, REQ-24.62]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/sdd-archive-lifecycle/spec.md"]
+    scope: all
+    tokens: [REQ-24.38, REQ-24.45, REQ-24.46, REQ-24.50, REQ-24.52]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/sdd-block-review-gates/spec.md"]
+    scope: all
+    tokens: [REQ-28.11]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/spec-baseline-integration/spec.md"]
+    scope: all
+    tokens: [REQ-24.38, REQ-24.39, REQ-24.40, REQ-24.41, REQ-24.42, REQ-24.43, REQ-24.44, REQ-24.45, REQ-24.46, REQ-24.47, REQ-24.48, REQ-24.49, REQ-24.50, REQ-24.51, REQ-24.52, REQ-24.53, REQ-24.54, REQ-24.59, REQ-24.61]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["openspec/specs/workspace-topology/spec.md"]
+    scope: all
+    tokens: [REQ-24.17]
+    category: legacy-citation
+    reason: "requisito retirado sin equivalente vivo"
+  - paths: ["internal/reqid/reqid.go"]
+    scope: go-comment
+    tokens: [REQ-09.1, REQ-9.2]
+    category: default-pattern-definition
+    reason: "El comentario de `Series` ilustra con el patrón por defecto que `<n>` se compara por su valor entero."
+  # ---- Fixtures del patrón por defecto en pruebas Go (literales) ----
+  - paths: ["internal/adoption/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/adoption/adoptcheck/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/agents/capabilitymanifest/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/cli/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/dashboard/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/idmigration/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/integrations/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/isoevidence/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/kickoff/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/legacyid/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/livespec/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/livingdoc/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/multirole/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/openspecdoc/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/reqid/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/reqtrace/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/sddstatus/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/state/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/techcontext/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  - paths: ["internal/workspace/*_test.go"]
+    scope: go-string
+    category: default-pattern-fixture
+    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
+  # ---- Comentarios de pruebas Go que describen esos fixtures ----
+  - paths: ["internal/adoption/adoptcheck/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-30.13, REQ-40.1]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/adoption/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-30.9]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/cli/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-21.14, REQ-21.18, REQ-30.1, REQ-30.2, REQ-30.3, REQ-31.1]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/dashboard/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1, REQ-25.33]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/integrations/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-21.18]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/kickoff/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-21.13, REQ-21.4]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/livespec/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-09.4, REQ-30.1, REQ-30.2, REQ-30.3, REQ-30.4, REQ-30.5, REQ-30.6, REQ-31.2, REQ-31.40, REQ-31.6, REQ-31.9, REQ-47.1, REQ-47.2]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/livingdoc/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/multirole/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/reqid/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-09.1, REQ-21.18, REQ-47.1, REQ-9.2]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/sddstatus/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-21.7, REQ-29.3, REQ-30.21]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  - paths: ["internal/state/*_test.go"]
+    scope: go-comment
+    tokens: [REQ-22.9]
+    category: default-pattern-fixture
+    reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
+  # ---- Pruebas que citan IDs heredados como tales ----
+  - paths: ["internal/cli/trace_legacy_test.go"]
+    scope: go-comment
+    tokens: [REQ-24.3]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/idmigration/generate_test.go"]
+    scope: go-comment
+    tokens: [REQ-2.3, REQ-27.2, REQ-27.2b]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/idmigration/migrate_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1, REQ-25.24, REQ-27.1]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/idmigration/model_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1, REQ-1.10, REQ-11.1, REQ-27.2b]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/idmigration/rewrite_test.go"]
+    scope: go-comment
+    tokens: [REQ-1.1, REQ-1.10, REQ-1.2, REQ-2.3, REQ-27.2b]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/legacyid/legacyid_test.go"]
+    scope: go-comment
+    tokens: [REQ-27.2b]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  - paths: ["internal/reqtrace/legacy_test.go"]
+    scope: go-comment
+    tokens: [REQ-27.2, REQ-27.2b]
+    category: legacy-citation
+    reason: "La prueba usa IDs heredados como entrada de la resolución o de la migración y los cita como tales."
+  # ---- Fixtures del árbol miniatura de la herramienta ----
+  - paths: ["internal/idmigration/testdata/**"]
+    scope: all
+    category: default-pattern-fixture
+    reason: "Árbol miniatura de la herramienta de migración: fixtures con IDs heredados."
+  # ---- Ejemplos del patrón por defecto en las specs vivas e INDEX.md ----
+  - paths: ["openspec/INDEX.md", "openspec/specs/*/spec.md"]
+    scope: md-code
+    category: default-pattern-example
+    reason: "Ejemplos del patrón por defecto dentro de tramos de código de las specs vivas y de INDEX.md."
+  # ---- Historia fechada ----
+  - paths: ["docs/archive/**", "docs/audits/**"]
+    scope: all
+    category: dated-history
+    reason: "Historia fechada fuera de OpenSpec: cita los IDs vigentes en su fecha."
+  # ---- Bloques openspec de documentos ODD que se conservan enteros ----
+  - paths: ["odd/tasks/arranque-minimo.md"]
+    scope: md-code
+    tokens: [REQ-09.1, REQ-09.2, REQ-09.3, REQ-14.1, REQ-16.1, REQ-16.2, REQ-16.3, REQ-16.4, REQ-17.10, REQ-17.5, REQ-17.6, REQ-17.7, REQ-17.8, REQ-17.9, REQ-22.6]
+    category: legacy-citation
+    reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
+  - paths: ["odd/tasks/prov-ids-arreglo.md"]
+    scope: md-code
+    tokens: [REQ-29.1, REQ-29.2, REQ-30.1, REQ-30.4, REQ-30.5, REQ-30.6, REQ-30.9, REQ-30.99, REQ-31.1, REQ-31.2]
+    category: legacy-citation
+    reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
+  - paths: ["odd/tasks/quitar-serena.md"]
+    scope: md-code
+    tokens: [REQ-1.1, REQ-1.3, REQ-23.13, REQ-23.14, REQ-23.8, REQ-3.1, REQ-4.2]
+    category: legacy-citation
+    reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
+  - paths: ["odd/tasks/retirar-agentes.md"]
+    scope: md-code
+    tokens: [REQ-16.3]
+    category: legacy-citation
+    reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
+  - paths: ["odd/tasks/retirar-knowledge-semantic.md"]
+    scope: md-code
+    tokens: [REQ-1.2, REQ-1.3, REQ-2.1, REQ-2.2, REQ-2.3, REQ-23.10, REQ-23.11, REQ-23.12, REQ-23.13, REQ-23.14, REQ-23.15, REQ-23.16, REQ-23.7, REQ-23.8, REQ-23.9, REQ-3.1, REQ-3.2, REQ-3.3, REQ-4.1, REQ-4.2]
+    category: legacy-citation
+    reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
