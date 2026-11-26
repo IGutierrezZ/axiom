@@ -145,10 +145,10 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar el resultado en staging bajo el common dir de git, en `<common>/axiom/change-start/v1/<cambio>/` (el WI normalizado en JSON y la carpeta `context/`). MUST NOT escribir en el árbol de trabajo del repositorio ni en el WI del tracker, MUST NOT crear ficheros fuera del common dir y MUST devolver el nombre derivado, el perfil y la `external_ref` (`<alias>:<id>`, con el alias de referencia del manifiesto). La escritura del staging MUST ser atómica: un fallo a mitad MUST NOT dejar un staging parcial que la fase 2 pueda adoptar, y un fallo de escritura MUST rechazarse con `write_failed` (salida 1), con continuación «reintenta `axiom change start …`». La detección de un staging existente MUST hacerse por identidad del WI (plugin e id guardados en su `work-item.json`) y no solo por nombre: tras derivar el nombre, MUST buscarse un staging válido de ese nombre y, si no lo hay, de cualquier otro nombre con el mismo WI (por ejemplo, porque el título cambió entre dos fases 1). Si ya existe un staging del mismo WI, con el mismo nombre o con otro, la fase 1 MUST informar de ello (estado `already_staged`, aviso con la ruta y el nombre de ese staging) sin descargar nada, sin pisarlo, sin crear otro y con código 0; el nombre devuelto MUST ser el del staging existente. Si el staging existente de ese mismo nombre corresponde a otro WI, MUST rechazar con `staging_conflict` y la continuación MUST nombrar `axiom change start --discard --change <cambio>`. Un directorio de staging sin `work-item.json` legible MUST tratarse como inexistente y sustituirse, porque no lo dejó una fase 1 completa. Si no hay staging pero el cambio del mismo nombre ya adoptó el mismo WI (vínculo local o `context/work-item.json` del mismo plugin e id), la fase 1 MUST responder `already_adopted` con código 0, sin descargar nada ni escribir nada, y, si el `backlink` no es `done`, con un aviso que nombre `axiom change start --adopt --change <cambio>` (con `--lane odd` en ODD).
 
 #### Scenario: Fase 1 sobre un WI ya adoptado por el mismo cambio
-- **DADO** un cambio `US-2525-alta-usuarios` que ya adoptó el WI 2525 y sin staging
+- **DADO** un cambio `US-2525-alta-de-usuarios` que ya adoptó el WI 2525 y sin staging
 - **CUANDO** se repite `axiom change start --from 2525 --json`
 - **ENTONCES** el estado es `already_adopted`, el código 0 y no se hace ninguna descarga ni escritura
-- **Y** si `backlink` es `pending`, un aviso nombra `axiom change start --adopt --change US-2525-alta-usuarios`
+- **Y** si `backlink` es `pending`, un aviso nombra `axiom change start --adopt --change US-2525-alta-de-usuarios`
 
 #### Scenario: Fase 1 correcta no toca el repositorio ni el WI
 - **DADO** un WI simulado válido y un repositorio con el árbol limpio
@@ -163,14 +163,14 @@ La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar
 - **ENTONCES** el WI se lee una sola vez y el descubrimiento del proceso se consulta como mucho una vez
 
 #### Scenario: Staging existente del mismo WI
-- **DADO** un staging del cambio `US-2525-alta-usuarios` creado por una fase 1 anterior del mismo WI
+- **DADO** un staging del cambio `US-2525-alta-de-usuarios` creado por una fase 1 anterior del mismo WI
 - **CUANDO** se repite `axiom change start --from 2525`
 - **ENTONCES** el verbo informa del staging existente, no lo modifica y termina con código 0
 
 #### Scenario: Staging del mismo WI con otro nombre por un título cambiado
-- **DADO** un staging `US-2525-alta-usuarios` del WI 2525 y un WI 2525 cuyo título pasó a «Alta de usuarios con SSO»
+- **DADO** un staging `US-2525-alta-de-usuarios` del WI 2525 y un WI 2525 cuyo título pasó a «Alta de usuarios con SSO»
 - **CUANDO** se repite `axiom change start --from 2525 --json`
-- **ENTONCES** el estado es `already_staged`, el nombre devuelto es `US-2525-alta-usuarios` y el aviso nombra su ruta
+- **ENTONCES** el estado es `already_staged`, el nombre devuelto es `US-2525-alta-de-usuarios` y el aviso nombra su ruta
 - **Y** no se crea un segundo staging ni se descarga ningún adjunto
 
 #### Scenario: Staging sin `work-item.json` legible
@@ -283,7 +283,7 @@ La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enl
 - **ENTONCES** el WI se acepta
 
 #### Scenario: La misma etiqueta del mismo cambio no es conflicto
-- **DADO** un WI con la etiqueta `axiom:US-2525-alta-usuarios` y el cambio derivado con ese mismo nombre
+- **DADO** un WI con la etiqueta `axiom:US-2525-alta-de-usuarios` y el cambio derivado con ese mismo nombre
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** el WI se acepta
 
@@ -299,7 +299,7 @@ El nombre del cambio MUST derivarse como `<prefijo>-<id>-<slug>`, con el prefijo
 #### Scenario: Nombre canónico
 - **DADO** un WI 2525 de tipo `User Story` con `User Story=US` y título «Alta de usuarios»
 - **CUANDO** se ejecuta la fase 1
-- **ENTONCES** el nombre derivado es `US-2525-alta-usuarios`
+- **ENTONCES** el nombre derivado es `US-2525-alta-de-usuarios`
 
 #### Scenario: Tildes, signos y mayúsculas
 - **DADO** un WI 7 de tipo `Bug` con `Bug=BUG` y título «Fallo en la  pestaña “Señalización” (¡urgente!)»
@@ -502,9 +502,9 @@ Antes de construir cualquier petición con credencial para un adjunto o una imag
 **Reintento, interrupción y destino existente.** La operación MUST ser reintentable e idempotente: un `--adopt` interrumpido a mitad (con el staging todavía presente) MUST poder repetirse y completar los pasos que falten sin duplicar el vínculo, el contexto ni la etiqueta. Si el destino `context/` ya existe y su `work-item.json` corresponde al mismo plugin e id, el movimiento MUST darse por hecho y el staging retirarse sin sobrescribir el destino; si corresponde a otro WI, o si `context/` existe sin un `work-item.json` legible, MUST rechazar con `staging_conflict` sin fusionar ni sobrescribir nada y con la continuación `axiom change start --discard --change <cambio>`. Sin staging y con una adopción completa (`backlink: done`), un segundo `--adopt` MUST responder éxito con estado `already_adopted`, código 0, sin ninguna petición de red ni cambios en el árbol; sin staging y con el enlace de vuelta `pending` o `conflict`, MUST repetir solo los pasos idempotentes 3 y 4 y el enlace de vuelta. Un fallo de E/S al mover `context/` o al vincular MUST rechazarse con `write_failed`, con el estado anterior intacto y la continuación «reintenta `axiom change start --adopt …`». MUST NOT escribir en una rama protegida distinta de la del cambio ni ejecutar git.
 
 #### Scenario: Adopción en SDD
-- **DADO** un staging de `US-2525-alta-usuarios`, la carpeta `openspec/changes/US-2525-alta-usuarios/` creada por `ensure` y `seal`
-- **CUANDO** se ejecuta `axiom change start --adopt --change US-2525-alta-usuarios`
-- **ENTONCES** `openspec/changes/US-2525-alta-usuarios/context/work-item.md` existe y el staging deja de existir
+- **DADO** un staging de `US-2525-alta-de-usuarios`, la carpeta `openspec/changes/US-2525-alta-de-usuarios/` creada por `ensure` y `seal`
+- **CUANDO** se ejecuta `axiom change start --adopt --change US-2525-alta-de-usuarios`
+- **ENTONCES** `openspec/changes/US-2525-alta-de-usuarios/context/work-item.md` existe y el staging deja de existir
 - **Y** `integrations.yaml` contiene `kind: work_item` con `plugin: azure-devops`, `id: "2525"`, la URL y `source: change.start`
 
 #### Scenario: Adopción en ODD

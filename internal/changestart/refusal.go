@@ -1,6 +1,6 @@
 package changestart
 
-// Códigos de rechazo de la fase 1 (D-18). La lógica solo lleva el código y los datos de confianza;
+// Códigos de rechazo de las fases 1 y 2 y del descarte (D-18). La lógica solo lleva el código y los datos de confianza;
 // los textos y las continuaciones viven en internal/cli, que es lo que audita el trinquete de
 // rechazos.
 const (
@@ -13,6 +13,9 @@ const (
 	CodeStagingConflict          = "staging_conflict"
 	CodeChangeStartBusy          = "change_start_busy"
 	CodeWriteFailed              = "write_failed"
+	CodeUsageInvalid             = "usage_invalid"
+	CodeChangeNotPrepared        = "change_not_prepared"
+	CodeStagingNotFound          = "staging_not_found"
 )
 
 // Refusal es un rechazo tipado del arranque: el código, los datos de confianza que el mensaje puede

@@ -679,7 +679,7 @@ func EnsureChangeContextIgnored(workspaceRoot string) error
   "phase": "probe|from|adopt|discard",
   "applicable": true,
   "status": "not_applicable|staged|already_staged|adopted|already_adopted|discarded|nothing_to_discard|refused",
-  "change": "US-2525-alta-usuarios",
+  "change": "US-2525-alta-de-usuarios",
   "profile": "incremento",
   "external_ref": "ado:2525",
   "work_item": {"plugin": "azure-devops", "id": "2525", "type_key": "User Story", "url": "https://dev.azure.com/acme/Proyecto/_workitems/edit/2525"},

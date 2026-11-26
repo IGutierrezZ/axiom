@@ -25,6 +25,22 @@ func axiomTagChange(tag string) (string, bool) {
 	return other, true
 }
 
+// blockingTags devuelve, con la grafía axiom:<otro>, las etiquetas de tags que impiden al cambio own
+// añadir la suya: las de Axiom con un nombre válido, distintas de own (sin distinguir mayúsculas) y
+// cuyo cambio no está cerrado localmente (D-11, prov:74:15). Las ajenas, las de nombre inválido y las
+// de cambios archivados o terminados se toleran.
+func (l *localState) blockingTags(tags []string, own string) []string {
+	var out []string
+	for _, tag := range tags {
+		other, ok := axiomTagChange(tag)
+		if !ok || strings.EqualFold(other, own) || l.closedLocally(other) {
+			continue
+		}
+		out = append(out, axiomTagPrefix+other)
+	}
+	return out
+}
+
 // selfAdoption es la adopción de este mismo work item por el cambio del nombre derivado.
 type selfAdoption struct {
 	Lane     Lane

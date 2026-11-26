@@ -31,6 +31,42 @@ func EnsureProjectStateIgnored(root string) error {
 		return err
 	}
 
+	return ensureExcludeEntries(excludePath, excludeHeader, projectStateExcludeEntries(prefix), func(covered map[string]bool) bool {
+		return coversWholeAxiomDir(covered, prefix)
+	})
+}
+
+// contextExcludeHeader encabeza las líneas que Axiom añade para el contexto importado de work items.
+const contextExcludeHeader = "# Axiom: contexto importado de work items (no versionar)"
+
+// EnsureChangeContextIgnored excluye de git el contexto importado de un work item (D-16) escribiendo en
+// el `info/exclude` del common dir del repositorio que contiene workspaceRoot, el que leen todos los
+// worktrees. Las entradas llevan el prefijo del workspace dentro de la raíz git y cubren `context/` y
+// los temporales de copia de un cambio SDD (activo y archivado) y `odd/context/` (con sus temporales).
+// Es idempotente, conserva las líneas ajenas y trabaja solo sobre ficheros. No hace nada si
+// workspaceRoot no está en un repositorio git.
+func EnsureChangeContextIgnored(workspaceRoot string) error {
+	excludePath, prefix, ok, err := projectExcludeTarget(workspaceRoot)
+	if err != nil || !ok {
+		return err
+	}
+	return ensureExcludeEntries(excludePath, contextExcludeHeader, changeContextExcludeEntries(prefix), nil)
+}
+
+// changeContextExcludeEntries son las cuatro entradas del contexto importado, ancladas con prefix.
+func changeContextExcludeEntries(prefix string) []string {
+	return []string{
+		prefix + "openspec/changes/*/context/",
+		prefix + "openspec/changes/*/.context-tmp/",
+		prefix + "openspec/changes/archive/*/context/",
+		prefix + "odd/context/",
+	}
+}
+
+// ensureExcludeEntries añade a excludePath, de forma idempotente y atómica, las entradas que falten bajo
+// header y conserva las líneas ajenas. satisfied, si no es nil, da por cubierto todo el conjunto (una
+// exclusión previa más amplia).
+func ensureExcludeEntries(excludePath, header string, entries []string, satisfied func(covered map[string]bool) bool) error {
 	existingBytes, err := os.ReadFile(excludePath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("leer %s: %w", excludePath, err)
@@ -39,12 +75,12 @@ func EnsureProjectStateIgnored(root string) error {
 	covered := excludeCoveredLines(existing)
 
 	var missing []string
-	for _, entry := range projectStateExcludeEntries(prefix) {
+	for _, entry := range entries {
 		if !covered[entry] {
 			missing = append(missing, entry)
 		}
 	}
-	if len(missing) == 0 || coversWholeAxiomDir(covered, prefix) {
+	if len(missing) == 0 || (satisfied != nil && satisfied(covered)) {
 		return nil
 	}
 
@@ -53,8 +89,8 @@ func EnsureProjectStateIgnored(root string) error {
 	if existing != "" && !strings.HasSuffix(existing, "\n") {
 		out.WriteString("\n")
 	}
-	if !strings.Contains(existing, excludeHeader) {
-		out.WriteString(excludeHeader + "\n")
+	if !strings.Contains(existing, header) {
+		out.WriteString(header + "\n")
 	}
 	for _, entry := range missing {
 		out.WriteString(entry + "\n")

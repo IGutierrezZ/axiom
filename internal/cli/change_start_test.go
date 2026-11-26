@@ -506,9 +506,9 @@ func TestChangeStartEndToEndLocalOnly(t *testing.T) {
 		t.Fatalf("segunda ejecución: código %d, doc %+v", code, again)
 	}
 
-	// Modo adopt y discard todavía no disponibles: rechazo tipado sin escribir.
+	// Sin el cambio preparado (registro y rama), la fase 2 rechaza sin tocar el staging.
 	code, out, _ = e.startCLI(t, "--adopt", "--change", doc.Change, "--json")
-	if mode := decodeStart(t, out); code != 1 || mode.Refusal == nil || mode.Refusal.Code != "mode_unavailable" {
+	if mode := decodeStart(t, out); code != 1 || mode.Refusal == nil || mode.Refusal.Code != "change_not_prepared" {
 		t.Fatalf("adopt: código %d, doc %+v", code, mode)
 	}
 }
@@ -516,7 +516,7 @@ func TestChangeStartEndToEndLocalOnly(t *testing.T) {
 func TestChangeStartRefusalCatalogHasSentinels(t *testing.T) {
 	for _, code := range []string{
 		"usage_invalid", "work_item_required", "work_item_reference_invalid", "work_item_not_found", "work_item_type_unmapped",
-		"work_item_closed", "work_item_linked", "tracker_unavailable", "staging_conflict", "change_start_busy",
+		"work_item_closed", "work_item_linked", "tracker_unavailable", "staging_conflict", "change_start_busy", "change_not_prepared", "staging_not_found",
 		"git_repository_required", "write_failed", "port_unsupported",
 	} {
 		if changeStartKinds[code] == nil {

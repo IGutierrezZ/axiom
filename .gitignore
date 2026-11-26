@@ -49,3 +49,10 @@ dist/
 .engram/cloud.json
 .engram/chunks/
 .engram/manifest.json
+
+# Contexto importado de un work item (`axiom change start`): datos de un tercero, locales a cada equipo,
+# que nunca se versionan. Incluye los temporales de su copia y el contexto de los cambios archivados.
+openspec/changes/*/context/
+openspec/changes/*/.context-tmp/
+openspec/changes/archive/*/context/
+odd/context/

@@ -15,6 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/builtin"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/secrets"
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -45,8 +46,8 @@ Arranca un cambio desde un work item existente del tracker. Tiene dos fases y un
   --from <id|url>     Fase 1. Lee el work item una vez, lo valida, deriva el nombre del cambio y deja el
                       contexto importado en staging bajo el common dir de git. No escribe en el árbol
                       de trabajo ni en el work item. Devuelve el nombre, el perfil y la referencia.
-  --adopt             Fase 2. Con el cambio ya preparado (axiom branch ensure), mueve el contexto al
-                      cambio, vincula el work item y le añade la etiqueta axiom:<cambio>. Exige --change.
+  --adopt             Fase 2. Con el cambio ya preparado (axiom branch ensure), copia y verifica el contexto en
+                      el cambio, vincula el work item y le añade la etiqueta axiom:<cambio>. Exige --change.
   --discard           Retira un staging abandonado. Exige --change.
 
 Sin ningún modo, el verbo es la consulta del orquestador: dice si hay un plugin de work items activo
@@ -80,9 +81,10 @@ var (
 	ErrChangeStartStagingConflict       = errors.New("el staging del cambio es de otro work item: retíralo con `axiom change start --discard --change <cambio>`")
 	ErrChangeStartBusy                  = errors.New("otro proceso arranca este cambio: reintenta `axiom change start` con los mismos argumentos")
 	ErrChangeStartGitRepositoryRequired = errors.New("la raíz del workspace no está en un repositorio git: repite `axiom change start` con `--cwd <repositorio>`")
-	ErrChangeStartWriteFailed           = errors.New("no se pudo escribir el staging: reintenta `axiom change start` con los mismos argumentos")
-	ErrChangeStartPortUnsupported       = errors.New("el plugin activo no ofrece el puerto de work items")                     // refusal:by-design world-action: hace falta una versión de axiom cuyo plugin ofrezca el puerto; no hay comando que lo resuelva
-	ErrChangeStartModeUnavailable       = errors.New("este modo del verbo de arranque aún no está disponible en esta versión") // refusal:by-design world-action: la fase 2 y el descarte llegan en la siguiente unidad del cambio; hasta entonces la salida es esperar a esa versión de axiom
+	ErrChangeStartWriteFailed           = errors.New("no se pudo escribir el staging o el contexto del cambio: reintenta `axiom change start` con los mismos argumentos")
+	ErrChangeStartNotPrepared           = errors.New("el cambio no está preparado: prepáralo con `axiom branch ensure --change <cambio> --json` y repite `axiom change start --adopt --change <cambio>`")
+	ErrChangeStartStagingNotFound       = errors.New("no hay staging ni contexto adoptado de ese cambio: ejecuta `axiom change start --from <id|url>`")
+	ErrChangeStartPortUnsupported       = errors.New("el plugin activo no ofrece el puerto de work items") // refusal:by-design world-action: hace falta una versión de axiom cuyo plugin ofrezca el puerto; no hay comando que lo resuelva
 )
 
 // changeStartKinds asocia cada código tipado con su centinela.
@@ -99,8 +101,9 @@ var changeStartKinds = map[string]error{
 	changestart.CodeChangeStartBusy:          ErrChangeStartBusy,
 	"git_repository_required":                ErrChangeStartGitRepositoryRequired,
 	changestart.CodeWriteFailed:              ErrChangeStartWriteFailed,
+	changestart.CodeChangeNotPrepared:        ErrChangeStartNotPrepared,
+	changestart.CodeStagingNotFound:          ErrChangeStartStagingNotFound,
 	"port_unsupported":                       ErrChangeStartPortUnsupported,
-	"mode_unavailable":                       ErrChangeStartModeUnavailable,
 }
 
 const (
@@ -146,6 +149,8 @@ type changeStartJSON struct {
 	Staging     string                      `json:"staging,omitempty"`
 	Context     string                      `json:"context,omitempty"`
 	Lane        string                      `json:"lane,omitempty"`
+	Link        string                      `json:"link,omitempty"`
+	Backlink    string                      `json:"backlink,omitempty"`
 	Attachments *changeStartAttachmentsJSON `json:"attachments,omitempty"`
 	Refusal     *changeStartRefusalJSON     `json:"refusal,omitempty"`
 	Warnings    []string                    `json:"warnings"`
@@ -347,19 +352,15 @@ func RunChangeStart(args []string, stdout, stderr io.Writer) int {
 	}
 	env := changestart.Env{WorkspaceRoot: loc.WorkspaceRoot, PlanningHome: loc.PlanningHome, GitRoot: gitRoot, CommonDir: common}
 
-	if !opts.hasFrom {
-		return emitChangeStartRefusal(opts, doc, "mode_unavailable", nil, plugin, "", stdout, stderr)
+	switch {
+	case opts.adopt:
+		return runChangeStartAdopt(opts, doc, env, app.tracker, stdout, stderr)
+	case opts.discard:
+		return runChangeStartDiscard(opts, doc, env, plugin, stdout, stderr)
 	}
 	res, err := changestart.Start(context.Background(), env, app.tracker, opts.from)
 	if err != nil {
-		var refusal *changestart.Refusal
-		switch {
-		case errors.As(err, &refusal):
-			return emitChangeStartRefusal(opts, doc, refusal.Code, refusal.Fields, plugin, "", stdout, stderr)
-		case errors.Is(err, integrations.ErrPortUnsupported):
-			return emitChangeStartRefusal(opts, doc, "port_unsupported", nil, plugin, "", stdout, stderr)
-		}
-		return emitChangeStartRefusal(opts, doc, changestart.CodeWriteFailed, nil, plugin, "", stdout, stderr)
+		return emitChangeStartError(opts, doc, err, plugin, stdout, stderr)
 	}
 	doc.Status = res.Status
 	doc.Change = res.Change
@@ -372,6 +373,68 @@ func RunChangeStart(args []string, stdout, stderr io.Writer) int {
 	if res.Status == changestart.StatusStaged || res.Status == changestart.StatusAlreadyStaged {
 		doc.Attachments = &changeStartAttachmentsJSON{Downloaded: res.Downloaded, Omitted: res.Omitted}
 	}
+	doc.Warnings = append(doc.Warnings, res.Warnings...)
+	return emitChangeStartDoc(opts, doc, stdout, stderr, changeStartExitOK)
+}
+
+// emitChangeStartError traduce el error de una operación a su rechazo tipado: un *changestart.Refusal con
+// su código y sus datos de confianza, el puerto no soportado o, en cualquier otro caso, un fallo de
+// escritura. Añade el cambio pedido a los datos del rechazo si la lógica no lo nombró.
+func emitChangeStartError(opts changeStartOptions, doc changeStartJSON, err error, plugin string, stdout, stderr io.Writer) int {
+	var refusal *changestart.Refusal
+	switch {
+	case errors.As(err, &refusal):
+		fields := map[string]string{}
+		for k, v := range refusal.Fields {
+			fields[k] = v
+		}
+		if fields["change"] == "" && opts.change != "" {
+			fields["change"] = opts.change
+		}
+		usage := ""
+		if refusal.Code == changestart.CodeUsageInvalid {
+			usage = "--change no es un nombre de cambio válido"
+		}
+		return emitChangeStartRefusal(opts, doc, refusal.Code, fields, plugin, usage, stdout, stderr)
+	case errors.Is(err, integrations.ErrPortUnsupported):
+		return emitChangeStartRefusal(opts, doc, "port_unsupported", nil, plugin, "", stdout, stderr)
+	}
+	return emitChangeStartRefusal(opts, doc, changestart.CodeWriteFailed, map[string]string{"change": opts.change}, plugin, "", stdout, stderr)
+}
+
+// runChangeStartAdopt ejecuta la fase 2 (--adopt) y compone la salida axiom.change-start/v1.
+func runChangeStartAdopt(opts changeStartOptions, doc changeStartJSON, env changestart.Env, tracker changestart.Tracker, stdout, stderr io.Writer) int {
+	lane := changestart.LaneSDD
+	if opts.lane == "odd" {
+		lane = changestart.LaneODD
+	}
+	res, err := changestart.Adopt(context.Background(), env, tracker, opts.change, lane)
+	if err != nil {
+		return emitChangeStartError(opts, doc, err, tracker.PluginID(), stdout, stderr)
+	}
+	doc.Status = res.Status
+	doc.Change = res.Change
+	doc.Profile = string(res.Profile)
+	doc.ExternalRef = res.ExternalRef
+	doc.WorkItem = &changeStartWorkItemJSON{Plugin: res.Plugin, ID: res.ID, TypeKey: res.TypeKey, URL: res.URL}
+	doc.Context = res.Context
+	doc.Lane = string(res.Lane)
+	doc.Link = res.Link
+	doc.Backlink = res.Backlink
+	doc.Attachments = &changeStartAttachmentsJSON{Downloaded: res.Downloaded, Omitted: res.Omitted}
+	doc.Warnings = append(doc.Warnings, res.Warnings...)
+	return emitChangeStartDoc(opts, doc, stdout, stderr, changeStartExitOK)
+}
+
+// runChangeStartDiscard ejecuta --discard: sin red, sin tracker y sin tocar el repositorio.
+func runChangeStartDiscard(opts changeStartOptions, doc changeStartJSON, env changestart.Env, plugin string, stdout, stderr io.Writer) int {
+	res, err := changestart.Discard(env, opts.change)
+	if err != nil {
+		return emitChangeStartError(opts, doc, err, plugin, stdout, stderr)
+	}
+	doc.Status = res.Status
+	doc.Change = res.Change
+	doc.Staging = res.Staging
 	doc.Warnings = append(doc.Warnings, res.Warnings...)
 	return emitChangeStartDoc(opts, doc, stdout, stderr, changeStartExitOK)
 }
@@ -409,13 +472,63 @@ func changeStartRefusalText(code string, fields map[string]string, plugin, usage
 	case "git_repository_required":
 		return "La raíz del workspace no pertenece a un repositorio git: no hay common dir donde dejar el staging.", continuationCwd
 	case changestart.CodeWriteFailed:
-		return "No se pudo escribir el staging; no queda ningún staging adoptable.", "Reintenta `" + continuationRetry + "` con los mismos argumentos"
+		return writeFailedText(fields)
+	case changestart.CodeChangeNotPrepared:
+		return notPreparedText(fields)
+	case changestart.CodeStagingNotFound:
+		return fmt.Sprintf("No hay staging del cambio %s ni un contexto ya adoptado en su destino: no hay qué adoptar.", fields["change"]), continuationFrom
 	case "port_unsupported":
 		return "El plugin activo no ofrece el puerto de work items: hace falta una versión de axiom cuyo plugin lo ofrezca.", ""
-	case "mode_unavailable":
-		return "Este modo de `axiom change start` aún no está disponible en esta versión de axiom: solo --from.", ""
 	}
 	return "Rechazo no catalogado.", continuationUsage
+}
+
+// writeFailedText distingue el fallo de escritura de la fase 1 (no queda staging adoptable) de los de la
+// fase 2 y el descarte, que dejan el staging intacto y se reintentan igual (D-25).
+func writeFailedText(fields map[string]string) (string, string) {
+	change := fields["change"]
+	switch fields["step"] {
+	case "copy", "verify", "rename", "link", "exclude", "workitem_json", "destination":
+		return "No se pudo completar la adopción del contexto: el staging permanece intacto y el destino queda como estaba.",
+			"Reintenta `axiom change start --adopt --change " + change + "`"
+	case "discard":
+		return "No se pudo retirar el staging: permanece intacto.", "Reintenta `axiom change start --discard --change " + change + "`"
+	}
+	return "No se pudo escribir el staging; no queda ningún staging adoptable.", "Reintenta `" + continuationRetry + "` con los mismos argumentos"
+}
+
+// notPreparedText compone change_not_prepared (D-14): el motivo, el carril del otro registro y el
+// worktree salen de datos de confianza de la lógica; la continuación nunca ejecuta nada.
+func notPreparedText(fields map[string]string) (string, string) {
+	change, lane := fields["change"], fields["lane"]
+	laneFlag := func(l string) string {
+		if l == "odd" {
+			return " --lane odd"
+		}
+		return ""
+	}
+	label := func(l string) string { return strings.ToUpper(l) }
+	ensure := fmt.Sprintf("axiom branch ensure --change %s%s --json", change, laneFlag(lane))
+	adoptHere := ""
+	if wt := fields["worktree"]; wt != "" {
+		adoptHere = fmt.Sprintf(" Desde su worktree, repite `axiom change start --adopt --change %s%s --cwd %s`.", change, laneFlag(lane), pathquote.Quote(wt))
+	}
+	switch fields["reason"] {
+	case "lane_mismatch":
+		record := fields["record_lane"]
+		cont := fmt.Sprintf("axiom change start --adopt --change %s%s", change, laneFlag(record))
+		if wt := fields["worktree"]; wt != "" {
+			cont += " --cwd " + pathquote.Quote(wt)
+		}
+		return fmt.Sprintf("El cambio %s está preparado en el carril %s, no en %s.", change, label(record), label(lane)), cont
+	case "record_unreadable":
+		return fmt.Sprintf("El registro de ramas del cambio %s no se puede leer: %s.", change, oneLine(fields["detail"])), ensure
+	case "head_other_branch":
+		return fmt.Sprintf("El HEAD del checkout no es la rama del cambio %s: no se escribe en otra rama.%s", change, adoptHere), ensure
+	case "folder_missing":
+		return fmt.Sprintf("Falta la carpeta openspec/changes/%s/ del cambio: prepárala con el arranque del cambio (`axiom branch ensure` y `axiom sdd kickoff seal`).%s", change, adoptHere), ensure
+	}
+	return fmt.Sprintf("El cambio %s no está preparado: no hay su registro de ramas en el carril %s.", change, label(lane)), ensure
 }
 
 func linkedText(fields map[string]string) (string, string) {
@@ -491,6 +604,13 @@ func changeStartSummary(doc changeStartJSON) string {
 		return fmt.Sprintf("Ya hay un staging de este work item para el cambio %s (perfil %s, referencia %s): %s", doc.Change, doc.Profile, doc.ExternalRef, filepath.ToSlash(doc.Staging))
 	case changestart.StatusAlreadyAdopted:
 		return fmt.Sprintf("El cambio %s ya adoptó este work item (perfil %s, referencia %s): %s", doc.Change, doc.Profile, doc.ExternalRef, filepath.ToSlash(doc.Context))
+	case changestart.StatusAdopted:
+		return fmt.Sprintf("Contexto del work item adoptado por el cambio %s (carril %s, referencia %s, enlace de vuelta: %s).\nContexto: %s",
+			doc.Change, doc.Lane, doc.ExternalRef, doc.Backlink, filepath.ToSlash(doc.Context))
+	case changestart.StatusDiscarded:
+		return fmt.Sprintf("Staging del cambio %s retirado.", doc.Change)
+	case changestart.StatusNothingToDiscard:
+		return fmt.Sprintf("No había ningún staging del cambio %s que retirar.", doc.Change)
 	}
 	return doc.Status
 }

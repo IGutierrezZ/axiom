@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
+	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 const (
@@ -29,9 +31,29 @@ type fsSeams struct {
 	WriteFile func(path string, data []byte, perm os.FileMode) error
 	Rename    func(oldPath, newPath string) error
 	RemoveAll func(path string) error
+	// CopyTree y VerifyTree son los pasos de copia y verificación de context/ de la fase 2 (D-15).
+	CopyTree   func(src, dst string) error
+	VerifyTree func(src, dst string) error
+	// LinkWorkItem y EnsureIgnored son los pasos 3 y 4 de la fase 2: el vínculo en integrations.yaml y la
+	// exclusión de context/ en info/exclude (D-25).
+	LinkWorkItem  func(f integrations.Folder, pluginID string, l integrations.Link, now time.Time) (bool, error)
+	EnsureIgnored func(workspaceRoot string) error
 }
 
 func (f fsSeams) withDefaults() fsSeams {
+	if f.CopyTree == nil {
+		seams := f
+		f.CopyTree = func(src, dst string) error { return copyTree(seams, src, dst) }
+	}
+	if f.VerifyTree == nil {
+		f.VerifyTree = verifyTree
+	}
+	if f.LinkWorkItem == nil {
+		f.LinkWorkItem = integrations.LinkWorkItem
+	}
+	if f.EnsureIgnored == nil {
+		f.EnsureIgnored = state.EnsureChangeContextIgnored
+	}
 	if f.MkdirAll == nil {
 		f.MkdirAll = os.MkdirAll
 	}
@@ -168,15 +190,21 @@ func randomName() string {
 // al renombrar se devuelve; un fallo al borrar el renombrado no es un fallo (lo barre la siguiente
 // operación del cambio).
 func (e Env) retire(dir, change string) error {
+	_, err := e.retireReporting(dir, change)
+	return err
+}
+
+// retireReporting es retire con el fallo del borrado final, que no es un fallo de la retirada: lo
+// devuelve aparte para que el llamador lo avise si quiere (descarte, D-25).
+func (e Env) retireReporting(dir, change string) (removeErr, err error) {
 	parking := filepath.Join(e.tmpDir(change), randomName())
 	if err := e.FS.MkdirAll(filepath.Dir(parking), contextDirMode); err != nil {
-		return err
+		return nil, err
 	}
 	if err := e.FS.Rename(dir, parking); err != nil {
-		return err
+		return nil, err
 	}
-	_ = e.FS.RemoveAll(parking)
-	return nil
+	return e.FS.RemoveAll(parking), nil
 }
 
 func isNotExist(err error) bool { return errors.Is(err, os.ErrNotExist) }

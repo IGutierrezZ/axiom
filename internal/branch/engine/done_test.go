@@ -198,6 +198,44 @@ func TestDoneRemovesAMergedWorktreeAndItsLocalBranchFromTheMainCheckout(t *testi
 	})
 }
 
+// C-07-d (D-16, pregunta abierta del diseño): el contexto importado de un work item vive en ficheros
+// ignorados (`info/exclude`) dentro del worktree del cambio. `done` no lo cuenta como árbol sucio y
+// `git worktree remove` lo retira con el worktree sin `--force`.
+func TestBranchDoneIgnoresIgnoredContext(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	remoteWithMain(t, repo)
+	wantReady(t, ensureWith(t, hubWorktree, EnsureRequest{CWD: repo, Change: "x"}))
+	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
+	writeFile(t, filepath.Join(worktree, "cambio.txt"), "trabajo del cambio\n")
+	runGit(t, worktree, "add", "-A")
+	commit(t, worktree, "trabajo del cambio")
+	runGit(t, repo, "push", "-q", "origin", "feat/x")
+
+	// Las mismas entradas que escribe `axiom change start --adopt` en el common dir.
+	exclude := filepath.Join(repo, ".git", "info", "exclude")
+	writeFile(t, exclude, "/openspec/changes/*/context/\n/openspec/changes/*/.context-tmp/\n")
+	context := filepath.Join(worktree, "openspec", "changes", "x", "context")
+	writeFile(t, filepath.Join(context, "work-item.md"), "dato de un tercero\n")
+	writeFile(t, filepath.Join(context, "attachments", "tasks.md"), "adjunto\n")
+	writeFile(t, filepath.Join(worktree, "openspec", "changes", "x", ".context-tmp", "abc", "work-item.md"), "temporal\n")
+	if status := runGit(t, worktree, "status", "--porcelain", "--untracked-files=all"); strings.Contains(status, "context") {
+		t.Fatalf("git ve el contexto ignorado:\n%s", status)
+	}
+	mergeInto(t, repo, "feat/x")
+
+	result := doneOf(t, doneRequest(repo))
+
+	wantReady(t, result)
+	change := branchByName(t, onlyRepository(t, result), "feat/x")
+	wantOutcome(t, change, branch.OutcomeRemoved, branch.LayerAncestry, "")
+	if _, err := os.Stat(worktree); !os.IsNotExist(err) {
+		t.Errorf("el worktree %s debía desaparecer con su contexto ignorado: %v", worktree, err)
+	}
+	if branchExists(t, repo, "feat/x") {
+		t.Error("la rama local feat/x debía eliminarse")
+	}
+}
+
 // RF-BRA-18 (escenarios «Árbol sucio impide la eliminación», «Rama sin fusionar impide la
 // eliminación» y «`--force` elimina con fusión no confirmada y avisa de lo descartado») y matriz de
 // amenazas «Borrado de ramas y worktrees»: un worktree con cambios sin confirmar da `dirty_worktree`
