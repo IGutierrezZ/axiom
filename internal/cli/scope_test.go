@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -31,9 +32,15 @@ func TestResolveInstallScope(t *testing.T) {
 			want:      ScopeWorkspace,
 		},
 		{
-			name:      "env global returns global",
+			name:      "env global is refused: global needs --scope global",
 			flagValue: "",
 			envValue:  "global",
+			wantErr:   true,
+		},
+		{
+			name:      "flag global wins over env workspace",
+			flagValue: "global",
+			envValue:  "workspace",
 			want:      ScopeGlobal,
 		},
 		{
@@ -66,6 +73,9 @@ func TestResolveInstallScope(t *testing.T) {
 		},
 	}
 
+	// El arnés del paquete (TestMain) deja que la variable elija el global; aquí se
+	// prueba el comportamiento de producción.
+	withScopeEnvGlobalOverride(t, false)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(ScopeAxiomEnvVar, "")
@@ -84,11 +94,33 @@ func TestResolveInstallScope(t *testing.T) {
 	}
 }
 
-func TestResolveInstallScope_Precedence(t *testing.T) {
+func withScopeEnvGlobalOverride(t *testing.T, value bool) {
+	t.Helper()
+	orig := ScopeEnvGlobalOverride
+	ScopeEnvGlobalOverride = value
+	t.Cleanup(func() { ScopeEnvGlobalOverride = orig })
+}
+
+func TestResolveInstallScopeRefusesGlobalFromEnv(t *testing.T) {
+	withScopeEnvGlobalOverride(t, false)
 	t.Setenv(ScopeAxiomEnvVar, "global")
 	got, err := ResolveInstallScope("")
-	if err != nil || got != ScopeGlobal {
-		t.Fatalf("axiom precedence failed: got %q, %v, want %q", got, err, ScopeGlobal)
+	if err == nil {
+		t.Fatalf("ResolveInstallScope(\"\") con %s=global = %q, se esperaba un error", ScopeAxiomEnvVar, got)
+	}
+	if !strings.Contains(err.Error(), "--scope global") {
+		t.Errorf("el error debe indicar cómo pedir el ámbito global: %v", err)
+	}
+	if got, err := ResolveInstallScope("global"); err != nil || got != ScopeGlobal {
+		t.Fatalf("ResolveInstallScope(\"global\") = %q, %v; --scope global explícito debe seguir valiendo", got, err)
+	}
+}
+
+func TestResolveInstallScopeOverrideLetsTheHarnessUseTheEnv(t *testing.T) {
+	withScopeEnvGlobalOverride(t, true)
+	t.Setenv(ScopeAxiomEnvVar, "global")
+	if got, err := ResolveInstallScope(""); err != nil || got != ScopeGlobal {
+		t.Fatalf("con ScopeEnvGlobalOverride, ResolveInstallScope(\"\") = %q, %v, want %q", got, err, ScopeGlobal)
 	}
 }
 

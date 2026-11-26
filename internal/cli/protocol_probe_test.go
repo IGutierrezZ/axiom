@@ -108,6 +108,9 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	testHome := os.Getenv("HOME")
+	// El arnés trabaja en el ámbito global sobre el HOME aislado sin pasar --scope
+	// en cada llamada; en producción la variable ya no elige el ámbito global.
+	ScopeEnvGlobalOverride = true
 	if err := os.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal)); err != nil {
 		panic(err)
 	}

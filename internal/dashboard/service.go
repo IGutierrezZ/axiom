@@ -1286,12 +1286,15 @@ func doctorStatusView(status doctor.Status) string {
 // writing agent configuration into the project and the user's home.
 var runAppArgsFn = app.RunArgs
 
-// RunSync ejecuta la sincronización de configuraciones y reglas de agentes.
-// Por defecto aplica el ámbito 'workspace' para aislar las configuraciones al repositorio activo.
+// RunSync ejecuta la sincronización de configuraciones y reglas de agentes del
+// proyecto abierto. Solo admite el ámbito 'workspace': el global se pide en la
+// terminal con --scope global explícito.
 func (s *Service) RunSync(scopeOpt ...string) (*EcosystemActionResponse, error) {
 	scope := "workspace"
-	if len(scopeOpt) > 0 && strings.TrimSpace(scopeOpt[0]) != "" {
-		scope = strings.TrimSpace(scopeOpt[0])
+	if len(scopeOpt) > 0 {
+		if requested := strings.TrimSpace(scopeOpt[0]); requested != "" && requested != scope {
+			return &EcosystemActionResponse{Success: false, Action: "sync", Error: "el dashboard solo sincroniza el ámbito workspace"}, fmt.Errorf("ámbito de sincronización no admitido en el dashboard: %q", requested)
+		}
 	}
 
 	origWd, getErr := os.Getwd()

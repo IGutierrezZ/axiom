@@ -24,7 +24,7 @@ Antes de modificar cualquier fichero gestionado, Axiom crea una copia de segurid
 
 Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace; si el proyecto aún no tiene el suyo, las preferencias parten del estado global como semilla de solo lectura, sin los agentes, véase [Estado de instalación por proyecto](#cli-flags-install)) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Axiom migra una vez el estado antiguo de `~/.gentle-ai/` a `~/.axiom/`.
 
-**Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall` trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
+**Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall` trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero solo se elige con `--scope global` explícito en la orden y `install` lo avisa antes de escribir. `AXIOM_INSTALL_SCOPE=global` se rechaza con un error, y ni la TUI ni el dashboard ofrecen el ámbito global. Con el ámbito workspace:
 
 - Axiom no escribe en tu HOME salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el hub, las copias de seguridad, `bin` y la caché; el estado de cada proyecto vive en `<raíz>/.axiom/state.json`, sin versionar.
 - Lo opcional es opt-in. CodeGraph no entra en el conjunto por defecto y hay que pedirlo expresamente; si lo eliges, conserva su huella en HOME y Axiom la avisa.
@@ -114,7 +114,7 @@ Elimina únicamente la configuración de Axiom de uno o más agentes. No desinst
 
 Antes de aplicar cualquier cambio, Axiom crea una copia de seguridad de los ficheros afectados.
 
-`uninstall` tiene el mismo ámbito que `install` y `sync`: `--scope workspace` (el valor por defecto) o `--scope global`, o la variable `AXIOM_INSTALL_SCOPE`. Cada ámbito revierte lo suyo y no toca el otro.
+`uninstall` tiene el mismo ámbito que `install` y `sync`: `--scope workspace` (el valor por defecto) o `--scope global`, o la variable `AXIOM_INSTALL_SCOPE`, que solo admite `workspace`: el global exige `--scope global`. Cada ámbito revierte lo suyo y no toca el otro.
 
 ```bash
 # Desinstalación parcial para agentes concretos (ámbito workspace, el predeterminado)
@@ -424,7 +424,7 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 | `--component`, `--components` | Components to install (comma-separated); without it, the default set: Engram, SDD, skills, Context7, permissions and persona |
 | `--skill`, `--skills`         | Skills to install (comma-separated)                                                                               |
 | `--sdd-mode`                  | SDD orchestrator mode: `single` or `multi`                                                                        |
-| `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`, útil en CI y usos no interactivos. |
+| `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`, útil en CI y usos no interactivos, pero solo con `workspace`: `AXIOM_INSTALL_SCOPE=global` se rechaza y el global se pide con `--scope global`. |
 | `--dry-run`                   | Preview the install plan without applying changes                                                                 |
 
 **Raíz del workspace.** Con `--scope workspace` (y con `axiom setup` y `axiom sync` en ese ámbito), la raíz no es la carpeta desde la que lanzas el comando, sino la del proyecto: la carpeta del `axiom.yaml` (o del puntero `.axiom-workspace`) más cercano hacia arriba; si no hay ninguno, la raíz del repositorio git que contiene la carpeta actual, o la del worktree enlazado, nunca la del checkout principal; y si tampoco hay repositorio, la propia carpeta actual. La raíz de un repositorio git que sea tu directorio personal no cuenta. Cuando la raíz difiere de la carpeta actual, Axiom lo avisa por la salida de errores. Así, lanzar `axiom sync` desde `internal/pkg` no crea `internal/pkg/.claude` ni `internal/pkg/.mcp.json`.
@@ -511,7 +511,7 @@ See [OpenCode SDD Profiles](opencode-profiles.md) for the full guide.
 | `--agent`, `--agents`         | Agents to uninstall managed config from (required unless using `--all`) |
 | `--component`, `--components` | Managed components to remove only from the selected agents              |
 | `--all`                       | Remove managed configuration from all supported agents                  |
-| `--scope`                     | `workspace` (default, reverts the project) or `global` (reverts the user configuration and managed PATH entries); also `AXIOM_INSTALL_SCOPE` |
+| `--scope`                     | `workspace` (default, reverts the project) or `global` (reverts the user configuration and managed PATH entries); also `AXIOM_INSTALL_SCOPE`, which only accepts `workspace`: global needs an explicit `--scope global` |
 | `--purge-state`               | With `--all --scope global`: also delete the Axiom state directory (`~/.axiom` or `AXIOM_STATE_DIR`) |
 | `--purge-hub`                 | With `--purge-state`: also delete the hub registry when it lists other projects |
 | `--yes`, `-y`                 | Skip the confirmation prompt                                            |

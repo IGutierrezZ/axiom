@@ -360,4 +360,22 @@ func TestEcosystemEndpointsAcceptOptionalPayloads(t *testing.T) {
 	if len(rec.args) != 2 || strings.Join(rec.args[1], " ") != "sync --scope workspace" {
 		t.Errorf("sync registrado = %v, se esperaban 2 ejecuciones y la última 'sync --scope workspace'", rec.args)
 	}
+
+	// El ámbito global no se pide desde el dashboard: 400 y ninguna sincronización.
+	body = strings.NewReader(`{"scope":"global"}`)
+	req = httptest.NewRequest(http.MethodPost, "/api/ecosystem/sync", body)
+	rr = httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("POST /api/ecosystem/sync con scope global = %d, want 400", rr.Code)
+	}
+	if len(rec.args) != 2 {
+		t.Errorf("con scope global no debía lanzarse ningún sync, registrado: %v", rec.args)
+	}
+	if _, err := svc.RunSync("global"); err == nil {
+		t.Error("RunSync(\"global\") debía rechazar el ámbito global")
+	}
+	if len(rec.args) != 2 {
+		t.Errorf("RunSync(\"global\") no debía lanzar ningún sync, registrado: %v", rec.args)
+	}
 }
