@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:7603998c291e64953a10222084a7c17f32aad14e7497da08dac4d341679fdb8a">
+<title>Resumen de la spec: integraciones en el dashboard</title>
+<style>
+body { font-family: sans-serif; max-width: 52rem; margin: 2rem auto; line-height: 1.5; color: #1a202c; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.25rem; }
+section.seg { border-color: #c53030; }
+section.mod { border-color: #b7791f; }
+.aviso { background: #fffbea; padding: 0.75rem; }
+.id { font-family: monospace; color: #4a5568; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<h1>Integraciones en el dashboard</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<h2>Qué cambia y para quién</h2>
+<p>Hoy, conectar Azure DevOps exige editar ficheros a mano y usar la terminal. Con este cambio, cualquier persona del equipo puede activarlo, guardar su clave de acceso (PAT), probar la conexión y empezar un cambio desde un work item, todo desde el dashboard local. Antes de manejar claves, el servidor se cierra frente a webs ajenas.</p>
+
+<h2>Seguridad primero</h2>
+<section class="seg" data-axiom-ref="prov:WEB:1">
+<h3>Cabeceras de seguridad <span class="id">prov:WEB:1</span></h3>
+<p>Toda respuesta lleva una política de contenido estricta, ninguna cabecera que abra el servidor a otros orígenes y el script de tema deja de estar incrustado en la página.</p>
+</section>
+<section class="seg" data-axiom-ref="prov:WEB:2">
+<h3>Peticiones solo locales <span class="id">prov:WEB:2</span></h3>
+<p>Las operaciones que modifican algo y cualquier consulta de integraciones se rechazan si vienen de un servidor u origen ajeno.</p>
+</section>
+
+<h2>Conexión con el gestor de trabajo</h2>
+<section data-axiom-ref="prov:WEB:3">
+<h3>Estado de la integración <span class="id">prov:WEB:3</span></h3>
+<p>El dashboard muestra la configuración, la identidad y de dónde viene la clave (entorno, almacén del sistema o ninguna), pero nunca la clave.</p>
+</section>
+<section data-axiom-ref="prov:WEB:4">
+<h3>Guardar y eliminar la clave <span class="id">prov:WEB:4</span></h3>
+<p>La clave se guarda solo en el almacén del sistema y nunca en <code>axiom.yaml</code>. Si el sistema no tiene almacén, se explica qué variable de entorno definir.</p>
+</section>
+<section data-axiom-ref="prov:WEB:5">
+<h3>Probar conexión <span class="id">prov:WEB:5</span></h3>
+<p>Comprueba la clave, muestra quién eres y, si hay varias identidades posibles, permite elegir una.</p>
+</section>
+<section data-axiom-ref="prov:WEB:6">
+<h3>Descubrir <span class="id">prov:WEB:6</span></h3>
+<p>Rellena las listas desplegables con lo que ofrece el gestor de trabajo, sin escribir ningún fichero.</p>
+</section>
+
+<h2>Pantallas nuevas</h2>
+<section data-axiom-ref="prov:WEB:7">
+<h3>Pantalla «Integraciones» <span class="id">prov:WEB:7</span></h3>
+<p>Se genera a partir de la descripción de cada plugin: activación, conexión y campos. Las plantillas de rama siguen en «Ajustes del proyecto».</p>
+</section>
+<section data-axiom-ref="prov:WEB:8">
+<h3>Pestaña «Integraciones» del cambio <span class="id">prov:WEB:8</span></h3>
+<p>Muestra el work item enlazado, las tareas por rol con su estimación y el tiempo imputado, las operaciones pendientes de enviar y quién hizo cada cosa. También en cambios archivados.</p>
+</section>
+<section data-axiom-ref="prov:WEB:9">
+<h3>Empezar un cambio desde un work item <span class="id">prov:WEB:9</span></h3>
+<p>Con un plugin activo, el alta pide el identificador o la URL del work item. Si algo falla a medias, se puede reintentar o descartar, y descartar solo ocurre si la persona lo pide.</p>
+</section>
+<section data-axiom-ref="prov:WEB:10">
+<h3>Enlace «Abrir en Azure DevOps» <span class="id">prov:WEB:10</span></h3>
+<p>Solo aparece si la dirección es http o https y se abre en una pestaña nueva.</p>
+</section>
+<section data-axiom-ref="prov:WEB:11">
+<h3>Control automático de claves filtradas <span class="id">prov:WEB:11</span></h3>
+<p>Cada ruta nueva queda clasificada en la prueba que busca claves en las respuestas, y esa prueba debe seguir en verde.</p>
+</section>
+
+<h2>Requisitos existentes que se ajustan</h2>
+<section class="mod" data-axiom-ref="RF-WEB-07">
+<h3>Navegación <span class="id">RF-WEB-07</span></h3>
+<p>Se añaden «Integraciones» y la pestaña del cambio.</p>
+</section>
+<section class="mod" data-axiom-ref="RF-WEB-10">
+<h3>Quién puede escribir <span class="id">RF-WEB-10</span></h3>
+<p><code>integrations</code> se edita solo por ajustes; la clave, por su ruta propia; todo exige origen y servidor locales.</p>
+</section>
+<section class="mod" data-axiom-ref="RF-WEB-18">
+<h3>Pantalla de Ajustes <span class="id">RF-WEB-18</span></h3>
+<p>No pinta integraciones y enlaza a «Integraciones».</p>
+</section>
+<section class="mod" data-axiom-ref="RF-WEB-19">
+<h3>API de ajustes <span class="id">RF-WEB-19</span></h3>
+<p>Incluye las claves de integración y rechaza las que el plugin no declara.</p>
+</section>
+<section class="mod" data-axiom-ref="RF-TOP-21">
+<h3>Catálogo de claves <span class="id">RF-TOP-21</span></h3>
+<p>Incluye las claves de cada plugin, tomadas de su descripción y nunca la clave de acceso.</p>
+</section>
+<section class="mod" data-axiom-ref="RF-TOP-22">
+<h3>Escritor de <code>axiom.yaml</code> <span class="id">RF-TOP-22</span></h3>
+<p>Edita <code>integrations</code> con las mismas garantías: conserva comentarios, valida todo y escribe de forma atómica.</p>
+</section>
+
+<h2>Flujo antes y después</h2>
+<svg width="560" height="120" role="img" aria-label="Antes: editar a mano y terminal. Después: todo desde el dashboard">
+<rect x="5" y="10" width="250" height="40" fill="#fed7d7"/>
+<text x="15" y="35">Antes: YAML a mano + terminal</text>
+<rect x="305" y="10" width="250" height="40" fill="#c6f6d5"/>
+<text x="315" y="35">Después: todo en el dashboard</text>
+<line x1="255" y1="30" x2="305" y2="30" stroke="#333"/>
+<rect x="5" y="70" width="550" height="40" fill="#bee3f8"/>
+<text x="15" y="95">Seguridad primero: CSP, sin CORS, Host y Origin locales, la clave nunca sale</text>
+</svg>
+
+<h2>Glosario</h2>
+<dl>
+<dt>PAT</dt><dd>Clave personal de acceso a Azure DevOps.</dd>
+<dt>CSP</dt><dd>Política que limita qué puede cargar y ejecutar una página.</dd>
+<dt>Manifiesto</dt><dd>Descripción de lo que configura un plugin de integración.</dd>
+<dt>Outbox</dt><dd>Cola de operaciones pendientes de enviar al gestor de trabajo.</dd>
+<dt>Staging</dt><dd>Preparación provisional de un cambio, conservada hasta reintentar o descartar.</dd>
+</dl>
+</body>
+</html>
