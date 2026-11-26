@@ -231,6 +231,22 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
 			t.Errorf("shared section %q canonical body lacks the SDD boundary or the parent spot check", name)
 		}
+		// C-08-j: the independent verifier is reserved for security-sensitive,
+		// executable or operational, and mode-changing changes, and verification
+		// stays on the touched packages; the full suite belongs to CI.
+		for _, want := range []string{
+			"security-sensitive, executable or operational, or mode-changing changes: writer self-verification plus an independent verifier.",
+			"Verification runs the checks of the touched packages or modules; the full suite belongs to CI.",
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("shared section %q lacks %q", name, want)
+			}
+		}
+		for _, stale := range []string{"or unclear changes", "treat it as the highest one"} {
+			if strings.Contains(body, stale) {
+				t.Errorf("shared section %q still carries the retired tier rule %q", name, stale)
+			}
+		}
 		for _, bad := range forbidden {
 			if strings.Contains(body, bad) {
 				t.Errorf("shared section %q still mentions %q", name, bad)

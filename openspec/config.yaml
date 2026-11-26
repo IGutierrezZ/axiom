@@ -30,14 +30,11 @@ rules:
     - Use hierarchical numbering (1.1, 1.2, etc.)
     - Keep tasks small enough to complete in one session
   apply:
-    - Load gentleman-bubbletea skill for TUI work (internal/tui/)
-    - Load gentleman-installer skill for installation steps
-    - Load gentleman-system skill for OS/system detection
     - Load go-testing skill when writing tests
     - Follow existing code patterns in internal/ packages
   verify:
-    - Run: go test ./...
-    - Run: go vet ./...
+    - "Run: go test <touched packages> -count=1, narrowed with -run; never internal/cli whole (the full suite runs in CI)"
+    - "Run: go vet <touched packages>"
     - Compare implementation against every spec scenario
   archive:
     - Warn before merging destructive deltas (large removals)
@@ -47,8 +44,9 @@ testing:
   detected: "2026-05-05"
 
   runner:
-    command: "go test ./..."
+    command: "go test <touched packages> -count=1"
     framework: "Go standard testing"
+    note: "Locally, only the touched packages (narrowed with -run); the full suite runs in CI"
 
   layers:
     unit:
@@ -69,7 +67,7 @@ testing:
 
   coverage:
     available: true
-    command: "go test -cover ./..."
+    command: "go test -cover <touched packages>"
 
   quality:
     linter:
