@@ -35,7 +35,7 @@ var ScopeEnvGlobalOverride = false
 // errGlobalScopeFromEnv es el rechazo de AXIOM_INSTALL_SCOPE=global: el ámbito
 // global escribe en la configuración de usuario de cada agente y afecta a todos
 // los proyectos de la máquina, así que tiene que pedirse en la propia orden.
-var errGlobalScopeFromEnv = fmt.Errorf("%s=global no elige el ámbito global: pídelo de forma explícita con --scope global", ScopeAxiomEnvVar)
+var errGlobalScopeFromEnv = fmt.Errorf("%s=global no elige el ámbito global: pídelo de forma explícita en la orden, por ejemplo axiom sync --scope global", ScopeAxiomEnvVar)
 
 // ResolveInstallScope resuelve el ámbito a partir de la opción y de la variable.
 // Prioridad: --scope explícito > AXIOM_INSTALL_SCOPE > workspace (predeterminado).
