@@ -64,13 +64,13 @@ Depende de: nada. Paquetes: `internal/docpaths`, `internal/branch`, `internal/sd
 
 Depende de: nada (paralelizable con U1; superficies disjuntas salvo `internal/branch`). Paquetes: `internal/branch`, `internal/branch/gitcli`, `internal/branch/engine`.
 
-- [ ] 2.1 RED: en `internal/branch/gitcli`, pruebas con git real: `RemoteConfigured` con y sin `origin`; `DirtyPathsUnder` expande una carpeta sin seguimiento a ficheros (`--untracked-files=all`), cuenta cambios preparados, sin preparar y borrados, trata como literal una ruta con espacios o `*` (`:(top,literal)`) y no ve nada fuera de las rutas candidatas.
+- [x] 2.1 RED: en `internal/branch/gitcli`, pruebas con git real: `RemoteConfigured` con y sin `origin`; `DirtyPathsUnder` expande una carpeta sin seguimiento a ficheros (`--untracked-files=all`), cuenta cambios preparados, sin preparar y borrados, trata como literal una ruta con espacios o `*` (`:(top,literal)`) y no ve nada fuera de las rutas candidatas.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/branch/gitcli/... -run 'RemoteConfigured|DirtyPathsUnder'`
-- [ ] 2.2 GREEN: añadir `RemoteConfigured` (`git config --get remote.<r>.url`) y `DirtyPathsUnder` (`status --porcelain=v1 -z --untracked-files=all --no-renames -- :(top,literal)<p>...`, con validación de rutas y `GIT_OPTIONAL_LOCKS=0`) a `branch.Git` (`internal/branch/ports.go`), `gitcli/ops.go` y `gitReader` (`internal/branch/engine/engine.go`); dos stubs en `fakeGit` (`engine/pending_test.go`).
+- [x] 2.2 GREEN: añadir `RemoteConfigured` (`git config --get remote.<r>.url`) y `DirtyPathsUnder` (`status --porcelain=v1 -z --untracked-files=all --no-renames -- :(top,literal)<p>...`, con validación de rutas y `GIT_OPTIONAL_LOCKS=0`) a `branch.Git` (`internal/branch/ports.go`), `gitcli/ops.go` y `gitReader` (`internal/branch/engine/engine.go`); dos stubs en `fakeGit` (`engine/pending_test.go`).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/branch/gitcli/... ./internal/branch/engine/... -run 'RemoteConfigured|DirtyPathsUnder|TheGitPortHasNoPush'`
-- [ ] 2.3 Cierre de U2: `go vet ./internal/branch/...` y commit `feat(branch): lecturas de solo lectura de remoto configurado y rutas sucias en el puerto git`.
+- [x] 2.3 Cierre de U2: `go vet ./internal/branch/...` y commit `feat(branch): lecturas de solo lectura de remoto configurado y rutas sucias en el puerto git`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/branch/gitcli/... -run 'RemoteConfigured|DirtyPathsUnder'` y `go test ./internal/branch/engine/... -run 'TheGitPortHasNoPush'`
 

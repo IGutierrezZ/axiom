@@ -549,6 +549,12 @@ func (f *fakeGit) Worktrees(context.Context, string) ([]branch.WorktreeEntry, er
 func (f *fakeGit) DirtyPaths(context.Context, string) ([]string, error) {
 	return nil, errors.New("no se usa")
 }
+func (f *fakeGit) RemoteConfigured(context.Context, string, string) (bool, error) {
+	return false, errors.New("no se usa")
+}
+func (f *fakeGit) DirtyPathsUnder(context.Context, string, []string) ([]string, error) {
+	return nil, errors.New("no se usa")
+}
 func (f *fakeGit) AheadBehind(context.Context, string, string, string) (int, int, error) {
 	return 0, 0, errors.New("no se usa")
 }
