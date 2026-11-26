@@ -345,3 +345,131 @@ func TestGateDigestBugWithoutDelta(t *testing.T) {
 		}
 	})
 }
+
+// El HTML explicativo no forma parte del digest de las puertas: crear, modificar o borrar
+// resumen-spec.html y resumen-design.html no cambia el digest de spec ni de design, y editar el md
+// sí lo cambia.
+func TestGateArtifactDigestIgnoresExplainerHTML(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example")
+	specPath := filepath.Join(changeRoot, "specs", "auth", "spec.md")
+	designPath := filepath.Join(changeRoot, "design.md")
+	for path, content := range map[string]string{
+		specPath:   "### Requirement: Auth\n#### Scenario: x\n",
+		designPath: "# Diseño\n",
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	digests := func() (string, string) {
+		t.Helper()
+		spec, err := gateArtifactDigest(changeRoot, kickoff.GateSpec, nil)
+		if err != nil || spec == "" {
+			t.Fatalf("digest de spec = %q, %v", spec, err)
+		}
+		design, err := gateArtifactDigest(changeRoot, kickoff.GateDesign, nil)
+		if err != nil || design == "" {
+			t.Fatalf("digest de design = %q, %v", design, err)
+		}
+		return spec, design
+	}
+	baseSpec, baseDesign := digests()
+
+	htmlSpec := filepath.Join(changeRoot, "resumen-spec.html")
+	htmlDesign := filepath.Join(changeRoot, "resumen-design.html")
+	steps := []struct {
+		name string
+		do   func() error
+	}{
+		{"crear", func() error {
+			if err := os.WriteFile(htmlSpec, []byte("<html>spec</html>"), 0o644); err != nil {
+				return err
+			}
+			return os.WriteFile(htmlDesign, []byte("<html>design</html>"), 0o644)
+		}},
+		{"modificar", func() error {
+			if err := os.WriteFile(htmlSpec, []byte("<html>spec cambiado</html>"), 0o644); err != nil {
+				return err
+			}
+			return os.WriteFile(htmlDesign, []byte("<html>design cambiado</html>"), 0o644)
+		}},
+		{"borrar", func() error {
+			if err := os.Remove(htmlSpec); err != nil {
+				return err
+			}
+			return os.Remove(htmlDesign)
+		}},
+	}
+	for _, step := range steps {
+		if err := step.do(); err != nil {
+			t.Fatalf("%s: %v", step.name, err)
+		}
+		if spec, design := digests(); spec != baseSpec || design != baseDesign {
+			t.Fatalf("%s el HTML cambió el digest de una puerta", step.name)
+		}
+	}
+
+	// Editar el md sí cambia el digest de su puerta y solo el de ella.
+	if err := os.WriteFile(specPath, []byte("### Requirement: Auth\n#### Scenario: cambiado\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if spec, design := digests(); spec == baseSpec || design != baseDesign {
+		t.Fatal("editar spec.md debe cambiar el digest de spec y no el de design")
+	}
+}
+
+// Una aprobación registrada sigue aprobada cuando el HTML aparece, cambia o desaparece: la
+// frescura del HTML nunca reabre una puerta.
+func TestGateArtifactDigestExplainerHTMLNeverReopensAGate(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example")
+	specPath := filepath.Join(changeRoot, "specs", "auth", "spec.md")
+	if err := os.MkdirAll(filepath.Dir(specPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(specPath, []byte("### Requirement: Auth\n#### Scenario: x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := RunSDDGate([]string{
+		"record", "--cwd", root, "--change", "inc-99-example",
+		"--gate", "spec", "--decision", "approved", "--actor", "reviewer",
+	}, &bytes.Buffer{}); err != nil {
+		t.Fatalf("RunSDDGate() error = %v", err)
+	}
+
+	specStatus := func() string {
+		t.Helper()
+		status, err := sddstatus.Resolve(sddstatus.ResolveOptions{CWD: root, ChangeName: "inc-99-example"})
+		if err != nil {
+			t.Fatalf("sddstatus.Resolve() error = %v", err)
+		}
+		for _, gate := range status.Governance.Gates {
+			if string(gate.Key) == "spec" {
+				return string(gate.Status)
+			}
+		}
+		t.Fatal(`no se encontro la compuerta "spec"`)
+		return ""
+	}
+	if got := specStatus(); got != "approved" {
+		t.Fatalf("estado inicial = %q, se esperaba approved", got)
+	}
+	htmlSpec := filepath.Join(changeRoot, "resumen-spec.html")
+	if err := os.WriteFile(htmlSpec, []byte("<html>spec</html>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := specStatus(); got != "approved" {
+		t.Fatalf("con el HTML creado la puerta es %q, se esperaba approved", got)
+	}
+	if err := os.Remove(htmlSpec); err != nil {
+		t.Fatal(err)
+	}
+	if got := specStatus(); got != "approved" {
+		t.Fatalf("con el HTML borrado la puerta es %q, se esperaba approved", got)
+	}
+}

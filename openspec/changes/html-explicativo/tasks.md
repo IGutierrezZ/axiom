@@ -66,7 +66,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Verificación: `go test ./internal/sddstatus -run 'Explainer|TestSDDStatusV2CleanBreak|TestExplainerISO'`
   - Ruta: inline (~600 líneas; un solo comportamiento; depende de T1 y T3).
 
-- [ ] T5 Pruebas de que el HTML queda fuera del digest de las puertas y entra en la publicación.
+- [x] T5 Pruebas de que el HTML queda fuera del digest de las puertas y entra en la publicación.
   - Cubre: prov:GAT:3, prov:GAT:2 (publicación)
   - Ficheros: `internal/cli/sdd_gate_artifact_digest_test.go`, `internal/sddpublish/publish_test.go`
   - Pruebas: crear, modificar y borrar `resumen-spec.html` y `resumen-design.html` no cambia `gateArtifactDigest` de `spec` ni de `design`, y modificar el md sí; una publicación de la carpeta del cambio incluye los `*.html` junto al resto de documentos (hueco spec #1, solo si basta una prueba; si exigiera cambiar el código de `sddpublish`, se registra como riesgo y no se amplía el alcance).
