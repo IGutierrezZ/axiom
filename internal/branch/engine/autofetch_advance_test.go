@@ -219,7 +219,7 @@ func TestAutofetchAdvanceDetachedHeadIsOnlyANotice(t *testing.T) {
 	if kinds := noticeKinds(result); !slices.Equal(kinds, []string{branch.AutofetchNoticeIntegrationDetached}) {
 		t.Fatalf("avisos %v, se esperaba integration_detached", kinds)
 	}
-	quoted := pathquote.Quote(repo)
+	quoted := pathquote.Quote(resolveDirectory(repo))
 	want := "git -C " + quoted + " switch main && git -C " + quoted + " merge --ff-only origin/main"
 	if got := result.Notices[0].Command; got != want {
 		t.Errorf("orden %q, se esperaba %q", got, want)
@@ -240,7 +240,7 @@ func TestAutofetchAdvanceNotDeployedIsOnlyANotice(t *testing.T) {
 	if kinds := noticeKinds(result); !slices.Equal(kinds, []string{branch.AutofetchNoticeNotDeployed}) {
 		t.Fatalf("avisos %v, se esperaba integration_not_deployed", kinds)
 	}
-	want := "git -C " + pathquote.Quote(repo) + " fetch . refs/remotes/origin/main:refs/heads/main"
+	want := "git -C " + pathquote.Quote(resolveDirectory(repo)) + " fetch . refs/remotes/origin/main:refs/heads/main"
 	if got := result.Notices[0].Command; got != want {
 		t.Errorf("orden %q, se esperaba %q", got, want)
 	}

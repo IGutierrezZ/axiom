@@ -99,3 +99,12 @@ func writeAutofetchStamp(commonDir string, at time.Time) error {
 	}
 	return nil
 }
+
+// SetAutofetchRunBudget fija el presupuesto global de `run` y devuelve la función que restablece
+// el anterior. Existe solo para las pruebas de otros paquetes (la CLI), que necesitan reducir la
+// cota de 10 s para probar el modo hook con un remoto lento; no hay ningún uso de producción.
+func SetAutofetchRunBudget(budget time.Duration) (restore func()) {
+	previous := autofetchRunBudget
+	autofetchRunBudget = budget
+	return func() { autofetchRunBudget = previous }
+}

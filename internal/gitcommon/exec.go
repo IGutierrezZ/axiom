@@ -21,6 +21,10 @@ var (
 	runTimeout  = 30 * time.Second
 	stdoutLimit = 64 << 20
 	stderrLimit = 64 << 10
+	// killWaitDelay es lo que se espera, tras agotar el tiempo, a que se cierren las tuberías de
+	// un proceso hijo de git (p. ej. git-remote-http) que sobrevive a git: sin él, un remoto que
+	// no responde mantendría bloqueada la invocación más allá de su tiempo máximo.
+	killWaitDelay = 500 * time.Millisecond
 )
 
 // Observe, cuando no es nula, recibe el directorio y los argumentos de cada
@@ -152,11 +156,17 @@ func RunWithTimeout(ctx context.Context, dir string, timeout time.Duration, args
 	cmd := exec.CommandContext(runCtx, binary, args...)
 	cmd.Dir = dir
 	cmd.Env = gitEnvironment()
+	cmd.WaitDelay = killWaitDelay
 	stdout := &limitedBuffer{limit: stdoutLimit}
 	stderr := &limitedBuffer{limit: stderrLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
 
 	runErr := cmd.Run()
+	// Git terminó bien pero un hijo suyo mantenía abiertas las tuberías: la salida ya está
+	// recogida y no es un fallo (solo cuenta si el tiempo se agotó, que se decide más abajo).
+	if errors.Is(runErr, exec.ErrWaitDelay) && runCtx.Err() == nil {
+		runErr = nil
+	}
 	result := Result{Stdout: stdout.buffer.Bytes(), Stderr: strings.TrimSpace(stderr.buffer.String())}
 	var exit *exec.ExitError
 	switch {

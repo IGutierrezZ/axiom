@@ -96,6 +96,10 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   branch scope         Alcance conjunto de un cambio: commits propios por repositorio y oferta de verificación (solo lectura; --change, --json)
   branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
   branch guard         Hook de los runtimes: bloquea los documentos de Axiom en la rama equivocada (--agent, --event)
+  autofetch enable     Enciende el autofetch del repositorio de specs de este proyecto (preferencia personal del hub; --cwd, --json)
+  autofetch disable    Apaga el autofetch del proyecto (--cwd, --json)
+  autofetch status     Informa del estado del interruptor, sin red ni escritura (--cwd, --json)
+  autofetch run        Trae origin del repositorio de specs y avisa de lo relevante; con --agent es el hook de sesión (--cwd, --agent, --json)
   integrations sync      Reintenta las entregas pendientes a los trackers configurados en axiom.yaml (--change, --json)
   integrations emit      Emite a mano un evento del ciclo de vida de un cambio a los plugins configurados (--change, --event)
   integrations secret    Guarda (set, solo por stdin), consulta (status) o borra (delete) un secreto de integración
@@ -281,6 +285,9 @@ func main() {
 
 	case "branch":
 		os.Exit(cli.RunBranch(os.Args[2:], os.Stdout, os.Stderr))
+
+	case "autofetch":
+		os.Exit(cli.RunAutofetch(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))
 
 	case "integrations":
 		os.Exit(cli.RunIntegrations(os.Args[2:], os.Stdin, os.Stdout, os.Stderr))

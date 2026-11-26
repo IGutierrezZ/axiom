@@ -83,7 +83,7 @@ func (e *Engine) AutofetchProject(cwd string) (AutofetchProject, *branch.Refusal
 		Master:    resolveDirectory(projectMaster(location, planning)),
 		GitRoot:   root,
 		CommonDir: commonDir,
-		Checkout:  checkout,
+		Checkout:  resolveDirectory(checkout),
 	}, nil
 }
 
@@ -193,4 +193,15 @@ func fetchTimeoutWithin(ctx context.Context) time.Duration {
 		}
 	}
 	return timeout
+}
+
+// AutofetchPreference lee la preferencia `autofetch` del proyecto de esa carpeta maestra con el
+// puerto de preferencias del motor (RF-HUB-13): el estado efectivo, el estado que lo explica y,
+// si procede, el aviso en castellano (proyecto sin registrar o hub ilegible). No escribe y no
+// lanza git; `axiom autofetch status` lo usa.
+func (e *Engine) AutofetchPreference(projectMaster string) (bool, branch.AutofetchPrefState, string) {
+	if e.prefs == nil {
+		return false, branch.AutofetchDisabled, ""
+	}
+	return e.prefs.Autofetch(projectMaster)
 }
