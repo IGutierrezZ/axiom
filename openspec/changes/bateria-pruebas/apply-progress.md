@@ -37,6 +37,13 @@
 - Verificación: `go test ./internal/sddstatus -run 'AcceptanceTests|TasksGate|Governance|Explainer|Declarations|Requirements|StatusV2'`, `go test ./internal/assets -run StatusContract`, `go test ./internal/components -run TestGolden` ok; `go vet ./internal/sddstatus`; `go build ./...` ok.
 - Para T6/T8: `AcceptanceTestsResult.Findings` ya trae `pruebas_ausente`; el verbo decide «antes de tasks» con `Missing == false && !Present`.
 
+## T6 completada: verbo `axiom sdd tests check`
+
+- Creado `internal/cli/sdd_tests.go` (`RunSDDTests` subdespachador, `runSDDTestsCheck`, esquema `axiom.sdd-tests-check/v1`; JSON con `active`, `environments`, `present`, `cases`, `scenarios`, `requirements`, `findings[{code,file,line,message}]`, `error?`, `notice?`). Registrado en `runSDD` y en la ayuda de `cmd/axiom/main.go`; `main_test.go` con `tests` en `expectedSubcmds` y `TestSDDTestsRouting`.
+- Salida: `Report.OK()` y `Missing` deciden el código 1; sin delta o cambio inexistente es error de uso (la delta se comprueba antes, también sin `pruebas.md`); sin batería informa «no están activadas» o «todavía no hay batería» con 0; declaración inválida o `Error` salen 1 tras imprimir el informe (con bloque inválido y fichero presente se ejecuta el check y sale 1 igualmente por el error de declaración).
+- Tests: `internal/cli/sdd_tests_test.go` (9 casos: texto/JSON, hallazgos, ausente, inactiva sin fichero, inactiva con fichero sin validar entornos, antes de tasks, errores de uso, declaración inválida, solo lectura).
+- Verificación: `go test ./internal/cli -run SDDTests`, `go test ./cmd/axiom -run 'RunSDDHelp|SDDVerbRouting|SDDTests|RunSDDUnknown'` ok; `go vet ./internal/cli ./cmd/axiom`; `go build ./...` ok.
+
 ## Pendientes
 
-T6 a T10.
+T7 a T10.

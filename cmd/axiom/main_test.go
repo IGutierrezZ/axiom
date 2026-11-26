@@ -49,7 +49,7 @@ func TestRunSDDHelp(t *testing.T) {
 			if !strings.Contains(out, "Uso: axiom sdd <subcomando>") {
 				t.Fatalf("la salida no contiene el uso esperado:\n%s", out)
 			}
-			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "archive-check", "archive-integrate", "trace", "integrate", "task-result", "preflight-hook", "publish"}
+			expectedSubcmds := []string{"status", "continue", "attempt", "archive-compose", "archive-check", "archive-integrate", "trace", "integrate", "task-result", "preflight-hook", "publish", "tests"}
 			for _, sub := range expectedSubcmds {
 				if !strings.Contains(out, sub) {
 					t.Fatalf("la ayuda de sdd no documenta el subcomando %q:\n%s", sub, out)
@@ -87,6 +87,22 @@ func TestSDDVerbRouting(t *testing.T) {
 		if !strings.Contains(help.String(), verb) {
 			t.Errorf("la ayuda de sdd no documenta %q:\n%s", verb, help.String())
 		}
+	}
+}
+
+// TestSDDTestsRouting fija que `sdd tests check` se enruta como los demás verbos de `sdd`
+// (RF-KOF-21): sin --change falla con su mensaje, no con «no reconocido».
+func TestSDDTestsRouting(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runSDD([]string{"tests", "check"}, &stdout, &stderr); code != 1 {
+		t.Fatalf("runSDD(tests check) sin --change = %d, se esperaba 1", code)
+	}
+	if strings.Contains(stderr.String(), "no reconocido") || !strings.Contains(stderr.String(), "requiere --change") {
+		t.Errorf("el verbo tests no está enrutado:\n%s", stderr.String())
+	}
+	stdout.Reset()
+	if code := runSDD([]string{"tests", "--help"}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "axiom sdd tests check") {
+		t.Errorf("runSDD(tests --help) = %d:\n%s", code, stdout.String())
 	}
 }
 
