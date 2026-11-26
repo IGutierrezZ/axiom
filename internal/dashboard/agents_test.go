@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -197,5 +198,60 @@ func TestInstallProjectAgentRejectsForeignOrigins(t *testing.T) {
 	rr := requestFrom(router, http.MethodPost, "/api/agents/install", `{"agent":"cursor"}`, "127.0.0.1", "http://evil.example")
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("código = %d", rr.Code)
+	}
+}
+
+// El bloque «Agentes» de Ecosistema: marcado, rutas, confirmación previa y motivo en
+// lugar del botón para los agentes que no se pueden instalar en el proyecto.
+func TestEcosystemAgentsBlock(t *testing.T) {
+	html := readAsset(t, "index.html")
+	for _, marker := range []string{`id="eco-agents-body"`, `id="eco-agents-count"`, `id="eco-agents-h"`} {
+		if !strings.Contains(html, marker) {
+			t.Errorf("index.html no contiene %s", marker)
+		}
+	}
+	js := readAsset(t, "js/screens/ecosystem.js")
+	for _, route := range []string{"'/api/agents'", "'/api/agents/install'"} {
+		if strings.Count(js, route) != 1 {
+			t.Errorf("ecosystem.js debe usar %s en un único punto", route)
+		}
+	}
+	if !strings.Contains(functionBody(t, js, "export async function loadEcosystem("), "loadAgents()") {
+		t.Errorf("loadEcosystem debe cargar los agentes")
+	}
+	load := functionBody(t, js, "async function loadAgents(")
+	if !strings.Contains(load, "catch (err)") || !strings.Contains(load, "stateError(") {
+		t.Errorf("loadAgents debe capturar su error y mostrarlo con stateError")
+	}
+	// Las tres marcas son columnas de la tabla.
+	for _, col := range []string{"<th>Admitido</th>", "<th>Detectado</th>", "<th>En el proyecto</th>"} {
+		if !strings.Contains(load, col) {
+			t.Errorf("la tabla de agentes no tiene la columna %s", col)
+		}
+	}
+	// Sin modo workspace (o no admitido): el motivo, antes y en lugar del botón.
+	action := functionBody(t, js, "function agentAction(")
+	reason, button := strings.Index(action, "a.reason"), strings.Index(action, "data-install-agent")
+	if !strings.Contains(action, "!a.supported || !a.workspace") || reason < 0 || button < 0 || reason > button {
+		t.Errorf("agentAction debe devolver el motivo antes de ofrecer el botón a un agente sin modo workspace")
+	}
+	// Instalar confirma antes de llamar a la API y avisa de dónde escribe.
+	install := functionBody(t, js, "async function installAgent(")
+	confirm, call := strings.Index(install, "confirmDialog("), strings.Index(install, "'/api/agents/install'")
+	if confirm < 0 || call < 0 || confirm > call || !strings.Contains(install, "if (!ok) return;") {
+		t.Errorf("installAgent debe pedir confirmación antes de llamar a la API")
+	}
+	msg := functionBody(t, js, "function installMessage(")
+	for _, want := range []string{"repositorio", ".axiom/state.json", "carpeta de usuario"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("el aviso de instalar debe mencionar %q", want)
+		}
+	}
+	// Tras instalar se refrescan la lista y el Doctor.
+	if !strings.Contains(install, "loadAgents()") || !strings.Contains(install, "refreshAfterChange()") {
+		t.Errorf("installAgent debe refrescar los agentes y el Doctor")
+	}
+	if !strings.Contains(readAsset(t, "js/core/ecosystem.js"), "install: 'install'") {
+		t.Errorf("OPERATION_LABEL debe nombrar la operación install")
 	}
 }

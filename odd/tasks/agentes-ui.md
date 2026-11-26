@@ -38,7 +38,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · Backend: `GET /api/agents` (agentes con admitido, detectado, instalado, workspace y motivo, más si el proyecto registra su lista) y `POST /api/agents/install` (un agente; valida antes de escribir; reutiliza `installAdapters`), tipos y tests.
-- [ ] T2 · UI: tarjeta «Agentes» en Ecosistema con las tres marcas, botón «Instalar» con confirmación del aviso de escritura, motivo para los no instalables, resultado en «Última operación» y refresco del Doctor; tests de assets.
+- [x] T2 · UI: tarjeta «Agentes» en Ecosistema con las tres marcas, botón «Instalar» con confirmación del aviso de escritura, motivo para los no instalables, resultado en «Última operación» y refresco del Doctor; tests de assets.
 - [ ] T3 · `## Spec viva` integrada con `axiom archive integrate --odd agentes-ui` y documentación viva del dashboard.
 
 Ruta: todas en línea (unidades de menos de unas 300 líneas con el mapa ya hecho; ningún disparador de delegación).
@@ -119,7 +119,8 @@ La pantalla Ecosistema DEBE mostrar un bloque «Agentes» con las tres marcas de
 ## Progreso y evidencia
 
 - T1: `go vet ./internal/dashboard` limpio y `go test ./internal/dashboard -count=1` en verde (78 s) tras clasificar las rutas nuevas en el canario de secretos (`/api/agents` cubierta, `/api/agents/install` excluida por ser POST).
+- T2: `go test ./internal/dashboard -count=1` en verde (69 s) con la prueba nueva `TestEcosystemAgentsBlock`; `node --check` de `screens/ecosystem.js` y `core/ecosystem.js` limpio. No se ha visto en el navegador: arrancar el dashboard exige compilar `axiom`.
 
 ## Siguiente paso
 
-T2.
+T3.
