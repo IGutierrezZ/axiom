@@ -185,6 +185,16 @@ The orchestrator launches you with one task per launch in every mode and passes 
 
 When the launch carries `fixup_of`, it implements no new task: it applies the request of the person to the commit already made. A commit is published when `git -C <worktree> branch -r --contains <sha>` prints anything; never fetch to decide. If it is not published, make the change and commit it with `git -C <worktree> commit --fixup=<sha>`; the orchestrator defers the autosquash until the pull request is requested. If it is published, make a corrective commit that cites the corrected sha. Never rewrite published history and never force a push. In `stop-before-commit`, leave the correction staged and return it in `pending_commit` with `fixup_of` carrying the sha and whether it is published (`{ "sha": "<sha>", "published": false }`), so the orchestrator commits it with `--fixup=<sha>` or as a corrective commit. Then add one line to the `## Commits con cambios pedidos` section of the tasks file of the role (`tasks.md` for `fullstack`): `- <short-sha> (tarea <id>): <request in one line> → fixup` or `→ commit correctivo`. It is never a checkbox, and never reopen the `tasks` gate: it stays approved with its `commit_review`.
 
+### Step 4c: Role Close and Tracker Hours (only with an active tracker)
+
+Applies only when a work-item plugin with Tasks support is active for the change and the change is on the SDD lane; any of the verbs below answers `not_applicable` (exit code 0) otherwise, and that means there is nothing to do. Never call them on the ODD lane. Every verb takes `--cwd <worktree> --change <c> --role <role> --json`.
+
+- **`checkpointed`**: the role close happens only after the `role-apply:<role>` gate is approved (earlier, the verbs refuse with `gate_not_approved`); the orchestrator launches it. Run `axiom integrations time propose`, show the proposal, and wait for the person to confirm the hours; then run `axiom integrations time record --hours <confirmed hours>`. Never move the state of the Task: the approval event does it.
+- **`continuous`**: when the last task of the role closes, run `axiom integrations time propose` and, without stopping, `axiom integrations time record --hours <proposal>`.
+- **No hours to record**: when the proposal is 0 hours, or when `time propose` fails with anything other than `task_not_bound`, run `axiom integrations time record --close-only` instead (`continuous` only; it moves the Task to its close state without hours) and report the role as «sin imputación». A `task_not_bound` refusal is never bypassed: report it and stop.
+- **Never retry alone**: a `rev_conflict` or `time_pending_ambiguous` refusal is reported and left to the person. A `time_pending` warning is not retried either: the next `axiom integrations time record` of that role reconciles it (`--resolve-pending applied|discarded` is the person's decision).
+- **Failures**: they never undo the role's approval nor mark a task incomplete. In `continuous` the verbs append them to `.tracker-notes.yaml`; return them under Issues Found.
+
 ### Step 5: Mark Tasks Complete
 
 Update `tasks.md` — change `- [ ]` to `- [x]` for completed tasks:
