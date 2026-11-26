@@ -462,3 +462,152 @@ func TestArchiveAdoptCheckRefusesAnInvalidDeclaredPattern(t *testing.T) {
 		t.Fatalf("la negativa no escribe: %v", contextCLIChanged(before, after))
 	}
 }
+
+// REQ-30.9: el escaneo propone el patrón de identificadores del cliente (texto y JSON).
+func TestArchiveAdoptScanProposesTheIDPattern(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
+
+	text, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Patrón de identificadores propuesto (sdd.id_pattern; axiom.yaml no se modifica):",
+		"plantilla: RF-<NNN>",
+		"evidencia: 2 identificador(es)", "prefijo RF ×2", "separador «-» ×2", "sin dominio ×2", "ancho 3 ×2",
+		"sdd:", `id_pattern: "RF-<NNN>"`, "conflictos: ninguno",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("el bloque del patrón debe contener %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "Patrón declarado en axiom.yaml") {
+		t.Errorf("sin declaración no hay línea de patrón declarado:\n%s", text)
+	}
+
+	stdout, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master, "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report map[string]any
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatal(err)
+	}
+	proposed, _ := report["proposed_id_pattern"].(map[string]any)
+	if proposed["template"] != "RF-<NNN>" {
+		t.Fatalf("proposed_id_pattern = %v", report["proposed_id_pattern"])
+	}
+	if _, ok := report["declared_id_pattern"]; ok {
+		t.Errorf("sin declaración no hay declared_id_pattern: %v", report)
+	}
+}
+
+func TestArchiveAdoptScanWithConflictsHasNoTemplate(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), "# R\n\n## RF-001 Alta\n\nA.\n\n## RNF-001 Rendimiento\n\nB.\n")
+	text, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"sin plantilla: normaliza a mano los identificadores del origen; Axiom no los reescribe", "[mixed_prefixes]"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("debe contener %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "id_pattern:") || strings.Contains(text, "\n  plantilla: ") {
+		t.Errorf("con conflicto de esquema no hay plantilla ni líneas de copia:\n%s", text)
+	}
+}
+
+func TestArchiveAdoptScanWithoutIDsHasNoPatternBlock(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), "# R\n\n## Alta de usuario\n\nA.\n")
+	text, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(text, "Patrón de identificadores propuesto") {
+		t.Errorf("sin identificadores ajenos no hay bloque:\n%s", text)
+	}
+}
+
+func TestArchiveAdoptScanShowsTheDeclaredPattern(t *testing.T) {
+	cases := []struct {
+		name, template, wantText string
+		matches                  bool
+		uncovered                int
+	}{
+		{"coincide", "RF-<NNN>", "Patrón declarado en axiom.yaml: RF-<NNN> (coincide con la propuesta)", true, 0},
+		{"difiere", "RF-<m>", "Patrón declarado en axiom.yaml: RF-<m> (difiere de la propuesta)", false, 0},
+		{"no reconoce", "HU-<NNN>", "Patrón declarado en axiom.yaml: HU-<NNN> (no reconoce 2 identificador(es): RF-001, RF-002)", false, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ws := workspacetest.Embedded(t, ".")
+			workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
+			declareAdoptPattern(t, ws, "sdd:\n  id_pattern: \""+tc.template+"\"\n")
+			text, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master)
+			if err != nil || !strings.Contains(text, tc.wantText) {
+				t.Fatalf("falta %q (err %v):\n%s", tc.wantText, err, text)
+			}
+			stdout, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master, "--json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			var report adoptScanReport
+			if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+				t.Fatal(err)
+			}
+			declared := report.DeclaredIDPattern
+			if declared == nil || declared.Template != tc.template || declared.MatchesProposal != tc.matches || len(declared.Uncovered) != tc.uncovered {
+				t.Fatalf("declared_id_pattern = %+v", declared)
+			}
+		})
+	}
+}
+
+func TestArchiveAdoptScanReportsAnInvalidDeclaredPatternWithoutRefusing(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
+	declareAdoptPattern(t, ws, "sdd:\n  id_pattern: \"<m><m>\"\n")
+	text, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master)
+	if err != nil {
+		t.Fatalf("scan no depende del patrón y no se niega: %v", err)
+	}
+	if !strings.Contains(text, "axiom workspace validate") || !strings.Contains(text, "plantilla: RF-<NNN>") {
+		t.Errorf("debe informar del error y seguir proponiendo:\n%s", text)
+	}
+	stdout, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master, "--json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var report adoptScanReport
+	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
+		t.Fatal(err)
+	}
+	if report.DeclaredIDPatternError == "" || report.DeclaredIDPattern != nil {
+		t.Fatalf("informe = %+v", report)
+	}
+}
+
+// REQ-30.9: `scan --change` no toca axiom.yaml y no hay opción para escribir el patrón.
+func TestArchiveAdoptScanChangeLeavesAxiomYamlUntouched(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
+	axiomYAML := filepath.Join(ws.Master, "axiom.yaml")
+	before, err := os.ReadFile(axiomYAML)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master, "--change", adoptCLIChange); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(axiomYAML)
+	if err != nil || string(before) != string(after) {
+		t.Fatalf("axiom.yaml debe quedar byte a byte igual (err %v)", err)
+	}
+	if _, err := runArchiveAdoptCLI(t, "scan", "--path", ws.Master, "--write-pattern"); err == nil {
+		t.Fatal("no existe --write-pattern")
+	}
+}

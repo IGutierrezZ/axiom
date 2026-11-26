@@ -49,11 +49,13 @@ func renderArchiveAdoptHelp(stdout io.Writer) error {
 		"Uso: axiom archive adopt <scan|check> [argumentos]",
 		"  scan  [--path <ruta>] [--change <cambio>] [--json]",
 		"        Inventaría los orígenes de requisitos previos (ficheros .md, .markdown, .txt, .docx, .xlsx y .pdf fuera de openspec/), sus unidades",
-		"        (encabezados H1–H3 con su ancla), los identificadores ajenos (RF-120…) y los candidatos a technical_context. Solo lee, es determinista",
-		"        y no exige openspec/. Con --change escribe únicamente <cambio>/adoption-inventory.yaml, solo en la rama del cambio; sin orígenes informa y sale con 0.",
+		"        (encabezados H1–H3 con su ancla), los identificadores ajenos (RF-120…) y los candidatos a technical_context,",
+		"        y propone el patrón de identificadores (sdd.id_pattern), sin escribir axiom.yaml. Solo lee, es determinista y no exige openspec/.",
+		"        Con --change escribe únicamente <cambio>/adoption-inventory.yaml, solo en la rama del cambio; sin orígenes informa y sale con 0.",
 		"  check --change <cambio> [--path <ruta>] [--json]",
-		// `adopt check` aplica siempre el patrón por defecto hasta C-03-c (REQ-30.31).
-		fmt.Sprintf("        Verifica el cambio de adopción sin escribir ni registrar compuertas: solo ADDED, (%s) únicos de una serie nueva, escenarios, Origen: que resuelven", reqid.Default().Compact()),
+		fmt.Sprintf("        Verifica el cambio de adopción sin escribir ni registrar compuertas: solo ADDED; en cada título, un identificador del patrón declarado (sdd.id_pattern; sin declaración, (%s)) o un provisional (%s);",
+			reqid.Default().Compact(), reqid.ProvisionalText("<clave>", "<ordinal>")),
+		"        únicos por serie y número, con el ID del cliente conservado (origin_id) y el patrón declarado (pattern_undeclared); escenarios; Origen: que resuelven",
 		"        y cobertura del inventario (cada unidad migrada con Origen: o descartada con motivo en `## Descartado` de adoption.md). Lista todos los fallos y sale con 1 si hay alguno.",
 		"        La fidelidad semántica de la migración la aprueba un humano en la compuerta `spec`; esta orden no la juzga.",
 		"  --path <ruta>  Directorio desde el que resolver el workspaceRoot (por defecto, el directorio actual). --cwd es un alias.",
@@ -127,6 +129,49 @@ func locateAdopt(verb string, parsed adoptArgs) (workspace.Location, error) {
 type adoptScanReport struct {
 	adoption.Inventory
 	Written string `json:"written,omitempty"`
+	// DeclaredIDPattern es el `sdd.id_pattern` de axiom.yaml frente a la propuesta; solo se
+	// informa si el proyecto lo declara. DeclaredIDPatternError dice por qué no se puede leer.
+	// Ninguno de los dos entra en el inventario escrito (REQ-30.9).
+	DeclaredIDPattern      *adoptDeclaredPattern `json:"declared_id_pattern,omitempty"`
+	DeclaredIDPatternError string                `json:"declared_id_pattern_error,omitempty"`
+}
+
+// adoptDeclaredPattern compara el patrón declarado con la propuesta del escaneo.
+type adoptDeclaredPattern struct {
+	Template        string   `json:"template"`
+	MatchesProposal bool     `json:"matches_proposal"`
+	Uncovered       []string `json:"uncovered"`
+}
+
+// declaredPatternReport lee el patrón declarado de loc solo para el informe: un patrón
+// ilegible no hace que `scan` se niegue, porque su inventario no depende de él.
+func declaredPatternReport(loc workspace.Location, inv adoption.Inventory) (*adoptDeclaredPattern, string) {
+	pattern, err := loc.Declarations.IDPattern()
+	if err != nil {
+		root := loc.Master
+		if root == "" {
+			root = loc.WorkspaceRoot
+		}
+		return nil, fmt.Sprintf("%v; ejecuta `axiom workspace validate --path %s` y corrígelo", err, pathquote.Quote(root))
+	}
+	if loc.Declarations.SDD == nil || loc.Declarations.SDD.IDPattern == nil {
+		return nil, ""
+	}
+	declared := &adoptDeclaredPattern{
+		Template:        pattern.Template(),
+		MatchesProposal: inv.ProposedIDPattern != nil && inv.ProposedIDPattern.Template == pattern.Template(),
+		Uncovered:       []string{},
+	}
+	for _, src := range inv.Sources {
+		for _, u := range src.Units {
+			for _, id := range adoption.IdentityIDs(u) {
+				if !pattern.Valid(id) {
+					declared.Uncovered = append(declared.Uncovered, id)
+				}
+			}
+		}
+	}
+	return declared, ""
 }
 
 func runArchiveAdoptScan(args []string, stdout io.Writer) error {
@@ -160,10 +205,12 @@ func runArchiveAdoptScan(args []string, stdout io.Writer) error {
 		written = target
 	}
 
+	report := adoptScanReport{Inventory: inv, Written: written}
+	report.DeclaredIDPattern, report.DeclaredIDPatternError = declaredPatternReport(loc, inv)
 	if parsed.asJSON {
-		return encodeJSON(stdout, adoptScanReport{Inventory: inv, Written: written})
+		return encodeJSON(stdout, report)
 	}
-	_, err = io.WriteString(stdout, adoptScanText(loc.WorkspaceRoot, inv, parsed.change, written))
+	_, err = io.WriteString(stdout, adoptScanText(loc.WorkspaceRoot, report, parsed.change))
 	return err
 }
 
@@ -195,7 +242,60 @@ func writeFileAtomic(target string, data []byte) error {
 	return nil
 }
 
-func adoptScanText(root string, inv adoption.Inventory, change, written string) string {
+// adoptPatternBlock es el bloque de texto del patrón propuesto y del declarado (D8).
+func adoptPatternBlock(b *strings.Builder, report adoptScanReport) {
+	if proposal := report.ProposedIDPattern; proposal != nil {
+		b.WriteString("\nPatrón de identificadores propuesto (sdd.id_pattern; axiom.yaml no se modifica):\n")
+		if proposal.Template != "" {
+			fmt.Fprintf(b, "  plantilla: %s\n", proposal.Template)
+		}
+		parts := []string{fmt.Sprintf("%d identificador(es)", proposal.IDs)}
+		for _, e := range proposal.Evidence {
+			switch {
+			case e.Dimension == "prefix":
+				parts = append(parts, fmt.Sprintf("prefijo %s ×%d", e.Value, e.Count))
+			case e.Dimension == "separator":
+				parts = append(parts, fmt.Sprintf("separador «%s» ×%d", e.Value, e.Count))
+			case e.Dimension == "domain" && e.Value == "":
+				parts = append(parts, fmt.Sprintf("sin dominio ×%d", e.Count))
+			case e.Dimension == "domain":
+				parts = append(parts, fmt.Sprintf("dominio %s ×%d", e.Value, e.Count))
+			default:
+				parts = append(parts, fmt.Sprintf("ancho %s ×%d", e.Value, e.Count))
+			}
+		}
+		fmt.Fprintf(b, "  evidencia: %s\n", strings.Join(parts, " · "))
+		if proposal.Template != "" {
+			fmt.Fprintf(b, "  para declararlo, la persona copia en axiom.yaml:\n    sdd:\n      id_pattern: %q\n", proposal.Template)
+		} else {
+			b.WriteString("  sin plantilla: normaliza a mano los identificadores del origen; Axiom no los reescribe\n")
+		}
+		if len(proposal.Conflicts) == 0 {
+			b.WriteString("  conflictos: ninguno\n")
+		} else {
+			b.WriteString("  conflictos:\n")
+			for _, c := range proposal.Conflicts {
+				fmt.Fprintf(b, "    - [%s] %s\n", c.Code, c.Detail)
+			}
+		}
+	}
+	if declared := report.DeclaredIDPattern; declared != nil {
+		state := "difiere de la propuesta"
+		switch {
+		case len(declared.Uncovered) > 0:
+			state = fmt.Sprintf("no reconoce %d identificador(es): %s", len(declared.Uncovered), strings.Join(declared.Uncovered, ", "))
+		case declared.MatchesProposal:
+			state = "coincide con la propuesta"
+		}
+		fmt.Fprintf(b, "Patrón declarado en axiom.yaml: %s (%s)\n", declared.Template, state)
+	}
+	if report.DeclaredIDPatternError != "" {
+		fmt.Fprintf(b, "Patrón declarado en axiom.yaml: no accesible (%s)\n", report.DeclaredIDPatternError)
+	}
+}
+
+func adoptScanText(root string, report adoptScanReport, change string) string {
+	inv, written := report.Inventory, report.Written
 	var b strings.Builder
 	fmt.Fprintf(&b, "Inventario de adopción de %s\n", root)
 	if len(inv.Sources) == 0 {
@@ -223,6 +323,7 @@ func adoptScanText(root string, inv adoption.Inventory, change, written string) 
 			fmt.Fprintf(&b, "  - %s → %s (%s)\n", c.Path, c.Mode, c.Reason)
 		}
 	}
+	adoptPatternBlock(&b, report)
 	if len(inv.Warnings) > 0 {
 		b.WriteString("\nAvisos:\n")
 		for _, w := range inv.Warnings {
