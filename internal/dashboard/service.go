@@ -76,6 +76,10 @@ type Service struct {
 	marksPub   MarksPublisher
 	marksLocks sync.Map
 	marksClock marksClockState
+
+	// integrationsMu protege integrationsGW, la pasarela inyectada de integraciones (integrations_port.go).
+	integrationsMu sync.Mutex
+	integrationsGW IntegrationsGateway
 }
 
 // NewService crea una nueva instancia del servicio para el workspace dado.

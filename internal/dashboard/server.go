@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode/utf16"
@@ -53,13 +54,19 @@ type Server struct {
 	listener   net.Listener
 	port       int
 	version    string
+
+	// integrationsLock es el cerrojo de connect y discover (D-05): una petición solapada responde
+	// 409 integration_busy. integrationBudget es su plazo; las pruebas lo reducen.
+	integrationsLock  sync.Mutex
+	integrationBudget time.Duration
 }
 
 // NewServer inicializa el servidor HTTP y configura las rutas de la API y assets estáticos.
 func NewServer(svc *Service) *Server {
 	s := &Server{
-		service: svc,
-		mux:     http.NewServeMux(),
+		service:           svc,
+		mux:               http.NewServeMux(),
+		integrationBudget: defaultIntegrationBudget,
 	}
 	svc.restartFn = s.relaunchAfterUpdate
 	s.registerRoutes()
@@ -93,6 +100,11 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
 	s.mux.HandleFunc("/api/settings", s.handleSettings)
 	s.mux.HandleFunc("/api/settings/personal", s.handleSettingsPersonal)
+	s.mux.HandleFunc("/api/integrations", s.handleIntegrations)
+	s.mux.HandleFunc("/api/integrations/secret", s.handleIntegrationsSecret)
+	s.mux.HandleFunc("/api/integrations/secret/delete", s.handleIntegrationsSecretDelete)
+	s.mux.HandleFunc("/api/integrations/connect", s.handleIntegrationsConnect)
+	s.mux.HandleFunc("/api/integrations/discover", s.handleIntegrationsDiscover)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)

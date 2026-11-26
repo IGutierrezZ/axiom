@@ -1209,6 +1209,7 @@ func runUI(args []string) {
 
 	svc := dashboard.NewServiceWithHub(baseDir, hubMgr)
 	svc.SetMarksPublisher(cli.NewMarksPublisher())
+	svc.SetIntegrationsGateway(cli.NewIntegrationsGateway())
 	server := dashboard.NewServer(svc)
 	server.SetVersion(Version)
 

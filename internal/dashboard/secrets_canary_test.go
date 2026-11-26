@@ -28,6 +28,7 @@ var coveredRoutes = map[string]string{
 	"/api/workspace":         "/api/workspace",
 	"/api/settings":          "/api/settings",
 	"/api/settings/personal": "/api/settings/personal",
+	"/api/integrations":      "/api/integrations",
 	"/api/increments":        "/api/increments",
 	"/api/increments/":       "/api/increments/x",
 	"/api/roles":             "/api/roles",
@@ -47,6 +48,10 @@ var excludedRoutes = map[string]string{
 	"/api/adapters":                       "lista los adaptadores de agentes del sistema; no lee el proyecto",
 	"/api/agents/install":                 "mutación (POST): instala un agente en el proyecto",
 	"/api/projects/active/worktree-prefs": "preferencias personales de worktrees del hub",
+	"/api/integrations/secret":            "mutación (POST): guarda el PAT en el almacén; responde solo la procedencia (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
+	"/api/integrations/secret/delete":     "mutación (POST): elimina el PAT del almacén; responde solo la procedencia (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
+	"/api/integrations/connect":           "mutación (POST): resuelve y persiste la identidad por la pasarela; errores redactados (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
+	"/api/integrations/discover":          "POST bajo demanda: devuelve el descubrimiento del plugin, sin secretos (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
 	"/api/fs/directories":                 "exploración de directorios del sistema de ficheros",
 	"/api/fs/native-picker":               "selector nativo de carpetas del sistema",
 	"/api/workspace/specs/sync-status":    "estado de git del repositorio de specs; no lee integraciones",
@@ -156,7 +161,8 @@ func TestNoReadOnlyDashboardRouteReturnsAnIntegrationSecret(t *testing.T) {
 	}
 	t.Setenv("AXIOM_INTEGRATION_FAKE_TOKEN", dashboardCanary)
 
-	handler := NewServer(NewService(ws.Master)).Router()
+	// Cadena completa de seguridad (handler()) con Host local: la que sirve el proceso real.
+	handler := NewServer(NewService(ws.Master)).handler()
 	paths := make([]string, 0, len(coveredRoutes))
 	for _, path := range coveredRoutes {
 		paths = append(paths, path)
@@ -164,7 +170,9 @@ func TestNoReadOnlyDashboardRouteReturnsAnIntegrationSecret(t *testing.T) {
 	sort.Strings(paths)
 	for _, path := range paths {
 		recorder := httptest.NewRecorder()
-		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+		request := httptest.NewRequest(http.MethodGet, path, nil)
+		request.Host = "127.0.0.1"
+		handler.ServeHTTP(recorder, request)
 		if body := recorder.Body.String(); strings.Contains(body, dashboardCanary) {
 			t.Errorf("GET %s devuelve el valor del secreto de integración", path)
 		}

@@ -3,6 +3,7 @@ package dashboard
 import (
 	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests/marks"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 )
 
 // WorkspaceDTO representa el estado global y configuración del espacio de trabajo.
@@ -768,4 +769,87 @@ type ExplainerDTO struct {
 	Kind  string `json:"kind"`            // spec|design
 	State string `json:"state,omitempty"` // fresh|stale|missing; vacío sin md de origen o con error
 	Error string `json:"error,omitempty"`
+}
+
+// IntegrationsDTO es la respuesta de `GET /api/integrations` (prov:WEB:3): el manifiesto de cada
+// plugin, sus valores de axiom.yaml, la procedencia de sus secretos y la identidad persistida.
+// Nunca lleva el valor de un secreto, un fragmento ni su longitud.
+type IntegrationsDTO struct {
+	ConfigPath     string                   `json:"configPath"`
+	Revision       string                   `json:"revision"`
+	Writable       bool                     `json:"writable"`
+	WriteBlocked   string                   `json:"writeBlockedReason,omitempty"`
+	DocumentErrors []string                 `json:"documentErrors"`
+	Plugins        []IntegrationPluginDTO   `json:"plugins"`
+	WorkItems      WorkItemApplicabilityDTO `json:"workItems"`
+}
+
+// IntegrationPluginDTO es el estado de un plugin del catálogo.
+type IntegrationPluginDTO struct {
+	Manifest      manifest.Manifest `json:"manifest"`
+	Enabled       bool              `json:"enabled"`
+	Declared      bool              `json:"declared"`
+	Entries       []SettingDTO      `json:"entries"`
+	Secrets       []SecretStatusDTO `json:"secrets"`
+	Identities    []IdentityDTO     `json:"identities"`
+	IdentityError string            `json:"identityError,omitempty"`
+}
+
+// SecretStatusDTO es la procedencia de un secreto declarado: solo `source`, nunca el valor.
+type SecretStatusDTO struct {
+	Name     string `json:"name"`
+	Source   string `json:"source"`
+	EnvVar   string `json:"envVar"`
+	Required bool   `json:"required"`
+}
+
+// IdentityDTO es una identidad resuelta y persistida en el almacén local de identidades.
+type IdentityDTO struct {
+	Account     string `json:"account"`
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+	Source      string `json:"source"`
+	ResolvedAt  string `json:"resolvedAt"`
+}
+
+// WorkItemApplicabilityDTO dice si el alta desde un work item aplica y, si no, por qué.
+type WorkItemApplicabilityDTO struct {
+	Applicable bool   `json:"applicable"`
+	Plugin     string `json:"plugin,omitempty"`
+	RefAlias   string `json:"refAlias,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+// IntegrationSecretResponse es la respuesta de guardar o eliminar un PAT: solo la procedencia
+// resultante. ShadowedByEnv es true cuando una variable de entorno tapa el valor del almacén.
+type IntegrationSecretResponse struct {
+	Plugin        string `json:"plugin"`
+	Name          string `json:"name"`
+	Source        string `json:"source"`
+	EnvVar        string `json:"envVar"`
+	ShadowedByEnv bool   `json:"shadowedByEnv"`
+}
+
+// IntegrationConnectResponse es la respuesta de «Probar conexión»: la identidad resuelta y
+// persistida y, si la organización ya tenía una, la que se sustituye.
+type IntegrationConnectResponse struct {
+	Identity   IdentityDTO  `json:"identity"`
+	ResolvedAt string       `json:"resolvedAt"`
+	Replaced   *IdentityDTO `json:"replaced,omitempty"`
+}
+
+// IntegrationCandidateDTO es un miembro del equipo entre los que elegir la identidad.
+type IntegrationCandidateDTO struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+}
+
+// integrationsErrorBody es el cuerpo de error de /api/integrations*: código tipado, mensaje en
+// castellano y, según el caso, la variable de entorno que guía al usuario o los candidatos de
+// identidad. Nada de lo que contiene deriva de un secreto.
+type integrationsErrorBody struct {
+	Code       string                    `json:"code"`
+	Error      string                    `json:"error"`
+	EnvVar     string                    `json:"envVar,omitempty"`
+	Candidates []IntegrationCandidateDTO `json:"candidates,omitempty"`
 }

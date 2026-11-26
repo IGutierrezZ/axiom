@@ -7,6 +7,8 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 - [x] 1.1 Barrera de red en `internal/dashboard/server.go` (D-02).
 - [x] 1.2 Retirar estilos y script de tema en línea (D-01).
 - [x] 2.1 Ámbito `integrations[<plugin>].<clave>` en el catálogo de ajustes (D-03).
+- [x] 3.1 `cli.IntegrationsGateway` y `secrets.MaxValueBytes` (D-04).
+- [x] 3.2 Puerto y rutas del dashboard `/api/integrations*` (D-05, D-06).
 
 ## Evidencia de la unidad 1.1
 
@@ -62,3 +64,18 @@ Decisiones: `keySpec.uiRequired` lleva la obligatoriedad del manifiesto solo par
 | Arnés | `adoEnv`/`adotest` y `newStartEnv`; sin ADO real ni binarios. |
 
 Desviaciones: (1) `secrets.MaxValueBytes` vale 2048, no 4096 (hueco 10: el almacén de Windows admite unos 2,5 KB); el límite ya lo aplica `Chain.Set` con un `*ValueTooLargeError` tipado que nombra la variable de entorno y nunca lleva el valor, y `secret set` de la CLI usa la misma constante. (2) `WorkItemRefusal`, los resultados y métodos de work item (`StartWorkItem`, `WorkItemStaged`, `AdoptWorkItem`, `DiscardWorkItem`) se declaran en 6.1, que es quien los necesita; adelantarlos habría dejado más código inalcanzable. (3) Un fallo de `Set` del almacén por otra causa ya llega como `*KeyringUnavailableError` (tipado, con la variable de entorno), sin reflejar el valor.
+
+## Evidencia de la unidad 3.2
+
+| Evidencia | Valor |
+|---|---|
+| RED | `integrations_api_test.go` escrito antes del código: `go vet ./internal/dashboard` fallaba (`Server.integrationBudget` indefinido; rutas y servicio inexistentes). |
+| GREEN | `go test ./internal/dashboard -run 'TestIntegrationsAPI\|Canary\|Security\|LocalGuard\|Settings\|TestEveryDashboardRouteIsClassified\|TestNoReadOnlyDashboardRoute' -count=1`: ok. `go vet ./internal/dashboard ./cmd/axiom`: limpio. `go test ./internal/cli -run 'TestIntegrationsGateway\|TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign' -count=1`: ok. |
+| Trinquete de código muerto | `bash scripts/deadcode-ratchet.sh`: «no new unreachable functions» (`SetIntegrationsGateway(cli.NewIntegrationsGateway())` en `main.go` cierra la alcanzabilidad de 3.1). |
+| Arnés | `handler()` con `Host: 127.0.0.1`, doble de `IntegrationsGateway`, `integrationstest.Install` y `AXIOM_STATE_DIR` temporal. Sin ADO real ni binarios. |
+
+Notas de cobertura resueltas: hueco 6 (sin pasarela `GET /api/integrations` se degrada con `workItems` no aplicable; solo connect y discover responden 503 `integrations_gateway_missing`); hueco 10 (`*ValueTooLargeError` o longitud excesiva responde 400 `value_too_large` con `envVar` y guía; un fallo del almacén, 500 `secret_store_failed` con el valor redactado y la variable de entorno); `no-store` probado en respuestas locales de éxito y de error; el canario clasifica las cinco rutas, usa `handler()` con Host local y `TestIntegrationsAPINeverEchoesTheSecret` siembra el centinela en el almacén y en los errores del doble (respuestas, cabeceras y log).
+
+Desviaciones: (1) códigos añadidos a la tabla de D-06: `value_too_large` (400), `port_unsupported` (422), `method_not_allowed` (405 tipado) y `settings_unreadable` (500). (2) Defensa en profundidad: los textos de error de la pasarela se redactan con los valores de secreto vigentes del plugin (`[redactado]`) aunque el plugin ya los sanee. (3) Plazos y cerrojo: `integrationBudget` (45 s) y un `TryLock` común a connect y discover en `Server`; el cerrojo de `start` llega en 6.1. (4) Los espacios laterales del PAT se recortan antes de guardar; los caracteres de control se rechazan sobre el valor recibido. (5) `Enabled` de un plugin = declarado y no `enabled: false` (igual que `workspace.Active`).
+
+Riesgos: la ruta de guardado del PAT usa `secrets.Default()` en cada llamada (sin caché); un keyring bloqueado queda acotado a 5 s por petición.
