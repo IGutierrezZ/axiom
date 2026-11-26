@@ -67,6 +67,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y el usuario no 
 ## Progreso
 
 - Worktree creado desde `origin/main` (`0901a6e1`).
+- T1 `5fa77d05`, hecha y comprobada (ver la evidencia de la tarea).
 
 ## No verificado
 
@@ -75,4 +76,4 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y el usuario no 
 
 ## Siguiente paso
 
-Hacer T1, abrir la PR (`type:docs`), esperar la CI en verde, fusionar con merge commit y ejecutar `done`.
+Abrir la PR (`type:docs`), esperar la CI en verde, fusionar con merge commit y ejecutar `done`.
