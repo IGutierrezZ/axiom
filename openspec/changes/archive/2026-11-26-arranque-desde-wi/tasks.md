@@ -33,18 +33,18 @@
 
 Commit: `docs(spec): alinear las deltas de arranque-desde-wi con los huecos del diseño`. Ruta: inline. Sin tocar IDs `prov:74:*`.
 
-- [x] 0.1 `openspec/changes/arranque-desde-wi/specs/change-start-from-work-item/spec.md` (prov:74:4): añadir las formas de referencia de D-29 (identificador `^[1-9][0-9]{0,9}$` ≤ 2147483647; URL `_workitems/edit`, `_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` con `workitem={id}`; fragmento y barra final ignorados; proyecto de la URL igual al configurado; `{org}.visualstudio.com` no aceptado) con escenarios de tablero, otro proyecto y `visualstudio.com`. Hueco 1.
-- [x] 0.2 Mismo fichero (prov:74:14): permitir ejecutar el paso 4 (`info/exclude`) antes del paso 2 sin cambiar el orden observable del resto, o declarar explícitamente la ventana por muerte del proceso; sustituir «renombrar y caer a copia» por «copiar y verificar siempre; el staging queda intacto hasta el paso 6». Huecos 2 y 3.
-- [x] 0.3 Mismo fichero (prov:74:13/14, `already_adopted`): definir `already_adopted` también en la fase 1 (cambio del mismo nombre con el WI ya adoptado, sin descarga ni escrituras, aviso con `--adopt` si `backlink` no es `done`). Hueco 4.
-- [x] 0.4 Mismo fichero (prov:74:14, paso 6): fallo al retirar el staging = aviso `staging_not_retired` con salida 0 y reintento de `--adopt`. Hueco 5.
-- [x] 0.5 Mismo fichero (prov:74:17): añadir el cerrojo por identidad del WI (`item-<plugin>-<id>`) junto al del cambio, con orden fijo WI → cambio → integraciones. Hueco 6.
-- [x] 0.6 Mismo fichero (prov:74:7): una etiqueta `axiom:<otro>` sin rastro local cuenta como abierta; el mensaje dice que el cambio no consta en este equipo y la continuación ofrece retirar la etiqueta o actualizar el checkout principal. Hueco 7.
-- [x] 0.7 Mismo fichero (prov:74:9): perfil `bug` solo cuando el tipo mapeado es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos); nota de que otros nombres de tipo de defecto dan `incremento`. Hueco 8.
-- [x] 0.8 Mismo fichero (prov:74:1): `git_repository_required` para `--from` no vacío, `--adopt` y `--discard` fuera de un repositorio git; la consulta sin argumentos y `--from` vacío no lo exigen. Hueco 9.
+- [x] 0.1 `openspec/changes/arranque-desde-wi/specs/change-start-from-work-item/spec.md` (prov:ARR:4): añadir las formas de referencia de D-29 (identificador `^[1-9][0-9]{0,9}$` ≤ 2147483647; URL `_workitems/edit`, `_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` con `workitem={id}`; fragmento y barra final ignorados; proyecto de la URL igual al configurado; `{org}.visualstudio.com` no aceptado) con escenarios de tablero, otro proyecto y `visualstudio.com`. Hueco 1.
+- [x] 0.2 Mismo fichero (prov:ARR:14): permitir ejecutar el paso 4 (`info/exclude`) antes del paso 2 sin cambiar el orden observable del resto, o declarar explícitamente la ventana por muerte del proceso; sustituir «renombrar y caer a copia» por «copiar y verificar siempre; el staging queda intacto hasta el paso 6». Huecos 2 y 3.
+- [x] 0.3 Mismo fichero (prov:ARR:13/14, `already_adopted`): definir `already_adopted` también en la fase 1 (cambio del mismo nombre con el WI ya adoptado, sin descarga ni escrituras, aviso con `--adopt` si `backlink` no es `done`). Hueco 4.
+- [x] 0.4 Mismo fichero (prov:ARR:14, paso 6): fallo al retirar el staging = aviso `staging_not_retired` con salida 0 y reintento de `--adopt`. Hueco 5.
+- [x] 0.5 Mismo fichero (prov:ARR:17): añadir el cerrojo por identidad del WI (`item-<plugin>-<id>`) junto al del cambio, con orden fijo WI → cambio → integraciones. Hueco 6.
+- [x] 0.6 Mismo fichero (prov:ARR:7): una etiqueta `axiom:<otro>` sin rastro local cuenta como abierta; el mensaje dice que el cambio no consta en este equipo y la continuación ofrece retirar la etiqueta o actualizar el checkout principal. Hueco 7.
+- [x] 0.7 Mismo fichero (prov:ARR:9): perfil `bug` solo cuando el tipo mapeado es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos); nota de que otros nombres de tipo de defecto dan `incremento`. Hueco 8.
+- [x] 0.8 Mismo fichero (prov:ARR:1): `git_repository_required` para `--from` no vacío, `--adopt` y `--discard` fuera de un repositorio git; la consulta sin argumentos y `--from` vacío no lo exigen. Hueco 9.
 - [x] 0.9 `openspec/changes/arranque-desde-wi/design.md`: marcar en «Huecos de spec» los nueve huecos como «recogidos en la spec» sin alterar las decisiones D-xx.
 - [x] 0.10 Verificación: `Grep` de `prov:74:` en `specs/` devuelve los mismos 27 identificadores sin duplicados ni pérdidas; relectura estructural de cada escenario nuevo (WHEN/THEN) y commit.
 
-Cubre: prov:74:1, prov:74:4, prov:74:7, prov:74:9, prov:74:13, prov:74:14, prov:74:17 (alineación, sin IDs nuevos).
+Cubre: RF-ARR-01, RF-ARR-04, RF-ARR-07, RF-ARR-09, RF-ARR-13, RF-ARR-14, RF-ARR-17 (alineación, sin IDs nuevos).
 
 ---
 
@@ -59,7 +59,7 @@ Commit: `feat(integrations): declarar item_keys, ref_alias y capacidades tags y 
 - [x] 1.5 Modificar `internal/workspace/integrations.go`: `stringList` aplica `Format` y convierte cada `FormatProblem` en error con clave, elemento y línea; aplicar el `Default` si falta `item_keys`. Pruebas en `internal/workspace/integrations_test.go`: `TestItemKeysValid`, `TestItemKeysDefaultApplied`, `TestItemKeysMalformed`, `TestItemKeysDuplicate`, `TestItemKeysPrefixInvalid`; comprobar que las pruebas existentes de `base_url`, `pat` y PAT por llamada siguen verdes.
 - [x] 1.6 Ejecutar `go test ./internal/integrations/manifest/... ./internal/workspace/... -run 'TestParseTypePrefixes|TestManifest|TestAzureDevOpsManifest|TestDefaultRegistryMatchesCatalog|TestItemKeys'`, `go vet` y `gofmt -l` de ambos paquetes; commit.
 
-Cubre: RF-ADO-01 (MOD), RF-ADO-02 (MOD), prov:74:9 (base del perfil).
+Cubre: RF-ADO-01 (MOD), RF-ADO-02 (MOD), RF-ARR-09 (base del perfil).
 
 ---
 
@@ -78,7 +78,7 @@ Commit: `feat(integrations): puerto WorkItemSource con lectura tipada, descarga 
 - [x] 2.9 RED: en `internal/integrations/links_test.go` añadir `TestLinkWorkItemCreatesFile`, `TestLinkWorkItemIdempotent`, `TestLinkWorkItemKeepsDeliveryLinks`, `TestLinkWorkItemRejectsUserinfo`. Modificar `internal/integrations/links.go` con `LinkWorkItem(f Folder, pluginID string, l Link, now time.Time) (bool, error)` (toma el cerrojo y reutiliza `mergeLinks` con la clave `change.start`) y `WorkItemLinks(f Folder) ([]Link, error)`. Las pruebas existentes de `mergeLinks` siguen verdes.
 - [x] 2.10 Ejecutar `go test ./internal/integrations/... -run 'TestWorkItemPort|TestLegacyPluginStillRegisters|TestParseItemRef|TestReadItem|TestStateCategory|TestDownload|TestLinkBack|TestAdotest|TestLinkWorkItem'`, `go vet` y `gofmt -l`; commit.
 
-Cubre: prov:74:4 (resolución), prov:74:13 (PAT restringido en la descarga), prov:74:20, prov:74:21, prov:74:22, prov:74:23, RF-INT-09 (MOD), RF-ADO-16 (MOD), prov:74:19 (hermeticidad del adaptador).
+Cubre: RF-ARR-04 (resolución), RF-ARR-13 (PAT restringido en la descarga), RF-INT-24, RF-ADO-17, RF-ADO-18, RF-ADO-19, RF-INT-09 (MOD), RF-ADO-16 (MOD), RF-ARR-19 (hermeticidad del adaptador).
 
 ---
 
@@ -93,7 +93,7 @@ Commit: `feat(changestart): convertir HTML a Markdown y marcar el contenido impo
 - [x] 3.5 RED: crear `internal/changestart/render_test.go` con `TestRenderHeaderFirstLine`, `TestRenderRelations`, `TestRenderOmitsEmptySections`, `TestRenderTrustMetadataOutsideBlock` (`external_ref`, `plugin`, `id`, `url`, `perfil`, `importado` fuera del bloque `AXIOM::INICIO-DATOS`). Crear `internal/changestart/render.go` con la composición de `work-item.md` en tres partes. GREEN.
 - [x] 3.6 Ejecutar `go test ./internal/changestart/... -run 'TestConvert|TestNeutralize|TestInlineNeutral|TestRender'` y un fuzz acotado `go test ./internal/changestart/htmlmd -run '^$' -fuzz FuzzConvert -fuzztime 20s`; `go vet`, `gofmt -l`; commit.
 
-Cubre: prov:74:10, prov:74:11 (amenaza de inyección de instrucciones, matriz específica).
+Cubre: RF-ARR-10, RF-ARR-11 (amenaza de inyección de instrucciones, matriz específica).
 
 ---
 
@@ -107,7 +107,7 @@ Commit: `feat(changestart): importar adjuntos con lista blanca, firmas, presupue
 - [x] 4.4 Crear `internal/changestart/attachments.go` (D-19): orden `AttachedFile` primero, tope de 100 candidatos, prefiltro sin petición, extensión y tamaño declarado antes de descargar, límite `min(10 MiB, presupuesto)`, comprobaciones posteriores (Content-Type, tipos nunca aceptados, firma), imágenes sin `fileName` por firma, nombres saneados (≤ 48, colisiones `-2`, `-3`), permisos `0o644`. GREEN.
 - [x] 4.5 Ejecutar `go test ./internal/changestart/... -run 'TestAttachment|TestSignature|TestImage|TestOOXML'`, `go vet`, `gofmt -l`; commit.
 
-Cubre: prov:74:12, prov:74:13 (nombres saneados y PAT restringido), amenazas de bombas de tamaño, exfiltración del PAT y rutas con apariencia de documentación.
+Cubre: RF-ARR-12, RF-ARR-13 (nombres saneados y PAT restringido), amenazas de bombas de tamaño, exfiltración del PAT y rutas con apariencia de documentación.
 
 ---
 
@@ -127,7 +127,7 @@ Commit: `feat(cli): axiom change start --from con staging atómico bajo el commo
 - [x] 5.10 Modificar `axiom.example.yaml` y `docs/manual-de-inicio.md`: `item_keys`, `ref_alias` (informativo), aviso del perfil `bug` literal (D-07), formas de `--from` (D-29), flujo `axiom change start` y nota de los ficheros de cerrojo de cero bytes (D-24).
 - [x] 5.11 Ejecutar `go test ./internal/changestart/... -run 'TestStart|TestDeriveName|FuzzDeriveName|TestLock|TestSweep|TestStartLinked'`, `go test ./internal/cli -run 'TestChangeStart'`, `go test ./cmd/axiom -run 'TestChangeHelpListsStart|TestAxiomHelpMentionsChangeStart'`, `go vet` y `gofmt -l`; commit.
 
-Cubre: prov:74:1, prov:74:2, prov:74:3, prov:74:4, prov:74:5, prov:74:6, prov:74:7, prov:74:8, prov:74:9, prov:74:17 (cerrojos de la fase 1), prov:74:19.
+Cubre: RF-ARR-01, RF-ARR-02, RF-ARR-03, RF-ARR-04, RF-ARR-05, RF-ARR-06, RF-ARR-07, RF-ARR-08, RF-ARR-09, RF-ARR-17 (cerrojos de la fase 1), RF-ARR-19.
 
 ---
 
@@ -146,7 +146,7 @@ Commit: `feat(cli): axiom change start --adopt y --discard con copia verificada 
 - [x] 6.9 Prueba del motor, con git real: añadir `TestBranchDoneIgnoresIgnoredContext` en `internal/branch/engine/done_test.go` para validar que `git worktree remove` no considera sucios los ficheros ignorados de `context/` (pregunta abierta del diseño); si falla en la versión de git local, registrar el hallazgo en la propia tarea y detener.
 - [x] 6.10 Ejecutar `go test ./internal/changestart/... -run 'TestAdopt|TestDiscard|TestLockOrder'`, `go test ./internal/state ./internal/docpaths ./internal/sddpublish ./internal/sddstatus -run 'TestEnsureChangeContextIgnored|TestLocalStateIncludesContext|TestPublishExcludesContext|TestPublicationStateIgnoresContext|TestStatusWithContextDir'`, `go test ./internal/integrations -run 'TestLinkWorkItem'`, `go test ./internal/cli -run 'TestChangeStart'`, `go test ./internal/branch/... -run 'TestBranchDoneIgnoresIgnoredContext'`; `go vet`, `gofmt -l`; commit.
 
-Cubre: prov:74:14, prov:74:15, prov:74:16, prov:74:17 (cerrojo de la fase 2 y del descarte), prov:74:18, RF-INT-09 (MOD), prov:74:19.
+Cubre: RF-ARR-14, RF-ARR-15, RF-ARR-16, RF-ARR-17 (cerrojo de la fase 2 y del descarte), RF-ARR-18, RF-INT-09 (MOD), RF-ARR-19.
 
 ---
 
@@ -162,7 +162,7 @@ Commit: `docs(skills): tratar el contexto del work item como dato no fiable y co
 - [x] 7.6 Añadir `TestStatusDoesNotRequireExternalRef` en `internal/sddstatus/status_test.go` (un cambio sin `external_ref` no bloquea el estado).
 - [x] 7.7 Ejecutar `go test ./internal/components/... -run 'TestSkillsTreatWorkItemContextAsUntrusted|TestProposeExternalRefRule'` y `go test ./internal/sddstatus/... -run 'TestStatusDoesNotRequireExternalRef'`; si las skills participan en goldens, **no** regenerarlos aquí (se hace una sola vez en T8); `gofmt -l`; commit.
 
-Cubre: prov:74:26, prov:74:27, prov:74:11 (lado skills).
+Cubre: RF-ORQ-27, RF-ORQ-28, RF-ARR-11 (lado skills).
 
 ---
 
@@ -177,7 +177,7 @@ Commit: `feat(doctrine): regla del work item de origen en SDD y ODD con goldens 
 - [x] 8.5 Ejecutar `go test ./internal/components/... -run 'TestOrchestratorWorkItemRuleParity|TestODDRoutingWorkItemRule|TestRoutingAddsNoStop|TestSkillsTreatWorkItemContextAsUntrusted|TestGolden'`, `gofmt -l`; commit.
 - [x] 8.6 (asignado por el usuario desde C-06-c, RF-GAT-32): en `_shared/sdd-orchestrator-sections.md`, parada `tasks`, frase que presenta `pruebas.md` junto a cada `tasks.<role>.md` con el resultado de `axiom sdd tests check` cuando `acceptanceTests.active: true` y el fichero existe, declara su ausencia si falta, no lo menciona si no está activa, y es informativo (no condiciona la aprobación, no va a `gates.yaml`, no cambia las tres salidas). Prueba `TestOrchestratorTasksStopPresentsAcceptanceTests` en `internal/components/sdd/workitem_rule_test.go`.
 
-Cubre: prov:74:24, prov:74:25, prov:74:26 (goldens y paridad por runtime).
+Cubre: RF-KOF-24, RF-RUT-22, RF-ORQ-27 (goldens y paridad por runtime).
 
 ---
 
@@ -192,7 +192,7 @@ Commit: `chore(change-start): cerrar trinquetes de código muerto y rechazos` (s
 - [x] 9.5 Comprobar con `git -C C:\repos\axiom-wt\arranque-desde-wi\axiom status --porcelain` que no quedan ficheros sin confirmar ni `context/` visible, y que `go.mod` y `go.sum` no cambian.
 - [x] 9.6 Registrar la evidencia (comandos y resultados observados) en la propia tarea y pasar a `sdd-verify`.
 
-Cubre: prov:74:19, restricciones D-22 (alcanzabilidad), trinquete de rechazos.
+Cubre: RF-ARR-19, restricciones D-22 (alcanzabilidad), trinquete de rechazos.
 
 ---
 
@@ -204,23 +204,23 @@ Secuencial, un solo escritor. T0 y T1 son independientes (T0 es solo documentaci
 
 | Requisito | Tareas |
 |-----------|--------|
-| prov:74:1 | T0, T5 |
-| prov:74:2, prov:74:3 | T5 |
-| prov:74:4 | T0, T2, T5 |
-| prov:74:5, prov:74:6, prov:74:8 | T5 |
-| prov:74:7 | T0, T5 |
-| prov:74:9 | T0, T1, T5 |
-| prov:74:10, prov:74:11 | T3, T7 |
-| prov:74:12 | T4 |
-| prov:74:13 | T0, T2, T4 |
-| prov:74:14 | T0, T6 |
-| prov:74:15, prov:74:16, prov:74:18 | T6 |
-| prov:74:17 | T0, T5, T6 |
-| prov:74:19 | T2, T5, T6, T9 |
-| prov:74:20, prov:74:21, prov:74:22, prov:74:23 | T2 |
-| prov:74:24, prov:74:25 | T8 |
-| prov:74:26 | T7, T8 |
-| prov:74:27 | T7 |
+| prov:ARR:1 | T0, T5 |
+| prov:ARR:2, prov:ARR:3 | T5 |
+| prov:ARR:4 | T0, T2, T5 |
+| prov:ARR:5, prov:ARR:6, prov:ARR:8 | T5 |
+| prov:ARR:7 | T0, T5 |
+| prov:ARR:9 | T0, T1, T5 |
+| prov:ARR:10, prov:ARR:11 | T3, T7 |
+| prov:ARR:12 | T4 |
+| prov:ARR:13 | T0, T2, T4 |
+| prov:ARR:14 | T0, T6 |
+| prov:ARR:15, prov:ARR:16, prov:ARR:18 | T6 |
+| prov:ARR:17 | T0, T5, T6 |
+| prov:ARR:19 | T2, T5, T6, T9 |
+| prov:INT:20, prov:ADO:21, prov:ADO:22, prov:ADO:23 | T2 |
+| prov:KOF:24, prov:RUT:25 | T8 |
+| prov:ORQ:26 | T7, T8 |
+| prov:ORQ:27 | T7 |
 | RF-INT-09 (MOD) | T2, T6 |
 | RF-ADO-01, RF-ADO-02 (MOD) | T1 |
 | RF-ADO-16 (MOD) | T2 |

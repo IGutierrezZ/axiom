@@ -1,15 +1,15 @@
 # Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item)
 
 > **Cambio:** `arranque-desde-wi` (C-07-d). **Idioma:** castellano de España; identificadores, comandos y claves en inglés.
-> Capacidad nueva, dominio `RF-ARR`. Los identificadores `prov:74:<n>` son provisionales: el número definitivo se asigna al archivar con `axiom sdd archive-integrate`.
+> Capacidad nueva, dominio `RF-ARR`. Los identificadores `prov:ARR:<n>` son provisionales: el número definitivo se asigna al archivar con `axiom sdd archive-integrate`.
 > «Plugin activo» significa que `axiom.yaml` declara `integrations.azure-devops` con `enabled` distinto de `false` y que el plugin se resuelve en el registro (patrón `resolvePortTarget`). «WI» es el work item del tracker. Ninguna prueba ni escenario de esta capacidad depende de Azure DevOps real: todos se ejecutan contra el servidor local `adotest`.
 > Códigos de salida del verbo: 0 (éxito, «no aplica» y éxito con avisos), 1 (rechazo tipado), 2 (uso incorrecto).
 > Catálogo cerrado de códigos de rechazo: `usage_invalid` (salida 2), `work_item_required`, `work_item_reference_invalid`, `work_item_not_found`, `work_item_type_unmapped`, `work_item_closed`, `work_item_linked`, `tracker_unavailable`, `staging_conflict`, `staging_not_found`, `change_not_prepared`, `change_start_busy`, `git_repository_required`, `write_failed` y `port_unsupported` (salida 1 salvo `usage_invalid`).
-> Fuera de alcance, sin delta: `odd-living-document` RF-ODO-01 está retirado (su estructura pasó a convención de agente, y `external_ref` en la cabecera ODD lo cubre prov:74:25) y `dashboard-sdd-orchestration` RF-DSO-04 no fija una lista cerrada de subcomandos en su escenario de ayuda; ninguno de los dos requiere delta.
+> Fuera de alcance, sin delta: `odd-living-document` RF-ODO-01 está retirado (su estructura pasó a convención de agente, y `external_ref` en la cabecera ODD lo cubre RF-RUT-22) y `dashboard-sdd-orchestration` RF-DSO-04 no fija una lista cerrada de subcomandos en su escenario de ayuda; ninguno de los dos requiere delta.
 
 ## ADDED Requirements
 
-### Requirement: Verbo `axiom change start` en Dos Fases con Salida Versionada (prov:74:1)
+### Requirement: Verbo `axiom change start` en Dos Fases con Salida Versionada (RF-ARR-01)
 
 La CLI MUST ofrecer el subcomando `axiom change start`, delegado desde `axiom change`, con las banderas `--from <id|url>`, `--adopt`, `--discard`, `--change <nombre>`, `--lane sdd|odd`, `--cwd` y `--json`. Los modos `--from`, `--adopt` y `--discard` MUST ser mutuamente excluyentes; combinarlos MUST rechazarse como uso incorrecto con el código tipado `usage_invalid`, salida 2 y sin ninguna operación de red ni escritura. `--adopt` y `--discard` MUST exigir `--change`, y `--change` MUST NOT aceptarse con `--from`. `--lane` MUST valer `sdd` por defecto y solo MUST aceptarse con `--adopt`: `--lane` junto a `--from` o `--discard`, o con un valor distinto de `sdd` y `odd`, MUST rechazarse con `usage_invalid` y salida 2. Las banderas desconocidas, los argumentos posicionales y un `--change` que no sea un componente de nombre de cambio válido MUST rechazarse también con `usage_invalid`. Estas comprobaciones de uso MUST preceder a la de aplicabilidad. Si, con plugin activo, `--from` no vacío, `--adopt` o `--discard` se ejecutan con un `--cwd` que no pertenece a un repositorio git (no se resuelve un common dir), el verbo MUST rechazar con `git_repository_required` (salida 1), sin red y sin escrituras, y la continuación MUST nombrar `axiom change start … --cwd <repositorio>`; la consulta sin argumentos y `--from` vacío MUST NOT exigir git. Con `--json` la salida MUST ser un único documento con el campo `schema: axiom.change-start/v1`, la fase ejecutada, el resultado (o el rechazo tipado con su código, mensaje y continuación) y la lista de avisos. El verbo MUST NOT ejecutar `axiom branch ensure` ni `axiom sdd kickoff seal`, MUST NOT crear `proposal.md` ni el documento ODD y MUST NOT ejecutar `git commit`, `git push` ni ninguna operación de git remota.
 
@@ -54,7 +54,7 @@ La CLI MUST ofrecer el subcomando `axiom change start`, delegado desde `axiom ch
 - **ENTONCES** el observador no registra `git commit`, `git push`, `git fetch`, `git pull` ni `git ls-remote`
 - **Y** no se crea ninguna rama, worktree, `kickoff.yaml`, `proposal.md` ni documento ODD
 
-### Requirement: Sin Plugin Activo el Verbo Responde «No Aplica» sin Red (prov:74:2)
+### Requirement: Sin Plugin Activo el Verbo Responde «No Aplica» sin Red (RF-ARR-02)
 
 Si no hay plugin activo (sin bloque `integrations.azure-devops`, `enabled: false`, `axiom.yaml` ausente o inválido, o plugin no resoluble), `axiom change start` MUST informar de que no aplica, MUST terminar con código 0, MUST NOT realizar ninguna operación de red y MUST NOT escribir ningún fichero ni crear staging, en cualquiera de sus modos. Con `--json` la respuesta MUST llevar `applicable: false`. Esta respuesta es la que el orquestador usa para saber si el WI es obligatorio. Cuando la causa sea un `axiom.yaml` inválido (incluido un bloque `integrations.azure-devops` con configuración incompleta o malformada, como `organization` o `project` ausentes) o un plugin activo que no se resuelve en el registro, la respuesta MUST incluir un aviso, porque la exigencia del WI queda desactivada; en el caso del `axiom.yaml` inválido el aviso MUST nombrar `axiom workspace validate`. Un `axiom.yaml` ausente o un plugin desactivado explícitamente no llevan aviso. Un plugin activo y resoluble que no ofrece el puerto de work items MUST rechazar con `port_unsupported` (salida 1) y no responder «no aplica».
 
@@ -85,7 +85,7 @@ Si no hay plugin activo (sin bloque `integrations.azure-devops`, `enabled: false
 - **CUANDO** se ejecuta `axiom change start --from 2525`
 - **ENTONCES** la respuesta es «no aplica» con código 0, sin red ni escrituras y con un aviso que nombra `axiom workspace validate`
 
-### Requirement: Con Plugin Activo y sin WI el Verbo se Niega y Pide el WI (prov:74:3)
+### Requirement: Con Plugin Activo y sin WI el Verbo se Niega y Pide el WI (RF-ARR-03)
 
 Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard` MUST rechazarse con el código tipado `work_item_required` y código de salida 1, sin red ni escrituras. El mensaje MUST pedir el identificador numérico o la URL del work item y la continuación MUST nombrar `axiom change start --from <id|url>`. Crear el WI MUST NOT ser una opción del verbo.
 
@@ -101,7 +101,7 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 - **CUANDO** se ejecuta `axiom change start --from ""`
 - **ENTONCES** el resultado es el mismo rechazo `work_item_required`
 
-### Requirement: Resolución del WI por ID o por URL del Host y la Organización Configurados (prov:74:4)
+### Requirement: Resolución del WI por ID o por URL del Host y la Organización Configurados (RF-ARR-04)
 
 `--from` MUST aceptar un identificador numérico positivo o una URL `https` cuyo host y organización coincidan con los configurados en `integrations.azure-devops`, y cuyo último segmento de ruta de work item sea un identificador numérico. El identificador MUST cumplir `^[1-9][0-9]{0,9}$` y ser como máximo 2147483647; `0`, los ceros a la izquierda, los signos y los decimales MUST rechazarse. Las formas de URL aceptadas MUST ser `/{org}[/{project}]/_workitems/edit/{id}`, `/{org}[/{project}]/_apis/wit/workitems/{id}` y cualquier ruta bajo `/{org}/` cuya consulta lleve exactamente un parámetro `workitem={id}` (tableros, backlogs y sprints); el fragmento y la barra final MUST ignorarse. Si la ruta nombra un proyecto, MUST coincidir con el `project` configurado (sin distinguir mayúsculas); `{org}.visualstudio.com` MUST NOT aceptarse. Una URL de otro host u otra organización, una URL con `userinfo`, un esquema distinto de `https` o un valor que no sea ni número ni URL MUST rechazarse con el código `work_item_reference_invalid`, sin ninguna petición de red, y su continuación MUST nombrar `axiom change start --from <id|url>`. La URL rechazada MUST NOT enviarse al tracker ni escribirse.
 
@@ -140,7 +140,7 @@ Con el plugin activo, `axiom change start` sin `--from`, `--adopt` ni `--discard
 - **CUANDO** se ejecuta `axiom change start --from abc` o `--from 0` o `--from http://dev.azure.com/acme/P/_workitems/edit/9`
 - **ENTONCES** cada invocación se rechaza con `work_item_reference_invalid` y sin red
 
-### Requirement: La Fase 1 Solo Escribe en Staging bajo el Common Dir de Git (prov:74:5)
+### Requirement: La Fase 1 Solo Escribe en Staging bajo el Common Dir de Git (RF-ARR-05)
 
 La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar el resultado en staging bajo el common dir de git, en `<common>/axiom/change-start/v1/<cambio>/` (el WI normalizado en JSON y la carpeta `context/`). MUST NOT escribir en el árbol de trabajo del repositorio ni en el WI del tracker, MUST NOT crear ficheros fuera del common dir y MUST devolver el nombre derivado, el perfil y la `external_ref` (`<alias>:<id>`, con el alias de referencia del manifiesto). La escritura del staging MUST ser atómica: un fallo a mitad MUST NOT dejar un staging parcial que la fase 2 pueda adoptar, y un fallo de escritura MUST rechazarse con `write_failed` (salida 1), con continuación «reintenta `axiom change start …`». La detección de un staging existente MUST hacerse por identidad del WI (plugin e id guardados en su `work-item.json`) y no solo por nombre: tras derivar el nombre, MUST buscarse un staging válido de ese nombre y, si no lo hay, de cualquier otro nombre con el mismo WI (por ejemplo, porque el título cambió entre dos fases 1). Si ya existe un staging del mismo WI, con el mismo nombre o con otro, la fase 1 MUST informar de ello (estado `already_staged`, aviso con la ruta y el nombre de ese staging) sin descargar nada, sin pisarlo, sin crear otro y con código 0; el nombre devuelto MUST ser el del staging existente. Si el staging existente de ese mismo nombre corresponde a otro WI, MUST rechazar con `staging_conflict` y la continuación MUST nombrar `axiom change start --discard --change <cambio>`. Un directorio de staging sin `work-item.json` legible MUST tratarse como inexistente y sustituirse, porque no lo dejó una fase 1 completa. Si no hay staging pero el cambio del mismo nombre ya adoptó el mismo WI (vínculo local o `context/work-item.json` del mismo plugin e id), la fase 1 MUST responder `already_adopted` con código 0, sin descargar nada ni escribir nada, y, si el `backlink` no es `done`, con un aviso que nombre `axiom change start --adopt --change <cambio>` (con `--lane odd` en ODD).
 
@@ -188,7 +188,7 @@ La fase 1 (`--from`) MUST leer el WI una sola vez, validarlo, importarlo y dejar
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** no queda ningún staging que `--adopt` pueda adoptar y el verbo se rechaza con `write_failed` (salida 1)
 
-### Requirement: Rechazos Tipados de la Fase 1 con Continuación Nombrada (prov:74:6)
+### Requirement: Rechazos Tipados de la Fase 1 con Continuación Nombrada (RF-ARR-06)
 
 La fase 1 MUST validar, en este orden y con una sola lectura del tracker: (1) el WI existe; (2) su tipo está mapeado en `item_keys`; (3) no está cerrado, es decir, su estado no pertenece a la categoría `Completed` ni `Removed` obtenida del descubrimiento (la categoría, nunca el nombre del estado); (4) no está enlazado a otro cambio abierto (requisito siguiente). Cada rechazo MUST tener código tipado, terminar con código 1, no dejar staging ni escribir nada, y su continuación MUST nombrar un comando `axiom …` o llevar la marca `refusal:by-design`, de modo que el trinquete de rechazos de la CLI no registre entradas nuevas. Los códigos MUST ser `work_item_not_found`, `work_item_type_unmapped`, `work_item_closed` y `tracker_unavailable`. Un fallo de red, un 5xx, un 401/403, un 429 agotado o un agotamiento de tiempo del tracker en la fase 1 MUST rechazarse con `tracker_unavailable`, cuyo mensaje MUST ser accionable y cuya continuación MUST ser «reintenta `axiom change start --from <id|url>`»; el verbo MUST ser síncrono, sin outbox ni reintentos propios más allá de los del cliente. Lo mismo MUST aplicarse cuando falla la consulta de descubrimiento de la categoría de los estados con el WI ya leído: no se acepta el WI sin conocer su categoría por un fallo del tracker, se rechaza con `tracker_unavailable` y no queda staging. Con el plugin activo y configuración completa, pero sin PAT disponible en el almacén de secretos, el rechazo MUST ser `tracker_unavailable` sin ninguna petición de red, y la continuación MUST nombrar `axiom integrations secret set --plugin azure-devops --name pat` además del reintento. (Un estado del WI que no figure entre los estados de su tipo no es un fallo: el WI se acepta, la categoría queda vacía y el resultado incluye un aviso.) Ningún mensaje MUST contener el PAT.
 
@@ -252,7 +252,7 @@ La fase 1 MUST validar, en este orden y con una sola lectura del tracker: (1) el
 - **CUANDO** se ejecuta la prueba del trinquete de rechazos de la CLI
 - **ENTONCES** todos los rechazos nombran una continuación `axiom …` o llevan `refusal:by-design`, sin entradas nuevas en la lista base
 
-### Requirement: Un WI Enlazado a Otro Cambio Abierto se Rechaza (prov:74:7)
+### Requirement: Un WI Enlazado a Otro Cambio Abierto se Rechaza (RF-ARR-07)
 
 La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enlazado a otro cambio abierto, comprobando (a) las etiquetas `axiom:<otro>` de `System.Tags` del WI (verdad entre máquinas) y (b) los vínculos locales de los cambios abiertos del registro local de ramas (`<common>/axiom/branch/v1/…`): los vínculos `kind: work_item` de su `integrations.yaml` en el carril SDD y el `context/work-item.json` adoptado de su carpeta `odd/context/<cambio>/` en el carril ODD (que no escribe `integrations.yaml`). Si ambas fuentes discrepan, MUST mandar el WI. La misma etiqueta del mismo cambio MUST NOT ser conflicto, y un cambio archivado localmente MUST contar como cerrado. Una etiqueta `axiom:<otro>` de la que no hay ningún rastro local (ni registro ni archivo ni documento ODD) MUST contar como cambio abierto, porque este equipo no puede distinguir un cambio abierto en otra máquina de uno cerrado allí y aún no traído; el mensaje MUST decir que el cambio no consta en este equipo y la continuación MUST ofrecer retirar la etiqueta en el tracker o actualizar el checkout principal y repetir `axiom change start --from <id|url>`. El mensaje MUST nombrar la etiqueta o el cambio que reclama el WI y la continuación MUST nombrar la salida (retirar la etiqueta en el tracker o cerrar el otro cambio con `axiom branch done --change <otro>`).
 
@@ -292,7 +292,7 @@ La fase 1 MUST rechazar con el código `work_item_linked` un WI que ya esté enl
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** el WI se acepta y el resultado incluye un aviso de que el escaneo local no fue posible
 
-### Requirement: Derivación Determinista del Nombre del Cambio (prov:74:8)
+### Requirement: Derivación Determinista del Nombre del Cambio (RF-ARR-08)
 
 El nombre del cambio MUST derivarse como `<prefijo>-<id>-<slug>`, con el prefijo que `item_keys` asigna al tipo del WI, el identificador numérico del WI y un slug del título en ASCII minúsculas, con las tildes plegadas (`á`→`a`, `ñ`→`n`), con cualquier carácter fuera de `[a-z0-9]` convertido en guion simple, sin guiones al inicio ni al final y truncado para que la rama y el worktree sigan siendo viables en Windows. La derivación MUST ser determinista (mismo WI y mismo título, mismo nombre), el nombre MUST ser válido como componente de rama (`branch/naming.go` y `gitref.ValidBranchComponent`) y, si el slug queda vacío, el nombre MUST ser `<prefijo>-<id>`. Dos WI distintos MUST NOT producir el mismo nombre, porque el identificador forma parte de él.
 
@@ -322,7 +322,7 @@ El nombre del cambio MUST derivarse como `<prefijo>-<id>-<slug>`, con el prefijo
 - **CUANDO** se deriva el nombre
 - **ENTONCES** el resultado supera `gitref.ValidBranchComponent`
 
-### Requirement: Perfil del Cambio según el Tipo del WI (prov:74:9)
+### Requirement: Perfil del Cambio según el Tipo del WI (RF-ARR-09)
 
 El resultado de la fase 1 MUST declarar el perfil: `bug` solo si el tipo del WI, ya mapeado en `item_keys`, es literalmente `Bug` (sin distinguir mayúsculas ni espacios extremos), e `incremento` para cualquier otro tipo mapeado (otros nombres de tipo de defecto, como `Defect`, producen `incremento`, y esto se documenta). El verbo MUST NOT inventar los campos `Observado:` ni `Esperado:` del informe de bug: los pasos de reproducción y los criterios del WI se importan como contexto y es la skill quien redacta el informe y pregunta lo que falte.
 
@@ -337,7 +337,7 @@ El resultado de la fase 1 MUST declarar el perfil: `bug` solo si el tipo del WI,
 - **ENTONCES** el perfil es `bug`
 - **Y** ningún fichero escrito contiene líneas `Observado:` ni `Esperado:`
 
-### Requirement: Importación del WI como Contexto en Markdown (prov:74:10)
+### Requirement: Importación del WI como Contexto en Markdown (RF-ARR-10)
 
 La importación MUST producir `context/work-item.md` con el título, el tipo, el estado, la URL, la descripción, los pasos de reproducción y los criterios de aceptación, las relaciones padre y Related (identificador, tipo y título) y la lista de adjuntos e imágenes incrustadas con su resultado (descargado u omitido con motivo). Los campos HTML MUST convertirse a Markdown con el subconjunto de párrafos, saltos, listas ordenadas y no ordenadas, énfasis, enlaces, imágenes, tablas simples y código; MUST NOT conservar `script`, `style`, manejadores de eventos ni atributos `style`; y los enlaces con esquema distinto de `http`, `https` y `mailto` (por ejemplo `javascript:`) MUST convertirse en texto sin enlace. Un campo vacío MUST omitirse sin dejar secciones vacías.
 
@@ -361,7 +361,7 @@ La importación MUST producir `context/work-item.md` con el título, el tipo, el
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** esas secciones no aparecen en `context/work-item.md`
 
-### Requirement: El Contenido Importado es Dato no Fiable de un Tercero (prov:74:11)
+### Requirement: El Contenido Importado es Dato no Fiable de un Tercero (RF-ARR-11)
 
 `context/work-item.md` MUST empezar por una cabecera fija que declare su contenido como dato de un tercero que no concede autoridad ni modifica el alcance. Todo el texto importado MUST ir dentro de un bloque delimitado y los delimitadores propios MUST neutralizarse dentro del texto importado, de modo que el contenido no pueda cerrar el bloque ni imitar la cabecera. Esa regla MUST aplicarse también a los títulos, a los nombres de adjuntos y a los motivos de omisión escritos en el fichero.
 
@@ -381,7 +381,7 @@ La importación MUST producir `context/work-item.md` con el título, el tipo, el
 - **CUANDO** se importa
 - **ENTONCES** la copia queda neutralizada dentro del bloque y no se puede confundir con la cabecera real
 
-### Requirement: Adjuntos con Lista Blanca y Límites (prov:74:12)
+### Requirement: Adjuntos con Lista Blanca y Límites (RF-ARR-12)
 
 El verbo MUST descargar solo adjuntos cuya extensión y tipo de contenido estén en la lista blanca `png, jpg, jpeg, gif, webp, bmp, pdf, doc, docx, xls, xlsx, ppt, pptx, txt, md, csv, json, log`. SVG MUST excluirse. MUST aplicarse un límite de 10 MiB por fichero y de 50 MiB por WI, con descarga mediante un lector limitado que aborte al superar el límite sin depender de la cabecera `Content-Length`. Un adjunto fuera de la lista, con extensión y tipo de contenido que no concuerdan, que supera su límite, que supera el presupuesto total o cuya descarga falla MUST omitirse, no abortar la importación y quedar listado en `context/work-item.md` con su motivo. Cada adjunto descargado MUST escribirse bajo `context/attachments/` y MUST NOT interpretarse ni ejecutarse. Las imágenes incrustadas en los campos HTML MUST seguir las mismas reglas.
 
@@ -451,7 +451,7 @@ Para las imágenes incrustadas, MUST aplicarse además: (a) las imágenes `data:
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** el segundo se descarga, el primero figura omitido con su motivo y el verbo termina con código 0
 
-### Requirement: El PAT Solo se Envía al Host y la Organización Configurados y los Nombres se Sanean (prov:74:13)
+### Requirement: El PAT Solo se Envía al Host y la Organización Configurados y los Nombres se Sanean (RF-ARR-13)
 
 Antes de construir cualquier petición con credencial para un adjunto o una imagen, el verbo MUST validar que la URL es `https`, que no lleva `userinfo`, que su host es el configurado y que su ruta comienza por `/{organización}/`. Una URL que no cumpla MUST NOT descargarse, MUST NOT recibir la cabecera `Authorization` y MUST listarse como omitida con su motivo; esto MUST aplicarse también a las URL de `<img src>` y de los enlaces de relación. Las redirecciones MUST seguir desactivadas. Los nombres de fichero MUST sanearse: sin separadores de ruta, sin `..`, sin nombres de dispositivo de Windows (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, con cualquier extensión), sin caracteres no permitidos en Windows, sin espacios ni puntos finales y con una longitud acotada; una colisión de nombres MUST resolverse de forma determinista sin sobrescribir.
 
@@ -491,7 +491,7 @@ Antes de construir cualquier petición con credencial para un adjunto o una imag
 - **CUANDO** se descargan
 - **ENTONCES** ambos se conservan con nombres distintos y deterministas
 
-### Requirement: Fase 2 `--adopt` Mueve el Contexto, Vincula el WI y es Idempotente (prov:74:14)
+### Requirement: Fase 2 `--adopt` Mueve el Contexto, Vincula el WI y es Idempotente (RF-ARR-14)
 
 `axiom change start --adopt --change <cambio> [--lane sdd|odd]` MUST comprobar, antes de escribir nada, que el cambio está preparado y que existe qué adoptar, y MUST ejecutar la adopción bajo el cerrojo del cambio en este orden fijo: (1) comprobar la preparación; (2) copiar y verificar `context/` desde el staging a `openspec/changes/<cambio>/context/` (carril `sdd`) o a `odd/context/<cambio>/` (carril `odd`): se copia siempre a un temporal del mismo árbol y volumen que el destino, se verifica (rutas, tamaño y SHA-256) y se publica con un único renombrado, de modo que el resultado es idéntico en uno o dos volúmenes; el staging queda intacto hasta el paso 6; (3) en el carril `sdd`, escribir el vínculo `kind: work_item` en `integrations.yaml` (RF-INT-09) con `plugin`, `id`, `url` y `source: change.start` (en el carril `odd` MUST NOT crear `integrations.yaml`); (4) asegurar las entradas de `.git/info/exclude`; (5) registrar en `context/work-item.json` del destino el carril y el enlace de vuelta como pendiente; (6) retirar el staging; (7) añadir el enlace de vuelta (requisito siguiente) y registrar su resultado (`done`, `pending` o `conflict`) en `context/work-item.json`. La implementación MAY ejecutar el paso 4 antes del paso 2 sin cambiar el orden observable del resto; si no lo hace, la única ventana en la que `context/` puede ser visible para git es la muerte del proceso entre los pasos 2 y 4, que ningún fallo controlado deja abierta y que el siguiente `--adopt` cierra. Si el retirado del staging (paso 6) falla, MUST avisar con `staging_not_retired` (nombrando `axiom change start --adopt --change <cambio>`), terminar con código 0 y continuar con el paso 7; el reintento retira el staging.
 
@@ -575,9 +575,9 @@ Antes de construir cualquier petición con credencial para un adjunto o una imag
 - **CUANDO** ambas terminan
 - **ENTONCES** el fichero contiene ambos vínculos sin pérdida ni duplicado
 
-### Requirement: Enlace de Vuelta por Etiqueta; un Fallo del Tracker Avisa sin Fallar (prov:74:15)
+### Requirement: Enlace de Vuelta por Etiqueta; un Fallo del Tracker Avisa sin Fallar (RF-ARR-15)
 
-En la fase 2, tras mover el contexto y vincular, el verbo MUST releer el WI y MUST añadir a `System.Tags` la etiqueta `axiom:<cambio>` solo si no figura ya, conservando las demás etiquetas (separadas por `;`) y sin duplicar. Si el tracker no responde o rechaza la escritura, el verbo MUST NOT fallar: MUST terminar con código 0, MUST avisar (aviso accionable que nombra `axiom change start --adopt --change <cambio>` como reintento) y MUST dejar el contexto y el vínculo ya aplicados; un `--adopt` posterior MUST completar solo el enlace pendiente. Si al releer el WI consta una etiqueta `axiom:<otro>` de otro cambio distinto, el verbo MUST NOT añadir la suya y MUST avisar del conflicto, salvo que `<otro>` sea un cambio archivado localmente: igual que en la fase 1 (prov:74:7), esa etiqueta MUST tolerarse también en la fase 2 y la etiqueta propia MUST añadirse conservando la ajena, para que un WI aceptado en la fase 1 no quede sin enlazar. El Hyperlink de vuelta al cambio queda fuera de este requisito.
+En la fase 2, tras mover el contexto y vincular, el verbo MUST releer el WI y MUST añadir a `System.Tags` la etiqueta `axiom:<cambio>` solo si no figura ya, conservando las demás etiquetas (separadas por `;`) y sin duplicar. Si el tracker no responde o rechaza la escritura, el verbo MUST NOT fallar: MUST terminar con código 0, MUST avisar (aviso accionable que nombra `axiom change start --adopt --change <cambio>` como reintento) y MUST dejar el contexto y el vínculo ya aplicados; un `--adopt` posterior MUST completar solo el enlace pendiente. Si al releer el WI consta una etiqueta `axiom:<otro>` de otro cambio distinto, el verbo MUST NOT añadir la suya y MUST avisar del conflicto, salvo que `<otro>` sea un cambio archivado localmente: igual que en la fase 1 (RF-ARR-07), esa etiqueta MUST tolerarse también en la fase 2 y la etiqueta propia MUST añadirse conservando la ajena, para que un WI aceptado en la fase 1 no quede sin enlazar. El Hyperlink de vuelta al cambio queda fuera de este requisito.
 
 #### Scenario: Etiqueta añadida una sola vez
 - **DADO** un WI con las etiquetas `a; b`
@@ -610,7 +610,7 @@ En la fase 2, tras mover el contexto y vincular, el verbo MUST releer el WI y MU
 - **CUANDO** se ejecuta `--adopt`
 - **ENTONCES** la escritura protegida por revisión no sobrescribe el cambio ajeno y el verbo avisa o reintenta sin perder etiquetas
 
-### Requirement: `--discard` Retira un Staging Abandonado (prov:74:16)
+### Requirement: `--discard` Retira un Staging Abandonado (RF-ARR-16)
 
 `axiom change start --discard --change <cambio>` MUST borrar únicamente `<common>/axiom/change-start/v1/<cambio>/` sin red y sin tocar el repositorio ni el WI, y MUST terminar con código 0. Si el staging no existe MUST ser un éxito sin efecto con aviso. `--change` MUST validarse como componente de nombre de cambio, y un valor con separadores o `..` MUST rechazarse como uso incorrecto sin borrar nada.
 
@@ -629,7 +629,7 @@ En la fase 2, tras mover el contexto y vincular, el verbo MUST releer el WI y MU
 - **CUANDO** se ejecuta `--discard`
 - **ENTONCES** se rechaza como uso incorrecto con código 2 y no se borra nada
 
-### Requirement: Un Cerrojo Local por Cambio Evita Arranques Simultáneos (prov:74:17)
+### Requirement: Un Cerrojo Local por Cambio Evita Arranques Simultáneos (RF-ARR-17)
 
 Las fases 1 y 2 y `--discard` MUST tomar un cerrojo local por cambio en el common dir. La fase 1 MUST tomar además, antes de leer el WI, un cerrojo por identidad del WI (`item-<plugin>-<id>`), con orden fijo WI, cambio, integraciones; la fase 2 y el descarte MUST NOT pedir el del WI. Dos invocaciones simultáneas sobre el mismo cambio MUST serializarse o rechazar la segunda con el código `change_start_busy` y continuación «reintenta `axiom change start …`»; en ningún caso MUST producir un staging corrupto ni un vínculo duplicado. Un cerrojo huérfano de un proceso que ya no existe MUST poder recuperarse sin intervención manual.
 
@@ -648,7 +648,7 @@ Las fases 1 y 2 y `--discard` MUST tomar un cerrojo local por cambio en el commo
 - **CUANDO** se ejecuta la fase 1
 - **ENTONCES** el cerrojo se recupera y la fase 1 prosigue
 
-### Requirement: `context/` no se Versiona (prov:74:18)
+### Requirement: `context/` no se Versiona (RF-ARR-18)
 
 El contenido de `context/` MUST quedar fuera del control de versiones. En este repositorio, `.gitignore` MUST contener las reglas `openspec/changes/*/context/`, `openspec/changes/archive/*/context/` y `odd/context/`. En un proyecto de usuario, `--adopt` MUST añadir, de forma idempotente y sin tocar el `.gitignore` versionado, las entradas equivalentes a `.git/info/exclude` del repositorio (resuelto con el common dir), conservando las líneas ajenas y sin duplicarlas. Tras `--adopt`, `git status` MUST NOT listar nada bajo `context/`. La presencia de `context/` MUST NOT impedir `axiom sdd status`, la publicación ni el archivado del cambio.
 
@@ -673,7 +673,7 @@ El contenido de `context/` MUST quedar fuera del control de versiones. En este r
 - **CUANDO** se ejecutan `axiom sdd status`, `axiom sdd publish` y el archivado
 - **ENTONCES** ninguno falla por la existencia de `context/` y `context/` no se commitea
 
-### Requirement: Hermeticidad de las Pruebas del Arranque (prov:74:19)
+### Requirement: Hermeticidad de las Pruebas del Arranque (RF-ARR-19)
 
 Ninguna prueba del verbo, del puerto de work items ni del adaptador MUST llamar a Azure DevOps real ni usar credenciales reales: todas MUST usar el servidor local `adotest`, un almacén de secretos sustituible y `go test` en proceso, sin compilar binarios sueltos. Toda petición saliente de esas pruebas MUST ir a un host local, y una petición a cualquier host no local MUST hacer fallar la prueba.
 

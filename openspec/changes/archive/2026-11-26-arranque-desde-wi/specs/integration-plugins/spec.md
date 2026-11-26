@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Puerto Opcional de Work Items (prov:74:20)
+### Requirement: Puerto Opcional de Work Items (RF-INT-24)
 
 El marco MUST ofrecer un puerto opcional de work items, detectado por aserción de tipo sobre el plugin (mismo patrón que `IdentityResolver` y `Discoverer`), sin añadir métodos a `Plugin` ni alterar los plugins que no lo implementan. El puerto MUST exponer, con tipos neutrales propios del marco (sin tipos del tracker): (a) la lectura de un work item (identificador, tipo, título, descripción, pasos de reproducción y criterios de aceptación en HTML o texto original, estado y su categoría, URL, etiquetas, padre, relaciones Related y adjuntos con nombre, URL y tamaño declarado); (b) la descarga acotada de un adjunto o imagen por URL; y (c) el enlace de vuelta idempotente por etiqueta. La invocación del puerto MUST pasar por el mismo punto que los demás puertos (`invokePort`): MUST recuperar los pánicos del plugin como error tipado y MUST sanear de secretos todo error devuelto. Si el plugin no implementa el puerto, la invocación MUST devolver un error tipado `port_unsupported` que nombra el plugin y el puerto, sin red. El puerto MUST estar conectado al verbo `axiom change start` alcanzable desde `cmd/axiom`.
 
