@@ -221,10 +221,15 @@ type Status struct {
 	// change (RF-PUB-11): structural absence (nil, omitempty) when there is nothing to commit or
 	// push, so a status without it is byte-identical to the one that predates it
 	// (decoratePublication).
-	Publication       *PublicationProjection `json:"publication,omitempty"`
-	PhaseInstructions *PhaseInstructions     `json:"phaseInstructions,omitempty"`
-	NextRecommended   string                 `json:"nextRecommended"`
-	BlockedReasons    []string               `json:"blockedReasons"`
+	Publication *PublicationProjection `json:"publication,omitempty"`
+	// Explainer es C-06-b's additive projection of sdd.explainer_html and the freshness of the
+	// explanatory HTML (decorateExplainer). Informational only: it never changes NextRecommended,
+	// Dependencies, BlockedReasons, ISO or a gate. Structural absence (nil, omitempty) unless axiom.yaml
+	// has an `sdd:` block or the selected change is sealed with explainer_html yes.
+	Explainer         *ExplainerProjection `json:"explainer,omitempty"`
+	PhaseInstructions *PhaseInstructions   `json:"phaseInstructions,omitempty"`
+	NextRecommended   string               `json:"nextRecommended"`
+	BlockedReasons    []string             `json:"blockedReasons"`
 	// Notes carries non-blocking diagnostics for a consumer to report, never to
 	// gate on: a non-empty Notes never withholds apply, sync, archive, or a
 	// terminal route. Always serialized as an array — `[]` when there is nothing
@@ -551,6 +556,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 	decorateISO(&status, location)
 	decorateRequirements(&status, location)
 	decoratePublication(&status, location)
+	decorateExplainer(&status, location)
 	return status, nil
 }
 

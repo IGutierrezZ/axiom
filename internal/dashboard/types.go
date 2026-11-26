@@ -99,6 +99,8 @@ type IncrementDetailDTO struct {
 	VerifyReport  string            `json:"verify_report,omitempty"`
 	ArchiveReport string            `json:"archive_report,omitempty"`
 	BarrierReport *BarrierDTO       `json:"barrier_report,omitempty"`
+	// Explainer es el estado del HTML explicativo del cambio (nunca null).
+	Explainer IncrementExplainerDTO `json:"explainer"`
 }
 
 // BarrierDTO es el contrato JSON propio del dashboard para la barrera de sincronización
@@ -578,4 +580,19 @@ type AgentInstallResponse struct {
 	Message string   `json:"message"`
 	Agents  []string `json:"agents,omitempty"`
 	Error   string   `json:"error,omitempty"`
+}
+
+// IncrementExplainerDTO resume el HTML explicativo de un cambio para la pestaña «Explicación».
+type IncrementExplainerDTO struct {
+	Sealed  string         `json:"sealed"`  // yes|no
+	Enabled bool           `json:"enabled"` // sealed yes y almacén de ficheros
+	Error   string         `json:"error,omitempty"`
+	Items   []ExplainerDTO `json:"items"` // spec y design con Enabled; [] sin activación
+}
+
+// ExplainerDTO es la frescura del HTML de un tipo.
+type ExplainerDTO struct {
+	Kind  string `json:"kind"`            // spec|design
+	State string `json:"state,omitempty"` // fresh|stale|missing; vacío sin md de origen o con error
+	Error string `json:"error,omitempty"`
 }

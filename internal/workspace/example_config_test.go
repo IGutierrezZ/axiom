@@ -64,6 +64,20 @@ func TestExampleConfigLoads(t *testing.T) {
 	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
 		t.Fatalf("el bloque documentado declara id_pattern RF-<DOM>-<NN>: %q, %v", p.Template(), err)
 	}
+	// El bloque descomentado declara también explainer_html: ask.
+	if m, err := declarations.ExplainerHTML(); err != nil || m != ExplainerHTMLAsk || declarations.SDD.ExplainerHTML != ExplainerHTMLAsk {
+		t.Fatalf("el bloque documentado declara explainer_html: ask: %q, %v", m, err)
+	}
+}
+
+// La plantilla documenta los tres valores de sdd.explainer_html.
+func TestExampleConfigDocumentsExplainerHTML(t *testing.T) {
+	example := readExampleConfig(t)
+	for _, want := range []string{"explainer_html", "ask ", "always ", "never ", "resumen-spec.html", "resumen-design.html"} {
+		if !strings.Contains(example, want) {
+			t.Errorf("axiom.example.yaml debe documentar %q", want)
+		}
+	}
 }
 
 // `iso: true` no convive con `workflow.lane: odd`, ni siquiera con la plantilla.

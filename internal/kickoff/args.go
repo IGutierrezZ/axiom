@@ -133,7 +133,9 @@ type SealArgs struct {
 	// DocsPublication es el valor de --docs-publication (RF-KOF-10): solo `auto`, solo con
 	// continuous y nunca con --infer.
 	DocsPublication DocsPublication
-	JSON            bool
+	// ExplainerHTML es el valor de --explainer-html: yes o no; nunca con --infer.
+	ExplainerHTML ExplainerHTML
+	JSON          bool
 }
 
 // ParseSealArgs parses and validates `axiom sdd kickoff seal` arguments
@@ -237,6 +239,17 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 			}
 			parsed.DocsPublication = publication
 			i = next
+		case "--explainer-html":
+			value, next, err := requireFlagValue(args, i, "--explainer-html")
+			if err != nil {
+				return SealArgs{}, err
+			}
+			explainer := ExplainerHTML(value)
+			if !validExplainerHTMLs[explainer] {
+				return SealArgs{}, fmt.Errorf("--explainer-html desconocido %q; opciones: yes, no", value)
+			}
+			parsed.ExplainerHTML = explainer
+			i = next
 		case "--deployment-target":
 			value, next, err := requireFlagValue(args, i, "--deployment-target")
 			if err != nil {
@@ -259,6 +272,9 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 	if parsed.Infer {
 		if parsed.DocsPublication != "" {
 			return SealArgs{}, fmt.Errorf("--docs-publication no se puede combinar con --infer: la autorización de publicar nunca se infiere")
+		}
+		if parsed.ExplainerHTML != "" {
+			return SealArgs{}, fmt.Errorf("--explainer-html no se puede combinar con --infer: la decisión del HTML explicativo nunca se infiere")
 		}
 		return parsed, nil
 	}
@@ -382,6 +398,7 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (RF-PRE-03)
 			Roles:                roles,
 			DocsPublication:      a.DocsPublication,
+			ExplainerHTML:        a.ExplainerHTML,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: a.DeploymentTarget, PostArchivePolicy: "bug_only"},
 	}

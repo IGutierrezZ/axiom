@@ -126,6 +126,9 @@ type FlowConfig struct {
 	// preguntar en el estilo continuous (RF-KOF-10, RF-PUB-08). Vacia significa que no se publica
 	// automaticamente; un binario anterior ignora la clave.
 	DocsPublication DocsPublication `yaml:"docs_publication,omitempty"`
+	// ExplainerHTML es la decision sellada de generar el HTML explicativo de la spec y del diseno.
+	// Vacia (kickoff previo o retrosellado) equivale a ExplainerHTMLNo; un binario anterior ignora la clave.
+	ExplainerHTML ExplainerHTML `yaml:"explainer_html,omitempty"`
 }
 
 // DocsPublication es la autorizacion, sellada, de publicar los documentos del cambio sin preguntar
@@ -135,6 +138,25 @@ type DocsPublication string
 // DocsPublicationAuto autoriza publicar al terminar `spec` y `design`, al cerrar `tasks` y tras archivar,
 // sin preguntar (RF-PUB-08).
 const DocsPublicationAuto DocsPublication = "auto"
+
+// ExplainerHTML es la decision sellada de generar el HTML explicativo (`resumen-spec.html` y
+// `resumen-design.html`). Vacia equivale a ExplainerHTMLNo.
+type ExplainerHTML string
+
+const (
+	// ExplainerHTMLYes: sdd-spec y sdd-design escriben ademas el HTML explicativo.
+	ExplainerHTMLYes ExplainerHTML = "yes"
+	// ExplainerHTMLNo: solo se escribe el md.
+	ExplainerHTMLNo ExplainerHTML = "no"
+)
+
+// EffectiveExplainerHTML devuelve el valor efectivo: vacio (sin la clave) es no.
+func EffectiveExplainerHTML(v ExplainerHTML) ExplainerHTML {
+	if v == "" {
+		return ExplainerHTMLNo
+	}
+	return v
+}
 
 // CommitReviewMode is the per-commit review mode chosen at the tasks gate of a
 // checkpointed change (RF-GAT-19). The empty value means "not recorded" and is

@@ -56,6 +56,7 @@ var excludedRoutes = map[string]string{
 	"/api/skills/approve":                 "mutación (POST): aprueba una skill",
 	"/api/skills/reject":                  "mutación (POST): descarta una skill",
 	"/api/archive/specs/":                 "especificación viva por dominio de openspec/specs; no lee integraciones",
+	"/api/explainer":                      "sirve solo resumen-spec.html o resumen-design.html de la carpeta del cambio; no lee integraciones",
 	"/api/archive/sync":                   "mutación (POST): regenera INDEX.md",
 	"/api/ecosystem/doctor":               "diagnóstico del ecosistema de la máquina",
 	"/api/ecosystem/sync":                 "mutación (POST): sincroniza agentes",

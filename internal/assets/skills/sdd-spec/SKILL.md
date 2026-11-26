@@ -218,7 +218,11 @@ Follow **Section C** from `skills/_shared/sdd-phase-common.md`.
 - topic_key: `sdd/{change-name}/spec`
 - type: `architecture`
 
-### Step 6: Return Summary
+### Step 6: Explainer HTML (only with `governance.kickoff.explainerHtml: yes`)
+
+With the `openspec` or `hybrid` store, after writing the md run `axiom sdd status --cwd "<workspaceRoot>" <change> --json`, copy the literal `explainer.spec.expectedDigest` into `<meta name="axiom-source-digest">`, write `<changeRoot>/resumen-spec.html` as `../_shared/sdd-explainer-html.md` says (Spanish (castellano), self-contained with no `<script>` and no external resources, `data-axiom-ref` with the ID of each block, and the notice that what gets approved is the md), read the status again and fix it until `state: fresh`, and list its path in `artifacts`. With `engram` or `none`, write no HTML and say so in the result. When the phase is reopened by a rejection or a correction, regenerate the md and then the HTML. A failure writing the HTML never blocks the phase: finish with the md, warn, and leave `missing` or `stale`.
+
+### Step 7: Return Summary
 
 Return to the orchestrator:
 

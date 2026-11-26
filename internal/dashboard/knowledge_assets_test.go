@@ -252,6 +252,9 @@ func TestSpecParserAndRouterRuntime(t *testing.T) {
 		"  plain: renderSpec('Solo texto\\n\\n- **DADO** suelto sin escenario'),\n" +
 		"  route: [parseHash('#/specs'), parseHash('#/specs/auth'), parseHash('#/specs/a%20b'), parseHash('#/specs/x/extra'), parseHash('#/specs/%E0%A4%A')],\n" +
 		"  hrefs: [hrefFor('specs'), hrefFor('specs', { domain: 'a b/c' })],\n" +
+		"  declared: parseSpec(['### Requirement: Funcional (RF-TRC-02)', '### Requirement: Historia (HU-001)',\n" +
+		"    '### Requirement: Paréntesis normal (opcional)', '### Requirement: Heredado (Requisito 7)'].join('\\n'))\n" +
+		"    .filter(b => b.type === 'requirement').map(r => r.id + '|' + r.title),\n" +
 		"}));\n"
 	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
 		t.Fatal(err)
@@ -278,10 +281,18 @@ func TestSpecParserAndRouterRuntime(t *testing.T) {
 			Domain    string `json:"domain"`
 			Canonical bool   `json:"canonical"`
 		} `json:"route"`
-		Hrefs []string `json:"hrefs"`
+		Hrefs    []string `json:"hrefs"`
+		Declared []string `json:"declared"`
 	}
 	if err := json.Unmarshal(out, &res); err != nil {
 		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
+	}
+
+	// El ID del título sigue el patrón declarado del proyecto (RF-<DOM>-<NN>, HU-<NNN>…), no solo
+	// REQ; un paréntesis que no es un ID se queda en el título.
+	wantDeclared := "RF-TRC-02|Funcional,HU-001|Historia,|Paréntesis normal (opcional),Requisito 7|Heredado"
+	if got := strings.Join(res.Declared, ","); got != wantDeclared {
+		t.Errorf("ids declarados = %s, se esperaba %s", got, wantDeclared)
 	}
 
 	// Estructura: un bloque de texto inicial y dos requisitos; lo de dentro del bloque de código no abre otro.

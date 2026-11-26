@@ -298,3 +298,113 @@ func TestWorkspaceValidateIDPattern(t *testing.T) {
 	_, err := LoadConfig(configPath)
 	wantErrorContains(t, err, "sdd.id_pattern", `"<m><m>"`)
 }
+
+// `sdd.explainer_html` es un texto de la lista cerrada ask, always o never.
+func TestDecodeSDDExplainerHTML(t *testing.T) {
+	valid := map[string]ExplainerHTMLMode{
+		"ask":           ExplainerHTMLAsk,
+		"always":        ExplainerHTMLAlways,
+		"never":         ExplainerHTMLNever,
+		"\"always\"":    ExplainerHTMLAlways,
+		"always # nota": ExplainerHTMLAlways,
+	}
+	for value, want := range valid {
+		got, err := decodeSDD(sddNode(t, "sdd:\n  explainer_html: "+value+"\n"))
+		if err != nil || got == nil || got.ExplainerHTML != want {
+			t.Errorf("explainer_html: %s -> %+v, %v", value, got, err)
+		}
+	}
+
+	t.Run("independiente de iso y de id_pattern", func(t *testing.T) {
+		got, err := decodeSDD(sddNode(t, "sdd:\n  iso: true\n  explainer_html: never\n  id_pattern: \"RF-<DOM>-<NN>\"\n"))
+		if err != nil || got == nil || !got.ISO || got.IDPattern == nil || got.ExplainerHTML != ExplainerHTMLNever {
+			t.Fatalf("decodeSDD = %+v, %v", got, err)
+		}
+	})
+	t.Run("ausente deja el modo sin declarar", func(t *testing.T) {
+		got, err := decodeSDD(sddNode(t, "sdd:\n  iso: true\n"))
+		if err != nil || got == nil || got.ExplainerHTML != "" {
+			t.Fatalf("decodeSDD = %+v, %v", got, err)
+		}
+	})
+
+	invalid := []struct {
+		name   string
+		source string
+		wants  []string
+	}{
+		{"texto fuera de la lista", "sdd:\n  explainer_html: quizás\n", []string{"sdd.explainer_html (línea 2)", `"quizás"`, "usa ask, always o never"}},
+		{"mayúsculas", "sdd:\n  explainer_html: Always\n", []string{`"Always"`, "usa ask, always o never"}},
+		{"booleano", "sdd:\n  explainer_html: true\n", []string{`"true"`, "usa ask, always o never"}},
+		{"nulo", "sdd:\n  explainer_html:\n", []string{"sdd.explainer_html", "usa ask, always o never"}},
+		{"lista", "sdd:\n  explainer_html: [ask]\n", []string{"sdd.explainer_html", "usa ask, always o never"}},
+		{"mapa", "sdd:\n  explainer_html: {a: b}\n", []string{"sdd.explainer_html", "usa ask, always o never"}},
+		{"clave repetida", "sdd:\n  explainer_html: ask\n  explainer_html: never\n", []string{"clave duplicada 'explainer_html'"}},
+		{"clave desconocida", "sdd:\n  explainer_htm: ask\n", []string{"explainer_htm", "claves admitidas: iso, id_pattern, explainer_html"}},
+	}
+	for _, tc := range invalid {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := decodeSDD(sddNode(t, tc.source))
+			if got != nil {
+				t.Errorf("un bloque inválido no devuelve configuración: %+v", got)
+			}
+			wantErrorContains(t, err, tc.wants...)
+		})
+	}
+}
+
+// Declarations.ExplainerHTML() lee en vivo la declaración y nunca cae en silencio
+// a ask con un bloque o un fichero que no se pudo leer.
+func TestDeclarationsExplainerHTML(t *testing.T) {
+	mode := func(t *testing.T, blocks string) ExplainerHTMLMode {
+		t.Helper()
+		_, _, declarations := parseDeclarations(t, blocks)
+		got, err := declarations.ExplainerHTML()
+		if err != nil {
+			t.Fatalf("ExplainerHTML(%q): %v", blocks, err)
+		}
+		return got
+	}
+	if got := mode(t, ""); got != ExplainerHTMLAsk {
+		t.Errorf("sin bloque: %q", got)
+	}
+	if got := mode(t, "sdd:\n  iso: true\n"); got != ExplainerHTMLAsk {
+		t.Errorf("sin clave: %q", got)
+	}
+	if got := mode(t, "sdd:\n  explainer_html: always\n"); got != ExplainerHTMLAlways {
+		t.Errorf("always: %q", got)
+	}
+	// Independiente del carril: workflow.lane no cambia el valor.
+	if got := mode(t, "workflow:\n  lane: odd\nsdd:\n  explainer_html: never\n"); got != ExplainerHTMLNever {
+		t.Errorf("never con workflow.lane odd: %q", got)
+	}
+
+	_, _, bad := parseDeclarations(t, "sdd:\n  explainer_html: quizás\n")
+	if _, err := bad.ExplainerHTML(); err == nil || !errors.Is(err, bad.SDDErr) {
+		t.Errorf("con SDDErr debe envolverlo con %%w: %v", err)
+	}
+	contradiction := Declarations{SDDErr: ErrISOWorkflowContradiction}
+	if _, err := contradiction.ExplainerHTML(); !errors.Is(err, ErrISOWorkflowContradiction) {
+		t.Errorf("con la contradicción debe envolverla: %v", err)
+	}
+	parseErr := errors.New("yaml roto")
+	if _, err := (Declarations{ParseErr: parseErr}).ExplainerHTML(); !errors.Is(err, parseErr) {
+		t.Errorf("con ParseErr debe envolverlo: %v", err)
+	}
+}
+
+// workspace validate (LoadConfig) rechaza un valor no admitido y acepta los tres.
+func TestWorkspaceValidateExplainerHTML(t *testing.T) {
+	ws := workspacetest.Embedded(t, ".")
+	configPath := filepath.Join(ws.Master, "axiom.yaml")
+
+	for _, v := range []string{"ask", "always", "never"} {
+		workspacetest.WriteFile(t, configPath, locateEmbeddedConfig+"sdd:\n  explainer_html: "+v+"\n")
+		if _, err := LoadConfig(configPath); err != nil {
+			t.Fatalf("%s debe cargar: %v", v, err)
+		}
+	}
+	workspacetest.WriteFile(t, configPath, locateEmbeddedConfig+"sdd:\n  explainer_html: quizás\n")
+	_, err := LoadConfig(configPath)
+	wantErrorContains(t, err, "sdd.explainer_html", `"quizás"`, "usa ask, always o never")
+}

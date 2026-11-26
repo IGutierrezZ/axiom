@@ -53,6 +53,9 @@ type StatusV2Projection struct {
 	// omitted without readable deltas, for an archived change, with a store that keeps
 	// no files or with an inaccessible ID pattern.
 	Requirements *RequirementsProjection `json:"requirements,omitempty"`
+	// Explainer projects Status.Explainer unchanged (C-06-b): additive and omitted unless axiom.yaml
+	// has an `sdd:` block or the selected change is sealed with explainer_html yes.
+	Explainer *ExplainerProjection `json:"explainer,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -142,6 +145,9 @@ type kickoffV2 struct {
 	// DocsPublication es la autorizacion sellada de publicar los documentos sin preguntar (RF-KOF-10);
 	// ausente cuando el kickoff no la lleva.
 	DocsPublication string `json:"docsPublication,omitempty"`
+	// ExplainerHTML es la decision sellada del HTML explicativo (yes o no); ausente cuando el kickoff
+	// no la lleva, que equivale a no.
+	ExplainerHTML string `json:"explainerHtml,omitempty"`
 }
 
 type gateV2 struct {
@@ -203,6 +209,7 @@ func projectGovernanceV2(governance *Governance) *governanceV2 {
 			ExecutionStyle:  string(governance.Kickoff.Config.ExecutionStyle),
 			HandoffPolicy:   string(governance.Kickoff.Config.HandoffPolicy),
 			DocsPublication: string(governance.Kickoff.Config.DocsPublication),
+			ExplainerHTML:   string(governance.Kickoff.Config.ExplainerHTML),
 			SealedAt:        sealedAt,
 			SealedBy:        governance.Kickoff.SealedBy,
 		},
@@ -260,6 +267,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 	projected.Workflow = status.Workflow
 	projected.ISO = status.ISO
 	projected.Requirements = status.Requirements
+	projected.Explainer = status.Explainer
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,
