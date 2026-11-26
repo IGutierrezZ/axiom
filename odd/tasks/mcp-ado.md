@@ -47,7 +47,7 @@ Que el agente consulte Azure DevOps (contexto, duplicados, ayuda a la redacción
 - [x] **T2 · Inyección condicionada al plugin activo (`internal/cli/sync.go`, `run.go`)** — ruta: inline.
   - Resolver la organización desde `workspace.Locate(s.workspaceDir)` → `Declarations.Integrations.Active()`.
   - Pruebas: con plugin activo en workspace se escribe; sin plugin o en ámbito de usuario, nada cambia.
-- [ ] **T3 · Doctrina de frontera agente/binario y goldens** — ruta: inline.
+- [x] **T3 · Doctrina de frontera agente/binario y goldens** — ruta: inline.
   - Párrafo en `sdd-orchestrator-sections.md` y línea en la sección ODD de `routing.go`.
   - Pruebas de paridad y regeneración de goldens.
 
@@ -62,13 +62,16 @@ Que el agente consulte Azure DevOps (contexto, duplicados, ayuda a la redacción
 - Worktree creado con `scripts/axiom-worktree.ps1 new mcp-ado -Lane odd`.
 - T1: `go test ./internal/versions ./internal/components/mcp -run 'AzureDevOps|TestPinnedVersions'` → ok (6 pruebas, 6 agentes); `gofmt -l` y `go vet` limpios.
 - T2: `go test ./internal/cli -run 'TestRunInstallWorkspaceInjectsAzureDevOpsMCPOnlyWithThePlugin|TestAzureDevOpsMCPOrganization|Context7'` → ok; `go vet ./internal/cli` limpio.
+- T3: `go test ./internal/components/agentguidance ./internal/components/sdd ./internal/assets ./internal/components/mcp` → ok; goldens regenerados (`go test ./internal/components -run 'TestGoldenSDD_|TestGoldenCombined_Claude' -update`, 10 ficheros) y `go test ./internal/components -run TestGolden` → ok. Nota en `docs/manual-de-inicio.md`.
 
 ## Commits
 
 | Tarea | Commit |
 |---|---|
 | T1 | `e3dfd9f0` |
+| T2 | `b7e14cc0` |
+| T3 | commit `docs(sdd)` que cierra la rama (sin `## Spec viva`: no hay `axiom archive integrate`) |
 
 ## Siguiente paso
 
-T1.
+Abrir la PR.
