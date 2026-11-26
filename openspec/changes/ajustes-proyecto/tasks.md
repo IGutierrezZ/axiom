@@ -109,7 +109,7 @@ Recordatorios de CI: cadenas JS comprobadas en `server_test.go:447` y `assets_br
 
 - [x] 7.1 Reescribir en `internal/dashboard/assets_branch_test.go` `TestBranchPolicyIsShownReadOnlyInEcosystem` (Ecosistema enlaza a `#/ajustes` sin pintar la política), borrar `TestBranchPolicyRuntime`, renombrar `TestWorktreePrefsEditorInEcosystem` a «InSettings» (`view-ajustes`, `screens/ajustes.js`) y actualizar el comentario de cabecera (RED).
 - [x] 7.2 Retirar `branchPolicyRows`, `repoPolicyHtml` y el import de `tableWrap` de `internal/dashboard/assets/js/core/branches.js` (la cabecera pasa a cuatro funciones); retirar su uso y las funciones y el enlace del formulario de worktree en `internal/dashboard/assets/js/screens/ecosystem.js`; la tarjeta Topología enlaza a `#/ajustes`.
-- [x] 7.3 Añadir el enlace «Ajustes del proyecto» al popover de proyecto de `internal/dashboard/assets/index.html`, y confirmar que `GET /api/workspace` conserva `branchPolicy` y `repositories` (`TestWorkspaceIsReadOnly` en `internal/dashboard/server_test.go` queda sin cambios).
+- [x] 7.3 Añadir el enlace «Ajustes del proyecto» al popover de proyecto de `internal/dashboard/assets/index.html`, y confirmar que `GET /api/workspace` conserva `branchPolicy` y `repositories` (`TestWorkspaceIsReadOnly` en `internal/dashboard/server_test.go` queda sin cambios). Evidencia: commit 82a825cde.
 
 Cubre: RF-WEB-21, RF-WEB-01
 
@@ -119,9 +119,9 @@ Recordatorio de CI: cadenas JS de `server_test.go:447` y `assets_branch_test.go`
 
 ## Fase 8: Documentación
 
-- [ ] 8.1 `docs/usage.md`: subsección «Ajustes del proyecto desde el dashboard» con claves editables, claves de solo lectura, «solo afecta a cambios nuevos», endpoints con sus códigos, petición local y autofetch.
-- [ ] 8.2 `docs/codebase/dashboard.md`: invariante de que `axiom.yaml` solo se escribe por `/api/settings` mediante `internal/settings` y de que toda escritura exige `isLocalRequest`.
-- [ ] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario.
+- [x] 8.1 `docs/usage.md`: subsección «Ajustes del proyecto desde el dashboard» con claves editables, claves de solo lectura, «solo afecta a cambios nuevos», endpoints con sus códigos, petición local y autofetch.
+- [x] 8.2 `docs/codebase/dashboard.md`: invariante de que `axiom.yaml` solo se escribe por `/api/settings` mediante `internal/settings` y de que toda escritura exige `isLocalRequest`.
+- [x] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario.
 
 Cubre: RF-WEB-10, RF-WEB-18, RF-TOP-21, RF-TOP-22
 

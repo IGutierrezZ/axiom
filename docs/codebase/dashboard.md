@@ -40,6 +40,8 @@ Guía de usuario: [usage.md](../usage.md#ui).
 - **No direct local DB assumptions**: no leer `.engram/engram.db` desde el dashboard salvo decisión explícita de arquitectura.
 - **No silent cloud coupling**: el estado remoto va detrás de una interfaz de transporte/cliente.
 - **Assets sin recursos externos** ni emojis (lo vigilan los tests de `internal/dashboard`).
+- **`axiom.yaml` solo se escribe por `PUT /api/settings`**, mediante `internal/settings` (catálogo, escritor de round-trip y revisión). Ninguna otra ruta modifica `axiom.yaml`, y `GET /api/workspace` sigue siendo solo lectura. `internal/dashboard/settings_api.go` solo traduce entre HTTP y ese paquete.
+- **Toda escritura exige `isLocalRequest`**, lo primero y antes de leer el cuerpo (`rejectNonLocal`): `PUT /api/settings`, `PUT /api/settings/personal` y `PUT /api/projects/active/worktree-prefs`. Los `GET` siguen abiertos. Una ruta nueva se registra en `server.go` con literal de cadena y se clasifica en `secrets_canary_test.go`.
 
 ## Navigation
 

@@ -379,6 +379,30 @@ Salvedades:
 
 `GET /api/ecosystem/models` devuelve las asignaciones y las opciones de cada adaptador instalado, y `POST /api/ecosystem/models` guarda un parche por adaptador. Solo el `POST` modifica algo, y, como los demás de este panel, solo acepta peticiones locales (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin hacer nada. Sin proyecto abierto responde `409`.
 
+#### Ajustes del proyecto desde el dashboard
+
+La pantalla **Ajustes** (`#/ajustes`, también desde el selector de proyecto) edita las claves de `axiom.yaml` que el catálogo declara editables. Se genera del catálogo que devuelve el servidor: tipo, valores permitidos, efecto de editar la clave y valor por defecto. Escribe el `axiom.yaml` efectivo del proyecto (en `multirepo`, el del repositorio de specs al que apunta el puntero, nunca uno nuevo en el código) y **solo afecta a cambios nuevos**: lo que ya está en curso no se reescribe. El cambio queda sin confirmar en el árbol de trabajo; confirmarlo con git es decisión tuya.
+
+**Claves editables**
+
+- Siempre: `workspace.name`, `git.integration_branch`, `git.branch_prefix`, `git.main_branch`, `git.promotion`, `workflow.lane`, `delivery.split_hint_lines`, `sdd.iso`, `sdd.id_pattern` y `sdd.explainer_html`.
+- Solo en `multirepo`: `repositories[<ruta>].integration_branch`, `.branch_prefix` y `.promotion`, `acceptance_tests.enabled`, `acceptance_tests.environments` y `roles[<id>].gate_policy` (`blocking`, `deferred` u `optional`).
+- Los vocabularios cerrados (`promotion`, `lane`, `explainer_html`, `gate_policy`) salen de las constantes del esquema: una opción nueva aparece sin tocar la pantalla. En un proyecto ISO (`sdd.iso: true`), `workflow.lane` no ofrece `odd`.
+- `sdd.iso` hace que todo el trabajo pase por SDD y que `verify` sea obligatorio antes de archivar. `sdd.id_pattern` solo lo usan los requisitos nuevos: los existentes no se renombran.
+
+**Claves de solo lectura**, con el enlace «Abrir en el editor» y el botón «Copiar ruta»: `workspace.topology`, `workspace.specs_repository`, `workspace.root`, `workspace.skill_roots`, `technical_context` y las claves de `governance`. El bloque `integrations`, `artifact_store` y los controles de RDD no se ofrecen.
+
+**Cómo se guarda.** La pantalla envía un lote con solo lo que cambió y la revisión (SHA-256) que leyó. Un valor vacío retira la clave (el motor vuelve a su valor por defecto) y un bloque que queda vacío se borra. El escritor conserva comentarios, orden de claves, líneas en blanco, finales de línea CRLF y BOM, valida el documento resultante entero (`ParseConfig`, `Validate`, `ValidateDeclarationPaths` y `ValidateRepositoryPolicies`) y reemplaza el fichero de forma atómica. De las comprobaciones contra el disco solo bloquean los errores que introduce el cambio: los que el proyecto ya tenía vuelven como avisos. Un `axiom.yaml` con anclas, alias, claves `<<`, más de un documento o claves repetidas no se edita desde la pantalla: se informa el motivo y se edita a mano.
+
+**Endpoints**
+
+- `GET /api/settings`: el catálogo con los valores tal como están escritos, la `revision`, la `configPath`, `writable` y los `documentErrors`. `404` con `config_missing` si el proyecto no tiene `axiom.yaml`.
+- `PUT /api/settings` con `{"revision": "…", "changes": {"<clave>": <valor>|null}}`: `200` con `{settings, changed, warnings}`; `400` (`invalid_request`), `403`, `404` (`config_missing`), `409` (`revision_mismatch`, por una edición externa), `422` (`unsupported_document`, `unknown_key`, `key_not_editable`, `key_not_applicable`, `invalid_value` y `validation_failed` con sus `violations`) y `500` (`write_failed`). `POST`, `PATCH` y `DELETE` responden `405`.
+- `GET /api/settings/personal` y `PUT /api/settings/personal` con `{"autofetch": true|false}`: la preferencia personal de autofetch del proyecto abierto, guardada en tu hub (`workspaces.json`) y no en `axiom.yaml`. Un cuerpo inválido, sin la clave o no booleano responde `400`; un proyecto sin registrar, `404`.
+- Los modos y la raíz de worktree se editan en el mismo bloque «Preferencias personales», con `GET|PUT /api/projects/active/worktree-prefs`.
+
+Toda escritura (los tres `PUT`) solo acepta peticiones del propio dashboard (`127.0.0.1` o `localhost` en su puerto): con un `Origin` o `Host` ajenos responde `403` sin leer el cuerpo ni escribir. Los `GET` siguen abiertos. Queda una ventana de milisegundos entre la última comprobación de revisión y el reemplazo atómico en la que una edición externa podría perderse; no hay `rename` condicional en ningún sistema operativo.
+
 #### Usar `axiom ui` como aplicación de escritorio
 
 El flujo recomendado es instalar el panel como aplicación (PWA) desde el navegador y anclar ese icono; el servidor arranca solo con Windows.
