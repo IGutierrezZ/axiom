@@ -34,4 +34,3 @@ func TestHelpCommandsHeadingIsAligned(t *testing.T) {
 		t.Fatalf("help output has inconsistent command indentation:\n%s", buf.String())
 	}
 }
-
