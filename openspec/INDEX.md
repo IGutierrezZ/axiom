@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 01:01:29 UTC
-> **Total Dominios:** 53 | **Total Requerimientos:** 528 | **Total Escenarios BDD:** 2141
+> **Última Sincronización:** 2026-11-26 02:27:08 UTC
+> **Total Dominios:** 53 | **Total Requerimientos:** 538 | **Total Escenarios BDD:** 2262
 
 ---
 
@@ -14,7 +14,7 @@
 | `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 18 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 10 | 13 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
-| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 13 | 74 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
+| `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 14 | 83 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 7 | 14 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
@@ -35,21 +35,21 @@
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
-| `odd-living-spec-integration` | Especificación de Requerimientos: Integración del Carril ODD en la Spec Viva de OpenSpec (REQ-30.1 a REQ-30.8) | 9 | 48 | [Ver Spec](specs/odd-living-spec-integration/spec.md) |
+| `odd-living-spec-integration` | Especificación de Requerimientos: Integración del Carril ODD en la Spec Viva de OpenSpec (REQ-30.1 a REQ-30.8) | 10 | 71 | [Ver Spec](specs/odd-living-spec-integration/spec.md) |
 | `odd-sdd-promotion` | Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-sdd-promotion/spec.md) |
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 68 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 69 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 15 | 28 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
-| `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
-| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 14 | 91 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
+| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 122 | [Ver Spec](specs/requirement-identifiers/spec.md) |
+| `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 52 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
-| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 108 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
+| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 118 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 90 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
@@ -255,6 +255,16 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* El consentimiento de edición SDD permanece
 - **[REQ-46.7]** Resiliencia en Decodificación de Rutas Windows en Salidas JSON de SDD
   - *Escenario BDD:* Validación de rutas permitidas bajo Windows
+- **[REQ-47.9]** `axiom sdd status --json` Proyecta los Requisitos que el Cambio Modifica y Crea
+  - *Escenario BDD:* Un cambio con deltas proyecta `modifies` y `creates`
+  - *Escenario BDD:* Un RENAMED cuenta como modificación con el identificador existente
+  - *Escenario BDD:* Un ADDED provisional se proyecta con su provisional
+  - *Escenario BDD:* Sin deltas el campo se omite
+  - *Escenario BDD:* Un requisito sin identificador se proyecta sin `id`
+  - *Escenario BDD:* El campo se omite con el almacén `engram`, con el cambio archivado y con el patrón inaccesible
+  - *Escenario BDD:* La proyección no altera el resto del estado
+  - *Escenario BDD:* La proyección es determinista
+  - *Escenario BDD:* El contrato documenta el campo
 
 ### Dominio: `axiom-skills-index-governance` — Especificación Viva: Gobernanza del Índice Unificado de Skills
 
@@ -1317,11 +1327,20 @@ Definir cómo un incremento o un bug tramitado por el carril ODD integra sus req
   - *Escenario BDD:* Todo o nada entre capacidades
   - *Escenario BDD:* Sin compuertas ni artefactos SDD
   - *Escenario BDD:* Documento inexistente
+  - *Escenario BDD:* Se asigna el número y se reescribe el documento ODD
+  - *Escenario BDD:* El documento ODD forma parte del conjunto atómico
+  - *Escenario BDD:* Se escribe solo en los destinos permitidos
 - **[REQ-30.3]** Idempotencia de la Integración ODD
   - *Escenario BDD:* Repetir la integración no cambia nada
   - *Escenario BDD:* Un requisito ya presente con otro cuerpo se rechaza
   - *Escenario BDD:* Un REMOVED ya aplicado es un no-op
   - *Escenario BDD:* Tras un rebase el nombre ya no casa
+  - *Escenario BDD:* Repetir una integración con provisionales no reasigna nada
+  - *Escenario BDD:* Un título cambiado no rompe el reconocimiento de lo ya integrado
+  - *Escenario BDD:* Dos ramas concurrentes reciben números distintos sin renumerar a mano
+  - *Escenario BDD:* Un duplicado entre capacidades sin conflicto de git no pasa en silencio
+  - *Escenario BDD:* Editar el cuerpo de un ADDED ya integrado se rechaza
+  - *Escenario BDD:* Una serie nueva ocupada por otro cambio se reasigna entera
 - **[REQ-30.4]** Comprobación de Colisión de Identificadores de Requisito según el Patrón Declarado
   - *Escenario BDD:* Colisión con la spec viva
   - *Escenario BDD:* Colisión con la delta de un cambio activo
@@ -1332,6 +1351,12 @@ Definir cómo un incremento o un bug tramitado por el carril ODD integra sus req
   - *Escenario BDD:* Colisión con un patrón declarado
   - *Escenario BDD:* Un ADDED con el formato por defecto se rechaza con un patrón declarado
   - *Escenario BDD:* El siguiente libre no cruza series
+  - *Escenario BDD:* Un ADDED con un provisional se acepta y se asigna
+  - *Escenario BDD:* Un provisional no colisiona con otro cambio activo
+  - *Escenario BDD:* Un MODIFIED con un identificador inexistente se rechaza con un error tipado
+  - *Escenario BDD:* Un provisional fuera de ADDED se rechaza
+  - *Escenario BDD:* Un provisional citado sin ADDED que lo declare se rechaza
+  - *Escenario BDD:* Un provisional duplicado en el documento se rechaza
 - **[REQ-30.5]** Marcador `Sin impacto en la spec` y Obligación de los Bugs ODD
   - *Escenario BDD:* Un bug sin delta ni marcador se rechaza
   - *Escenario BDD:* El marcador con motivo pasa sin cambiar la spec
@@ -1362,6 +1387,15 @@ Definir cómo un incremento o un bug tramitado por el carril ODD integra sus req
   - *Escenario BDD:* Espacios iniciales y finales
   - *Escenario BDD:* Solo cuenta la primera línea de motivo
   - *Escenario BDD:* La etiqueta tiene una única definición
+- **[REQ-47.7]** `axiom archive integrate --odd <feature> --check` Proyecta los Requisitos y el Mapa Previsto sin Escribir
+  - *Escenario BDD:* `--check` no escribe nada
+  - *Escenario BDD:* `--check` proyecta `requirements` y el mapa previsto
+  - *Escenario BDD:* `--check` rechaza lo que la integración rechazaría
+  - *Escenario BDD:* `--check` detecta el duplicado entre capacidades
+  - *Escenario BDD:* Sin `--check` el informe conserva sus campos
+  - *Escenario BDD:* `--check` sobre un documento ya integrado
+  - *Escenario BDD:* `--check` distingue una reasignación
+  - *Escenario BDD:* `--check` aplica la comprobación del contexto y no regenera el índice
 
 ### Dominio: `odd-sdd-promotion` — Especificación de Requerimientos: Promoción de Documentos ODD a Propuestas SDD (INC-19)
 
@@ -1485,6 +1519,7 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* La regla figura en el paso de cierre del protocolo ODD
   - *Escenario BDD:* El cierre remite a los localizadores de la exploración
   - *Escenario BDD:* El cierre manda integrar la spec viva y declarar el impacto de los bugs
+  - *Escenario BDD:* El cierre indica el identificador provisional del ADDED y la asignación
   - *Escenario BDD:* La regla no exige nada sin contexto mantenido
   - *Escenario BDD:* La documentación de referencia no se modifica
   - *Escenario BDD:* El renderizado sigue siendo determinista e idéntico entre proyectos
@@ -1774,7 +1809,7 @@ Definir el contexto técnico del proyecto como concepto de primera clase: cómo 
 
 ### Dominio: `requirement-identifiers` — Especificación de requirement-identifiers
 
-Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia; la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad no asigna identificadores provisionales ni definitivos (C-03-b), no conserva los identificadores de un cliente al adoptar (C-03-c), no traza identificadores (C-03-d) ni migra las specs de Axiom (C-03-e).
+Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia; la única excepción deliberada y temporal es `adoptcheck` con `archive adopt` (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no conserva los identificadores de un cliente al adoptar (C-03-c) ni migra las specs de Axiom (C-03-e).
 
 **Archivo:** [`specs/requirement-identifiers/spec.md`](specs/requirement-identifiers/spec.md)
 
@@ -1853,6 +1888,68 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* `archive-compose` sin workspace usa el defecto
   - *Escenario BDD:* `sdd trace` y `archive-check` terminan con error
   - *Escenario BDD:* Un cambio ISO con el patrón inaccesible
+- **[REQ-47.1]** Forma del Identificador Provisional, Inconfundible con un Identificador Válido, Única en el Cambio y Ausente de la Spec Viva
+  - *Escenario BDD:* Un provisional no es un identificador válido con ningún patrón
+  - *Escenario BDD:* El provisional contiene una minúscula
+  - *Escenario BDD:* Un provisional con la serie fijada la conserva
+  - *Escenario BDD:* Varios ADDED comparten una serie nueva
+  - *Escenario BDD:* Una etiqueta de serie nueva no se admite con un patrón con `<DOM>`
+  - *Escenario BDD:* Un provisional repetido en el cambio es un error
+  - *Escenario BDD:* El mismo provisional en dos cambios no colisiona
+  - *Escenario BDD:* Ningún provisional llega a la spec viva
+  - *Escenario BDD:* Los lectores de deltas activas no toman el provisional como identificador
+- **[REQ-47.2]** Asignación del Siguiente Número Libre al Integrar, Incluida la Apertura de una Serie
+  - *Escenario BDD:* Se asigna el siguiente libre de una serie existente
+  - *Escenario BDD:* Se abre una serie vacía con un patrón de dominio
+  - *Escenario BDD:* Se abre una serie nueva con el patrón por defecto
+  - *Escenario BDD:* Dos etiquetas de serie nueva reciben series distintas
+  - *Escenario BDD:* Varios ADDED de una serie reciben números consecutivos
+  - *Escenario BDD:* La asignación es determinista
+  - *Escenario BDD:* Patrón de serie única
+  - *Escenario BDD:* Un definitivo del propio cambio cuenta como ocupado
+  - *Escenario BDD:* Una serie nueva no recae en una serie fijada por el propio cambio
+  - *Escenario BDD:* Un definitivo de otro cambio activo cuenta como ocupado
+- **[REQ-47.3]** Plan Único de Asignación sobre Todas las Capacidades, Validado antes de Escribir
+  - *Escenario BDD:* Dos capacidades del cambio no reciben el mismo número
+  - *Escenario BDD:* Un MODIFIED con un identificador inexistente se rechaza
+  - *Escenario BDD:* El nombre antiguo de un RENAMED con un identificador inexistente se rechaza
+  - *Escenario BDD:* Un REMOVED que ya no se resuelve es lo ya integrado
+  - *Escenario BDD:* Un MODIFIED sin identificador se resuelve por título fuera de ISO
+  - *Escenario BDD:* Una capacidad nueva con MODIFIED, REMOVED o RENAMED se rechaza
+  - *Escenario BDD:* Un nombre con un provisional y otro identificador es ambiguo
+  - *Escenario BDD:* Una serie fijada que el patrón no admite se rechaza
+  - *Escenario BDD:* Un mapa guardado ilegible o de otro patrón se rechaza
+  - *Escenario BDD:* Con el patrón inaccesible el plan no se evalúa
+  - *Escenario BDD:* Un MODIFIED con un identificador existente se acepta
+  - *Escenario BDD:* Un provisional en MODIFIED, REMOVED o RENAMED se rechaza
+  - *Escenario BDD:* Un provisional citado sin ADDED que lo declare se rechaza
+  - *Escenario BDD:* Un ADDED con un identificador definitivo se sigue aceptando
+  - *Escenario BDD:* El plan no escribe nada
+- **[REQ-47.4]** Sustitución por Token Completo y Reescritura Atómica del Provisional en Todos sus Destinos
+  - *Escenario BDD:* La sustitución respeta los límites del token
+  - *Escenario BDD:* La sustitución es sensible a mayúsculas
+  - *Escenario BDD:* El `Cubre:` conserva su posición
+  - *Escenario BDD:* Un fallo en la reescritura no deja nada a medias
+  - *Escenario BDD:* Una asignación inválida no escribe ningún destino
+  - *Escenario BDD:* Sin provisionales no se reescribe nada
+  - *Escenario BDD:* La matriz de verificación se reescribe al archivar
+  - *Escenario BDD:* La prosa de las tareas se valida pero no se reescribe
+  - *Escenario BDD:* La prosa de diseño no se valida
+  - *Escenario BDD:* Un fallo al restaurar se nombra
+- **[REQ-47.5]** Detección de Identificadores Duplicados entre Capacidades de la Spec Viva
+  - *Escenario BDD:* La misma serie nueva en dos capacidades se detecta
+  - *Escenario BDD:* Un duplicado ajeno a la integración no la bloquea
+  - *Escenario BDD:* Un ADDED con identificador definitivo duplicado entre capacidades se rechaza
+- **[REQ-47.6]** Traza Legible del Mapa de Provisional a Definitivo tras Archivar
+  - *Escenario BDD:* La traza de un cambio SDD es legible tras archivar
+  - *Escenario BDD:* La traza ODD consta en el documento y en el informe
+  - *Escenario BDD:* Sin provisionales no hay traza
+  - *Escenario BDD:* Las trazas anteriores no se reescriben
+  - *Escenario BDD:* La sección del mapa no altera la validación del documento ODD
+- **[REQ-47.10]** Las Guías de las Fases Describen el Identificador Provisional y el Paso de Archivado
+  - *Escenario BDD:* La guía de `sdd-spec` describe el provisional
+  - *Escenario BDD:* La guía de `sdd-archive` usa el paso de archivado del cambio
+  - *Escenario BDD:* La convención ISO admite el provisional hasta archivar
 
 ### Dominio: `sdd-archive-lifecycle` — Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21)
 
@@ -1868,6 +1965,8 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* Archivado exitoso actualiza incremento, especificación viva e inventario
   - *Escenario BDD:* Archivado con contexto mantenido integra el delta de contexto
   - *Escenario BDD:* La integración se verifica antes de transferir el incremento
+  - *Escenario BDD:* La asignación y la traza se completan antes de transferir
+  - *Escenario BDD:* Una asignación inválida deja el incremento sin transferir
 - **[REQ-21.18]** Sellado Inmutable Post-Archive y Gestión Exclusiva vía Bug o Nuevo Incremento
   - *Escenario BDD:* Intento de reabrir un incremento archivado se rechaza
   - *Escenario BDD:* Regresión post-archive se gestiona mediante bug o nuevo incremento
@@ -1953,6 +2052,10 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* `archive-check` con un REMOVED por identificador y título obsoleto
   - *Escenario BDD:* Una segunda integración ODD de un MODIFIED por identificador es idempotente
   - *Escenario BDD:* Con un bloque `sdd:` inválido la composición se niega
+  - *Escenario BDD:* Un ADDED provisional se rechaza remitiendo al paso de archivado del cambio
+  - *Escenario BDD:* Un provisional en MODIFIED, REMOVED o RENAMED se rechaza
+  - *Escenario BDD:* Un provisional solo en el cuerpo se rechaza
+  - *Escenario BDD:* Un REMOVED con un identificador inexistente tiene su error tipado
 - **[REQ-30.23]** Fidelidad de Bytes al Componer
   - *Escenario BDD:* Round-trip en LF, CRLF y CRLF con BOM
   - *Escenario BDD:* Los bloques editados usan el final de línea del documento
@@ -1965,6 +2068,24 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
 - **[REQ-30.25]** Retirada de `axiom sdd integrate`
   - *Escenario BDD:* `axiom sdd integrate` remite a los verbos nuevos
   - *Escenario BDD:* Las skills no citan el verbo retirado
+- **[REQ-47.8]** Paso de Archivado del Cambio Entero Dirigido por Go, Capacidades Nuevas Incluidas
+  - *Escenario BDD:* Se archiva un cambio con ADDED provisionales en una capacidad existente
+  - *Escenario BDD:* Una capacidad nueva se archiva con identificadores definitivos
+  - *Escenario BDD:* Una capacidad nueva con el patrón de dominio abre su serie
+  - *Escenario BDD:* Todas las capacidades se planifican a la vez
+  - *Escenario BDD:* Se reescriben las tareas y las deltas y queda la traza
+  - *Escenario BDD:* Las reescrituras ocurren antes de la instantánea
+  - *Escenario BDD:* Un fallo en cualquier punto no deja el archivado a medias
+  - *Escenario BDD:* Un archivado interrumpido se reanuda sin reasignar
+  - *Escenario BDD:* La reejecución no queda bloqueada por las puertas
+  - *Escenario BDD:* Dos cambios archivados uno tras otro reciben números distintos
+  - *Escenario BDD:* Un cambio sin provisionales no cambia
+  - *Escenario BDD:* Una capacidad nueva con un MODIFIED se rechaza en lugar de copiarse
+  - *Escenario BDD:* Una capacidad parcialmente integrada se completa
+  - *Escenario BDD:* El informe del paso lista capacidades, mapa, duplicados y ficheros
+  - *Escenario BDD:* La opción de solo lectura no escribe
+  - *Escenario BDD:* Una segunda rama de archivado rebasada detecta el duplicado y se rehace
+  - *Escenario BDD:* Un nombre superado que no casa se rechaza
 
 ### Dominio: `sdd-block-review-gates` — Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21)
 
@@ -2349,6 +2470,12 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Con un patrón declarado, dos identificadores distintos bloquean
   - *Escenario BDD:* Con un patrón declarado, un ADDED con un identificador existente bloquea
   - *Escenario BDD:* Con el patrón inaccesible no se evalúa con un patrón no declarado
+  - *Escenario BDD:* Un ADDED con un provisional no bloquea
+  - *Escenario BDD:* Con un patrón declarado, un ADDED con un provisional con el dominio fijado no bloquea
+  - *Escenario BDD:* Dos ADDED con el mismo provisional bloquean
+  - *Escenario BDD:* Un provisional en un MODIFIED, REMOVED o RENAMED bloquea
+  - *Escenario BDD:* Un nombre con un provisional y un identificador válido bloquea por ambiguo
+  - *Escenario BDD:* La matriz de verify cita el provisional hasta archivar
 - **[REQ-29.4]** Cobertura `Cubre:` de los Requisitos de la Delta
   - *Escenario BDD:* Un requisito de la delta sin tarea que lo cubra bloquea
   - *Escenario BDD:* La cobertura se calcula sobre la unión de los ficheros por rol
@@ -2359,6 +2486,10 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* En un cambio no ISO la cobertura no bloquea
   - *Escenario BDD:* Con un patrón declarado, `Cubre:` cita el identificador del patrón
   - *Escenario BDD:* Con un patrón declarado, un `Cubre:` con el formato por defecto bloquea
+  - *Escenario BDD:* `Cubre:` acepta el provisional de un ADDED de la delta y lo cuenta como cobertura
+  - *Escenario BDD:* Un ADDED provisional sin ninguna tarea que lo cubra bloquea
+  - *Escenario BDD:* Un provisional citado que ningún ADDED declara bloquea
+  - *Escenario BDD:* El `Cubre:` con provisional se reescribe al archivar
 - **[REQ-29.5]** Bug con Requisito Existente en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios
   - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito inexistente bloquea en ISO
   - *Escenario BDD:* Un bug sin delta con `Cubre:` a un requisito existente avanza

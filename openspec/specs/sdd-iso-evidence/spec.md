@@ -257,14 +257,16 @@ El bloqueo del archivado por la matriz es el REQ-29.11 de `sdd-archive-lifecycle
 
 ### Requirement: Identificador Válido según el Patrón Declarado en el Nombre de los Requisitos de la Delta (REQ-29.3)
 
-En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; sin declaración, el valor por defecto de REQ-44.2, que admite exactamente `REQ-<n>.<m>` con `<n>` y `<m>` enteros decimales sin signo). Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6). La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. El análisis del nombre (qué es un identificador, un candidato mal formado o una ausencia) lo hace el puerto único (REQ-44.4 y REQ-44.5 de `requirement-identifiers`). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
-(Previously: el nombre debía contener un identificador con la forma literal `REQ-<n>.<m>`; ahora basta un identificador válido según el patrón declarado del proyecto, y el motivo nombra ese patrón.)
+En un cambio ISO, el nombre de todo requisito de la delta (ADDED, MODIFIED, REMOVED o RENAMED) DEBE contener un identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; sin declaración, el valor por defecto de REQ-44.2, que admite exactamente `REQ-<n>.<m>` con `<n>` y `<m>` enteros decimales sin signo). La única excepción es el ADDED, cuyo nombre PUEDE llevar en su lugar un identificador provisional (REQ-47.1 de `requirement-identifiers`), que la integración sustituye por el definitivo al archivar (REQ-47.8 de `sdd-archive-lifecycle`). Es el identificador que citan `Cubre:` (REQ-29.4), la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) y la matriz de verify (REQ-29.6): hasta archivar, las filas de la matriz de los escenarios de un ADDED provisional citan el provisional, y el paso de archivado las reescribe al definitivo junto con la delta (REQ-47.4 de `requirement-identifiers`), de modo que la comprobación de la matriz al archivar o al reanudar un archivado compara siempre la misma forma del identificador. La baseline es `openspec/specs/`, el único formato de spec viva: no existe ninguna otra identidad que declarar, y el identificador es solo el que figura en el nombre del requisito. El análisis del nombre (qué es un identificador, un candidato mal formado o una ausencia) lo hace el puerto único (REQ-44.4 y REQ-44.5 de `requirement-identifiers`). La comprobación DEBE hacerse en el estado del cambio, una vez escrita la delta y antes de habilitar la fase `design`, y DEBE aplicar estas reglas:
+(Previously: el nombre debía contener siempre un identificador válido según el patrón declarado del proyecto, también el ADDED; ahora el ADDED admite además un identificador provisional de la propia delta, que la matriz de verify cita hasta archivar, y un provisional fuera de ADDED bloquea.)
 
 | Caso | Regla |
 |---|---|
-| Nombre sin identificador, o con una forma que no es un identificador válido según el patrón | Bloquea. |
-| Nombre con más de un identificador distinto | Bloquea: es ambiguo. |
-| ADDED cuyo identificador ya existe en la baseline, o que repite el de otro ADDED de la delta | Bloquea (supuesto visible: sin identificadores únicos, `Cubre:` y la consulta del bug no resuelven sin ambigüedad). **Excepción (archivado interrumpido):** NO bloquea un ADDED cuyo identificador figura en la baseline del mismo dominio en un requisito con el mismo nombre y el mismo bloque, byte a byte (encabezado `### Requirement:` y cuerpo), que el bloque ADDED de la delta. La comparación se hace tras la única normalización que aplica el compositor (`axiom sdd archive-compose` solo asegura que el bloque termine en un salto de línea); no se normaliza nada más (espacios, finales de línea ni orden). Es el propio requisito, ya compuesto por un archivado que se interrumpió antes de mover la carpeta del cambio. Cualquier diferencia de nombre, de bloque o de dominio sigue bloqueando. |
+| Nombre sin identificador, o con una forma que no es un identificador válido según el patrón ni un provisional de un ADDED | Bloquea. |
+| Nombre con más de un identificador distinto (válidos o provisionales, en cualquier combinación) | Bloquea: es ambiguo. |
+| ADDED con un provisional | No bloquea por falta de identificador definitivo. Bloquea si repite el provisional de otro ADDED de la delta, en el mismo dominio o en otro (error tipado de provisional duplicado, REQ-47.1). |
+| MODIFIED, REMOVED o RENAMED con un provisional en cualquiera de sus nombres | Bloquea: un provisional solo es válido en un ADDED. |
+| ADDED con identificador definitivo cuyo identificador ya existe en la baseline, o que repite el de otro ADDED de la delta | Bloquea (supuesto visible: sin identificadores únicos, `Cubre:` y la consulta del bug no resuelven sin ambigüedad). **Excepción (archivado interrumpido):** NO bloquea un ADDED cuyo identificador figura en la baseline del mismo dominio en un requisito con el mismo nombre y el mismo bloque, byte a byte (encabezado `### Requirement:` y cuerpo), que el bloque ADDED de la delta. La comparación se hace tras la única normalización que aplica el compositor (`axiom sdd archive-compose` solo asegura que el bloque termine en un salto de línea); no se normaliza nada más (espacios, finales de línea ni orden). Es el propio requisito, ya compuesto por un archivado que se interrumpió antes de mover la carpeta del cambio. Cualquier diferencia de nombre, de bloque o de dominio sigue bloqueando. |
 | MODIFIED o REMOVED | Su nombre es el del requisito existente, de modo que el identificador es el que ya contiene. Si el existente no lo contiene, bloquea. |
 | RENAMED | El nombre nuevo contiene identificador. Si el nombre antiguo también lo contiene, ambos son el mismo (supuesto visible: renombrar no cambia la identidad). Un RENAMED puede añadir el identificador a un requisito que no lo tenía. |
 
@@ -272,7 +274,7 @@ Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la secci�
 
 #### Scenario: Un ADDED sin identificador bloquea antes de design
 
-- **DADO** un cambio ISO y una delta con un requisito ADDED llamado `Cobro con IVA` (sin `REQ-<n>.<m>`)
+- **DADO** un cambio ISO y una delta con un requisito ADDED llamado `Cobro con IVA` (sin `REQ-<n>.<m>` ni provisional)
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador
 - **Y** el motivo nombra el dominio, la sección ADDED, el requisito y la continuación
@@ -397,12 +399,51 @@ Un bloqueo DEBE ser un motivo tipado accionable que nombre el dominio, la secci�
 - **ENTONCES** la etapa `specs` proyecta el hallazgo `iso_declaration_invalid` en lugar de las reglas de identificador
 - **Y** la etapa `tasks` no se evalúa
 
+#### Scenario: Un ADDED con un provisional no bloquea
+
+- **DADO** un cambio ISO y una delta con un ADDED llamado `Cobro con IVA («prov-a»)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+- **Y** la fase `design` puede proyectarse como siguiente
+
+#### Scenario: Con un patrón declarado, un ADDED con un provisional con el dominio fijado no bloquea
+
+- **DADO** un cambio ISO de un proyecto con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}` y un ADDED con un provisional con el dominio `USU` fijado
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta el motivo tipado de identificador
+
+#### Scenario: Dos ADDED con el mismo provisional bloquean
+
+- **DADO** un cambio ISO con dos ADDED, en el mismo dominio o en dominios distintos, ambos con `«prov-a»`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra `«prov-a»` y los dos requisitos
+
+#### Scenario: Un provisional en un MODIFIED, REMOVED o RENAMED bloquea
+
+- **DADO** un cambio ISO y un MODIFIED cuyo nombre lleva `«prov-a»`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que nombra la sección MODIFIED y `«prov-a»`
+- **Y** lo mismo ocurre con un provisional en un REMOVED o en cualquiera de los dos nombres de un RENAMED
+
+#### Scenario: Un nombre con un provisional y un identificador válido bloquea por ambiguo
+
+- **DADO** un cambio ISO y un ADDED llamado `Cobro con IVA («prov-a», REQ-30.1)`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de identificador, que indica que el nombre es ambiguo
+
+#### Scenario: La matriz de verify cita el provisional hasta archivar
+
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA («prov-a»)` con un escenario y un `verify-report.md` cuya matriz tiene la fila de ese escenario con `«prov-a»` en la columna del requisito
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json` y después `axiom sdd archive-check`
+- **ENTONCES** la fila cuenta como la del escenario afectado y no se proyecta ningún motivo de matriz por el provisional
+- **Y** tras el paso de archivado la fila cita el definitivo asignado y una reanudación de `archive-check` sigue sin motivos de matriz
+
 ---
 
 ### Requirement: Cobertura `Cubre:` de los Requisitos de la Delta (REQ-29.4)
 
-En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. El identificador citado es el identificador válido, según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`), del nombre del requisito (REQ-29.3). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (identificado por el identificador válido de su nombre; en un RENAMED, el de su nombre nuevo) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre; uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
-(Previously: el identificador citado era la forma literal `REQ-<n>.<m>`; ahora es el identificador válido según el patrón declarado del proyecto, que con el patrón por defecto coincide con `REQ-<n>.<m>`.)
+En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder declarar los requisitos que cubre con una línea `Cubre: REQ-x[, REQ-y ...]`. El identificador citado es el identificador válido, según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`), del nombre del requisito (REQ-29.3), o el provisional de un ADDED de la propia delta (REQ-47.1). El motor DEBE analizar esas líneas en todos los ficheros de tareas del cambio y validar la cobertura conjunta, en cuanto existan los ficheros de tareas: cada requisito de la delta (identificado por el identificador válido o el provisional de su nombre; en un RENAMED, el de su nombre nuevo) DEBE aparecer en al menos un `Cubre:` del conjunto de ficheros. Un requisito de la delta sin cobertura DEBE bloquear con un motivo tipado que lo nombre. Un identificador de `Cubre:` que no existe ni en la delta ni en la baseline DEBE bloquear con un motivo tipado que lo nombre, y un provisional citado que ningún ADDED de la delta declara DEBE bloquear igual (no se confunde con un identificador de la baseline); uno que existe en la baseline pero no en la delta se admite y no cuenta para la cobertura. Las líneas `Cubre:` con provisionales de la delta DEBEN reescribirse al identificador definitivo al archivar, conservando la posición del token en la línea (REQ-47.4 de `requirement-identifiers` y REQ-47.8 de `sdd-archive-lifecycle`). Fuera de ISO, `Cubre:` es informativo y opcional y NUNCA DEBE bloquear.
+(Previously: el identificador citado era solo el identificador válido, según el patrón declarado del proyecto, del nombre del requisito, y un provisional se habría rechazado como identificador desconocido; ahora `Cubre:` admite los provisionales de los ADDED de la propia delta, cuenta como cobertura de ese ADDED y se reescribe al archivar.)
 
 #### Scenario: Un requisito de la delta sin tarea que lo cubra bloquea
 
@@ -447,7 +488,6 @@ En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder decl
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** no se proyecta ningún motivo de bloqueo de cobertura
 
-
 #### Scenario: Con un patrón declarado, `Cubre:` cita el identificador del patrón
 
 - **DADO** un cambio ISO de un proyecto con `sdd: {iso: true, id_pattern: "RF-<DOM>-<NN>"}`, una delta con `RF-USU-01` y `RF-USU-02` y tareas con `Cubre: RF-USU-01, RF-USU-02`
@@ -460,8 +500,32 @@ En un cambio ISO, cada tarea de `tasks.md` o de `tasks.<rol>.md` DEBE poder decl
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** el cambio queda bloqueado con un motivo tipado que nombra `REQ-30.1` y el patrón `RF-<DOM>-<NN>`
 
----
+#### Scenario: `Cubre:` acepta el provisional de un ADDED de la delta y lo cuenta como cobertura
 
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA («prov-a»)` y una tarea con `Cubre: «prov-a»`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** no se proyecta ningún motivo de cobertura ni de identificador desconocido
+
+#### Scenario: Un ADDED provisional sin ninguna tarea que lo cubra bloquea
+
+- **DADO** un cambio ISO con un ADDED `Cobro con IVA («prov-a»)` y tareas sin ninguna línea `Cubre:` que cite `«prov-a»`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con el motivo tipado de cobertura, que nombra `«prov-a»`
+
+#### Scenario: Un provisional citado que ningún ADDED declara bloquea
+
+- **DADO** un cambio ISO y una tarea con `Cubre: «prov-b»`, sin ningún ADDED que declare `«prov-b»`
+- **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
+- **ENTONCES** el cambio queda bloqueado con un motivo tipado que nombra `«prov-b»`
+
+#### Scenario: El `Cubre:` con provisional se reescribe al archivar
+
+- **DADO** un cambio ISO con una tarea `Cubre: REQ-29.1, «prov-a»` y un ADDED `«prov-a»` al que el archivado asigna `REQ-31.2`
+- **CUANDO** se ejecuta el archivado del cambio
+- **ENTONCES** la línea de la tarea archivada queda `Cubre: REQ-29.1, REQ-31.2`
+- **Y** el resto de `tasks.md` conserva sus bytes
+
+---
 ### Requirement: Bug con Requisito Existente en un Cambio ISO: el Requisito Citado Existe y Tiene Escenarios (REQ-29.5)
 
 En un cambio ISO declarado como bug sin delta y sin la marca `Sin impacto en la spec` (bug con requisito existente, REQ-29.15 de `axiom-sdd-cli-integration`), el motor DEBE comprobar que el cambio cita, en los `Cubre:` de sus tareas, al menos un requisito, y que todo requisito citado existe en la baseline, con la consulta de REQ-29.14 de `spec-baseline-integration`. Un `Cubre:` que apunta a un requisito inexistente DEBE bloquear con un motivo tipado que nombre el identificador; un bug sin delta cuyas tareas no citan ningún requisito DEBE bloquear con un motivo tipado que lo indique. Los escenarios del requisito existente citado son los escenarios afectados de ese cambio: la matriz de verify (REQ-29.6) DEBE tener una fila por cada uno. Si el requisito citado existe pero no tiene ningún escenario, el cambio DEBE bloquear con un motivo tipado que lo nombre, porque no hay nada que verificar; la continuación es tramitar el trabajo como un cambio normal con delta que añada los escenarios, ya que el requisito estaba mal especificado. Un bug con la marca `Sin impacto en la spec` no cita ningún requisito y se rige por REQ-29.19, no por esta regla. Fuera de ISO, un bug sin delta queda preparado con la sola declaración y esta comprobación NO DEBE bloquear.
