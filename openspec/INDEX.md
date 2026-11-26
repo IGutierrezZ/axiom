@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 02:29:54 UTC
-> **Total Dominios:** 51 | **Total Requerimientos:** 514 | **Total Escenarios BDD:** 2212
+> **Última Sincronización:** 2026-11-26 02:53:02 UTC
+> **Total Dominios:** 48 | **Total Requerimientos:** 494 | **Total Escenarios BDD:** 2188
 
 ---
 
@@ -26,8 +26,6 @@
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
-| `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
-| `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 12 | 36 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
@@ -41,7 +39,7 @@
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
 | `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 69 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
-| `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
+| `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 122 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
@@ -54,13 +52,12 @@
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
-| `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06) | 10 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 7 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
 | `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 102 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 103 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -1045,40 +1042,6 @@ Permite inicializar un espacio de trabajo ligero de Axiom enfocado en documentac
 - **[REQ-23.6]** Creación de Borradores de Cambio para Traspaso Futuro
   - *Escenario BDD:* Creación de cambio en modo borrador
 
-### Dominio: `knowledge-query-engine` — Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23)
-
-Permite formular consultas técnicas o funcionales sobre el proyecto, respondiendo con fundamentación y enriqueciendo automáticamente las especificaciones vivas.
-
-**Archivo:** [`specs/knowledge-query-engine/spec.md`](specs/knowledge-query-engine/spec.md)
-
-- **[REQ-23.12]** Subcomando de Consulta Técnica/Funcional
-  - *Escenario BDD:* Invocación de consulta funcional
-- **[REQ-23.13]** Resolución Spec-First con Cortocircuito Inmediato
-  - *Escenario BDD:* Respuesta directa desde la spec viva sin tocar código
-- **[REQ-23.14]** Triangulación Profunda con Evidencias ante Lagunas en la Spec
-  - *Escenario BDD:* Consulta que requiere inspección profunda de código
-- **[REQ-23.15]** Contrato de Respuesta en Dos Niveles
-  - *Escenario BDD:* Formato de la respuesta estructurada
-- **[REQ-23.16]** Auto-Enriquecimiento Obligatorio de la Spec Viva
-  - *Escenario BDD:* Auto-enriquecimiento de la spec tras investigación
-
-### Dominio: `knowledge-sweep-command` — Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23)
-
-Permite realizar un barrido inicial rápido sobre los repositorios del proyecto para inferir la arquitectura técnica y los módulos funcionales sin bloqueos interactivos.
-
-**Archivo:** [`specs/knowledge-sweep-command/spec.md`](specs/knowledge-sweep-command/spec.md)
-
-- **[REQ-23.7]** Invocación Autónoma Headless
-  - *Escenario BDD:* Ejecución headless de barrido emitiendo JSON
-- **[REQ-23.8]** Detección Técnica Multidimensional
-  - *Escenario BDD:* Identificación de stack y puntos de entrada
-- **[REQ-23.9]** Inferencia Funcional de Módulos y Dominios
-  - *Escenario BDD:* Inferencia de módulos de negocio
-- **[REQ-23.10]** Política No Bloqueante y Sobre Diferido de Ambigüedades
-  - *Escenario BDD:* Detección de ambigüedades sin bloqueo
-- **[REQ-23.11]** Siembra Inicial en OpenSpec y Persistencia en Engram
-  - *Escenario BDD:* Persistencia y catalogación del barrido inicial
-
 ### Dominio: `living-documentation` — Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07)
 
 Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para transformar la fase de cierre (`Archive`) en un mantenedor continuo de especificaciones vivas y en un motor de adopción orgánica (*Zero-Doc Cold Start*) en Axiom: indexador canónico de especificaciones vivas (`openspec/specs/`), generador determinista del catálogo maestro `openspec/INDEX.md`, sintetizador orgánico para proyectos legados, subcomandos CLI `axiom archive` y la extensión visual del Dashboard Web local (`axiom ui`).
@@ -1629,7 +1592,6 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
   - *Escenario BDD:* Los cambios archivados siguen sellados
 - **[REQ-24.10]** Los Consumidores de Catálogo Comparten la Convención de Raíz
   - *Escenario BDD:* Catálogo del workspace canónico
-  - *Escenario BDD:* Raíz de especificaciones por defecto de knowledge
   - *Escenario BDD:* Ubicación divergente en un proyecto embebido
   - *Escenario BDD:* El dashboard lee el planning home canónico
 - **[REQ-24.11]** Regla de Ejecutores para las Rutas `openspec/...`
@@ -2899,37 +2861,6 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
   - *Escenario BDD:* La barrera y verify coinciden en qué roles bloquean
   - *Escenario BDD:* Un cambio de un solo rol o continuo no cambia
 
-### Dominio: `semantic-code` — Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06)
-
-Definir de forma ejecutable, determinista y verificable los requerimientos funcionales, no funcionales y escenarios BDD para la integración semántica de código en Axiom: diagnóstico del conector externo CodeGraph, motor semántico nativo en Go con análisis de AST (`go/parser`, `go/ast`), subcomandos CLI `axiom semantic` y la extensión del Dashboard Web local (`axiom ui`) con la pestaña de exploración semántica.
-
-**Archivo:** [`specs/semantic-code/spec.md`](specs/semantic-code/spec.md)
-
-- **[REQ-1.2]** Detección de CodeGraph CLI y Configuración
-  - *Escenario BDD:* CodeGraph disponible en el PATH del sistema
-  - *Escenario BDD:* CodeGraph no instalado en el sistema
-- **[REQ-1.3]** Resolución del Conector Semántico Activo
-  - *Escenario BDD:* Resolución automática con CodeGraph disponible
-  - *Escenario BDD:* Resolución automática con fallback a AST nativo
-  - *Escenario BDD:* Conector explícito no disponible advierte y activa fallback
-  - *Escenario BDD:* Valor obsoleto `serena`
-- **[REQ-2.1]** Extracción de Símbolos de Código en Go
-  - *Escenario BDD:* Extracción de interfaces y structs con métodos
-- **[REQ-2.2]** Análisis del Grafo de Dependencias de Paquetes
-  - *Escenario BDD:* Mapeo de dependencias internas de un rol
-- **[REQ-2.3]** Búsqueda y Filtrado de Símbolos
-  - *Escenario BDD:* Búsqueda de interfaces en el workspace
-- **[REQ-3.1]** Comando `axiom semantic status`
-  - *Escenario BDD:* Ejecución de `axiom semantic status`
-- **[REQ-3.2]** Comando `axiom semantic symbols`
-  - *Escenario BDD:* Consulta de símbolos con filtro de texto
-- **[REQ-3.3]** Comando `axiom semantic inspect`
-  - *Escenario BDD:* Inspección de dependencias de un rol
-- **[REQ-4.1]** Endpoints REST Semánticos en el Servidor Web
-  - *Escenario BDD:* Petición HTTP a `/api/semantic/status`
-- **[REQ-4.2]** Interfaz Web SPA con Panel Semántico y Buscador
-  - *Escenario BDD:* Exploración de símbolos desde el navegador web
-
 ### Dominio: `spec-baseline-integration` — Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24)
 
 Definir cómo integra archive un cambio en la baseline declarada del proyecto: la composición determinista sobre documentos direccionables por requisito (patrón de encabezado, identidad por ID, plantilla de render, duplicados, frontera de bloque, fidelidad de bytes), la integración de documentos de prosa mediante edición dirigida con verificación nativa y traza por entrada, las precondiciones de la integración y la lectura de la baseline por las fases de planificación.
@@ -3038,6 +2969,7 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Declaración incompatible con el almacén de artefactos finaliza con error
   - *Escenario BDD:* Bloque `git:` o `repositories:` inválido finaliza con error
   - *Escenario BDD:* Topología retirada finaliza con error accionable
+  - *Escenario BDD:* Clave `governance.semantic_analysis` residual solo avisa
 - **[REQ-2.1]** Estructura del Esquema axiom.yaml
   - *Escenario BDD:* El bloque `workflow` es opcional y se valida cuando está presente
   - *Escenario BDD:* El bloque `delivery` es opcional y se valida cuando está presente

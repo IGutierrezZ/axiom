@@ -32,7 +32,9 @@ Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 - `workspace.topology: "multirepo"`.
 - `workspace.specs_repository: "openspec"` (como repositorio separado e independiente desde cero).
 - `roles.knowledge` con política `advisory`, sin compuertas bloqueantes de código.
-- `governance.language: "es"`, `governance.shared_memory: "engram"` y `governance.semantic_analysis: "auto"`.
+- `governance.language: "es"` y `governance.shared_memory: "engram"`.
+
+(Previously: también escribía `governance.semantic_analysis: "auto"`, clave que C-08-l deja sin efecto.)
 
 #### Scenario: Manifiesto axiom.yaml generado bajo perfil knowledge
 - **DADO** un comando de inicialización con `--profile=knowledge`
@@ -40,8 +42,6 @@ Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 - **ENTONCES** la sección `workspace` declara `topology: "multirepo"` y `specs_repository: "openspec"`
 - **Y** la sección `governance` declara `language: "es"` y `shared_memory: "engram"`
 - **Y** los roles definidos tienen política `gate_policy: "advisory"`
-
----
 
 ### Requirement: Andamiaje Estándar OpenSpec (REQ-23.3)
 
