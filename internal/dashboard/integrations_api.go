@@ -228,3 +228,17 @@ func (s *Server) handleIntegrationsDiscover(w http.ResponseWriter, r *http.Reque
 	}
 	s.respondIntegrations(w, http.StatusOK, resp)
 }
+
+// handleChangeIntegrations sirve `GET /api/integrations/change?name=<cambio>`: la pestaña
+// «Integraciones» del cambio (D-07), de solo lectura y sin secretos.
+func (s *Server) handleChangeIntegrations(w http.ResponseWriter, r *http.Request) {
+	if !s.requireIntegrationsMethod(w, r, http.MethodGet) {
+		return
+	}
+	dto, err := s.service.GetChangeIntegrations(r.URL.Query().Get("name"))
+	if err != nil {
+		s.respondIntegrationsError(w, err)
+		return
+	}
+	s.respondIntegrations(w, http.StatusOK, dto)
+}

@@ -105,6 +105,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/integrations/secret/delete", s.handleIntegrationsSecretDelete)
 	s.mux.HandleFunc("/api/integrations/connect", s.handleIntegrationsConnect)
 	s.mux.HandleFunc("/api/integrations/discover", s.handleIntegrationsDiscover)
+	s.mux.HandleFunc("/api/integrations/change", s.handleChangeIntegrations)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)

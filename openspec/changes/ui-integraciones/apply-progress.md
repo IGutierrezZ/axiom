@@ -9,6 +9,8 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 - [x] 2.1 Ámbito `integrations[<plugin>].<clave>` en el catálogo de ajustes (D-03).
 - [x] 3.1 `cli.IntegrationsGateway` y `secrets.MaxValueBytes` (D-04).
 - [x] 3.2 Puerto y rutas del dashboard `/api/integrations*` (D-05, D-06).
+- [x] 4.1 Pantalla «Integraciones» genérica (D-09 cliente, D-10).
+- [x] 5.1 `OutboxView` y pestaña «Integraciones» del cambio (D-07, D-09).
 
 ## Evidencia de la unidad 1.1
 
@@ -88,6 +90,21 @@ Riesgos: la ruta de guardado del PAT usa `secrets.Default()` en cada llamada (si
 | GREEN | `go test ./internal/dashboard -run 'TestIntegrationsScreenAssets\|Assets\|Inline\|Theme\|Settings\|Router\|Shell\|TestJSModuleImportsResolve\|TestIndexHTMLShell' -count=1`: ok (incluye `TestNoInlineStyleOrScriptInAssets`). `go vet ./internal/dashboard`: limpio. |
 | Arnés | Sin ejecutor de JS en las pruebas (H-05): invariantes fijados por texto. Comprobación puntual con Node en un directorio temporal: `node --check` de los módulos nuevos y `safeExternalURL` (acepta `https://a.b/x`; rechaza `javascript:`, `//h`, credenciales). Comprobación visual en navegador queda para `verify`. |
 
-Decisiones: la pantalla reutiliza `controlHtml` y `collectChanges` con las entradas de cada plugin y guarda con un único `PUT /api/settings`; tras éxito recarga `GET /api/integrations`. Un 409 muestra `errorView` (con «Recargar»), que recarga con `keepTyped` y reaplica lo tecleado. El campo del PAT no lleva `data-key` (no entra en el lote), se vacía siempre tras guardar (también si falla) y el borrado pide `confirmDialog`. «Probar conexión» y «aviso de identidad» usan `candidates` (409/422) con radios y reenvían `user`. «Descubrir» deja un `<datalist>` solo en campos de texto libre sin `format` ni `enum` y marca «no encontrado en el tracker» los valores ausentes; las sugerencias se recuerdan solo en memoria. `safeExternalURL`/`externalLink` viven en `core/integrations.js`, listos para 5.1 (la pantalla de ajustes ya enlazaba a `#/integraciones`).
+Decisiones: la pantalla reutiliza `controlHtml` y `collectChanges` con las entradas de cada plugin y guarda con un único `PUT /api/settings`; tras éxito recarga `GET /api/integrations`. Un 409 muestra `errorView` (con «Recargar»), que recarga con `keepTyped` y reaplica lo tecleado. El campo del PAT no lleva `data-key` (no entra en el lote), se vacía siempre tras guardar (también si falla) y el borrado pide `confirmDialog`. «Probar conexión» usa `candidates` (409/422) con radios cuando hay varios candidatos de identidad y reenvía `user`. «Descubrir» deja un `<datalist>` solo en campos de texto libre sin `format` ni `enum` y marca «no encontrado en el tracker» los valores ausentes; las sugerencias se recuerdan solo en memoria. `safeExternalURL`/`externalLink` viven en `core/integrations.js`, listos para 5.1 (la pantalla de ajustes ya enlazaba a `#/integraciones`).
 
 Riesgos: la pantalla no se ha visto en un navegador real; `externalLink` aún no tiene consumidor hasta 5.1 (JS, no afecta al trinquete de Go); el icono de navegación reutiliza `handoff`.
+
+## Evidencia de la unidad 5.1
+
+| Evidencia | Valor |
+|---|---|
+| RED | `outbox_view_test.go` escrito antes de `OutboxView`: `go test ./internal/integrations -run TestOutboxView` no compilaba (`OutboxView` y `OperationView` indefinidos). Las pruebas del dashboard (`change_integrations_test.go`) se escribieron justo después del código del servicio y pasaron a la primera: RED no observado para esa mitad. |
+| GREEN | `go test ./internal/integrations -run 'TestOutboxView\|TestImportsDirection' -count=1`: ok. `go test ./internal/dashboard -run 'TestChangeIntegrations\|TestSafeExternalURL\|TestIntegrations\|Canary\|Detail\|Detalle\|Assets\|Inline\|Router\|TestJSModuleImportsResolve\|TestEveryDashboardRouteIsClassified\|TestNoReadOnlyDashboardRoute\|TestIndexHTMLShell' -count=1`: ok. `go vet ./internal/dashboard ./internal/integrations`: limpio. |
+| Trinquete de código muerto | `bash scripts/deadcode-ratchet.sh`: «no new unreachable functions» (`OutboxView` se alcanza desde `handleChangeIntegrations`). |
+| Arnés | `handler()` con `Host: 127.0.0.1`, `embeddedProject` y ficheros YAML reales del cambio; sin ADO real ni binarios. Sin ejecutor de JS: la pestaña se fija por texto (`TestChangeIntegrationsTabAssets`); comprobación visual para `verify`. |
+
+Notas de cobertura: hueco 9, el título del work item NO se muestra (`context/work-item.json` solo guarda datos de confianza: id, URL, plugin; el título viviría en el markdown no confiable), así que se muestra identificador, plugin y enlace («si existe» se cumple por omisión). Hueco 12, la pestaña tolera la ausencia de `kickoff.yaml` (`sealed: false`, «sin sellar») y de `sealed_by` o `actor` («sin registrar»), sin error.
+
+Decisiones: la ruta es `GET /api/integrations/change?name=` con `no-store`, clasificada en el canario con un cambio `x` que ya tiene outbox; `safeExternalURL` (Go) vive en `service_change_integrations.go` y `TestSafeExternalURL` en `change_integrations_test.go` (6.1 la reutiliza). Los errores parciales son frases fijas (sin rutas ni texto del YAML). Las decisiones de puerta se listan todas, con tope de 100. Nombre inválido: 400 `invalid_change_name`; no localizado: 404 `change_not_found`.
+
+Riesgos: la pestaña no se ha visto en un navegador real. `deadcode-ratchet` avisa de que una entrada de la línea base ya es alcanzable (previa a esta tarea; no se actualiza la línea base aquí).

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -171,4 +172,53 @@ func writeOutbox(f Folder, o Outbox) error {
 		return fmt.Errorf("serializar %s: %w", outboxName, err)
 	}
 	return f.writeAtomic(outboxName, outboxTempPattern, payload)
+}
+
+// OperationView es la vista de solo lectura de una operación de la outbox. No lleva la clave de
+// idempotencia, el texto del último error, el actor ni el digest del artefacto: quien la consume no
+// puede filtrarlos aunque quiera.
+type OperationView struct {
+	Plugin        string
+	Event         EventType
+	Role, Gate    string
+	State         OperationState
+	Attempts      int
+	EnqueuedAt    time.Time
+	LastAttemptAt time.Time
+	Reason        string
+}
+
+// OutboxView lee la outbox de la carpeta sin cerrojo (la escritura es atómica) y la devuelve
+// ordenada por EnqueuedAt, plugin y tipo de evento. Sin fichero devuelve una lista vacía; un fichero
+// corrupto o de otro cambio devuelve el error de la lectura estricta.
+func OutboxView(f Folder) ([]OperationView, error) {
+	ob, err := readOutbox(f)
+	if err != nil {
+		return nil, err
+	}
+	views := make([]OperationView, 0, len(ob.Operations))
+	for _, op := range ob.Operations {
+		views = append(views, OperationView{
+			Plugin:        op.Plugin,
+			Event:         op.Event.Type,
+			Role:          op.Event.Role,
+			Gate:          op.Event.Gate,
+			State:         op.State,
+			Attempts:      op.Attempts,
+			EnqueuedAt:    op.EnqueuedAt,
+			LastAttemptAt: op.LastAttemptAt,
+			Reason:        op.Reason,
+		})
+	}
+	sort.SliceStable(views, func(i, j int) bool {
+		a, b := views[i], views[j]
+		if !a.EnqueuedAt.Equal(b.EnqueuedAt) {
+			return a.EnqueuedAt.Before(b.EnqueuedAt)
+		}
+		if a.Plugin != b.Plugin {
+			return a.Plugin < b.Plugin
+		}
+		return a.Event < b.Event
+	})
+	return views, nil
 }

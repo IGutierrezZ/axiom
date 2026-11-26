@@ -853,3 +853,87 @@ type integrationsErrorBody struct {
 	EnvVar     string                    `json:"envVar,omitempty"`
 	Candidates []IntegrationCandidateDTO `json:"candidates,omitempty"`
 }
+
+// ChangeIntegrationsDTO es la pestaña «Integraciones» de un cambio (D-07): vínculos, tasks por
+// rol, outbox de solo lectura y actores por fase. Nunca lleva payloads, claves de idempotencia,
+// errores crudos del tracker ni secretos. Cada lectura que falla deja vacía su sección y añade una
+// frase fija a Errors.
+type ChangeIntegrationsDTO struct {
+	Name            string                `json:"name"`
+	Archived        bool                  `json:"archived"`
+	Empty           bool                  `json:"empty"`
+	WorkItems       []ChangeLinkDTO       `json:"workItems"`
+	Roles           []ChangeRoleDTO       `json:"roles"`
+	Outbox          []ChangeOperationDTO  `json:"outbox"`
+	OutboxTotal     int                   `json:"outboxTotal"`
+	OutboxTruncated bool                  `json:"outboxTruncated"`
+	Kickoff         ChangeKickoffActorDTO `json:"kickoff"`
+	Gates           []ChangeGateActorDTO  `json:"gates"`
+	Errors          []string              `json:"errors"`
+}
+
+// ChangeLinkDTO es un work item o una Task enlazados. URL solo se publica si supera safeExternalURL;
+// PluginTitle sale del manifiesto («Abrir en <PluginTitle>») y cae en el id del plugin si el
+// manifiesto ya no está en el catálogo.
+type ChangeLinkDTO struct {
+	Plugin        string   `json:"plugin"`
+	PluginTitle   string   `json:"pluginTitle"`
+	Kind          string   `json:"kind"`
+	ID            string   `json:"id"`
+	URL           string   `json:"url,omitempty"`
+	EstimateHours *float64 `json:"estimateHours,omitempty"`
+	StartedAt     string   `json:"startedAt,omitempty"`
+}
+
+// ChangeRoleDTO agrupa por rol su Task (nil: «sin Task»), sus imputaciones y el tiempo pendiente.
+type ChangeRoleDTO struct {
+	Role    string                `json:"role"`
+	Task    *ChangeLinkDTO        `json:"task"`
+	Entries []ChangeTimeEntryDTO  `json:"entries"`
+	Pending *ChangePendingTimeDTO `json:"pending"`
+}
+
+// ChangeTimeEntryDTO es una imputación registrada. Actor vacío: «sin registrar».
+type ChangeTimeEntryDTO struct {
+	Plugin  string `json:"plugin"`
+	ItemID  string `json:"itemId"`
+	Minutes int    `json:"minutes"`
+	Date    string `json:"date"`
+	Actor   string `json:"actor"`
+}
+
+// ChangePendingTimeDTO es el tiempo pendiente de imputar de un rol: solo minutos, fecha y elemento.
+type ChangePendingTimeDTO struct {
+	Minutes int    `json:"minutes"`
+	Date    string `json:"date"`
+	ItemID  string `json:"itemId"`
+}
+
+// ChangeOperationDTO es una operación de la outbox, de solo lectura y redactada.
+type ChangeOperationDTO struct {
+	Plugin        string `json:"plugin"`
+	Event         string `json:"event"`
+	Role          string `json:"role,omitempty"`
+	Gate          string `json:"gate,omitempty"`
+	State         string `json:"state"`
+	Attempts      int    `json:"attempts"`
+	EnqueuedAt    string `json:"enqueuedAt"`
+	LastAttemptAt string `json:"lastAttemptAt,omitempty"`
+	Reason        string `json:"reason,omitempty"`
+}
+
+// ChangeKickoffActorDTO dice quién selló el kickoff. Sealed false: el cambio no tiene
+// kickoff.yaml (por ejemplo, un cambio creado desde el dashboard); SealedBy vacío con Sealed true
+// es un kickoff anterior a C-07-a. El cliente muestra «sin sellar» y «sin registrar».
+type ChangeKickoffActorDTO struct {
+	Sealed   bool   `json:"sealed"`
+	SealedBy string `json:"sealedBy"`
+}
+
+// ChangeGateActorDTO es una decisión del registro de puertas con su autor (vacío: «sin registrar»).
+type ChangeGateActorDTO struct {
+	Gate       string `json:"gate"`
+	Decision   string `json:"decision"`
+	Actor      string `json:"actor"`
+	RecordedAt string `json:"recordedAt,omitempty"`
+}
