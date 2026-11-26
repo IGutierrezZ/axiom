@@ -116,7 +116,7 @@ Un cambio de adopción es un cambio SDD ordinario (kickoff, compuertas y archiva
 - **ENTONCES** el requisito se reconoce con el identificador `REQ-40.1` y su procedencia
 
 #### Scenario: Requisito de un origen sin identificador con provisional
-- **DADO** un requisito con título `(prov:30:1)` y `Origen: docs/vision.md#alcance` sin identificador original
+- **DADO** un requisito con título `(prov:30:<k>)` y `Origen: docs/vision.md#alcance` sin identificador original
 - **CUANDO** se analiza el cambio de adopción
 - **ENTONCES** el requisito se reconoce con su provisional y su procedencia
 
