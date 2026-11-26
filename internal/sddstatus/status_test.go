@@ -484,6 +484,36 @@ func TestStatusWithContextDir(t *testing.T) {
 	assertArtifact(t, after, "verifyReport", ArtifactMissing)
 }
 
+// prov:74:27: un cambio cuya propuesta no declara `external_ref` no bloquea el estado, con o sin
+// carpeta `context/`: la referencia es opcional y solo depende del vínculo del work item.
+func TestStatusDoesNotRequireExternalRef(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	changeRoot := seedReadyChange(t, root, "no-external-ref", "# Tasks\n\n- [ ] 1.1 A\n")
+	proposal, err := os.ReadFile(filepath.Join(changeRoot, "proposal.md"))
+	if err != nil {
+		t.Fatalf("leer proposal.md: %v", err)
+	}
+	if strings.Contains(string(proposal), "external_ref") {
+		t.Fatalf("la semilla ya declara external_ref; la prueba no cubriría su ausencia:\n%s", proposal)
+	}
+	for _, withContext := range []bool{false, true} {
+		if withContext {
+			write(t, filepath.Join(changeRoot, "context", "work-item.md"), "dato de un tercero\n")
+		}
+		status, err := Resolve(ResolveOptions{CWD: root, ChangeName: "no-external-ref"})
+		if err != nil {
+			t.Fatalf("Resolve() con contexto=%v: %v", withContext, err)
+		}
+		for _, reason := range status.BlockedReasons {
+			if strings.Contains(reason, "external_ref") || strings.Contains(reason, "Referencia") {
+				t.Fatalf("la ausencia de external_ref bloquea (contexto=%v): %q", withContext, reason)
+			}
+		}
+		assertArtifact(t, status, "proposal", ArtifactDone)
+	}
+}
+
 // #3311: status built Relationships.DependsOn as an unconditional empty list
 // and never read openspec/changes/<change>/state.yaml, the file the OpenSpec
 // convention names as the change's DAG state.
