@@ -37,7 +37,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · Retirar el panel «Código y grafo» del dashboard: rutas `/api/semantic/*`, métodos de `Service`, pantalla `semantic.js`, sección de `index.html`, navegación, fuente `semantic` de Inicio, CSS y tests.
-- [ ] T2 · Retirar `axiom knowledge` y `axiom semantic`: casos y funciones de `cmd/axiom`, ayuda, `internal/knowledge`, `internal/semantic`, skills `knowledge-*`, `AGENTS.md`, docs y baselines.
+- [x] T2 · Retirar `axiom knowledge` y `axiom semantic`: casos y funciones de `cmd/axiom`, ayuda, `internal/knowledge`, `internal/semantic`, skills `knowledge-*`, `AGENTS.md`, docs y baselines.
 - [ ] T3 · Lectura tolerante de `governance.semantic_analysis`: aviso en `workspace.Validate`, `hub/init.go` deja de escribirla, `axiom.example.yaml`, y test.
 - [ ] T4 · `## Spec viva` integrada con `axiom archive integrate --odd retirar-knowledge-semantic`, borrado de las tres specs retiradas e `INDEX.md`, notas de limpieza manual y criterio `rg`.
 
@@ -60,6 +60,8 @@ Ruta: todas en línea (borrado guiado por el compilador; ninguna unidad necesita
 - 2026-11-26: documento creado; worktree desde `origin/main` en `7464c5a7`.
 - 2026-11-26: T1 hecha. Fuera las rutas `/api/semantic/*`, los métodos semánticos de `Service`, `semantic.js`, `core/lazy.js` (solo lo usaba Código), la sección `view-codigo` y su entrada de navegación, la ruta `codigo`, la fuente `semantic` de Inicio y su fila de ayuda, y el CSS que solo usaba la pantalla. Tests: fuera `TestSemanticEndpoints`, `TestSemanticReindex*`, `TestSymbolFiltersAreServerSide`, `TestCodeScreenLoadsLazily` y los helpers del CodeGraph falso; la prueba de la caché de Inicio usa ahora `specs` como fuente que falla (5 fuentes). `go vet` limpio y `go test ./internal/dashboard` en verde (el primer pase completo solo lo paró la guarda del repositorio por mis ediciones simultáneas en otros paquetes; se repite al cerrar T2).
 
+- 2026-11-26: T2 hecha. Fuera los casos, la ayuda y las funciones `runKnowledge*`/`runSemantic*` de `cmd/axiom`, `internal/knowledge`, `internal/semantic`, los tests CLI de `knowledge` (incluidos los de baseline residual) y el helper `jsonOf`; test nuevo `TestCLIHelpOmitsRetiredKnowledgeAndSemantic`. Skill `knowledge-crawl` retirada y `knowledge-query` sobre CodeGraph directo; `AGENTS.md`, manual (sección «CodeGraph en Uso Directo»), `.deadcode-baseline.txt` y humo `semantic` de `ci.yml`. `go vet` y `go test ./cmd/axiom -run` focalizado en verde.
+
 ## Siguiente paso
 
-T2.
+T3 (lectura tolerante de `governance.semantic_analysis`), luego T4 (Spec viva: REMOVED de las tres specs; MODIFIED de `knowledge-profile-init` REQ-23.2, `planning-home-resolution` REQ-24.10, `workspace-topology` REQ-1.2 y `axiom-binary-ci-coverage` REQ-20.15; notas de limpieza) y la repetición de `go test ./internal/dashboard` completo. Pendiente de revisar `docs/redesign/README.md` (propuesta con mockups; se dejó intacta).
