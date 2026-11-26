@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 11:28:56 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 530 | **Total Escenarios BDD:** 2437
+> **Última Sincronización:** 2026-11-26 12:05:09 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 542 | **Total Escenarios BDD:** 2504
 
 ---
 
@@ -27,7 +27,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 16 | 56 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 17 | 63 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -44,11 +44,11 @@
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 17 | 51 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 30 | 144 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 32 | 152 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 16 | 99 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 23 | 139 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 92 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -58,7 +58,7 @@
 | `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 103 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 20 | 115 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -1199,6 +1199,14 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Cambio sin explicación activada
   - *Escenario BDD:* La frescura del dashboard coincide con la del status
   - *Escenario BDD:* Sin acciones de escritura
+- **[RF-WEB-17]** Pestaña «Pruebas» de Solo Lectura en el Detalle del Incremento, sin Ruta Nueva
+  - *Escenario BDD:* El detalle devuelve la batería y su cobertura
+  - *Escenario BDD:* La cobertura coincide con la del verbo
+  - *Escenario BDD:* La pestaña es de solo lectura
+  - *Escenario BDD:* Contenido hostil se muestra como texto
+  - *Escenario BDD:* Función no activada
+  - *Escenario BDD:* Activa y sin fichero
+  - *Escenario BDD:* Sin ruta nueva
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -2372,6 +2380,16 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* Se proyecta también en `continuous`
   - *Escenario BDD:* Con `no` o sin campo no se proyecta
   - *Escenario BDD:* Un cambio ISO no se bloquea por la frescura
+- **[RF-GAT-31]** `pruebas.md` Entra en el Digest de la Compuerta `tasks` solo Cuando Existe, con Cálculo Único en las Dos Rutas
+  - *Escenario BDD:* Sin `pruebas.md` el digest no cambia
+  - *Escenario BDD:* Editar `pruebas.md` cambia el digest
+  - *Escenario BDD:* El digest coincide en `gate record` y en el status
+  - *Escenario BDD:* Una compuerta `tasks` rechazada se reabre al editar solo `pruebas.md`
+  - *Escenario BDD:* Una compuerta `tasks` aprobada sigue aprobada
+- **[RF-GAT-32]** La Parada `tasks` Presenta `pruebas.md` junto a los Ficheros de Tareas y su Resultado Informativo
+  - *Escenario BDD:* Parada `tasks` con `pruebas.md`
+  - *Escenario BDD:* Función activa y `pruebas.md` ausente
+  - *Escenario BDD:* Función no activa
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2838,6 +2856,53 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Cambio sellado antes de este cambio
   - *Escenario BDD:* Declaración inválida
   - *Escenario BDD:* La proyección no altera el encadenado
+- **[RF-KOF-17]** `sdd-tasks` Genera `pruebas.md` solo en SDD, con la Función Activa y Después del Design
+  - *Escenario BDD:* Función activa en SDD
+  - *Escenario BDD:* Función no activa no genera nada
+  - *Escenario BDD:* ODD nunca genera
+  - *Escenario BDD:* `sdd-apply` solo refina rutas o URL
+- **[RF-KOF-18]** Gramática Cerrada de la Tabla de `pruebas.md`
+  - *Escenario BDD:* Tabla válida
+  - *Escenario BDD:* Columnas en otro orden
+  - *Escenario BDD:* Cabecera inválida
+  - *Escenario BDD:* ID mal formado o duplicado
+  - *Escenario BDD:* Tipo o prioridad fuera de dominio
+  - *Escenario BDD:* Entorno no declarado o repetido
+  - *Escenario BDD:* Rol no sellado
+  - *Escenario BDD:* Barra escapada en una celda
+- **[RF-KOF-19]** Sintaxis de `Cubre` y Reconocimiento de IDs solo por el Puerto `reqid`
+  - *Escenario BDD:* Requisito citado por su ID suelto
+  - *Escenario BDD:* Escenario citado con `ID#nombre`
+  - *Escenario BDD:* Nombre de escenario con comas
+  - *Escenario BDD:* ID no reconocido por `reqid`
+  - *Escenario BDD:* ID o escenario inexistente en la delta
+  - *Escenario BDD:* Caso sin cubre
+  - *Escenario BDD:* Identificador provisional y patrón del proyecto
+- **[RF-KOF-20]** `acceptancetests.Check` Cruza `pruebas.md` con las Specs Delta y Define los Hallazgos y el Informe
+  - *Escenario BDD:* Cobertura completa
+  - *Escenario BDD:* Escenario sin cubrir
+  - *Escenario BDD:* Requisito sin cubrir
+  - *Escenario BDD:* Requisito sin ID
+  - *Escenario BDD:* Escenario ambiguo
+  - *Escenario BDD:* MODIFIED cuenta y REMOVED no
+  - *Escenario BDD:* Un hallazgo por cada causa
+  - *Escenario BDD:* Determinismo y solo lectura
+- **[RF-KOF-21]** Verbo de Solo Lectura `axiom sdd tests check`
+  - *Escenario BDD:* Informe en texto y JSON
+  - *Escenario BDD:* Con hallazgos sale en error
+  - *Escenario BDD:* Activa y falta `pruebas.md`
+  - *Escenario BDD:* No activa y sin fichero
+  - *Escenario BDD:* Registro del verbo
+- **[RF-KOF-22]** El Status Proyecta `acceptanceTests` de Forma Aditiva y Avisa sin Bloquear la Ausencia de `pruebas.md`
+  - *Escenario BDD:* Función activa con `pruebas.md`
+  - *Escenario BDD:* Aviso por ausencia sin bloqueo
+  - *Escenario BDD:* Función no activa
+  - *Escenario BDD:* Declaración inválida
+- **[RF-KOF-23]** El Archivado Reescribe los Provisionales de la Columna `Cubre` de `pruebas.md`
+  - *Escenario BDD:* Provisionales reescritos en `Cubre`
+  - *Escenario BDD:* El resto del fichero no cambia
+  - *Escenario BDD:* Idempotencia y ausencia
+  - *Escenario BDD:* IDs definitivos intactos
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -3371,4 +3436,18 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* La plantilla documenta `azure-devops`
   - *Escenario BDD:* El manual documenta secreto, scopes y verbos
   - *Escenario BDD:* Ya no se afirma catálogo vacío
+- **[RF-TOP-19]** Bloque `acceptance_tests:` Opcional y Estricto de `axiom.yaml`, Solo en `multirepo`
+  - *Escenario BDD:* Bloque válido en multirepo
+  - *Escenario BDD:* Sin bloque o con `enabled: false`
+  - *Escenario BDD:* Clave desconocida
+  - *Escenario BDD:* Activo sin entornos o con entornos vacíos
+  - *Escenario BDD:* Entornos duplicados
+  - *Escenario BDD:* `enabled` no booleano o bloque no mapeo
+  - *Escenario BDD:* Monorepo rechaza `enabled: true`
+  - *Escenario BDD:* Monorepo admite `enabled: false` y la ausencia del bloque
+- **[RF-TOP-20]** `Locate` Expone el Error del Bloque sin Rechazar, no Bloquea el Archivado y `init --force` lo Conserva; Plantilla y Manual lo Documentan
+  - *Escenario BDD:* `Locate` con bloque inválido
+  - *Escenario BDD:* Archivado no bloqueado
+  - *Escenario BDD:* `init --force` conserva el bloque
+  - *Escenario BDD:* Plantilla y manual cubiertos por las pruebas de contrato
 
