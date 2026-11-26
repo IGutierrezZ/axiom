@@ -276,13 +276,13 @@ this same capability already governs.
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en sus pasos de exploración y de cierre, estas reglas mínimas, en un texto idéntico para todos los proyectos y adaptadores:
 
-1. Lectura del contexto técnico: el paso de exploración DEBE indicar que, si el proyecto declara un contexto técnico mantenido, se obtienen los localizadores con `axiom workspace context --cwd <repo> --json`, se abre primero `technicalContext.maintained.entry` y se consultan los demás `technicalContext.maintained.paths` solo bajo demanda. Sin contexto mantenido declarado, el paso NO DEBE exigir ninguna lectura adicional. La regla NO DEBE depender de `axiom sdd status --json` ni de un cambio SDD.
+1. Lectura del contexto técnico: el paso de exploración DEBE indicar que, si el proyecto declara un contexto técnico mantenido, se obtienen los localizadores con `axiom workspace context --cwd <repo> --json`, se abre primero `technicalContext.maintained.entry` y se consultan los demás `technicalContext.maintained.paths` solo bajo demanda. Sin contexto técnico mantenido declarado, el paso NO DEBE exigir ninguna lectura adicional. La regla NO DEBE depender de `axiom sdd status --json` ni de un cambio SDD.
 2. Contexto técnico: el cierre DEBE indicar que, si el proyecto declara un contexto técnico mantenido y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo, con los localizadores leídos en la exploración (la salida de `axiom workspace context --cwd <repo> --json`). La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido y NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`).
-3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`, que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`) y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (REQ-27.17). La integración en `openspec/specs/` es la única escritura permitida fuera del documento ODD y del código.
+3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`; que todo requisito ADDED lleva un identificador provisional (o, si el autor lo prefiere, un identificador definitivo, que se sigue admitiendo con la comprobación de colisión) y que `axiom archive integrate --odd <feature>` asigna el número definitivo y reescribe el documento; que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`); y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (REQ-27.17). La integración en `openspec/specs/` y la reescritura de los identificadores del propio documento ODD son las únicas escrituras permitidas fuera del código.
 4. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (REQ-30.7 de `odd-living-spec-integration`).
 
 Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Estas reglas son la extensión de `project-technical-context` y de `odd-living-spec-integration` al carril ODD, que no tiene archive.
-(Previously: solo el paso de cierre mencionaba el contexto técnico, con el localizador de `axiom sdd status --json`, y la exploración no lo leía)
+(Previously: la regla 3 decía que la delta se escribe en `## Spec viva` y que el ADDED lleva el identificador elegido por el autor, y que la integración en `openspec/specs/` era la única escritura permitida fuera del documento ODD y del código; ahora el ADDED lleva un provisional que la integración asigna y reescribe en el documento, y esa reescritura del documento también está permitida.)
 
 #### Scenario: La exploración lee la entrada del contexto mantenido
 
@@ -312,6 +312,14 @@ Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SD
 - **ENTONCES** indica la sección `## Spec viva`, el marcador de `## Impacto en la spec` para los bugs sin delta (la línea literal `Sin impacto en la spec` y una línea `Motivo:`) y la ejecución de `axiom archive integrate --odd <feature>`
 - **Y** no contiene ninguna parada ni el texto de las tres salidas
 
+#### Scenario: El cierre indica el identificador provisional del ADDED y la asignación
+
+- **DADO** las instrucciones de enrutamiento renderizadas
+- **CUANDO** se inspecciona (pin de texto) el paso de cierre
+- **ENTONCES** indica que el requisito ADDED lleva un identificador provisional y que `axiom archive integrate --odd <feature>` asigna el número definitivo y reescribe el documento
+- **Y** indica que un identificador definitivo en el ADDED sigue admitiéndose
+- **Y** no fija el formato literal del identificador provisional
+
 #### Scenario: La regla no exige nada sin contexto mantenido
 
 - **DADO** un proyecto sin `technical_context.maintained`
@@ -331,7 +339,6 @@ Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SD
 - **CUANDO** se renderizan repetidamente las instrucciones de enrutamiento gestionadas
 - **ENTONCES** el texto es idéntico en cada renderizado y entre proyectos
 - **Y** los pasos del protocolo ODD distintos de la exploración y el cierre, y el carril SDD, no mencionan el contexto técnico
-
 ### Requirement: El Protocolo ODD Prepara la Rama con `axiom branch ensure` (REQ-25.40)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN sustituir la regla «branch first when on the default branch» por la ejecución de `axiom branch ensure --lane odd --change <feature>` antes de la primera escritura del documento vivo `odd/tasks/<feature>.md` y de cualquier escritura de código, y DEBEN indicar que las órdenes posteriores usan como `--cwd` las rutas absolutas que devuelve su JSON. El cierre de cada tarea mantiene el commit por unidad de trabajo, ahora en la rama que `ensure` preparó. La regla NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD, NO DEBE exigir interacción con el usuario salvo el resultado `decision_required` del modo `ask`, y la proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Esta regla no activa SDD ni crea artefactos SDD.
