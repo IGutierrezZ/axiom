@@ -123,3 +123,55 @@ export async function createWithDecision(post, ask, payload) {
     throw refusalError(err);
   }
 }
+
+// ---- 5. Alta desde un work item (prov:WEB:9) ---------------------------------------
+
+// WorkItemStartError es un fallo del alta desde un work item. Si `change` no está vacío, la fase 1
+// ya dejó su staging: `actions` dice qué ofrece la interfaz («retry», «discard»). Todos los textos se
+// pintan con textContent: pueden derivar del tracker.
+export class WorkItemStartError extends Error {
+  constructor(message, change, actions) {
+    super(message);
+    this.name = 'WorkItemStartError';
+    this.change = change || '';
+    this.actions = change ? actions : [];
+  }
+}
+
+// workItemFailure traduce el rechazo del servidor: mensaje, motivo, continuación y variable de
+// entorno, juntos y como texto plano.
+export function workItemFailure(err) {
+  const data = (err && err.data) || {};
+  const parts = [(err && err.message) || data.error || 'El alta desde el work item ha fallado.'];
+  if (data.reason) parts.push(`Motivo: ${data.reason}`);
+  if (data.continuation) parts.push(`Continuación: ${data.continuation}`);
+  if (data.envVar) parts.push(`Variable de entorno: ${data.envVar}`);
+  const actions = Array.isArray(data.actions) ? data.actions.filter(a => a === 'retry' || a === 'discard') : [];
+  return new WorkItemStartError(parts.join(' '), typeof data.change === 'string' ? data.change : '', actions);
+}
+
+// startFromWorkItem da el alta con `post(payload)`. Un 409 `decision_required` se presenta con
+// `ask(decision)` (el selector de modo del alta manual) y se repite UNA vez con `{change, mode}`,
+// sin repetir la fase 1. Cancelar la decisión, o cualquier fallo posterior a la fase 1, deja el
+// staging: el error ofrece reintentar con ese `change` o descartarlo.
+export async function startFromWorkItem(post, ask, payload) {
+  try {
+    return await post(payload);
+  } catch (err) {
+    const decision = decisionOf(err);
+    const change = err && err.data && typeof err.data.change === 'string' ? err.data.change : '';
+    if (!decision || !change) throw workItemFailure(err);
+    const answer = await ask(decision);
+    if (!answer) {
+      throw new WorkItemStartError('Alta cancelada: no elegiste cómo trabajar el cambio. El work item ya está preparado.', change, ['retry', 'discard']);
+    }
+    try {
+      return await post({ change, mode: answer, intent: payload.intent, type: payload.type });
+    } catch (second) {
+      if (decisionOf(second)) {
+        throw new WorkItemStartError('El servidor volvió a pedir la decisión tras responderla.', change, ['retry', 'discard']);
+      }
+      throw workItemFailure(second);
+    }
+  }
+}

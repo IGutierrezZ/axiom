@@ -40,6 +40,12 @@ export function externalLink(href, label) {
   return a;
 }
 
+// workItemsApplicable dice si el alta puede ofrecer el campo del work item: solo con la respuesta
+// de GET /api/integrations y `workItems.applicable === true`. Cualquier otra cosa, no.
+export function workItemsApplicable(data) {
+  return Boolean(data && data.workItems && data.workItems.applicable === true);
+}
+
 const SOURCE_LABELS = {
   env: 'Variable de entorno',
   keyring: 'Almacén del sistema',

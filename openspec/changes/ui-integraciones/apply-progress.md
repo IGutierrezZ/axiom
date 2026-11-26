@@ -124,3 +124,17 @@ Notas de cobertura resueltas: hueco 4 (reanudar con el mismo work item o por `ch
 Desviaciones: (1) los tipos y métodos de work item de la pasarela viven en `internal/cli/integrations_gateway_workitem.go` (el diseño decía `integrations_gateway.go`), sin literales de rechazo nuevos: reutilizan `changeStartRefusalText`. (2) `proposal.md` se escribe antes de la fase 2 (el diseño la ponía después): así un reintento por `change` nunca depende de un staging ya retirado y la fase 2 solo exige la carpeta. (3) `WorkItemStaged` devuelve `{Change, ExternalRef}` y lee el staging con `changestart.WorkItemFacts`; el dashboard valida el nombre con `changestart.ValidChangeName` directamente. (4) Códigos añadidos a D-08: `change_exists` (409), `invalid_change_name` (422), `ensure_failed` y `folder_write_failed` (500), `work_items_not_applicable` (422). `Fields` del rechazo expone solo `reason`, `type`, `tag`, `change`, `lane` y `record_lane` (nunca `detail`). (5) Un único `workItemLock` para alta y descarte; presupuesto 120 s en `Server.workItemBudget`.
 
 Riesgos: la ruta de multirepo usa `filepath.Dir(planningHome)` como `cwd` de la fase 2, según el diseño, sin prueba con git real en multirepo; `already_adopted` reutiliza la carpeta y la fase 2 es idempotente, pero no se ejercita contra un cambio ya adoptado de verdad.
+
+## Evidencia de la unidad 6.2
+
+| Evidencia | Valor |
+|---|---|
+| RED | `TestIntegrationsScreenAssetsWorkItemStartForm` escrita antes de tocar `incrementos.js`: `go test ./internal/dashboard -run TestIntegrationsScreenAssetsWorkItemStartForm` falló (faltaban `/api/integrations/start`, `confirm: true`, `confirmDialog`, `startFromWorkItem`, `workItemsApplicable`, `Descartar`). |
+| GREEN | `go test ./internal/dashboard -run 'TestIntegrationsScreenAssets\|Assets\|Inline\|Increment\|Incrementos\|Branches\|TestJSModuleImportsResolve\|TestIndexHTMLShell\|TestNoInlineStyle' -count=1`: ok; `go vet ./internal/dashboard`: ok; `node --check` de `incrementos.js`, `branches.js` e `integrations.js` (copias en un directorio temporal): ok. |
+| Arnés | Sin ejecutor de JS en las pruebas: invariantes fijados por texto. Comprobación visual pendiente para `verify`. |
+
+Implementación: `core/branches.js` añade `startFromWorkItem` (un 409 `decision_required` reutiliza el selector de modo y repite con `{change, mode, intent, type}` sin repetir la fase 1) y `WorkItemStartError` con `change` y `actions`; `core/integrations.js` añade `workItemsApplicable`; `index.html` añade el campo, el aviso y los botones Reintentar y Descartar; `incrementos.js` muestra el campo solo si `GET /api/integrations` dice `workItems.applicable` (si falla, el alta manual queda igual), pinta mensajes, avisos y continuaciones con `textContent`, y descarta con `confirmDialog` y `confirm: true`.
+
+Decisiones: con work item, el campo de nombre se ignora (el cambio se deriva del work item); las advertencias del éxito se muestran en el diálogo y el botón pasa a «Abrir el cambio». Cancelar la decisión de modo ofrece reintentar o descartar.
+
+Riesgos: la interfaz no se ha visto en un navegador real; el reintento reenvía la intención y el tipo del formulario.

@@ -108,3 +108,35 @@ func TestIntegrationsScreenAssetsReuseTheSettingsFlow(t *testing.T) {
 		}
 	}
 }
+
+func TestIntegrationsScreenAssetsWorkItemStartForm(t *testing.T) {
+	t.Parallel()
+	inc := readAsset(t, "js/screens/incrementos.js")
+	for _, marker := range []string{
+		"/api/integrations", "/api/integrations/start", "/api/integrations/start/discard", "confirm: true",
+		"confirmDialog", "startFromWorkItem", "workItemsApplicable", "Reintentar", "Descartar", "textContent",
+	} {
+		if !strings.Contains(inc, marker) {
+			t.Errorf("incrementos.js no contiene %q", marker)
+		}
+	}
+	for _, banned := range []string{"workitem", "work-item", "WorkItem"} {
+		// El work item nunca se recuerda en el navegador: ninguna escritura de preferencias lo nombra.
+		if regexp.MustCompile(`writePref\([^)]*` + banned).MatchString(inc) {
+			t.Errorf("incrementos.js guarda el work item con writePref (%s)", banned)
+		}
+	}
+	// Ningún dato del tracker entra en innerHTML.
+	if regexp.MustCompile(`innerHTML\s*=[^;]*(err\.|failure|warning|message)`).MatchString(inc[strings.Index(inc, "// ---- Modal"):]) {
+		t.Error("el modal de alta interpola datos del servidor en innerHTML")
+	}
+	index := readAsset(t, "index.html")
+	for _, marker := range []string{`id="field-inc-workitem"`, `id="input-inc-workitem"`, `id="new-inc-recovery"`, `id="btn-wi-retry"`, `id="btn-wi-discard"`, `id="new-inc-notes"`} {
+		if !strings.Contains(index, marker) {
+			t.Errorf("index.html no contiene %q", marker)
+		}
+	}
+	if !strings.Contains(readAsset(t, "js/core/branches.js"), "export async function startFromWorkItem") {
+		t.Error("core/branches.js no exporta startFromWorkItem")
+	}
+}

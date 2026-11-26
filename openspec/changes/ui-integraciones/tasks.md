@@ -84,7 +84,7 @@ Barandillas transversales (aplican a TODA tarea que toque Go):
   Cubre: prov:WEB:9, prov:WEB:10, prov:WEB:11.
   Prueba: `go test ./internal/dashboard -run 'TestWorkItemStart|TestSafeExternalURL|TestCreateIncrement_|TestEveryDashboardRouteIsClassified'`; `go test ./internal/cli -run 'TestIntegrationsGatewayWorkItem|TestEveryProductionRefusal|TestChangeStart'`.
   Hecho cuando: pasan sin llamadas a ADO real y el alta manual existente no cambia.
-- [ ] 6.2 Interfaz del alta con work item. RED: ampliar `integrations_assets_test.go` con `TestIntegrationsScreenAssets*` para el campo de work item, «Reintentar» y «Descartar» con confirmación explícita. GREEN: `screens/incrementos.js`, `core/branches.js`, `index.html`, sin `innerHTML` con datos del tracker ni estilos en línea. Ficheros: `internal/dashboard/assets/js/screens/incrementos.js`, `internal/dashboard/assets/js/core/branches.js`, `internal/dashboard/assets/index.html`, `internal/dashboard/integrations_assets_test.go`.
+- [x] 6.2 Interfaz del alta con work item. RED: ampliar `integrations_assets_test.go` con `TestIntegrationsScreenAssets*` para el campo de work item, «Reintentar» y «Descartar» con confirmación explícita. GREEN: `screens/incrementos.js`, `core/branches.js`, `index.html`, sin `innerHTML` con datos del tracker ni estilos en línea. Ficheros: `internal/dashboard/assets/js/screens/incrementos.js`, `internal/dashboard/assets/js/core/branches.js`, `internal/dashboard/assets/index.html`, `internal/dashboard/integrations_assets_test.go`.
   Cubre: prov:WEB:9.
   Prueba: `go test ./internal/dashboard -run 'TestIntegrationsScreen|TestIndexHTMLShell|TestJSModuleImportsResolve|TestNoInlineStyle'`.
   Hecho cuando: pasan y la interfaz ofrece reanudar con el mismo work item.
