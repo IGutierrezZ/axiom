@@ -16,8 +16,8 @@ import (
 //
 //   - avisos del listado de incrementos (`X-Axiom-Notes`), insignias de pendiente de archivar y de rama:
 //     js/screens/incrementos.js, js/core/branches.js y la lectura de cabeceras de js/core/api.js;
-//   - política de ramas efectiva en solo lectura y preferencias personales de worktree del proyecto
-//     activo: js/screens/ecosystem.js (tarjetas Topología y Preferencias de worktree);
+//   - política de ramas efectiva en solo lectura: js/screens/ecosystem.js (tarjeta Topología);
+//   - preferencias personales de worktree del proyecto activo: js/screens/ajustes.js (Ajustes del proyecto);
 //   - modo y raíz de worktree al registrar un proyecto: js/projects.js;
 //   - diálogo de decisión del 409 `decision_required` al crear un incremento: js/screens/incrementos.js.
 //
@@ -410,20 +410,20 @@ func TestBranchPolicyRuntime(t *testing.T) {
 	}
 }
 
-// RF-HUB-07 y REQ-25.33: las preferencias personales de worktree del proyecto activo se editan y se
-// guardan en el Hub desde Ecosistema, y el alta de un proyecto las pregunta.
-func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
+// RF-HUB-07 y RF-WEB-10: las preferencias personales de worktree del proyecto activo se editan y se
+// guardan en el Hub desde Ajustes del proyecto, y el alta de un proyecto las pregunta.
+func TestWorktreePrefsEditorInSettings(t *testing.T) {
 	t.Parallel()
-	html, eco := readAsset(t, "index.html"), readAsset(t, "js/screens/ecosystem.js")
-	start, end := strings.Index(html, `id="view-ecosistema"`), strings.Index(html, "</main>")
+	html, eco := readAsset(t, "index.html"), readAsset(t, "js/screens/ajustes.js")
+	start, end := strings.Index(html, `id="view-ajustes"`), strings.Index(html, "</main>")
 	if start < 0 || end < start {
-		t.Fatal("index.html: no se localiza la vista de Ecosistema")
+		t.Fatal("index.html: no se localiza la vista de Ajustes")
 	}
 	view := html[start:end]
 
 	selectBlock := regexp.MustCompile(`(?s)<select id="select-worktree-prefs-mode".*?</select>`).FindString(view)
 	if selectBlock == "" {
-		t.Fatal("la vista de Ecosistema no tiene el selector `select-worktree-prefs-mode`")
+		t.Fatal("la vista de Ajustes no tiene el selector `select-worktree-prefs-mode`")
 	}
 	for _, option := range []string{`value=""`, `value="worktree"`, `value="in_place"`, `value="ask"`} {
 		if !strings.Contains(selectBlock, option) {
@@ -432,7 +432,7 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	}
 	for _, id := range []string{"input-worktree-prefs-root", "btn-save-worktree-prefs", "worktree-prefs-effective", "worktree-prefs-status", "eco-worktree-body", "form-worktree-prefs"} {
 		if !strings.Contains(view, `id="`+id+`"`) {
-			t.Errorf("la vista de Ecosistema no contiene #%s", id)
+			t.Errorf("la vista de Ajustes no contiene #%s", id)
 		}
 	}
 	// Cada control tiene su etiqueta, y el resultado se anuncia.
@@ -458,8 +458,8 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	if load := funcBody(t, eco, "loadWorktreePrefs"); !strings.Contains(load, "/api/projects/active/worktree-prefs") || !strings.Contains(load, "stateError(") || !strings.Contains(load, "404") {
 		t.Errorf("loadWorktreePrefs debe leer las preferencias y distinguir un proyecto sin registrar de un fallo:\n%s", load)
 	}
-	if !strings.Contains(funcBody(t, eco, "loadEcosystem"), "loadWorktreePrefs()") {
-		t.Error("Actualizar y cambiar de proyecto deben recargar las preferencias (loadEcosystem)")
+	if !strings.Contains(funcBody(t, eco, "loadSettings"), "loadWorktreePrefs()") {
+		t.Error("Actualizar y cambiar de proyecto deben recargar las preferencias (loadSettings)")
 	}
 }
 

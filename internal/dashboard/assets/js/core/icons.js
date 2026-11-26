@@ -46,7 +46,8 @@ const PATHS = {
   square: '<rect x="3" y="3" width="18" height="18" rx="5"/>',
   lock: '<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
   fileDashed: '<path d="M6 3h8l4 4v14H6z" stroke-dasharray="3 3"/>',
-  pin: '<path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z"/>'
+  pin: '<path d="M9 3h6l-1 6 4 4v2h-5v6l-1 1-1-1v-6H6v-2l4-4z"/>',
+  settings: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'
 };
 
 // icon devuelve el SVG como cadena. El trazo usa currentColor y es decorativo

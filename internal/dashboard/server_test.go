@@ -19,7 +19,7 @@ import (
 )
 
 // Pruebas de las preferencias personales de worktree en el dashboard (INC-25, RF-HUB-05,
-// RF-HUB-06, RF-HUB-07, REQ-25.33). Decodifican el JSON con tipos propios de la prueba, no con
+// RF-HUB-06, RF-HUB-07, RF-WEB-10). Decodifican el JSON con tipos propios de la prueba, no con
 // los DTO de producción: así fijan los nombres de los campos del contrato HTTP.
 
 // prefsJSON y projectJSON son la forma observable de `worktree_prefs` y de cada proyecto de
@@ -415,7 +415,7 @@ func TestProjectsWorktreePrefsHarness(t *testing.T) {
 // El servidor sirve la página con los campos de worktree del modal de registro y el módulo que los
 // envía. El detalle de los campos y de la lógica (rediseño) lo cubre assets_branch_test.go; aquí se
 // fija solo que lo que el navegador recibe por HTTP es lo que ofrece las preferencias (RF-HUB-07,
-// REQ-25.33) y que la interfaz no deja editar el bloque `git:`.
+// RF-WEB-10) y que la interfaz no deja editar el bloque `git:`.
 func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 	t.Parallel()
 	router, _, _ := newPrefsServer(t, newProjectDir(t, "assets"))
@@ -437,14 +437,14 @@ func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 		}
 	}
 	if strings.Contains(html, "integration_branch") || strings.Contains(html, "branch_prefix") {
-		t.Error("index.html no debe ofrecer controles de edición de `git:` (REQ-25.33)")
+		t.Error("index.html no debe ofrecer controles de edición de `git:` (RF-WEB-10)")
 	}
 
 	// Los módulos que envían y guardan las preferencias se sirven como JavaScript.
 	for target, markers := range map[string][]string{
-		"/js/projects.js":          {"worktree"},
-		"/js/screens/ecosystem.js": {"/api/projects/active/worktree-prefs"},
-		"/js/core/branches.js":     {"worktree_mode", "worktree_root", "defaultWorktreeRoot"},
+		"/js/projects.js":        {"worktree"},
+		"/js/screens/ajustes.js": {"/api/projects/active/worktree-prefs"},
+		"/js/core/branches.js":   {"worktree_mode", "worktree_root", "defaultWorktreeRoot"},
 	} {
 		rr := request(router, http.MethodGet, target, "")
 		if rr.Code != http.StatusOK || !strings.HasPrefix(rr.Header().Get("Content-Type"), "text/javascript") {
@@ -476,7 +476,7 @@ func equalTrees(a, b map[string]string) bool {
 }
 
 // Pruebas de la política de ramas en solo lectura de `GET /api/workspace` (INC-25, REQ-1.1,
-// REQ-25.33, design D-20). Decodifican el JSON con tipos propios de la prueba, no con los DTO de
+// RF-WEB-10, design D-20). Decodifican el JSON con tipos propios de la prueba, no con los DTO de
 // producción: así fijan los nombres de los campos del contrato HTTP.
 
 // branchPolicyJSON y repositoryJSON son la forma observable de `branchPolicy` y de cada entrada
@@ -604,8 +604,9 @@ func TestWorkspaceBranchPolicy(t *testing.T) {
 	}
 }
 
-// Ninguna ruta del servidor escribe axiom.yaml (REQ-25.33): ni la lectura de la política ni
-// los métodos no permitidos sobre `/api/workspace` cambian el árbol del proyecto.
+// `/api/workspace` es solo lectura (RF-WEB-01, RF-WEB-10): ni la lectura de la política ni los
+// métodos no permitidos cambian el árbol del proyecto. El único camino que escribe axiom.yaml es
+// `PUT /api/settings` (settings_api_test.go).
 func TestWorkspaceIsReadOnly(t *testing.T) {
 	t.Parallel()
 	dir := newPolicyProjectDir(t, policyHeader+"git:\n  integration_branch: develop\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n")

@@ -14,7 +14,8 @@ const ROUTE_LABELS = {
   incremento: 'Incrementos',
   specs: 'Specs vivas',
   skills: 'Skills',
-  ecosistema: 'Ecosistema'
+  ecosistema: 'Ecosistema',
+  ajustes: 'Ajustes del proyecto'
 };
 
 export function routeLabel(route) {
