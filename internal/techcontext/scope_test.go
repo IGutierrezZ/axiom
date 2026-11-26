@@ -42,6 +42,7 @@ func scopeEntry(document string) Entry {
 }
 
 func TestScopeAcceptsMaintainedDocuments(t *testing.T) {
+	t.Parallel()
 	scope, _ := scopeTree(t)
 	for _, document := range []string{
 		"context/ARQUITECTURA.md",            // existente
@@ -58,6 +59,7 @@ func TestScopeAcceptsMaintainedDocuments(t *testing.T) {
 }
 
 func TestScopeRejectsDocumentsOutsideTheMaintainedPaths(t *testing.T) {
+	t.Parallel()
 	scope, _ := scopeTree(t)
 	tests := []struct {
 		document string
@@ -84,6 +86,7 @@ func TestScopeRejectsDocumentsOutsideTheMaintainedPaths(t *testing.T) {
 }
 
 func TestScopeDecidesByIdentityNotByText(t *testing.T) {
+	t.Parallel()
 	scope, _ := scopeTree(t)
 	// Una ruta mantenida declarada como un fichero concreto solo permite ese fichero.
 	if err := os.WriteFile(scope.Resolve("NOTAS-RAIZ.md"), []byte("# n\n"), 0o644); err != nil {
@@ -103,6 +106,7 @@ func TestScopeDecidesByIdentityNotByText(t *testing.T) {
 }
 
 func TestScopeRejectsASymlinkThatLeavesTheMaintainedPath(t *testing.T) {
+	t.Parallel()
 	scope, base := scopeTree(t)
 	link := filepath.Join(scope.WorkspaceRoot, "context", "salida")
 	if err := os.Symlink(filepath.Join(base, "ajeno"), link); err != nil {
@@ -117,6 +121,7 @@ func TestScopeRejectsASymlinkThatLeavesTheMaintainedPath(t *testing.T) {
 }
 
 func TestScopeComparesAnUndeclaredPathLexically(t *testing.T) {
+	t.Parallel()
 	scope, _ := scopeTree(t)
 	// La ruta mantenida aún no existe: no tiene identidad, así que se compara de
 	// forma léxica y el primer documento de un directorio nuevo se permite.
@@ -130,6 +135,7 @@ func TestScopeComparesAnUndeclaredPathLexically(t *testing.T) {
 }
 
 func TestScopeWithoutMaintainedPaths(t *testing.T) {
+	t.Parallel()
 	scope, _ := scopeTree(t)
 	scope.Maintained = nil
 	err := scope.CheckDocument(scopeEntry("context/ARQUITECTURA.md"))
@@ -146,6 +152,7 @@ func locationWith(root string, technical *workspace.TechnicalContextConfig) work
 }
 
 func TestScopeOfReadsTheDeclaredPathsWithSlashes(t *testing.T) {
+	t.Parallel()
 	loc := locationWith(`C:\ws`, &workspace.TechnicalContextConfig{
 		Maintained: &workspace.ContextMode{Entry: "context/A.md", Paths: []string{` context\ `, "../repo/docs/"}},
 		Reference:  &workspace.ContextMode{Paths: []string{"referencia/"}},
@@ -211,6 +218,7 @@ func TestClassifyResolvesDeclaredPathsAgainstTheWorkspaceRoot(t *testing.T) {
 }
 
 func TestClassifyGivesReferencePrecedenceOverMaintained(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "context", "legado"), 0o755); err != nil {
 		t.Fatal(err)

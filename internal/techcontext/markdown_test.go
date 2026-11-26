@@ -7,6 +7,7 @@ import (
 )
 
 func TestMarkdownDocumentLinesKeepTheirOwnEOL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		data string
@@ -46,6 +47,7 @@ func headingSummary(doc Document) []string {
 }
 
 func TestMarkdownDocumentATXHeadings(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		text string
@@ -81,6 +83,7 @@ func TestMarkdownDocumentATXHeadings(t *testing.T) {
 }
 
 func TestMarkdownDocumentHeadingIndexesAreZeroBased(t *testing.T) {
+	t.Parallel()
 	doc := ParseDocument([]byte("texto\n\n## Dos\n"))
 	headings := doc.Headings()
 	if len(headings) != 1 || headings[0].Index+1 != 3 || headings[0].Index != 2 {

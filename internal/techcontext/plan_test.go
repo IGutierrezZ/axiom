@@ -12,6 +12,7 @@ import (
 )
 
 func TestCheckReportsTheContextEntries(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	report := f.check(t)
 	mustNoErrors(t, report)
@@ -35,6 +36,7 @@ func TestCheckReportsTheContextEntries(t *testing.T) {
 
 // REQ-30.15 y REQ-30.29: `check` no escribe nada, tampoco en la carpeta del cambio.
 func TestCheckDoesNotWrite(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	before := snapshot(t, f.master)
 	f.check(t)
@@ -44,6 +46,7 @@ func TestCheckDoesNotWrite(t *testing.T) {
 }
 
 func TestCheckMarksTheDocumentsThatArchiveCreates(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	f.writeChange(t, DeltaFileName, "## Entrada: context/NUEVO.md\n\n- Ancla: Pagos\n- Acción: add\n- Motivo: documento nuevo\n")
 	report := f.check(t)
@@ -54,6 +57,7 @@ func TestCheckMarksTheDocumentsThatArchiveCreates(t *testing.T) {
 }
 
 func TestCheckWarnsWhenTheDeltaIsMissingAndNeverAssumesNoImpact(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	f.removeChange(t, DeltaFileName)
 	report := f.check(t)
@@ -67,6 +71,7 @@ func TestCheckWarnsWhenTheDeltaIsMissingAndNeverAssumesNoImpact(t *testing.T) {
 }
 
 func TestCheckAcceptsNoImpact(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	f.writeChange(t, DeltaFileName, "# Delta\n\nSin impacto: solo cambia código interno\n")
 	report := f.check(t)
@@ -77,6 +82,7 @@ func TestCheckAcceptsNoImpact(t *testing.T) {
 }
 
 func TestCheckWithoutTechnicalContextHasNothingToIntegrate(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	writeTestFile(t, filepath.Join(f.specs, "axiom.yaml"), configWithoutContext)
 	report := f.check(t)
@@ -87,6 +93,7 @@ func TestCheckWithoutTechnicalContextHasNothingToIntegrate(t *testing.T) {
 }
 
 func TestCheckRejections(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		delta  string
@@ -140,6 +147,7 @@ func TestCheckRejections(t *testing.T) {
 // REQ-30.19: con contexto mantenido, un almacén de artefactos sin ficheros no tiene
 // delta ni traza que integrar.
 func TestCheckRequiresAFileArtifactStoreWithMaintainedContext(t *testing.T) {
+	t.Parallel()
 	for _, store := range []string{"engram", "none"} {
 		t.Run(store, func(t *testing.T) {
 			f := newFixture(t, false)
@@ -163,6 +171,7 @@ func TestCheckRequiresAFileArtifactStoreWithMaintainedContext(t *testing.T) {
 
 // REQ-30.30: una declaración `technical_context:` inválida falla cerrada.
 func TestCheckFailsClosedOnAnInvalidTechnicalContext(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, false)
 	writeTestFile(t, filepath.Join(f.specs, "axiom.yaml"), strings.Replace(fixtureConfig, "paths:\n      - context/\n      - ../repo-backend/docs/\n", "paths: []\n", 1))
 	mustErrors(t, f.check(t), "no es válida", "axiom workspace validate")
@@ -232,6 +241,7 @@ func TestPrepareWritesOnlyTheTraceAndRegistersTheRepositories(t *testing.T) {
 }
 
 func TestPrepareWithNoImpactRegistersTheDecisionWithoutEntries(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	f.writeChange(t, DeltaFileName, "Sin impacto: solo cambia código interno\n")
 	commitAll(t, f.specs, "sin impacto")
@@ -243,6 +253,7 @@ func TestPrepareWithNoImpactRegistersTheDecisionWithoutEntries(t *testing.T) {
 }
 
 func TestPrepareStopsWhenTheDeltaIsMissingWithMaintainedContext(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	f.removeChange(t, DeltaFileName)
 	_, report, err := Prepare(context.Background(), f.target(t))
@@ -256,6 +267,7 @@ func TestPrepareStopsWhenTheDeltaIsMissingWithMaintainedContext(t *testing.T) {
 }
 
 func TestPrepareStopsOnUncommittedChangesInTheEditedDocuments(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	writeTestFile(t, filepath.Join(f.specs, "context", "ARQUITECTURA.md"), fixtureContext+"\nCambio sin confirmar.\n")
 	_, report, err := Prepare(context.Background(), f.target(t))
@@ -269,6 +281,7 @@ func TestPrepareStopsOnUncommittedChangesInTheEditedDocuments(t *testing.T) {
 }
 
 func TestPrepareRequiresEditAuthorizationForSiblingRepositories(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	target := f.target(t)
 	target.AllowedRoots = []string{target.Location.WorkspaceRoot}
@@ -304,6 +317,7 @@ func TestPrepareIsIdempotentAndRejectsChangedInputs(t *testing.T) {
 }
 
 func TestPrepareRejectsAnAlreadyIntegratedChange(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	trace, _ := prepare(t, f)
 	for i := range trace.Entries {
@@ -320,6 +334,7 @@ func TestPrepareRejectsAnAlreadyIntegratedChange(t *testing.T) {
 }
 
 func TestPrepareRejectsAForeignPlan(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	foreign := strings.Replace(planV1, "documents: []", "documents:\n  - domain: modelo\n    path: 03.md\n    integration: compose\n    before_sha256: "+testDigest, 1)
 	writeTestFile(t, filepath.Join(f.changeRoot, TraceFileName), foreign)
@@ -331,6 +346,7 @@ func TestPrepareRejectsAForeignPlan(t *testing.T) {
 }
 
 func TestPrepareWithoutTechnicalContextWritesAnEmptyPlan(t *testing.T) {
+	t.Parallel()
 	f := newFixture(t, true)
 	writeTestFile(t, filepath.Join(f.specs, "axiom.yaml"), configWithoutContext)
 	commitAll(t, f.specs, "sin contexto")
