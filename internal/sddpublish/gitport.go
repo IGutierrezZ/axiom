@@ -352,3 +352,80 @@ func splitLines(text string) []string {
 func commandFailed(dir string, result gitcommon.Result, args ...string) error {
 	return fmt.Errorf("git %s en %s terminó con el código %d: %s", strings.Join(args, " "), dir, result.ExitCode, result.Stderr)
 }
+
+// Fetch implementa Git. La refspec lleva el destino explícito y no lleva `+`: si la referencia
+// de seguimiento no avanza en línea recta, git se niega y el llamador lo trata como fallo.
+func (*GitCLI) Fetch(ctx context.Context, dir, remote, branch string) (PushOutcome, error) {
+	if err := checkRevision(remote); err != nil {
+		return PushOutcome{}, err
+	}
+	if err := checkRevision(branch); err != nil {
+		return PushOutcome{}, err
+	}
+	args := []string{"fetch", "--no-tags", remote, "refs/heads/" + branch + ":refs/remotes/" + remote + "/" + branch}
+	result, err := gitcommon.RunWithTimeout(ctx, dir, pushTimeout, args...)
+	switch {
+	case errors.Is(err, gitcommon.ErrTimeout):
+		return PushOutcome{TimedOut: true, Stdout: string(result.Stdout), Stderr: result.Stderr}, nil
+	case err != nil:
+		return PushOutcome{}, err
+	}
+	return PushOutcome{ExitCode: result.ExitCode, Stdout: string(result.Stdout), Stderr: result.Stderr}, nil
+}
+
+var objectName = regexp.MustCompile(`^[0-9a-f]{40,64}$`)
+
+// FileAt implementa Git: `git ls-tree -z --full-tree <rev> -- <ruta>` localiza el objeto y
+// `git cat-file blob <objeto>` lo lee. Una ruta que no es un fichero regular de rev (inexistente,
+// carpeta, submódulo o enlace) devuelve exists = false.
+func (*GitCLI) FileAt(ctx context.Context, dir, rev, rel string) ([]byte, bool, error) {
+	if err := checkRevision(rev); err != nil {
+		return nil, false, err
+	}
+	if err := checkRelativePath(rel); err != nil {
+		return nil, false, err
+	}
+	args := []string{"ls-tree", "-z", "--full-tree", rev, "--", rel}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, false, err
+	}
+	if result.ExitCode != 0 {
+		return nil, false, commandFailed(dir, result, args...)
+	}
+	for _, record := range strings.Split(string(result.Stdout), "\x00") {
+		if record == "" {
+			continue
+		}
+		meta, entry, found := strings.Cut(record, "\t")
+		fields := strings.Fields(meta)
+		if !found || len(fields) != 3 || entry != rel {
+			return nil, false, fmt.Errorf("git %s en %s devolvió una entrada que no se entiende: %q", strings.Join(args, " "), dir, record)
+		}
+		mode, kind, object := fields[0], fields[1], fields[2]
+		if kind != "blob" || mode == "120000" {
+			return nil, false, nil
+		}
+		if !objectName.MatchString(object) {
+			return nil, false, fmt.Errorf("git %s en %s devolvió un objeto que no se entiende: %q", strings.Join(args, " "), dir, record)
+		}
+		blob := []string{"cat-file", "blob", object}
+		read, err := gitcommon.Run(ctx, dir, blob...)
+		if err != nil {
+			return nil, false, err
+		}
+		if read.ExitCode != 0 {
+			return nil, false, commandFailed(dir, read, blob...)
+		}
+		return read.Stdout, true, nil
+	}
+	return nil, false, nil
+}
+
+// ResetKeep implementa Git: `git reset --keep <rev>`.
+func (*GitCLI) ResetKeep(ctx context.Context, dir, rev string) error {
+	if err := checkRevision(rev); err != nil {
+		return err
+	}
+	return runStep(ctx, dir, "reset", []string{"reset", "--keep", rev, "--"})
+}
