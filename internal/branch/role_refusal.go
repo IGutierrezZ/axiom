@@ -44,6 +44,30 @@ func KickoffNotSealed(change, role, master string) *Refusal {
 	}
 }
 
+// TaskNotBound es el rechazo `task_not_bound` de `--role` con un tracker activo: el cambio tiene su
+// work item vinculado y el rol no tiene Task. La continuación nombra las dos salidas reales.
+func TaskNotBound(change, role, master string) *Refusal {
+	cwd := pathquote.Quote(master)
+	return &Refusal{
+		Code:         CodeTaskNotBound,
+		Message:      fmt.Sprintf("el rol %s del cambio %s no tiene Task vinculada en el tracker y no se puede arrancar; no se ha creado ninguna rama ni worktree", role, change),
+		Continuation: fmt.Sprintf("crea las Tasks con `axiom integrations tasks create --change %s --cwd %s` o vincula una existente con `axiom integrations tasks bind --change %s --role %s=<id> --cwd %s`, y repite", change, cwd, change, role, cwd),
+		Details:      map[string]string{"change": change, "role": role},
+	}
+}
+
+// IntegrationsLinksInvalid es el rechazo `integrations_links_invalid` de `--role` con un tracker
+// activo cuyo integrations.yaml no se puede leer: la barrera falla cerrado y no se esquiva con un
+// fichero roto. cause es el motivo de la lectura fallida.
+func IntegrationsLinksInvalid(change, role, master string, cause error) *Refusal {
+	return &Refusal{
+		Code:         CodeIntegrationsLinksInvalid,
+		Message:      fmt.Sprintf("no se puede comprobar la Task del rol %s: integrations.yaml del cambio %s no se puede leer (%v); no se ha creado ninguna rama ni worktree", role, change, cause),
+		Continuation: fmt.Sprintf("revisa integrations.yaml del cambio y repite, o consulta su estado con `axiom integrations sync --change %s --cwd %s`", change, pathquote.Quote(master)),
+		Details:      map[string]string{"change": change, "role": role},
+	}
+}
+
 // RoleNotInRoster es el rechazo `role_not_in_roster` de `--role` con un rol que no pertenece al
 // roster sellado; roster lista los roles válidos (detalle `roster`, separados por coma).
 func RoleNotInRoster(change, role string, roster []string) *Refusal {
