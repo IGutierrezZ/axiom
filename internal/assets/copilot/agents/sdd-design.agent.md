@@ -21,6 +21,10 @@ Execute all steps from the skill directly in this context window:
 
 Do NOT write tasks yet — design is the HOW at architectural level, tasks are the WHAT-to-do steps.
 
+## Explainer HTML
+
+When `governance.kickoff.explainerHtml` is `yes`, after the md write `resumen-design.html` as the skill's explainer step says: written in Spanish (castellano) for non-technical readers; self-contained, with no `<script>` and no external resources; with `<meta name="axiom-source-digest">` set to `expectedDigest` from `axiom sdd status`; and every block citing its requirement ID with `data-axiom-ref`.
+
 ## Engram Save (mandatory)
 
 After completing work, call `mem_save` with:

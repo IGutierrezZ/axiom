@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
@@ -35,9 +36,10 @@ func RunSDDKickoff(args []string, stdout io.Writer) error {
 
 func renderSDDKickoffHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "Uso: axiom sdd kickoff <seal|show> [argumentos]")
-	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> [--execution-style continuous|checkpointed | --from-session-pace interactive|auto] [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
+	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> [--execution-style continuous|checkpointed | --from-session-pace interactive|auto] [--docs-publication auto (solo con continuous)] [--explainer-html yes|no] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
 	_, _ = fmt.Fprintln(stdout, "    continuous solo con el rol fullstack: con roles especializados se sella --execution-style checkpointed")
 	_, _ = fmt.Fprintln(stdout, "    la topología de axiom.yaml manda: en multirepo se sella siempre checkpointed (el estilo se deriva si se omite y continuous se rechaza); en monorepo-embedded solo se admite el rol fullstack; sin axiom.yaml el estilo es obligatorio")
+	_, _ = fmt.Fprintln(stdout, "    --explainer-html yes|no decide si sdd-spec y sdd-design escriben el HTML explicativo; sdd.explainer_html de axiom.yaml (ask, always o never) manda: always sella yes, never sella no y ask sin bandera sella no con un aviso")
 	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, RF-KOF-04)")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
@@ -56,6 +58,7 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	var sealing kickoff.Kickoff
 	// Aviso de identidad git incompleta (capacidad change-actor-identity): vacío en --infer.
 	sealWarning := ""
+	defaultedExplainer := false
 	if parsed.Infer {
 		// El retrosellado es de un cambio con artefactos: nunca crea la carpeta.
 		if !existed {
@@ -89,6 +92,18 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 			return fmt.Errorf("no se sella el cambio %q: la declaración `sdd:` de axiom.yaml no es válida: %w", parsed.Change, err)
 		}
 		// Guarda A (RF-KOF-08) e instantánea de política git (RF-KOF-06): sin --infer.
+		// La decisión del HTML explicativo (sdd.explainer_html y --explainer-html) también se
+		// resuelve antes de tocar nada: una contradicción no crea la carpeta ni emite avisos.
+		mode, err := loc.Declarations.ExplainerHTML()
+		if err != nil {
+			return fmt.Errorf("no se sella el cambio %q: %w", parsed.Change, err)
+		}
+		explainerValue, explainerDefaulted, err := kickoff.ResolveExplainerHTML(mode, parsed.ExplainerHTML)
+		if err != nil {
+			return fmt.Errorf("no se sella el cambio %q: %w", parsed.Change, err)
+		}
+		sealing.Config.ExplainerHTML = explainerValue
+		defaultedExplainer = explainerDefaulted
 		if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
 			return err
 		}
@@ -122,6 +137,9 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	}
 	if wrote {
 		emitActorIdentityWarning(sealWarning)
+		if defaultedExplainer {
+			_, _ = fmt.Fprintln(kickoffSealWarnings, "aviso: sdd.explainer_html es ask y no se ha preguntado: se sella explainer_html: no; para activar el HTML explicativo, pregunta antes de sellar y pasa --explainer-html yes")
+		}
 	}
 
 	return renderKickoffSealResult(stdout, parsed.JSON, sealed, wrote)
@@ -129,6 +147,10 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 
 // sealKickoffFile es la costura de prueba sobre kickoff.Seal.
 var sealKickoffFile = kickoff.Seal
+
+// kickoffSealWarnings recibe los avisos informativos de `seal` (el de ask sin pregunta). Es una
+// costura de prueba: un fallo al escribir nunca falla el verbo.
+var kickoffSealWarnings io.Writer = os.Stderr
 
 // resolveSealChangeRoot resuelve la carpeta de un cambio para `seal`, que a
 // diferencia de gate y show puede sellar un cambio cuya carpeta aún no existe
@@ -214,6 +236,9 @@ func renderKickoffSummaryText(k kickoff.Kickoff, wrote bool) string {
 	if k.Config.DocsPublication != "" {
 		text += fmt.Sprintf(" docs_publication=%s", k.Config.DocsPublication)
 	}
+	if k.Config.ExplainerHTML != "" {
+		text += fmt.Sprintf(" explainer_html=%s", k.Config.ExplainerHTML)
+	}
 	if k.IsISO() {
 		text += " iso=true"
 	}
@@ -249,6 +274,7 @@ type kickoffJSON struct {
 	Roles            []kickoffRoleJSON `json:"roles"`
 	DeploymentTarget string            `json:"deploymentTarget"`
 	DocsPublication  string            `json:"docsPublication,omitempty"`
+	ExplainerHTML    string            `json:"explainerHtml,omitempty"`
 	ISO              bool              `json:"iso,omitempty"` // RF-KOF-12: solo un cambio sellado como ISO
 }
 
@@ -273,6 +299,7 @@ func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {
 		Roles:            roles,
 		DeploymentTarget: k.Lifecycle.DeploymentTarget,
 		DocsPublication:  string(k.Config.DocsPublication),
+		ExplainerHTML:    string(k.Config.ExplainerHTML),
 		ISO:              k.IsISO(),
 	}
 }

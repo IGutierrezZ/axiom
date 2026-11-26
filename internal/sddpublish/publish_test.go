@@ -935,3 +935,32 @@ func TestPublishExcludesIntegrationsOutbox(t *testing.T) {
 		}
 	}
 }
+
+// El HTML explicativo (resumen-spec.html y resumen-design.html) vive en la carpeta del cambio y se
+// publica junto al resto de documentos, sin tocar el código sin preparar.
+func TestPublishCommitsExplainerHTML(t *testing.T) {
+	t.Parallel()
+	repo, bare := newMonorepo(t)
+	editDesign(t, repo, "diseño nuevo\n")
+	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "resumen-spec.html"), "<html><body>spec</body></html>\n")
+	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "resumen-design.html"), "<html><body>design</body></html>\n")
+	writeFile(t, filepath.Join(repo, "src", "c.go"), "package c\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	want := []string{
+		"openspec/changes/x/design.md",
+		"openspec/changes/x/resumen-design.html",
+		"openspec/changes/x/resumen-spec.html",
+	}
+	if got := commitFiles(t, repo, "HEAD"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("el commit contiene %v, se esperaba %v", got, want)
+	}
+	if got := runGit(t, bare, "rev-parse", "refs/heads/feat/x"); got != runGit(t, repo, "rev-parse", "HEAD") {
+		t.Errorf("el remoto tiene %s, se esperaba HEAD", got)
+	}
+	if got := runGit(t, repo, "status", "--porcelain", "--untracked-files=all"); !strings.Contains(got, "?? src/c.go") {
+		t.Errorf("el código sin preparar debe seguir igual:\n%s", got)
+	}
+}

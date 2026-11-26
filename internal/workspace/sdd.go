@@ -16,10 +16,23 @@ type SDDConfig struct {
 	// IDPattern es la plantilla de identificadores de requisito declarada en
 	// `sdd.id_pattern`, ya compilada; nil si no se declara (rige el defecto).
 	IDPattern *reqid.Pattern
+	// ExplainerHTML es lo declarado en `sdd.explainer_html`; vacío si la clave no
+	// está (rige ask).
+	ExplainerHTML ExplainerHTMLMode
 }
 
+// ExplainerHTMLMode es `sdd.explainer_html`: si los cambios SDD del proyecto
+// generan el HTML explicativo de la spec y del diseño.
+type ExplainerHTMLMode string
+
+const (
+	ExplainerHTMLAsk    ExplainerHTMLMode = "ask"    // defecto: se pregunta una vez por cambio
+	ExplainerHTMLAlways ExplainerHTMLMode = "always" // se sella yes sin preguntar
+	ExplainerHTMLNever  ExplainerHTMLMode = "never"  // se sella no sin preguntar
+)
+
 // sddKeys es la lista cerrada de claves del bloque `sdd:`.
-var sddKeys = []string{"iso", "id_pattern"}
+var sddKeys = []string{"iso", "id_pattern", "explainer_html"}
 
 // idPatternExample es la plantilla de ejemplo que citan los mensajes de error de
 // `sdd.id_pattern`.
@@ -37,7 +50,7 @@ var ErrISOWorkflowContradiction = errors.New("sdd.iso: true es incompatible con 
 func decodeSDD(node *yaml.Node) (*SDDConfig, error) {
 	node = resolveAlias(node)
 	if node == nil || node.Kind != yaml.MappingNode {
-		return nil, errors.New("el bloque 'sdd' debe ser un mapeo con las claves opcionales 'iso' (true o false) e 'id_pattern' (una plantilla de texto); para no declararlo, elimina el bloque")
+		return nil, errors.New("el bloque 'sdd' debe ser un mapeo con las claves opcionales 'iso' (true o false), 'id_pattern' (una plantilla de texto) y 'explainer_html' (ask, always o never); para no declararlo, elimina el bloque")
 	}
 
 	errs := unknownKeys(node, "sdd", sddKeys)
@@ -61,6 +74,16 @@ func decodeSDD(node *yaml.Node) (*SDDConfig, error) {
 				continue
 			}
 			config.IDPattern = &pattern
+			continue
+		}
+
+		if key.Value == "explainer_html" {
+			mode, err := sddExplainerHTML(key.Line, node.Content[i+1])
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			config.ExplainerHTML = mode
 			continue
 		}
 
@@ -90,6 +113,23 @@ func sddPattern(line int, node *yaml.Node) (reqid.Pattern, error) {
 		return reqid.Pattern{}, fmt.Errorf("sdd.id_pattern (línea %d): %w; un ejemplo válido es %q; para el patrón por defecto (%s) retira la clave", line, err, idPatternExample, reqid.Default().Template())
 	}
 	return pattern, nil
+}
+
+// sddExplainerHTML lee `sdd.explainer_html`: solo un escalar !!str con ask, always
+// o never. El nulo, las listas, los mapeos y el booleano sin comillas se rechazan.
+func sddExplainerHTML(line int, node *yaml.Node) (ExplainerHTMLMode, error) {
+	node = resolveAlias(node)
+	value := ""
+	if node != nil && node.Kind == yaml.ScalarNode {
+		value = node.Value
+		if node.Tag == "!!str" {
+			switch mode := ExplainerHTMLMode(value); mode {
+			case ExplainerHTMLAsk, ExplainerHTMLAlways, ExplainerHTMLNever:
+				return mode, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("sdd.explainer_html (línea %d): el valor %q no es válido: usa ask, always o never", line, value)
 }
 
 // sddBool lee un booleano estricto: solo el escalar con etiqueta !!bool, de modo

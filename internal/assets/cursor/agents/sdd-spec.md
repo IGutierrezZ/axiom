@@ -23,6 +23,10 @@ Execute all steps from the skill directly in this context window:
 3. Write acceptance scenarios in Given/When/Then format for each requirement
 4. Persist spec to active backend (engram, openspec, or hybrid)
 
+## Explainer HTML
+
+When `governance.kickoff.explainerHtml` is `yes`, after the md write `resumen-spec.html` as the skill's explainer step says: written in Spanish (castellano) for non-technical readers; self-contained, with no `<script>` and no external resources; with `<meta name="axiom-source-digest">` set to `expectedDigest` from `axiom sdd status`; and every block citing its requirement ID with `data-axiom-ref`.
+
 ## Engram Save (mandatory)
 
 After completing work, call `mem_save` with:

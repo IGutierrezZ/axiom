@@ -10,6 +10,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	"unicode/utf16"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/explainer"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -88,6 +90,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/increments/verify", s.handleIncrementVerify)
 	s.mux.HandleFunc("/api/increments/migrate-cumulative", s.handleMigrateCumulative)
 	s.mux.HandleFunc("/api/increments/", s.handleIncrementDetail)
+	s.mux.HandleFunc("/api/explainer", s.handleExplainer)
 	s.mux.HandleFunc("/api/roles", s.handleRoles)
 	s.mux.HandleFunc("/api/handoffs", s.handleHandoffs)
 	s.mux.HandleFunc("/api/skills", s.handleSkills)
@@ -1014,4 +1017,54 @@ func notesHeader(notes []string) string {
 		}
 	}
 	return header.String()
+}
+
+// explainerCSP es la política del HTML explicativo: sin scripts, sin recursos externos y solo
+// imágenes data:. Va en el handler y no en withHeaders (decisión 8 del diseño).
+const explainerCSP = "default-src 'none'; style-src 'unsafe-inline'; img-src data:"
+
+var explainerChangeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]{0,199}$`)
+
+// validExplainerChangeName acepta solo nombres de cambio simples: rechaza vacío, ".", "..",
+// separadores, ":", espacios, NUL y cualquier escape ya decodificado.
+func validExplainerChangeName(name string) bool {
+	return explainerChangeName.MatchString(name) && !strings.Contains(name, "..")
+}
+
+// handleExplainer sirve GET|HEAD /api/explainer?change=<n>&kind=spec|design. La ruta del fichero
+// la construye el servidor a partir del cambio y de una lista blanca de dos nombres.
+func (s *Server) handleExplainer(w http.ResponseWriter, r *http.Request) {
+	h := w.Header()
+	h.Set("Content-Security-Policy", explainerCSP)
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Cache-Control", "no-store")
+	h.Set("Referrer-Policy", "no-referrer")
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	query := r.URL.Query()
+	change, kind := query.Get("change"), explainer.Kind(query.Get("kind"))
+	if !validExplainerChangeName(change) || !explainer.ValidKind(kind) {
+		http.Error(w, "Cambio o tipo de resumen inválidos", http.StatusBadRequest)
+		return
+	}
+	data, err := s.service.ReadExplainer(change, kind)
+	switch {
+	case errors.Is(err, ErrExplainerNotFound):
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	case errors.Is(err, explainer.ErrTooLarge):
+		http.Error(w, "el resumen supera el límite de 5 MiB", http.StatusInternalServerError)
+		return
+	case err != nil:
+		http.Error(w, "No se pudo leer el resumen", http.StatusInternalServerError)
+		return
+	}
+	h.Set("Content-Type", "text/html; charset=utf-8")
+	h.Set("Content-Length", strconv.Itoa(len(data)))
+	w.WriteHeader(http.StatusOK)
+	if r.Method == http.MethodGet {
+		_, _ = w.Write(data)
+	}
 }
