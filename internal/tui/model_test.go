@@ -5299,32 +5299,23 @@ func TestPinErrClearedOnScreenReentry(t *testing.T) {
 // ComponentPersona when persona != PersonaCustom and excludes it for PersonaCustom.
 func TestComponentsForPreset_PersonaMatrix(t *testing.T) {
 	tests := []struct {
-		name             string
-		preset           model.PresetID
-		persona          model.PersonaID
-		wantPersona      bool
-		wantTheme        bool
-		wantClaudeTheme  bool
-		wantOpenCodeLogo bool
-		wantNil          bool
+		name        string
+		preset      model.PresetID
+		persona     model.PersonaID
+		wantPersona bool
+		wantNil     bool
 	}{
 		{
-			name:             "full-gentleman + gentleman includes persona without visuals",
-			preset:           model.PresetFullGentleman,
-			persona:          model.PersonaGentleman,
-			wantPersona:      true,
-			wantTheme:        false,
-			wantClaudeTheme:  false,
-			wantOpenCodeLogo: false,
+			name:        "full-gentleman + gentleman includes persona without visuals",
+			preset:      model.PresetFullGentleman,
+			persona:     model.PersonaGentleman,
+			wantPersona: true,
 		},
 		{
-			name:             "full-gentleman + custom excludes persona and visuals",
-			preset:           model.PresetFullGentleman,
-			persona:          model.PersonaCustom,
-			wantPersona:      false,
-			wantTheme:        false,
-			wantClaudeTheme:  false,
-			wantOpenCodeLogo: false,
+			name:        "full-gentleman + custom excludes persona and visuals",
+			preset:      model.PresetFullGentleman,
+			persona:     model.PersonaCustom,
+			wantPersona: false,
 		},
 		{
 			name:        "minimal + gentleman includes persona",
@@ -5376,21 +5367,9 @@ func TestComponentsForPreset_PersonaMatrix(t *testing.T) {
 			}
 
 			hasPersona := false
-			hasTheme := false
-			hasClaudeTheme := false
-			hasOpenCodeLogo := false
 			for _, c := range got {
 				if c == model.ComponentPersona {
 					hasPersona = true
-				}
-				if c == model.ComponentTheme {
-					hasTheme = true
-				}
-				if c == model.ComponentClaudeTheme {
-					hasClaudeTheme = true
-				}
-				if c == model.ComponentOpenCodeGentleLogo {
-					hasOpenCodeLogo = true
 				}
 			}
 
@@ -5399,15 +5378,6 @@ func TestComponentsForPreset_PersonaMatrix(t *testing.T) {
 			}
 			if !tt.wantPersona && hasPersona {
 				t.Fatalf("componentsForPreset(%v, %v) should not include ComponentPersona; got: %v", tt.preset, tt.persona, got)
-			}
-			if tt.wantTheme != hasTheme {
-				t.Fatalf("componentsForPreset(%v, %v) ComponentTheme present = %v, want %v; got: %v", tt.preset, tt.persona, hasTheme, tt.wantTheme, got)
-			}
-			if tt.wantClaudeTheme != hasClaudeTheme {
-				t.Fatalf("componentsForPreset(%v, %v) ComponentClaudeTheme present = %v, want %v; got: %v", tt.preset, tt.persona, hasClaudeTheme, tt.wantClaudeTheme, got)
-			}
-			if tt.wantOpenCodeLogo != hasOpenCodeLogo {
-				t.Fatalf("componentsForPreset(%v, %v) ComponentOpenCodeGentleLogo present = %v, want %v; got: %v", tt.preset, tt.persona, hasOpenCodeLogo, tt.wantOpenCodeLogo, got)
 			}
 		})
 	}
@@ -5425,22 +5395,15 @@ func TestPersonaScreenRecomputesComponentsWhenPresetAlreadySet(t *testing.T) {
 	m.Selection.Persona = model.PersonaGentleman
 	m.Selection.Components = componentsForPreset(model.PresetFullGentleman, model.PersonaGentleman)
 
-	// Confirm that managed persona is included, but visual polish is not.
+	// Confirm that managed persona is included.
 	hasPersonaBefore := false
-	hasPolishBefore := false
 	for _, c := range m.Selection.Components {
 		if c == model.ComponentPersona {
 			hasPersonaBefore = true
 		}
-		if slices.Contains(model.VisualPolishComponents(), c) {
-			hasPolishBefore = true
-		}
 	}
 	if !hasPersonaBefore {
 		t.Fatal("setup: expected ComponentPersona in initial components")
-	}
-	if hasPolishBefore {
-		t.Fatal("setup: visual polish must not be installed")
 	}
 
 	// Move cursor to PersonaCustom and confirm.
@@ -5457,17 +5420,6 @@ func TestPersonaScreenRecomputesComponentsWhenPresetAlreadySet(t *testing.T) {
 		if c == model.ComponentPersona {
 			t.Fatalf("ComponentPersona must not be in components after switching to PersonaCustom; got: %v", state.Selection.Components)
 		}
-		if c == model.ComponentTheme {
-			t.Fatalf("ComponentTheme must not be in full preset components; got: %v", state.Selection.Components)
-		}
-	}
-	for _, visual := range model.VisualPolishComponents() {
-		if slices.Contains(state.Selection.Components, visual) {
-			t.Fatalf("visual component %q appeared after switching to PersonaCustom", visual)
-		}
-	}
-	if slices.Contains(state.Selection.Components, model.ComponentOpenCodeGentleLogo) {
-		t.Fatalf("ComponentOpenCodeGentleLogo should not be in preset components; got: %v", state.Selection.Components)
 	}
 }
 
@@ -5526,7 +5478,7 @@ func TestCustomPersonaCustomPresetCanSelectEngramWithoutPersonaOrPolish(t *testi
 	if !slices.Equal(state.Selection.Components, []model.ComponentID{model.ComponentEngram}) {
 		t.Fatalf("components = %v, want only Engram selected", state.Selection.Components)
 	}
-	for _, unwanted := range append([]model.ComponentID{model.ComponentPersona}, model.VisualPolishComponents()...) {
+	for _, unwanted := range []model.ComponentID{model.ComponentPersona} {
 		if slices.Contains(state.Selection.Components, unwanted) {
 			t.Fatalf("custom preset should not auto-select %v; components: %v", unwanted, state.Selection.Components)
 		}
@@ -8140,8 +8092,7 @@ func TestOpenCodePluginUninstallDetectsInstalledFromTUIJSON(t *testing.T) {
   "$schema": "https://opencode.ai/tui.json",
   "plugin": [
     "opencode-subagent-statusline",
-    "unrelated-plugin",
-    "/home/me/.config/opencode/tui-plugins/gentle-logo.tsx"
+    "unrelated-plugin"
   ]
 }`
 	if err := os.WriteFile(filepath.Join(opencodeDir, "tui.json"), []byte(tuiJSON), 0o644); err != nil {
@@ -8151,7 +8102,6 @@ func TestOpenCodePluginUninstallDetectsInstalledFromTUIJSON(t *testing.T) {
 	got := openCodePluginUninstallInstalledFromTUI(home)
 	want := []model.OpenCodeCommunityPluginID{
 		model.OpenCodePluginSubAgentStatusline,
-		model.OpenCodePluginGentleLogo,
 	}
 	if len(got) != len(want) {
 		t.Fatalf("installed = %#v, want %#v", got, want)

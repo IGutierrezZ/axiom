@@ -4259,8 +4259,7 @@ func opencodepluginDefinitions() []model.OpenCodeCommunityPluginID {
 // openCodePluginUninstallInstalledFromTUI reads ~/.config/opencode/tui.json's
 // plugin[] list and maps package names back to OpenCodeCommunityPluginIDs so
 // the uninstall Select screen can offer the user a list of what is actually
-// installed. Unknown entries (e.g. third-party packages, the GentleLogo .tsx
-// absolute path) are mapped when recognized and ignored otherwise. Returns
+// installed. Unknown entries (e.g. third-party packages) are ignored. Returns
 // an empty slice if tui.json is missing, malformed, or has no plugin[] field.
 func openCodePluginUninstallInstalledFromTUI(home string) []model.OpenCodeCommunityPluginID {
 	if home == "" {
@@ -4283,12 +4282,6 @@ func openCodePluginUninstallInstalledFromTUI(home string) []model.OpenCodeCommun
 	for _, def := range opencodeplugin.Definitions() {
 		knownByPackage[def.PackageName] = def.ID
 	}
-	// Match the GentleLogo plugin by either separator form because the
-	// Install path uses filepath.Join (native separator for the host).
-	gentleLogoSuffixes := []string{
-		filepath.Join("tui-plugins", "gentle-logo.tsx"),
-		"tui-plugins/gentle-logo.tsx",
-	}
 	seen := map[model.OpenCodeCommunityPluginID]bool{}
 	out := make([]model.OpenCodeCommunityPluginID, 0, len(raw))
 	for _, item := range raw {
@@ -4304,15 +4297,6 @@ func openCodePluginUninstallInstalledFromTUI(home string) []model.OpenCodeCommun
 			seen[id] = true
 			out = append(out, id)
 			continue
-		}
-		if !seen[model.OpenCodePluginGentleLogo] {
-			for _, suffix := range gentleLogoSuffixes {
-				if strings.HasSuffix(entry, suffix) {
-					seen[model.OpenCodePluginGentleLogo] = true
-					out = append(out, model.OpenCodePluginGentleLogo)
-					break
-				}
-			}
 		}
 	}
 	return out

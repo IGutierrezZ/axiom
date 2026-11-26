@@ -1,14 +1,7 @@
 package model
 
-// VisualPolishComponents returns the complete managed visual-polish inventory.
-// Cleanup flows use this inventory, which intentionally includes the generic theme
-// even though presets do not install it.
-func VisualPolishComponents() []ComponentID {
-	return []ComponentID{ComponentTheme, ComponentClaudeTheme, ComponentOpenCodeGentleLogo}
-}
-
 // ComponentsForPreset returns the managed components implied by a preset/persona
-// pair. Visual themes are retained as legacy cleanup IDs, never installed.
+// pair.
 //
 // CodeGraph no forma parte de ningún preset predefinido: es una herramienta de
 // la comunidad que se elige aparte (Selection.CommunityTools) y nunca viene

@@ -25,7 +25,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -149,9 +148,6 @@ var (
 		model.ComponentPermission,
 		model.ComponentSDD,
 		model.ComponentSkills,
-		model.ComponentTheme,
-		model.ComponentClaudeTheme,
-		model.ComponentOpenCodeGentleLogo,
 	}
 	fullAgentRemovalComponents = []model.ComponentID{
 		model.ComponentPersona,
@@ -160,9 +156,6 @@ var (
 		model.ComponentPermission,
 		model.ComponentSDD,
 		model.ComponentSkills,
-		model.ComponentTheme,
-		model.ComponentClaudeTheme,
-		model.ComponentOpenCodeGentleLogo,
 	}
 	configuredAgents = []string{
 		"gentle-orchestrator",
@@ -364,7 +357,6 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	if len(components) == 0 {
 		components = slices.Clone(fullAgentRemovalComponents)
 	}
-	components = expandVisualPolishUninstallComponents(components)
 
 	s.keepEngramRegistration = !s.workspace && !slices.Contains(componentIDs, model.ComponentEngram)
 	defer func() { s.keepEngramRegistration = false }()
@@ -415,27 +407,6 @@ func keptEngramRegistrationNote(homeDir string, agentIDs []model.AgentID) string
 // to the "unreadable state" path.
 func isStateNotFound(err error) bool {
 	return errors.Is(err, fs.ErrNotExist)
-}
-
-func expandVisualPolishUninstallComponents(components []model.ComponentID) []model.ComponentID {
-	shouldExpand := false
-	visualPolish := model.VisualPolishComponents()
-	for _, component := range components {
-		if component != model.ComponentClaudeTheme && slices.Contains(visualPolish, component) {
-			shouldExpand = true
-		}
-	}
-	if !shouldExpand {
-		return components
-	}
-
-	expanded := slices.Clone(components)
-	for _, component := range model.VisualPolishComponents() {
-		if !slices.Contains(expanded, component) {
-			expanded = append(expanded, component)
-		}
-	}
-	return expanded
 }
 
 func (s *Service) SetProfileNamesToRemove(profileNames []string) {
@@ -993,36 +964,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
-	case model.ComponentTheme:
-		// Legacy component: Axiom does not own the user's theme setting.
-	case model.ComponentClaudeTheme:
-		if s.workspace {
-			// Los recursos visuales ya no se instalan y nunca se instalaron en el
-			// proyecto.
-			break
-		}
-		managedPaths, err := theme.ManagedVisualThemePaths(homeDir, adapter)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, path := range managedPaths {
-			targets = append(targets, path)
-			ops = append(ops, removeManagedVisualTheme(path, adapter))
-		}
-		// Legacy Gentleman-named assets have no verifiable byte identity here.
-		// Preserve them rather than deleting a possibly user-authored file.
-	case model.ComponentOpenCodeGentleLogo:
-		// El logo es un plugin de la TUI de OpenCode en la carpeta de usuario; el
-		// ámbito workspace no lo instala.
-		if adapter.Agent() != model.AgentOpenCode || s.workspace {
-			break
-		}
-		pluginPath := filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx")
-		targets = append(targets, pluginPath)
-		ops = append(ops, removeFile(pluginPath), removeDirIfEmpty(filepath.Dir(pluginPath)))
-		tuiPath := filepath.Join(homeDir, ".config", "opencode", "tui.json")
-		targets = append(targets, tuiPath)
-		ops = append(ops, rewriteOpenCodeTUIPlugins(tuiPath, "gentle-logo"))
 	case model.ComponentSkills:
 		if !adapter.SupportsSkills() {
 			break
@@ -1634,64 +1575,6 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 	return append(out, '\n'), true, nil
 }
 
-func rewriteOpenCodeTUIPlugins(path string, removePatterns ...string) operation {
-	return operation{
-		typeID: opRewriteFile,
-		path:   path,
-		apply: func(path string) (bool, bool, error) {
-			raw, err := readManagedFile(path)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return false, false, nil
-				}
-				return false, false, fmt.Errorf("read tui.json %q: %w", path, err)
-			}
-			var root map[string]any
-			if err := json.Unmarshal(raw, &root); err != nil {
-				return false, false, nil
-			}
-			changed := false
-			for _, key := range []string{"plugin", "plugins"} {
-				pluginsRaw, ok := root[key].([]any)
-				if !ok {
-					continue
-				}
-				var kept []any
-				for _, item := range pluginsRaw {
-					s, ok := item.(string)
-					if !ok {
-						kept = append(kept, item)
-						continue
-					}
-					remove := false
-					for _, pat := range removePatterns {
-						if strings.Contains(s, pat) {
-							remove = true
-							break
-						}
-					}
-					if remove {
-						changed = true
-					} else {
-						kept = append(kept, item)
-					}
-				}
-				root[key] = kept
-			}
-			if !changed {
-				return false, false, nil
-			}
-			out, err := json.MarshalIndent(root, "", "  ")
-			if err != nil {
-				return false, false, err
-			}
-			out = append(out, '\n')
-			_, err = filemerge.WriteFileAtomic(path, out, 0o644)
-			return true, false, err
-		},
-	}
-}
-
 func rewriteTOMLFile(path string, mutate func(content string) (string, bool)) operation {
 	return operation{
 		typeID: opRewriteFile,
@@ -1848,26 +1731,6 @@ func removeFile(path string) operation {
 					return false, false, nil
 				}
 				return false, false, statErr
-			}
-			if err := removeFileIfExists(path); err != nil {
-				return false, false, err
-			}
-			return true, true, nil
-		},
-	}
-}
-
-func removeManagedVisualTheme(path string, adapter agents.Adapter) operation {
-	return operation{
-		typeID: opRemoveFile,
-		path:   path,
-		apply: func(path string) (bool, bool, error) {
-			managed, err := theme.IsManagedVisualThemeFile(path, adapter)
-			if err != nil {
-				return false, false, err
-			}
-			if !managed {
-				return false, false, nil
 			}
 			if err := removeFileIfExists(path); err != nil {
 				return false, false, err

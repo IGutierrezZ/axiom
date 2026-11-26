@@ -1549,3 +1549,28 @@ func TestReadIgnoresComponentsAxiomNoLongerSupports(t *testing.T) {
 		t.Errorf("la siguiente escritura no debe conservar el componente retirado: %s", written)
 	}
 }
+
+// Un estado con los componentes visuales retirados (theme, claude-theme y
+// opencode-gentle-logo) carga igual y los ignora para avisar.
+func TestReadIgnoresRetiredVisualComponents(t *testing.T) {
+	home := t.TempDir()
+	path := Path(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"selection_configured": true, "components": ["engram", "theme", "claude-theme", "opencode-gentle-logo", "sdd"]}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Read(home)
+	if err != nil {
+		t.Fatalf("Read() error = %v, want nil con componentes visuales retirados", err)
+	}
+	if want := []model.ComponentID{model.ComponentEngram, model.ComponentSDD}; !reflect.DeepEqual(s.Components, want) {
+		t.Errorf("Components = %v, want %v", s.Components, want)
+	}
+	if want := []model.ComponentID{"theme", "claude-theme", "opencode-gentle-logo"}; !reflect.DeepEqual(s.IgnoredComponents, want) {
+		t.Errorf("IgnoredComponents = %v, want %v", s.IgnoredComponents, want)
+	}
+}

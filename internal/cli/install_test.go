@@ -2,7 +2,6 @@ package cli
 
 import (
 	"reflect"
-	"slices"
 	"strings"
 	"testing"
 
@@ -129,19 +128,6 @@ func TestNormalizeInstallFlagsFullPresetCustomPersonaExcludesVisualComponents(t 
 		if got == model.ComponentPersona {
 			t.Fatalf("components should not include persona for custom persona; got %#v", input.Selection.Components)
 		}
-		if slices.Contains(model.VisualPolishComponents(), got) {
-			t.Fatalf("components should not include visual component %q; got %#v", got, input.Selection.Components)
-		}
-	}
-}
-
-func TestNormalizeInstallFlagsRejectsRetiredVisualThemeComponent(t *testing.T) {
-	_, err := NormalizeInstallFlags(InstallFlags{
-		Preset:     string(model.PresetCustom),
-		Components: []string{string(model.ComponentClaudeTheme)},
-	}, system.DetectionResult{})
-	if err == nil || !strings.Contains(err.Error(), `unsupported component "claude-theme"`) {
-		t.Fatalf("NormalizeInstallFlags() error = %v, want unsupported visual component", err)
 	}
 }
 

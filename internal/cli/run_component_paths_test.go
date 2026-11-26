@@ -1172,40 +1172,6 @@ func TestBackupTargetsClaudeContext7IncludeCleanupWithoutVerificationRequirement
 	}
 }
 
-func TestComponentPathsVisualThemesAreNoLongerRequired(t *testing.T) {
-	home := t.TempDir()
-	for _, agent := range []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode} {
-		paths := componentPaths(home, model.Selection{}, resolveAdapters([]model.AgentID{agent}), model.ComponentClaudeTheme)
-		if len(paths) != 0 {
-			t.Fatalf("%q required visual paths = %v, want none", agent, paths)
-		}
-	}
-}
-
-func TestComponentPathsOpenCodeGentleLogoMatchesSelectedAdapter(t *testing.T) {
-	home := t.TempDir()
-	for _, tt := range []struct {
-		agent model.AgentID
-		want  []string
-	}{
-		{model.AgentClaudeCode, []string{}},
-		{model.AgentOpenCode, []string{
-			filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-			filepath.Join(home, ".config", "opencode", "tui.json"),
-		}},
-	} {
-		paths := componentPaths(home, model.Selection{}, resolveAdapters([]model.AgentID{tt.agent}), model.ComponentOpenCodeGentleLogo)
-		if len(paths) != len(tt.want) {
-			t.Fatalf("%q paths = %v, want %v", tt.agent, paths, tt.want)
-		}
-		for i := range tt.want {
-			if paths[i] != tt.want[i] {
-				t.Fatalf("%q paths = %v, want %v", tt.agent, paths, tt.want)
-			}
-		}
-	}
-}
-
 func TestBackupTargetsContainNoDuplicatePaths(t *testing.T) {
 	home := t.TempDir()
 	agentIDs := []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode}

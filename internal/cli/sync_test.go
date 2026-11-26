@@ -55,9 +55,6 @@ func TestParseSyncFlagsDefaults(t *testing.T) {
 	if flags.IncludePermissions {
 		t.Errorf("IncludePermissions = true, want false")
 	}
-	if flags.IncludeTheme {
-		t.Errorf("IncludeTheme = true, want false")
-	}
 	if flags.SDDMode != "" {
 		t.Errorf("SDDMode = %q, want empty", flags.SDDMode)
 	}
@@ -190,16 +187,13 @@ func TestParseSyncFlagsSDDProfileStrategy(t *testing.T) {
 	}
 }
 
-func TestParseSyncFlagsIncludePermissionsAndTheme(t *testing.T) {
-	flags, err := ParseSyncFlags([]string{"--include-permissions", "--include-theme"})
+func TestParseSyncFlagsIncludePermissions(t *testing.T) {
+	flags, err := ParseSyncFlags([]string{"--include-permissions"})
 	if err != nil {
 		t.Fatalf("ParseSyncFlags() error = %v", err)
 	}
 	if !flags.IncludePermissions {
 		t.Errorf("IncludePermissions = false, want true")
-	}
-	if !flags.IncludeTheme {
-		t.Errorf("IncludeTheme = false, want true")
 	}
 }
 
@@ -334,7 +328,6 @@ func TestBuildSyncSelectionDefaultExcludesPermissionsTheme(t *testing.T) {
 
 	excluded := []model.ComponentID{
 		model.ComponentPermission,
-		model.ComponentTheme,
 	}
 
 	for _, comp := range excluded {
@@ -361,37 +354,6 @@ func TestBuildSyncSelectionIncludePermissionsWhenFlagSet(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("BuildSyncSelection() expected ComponentPermission when --include-permissions is set")
-	}
-}
-
-func TestBuildSyncSelectionIncludeThemeFlagIsInert(t *testing.T) {
-	agents := []model.AgentID{model.AgentClaudeCode}
-	flags := SyncFlags{IncludeTheme: true}
-
-	sel := BuildSyncSelection(flags, agents)
-
-	for _, comp := range sel.Components {
-		if comp == model.ComponentTheme {
-			t.Fatalf("BuildSyncSelection() must not include ComponentTheme even with --include-theme")
-		}
-	}
-}
-
-func TestRestorePersistedSelectionRetiresVisualThemes(t *testing.T) {
-	selection := BuildSyncSelection(SyncFlags{}, []model.AgentID{model.AgentClaudeCode})
-	RestorePersistedSelection(&selection, state.InstallState{
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentPersona, model.ComponentTheme, model.ComponentClaudeTheme,
-		},
-	}, SyncFlags{})
-	if !slices.Contains(selection.Components, model.ComponentPersona) {
-		t.Fatal("non-visual persisted component was lost")
-	}
-	for _, visual := range []model.ComponentID{model.ComponentTheme, model.ComponentClaudeTheme} {
-		if slices.Contains(selection.Components, visual) {
-			t.Fatalf("retired visual component %q survived state restore", visual)
-		}
 	}
 }
 
@@ -1441,182 +1403,6 @@ func TestSyncPersonaOnlyRollbackRestoresOpenCodeSettingsAfterGentlemanCleanup(t 
 	}
 	if !bytes.Equal(after, before) {
 		t.Fatalf("persona-only sync rollback settings = %q, want exact before-image %q", after, before)
-	}
-}
-
-func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
-	workspace, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatalf("EvalSymlinks(workspace) error = %v", err)
-	}
-	t.Chdir(workspace)
-	home, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatalf("EvalSymlinks(home) error = %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"claude-code", "opencode"},
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentClaudeTheme,
-			model.ComponentOpenCodeGentleLogo,
-		},
-		Persona: "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	// Persisted visual themes are ignored.
-	// The last two entries are the routing guidance targets. Guidance is written
-	// for every configured agent regardless of which components are persisted.
-	wantFiles := []string{
-		filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-		filepath.Join(home, ".config", "opencode", "tui.json"),
-		filepath.Join(home, ".claude", "CLAUDE.md"),
-		filepath.Join(home, ".config", "opencode", "opencode.json"),
-	}
-
-	first, err := RunSync([]string{"--agents", "claude-code,opencode"})
-	if err != nil {
-		t.Fatalf("RunSync() first error = %v", err)
-	}
-	if !reflect.DeepEqual(first.ChangedFiles, wantFiles) {
-		t.Fatalf("first ChangedFiles = %#v, want %#v", first.ChangedFiles, wantFiles)
-	}
-	for _, path := range wantFiles {
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("expected managed non-theme file %q was not refreshed: %v", path, err)
-		}
-	}
-	for _, root := range []string{filepath.Join(home, ".claude", "themes"), filepath.Join(home, ".config", "opencode", "themes")} {
-		if _, err := os.Stat(root); !os.IsNotExist(err) {
-			t.Fatalf("sync installed a theme directory %q: %v", root, err)
-		}
-	}
-
-	second, err := RunSync([]string{"--agents", "claude-code,opencode"})
-	if err != nil {
-		t.Fatalf("RunSync() second error = %v", err)
-	}
-	if !second.NoOp || second.FilesChanged != 0 || len(second.ChangedFiles) != 0 {
-		t.Fatalf("second sync = NoOp %v, FilesChanged %d, ChangedFiles %#v; want idempotent no-op", second.NoOp, second.FilesChanged, second.ChangedFiles)
-	}
-}
-
-func TestRunSyncRetiresOnlyExactManagedVisualTheme(t *testing.T) {
-	workspace := t.TempDir()
-	t.Chdir(workspace)
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"}, SelectionConfigured: true,
-		Components: []model.ComponentID{model.ComponentClaudeTheme}, Persona: "custom",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	settings := filepath.Join(home, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(settings, []byte(`{"theme":"personal"}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	themes := filepath.Join(home, ".claude", "themes")
-	if err := os.MkdirAll(themes, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	asset := struct {
-		Name      string            `json:"name"`
-		Base      string            `json:"base"`
-		Overrides map[string]string `json:"overrides"`
-	}{"axiom", "dark", map[string]string{
-		"diffAdded": "#3F4A2D", "diffRemoved": "#5C3838", "diffAddedWord": "#76946A", "diffRemovedWord": "#C34043",
-		"chromeYellow": "#DCA561", "briefLabelYou": "#DCA561", "rainbow_yellow": "#DCA561", "yellow_FOR_SUBAGENTS_ONLY": "#DCA561",
-	}}
-	exact, err := json.MarshalIndent(asset, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	exact = append(exact, '\n')
-	exactPath := filepath.Join(themes, "axiom.json")
-	modifiedPath := filepath.Join(themes, "axiom-dark.json")
-	if err := os.WriteFile(exactPath, exact, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	modified := []byte(`{"name":"user-modified"}`)
-	if err := os.WriteFile(modifiedPath, modified, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
-	result, err := RunSync([]string{"--agents", "claude-code"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(exactPath); !os.IsNotExist(err) {
-		t.Fatalf("exact theme remains: %v", err)
-	}
-	if got, err := os.ReadFile(modifiedPath); err != nil || string(got) != string(modified) {
-		t.Fatalf("modified theme changed: %q, %v", got, err)
-	}
-	if got, err := os.ReadFile(settings); err != nil || string(got) != `{"theme":"personal"}` {
-		t.Fatalf("theme preference changed: %q, %v", got, err)
-	}
-	if !slices.Contains(result.ChangedFiles, exactPath) {
-		t.Fatalf("removed theme missing from ChangedFiles: %v", result.ChangedFiles)
-	}
-}
-
-// TestRunSyncSkipsOpenCodeGentleLogoWhenOpenCodeNotSelected ensures that when
-// ComponentOpenCodeGentleLogo is in state, but OpenCode is not selected (e.g. only
-// Claude Code is selected), sync does not touch OpenCode directories or fail (issue #1212).
-func TestRunSyncSkipsOpenCodeGentleLogoWhenOpenCodeNotSelected(t *testing.T) {
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"claude-code"},
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentOpenCodeGentleLogo,
-		},
-		Persona: "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	result, err := RunSync([]string{"--agents", "claude-code"})
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-
-	opencodeDir := filepath.Join(home, ".config", "opencode")
-	if _, err := os.Stat(opencodeDir); !os.IsNotExist(err) {
-		t.Fatalf("expected OpenCode config dir %q to not exist, err: %v", opencodeDir, err)
-	}
-
-	for _, p := range result.ChangedFiles {
-		if strings.Contains(p, "opencode") {
-			t.Fatalf("unexpected opencode path in ChangedFiles: %s", p)
-		}
 	}
 }
 

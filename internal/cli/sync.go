@@ -24,12 +24,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
@@ -48,7 +46,6 @@ type SyncFlags struct {
 	SDDProfileStrategy string
 	StrictTDD          bool
 	IncludePermissions bool
-	IncludeTheme       bool
 	DryRun             bool
 	Scope              string
 
@@ -69,7 +66,6 @@ type SyncFlags struct {
 	sddModeSet       bool
 	strictTDDSet     bool
 	permissionsSet   bool
-	themeSet         bool
 }
 
 // SyncResult holds the outcome of a sync execution.
@@ -134,7 +130,6 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 	fs.StringVar(&opts.SDDProfileStrategy, "sdd-profile-strategy", "", "OpenCode SDD profile sync strategy: generated-multi or external-single-active (default: auto-detect)")
 	fs.BoolVar(&opts.StrictTDD, "strict-tdd", false, "enable strict TDD mode for SDD agents (RED → GREEN → REFACTOR)")
 	fs.BoolVar(&opts.IncludePermissions, "include-permissions", false, "include permissions component in sync")
-	fs.BoolVar(&opts.IncludeTheme, "include-theme", false, "include theme component in sync")
 	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS); eligible versions use a managed launcher")
 	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_PI_BACKGROUND_SUBAGENTS); the resolved policy is projected for gentle-pi")
 	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE (fallback: GENTLE_AI_INSTALL_SCOPE)")
@@ -166,8 +161,6 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 			opts.strictTDDSet = true
 		case "include-permissions":
 			opts.permissionsSet = true
-		case "include-theme":
-			opts.themeSet = true
 		case "opencode-background-subagents":
 			opts.OpenCodeBackgroundSubagentsSet = true
 		case "pi-background-subagents":
@@ -208,7 +201,6 @@ FLAGS
   --sdd-profile-strategy <strategy>  OpenCode SDD profile sync strategy
   --strict-tdd                       Enable strict TDD mode for SDD agents
   --include-permissions              Include permissions component
-  --include-theme                    Include theme component
   --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE, fallback: GENTLE_AI_INSTALL_SCOPE)
   --profile <name:provider/model>    Sync a named SDD profile
   --profile-phase <name:phase:model> Sync a named SDD profile phase
@@ -396,7 +388,6 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 	if flags.IncludePermissions {
 		components = append(components, model.ComponentPermission)
 	}
-	// --include-theme remains parseable for compatibility but cannot install a theme.
 
 	sddMode := model.SDDModeID(flags.SDDMode)
 
@@ -471,11 +462,6 @@ func RestorePersistedSelection(selection *model.Selection, persisted state.Insta
 		selection.StrictTDD = explicit.StrictTDD
 	}
 	setSelectionComponent(selection, model.ComponentPermission, flags.permissionsSet, flags.IncludePermissions)
-	// Retire visual components persisted by older releases; sync must not
-	// reinstall theme assets after a user upgrades to a theme-free Axiom.
-	selection.Components = slices.DeleteFunc(selection.Components, func(component model.ComponentID) bool {
-		return component == model.ComponentTheme || component == model.ComponentClaudeTheme
-	})
 	// The persisted component list above may predate the caller ever choosing
 	// the SDD component (e.g. an install that ran before profiles existed).
 	// When the caller explicitly asked for profile or model assignment work,
@@ -621,9 +607,6 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	apply := []pipeline.Step{
 		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
 	}
-	if r.scope != ScopeWorkspace {
-		apply = append(apply, managedVisualThemeCleanupStep{id: "sync:retire-managed-visual-themes", homeDir: r.homeDir, adapters: adapters, changedFiles: &r.changedFiles})
-	}
 	apply = append(apply, retiredSkillsCleanupStep{
 		id:           "sync:retire-installed-skills",
 		roots:        retiredSkillRoots(r.homeDir, r.workspaceDir, r.scope, adapters),
@@ -748,17 +731,6 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 	for _, root := range retiredSkillRoots(homeDir, workspaceDir, scope, adapters) {
 		for _, path := range inspectRetiredSkills(root).Owned {
 			paths[path] = struct{}{}
-		}
-	}
-	if scope != ScopeWorkspace {
-		for _, adapter := range adapters {
-			owned, err := theme.ManagedVisualThemePaths(homeDir, adapter)
-			if err != nil {
-				return nil, err
-			}
-			for _, path := range owned {
-				paths[path] = struct{}{}
-			}
 		}
 	}
 	for _, component := range selection.Components {
@@ -1015,28 +987,6 @@ type componentSyncStep struct {
 	changedFiles *[]string // accumulates absolute paths of files that actually changed
 
 	backgroundPolicy bool
-}
-
-type managedVisualThemeCleanupStep struct {
-	id           string
-	homeDir      string
-	adapters     []agents.Adapter
-	changedFiles *[]string
-}
-
-func (s managedVisualThemeCleanupStep) ID() string { return s.id }
-
-func (s managedVisualThemeCleanupStep) Run() error {
-	for _, adapter := range s.adapters {
-		result, err := theme.RetireManagedVisualThemes(s.homeDir, adapter)
-		if err != nil {
-			return fmt.Errorf("retire visual themes for %q: %w", adapter.Agent(), err)
-		}
-		if result.Changed && s.changedFiles != nil {
-			*s.changedFiles = append(*s.changedFiles, result.Files...)
-		}
-	}
-	return nil
 }
 
 // Seams over the retired-skill cleanup so tests can prove ownership against
@@ -1463,25 +1413,6 @@ func (s componentSyncStep) Run() error {
 			}
 			s.countChanged(boolToInt(res.Changed), res.Files...)
 		}
-		return nil
-
-	case model.ComponentTheme:
-		// Legacy component: never change user theme preferences.
-		return nil
-
-	case model.ComponentClaudeTheme:
-		// Legacy component: never reinstall visual theme assets.
-		return nil
-
-	case model.ComponentOpenCodeGentleLogo:
-		if !containsAgent(s.agents, model.AgentOpenCode) {
-			return nil
-		}
-		res, err := opencodeplugin.Install(s.homeDir, model.OpenCodePluginGentleLogo)
-		if err != nil {
-			return fmt.Errorf("sync OpenCode Gentle Logo plugin: %w", err)
-		}
-		s.countChanged(boolToInt(res.Changed), res.Files...)
 		return nil
 
 	default:

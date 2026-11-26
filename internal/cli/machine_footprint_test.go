@@ -250,7 +250,7 @@ func TestOptInFootprintNotes(t *testing.T) {
 
 	// Plugins de OpenCode elegidos: rutas de la configuración de usuario, y solo
 	// si OpenCode está entre los agentes.
-	selection := model.Selection{OpenCodePlugins: []model.OpenCodeCommunityPluginID{model.OpenCodePluginGentleLogo}}
+	selection := model.Selection{OpenCodePlugins: []model.OpenCodeCommunityPluginID{model.OpenCodePluginSDDEngramManage}}
 	if got := optInFootprintNotes(ScopeWorkspace, home, nil, []model.AgentID{model.AgentClaudeCode}, selection); len(got) != 0 {
 		t.Errorf("sin OpenCode no se instalan plugins, got %v", got)
 	}

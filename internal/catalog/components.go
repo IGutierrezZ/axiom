@@ -15,7 +15,6 @@ var mvpComponents = []Component{
 	{ID: model.ComponentContext7, Name: "Context7", Description: "Latest framework and library docs"},
 	{ID: model.ComponentPersona, Name: "Persona", Description: "Managed agent behavior and conversation tone"},
 	{ID: model.ComponentPermission, Name: "Permissions", Description: "Security-first defaults and guardrails"},
-	{ID: model.ComponentOpenCodeGentleLogo, Name: "OpenCode Logo", Description: "Visual polish: OpenCode home logo plugin"},
 }
 
 func MVPComponents() []Component {

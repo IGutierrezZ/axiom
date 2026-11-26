@@ -81,19 +81,13 @@ func RenderOpenCodePluginUninstallConfirm(selected model.OpenCodeCommunityPlugin
 	b.WriteString("\n\n")
 	b.WriteString(styles.SubtextStyle.Render("Layered cleanup:"))
 	b.WriteString("\n")
-	if selected == model.OpenCodePluginGentleLogo {
-		b.WriteString(styles.UnselectedStyle.Render("  • tui.json: entry removed"))
-		b.WriteString("\n")
-		b.WriteString(styles.UnselectedStyle.Render("  • tui-plugins/gentle-logo.tsx: removed"))
-	} else {
-		b.WriteString(styles.UnselectedStyle.Render("  • Layer 1 — tui.json: entry removed"))
-		b.WriteString("\n")
-		b.WriteString(styles.UnselectedStyle.Render("  • Layer 2 — package.json: dependency removed"))
-		b.WriteString("\n")
-		b.WriteString(styles.UnselectedStyle.Render("  • Layer 3 — node_modules/<pkg>: directory removed"))
-		b.WriteString("\n")
-		b.WriteString(styles.UnselectedStyle.Render("  • Layer 4 — cache: ~/.cache/opencode/packages/<pkg>@latest removed"))
-	}
+	b.WriteString(styles.UnselectedStyle.Render("  • Layer 1 — tui.json: entry removed"))
+	b.WriteString("\n")
+	b.WriteString(styles.UnselectedStyle.Render("  • Layer 2 — package.json: dependency removed"))
+	b.WriteString("\n")
+	b.WriteString(styles.UnselectedStyle.Render("  • Layer 3 — node_modules/<pkg>: directory removed"))
+	b.WriteString("\n")
+	b.WriteString(styles.UnselectedStyle.Render("  • Layer 4 — cache: ~/.cache/opencode/packages/<pkg>@latest removed"))
 	b.WriteString("\n\n")
 	b.WriteString(styles.WarningStyle.Render("Changes are staged and rolled back if the operation reports an error."))
 	b.WriteString("\n\n")
@@ -130,32 +124,21 @@ func RenderOpenCodePluginUninstallResult(result opencodeplugin.UninstallResult, 
 		b.WriteString(styles.SuccessStyle.Render("✓ " + name + " uninstalled"))
 		b.WriteString("\n\n")
 
-		if result.PluginID == model.OpenCodePluginGentleLogo {
-			if result.TSXPath != "" {
-				b.WriteString(styles.SubtextStyle.Render("  • TSX: " + result.TSXPath))
-				b.WriteString("\n")
-			}
-			if result.ChangedTUI {
-				b.WriteString(styles.SubtextStyle.Render("  • Layer 1 — tui.json: updated"))
-				b.WriteString("\n")
-			}
-		} else {
-			if result.ChangedTUI {
-				b.WriteString(styles.SubtextStyle.Render("  • Layer 1 — tui.json: updated"))
-				b.WriteString("\n")
-			}
-			if result.ChangedPackageJSON {
-				b.WriteString(styles.SubtextStyle.Render("  • Layer 2 — package.json: updated"))
-				b.WriteString("\n")
-			}
-			if result.ChangedNodeModules {
-				b.WriteString(styles.SubtextStyle.Render("  • Layer 3 — node_modules: removed " + result.NodeModulesPath))
-				b.WriteString("\n")
-			}
-			if result.CacheEntryRemoved != "" {
-				b.WriteString(styles.SubtextStyle.Render("  • Layer 4 — cache: removed " + result.CacheEntryRemoved))
-				b.WriteString("\n")
-			}
+		if result.ChangedTUI {
+			b.WriteString(styles.SubtextStyle.Render("  • Layer 1 — tui.json: updated"))
+			b.WriteString("\n")
+		}
+		if result.ChangedPackageJSON {
+			b.WriteString(styles.SubtextStyle.Render("  • Layer 2 — package.json: updated"))
+			b.WriteString("\n")
+		}
+		if result.ChangedNodeModules {
+			b.WriteString(styles.SubtextStyle.Render("  • Layer 3 — node_modules: removed " + result.NodeModulesPath))
+			b.WriteString("\n")
+		}
+		if result.CacheEntryRemoved != "" {
+			b.WriteString(styles.SubtextStyle.Render("  • Layer 4 — cache: removed " + result.CacheEntryRemoved))
+			b.WriteString("\n")
 		}
 		for _, path := range result.CleanupPending {
 			b.WriteString(styles.WarningStyle.Render("  • Cleanup pending: remove " + path + " manually"))
@@ -174,10 +157,6 @@ func RenderOpenCodePluginUninstallResult(result opencodeplugin.UninstallResult, 
 func pluginDisplayName(id model.OpenCodeCommunityPluginID) string {
 	if def, ok := opencodeplugin.DefinitionFor(id); ok {
 		return def.Name
-	}
-	switch id {
-	case model.OpenCodePluginGentleLogo:
-		return "Gentle Logo"
 	}
 	return string(id)
 }

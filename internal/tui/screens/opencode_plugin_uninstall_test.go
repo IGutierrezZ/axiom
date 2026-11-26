@@ -160,16 +160,6 @@ func TestRenderOpenCodePluginUninstallResultErrorShowsErrorMessage(t *testing.T)
 	}
 }
 
-func TestRenderOpenCodePluginUninstallResultGentleLogoShowsTSX(t *testing.T) {
-	out := RenderOpenCodePluginUninstallResult(opencodeplugin.UninstallResult{
-		PluginID: model.OpenCodePluginGentleLogo,
-		TSXPath:  "/home/me/.config/opencode/tui-plugins/gentle-logo.tsx",
-	}, nil)
-	if !strings.Contains(out, "gentle-logo.tsx") {
-		t.Fatalf("GentleLogo result screen missing TSX path; output:\n%s", out)
-	}
-}
-
 // TestRenderOpenCodePluginUninstallResultEmptyState covers the launcher
 // short-circuit when tui.json has no recognizable plugin entries. The
 // Model sets screen=Result with a zero-value UninstallResult and

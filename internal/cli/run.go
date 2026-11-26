@@ -1879,20 +1879,6 @@ func (s componentApplyStep) Run() error {
 			}
 		}
 		return nil
-	case model.ComponentTheme:
-		// Retained for legacy selections; no visual configuration is installed.
-		return nil
-	case model.ComponentClaudeTheme:
-		// Retained for legacy selections; no visual assets are installed.
-		return nil
-	case model.ComponentOpenCodeGentleLogo:
-		if !containsAgent(s.agents, model.AgentOpenCode) {
-			return nil
-		}
-		if _, err := opencodeplugin.Install(s.homeDir, model.OpenCodePluginGentleLogo); err != nil {
-			return fmt.Errorf("install OpenCode Gentle Logo plugin: %w", err)
-		}
-		return nil
 	default:
 		return fmt.Errorf("component %q is not supported in install runtime", s.component)
 	}
@@ -2646,17 +2632,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				if p := permissions.TargetPath(root, adapter); p != "" {
 					paths = append(paths, p)
 				}
-			}
-		case model.ComponentTheme:
-			// No managed path: legacy theme component is inert.
-		case model.ComponentClaudeTheme:
-			// No required paths: visual assets are no longer installed.
-		case model.ComponentOpenCodeGentleLogo:
-			if adapter.Agent() == model.AgentOpenCode {
-				paths = append(paths,
-					filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-					filepath.Join(homeDir, ".config", "opencode", "tui.json"),
-				)
 			}
 		}
 	}
