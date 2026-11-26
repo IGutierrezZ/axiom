@@ -580,7 +580,7 @@ func goInstallUpgrade(ctx context.Context, r update.UpdateResult, profile system
 	}
 
 	// The Windows self-install never lets `go install` write over the running
-	// binary: it stages the build and swaps it in (prov:UPD:3).
+	// binary: it stages the build and swaps it in (RF-UPD-11).
 	if profile.OS == "windows" && update.IsSelfTool(tool) && destDir != "" {
 		if err := goInstallSelfWindows(tool, target, env, destDir); err != nil {
 			return err

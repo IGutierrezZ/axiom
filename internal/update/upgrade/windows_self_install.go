@@ -20,7 +20,7 @@ import (
 // The self-tool install on Windows therefore never lets `go install` touch the
 // destination: it builds into a staging directory next to the destination
 // (same volume, so the final move is a rename), moves the current binary aside
-// to a unique `.old` name and moves the new one into place (prov:UPD:3).
+// to a unique `.old` name and moves the new one into place (RF-UPD-11).
 
 // selfInstallStagingPrefix names the staging directories created inside the
 // destination directory. They are removed after every attempt.

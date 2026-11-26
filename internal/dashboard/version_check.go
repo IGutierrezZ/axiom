@@ -2,8 +2,11 @@ package dashboard
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -22,7 +25,7 @@ const (
 	versionStatusCheckFailed     = "check_failed"
 	// versionStatusRestartRequired: el binario instalado es distinto del que sirve el
 	// dashboard y no va por detrás de la última versión; basta con reiniciar
-	// (prov:UPD:1).
+	// (RF-UPD-09).
 	versionStatusRestartRequired = "restart_required"
 )
 
@@ -49,6 +52,20 @@ type VersionInfo struct {
 	// pudo leer. RestartRequired dice que es distinta de Current.
 	Installed       string `json:"installed"`
 	RestartRequired bool   `json:"restart_required"`
+	// Instance identifica el proceso servidor que responde. Cambia en cada reinicio,
+	// también cuando la versión es la misma.
+	Instance string `json:"instance"`
+}
+
+// newServerInstance devuelve un identificador del proceso servidor, distinto en cada
+// arranque. Lleva una parte aleatoria: el reloj de Windows puede repetir valores
+// entre dos arranques seguidos.
+func newServerInstance() string {
+	var nonce [8]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return fmt.Sprintf("%d-%d", os.Getpid(), time.Now().UnixNano())
+	}
+	return fmt.Sprintf("%d-%s", os.Getpid(), hex.EncodeToString(nonce[:]))
 }
 
 // versionCheckFn consulta la última versión publicada de Axiom. Es la costura
@@ -92,7 +109,7 @@ func newVersionChecker() *versionChecker {
 //
 // La comprobación contra la última versión se hace con el binario que arrancaría un
 // reinicio, no con el proceso: si otro `go install` ya lo sustituyó, lo que hace
-// falta es reiniciar, no actualizar (prov:UPD:1). Sin esa versión, se usa la del
+// falta es reiniciar, no actualizar (RF-UPD-09). Sin esa versión, se usa la del
 // proceso, como antes.
 func (c *versionChecker) Get(ctx context.Context, refresh bool) VersionInfo {
 	c.mu.Lock()
@@ -217,7 +234,9 @@ func versionInfoFromResult(current string, r update.UpdateResult) VersionInfo {
 
 // CheckVersion devuelve la información de versión del Axiom que sirve el dashboard.
 func (s *Service) CheckVersion(ctx context.Context, refresh bool) VersionInfo {
-	return s.versions.Get(ctx, refresh)
+	info := s.versions.Get(ctx, refresh)
+	info.Instance = s.instance
+	return info
 }
 
 // handleSystemVersion responde GET /api/system/version. Un fallo de red no es un

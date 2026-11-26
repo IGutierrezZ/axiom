@@ -60,7 +60,7 @@ func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
 }
 
 // Con un binario instalado distinto del proceso y nada más reciente que instalar, el
-// aviso ofrece reiniciar y no actualizar (prov:UPD:1); la orden manual sigue el canal.
+// aviso ofrece reiniciar y no actualizar (RF-UPD-09); la orden manual sigue el canal.
 func TestUpdateBannerOffersRestartWhenTheInstalledBinaryDiffers(t *testing.T) {
 	t.Parallel()
 	src := readAsset(t, "js/update.js")
@@ -73,6 +73,35 @@ func TestUpdateBannerOffersRestartWhenTheInstalledBinaryDiffers(t *testing.T) {
 		"const from = info.installed || info.current;",
 		"axiom@main",
 		"latest.startsWith('main@')",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}
+
+// El botón permanente «Reiniciar con la última versión» lanza el reinicio forzado y
+// la página se recarga cuando responde otra instancia del servidor, aunque la versión
+// no cambie (RF-UPD-10).
+func TestRestartLatestButtonIsWired(t *testing.T) {
+	t.Parallel()
+	index := getAsset(t, assetServer(t), "/").Body.String()
+	for _, marker := range []string{
+		`id="btn-axiom-restart"`,
+		"Reiniciar con la última versión",
+		`id="axiom-running-version"`,
+	} {
+		if !strings.Contains(index, marker) {
+			t.Errorf("index.html no contiene %q", marker)
+		}
+	}
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"'/api/system/restart'",
+		"startRestart(restartButton)",
+		"restartInstance = currentInstance();",
+		"info.instance !== restartInstance",
+		"on('version', renderRunningVersion)",
 	} {
 		if !strings.Contains(src, marker) {
 			t.Errorf("js/update.js no contiene %q", marker)

@@ -182,11 +182,19 @@ let updateStarted = false;
 let startedFrom = '';
 let downSeen = false;
 let restartHint = '';
+// restartInstance: instancia del servidor que se va a sustituir. Un reinicio forzado
+// puede conservar la versión, así que también se recarga cuando responde otra
+// instancia (RF-UPD-10).
+let restartInstance = '';
 
 function trackUpdate(job) {
   updateStarted = true;
   startedFrom = job.from_version || '';
   downSeen = false;
+}
+
+function currentInstance() {
+  return (state.version && state.version.instance) || '';
 }
 
 function newProcessAnswered(job) {
@@ -210,7 +218,8 @@ async function pollRestart() {
   stopPolling();
   try {
     const info = await api('/api/system/version');
-    if (info && info.current && (restartFrom ? info.current !== restartFrom : sawDown)) {
+    const otherInstance = !!restartInstance && !!info && !!info.instance && info.instance !== restartInstance;
+    if (info && info.current && (otherInstance || (restartFrom ? info.current !== restartFrom : sawDown))) {
       window.location.reload();
       return;
     }
@@ -230,6 +239,7 @@ async function pollRestart() {
 function beginRestartWait(job) {
   if (restartFrom !== null) return;
   restartFrom = job.from_version || (state.version && state.version.current) || '';
+  restartInstance = currentInstance();
   restartStarted = Date.now();
   restartHint = job.manual_hint || '';
   sawDown = false;
@@ -279,20 +289,40 @@ function manualUpdateCommand() {
   return typeof latest === 'string' && latest.startsWith('main@') ? MANUAL_UPDATE_BETA : MANUAL_UPDATE;
 }
 
-async function startUpdate(btn) {
-  const restartOnly = state.version && state.version.status === 'restart_required';
-  const restore = setBusy(btn, restartOnly ? 'Reiniciando…' : 'Actualizando…');
+// launchJob lanza el trabajo de actualización o de reinicio y sigue su estado.
+async function launchJob(btn, url, busyLabel, failure) {
+  const restore = setBusy(btn, busyLabel);
   try {
-    const job = await api('/api/system/update', { method: 'POST' });
+    const job = await api(url, { method: 'POST' });
     pollErrors = 0;
     trackUpdate(job);
     set('updateJob', job);
     if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
   } catch (err) {
-    toast(`No se pudo iniciar la actualización: ${err.message}`, 'bad');
+    toast(`${failure}: ${err.message}`, 'bad');
   } finally {
     restore();
   }
+}
+
+function startUpdate(btn) {
+  const restartOnly = state.version && state.version.status === 'restart_required';
+  return launchJob(btn, '/api/system/update', restartOnly ? 'Reiniciando…' : 'Actualizando…', 'No se pudo iniciar la actualización');
+}
+
+// startRestart lanza el reinicio forzado con la última versión (RF-UPD-10): instala
+// si hay una versión más reciente y reinicia el dashboard siempre.
+function startRestart(btn) {
+  return launchJob(btn, '/api/system/restart', 'Reiniciando…', 'No se pudo iniciar el reinicio');
+}
+
+// renderRunningVersion muestra en la barra lateral la versión que sirve el dashboard.
+function renderRunningVersion() {
+  const label = $('#axiom-running-version');
+  if (!label) return;
+  const current = state.version && state.version.current;
+  label.textContent = current ? `Axiom ${current}` : 'Axiom';
+  label.title = current || '';
 }
 
 function dismiss() {
@@ -315,7 +345,10 @@ async function resumeUpdate() {
 
 export function initUpdate() {
   on('version', renderUpdateBanner);
+  on('version', renderRunningVersion);
   on('updateJob', renderUpdateBanner);
+  const restartButton = $('#btn-axiom-restart');
+  if (restartButton) restartButton.addEventListener('click', () => startRestart(restartButton));
   const banner = $('#update-banner');
   if (banner) {
     banner.addEventListener('click', (event) => {

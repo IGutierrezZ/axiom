@@ -107,3 +107,51 @@ El archivo de estado de usuario (`~/.axiom/state.json`) DEBE mantener la clave d
 - **DADO** la inicialización de estado de Axiom
 - **CUANDO** se consulta `state.json`
 - **ENTONCES** el registro contiene `upstream_version: "3.4.0"`
+### Requirement: Reinicio pendiente detectado en el dashboard (RF-UPD-09)
+
+El dashboard DEBE comparar la versión del proceso en ejecución con la del binario de Axiom que arrancaría al reiniciarse. Cuando difieren y el binario instalado no está por detrás de la última versión publicada, DEBE ofrecer reiniciar el dashboard y NO DEBE ofrecer ni ejecutar una actualización. Si no puede leer la versión del binario instalado, DEBE comprobar con la versión del proceso, como hasta ahora.
+
+#### Scenario: Binario ya actualizado por fuera
+- **DADO** un dashboard en ejecución con la versión A
+- **Y** un binario instalado que ya es la última versión B
+- **CUANDO** se consulta `GET /api/system/version`
+- **ENTONCES** la respuesta trae `status: restart_required`, `installed: B` y `restart_required: true`
+- **Y** el aviso de la interfaz ofrece «Reiniciar» en lugar de «Actualizar»
+- **Y** `POST /api/system/update` relanza el dashboard con el binario instalado sin ejecutar `go install`
+
+#### Scenario: Binario instalado también por detrás
+- **DADO** un dashboard con la versión A y un binario instalado B, distinto de A y anterior a la última versión C
+- **CUANDO** se consulta `GET /api/system/version`
+- **ENTONCES** el estado es `update_available` con `restart_required: true`
+- **Y** la actualización instala C y después relanza el dashboard
+
+### Requirement: Reinicio forzado con la última versión (RF-UPD-10)
+
+El dashboard DEBE ofrecer en todo momento la acción «Reiniciar con la última versión» (`POST /api/system/restart`, solo desde el propio dashboard). Esa acción DEBE instalar la última versión publicada cuando el binario instalado esté por detrás y DEBE relanzar siempre el dashboard con el binario instalado, también cuando ya está al día. Si la instalación falla, el dashboard en ejecución DEBE seguir sirviendo y mostrar el motivo con la orden manual del canal en uso: `@main` en el canal beta y `@latest` en el estable.
+
+#### Scenario: Reinicio forzado sin versión nueva
+- **DADO** un dashboard al día
+- **CUANDO** el usuario pulsa «Reiniciar con la última versión»
+- **ENTONCES** no se instala nada
+- **Y** el dashboard se relanza en el mismo puerto y la página se recarga cuando responde el proceso nuevo, aunque la versión sea la misma
+
+#### Scenario: Reinicio forzado con versión nueva
+- **DADO** un binario instalado por detrás de la última versión
+- **CUANDO** el usuario pulsa «Reiniciar con la última versión»
+- **ENTONCES** se instala la última versión y el dashboard se relanza con ella
+
+### Requirement: Instalación propia en Windows independiente del nombre apartado (RF-UPD-11)
+
+En Windows, la actualización del propio binario con `go install` DEBE compilar en un directorio temporal dentro del destino y sustituir el binario apartando el anterior con un nombre único, de modo que un `axiom.exe~` ocupado por un proceso anterior no impida la actualización. Si la sustitución falla, el binario anterior DEBE quedar restaurado en su ruta.
+
+#### Scenario: Nombre apartado ocupado por un dashboard anterior
+- **DADO** un `axiom.exe~` en uso por un proceso anterior en el directorio de destino
+- **CUANDO** se actualiza Axiom con `go install` en Windows
+- **ENTONCES** el binario nuevo queda en `axiom.exe`
+- **Y** el anterior queda apartado con un nombre único terminado en `.old`
+
+#### Scenario: Falla la sustitución
+- **DADO** una compilación correcta en el directorio temporal
+- **CUANDO** no se puede mover el binario nuevo a su ruta
+- **ENTONCES** el binario anterior vuelve a su ruta y la actualización informa del fallo
+

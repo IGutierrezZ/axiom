@@ -133,6 +133,17 @@ func (j *updateJobState) finish(phase, message, manualHint string, sync *UpdateS
 // vez: si ya hay uno en curso (en cualquier fase no terminal) devuelve su estado y
 // no lanza otro. Devuelve el estado y si se ha lanzado un trabajo nuevo.
 func (s *Service) StartUpdate() (UpdateJobStatus, bool) {
+	return s.startUpdateJob(false)
+}
+
+// StartRestart arranca el reinicio forzado con la última versión (RF-UPD-10): el
+// mismo trabajo que StartUpdate, pero relanza el dashboard siempre, también cuando
+// no hay nada que instalar. Comparte con StartUpdate el único trabajo del proceso.
+func (s *Service) StartRestart() (UpdateJobStatus, bool) {
+	return s.startUpdateJob(true)
+}
+
+func (s *Service) startUpdateJob(force bool) (UpdateJobStatus, bool) {
 	j := &s.update
 	j.mu.Lock()
 	if j.running {
@@ -146,7 +157,7 @@ func (s *Service) StartUpdate() (UpdateJobStatus, bool) {
 	st := j.snapshotLocked()
 	j.mu.Unlock()
 
-	go s.runUpdateJob()
+	go s.runUpdateJob(force)
 	return st, true
 }
 
@@ -158,7 +169,12 @@ func (s *Service) UpdateStatus() UpdateJobStatus {
 // runUpdateJob es el cuerpo del trabajo: comprobar, actualizar y, si el binario
 // no se ha reemplazado, sincronizar. Nunca propaga un pánico: lo convierte en una
 // fase failed con el comando manual, y el dashboard sigue sirviendo.
-func (s *Service) runUpdateJob() {
+//
+// Con force (reinicio forzado, RF-UPD-10) el dashboard se relanza siempre que no
+// falle la instalación: también al día, con una compilación de desarrollo o si la
+// comprobación de la última versión falla, porque reiniciar sigue cargando el
+// binario instalado.
+func (s *Service) runUpdateJob(force bool) {
 	j := &s.update
 	defer func() {
 		if r := recover(); r != nil {
@@ -168,17 +184,17 @@ func (s *Service) runUpdateJob() {
 
 	// 1. Comprobar. El trabajo no depende del contexto de la petición.
 	info := s.versions.Get(context.Background(), true)
-	switch info.Status {
-	case versionStatusUpdateAvailable:
-	case versionStatusRestartRequired:
+	switch {
+	case info.Status == versionStatusUpdateAvailable:
+	case info.Status == versionStatusRestartRequired || force:
 		// El binario instalado ya no es el de este proceso y no hay nada más reciente
-		// que instalar: basta con relanzar el dashboard (prov:UPD:1).
+		// que instalar, o el reinicio es forzado: basta con relanzar el dashboard.
 		s.restartWithInstalled(info)
 		return
-	case versionStatusUpToDate:
+	case info.Status == versionStatusUpToDate:
 		j.finish(updatePhaseDone, "Axiom ya está en la última versión.", "", nil)
 		return
-	case versionStatusDevBuild:
+	case info.Status == versionStatusDevBuild:
 		j.finish(updatePhaseDone, "Esta es una compilación de desarrollo: no se actualiza automáticamente.", "", nil)
 		return
 	default:
@@ -223,6 +239,11 @@ func (s *Service) runUpdateJob() {
 		// Si el relanzamiento falla, la UI ya tiene el comando manual.
 		j.setRestarting("Axiom se ha actualizado. Reiniciando el dashboard con la versión nueva…", manualRelaunchHint(s.getRootPath()))
 		s.afterSelfUpgrade(sync)
+		return
+	}
+	if force {
+		// El binario propio no se ha reemplazado, pero el reinicio es lo pedido.
+		s.restartWithInstalled(info)
 		return
 	}
 	j.finish(updatePhaseDone, resp.Message, "", sync)
@@ -282,6 +303,22 @@ func (s *Server) handleSystemUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, _ := s.service.StartUpdate()
+	s.respondJSON(w, http.StatusAccepted, st)
+}
+
+// handleSystemRestart responde POST /api/system/restart: el reinicio forzado con la
+// última versión (RF-UPD-10). Como la actualización, solo lo admite el propio
+// dashboard y contesta enseguida con el estado del trabajo.
+func (s *Server) handleSystemRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
+	st, _ := s.service.StartRestart()
 	s.respondJSON(w, http.StatusAccepted, st)
 }
 
