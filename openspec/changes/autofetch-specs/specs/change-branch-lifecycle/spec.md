@@ -8,15 +8,15 @@
 
 ### Requirement: Autofetch del Repositorio de Specs con el Interruptor Personal (RF-BRA-39)
 
-Con el interruptor de autofetch encendido, el sistema MUST ofrecer el verbo propio `axiom autofetch run [--cwd] [--agent] [--json]`, que NO pertenece a la familia `axiom branch`. Con el interruptor apagado, `run` MUST NOT realizar ninguna operación de red ni escribir, MUST informar de que el autofetch está apagado y MUST terminar con código 0. Un proyecto no registrado o un hub ilegible cuentan como apagado, con aviso (RF-HUB-07).
+Con el interruptor de autofetch encendido, el sistema MUST ofrecer el verbo propio `axiom autofetch run [--cwd] [--agent] [--json]`, que NO pertenece a la familia `axiom branch`. Con el interruptor apagado, `run` MUST NOT realizar ninguna operación de red ni escribir, MUST informar de que el autofetch está apagado y MUST terminar con código 0. Un proyecto no registrado o un hub ilegible cuentan como apagado (RF-HUB-07). El aviso se emite solo cuando `run` se invoca a mano (sin `--agent`); el hook de sesión (`run --agent`) se comporta exactamente como con el interruptor apagado, sin aviso.
 
 El ciclo de `run` con el interruptor encendido MUST ser este:
 
-1. **Fetch.** Ejecuta `git fetch origin` en el repositorio de specs (en `monorepo-embedded`, el propio repositorio; en `multirepo`, el repositorio de specs in situ). MUST NOT usar `--prune` ni escribir en el remoto. MUST estar acotado por un tiempo máximo de unos 8 segundos y MUST NOT pedir credenciales de forma interactiva. MUST NOT repetir el fetch antes de transcurrido un intervalo mínimo desde el último fetch correcto: dentro del intervalo `run` MUST NOT hacer red.
-2. **Avance de la rama de integración.** Avanza la rama de integración local (`git.integration_branch`) a `origin/<integración>` SOLO por fast-forward estricto (`merge --ff-only`) y SOLO si la rama está desplegada en un checkout, el árbol de ese checkout está limpio y la rama local no ha divergido de `origin/<integración>`. Si la rama ya está al día, no hace nada. Si no se cumple alguna condición (árbol sucio, divergencia, rama no desplegada en ningún checkout, bloqueo de git u otro error del avance), NO DEBE mover la rama y DEBE avisar con la orden exacta que la persona puede ejecutar. El aviso MUST ser un aviso, no un fallo: el código de salida sigue siendo 0.
-3. **Aviso por relevancia.** Avisa únicamente de (a) commits entrantes en `origin/<integración>` que tocan `openspec/changes/<cambio actual>/`, las specs vivas de las capacidades que el cambio actual declara en su carpeta `specs/`, o `odd/tasks/<feature>.md` del cambio actual, y (b) commits nuevos en `origin/<rama del cambio actual>` que la rama local no tiene. Cada aviso MUST nombrar la rama, el número de commits y su alcance, y MUST NOT listar nada irrelevante. Sin cambio actual resoluble, el ciclo hace el fetch y el avance pero no emite avisos de relevancia. Sin nada relevante, `run` MUST NOT emitir ningún aviso.
+1. **Fetch.** Ejecuta `git fetch origin` en el repositorio de specs (en `monorepo-embedded`, el propio repositorio; en `multirepo`, el repositorio de specs in situ). MUST NOT usar `--prune` ni escribir en el remoto. MUST estar acotado por un tiempo máximo de unos 8 segundos (el `run` completo en modo hook, con fetch, lecturas locales y avance, MUST terminar en unos 10 segundos como máximo) y MUST NOT pedir credenciales de forma interactiva. MUST NOT repetir el fetch antes de transcurrido un intervalo mínimo desde el último fetch correcto: dentro del intervalo `run` MUST NOT hacer red.
+2. **Avance de la rama de integración.** Avanza la rama de integración local (`git.integration_branch`) a `origin/<integración>` SOLO por fast-forward estricto (`merge --ff-only`) y SOLO si la rama está desplegada en un checkout, el árbol de ese checkout está limpio y la rama local no ha divergido de `origin/<integración>`. Si la rama ya está al día, no hace nada. Si no se cumple alguna condición (árbol sucio, divergencia, rama no desplegada en ningún checkout, operación git en curso (merge, rebase, cherry-pick) o HEAD desacoplado en el checkout de la integración, bloqueo de git u otro error del avance), NO DEBE mover la rama y DEBE avisar con la orden exacta que la persona puede ejecutar. El aviso MUST ser un aviso, no un fallo: el código de salida sigue siendo 0.
+3. **Aviso por relevancia.** Una integración local por detrás de `origin/<integración>` que no se ha podido avanzar (árbol sucio, divergencia, rama no desplegada, operación git en curso o HEAD desacoplado en ese checkout) es relevante y se avisa siempre con la orden exacta; si la integración no está por detrás, no hay aviso de no-avance. Además avisa únicamente de (a) commits entrantes en `origin/<integración>` que tocan `openspec/changes/<cambio actual>/`, las specs vivas de las capacidades que el cambio actual declara en su carpeta `specs/`, o `odd/tasks/<feature>.md` del cambio actual, y (b) commits nuevos en `origin/<rama del cambio actual>` que la rama local no tiene. Cada aviso MUST nombrar la rama, el número de commits y su alcance, y MUST NOT listar nada irrelevante. Sin cambio actual resoluble, el ciclo hace el fetch y el avance pero no emite avisos de relevancia. Sin nada relevante, `run` MUST NOT emitir ningún aviso.
 
-Prohibiciones, con el interruptor encendido y en cualquier circunstancia: el sistema MUST NOT avanzar `main_branch`; MUST NOT mover la rama de un cambio, la rama de archivado ni la rama de un worktree de feature (ni rebase ni merge ni reset: solo avisar); MUST NOT avanzar ninguna rama local de un repositorio de código; MUST NOT ejecutar `push` ni `prune`.
+Prohibiciones, con el interruptor encendido y en cualquier circunstancia: el sistema MUST NOT avanzar `main_branch` cuando es distinta de `integration_branch`; cuando coinciden (monorepo de una sola etapa, o el `main` del repositorio de specs de un multirepo, que hace de integración), avanzarla por fast-forward estricto ES el avance de la integración que ordena el paso 2; MUST NOT mover la rama de un cambio, la rama de archivado ni la rama de un worktree de feature (ni rebase ni merge ni reset: solo avisar); MUST NOT avanzar ninguna rama local de un repositorio de código; MUST NOT ejecutar `push` ni `prune`.
 
 Si el remoto es inalcanzable o el fetch agota su tiempo, `run` MUST NOT bloquear: deja un aviso, no avanza nada y termina con código 0. `run --json` MUST devolver un resultado tipado con el estado del interruptor, si hubo fetch o se omitió por el intervalo, si la rama de integración avanzó, y la lista de avisos con sus órdenes exactas.
 
@@ -79,6 +79,26 @@ Si el remoto es inalcanzable o el fetch agota su tiempo, `run` MUST NOT bloquear
 - **ENTONCES** ni `main_branch` ni ninguna rama local de los repositorios de código cambian
 - **Y** no se ejecuta ningún `git fetch` en los repositorios de código
 
+#### Scenario: Con `main_branch` igual a la integración se avanza por fast-forward
+
+- **DADO** el interruptor encendido, `main_branch` igual a `integration_branch`, desplegada con el árbol limpio y con commits nuevos en `origin/<integración>`
+- **CUANDO** se ejecuta `axiom autofetch run --json`
+- **ENTONCES** esa rama avanza por fast-forward estricto a `origin/<integración>` sin commit de fusión
+- **Y** ninguna rama de los repositorios de código cambia
+
+#### Scenario: Integración por detrás con operación git en curso solo avisa
+
+- **DADO** el interruptor encendido, la integración local por detrás de `origin/<integración>` y el checkout de la integración con un rebase en curso o con HEAD desacoplado
+- **CUANDO** se ejecuta `axiom autofetch run --json`
+- **ENTONCES** la rama no se mueve y el resultado incluye un aviso con la orden exacta
+- **Y** la orden termina con código 0
+
+#### Scenario: Integración al día no emite aviso de no-avance
+
+- **DADO** el interruptor encendido, la integración igual a `origin/<integración>` y el árbol de su checkout sucio
+- **CUANDO** se ejecuta `axiom autofetch run --json`
+- **ENTONCES** el resultado no incluye ningún aviso de no-avance
+
 #### Scenario: Nunca se hace push ni prune
 
 - **DADO** el interruptor encendido y un observador instalado en el único punto del motor que ejecuta git
@@ -89,7 +109,7 @@ Si el remoto es inalcanzable o el fetch agota su tiempo, `run` MUST NOT bloquear
 
 - **DADO** el interruptor encendido y un remoto inalcanzable
 - **CUANDO** se ejecuta `axiom autofetch run --json`
-- **ENTONCES** la orden termina dentro del tiempo máximo del fetch con código 0
+- **ENTONCES** la orden termina dentro de la cota de unos 10 segundos (fetch de unos 8 segundos como máximo) con código 0
 - **Y** el resultado incluye un aviso de remoto inalcanzable
 - **Y** ninguna rama se modifica
 
@@ -124,6 +144,13 @@ Si el remoto es inalcanzable o el fetch agota su tiempo, `run` MUST NOT bloquear
 - **DADO** el interruptor encendido y commits nuevos en `origin/<integración>` que no tocan nada relevante para el cambio actual
 - **CUANDO** se ejecuta `axiom autofetch run`
 - **ENTONCES** no se emite ningún aviso
+
+#### Scenario: Proyecto no registrado o hub ilegible en `run`
+
+- **DADO** un proyecto no registrado o un hub ilegible
+- **CUANDO** se ejecuta `axiom autofetch run` a mano, y después `axiom autofetch run --agent claude-code`
+- **ENTONCES** la primera ejecución informa de autofetch apagado con aviso y la segunda no emite ningún aviso ni salida
+- **Y** ninguna hace red ni escribe, y ambas terminan con código 0
 
 #### Scenario: Multirepo opera solo sobre el repositorio de specs
 
@@ -165,7 +192,7 @@ La regla de doctrina de los textos del orquestador (y de las guías `AGENTS.md`,
 - **DADO** el hook instalado, un remoto inalcanzable o `axiom` ausente del `PATH`
 - **CUANDO** el runtime inicia la sesión
 - **ENTONCES** la orden del hook termina con código 0
-- **Y** el arranque de la sesión no espera más que el tiempo máximo del fetch
+- **Y** el `run` completo termina en unos 10 segundos como máximo (fetch acotado a unos 8 segundos más lecturas locales y avance) y el arranque de la sesión no espera más que esa cota
 
 #### Scenario: El hook es inerte fuera de proyectos Axiom
 
@@ -259,7 +286,7 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 
 ### Requirement: Base sin Red y `--fetch` Explícito (RF-BRA-10)
 
-`ensure` NO DEBE realizar ninguna operación remota salvo que la persona la haya pedido de forma explícita: con `--fetch` en la orden o con el interruptor de autofetch encendido (RF-HUB-07, RF-HUB-13), que cuenta como opción explícita y persistente. Con el interruptor apagado y sin `--fetch`, ninguna orden de `axiom branch` hace red. La base de cada rama DEBE ser `origin/<base efectiva>` si esa referencia existe en local y, si no, la rama local de la base efectiva, donde la base efectiva es la rama de integración (en los repositorios de una sola etapa y en modo `release`) o la rama principal (en los repositorios con dos etapas en modo `branch`, RF-BRA-29); si la propia rama del cambio no existe en local pero existe su referencia remota local, la rama se adopta desde ella (RF-BRA-27). El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si la base procede de la referencia remota local o de la rama local; la rama del cambio adoptada desde el remoto se indica aparte, en `branches[].createdFrom: remote` y `createdFromRef`, RF-BRA-27) y `fetched`, que DEBE ser `false` si no hubo fetch y `true` si lo hubo. Con `--fetch`, el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Con el interruptor encendido y sin `--fetch`, `ensure` DEBE ejecutar el fetch de forma implícita, antes de resolver la base, en todos los repositorios del plan (también los de código), sin respetar el intervalo mínimo de RF-BRA-39 y sin avanzar ninguna rama local; el fetch implícito se aplica también a `ensure --archive` (RF-BRA-13) y NO a `done`. Si el fetch implícito falla, `ensure` NO DEBE rechazar: DEBE avisar del fallo, continuar con la base local resuelta como si no hubiera fetch y devolver `fetched: false` para ese repositorio. Si no existe la base efectiva ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (RF-BRA-12). El `--fetch` explícito sigue exigiendo la autorización de la persona, salvo que haya encendido el autofetch.
+`ensure` NO DEBE realizar ninguna operación remota salvo que la persona la haya pedido de forma explícita: con `--fetch` en la orden o con el interruptor de autofetch encendido (RF-HUB-07, RF-HUB-13), que cuenta como opción explícita y persistente. Con el interruptor apagado y sin `--fetch`, ninguna orden de `axiom branch` hace red. La base de cada rama DEBE ser `origin/<base efectiva>` si esa referencia existe en local y, si no, la rama local de la base efectiva, donde la base efectiva es la rama de integración (en los repositorios de una sola etapa y en modo `release`) o la rama principal (en los repositorios con dos etapas en modo `branch`, RF-BRA-29); si la propia rama del cambio no existe en local pero existe su referencia remota local, la rama se adopta desde ella (RF-BRA-27). El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si la base procede de la referencia remota local o de la rama local; la rama del cambio adoptada desde el remoto se indica aparte, en `branches[].createdFrom: remote` y `createdFromRef`, RF-BRA-27) y `fetched`, que DEBE ser `false` si no hubo fetch y `true` si lo hubo. Con `--fetch`, el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Con el interruptor encendido y sin `--fetch`, `ensure` DEBE ejecutar el fetch de forma implícita, antes de resolver la base, en todos los repositorios del plan (también los de código, y el repositorio de specs in situ de un multirepo, donde solo hay fetch y `ensure` no avanza nada), con un tiempo máximo de unos 8 segundos por repositorio, omitiendo sin aviso (`fetched: false`) los repositorios sin remoto `origin`, también cuando se pasa `--base <ref>` (el fetch implícito se hace igual), sin respetar el intervalo mínimo de RF-BRA-39 y sin avanzar ninguna rama local; el fetch implícito se aplica también a `ensure --archive` (RF-BRA-13) y NO a `done`. Si el fetch implícito falla, `ensure` NO DEBE rechazar: DEBE avisar del fallo, continuar con la base local resuelta como si no hubiera fetch y devolver `fetched: false` para ese repositorio. Si no existe la base efectiva ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (RF-BRA-12). El `--fetch` explícito sigue exigiendo la autorización de la persona, salvo que haya encendido el autofetch.
 (Previously: la única vía de red era `--fetch`; no existía el interruptor ni el fetch implícito, y `fetched` solo era `true` con `--fetch`)
 
 #### Scenario: Sin `--fetch` y con el interruptor apagado no hay operaciones remotas
@@ -302,6 +329,31 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 - **CUANDO** se ejecuta `ensure --change x --json`
 - **ENTONCES** cada repositorio del plan recibe un `fetch` y su JSON devuelve `fetched: true`
 - **Y** ninguna rama local preexistente de los repositorios de código cambia de commit
+
+#### Scenario: El fetch implícito incluye el repositorio de specs in situ de un multirepo
+
+- **DADO** un multirepo con el interruptor encendido y commits nuevos en el remoto del repositorio de specs
+- **CUANDO** se ejecuta `ensure --change x --json`
+- **ENTONCES** el repositorio de specs recibe un `fetch` y su JSON devuelve `fetched: true`
+- **Y** ninguna rama de ese repositorio se avanza desde `ensure`
+
+#### Scenario: Un repositorio sin remoto `origin` se omite sin aviso
+
+- **DADO** el interruptor encendido y un repositorio del plan sin remoto `origin`
+- **CUANDO** se ejecuta `ensure --change x --json`
+- **ENTONCES** ese repositorio no recibe `fetch`, devuelve `fetched: false` y no se emite ningún aviso por ello
+
+#### Scenario: Con `--base <ref>` el fetch implícito se hace igual
+
+- **DADO** el interruptor encendido y un repositorio con remoto
+- **CUANDO** se ejecuta `ensure --change x --base <ref> --json`
+- **ENTONCES** se ejecuta un `fetch` antes de resolver la base y `fetched` es `true`
+
+#### Scenario: El fetch implícito tiene tiempo máximo por repositorio
+
+- **DADO** el interruptor encendido y un remoto que no responde en un repositorio del plan
+- **CUANDO** se ejecuta `ensure --change x --json`
+- **ENTONCES** el fetch de ese repositorio se corta en unos 8 segundos, se avisa del fallo y `fetched` es `false`
 
 #### Scenario: El fetch implícito no respeta el intervalo mínimo
 - **DADO** el interruptor encendido y un fetch correcto realizado hace menos del intervalo mínimo

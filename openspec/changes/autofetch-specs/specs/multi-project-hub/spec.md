@@ -9,7 +9,7 @@
 
 El sistema MUST exponer la preferencia `autofetch` de RF-HUB-07 mediante el verbo propio `axiom autofetch` con los subcomandos `enable`, `disable` y `status`, todos con `--cwd`, `--agent` y `--json` (`run` lo define `change-branch-lifecycle`, RF-BRA-39). `enable` MUST guardar `autofetch: true` en la entrada del proyecto del hub y MUST ser la única vía de encenderlo desde la CLI; `disable` MUST apagarlo y dejar la entrada sin la clave. `enable` y `disable` MUST ser idempotentes. `status` MUST informar del estado efectivo (`enabled` o `disabled`), sin red y sin escribir. Ninguno de los tres MUST modificar `axiom.yaml` ni ningún fichero versionado.
 
-Encender el interruptor MUST ser la autorización explícita y persistente del `fetch` para ese proyecto. El registro de un proyecto (`axiom init`, `axiom project add` y el registro del dashboard, RF-HUB-08) MUST NOT preguntar por el autofetch ni encenderlo: un proyecto recién registrado queda con el interruptor apagado. `enable` sobre un proyecto no registrado MUST rechazarse con un mensaje en español que indique cómo registrarlo, sin escribir el hub. Con el hub ilegible, `enable` y `disable` MUST rechazarse sin modificarlo y `status` MUST informar de `disabled` con un aviso.
+Encender el interruptor MUST ser la autorización explícita y persistente del `fetch` para ese proyecto. El registro de un proyecto (`axiom init`, `axiom project add` y el registro del dashboard, RF-HUB-08) MUST NOT preguntar por el autofetch ni encenderlo: un proyecto recién registrado queda con el interruptor apagado. `enable` sobre un proyecto no registrado MUST rechazarse con un mensaje en español que indique cómo registrarlo, sin escribir el hub; `disable` sobre un proyecto no registrado MUST no hacer nada, informarlo y terminar sin error. Con el hub ilegible, `enable` y `disable` MUST rechazarse sin modificarlo y `status` MUST informar de `disabled` con un aviso. Con un proyecto no registrado, `status` MUST informar de `disabled` con aviso.
 
 #### Scenario: `enable` persiste la preferencia en el hub y no toca `axiom.yaml`
 
@@ -53,6 +53,13 @@ Encender el interruptor MUST ser la autorización explícita y persistente del `
 - **ENTONCES** se rechaza con un mensaje en español que indica cómo registrar el proyecto
 - **Y** `workspaces.json` no se crea ni se modifica
 
+#### Scenario: `disable` en un proyecto no registrado no hace nada
+
+- **DADO** un proyecto que no figura en `workspaces.json`
+- **CUANDO** se ejecuta `axiom autofetch disable`
+- **ENTONCES** la orden informa de que no hay nada que apagar y termina con código 0
+- **Y** `workspaces.json` no se crea ni se modifica
+
 #### Scenario: Hub ilegible equivale a apagado con aviso
 
 - **DADO** un `workspaces.json` ilegible
@@ -64,7 +71,7 @@ Encender el interruptor MUST ser la autorización explícita y persistente del `
 
 ### Requirement: Preferencias Personales de Worktree por Proyecto en el Hub (RF-HUB-07)
 
-Además de los campos de RF-HUB-01, cada proyecto registrado en `~/.axiom/workspaces.json` PUEDE almacenar tres preferencias personales opcionales: el **modo de trabajo** (`worktree`, `in_place` o `ask`), la **raíz de worktrees** (ruta absoluta) y el **autofetch** (booleano de dos estados, apagado por defecto). Las preferencias son personales y NO DEBEN escribirse nunca en `axiom.yaml` ni en ningún fichero versionado, ni leerse de ellos. Sin preferencias guardadas para un proyecto, estén o no registrado, el modo efectivo DEBE ser `worktree`, la raíz efectiva DEBE ser `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt` y el autofetch efectivo DEBE ser apagado. Un modo distinto de los tres valores, o una raíz que no sea una ruta absoluta, DEBEN rechazarse con un mensaje en español, sin modificar el registro. El autofetch apagado DEBE representarse con la ausencia de la clave `autofetch` en la entrada; encendido, con `autofetch: true`. Un proyecto no registrado o un hub ilegible DEBEN dar autofetch apagado, con aviso en las órdenes que lo consultan, sin hacer red por esa causa. Registrar de nuevo un proyecto ya registrado (RF-HUB-01, registro idempotente) NO DEBE borrar ni restablecer sus preferencias; desregistrarlo SÍ DEBE eliminarlas junto con su entrada. Las preferencias NO DEBEN cambiar la versión del esquema (`"1.0"`): un binario anterior las ignora. La edición del autofetch es el comando `axiom autofetch` de RF-HUB-13.
+Además de los campos de RF-HUB-01, cada proyecto registrado en `~/.axiom/workspaces.json` PUEDE almacenar tres preferencias personales opcionales: el **modo de trabajo** (`worktree`, `in_place` o `ask`), la **raíz de worktrees** (ruta absoluta) y el **autofetch** (booleano de dos estados, apagado por defecto). Las preferencias son personales y NO DEBEN escribirse nunca en `axiom.yaml` ni en ningún fichero versionado, ni leerse de ellos. Sin preferencias guardadas para un proyecto, estén o no registrado, el modo efectivo DEBE ser `worktree`, la raíz efectiva DEBE ser `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt` y el autofetch efectivo DEBE ser apagado. Un modo distinto de los tres valores, o una raíz que no sea una ruta absoluta, DEBEN rechazarse con un mensaje en español, sin modificar el registro. El autofetch apagado DEBE representarse con la ausencia de la clave `autofetch` en la entrada; encendido, con `autofetch: true`. Un proyecto no registrado o un hub ilegible DEBEN dar autofetch apagado, sin hacer red por esa causa. Avisan `axiom autofetch status` y `axiom autofetch run` invocado a mano (sin `--agent`); `enable` rechaza y `disable` sobre un proyecto no registrado no hace nada y lo informa sin error (RF-HUB-13); el hook de sesión (`run --agent`) y `axiom branch ensure` se comportan exactamente como con el interruptor apagado, sin aviso, para no añadir ruido a cada arranque ni alterar la salida de `ensure`. Registrar de nuevo un proyecto ya registrado (RF-HUB-01, registro idempotente) NO DEBE borrar ni restablecer sus preferencias; desregistrarlo SÍ DEBE eliminarlas junto con su entrada. Las preferencias NO DEBEN cambiar la versión del esquema (`"1.0"`): un binario anterior las ignora. La edición del autofetch es el comando `axiom autofetch` de RF-HUB-13.
 (Previously: solo existían las preferencias de modo de trabajo y raíz de worktrees; el autofetch no existía)
 
 #### Scenario: Sin preferencias el modo efectivo es `worktree`
@@ -125,6 +132,11 @@ Además de los campos de RF-HUB-01, cada proyecto registrado en `~/.axiom/worksp
 
 #### Scenario: Proyecto no registrado o hub ilegible dan apagado con aviso
 - **DADO** un proyecto que no figura en el hub, o un `workspaces.json` ilegible
-- **CUANDO** una orden consulta el autofetch efectivo
-- **ENTONCES** el autofetch es apagado
-- **Y** la orden no realiza ninguna operación de red por esa consulta
+- **CUANDO** se ejecutan `axiom autofetch status` y `axiom autofetch run` a mano
+- **ENTONCES** el autofetch es apagado y ambas órdenes emiten un aviso
+- **Y** ninguna realiza operación de red por esa consulta
+
+#### Scenario: Hook de sesión y `ensure` no avisan con el hub no resoluble
+- **DADO** un proyecto que no figura en el hub, o un `workspaces.json` ilegible
+- **CUANDO** se ejecutan `axiom autofetch run --agent claude-code` y `axiom branch ensure --change x --json`
+- **ENTONCES** se comportan como con el interruptor apagado: sin red por esta causa, sin aviso y con la salida de `ensure` sin cambios
