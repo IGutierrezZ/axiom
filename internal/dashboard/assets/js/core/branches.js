@@ -1,19 +1,19 @@
-// Ramas y worktrees (INC-25): la lógica de las cinco funciones que el dashboard
+// Ramas y worktrees (INC-25): la lógica de las cuatro funciones que el dashboard
 // anterior ofrecía y que el rediseño conserva, separada del DOM para poder
 // ejecutarla en las pruebas.
 //
 //   1. Avisos del listado de incrementos (cabecera X-Axiom-Notes) e insignias de
 //      «pendiente de archivar» y de rama del worktree.
-//   2. Política de ramas efectiva, en solo lectura (rama de integración y prefijo,
-//      más los ajustes por repositorio).
-//   3. Preferencias personales de worktree (modo y raíz): textos y valores por defecto.
-//   4. Preferencias que se envían al registrar un proyecto.
-//   5. Creación de un incremento con el reintento tras una decisión del servidor.
+//   2. Preferencias personales de worktree (modo y raíz): textos y valores por defecto.
+//   3. Preferencias que se envían al registrar un proyecto.
+//   4. Creación de un incremento con el reintento tras una decisión del servidor.
+//
+// La política de ramas efectiva y los ajustes por repositorio ya no se pintan aquí: se ven y se
+// editan en Ajustes del proyecto (screens/ajustes.js, a partir del catálogo de /api/settings).
 //
 // Todo dato del servidor se escapa aquí antes de interpolarlo en HTML.
 
 import { escapeHtml } from './api.js';
-import { tableWrap } from './components.js';
 import { icon } from './icons.js';
 
 // ---- 1. Avisos del listado e insignias ---------------------------------------------
@@ -49,33 +49,7 @@ export function branchBadge(inc) {
   return `<span class="badge badge-neutral badge-mono" title="${escapeHtml(where)}">${icon('graph', 13)}${escapeHtml(inc.branch)}</span>`;
 }
 
-// ---- 2. Política de ramas (solo lectura) -------------------------------------------
-
-// branchPolicyRows devuelve los pares <dt>/<dd> de la política efectiva del workspace,
-// para la lista de datos de la tarjeta Topología. Se declara en axiom.yaml: aquí no se edita.
-export function branchPolicyRows(ws) {
-  const policy = (ws && ws.branchPolicy) || {};
-  const row = (label, value) => `<dt>${label}</dt><dd class="mono">${value ? `<code>${escapeHtml(value)}</code>` : '—'}</dd>`;
-  return row('Rama de integración', policy.integrationBranch) + row('Prefijo de ramas de cambio', policy.branchPrefix);
-}
-
-// repoPolicyHtml es la tabla de los ajustes por repositorio (`repositories:` de
-// axiom.yaml). Un hueco significa que el repositorio hereda el valor del workspace.
-// Sin entradas no hay tabla.
-export function repoPolicyHtml(ws) {
-  const repos = ws && Array.isArray(ws.repositories) ? ws.repositories : [];
-  if (repos.length === 0) return '';
-  const cell = value => (value ? `<code>${escapeHtml(value)}</code>` : '<span class="dim">hereda del workspace</span>');
-  const rows = repos.map(repo => `<tr>
-    <th scope="row"><code>${escapeHtml(repo.path)}</code></th>
-    <td>${cell(repo.integrationBranch)}</td>
-    <td>${cell(repo.branchPrefix)}</td>
-  </tr>`).join('');
-  const table = `<table class="data-table eco-repo-policy"><thead><tr><th scope="col">Repositorio</th><th scope="col">Rama de integración</th><th scope="col">Prefijo de ramas</th></tr></thead><tbody>${rows}</tbody></table>`;
-  return `<h3 class="eco-sub">Ajustes de ramas por repositorio</h3>${tableWrap(table, 'Ajustes de ramas por repositorio')}`;
-}
-
-// ---- 3 y 4. Preferencias personales de worktree ------------------------------------
+// ---- 2 y 3. Preferencias personales de worktree ------------------------------------
 
 // defaultWorktreeRoot es la raíz de worktrees por defecto de un proyecto: la ruta del
 // proyecto con el sufijo -wt. Devuelve '' si todavía no hay una ruta de la que calcularla.
@@ -104,7 +78,7 @@ export function effectivePrefsText(effective) {
   return `Vigentes: modo ${effective.mode}, raíz ${effective.root}`;
 }
 
-// ---- 5. Crear un incremento con decisión -------------------------------------------
+// ---- 4. Crear un incremento con decisión -------------------------------------------
 
 // decisionOf devuelve la decisión que el servidor pide ({ question, choices }) si el
 // error es un 409 `decision_required` con respuestas utilizables; si no, null.

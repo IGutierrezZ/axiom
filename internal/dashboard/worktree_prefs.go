@@ -57,11 +57,9 @@ func newProjectWorktreePrefsDTO(rec hub.WorkspaceRecord) ProjectWorktreePrefsDTO
 	return ProjectWorktreePrefsDTO{ID: rec.ID, Path: rec.Path, WorktreePrefs: saved, EffectiveWorktreePrefs: effective}
 }
 
-// activeProjectRecord busca en el hub la entrada del proyecto que el dashboard tiene abierto
-// (la raíz del servicio), por identidad de directorio. Es la raíz del servicio y no el
-// `active_workspace` del hub: `axiom ui` sirve la carpeta donde se lanzó aunque el hub
-// tenga marcado otro proyecto, y las preferencias que se editan son las del proyecto que se ve.
-func (s *Service) activeProjectRecord() (*hub.WorkspaceRecord, error) {
+// hub devuelve el gestor del hub del servicio, creándolo con la ruta por defecto la primera vez.
+// Lo comparten las preferencias de worktree y las preferencias personales de Ajustes.
+func (s *Service) hub() (*hub.Manager, error) {
 	if s.hubManager == nil {
 		mgr, err := hub.NewManager("")
 		if err != nil {
@@ -69,7 +67,19 @@ func (s *Service) activeProjectRecord() (*hub.WorkspaceRecord, error) {
 		}
 		s.hubManager = mgr
 	}
-	records, err := s.hubManager.List()
+	return s.hubManager, nil
+}
+
+// activeProjectRecord busca en el hub la entrada del proyecto que el dashboard tiene abierto
+// (la raíz del servicio), por identidad de directorio. Es la raíz del servicio y no el
+// `active_workspace` del hub: `axiom ui` sirve la carpeta donde se lanzó aunque el hub
+// tenga marcado otro proyecto, y las preferencias que se editan son las del proyecto que se ve.
+func (s *Service) activeProjectRecord() (*hub.WorkspaceRecord, error) {
+	mgr, err := s.hub()
+	if err != nil {
+		return nil, err
+	}
+	records, err := mgr.List()
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +136,10 @@ func (s *Server) handleActiveWorktreePrefs(w http.ResponseWriter, r *http.Reques
 	case http.MethodGet:
 		dto, err = s.service.GetActiveWorktreePrefs()
 	case http.MethodPut:
+		// Escribe el hub: solo la acepta el propio dashboard, antes de leer el cuerpo.
+		if s.rejectNonLocal(w, r) {
+			return
+		}
 		var req WorktreePrefsDTO
 		if decodeErr := json.NewDecoder(r.Body).Decode(&req); decodeErr != nil {
 			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})

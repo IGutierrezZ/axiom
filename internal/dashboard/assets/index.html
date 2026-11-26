@@ -67,6 +67,9 @@
             <button type="button" id="btn-add-project" class="popover-item" title="Vincular otro proyecto al Hub">
               <i data-icon="plus"></i><span class="grow">Añadir proyecto…</span>
             </button>
+            <a href="#/ajustes" id="link-project-settings" class="popover-item" title="Ver y editar los ajustes de este proyecto">
+              <i data-icon="settings"></i><span class="grow">Ajustes del proyecto</span>
+            </a>
           </div>
         </div>
 
@@ -84,6 +87,7 @@
           <div class="nav-group">
             <span class="nav-label">Plataforma</span>
             <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span><span id="badge-ecosistema" hidden></span></a>
+            <a class="nav-item" href="#/ajustes" data-nav="ajustes"><i data-icon="settings" data-size="18"></i><span class="grow">Ajustes</span></a>
           </div>
         </nav>
 
@@ -390,41 +394,6 @@
               </div>
             </section>
 
-            <section class="card card-flush eco-wide" aria-labelledby="eco-wt-h">
-              <div class="card-head">
-                <h2 class="card-title-h" id="eco-wt-h">Preferencias de worktree</h2>
-                <span class="badge badge-mono">~/.axiom</span>
-              </div>
-              <div id="eco-worktree-body" class="eco-pad">
-                <p class="eco-note">Cómo se trabaja cada cambio de este proyecto: en un worktree propio, en la carpeta del proyecto o preguntando cada vez. Se guardan en tu Hub (<code>~/.axiom/workspaces.json</code>), solo para este equipo: no modifican <code>axiom.yaml</code> ni ningún fichero del proyecto.</p>
-                <div id="eco-worktree-state">
-                  <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las preferencias de worktree…</span></div>
-                </div>
-                <form id="form-worktree-prefs" class="eco-wt-form" hidden novalidate>
-                  <div class="field-grid">
-                    <div class="field">
-                      <label for="select-worktree-prefs-mode">Modo de trabajo</label>
-                      <select id="select-worktree-prefs-mode" class="form-select">
-                        <option value="">por defecto (worktree)</option>
-                        <option value="worktree">worktree (un worktree por cambio)</option>
-                        <option value="in_place">in_place (en la carpeta del proyecto)</option>
-                        <option value="ask">ask (preguntar en cada cambio)</option>
-                      </select>
-                    </div>
-                    <div class="field">
-                      <label for="input-worktree-prefs-root">Raíz de worktrees (ruta absoluta)</label>
-                      <input type="text" id="input-worktree-prefs-root" class="form-input" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto" autocomplete="off">
-                    </div>
-                  </div>
-                  <div class="eco-wt-actions">
-                    <button type="submit" id="btn-save-worktree-prefs" class="btn btn-primary">Guardar preferencias</button>
-                    <span id="worktree-prefs-effective" class="eco-note"></span>
-                  </div>
-                  <p id="worktree-prefs-status" class="field-hint" role="status"></p>
-                </form>
-              </div>
-            </section>
-
             <section class="card card-flush eco-wide" aria-labelledby="eco-agents-h">
               <div class="card-head">
                 <h2 class="card-title-h" id="eco-agents-h">Agentes</h2>
@@ -445,6 +414,82 @@
               </div>
             </section>
           </div>
+        </section>
+
+        <!-- ===== Ajustes del proyecto ===== -->
+        <section id="view-ajustes" class="view" hidden aria-labelledby="ajustes-title">
+          <div class="page-header">
+            <div>
+              <h1 id="ajustes-title" class="page-title" tabindex="-1">Ajustes del proyecto</h1>
+              <p class="page-sub">Las claves de <code>axiom.yaml</code> que se pueden ajustar desde aquí, más tus preferencias personales.</p>
+            </div>
+          </div>
+
+          <p class="alert alert-warn" role="note"><span class="grow">Editar solo afecta a cambios nuevos: lo que ya está en curso no se reescribe. Los cambios quedan sin confirmar en el árbol de trabajo; confirmarlos con git es decisión tuya.</span></p>
+          <p id="settings-announce" class="sr-only" role="status" aria-live="polite"></p>
+
+          <section class="card card-flush" aria-labelledby="ajustes-project-h">
+            <div class="card-head">
+              <h2 class="card-title-h" id="ajustes-project-h">Proyecto</h2>
+              <span class="badge badge-mono" id="settings-config-path">axiom.yaml</span>
+            </div>
+            <div id="settings-body" class="eco-pad">
+              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando los ajustes del proyecto…</span></div>
+            </div>
+          </section>
+
+          <section class="card card-flush" aria-labelledby="ajustes-personal-h">
+            <div class="card-head">
+              <h2 class="card-title-h" id="ajustes-personal-h">Preferencias personales</h2>
+              <span class="badge badge-mono">~/.axiom</span>
+            </div>
+            <div id="eco-worktree-body" class="eco-pad">
+              <p class="eco-note">Se guardan en tu Hub (<code>~/.axiom/workspaces.json</code>), solo para este equipo: no modifican <code>axiom.yaml</code> ni ningún fichero del proyecto.</p>
+
+              <h3 class="eco-sub">Autofetch</h3>
+              <div id="settings-personal-state">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las preferencias personales…</span></div>
+              </div>
+              <form id="form-autofetch" class="eco-wt-form" hidden novalidate>
+                <div class="field">
+                  <label for="input-autofetch"><input type="checkbox" id="input-autofetch"> Autofetch del repositorio de specs</label>
+                  <p class="field-hint">Con él encendido, Axiom hace <code>git fetch</code> del repositorio de specs y avanza la rama de integración solo en avance rápido, sin que pases <code>--fetch</code>. Nunca hace <code>push</code> ni <code>prune</code>. Apagado por defecto.</p>
+                </div>
+                <div class="eco-wt-actions">
+                  <button type="submit" id="btn-save-autofetch" class="btn btn-primary">Guardar autofetch</button>
+                  <span id="autofetch-status" class="field-hint" role="status"></span>
+                </div>
+              </form>
+
+              <h3 class="eco-sub">Worktrees</h3>
+              <p class="eco-note">Cómo se trabaja cada cambio de este proyecto: en un worktree propio, en la carpeta del proyecto o preguntando cada vez.</p>
+              <div id="eco-worktree-state">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las preferencias de worktree…</span></div>
+              </div>
+              <form id="form-worktree-prefs" class="eco-wt-form" hidden novalidate>
+                <div class="field-grid">
+                  <div class="field">
+                    <label for="select-worktree-prefs-mode">Modo de trabajo</label>
+                    <select id="select-worktree-prefs-mode" class="form-select">
+                      <option value="">por defecto (worktree)</option>
+                      <option value="worktree">worktree (un worktree por cambio)</option>
+                      <option value="in_place">in_place (en la carpeta del proyecto)</option>
+                      <option value="ask">ask (preguntar en cada cambio)</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="input-worktree-prefs-root">Raíz de worktrees (ruta absoluta)</label>
+                    <input type="text" id="input-worktree-prefs-root" class="form-input" placeholder="por defecto: «carpeta»-wt junto a la carpeta del proyecto" autocomplete="off">
+                  </div>
+                </div>
+                <div class="eco-wt-actions">
+                  <button type="submit" id="btn-save-worktree-prefs" class="btn btn-primary">Guardar preferencias</button>
+                  <span id="worktree-prefs-effective" class="eco-note"></span>
+                </div>
+                <p id="worktree-prefs-status" class="field-hint" role="status"></p>
+              </form>
+            </div>
+          </section>
         </section>
       </main>
     </div>

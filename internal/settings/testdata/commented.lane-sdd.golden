@@ -1,0 +1,30 @@
+# Proyecto de referencia para las pruebas del escritor.
+# Segunda línea de la cabecera.
+
+workspace:
+  name: "Demo"  # nombre visible
+  topology: "monorepo-embedded"
+  specs_repository: "openspec"
+
+# Política de ramas del proyecto.
+git:
+  integration_branch: "main"
+  branch_prefix: "inc"
+
+# Carril de trabajo: pregunta ODD o SDD en cada trabajo.
+workflow:
+  lane: "sdd" # carril por defecto del proyecto
+
+sdd:
+  id_pattern: "RF-<DOM>-<NN>"
+
+roles:
+  fullstack:
+    name: "Fullstack"
+    repositories:
+      - path: "."
+
+governance:
+  language: "es"
+
+# Pie del documento.

@@ -3,6 +3,8 @@
 # ==============================================================================
 # Este archivo define la identidad, topología y roles de desarrollo del proyecto.
 # Renombra o copia este archivo como 'axiom.yaml' en la carpeta maestra local.
+# Las claves del proyecto también se editan desde «Ajustes del proyecto» en `axiom ui`,
+# que conserva los comentarios y valida el documento antes de escribir.
 
 workspace:
   # Nombre identificador del proyecto

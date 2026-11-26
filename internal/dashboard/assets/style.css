@@ -1041,3 +1041,15 @@ h5.md-h, h6.md-h { font-size: 13px; }
 
 /* Pestaña «Explicación»: el iframe en sandbox ocupa el ancho del panel. */
 .explainer-frame { width: 100%; min-height: 70vh; border: 1px solid var(--border, currentColor); border-radius: 8px; background: var(--surface); }
+
+/* Ajustes del proyecto (#/ajustes, C-06-e): solo lo que no cubren card, field-grid, field y eco-note */
+.settings-group { border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
+.settings-group > legend { width: 100%; padding: 4px 0; margin-bottom: 10px; }
+.settings-key { font-size: 11px; color: var(--text-3); font-weight: 400; }
+.settings-field .field-hint { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.settings-path-actions { display: inline-flex; gap: 12px; }
+.settings-readonly pre { margin: 0; max-height: 220px; overflow: auto; }
+.settings-violations { margin: 6px 0 0; padding-left: 18px; }
+#form-autofetch .field > label { flex-direction: row; align-items: center; gap: 8px; }
+
+a.popover-item { color: inherit; text-decoration: none; }

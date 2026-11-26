@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"errors"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 )
@@ -33,14 +34,19 @@ type WorkflowConfig struct {
 	Lane WorkflowLane `yaml:"lane,omitempty"`
 }
 
+// WorkflowLanes devuelve el vocabulario cerrado de `workflow.lane` (odd, sdd y
+// ask), en una copia nueva por llamada.
+func WorkflowLanes() []WorkflowLane {
+	return []WorkflowLane{WorkflowLaneODD, WorkflowLaneSDD, WorkflowLaneAsk}
+}
+
 // workflowKeys es la lista cerrada de claves del bloque `workflow:`.
 var workflowKeys = []string{"lane"}
 
 // workflowValidator devuelve el validador de la clave del bloque `workflow:`.
 func workflowValidator(string) func(string) error {
 	return func(raw string) error {
-		switch WorkflowLane(raw) {
-		case WorkflowLaneODD, WorkflowLaneSDD, WorkflowLaneAsk:
+		if slices.Contains(WorkflowLanes(), WorkflowLane(raw)) {
 			return nil
 		}
 		return errors.New("usa odd, sdd o ask")

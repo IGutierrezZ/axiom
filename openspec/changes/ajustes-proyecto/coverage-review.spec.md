@@ -1,0 +1,24 @@
+# Revisión de cobertura · spec · ajustes-proyecto
+
+## Ronda 1 — 2026-11-26
+
+Revisores: `jd-judge-a` (A) y `jd-judge-b` (B), a ciegas y en solo lectura. Entradas: `proposal.md`, `specs/workspace-topology/spec.md` y `specs/local-web-dashboard/spec.md`, contrastadas con las specs vivas y con el plan C-06-e. El informe recoge la unión de los huecos sin duplicados. Es informativo: no bloquea ninguna fase.
+
+| # | Tipo | Ubicación | Hueco | Revisor |
+|---|---|---|---|---|
+| 1 | uncovered_requirement | local-web-dashboard#RF-WEB-10 | El título MODIFIED difiere del vivo. **Comprobado por el orquestador:** `livespec` resuelve MODIFIED por identificador (`reqid.Pattern.Resolve`), no por título exacto, así que el archivado no se rompe. Conviene declarar que los escenarios anteriores (p. ej. «`develop` en un control de solo lectura») quedan sustituidos. | B |
+| 2 | uncovered_requirement | local-web-dashboard#RF-WEB-01 (vivo) | **Hallazgo del orquestador:** el RF-WEB-01 vivo dice «ninguna ruta del servidor DEBE modificar `axiom.yaml` (RF-WEB-10)», y la delta no lo modifica. Contradice RF-WEB-10/19. | orquestador |
+| 3 | edge_case | workspace-topology#RF-TOP-22 | Faltan: crear una clave cuyo bloque aún no existe (dónde se inserta y con qué sangrado), parche de varias claves con una inválida (todo o nada), parche vacío y parche que no cambia nada (¿se reescribe?, ¿cambia la revisión?). | A, B |
+| 4 | edge_case | workspace-topology#RF-TOP-22 | No se define cómo se direcciona `repositories[]` ni `roles[]` (por `path`, `id` o índice), qué pasa si la entrada no existe, ni cómo se edita `acceptance_tests.environments` (reemplazo, duplicados, vacío, `enabled: true` sin entornos). | A, B |
+| 5 | edge_case | workspace-topology#RF-TOP-22 | Round-trip: CRLF, BOM, sin salto final, varios documentos, claves duplicadas, clave desconocida que debe conservarse, y el comentario que precede a una clave que se borra con `null`. | A, B |
+| 6 | error | workspace-topology#RF-TOP-22 · RF-TOP-17/20 vivos | `axiom.yaml` ya inválido o corrupto: qué devuelve el GET, y si la revalidación completa impide reparar desde la UI un bloque roto ajeno al parche. | A, B |
+| 7 | error | workspace-topology#RF-TOP-23 · local-web-dashboard#RF-WEB-19 | Errores de E/S (solo lectura, permisos, `rename` bloqueado por un editor o el antivirus en Windows, enlace simbólico, fichero borrado entre la lectura y la escritura) sin código tipado ni 5xx. La ventana TOCTOU residual no está declarada. Faltan dos PUT simultáneos del propio servidor (exclusión) y la definición de la revisión: bytes crudos o normalizados. | A, B |
+| 8 | edge_case | workspace-topology#RF-TOP-21 · local-web-dashboard#RF-WEB-19 | Validación de tipos: `split_hint_lines` igual a 0, negativo, decimal o cadena; booleanos como cadena; listas; cadena vacía en `name`, `branch_prefix` o `id_pattern`; `id_pattern` inválido; `null` sobre claves obligatorias; `sdd.iso: true` con `lane: odd` ya presente. Falta fijar si son 400 o 422. | A, B |
+| 9 | edge_case | local-web-dashboard#RF-WEB-19 | PUT con claves que no aplican a la topología (p. ej. `gate_policy` en monorepo): ¿rechazo y con qué código? Forma JSON del parche, Content-Type, límite de cuerpo y cómo distingue el GET «sin declarar» de «valor por defecto». | A, B |
+| 10 | edge_case | local-web-dashboard#RF-WEB-10/19 | Orden de las guardas (403 antes que 400 y 404), lectura no local del GET, y comprobación de `Origin`/`Host` frente a peticiones entre sitios y al reenlace DNS. | A, B |
+| 11 | use_case | local-web-dashboard#RF-WEB-18 | Estados de la pantalla: carga, error de red, 404 sin `axiom.yaml` o sin proyecto activo, 403, guardado de varias claves y fallo parcial, y bloque personal con proyecto no registrado (404 de `/settings/personal`) mientras el bloque del proyecto sigue editable. | A, B |
+| 12 | edge_case | local-web-dashboard#RF-WEB-18 | Enlace `vscode://file/`: codificación de rutas Windows con espacios, acentos y barras invertidas; esquema fijo frente a la inyección de `javascript:`; protocolo no registrado. El texto hostil solo se prueba con `workspace.name`. | A, B |
+| 13 | uncovered_requirement | local-web-dashboard#RF-WEB-18 | El efecto sobre los cambios sellados solo se prueba con `workflow.lane`. Faltan `git.promotion` (el plan dice que no es editable para cambios ya creados), `branch_prefix`, `repositories[].*`, `gate_policy` y `sdd.iso`, y qué claves lee el motor en vivo. El contenido del «efecto explícito» de `sdd.iso` e `id_pattern` no está fijado. | A, B |
+| 14 | uncovered_requirement | local-web-dashboard#RF-WEB-20 | La spec no registra que P16 sustituye la línea del plan «el autofetch… no entra en esta pantalla». No confirma con escenarios que RF-HUB-13 queda intacto ni el valor por defecto del autofetch en un proyecto recién registrado. | B |
+
+Contradicciones con requisitos vivos: la #2 (RF-WEB-01).

@@ -48,7 +48,10 @@ type Service struct {
 	modelsMu sync.Mutex
 	// agentsMu serializa las instalaciones de agentes desde el dashboard: cada una
 	// lee y reescribe el estado del proyecto y regenera su configuración.
-	agentsMu         sync.Mutex
+	agentsMu sync.Mutex
+	// settingsMu serializa los PUT de /api/settings: cada uno lee axiom.yaml, lo valida y lo
+	// reemplaza, y la revisión solo detecta ediciones ajenas al proceso.
+	settingsMu       sync.Mutex
 	hubManager       *hub.Manager
 	hubDetector      *hub.Detector
 	autoskillManager *autoskill.Manager

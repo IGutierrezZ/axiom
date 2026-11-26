@@ -16,8 +16,8 @@ import (
 //
 //   - avisos del listado de incrementos (`X-Axiom-Notes`), insignias de pendiente de archivar y de rama:
 //     js/screens/incrementos.js, js/core/branches.js y la lectura de cabeceras de js/core/api.js;
-//   - política de ramas efectiva en solo lectura y preferencias personales de worktree del proyecto
-//     activo: js/screens/ecosystem.js (tarjetas Topología y Preferencias de worktree);
+//   - política de ramas efectiva en solo lectura: js/screens/ecosystem.js (tarjeta Topología);
+//   - preferencias personales de worktree del proyecto activo: js/screens/ajustes.js (Ajustes del proyecto);
 //   - modo y raíz de worktree al registrar un proyecto: js/projects.js;
 //   - diálogo de decisión del 409 `decision_required` al crear un incremento: js/screens/incrementos.js.
 //
@@ -332,98 +332,55 @@ func TestCreateWithDecisionRuntime(t *testing.T) {
 	}
 }
 
-// REQ-1.1 y REQ-25.33: la política de ramas y los ajustes por repositorio se muestran en solo lectura.
-func TestBranchPolicyIsShownReadOnlyInEcosystem(t *testing.T) {
+// RF-WEB-21: Ecosistema ya no pinta la política de ramas ni la tabla por repositorio: la tarjeta
+// Topología enlaza a Ajustes del proyecto, donde se ven y se editan (RF-WEB-10). GET /api/workspace
+// conserva `branchPolicy` y `repositories` (RF-WEB-01), así que no se quita ningún campo.
+func TestBranchPolicyIsLinkedToSettingsFromEcosystem(t *testing.T) {
 	t.Parallel()
 	html, eco, branches := readAsset(t, "index.html"), readAsset(t, "js/screens/ecosystem.js"), readAsset(t, "js/core/branches.js")
 
 	topology := funcBody(t, eco, "topologyHtml")
-	if !strings.Contains(topology, "branchPolicyRows(ws)") || !strings.Contains(topology, "repoPolicyHtml(ws)") {
-		t.Errorf("la tarjeta Topología debe mostrar la política de ramas y los ajustes por repositorio:\n%s", topology)
+	if !strings.Contains(topology, `href="#/ajustes"`) || !strings.Contains(topology, "Ajustes del proyecto") {
+		t.Errorf("la tarjeta Topología debe enlazar a Ajustes del proyecto:\n%s", topology)
 	}
-	for _, marker := range []string{"ws.branchPolicy", "integrationBranch", "branchPrefix", "ws.repositories", "hereda del workspace"} {
-		if !strings.Contains(branches, marker) {
-			t.Errorf("branches.js debe contener %q", marker)
+	for _, retired := range []string{"branchPolicyRows", "repoPolicyHtml", "ws.branchPolicy", "ws.repositories"} {
+		if strings.Contains(topology, retired) || strings.Contains(eco, retired) {
+			t.Errorf("ecosystem.js ya no pinta la política de ramas (%s)", retired)
+		}
+		if strings.Contains(branches, retired) {
+			t.Errorf("branches.js ya no contiene %s", retired)
 		}
 	}
-	// Solo lectura: ni controles de edición de `git:` ni una escritura de la política.
-	if strings.Contains(html, "integration_branch") || strings.Contains(html, "branch_prefix") || strings.Contains(branches, "integration_branch") {
-		t.Error("la interfaz no debe ofrecer controles de edición de `git:` (REQ-25.33)")
+	if strings.Contains(branches, "tableWrap") || strings.Contains(branches, "hereda del workspace") {
+		t.Error("branches.js ya no importa tableWrap ni pinta la tabla por repositorio")
 	}
-	if loc := regexp.MustCompile(`(?s)<(input|select|textarea)[^>]*id="[^"]*(integration|branch-prefix)[^"]*"`).FindString(html); loc != "" {
-		t.Errorf("la política de ramas es de solo lectura, no debe tener controles: %s", loc)
+	// El selector de proyecto ofrece el enlace a Ajustes.
+	if link := regexp.MustCompile(`<a href="#/ajustes" id="link-project-settings" class="popover-item"[^>]*>`).FindString(html); link == "" {
+		t.Error("el popover de proyecto debe tener el enlace «Ajustes del proyecto»")
+	}
+	// La interfaz sigue sin ofrecer claves de `git:` escritas a mano: el catálogo las genera.
+	if strings.Contains(html, "integration_branch") || strings.Contains(html, "branch_prefix") {
+		t.Error("index.html no debe contener controles de `git:` escritos a mano (RF-WEB-10)")
 	}
 	if regexp.MustCompile(`method:\s*'(PUT|PATCH|DELETE)'`).MatchString(branches) || strings.Contains(branches, "api(") {
-		t.Errorf("branches.js no escribe la política de ramas")
+		t.Errorf("branches.js no escribe nada en el servidor")
 	}
 }
 
-// Los dos bloques de la política se pintan con datos hostiles y con los huecos que deja el servidor.
-func TestBranchPolicyRuntime(t *testing.T) {
+// RF-HUB-07 y RF-WEB-10: las preferencias personales de worktree del proyecto activo se editan y se
+// guardan en el Hub desde Ajustes del proyecto, y el alta de un proyecto las pregunta.
+func TestWorktreePrefsEditorInSettings(t *testing.T) {
 	t.Parallel()
-	out := runNodeModules(t, []string{"api", "icons", "components", "branches"},
-		"import { branchPolicyRows, repoPolicyHtml } from './branches.mjs';\n"+
-			"const ws = { branchPolicy: { integrationBranch: 'develop', branchPrefix: 'inc/' }, repositories: [\n"+
-			"  { path: 'repo-specs', integrationBranch: 'release/<i>' },\n"+
-			"  { path: 'src/web', branchPrefix: 'web/' },\n"+
-			"  { path: '.' } ] };\n"+
-			"console.log(JSON.stringify({\n"+
-			"  rows: branchPolicyRows(ws),\n"+
-			"  repos: repoPolicyHtml(ws),\n"+
-			"  emptyRows: [branchPolicyRows({}), branchPolicyRows(null), branchPolicyRows({ branchPolicy: {} })],\n"+
-			"  noRepos: [repoPolicyHtml({ repositories: [] }), repoPolicyHtml({}), repoPolicyHtml(null)],\n"+
-			"}));\n")
-	var res struct {
-		Rows      string   `json:"rows"`
-		Repos     string   `json:"repos"`
-		EmptyRows []string `json:"emptyRows"`
-		NoRepos   []string `json:"noRepos"`
-	}
-	if err := json.Unmarshal(out, &res); err != nil {
-		t.Fatalf("salida de node ilegible: %v\n%s", err, out)
-	}
-	for _, want := range []string{"Rama de integración", "<code>develop</code>", "Prefijo de ramas de cambio", "<code>inc/</code>"} {
-		if !strings.Contains(res.Rows, want) {
-			t.Errorf("la política efectiva debe contener %q: %s", want, res.Rows)
-		}
-	}
-	for _, want := range []string{"Ajustes de ramas por repositorio", "<code>repo-specs</code>", "release/&lt;i&gt;", "<code>web/</code>", "<table"} {
-		if !strings.Contains(res.Repos, want) {
-			t.Errorf("la tabla por repositorio debe contener %q: %s", want, res.Repos)
-		}
-	}
-	if strings.Contains(res.Repos, "<i>") {
-		t.Errorf("los nombres de rama se escapan: %s", res.Repos)
-	}
-	if got := strings.Count(res.Repos, "hereda del workspace"); got != 4 {
-		t.Errorf("cada hueco hereda del workspace (4 huecos), hay %d: %s", got, res.Repos)
-	}
-	for i, got := range res.EmptyRows {
-		if !strings.Contains(got, "Rama de integración") || !strings.Contains(got, "—") || strings.Contains(got, "undefined") {
-			t.Errorf("sin política el valor es «—» (caso %d): %s", i, got)
-		}
-	}
-	for i, got := range res.NoRepos {
-		if got != "" {
-			t.Errorf("sin repositorios no hay tabla (caso %d): %s", i, got)
-		}
-	}
-}
-
-// RF-HUB-07 y REQ-25.33: las preferencias personales de worktree del proyecto activo se editan y se
-// guardan en el Hub desde Ecosistema, y el alta de un proyecto las pregunta.
-func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
-	t.Parallel()
-	html, eco := readAsset(t, "index.html"), readAsset(t, "js/screens/ecosystem.js")
-	start, end := strings.Index(html, `id="view-ecosistema"`), strings.Index(html, "</main>")
+	html, eco := readAsset(t, "index.html"), readAsset(t, "js/screens/ajustes.js")
+	start, end := strings.Index(html, `id="view-ajustes"`), strings.Index(html, "</main>")
 	if start < 0 || end < start {
-		t.Fatal("index.html: no se localiza la vista de Ecosistema")
+		t.Fatal("index.html: no se localiza la vista de Ajustes")
 	}
 	view := html[start:end]
 
 	selectBlock := regexp.MustCompile(`(?s)<select id="select-worktree-prefs-mode".*?</select>`).FindString(view)
 	if selectBlock == "" {
-		t.Fatal("la vista de Ecosistema no tiene el selector `select-worktree-prefs-mode`")
+		t.Fatal("la vista de Ajustes no tiene el selector `select-worktree-prefs-mode`")
 	}
 	for _, option := range []string{`value=""`, `value="worktree"`, `value="in_place"`, `value="ask"`} {
 		if !strings.Contains(selectBlock, option) {
@@ -432,7 +389,7 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	}
 	for _, id := range []string{"input-worktree-prefs-root", "btn-save-worktree-prefs", "worktree-prefs-effective", "worktree-prefs-status", "eco-worktree-body", "form-worktree-prefs"} {
 		if !strings.Contains(view, `id="`+id+`"`) {
-			t.Errorf("la vista de Ecosistema no contiene #%s", id)
+			t.Errorf("la vista de Ajustes no contiene #%s", id)
 		}
 	}
 	// Cada control tiene su etiqueta, y el resultado se anuncia.
@@ -458,8 +415,8 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	if load := funcBody(t, eco, "loadWorktreePrefs"); !strings.Contains(load, "/api/projects/active/worktree-prefs") || !strings.Contains(load, "stateError(") || !strings.Contains(load, "404") {
 		t.Errorf("loadWorktreePrefs debe leer las preferencias y distinguir un proyecto sin registrar de un fallo:\n%s", load)
 	}
-	if !strings.Contains(funcBody(t, eco, "loadEcosystem"), "loadWorktreePrefs()") {
-		t.Error("Actualizar y cambiar de proyecto deben recargar las preferencias (loadEcosystem)")
+	if !strings.Contains(funcBody(t, eco, "loadSettings"), "loadWorktreePrefs()") {
+		t.Error("Actualizar y cambiar de proyecto deben recargar las preferencias (loadSettings)")
 	}
 }
 

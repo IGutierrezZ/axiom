@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -203,11 +204,17 @@ func branchValidator(key string) func(string) error {
 	}
 }
 
+// PromotionValues devuelve el vocabulario cerrado de `promotion` (branch, release
+// y ask), en una copia nueva por llamada. Lo comparten el validador y el catálogo
+// de ajustes del proyecto.
+func PromotionValues() []string {
+	return []string{PromotionBranch, PromotionRelease, PromotionAsk}
+}
+
 // validPromotion acepta exactamente `branch`, `release` y `ask`, distinguiendo
 // mayúsculas.
 func validPromotion(raw string) error {
-	switch raw {
-	case PromotionBranch, PromotionRelease, PromotionAsk:
+	if slices.Contains(PromotionValues(), raw) {
 		return nil
 	}
 	return fmt.Errorf("debe ser '%s', '%s' o '%s'", PromotionBranch, PromotionRelease, PromotionAsk)

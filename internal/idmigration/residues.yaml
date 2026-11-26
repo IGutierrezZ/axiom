@@ -337,7 +337,7 @@ entries:
     reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
   - paths: ["internal/dashboard/*_test.go"]
     scope: go-comment
-    tokens: [REQ-1.1, REQ-25.33]
+    tokens: [REQ-1.1]
     category: default-pattern-fixture
     reason: "Comentarios que describen los fixtures del patrón por defecto de estas pruebas."
   - paths: ["internal/integrations/*_test.go"]

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
@@ -348,9 +349,7 @@ func policyViolations(cfg *workspace.WorkspaceConfig) []string {
 	var violations []string
 	for key, role := range cfg.Roles {
 		policy := multirole.GatePolicy(strings.ToLower(strings.TrimSpace(role.GatePolicy)))
-		switch policy {
-		case "", multirole.PolicyBlocking, multirole.PolicyDeferred, multirole.PolicyOptional:
-		default:
+		if policy != "" && !slices.Contains(multirole.GatePolicies(), policy) {
 			violations = append(violations, fmt.Sprintf("el gate_policy %q del rol %q no es válido (admitidos: blocking, deferred, optional)", role.GatePolicy, key))
 		}
 	}
