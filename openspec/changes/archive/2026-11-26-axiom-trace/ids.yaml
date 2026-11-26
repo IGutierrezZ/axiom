@@ -1,0 +1,63 @@
+schema: axiom.requirement-ids/v1
+pattern: REQ-<n>.<m>
+assignments:
+  - provisional: prov:trace:1
+    definitive: REQ-48.1
+    capability: requirement-trace
+    requirement: Verbo `axiom trace <ID>` y Sus Opciones (REQ-48.1)
+  - provisional: prov:trace:2
+    definitive: REQ-48.2
+    capability: requirement-trace
+    requirement: Validación del ID Contra el Patrón del Proyecto con Error Tipado (REQ-48.2)
+  - provisional: prov:trace:3
+    definitive: REQ-48.3
+    capability: requirement-trace
+    requirement: Resolución Entre Provisional y Definitivo por la Traza (REQ-48.3)
+  - provisional: prov:trace:4
+    definitive: REQ-48.4
+    capability: requirement-trace
+    requirement: Punto de Extensión de Alias (REQ-48.4)
+  - provisional: prov:trace:5
+    definitive: REQ-48.5
+    capability: requirement-trace
+    requirement: Incrementos SDD Archivados como Fuente (REQ-48.5)
+  - provisional: prov:trace:6
+    definitive: REQ-48.6
+    capability: requirement-trace
+    requirement: Clasificación de Bug en Cambios SDD (REQ-48.6)
+  - provisional: prov:trace:7
+    definitive: REQ-48.7
+    capability: requirement-trace
+    requirement: Documentos ODD como Fuente (REQ-48.7)
+  - provisional: prov:trace:8
+    definitive: REQ-48.8
+    capability: requirement-trace
+    requirement: Commit de Integración en la Línea `--first-parent` (REQ-48.8)
+  - provisional: prov:trace:9
+    definitive: REQ-48.9
+    capability: requirement-trace
+    requirement: Contrato JSON `axiom.trace/v1` y Salida de Texto (REQ-48.9)
+  - provisional: prov:trace:10
+    definitive: REQ-48.10
+    capability: requirement-trace
+    requirement: Solo Lectura (REQ-48.10)
+  - provisional: prov:trace:11
+    definitive: REQ-48.11
+    capability: requirement-trace
+    requirement: ID Válido sin Apariciones (REQ-48.11)
+  - provisional: prov:trace:12
+    definitive: REQ-48.12
+    capability: requirement-trace
+    requirement: Rama de Integración Ausente con Remedio (REQ-48.12)
+  - provisional: prov:trace:13
+    definitive: REQ-48.13
+    capability: requirement-trace
+    requirement: Orden Determinista (REQ-48.13)
+  - provisional: prov:trace:14
+    definitive: REQ-48.14
+    capability: requirement-trace
+    requirement: Topología Multirepo con Rutas Ancladas en su Raíz Git (REQ-48.14)
+  - provisional: prov:trace:15
+    definitive: REQ-48.15
+    capability: requirement-trace
+    requirement: Criterio de Terminado de Trazabilidad de Punta a Punta (REQ-48.15)
