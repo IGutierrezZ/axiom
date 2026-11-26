@@ -6,32 +6,20 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // Ayudantes de git y de línea de comando compartidos por las pruebas de la CLI.
 // Antes vivían en las pruebas de `axiom sdd integrate`, retirado con la baseline
 // ajena (REQ-30.25); los demás verbos los siguen usando.
 
-// isolateIntegrateGit aísla git del entorno del usuario: HOME temporal, sin
-// configuración global ni del sistema y con autor fijo.
+// isolateIntegrateGit omite la prueba con -short o sin git. TestMain ya aisló git del entorno
+// del usuario (testenv.IsolateGit): HOME temporal, sin configuración global ni del sistema y
+// con autor fijo.
 func isolateIntegrateGit(t *testing.T) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("la prueba ejecuta git: se omite con -short")
-	}
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skipf("git no está disponible: %v", err)
-	}
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, "gitconfig"))
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
-	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
-	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	testenv.RequireGit(t)
 }
 
 // integrateGit ejecuta git en dir y devuelve su salida sin el salto final.

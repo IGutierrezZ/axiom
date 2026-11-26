@@ -32,6 +32,7 @@ func engramLocatorStatus() Status {
 // archive instructions carry the resolved Engram topic keys and never the
 // OpenSpec filenames.
 func TestPhaseInstructionsNameResolvedLocatorsForEngramStore(t *testing.T) {
+	t.Parallel()
 	instructions := renderPhaseInstructions(engramLocatorStatus())
 
 	apply := strings.Join(instructions.Apply, "\n")
@@ -55,6 +56,7 @@ func TestPhaseInstructionsNameResolvedLocatorsForEngramStore(t *testing.T) {
 // contract from the other side: under OpenSpec the instructions carry the
 // resolved paths the native surface produced, not a restated constant.
 func TestPhaseInstructionsNameResolvedLocatorsForOpenSpecStore(t *testing.T) {
+	t.Parallel()
 	change := "locator-collapse"
 	status := Status{
 		ChangeName:    &change,

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -36,16 +37,20 @@ func TestMain(m *testing.M) {
 }
 
 func runTests(m *testing.M) int {
-	home, err := os.MkdirTemp("", "axiom-dashboard-test-home-*")
+	// testenv.IsolateGit fija el HOME aislado y el entorno de git una sola vez, de modo
+	// que las pruebas con git no necesitan t.Setenv y pueden marcarse con t.Parallel().
+	// Siguen en serie las que fijan entorno, cambian de directorio, sustituyen una
+	// variable del paquete (los seams *Fn, installAdapters, discoverOpenCodeCatalog,
+	// relaunchDelay) o escriben preferencias en el hub compartido (setWorktreePrefs).
+	_, cleanup, err := testenv.IsolateGit("dashboard")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "dashboard tests: create sandbox home: %v\n", err)
+		fmt.Fprintf(os.Stderr, "dashboard tests: %v\n", err)
 		return 1
 	}
-	defer func() { _ = os.RemoveAll(home) }()
+	defer cleanup()
+	home := os.Getenv("HOME")
 
 	for key, value := range map[string]string{
-		"HOME":                        home,
-		"USERPROFILE":                 home,
 		"LOCALAPPDATA":                filepath.Join(home, "AppData", "Local"),
 		"APPDATA":                     filepath.Join(home, "AppData", "Roaming"),
 		system.NoPersistentPathEnvVar: "1",

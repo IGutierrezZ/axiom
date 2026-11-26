@@ -50,6 +50,7 @@ func TestGetDoctorDiagnosticsReadsTheOpenProjectNotTheCwd(t *testing.T) {
 }
 
 func TestGetDoctorDiagnosticsHealthyFollowsFailures(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	statePath := state.ProjectPath(root)
 	if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
@@ -73,6 +74,7 @@ func TestGetDoctorDiagnosticsHealthyFollowsFailures(t *testing.T) {
 }
 
 func TestDoctorStatusView(t *testing.T) {
+	t.Parallel()
 	for in, want := range map[doctor.Status]string{doctor.StatusPass: "ok", doctor.StatusWarn: "warning", doctor.StatusFail: "error"} {
 		if got := doctorStatusView(in); got != want {
 			t.Errorf("doctorStatusView(%s) = %s, want %s", in, got, want)

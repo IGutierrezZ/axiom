@@ -64,6 +64,7 @@ func resolveMixedPolicyChange(t *testing.T, name string, mutate func(changeRoot 
 }
 
 func TestRoleGatesDependencyBlockingApprovedAndDeferredPending(t *testing.T) {
+	t.Parallel()
 	status := resolveMixedPolicyChange(t, "mixed-open", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
 	}, "core:blocking", "e2e:deferred")
@@ -81,6 +82,7 @@ func TestRoleGatesDependencyBlockingApprovedAndDeferredPending(t *testing.T) {
 }
 
 func TestRoleGatesDependencyBlockingPendingStaysBlocked(t *testing.T) {
+	t.Parallel()
 	status := resolveMixedPolicyChange(t, "mixed-blocked", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("e2e"))
 	}, "core:blocking", "e2e:deferred")
@@ -95,6 +97,7 @@ func TestRoleGatesDependencyBlockingPendingStaysBlocked(t *testing.T) {
 }
 
 func TestRoleGatesDependencyRejectedNonBlockingIsReportedNotBlocking(t *testing.T) {
+	t.Parallel()
 	status := resolveMixedPolicyChange(t, "mixed-rejected", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
 		// Un rechazo solo se mantiene mientras la huella siga siendo la del
@@ -122,6 +125,7 @@ func TestRoleGatesDependencyRejectedNonBlockingIsReportedNotBlocking(t *testing.
 
 // Con todos los roles blocking el resultado es el de siempre y no hay notas nuevas.
 func TestRoleGatesDependencyAllBlockingProjectsNoNonBlockingNotes(t *testing.T) {
+	t.Parallel()
 	status := resolveMixedPolicyChange(t, "all-blocking", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
 	}, "core:blocking", "web:blocking")
@@ -137,6 +141,7 @@ func TestRoleGatesDependencyAllBlockingProjectsNoNonBlockingNotes(t *testing.T) 
 
 // verifyDependencyFromRoleGates directamente: roster con políticas.
 func TestVerifyDependencyFromRoleGatesByPolicy(t *testing.T) {
+	t.Parallel()
 	build := func(coreStatus, e2eStatus string) *Governance {
 		return &Governance{
 			Kickoff: kickoff.Kickoff{Config: kickoff.FlowConfig{

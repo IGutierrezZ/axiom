@@ -36,6 +36,7 @@ func requireKeys(t *testing.T, where string, m map[string]json.RawMessage, want 
 }
 
 func TestBarrierDTOContract(t *testing.T) {
+	t.Parallel()
 	report := &multirole.BarrierReport{
 		Satisfied: false,
 		Change:    "inc-x",
@@ -105,6 +106,7 @@ func TestBarrierDTOContract(t *testing.T) {
 }
 
 func TestBarrierDTOEmptySlicesAreArrays(t *testing.T) {
+	t.Parallel()
 	raw, err := json.Marshal(NewBarrierDTO(&multirole.BarrierReport{
 		Change: "vacio",
 		Roles:  []multirole.RoleExecutionStatus{{Assignment: multirole.RoleAssignment{Role: "fullstack"}}},
@@ -141,6 +143,7 @@ func TestBarrierDTOEmptySlicesAreArrays(t *testing.T) {
 }
 
 func TestHandoffDTOContract(t *testing.T) {
+	t.Parallel()
 	ts := time.Date(2026, 9, 14, 12, 0, 0, 0, time.UTC)
 	ho := &handoff.Handoff{
 		Metadata: handoff.Metadata{
@@ -192,6 +195,7 @@ func TestHandoffDTOContract(t *testing.T) {
 
 // TestRolesAndHandoffEndpointsUseSnakeCase comprueba el contrato de extremo a extremo por HTTP.
 func TestRolesAndHandoffEndpointsUseSnakeCase(t *testing.T) {
+	t.Parallel()
 	// /api/roles sobre el incremento real inc-03 de este repositorio.
 	srv := NewServer(NewService("../.."))
 	rec := httptest.NewRecorder()

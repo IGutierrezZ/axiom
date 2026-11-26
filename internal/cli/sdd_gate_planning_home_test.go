@@ -10,24 +10,16 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// isolateGateGitEnv aísla los procesos git que lanza la prueba de la
-// configuración del desarrollador: HOME propio, sin configuración global ni de
-// sistema, y autor y committer fijos. Usa t.Setenv, así que la prueba que la
-// invoca no puede ser paralela.
+// isolateGateGitEnv omite la prueba con -short o sin git. TestMain ya aisló los procesos git
+// de la configuración del desarrollador (testenv.IsolateGit), sin t.Setenv: la prueba que la
+// invoca puede ser paralela.
 func isolateGateGitEnv(t *testing.T) {
 	t.Helper()
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Prueba de compuerta")
-	t.Setenv("GIT_AUTHOR_EMAIL", "compuerta@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "Prueba de compuerta")
-	t.Setenv("GIT_COMMITTER_EMAIL", "compuerta@example.com")
+	testenv.RequireGit(t)
 }
 
 // commitInGateTestRepo inicializa dir como repositorio git en la rama main, crea
@@ -64,6 +56,7 @@ func readGatesYAMLOrNil(t *testing.T, changeRoot string) []byte {
 // carpeta maestra. S está fusionado en la rama principal de repo-specs; C solo
 // existe en repo-backend.
 func TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace(t *testing.T) {
+	t.Parallel()
 	isolateGateGitEnv(t)
 	ws := workspacetest.Canonical(t)
 	changeRoot := filepath.Join(ws.Home, "changes", planningHomeChange)
@@ -145,6 +138,7 @@ func TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace
 // contra un `main` fijo. El repositorio solo tiene la rama `develop`: con el literal `main` la
 // comprobación de ancestro fallaría porque esa referencia no existe.
 func TestSDDGateRecordCompletesTheBaseRefWithTheResolvedIntegration(t *testing.T) {
+	t.Parallel()
 	isolateGateGitEnv(t)
 	root, changeRoot := newGovernanceWorkspace(t, planningHomeChange)
 	writeCLIFixture(t, filepath.Join(root, "axiom.yaml"),

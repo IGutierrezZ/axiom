@@ -33,6 +33,7 @@ func requirementsJSON(t *testing.T, status Status) string {
 // REQ-47.9: modifies y creates ordenados, sin id para un nombre sin ID, provisional marcado,
 // RENAMED por su nombre antiguo y capacidad nueva como spec completa que cuenta como ADDED.
 func TestRequirementsProjectsModifiesAndCreates(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": reqDeltaPagos, "alfa": reqDeltaAlfa, "nueva": reqFullSpec}, provTasks, "")
 	status := resolveFrom(t, ws.Master, "demo")
@@ -79,6 +80,7 @@ func TestRequirementsProjectsModifiesAndCreates(t *testing.T) {
 
 // REQ-47.9: sin deltas legibles el campo se omite y la salida no lo nombra.
 func TestRequirementsOmittedWithoutReadableDeltas(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "sin-specs", "# Propuesta\n", nil, provTasks, "")
 	seedISOChange(t, ws, "vacio", "# Propuesta\n", map[string]string{"pagos": "# solo texto\n"}, provTasks, "")
@@ -95,6 +97,7 @@ func TestRequirementsOmittedWithoutReadableDeltas(t *testing.T) {
 
 // REQ-47.9: con un cambio archivado el campo se omite.
 func TestRequirementsOmittedForArchivedChange(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "archive", "2026-08-30-demo", "proposal.md"), "# Propuesta\n")
 	write(t, filepath.Join(root, "openspec", "changes", "archive", "2026-08-30-demo", "specs", "pagos", "spec.md"), reqDeltaPagos)
@@ -109,6 +112,7 @@ func TestRequirementsOmittedForArchivedChange(t *testing.T) {
 
 // REQ-47.9: con el patrón inaccesible el campo se omite.
 func TestRequirementsOmittedWithInaccessiblePattern(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": reqDeltaPagos}, provTasks, "")
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+"sdd:\n  iso: true\n  id_pattern: \"<m><m>\"\n")
@@ -121,6 +125,7 @@ func TestRequirementsOmittedWithInaccessiblePattern(t *testing.T) {
 // REQ-47.9: con el almacén engram o none no hay ficheros de delta y el campo se omite; y el
 // campo nunca altera nextRecommended, dependencies ni motivos.
 func TestRequirementsStoreAndRoutingIndependence(t *testing.T) {
+	t.Parallel()
 	ws := isoDefaultProject(t)
 	root := seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": reqDeltaPagos}, provTasks, "")
 	status := resolveFrom(t, ws.Master, "demo")

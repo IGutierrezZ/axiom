@@ -7,6 +7,7 @@ import (
 )
 
 func TestValidateStatusContractDualSupport(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		contract string
@@ -55,6 +56,7 @@ func TestValidateStatusContractDualSupport(t *testing.T) {
 }
 
 func TestProjectStatusV2SchemaDualSupport(t *testing.T) {
+	t.Parallel()
 	baseStatus := Status{
 		SchemaVersion:   SchemaVersion,
 		ArtifactStore:   ArtifactStoreOpenSpec,
@@ -112,6 +114,7 @@ func TestProjectStatusV2SchemaDualSupport(t *testing.T) {
 }
 
 func TestSDDIntegrationConsentResultDualValidation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		envelope SDDIntegrationConsentResult
@@ -213,6 +216,7 @@ func TestSDDIntegrationConsentResultDualValidation(t *testing.T) {
 }
 
 func TestSDDGovernanceGateResultDualValidation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		envelope SDDGovernanceGateResult

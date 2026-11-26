@@ -18,6 +18,7 @@ func contextWorkspace(t *testing.T, blocks string) workspacetest.Workspace {
 }
 
 func TestResolveWorkspaceTechnicalContextProjectsDeclaredModes(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct {
 		blocks         string
 		wantMaintained *ContextModeProjection
@@ -77,6 +78,7 @@ func TestResolveWorkspaceTechnicalContextProjectsDeclaredModes(t *testing.T) {
 }
 
 func TestResolveWorkspaceTechnicalContextWithoutDeclarationIsNullInJSON(t *testing.T) {
+	t.Parallel()
 	ws := contextWorkspace(t, "")
 	got, err := ResolveWorkspaceTechnicalContext(ws.Master)
 	if err != nil {
@@ -92,6 +94,7 @@ func TestResolveWorkspaceTechnicalContextWithoutDeclarationIsNullInJSON(t *testi
 }
 
 func TestResolveWorkspaceTechnicalContextInvalidDeclarationFailsClosed(t *testing.T) {
+	t.Parallel()
 	ws := contextWorkspace(t, "technical_context:\n  maintained:\n    paths: []\n")
 	got, err := ResolveWorkspaceTechnicalContext(ws.Master)
 	if err != nil {
@@ -118,6 +121,7 @@ func TestResolveWorkspaceTechnicalContextInvalidDeclarationFailsClosed(t *testin
 // Verificación pendiente del plan C-04-b: sin --change, el status proyecta
 // technicalContext aunque esté bloqueado por 0 o varios cambios activos.
 func TestResolveWithoutChangeProjectsTechnicalContextWhenBlocked(t *testing.T) {
+	t.Parallel()
 	cases := map[string][]string{
 		"0 cambios activos": nil,
 		"2 cambios activos": {"first", "second"},

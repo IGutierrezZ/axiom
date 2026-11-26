@@ -14,24 +14,38 @@ import (
 
 // askModeHub registra el proyecto en el hub aislado de la prueba (isolateBranchGit fija HOME y
 // USERPROFILE) con el modo de trabajo `ask`, y devuelve el gestor.
-func askModeHub(t *testing.T, project string) *hub.Manager {
+func askModeHub(t *testing.T, project string) (*hub.Manager, string) {
 	t.Helper()
 	manager, err := hub.NewManager("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := manager.Register(project, "ejemplo", ""); err != nil {
+	record, err := manager.Register(project, "ejemplo", "")
+	if err != nil {
 		t.Fatal(err)
 	}
 	cfg, err := manager.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.Workspaces[0].WorktreeMode = "ask"
+	hubWorkspace(t, cfg, record.ID).WorktreeMode = "ask"
 	if err := manager.Save(cfg); err != nil {
 		t.Fatal(err)
 	}
-	return manager
+	return manager, record.ID
+}
+
+// hubWorkspace devuelve el registro id del hub. El hub vive en el HOME que TestMain comparte entre
+// las pruebas, así que puede guardar otros proyectos: nunca se busca por posición.
+func hubWorkspace(t *testing.T, cfg *hub.HubConfig, id string) *hub.WorkspaceRecord {
+	t.Helper()
+	for i := range cfg.Workspaces {
+		if cfg.Workspaces[i].ID == id {
+			return &cfg.Workspaces[i]
+		}
+	}
+	t.Fatalf("el hub no tiene el proyecto %s", id)
+	return nil
 }
 
 func TestBranchEnsureModeFlagUsageErrorsExitWithCode2(t *testing.T) {
@@ -125,7 +139,7 @@ func TestBranchEnsureAskModeReturnsDecisionRequiredWithExitCode1(t *testing.T) {
 // cambio no vuelve a preguntar; la preferencia personal del hub no cambia.
 func TestBranchEnsureAskAnswerWithTheModeFlagIsRecordedAndReused(t *testing.T) {
 	repo := newBranchRepository(t)
-	manager := askModeHub(t, repo)
+	manager, id := askModeHub(t, repo)
 
 	code, stdout, stderr := runBranchCLI(t, "ensure", "--change", "x", "--mode", "worktree", "--json", "--cwd", repo)
 
@@ -157,7 +171,7 @@ func TestBranchEnsureAskAnswerWithTheModeFlagIsRecordedAndReused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Workspaces[0].WorktreeMode != "ask" {
-		t.Errorf("la respuesta no modifica la preferencia del hub: %q", cfg.Workspaces[0].WorktreeMode)
+	if mode := hubWorkspace(t, cfg, id).WorktreeMode; mode != "ask" {
+		t.Errorf("la respuesta no modifica la preferencia del hub: %q", mode)
 	}
 }

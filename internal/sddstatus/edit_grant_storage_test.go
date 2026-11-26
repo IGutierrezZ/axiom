@@ -21,6 +21,7 @@ func grantTestStore(t *testing.T) (RuntimeStore, GrantRootsRequest) {
 }
 
 func TestEditGrantCASAndLockPermitOnlyOneConcurrentWriter(t *testing.T) {
+	t.Parallel()
 	store, request := grantTestStore(t)
 	// Keep the #1850 first-use population: do not pre-create the store or lock.
 	const writers = 24
@@ -57,6 +58,7 @@ func TestEditGrantCASAndLockPermitOnlyOneConcurrentWriter(t *testing.T) {
 }
 
 func TestEditGrantRejectsStaleCASWithoutPublishing(t *testing.T) {
+	t.Parallel()
 	store, request := grantTestStore(t)
 	first, err := store.Grant(context.Background(), request)
 	if err != nil {
@@ -73,6 +75,7 @@ func TestEditGrantRejectsStaleCASWithoutPublishing(t *testing.T) {
 }
 
 func TestEditGrantCannotFollowAuthoritySymlinks(t *testing.T) {
+	t.Parallel()
 	for _, target := range []string{"store", "lock"} {
 		t.Run(target, func(t *testing.T) {
 			store, request := grantTestStore(t)

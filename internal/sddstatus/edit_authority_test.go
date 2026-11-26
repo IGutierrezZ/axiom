@@ -45,6 +45,7 @@ func realPath(t *testing.T, path string) string {
 }
 
 func TestMultiRepoTaskTargetsBlockApplyWithoutEditAuthority(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir() // the workspace itself is NOT a Git repository
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")
@@ -84,6 +85,7 @@ func TestMultiRepoTaskTargetsBlockApplyWithoutEditAuthority(t *testing.T) {
 }
 
 func TestNestedPlanningWorkspaceBlocksSiblingDirectoryWithinParentRepository(t *testing.T) {
+	t.Parallel()
 	parent := initRuntimeLedgerRepo(t)
 	planning := filepath.Join(parent, "subproject")
 	service := filepath.Join(parent, "service-dir")
@@ -112,6 +114,7 @@ func TestNestedPlanningWorkspaceBlocksSiblingDirectoryWithinParentRepository(t *
 }
 
 func TestDeletedAllowedRootDoesNotBroadenSiblingAuthorization(t *testing.T) {
+	t.Parallel()
 	parent := initRuntimeLedgerRepo(t)
 	planning := filepath.Join(parent, "subproject")
 	granted := filepath.Join(parent, "service-dir")
@@ -131,6 +134,7 @@ func TestDeletedAllowedRootDoesNotBroadenSiblingAuthorization(t *testing.T) {
 }
 
 func TestSameRepositoryEditRootUsesCanonicalDirectory(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	directory := filepath.Join(root, "service-dir")
 	mkdir(t, directory)
@@ -169,6 +173,7 @@ func TestSameRepositoryEditRootUsesCanonicalDirectory(t *testing.T) {
 // and blockedReasons when at least one unauthorized edit root is found, so an
 // empty JSON footprint here proves the whole fixture is untouched.
 func TestSingleRepoTasksKeepStatusByteIdentical(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	seedReadyChange(t, repo, "single-repo-change", strings.Join([]string{
 		"- [ ] 1.1 Update `internal/auth/login.go` with the new claim check",
@@ -204,6 +209,7 @@ func TestSingleRepoTasksKeepStatusByteIdentical(t *testing.T) {
 // nearest-existing-ancestor rule (task prose names files that do not exist
 // yet) and that non-path prose stays invisible.
 func TestDetectUnauthorizedEditRootsHonorsAllowedRoots(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")
@@ -277,6 +283,7 @@ func TestEngramTasksTextBlocksApplyOnUnauthorizedTargets(t *testing.T) {
 // change's own directory (so it dies with archive and a recreated change
 // mints a fresh one), and will later use to project the granted roots back.
 func TestBlockedEditAuthorityStatusCarriesConsentEnvelope(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir() // the workspace itself is NOT a Git repository
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")
@@ -376,6 +383,7 @@ func TestBlockedEditAuthorityStatusCarriesConsentEnvelope(t *testing.T) {
 // projects none of the old grants — the recreated change is blocked again
 // with a new instance token and planning-only edit authority.
 func TestRecreatedChangeNameDoesNotInheritGrantedRoots(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir() // the workspace itself is NOT a Git repository
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")
@@ -462,6 +470,7 @@ func TestRecreatedChangeNameDoesNotInheritGrantedRoots(t *testing.T) {
 }
 
 func TestChangeInstanceMarkerMigratesLegacyName(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	legacyMarkerPath := filepath.Join(changeRoot, ".gentle-ai-instance")
 	legacyToken := "sdd-0123456789abcdef0123456789abcdef"
@@ -491,6 +500,7 @@ func TestChangeInstanceMarkerMigratesLegacyName(t *testing.T) {
 }
 
 func TestChangeInstanceMarkerKeepsExistingNewMarker(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	newToken := "sdd-fedcba9876543210fedcba9876543210"
 	if err := os.WriteFile(filepath.Join(changeRoot, ".axiom-instance"), []byte(newToken+"\n"), 0o644); err != nil {

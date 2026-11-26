@@ -63,6 +63,7 @@ func wantNotContains(t *testing.T, what string, lines []string, unwanted string)
 // REQ-24.18 y REQ-30.21: una declaración inválida, o un `baseline:` residual,
 // bloquea solo el archivado.
 func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
+	t.Parallel()
 	t.Run("ruta archive: bloqueada, con la causa en notes y blockedReasons", func(t *testing.T) {
 		ws := embeddedChange(t, declResidualBaseline, "", tasksDone)
 		status := resolveWithInstructions(t, ws.Master, "demo")
@@ -183,6 +184,7 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 // R1: un proyecto solo de openspec/, o con axiom.yaml sin bloques nuevos, no
 // recibe causas ni notas aunque declare un almacén sin ficheros.
 func TestArchiveNotBlockedWithoutDeclarations(t *testing.T) {
+	t.Parallel()
 	bare := t.TempDir()
 	seedReadyChange(t, bare, "demo", tasksDone)
 	workspacetest.WriteFile(t, filepath.Join(bare, "openspec", "config.yaml"), "artifact_store: none\n")
@@ -367,6 +369,7 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 // prepara la integración del contexto; con un `baseline:` residual no nombra
 // ningún verbo retirado (REQ-30.25).
 func TestArchiveInstructionsNameContextPrepare(t *testing.T) {
+	t.Parallel()
 	t.Run("contexto mantenido", func(t *testing.T) {
 		ws := embeddedChange(t, declMaintainedOnly, "", tasksPending)
 		status := resolveWithInstructions(t, ws.Master, "demo")
@@ -399,6 +402,7 @@ func TestArchiveInstructionsNameContextPrepare(t *testing.T) {
 // R30: en multirepo, una ruta de tasks.md que nombra un repositorio de código
 // hermano sin `../` ni ruta absoluta se avisa.
 func TestStatusWarnsAboutSiblingRepositoryPathsWithoutDotDot(t *testing.T) {
+	t.Parallel()
 	canonical := func(t *testing.T, tasks string) workspacetest.Workspace {
 		t.Helper()
 		ws := workspacetest.Canonical(t)
@@ -447,6 +451,7 @@ func TestStatusWarnsAboutSiblingRepositoryPathsWithoutDotDot(t *testing.T) {
 // solo reúne la lectura de YAML, la baseline retirada y technical_context, como `git:`, `workflow:`
 // y `sdd:`; el error de integraciones lo reportan `workspace validate` y los verbos de integración.
 func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
+	t.Parallel()
 	ws := embeddedChange(t, "integrations:\n  azure:\n    project: p\n", "", tasksDone)
 	status := resolveWithInstructions(t, ws.Master, "demo")
 	if status.Dependencies.Archive != DependencyReady || status.NextRecommended != "archive" {
@@ -466,6 +471,7 @@ func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
 // REQ-21.18 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
 // carpeta archivada es estado local: no cambia la entrada archivada de un cambio ni su proyección.
 func TestArchivedOutboxDoesNotChangeTheArchivedProjection(t *testing.T) {
+	t.Parallel()
 	project := func(withOutbox bool) (Status, string, []string) {
 		root := t.TempDir()
 		folder := filepath.Join(root, "openspec", "changes", "archive", "2026-11-19-x")

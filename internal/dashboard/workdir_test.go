@@ -7,6 +7,7 @@ import (
 )
 
 func TestNeutralWorkDir(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	ws := filepath.Join(root, "ws")
 	inside := filepath.Join(ws, "sub")
@@ -36,6 +37,7 @@ func TestNeutralWorkDir(t *testing.T) {
 }
 
 func TestServerWorkDirOutsideWorkspace(t *testing.T) {
+	t.Parallel()
 	ws := t.TempDir()
 	got := ServerWorkDir(ws)
 	if isWithinDir(ws, got) {

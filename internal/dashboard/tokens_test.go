@@ -51,6 +51,7 @@ func contrastRatio(a, b string) float64 {
 }
 
 func TestContrastRatioKnownValues(t *testing.T) {
+	t.Parallel()
 	if got := contrastRatio("#000000", "#FFFFFF"); math.Abs(got-21) > 0.01 {
 		t.Errorf("negro sobre blanco = %.2f, se esperaba 21", got)
 	}
@@ -63,6 +64,7 @@ func TestContrastRatioKnownValues(t *testing.T) {
 // Todo texto de los tokens cumple al menos 4,5:1 sobre las superficies donde se usa,
 // en ambos temas (criterio de aceptación del rediseño).
 func TestThemeTokensMeetContrast(t *testing.T) {
+	t.Parallel()
 	css := readAsset(t, "tokens.css")
 	themes := map[string]map[string]string{
 		"claro":  parseThemeTokens(t, css, ":root[data-theme=\"light\"] {"),

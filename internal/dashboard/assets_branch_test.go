@@ -67,6 +67,7 @@ func runNodeModules(t *testing.T, modules []string, script string) []byte {
 // REQ-25.34: la tarjeta de un cambio muestra la insignia de pendiente de archivar y la rama de su
 // worktree, y los avisos de `X-Axiom-Notes` llegan a una región visible y anunciada del listado.
 func TestIncrementsListShowsNotesPendingArchiveAndBranch(t *testing.T) {
+	t.Parallel()
 	html, js := readAsset(t, "index.html"), readAsset(t, "js/screens/incrementos.js")
 
 	box := regexp.MustCompile(`<div[^>]*id="increments-notes"[^>]*>`).FindString(html)
@@ -97,6 +98,7 @@ func TestIncrementsListShowsNotesPendingArchiveAndBranch(t *testing.T) {
 
 // La lógica pura de los avisos y de las insignias se ejecuta de verdad (si hay Node) con entradas hostiles.
 func TestNotesAndLocationBadgesRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api", "icons", "components", "branches"},
 		"import { parseNotes, pendingArchiveBadge, branchBadge } from './branches.mjs';\n"+
 			"const header = '[\"cambios pendientes de archivar (1): inc-1 (axiom branch ensure --change inc-1 --archive)\",\"worktree desaparecido: C:\\\\\\\\wt\\\\\\\\x\",\"\\\\u00e1\\\\u00e9\"]';\n"+
@@ -158,6 +160,7 @@ func TestNotesAndLocationBadgesRuntime(t *testing.T) {
 // api.js expone las cabeceras de la respuesta (los avisos viajan en `X-Axiom-Notes`) sin romper el
 // agrupamiento de GET simultáneos, y el cuerpo de un 409 llega entero en el ApiError.
 func TestAPIClientExposesHeadersAndConflictBodies(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api"},
 		"import { api, apiWithHeaders, ApiError } from './api.mjs';\n"+
 			"let calls = 0;\n"+
@@ -219,6 +222,7 @@ func TestAPIClientExposesHeadersAndConflictBodies(t *testing.T) {
 // REQ-25.32: ante un 409 `decision_required` la interfaz presenta la decisión en un diálogo accesible y
 // repite la creación con `mode`.
 func TestNewIncrementAsksTheDecisionInAnAccessibleDialog(t *testing.T) {
+	t.Parallel()
 	html, js := readAsset(t, "index.html"), readAsset(t, "js/screens/incrementos.js")
 
 	dialog := regexp.MustCompile(`<dialog[^>]*id="dlg-increment-decision"[^>]*>`).FindString(html)
@@ -264,6 +268,7 @@ func TestNewIncrementAsksTheDecisionInAnAccessibleDialog(t *testing.T) {
 
 // createWithDecision se ejecuta de verdad: un único reintento con `mode`, y cada rechazo con su texto.
 func TestCreateWithDecisionRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api", "icons", "components", "branches"},
 		"import { ApiError } from './api.mjs';\n"+
 			"import { createWithDecision } from './branches.mjs';\n"+
@@ -329,6 +334,7 @@ func TestCreateWithDecisionRuntime(t *testing.T) {
 
 // REQ-1.1 y REQ-25.33: la política de ramas y los ajustes por repositorio se muestran en solo lectura.
 func TestBranchPolicyIsShownReadOnlyInEcosystem(t *testing.T) {
+	t.Parallel()
 	html, eco, branches := readAsset(t, "index.html"), readAsset(t, "js/screens/ecosystem.js"), readAsset(t, "js/core/branches.js")
 
 	topology := funcBody(t, eco, "topologyHtml")
@@ -354,6 +360,7 @@ func TestBranchPolicyIsShownReadOnlyInEcosystem(t *testing.T) {
 
 // Los dos bloques de la política se pintan con datos hostiles y con los huecos que deja el servidor.
 func TestBranchPolicyRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api", "icons", "components", "branches"},
 		"import { branchPolicyRows, repoPolicyHtml } from './branches.mjs';\n"+
 			"const ws = { branchPolicy: { integrationBranch: 'develop', branchPrefix: 'inc/' }, repositories: [\n"+
@@ -406,6 +413,7 @@ func TestBranchPolicyRuntime(t *testing.T) {
 // REQ-25.29 y REQ-25.33: las preferencias personales de worktree del proyecto activo se editan y se
 // guardan en el Hub desde Ecosistema, y el alta de un proyecto las pregunta.
 func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
+	t.Parallel()
 	html, eco := readAsset(t, "index.html"), readAsset(t, "js/screens/ecosystem.js")
 	start, end := strings.Index(html, `id="view-ecosistema"`), strings.Index(html, "</main>")
 	if start < 0 || end < start {
@@ -457,6 +465,7 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 
 // REQ-25.29: el modal de registro pregunta el modo y la raíz de worktree, y la petición los envía.
 func TestRegistrationModalAsksWorktreePrefsInTheRedesign(t *testing.T) {
+	t.Parallel()
 	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")
 
 	selectBlock := regexp.MustCompile(`(?s)<select id="select-project-worktree-mode".*?</select>`).FindString(html)
@@ -506,6 +515,7 @@ func TestRegistrationModalAsksWorktreePrefsInTheRedesign(t *testing.T) {
 
 // La lógica de las preferencias se ejecuta de verdad (si hay Node).
 func TestWorktreePrefsLogicRuntime(t *testing.T) {
+	t.Parallel()
 	out := runNodeModules(t, []string{"api", "icons", "components", "branches"},
 		"import { defaultWorktreeRoot, registrationPrefs, effectivePrefsText } from './branches.mjs';\n"+
 			"console.log(JSON.stringify({\n"+

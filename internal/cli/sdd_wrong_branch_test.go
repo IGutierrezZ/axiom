@@ -137,6 +137,7 @@ func TestSDDWrongBranchStatusHarness(t *testing.T) {
 // prepara el marcador de instancia ni emite sobre de consentimiento y no autoriza ninguna fase; en la
 // rama del cambio el mismo plan sí prepara el marcador y pide la concesión (S-9).
 func TestSDDWrongBranchContinueReflectsTheBlockWithoutPreparingTheMarker(t *testing.T) {
+	t.Parallel()
 	root, changeRoot := wrongBranchRealGitProject(t, "main", "- [ ] 1.1 Update `../source/main.go`\n")
 	writeSDDStatusFile(t, filepath.Join(root, "..", "source", "main.go"), "package source\n")
 	marker := filepath.Join(changeRoot, ".axiom-instance")

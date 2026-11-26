@@ -13,6 +13,7 @@ import (
 // El Doctor pertenece al proyecto abierto: al cambiar de proyecto el informe
 // anterior desaparece y una respuesta de otro proyecto no se publica nunca.
 func TestDoctorIsScopedToTheOpenProjectRuntime(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite la prueba de ejecución del Doctor por proyecto")

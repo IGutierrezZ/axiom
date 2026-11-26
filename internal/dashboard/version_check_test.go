@@ -38,6 +38,7 @@ func newTestVersionChecker(current string, results []VersionInfo) (*versionCheck
 }
 
 func TestVersionChecker_CachesWithinTTLAndRefreshesAfter(t *testing.T) {
+	t.Parallel()
 	c, clock, calls := newTestVersionChecker("v3.6.0", []VersionInfo{
 		{Latest: "v3.7.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true, ReleaseURL: "https://example.test/r"},
 		{Latest: "v3.8.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true},
@@ -60,6 +61,7 @@ func TestVersionChecker_CachesWithinTTLAndRefreshesAfter(t *testing.T) {
 }
 
 func TestVersionChecker_RefreshBypassesCache(t *testing.T) {
+	t.Parallel()
 	c, _, calls := newTestVersionChecker("v3.6.0", []VersionInfo{
 		{Latest: "v3.6.0", Status: versionStatusUpToDate},
 		{Latest: "v3.7.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true},
@@ -73,6 +75,7 @@ func TestVersionChecker_RefreshBypassesCache(t *testing.T) {
 }
 
 func TestVersionChecker_FailureIsNotCached(t *testing.T) {
+	t.Parallel()
 	c, _, calls := newTestVersionChecker("v3.6.0", []VersionInfo{
 		{Status: versionStatusCheckFailed},
 		{Latest: "v3.7.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true},
@@ -87,6 +90,7 @@ func TestVersionChecker_FailureIsNotCached(t *testing.T) {
 }
 
 func TestVersionChecker_CacheDoesNotSurviveVersionChange(t *testing.T) {
+	t.Parallel()
 	current := "v3.6.0"
 	c, _, calls := newTestVersionChecker(current, []VersionInfo{
 		{Latest: "v3.7.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true},
@@ -103,6 +107,7 @@ func TestVersionChecker_CacheDoesNotSurviveVersionChange(t *testing.T) {
 }
 
 func TestVersionInfoFromResult(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name       string
 		result     update.UpdateResult
@@ -139,6 +144,7 @@ func getVersion(t *testing.T, svc *Service, query string) (int, VersionInfo, map
 }
 
 func TestSystemVersionEndpoint_Contract(t *testing.T) {
+	t.Parallel()
 	svc := NewService(t.TempDir())
 	svc.versions, _, _ = newTestVersionChecker("v3.6.0", []VersionInfo{
 		{Latest: "v3.7.0", Status: versionStatusUpdateAvailable, UpdateAvailable: true, ReleaseURL: "https://example.test/r"},
@@ -159,6 +165,7 @@ func TestSystemVersionEndpoint_Contract(t *testing.T) {
 }
 
 func TestSystemVersionEndpoint_NetworkFailureIs200WithoutBanner(t *testing.T) {
+	t.Parallel()
 	svc := NewService(t.TempDir())
 	svc.versions, _, _ = newTestVersionChecker("v3.6.0", []VersionInfo{{Status: versionStatusCheckFailed}})
 
@@ -169,6 +176,7 @@ func TestSystemVersionEndpoint_NetworkFailureIs200WithoutBanner(t *testing.T) {
 }
 
 func TestSystemVersionEndpoint_DevBuildAndRefresh(t *testing.T) {
+	t.Parallel()
 	svc := NewService(t.TempDir())
 	var calls *int
 	svc.versions, _, calls = newTestVersionChecker("dev", []VersionInfo{
@@ -189,6 +197,7 @@ func TestSystemVersionEndpoint_DevBuildAndRefresh(t *testing.T) {
 }
 
 func TestSystemVersionEndpoint_RejectsNonGET(t *testing.T) {
+	t.Parallel()
 	rec := httptest.NewRecorder()
 	NewServer(NewService(t.TempDir())).Router().ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/system/version", nil))
 	if rec.Code != http.StatusMethodNotAllowed {

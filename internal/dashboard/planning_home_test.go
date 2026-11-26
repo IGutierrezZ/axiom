@@ -55,6 +55,7 @@ func requireNoOpenSpecAt(t *testing.T, dirs ...string) {
 // registrada en la carpeta maestra o en un repositorio de código, los cambios se
 // leen de <planning home>/changes, y rootPath sigue siendo la ruta registrada.
 func TestPlanningHomeResolvesFromTheRegisteredPath(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []struct {
 		name  string
 		start func(workspacetest.Workspace) string
@@ -99,6 +100,7 @@ func TestPlanningHomeResolvesFromTheRegisteredPath(t *testing.T) {
 }
 
 func TestCreateIncrementWritesUnderThePlanningHome(t *testing.T) {
+	t.Parallel()
 	for _, tt := range []struct {
 		name  string
 		start func(workspacetest.Workspace) string
@@ -131,6 +133,7 @@ func TestCreateIncrementWritesUnderThePlanningHome(t *testing.T) {
 }
 
 func TestMigrateIncompleteTasksUsesTheCumulativeOfThePlanningHome(t *testing.T) {
+	t.Parallel()
 	svc, ws := canonicalService(t, startAtMaster)
 	writeFixtureFile(t, ws.Home, "changes/inc-99-ejemplo/tasks.md",
 		"# Tareas\n- [x] 1.1 hecha\n- [ ] 1.2 pendiente\n")
@@ -161,6 +164,7 @@ func TestMigrateIncompleteTasksUsesTheCumulativeOfThePlanningHome(t *testing.T) 
 // ruta de artefactos por defecto es la del planning home, relativa a la ruta
 // registrada cuando cuelga de ella y absoluta cuando queda fuera.
 func TestCreateHandoffTextUsesThePlanningHome(t *testing.T) {
+	t.Parallel()
 	req := CreateHandoffRequest{Change: "inc-99-ejemplo", FromPhase: "design", ToPhase: "tasks", ExecutiveSummary: "Resumen de prueba"}
 
 	t.Run("relativa a la carpeta maestra", func(t *testing.T) {
@@ -212,6 +216,7 @@ func TestCreateHandoffTextUsesThePlanningHome(t *testing.T) {
 // resultado de Locate: un espacio cuyo puntero se repara entre dos llamadas pasa
 // de rechazarse a resolverse con el mismo servicio.
 func TestPlanningRootIsResolvedOnEveryCall(t *testing.T) {
+	t.Parallel()
 	svc, ws := canonicalService(t, startAtMaster, workspacetest.WithBrokenPointer())
 
 	var locateErr *workspace.LocateError
@@ -232,6 +237,7 @@ func TestPlanningRootIsResolvedOnEveryCall(t *testing.T) {
 // TestUnresolvablePlanningHomeIsPropagated cubre que un fallo de Locate llega
 // intacto (causa y continuación) y que ningún método escribe nada.
 func TestUnresolvablePlanningHomeIsPropagated(t *testing.T) {
+	t.Parallel()
 	svc, ws := canonicalService(t, startAtMaster, workspacetest.WithBrokenPointer())
 
 	calls := map[string]func() error{
@@ -272,6 +278,7 @@ func TestUnresolvablePlanningHomeIsPropagated(t *testing.T) {
 // sobre el canónico devuelve los cambios del planning home, y con el puntero roto
 // responde 500 con el mensaje de Locate.
 func TestIncrementsEndpointListsThePlanningHome(t *testing.T) {
+	t.Parallel()
 	svc, _ := canonicalService(t, startAtMaster)
 	rr := httptest.NewRecorder()
 	NewServer(svc).Router().ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/increments", nil))

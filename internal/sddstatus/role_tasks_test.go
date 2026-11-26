@@ -52,6 +52,7 @@ func seedMultiRoleChange(t *testing.T, root, name string, style kickoff.Executio
 }
 
 func TestMultiRoleTasksResolveFromSealedKickoff(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedMultiRoleChange(t, root, "two-roles", kickoff.ExecutionContinuous, map[string]string{
 		"backend":  "- [x] 1.1 Model\n- [ ] 1.2 Endpoint\n",
@@ -79,6 +80,7 @@ func TestMultiRoleTasksResolveFromSealedKickoff(t *testing.T) {
 }
 
 func TestMultiRoleTasksFollowKickoffRoleOrder(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := seedMultiRoleChange(t, root, "ordered", kickoff.ExecutionContinuous, map[string]string{
 		"backend": "- [ ] 1.1 A\n", "frontend": "- [ ] 1.1 B\n",
@@ -95,6 +97,7 @@ func TestMultiRoleTasksFollowKickoffRoleOrder(t *testing.T) {
 }
 
 func TestMultiRoleTasksMissingRoleFileIsPartialAndNamed(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedMultiRoleChange(t, root, "one-missing", kickoff.ExecutionContinuous, map[string]string{
 		"backend": "- [ ] 1.1 Endpoint\n",
@@ -144,6 +147,7 @@ func planningReasons(t *testing.T, root, change string, status Status, roles ...
 }
 
 func TestMultiRoleTasksRoleWithoutCheckboxesBlocksApply(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedMultiRoleChange(t, root, "plain-prose", kickoff.ExecutionContinuous, map[string]string{
 		"backend":  "- [ ] 1.1 Endpoint\n",
@@ -163,6 +167,7 @@ func TestMultiRoleTasksRoleWithoutCheckboxesBlocksApply(t *testing.T) {
 }
 
 func TestMultiRoleTasksAllCompleteReportsAllDone(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedMultiRoleChange(t, root, "finished", kickoff.ExecutionContinuous, map[string]string{
 		"backend": "- [x] 1.1 Endpoint\n", "frontend": "- [x] 1.1 Screen\n- [x] 1.2 Route\n",
@@ -182,6 +187,7 @@ func TestMultiRoleTasksAllCompleteReportsAllDone(t *testing.T) {
 
 // One role with pending work keeps apply open even when the other role is done.
 func TestMultiRoleTasksOnePendingRoleKeepsApplyReady(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedMultiRoleChange(t, root, "half-done", kickoff.ExecutionContinuous, map[string]string{
 		"backend": "- [x] 1.1 Endpoint\n", "frontend": "- [ ] 1.1 Screen\n",
@@ -197,6 +203,7 @@ func TestMultiRoleTasksOnePendingRoleKeepsApplyReady(t *testing.T) {
 }
 
 func TestMultiRoleEditAuthorityUnitesTheRootsOfEveryRole(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir() // the workspace itself is NOT a Git repository
 	planning := filepath.Join(workspace, "planning")
 	apiRepo := filepath.Join(workspace, "api-repo")
@@ -278,6 +285,7 @@ func TestMultiRoleEditAuthorityUnitesTheRootsOfEveryRole(t *testing.T) {
 // A single sealed role whose plan lives in tasks.<role>.md is per-role too, and
 // its diagnostics name that one file in the singular.
 func TestSingleSealedRoleWithOwnTasksFileResolvesIt(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	apiRepo := filepath.Join(workspace, "api-repo")
@@ -301,6 +309,7 @@ func TestSingleSealedRoleWithOwnTasksFileResolvesIt(t *testing.T) {
 // tasks gate opens once both exist (machine.go tasksGateOpen needs it) and not
 // before.
 func TestMultiRoleCheckpointedTasksGateOpensOnceEveryRoleFileExists(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := seedMultiRoleChange(t, root, "gated", kickoff.ExecutionCheckpointed, map[string]string{
 		"backend": "- [ ] 1.1 Endpoint\n",
@@ -330,6 +339,7 @@ func TestMultiRoleCheckpointedTasksGateOpensOnceEveryRoleFileExists(t *testing.T
 }
 
 func TestGateEvidenceNamesTheRoleTaskFiles(t *testing.T) {
+	t.Parallel()
 	paths := ArtifactPaths{Tasks: []string{"c/tasks.backend.md", "c/tasks.frontend.md"}}
 	if got := gateEvidence(kickoff.GateState{Key: kickoff.GateTasks}, paths); !reflect.DeepEqual(got, paths.Tasks) {
 		t.Fatalf("tasks gate evidence = %v, want both role files %v", got, paths.Tasks)

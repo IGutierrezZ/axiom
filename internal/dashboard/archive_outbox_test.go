@@ -13,6 +13,7 @@ import (
 // carpeta archivada es estado local, no contenido del incremento: el listado de incrementos es el
 // mismo con y sin ella.
 func TestArchiveOutboxIsNotIncrementContent(t *testing.T) {
+	t.Parallel()
 	listingOf := func(withOutbox bool) []byte {
 		ws := workspacetest.Embedded(t, ".")
 		workspacetest.WriteFile(t, filepath.Join(ws.Home, "changes", "archive", "2026-01-01-viejo", "proposal.md"), "# viejo\n")

@@ -202,6 +202,7 @@ func publishingCallViolations(label string, source []byte) (violations []string,
 // único fichero que lo usa es `sdd_publish.go`; ni `internal/branch/**` ni `internal/docpaths` lo
 // importan.
 func TestIsolationOnlyTheCLIVerbImportsSddpublish(t *testing.T) {
+	t.Parallel()
 	files := walkProduction(t)
 	importers := map[string]bool{}
 	for _, file := range files {
@@ -238,6 +239,7 @@ func TestIsolationOnlyTheCLIVerbImportsSddpublish(t *testing.T) {
 // REQ-25.1 y REQ-27.11: ninguna ejecución de git de `internal/branch/**` lleva "push" ni "commit"; el
 // puerto de publicación sí los lleva, y por eso la comprobación no es vacua.
 func TestIsolationBranchPackageNeverPassesPushOrCommitToGit(t *testing.T) {
+	t.Parallel()
 	files := walkProduction(t)
 	branchCalls, publishCalls := 0, 0
 	for _, file := range files {
@@ -271,6 +273,7 @@ func TestIsolationBranchPackageNeverPassesPushOrCommitToGit(t *testing.T) {
 
 // Las comprobaciones fallan si alguien rompe el aislamiento: se prueban con fuentes sintéticas.
 func TestIsolationChecksFlagSyntheticViolations(t *testing.T) {
+	t.Parallel()
 	importCases := []struct {
 		name       string
 		label      string

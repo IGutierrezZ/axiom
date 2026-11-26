@@ -45,6 +45,7 @@ func archiveTokens(findings []isoevidence.Finding) []string {
 // REQ-29.10, REQ-29.11, REQ-29.6 a REQ-29.8 y REQ-29.19: la regla del archivado
 // ISO, compartida por el status, archive-check y archive-compose.
 func TestISOArchiveRefusal(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		proposal string
@@ -171,6 +172,7 @@ func sealRewrite(t *testing.T, changeRoot, name string) {
 // incompleto sigue exigiendo la matriz: `archive` queda bloqueado, el motivo va
 // solo a notes y la ruta sigue siendo apply.
 func TestISOArchiveWithPendingTasks(t *testing.T) {
+	t.Parallel()
 	ws := isoProject(t)
 	seedISOChange(t, ws, "demo", "# P\n", map[string]string{"pagos": deltaAddedOK}, tasksCoveredOpen, "")
 	status := resolveFrom(t, ws.Master, "demo")
@@ -214,6 +216,7 @@ func sealISOCheckpointed(t *testing.T, changeRoot, name string) {
 // `verify`; con filas `fail`, resolve-blockers; con una matriz de éxito, archive.
 // `iso.matrix` lo proyecta en cada caso.
 func TestISOVerifyRoute(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		proposal    string
@@ -284,6 +287,7 @@ func TestISOVerifyRoute(t *testing.T) {
 // D19: la ruta `verify` sustituye a await-gate solo cuando la compuerta abierta
 // es `integration`; las demás compuertas conservan su precedencia.
 func TestISOVerifyRouteGatePrecedence(t *testing.T) {
+	t.Parallel()
 	seed := func(t *testing.T, verify string, approved ...kickoff.GateKey) (workspacetest.Workspace, string) {
 		t.Helper()
 		ws := isoProject(t)
@@ -354,6 +358,7 @@ func TestISOVerifyRouteGatePrecedence(t *testing.T) {
 // REQ-29.16 y REQ-29.2: iso.matrix se proyecta igual en v1 y v2, y solo en un
 // cambio ISO con apply terminado.
 func TestISOMatrixProjection(t *testing.T) {
+	t.Parallel()
 	t.Run("v1 y v2 coinciden", func(t *testing.T) {
 		ws := isoProject(t)
 		seedISOChange(t, ws, "demo", "# P\n", map[string]string{"pagos": deltaAddedOK}, tasksCoveredDone, "")

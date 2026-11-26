@@ -74,6 +74,7 @@ func validIntegrationGateResult() SDDGovernanceGateResult {
 }
 
 func TestSDDGovernanceGateResultValidateAcceptsWellFormedEnvelope(t *testing.T) {
+	t.Parallel()
 	if err := validGovernanceGateResult().Validate(); err != nil {
 		t.Fatalf("Validate() error = %v, se esperaba aceptacion de un envoltorio bien formado", err)
 	}
@@ -84,6 +85,7 @@ func TestSDDGovernanceGateResultValidateAcceptsWellFormedEnvelope(t *testing.T) 
 // gentle-ai.sdd-governance.gate/v1, including the sibling edit-authority
 // schema (design.md S1.3 rule 4: never reuse the consent schema).
 func TestSDDGovernanceGateResultValidateRejectsUnknownSchema(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		schema string
@@ -107,6 +109,7 @@ func TestSDDGovernanceGateResultValidateRejectsUnknownSchema(t *testing.T) {
 // is task 12.1's second required case, extended by REQ-26.2: a planning gate
 // carries exactly "rejected", "hand_off", "approved", in that order.
 func TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedRejected(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		mutate func(*SDDGovernanceGateResult)
@@ -149,6 +152,7 @@ func TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedReject
 // choice, because that would relay a quality decision as edit-authority
 // escalation (design.md S1.3 rule 4).
 func TestSDDGovernanceGateResultValidateRejectsInvocationNotStartingWithGateRecord(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		invocation string
@@ -174,6 +178,7 @@ func TestSDDGovernanceGateResultValidateRejectsInvocationNotStartingWithGateReco
 // criteria rows, taken as-is from the shared gateCriteria table, must
 // validate for its own gate identity.
 func TestSDDGovernanceGateResultValidateAcceptsEachDesignCriteriaRow(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		state kickoff.GateState
@@ -210,6 +215,7 @@ func TestSDDGovernanceGateResultValidateAcceptsEachDesignCriteriaRow(t *testing.
 // GovernanceRoster, and gateCriteria, none of which exist yet).
 
 func TestLoadGovernanceReturnsNilWithoutErrorWhenNoKickoffIsSealed(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	got, err := loadGovernance(changeRoot)
 	if err != nil {
@@ -225,6 +231,7 @@ func TestLoadGovernanceReturnsNilWithoutErrorWhenNoKickoffIsSealed(t *testing.T)
 // continuous kickoff projects the kickoff and its role roster, with an
 // empty, non-nil Gates slice, and never reads the gate ledger.
 func TestLoadGovernanceProjectsRosterWithoutGatesForContinuousExecutionStyle(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	writeFile(t, filepath.Join(changeRoot, "tasks.md"), "- [ ] 1.1 Work\n")
 	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
@@ -259,6 +266,7 @@ func TestLoadGovernanceProjectsRosterWithoutGatesForContinuousExecutionStyle(t *
 }
 
 func TestLoadGovernancePropagatesACorruptKickoffAsANamedError(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	writeFile(t, filepath.Join(changeRoot, kickoff.KickoffFileName), "{ not: valid: yaml")
 	if _, err := loadGovernance(changeRoot); err == nil {
@@ -267,6 +275,7 @@ func TestLoadGovernancePropagatesACorruptKickoffAsANamedError(t *testing.T) {
 }
 
 func TestLoadGovernanceTranslatesSealedKickoffAndLedgerIntoGateStates(t *testing.T) {
+	t.Parallel()
 	changeRoot := t.TempDir()
 	writeFile(t, filepath.Join(changeRoot, "proposal.md"), "# Proposal\n")
 	writeFile(t, filepath.Join(changeRoot, "design.md"), "# Design\n")
@@ -343,6 +352,7 @@ func TestLoadGovernanceTranslatesSealedKickoffAndLedgerIntoGateStates(t *testing
 // had no production caller: only governance_test.go referenced them.
 
 func TestNewGovernanceGateQuestionBuildsValidEnvelopeCarryingGateCriteria(t *testing.T) {
+	t.Parallel()
 	gate := kickoff.GateState{Key: kickoff.GateSpec, Status: "pending"}
 	artifactPaths := ArtifactPaths{Specs: []string{"openspec/changes/inc-99/specs/example/spec.md"}}
 
@@ -376,6 +386,7 @@ func TestNewGovernanceGateQuestionBuildsValidEnvelopeCarryingGateCriteria(t *tes
 // their own --decision, never the sdd-attempt vocabulary T-9 guards
 // against.
 func TestNewGovernanceGateQuestionChoicesCarryRunnableGateRecordInvocations(t *testing.T) {
+	t.Parallel()
 	gate := kickoff.GateState{Key: kickoff.GateDesign, Status: "pending"}
 	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec)
 	if err != nil {
@@ -402,6 +413,7 @@ func TestNewGovernanceGateQuestionChoicesCarryRunnableGateRecordInvocations(t *t
 // orchestrator's third required case: the off path never decides the gate,
 // it only re-enters through native SDD status.
 func TestNewGovernanceGateQuestionOffPathReentersNativeStatus(t *testing.T) {
+	t.Parallel()
 	gate := kickoff.GateState{Key: kickoff.GateTasks, Status: "pending"}
 	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec)
 	if err != nil {
@@ -419,6 +431,7 @@ func TestNewGovernanceGateQuestionOffPathReentersNativeStatus(t *testing.T) {
 // the constructor recognises a role-apply:<role> gate the same way
 // gateCriteria does, rather than only the four fixed keys.
 func TestNewGovernanceGateQuestionUsesRoleApplyCriteriaForRoleApplyGate(t *testing.T) {
+	t.Parallel()
 	gate := kickoff.GateState{Key: kickoff.RoleApplyGate("backend"), Blocks: "backend", Status: "pending"}
 	result, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{Tasks: []string{"openspec/changes/inc-99/tasks.backend.md"}}, ArtifactStoreHybrid)
 	if err != nil {
@@ -437,6 +450,7 @@ func TestNewGovernanceGateQuestionUsesRoleApplyCriteriaForRoleApplyGate(t *testi
 // that gateCriteria cannot resolve any lenses for must never produce a
 // malformed envelope with empty Criteria -- it must fail loudly instead.
 func TestNewGovernanceGateQuestionRejectsUnrecognisedGateKey(t *testing.T) {
+	t.Parallel()
 	gate := kickoff.GateState{Key: kickoff.GateKey("unrecognised-gate"), Status: "pending"}
 	if _, err := newGovernanceGateQuestion("inc-99-example", "/repo", gate, ArtifactPaths{}, ArtifactStoreOpenSpec); err == nil {
 		t.Fatal("newGovernanceGateQuestion() error = nil, want a named error for a gate key gateCriteria cannot resolve")
@@ -462,6 +476,7 @@ func gateStateOf(t *testing.T, status Status, key kickoff.GateKey) kickoff.GateS
 // abre, un rechazo guarda la huella de proposal.md y se reabre al cambiar ese
 // fichero. Con delta, la compuerta juzga las specs como hasta ahora.
 func TestGovernanceSpecGateBugWithoutDelta(t *testing.T) {
+	t.Parallel()
 	t.Run("bug sin delta", func(t *testing.T) {
 		root := t.TempDir()
 		changeRoot := seedBugChange(t, root, "bug-gate", "# Propuesta\n\n"+bugReportOK, "- [x] 1.1 Corregir\n")

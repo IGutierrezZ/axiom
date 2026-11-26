@@ -32,6 +32,7 @@ Segundo párrafo.
 `
 
 func TestParseDeltaWithEntries(t *testing.T) {
+	t.Parallel()
 	forEachVariant(t, func(t *testing.T, v byteVariant) {
 		delta, err := ParseDelta(v.apply(contextDeltaExample))
 		if err != nil {
@@ -66,6 +67,7 @@ func TestParseDeltaWithEntries(t *testing.T) {
 }
 
 func TestParseDeltaNoImpact(t *testing.T) {
+	t.Parallel()
 	forEachVariant(t, func(t *testing.T, v byteVariant) {
 		delta, err := ParseDelta(v.apply("# Delta de contexto: inc-99-ejemplo\n\nSin impacto: el cambio solo corrige una errata en un mensaje de error\n"))
 		if err != nil {
@@ -81,6 +83,7 @@ func TestParseDeltaNoImpact(t *testing.T) {
 }
 
 func TestParseDeltaFencesAreBodyNotStructure(t *testing.T) {
+	t.Parallel()
 	data := "## Entrada: context/A.md\n\n- Ancla: Uno\n- Acción: add\n- Motivo: ejemplo\n\n```markdown\n## Entrada: context/Falsa.md\n- Campo: no es un campo\nSin impacto: tampoco\n```\n\nCierre.\n"
 	delta, err := ParseDelta([]byte(data))
 	if err != nil {
@@ -95,6 +98,7 @@ func TestParseDeltaFencesAreBodyNotStructure(t *testing.T) {
 }
 
 func TestParseDeltaEntryWithoutBodyAndWithOtherHeadings(t *testing.T) {
+	t.Parallel()
 	data := "## Entrada: context/A.md\n- Ancla: Uno\n- Acción: add\n- Motivo: sin línea en blanco tras los campos\n## Entrada: context/B.md\n\n- Ancla: Dos\n- Acción: add\n- Motivo: m\n\n## Notas\n\nUn encabezado que no es una entrada forma parte del cuerpo.\n"
 	delta, err := ParseDelta([]byte(data))
 	if err != nil {
@@ -109,6 +113,7 @@ func TestParseDeltaEntryWithoutBodyAndWithOtherHeadings(t *testing.T) {
 }
 
 func TestParseDeltaRejections(t *testing.T) {
+	t.Parallel()
 	entry := func(fields ...string) string {
 		return "## Entrada: context/A.md\n\n" + strings.Join(fields, "\n") + "\n"
 	}
@@ -165,6 +170,7 @@ func TestParseDeltaRejections(t *testing.T) {
 }
 
 func TestParseDeltaSameAnchorWithDifferentOrdinalIsNotARepeat(t *testing.T) {
+	t.Parallel()
 	data := "## Entrada: context/A.md\n\n- Ancla: Notas #1\n- Acción: modify\n- Motivo: a\n\n## Entrada: context/A.md\n\n- Ancla: Notas #2\n- Acción: modify\n- Motivo: b\n\n## Entrada: context/B.md\n\n- Ancla: Notas #1\n- Acción: modify\n- Motivo: c\n"
 	if _, err := ParseDelta([]byte(data)); err != nil {
 		t.Fatalf("un ordinal distinto, o un documento distinto, no repite el par: %v", err)
@@ -172,6 +178,7 @@ func TestParseDeltaSameAnchorWithDifferentOrdinalIsNotARepeat(t *testing.T) {
 }
 
 func TestParseDeltaReportsEveryProblem(t *testing.T) {
+	t.Parallel()
 	data := "## Entrada: context/A.md\n\n- Ancla: Uno\n- Acción: replace\n\n## Entrada: context/B.md\n\n- Ancla: Dos\n- Acción: add\n- Motivo: m\n- Extra: x\n"
 	_, err := ParseDelta([]byte(data))
 	var parseErr *DeltaError

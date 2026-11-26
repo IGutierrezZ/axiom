@@ -110,6 +110,7 @@ func TestResolveRelaunchExecutable(t *testing.T) {
 }
 
 func TestRelaunchArgs(t *testing.T) {
+	t.Parallel()
 	got := relaunchArgs("/work/space", 8123)
 	want := []string{"ui", "--path", "/work/space", "--port", "8123", "--no-browser", "--post-update-sync"}
 	if !reflect.DeepEqual(got, want) {
@@ -199,6 +200,7 @@ func TestUpdateJob_ExitsOnlyAfterTheLiveCheckWindow(t *testing.T) {
 }
 
 func TestManualRelaunchHintKeepsWindowsPathsCopyable(t *testing.T) {
+	t.Parallel()
 	got := manualRelaunchHint(`C:\Users\yo\mi proyecto`)
 	if want := `axiom ui --path "C:\Users\yo\mi proyecto"`; got != want {
 		t.Fatalf("hint = %s, quiero %s", got, want)

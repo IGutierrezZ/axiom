@@ -69,6 +69,7 @@ func resolveTwoRoleChange(t *testing.T, name string, mutate func(changeRoot stri
 }
 
 func TestVerifyBlockedWhileARoleHasNoApprovedRoleApplyGate(t *testing.T) {
+	t.Parallel()
 	status := resolveTwoRoleChange(t, "two-roles-open", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
 	})
@@ -82,6 +83,7 @@ func TestVerifyBlockedWhileARoleHasNoApprovedRoleApplyGate(t *testing.T) {
 }
 
 func TestVerifyReadyOnceEveryRoleApprovedWithoutAHandoffFile(t *testing.T) {
+	t.Parallel()
 	status := resolveTwoRoleChange(t, "two-roles-closed", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"), kickoff.RoleApplyGate("web"))
 	})
@@ -96,6 +98,7 @@ func TestVerifyReadyOnceEveryRoleApprovedWithoutAHandoffFile(t *testing.T) {
 }
 
 func TestVerifyStaysBlockedWhenARoleApplyGateIsRejected(t *testing.T) {
+	t.Parallel()
 	status := resolveTwoRoleChange(t, "two-roles-rejected", func(changeRoot string) {
 		approveGates(t, changeRoot, kickoff.RoleApplyGate("core"))
 		rejectGate(t, changeRoot, kickoff.RoleApplyGate("web"))
@@ -108,6 +111,7 @@ func TestVerifyStaysBlockedWhenARoleApplyGateIsRejected(t *testing.T) {
 // A single role or a continuous seal keeps the baseline untouched, whatever
 // handoff_policy says.
 func TestVerifyKeepsBaselineForSingleRoleAndContinuous(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := seedReadyChange(t, root, "solo-per-checkpoint", "- [x] 1.1 Wire routes\n")
 	sealPerCheckpointFullstackKickoff(t, changeRoot, "solo-per-checkpoint", kickoff.ExecutionCheckpointed)
@@ -134,6 +138,7 @@ func TestVerifyKeepsBaselineForSingleRoleAndContinuous(t *testing.T) {
 
 // REQ-26.9: per_checkpoint and none produce the same result.
 func TestVerifyDependencyIgnoresHandoffPolicy(t *testing.T) {
+	t.Parallel()
 	build := func(policy kickoff.HandoffPolicy, webApproved bool) *Governance {
 		webStatus := "pending"
 		if webApproved {

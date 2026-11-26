@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // scratchRoot es la carpeta temporal de todo el binario de pruebas: aloja el HOME
@@ -16,41 +18,21 @@ var scratchRoot string
 
 // TestMain deja a los procesos git de las pruebas sin acceso a la configuración
 // del usuario, con un autor fijo y sin red. Se fija una vez para todo el binario
-// de pruebas, de modo que las pruebas con git puedan ejecutarse en paralelo.
+// de pruebas (testenv.IsolateGit), de modo que las pruebas con git puedan
+// ejecutarse en paralelo. Siguen en serie las que cambian de directorio (t.Chdir)
+// o sustituyen una variable global (now con fixedClock, renameFile).
 func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }
 
 func runTests(m *testing.M) int {
-	root, err := os.MkdirTemp("", "techcontext-pruebas-*")
+	root, cleanup, err := testenv.IsolateGit("techcontext")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "techcontext: crear la carpeta temporal de las pruebas: %v\n", err)
+		fmt.Fprintf(os.Stderr, "techcontext: %v\n", err)
 		return 1
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer cleanup()
 	scratchRoot = root
-
-	home := filepath.Join(root, "home")
-	if err := os.MkdirAll(home, 0o755); err != nil {
-		fmt.Fprintf(os.Stderr, "techcontext: crear el HOME aislado: %v\n", err)
-		return 1
-	}
-	for key, value := range map[string]string{
-		"HOME":                home,
-		"USERPROFILE":         home,
-		"GIT_CONFIG_GLOBAL":   filepath.Join(home, "gitconfig"),
-		"GIT_CONFIG_NOSYSTEM": "1",
-		"GIT_AUTHOR_NAME":     "Autor de Prueba",
-		"GIT_AUTHOR_EMAIL":    "autor@ejemplo.invalid",
-		"GIT_COMMITTER_NAME":  "Autor de Prueba",
-		"GIT_COMMITTER_EMAIL": "autor@ejemplo.invalid",
-		"GIT_TERMINAL_PROMPT": "0",
-	} {
-		if err := os.Setenv(key, value); err != nil {
-			fmt.Fprintf(os.Stderr, "techcontext: fijar %s: %v\n", key, err)
-			return 1
-		}
-	}
 	return m.Run()
 }
 

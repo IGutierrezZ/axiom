@@ -28,6 +28,7 @@ func resolveContinuousRoles(t *testing.T, name string, tasksByRole map[string]st
 }
 
 func TestContinuousMultiRoleProjectsRosterWithoutGates(t *testing.T) {
+	t.Parallel()
 	status, _, _ := resolveContinuousRoles(t, "roster", map[string]string{
 		"backend": "- [x] 1.1 Model\n- [ ] 1.2 Endpoint\n", "frontend": "- [ ] 1.1 Screen\n",
 	}, "backend", "frontend")
@@ -71,6 +72,7 @@ func TestContinuousMultiRoleProjectsRosterWithoutGates(t *testing.T) {
 // gate does not exist in continuous mode, so it cannot be missing (REQ-21.16
 // constrains gated changes only).
 func TestContinuousMultiRoleArchiveNotBlockedByIntegrationGate(t *testing.T) {
+	t.Parallel()
 	status, changeRoot, root := resolveContinuousRoles(t, "finished", map[string]string{
 		"backend": "- [x] 1.1 Endpoint\n", "frontend": "- [x] 1.1 Screen\n",
 	}, "backend", "frontend")
@@ -94,6 +96,7 @@ func TestContinuousMultiRoleArchiveNotBlockedByIntegrationGate(t *testing.T) {
 // verify (REQ-21.15). handoff.md is only written when the last role-apply
 // gate is approved, which a continuous change never has.
 func TestContinuousMultiRoleVerifyNotBlockedByMissingHandoff(t *testing.T) {
+	t.Parallel()
 	status, changeRoot, _ := resolveContinuousRoles(t, "no-handoff", map[string]string{
 		"backend": "- [x] 1.1 Endpoint\n", "frontend": "- [x] 1.1 Screen\n",
 	}, "backend", "frontend")
@@ -111,6 +114,7 @@ func TestContinuousMultiRoleVerifyNotBlockedByMissingHandoff(t *testing.T) {
 // A single fullstack role keeps projecting a one-role roster: a uniform
 // shape for every sealed change, with no gate side effect.
 func TestContinuousFullstackProjectsSingleRoleRosterWithoutGateEffects(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := seedReadyChange(t, root, "solo", "- [x] 1.1 Wire routes\n")
 	sealPerCheckpointFullstackKickoff(t, changeRoot, "solo", kickoff.ExecutionContinuous)
@@ -131,6 +135,7 @@ func TestContinuousFullstackProjectsSingleRoleRosterWithoutGateEffects(t *testin
 // governance that (hypothetically) carried open, approved or handoff-worthy
 // state is inert, because they check the execution style explicitly.
 func TestGateConsumersAreInertForContinuousGovernance(t *testing.T) {
+	t.Parallel()
 	continuous := &Governance{
 		Kickoff: kickoff.Kickoff{Config: kickoff.FlowConfig{
 			ExecutionStyle: kickoff.ExecutionContinuous, HandoffPolicy: kickoff.HandoffPerCheckpoint,

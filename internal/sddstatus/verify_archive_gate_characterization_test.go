@@ -64,6 +64,7 @@ func exactBlockedReasons(t *testing.T, label string, got, want []string) {
 // Verify and Archive blocked. Orthogonal to 62ce74b7 (research/verification
 // optionality never relaxes the propose/spec/design/tasks ordering).
 func TestCharacterization_PlanningArtifactsRouteBeforeVerify(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	const change = "characterization-no-artifacts"
 	mkdir(t, filepath.Join(root, "openspec", "changes", change))
@@ -104,6 +105,7 @@ func TestCharacterization_PlanningArtifactsRouteBeforeVerify(t *testing.T) {
 // cases, so this is not a local regression -- it is upstream's shipped
 // design, transcribed here.
 func TestCharacterization_TasksIncompleteBlocksVerifyAndArchive(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	const change = "characterization-tasks-incomplete"
 	seedReadyChange(t, root, change, "- [x] 1.1 Done\n- [ ] 1.2 Pending\n")
@@ -136,6 +138,7 @@ func TestCharacterization_TasksIncompleteBlocksVerifyAndArchive(t *testing.T) {
 // unchanged after 62ce74b7, so this scenario is stable across the whole
 // re-derivation, not just before it.
 func TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive(t *testing.T) {
+	t.Parallel()
 	root, outside := t.TempDir(), t.TempDir()
 	const change = "characterization-edit-authority"
 	tasks := "- [ ] Edit `" + filepath.ToSlash(filepath.Join(outside, "main.go")) + "`\n"
@@ -182,6 +185,7 @@ func TestCharacterization_EditAuthorityMissingBlocksApplyAndArchive(t *testing.T
 // path at all. Both sub-tests are transcribed from this package's real
 // output on 2026-09-20, immediately after re-deriving status.go.
 func TestCharacterization_PostF4OptionalVerificationNeverGatesArchive(t *testing.T) {
+	t.Parallel()
 	t.Run("no_report_at_all_still_reaches_archive", func(t *testing.T) {
 		root := t.TempDir()
 		const change = "characterization-no-report"

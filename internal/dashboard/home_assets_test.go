@@ -16,6 +16,7 @@ import (
 // indicadores y la caché con deduplicación se ejecutan de verdad.
 
 func TestHomeAssetsAreServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	for _, target := range []string{"/js/core/overview.js", "/js/screens/inicio.js", "/js/core/increment.js"} {
 		rr := getAsset(t, h, target)
@@ -32,6 +33,7 @@ func TestHomeAssetsAreServed(t *testing.T) {
 // La regla «necesita atención» se define una sola vez, en increment.js, y Inicio
 // la consume sin repetir las banderas del resumen.
 func TestHomeAttentionRuleIsDefinedOnce(t *testing.T) {
+	t.Parallel()
 	shared := readAsset(t, "js/core/increment.js")
 	if got := strings.Count(shared, "export function needsAttention("); got != 1 {
 		t.Errorf("increment.js define needsAttention %d veces, se esperaba 1", got)
@@ -60,6 +62,7 @@ func TestHomeAttentionRuleIsDefinedOnce(t *testing.T) {
 
 // D3: ni actividad reciente ni «Ver como» ni edades relativas inventadas.
 func TestHomeOmitsRecentActivityAndLens(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	start, end := strings.Index(html, `id="view-inicio"`), strings.Index(html, `id="view-incrementos"`)
 	if start < 0 || end < start {
@@ -81,6 +84,7 @@ func TestHomeOmitsRecentActivityAndLens(t *testing.T) {
 
 // Cada bloque pinta su carga, su vacío y su error; un fallo no vacía el resto.
 func TestHomeBlocksHaveLoadingEmptyAndErrorStates(t *testing.T) {
+	t.Parallel()
 	home := readAsset(t, "js/screens/inicio.js")
 	for _, marker := range []string{
 		"stateLoading(", "stateError(", "stateEmpty(", "data-action=\"retry\"",
@@ -115,6 +119,7 @@ func TestHomeBlocksHaveLoadingEmptyAndErrorStates(t *testing.T) {
 
 // Inicio: cada fila lleva la orden de agente copiable y ningún botón que ejecute fases.
 func TestHomeActionsAreCopyableCommands(t *testing.T) {
+	t.Parallel()
 	home := readAsset(t, "js/screens/inicio.js")
 	if !strings.Contains(home, "commandChip(nextCommand(inc))") {
 		t.Errorf("las filas de «Necesita atención» deben llevar la orden con commandChip(nextCommand(inc))")
@@ -135,6 +140,7 @@ func TestHomeActionsAreCopyableCommands(t *testing.T) {
 
 // Las insignias de la barra lateral llevan texto accesible y no se refrescan al navegar.
 func TestSidebarBadgesAreAccessibleAndCached(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	for _, id := range []string{`id="badge-incrementos"`, `id="badge-skills"`, `id="badge-ecosistema"`} {
 		if !strings.Contains(html, id) {
@@ -169,6 +175,7 @@ func TestSidebarBadgesAreAccessibleAndCached(t *testing.T) {
 
 // La caché reparte las fuentes y api() comparte los GET simultáneos.
 func TestHomeSharedCacheAndDedupe(t *testing.T) {
+	t.Parallel()
 	over := readAsset(t, "js/core/overview.js")
 	for _, route := range []string{
 		"/api/increments", "/api/ecosystem/doctor", "/api/workspace/specs/sync-status",
@@ -196,6 +203,7 @@ func TestHomeSharedCacheAndDedupe(t *testing.T) {
 
 // El CSS nuevo solo usa tokens y define los estados accesibles de Inicio.
 func TestHomeStylesUseTokensAndKeepStatesVisible(t *testing.T) {
+	t.Parallel()
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{
 		".kpi-link", ".home-grid", ".home-main", ".att-row", ".cmd-chip", ".flow-list", ".flow-seg.is-bug",
@@ -217,6 +225,7 @@ func TestHomeStylesUseTokensAndKeepStatesVisible(t *testing.T) {
 // Con Node se ejecutan de verdad: la regla de atención y su prioridad, los
 // indicadores, el resumen del doctor, la caché por fuente y la deduplicación.
 func TestHomeLogicRuntime(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite la prueba de ejecución de la lógica de Inicio")
