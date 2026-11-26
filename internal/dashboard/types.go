@@ -2,6 +2,7 @@ package dashboard
 
 import (
 	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests/marks"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 )
@@ -936,4 +937,55 @@ type ChangeGateActorDTO struct {
 	Decision   string `json:"decision"`
 	Actor      string `json:"actor"`
 	RecordedAt string `json:"recordedAt,omitempty"`
+}
+
+// WorkItemStartRequest es el cuerpo de `POST /api/integrations/start` (D-08): exactamente uno de Ref
+// (primer intento, ejecuta la fase 1) o Change (reintento sobre un staging existente, sin repetir la
+// fase 1). Mode responde a un `decision_required` de `ensure`.
+type WorkItemStartRequest struct {
+	Ref    string `json:"ref,omitempty"`
+	Change string `json:"change,omitempty"`
+	Intent string `json:"intent,omitempty"`
+	Type   string `json:"type,omitempty"`
+	Mode   string `json:"mode,omitempty"`
+}
+
+// WorkItemStartResponse es el alta correcta. Warnings reúne los avisos de las fases 1 y 2.
+type WorkItemStartResponse struct {
+	Success     bool     `json:"success"`
+	Name        string   `json:"name"`
+	Path        string   `json:"path"`
+	ExternalRef string   `json:"externalRef"`
+	Warnings    []string `json:"warnings"`
+}
+
+// WorkItemDiscardRequest es el cuerpo de `POST /api/integrations/start/discard`.
+type WorkItemDiscardRequest struct {
+	Change  string `json:"change"`
+	Confirm bool   `json:"confirm"`
+}
+
+// WorkItemDiscardResponse es el descarte correcto del staging.
+type WorkItemDiscardResponse struct {
+	Change   string   `json:"change"`
+	Status   string   `json:"status"`
+	Warnings []string `json:"warnings"`
+}
+
+// workItemErrorBody es el cuerpo de error del alta: código tipado, mensaje y continuación, la etapa
+// que falló (start, ensure, folder, adopt), el cambio derivado y, tras la fase 1, las acciones que la
+// interfaz ofrece (`retry`, `discard`). En `decision_required` lleva además la decisión de `ensure`.
+// Nada de lo que contiene deriva de un secreto ni de texto del work item.
+type workItemErrorBody struct {
+	Code         string           `json:"code"`
+	Error        string           `json:"error"`
+	Continuation string           `json:"continuation,omitempty"`
+	Stage        string           `json:"stage,omitempty"`
+	Change       string           `json:"change,omitempty"`
+	Reason       string           `json:"reason,omitempty"`
+	Actions      []string         `json:"actions,omitempty"`
+	EnvVar       string           `json:"envVar,omitempty"`
+	Status       string           `json:"status,omitempty"`
+	StatusLabel  string           `json:"statusLabel,omitempty"`
+	Decision     *branch.Decision `json:"decision,omitempty"`
 }

@@ -1104,7 +1104,7 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 
 	// RF-WEB-09: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
 	// escribir nada; el escritor guardado escribe en el planning home que devuelve.
-	planningHome, err := s.ensureIncrementBranch(name, req.Mode)
+	planningHome, err := s.ensureIncrementBranch(context.Background(), name, req.Mode)
 	if err != nil {
 		return nil, err
 	}

@@ -41,6 +41,15 @@ type fakeGateway struct {
 	discover func(ctx context.Context, cwd, plugin string) (integrations.Discovery, error)
 	applic   cli.WorkItemApplicability
 
+	// Alta desde un work item (6.1): cada paso delega en una función sustituible y cuenta las llamadas.
+	startWI func(ctx context.Context, cwd, ref string) (cli.WorkItemStartOutcome, error)
+	staged  func(cwd, change string) (cli.WorkItemStagedOutcome, error)
+	adopt   func(ctx context.Context, cwd, change string) (cli.WorkItemAdoptOutcome, error)
+	discard func(cwd, change string) (cli.WorkItemDiscardOutcome, error)
+
+	starts, stageds, adopts, discards atomic.Int32
+	startCwd, adoptCwd                atomic.Value
+
 	connects, discovers atomic.Int32
 	lastCwd             atomic.Value
 }
@@ -878,4 +887,38 @@ func TestIntegrationsAPINeverEchoesTheSecret(t *testing.T) {
 	if got := responses["POST connect"]; got.Code != http.StatusBadGateway || !strings.Contains(got.body(), "[redactado]") {
 		t.Errorf("el error del plugin debe salir redactado: %d %s", got.Code, got.body())
 	}
+}
+
+func (g *fakeGateway) StartWorkItem(ctx context.Context, cwd, ref string) (cli.WorkItemStartOutcome, error) {
+	g.starts.Add(1)
+	g.startCwd.Store(cwd)
+	if g.startWI != nil {
+		return g.startWI(ctx, cwd, ref)
+	}
+	return cli.WorkItemStartOutcome{Change: "us-12-alta", ExternalRef: "fk:12", Status: "staged"}, nil
+}
+
+func (g *fakeGateway) WorkItemStaged(cwd, change string) (cli.WorkItemStagedOutcome, error) {
+	g.stageds.Add(1)
+	if g.staged != nil {
+		return g.staged(cwd, change)
+	}
+	return cli.WorkItemStagedOutcome{Change: change, ExternalRef: "fk:12"}, nil
+}
+
+func (g *fakeGateway) AdoptWorkItem(ctx context.Context, cwd, change string) (cli.WorkItemAdoptOutcome, error) {
+	g.adopts.Add(1)
+	g.adoptCwd.Store(cwd)
+	if g.adopt != nil {
+		return g.adopt(ctx, cwd, change)
+	}
+	return cli.WorkItemAdoptOutcome{Change: change, Status: "adopted"}, nil
+}
+
+func (g *fakeGateway) DiscardWorkItem(cwd, change string) (cli.WorkItemDiscardOutcome, error) {
+	g.discards.Add(1)
+	if g.discard != nil {
+		return g.discard(cwd, change)
+	}
+	return cli.WorkItemDiscardOutcome{Change: change, Status: "discarded"}, nil
 }

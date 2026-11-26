@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"mime"
 	"net/http"
@@ -20,6 +21,10 @@ import (
 const (
 	// maxIntegrationsBody acota el cuerpo de las POST de integraciones: un PAT y unos nombres.
 	maxIntegrationsBody = 8 << 10
+
+	// maxWorkItemStartBody acota el cuerpo de las POST del alta desde un work item: una referencia y
+	// una intención de hasta 4 KiB.
+	maxWorkItemStartBody = 16 << 10
 
 	// defaultIntegrationBudget es el plazo de connect y discover; la escritura se amplía 5 s más.
 	defaultIntegrationBudget = 45 * time.Second
@@ -55,6 +60,11 @@ func (s *Server) requireIntegrationsMethod(w http.ResponseWriter, r *http.Reques
 // el 400 que corresponda y devuelve false si algo falla; los mensajes son fijos y no repiten el
 // contenido recibido.
 func (s *Server) decodeIntegrationsBody(w http.ResponseWriter, r *http.Request, dst any) bool {
+	return s.decodeIntegrationsBodyLimit(w, r, dst, maxIntegrationsBody)
+}
+
+// decodeIntegrationsBodyLimit es decodeIntegrationsBody con un límite de cuerpo propio.
+func (s *Server) decodeIntegrationsBodyLimit(w http.ResponseWriter, r *http.Request, dst any, limit int64) bool {
 	invalid := func(message string) bool {
 		s.respondIntegrationsFailure(w, http.StatusBadRequest, "invalid_request", message)
 		return false
@@ -65,12 +75,12 @@ func (s *Server) decodeIntegrationsBody(w http.ResponseWriter, r *http.Request, 
 	if mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mediaType != "application/json" {
 		return invalid("el cuerpo debe ser JSON: envía Content-Type: application/json")
 	}
-	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxIntegrationsBody))
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(dst); err != nil {
 		var tooBig *http.MaxBytesError
 		if errors.As(err, &tooBig) {
-			return invalid("el cuerpo supera el límite de 8 KiB")
+			return invalid(fmt.Sprintf("el cuerpo supera el límite de %d KiB", limit>>10))
 		}
 		return invalid("JSON inválido: revisa los campos del cuerpo")
 	}
@@ -241,4 +251,68 @@ func (s *Server) handleChangeIntegrations(w http.ResponseWriter, r *http.Request
 		return
 	}
 	s.respondIntegrations(w, http.StatusOK, dto)
+}
+
+// defaultWorkItemBudget es el plazo del alta desde un work item: fase 1 (tracker), `ensure`,
+// carpeta y fase 2 (tracker) dentro de una sola petición.
+const defaultWorkItemBudget = 120 * time.Second
+
+// respondWorkItemFailure escribe el fallo tipado del alta, siempre `no-store`.
+func (s *Server) respondWorkItemFailure(w http.ResponseWriter, f *workItemFailure) {
+	s.respondIntegrations(w, f.Status, f.Body)
+}
+
+// handleWorkItemStart sirve `POST /api/integrations/start`: el alta de un cambio desde un work item
+// (D-08). Un único alta a la vez (cerrojo propio) y plazo de 120 s; el dashboard no sella kickoff.yaml.
+func (s *Server) handleWorkItemStart(w http.ResponseWriter, r *http.Request) {
+	if !s.requireIntegrationsMethod(w, r, http.MethodPost) {
+		return
+	}
+	var req WorkItemStartRequest
+	if !s.decodeIntegrationsBodyLimit(w, r, &req, maxWorkItemStartBody) {
+		return
+	}
+	if !s.workItemLock.TryLock() {
+		s.integrationsBusy(w)
+		return
+	}
+	defer s.workItemLock.Unlock()
+	ctx, cancel := s.integrationsContext(w, r, s.workItemBudget)
+	defer cancel()
+	resp, fail := s.service.StartFromWorkItem(ctx, req)
+	if fail != nil {
+		s.respondWorkItemFailure(w, fail)
+		return
+	}
+	s.respondIntegrations(w, http.StatusOK, resp)
+}
+
+// handleWorkItemDiscard sirve `POST /api/integrations/start/discard`: retira solo el staging de un
+// alta fallida. Exige `confirm: true` y nunca se ejecuta de forma automática.
+func (s *Server) handleWorkItemDiscard(w http.ResponseWriter, r *http.Request) {
+	if !s.requireIntegrationsMethod(w, r, http.MethodPost) {
+		return
+	}
+	var req WorkItemDiscardRequest
+	if !s.decodeIntegrationsBodyLimit(w, r, &req, maxWorkItemStartBody) {
+		return
+	}
+	if !req.Confirm {
+		s.respondIntegrationsFailure(w, http.StatusBadRequest, "invalid_request",
+			"falta la confirmación: descartar retira el work item preparado y habrá que volver a darlo; envía confirm: true")
+		return
+	}
+	if !s.workItemLock.TryLock() {
+		s.integrationsBusy(w)
+		return
+	}
+	defer s.workItemLock.Unlock()
+	ctx, cancel := s.integrationsContext(w, r, s.workItemBudget)
+	defer cancel()
+	resp, fail := s.service.DiscardWorkItemStart(ctx, req)
+	if fail != nil {
+		s.respondWorkItemFailure(w, fail)
+		return
+	}
+	s.respondIntegrations(w, http.StatusOK, resp)
 }

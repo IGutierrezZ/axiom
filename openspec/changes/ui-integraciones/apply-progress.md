@@ -11,6 +11,7 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 - [x] 3.2 Puerto y rutas del dashboard `/api/integrations*` (D-05, D-06).
 - [x] 4.1 Pantalla «Integraciones» genérica (D-09 cliente, D-10).
 - [x] 5.1 `OutboxView` y pestaña «Integraciones» del cambio (D-07, D-09).
+- [x] 6.1 Alta desde un work item: servicio y rutas (D-08).
 
 ## Evidencia de la unidad 1.1
 
@@ -108,3 +109,18 @@ Notas de cobertura: hueco 9, el título del work item NO se muestra (`context/wo
 Decisiones: la ruta es `GET /api/integrations/change?name=` con `no-store`, clasificada en el canario con un cambio `x` que ya tiene outbox; `safeExternalURL` (Go) vive en `service_change_integrations.go` y `TestSafeExternalURL` en `change_integrations_test.go` (6.1 la reutiliza). Los errores parciales son frases fijas (sin rutas ni texto del YAML). Las decisiones de puerta se listan todas, con tope de 100. Nombre inválido: 400 `invalid_change_name`; no localizado: 404 `change_not_found`.
 
 Riesgos: la pestaña no se ha visto en un navegador real. `deadcode-ratchet` avisa de que una entrada de la línea base ya es alcanzable (previa a esta tarea; no se actualiza la línea base aquí).
+
+## Evidencia de la unidad 6.1
+
+| Evidencia | Valor |
+|---|---|
+| RED | `integrations_gateway_test.go` (`WorkItemRefusal` indefinido: `go vet ./internal/cli` no compilaba) y `workitem_start_test.go` (`Server.workItemBudget` y el puerto sin métodos de work item: `go vet ./internal/dashboard` no compilaba) escritos antes del código. Una primera pasada de GREEN fallaba 2 pruebas por mi arnés (el estado del hub se aislaba después de preparar el proyecto); corregido en la prueba. |
+| GREEN | `go test ./internal/dashboard -run 'TestWorkItemStart\|TestSafeExternalURL\|TestIntegrationsAPI\|Canary\|CreateIncrement\|Increment' -count=1`: ok (91 s). `go test ./internal/cli -run 'TestIntegrationsGateway\|TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign\|TestChangeStart' -count=1`: ok. `go test ./internal/integrations -run TestImportsDirection -count=1`: ok. `go vet ./internal/dashboard ./internal/cli ./cmd/axiom`: limpio. |
+| Trinquete de código muerto | `bash scripts/deadcode-ratchet.sh`: «no new unreachable functions» (aviso previo de una entrada de la línea base ya alcanzable). |
+| Arnés | `handler()` con `Host: 127.0.0.1`, git real con `ensure` real (`embeddedProject`), doble de `IntegrationsGateway` para las fases 1 y 2 y servidor doble de ADO (`adotest`) en las pruebas de la pasarela. Sin ADO real ni binarios. |
+
+Notas de cobertura resueltas: hueco 4 (reanudar con el mismo work item o por `change` reutiliza la carpeta del intento fallido y no pisa un `proposal.md` existente; un cambio activo o archivado ajeno con el mismo nombre derivado responde 409 `change_exists`, retira el staging recién creado por esa petición y no crea rama), hueco 5 (`work_items_not_applicable` 422 sin plugin aplicable y `secret_missing` 422 sin PAT, sin llamar al tracker ni crear nada; 503 sin pasarela), hueco 7 (`ensureIncrementBranch(ctx, …)` recibe el contexto con plazo de la petición; el alta manual sigue con `context.Background()`), hueco 8 (`change_not_prepared` conserva `reason` y su mensaje propio: `head_other_branch`, `folder_missing`, `lane_mismatch`, `record_unreadable`; la pasarela lo prueba con `no_record` real).
+
+Desviaciones: (1) los tipos y métodos de work item de la pasarela viven en `internal/cli/integrations_gateway_workitem.go` (el diseño decía `integrations_gateway.go`), sin literales de rechazo nuevos: reutilizan `changeStartRefusalText`. (2) `proposal.md` se escribe antes de la fase 2 (el diseño la ponía después): así un reintento por `change` nunca depende de un staging ya retirado y la fase 2 solo exige la carpeta. (3) `WorkItemStaged` devuelve `{Change, ExternalRef}` y lee el staging con `changestart.WorkItemFacts`; el dashboard valida el nombre con `changestart.ValidChangeName` directamente. (4) Códigos añadidos a D-08: `change_exists` (409), `invalid_change_name` (422), `ensure_failed` y `folder_write_failed` (500), `work_items_not_applicable` (422). `Fields` del rechazo expone solo `reason`, `type`, `tag`, `change`, `lane` y `record_lane` (nunca `detail`). (5) Un único `workItemLock` para alta y descarte; presupuesto 120 s en `Server.workItemBudget`.
+
+Riesgos: la ruta de multirepo usa `filepath.Dir(planningHome)` como `cwd` de la fase 2, según el diseño, sin prueba con git real en multirepo; `already_adopted` reutiliza la carpeta y la fase 2 es idempotente, pero no se ejercita contra un cambio ya adoptado de verdad.

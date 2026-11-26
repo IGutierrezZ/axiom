@@ -54,12 +54,5 @@ func (*IntegrationsGateway) WorkItemApplicability(cwd string) WorkItemApplicabil
 	if app.tracker != nil {
 		return WorkItemApplicability{Applicable: true, Plugin: app.tracker.PluginID(), RefAlias: app.tracker.RefAlias()}
 	}
-	reason := "no hay ningún plugin de integración activo: configúralo en la pantalla de integraciones"
-	switch {
-	case len(app.warnings) > 0:
-		reason = strings.Join(app.warnings, "; ")
-	case app.portUnsupported:
-		reason = "el plugin activo no admite work items: elige un plugin que los admita en la pantalla de integraciones"
-	}
-	return WorkItemApplicability{Reason: reason}
+	return WorkItemApplicability{Reason: workItemReason(app)}
 }

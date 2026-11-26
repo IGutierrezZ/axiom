@@ -15,6 +15,13 @@ type IntegrationsGateway interface {
 	Connect(ctx context.Context, cwd, pluginID, user string) (cli.IntegrationConnectOutcome, error)
 	Discover(ctx context.Context, cwd, pluginID string) (integrations.Discovery, error)
 	WorkItemApplicability(cwd string) cli.WorkItemApplicability
+
+	// Alta desde un work item (D-08): fase 1, staging pendiente, fase 2 y descarte. Los rechazos
+	// tipados salen como *cli.WorkItemRefusal.
+	StartWorkItem(ctx context.Context, cwd, ref string) (cli.WorkItemStartOutcome, error)
+	WorkItemStaged(cwd, change string) (cli.WorkItemStagedOutcome, error)
+	AdoptWorkItem(ctx context.Context, cwd, change string) (cli.WorkItemAdoptOutcome, error)
+	DiscardWorkItem(cwd, change string) (cli.WorkItemDiscardOutcome, error)
 }
 
 // SetIntegrationsGateway inyecta la pasarela de integraciones. Sin ella, `connect` y `discover`

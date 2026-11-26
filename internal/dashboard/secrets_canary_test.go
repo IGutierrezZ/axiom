@@ -53,6 +53,8 @@ var excludedRoutes = map[string]string{
 	"/api/integrations/secret/delete":     "mutación (POST): elimina el PAT del almacén; responde solo la procedencia (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
 	"/api/integrations/connect":           "mutación (POST): resuelve y persiste la identidad por la pasarela; errores redactados (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
 	"/api/integrations/discover":          "POST bajo demanda: devuelve el descubrimiento del plugin, sin secretos (TestIntegrationsAPINeverEchoesTheSecret lo ejercita con centinela)",
+	"/api/integrations/start":             "mutación (POST): alta desde un work item (fase 1, ensure, carpeta, fase 2); errores redactados y nunca copia texto del work item (TestWorkItemStartGatewayErrorsAreRedacted lo ejercita con centinela)",
+	"/api/integrations/start/discard":     "mutación (POST): retira solo el staging de un alta fallida, con confirm obligatorio; no lee secretos (TestWorkItemDiscardRequiresConfirmAndOnlyDiscardsTheStaging)",
 	"/api/fs/directories":                 "exploración de directorios del sistema de ficheros",
 	"/api/fs/native-picker":               "selector nativo de carpetas del sistema",
 	"/api/workspace/specs/sync-status":    "estado de git del repositorio de specs; no lee integraciones",

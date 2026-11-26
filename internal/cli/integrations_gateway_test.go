@@ -183,3 +183,136 @@ func TestIntegrationsGatewayWorkItemApplicability(t *testing.T) {
 		})
 	}
 }
+
+// wantWorkItemRefusal exige un *WorkItemRefusal con el código dado, un mensaje y una continuación
+// y lo devuelve.
+func wantWorkItemRefusal(t *testing.T, err error, code string) *WorkItemRefusal {
+	t.Helper()
+	var refusal *WorkItemRefusal
+	if !errors.As(err, &refusal) {
+		t.Fatalf("err = %v, se esperaba un *WorkItemRefusal %s", err, code)
+	}
+	if refusal.Code != code || strings.TrimSpace(refusal.Message) == "" || refusal.Error() != refusal.Message {
+		t.Fatalf("rechazo = %+v, se esperaba el código %s con mensaje", refusal, code)
+	}
+	return refusal
+}
+
+func TestIntegrationsGatewayWorkItemStartStagesAndResumes(t *testing.T) {
+	e := newStartEnv(t)
+	e.seedStory(2525, "Alta de usuarios", "New")
+	gw := NewIntegrationsGateway()
+
+	first, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	if err != nil {
+		t.Fatalf("fase 1: %v", err)
+	}
+	if first.Status != "staged" || first.Change != "US-2525-alta-de-usuarios" || first.ExternalRef != "ado:2525" {
+		t.Errorf("primer arranque = %+v", first)
+	}
+	// Volver a dar el mismo work item reanuda: la fase 1 es idempotente.
+	again, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	if err != nil || again.Status != "already_staged" || again.Change != first.Change {
+		t.Fatalf("reanudación = %+v, %v", again, err)
+	}
+	staged, err := gw.WorkItemStaged(e.root, first.Change)
+	if err != nil || staged.Change != first.Change || staged.ExternalRef != "ado:2525" {
+		t.Fatalf("staging = %+v, %v", staged, err)
+	}
+}
+
+func TestIntegrationsGatewayWorkItemStartRefusalsAreTypedAndLeaveNoTrace(t *testing.T) {
+	e := newStartEnv(t)
+	e.seedStory(2525, "Alta de usuarios", "Hecho")
+	gw := NewIntegrationsGateway()
+	before := snapshotFiles(t, e.root)
+
+	_, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	closed := wantWorkItemRefusal(t, err, "work_item_closed")
+	if strings.TrimSpace(closed.Continuation) == "" {
+		t.Errorf("el rechazo debe llevar continuación: %+v", closed)
+	}
+	_, err = gw.StartWorkItem(context.Background(), e.root, "no-es-un-work-item")
+	wantWorkItemRefusal(t, err, "work_item_reference_invalid")
+	_, err = gw.StartWorkItem(context.Background(), e.root, "9999")
+	wantWorkItemRefusal(t, err, "work_item_not_found")
+
+	for path := range snapshotFiles(t, e.root) {
+		if _, existed := before[path]; !existed && !strings.Contains(filepath.ToSlash(path), "change-start/v1/.locks/") {
+			t.Errorf("un rechazo de la fase 1 no deja rastro: %s", path)
+		}
+	}
+}
+
+func TestIntegrationsGatewayWorkItemWithoutApplicablePluginIsTyped(t *testing.T) {
+	e := newStartEnv(t)
+	writeCLIFixture(t, filepath.Join(e.root, "axiom.yaml"), integrationsBase)
+	gw := NewIntegrationsGateway()
+
+	_, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	wantWorkItemRefusal(t, err, "work_items_not_applicable")
+	_, err = gw.AdoptWorkItem(context.Background(), e.root, "x")
+	wantWorkItemRefusal(t, err, "work_items_not_applicable")
+	_, err = gw.DiscardWorkItem(e.root, "x")
+	wantWorkItemRefusal(t, err, "work_items_not_applicable")
+}
+
+func TestIntegrationsGatewayWorkItemStagedAndDiscard(t *testing.T) {
+	e := newStartEnv(t)
+	e.seedStory(2525, "Alta de usuarios", "New")
+	gw := NewIntegrationsGateway()
+
+	_, err := gw.WorkItemStaged(e.root, "US-2525-alta-de-usuarios")
+	wantWorkItemRefusal(t, err, "staging_not_found")
+	for _, bad := range []string{"", "../x", "a/b", "archive", filepath.Join(e.root, "x")} {
+		_, err = gw.WorkItemStaged(e.root, bad)
+		wantWorkItemRefusal(t, err, "usage_invalid")
+		_, err = gw.DiscardWorkItem(e.root, bad)
+		wantWorkItemRefusal(t, err, "usage_invalid")
+	}
+
+	start, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := gw.DiscardWorkItem(e.root, start.Change)
+	if err != nil || out.Status != "discarded" || out.Change != start.Change {
+		t.Fatalf("descarte = %+v, %v", out, err)
+	}
+	if _, err := gw.WorkItemStaged(e.root, start.Change); err == nil {
+		t.Error("tras descartar no debe quedar staging")
+	}
+}
+
+// El motivo de change_not_prepared llega en Fields["reason"] y el mensaje propio del motivo (hueco 8).
+func TestIntegrationsGatewayWorkItemAdoptRefusalKeepsItsReason(t *testing.T) {
+	e := newStartEnv(t)
+	e.seedStory(2525, "Alta de usuarios", "New")
+	gw := NewIntegrationsGateway()
+	start, err := gw.StartWorkItem(context.Background(), e.root, "2525")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = gw.AdoptWorkItem(context.Background(), e.root, start.Change)
+
+	refusal := wantWorkItemRefusal(t, err, "change_not_prepared")
+	if refusal.Fields["reason"] != "no_record" {
+		t.Errorf("reason = %q, se esperaba no_record: %+v", refusal.Fields["reason"], refusal)
+	}
+	if !strings.Contains(refusal.Continuation, "axiom branch ensure") {
+		t.Errorf("la continuación debe llevar el ensure del cambio: %q", refusal.Continuation)
+	}
+	if _, ok := refusal.Fields["detail"]; ok {
+		t.Errorf("Fields no debe exponer detail: %+v", refusal.Fields)
+	}
+}
+
+func TestIntegrationsGatewayWorkItemAdoptWithoutStagingIsTyped(t *testing.T) {
+	e := newStartEnv(t)
+	gw := NewIntegrationsGateway()
+
+	_, err := gw.AdoptWorkItem(context.Background(), e.root, "US-1-sin-staging")
+
+	wantWorkItemRefusal(t, err, "change_not_prepared")
+}

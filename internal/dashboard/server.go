@@ -59,6 +59,11 @@ type Server struct {
 	// 409 integration_busy. integrationBudget es su plazo; las pruebas lo reducen.
 	integrationsLock  sync.Mutex
 	integrationBudget time.Duration
+
+	// workItemLock es el cerrojo propio del alta desde un work item y de su descarte (D-08);
+	// workItemBudget es su plazo (las pruebas lo reducen).
+	workItemLock   sync.Mutex
+	workItemBudget time.Duration
 }
 
 // NewServer inicializa el servidor HTTP y configura las rutas de la API y assets estáticos.
@@ -67,6 +72,7 @@ func NewServer(svc *Service) *Server {
 		service:           svc,
 		mux:               http.NewServeMux(),
 		integrationBudget: defaultIntegrationBudget,
+		workItemBudget:    defaultWorkItemBudget,
 	}
 	svc.restartFn = s.relaunchAfterUpdate
 	s.registerRoutes()
@@ -106,6 +112,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/integrations/connect", s.handleIntegrationsConnect)
 	s.mux.HandleFunc("/api/integrations/discover", s.handleIntegrationsDiscover)
 	s.mux.HandleFunc("/api/integrations/change", s.handleChangeIntegrations)
+	s.mux.HandleFunc("/api/integrations/start", s.handleWorkItemStart)
+	s.mux.HandleFunc("/api/integrations/start/discard", s.handleWorkItemDiscard)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)
