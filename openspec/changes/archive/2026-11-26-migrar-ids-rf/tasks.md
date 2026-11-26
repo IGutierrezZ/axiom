@@ -44,14 +44,14 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
 ## Fase 2: Resolución de IDs heredados en `axiom trace` (commit b)
 
 - [x] 2.1 RED: crear `internal/legacyid/legacyid_test.go` con tabla sobre `fstest.MapFS`: fichero ausente (`nil, nil`); ilegible; YAML inválido; campo desconocido; esquema desconocido; ID nuevo repetido o inválido; antiguo repetido en una capacidad (y permitido en dos); entrada sin `old` ni `title`; capacidad vacía; resolutor (`Aliases` en ambos sentidos, `InCapability`, `Capabilities`, `Legacy`, `Known`); token `REQ-27.2b` como clave antigua (consulta exacta, hueco 7).
-  - Cubre: prov:TRC:1, prov:TRC:2
+  - Cubre: RF-TRC-16, RF-TRC-17
   - Evidencia: RED observado, `go test ./internal/legacyid` no compila (`undefined: FileName`, `Map`, `Load`, `CodeUnreadable`...); la tabla cubre ausente, ilegible, vacío, YAML inválido, campo desconocido, esquema desconocido/ausente, nuevo repetido/inválido/vacío, antiguo repetido (en la capacidad y en la misma entrada), sin `old` ni `title`, capacidad vacía, y el resolutor.
 - [x] 2.2 RED: añadir en `internal/legacyid/legacyid_test.go` los casos de patrón (hueco 4): con un mapa cuyos IDs nuevos son `RF-<DOM>-<NN>` y el patrón por defecto `REQ-<n>.<m>`, `Load` no falla por la forma de los IDs nuevos (se validan con el patrón declarado del mapa o con `RF-<DOM>-<NN>`, nunca exigiendo `REQ-<n>.<m>`); y precedencia fijada: un mapa inválido gana siempre sobre un ID de consulta inválido.
-  - Cubre: prov:TRC:2
+  - Cubre: RF-TRC-17
   - Evidencia: RED en el mismo fallo de compilación (`TestLegacyIDNewIDsUseRFPatternNotDefault`); `Load` acepta IDs `RF-<DOM>-<NN>` con el patrón por defecto y con el RF, y rechaza uno inválido bajo ambos. La precedencia mapa inválido sobre ID inválido se fija en la CLI (2.6, `TestAxiomTraceInvalidMapFailsTypedWithoutGit`).
 - [x] 2.3 GREEN: crear `internal/legacyid/legacyid.go` con `FileName`, `Schema`, `Load` (lectura estricta `KnownFields`), `Map` y sus métodos, `MapError` y códigos `id_map_unreadable`, `id_map_malformed`, `id_map_schema_unknown`, `id_map_invariant`; el `Error()` nombra fichero, código, motivo y continuación (D2, D8). Crear `internal/legacyid/imports_test.go` que prohíbe `os/exec`, `gitcommon` y la importación de `reqtrace` en producción.
   - Verificación: `go test ./internal/legacyid -count=1` y `go vet ./internal/legacyid`.
-  - Cubre: prov:TRC:1, prov:TRC:2
+  - Cubre: RF-TRC-16, RF-TRC-17
   - Evidencia: GREEN, `go test ./internal/legacyid -count=1` ok y `go vet ./internal/legacyid` ok.
 - [x] 2.4 RED: en `internal/reqtrace/*_test.go` (con fixtures de mapa en memoria): `ParseID` acepta un antiguo del mapa, rechaza uno fuera del mapa, rechaza sin mapa; cierre de equivalencias antiguo a nuevos y nuevo a antiguos con aviso `legacy_ambiguous` cuando un antiguo da varios nuevos; coincidencia acotada por capacidad (delta de `autoskills` frente a `workspace-topology` con `REQ-1.1`); `Cubre:` con y sin contexto; entradas de `ids.yaml` con `definitive` heredado; el token `REQ-27.2b` se consulta y se encuentra como token completo y no como `REQ-27.2` seguido de `b` (hueco 7).
   - Cubre: RF-TRC-02, RF-TRC-04
@@ -64,7 +64,7 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
   - Verificación: `go test ./internal/cli -run 'TestTrace' -count=1` y `go vet ./internal/cli`; sin código de producción huérfano.
   - Evidencia: RED observado, `go vet ./internal/cli` no compila (`not enough arguments in call to reqtrace.ParseID`) con `trace_legacy_test.go`; GREEN, `go test ./internal/cli -run 'Trace' -count=1` ok (130 s) y `go vet ./internal/cli` ok; `go test ./internal/reqid -run TestNoRequirementIDFormatOutsideReqid` ok. Sin producción huérfana: `Map` se alcanza desde `RunTrace` y por la interfaz `LegacyResolver`.
   - Commit de las fases 2.1-2.6: `feat(trace): resolver identificadores heredados con un mapa versionado`.
-  - Cubre: prov:TRC:1, prov:TRC:2, RF-TRC-02, RF-TRC-04
+  - Cubre: RF-TRC-16, RF-TRC-17, RF-TRC-02, RF-TRC-04
 
 ## Fase 3: Herramienta de migración, solo pruebas (commit c)
 
@@ -72,22 +72,22 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
   - Verificación: `go test ./internal/idmigration -run TestDomains -count=1`.
   - Evidencia: GREEN, `TestDomainsTable` (49 códigos únicos, tres mayúsculas, válidos bajo `RF-<DOM>-<NN>`) y `TestDomainsSeriesNumbering` ok. Árbol miniatura en `internal/idmigration/testdata/mini` (5 capacidades, ambiguos `REQ-1.1`/`REQ-2.1`, título no final, `(A & B)`, `REQ-27.2`/`REQ-27.2b`, título sin ID, ODD con vallas `openspec` y capacidad retirada, Go de producción y de pruebas, Markdown, binario con NUL). Los CRLF y el BOM se fabrican en `t.TempDir()` dentro de las pruebas, porque `.gitattributes` (`* text=auto eol=lf`) normaliza los ficheros versionados.
 - [x] 3.2 RED y GREEN del generador: `internal/idmigration/generate_test.go` con doble generación idéntica byte a byte, numeración por aparición, ambigüedad calculada, emisor determinista (cabecera fija, LF, salto final), ida y vuelta con `legacyid.Load(Generate(x))` sin error, fallo si el fichero ya existe o si un título ya tiene un ID que no es `REQ-n.m`, y `REQ-27.2b` como token del mapa (hueco 7).
-  - Cubre: prov:TRC:1
+  - Cubre: RF-TRC-16
   - Verificación: `go test ./internal/idmigration -run 'TestGenerate' -count=1`.
   - Evidencia: GREEN, 9 pruebas `TestGenerate*` ok (numeración por aparición, ambigüedad calculada, doble generación idéntica, emisor LF con cabecera fija, ida y vuelta con `legacyid.Load`, `REQ-27.2b` distinto de `REQ-27.2`, falla si el mapa existe, falla ante títulos con ID no heredado, sin código de dominio o claves repetidas, ignora títulos dentro de vallas). RED: el generador y las pruebas se escribieron juntos y pasaron a la primera, así que el RED se observó por mutación (véase 3.3); no hubo fallo previo de compilación.
 - [x] 3.3 RED y GREEN del reescritor: `internal/idmigration/rewrite_test.go` con las reglas D3-D6: token completo (`REQ-1.1` no toca `REQ-1.10`), títulos (D6, incluido `REQ-27.2b` por sustitución y títulos sin ID), continuaciones y rangos D5 (contiguo y no contiguo), cadena de contexto D3 (cada eslabón y fallo sin escribir), Go con `go/scanner` (comentario, literal fixture, literal fijado, `go/format`), ODD (vallas `openspec`, capacidad retirada), Markdown de specs (código en línea conservado), idempotencia (segunda pasada sin cambios). Criterios de bytes (hueco 5): se preservan CRLF/LF y BOM salvo los tokens sustituidos; un fichero sin sustituciones no se reescribe (mismo contenido y mismo mtime); rutas listadas por git que no existen y ficheros binarios se omiten sin error.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
   - Verificación: `go test ./internal/idmigration -run 'TestRewrite' -count=1`.
   - Evidencia: RED observado por mutación: con el límite derecho de `findTokens` anulado (`if r == 0`), `TestRewriteWholeTokenOnly` falla (`REQ-1.10`/`REQ-11.1` se tocarían); restaurado, GREEN con 14 pruebas `TestRewrite*` ok: token completo, sufijo `REQ-27.2b`, títulos D6 (no final, `(A & B)`, sin ID, idempotente, ID distinto), listas y rangos D5 (contiguo, no contiguo y extremo sin mapa), cadena D3 (línea, fichero, tabla de contexto y fallo `ruta:línea token [candidatas]`), Go (`go/scanner`, literal fijado y fixture, `gofmt` solo si el original ya era canónico), ODD (vallas `openspec` anidadas y capacidad retirada), specs (código en línea y vallas conservados), residuo, idempotencia, CRLF y BOM preservados, fichero sin sustituciones con mismo contenido y mtime, rutas inexistentes y binario omitidos, fallo sin escribir ante ambiguo, rango no contiguo, literal de producción y título con ID distinto.
 - [x] 3.4 RED y GREEN del modelo de residuos y las guardas de raíz: `internal/idmigration/residues_test.go` y la lectura de `residues.yaml` y `contexts.yaml` (D7): cita no declarada falla con `ruta:línea`; entrada o token caducado falla; la caducidad cuenta el archivo; validación estructural (categoría, ámbito, motivo, `tokens` obligatorio); prohibición de entradas sobre literales de Go de producción y sobre los assets embebidos de producción `internal/assets/skills/**` salvo ejemplo explícito del patrón por defecto (`default-pattern-example`, hueco 9); la prueba falla (no se omite) si no hay `git` o la raíz no es un repositorio (hueco 8); resolución de raíz con `filepath.Abs("../..")` y `git -C <raíz> rev-parse --show-toplevel`, rechazo de una ruta con `..` o absoluta de la lista.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
   - Verificación: `go test ./internal/idmigration -run 'TestResidue|TestRepoRoot' -count=1`.
   - Evidencia: GREEN, 9 pruebas `TestResidue*` y 4 `TestRepoRoot*` ok: cita no declarada falla con `ruta:línea`, residuos declarados aceptados, entrada y token caducados, caducidad que cuenta el archivo, ficheros de entrada que no mantienen viva una entrada, validación estructural (categoría, ámbito, motivo, `tokens`), veto de literales de producción y assets embebidos (con excepción del ejemplo del patrón por defecto), ámbitos por `go/scanner` y Markdown; raíz con `git -C <raíz> rev-parse --show-toplevel`, falla (no se omite) sin git (`PATH` vacío) y fuera de un repositorio, y rechaza `..`, rutas absolutas y vacías.
 - [x] 3.5 `TestMigrateRepository` (`internal/idmigration/migrate_test.go`) con los modos `map`, `plan` y `write` por la variable `AXIOM_IDMIGRATION` (sin variable: `t.Skip`); `plan` y `write` fallan sin escribir nada ante ambiguos sin resolver, rangos no contiguos, literal de producción no mapeado o título con ID distinto; inserción del bloque `sdd:` en `axiom.yaml` (D10) y regeneración de `INDEX.md` con `livingdoc.NewService(raíz, nil, nil).Sync` solo si cambia algo más que la línea de fecha. Probar los tres modos sobre el árbol miniatura.
   - Verificación: `go test ./internal/idmigration -count=1` y `go vet ./internal/idmigration`; el paquete no contiene ficheros de producción.
   - Evidencia: `go test ./internal/idmigration -count=1` ok (`TestMigrateRepository` se omite sin variable) y `go vet` ok; `find internal/idmigration -name '*.go' ! -name '*_test.go' ! -path '*/testdata/*'` vacío. Los tres modos sobre el árbol miniatura (`TestMigrateMiniatureMapPlanWriteEndToEnd`): `plan` no escribe y sin mapa usa el generado en memoria, `write` sin mapa pide `map`, `map` solo crea `openspec/id-map.yaml`, `write` reescribe, inserta el bloque `sdd:`, regenera `INDEX.md` y la segunda ejecución no cambia nada. `AXIOM_IDMIGRATION=plan` contra el repositorio real (solo lectura, sin mapa: usa el generado en memoria): 1969 ficheros analizados, 583 reescribirían 4326 sustituciones, 39 ambiguos sin resolver (los 39 medidos en el design), 1 literal de producción sin equivalente (`internal/techcontext/plan.go:137`, `REQ-24.62`, D13), 43 tokens distintos sin equivalente en 151 apariciones y 44 ficheros candidatos a residuo; `plan` falla, como debe, hasta que d2 aporte `contexts.yaml` y `residues.yaml`.
   - Commit de las fases 3.1-3.5: `test(idmigration): herramienta de migración de identificadores`.
-  - Cubre: prov:TRC:1, prov:RID:1
+  - Cubre: RF-TRC-16, RF-RID-16
 
 ## Fase 4: Generación del mapa y datos curados (commits d1 y d2)
 
@@ -95,23 +95,23 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
   - Verificación: `go test ./internal/idmigration ./internal/legacyid -count=1`.
   - Evidencia: `openspec/id-map.yaml` generado (513 entradas, 1542 líneas; segunda generación idéntica byte a byte con `cmp`), `go test ./internal/idmigration ./internal/legacyid -count=1` ok, `plan` lo carga sin error; `REQ-27.2b` → `RF-CLI-09`, `REQ-48.2` → `RF-TRC-02`, `REQ-48.4` → `RF-TRC-04`, `REQ-24.3` (planning-home-resolution) → `RF-PLH-03`, 2 entradas con dos antiguos.
   - Commit: `chore(openspec): generar el mapa de identificadores heredados`.
-  - Cubre: prov:TRC:1
+  - Cubre: RF-TRC-16
 - [x] 4.2 Corregir a mano el mensaje de producción con el requisito retirado en `internal/techcontext/plan.go` (línea 137 al diseñar, sustituir la cita retirada por el requisito vivo de contexto técnico mantenido, D13) y ajustar la prueba que fija ese mensaje en `internal/techcontext`.
   - Verificación: `go test ./internal/techcontext -count=1` y `go vet ./internal/techcontext`.
   - Evidencia: `plan.go:137` cita ahora `REQ-30.19` (único en el mapa, `project-technical-context`, «El Contexto Técnico Mantenido Exige un Almacén de Artefactos de Ficheros»). Ninguna prueba fija la cita retirada (`TestCheckRequiresAFileArtifactStoreWithMaintainedContext` comprueba `technical_context.maintained`, el almacén y `artifact_store: openspec`), así que no hubo que ajustar pruebas. `go test ./internal/techcontext -count=1` ok y `go vet` ok.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 4.3 Crear `internal/idmigration/residues.yaml` (esquema `axiom.id-residues/v1`) y `internal/idmigration/contexts.yaml` (`axiom.id-contexts/v1`) a partir del informe de `AXIOM_IDMIGRATION=plan go test ./internal/idmigration -run TestMigrateRepository -count=1 -v`: fixtures del patrón por defecto, ejemplos para otros proyectos, retirados sin equivalente como `legacy-citation` con motivo «requisito retirado sin equivalente vivo», historia fechada, la carpeta de este cambio (rutas activa y archivada) y las ~10 entradas de contexto de Go con evidencia. Ninguna entrada alcanza literales de Go de producción ni los assets embebidos de producción salvo el ejemplo del patrón por defecto. Repetir `plan` hasta cero pendientes.
   - Verificación: `AXIOM_IDMIGRATION=plan go test ./internal/idmigration -run TestMigrateRepository -count=1` pasa sin pendientes; `go test ./internal/idmigration -count=1`.
   - Evidencia: `contexts.yaml` con 28 entradas (resuelven los 39 ambiguos, cada una con la evidencia de la spec o del comentario) y `residues.yaml` con 94 entradas (retirados sin equivalente vivo como `legacy-citation`, fixtures y comentarios de fixtures del patrón por defecto, ejemplos en specs e `INDEX.md`, historia fechada, bloques `openspec` de ODD conservados, árbol miniatura y carpeta de este cambio). `AXIOM_IDMIGRATION=plan` termina con 0 ambiguos, 0 fallos y 0 candidatos a residuo: 1975 ficheros analizados, 587 reescritos, 4345 sustituciones. Comprobación adicional sin tocar el árbol: un `write` simulado sobre una copia temporal más `checkResidues` sobre el resultado solo dejó pendientes los 10 goldens de `testdata/golden`, que regenera `-update` en d3. Ajuste de la herramienta: `classify` trata un `.go` bajo `testdata/` como fixture (el literal de `testdata/mini/internal/foo/foo.go` no podía declararse residuo) con la prueba `TestResidueTestdataGoFileIsAFixtureNotProduction`. `go test ./internal/idmigration -count=1` ok y `go vet` ok.
   - Commit de 4.2-4.3: `chore(idmigration): curar contextos y residuos de la migración`.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 
 ## Fase 5: Reescritura masiva generada (commit d3)
 
 - [x] 5.1 Ejecutar `AXIOM_IDMIGRATION=write go test ./internal/idmigration -run TestMigrateRepository -count=1`: reescribe specs, Go, ODD, docs vivos, assets, `axiom.yaml` (bloque `sdd:` con `id_pattern: "RF-<DOM>-<NN>"`) y regenera `openspec/INDEX.md` en proceso. Sin ediciones a mano. Comprobar la segunda pasada en memoria sin cambios (idempotencia) y que `git diff --stat` no toca `openspec/changes/archive/` ni `openspec/id-map.yaml`.
   - Verificación: `AXIOM_IDMIGRATION=plan go test ./internal/idmigration -run TestMigrateRepository -count=1` tras escribir informa cero sustituciones.
   - Evidencia: `write` reescribió 589 ficheros (4373 sustituciones; conservados residuo=134 y automático=2034; 0 ambiguos, 0 fallos), insertó `sdd.id_pattern: "RF-<DOM>-<NN>"` en `axiom.yaml` y regeneró `INDEX.md`. Los 513 títulos de `openspec/specs/*/spec.md` llevan `(RF-<DOM>-<NN>)` (0 con `REQ-n.m`; 4 con sufijo `— RETIRADO` o `[SUPERSEDED / DEPRECADO]` tras el ID). Segunda ejecución de `write`: 0 reescritos, 0 sustituciones, `INDEX.md` sin regenerar, `git diff --stat` idéntico. `openspec/changes/` y `openspec/id-map.yaml` sin tocar. Dos correcciones de la herramienta (commits aparte antes de d3, no se editó el resultado a mano): un literal de prueba fijado por un mensaje de producción gana al residuo `go-string` de ámbito completo, y el pin cruza a los paquetes importados (la guarda de archivada de `kickoff` que afirman las pruebas de `integrations`).
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 5.2 Regenerar los 10 goldens: `go test ./internal/components -run TestGolden -count=1 -update` y confirmar estabilidad con `go test ./internal/components -run TestGolden -count=1` sin `-update`.
   - Verificación: ambas ejecuciones pasan.
   - Evidencia: los 10 goldens de `testdata/golden` (raíz del repositorio, no `internal/components/testdata`) regenerados con `-update`; `go test ./internal/components -run TestGolden -count=1` ok con y sin `-update`.
@@ -119,24 +119,24 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
   - Verificación: `go test <paquetes tocados> -count=1` y `go vet <paquetes tocados>`; el trinquete de código muerto no se ve afectado (no hay producción nueva).
   - Evidencia: `go vet ./...` sin salida. Verdes con `-count=1`: kickoff, sddstatus, techcontext, assets, components y subpaquetes, openspecdoc, livespec, reqid (incl. `TestNoRequirementIDFormatOutsideReqid`), reqtrace, legacyid, idmigration, isoevidence, livingdoc, multirole, docpaths, gitref, sddtaskresult, autoskill, integrations/..., adoption/..., branch/..., dashboard, hub, workspace/..., app, sddpublish, skillregistry, state, gitcommon, update/..., e2e/.... `./internal/cli` solo con `-run` (`TestRunSDDGateRecord*`, `TestRunSDDKickoffSeal*`, `TestTrace*`, `TestReqid*`, `Archived`, `TestGovernanceVerbsRejectAnArchivedChangeWithADatePrefix`) ok y `./cmd/axiom` con `-run TestRunChangeCreate` ok. Primera pasada con fallos de pines, corregidos en la herramienta: kickoff (3), techcontext (3), integrations (2). Línea base en d2: kickoff, sddstatus, techcontext y assets verdes. `components/communitytool` falló una vez por `context deadline exceeded` en `TestPiCodeGraphProbe...` (sonda MCP bajo carga) y pasó en la repetición.
   - Commit de 5.1-5.3 (una sola unidad, salida exacta de la herramienta y goldens): `refactor(specs): migrar los identificadores a RF-<DOM>-<NN>`.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 
 ## Fase 6: Pruebas permanentes (commit e)
 
 - [x] 6.1 Crear `TestIDMapMatchesLivingSpecs` en `internal/idmigration`: carga el mapa real con `legacyid.Load` y comprueba solo mapa a spec viva (cada entrada existe en la spec viva de su capacidad con su ID nuevo; 513 entradas en el momento de la migración). No comprueba spec a mapa, para no romper al archivar este cambio ni con requisitos posteriores (huecos 1; RF-TRC-16, RF-TRC-17, RF-RID-16 no deben estar en el mapa). Antes del archivado, comprueba además que `RF-TRC-02` y `RF-TRC-04` existen en `requirement-trace`.
-  - Cubre: prov:TRC:1, RF-TRC-02, RF-TRC-04
+  - Cubre: RF-TRC-16, RF-TRC-02, RF-TRC-04
 - [x] 6.2 Huella de inmutabilidad (hueco 2): fijar en `internal/idmigration` una prueba con el `sha256` de `openspec/id-map.yaml` tal como queda tras 4.1, con mensaje de fallo que explica que el mapa es inmutable una vez publicado y que un cambio exige actualizar la huella de forma deliberada y revisada. Es el mecanismo barato; queda anotado como pendiente refinar a una huella por conjunto de entradas originales si hiciera falta añadir entradas legítimas después.
-  - Cubre: prov:TRC:1
+  - Cubre: RF-TRC-16
 - [x] 6.3 Crear `TestRepositoryLegacyIDResidues` (siempre activa): recorre `git -C <raíz> ls-files -z`, busca `REQ-\d+\.\d+`, clasifica por ámbito y exige cobertura por `residues.yaml` fuera de `openspec/changes/archive/**` y de `openspec/id-map.yaml`; caducidad de entradas y tokens sobre cualquier fichero versionado; falla (no omite) sin git o fuera de un repositorio; veta los literales de Go de producción y los assets embebidos de producción como residuo (huecos 8 y 9).
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 6.4 Prueba de líneas `Cubre:` (hueco 3): recorre los documentos vivos (`odd/tasks/*.md` y `openspec/specs/**/spec.md`), extrae los IDs de cada línea `Cubre:` y exige que sean válidos bajo `RF-<DOM>-<NN>` y existan en la spec viva, salvo residuos de requisitos retirados declarados explícitamente en una lista de la propia prueba (cada uno con motivo). No inspecciona `openspec/changes/archive/**`.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 6.5 Prueba permanente de `axiom.yaml` (hueco 8, RF-RID-01): `axiom.yaml` declara `sdd.id_pattern: RF-<DOM>-<NN>`; se lee con el cargador de configuración del proyecto o `yaml.v3` en `internal/idmigration`.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 6.6 Variantes RF del corpus: en `internal/openspecdoc/compose_corpus_test.go` añadir `TestComposeCorpusIdentityModifiedRF` con `reqid.Parse("RF-<DOM>-<NN>")` exigiendo `p.InTitle(nombre) != ""` y `reqid.Default().InTitle(nombre) == ""` en todo requisito; en `internal/reqid/legacy_equivalence_test.go` pasar el corpus de equivalencia a los títulos de `openspec/changes/archive/*/specs/*/spec.md` y añadir `TestRFCorpusTitlesHaveIDs` sobre `openspec/specs`.
-  - Cubre: prov:RID:1
+  - Cubre: RF-RID-16
 - [x] 6.7 `TestTraceRealMapResolvesLegacyID` en `internal/reqtrace`: lee `../../openspec/id-map.yaml` y el patrón de `../../axiom.yaml`, comprueba que `REQ-24.3` se acepta y resuelve a `RF-PLH-03`, que `REQ-1.1` resuelve a siete IDs nuevos con `legacy_ambiguous` y que `REQ-27.2b` se acepta y resuelve a su ID nuevo.
-  - Cubre: RF-TRC-02, RF-TRC-04, prov:TRC:1
+  - Cubre: RF-TRC-02, RF-TRC-04, RF-TRC-16
   - Verificación 6.1-6.7: `go test ./internal/idmigration ./internal/openspecdoc ./internal/reqid ./internal/reqtrace -count=1` y `go vet` de esos paquetes.
   - Evidencia: pruebas nuevas en `internal/idmigration/repository_test.go` (`TestIDMapMatchesLivingSpecs`, `TestIDMapFingerprint` con sha256 `197be163...20c1`, `TestRepositoryLegacyIDResidues`, `TestCubreLinesUseExistingRFIDs`, `TestAxiomYAMLDeclaresRFPattern`), `TestTraceRealMapResolvesLegacyID` en `internal/reqtrace/real_map_test.go` (las pruebas de `reqtrace` pueden leer con `os`: `imports_test.go` solo vigila producción), `TestComposeCorpusIdentityModifiedRF` y `TestRFCorpusTitlesHaveIDs` (corpus de equivalencia pasado a 186 specs archivadas). `go test ./internal/idmigration ./internal/openspecdoc ./internal/reqid ./internal/reqtrace -count=1` ok y `go vet` ok. `TestRepositoryLegacyIDResidues` reveló un residuo caduco (`internal/integrations/*_test.go`, `go-string`) tras fijar los pines; se retiró de `residues.yaml` en un commit propio (`04963be6`). Sin líneas `Cubre:` reales en `odd/tasks` ni en las specs vivas: la lista de retirados `withdrawnCubre` queda vacía y la extracción se prueba con un documento sintético.
   - Commit: `test(specs): residuos y corpus con el patrón RF`.
@@ -147,13 +147,13 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
   - Verificación: `go test ./internal/idmigration -run TestRepositoryLegacyIDResidues -count=1`.
   - Evidencia: `docs/openspec-config.md` gana la sección «Requirement identifiers of this repository» (patrón `RF-<DOM>-<NN>`, `openspec/id-map.yaml`, `axiom trace REQ-n.m`, residuos) y `docs/manual-de-inicio.md` una viñeta en `sdd.id_pattern` y la viñeta «IDs heredados» en `axiom trace`; ninguna escribe un token heredado con dígitos, así que no hizo falta ninguna entrada nueva en `residues.yaml`. `go test ./internal/idmigration -run 'TestRepositoryLegacyIDResidues|TestIDMap' -count=1` ok, `./internal/workspace -run 'Docs|Contract'` ok y `./internal/app -run Documented` ok.
   - Commit: `docs: patrón RF de Axiom y consulta de IDs antiguos`.
-  - Cubre: prov:TRC:1, prov:RID:1
+  - Cubre: RF-TRC-16, RF-RID-16
 
 ## Fase 8: Comprobación final
 
 - [x] 8.1 Comprobar con `rg 'REQ-[0-9]+\.[0-9]+'` fuera de `openspec/changes/archive/` que toda aparición restante figura en la lista de residuos (`residues.yaml`) y que no queda ninguna en literales de Go de producción ni en `internal/assets/skills/**` salvo el ejemplo declarado; confirmar que `TestRepositoryLegacyIDResidues` pasa y que la revisión de d3 es reproducible (`git checkout <d2>`, `AXIOM_IDMIGRATION=write ...`, `-update` de goldens, `git diff <d3>` solo difiere en la línea de fecha de `INDEX.md`).
   - Verificación: `go test ./internal/idmigration ./internal/legacyid ./internal/openspecdoc ./internal/livespec ./internal/reqid ./internal/reqtrace -count=1`, `go vet` de los mismos y `go test ./internal/cli -run 'TestTrace' -count=1`.
-  - Cubre: prov:RID:1, prov:TRC:1, prov:TRC:2, RF-TRC-02, RF-TRC-04
+  - Cubre: RF-RID-16, RF-TRC-16, RF-TRC-17, RF-TRC-02, RF-TRC-04
   - Evidencia: `git grep -nE 'REQ-[0-9]+\.[0-9]+' -- ':!openspec/changes/archive'` da 2387 apariciones en 184 ficheros (sin `rg`), todas cubiertas por `residues.yaml` o por las exenciones de obligación (mapa, ficheros de entrada de la herramienta, archivo): lo garantiza `TestRepositoryLegacyIDResidues`, que pasa; ninguna en `internal/assets/skills/**` (`git grep` vacío) ni en literales de Go de producción (la prueba los veta). Reproducibilidad de d3 (sin árbol temporal, por decisión del orquestador): `AXIOM_IDMIGRATION=plan` sobre HEAD informa 1977 ficheros analizados, 0 reescritos, 0 sustituciones, 0 ambiguos, 0 fallos y 0 candidatos a residuo. Verificación: `go test ./internal/idmigration ./internal/legacyid ./internal/openspecdoc ./internal/livespec ./internal/reqid ./internal/reqtrace -count=1` ok, `go vet` de los mismos ok y `go test ./internal/cli -run 'Trace' -count=1` ok (157 s; con `-run TestTrace` no casa ninguna prueba, los nombres son `TestAxiomTrace*`).
 
 ## Orden y dependencias

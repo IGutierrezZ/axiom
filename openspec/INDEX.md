@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 08:13:56 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2298
+> **Última Sincronización:** 2026-11-26 08:31:13 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 516 | **Total Escenarios BDD:** 2316
 
 ---
 
@@ -41,8 +41,8 @@
 | `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
-| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 125 | [Ver Spec](specs/requirement-identifiers/spec.md) |
-| `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
+| `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
+| `requirement-trace` | Especificación de requirement-trace | 17 | 49 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
@@ -1901,10 +1901,16 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* La guía de `sdd-spec` describe el provisional
   - *Escenario BDD:* La guía de `sdd-archive` usa el paso de archivado del cambio
   - *Escenario BDD:* La convención ISO admite el provisional hasta archivar
+- **[RF-RID-16]** Las Specs Propias de Axiom Usan el Patrón Declarado y no Citan Identificadores Heredados Fuera de los Residuos Declarados
+  - *Escenario BDD:* Axiom declara su patrón
+  - *Escenario BDD:* Ningún título de la spec viva queda sin identificador
+  - *Escenario BDD:* Una cita heredada no declarada rompe la prueba
+  - *Escenario BDD:* Una entrada de la lista sin aparición rompe la prueba
+  - *Escenario BDD:* Los residuos declarados se aceptan
 
 ### Dominio: `requirement-trace` — Especificación de requirement-trace
 
-Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (RF-RID-14 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
+Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (RF-RID-14 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e existe en `openspec/id-map.yaml` y `axiom trace` lo usa como fuente de equivalencias cuando está presente (RF-TRC-16); el punto de extensión de alias (RF-TRC-04) permite añadirlo sin modificar la consulta.
 
 **Archivo:** [`specs/requirement-trace/spec.md`](specs/requirement-trace/spec.md)
 
@@ -1914,6 +1920,8 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
 - **[RF-TRC-02]** Validación del ID Contra el Patrón del Proyecto con Error Tipado
   - *Escenario BDD:* ID que no cumple el patrón
   - *Escenario BDD:* El patrón del proyecto manda
+  - *Escenario BDD:* Un ID antiguo del mapa se acepta bajo el patrón RF
+  - *Escenario BDD:* Un ID antiguo fuera del mapa sigue fallando
   - *Escenario BDD:* Un provisional válido se acepta
 - **[RF-TRC-03]** Resolución Entre Provisional y Definitivo por la Traza
   - *Escenario BDD:* Provisional y definitivo dan el mismo resultado
@@ -1921,6 +1929,10 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
 - **[RF-TRC-04]** Punto de Extensión de Alias
   - *Escenario BDD:* Un alias inyectado se incorpora a la consulta
   - *Escenario BDD:* Sin resolutor adicional solo cuentan las trazas
+  - *Escenario BDD:* Un ID antiguo ambiguo resuelve a todos sus IDs nuevos
+  - *Escenario BDD:* Un ID antiguo no ambiguo resuelve a su ID nuevo
+  - *Escenario BDD:* La coincidencia en archivados se acota por capacidad
+  - *Escenario BDD:* Consultar por el ID nuevo trae los incrementos del ID antiguo
 - **[RF-TRC-05]** Incrementos SDD Archivados como Fuente
   - *Escenario BDD:* Roles por sección de la delta
   - *Escenario BDD:* Cubre con tareas
@@ -1959,6 +1971,15 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
 - **[RF-TRC-15]** Criterio de Terminado de Trazabilidad de Punta a Punta
   - *Escenario BDD:* SDD y ODD sobre el mismo ID
   - *Escenario BDD:* El bug SDD aparece como bug
+- **[RF-TRC-16]** Mapa Versionado de Identificadores Heredados como Fuente de Equivalencias de la Traza
+  - *Escenario BDD:* El mapa cubre todos los requisitos vigentes
+  - *Escenario BDD:* La regeneración es idéntica
+  - *Escenario BDD:* Un ID antiguo ambiguo tiene una entrada por capacidad
+  - *Escenario BDD:* Invariantes violados por un mapa
+- **[RF-TRC-17]** Mapa Ausente Degrada sin Alias y Mapa Inválido Falla con Error Tipado
+  - *Escenario BDD:* Sin mapa, la traza funciona
+  - *Escenario BDD:* Mapa con esquema desconocido
+  - *Escenario BDD:* Mapa corrupto
 
 ### Dominio: `sdd-archive-lifecycle` — Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21)
 
