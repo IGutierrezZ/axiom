@@ -1,10 +1,10 @@
-# Delta para requirement-trace
+# Especificación de requirement-trace
 
-Esta capacidad es nueva (C-03-d). Define la consulta de solo lectura `axiom trace <ID>`, que responde qué incrementos (cambios SDD archivados y documentos ODD integrados) crearon, modificaron, retiraron, renombraron o cubrieron un requisito, con su tipo, sus tareas y su commit de integración en la línea `--first-parent`.
+## Purpose
 
-Notación: los requisitos llevan identificadores provisionales de serie nueva `prov:trace:<n>` (REQ-47.1 de `requirement-identifiers`); el número definitivo se asigna al archivar. En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. La forma exacta del JSON (nombres de campo salvo los que fija esta spec) la fija el diseño. El mapa `REQ-n.m` a ID nuevo de C-03-e queda fuera: solo se exige el punto de extensión.
+Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (REQ-47.6 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Verbo `axiom trace <ID>` y Sus Opciones (REQ-48.1)
 

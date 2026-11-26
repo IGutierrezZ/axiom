@@ -1,7 +1,7 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 04:36:40 UTC
+> **Última Sincronización:** 2026-11-26 04:38:13 UTC
 > **Total Dominios:** 49 | **Total Requerimientos:** 511 | **Total Escenarios BDD:** 2231
 
 ---
@@ -42,7 +42,7 @@
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 122 | [Ver Spec](specs/requirement-identifiers/spec.md) |
-| `requirement-trace` | Delta para requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
+| `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 52 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
@@ -1872,9 +1872,9 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* La guía de `sdd-archive` usa el paso de archivado del cambio
   - *Escenario BDD:* La convención ISO admite el provisional hasta archivar
 
-### Dominio: `requirement-trace` — Delta para requirement-trace
+### Dominio: `requirement-trace` — Especificación de requirement-trace
 
-Esta capacidad es nueva (C-03-d). Define la consulta de solo lectura `axiom trace <ID>`, que responde qué incrementos (cambios SDD archivados y documentos ODD integrados) crearon, modificaron, retiraron, renombraron o cubrieron un requisito, con su tipo, sus tareas y su commit de integración en la línea `--first-parent`.
+Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (REQ-47.6 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
 
 **Archivo:** [`specs/requirement-trace/spec.md`](specs/requirement-trace/spec.md)
 
