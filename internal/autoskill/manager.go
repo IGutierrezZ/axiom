@@ -16,7 +16,7 @@ import (
 )
 
 // IndexRegenerator refreshes the unified skills index after a successful
-// promotion (REQ-22.13). It is a plain func so this package never imports
+// promotion (RF-SKI-04). It is a plain func so this package never imports
 // skillregistry internals (D-12).
 type IndexRegenerator func(cwd, home string) error
 
@@ -42,7 +42,7 @@ type ApproveOutcome struct {
 	// Promoted is true when the skill now lives in skills/.
 	Promoted bool
 	// RegenerateError is non-nil when the index refresh failed after a
-	// completed promotion. The promotion stands (REQ-22.13).
+	// completed promotion. The promotion stands (RF-SKI-04).
 	RegenerateError error
 }
 
@@ -285,7 +285,7 @@ func (m *Manager) ListInbox() ([]SkillProposal, error) {
 }
 
 // Approve promueve atómicamente la skill del buzón transitorio al directorio canónico skills/
-// y después regenera el índice unificado de skills (REQ-22.13). El error de
+// y después regenera el índice unificado de skills (RF-SKI-04). El error de
 // retorno corresponde solo a fallos de promoción: un fallo de indexación queda
 // en ApproveOutcome.RegenerateError, sin deshacer la promoción (D-12).
 func (m *Manager) Approve(skillName string) (ApproveOutcome, error) {

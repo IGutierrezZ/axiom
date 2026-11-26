@@ -36,7 +36,7 @@ func plannedBranchWorktree(t *testing.T, repo, change string) string {
 	return filepath.Join(filepath.Dir(resolved), filepath.Base(resolved)+"-wt", change, filepath.Base(resolved))
 }
 
-// REQ-25.7, REQ-25.8 y REQ-25.2: `ensure --change x --json --cwd <ruta>` crea la rama y el
+// RF-BRA-07, RF-BRA-08 y RF-BRA-02: `ensure --change x --json --cwd <ruta>` crea la rama y el
 // worktree, imprime el estado final como `axiom.branch-result/v1` y sale con 0.
 func TestBranchEnsureCreatesTheBranchAndTheWorktreeAndExitsWithZero(t *testing.T) {
 	t.Parallel()
@@ -76,7 +76,7 @@ func TestBranchEnsureCreatesTheBranchAndTheWorktreeAndExitsWithZero(t *testing.T
 	}
 }
 
-// REQ-25.7: dos ejecuciones dan el mismo JSON byte a byte (salvo `createdFrom` y `createdFromRef`, REQ-27.15, que solo describen la ejecución que crea la rama) y el mismo
+// RF-BRA-07: dos ejecuciones dan el mismo JSON byte a byte (salvo `createdFrom` y `createdFromRef`, RF-BRA-27, que solo describen la ejecución que crea la rama) y el mismo
 // `git worktree list --porcelain`; el resultado de texto también es estable.
 func TestBranchEnsureIsIdempotent(t *testing.T) {
 	t.Parallel()
@@ -123,7 +123,7 @@ func TestBranchEnsurePrintsSpanishTextWithoutJSON(t *testing.T) {
 	}
 }
 
-// REQ-25.13: `--lane odd` se admite y el resultado nombra el documento de la feature.
+// RF-BRA-14: `--lane odd` se admite y el resultado nombra el documento de la feature.
 func TestBranchEnsureAcceptsTheOddLane(t *testing.T) {
 	t.Parallel()
 	repo := newBranchRepository(t)
@@ -142,7 +142,7 @@ func TestBranchEnsureAcceptsTheOddLane(t *testing.T) {
 	}
 }
 
-// REQ-25.2: cada rechazo sale con código 1, un resultado tipado en JSON o un mensaje en
+// RF-BRA-02: cada rechazo sale con código 1, un resultado tipado en JSON o un mensaje en
 // texto por stderr, y una continuación con la orden de `ensure` y las rutas citadas.
 func TestBranchEnsureRefusalsExitWithCode1AndNameTheContinuation(t *testing.T) {
 	t.Parallel()
@@ -225,7 +225,7 @@ func TestBranchEnsureRefusalsExitWithCode1AndNameTheContinuation(t *testing.T) {
 	}
 }
 
-// REQ-25.2 y REQ-25.7: un fallo de git es `git_failed` con código 1; aquí git no se puede
+// RF-BRA-02 y RF-BRA-07: un fallo de git es `git_failed` con código 1; aquí git no se puede
 // ejecutar. La continuación repite `ensure` con el cambio.
 func TestBranchEnsureReportsGitFailedWhenGitCannotRun(t *testing.T) {
 	repo := newBranchRepository(t)
@@ -304,7 +304,7 @@ func newBranchRemote(t *testing.T, repo string) string {
 	return remote
 }
 
-// REQ-25.10, escenario «`--fetch` es explícito»: `ensure --fetch` ejecuta un fetch antes de
+// RF-BRA-10, escenario «`--fetch` es explícito»: `ensure --fetch` ejecuta un fetch antes de
 // resolver la base, de modo que contra un remoto desnudo local que avanzó la base alcanza el
 // commit nuevo y el JSON devuelve `fetched: true`; sin la bandera, no.
 func TestBranchEnsureFetchReachesTheNewRemoteCommit(t *testing.T) {
@@ -346,7 +346,7 @@ func TestBranchEnsureFetchReachesTheNewRemoteCommit(t *testing.T) {
 	})
 }
 
-// REQ-25.10, escenario «`--fetch` fallido no deja efectos»: contra un remoto que no existe,
+// RF-BRA-10, escenario «`--fetch` fallido no deja efectos»: contra un remoto que no existe,
 // código de salida 1, `fetch_failed` en JSON y en texto, y ni rama, ni worktree, ni registro.
 func TestBranchEnsureFetchFailedExitsWithCode1AndCreatesNothing(t *testing.T) {
 	t.Parallel()
@@ -384,7 +384,7 @@ func TestBranchEnsureFetchFailedExitsWithCode1AndCreatesNothing(t *testing.T) {
 }
 
 // withoutCreatedFrom quita `createdFrom` y `createdFromRef`, que solo salen en la ejecución que
-// crea la rama (REQ-27.15), para comparar el estado final entre ejecuciones.
+// crea la rama (RF-BRA-27), para comparar el estado final entre ejecuciones.
 func withoutCreatedFrom(t *testing.T, stdout string) string {
 	t.Helper()
 	var decoded any
@@ -414,7 +414,7 @@ func withoutCreatedFrom(t *testing.T, stdout string) string {
 	return string(out)
 }
 
-// REQ-27.15: con la rama publicada ya traída a local, `ensure` la adopta; el JSON informa
+// RF-BRA-27: con la rama publicada ya traída a local, `ensure` la adopta; el JSON informa
 // `createdFrom: remote` y el texto, «adoptada desde origin/<rama> (seguimiento configurado)».
 // Sin ella, crea desde la base y el texto sugiere `git fetch origin`.
 func TestBranchEnsureAdoptsThePublishedBranchAndTextSaysSo(t *testing.T) {

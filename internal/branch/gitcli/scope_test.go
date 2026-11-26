@@ -19,7 +19,7 @@ func commitFile(t *testing.T, repo, rel, content, message string) string {
 	return runGit(t, repo, "rev-parse", "HEAD")
 }
 
-// REQ-25.51: RevList lee la lista de commits con sus padres, con y sin `--first-parent`, y
+// RF-BRA-35: RevList lee la lista de commits con sus padres, con y sin `--first-parent`, y
 // admite revisiones excluidas con «^».
 func TestRevListReadsCommitsWithTheirParents(t *testing.T) {
 	ctx := context.Background()
@@ -68,7 +68,7 @@ func TestRevListReadsCommitsWithTheirParents(t *testing.T) {
 	})
 }
 
-// REQ-25.51: CommitFiles devuelve los commits con sus ficheros en una sola lectura, íntegros
+// RF-BRA-35: CommitFiles devuelve los commits con sus ficheros en una sola lectura, íntegros
 // con espacios y caracteres no ASCII, con las dos rutas de un renombrado y con `merge: true`
 // en un commit de fusión (que git no lista con `--name-only`).
 func TestCommitFilesListsFilesPerCommit(t *testing.T) {
@@ -116,7 +116,7 @@ func TestCommitFilesListsFilesPerCommit(t *testing.T) {
 	}
 }
 
-// REQ-25.53: BranchCreation lee la entrada más antigua del reflog de la rama local: válida si
+// RF-BRA-37: BranchCreation lee la entrada más antigua del reflog de la rama local: válida si
 // la rama se creó con `git branch`, no válida si se adoptó de `origin/<rama>` ni si no hay entrada.
 func TestBranchCreationReadsTheOldestReflogEntry(t *testing.T) {
 	ctx := context.Background()

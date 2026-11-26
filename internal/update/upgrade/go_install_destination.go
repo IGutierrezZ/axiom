@@ -170,7 +170,7 @@ func warnGoInstallDestination(toolName, osName, destDir string, destErr error) {
 // upgrade path that writes the self-tool binary on Windows (D-03, T-5).
 // It resolves where the write would land (GOBIN/GOPATH) and where the shell
 // currently resolves the binary, and refuses the upgrade when they differ —
-// preventing a second PATH-visible binary (REQ-22.1).
+// preventing a second PATH-visible binary (RF-UPD-01).
 //
 // Returns nil when the tool is not the self-tool or the platform is not
 // Windows. On success returns the resolved destination directory.

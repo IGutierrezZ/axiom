@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Preferencias personales de worktree del hub (INC-25, REQ-25.29, design D-08): lectura por
+// Preferencias personales de worktree del hub (INC-25, RF-HUB-07, design D-08): lectura por
 // identidad de directorio, valores por defecto y rechazo de lo persistido inválido.
 
 // newPrefsHub crea un hub con un proyecto registrado y devuelve el gestor, la ruta del
@@ -52,7 +52,7 @@ func wantDefaultPrefs(t *testing.T, got WorktreePrefs, project string) {
 	}
 }
 
-// REQ-25.29, escenario «Sin preferencias el modo efectivo es `worktree`».
+// RF-HUB-07, escenario «Sin preferencias el modo efectivo es `worktree`».
 func TestLookupWorktreePrefsWithoutPreferencesReturnsTheDefaults(t *testing.T) {
 	manager, project, _ := newPrefsHub(t)
 
@@ -64,7 +64,7 @@ func TestLookupWorktreePrefsWithoutPreferencesReturnsTheDefaults(t *testing.T) {
 	wantDefaultPrefs(t, prefs, project)
 }
 
-// REQ-25.29, escenario «Proyecto no registrado también recibe los valores por defecto»: ni
+// RF-HUB-07, escenario «Proyecto no registrado también recibe los valores por defecto»: ni
 // el fichero del hub existe.
 func TestLookupWorktreePrefsOfAnUnregisteredProjectAlsoGetsTheDefaults(t *testing.T) {
 	manager, err := NewManager(filepath.Join(t.TempDir(), "no-existe", "workspaces.json"))
@@ -126,7 +126,7 @@ func TestLookupWorktreePrefsFindsTheProjectByDirectoryIdentity(t *testing.T) {
 	})
 }
 
-// REQ-25.29: un valor persistido inválido se rechaza con un mensaje en castellano que nombra
+// RF-HUB-07: un valor persistido inválido se rechaza con un mensaje en castellano que nombra
 // el fichero; el registro no se modifica.
 func TestLookupWorktreePrefsRejectsAPersistedInvalidValue(t *testing.T) {
 	tests := []struct {
@@ -175,7 +175,7 @@ func TestLookupWorktreePrefsReportsAnUnreadableHub(t *testing.T) {
 	}
 }
 
-// REQ-25.29: las preferencias son campos opcionales de la entrada y el esquema sigue en
+// RF-HUB-07: las preferencias son campos opcionales de la entrada y el esquema sigue en
 // `"1.0"`: sin ellas el JSON no cambia (un binario anterior los ignora).
 func TestWorkspaceRecordStoresTheWorktreePrefsWithoutChangingTheSchema(t *testing.T) {
 	manager, _, config := newPrefsHub(t)
@@ -216,7 +216,7 @@ func TestWorkspaceRecordStoresTheWorktreePrefsWithoutChangingTheSchema(t *testin
 	}
 }
 
-// REQ-25.29 y design D-08: el modo admite los tres valores (o vacío, sin preferencia) y la
+// RF-HUB-07 y design D-08: el modo admite los tres valores (o vacío, sin preferencia) y la
 // raíz, una ruta absoluta (o vacía); el rechazo está en castellano y lista lo válido.
 func TestValidateWorktreePrefs(t *testing.T) {
 	absolute := filepath.Join(t.TempDir(), "wt")

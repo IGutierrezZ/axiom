@@ -413,7 +413,7 @@ sdd:
 
 #### Patrón de identificadores de requisito (`sdd.id_pattern`)
 
-Todo requisito de la spec viva lleva un identificador en su título, `### Requirement: <nombre> (<ID>)`. La forma de ese identificador la fija `sdd.id_pattern`, una plantilla de texto entre comillas; sin ella rige `REQ-<n>.<m>` (por ejemplo `REQ-30.4`), que es el comportamiento de siempre. La plantilla se compone de literales y marcadores:
+Todo requisito de la spec viva lleva un identificador en su título, `### Requirement: <nombre> (<ID>)`. La forma de ese identificador la fija `sdd.id_pattern`, una plantilla de texto entre comillas; sin ella rige `REQ-<n>.<m>` (por ejemplo `RF-OLS-04`), que es el comportamiento de siempre. La plantilla se compone de literales y marcadores:
 
 | Marcador | Significado | Ejemplo |
 |---|---|---|

@@ -16,7 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas de `done` con git real, entorno aislado y sin red (REQ-25.16, REQ-25.17, design D-09,
+// Pruebas de `done` con git real, entorno aislado y sin red (RF-BRA-17, RF-BRA-18, design D-09,
 // matriz de amenazas «Borrado de ramas y worktrees»): la fusión se confirma por ascendencia, el
 // desmontaje retira el worktree y después borra la rama local desde el checkout principal, cada
 // rama (de rol, del cambio y de archivado) se procesa por separado y nunca se toca una rama remota.
@@ -59,7 +59,7 @@ func doneWrites(seen [][]string) []string {
 	return writes
 }
 
-// wantNoRemote comprueba que ninguna invocación observada es remota (REQ-25.1): ni fetch, ni pull,
+// wantNoRemote comprueba que ninguna invocación observada es remota (RF-BRA-01): ni fetch, ni pull,
 // ni push, ni ls-remote.
 func wantNoRemote(t *testing.T, seen [][]string) {
 	t.Helper()
@@ -101,7 +101,7 @@ func branchNames(repository branch.RepositoryResult) []string {
 	return names
 }
 
-// REQ-25.16 (escenario «Fusión real detectada por ascendencia») y REQ-25.17 (escenarios
+// RF-BRA-17 (escenario «Fusión real detectada por ascendencia») y RF-BRA-18 (escenarios
 // «Eliminación tras una fusión confirmada» y «La rama de archivado se elimina como las demás»): con
 // el cambio y su rama de archivado fusionados con un merge commit, `done` retira cada worktree y
 // después borra la rama local desde el checkout principal, la confirma con el token `ancestry` y
@@ -198,7 +198,7 @@ func TestDoneRemovesAMergedWorktreeAndItsLocalBranchFromTheMainCheckout(t *testi
 	})
 }
 
-// REQ-25.17 (escenarios «Árbol sucio impide la eliminación», «Rama sin fusionar impide la
+// RF-BRA-18 (escenarios «Árbol sucio impide la eliminación», «Rama sin fusionar impide la
 // eliminación» y «`--force` elimina con fusión no confirmada y avisa de lo descartado») y matriz de
 // amenazas «Borrado de ramas y worktrees»: un worktree con cambios sin confirmar da `dirty_worktree`
 // aunque la rama esté fusionada; limpio pero sin fusionar, `merge_not_confirmed`; en ambos casos se
@@ -288,7 +288,7 @@ func TestDoneRefusesADirtyWorktreeOrAnUnmergedBranchUnlessForced(t *testing.T) {
 	wantNoRemote(t, *seen)
 }
 
-// REQ-25.17 (escenario «Ramas de rol y de seguimiento se procesan por separado»): con `feat/x-core`
+// RF-BRA-18 (escenario «Ramas de rol y de seguimiento se procesan por separado»): con `feat/x-core`
 // fusionada en `feat/x` y `feat/x` aún sin fusionar en `main`, se elimina `feat/x-core` y se
 // conservan `feat/x` y la rama de `qa` (sin fusionar) con `merge_not_confirmed`; el resultado es
 // `partial`, el código de salida es 1 y el registro conserva solo lo que queda. Las ramas de rol
@@ -375,7 +375,7 @@ func TestDoneProcessesTheRoleAndChangeBranchesSeparately(t *testing.T) {
 	})
 }
 
-// REQ-25.17 (escenarios de `in_place`): con el árbol sucio, `done` y `done --force` se rechazan con
+// RF-BRA-18 (escenarios de `in_place`): con el árbol sucio, `done` y `done --force` se rechazan con
 // `dirty_worktree` sin cambiar de rama ni borrar nada (`--force` no salta la limpieza y la
 // continuación no lo ofrece); limpio y sin fusionar, `merge_not_confirmed` sin cambiar de rama; con
 // `--force` y el árbol limpio, vuelve a la integración, elimina la rama y deja la punta en el
@@ -443,7 +443,7 @@ func TestDoneInPlaceNeverSkipsACleanTreeEvenWhenForced(t *testing.T) {
 	})
 }
 
-// REQ-25.16 y REQ-25.17 (rama de archivado): la rama de archivado se procesa aparte de la del cambio
+// RF-BRA-17 y RF-BRA-18 (rama de archivado): la rama de archivado se procesa aparte de la del cambio
 // y se confirma con la integración; una de archivado sin fusionar se conserva con
 // `merge_not_confirmed` aunque la del cambio ya se haya eliminado, y la siguiente ejecución, con
 // ambas fusionadas, sale con 0. (Que `pr_merged` no confirma el archivado lo fija
@@ -513,7 +513,7 @@ func TestDoneProcessesTheRoleBranchesTheRegistryKnowsWhenTheKickoffIsGone(t *tes
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// REQ-25.10 y REQ-25.16 («solo con `--fetch` PUEDE actualizarse el remoto»): con `--fetch`, `done`
+// RF-BRA-10 y RF-BRA-17 («solo con `--fetch` PUEDE actualizarse el remoto»): con `--fetch`, `done`
 // ejecuta un único `git fetch origin` antes de evaluar y de escribir; si el fetch falla rechaza con
 // `fetch_failed` sin eliminar nada y sin escribir.
 func TestDoneFetchRunsOneFetchBeforeEvaluatingAndAFailedFetchRemovesNothing(t *testing.T) {
@@ -639,7 +639,7 @@ func wantSamePlace(t *testing.T, what, got, want string) {
 	}
 }
 
-// REQ-25.17 («Si la eliminación del worktree falla, NO DEBE eliminarse la rama») y REQ-25.2: un fallo
+// RF-BRA-18 («Si la eliminación del worktree falla, NO DEBE eliminarse la rama») y RF-BRA-02: un fallo
 // de git al retirar el worktree conserva el worktree y la rama; uno al borrar la rama, ya sin
 // worktree, conserva la rama. Ambos son `git_failed`, nombran la operación y resumen el error, y
 // repetir `done` completa el desmontaje.

@@ -19,8 +19,8 @@ import (
 // emite en todas las salidas de la compuerta, no solo en la de la cesión.
 const gateRecordSchema = "axiom.sdd-gate-record/v1"
 
-// Comprobaciones de la salida 2 de una parada, `gate record --hand-off` (REQ-26.1, REQ-26.3,
-// REQ-26.6; DD-02, DD-12). runSDDGateRecord las llama en dos puntos, siempre ANTES de escribir
+// Comprobaciones de la salida 2 de una parada, `gate record --hand-off` (RF-GAT-07, RF-GAT-09,
+// RF-GAT-12; DD-02, DD-12). runSDDGateRecord las llama en dos puntos, siempre ANTES de escribir
 // gates.yaml: requireHandOffStops tras cargar el kickoff (paso 4) y prepareHandOff una vez
 // resuelto el digest de la puerta (pasos 6 a 9). Todas son lecturas y cada rechazo nombra la orden
 // ejecutable que sigue siendo válida; ninguna deja rastro en el disco.
@@ -43,7 +43,7 @@ type handOffPrepared struct {
 }
 
 // prepareHandOff implementa los pasos 6 a 9 de DD-02: almacén con ficheros, artefacto presente,
-// puerta aún sin aprobar y los datos de entrega. Ya no comprueba qué está confirmado (REQ-26.4,
+// puerta aún sin aprobar y los datos de entrega. Ya no comprueba qué está confirmado (RF-GAT-10,
 // DD-12): los documentos pendientes los confirma `axiom sdd publish`, que informa del código sin subir.
 func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, changeRoot string, roster []multirole.RoleAssignment, digest string) (*handOffPrepared, error) {
 	workspaceRoot := loc.WorkspaceRoot
@@ -95,7 +95,7 @@ func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, chang
 
 // gateStillPendingCheck es la comprobación del paso 10 de DD-02, bajo el cerrojo del ledger, cuando
 // el registro lleva `--hand-off`, `--commit-review` o ambas: la puerta sigue sin aprobar cuando se va
-// a anexar el registro (REQ-26.3, REQ-33.2). Una aprobación posterior a la primera quedaría oculta
+// a anexar el registro (RF-GAT-09, RF-GAT-20). Una aprobación posterior a la primera quedaría oculta
 // tras ella y su marca o su modo serían invisibles.
 func gateStillPendingCheck(parsed kickoff.GateRecordArgs, workspaceRoot string) func(kickoff.GateLedger) error {
 	return func(ledger kickoff.GateLedger) error {
@@ -146,7 +146,7 @@ func gateRejectedInvocation(parsed kickoff.GateRecordArgs, workspaceRoot string)
 }
 
 // gatePublishJSON es el destino de la publicación de los documentos que `gate record` calcula y no
-// ejecuta (REQ-27.12, DD-11): la misma forma que `gateQuestion.publication`. Invocation es la orden
+// ejecuta (RF-GAT-15, DD-11): la misma forma que `gateQuestion.publication`. Invocation es la orden
 // de `axiom sdd publish` atada a la rama con `--branch`, que el orquestador ejecuta una vez tras el
 // registro. PRTarget es informativo y se omite en la integración in situ de un multirepo.
 type gatePublishJSON struct {
@@ -164,10 +164,10 @@ type gatePublish struct {
 	unavailable string
 }
 
-// resolveGatePublish calcula, solo con lecturas, dónde publica una aprobación (REQ-27.12): en toda
+// resolveGatePublish calcula, solo con lecturas, dónde publica una aprobación (RF-GAT-15): en toda
 // aprobación distinta de `integration` con un almacén que guarda ficheros. En la cesión usa el plan
 // que ya calculó el motor, y en las demás aprobaciones el destino de `PublicationTarget`. Nunca
-// ejecuta `commit` ni `push`: `gate record` solo registra (REQ-26.5).
+// ejecuta `commit` ni `push`: `gate record` solo registra (RF-GAT-11).
 func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, handOff *handOffPrepared) gatePublish {
 	if parsed.Decision != kickoff.DecisionApproved || parsed.Gate == kickoff.GateIntegration {
 		return gatePublish{}
@@ -194,7 +194,7 @@ func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, han
 // gateRecordJSON es el `--json` de `gate record` (§4.4). delivery, handedOff y handedOffTo solo
 // salen con la salida 2; publish y publishUnavailable, en toda aprobación distinta de integration;
 // lastRoleClosed solo en una compuerta de rol (y pendingNonBlockingRoles, solo al cerrar el último blocking);
-// commitReview solo cuando la aprobación de tasks persiste el modo (REQ-33.2).
+// commitReview solo cuando la aprobación de tasks persiste el modo (RF-GAT-20).
 type gateRecordJSON struct {
 	Schema             string              `json:"schema"`
 	Change             string              `json:"change"`
@@ -211,7 +211,7 @@ type gateRecordJSON struct {
 }
 
 // pendingRoleJSON es un rol no bloqueante cuya compuerta role-apply sigue abierta cuando se cierra
-// el último rol blocking (REQ-21.13): el rol, su política y el estado de su compuerta (`pending` o
+// el último rol blocking (RF-RCL-01): el rol, su política y el estado de su compuerta (`pending` o
 // `rejected`). No bloquea la verificación global.
 type pendingRoleJSON struct {
 	Role   string `json:"role"`
@@ -234,7 +234,7 @@ func pendingRolesJSON(pending []kickoff.PendingRole) []pendingRoleJSON {
 
 // writeGateRecordJSON emite el `--json` de una compuerta registrada. lastRoleClosed es nil fuera de
 // una compuerta de rol; con la aprobación que cierra el último rol blocking es true (el aviso de
-// REQ-21.13 en forma de campo) y pendingNonBlocking lista los roles no bloqueantes aún abiertos.
+// RF-RCL-01 en forma de campo) y pendingNonBlocking lista los roles no bloqueantes aún abiertos.
 func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, mode kickoff.CommitReviewMode, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool, pendingNonBlocking []kickoff.PendingRole) error {
 	document := gateRecordJSON{
 		Schema:             gateRecordSchema,
@@ -274,7 +274,7 @@ func writeGateRecordHeader(stdout io.Writer, parsed kickoff.GateRecordArgs, mode
 }
 
 // writePublishNext presenta, en las salidas 2 y 3, la orden de publicación que sigue al registro
-// (REQ-27.12): Axiom solo la calcula. Sin destino calculable no escribe nada; el código de la
+// (RF-GAT-15): Axiom solo la calcula. Sin destino calculable no escribe nada; el código de la
 // negativa va en el JSON.
 func writePublishNext(stdout io.Writer, publish gatePublish) error {
 	if publish.target == nil {
@@ -288,7 +288,7 @@ func writePublishNext(stdout io.Writer, publish gatePublish) error {
 // writeHandOffDelivery presenta la entrega de la salida 2 en castellano: la orden de publicación de
 // los documentos, la reanudación de quien siga y, solo si el rol tiene repositorios de código, sus
 // órdenes de push numeradas con la aclaración de que Axiom no sube código ni abre PR. No exige una PR
-// fusionada y no emite ninguna orden de plataforma (REQ-26.5, REQ-27.12, DD-12).
+// fusionada y no emite ninguna orden de plataforma (RF-GAT-11, RF-GAT-15, DD-12).
 func writeHandOffDelivery(stdout io.Writer, handOff *handOffPrepared) error {
 	plan := handOff.plan
 	var out strings.Builder

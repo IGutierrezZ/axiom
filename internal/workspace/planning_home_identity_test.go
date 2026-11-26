@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-2.2: la comparación de planning homes es por ruta y no exige que existan.
+// RF-HUB-04: la comparación de planning homes es por ruta y no exige que existan.
 func TestSamePlanningHome(t *testing.T) {
 	root := t.TempDir()
 	existing := filepath.Join(root, "uno")

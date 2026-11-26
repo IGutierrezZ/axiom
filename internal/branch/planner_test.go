@@ -11,8 +11,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Las pruebas del planificador son tablas sin git ni disco (REQ-25.4, REQ-25.5,
-// REQ-25.11, REQ-25.13): `Plan` es una función pura sobre los hechos que reúne el
+// Las pruebas del planificador son tablas sin git ni disco (RF-BRA-04, RF-BRA-05,
+// RF-BRA-11, RF-BRA-14): `Plan` es una función pura sobre los hechos que reúne el
 // motor, así que cada escenario se escribe como una entrada y una salida esperada.
 
 var (
@@ -101,11 +101,11 @@ func repositoryNames(plan ChangePlan) []string {
 	return names
 }
 
-// REQ-25.4 (escenario «Un rol, rama única») y REQ-25.11 (ruta sin sufijo de rol): con
+// RF-BRA-04 (escenario «Un rol, rama única») y RF-BRA-11 (ruta sin sufijo de rol): con
 // un rol solo existe `<prefijo>/<cambio>`, con PR hacia la integración y su worktree
 // en `<raíz>/<cambio>/<repo>`; `fullstack` también cuenta como un único rol.
 func TestPlanEmbeddedWithOneRoleHasASingleChangeBranch(t *testing.T) {
-	// En un monorepo el único rol es `fullstack` (REQ-2.2 de `workspace-topology`).
+	// En un monorepo el único rol es `fullstack` (RF-TOP-04 de `workspace-topology`).
 	for name, tc := range map[string]struct {
 		sealed   []string
 		declared []string
@@ -141,10 +141,10 @@ func TestPlanEmbeddedWithOneRoleHasASingleChangeBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.4 (escenario «Dos roles sobre el mismo repositorio crean seguimiento y
-// ramas de rol») y REQ-25.11 (ruta con sufijo de rol): la de seguimiento más una
+// RF-BRA-04 (escenario «Dos roles sobre el mismo repositorio crean seguimiento y
+// ramas de rol») y RF-BRA-11 (ruta con sufijo de rol): la de seguimiento más una
 // rama por rol, en orden alfabético, con el PR de los roles hacia la de seguimiento. Solo es
-// posible en `multirepo` (en `monorepo-embedded` el único rol es `fullstack`, REQ-2.2 de
+// posible en `multirepo` (en `monorepo-embedded` el único rol es `fullstack`, RF-TOP-04 de
 // `workspace-topology`): los dos roles comparten el repositorio de código `repo-backend`.
 func TestPlanMultirepoWithTwoRolesCreatesTrackingAndRoleBranches(t *testing.T) {
 	in := embeddedInput("x", "qa", "core")
@@ -168,7 +168,7 @@ func TestPlanMultirepoWithTwoRolesCreatesTrackingAndRoleBranches(t *testing.T) {
 	}
 }
 
-// REQ-25.4: `fullstack` es el único rol que toca la unión de los repositorios
+// RF-BRA-04: `fullstack` es el único rol que toca la unión de los repositorios
 // declarados y el del planning home (S-3); como cuenta como un solo rol, ningún
 // repositorio genera ramas de rol. Los repositorios salen en orden estable: primero
 // el del planning home y después por nombre, sin depender del orden de entrada.
@@ -191,7 +191,7 @@ func TestPlanFullstackTouchesEveryDeclaredRepositoryAndThePlanningHome(t *testin
 	}
 }
 
-// REQ-25.4 (escenario «Un rol sellado que no toca ningún repositorio declarado no
+// RF-BRA-04 (escenario «Un rol sellado que no toca ningún repositorio declarado no
 // crea ramas»): un rol desconocido no aporta nada y genera un aviso que lo nombra.
 func TestPlanAnUnknownRoleContributesNothingAndWarns(t *testing.T) {
 	in := embeddedInput("x", "core", "fantasma")
@@ -207,7 +207,7 @@ func TestPlanAnUnknownRoleContributesNothingAndWarns(t *testing.T) {
 }
 
 // Un rol cuya ruta se omitió (no es un repositorio git) ya tiene su mensaje en
-// `skipped`: no recibe además el aviso de rol desconocido (REQ-25.6).
+// `skipped`: no recibe además el aviso de rol desconocido (RF-BRA-06).
 func TestPlanARoleWithASkippedPathDoesNotWarnAsUnknown(t *testing.T) {
 	skipped := SkippedPath{Path: filepath.Join(testMaster, "scripts"), Role: "tooling", Code: CodeNotAGitRepository, Message: "no es un repositorio"}
 	in := embeddedInput("x", "tooling")
@@ -222,7 +222,7 @@ func TestPlanARoleWithASkippedPathDoesNotWarnAsUnknown(t *testing.T) {
 	}
 }
 
-// REQ-25.4 / design D-04 (S-1): antes del sellado el plan contiene solo la rama del
+// RF-BRA-04 / design D-04 (S-1): antes del sellado el plan contiene solo la rama del
 // cambio en el planning home; los repositorios de código que declaran los roles aún
 // no se conocen como tocados.
 func TestPlanBeforeSealingHasOnlyTheChangeBranchInThePlanningHome(t *testing.T) {
@@ -266,7 +266,7 @@ func TestPlanAfterSealingEvaluatesTheModelPerRepository(t *testing.T) {
 	})
 }
 
-// REQ-25.4 / design D-04 (S-3): los roles sin coincidencia de mayúsculas se
+// RF-BRA-04 / design D-04 (S-3): los roles sin coincidencia de mayúsculas se
 // reconocen igual, y la entrada no se altera (ni se reordena) al planificar.
 func TestPlanMatchesRolesIgnoringCaseAndDoesNotMutateItsInput(t *testing.T) {
 	in := embeddedInput("x", "QA", "Core")
@@ -302,7 +302,7 @@ func TestPlanIsDeterministic(t *testing.T) {
 	}
 }
 
-// REQ-25.13 y design D-04: el carril ODD no tiene roles ni archivado, así que solo
+// RF-BRA-14 y design D-04: el carril ODD no tiene roles ni archivado, así que solo
 // recibe la rama de la funcionalidad en el planning home, y el documento ODD es
 // `<workspaceRoot del plan>/odd/tasks/<feature>.md`.
 func TestPlanOddLaneHasNoRolesAndNamesTheOddDocument(t *testing.T) {
@@ -363,7 +363,7 @@ func TestPlanPlacesTheWorkspaceInsideTheChangeWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.11 (S-17): `<repo>` es el último segmento de la ruta declarada y, para `.`, el
+// RF-BRA-11 (S-17): `<repo>` es el último segmento de la ruta declarada y, para `.`, el
 // nombre del directorio de la raíz git.
 func TestPlanNamesEachRepositoryByTheLastSegmentOfItsDeclaredPath(t *testing.T) {
 	tests := []struct {
@@ -405,7 +405,7 @@ func TestPlanNamesEachRepositoryByTheLastSegmentOfItsDeclaredPath(t *testing.T) 
 	}
 }
 
-// REQ-25.11, escenario «Raíz de worktrees por defecto fuera de cualquier
+// RF-BRA-11, escenario «Raíz de worktrees por defecto fuera de cualquier
 // repositorio»: `<P>/axiom` da `<P>/axiom-wt`.
 func TestDefaultWorktreeRootIsASiblingOfTheMasterFolder(t *testing.T) {
 	parent := filepath.FromSlash("/trabajo/proyectos")
@@ -421,7 +421,7 @@ func TestDefaultWorktreeRootIsASiblingOfTheMasterFolder(t *testing.T) {
 	}
 }
 
-// REQ-25.11 (escenario «Nombre con carácter inválido en Windows») y design D-04:
+// RF-BRA-11 (escenario «Nombre con carácter inválido en Windows») y design D-04:
 // `<cambio>` y `<rol>` inválidos dan `invalid_name` antes de planificar nada.
 func TestPlanRejectsInvalidChangeAndRoleNamesWithInvalidName(t *testing.T) {
 	roleInput := func(roles ...string) PlanInput {
@@ -501,7 +501,7 @@ func policyConfig(integration, prefix string, repositories ...workspace.Reposito
 	}
 }
 
-// REQ-25.3: sin configuración rigen `main` y `feat`; el bloque `git:` los sustituye;
+// RF-BRA-03: sin configuración rigen `main` y `feat`; el bloque `git:` los sustituye;
 // un repositorio con ajustes propios prevalece sobre `git:` solo en su repositorio.
 func TestPlanResolvesTheBranchPolicyPerRepository(t *testing.T) {
 	t.Run("sin configuración rigen main y feat", func(t *testing.T) {
@@ -552,8 +552,8 @@ func TestPlanResolvesTheBranchPolicyPerRepository(t *testing.T) {
 	})
 }
 
-// REQ-25.3 (escenario «La excepción por cambio prevalece sobre todo lo demás») y
-// REQ-25.12: las excepciones de la invocación van encima de la entrada del
+// RF-BRA-03 (escenario «La excepción por cambio prevalece sobre todo lo demás») y
+// RF-BRA-12: las excepciones de la invocación van encima de la entrada del
 // repositorio, del bloque `git:` y de los valores por defecto, en todos los
 // repositorios del plan.
 func TestPlanExceptionsPrevailOverTheWholePolicy(t *testing.T) {
@@ -619,7 +619,7 @@ func TestPlanExceptionsPrevailOverTheWholePolicy(t *testing.T) {
 	})
 }
 
-// REQ-25.3 (escenarios «Un prefijo inválido de la invocación se rechaza sin efectos»
+// RF-BRA-03 (escenarios «Un prefijo inválido de la invocación se rechaza sin efectos»
 // y «Un prefijo inválido de `axiom.yaml` se rechaza como configuración»): el nombre
 // inválido de la invocación es `invalid_name`; el de axiom.yaml, `config_invalid`.
 func TestPlanDistinguishesAnInvalidInvocationNameFromAnInvalidConfiguration(t *testing.T) {
@@ -692,8 +692,8 @@ func TestPlanDistinguishesAnInvalidInvocationNameFromAnInvalidConfiguration(t *t
 	})
 }
 
-// REQ-25.5 y design D-04: en `multirepo` el repositorio de specs se trabaja in situ
-// (sin ramas ni worktrees) y cada repositorio de código recibe el modelo de REQ-25.4;
+// RF-BRA-05 y design D-04: en `multirepo` el repositorio de specs se trabaja in situ
+// (sin ramas ni worktrees) y cada repositorio de código recibe el modelo de RF-BRA-04;
 // un rol cuyo único repositorio es el de specs (perfiles `knowledge` y `spec-only`)
 // no genera ramas.
 func TestPlanMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
@@ -755,7 +755,7 @@ func TestPlanMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
 		}
 	})
 
-	// REQ-25.4 (escenario «Un rol sellado que no toca ningún repositorio declarado no
+	// RF-BRA-04 (escenario «Un rol sellado que no toca ningún repositorio declarado no
 	// crea ramas») en multirepo: el repositorio de specs sigue in situ y los repositorios
 	// de código que ningún rol sellado toca no entran al plan.
 	t.Run("un rol sellado que no toca ningún repositorio declarado no crea ramas", func(t *testing.T) {
@@ -772,7 +772,7 @@ func TestPlanMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
 			t.Errorf("avisos = %v, se esperaba uno que nombre el rol fantasma", plan.Warnings)
 		}
 	})
-	// REQ-25.5 y design D-04: un rol cuyo único repositorio resuelve a la raíz del
+	// RF-BRA-05 y design D-04: un rol cuyo único repositorio resuelve a la raíz del
 	// repositorio de specs no genera ramas, sea cual sea el perfil que lo declaró. Los
 	// perfiles `knowledge` y `spec-only` de `axiom init` generan multirepo con el rol
 	// `knowledge` sobre `.`; `fullstack` toca la unión de lo declarado, que aquí es solo
@@ -823,7 +823,7 @@ func repositoryPair() []RepoFacts {
 	return []RepoFacts{codeFacts("b/api", "web"), codeFacts("a/api", "api")}
 }
 
-// REQ-25.11 (escenario «Dos repositorios con el mismo último segmento se rechazan») y
+// RF-BRA-11 (escenario «Dos repositorios con el mismo último segmento se rechazan») y
 // S-17: dos repositorios del plan con el mismo `<repo>` dan `invalid_name`, nombrando
 // ambas rutas, antes de planificar ninguna rama.
 func TestPlanRejectsTwoRepositoriesWithTheSameName(t *testing.T) {
@@ -878,7 +878,7 @@ func TestPlanRejectsTwoRepositoriesWithTheSameName(t *testing.T) {
 	})
 }
 
-// REQ-25.11 y design D-04: `plan_conflict` cuando la raíz de worktrees queda dentro de
+// RF-BRA-11 y design D-04: `plan_conflict` cuando la raíz de worktrees queda dentro de
 // un repositorio del plan. La comparación es por segmentos de ruta: `axiom-wt` no está
 // dentro de `axiom`.
 func TestPlanRejectsAWorktreeRootInsideARepositoryOfThePlan(t *testing.T) {
@@ -933,7 +933,7 @@ func TestPlanRejectsAWorktreeRootInsideARepositoryOfThePlan(t *testing.T) {
 	})
 }
 
-// REQ-25.11 y design D-04: `plan_conflict` cuando una ruta planificada queda dentro de
+// RF-BRA-11 y design D-04: `plan_conflict` cuando una ruta planificada queda dentro de
 // un worktree existente distinto del suyo (por ejemplo, uno antiguo de los scripts
 // locales); el worktree que ya está exactamente en la ruta planificada es el suyo.
 func TestPlanRejectsAPlannedPathInsideAnExistingWorktree(t *testing.T) {
@@ -1006,7 +1006,7 @@ func pathLengthInput(length int, rules PathRules) PlanInput {
 	return in
 }
 
-// REQ-25.11 y design D-04 (A-1): con `PathRules{GOOS: "windows"}`, una ruta de worktree
+// RF-BRA-11 y design D-04 (A-1): con `PathRules{GOOS: "windows"}`, una ruta de worktree
 // de más de 220 caracteres (260 menos un margen de 40) da `path_too_long`, nombrando la
 // ruta, su longitud y el máximo; 220 exactos se admiten. En otros sistemas no hay límite
 // propio, de modo que la regla se prueba en cualquier sistema.

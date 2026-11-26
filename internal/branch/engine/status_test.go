@@ -287,7 +287,7 @@ func intValue(t *testing.T, what string, value *int) int {
 }
 
 // remoteOperation dice si una invocación de git es de las que `status` no puede
-// lanzar (REQ-25.1): fetch, pull, push o ls-remote.
+// lanzar (RF-BRA-01): fetch, pull, push o ls-remote.
 func remoteOperation(subcommand string) bool {
 	switch subcommand {
 	case "fetch", "pull", "push", "ls-remote":
@@ -296,7 +296,7 @@ func remoteOperation(subcommand string) bool {
 	return false
 }
 
-// REQ-25.15, escenarios «Estado de un cambio con rama y worktree» y «Atraso calculado
+// RF-BRA-16, escenarios «Estado de un cambio con rama y worktree» y «Atraso calculado
 // solo con referencias locales»: por repositorio, el papel; por rama, su worktree, su
 // limpieza, su adelanto y su atraso respecto de la base, y el destino del PR. El
 // observador no ve ninguna operación remota, ni ninguna fuera de la lista cerrada de
@@ -372,7 +372,7 @@ func TestStatusOfAChangeWithABranchAndAWorktree(t *testing.T) {
 	})
 }
 
-// REQ-25.15: con la rama de integración remota ya traída a local, la base es esa
+// RF-BRA-16: con la rama de integración remota ya traída a local, la base es esa
 // referencia (`remote-tracking`) y el adelanto y el atraso se miden contra ella.
 func TestStatusUsesTheLocalRemoteTrackingReferenceAsTheBase(t *testing.T) {
 	t.Parallel()
@@ -401,7 +401,7 @@ func TestStatusUsesTheLocalRemoteTrackingReferenceAsTheBase(t *testing.T) {
 	}
 }
 
-// REQ-25.15, escenario «Cambio no iniciado»: un cambio sin ramas es `not_started`
+// RF-BRA-16, escenario «Cambio no iniciado»: un cambio sin ramas es `not_started`
 // (etiqueta «no iniciado», salida 0), no un error, y el plan sigue visible.
 func TestStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
 	t.Parallel()
@@ -422,9 +422,9 @@ func TestStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
 	}
 }
 
-// REQ-25.4 (escenarios «Dos roles sobre el mismo repositorio…» y «La rama de
-// archivado no pertenece al modelo de roles») y REQ-25.15 (escenario «Rama destino
-// propuesta para el PR»): en un multirepo (único lugar con ramas de rol, REQ-2.2 de
+// RF-BRA-04 (escenarios «Dos roles sobre el mismo repositorio…» y «La rama de
+// archivado no pertenece al modelo de roles») y RF-BRA-16 (escenario «Rama destino
+// propuesta para el PR»): en un multirepo (único lugar con ramas de rol, RF-TOP-04 de
 // `workspace-topology`) con dos roles sellados sobre `repo-backend`, el destino de cada rama de
 // rol es la de seguimiento y el de esta, la integración; el adelanto de una rama de rol se mide
 // contra la de seguimiento.
@@ -474,7 +474,7 @@ func TestStatusProposesThePRTargetOfEachBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.4 (S-1): antes del sellado el plan solo tiene la rama del cambio, aunque
+// RF-BRA-04 (S-1): antes del sellado el plan solo tiene la rama del cambio, aunque
 // axiom.yaml declare roles.
 func TestStatusBeforeSealingListsOnlyTheChangeBranch(t *testing.T) {
 	t.Parallel()
@@ -487,8 +487,8 @@ func TestStatusBeforeSealingListsOnlyTheChangeBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.3 (escenario «Un repositorio con ajustes propios prevalece sobre `git:`») y
-// REQ-25.6: `fullstack` toca el repositorio del planning home y los declarados; un
+// RF-BRA-03 (escenario «Un repositorio con ajustes propios prevalece sobre `git:`») y
+// RF-BRA-06: `fullstack` toca el repositorio del planning home y los declarados; un
 // repositorio anidado toma su política propia (aquí, su rama de integración).
 func TestStatusPlansEveryRepositoryWithItsOwnPolicy(t *testing.T) {
 	t.Parallel()
@@ -534,7 +534,7 @@ func TestStatusPlansEveryRepositoryWithItsOwnPolicy(t *testing.T) {
 	}
 }
 
-// REQ-25.6: una ruta declarada que no existe o que no es un repositorio git se omite
+// RF-BRA-06: una ruta declarada que no existe o que no es un repositorio git se omite
 // sin abortar el plan, con su código y un mensaje que nombra la ruta y el rol.
 func TestStatusSkipsDeclaredPathsThatAreNotGitRepositories(t *testing.T) {
 	t.Parallel()
@@ -580,7 +580,7 @@ func TestStatusSkipsDeclaredPathsThatAreNotGitRepositories(t *testing.T) {
 	}
 }
 
-// REQ-25.13: el carril ODD no lee el kickoff, no divide en roles y su resultado nombra
+// RF-BRA-14: el carril ODD no lee el kickoff, no divide en roles y su resultado nombra
 // el documento `odd/tasks/<feature>.md`.
 func TestStatusOddLaneNamesTheOddDocument(t *testing.T) {
 	t.Parallel()
@@ -643,7 +643,7 @@ func TestStatusWithoutTheIntegrationBranchWarnsAndSkipsTheComparison(t *testing.
 		t.Errorf("base %+v, rama %+v; sin rama de integración no hay base ni comparación", repository.Base, feature)
 	}
 	// Dos avisos con la misma causa y distinto efecto: no se calculan adelanto ni atraso, y
-	// la lista de pendientes de archivar no se evalúa (REQ-25.20).
+	// la lista de pendientes de archivar no se evalúa (RF-BRA-21).
 	if len(result.Warnings) != 2 || !strings.Contains(result.Warnings[0], "«develop»") || !strings.Contains(result.Warnings[0], "adelanto") ||
 		!strings.Contains(result.Warnings[1], "«develop»") || !strings.Contains(result.Warnings[1], "pendientes de archivar") {
 		t.Errorf("avisos = %v, se esperaban dos que nombren la rama de integración develop: el de la comparación y el de los pendientes", result.Warnings)

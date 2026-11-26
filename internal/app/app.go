@@ -359,7 +359,7 @@ func resolveSkillRegistryDirs(cwd, home string) (string, string, error) {
 	return cwd, home, nil
 }
 
-// runSkillRegistryRefresh keeps the legacy surface byte-identical (REQ-22.14):
+// runSkillRegistryRefresh keeps the legacy surface byte-identical (RF-SKI-05):
 // primary line only, no per-destination lines and no mirror warning. The
 // engine underneath is the shared unified one (D-13).
 func runSkillRegistryRefresh(args []string, stdout io.Writer) error {
@@ -379,7 +379,7 @@ func runSkillRegistryRefresh(args []string, stdout io.Writer) error {
 }
 
 // runSkillRegistryList keeps the legacy list output byte-identical
-// (REQ-22.14) over the shared read-only engine.
+// (RF-SKI-05) over the shared read-only engine.
 func runSkillRegistryList(args []string, stdout io.Writer) error {
 	return writeSkillIndexList(skillIndexSurfaceLegacy, args, stdout)
 }
@@ -408,7 +408,7 @@ func runUpdate(ctx context.Context, currentVersion string, profile system.Platfo
 //
 // The implementation lives in runUpgradeReport so the dashboard can obtain the
 // structured outcome (D-06) without duplicating the run; this wrapper keeps the
-// CLI error contract and the exact same stdout bytes (REQ-22.5).
+// CLI error contract and the exact same stdout bytes (RF-UPD-05).
 func runUpgrade(ctx context.Context, args upgradeArgs, detection system.DetectionResult, stdout io.Writer) error {
 	_, err := runUpgradeReport(ctx, args, detection, stdout)
 	return err

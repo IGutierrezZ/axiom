@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// RequirementItem es un requisito que la delta del cambio crea o toca (REQ-47.9).
+// RequirementItem es un requisito que la delta del cambio crea o toca (RF-CLI-14).
 type RequirementItem = openspecdoc.DeclaredRequirement
 
 // RequirementsProjection es el campo aditivo `requirements` de `axiom sdd status --json`:
@@ -19,7 +19,7 @@ type RequirementsProjection struct {
 	Creates  []RequirementItem `json:"creates"`
 }
 
-// decorateRequirements proyecta lo que declaran las deltas del cambio (REQ-47.9, D9). Es
+// decorateRequirements proyecta lo que declaran las deltas del cambio (RF-CLI-14, D9). Es
 // aditivo y no toca nextRecommended, dependencies ni motivos. El campo se omite, sin dejar
 // rastro en el JSON, cuando el cambio está archivado, el almacén no guarda ficheros
 // (`engram` o `none`), el patrón de identificadores es inaccesible o las deltas no declaran

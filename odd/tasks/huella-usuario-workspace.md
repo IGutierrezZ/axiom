@@ -17,7 +17,7 @@ Análisis de solo lectura sobre `main` `c780061a` (Engram `analysis/user-level-f
    - En cualquier repositorio git crea `.atl/` sin `.gitignore`.
    - Reescribe la sección `## Skills` de un `AGENTS.md` existente (`internal/skillregistry/agents.go:146-160`).
    - Guarda un tema en Engram con el nombre de la carpeta.
-   - Contradice REQ-25.22 y `docs/manual-de-inicio.md:239`.
+   - Contradice RF-BRA-23 y `docs/manual-de-inicio.md:239`.
 2. **Los permisos ignoran el ámbito y fijan modos de autoaprobación.**
    - Siempre se inyectan en home: `permissions.Inject(s.homeDir, …)` en `internal/cli/run.go:1746` y `internal/cli/sync.go:1357`.
    - Los modos impuestos son `bypassPermissions` en Claude, `auto_edit` en Gemini y Qwen, `chat.tools.autoApprove` en VS Code y `bash "*": allow` en OpenCode y Kilo.
@@ -75,7 +75,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Cuenta el `axiom.yaml` propio en un ancestro y también el que se alcanza mediante el puntero multirepo `.axiom-workspace`. Ese puntero no es un marcador independiente: es la vía canónica para llegar al `axiom.yaml` del repositorio de specs (`internal/workspace/loader.go:185-229`). Excluirlo rompería los workspaces multirepo.
   - `openspec/` deja de valer como marcador para hooks y guardas.
   - Hoy `markerAt` lo acepta como `OriginOpenSpec` (`internal/workspace/locate.go:219-229`), lo que activa Axiom en repositorios ajenos que usan OpenSpec.
-  - T3 decide si el cambio va en `markerAt` o solo en la entrada de las guardas. Antes hay que revisar qué usos legítimos tiene `OriginOpenSpec` (REQ-24.2).
+  - T3 decide si el cambio va en `markerAt` o solo en la entrada de las guardas. Antes hay que revisar qué usos legítimos tiene `OriginOpenSpec` (RF-PLH-02).
 - **D4 · Migración de equipos con instalación global.** **Resuelta: según la recomendación.**
   - Recomendación: un comando o guía basados en `axiom uninstall` global seguido de `axiom setup` por proyecto, con un `doctor` que detecte restos globales.
 
@@ -109,7 +109,7 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
     - `go vet`, `go build`, deadcode-ratchet y `gofmt`: ok.
   - Tamaño: +996/−147, de ellas unas 880 líneas de pruebas. Nivel: medium.
 - [x] **T3 · Detección de proyecto y guardas en repositorios ajenos** (ruta: delegada; depende de D3). Commit `2f05d8b3`.
-  - Decisión: `markerAt` y `Locate` no cambian. REQ-24.2 (`planning-home-resolution`) exige `openspec/` como marcador para los comandos explícitos, y hay 32 llamadas a `Locate`. El filtro `IsAxiomProject` se aplica en la entrada de cada hook:
+  - Decisión: `markerAt` y `Locate` no cambian. RF-PLH-02 (`planning-home-resolution`) exige `openspec/` como marcador para los comandos explícitos, y hay 32 llamadas a `Locate`. El filtro `IsAxiomProject` se aplica en la entrada de cada hook:
     - `branch guard`, en sus caminos pre y post de `internal/branch/engine`;
     - `sdd-preflight-hook`, que usa el `cwd` del payload;
     - `review stop-hook`: fuera de proyecto no lee el modo RDD ni escribe marcas en `~/.gentle-ai/review-stop-hook`.
@@ -376,13 +376,13 @@ Las cuatro quedaron resueltas por el usuario el 2026-10-29: acepta las recomenda
   - Hallazgos: la guía de enrutado de VS Code en workspace escribe `<raíz>/AppData/Roaming/Code/User/prompts/axiom.instructions.md` (bug de install, T13b); `share:"disabled"` de `opencode.json` se retira aunque lo pusiera el usuario; los JSON se reescriben sin comentarios; no se retiran copias de migración en `.opencode/skills` o `.codex/skills`. Una prueba intermedia dejó `C:\backups\<marca>\manifest.json` fuera del worktree, pendiente de borrar a mano.
 - [x] **T13b · Guía de enrutado de VS Code en workspace** (ruta: inline; un fichero de código y su prueba). La instalación en workspace ya no escribe la ruta de usuario de VS Code dentro del proyecto: `routingGuidanceOptions` pasa el adaptador ligado de cualquier agente con modo workspace (`boundToWorkspace`), y la guía va a `.github/instructions/axiom.instructions.md`. Prueba en rojo sin la corrección (faltaba `agent-routing` y aparecía `AppData` en el proyecto) y en verde con ella; `internal/cli -run 'VSCode|Workspace|Codex|Gemini|Uninstall'` ok. La limpieza de ese resto en uninstall se mantiene para instalaciones anteriores.
 - [x] **T14 · Documentación alineada** (ruta: delegada; disparador: 2+ ficheros). Commits `60bd608d`, `2f4aed89`, `6d6be36b`, `85b59ede`, `33fd0206`, `8ff19b8e`, `f2a7d69d`, `1f37111a`.
-  - Hecho: ámbito workspace por defecto y huella en `usage.md`, `manual-de-inicio.md`, `quickstart.md` y `non-interactive.md`; modo workspace por agente, precedencia de Gemini y `engram setup codex` en `agents.md` y `engram.md`; notas en `components.md`, `platforms.md`, `opencode-profiles.md` y `kiro.md`; REQ-25.22; `install.ps1` usa `GENTLE_AI_NO_SELF_UPDATE`; el asset de Gemini usa `{{AXIOM_SKILLS_DIR}}`; el aviso de instalación global ya no dice «(default)».
+  - Hecho: ámbito workspace por defecto y huella en `usage.md`, `manual-de-inicio.md`, `quickstart.md` y `non-interactive.md`; modo workspace por agente, precedencia de Gemini y `engram setup codex` en `agents.md` y `engram.md`; notas en `components.md`, `platforms.md`, `opencode-profiles.md` y `kiro.md`; RF-BRA-23; `install.ps1` usa `GENTLE_AI_NO_SELF_UPDATE`; el asset de Gemini usa `{{AXIOM_SKILLS_DIR}}`; el aviso de instalación global ya no dice «(default)».
   - Comprobación: build, vet y gofmt ok; `assets`, `components/sdd`, `agents/gemini`, `update`, `app` (docs), `workspace`, `skillregistry` ok. Repetido por el orquestador: `components/sdd` ok.
   - Hallazgos: la caché `model-variants` no la lee ningún código, ignora `AXIOM_STATE_DIR` y `uninstall --scope global` solo borra la v1; OpenClaw y Pi pasan el filtro de workspace sin adaptador ligado (se revisa en V1).
   - Lista original:
   - `docs/usage.md:248`.
   - `docs/manual-de-inicio.md:204,239`.
-  - Redacción de REQ-25.22 en la spec viva.
+  - Redacción de RF-BRA-23 en la spec viva.
   - `docs/components.md`, `docs/platforms.md` y las rutas de `docs/opencode-profiles.md`.
   - `AXIOM_NO_SELF_UPDATE` en `scripts/install.ps1:153`, alineado con `GENTLE_AI_NO_SELF_UPDATE`.
 - [ ] **V1 · Verificación de extremo a extremo** (ruta: delegada; al cierre de cada fase).

@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Pruebas de los constructores de la entrega de la salida 2 (REQ-26.4, REQ-26.5, REQ-27.12, DD-12).
+// Pruebas de los constructores de la entrega de la salida 2 (RF-GAT-10, RF-GAT-11, RF-GAT-15, DD-12).
 // Matriz de amenazas: «Selección de repositorio git», «Estado del push» y «Órdenes de PR».
 
 const spacedRoot = `C:\Users\dev name\axiom-wt\x\axiom`
@@ -32,7 +32,7 @@ func TestHandOffPushNamesTheConcreteBranchAndNeverHEAD(t *testing.T) {
 	}
 }
 
-// REQ-27.7 y REQ-27.12: la invocación de publicación va atada a la rama con --branch y cita la
+// RF-PUB-03 y RF-GAT-15: la invocación de publicación va atada a la rama con --branch y cita la
 // raíz del espacio de trabajo; sin `&&` ni órdenes de plataforma.
 func TestPublishInvocationIsBoundToTheBranchAndQuotesTheWorkspaceRoot(t *testing.T) {
 	got := PublishInvocation(spacedRoot, "x", "inc/x")

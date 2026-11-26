@@ -333,7 +333,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - El colector no está en ningún workflow, ni en `.goreleaser.yaml`, ni en un Makefile, ni en la línea base de código muerto. Borrar un paquete huérfano entero nunca dispara el ratchet; solo lo hacen las funciones que se quedan sin llamadores dentro de paquetes que siguen importados.
   - `modernc.org/sqlite` y sus dependencias indirectas solo los usa el colector: `go mod tidy` los quita.
   - No hay ratchet ni golden test que enumere símbolos de telemetría. `.guard-population-baseline.txt` fija el hash de una guarda de `sync.go`: no tocar esa sentencia.
-  - Otros puntos afectados: `scripts/test-opencode-v2-host.py:19` (`PLUGIN_IDS`), `assets_test.go:649-656` (5 plugins), `docs/opencode-compatibility.md:10` y el requisito REQ-20.12 (`openspec/specs/axiom-distribution-identity/spec.md:74-79`), que queda sin objeto.
+  - Otros puntos afectados: `scripts/test-opencode-v2-host.py:19` (`PLUGIN_IDS`), `assets_test.go:649-656` (5 plugins), `docs/opencode-compatibility.md:10` y el requisito RF-DIS-06 (`openspec/specs/axiom-distribution-identity/spec.md:74-79`), que queda sin objeto.
 - **Forma de los hooks instalados:**
   - Claude: `axiom telemetry runtime claude --json` (async, timeout 5), en `Stop` y `SubagentStop`.
   - Codex: `axiom telemetry runtime codex --json` (async, timeout 4), y debe callar en stdout.
@@ -345,11 +345,11 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
   - **T6c** — retirar los hooks de Claude y Codex: dejar de escribirlos y, en `sync` o `install`, quitar los existentes (coincidencia exacta con los prefijos `axiom` y `gentle-ai`, sin tocar entradas del usuario). `uninstall` ya los quita. ~350 líneas.
   - **T6d** — retirar el plugin de OpenCode: lista fija de 4 digests en `managed.go`; un paso de retirada no fatal en `install` y en `sync`; borrar los assets `.ts` y `Reconcile*`, con sus tests. ~1-1,3 k líneas, `size:exception`.
   - **T6e** — borrado final de `cmd/gentle-telemetry`, `internal/telemetrycollector`, `internal/telemetry`, `deploy/telemetry`, `contracts/telemetry` y `docs/telemetry-collector.md`, más `go mod tidy`. También quita la telemetría de los `TestMain`, manteniendo su aislamiento del HOME y del PATH, y añade un test de guarda contra la reaparición del endpoint. ~20 k líneas, `size:exception`.
-  - **T6f** — `README.md:177`; `docs/telemetry.md`, reducido a una declaración de ~15 líneas de que Axiom no envía telemetría; ledger con 20 filas de `absorbido` a `revertido` (19 en F2 más `80c927ae`), con motivo no vacío, y el recuento a 60/11/20; nota de retirada de REQ-20.12. ~100 líneas.
+  - **T6f** — `README.md:177`; `docs/telemetry.md`, reducido a una declaración de ~15 líneas de que Axiom no envía telemetría; ledger con 20 filas de `absorbido` a `revertido` (19 en F2 más `80c927ae`), con motivo no vacío, y el recuento a 60/11/20; nota de retirada de RF-DIS-06. ~100 líneas.
   - **Orden:** T6a → T6b (con el stub) → T6c y T6d (independientes) → T6e → T6f.
 - **Decisión del usuario (2026-10-05): sin stub.** «No hay ese alguien: el único proyecto con Axiom instalado es Axiom, por lo que se puede quitar y hacer sync.»
   - **Nuevo orden: T6a → T6c → T6d → T6b → T6e → T6f.** Primero se deja de enviar y se retiran los hooks y el plugin mediante `sync`. El comando se borra solo cuando el usuario ya ha ejecutado `sync`, para que ningún hook llame a un comando inexistente. T6b deja de llevar stub.
-  - Se aplican las demás recomendaciones del plan: retirar el plugin en `install` y en `sync`; ante un conflicto de propiedad, avisar y saltar; mantener un `docs/telemetry.md` mínimo; no fusionar T6b con T6e; sin hotfix del endpoint; el ledger, después de T6e; retirar REQ-20.12 en T6f. Los `size:exception` se piden PR a PR.
+  - Se aplican las demás recomendaciones del plan: retirar el plugin en `install` y en `sync`; ante un conflicto de propiedad, avisar y saltar; mantener un `docs/telemetry.md` mínimo; no fusionar T6b con T6e; sin hotfix del endpoint; el ledger, después de T6e; retirar RF-DIS-06 en T6f. Los `size:exception` se piden PR a PR.
   - **Instalación real (lectura del 2026-10-05):** 2 hooks en `~/.claude/settings.json`; el plugin `~/.config/opencode/plugins/telemetry-runtime.ts`; `~/.gentle-ai/telemetry.json` (no se borra, es compartido con el upstream); y `C:\repos\axiom\.claude\settings.json`, que no está versionado y pertenece al checkout de la otra sesión. Ningún fichero versionado del repositorio lleva hooks de telemetría.
 - **Progreso:**
   - **T6a: PR #84** (`600350b3`, rama `fix/telemetria-dejar-de-enviar`, worktree `odd-up-t6a`). Quita los disparadores automáticos de `app`, `run` y `sync` y las seis llamadas del cierre de revisiones, y borra lo que queda sin llamadores (`counters.go` incluido). +5 y −383 líneas, riesgo `medium`. Verificado: build y vet limpios; `internal/telemetry`, `internal/app` y subconjuntos de `internal/cli` en verde; ratchet sin funciones nuevas inalcanzables. Se mantienen `runTelemetryTriggerCommand` y sus helpers, que siguen siendo alcanzables desde `axiom telemetry trigger` hasta T6b.
@@ -386,7 +386,7 @@ Cada PR lleva riesgo `high` probable (borrado masivo y hooks), así que necesita
       - `docs/telemetry.md`: de 585 a 25 líneas.
       - `README.md`.
       - Ledger: 20 filas a `revertido`, con motivo; si la fila ya tenía uno, se conserva como «Nota de absorción original». Recuento 60/11/20, total 91.
-      - REQ-20.12 marcado como RETIRADO en la spec y en `INDEX.md`.
+      - RF-DIS-06 marcado como RETIRADO en la spec y en `INDEX.md`.
       - `docs/telemetry.md` fuera de la lista blanca del test de guarda; el *fixture* del autotest pasa al ledger.
     - **Tamaño:** +47 / −606, con **`size:exception` aprobado por el usuario**. Riesgo `medium`.
     - **Menciones restantes a «telemetry», todas inocuas:** la lógica de retirada, comentarios, `PRD-AGENT-BUILDER.md` (futura) y `internal/update/upgrade/executor.go:102` (datos de usuario que conserva la actualización).

@@ -50,7 +50,7 @@ func formatLiterals(t testing.TB, name string, src []byte) []string {
 	return found
 }
 
-// TestNoRequirementIDFormatOutsideReqid fija REQ-44.4: ninguna forma de identificador de
+// TestNoRequirementIDFormatOutsideReqid fija RF-RID-04: ninguna forma de identificador de
 // requisito fuera de internal/reqid. Recorre los literales de texto de los `.go` de
 // producción de internal/ y cmd/ (sin `_test.go` ni internal/reqid) y falla nombrando el
 // fichero si alguno contiene `REQ-` seguido de algo que no sea una cifra.

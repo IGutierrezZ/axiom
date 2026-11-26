@@ -47,7 +47,7 @@ type Dispatcher struct {
 	Immediate     time.Duration // 10 s si es cero
 	PerOp         time.Duration // 30 s si es cero (sync)
 	// Guard, si no es nil, se llama con la carpeta antes de tomar su cerrojo: un error la rechaza
-	// (la guarda A de ramas, REQ-25.19, la pone la capa de verbos). Dispatch lo deja en Report.Err y
+	// (la guarda A de ramas, RF-BRA-20, la pone la capa de verbos). Dispatch lo deja en Report.Err y
 	// Sync salta la carpeta con un aviso.
 	Guard func(Folder) error
 }

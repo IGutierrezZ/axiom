@@ -118,7 +118,7 @@ func classifyMergeTree(exitCode int) mergeTreeResult {
 // MergeTreeEquivalent dice si la fusión simulada de branchRef en target produce el árbol de target
 // (`git merge-tree --write-tree --no-messages <target> <branchRef>`, salida 0, y su primera línea
 // igual a `git rev-parse <target>^{tree}`): la capa 2 de la detección de fusión de `done`
-// (`equivalent_tree`, REQ-25.16), que detecta un squash o un rebase aunque target haya avanzado
+// (`equivalent_tree`, RF-BRA-17), que detecta un squash o un rebase aunque target haya avanzado
 // después. supported es falso, sin error, si git no admite la orden (versión anterior a la 2.38 o
 // salida 129): la capa se omite. Una fusión con conflictos (salida 1) es admitida y no equivalente.
 // Solo usa referencias locales; la orden escribe los objetos de árbol que calcula en el repositorio

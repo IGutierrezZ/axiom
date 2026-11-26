@@ -16,7 +16,7 @@ import (
 //
 // También deja a los procesos git de las pruebas sin acceso a la configuración del
 // usuario, con un autor fijo y sin red (tasks.md, regla 9): las pruebas de
-// REQ-25.31 crean repositorios y worktrees reales.
+// RF-HUB-09 crean repositorios y worktrees reales.
 func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }

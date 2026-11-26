@@ -15,7 +15,7 @@ import (
 const planningHomeChange = "inc-99-ejemplo"
 
 // canonicalStarts son los tres puntos de partida del espacio canónico desde los
-// que los verbos SDD deben resolver el mismo planning home (REQ-24.8).
+// que los verbos SDD deben resolver el mismo planning home (RF-PLH-08).
 func canonicalStarts(ws workspacetest.Workspace) map[string]string {
 	return map[string]string{
 		"carpeta maestra":                 ws.Master,
@@ -33,7 +33,7 @@ func assertNoOpenSpecOutsideSpecsRepository(t *testing.T, ws workspacetest.Works
 	}
 }
 
-// REQ-24.8 y REQ-24.9: kickoff y gate leen y escriben el cambio del repositorio
+// RF-PLH-08 y RF-PLH-09: kickoff y gate leen y escriben el cambio del repositorio
 // de especificaciones desde cualquier punto de partida del espacio canónico.
 func TestGovernanceVerbsOperateOnTheSamePlanningHomeFromEveryStart(t *testing.T) {
 	ws := workspacetest.Canonical(t)
@@ -74,7 +74,7 @@ func TestGovernanceVerbsOperateOnTheSamePlanningHomeFromEveryStart(t *testing.T)
 	assertNoOpenSpecOutsideSpecsRepository(t, ws)
 }
 
-// REQ-24.8: la configuración que consulta `kickoff seal --infer` es la que
+// RF-PLH-08: la configuración que consulta `kickoff seal --infer` es la que
 // resuelve el primitivo (a través del puntero), no un axiom.yaml de la raíz.
 func TestKickoffSealInferReadsTheConfigurationBehindThePointer(t *testing.T) {
 	ws := workspacetest.Canonical(t)
@@ -107,7 +107,7 @@ func TestKickoffSealInferReadsTheConfigurationBehindThePointer(t *testing.T) {
 	})
 }
 
-// REQ-24.9, escenario 3: un cambio archivado con prefijo de fecha se rechaza por
+// RF-PLH-09, escenario 3: un cambio archivado con prefijo de fecha se rechaza por
 // archivado y no con «no existe».
 func TestGovernanceVerbsRejectAnArchivedChangeWithADatePrefix(t *testing.T) {
 	ws := workspacetest.Canonical(t, workspacetest.WithArchivedChange())
@@ -118,7 +118,7 @@ func TestGovernanceVerbsRejectAnArchivedChangeWithADatePrefix(t *testing.T) {
 			if err == nil {
 				t.Fatal("se esperaba el rechazo del cambio archivado")
 			}
-			if !strings.Contains(err.Error(), "archivado") || !strings.Contains(err.Error(), "REQ-21.18") {
+			if !strings.Contains(err.Error(), "archivado") || !strings.Contains(err.Error(), "RF-ARC-03") {
 				t.Fatalf("el rechazo debe ser por cambio archivado: %v", err)
 			}
 			if strings.Contains(err.Error(), "no existe") {
@@ -154,7 +154,7 @@ func TestGovernanceVerbsRejectAnUnresolvableWorkspaceWithoutWriting(t *testing.T
 	})
 }
 
-// REQ-24.9 y REQ-24.12: la autorización por cambio opera sobre el repositorio de
+// RF-PLH-09 y RF-PLH-12: la autorización por cambio opera sobre el repositorio de
 // especificaciones, también cuando se lanza desde un repositorio de código.
 func TestSDDAttemptGrantOperatesOnTheSpecsRepositoryFromACodeRepository(t *testing.T) {
 	ws := workspacetest.Canonical(t, workspacetest.WithGit())

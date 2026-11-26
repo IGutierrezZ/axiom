@@ -7,12 +7,12 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// REQ-21.15 and DD-10: the global verify phase opens when every role of a
+// RF-RCL-03 and DD-10: the global verify phase opens when every role of a
 // multi-role roster has its role-apply gate approved. No handoff.md takes part
-// in that decision, and handoff_policy has no effect on it (REQ-26.9).
+// in that decision, and handoff_policy has no effect on it (RF-PRE-03).
 
 // sealPerCheckpointFullstackKickoff seals a single-role "fullstack" kickoff
-// with handoff_policy per_checkpoint, the value REQ-26.9 turns into a no-op.
+// with handoff_policy per_checkpoint, the value RF-PRE-03 turns into a no-op.
 func sealPerCheckpointFullstackKickoff(t *testing.T, changeRoot, changeName string, style kickoff.ExecutionStyle) {
 	t.Helper()
 	_, ok, err := kickoff.Seal(changeRoot, kickoff.Kickoff{
@@ -136,7 +136,7 @@ func TestVerifyKeepsBaselineForSingleRoleAndContinuous(t *testing.T) {
 	}
 }
 
-// REQ-26.9: per_checkpoint and none produce the same result.
+// RF-PRE-03: per_checkpoint and none produce the same result.
 func TestVerifyDependencyIgnoresHandoffPolicy(t *testing.T) {
 	t.Parallel()
 	build := func(policy kickoff.HandoffPolicy, webApproved bool) *Governance {

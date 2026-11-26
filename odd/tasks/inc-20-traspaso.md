@@ -17,7 +17,7 @@
 ## Lo primero al retomar
 
 1. **Comprobar PR #26.** Si está en verde, fusionarlo. Si no, leer el fallo antes de tocar nada.
-2. **Lanzar la rebanada 3 (F0.c1)** — identidad de build, cobertura de CI, REQ-20.15 y REQ-20.16.
+2. **Lanzar la rebanada 3 (F0.c1)** — identidad de build, cobertura de CI, RF-CIB-01 y RF-CIB-02.
 3. Antes de abrir PRs: `git log origin/main..main` y `gofmt -l .`. Las dos han mordido antes.
 
 ## Decisiones del usuario ya cerradas — no reabrir
@@ -30,7 +30,7 @@
 
 ## Bloqueado por el mantenedor, no por código
 
-**El tramo de instalador de la rebanada 4** depende de REQ-20.8, que exige un release publicado bajo la identidad de Axiom. Medido: **el fork tiene cero releases**; upstream va por `v3.3.0`. El resto de esa rebanada avanza igual.
+**El tramo de instalador de la rebanada 4** depende de RF-DIS-02, que exige un release publicado bajo la identidad de Axiom. Medido: **el fork tiene cero releases**; upstream va por `v3.3.0`. El resto de esa rebanada avanza igual.
 
 ## Hallazgos vivos que afectan a rebanadas futuras
 
@@ -40,7 +40,7 @@
 
 ### `axiom archive sync` muta un fichero versionado
 
-Regenera `openspec/INDEX.md` con una marca de tiempo nueva **en cada ejecución** (`internal/livingdoc`). Cualquier paso de CI que ejercite la superficie exclusiva —que es justo lo que REQ-20.15 obliga— ensucia el árbol de forma no determinista. Rebanada 3 debe resolverlo.
+Regenera `openspec/INDEX.md` con una marca de tiempo nueva **en cada ejecución** (`internal/livingdoc`). Cualquier paso de CI que ejercite la superficie exclusiva —que es justo lo que RF-CIB-01 obliga— ensucia el árbol de forma no determinista. Rebanada 3 debe resolverlo.
 
 ### El catálogo maestro está desincronizado
 

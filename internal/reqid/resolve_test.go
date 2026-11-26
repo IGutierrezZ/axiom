@@ -6,7 +6,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// REQ-30.22: el núcleo de la resolución de un nombre de delta contra los nombres
+// RF-ARC-11: el núcleo de la resolución de un nombre de delta contra los nombres
 // de la canónica (D-05).
 func TestResolve(t *testing.T) {
 	sup := reqid.SupersededSuffix

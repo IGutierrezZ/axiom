@@ -7,11 +7,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Contratos que la promoción no cambia (C-02-a, REQ-25.50 y REQ-25.45, W1 del informe de
+// Contratos que la promoción no cambia (C-02-a, RF-BRA-32 y RF-BRA-13, W1 del informe de
 // verificación): con `main_branch` declarado y modo `branch`, la publicación, el relevo y el
 // archivado siguen refiriéndose a la rama de integración. Con git real y sin red.
 
-// REQ-25.50 (escenario «La publicación y el relevo siguen apuntando a la integración»): con
+// RF-BRA-32 (escenario «La publicación y el relevo siguen apuntando a la integración»): con
 // `feat/x` ya fusionada en `develop`, `status` presenta la siguiente PR hacia `master`, pero el
 // destino de `publish` y el del relevo siguen siendo los de la primera etapa.
 func TestPublicationAndHandOffKeepTargetingTheIntegrationInBranchMode(t *testing.T) {
@@ -42,7 +42,7 @@ func TestPublicationAndHandOffKeepTargetingTheIntegrationInBranchMode(t *testing
 	}
 }
 
-// REQ-25.45 y REQ-25.50 (escenarios «Con dos etapas en modo `branch` el archivado espera solo a la
+// RF-BRA-13 y RF-BRA-32 (escenarios «Con dos etapas en modo `branch` el archivado espera solo a la
 // integración» y «El archivado se rechaza si el cambio no está en la integración aunque esté en la
 // rama principal»): `ensure --archive` evalúa `develop`, nunca `master`.
 func TestEnsureArchiveWaitsOnlyForTheIntegrationInBranchMode(t *testing.T) {

@@ -16,7 +16,7 @@ import (
 )
 
 // execPointLabel es el único fichero de producción que puede lanzar procesos
-// (REQ-25.1, G-7): los demás de `internal/branch/**` y de este paquete ejecutan git
+// (RF-BRA-01, G-7): los demás de `internal/branch/**` y de este paquete ejecutan git
 // a través de gitcommon.Run.
 const execPointLabel = "internal/gitcommon/exec.go"
 
@@ -100,24 +100,24 @@ func architectureViolations(label string, source []byte) ([]string, error) {
 	return violations, nil
 }
 
-// REQ-25.1 y REQ-27.11 (DD-14), escenario «Una prueba de arquitectura fija el único punto de ejecución
+// RF-BRA-01 y RF-PUB-07 (DD-14), escenario «Una prueba de arquitectura fija el único punto de ejecución
 // de git»: ningún fichero de `internal/branch/**`, `internal/sddpublish`, `internal/docpaths` ni de este paquete lanza procesos
 // ni abre la red, salvo exec.go.
 func TestArchitectureOnlyExecGoLaunchesProcesses(t *testing.T) {
 	sources := collectSources(t, ".", "internal/gitcommon")
 	sources = append(sources, collectSources(t, filepath.Join("..", "branch"), "internal/branch")...)
-	// La publicación de documentos (DD-14, REQ-27.11) tampoco lanza procesos por su cuenta: ejecuta
+	// La publicación de documentos (DD-14, RF-PUB-07) tampoco lanza procesos por su cuenta: ejecuta
 	// git a través de gitcommon.Run y gitcommon.RunWithTimeout, y la lista de rutas es pura.
 	sources = append(sources, collectSources(t, filepath.Join("..", "sddpublish"), "internal/sddpublish")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "docpaths"), "internal/docpaths")...)
-	// El contexto técnico y la spec viva (REQ-30.15): ejecutan git con gitcommon.Run. `livespec` llega con
+	// El contexto técnico y la spec viva (RF-CTX-13): ejecutan git con gitcommon.Run. `livespec` llega con
 	// la integración ODD y collectSources tolera su ausencia.
 	sources = append(sources, collectSources(t, filepath.Join("..", "techcontext"), "internal/techcontext")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "livespec"), "internal/livespec")...)
 	// La identidad git del actor (capacidad change-actor-identity) lee user.name y user.email con
 	// gitcommon.RunWithTimeout: tampoco lanza procesos por su cuenta.
 	sources = append(sources, collectSources(t, filepath.Join("..", "gitidentity"), "internal/gitidentity")...)
-	// La adopción de OpenSpec (REQ-30.9 a REQ-30.14) solo lee ficheros: no lanza procesos.
+	// La adopción de OpenSpec (RF-ADP-01 a RF-ADP-06) solo lee ficheros: no lanza procesos.
 	sources = append(sources, collectSources(t, filepath.Join("..", "adoption"), "internal/adoption")...)
 	sources = append(sources, collectSources(t, filepath.Join("..", "adoption", "adoptcheck"), "internal/adoption/adoptcheck")...)
 
@@ -268,7 +268,7 @@ func TestArchitectureRemoteSubcommandDetection(t *testing.T) {
 	}
 }
 
-// REQ-25.1: con un remoto configurado, las lecturas que componen `status` pasan
+// RF-BRA-01: con un remoto configurado, las lecturas que componen `status` pasan
 // por el observador y ninguna es una operación remota.
 func TestArchitectureReadsLaunchNoRemoteOperation(t *testing.T) {
 	requireGit(t)

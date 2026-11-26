@@ -173,7 +173,7 @@ func TestRunArgsRestoreByIDWithYes(t *testing.T) {
 	// Integration evidence for [D-12]: a legacy-root backup must still be
 	// discoverable through ListBackups before this increment's writer
 	// migration is exercised anywhere else in this test — the dual-root read
-	// contract from INC-12 is unaffected by REQ-20.13/REQ-20.14.
+	// contract from INC-12 is unaffected by RF-DIS-07/RF-DIS-08.
 	found := false
 	for _, listed := range ListBackups() {
 		if listed.ID == m.ID {

@@ -4,7 +4,7 @@
 
 ## Propósito
 
-Definir de forma rigurosa, ejecutable y verificable los requerimientos funcionales y escenarios BDD para el cierre determinista del último rol activo en un cambio SDD, incluyendo el aviso formal al usuario y la transición hacia la fase `verify` global de toda la solución, habilitada al aprobarse todos los `role-apply` del roster (REQ-21.15); el `handoff.md` de integración queda retirado (REQ-21.14).
+Definir de forma rigurosa, ejecutable y verificable los requerimientos funcionales y escenarios BDD para el cierre determinista del último rol activo en un cambio SDD, incluyendo el aviso formal al usuario y la transición hacia la fase `verify` global de toda la solución, habilitada al aprobarse todos los `role-apply` del roster (RF-RCL-03); el `handoff.md` de integración queda retirado (RF-RCL-02).
 
 ---
 
@@ -12,11 +12,11 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 Al concluir el último rol activo del cambio, el orquestador cierra la fase de implementación con un aviso formal, un relevo de integración y la apertura de la verificación global de toda la solución.
 
-### Requirement: Aviso Formal de Conclusión del Último Rol Activo (REQ-21.13)
+### Requirement: Aviso Formal de Conclusión del Último Rol Activo (RF-RCL-01)
 
-Al aprobarse la compuerta de `apply` (REQ-21.11) del último rol pendiente entre los roles con política `blocking` del cambio —incluido el caso de un único rol `fullstack`, y tanto con la salida 2 como con la salida 3 de REQ-26.1— el orquestador DEBE notificar formalmente al usuario que ha concluido la implementación del último rol bloqueante y que queda abierta la verificación global de la solución (REQ-21.15). Si en ese momento algún rol con política `deferred` u `optional` sigue con su `role-apply` sin aprobar, el aviso DEBE nombrarlo (rol, política y estado de su `role-apply`) e indicar que no bloquea la verificación global. El cierre posterior de un rol `deferred` u `optional` NO DEBE repetir el aviso. El aviso NO DEBE anunciar la generación de ningún relevo y NO DEBE escribir ningún fichero `handoff.md`. Con todos los roles `blocking`, el último rol pendiente entre los bloqueantes es el último rol activo del cambio y el aviso es el mismo que antes de esta modificación.
+Al aprobarse la compuerta de `apply` (RF-GAT-05) del último rol pendiente entre los roles con política `blocking` del cambio —incluido el caso de un único rol `fullstack`, y tanto con la salida 2 como con la salida 3 de RF-GAT-07— el orquestador DEBE notificar formalmente al usuario que ha concluido la implementación del último rol bloqueante y que queda abierta la verificación global de la solución (RF-RCL-03). Si en ese momento algún rol con política `deferred` u `optional` sigue con su `role-apply` sin aprobar, el aviso DEBE nombrarlo (rol, política y estado de su `role-apply`) e indicar que no bloquea la verificación global. El cierre posterior de un rol `deferred` u `optional` NO DEBE repetir el aviso. El aviso NO DEBE anunciar la generación de ningún relevo y NO DEBE escribir ningún fichero `handoff.md`. Con todos los roles `blocking`, el último rol pendiente entre los bloqueantes es el último rol activo del cambio y el aviso es el mismo que antes de esta modificación.
 (Previously: el aviso anunciaba que se generaba el relevo de integración para la verificación global)
-(Previously: el aviso se emitía al aprobarse el `role-apply` del último rol pendiente entre todos los roles activos, sin distinguir su política; con REQ-21.15 modificado, la verificación global se abre al cerrar el último rol `blocking`, de modo que el aviso se adelanta a ese momento)
+(Previously: el aviso se emitía al aprobarse el `role-apply` del último rol pendiente entre todos los roles activos, sin distinguir su política; con RF-RCL-03 modificado, la verificación global se abre al cerrar el último rol `blocking`, de modo que el aviso se adelanta a ese momento)
 
 #### Scenario: Último de varios roles activa el aviso sin relevo
 
@@ -34,7 +34,7 @@ Al aprobarse la compuerta de `apply` (REQ-21.11) del último rol pendiente entre
 
 #### Scenario: Compuerta rechazada no dispara el cierre aunque sea el único rol pendiente
 
-- **DADO** un cambio en el que el único rol `blocking` pendiente tiene su compuerta de `apply` rechazada (REQ-21.12)
+- **DADO** un cambio en el que el único rol `blocking` pendiente tiene su compuerta de `apply` rechazada (RF-GAT-06)
 - **CUANDO** se registra el rechazo
 - **ENTONCES** el orquestador no emite el aviso de último rol
 - **Y** espera a que esa compuerta se apruebe explícitamente antes de reevaluar la condición de cierre
@@ -44,7 +44,7 @@ Al aprobarse la compuerta de `apply` (REQ-21.11) del último rol pendiente entre
 - **DADO** un cambio con el rol único `fullstack` y su trabajo confirmado en la rama
 - **CUANDO** se aprueba la compuerta `role-apply:fullstack` con la salida 2
 - **ENTONCES** se emite el aviso de último rol
-- **Y** la fase `verify` queda cedida a otra persona (REQ-26.7)
+- **Y** la fase `verify` queda cedida a otra persona (RF-GAT-13)
 - **Y** no se escribe ningún `handoff.md`
 
 #### Scenario: El aviso se emite al cerrar el último rol blocking aunque un rol deferred siga pendiente
@@ -75,13 +75,13 @@ Al aprobarse la compuerta de `apply` (REQ-21.11) del último rol pendiente entre
 
 ---
 
-### Requirement: Generación del `handoff.md` de Integración (REQ-21.14) [SUPERSEDED / DEPRECADO]
+### Requirement: Generación del `handoff.md` de Integración (RF-RCL-02) [SUPERSEDED / DEPRECADO]
 > [!CAUTION]
 > **REQUISITO HISTÓRICO SUPERADO / DEPRECADO:** Este requisito ha sido superado o deprecado.
-> Motivo: el usuario decidió (Engram #1811, `product/paradas-tres-salidas`) no implementar el relevo intermedio ni el de integración como artefacto del flujo SDD: el relevo entre personas se resuelve con las tres salidas de las paradas, que dejan lo aprobado en la rama de integración. El último `role-apply` aprobado ya habilita `verify` por sí solo (REQ-21.15).
+> Motivo: el usuario decidió (Engram #1811, `product/paradas-tres-salidas`) no implementar el relevo intermedio ni el de integración como artefacto del flujo SDD: el relevo entre personas se resuelve con las tres salidas de las paradas, que dejan lo aprobado en la rama de integración. El último `role-apply` aprobado ya habilita `verify` por sí solo (RF-RCL-03).
 
 
-Junto con el aviso de REQ-21.13, el orquestador DEBE generar un artefacto `handoff.md` canónico, conforme al esquema ya definido para relevos estructurados (frontmatter YAML con `from_phase`, `to_phase`, `from_role`, `to_role`, `timestamp` y `status`, seguido de las cinco secciones descriptivas), con `status: ready`, consolidando los cambios de todos los roles participantes y especificando las instrucciones de prueba para la fase `verify`.
+Junto con el aviso de RF-RCL-01, el orquestador DEBE generar un artefacto `handoff.md` canónico, conforme al esquema ya definido para relevos estructurados (frontmatter YAML con `from_phase`, `to_phase`, `from_role`, `to_role`, `timestamp` y `status`, seguido de las cinco secciones descriptivas), con `status: ready`, consolidando los cambios de todos los roles participantes y especificando las instrucciones de prueba para la fase `verify`.
 
 #### Scenario: Handoff de integración consolida todos los roles participantes
 
@@ -92,9 +92,9 @@ Junto con el aviso de REQ-21.13, el orquestador DEBE generar un artefacto `hando
 
 ---
 
-### Requirement: Ejecución de la Fase `verify` Global tras Aprobarse Todos los `role-apply` (REQ-21.15)
+### Requirement: Ejecución de la Fase `verify` Global tras Aprobarse Todos los `role-apply` (RF-RCL-03)
 
-En un cambio con más de un rol y con compuertas (modalidad "con paradas"), la fase `verify` global DEBE habilitarse cuando están aprobadas las compuertas `role-apply:<rol>` de todos los roles del roster sellado con política `blocking`, y NO DEBE habilitarse mientras falte alguna de ellas. Los roles con política `deferred` u `optional` NO DEBEN bloquear `verify`, tengan su `role-apply` pendiente, aprobado o rechazado; la dependencia `verify` de `axiom sdd status` DEBE informar de ellos (rol, política y estado de su `role-apply`) sin bloquear. La partición entre roles bloqueantes y no bloqueantes es la misma que usa la barrera de sincronización (REQ-2.1 de `multi-role-fan-out`). No se exige ni se consulta ningún `handoff.md`: un `handoff.md` presente, ausente, `ready`, `blocked` o `needs_clarification` NO DEBE alterar esa condición. Una vez habilitada, la fase `verify` DEBE ejecutar la suite completa de pruebas de la solución (integración, regresión y compuertas de seguridad aplicables) considerando el trabajo consolidado de todos los roles, y DEBE emitir un informe consolidado `verify-report.md`, distinto de los informes individuales `verify-report.<rol>.md` de cada rol. La dependencia `verify` de `axiom sdd status` DEBE reflejar esa condición. Un cambio con un único rol, o en modalidad "continua", NO DEBE verse afectado por este requisito.
+En un cambio con más de un rol y con compuertas (modalidad "con paradas"), la fase `verify` global DEBE habilitarse cuando están aprobadas las compuertas `role-apply:<rol>` de todos los roles del roster sellado con política `blocking`, y NO DEBE habilitarse mientras falte alguna de ellas. Los roles con política `deferred` u `optional` NO DEBEN bloquear `verify`, tengan su `role-apply` pendiente, aprobado o rechazado; la dependencia `verify` de `axiom sdd status` DEBE informar de ellos (rol, política y estado de su `role-apply`) sin bloquear. La partición entre roles bloqueantes y no bloqueantes es la misma que usa la barrera de sincronización (RF-FAN-04 de `multi-role-fan-out`). No se exige ni se consulta ningún `handoff.md`: un `handoff.md` presente, ausente, `ready`, `blocked` o `needs_clarification` NO DEBE alterar esa condición. Una vez habilitada, la fase `verify` DEBE ejecutar la suite completa de pruebas de la solución (integración, regresión y compuertas de seguridad aplicables) considerando el trabajo consolidado de todos los roles, y DEBE emitir un informe consolidado `verify-report.md`, distinto de los informes individuales `verify-report.<rol>.md` de cada rol. La dependencia `verify` de `axiom sdd status` DEBE reflejar esa condición. Un cambio con un único rol, o en modalidad "continua", NO DEBE verse afectado por este requisito.
 (Previously: «Ejecución de la Fase `verify` Global tras el Handoff»: la fase `verify` global exigía un `handoff.md` de integración en `status: ready` y no se iniciaba con `blocked` o `needs_clarification`)
 (Previously: la condición exigía aprobado el `role-apply` de todos los roles del roster, sin distinguir su política; un rol `deferred` u `optional` bloqueaba `verify` igual que uno `blocking`)
 

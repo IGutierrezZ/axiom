@@ -195,7 +195,7 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
     Nunca se reescribe historia publicada.
   - (Análisis, **no confirmado por el usuario**.) Fusionar sin squash (merge commit), para que los commits revisados lleguen a la rama destino y para que `done` confirme por ascendencia en el modo `branch` de C-02-a.
   - (Usuario, 2026-11-17; P2 resuelta, **sustituye a la viñeta siguiente**.) El modo se pregunta en la parada previa a las tareas (puerta `tasks` en SDD `checkpointed`), no en el pre-vuelo ni en `kickoff seal`. Se pregunta si parar al terminar cada tarea y si el commit es automático. Tres modos: (1) avisar y seguir con commit automático, por defecto; (2) parar tras cada tarea con commit automático; (3) parar tras cada tarea sin commit: la persona revisa el diff, aprueba y entonces se hace el commit. «Sin commit» implica parar. En `continuous` no se pregunta: modo 1.
-  - (Usuario, 2026-11-20; corrige P2.) ODD va siempre en modo 1: sin pregunta ni paradas, tampoco a petición en el chat. Quien quiera parar tras cada tarea usa SDD `checkpointed`. La «parada de plan en ODD» que citaba P2 ya no existía (la retiró REQ-27.17 el 2026-11-10); REQ-27.17 no cambia y el modo 3 solo es comportamiento nuevo en `sdd-apply`.
+  - (Usuario, 2026-11-20; corrige P2.) ODD va siempre en modo 1: sin pregunta ni paradas, tampoco a petición en el chat. Quien quiera parar tras cada tarea usa SDD `checkpointed`. La «parada de plan en ODD» que citaba P2 ya no existía (la retiró RF-RUT-18 el 2026-11-10); RF-RUT-18 no cambia y el modo 3 solo es comportamiento nuevo en `sdd-apply`.
   - (Usuario, 2026-11-17; P1 resuelta.) La doctrina recomienda fusionar sin squash (merge commit).
   - (Análisis, **superada por P2**.) Sin pregunta nueva en el pre-vuelo: el modo es `notify` por defecto y la persona pide paradas en cualquier momento. El motivo ya no es que el hook exija exactamente 3 preguntas (C-01-b lo hace variable), sino no ampliar el pre-vuelo con una decisión que el usuario quiere tomar sobre la marcha («que lo decida el usuario»). En SDD se refleja en el kickoff (bandera nueva en `axiom sdd kickoff seal`, ortogonal a `--execution-style`); en ODD, en el documento de feature.
   - (Sección 01.) Sin RDD.
@@ -203,7 +203,7 @@ El cambio se decide por preferencia propia del usuario, no por imitar a upstream
   - Revisión automática de commits.
   - Bloquear la PR por commits pendientes.
   - La interfaz de usuario para validar commits (en su caso, sección 06).
-- **Carril propuesto.** SDD: registra el modo en la decisión de la puerta `tasks` (`gates.yaml`; el kickoff no admite cambios tras el sellado, REQ-25.36) y cambia la doctrina del orquestador. ODD no gana paradas: sigue sin parada propia (`internal/components/agentguidance/routing.go:66-67`, REQ-27.17) y va siempre en modo 1.
+- **Carril propuesto.** SDD: registra el modo en la decisión de la puerta `tasks` (`gates.yaml`; el kickoff no admite cambios tras el sellado, RF-KOF-06) y cambia la doctrina del orquestador. ODD no gana paradas: sigue sin parada propia (`internal/components/agentguidance/routing.go:66-67`, RF-RUT-18) y va siempre en modo 1.
 - **Tamaño.** M.
 - **Depende de / bloquea a.**
   - Depende de C-02-c (comparte doctrina y skills).

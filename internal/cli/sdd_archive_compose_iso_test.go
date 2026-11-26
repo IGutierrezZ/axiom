@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// REQ-29.10 y REQ-29.11: archive-compose se niega a componer la delta de un cambio
+// RF-ARC-09 y RF-ARC-10: archive-compose se niega a componer la delta de un cambio
 // ISO que no cumple la regla del archivado. Los nombres empiezan por
 // TestArchiveCompose para entrar en el mismo patrón de `-run`.
 
@@ -73,7 +73,7 @@ func TestArchiveComposeISORefusal(t *testing.T) {
 	}
 }
 
-// Sin cambio determinable no se aplica nada (último escenario de REQ-29.10): una
+// Sin cambio determinable no se aplica nada (último escenario de RF-ARC-09): una
 // delta suelta, fuera de changes/<cambio>/specs/<dominio>/, o fuera de todo espacio.
 func TestArchiveComposeISORefusalWithoutChangeContext(t *testing.T) {
 	root, changeRoot := archiveCheckWorkspace(t, archiveCheckChange{
@@ -116,7 +116,7 @@ func composeISOFixture(t *testing.T, change archiveCheckChange) (root, canonical
 	return root, canonical, filepath.Join(changeRoot, "specs", "pagos", "spec.md")
 }
 
-// REQ-29.10 y REQ-29.11, de extremo a extremo: el rechazo no escribe nada, ni en
+// RF-ARC-09 y RF-ARC-10, de extremo a extremo: el rechazo no escribe nada, ni en
 // la salida ni en la canónica.
 func TestArchiveComposeISORefusesEndToEndWithoutWriting(t *testing.T) {
 	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
@@ -187,7 +187,7 @@ func TestArchiveComposeNonISOKeepsComposingWithoutScenarios(t *testing.T) {
 
 // Los modos retirados con la baseline ajena (`--document`, `--change`, `--in-place`) se
 // rechazan con un motivo tipado, antes de la regla ISO y sin escribir nada
-// (REQ-30.22).
+// (RF-ARC-11).
 func TestArchiveComposeRetiredModesAreRejectedWithATypedError(t *testing.T) {
 	change := archiveCheckChange{name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaNoScene}, tasks: archiveCheckTasksDone, verify: archiveCheckVerify(), iso: true}
 	root, canonical, delta := composeISOFixture(t, change)

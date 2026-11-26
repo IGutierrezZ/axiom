@@ -21,20 +21,20 @@ import (
 const originRemote = "origin"
 
 // Status describe, solo con lecturas, el estado de las ramas y los worktrees de un
-// cambio (REQ-25.15): por repositorio, su papel, la rama actual y la base; por rama, si
+// cambio (RF-BRA-16): por repositorio, su papel, la rama actual y la base; por rama, si
 // existe, su worktree, si tiene cambios sin confirmar, su adelanto y su atraso respecto
 // de su base y el destino propuesto para su PR. Un cambio sin ramas creadas es
 // `not_started`, no un error. Con registro local, informa además del modo de trabajo
 // materializado y de los worktrees registrados, y aplica las excepciones que el registro
 // guarda (`--prefix`, `--branch`, `--base`); sin él, `registry.present` es falso. Con
-// cambio, añade si está pendiente de archivar (`pendingArchive`, REQ-25.20). Cuando existe la
+// cambio, añade si está pendiente de archivar (`pendingArchive`, RF-BRA-21). Cuando existe la
 // rama de archivado del cambio (en git o en el registro), la incluye al final de las ramas del
 // repositorio del planning home, con los mismos datos y el destino de su PR en la rama de
-// integración (REQ-25.15, REQ-25.45).
+// integración (RF-BRA-16, RF-BRA-13).
 //
-// El cambio es opcional (REQ-25.15): sin él, `Status` no describe ningún plan, sino que
+// El cambio es opcional (RF-BRA-16): sin él, `Status` no describe ningún plan, sino que
 // lista los cambios registrados del carril y los pendientes de archivar del proyecto.
-// cwd debe ser un directorio absoluto. Nunca ejecuta operaciones remotas (REQ-25.1) ni
+// cwd debe ser un directorio absoluto. Nunca ejecuta operaciones remotas (RF-BRA-01) ni
 // escribe el registro.
 func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lane) branch.Result {
 	const operation = "status"
@@ -49,7 +49,7 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
-	// La rama de archivado, cuando existe, figura en el plan con el mismo detalle (REQ-25.15).
+	// La rama de archivado, cuando existe, figura en el plan con el mismo detalle (RF-BRA-16).
 	if plan, refusal = e.withArchiveBranch(ctx, operation, cwd, facts, plan); refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
@@ -61,7 +61,7 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	return result
 }
 
-// statusOfProject es `status` sin cambio (REQ-25.15, REQ-25.20): los cambios con registro
+// statusOfProject es `status` sin cambio (RF-BRA-16, RF-BRA-21): los cambios con registro
 // local del carril, ordenados por nombre, y los pendientes de archivar de la rama de
 // integración. Los pendientes son información y no una negativa: si no se pueden evaluar,
 // el campo se omite con un aviso y la salida sigue siendo 0.
@@ -77,7 +77,7 @@ func (e *Engine) statusOfProject(ctx context.Context, operation, cwd string, lan
 	if refusal := branch.ConfigRefusal(location); refusal != nil {
 		return refused(refusal)
 	}
-	// El registro vive en el git common dir del repositorio del planning home (REQ-25.14).
+	// El registro vive en el git common dir del repositorio del planning home (RF-BRA-15).
 	planning, refusal := e.repositoryFacts(ctx, operation, location, location.WorkspaceRoot, ".", location.WorkspaceRoot)
 	if refusal != nil {
 		return refused(refusal)
@@ -234,7 +234,7 @@ func registeredWorktrees(record *branch.Record, repo branch.RepoPlan) map[string
 }
 
 // describeRepository lee el estado de git de un repositorio del plan: la rama actual
-// (de ficheros, sin procesos, REQ-25.21), la base y, por rama planificada, si existe,
+// (de ficheros, sin procesos, RF-BRA-22), la base y, por rama planificada, si existe,
 // dónde está desplegada, si su worktree está limpio y cuánto se ha alejado de su base.
 // Los worktrees que git conoce ya los reunió gather.
 func (e *Engine) describeRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts) (branch.RepositoryResult, []string, *branch.Refusal) {
@@ -342,7 +342,7 @@ func comparisonFor(planned branch.BranchPlan, base baseReference, haveBase bool,
 }
 
 // describePromotionStage fija la etapa de promoción de la rama del cambio de un repositorio de dos
-// etapas en modo `branch` (REQ-25.48, design D8), solo con referencias locales: los commits que la
+// etapas en modo `branch` (RF-BRA-30, design D8), solo con referencias locales: los commits que la
 // rama lleva por delante de la rama principal (sin `--base`, que no cuenta aquí) y la evidencia de
 // fusión de las capas 1 y 2 contra la integración. Con etapa `main`, la siguiente PR va a la rama
 // principal y PRTarget pasa a ser esta. Si la capa 2 no tiene soporte y no basta la ascendencia,

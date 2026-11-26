@@ -15,7 +15,7 @@ import (
 )
 
 // Pruebas extremo a extremo de un proyecto con `sdd: {id_pattern: "RF-<DOM>-<NN>"}`
-// (REQ-44.7, REQ-44.9). Todo corre en proceso con repositorios git temporales: nunca se
+// (RF-RID-07, RF-RID-08). Todo corre en proceso con repositorios git temporales: nunca se
 // compila ni se lanza un binario.
 
 const rfSDDBlock = "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n"

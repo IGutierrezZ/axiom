@@ -1,7 +1,7 @@
 package skillregistry
 
 // DestinationStatus reports what one Regenerate run did to a secondary
-// destination. The literals are the exact strings the CLI prints (REQ-22.10).
+// destination. The literals are the exact strings the CLI prints (RF-SKI-01).
 type DestinationStatus string
 
 const (
@@ -23,7 +23,7 @@ type DestinationOutcome struct {
 	Reason string
 }
 
-// MirrorStatus reports the Engram mirror attempt (REQ-22.11). The two literals
+// MirrorStatus reports the Engram mirror attempt (RF-SKI-02). The two literals
 // are the exact strings the CLI prints.
 type MirrorStatus string
 
@@ -33,7 +33,7 @@ const (
 	MirrorOK MirrorStatus = "mirror ok"
 	// MirrorFailed covers every mirror miss: MirrorFunc nil ("mirror not
 	// configured"), transport failure, or tool error. It is never fatal
-	// (REQ-22.11).
+	// (RF-SKI-02).
 	MirrorFailed MirrorStatus = "mirror failed"
 )
 

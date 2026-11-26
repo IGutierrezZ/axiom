@@ -10,14 +10,14 @@ import (
 )
 
 // HandOff calcula, solo con lecturas, la entrega de la salida 2 de una parada («aprobar, publicar y
-// parar», REQ-26.4, REQ-26.5, REQ-27.12, DD-12): el destino de la publicación de los documentos
+// parar», RF-GAT-10, RF-GAT-11, RF-GAT-15, DD-12): el destino de la publicación de los documentos
 // (rama, `prTarget` e invocación de `axiom sdd publish`), el push de código de los demás
 // repositorios del rol y lo que ejecuta quien recoja el cambio. Se construye sobre el mismo camino
 // de lectura que `Status` (`gather` y la planificación pura): no toma el cerrojo del cambio, no
 // escribe el registro ni el ledger y no hace `fetch`, y el puerto de git no tiene ningún método que
-// publique, así que nunca ejecuta `commit` ni `push` (REQ-25.1).
+// publique, así que nunca ejecuta `commit` ni `push` (RF-BRA-01).
 //
-// No comprueba qué está confirmado ni lee el estado del árbol de trabajo: REQ-26.4 prohíbe que
+// No comprueba qué está confirmado ni lee el estado del árbol de trabajo: RF-GAT-10 prohíbe que
 // `gate record` inspeccione el trabajo del rol. Los documentos pendientes los confirma
 // `axiom sdd publish`, y el código sin subir de un role-apply lo informa él como
 // `code_commits_unpublished`, sin deshacer la aprobación. Un rechazo no ha tocado nada.
@@ -125,7 +125,7 @@ func planningPublish(req branch.HandOffRequest, repo branch.RepoPlan, master str
 // codeDelivery compone la entrega de código de un repositorio del rol distinto del planning home
 // (en un multirepo, un repositorio de código): su rama de rol si el plan la tiene y, si no, la del
 // cambio. Solo queda publicarla, y es de la persona: Axiom no sube código. No comprueba si el
-// trabajo está confirmado (REQ-26.4). Devuelve nil si la rama no existe: sin rama no hay trabajo que
+// trabajo está confirmado (RF-GAT-10). Devuelve nil si la rama no existe: sin rama no hay trabajo que
 // entregar.
 func (e *Engine) codeDelivery(ctx context.Context, operation string, req branch.HandOffRequest, repo branch.RepoPlan, worktrees []branch.WorktreeEntry) (*branch.HandOffDelivery, *branch.Refusal) {
 	planned := repo.Branches[0]

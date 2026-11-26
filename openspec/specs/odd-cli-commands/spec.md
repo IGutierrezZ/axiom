@@ -14,22 +14,22 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 ## REMOVED Requirements
 
-### Requirement: Subcomando axiom odd create (REQ-19.5)
+### Requirement: Subcomando axiom odd create (RF-OCL-01)
 
 (Motivo: `internal/cli/odd_create.go` y el despacho `case "odd":` que lo invocaba desde `cmd/axiom/main.go` se retiran por la Decisión D1.)
 (Migración: ninguna. La creación de un documento vivo ODD pasa a ser un acto de agente con herramientas de fichero, sin subcomando de CLI.)
 
-### Requirement: Subcomando axiom odd status con Salida en Texto y JSON (REQ-19.6)
+### Requirement: Subcomando axiom odd status con Salida en Texto y JSON (RF-OCL-02)
 
 (Motivo: `internal/cli/odd_status.go` se retira por la Decisión D1.)
 (Migración: ninguna. La consulta de progreso ODD pasa a leerse directamente del contenido Markdown del documento vivo, sin salida `--json` estructurada.)
 
-### Requirement: Bandera --check-mirror en axiom odd status (REQ-19.7)
+### Requirement: Bandera --check-mirror en axiom odd status (RF-OCL-03)
 
 (Motivo: la bandera `--check-mirror` de `internal/cli/odd_status.go` se retira junto con el subcomando completo.)
 (Migración: ninguna. No existe una comprobación de divergencia equivalente tras esta retirada.)
 
-### Requirement: Subcomando axiom odd promote: Banderas y Presencia en la Ayuda (REQ-19.8)
+### Requirement: Subcomando axiom odd promote: Banderas y Presencia en la Ayuda (RF-OCL-04)
 
 (Motivo: `internal/cli/odd_promote.go` y la entrada del grupo `axiom odd` en `printHelp()` de `cmd/axiom/main.go` se retiran por la Decisión D1.)
 (Migración: ver el delta de la capacidad `odd-sdd-promotion` para el reemplazo funcional de la promoción.)

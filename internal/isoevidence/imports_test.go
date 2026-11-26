@@ -10,7 +10,7 @@ import (
 )
 
 // reqidImport es el único paquete interno que isoevidence puede importar: el puerto
-// único de identificadores de requisito (D-02 y REQ-44.4).
+// único de identificadores de requisito (D-02 y RF-RID-04).
 const reqidImport = "github.com/IGutierrezZ/axiom/v3/internal/reqid"
 
 // TestPackageImports fija la arquitectura del paquete hoja: ningún fichero de

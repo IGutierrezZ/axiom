@@ -24,7 +24,7 @@ const (
 )
 
 // Scope reúne las rutas que deciden si el documento de una entrada puede
-// editarse (REQ-24.30, D-16). Todas son relativas a WorkspaceRoot, con `/`; las
+// editarse (RF-CTX-05, D-16). Todas son relativas a WorkspaceRoot, con `/`; las
 // de contexto pueden salir de él hacia un repositorio hermano (`../repo/docs/`).
 type Scope struct {
 	WorkspaceRoot string   // absoluta
@@ -46,7 +46,7 @@ func (s Scope) Resolve(document string) string {
 
 // CheckDocument comprueba, por identidad y no por texto, que el documento de la
 // entrada está bajo alguna ruta mantenida y que no está bajo una ruta de
-// referencia (REQ-24.30, REQ-24.31, D-16).
+// referencia (RF-CTX-05, RF-CTX-06, D-16).
 func (s Scope) CheckDocument(entry Entry) error {
 	target := resolveDeepest(s.Resolve(entry.Document))
 	for _, declared := range s.Reference {

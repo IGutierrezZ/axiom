@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de la guarda B de `axiom sdd status` (REQ-25.42, REQ-25.39, design D-13 y S-9): el status
+// Pruebas de la guarda B de `axiom sdd status` (RF-CLI-05, RF-ARC-07, design D-13 y S-9): el status
 // proyecta `blocked(wrong_branch)` cuando el veredicto de rama del cambio es desfavorable. Los
 // repositorios de estas pruebas se montan solo con ficheros (`.git/HEAD`): la guarda lee ficheros y
 // no lanza ningún proceso de git, y las pruebas lo comprueban con el observador de gitcommon.
@@ -146,7 +146,7 @@ func wantWrongBranchStatus(t *testing.T, status Status, repo, current, expected,
 	}
 }
 
-// REQ-25.42, escenarios «Status en la rama de integración de un monorepo» y «Status en la rama del
+// RF-CLI-05, escenarios «Status en la rama de integración de un monorepo» y «Status en la rama del
 // cambio no bloquea»: la guarda consulta el motor por la variable de prueba y no lanza procesos.
 func TestResolveBranchContextBlocksTheIntegrationBranchOfAMonorepo(t *testing.T) {
 	root := branchMonorepo(t, "main", false)
@@ -175,7 +175,7 @@ func TestResolveBranchContextBlocksTheIntegrationBranchOfAMonorepo(t *testing.T)
 	}
 }
 
-// REQ-25.42, escenario «Se evalúa en toda fase en un monorepo»: también con la planificación
+// RF-CLI-05, escenario «Se evalúa en toda fase en un monorepo»: también con la planificación
 // incompleta.
 func TestResolveBranchContextIsEvaluatedInEveryPhaseOfAMonorepo(t *testing.T) {
 	useBranchGuard(t)
@@ -195,7 +195,7 @@ func TestResolveBranchContextIsEvaluatedInEveryPhaseOfAMonorepo(t *testing.T) {
 	}
 }
 
-// REQ-25.42 y REQ-25.39, escenario «En la fase archive solo la rama de archivado es correcta»:
+// RF-CLI-05 y RF-ARC-07, escenario «En la fase archive solo la rama de archivado es correcta»:
 // (monorepo con el rol `fullstack`, sin ramas de rol) feat/x, main y la rama ajena feat/otra
 // bloquean con la rama esperada feat/x-archive y la continuación `--archive`; en feat/x-archive
 // no bloquea.
@@ -218,7 +218,7 @@ func TestResolveBranchContextOnlyTheArchiveBranchIsCorrectInTheArchivePhase(t *t
 	}
 }
 
-// REQ-25.42 y D-13: sin `verify-report` hecho no es la fase archive y rige la rama del cambio.
+// RF-CLI-05 y D-13: sin `verify-report` hecho no es la fase archive y rige la rama del cambio.
 func TestResolveBranchContextIsNotTheArchivePhaseWithoutAVerifyReport(t *testing.T) {
 	root := branchMonorepo(t, "feat/x", true)
 	if err := os.Remove(filepath.Join(root, "openspec", "changes", branchChange, "verify-report.md")); err != nil {
@@ -235,7 +235,7 @@ func TestResolveBranchContextIsNotTheArchivePhaseWithoutAVerifyReport(t *testing
 	}
 }
 
-// REQ-25.42, escenario «Los cambios activos en la rama de integración no bloquean»: otro cambio y
+// RF-CLI-05, escenario «Los cambios activos en la rama de integración no bloquean»: otro cambio y
 // presente en el planning home no altera el veredicto de x.
 func TestResolveBranchContextIgnoresOtherActiveChanges(t *testing.T) {
 	root := branchMonorepo(t, "feat/x", false)
@@ -244,7 +244,7 @@ func TestResolveBranchContextIgnoresOtherActiveChanges(t *testing.T) {
 	wantNotWrongBranch(t, resolveFrom(t, root, branchChange))
 }
 
-// REQ-25.42, escenario «Un cambio exento no se bloquea»: un kickoff.yaml sin instantánea.
+// RF-CLI-05, escenario «Un cambio exento no se bloquea»: un kickoff.yaml sin instantánea.
 func TestResolveBranchContextDoesNotBlockAnExemptChange(t *testing.T) {
 	useBranchGuard(t)
 	ws := workspacetest.Embedded(t, ".")
@@ -255,7 +255,7 @@ func TestResolveBranchContextDoesNotBlockAnExemptChange(t *testing.T) {
 	wantNotWrongBranch(t, resolveFrom(t, ws.Master, branchChange))
 }
 
-// REQ-25.42, escenario «Sin git no se bloquea»: ningún repositorio git; el status avisa en `notes`
+// RF-CLI-05, escenario «Sin git no se bloquea»: ningún repositorio git; el status avisa en `notes`
 // y no en `blockedReasons`.
 func TestResolveBranchContextWithoutGitDoesNotBlockAndLeavesANote(t *testing.T) {
 	useBranchGuard(t)
@@ -283,7 +283,7 @@ func TestResolveBranchContextWithoutGitDoesNotBlockAndLeavesANote(t *testing.T) 
 	}
 }
 
-// REQ-25.42, escenario «Un repositorio de código de un multirepo solo se evalúa en apply»: con
+// RF-CLI-05, escenario «Un repositorio de código de un multirepo solo se evalúa en apply»: con
 // `repo-backend` en main no bloquea en la fase spec; en apply con una unidad de trabajo que lo toca
 // bloquea nombrando `repo-backend`.
 func TestResolveBranchContextEvaluatesACodeRepositoryOnlyWhenApplying(t *testing.T) {
@@ -315,7 +315,7 @@ func TestResolveBranchContextEvaluatesACodeRepositoryOnlyWhenApplying(t *testing
 	}
 }
 
-// REQ-25.42 y REQ-25.39, escenario «En la fase archive del repositorio de specs de un multirepo se
+// RF-CLI-05 y RF-ARC-07, escenario «En la fase archive del repositorio de specs de un multirepo se
 // exige la integración»: feat/x-core bloquea con la esperada `main` y sin `--archive`.
 func TestResolveBranchContextRequiresTheIntegrationBranchOfTheSpecsRepositoryInTheArchivePhase(t *testing.T) {
 	useBranchGuard(t)
@@ -335,7 +335,7 @@ func TestResolveBranchContextRequiresTheIntegrationBranchOfTheSpecsRepositoryInT
 	wantNotWrongBranch(t, resolveFrom(t, ws.Specs, branchChange))
 }
 
-// REQ-25.42, S-9: con la rama equivocada no se evalúa la autoridad de edición (ni hay sobre de
+// RF-CLI-05, S-9: con la rama equivocada no se evalúa la autoridad de edición (ni hay sobre de
 // consentimiento ni marcador pendiente); tras corregir la rama aparece `edit_authority_missing`.
 func TestResolveBranchContextPrecedesTheEditAuthorityBlock(t *testing.T) {
 	root := branchMonorepo(t, "main", false)
@@ -363,7 +363,7 @@ func TestResolveBranchContextPrecedesTheEditAuthorityBlock(t *testing.T) {
 	}
 }
 
-// REQ-25.42 y D-13 (contrato v2): el bloqueo solo añade un texto en blockedReasons; las claves del
+// RF-CLI-05 y D-13 (contrato v2): el bloqueo solo añade un texto en blockedReasons; las claves del
 // status proyectado son las mismas con y sin bloqueo.
 func TestResolveBranchContextOnlyGrowsTheStatusV2Contract(t *testing.T) {
 	root := branchMonorepo(t, "feat/x", false)

@@ -245,8 +245,8 @@ func TestLinksInArchivedFolderAreReadOnly(t *testing.T) {
 	before := readTestFile(t, archived.path(LinksFile))
 	for _, out := range []Outcome{sampleOutcome(), {Links: []Link{{Kind: "work_item", ID: "12345"}}}} {
 		_, err := mergeLinks(archived, "fake", "archive/x/2026-11-19-x", fixedNow, out)
-		if err == nil || !strings.Contains(err.Error(), "REQ-21.18") {
-			t.Fatalf("toda escritura en la archivada se rechaza con el mensaje de REQ-21.18: %v", err)
+		if err == nil || !strings.Contains(err.Error(), "RF-ARC-03") {
+			t.Fatalf("toda escritura en la archivada se rechaza con el mensaje de RF-ARC-03: %v", err)
 		}
 	}
 	if after := readTestFile(t, archived.path(LinksFile)); after != before {

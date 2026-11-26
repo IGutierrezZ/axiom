@@ -12,7 +12,7 @@ import (
 
 const reqidImport = "github.com/IGutierrezZ/axiom/v3/internal/reqid"
 
-// REQ-44.4: openspecdoc sigue siendo un paquete hoja; sus ficheros de producción solo
+// RF-RID-04: openspecdoc sigue siendo un paquete hoja; sus ficheros de producción solo
 // importan la biblioteca estándar e internal/reqid.
 func TestOpenspecdocImportsOnlyStandardLibraryAndReqid(t *testing.T) {
 	files, err := filepath.Glob("*.go")

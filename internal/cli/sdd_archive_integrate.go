@@ -19,7 +19,7 @@ import (
 )
 
 // RunSDDArchiveIntegrate es `axiom sdd archive-integrate --cwd <dir> --change <cambio>
-// [--supersede] [--superseded-requirements "<a>, <cap>/<b>"] [--check] [--json]` (REQ-47.8, D4):
+// [--supersede] [--superseded-requirements "<a>, <cap>/<b>"] [--check] [--json]` (RF-ARC-15, D4):
 // el paso nativo del archivado que cubre el cambio entero. Planifica en un plan único la
 // asignación de los identificadores provisionales de todas sus capacidades, compone cada una
 // sobre la spec viva (las nuevas, copiadas con sus definitivos), reescribe las deltas, las
@@ -27,7 +27,7 @@ import (
 // `ids.yaml`, todo en un conjunto atómico. Es un adaptador fino: cada decisión es de livespec.
 //
 // El orden de rechazos es `baseline:` residual, patrón de identificadores accesible, negativa
-// ISO y guarda A (REQ-25.19: el verbo escribe en la carpeta del cambio, contexto `archive`).
+// ISO y guarda A (RF-BRA-20: el verbo escribe en la carpeta del cambio, contexto `archive`).
 // `--check` ejecuta lo mismo salvo la guarda y la escritura, y sobre un cambio ya archivado
 // comprueba que cada definitivo de su traza aparece una sola vez en su capacidad.
 func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
@@ -67,7 +67,7 @@ func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
 		return fmt.Errorf("sdd archive-integrate: %w", err)
 	}
 
-	// 1. `baseline:` residual (REQ-30.21) y 2. patrón de identificadores accesible (REQ-44.9).
+	// 1. `baseline:` residual (RF-TOP-12) y 2. patrón de identificadores accesible (RF-RID-08).
 	if retired := loc.Declarations.BaselineRetiredErr; retired != nil {
 		return retired
 	}
@@ -77,7 +77,7 @@ func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
 	}
 	retry := fmt.Sprintf("axiom sdd archive-integrate --cwd %s --change %s", pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(*change))
 
-	// Un cambio ya archivado solo admite la comprobación de solo lectura (REQ-21.18).
+	// Un cambio ya archivado solo admite la comprobación de solo lectura (RF-ARC-03).
 	if *check && !isDirectory(filepath.Join(loc.PlanningHome, "changes", *change)) {
 		if archived, ok := kickoff.ArchivedChangeRoot(loc.WorkspaceRoot, *change); ok {
 			return checkArchivedChange(stdout, *asJSON, loc, archived, *change, pattern)
@@ -89,7 +89,7 @@ func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
 		return fmt.Errorf("sdd archive-integrate: %w", err)
 	}
 
-	// 3. Negativa ISO (REQ-29.10): un cambio ISO que no cumple la regla del archivado no se integra.
+	// 3. Negativa ISO (RF-ARC-09): un cambio ISO que no cumple la regla del archivado no se integra.
 	if findings := sddstatus.ISOArchiveRefusal(loc.WorkspaceRoot, changeRoot); len(findings) > 0 {
 		reasons := make([]string, 0, len(findings))
 		for _, finding := range findings {
@@ -99,7 +99,7 @@ func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
 			*change, strings.Join(reasons, " | "), pathquote.Quote(loc.WorkspaceRoot), pathquote.ShellWord(*change))
 	}
 
-	// 4. Guarda A (REQ-25.19): el verbo escribe en la carpeta del cambio; `--check` no escribe.
+	// 4. Guarda A (RF-BRA-20): el verbo escribe en la carpeta del cambio; `--check` no escribe.
 	if !*check {
 		if err := guardChangeWriter(changeRoot, *change, "sdd archive-integrate", branch.ContextArchive); err != nil {
 			return err

@@ -228,11 +228,11 @@ func TestWriteAtomicAndRemoveGoThroughTheArchivedGuard(t *testing.T) {
 	archived := archivedFolderOf(t, f, "2026-11-19-x")
 
 	for _, name := range []string{LinksFile, "gates.yaml", ".gates.lock", ".otro"} {
-		if err := archived.writeAtomic(name, outboxTempPattern, []byte("x\n")); err == nil || !strings.Contains(err.Error(), "REQ-21.18") {
-			t.Errorf("escribir %s en la archivada se rechaza con el mensaje de REQ-21.18: %v", name, err)
+		if err := archived.writeAtomic(name, outboxTempPattern, []byte("x\n")); err == nil || !strings.Contains(err.Error(), "RF-ARC-03") {
+			t.Errorf("escribir %s en la archivada se rechaza con el mensaje de RF-ARC-03: %v", name, err)
 		}
-		if err := archived.remove(name); err == nil || !strings.Contains(err.Error(), "REQ-21.18") {
-			t.Errorf("borrar %s en la archivada se rechaza con el mensaje de REQ-21.18: %v", name, err)
+		if err := archived.remove(name); err == nil || !strings.Contains(err.Error(), "RF-ARC-03") {
+			t.Errorf("borrar %s en la archivada se rechaza con el mensaje de RF-ARC-03: %v", name, err)
 		}
 	}
 	if err := archived.writeAtomic(LinksFile, linksTempPattern, []byte("x\n")); err == nil {

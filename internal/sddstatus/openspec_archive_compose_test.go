@@ -8,7 +8,7 @@ import (
 
 // El análisis y la composición viven en internal/openspecdoc, con sus pruebas. Aquí
 // solo se fija que el envoltorio conserva la API y el tipo de error de sddstatus
-// (REQ-30.22 a REQ-30.24): la CLI `sdd archive-compose` depende de ellos.
+// (RF-ARC-11 a RF-ARC-13): la CLI `sdd archive-compose` depende de ellos.
 
 const composeWrapperCanonical = `# Widgets Specification
 

@@ -1,7 +1,7 @@
 package branch
 
 // labels asocia cada token estable en inglés con su etiqueta en castellano (G-4,
-// REQ-25.2). Los tokens no se traducen ni cambian con el idioma; lo que se traduce
+// RF-BRA-02). Los tokens no se traducen ni cambian con el idioma; lo que se traduce
 // es la etiqueta, que va en un campo hermano `<campo>Label`.
 //
 // Los tokens de estado, de veredicto y de capa de fusión son los de la spec
@@ -26,12 +26,12 @@ var labels = map[string]string{
 	string(LayerPRMerged):       "PR fusionado",
 	string(LayerForced):         "forzado",
 
-	// Lo que `done` hizo con cada rama (REQ-25.17).
+	// Lo que `done` hizo con cada rama (RF-BRA-18).
 	string(OutcomeRemoved): "eliminada",
 	string(OutcomeKept):    "conservada",
 	string(OutcomeAbsent):  "ya no existía",
 
-	// Papel del repositorio y tipo de rama del `status` (REQ-25.15): los términos de la
+	// Papel del repositorio y tipo de rama del `status` (RF-BRA-16): los términos de la
 	// spec («repositorio con rama de cambio», «rama de rol»…).
 	string(RepoChangeBranch): "repositorio con rama de cambio",
 	string(RepoSpecsInPlace): "repositorio de specs in situ",
@@ -40,16 +40,16 @@ var labels = map[string]string{
 	string(KindRole):         "rama de rol",
 	string(KindArchive):      "rama de archivado",
 
-	// Códigos de la publicación de documentos (REQ-27.7).
+	// Códigos de la publicación de documentos (RF-PUB-03).
 	string(CodeDetachedHead):      "HEAD desacoplado",
 	string(CodeIntegrationBranch): "rama de integración no publicable",
 
-	// Rechazos de `ensure --role` (REQ-43.24).
+	// Rechazos de `ensure --role` (RF-BRA-33).
 	string(CodeRoleNotApplicable): "rol no aplicable",
 	string(CodeKickoffNotSealed):  "kickoff sin sellar",
 	string(CodeRoleNotInRoster):   "rol fuera del roster",
 
-	// Modo de trabajo materializado y su origen (REQ-25.15, design §4.4).
+	// Modo de trabajo materializado y su origen (RF-BRA-16, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",
 	string(ModeAsk):      "preguntar",
@@ -58,7 +58,7 @@ var labels = map[string]string{
 	ModeSourceHub:        "preferencias personales del hub",
 	ModeSourceDefault:    "valor por defecto",
 
-	// `axiom branch scope` (REQ-25.51 a REQ-25.54): código del rechazo, resultado de cada
+	// `axiom branch scope` (RF-BRA-35 a RF-BRA-38): código del rechazo, resultado de cada
 	// repositorio, motivos de `unverifiable`, oferta, fuente del punto de partida, de la rama y aviso.
 	string(CodeScopeNotApplicable):     "alcance no aplicable",
 	ScopeOutcomeOK:                     "alcance calculado",

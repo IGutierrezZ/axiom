@@ -162,7 +162,7 @@ func TestAdoptSkillsIndexMarkersContract(t *testing.T) {
 	}
 }
 
-// TestAgentsFirstRegenerationDoesNotDuplicateSkills covers REQ-22.12 «Adopción
+// TestAgentsFirstRegenerationDoesNotDuplicateSkills covers RF-SKI-03 «Adopción
 // inicial sobre un AGENTS.md sin marcadores»: the region is replaced in situ
 // and no second `## Skills` section appears (H-6).
 func TestAgentsFirstRegenerationDoesNotDuplicateSkills(t *testing.T) {
@@ -185,7 +185,7 @@ func TestAgentsFirstRegenerationDoesNotDuplicateSkills(t *testing.T) {
 	}
 }
 
-// TestAgentsOutsideMarkersSurviveByteIdentical covers REQ-22.12 «Ninguna otra
+// TestAgentsOutsideMarkersSurviveByteIdentical covers RF-SKI-03 «Ninguna otra
 // sección se altera» (spec §3.6 preservation): everything before the open
 // marker and after the close marker is byte-identical to the original
 // document's outside-the-region bytes.
@@ -239,7 +239,7 @@ func TestAgentsRegenerationIsIdempotent(t *testing.T) {
 	}
 }
 
-// TestAgentsLegacyMarkersAreElevated covers REQ-22.12 «Marcadores legados se
+// TestAgentsLegacyMarkersAreElevated covers RF-SKI-03 «Marcadores legados se
 // elevan al canónico»: adoption passes them through and InjectMarkdownSection
 // upgrades them while refreshing the managed body.
 func TestAgentsLegacyMarkersAreElevated(t *testing.T) {

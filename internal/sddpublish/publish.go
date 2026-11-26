@@ -123,7 +123,7 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 	}
 
 	// 5. Rango sin subir: la referencia superior es la rama remota si existe y, si no, la de
-	// integración remota o local (REQ-27.8). Lo que ya está en la integración remota no es trabajo
+	// integración remota o local (RF-PUB-04). Lo que ya está en la integración remota no es trabajo
 	// del cambio, así que se excluye también (una fusión de `main` en la rama no da negativas falsas).
 	_, remoteBranchExists, err := p.Git.ResolveCommit(ctx, dir, "refs/remotes/origin/"+target.Branch)
 	if err != nil {

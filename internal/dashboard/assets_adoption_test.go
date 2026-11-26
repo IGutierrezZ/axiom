@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// REQ-30.27: el panel de adopción que aparece tras el alta se calcula en un módulo puro de
+// RF-HUB-11: el panel de adopción que aparece tras el alta se calcula en un módulo puro de
 // js/core/ (se ejecuta con Node) y la UI solo lo muestra: sin ejecutar nada, sin CDN externos.
 func TestAdoptionAssetPanelModelRuntime(t *testing.T) {
 	t.Parallel()

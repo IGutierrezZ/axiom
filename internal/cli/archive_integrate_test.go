@@ -17,7 +17,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Las pruebas de `axiom archive integrate --odd <feature>` (REQ-30.1 a REQ-30.4, REQ-30.8).
+// Las pruebas de `axiom archive integrate --odd <feature>` (REQ-30.1 a RF-OLS-04, RF-OLS-08).
 // Todos los textos son inventados.
 
 const oddFeature = "mi-feature"
@@ -427,7 +427,7 @@ func TestArchiveIntegrateHelp(t *testing.T) {
 	}
 }
 
-// REQ-30.21: un `baseline:` residual se rechaza sin escribir con el error tipado de
+// RF-TOP-12: un `baseline:` residual se rechaza sin escribir con el error tipado de
 // su retirada y la migración `axiom archive adopt`.
 func TestArchiveIntegrateRefusesWhenABaselineIsRetired(t *testing.T) {
 	f := newODDFixture(t, true)
@@ -447,7 +447,7 @@ func TestArchiveIntegrateRefusesWhenABaselineIsRetired(t *testing.T) {
 	}
 }
 
-// REQ-30.7: un proyecto que declara `sdd.iso: true` rechaza la integración ODD con
+// RF-OLS-07: un proyecto que declara `sdd.iso: true` rechaza la integración ODD con
 // un motivo tipado que remite al carril SDD, antes de leer el documento ODD y sin
 // escribir nada; la spec viva no cambia.
 func TestArchiveIntegrateRefusesAnISOProject(t *testing.T) {
@@ -472,7 +472,7 @@ func TestArchiveIntegrateRefusesAnISOProject(t *testing.T) {
 	}
 }
 
-// REQ-30.7: la negativa ISO precede a la lectura del documento ODD: un proyecto ISO
+// RF-OLS-07: la negativa ISO precede a la lectura del documento ODD: un proyecto ISO
 // sin documento se rechaza por ISO, no por el documento ausente.
 func TestArchiveIntegrateISORefusalPrecedesReadingTheDocument(t *testing.T) {
 	f := newODDFixture(t, true)
@@ -486,7 +486,7 @@ func TestArchiveIntegrateISORefusalPrecedesReadingTheDocument(t *testing.T) {
 	}
 }
 
-// REQ-30.8: en multirepo opera sobre el repositorio de specs, desde la carpeta maestra, y
+// RF-OLS-08: en multirepo opera sobre el repositorio de specs, desde la carpeta maestra, y
 // no modifica ningún repositorio de código.
 func TestArchiveIntegrateMultirepoWritesTheSpecsRepository(t *testing.T) {
 	contextCLIIsolateGit(t)
@@ -532,7 +532,7 @@ func TestArchiveIntegrateOutsideGitIsNotRefusedByTheGuard(t *testing.T) {
 	}
 }
 
-// Impacto de los bugs y contexto técnico (REQ-30.5, REQ-30.6).
+// Impacto de los bugs y contexto técnico (RF-OLS-05, RF-OLS-06).
 
 const oddContextConfig = `workspace:
   name: ejemplo-embebido

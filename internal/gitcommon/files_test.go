@@ -92,7 +92,7 @@ func insideGit(dir string) bool {
 	}
 }
 
-// workspace REQ-25.27 y D-03.4: la raíz git de una ruta sale de ascender hasta una
+// workspace RF-TOP-10 y D-03.4: la raíz git de una ruta sale de ascender hasta una
 // entrada `.git`, desde cualquier punto de un repositorio real.
 func TestGitRootFromFilesFindsTheRootOfARealRepository(t *testing.T) {
 	requireGit(t)
@@ -214,7 +214,7 @@ func TestGitRootFromFilesOutsideAnyRepository(t *testing.T) {
 	}
 }
 
-// design §3, REQ-25.1 y G-7: las lecturas de ficheros no lanzan procesos, así que
+// design §3, RF-BRA-01 y G-7: las lecturas de ficheros no lanzan procesos, así que
 // files.go no puede importar os/exec.
 func TestFilesGoLaunchesNoProcesses(t *testing.T) {
 	parsed, err := parser.ParseFile(token.NewFileSet(), "files.go", nil, parser.ImportsOnly)
@@ -246,7 +246,7 @@ const (
 	sampleSHA256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 )
 
-// REQ-25.21: el directorio git sale de leer la entrada `.git`, directorio o
+// RF-BRA-22: el directorio git sale de leer la entrada `.git`, directorio o
 // fichero `gitdir:`, sin lanzar procesos.
 func TestGitDirFromFilesReadsADirectoryAndAGitdirFile(t *testing.T) {
 	t.Run("un directorio .git", func(t *testing.T) {
@@ -354,7 +354,7 @@ func TestGitDirFromFilesRefusesWhatIsNotAGitEntry(t *testing.T) {
 	}
 }
 
-// design §4.6 y REQ-25.21: `ReadHead` distingue rama, HEAD desacoplado y forma
+// design §4.6 y RF-BRA-22: `ReadHead` distingue rama, HEAD desacoplado y forma
 // desconocida a partir de `<gitdir>/HEAD`, tolerando CRLF y espacios finales.
 func TestReadHeadClassifiesTheContentOfHEAD(t *testing.T) {
 	tests := []struct {
@@ -534,7 +534,7 @@ func TestCommonDirFromFilesAgreesWithGitOnRealRepositories(t *testing.T) {
 	})
 }
 
-// design §4.6 (REQ-25.18): con `git init --separate-git-dir` la entrada `.git` es un fichero
+// design §4.6 (RF-BRA-19): con `git init --separate-git-dir` la entrada `.git` es un fichero
 // `gitdir:` que apunta a un git dir sin `commondir`, que es a la vez su common dir; sale de
 // ficheros y coincide con la respuesta de git. Un worktree enlazado de ese repositorio
 // comparte ese mismo directorio.
@@ -613,7 +613,7 @@ func wantNoLinkedRoot(t *testing.T, path string) {
 	}
 }
 
-// REQ-25.31: un worktree enlazado se reconoce por su evidencia en git (`.git` fichero cuyo
+// RF-HUB-09: un worktree enlazado se reconoce por su evidencia en git (`.git` fichero cuyo
 // git dir tiene `commondir`), no por el nombre de su ruta.
 func TestLinkedWorktreeRoot(t *testing.T) {
 	t.Run("repositorio real", func(t *testing.T) {

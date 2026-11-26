@@ -18,7 +18,7 @@ var sourceBuildMkdirTemp = func() (string, error) {
 }
 
 // sourceBuildUpgrade compiles the self-tool from a controlled source clone and
-// atomically replaces the active binary (REQ-22.1, D-02). It is the resilient
+// atomically replaces the active binary (RF-UPD-01, D-02). It is the resilient
 // Windows path when `go install` is not resolvable.
 //
 // Steps:
@@ -117,7 +117,7 @@ func sourceBuildUpgrade(ctx context.Context, r update.UpdateResult, profile syst
 }
 
 // sourceBuildManualFallback builds the ManualFallbackError for a failed source
-// build. It names the fork and the correct manual path (REQ-22.1).
+// build. It names the fork and the correct manual path (RF-UPD-01).
 func sourceBuildManualFallback(tool update.ToolInfo, version, reason string) error {
 	return &ManualFallbackError{
 		Hint: fmt.Sprintf(

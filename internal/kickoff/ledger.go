@@ -18,7 +18,7 @@ const GatesFileName = "gates.yaml"
 
 // GatesLockFileName es el cerrojo consultivo de gates.yaml en la carpeta del cambio: un fichero vacío
 // que persiste tras liberarse (borrarlo rompería la exclusión entre procesos) y nunca se publica.
-// `axiom branch done` no lo cuenta como árbol sucio (REQ-25.17).
+// `axiom branch done` no lo cuenta como árbol sucio (RF-BRA-18).
 const GatesLockFileName = ".gates.lock"
 
 // gateLockAcquireAttempts, gateLockRetryDelay and gateLockMaxRetryDelay bound
@@ -76,7 +76,7 @@ func LoadGates(changeRoot string) (GateLedger, error) {
 
 // AppendGate appends one decision to the change's gate ledger under an
 // exclusive advisory lock, so concurrent recorders never lose a record. It
-// never edits or removes an existing record (REQ-21.12): rejection history
+// never edits or removes an existing record (RF-GAT-06): rejection history
 // is evidence, and this is the only writer of gates.yaml.
 func AppendGate(changeRoot string, rec GateRecord) error {
 	return AppendGateChecked(changeRoot, rec, nil)
@@ -89,7 +89,7 @@ func AppendGate(changeRoot string, rec GateRecord) error {
 // can tell its own refusal apart from an I/O failure.
 //
 // It exists for the decisions that depend on the ledger's current content, such
-// as handing off a gate that must still be pending (REQ-26.3): a check made
+// as handing off a gate that must still be pending (RF-GAT-09): a check made
 // before taking the lock would let two concurrent recorders both pass it, and
 // the second approval, hidden behind the first one, would be invisible.
 func AppendGateChecked(changeRoot string, rec GateRecord, check func(GateLedger) error) error {

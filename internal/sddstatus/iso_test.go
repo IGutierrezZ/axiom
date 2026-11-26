@@ -13,7 +13,7 @@ const (
 )
 
 // seedBugChange crea un cambio sin ningún fichero de specs: el bug sin delta
-// de REQ-29.15 declara su informe en proposal.md.
+// de RF-CLI-10 declara su informe en proposal.md.
 func seedBugChange(t *testing.T, root, name, proposal, tasks string) string {
 	t.Helper()
 	changeRoot := filepath.Join(root, "openspec", "changes", name)
@@ -33,7 +33,7 @@ func reasonsWith(reasons []string, needle string) []string {
 	return found
 }
 
-// REQ-29.15 (design D9): el artefacto de specs se cumple sin delta con un bug
+// RF-CLI-10 (design D9): el artefacto de specs se cumple sin delta con un bug
 // declarado; una declaración incompleta lo deja `missing` con un motivo por cada
 // falta; con delta las secciones no se analizan; vale en un proyecto no ISO.
 func TestISOBugProfile(t *testing.T) {
@@ -125,7 +125,7 @@ func TestISOBugProfile(t *testing.T) {
 	}
 }
 
-// REQ-29.2: sin bloque `sdd:` y con un cambio no ISO, el JSON del status es
+// RF-ISO-02: sin bloque `sdd:` y con un cambio no ISO, el JSON del status es
 // idéntico byte a byte al que produce la resolución sin la decoración ISO, y no
 // aparece ni la clave `iso` ni ningún token `iso_*`. Las pruebas de regresión
 // existentes (kickoff_absence_regression_test.go, status_v2_clean_break_test.go)
@@ -172,7 +172,7 @@ func TestISOStatusContinuity(t *testing.T) {
 				t.Fatal(err)
 			}
 			decorateWorkspaceDeclarations(&want, location)
-			// `requirements` (REQ-47.9) es una decoración aditiva ajena a ISO: este caso solo
+			// `requirements` (RF-CLI-14) es una decoración aditiva ajena a ISO: este caso solo
 			// fija que decorateISO no altera nada.
 			decorateRequirements(&want, location)
 

@@ -30,8 +30,8 @@ func NewInitializer(mgr *Manager, det *Detector) *Initializer {
 
 // ForeignPlanningHomeError es el rechazo de axiom init cuando el puntero propio
 // del destino resuelve un planning home distinto de <destino>/openspec
-// (multi-project-hub REQ-2.2): crear ese directorio produciría un segundo
-// planning home y la ambigüedad de REQ-24.6 en todos los verbos.
+// (multi-project-hub RF-HUB-04): crear ese directorio produciría un segundo
+// planning home y la ambigüedad de RF-PLH-06 en todos los verbos.
 type ForeignPlanningHomeError struct {
 	PointerPath   string // .axiom-workspace del propio destino
 	PlanningHome  string // planning home que resuelve el puntero
@@ -45,7 +45,7 @@ func (e *ForeignPlanningHomeError) Error() string {
 }
 
 // ownMarkers es lo que Init encuentra en los marcadores del propio destino.
-// Nunca incluye los de un ancestro: el marcador más cercano gana (REQ-24.2) y
+// Nunca incluye los de un ancestro: el marcador más cercano gana (RF-PLH-02) y
 // el destino pasa a ser el suyo.
 type ownMarkers struct {
 	configPath   string                 // axiom.yaml existente que Init considera suyo; "" si no hay
@@ -88,7 +88,7 @@ func (m ownMarkers) declares() bool {
 //  3. Sin marcadores, init se comporta como antes.
 //
 // El axiom.yaml que encuentra se valida con el mismo validador de carga que
-// LoadConfig, Locate y workspace validate (REQ-2.2, punto 4).
+// LoadConfig, Locate y workspace validate (RF-HUB-04, punto 4).
 //
 // expectedHome es el planning home que el alta va a usar: <absPath>/openspec, o el
 // del repositorio de especificaciones propio en un alta multirepo. Un puntero que
@@ -118,7 +118,7 @@ func inspectOwnMarkers(absPath, expectedHome string) (ownMarkers, error) {
 		_, loadErr := workspace.LoadConfig(markers.configPath)
 		markers.violations = loadViolations(loadErr)
 	}
-	// Un `baseline:` residual (REQ-30.21) no se ignora ni se completa con avisos:
+	// Un `baseline:` residual (RF-TOP-12) no se ignora ni se completa con avisos:
 	// el alta se rechaza antes de escribir ni registrar nada, con la guía de
 	// migración, y el axiom.yaml existente no se toca.
 	if retired := markers.declarations.BaselineRetiredErr; retired != nil {
@@ -145,7 +145,7 @@ func loadViolations(err error) []string {
 //
 // Antes de escribir ni registrar nada, también antes de crear el directorio
 // destino, evalúa los marcadores del propio destino (inspectOwnMarkers). Con una
-// `baseline:` residual rechaza el alta (REQ-30.21), y con un axiom.yaml que no se
+// `baseline:` residual rechaza el alta (RF-TOP-12), y con un axiom.yaml que no se
 // puede leer no crea openspec/specs/ ni openspec/INDEX.md, conserva el resto del
 // andamiaje de su perfil e informa en InitResult.Notes. Las violaciones de las declaraciones se informan
 // pero no cambian el resultado: REQ-24.23 sitúa a init entre las operaciones que
@@ -327,7 +327,7 @@ func (ini *Initializer) Init(opts InitOptions) (*InitResult, error) {
 		}
 	}
 
-	// 4. Informe de adopción (REQ-30.27): el inventario del repositorio de especificaciones,
+	// 4. Informe de adopción (RF-HUB-11): el inventario del repositorio de especificaciones,
 	// de solo lectura, y la instrucción para lanzar la adopción desde el agente. No ejecuta
 	// nada ni crea el cambio de adopción. Un fallo del escaneo deja el informe ausente.
 	var adoptionReport *adoption.Summary
@@ -461,7 +461,7 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, root, domainContext stri
 // AdoptionChange es el nombre del cambio SDD de adopción que propone la instrucción del alta.
 const AdoptionChange = "adopcion-openspec"
 
-// adoptionInstructionFor compone la orden y la frase para el agente (REQ-30.27). La ruta es la
+// adoptionInstructionFor compone la orden y la frase para el agente (RF-HUB-11). La ruta es la
 // carpeta maestra, que `axiom archive adopt` resuelve al repositorio de especificaciones.
 func adoptionInstructionFor(masterPath string) string {
 	return fmt.Sprintf("Adopta los requisitos previos de este proyecto en OpenSpec: crea el cambio SDD `%[1]s`, ejecuta `axiom archive adopt scan --path %[2]s --change %[1]s` y redacta la delta siguiendo la referencia de adopción de la skill sdd-spec; comprueba el resultado con `axiom archive adopt check --path %[2]s --change %[1]s` y somete la compuerta `spec` a aprobación humana.",

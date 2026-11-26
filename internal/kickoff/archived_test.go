@@ -8,7 +8,7 @@ import (
 )
 
 // TestArchivedChangeRoot fija la regla de búsqueda de cambios archivados
-// (REQ-24.9, escenario 3): nombre exacto (forma heredada) y entrada con prefijo
+// (RF-PLH-09, escenario 3): nombre exacto (forma heredada) y entrada con prefijo
 // de fecha, de la que gana la más reciente; un sufijo parcial no coincide.
 func TestArchivedChangeRoot(t *testing.T) {
 	tests := []struct {
@@ -108,7 +108,7 @@ func TestRefuseArchivedRootRejectsAbsolutePathOutsideWorkspace(t *testing.T) {
 	}
 }
 
-// MODIFIED REQ-21.18 y REQ-43.28: la guarda hermana autoriza bajo archive/ solo la cola de
+// MODIFIED RF-ARC-03 y RF-INT-19: la guarda hermana autoriza bajo archive/ solo la cola de
 // integraciones (y sus temporales) en la raíz exacta de una carpeta archivada.
 func TestRefuseArchivedWriteExceptLocalState(t *testing.T) {
 	workspaceRoot := t.TempDir()
@@ -154,7 +154,7 @@ func TestRefuseArchivedWriteExceptLocalState(t *testing.T) {
 		})
 	}
 
-	t.Run("el rechazo en la archivada lleva el mensaje de REQ-21.18", func(t *testing.T) {
+	t.Run("el rechazo en la archivada lleva el mensaje de RF-ARC-03", func(t *testing.T) {
 		want := RefuseArchivedRoot(workspaceRoot, archived)
 		if want == nil {
 			t.Fatal("RefuseArchivedRoot debe rechazar la carpeta archivada")
@@ -162,11 +162,11 @@ func TestRefuseArchivedWriteExceptLocalState(t *testing.T) {
 		for _, file := range []string{"integrations.yaml", "gates.yaml", ".gates.lock"} {
 			got := RefuseArchivedWriteExceptLocalState(workspaceRoot, archived, file)
 			if got == nil || got.Error() != want.Error() {
-				t.Errorf("%s: error = %v, se esperaba el mensaje de REQ-21.18 %q", file, got, want)
+				t.Errorf("%s: error = %v, se esperaba el mensaje de RF-ARC-03 %q", file, got, want)
 			}
 		}
-		if err := RefuseArchivedWriteExceptLocalState(workspaceRoot, archiveDir, IntegrationsOutboxFile); err == nil || !strings.Contains(err.Error(), "REQ-21.18") {
-			t.Errorf("archive/ sin carpeta de cambio debe llevar REQ-21.18: %v", err)
+		if err := RefuseArchivedWriteExceptLocalState(workspaceRoot, archiveDir, IntegrationsOutboxFile); err == nil || !strings.Contains(err.Error(), "RF-ARC-03") {
+			t.Errorf("archive/ sin carpeta de cambio debe llevar RF-ARC-03: %v", err)
 		}
 	})
 

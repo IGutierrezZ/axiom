@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// La verificación conjunta nunca bloquea (C-02-b, REQ-28.1, REQ-28.42, REQ-43.32): una ronda
+// La verificación conjunta nunca bloquea (C-02-b, RF-REV-01, RF-REV-11, RF-GAT-26): una ronda
 // «Verificación conjunta» en `verify-report.md`, limpia o no, no cambia `nextRecommended`, las
 // dependencias ni las razones de bloqueo de `axiom sdd status`; `status` no la lee ni la digiere.
 func TestJointVerifyNonblocking(t *testing.T) {

@@ -64,7 +64,7 @@ func runNodeModules(t *testing.T, modules []string, script string) []byte {
 	return out
 }
 
-// REQ-25.34: la tarjeta de un cambio muestra la insignia de pendiente de archivar y la rama de su
+// RF-WEB-11: la tarjeta de un cambio muestra la insignia de pendiente de archivar y la rama de su
 // worktree, y los avisos de `X-Axiom-Notes` llegan a una región visible y anunciada del listado.
 func TestIncrementsListShowsNotesPendingArchiveAndBranch(t *testing.T) {
 	t.Parallel()
@@ -219,7 +219,7 @@ func TestAPIClientExposesHeadersAndConflictBodies(t *testing.T) {
 	}
 }
 
-// REQ-25.32: ante un 409 `decision_required` la interfaz presenta la decisión en un diálogo accesible y
+// RF-WEB-09: ante un 409 `decision_required` la interfaz presenta la decisión en un diálogo accesible y
 // repite la creación con `mode`.
 func TestNewIncrementAsksTheDecisionInAnAccessibleDialog(t *testing.T) {
 	t.Parallel()
@@ -410,7 +410,7 @@ func TestBranchPolicyRuntime(t *testing.T) {
 	}
 }
 
-// REQ-25.29 y REQ-25.33: las preferencias personales de worktree del proyecto activo se editan y se
+// RF-HUB-07 y REQ-25.33: las preferencias personales de worktree del proyecto activo se editan y se
 // guardan en el Hub desde Ecosistema, y el alta de un proyecto las pregunta.
 func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	t.Parallel()
@@ -463,7 +463,7 @@ func TestWorktreePrefsEditorInEcosystem(t *testing.T) {
 	}
 }
 
-// REQ-25.29: el modal de registro pregunta el modo y la raíz de worktree, y la petición los envía.
+// RF-HUB-07: el modal de registro pregunta el modo y la raíz de worktree, y la petición los envía.
 func TestRegistrationModalAsksWorktreePrefsInTheRedesign(t *testing.T) {
 	t.Parallel()
 	html, projects := readAsset(t, "index.html"), readAsset(t, "js/projects.js")

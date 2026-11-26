@@ -125,12 +125,12 @@ type SealArgs struct {
 
 	// HandoffPolicy is the parsed --handoff-policy value.
 	//
-	// Deprecated: the flag is accepted, validated and ignored (REQ-26.9);
+	// Deprecated: the flag is accepted, validated and ignored (RF-PRE-03);
 	// ToKickoff never copies it, so a sealed kickoff always carries HandoffNone.
 	HandoffPolicy    HandoffPolicy
 	Roles            []RoleFlag
 	DeploymentTarget string
-	// DocsPublication es el valor de --docs-publication (REQ-27.4): solo `auto`, solo con
+	// DocsPublication es el valor de --docs-publication (RF-KOF-10): solo `auto`, solo con
 	// continuous y nunca con --infer.
 	DocsPublication DocsPublication
 	JSON            bool
@@ -138,8 +138,8 @@ type SealArgs struct {
 
 // ParseSealArgs parses and validates `axiom sdd kickoff seal` arguments
 // (design.md S5.7). With --infer, none of execution-style or role is
-// required: InferKickoff derives both from the existing tree (REQ-21.4,
-// S8.1). --handoff-policy is deprecated and never required (REQ-26.9).
+// required: InferKickoff derives both from the existing tree (RF-KOF-04,
+// S8.1). --handoff-policy is deprecated and never required (RF-PRE-03).
 func ParseSealArgs(args []string) (SealArgs, error) {
 	parsed := SealArgs{FlowMode: FlowSDD}
 	var executionStyleExplicit, sessionPaceGiven bool
@@ -281,8 +281,8 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 	if len(parsed.Roles) == 0 {
 		parsed.Roles = []RoleFlag{{Role: "fullstack", GatePolicy: multirole.PolicyBlocking}}
 	}
-	// El estilo obligatorio (REQ-21.5), la regla de continuous (REQ-28.12,
-	// REQ-28.13) y las reglas de topología (REQ-28.19) las aplica ApplyTopology,
+	// El estilo obligatorio (RF-PRE-01), la regla de continuous (RF-PRE-04,
+	// RF-PRE-05) y las reglas de topología (RF-PRE-11) las aplica ApplyTopology,
 	// que necesita la topología que gobierna el cambio.
 	if parsed.DeploymentTarget == "" {
 		parsed.DeploymentTarget = "local"
@@ -292,18 +292,18 @@ func ParseSealArgs(args []string) (SealArgs, error) {
 }
 
 // ErrTopologyForbidsContinuous identifica el rechazo de continuous en la
-// topología multirepo, que sella siempre checkpointed (REQ-28.19).
+// topología multirepo, que sella siempre checkpointed (RF-PRE-11).
 var ErrTopologyForbidsContinuous = errors.New("la topología multirepo sella siempre checkpointed")
 
 // ErrTopologyRequiresFullstack identifica el rechazo de un rol distinto de
-// fullstack en la topología monorepo-embedded (REQ-28.19, REQ-21.6).
+// fullstack en la topología monorepo-embedded (RF-PRE-11, RF-PRE-02).
 var ErrTopologyRequiresFullstack = errors.New("la topología monorepo-embedded solo admite el rol fullstack")
 
 // ApplyTopology resuelve el estilo y valida el roster del sellado explícito
 // para la topología que gobierna el cambio ("" sin axiom.yaml). Es pura. Orden:
 // reglas de topología (con mensaje que nombra la topología), estilo obligatorio
-// (REQ-21.5) y, como red de seguridad, la regla de continuous (REQ-28.12,
-// REQ-28.13). El sellado con --infer no pasa por aquí.
+// (RF-PRE-01) y, como red de seguridad, la regla de continuous (RF-PRE-04,
+// RF-PRE-05). El sellado con --infer no pasa por aquí.
 //
 //   - multirepo: continuous (explícito o derivado de --from-session-pace auto)
 //     se rechaza; sin estilo se deriva checkpointed con origen "topology".
@@ -342,7 +342,7 @@ func (a *SealArgs) ApplyTopology(topology workspace.TopologyType) error {
 		}
 	}
 	if a.ExecutionStyle == "" {
-		return fmt.Errorf("kickoff seal requiere --execution-style o --from-session-pace (REQ-21.5: no se asume un valor por defecto; solo la topología multirepo deriva checkpointed)")
+		return fmt.Errorf("kickoff seal requiere --execution-style o --from-session-pace (RF-PRE-01: no se asume un valor por defecto; solo la topología multirepo deriva checkpointed)")
 	}
 	roleNames := make([]string, 0, len(a.Roles))
 	for _, r := range a.Roles {
@@ -379,7 +379,7 @@ func (a SealArgs) ToKickoff(change string) Kickoff {
 			FlowMode:             a.FlowMode,
 			ExecutionStyle:       a.ExecutionStyle,
 			ExecutionStyleSource: a.ExecutionStyleSource,
-			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (REQ-26.9)
+			HandoffPolicy:        HandoffNone, // compatibility value, never the deprecated flag (RF-PRE-03)
 			Roles:                roles,
 			DocsPublication:      a.DocsPublication,
 		},
@@ -400,9 +400,9 @@ type GateRecordArgs struct {
 	Reason   string
 	Actor    string
 	JSON     bool
-	// HandOff is exit 2 of a stop ("approve, push and stop", REQ-26.1): the approval hands the
+	// HandOff is exit 2 of a stop ("approve, push and stop", RF-GAT-07): the approval hands the
 	// next phase to another person. It only goes with an approval, never with integration or
-	// evidence, and --reason stays optional with it (REQ-26.3).
+	// evidence, and --reason stays optional with it (RF-GAT-09).
 	HandOff bool
 
 	// EvidenceKind classifies the integration evidence this decision
@@ -554,7 +554,7 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 		}
 	}
 	if parsed.Decision == DecisionRejected && strings.TrimSpace(parsed.Reason) == "" {
-		return GateRecordArgs{}, fmt.Errorf("gate record --decision rejected requiere --reason (REQ-21.12 exige registrar el motivo)")
+		return GateRecordArgs{}, fmt.Errorf("gate record --decision rejected requiere --reason (RF-GAT-06 exige registrar el motivo)")
 	}
 	if parsed.EvidenceKind == EvidencePRMerged {
 		if strings.TrimSpace(parsed.Commit) == "" {

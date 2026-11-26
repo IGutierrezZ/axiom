@@ -8,7 +8,7 @@ Esta capacidad define el QUÉ. La forma de proyectar el texto a los runtimes, lo
 
 Definiciones usadas en esta especificación:
 
-- **Preferencia de revisión independiente:** respuesta del usuario en una interacción propia tras el pre-vuelo (REQ-28.14 de `sdd-preflight-configuration`) con dos partes: *revisión tras el apply de cada rol* (`verify`, `verify-judgment` o `none`) y *revisión de cobertura tras spec y design* (`yes` o `no`).
+- **Preferencia de revisión independiente:** respuesta del usuario en una interacción propia tras el pre-vuelo (RF-PRE-06 de `sdd-preflight-configuration`) con dos partes: *revisión tras el apply de cada rol* (`verify`, `verify-judgment` o `none`) y *revisión de cobertura tras spec y design* (`yes` o `no`).
 - **Verify limpio:** informe de verify del rol sin ningún hallazgo de severidad crítica (funcional o de cumplimiento técnico) y sin ninguna comprobación obligatoria fallida (compilación, pruebas, análisis estático declarados). Los hallazgos de aviso o sugerencia NO impiden que un verify sea limpio. Un informe parcial por herramienta no disponible NO es limpio (supuesto A-1).
 - **Informe vigente del rol:** el contenido actual de su `verify_file` (`verify-report.md` para `fullstack`, `verify-report.<rol>.md` para el resto).
 
@@ -16,9 +16,9 @@ Definiciones usadas en esta especificación:
 
 ## 1. Capacidad: `sdd-independent-review`
 
-### Requirement: El Orquestador Ofrece la Revisión Independiente en Cuatro Puntos del Flujo (REQ-28.1)
+### Requirement: El Orquestador Ofrece la Revisión Independiente en Cuatro Puntos del Flujo (RF-REV-01)
 
-El orquestador DEBE contemplar la revisión independiente en cuatro puntos y solo en ellos: (a) al concluir el `apply` de cada rol activo, incluido el rol único `fullstack`, el `verify` de ese rol y, tras un verify limpio, el juicio; (b) al concluir la fase `spec`, la revisión de cobertura del spec; (c) al concluir la fase `design`, la revisión de cobertura de spec y design; (d) al presentar la compuerta `integration` de un cambio `checkpointed`, la **oferta** de la verificación conjunta cuando el resumen de `axiom branch scope` indica `offerable` (REQ-25.54 de `change-branch-lifecycle`). En los puntos (a), (b) y (c) DEBE aplicar la preferencia del usuario según el estilo sellado (REQ-28.2). El punto (d) es solo una oferta: el orquestador NO DEBE lanzar la verificación conjunta por iniciativa propia, con ninguna preferencia, y NO DEBE añadir una pregunta ni una opción nueva a la preferencia de revisión independiente; la persona decide en la propia presentación de `integration`. La oferta NO DEBE añadir estados, campos de ledger ni puertas: es texto del orquestador. Con la preferencia `none` o cobertura `no`, el orquestador NO DEBE lanzar la revisión por iniciativa propia en los puntos (a), (b) y (c), pero DEBE lanzarla si el usuario la pide de forma explícita, y DEBE atender siempre una petición explícita de verificación conjunta, aunque la oferta no sea `offerable`, declarando los huecos (REQ-28.41).
+El orquestador DEBE contemplar la revisión independiente en cuatro puntos y solo en ellos: (a) al concluir el `apply` de cada rol activo, incluido el rol único `fullstack`, el `verify` de ese rol y, tras un verify limpio, el juicio; (b) al concluir la fase `spec`, la revisión de cobertura del spec; (c) al concluir la fase `design`, la revisión de cobertura de spec y design; (d) al presentar la compuerta `integration` de un cambio `checkpointed`, la **oferta** de la verificación conjunta cuando el resumen de `axiom branch scope` indica `offerable` (RF-BRA-38 de `change-branch-lifecycle`). En los puntos (a), (b) y (c) DEBE aplicar la preferencia del usuario según el estilo sellado (RF-REV-02). El punto (d) es solo una oferta: el orquestador NO DEBE lanzar la verificación conjunta por iniciativa propia, con ninguna preferencia, y NO DEBE añadir una pregunta ni una opción nueva a la preferencia de revisión independiente; la persona decide en la propia presentación de `integration`. La oferta NO DEBE añadir estados, campos de ledger ni puertas: es texto del orquestador. Con la preferencia `none` o cobertura `no`, el orquestador NO DEBE lanzar la revisión por iniciativa propia en los puntos (a), (b) y (c), pero DEBE lanzarla si el usuario la pide de forma explícita, y DEBE atender siempre una petición explícita de verificación conjunta, aunque la oferta no sea `offerable`, declarando los huecos (RF-REV-10).
 (Previously: «tres puntos y solo en ellos», sin ninguna oferta en `integration`)
 
 #### Scenario: Un rol que concluye su apply activa el verify según la preferencia
@@ -68,9 +68,9 @@ El orquestador DEBE contemplar la revisión independiente en cuatro puntos y sol
 - **ENTONCES** declara el estado «ofrecida» sin lanzarla por iniciativa propia
 - **Y** la lanza si la persona la pide de forma explícita
 
-### Requirement: Aplicación de la Preferencia según el Estilo Sellado, sin Violar `continuous` (REQ-28.2)
+### Requirement: Aplicación de la Preferencia según el Estilo Sellado, sin Violar `continuous` (RF-REV-02)
 
-La preferencia de revisión independiente DEBE aplicarse sin preguntar de nuevo al usuario cuando el estilo sellado es `continuous`: el orquestador lanza las revisiones que la preferencia indica y encadena la fase siguiente al terminar, sin detenerse (REQ-21.7 de `sdd-block-review-gates` no cambia). Cuando el estilo sellado es `checkpointed`, la preferencia es la respuesta por defecto que el orquestador aplica antes de la parada correspondiente y cuyos resultados presenta en ella (REQ-28.10); la parada NO se sustituye ni se adelanta. El orquestador DEBE guardar la preferencia en la caché de la sesión del mismo modo que la estrategia de entrega y NO DEBE escribirla en `kickoff.yaml` ni en `gates.yaml`. Cada sesión recoge la preferencia tras su pre-vuelo (REQ-28.14). Cuando una sesión carece de preferencia cacheada (por ejemplo, un pre-vuelo establecido por un orquestador anterior a este cambio), el orquestador NO DEBE reconstruirla por inferencia: en `continuous` NO DEBE lanzar ninguna revisión por iniciativa propia ni preguntar; en `checkpointed` DEBE ofrecer la elección en la parada correspondiente como parte de su presentación.
+La preferencia de revisión independiente DEBE aplicarse sin preguntar de nuevo al usuario cuando el estilo sellado es `continuous`: el orquestador lanza las revisiones que la preferencia indica y encadena la fase siguiente al terminar, sin detenerse (RF-GAT-01 de `sdd-block-review-gates` no cambia). Cuando el estilo sellado es `checkpointed`, la preferencia es la respuesta por defecto que el orquestador aplica antes de la parada correspondiente y cuyos resultados presenta en ella (RF-GAT-16); la parada NO se sustituye ni se adelanta. El orquestador DEBE guardar la preferencia en la caché de la sesión del mismo modo que la estrategia de entrega y NO DEBE escribirla en `kickoff.yaml` ni en `gates.yaml`. Cada sesión recoge la preferencia tras su pre-vuelo (RF-PRE-06). Cuando una sesión carece de preferencia cacheada (por ejemplo, un pre-vuelo establecido por un orquestador anterior a este cambio), el orquestador NO DEBE reconstruirla por inferencia: en `continuous` NO DEBE lanzar ninguna revisión por iniciativa propia ni preguntar; en `checkpointed` DEBE ofrecer la elección en la parada correspondiente como parte de su presentación.
 
 #### Scenario: En continuous se aplica la preferencia sin detenerse
 
@@ -83,7 +83,7 @@ La preferencia de revisión independiente DEBE aplicarse sin preguntar de nuevo 
 
 - **DADO** un cambio `checkpointed` con preferencia `verify` tras el apply
 - **CUANDO** el rol concluye su `apply`
-- **ENTONCES** el orquestador lanza el verify y, con su informe, presenta la parada `role-apply:<rol>` con las tres salidas de REQ-26.1
+- **ENTONCES** el orquestador lanza el verify y, con su informe, presenta la parada `role-apply:<rol>` con las tres salidas de RF-GAT-07
 - **Y** el usuario puede, en esa parada, pedir además un juicio o repetir el verify antes de elegir una salida
 
 #### Scenario: Sesión sin preferencia cacheada en continuous
@@ -115,9 +115,9 @@ La preferencia de revisión independiente DEBE aplicarse sin preguntar de nuevo 
 
 ---
 
-### Requirement: Las Revisiones Son Informativas y No Bloquean (REQ-28.3)
+### Requirement: Las Revisiones Son Informativas y No Bloquean (RF-REV-03)
 
-Ni el verify por rol, ni el juicio, ni la revisión de cobertura DEBEN bloquear una fase, una puerta o el archivado. Un hallazgo, sea cual sea su severidad, NO DEBE alterar `nextRecommended`, las dependencias proyectadas por `axiom sdd status`, ni impedir `sdd-archive`. La decisión de actuar sobre un hallazgo es humana: en `checkpointed` se toma en la parada; en `continuous` el orquestador informa en su resumen final y no corrige por su cuenta, salvo las correcciones acotadas del juicio (REQ-28.6). El verify NO DEBE mutar código, tareas ni artefactos de planificación; solo escribe su informe. **Excepción declarada:** en un cambio sellado como ISO (REQ-29.1 de `sdd-iso-evidence` y REQ-29.13 de `sdd-lane-kickoff`), la matriz de verify del informe SÍ condiciona el archivado: `archive` se bloquea mientras la matriz esté ausente, sea inválida o tenga alguna fila fallida (REQ-29.11 de `sdd-archive-lifecycle`). Ese bloqueo procede de la validez de la matriz —evidencia declarada y contrastada con el árbol de trabajo— y nunca de un hallazgo de revisión: los hallazgos, el juicio `ESCALATED` y la revisión de cobertura siguen sin alterar `nextRecommended` ni las dependencias, también en un cambio ISO.
+Ni el verify por rol, ni el juicio, ni la revisión de cobertura DEBEN bloquear una fase, una puerta o el archivado. Un hallazgo, sea cual sea su severidad, NO DEBE alterar `nextRecommended`, las dependencias proyectadas por `axiom sdd status`, ni impedir `sdd-archive`. La decisión de actuar sobre un hallazgo es humana: en `checkpointed` se toma en la parada; en `continuous` el orquestador informa en su resumen final y no corrige por su cuenta, salvo las correcciones acotadas del juicio (RF-REV-06). El verify NO DEBE mutar código, tareas ni artefactos de planificación; solo escribe su informe. **Excepción declarada:** en un cambio sellado como ISO (RF-ISO-01 de `sdd-iso-evidence` y RF-KOF-12 de `sdd-lane-kickoff`), la matriz de verify del informe SÍ condiciona el archivado: `archive` se bloquea mientras la matriz esté ausente, sea inválida o tenga alguna fila fallida (RF-ARC-10 de `sdd-archive-lifecycle`). Ese bloqueo procede de la validez de la matriz —evidencia declarada y contrastada con el árbol de trabajo— y nunca de un hallazgo de revisión: los hallazgos, el juicio `ESCALATED` y la revisión de cobertura siguen sin alterar `nextRecommended` ni las dependencias, también en un cambio ISO.
 (Previously: ninguna revisión ni informe de verify bloqueaba el archivado en ningún caso; ahora un cambio ISO tiene la excepción de la matriz de verify)
 
 #### Scenario: Un hallazgo crítico no bloquea el archivado
@@ -152,7 +152,7 @@ Ni el verify por rol, ni el juicio, ni la revisión de cobertura DEBEN bloquear 
 
 - **DADO** un cambio ISO cuyo informe de verify no contiene ningún hallazgo y cuya matriz tiene un escenario sin fila
 - **CUANDO** se solicita el archivado
-- **ENTONCES** `archive` se bloquea con el motivo tipado de matriz (REQ-29.11 de `sdd-archive-lifecycle`)
+- **ENTONCES** `archive` se bloquea con el motivo tipado de matriz (RF-ARC-10 de `sdd-archive-lifecycle`)
 - **Y** el motivo no cita ningún hallazgo de revisión
 
 #### Scenario: En un cambio ISO un hallazgo crítico con la matriz válida no bloquea
@@ -177,9 +177,9 @@ Ni el verify por rol, ni el juicio, ni la revisión de cobertura DEBEN bloquear 
 
 ---
 
-### Requirement: Verify por Rol con Sección de Cumplimiento Técnico (REQ-28.4)
+### Requirement: Verify por Rol con Sección de Cumplimiento Técnico (RF-REV-04)
 
-El `verify` de un rol DEBE inspeccionar únicamente el diff de ese rol y escribir su informe en el `verify_file` que el kickoff asigna a ese rol. Además de la verificación funcional existente (requisitos, pruebas, compilación), el informe DEBE incluir una sección **Cumplimiento técnico** que contraste el diff con las reglas aplicables (REQ-28.5). Cuando no hay hallazgos, la sección DEBE existir y declararlo, con la lista de fuentes consultadas. El verify global multirrol, que se evalúa cuando REQ-21.15 lo habilita, no cambia en cuanto a su habilitación ni a la semántica del veredicto que lee la barrera de `multi-role-fan-out`: la sección nueva es contenido adicional del informe. **Alcance del verify sin rol:** cuando el verify global se ejecuta sin rol en modo conjunto sobre un cambio con instantánea sellada de repositorios, DEBE inspeccionar la **unión del alcance** que devuelve `axiom branch scope` (REQ-25.51 de `change-branch-lifecycle`) y no un alcance definido por el agente; ese alcance solo delimita lo que se inspecciona: la suite completa de pruebas que REQ-21.15 exige no se acota por él. Cuando `axiom branch scope` no es aplicable o falla, el verify sin rol se comporta como antes y su informe declara el motivo; nunca falla por ello ni cambia su veredicto. En un cambio ISO, el informe consolidado (o el del rol único `fullstack`) incluye además la matriz de verify (REQ-29.6 de `sdd-iso-evidence`) como otra sección adicional, que NO escribe líneas `verdict:` y NO altera la sección «Cumplimiento técnico»; los informes por rol de un cambio multirrol NO necesitan matriz. En un cambio con el rol único `fullstack`, el verify del rol y el verify del cambio son el mismo informe y NO se ejecutan dos veces sin motivo. Nota: el verify por rol es un diagnóstico del rol que se ofrece antes de aprobar `role-apply`; NO es la fase `verify` global de REQ-21.15, que sigue evaluándose cuando REQ-21.15 la habilita.
+El `verify` de un rol DEBE inspeccionar únicamente el diff de ese rol y escribir su informe en el `verify_file` que el kickoff asigna a ese rol. Además de la verificación funcional existente (requisitos, pruebas, compilación), el informe DEBE incluir una sección **Cumplimiento técnico** que contraste el diff con las reglas aplicables (RF-REV-05). Cuando no hay hallazgos, la sección DEBE existir y declararlo, con la lista de fuentes consultadas. El verify global multirrol, que se evalúa cuando RF-RCL-03 lo habilita, no cambia en cuanto a su habilitación ni a la semántica del veredicto que lee la barrera de `multi-role-fan-out`: la sección nueva es contenido adicional del informe. **Alcance del verify sin rol:** cuando el verify global se ejecuta sin rol en modo conjunto sobre un cambio con instantánea sellada de repositorios, DEBE inspeccionar la **unión del alcance** que devuelve `axiom branch scope` (RF-BRA-35 de `change-branch-lifecycle`) y no un alcance definido por el agente; ese alcance solo delimita lo que se inspecciona: la suite completa de pruebas que RF-RCL-03 exige no se acota por él. Cuando `axiom branch scope` no es aplicable o falla, el verify sin rol se comporta como antes y su informe declara el motivo; nunca falla por ello ni cambia su veredicto. En un cambio ISO, el informe consolidado (o el del rol único `fullstack`) incluye además la matriz de verify (RF-ISO-06 de `sdd-iso-evidence`) como otra sección adicional, que NO escribe líneas `verdict:` y NO altera la sección «Cumplimiento técnico»; los informes por rol de un cambio multirrol NO necesitan matriz. En un cambio con el rol único `fullstack`, el verify del rol y el verify del cambio son el mismo informe y NO se ejecutan dos veces sin motivo. Nota: el verify por rol es un diagnóstico del rol que se ofrece antes de aprobar `role-apply`; NO es la fase `verify` global de RF-RCL-03, que sigue evaluándose cuando RF-RCL-03 la habilita.
 (Previously: el verify global multirrol «NO cambia» sin matiz y no tenía alcance definido; ahora, sin rol y en modo conjunto, su alcance es la unión del de `axiom branch scope`, sin alterar su habilitación ni el veredicto que lee la barrera)
 
 #### Scenario: El informe de un rol contiene la sección Cumplimiento técnico
@@ -203,7 +203,7 @@ El `verify` de un rol DEBE inspeccionar únicamente el diff de ese rol y escribi
 #### Scenario: El verify global multirrol no cambia su habilitación
 - **DADO** un cambio con los roles `core` y `web`, ambos `blocking`, y todos los `role-apply` aprobados
 - **CUANDO** se evalúa la dependencia `verify`
-- **ENTONCES** se habilita conforme a REQ-21.15, sin ninguna condición añadida por este requisito
+- **ENTONCES** se habilita conforme a RF-RCL-03, sin ninguna condición añadida por este requisito
 - **Y** el veredicto que lee la barrera de sincronización se obtiene como antes, sin tener en cuenta la sección nueva
 
 #### Scenario: El verify sin rol en modo conjunto usa el alcance de axiom branch scope
@@ -220,7 +220,7 @@ El `verify` de un rol DEBE inspeccionar únicamente el diff de ese rol y escribi
 
 #### Scenario: El alcance no acota la suite completa de pruebas
 - **DADO** un verify sin rol en modo conjunto con un alcance de dos repositorios
-- **CUANDO** se ejecutan las pruebas que REQ-21.15 exige
+- **CUANDO** se ejecutan las pruebas que RF-RCL-03 exige
 - **ENTONCES** se ejecuta la suite completa y no solo la de los ficheros del alcance
 - **Y** el informe indica que el alcance solo delimita lo inspeccionado
 
@@ -237,7 +237,7 @@ El `verify` de un rol DEBE inspeccionar únicamente el diff de ese rol y escribi
 - **ENTONCES** declara la comprobación como no ejecutada con su motivo
 - **Y** no la presenta como superada
 
-### Requirement: Fuentes de Reglas y Forma de los Hallazgos Técnicos (REQ-28.5)
+### Requirement: Fuentes de Reglas y Forma de los Hallazgos Técnicos (RF-REV-05)
 
 La sección «Cumplimiento técnico» DEBE contrastar el diff del rol con: (a) las skills que `skill_resolution` del apply del rol declara cargadas; (b) las skills del registro cuyos disparadores casan con los ficheros tocados por el rol; (c) el contexto técnico (`entry` de `technicalContext`) cuando la proyección del estado lo declara; (d) las reglas y el contexto de `openspec/config.yaml` aplicables a la fase `apply` y a la verificación. Cada hallazgo DEBE citar la regla incumplida (fuente y, cuando exista, identificador o frase) y la ubicación en el diff (fichero y línea o rango), e indicar su severidad. Un hallazgo sin regla citable NO DEBE presentarse como incumplimiento: se presenta, como mucho, como observación. Las fuentes ausentes (por ejemplo, sin `technicalContext`) NO DEBEN producir hallazgos ni error: se omiten y se declaran en la lista de fuentes. El verify NO DEBE crear, modificar ni borrar ficheros bajo las rutas de `technicalContext.reference`.
 
@@ -284,9 +284,9 @@ La sección «Cumplimiento técnico» DEBE contrastar el diff del rol con: (a) l
 
 ---
 
-### Requirement: El Juicio Solo se Ofrece o Lanza Tras un Verify Limpio del Rol (REQ-28.6)
+### Requirement: El Juicio Solo se Ofrece o Lanza Tras un Verify Limpio del Rol (RF-REV-06)
 
-El orquestador DEBE ofrecer o lanzar el juicio de un rol únicamente cuando el verify de ese rol, en su estado vigente, es limpio. Con un verify no limpio, el orquestador NO DEBE lanzarlo por iniciativa propia, DEBE informar de que el juicio no se lanza por no ser limpio el verify, y DEBE aceptar una petición explícita del usuario de lanzarlo igualmente (supuesto A-2: la petición explícita de un usuario informado prevalece). Con la preferencia `verify-judgment` y un verify no limpio, el juicio simplemente no se lanza y el flujo continúa. En un cambio ISO cuyo informe vigente del rol contiene la matriz de verify (el rol único `fullstack`), una matriz ausente, inválida o con alguna fila fallida (REQ-29.6 a REQ-29.8 de `sdd-iso-evidence`) cuenta como comprobación obligatoria fallida: el verify no es limpio y el juicio no se lanza por iniciativa propia. En un cambio multirrol, la matriz vive en el informe consolidado y no afecta a si el verify de un rol es limpio. Antes de lanzar el juicio, el orquestador DEBE informar del coste previsto (dos jueces ciegos y hasta dos rondas con el actor de arreglos) en una línea; en `continuous` la información no detiene el flujo.
+El orquestador DEBE ofrecer o lanzar el juicio de un rol únicamente cuando el verify de ese rol, en su estado vigente, es limpio. Con un verify no limpio, el orquestador NO DEBE lanzarlo por iniciativa propia, DEBE informar de que el juicio no se lanza por no ser limpio el verify, y DEBE aceptar una petición explícita del usuario de lanzarlo igualmente (supuesto A-2: la petición explícita de un usuario informado prevalece). Con la preferencia `verify-judgment` y un verify no limpio, el juicio simplemente no se lanza y el flujo continúa. En un cambio ISO cuyo informe vigente del rol contiene la matriz de verify (el rol único `fullstack`), una matriz ausente, inválida o con alguna fila fallida (RF-ISO-06 a RF-ISO-08 de `sdd-iso-evidence`) cuenta como comprobación obligatoria fallida: el verify no es limpio y el juicio no se lanza por iniciativa propia. En un cambio multirrol, la matriz vive en el informe consolidado y no afecta a si el verify de un rol es limpio. Antes de lanzar el juicio, el orquestador DEBE informar del coste previsto (dos jueces ciegos y hasta dos rondas con el actor de arreglos) en una línea; en `continuous` la información no detiene el flujo.
 (Previously: «limpio» no consideraba la matriz de verify de un cambio ISO)
 
 #### Scenario: Verify limpio habilita el juicio
@@ -352,9 +352,9 @@ El orquestador DEBE ofrecer o lanzar el juicio de un rol únicamente cuando el v
 - **DADO** un cambio no ISO sin matriz y un verify sin hallazgos críticos ni comprobaciones fallidas
 - **CUANDO** el orquestador decide si lanza el juicio
 - **ENTONCES** lo trata como limpio
-### Requirement: El Juicio Toma como Objetivo el Diff de un Rol SDD y Acota sus Arreglos (REQ-28.7)
+### Requirement: El Juicio Toma como Objetivo el Diff de un Rol SDD y Acota sus Arreglos (RF-REV-07)
 
-El juicio DEBE aceptar como objetivo el diff de un rol SDD. Que el usuario acepte la oferta del orquestador, o que su preferencia incluya el juicio, cuenta como la petición explícita que exige el contrato de activación del juicio. Se conservan las reglas del juicio: dos jueces ciegos en paralelo, corroboración por acuerdo, arreglo solo de hallazgos severos confirmados por ambos, como mucho dos rondas y veredicto terminal `APPROVED` o `ESCALATED`; la corroboración es por intersección. Los arreglos DEBEN limitarse a las raíces de edición autorizadas del cambio y NO DEBEN tocar ficheros fuera de ellas ni de las rutas de referencia del contexto técnico. Los arreglos aplicados DEBEN quedar registrados en el progreso del rol. En `checkpointed`, el orquestador DEBE pedir confirmación antes de la corrección de la primera ronda, como establece el contrato del juicio; en `continuous`, la preferencia `verify-judgment` incluye esa autorización, y la descripción de esa opción en la interacción de la preferencia DEBE decirlo (REQ-28.14).
+El juicio DEBE aceptar como objetivo el diff de un rol SDD. Que el usuario acepte la oferta del orquestador, o que su preferencia incluya el juicio, cuenta como la petición explícita que exige el contrato de activación del juicio. Se conservan las reglas del juicio: dos jueces ciegos en paralelo, corroboración por acuerdo, arreglo solo de hallazgos severos confirmados por ambos, como mucho dos rondas y veredicto terminal `APPROVED` o `ESCALATED`; la corroboración es por intersección. Los arreglos DEBEN limitarse a las raíces de edición autorizadas del cambio y NO DEBEN tocar ficheros fuera de ellas ni de las rutas de referencia del contexto técnico. Los arreglos aplicados DEBEN quedar registrados en el progreso del rol. En `checkpointed`, el orquestador DEBE pedir confirmación antes de la corrección de la primera ronda, como establece el contrato del juicio; en `continuous`, la preferencia `verify-judgment` incluye esa autorización, y la descripción de esa opción en la interacción de la preferencia DEBE decirlo (RF-PRE-06).
 
 #### Scenario: El juicio recibe el diff del rol como objetivo
 
@@ -405,9 +405,9 @@ El juicio DEBE aceptar como objetivo el diff de un rol SDD. Que el usuario acept
 
 ---
 
-### Requirement: Si el Juicio Corrige, su Verificación Final Pasa a Ser el Informe Vigente (REQ-28.8)
+### Requirement: Si el Juicio Corrige, su Verificación Final Pasa a Ser el Informe Vigente (RF-REV-08)
 
-Si el juicio modifica código, su verificación final posterior a la última corrección DEBE convertirse en el informe vigente del rol, y el contenido del verify anterior DEBE conservarse como contexto histórico dentro del mismo informe (fecha, origen y hallazgos que ya no se mantienen y por qué), sin perder ningún hallazgo no resuelto. Si el juicio no modifica código, el informe vigente es el verify previo, sin cambios. El informe vigente es el que presentan las paradas (REQ-28.10) y el que lee cualquier consumidor del `verify_file`. La verificación final NO DEBE bloquear (REQ-28.3).
+Si el juicio modifica código, su verificación final posterior a la última corrección DEBE convertirse en el informe vigente del rol, y el contenido del verify anterior DEBE conservarse como contexto histórico dentro del mismo informe (fecha, origen y hallazgos que ya no se mantienen y por qué), sin perder ningún hallazgo no resuelto. Si el juicio no modifica código, el informe vigente es el verify previo, sin cambios. El informe vigente es el que presentan las paradas (RF-GAT-16) y el que lee cualquier consumidor del `verify_file`. La verificación final NO DEBE bloquear (RF-REV-03).
 
 #### Scenario: Tras una corrección el informe vigente es la verificación final
 
@@ -439,9 +439,9 @@ Si el juicio modifica código, su verificación final posterior a la última cor
 
 ---
 
-### Requirement: Revisión de Cobertura por Unión, de Solo Lectura y sin Autocorrección (REQ-28.9)
+### Requirement: Revisión de Cobertura por Unión, de Solo Lectura y sin Autocorrección (RF-REV-09)
 
-La revisión de cobertura, ofrecida o aplicada tras `spec` (revisa el spec contra la propuesta) y tras `design` (revisa spec y design contra la propuesta), DEBE ejecutarla uno o más revisores de contexto limpio y solo lectura, que reciben la propuesta y los artefactos revisados, y devuelven los casos de uso, casos límite y escenarios de error que faltan. El informe DEBE ser la **unión** de los hallazgos de todos los revisores, deduplicada, sin exigir acuerdo entre ellos. La revisión NO DEBE modificar el artefacto revisado ni su contenido, y el informe se guarda como artefacto informativo de la fase, fuera de los artefactos que juzgan las puertas, de modo que su presencia no cambie el digest de ninguna puerta ni la reabra. Las correcciones DEBEN hacerlas `sdd-spec` o `sdd-design` por la salida «iterar» (REQ-26.1) en `checkpointed`, o por una nueva ejecución de la fase en `continuous`. La tabla de cobertura que el propio autor incluye en su resumen NO sustituye a esta revisión. Un informe sin huecos DEBE existir y declararlo.
+La revisión de cobertura, ofrecida o aplicada tras `spec` (revisa el spec contra la propuesta) y tras `design` (revisa spec y design contra la propuesta), DEBE ejecutarla uno o más revisores de contexto limpio y solo lectura, que reciben la propuesta y los artefactos revisados, y devuelven los casos de uso, casos límite y escenarios de error que faltan. El informe DEBE ser la **unión** de los hallazgos de todos los revisores, deduplicada, sin exigir acuerdo entre ellos. La revisión NO DEBE modificar el artefacto revisado ni su contenido, y el informe se guarda como artefacto informativo de la fase, fuera de los artefactos que juzgan las puertas, de modo que su presencia no cambie el digest de ninguna puerta ni la reabra. Las correcciones DEBEN hacerlas `sdd-spec` o `sdd-design` por la salida «iterar» (RF-GAT-07) en `checkpointed`, o por una nueva ejecución de la fase en `continuous`. La tabla de cobertura que el propio autor incluye en su resumen NO sustituye a esta revisión. Un informe sin huecos DEBE existir y declararlo.
 
 #### Scenario: La cobertura del spec une los hallazgos de varios revisores
 
@@ -499,9 +499,9 @@ La revisión de cobertura, ofrecida o aplicada tras `spec` (revisa el spec contr
 
 ---
 
-### Requirement: La Verificación Conjunta es el Verify Sin Rol sobre la Unión del Alcance por Repositorio (REQ-28.41)
+### Requirement: La Verificación Conjunta es el Verify Sin Rol sobre la Unión del Alcance por Repositorio (RF-REV-10)
 
-La verificación conjunta DEBE ser el `verify` global sin rol (REQ-21.15 de `sdd-role-closure-handoff`) y NO un informe ni una fase adicional. Su alcance DEBE ser la **unión por repositorio** de lo que devuelve `axiom branch scope` para el cambio, y DEBE verificar **solo commits**: NO DEBE incluir el árbol de trabajo ni los ficheros sin seguimiento. Los commits ajenos que `axiom branch scope` excluya DEBEN listarse como excluidos, y un aviso `foreign_commits_possible` DEBE reproducirse como aviso; nunca se incluyen en silencio.
+La verificación conjunta DEBE ser el `verify` global sin rol (RF-RCL-03 de `sdd-role-closure-handoff`) y NO un informe ni una fase adicional. Su alcance DEBE ser la **unión por repositorio** de lo que devuelve `axiom branch scope` para el cambio, y DEBE verificar **solo commits**: NO DEBE incluir el árbol de trabajo ni los ficheros sin seguimiento. Los commits ajenos que `axiom branch scope` excluya DEBEN listarse como excluidos, y un aviso `foreign_commits_possible` DEBE reproducirse como aviso; nunca se incluyen en silencio.
 
 El resultado DEBE escribirse en el informe consolidado `verify-report.md` (el `verify_file` del rol `fullstack` cuando es el único rol) como una sección propia **«Verificación conjunta»**, fechada, **una por ronda**. La sección DEBE añadirse sin sobrescribir la matriz ISO ni ningún otro contenido; una verificación posterior añade una ronda nueva y NO borra las anteriores. Cada ronda DEBE indicar, por repositorio, la rama, el `tip` verificado (SHA de la punta de la rama) y el resultado (`ok`, `empty`, `unverifiable` o `exempt`), y DEBE declarar los huecos: cada repositorio `unverifiable` con su motivo (`branch_missing`, `base_missing` o `fork_point_undetermined`), y cada rama sin fusionar en la integración. Un repositorio `empty` o `exempt` se declara como tal y no cuenta como hueco. La ronda NO es limpia mientras tenga algún hueco. El verify NO DEBE ejecutar `fetch` ni rellenar un hueco por su cuenta.
 
@@ -553,9 +553,9 @@ La sección NO DEBE escribir líneas `verdict:`, NO DEBE modificar la línea `**
 - **ENTONCES** no se añade ninguna sección «Verificación conjunta»
 - **Y** la respuesta declara que no hay commits propios que verificar
 
-### Requirement: La Verificación Conjunta Nunca Bloquea (REQ-28.42)
+### Requirement: La Verificación Conjunta Nunca Bloquea (RF-REV-11)
 
-La verificación conjunta NO DEBE bloquear ni condicionar la compuerta `integration`, `axiom sdd gate record`, el archivado, `nextRecommended` ni las dependencias de `axiom sdd status`; su ausencia, su declinación y cualquier hallazgo o hueco del informe son informativos, igual que el resto de revisiones independientes (REQ-28.3). La evidencia de REQ-21.16 de `sdd-archive-lifecycle` no cambia. En un cambio `continuous` NO existe la compuerta `integration` y el orquestador NO DEBE añadir parada, pregunta ni oferta nueva por esta capacidad.
+La verificación conjunta NO DEBE bloquear ni condicionar la compuerta `integration`, `axiom sdd gate record`, el archivado, `nextRecommended` ni las dependencias de `axiom sdd status`; su ausencia, su declinación y cualquier hallazgo o hueco del informe son informativos, igual que el resto de revisiones independientes (RF-REV-03). La evidencia de RF-ARC-01 de `sdd-archive-lifecycle` no cambia. En un cambio `continuous` NO existe la compuerta `integration` y el orquestador NO DEBE añadir parada, pregunta ni oferta nueva por esta capacidad.
 
 #### Scenario: La verificación conjunta no bloquea integration
 - **DADO** una compuerta `integration` pendiente y ninguna verificación conjunta hecha
@@ -567,15 +567,15 @@ La verificación conjunta NO DEBE bloquear ni condicionar la compuerta `integrat
 - **DADO** una verificación conjunta con un hallazgo crítico
 - **CUANDO** se consulta `axiom sdd status` y se solicita el archivado
 - **ENTONCES** `nextRecommended` y las dependencias no cambian
-- **Y** el archivado no se rechaza por el informe, salvo la excepción de la matriz ISO de REQ-28.3
+- **Y** el archivado no se rechaza por el informe, salvo la excepción de la matriz ISO de RF-REV-03
 
 #### Scenario: En continuous no hay oferta ni parada nuevas
 - **DADO** un cambio `continuous` con el rol `fullstack`
 - **CUANDO** concluye el flujo
 - **ENTONCES** el orquestador no presenta ninguna parada ni oferta de verificación conjunta
-### Requirement: Juicio Explícito con Dos Jueces Ciegos y Rondas Acotadas (REQ-28.43)
+### Requirement: Juicio Explícito con Dos Jueces Ciegos y Rondas Acotadas (RF-REV-12)
 
-Judgment Day DEBE seleccionarse de forma explícita: por petición de la persona o porque su preferencia de sesión incluye el juicio (`verify-judgment`, REQ-28.2); nunca por iniciativa propia del orquestador ni como efecto de un hito de entrega. Cuando se selecciona, DEBE ejecutar dos jueces distintos, ciegos entre sí y de solo lectura, cuyos resultados se contrastan con un acuerdo o confirmación explícitos antes de dar por corroborado un hallazgo; no se usa ningún refutador adicional. El juicio DEBE permitir como máximo dos rondas de arreglo y dos rejuicios acotados al alcance de los arreglos. Si tras el segundo rejuicio persiste un hallazgo severo confirmado, el veredicto DEBE ser `ESCALATED` y NO DEBE abrirse una tercera ronda. El juicio NO DEBE emitir recibos, ni depender de un estado de revisión nativo, ni invocar comandos `axiom review`, y su veredicto es informativo (REQ-28.3). Sus artefactos (`sdd/{change}/review-ledger`) son los propios de Judgment Day.
+Judgment Day DEBE seleccionarse de forma explícita: por petición de la persona o porque su preferencia de sesión incluye el juicio (`verify-judgment`, RF-REV-02); nunca por iniciativa propia del orquestador ni como efecto de un hito de entrega. Cuando se selecciona, DEBE ejecutar dos jueces distintos, ciegos entre sí y de solo lectura, cuyos resultados se contrastan con un acuerdo o confirmación explícitos antes de dar por corroborado un hallazgo; no se usa ningún refutador adicional. El juicio DEBE permitir como máximo dos rondas de arreglo y dos rejuicios acotados al alcance de los arreglos. Si tras el segundo rejuicio persiste un hallazgo severo confirmado, el veredicto DEBE ser `ESCALATED` y NO DEBE abrirse una tercera ronda. El juicio NO DEBE emitir recibos, ni depender de un estado de revisión nativo, ni invocar comandos `axiom review`, y su veredicto es informativo (RF-REV-03). Sus artefactos (`sdd/{change}/review-ledger`) son los propios de Judgment Day.
 (Trasladado desde el requisito «Explicit Judgment Day replacement» de la capacidad `review-findings-ledger`, retirada con RDD (C-01-e, P20), sin su acoplamiento a la revisión 4R, a `review-refuter`, al estado nativo ni a los recibos.)
 
 #### Scenario: El juicio no se lanza sin selección explícita

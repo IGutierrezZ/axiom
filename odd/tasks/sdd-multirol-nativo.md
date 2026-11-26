@@ -19,7 +19,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
    - Consecuencia: `allowedEditRoots` solo contiene el repo de specs, y el sobre `axiom.sdd-integration.consent/v1` para los repos de código nunca se emite.
 2. **Con `continuous` el estado no proyecta los roles.**
    - `governance.go:343` devuelve nil, así que no hay roster ni progreso por rol.
-   - REQ-21.7 (`openspec/specs/sdd-block-review-gates/spec.md:15`) solo prohíbe las **puertas** en `continuous`. No prohíbe proyectar el roster. La decisión D-05 (`inc-21`, `design.md:239`) extendió la ausencia a todo el bloque `governance`.
+   - RF-GAT-01 (`openspec/specs/sdd-block-review-gates/spec.md:15`) solo prohíbe las **puertas** en `continuous`. No prohíbe proyectar el roster. La decisión D-05 (`inc-21`, `design.md:239`) extendió la ausencia a todo el bloque `governance`.
 3. **Subagentes de Claude Code sin las herramientas que exige su skill.**
    - `sdd-spec` y `sdd-design` no tienen Bash, pero deben ejecutar `axiom sdd integrate check` (`sdd-spec/SKILL.md:185`, `sdd-design/SKILL.md:69`).
    - `sdd-explore` no tiene Write, pero debe persistir `exploration.md` (`sdd-explore/SKILL.md:103-114`).
@@ -40,7 +40,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
 ## Restricciones
 
 - **Cambios no sellados y `fullstack`.** El estado no cambia ni un byte: el sellado `fullstack` sigue usando `tasks.md`. Las pruebas de byte-identidad existentes (`kickoff_absence_regression_test.go`, `TestSingleRepoTasksKeepStatusByteIdentical`) deben seguir en verde.
-- **Puertas en `continuous`.** No se evalúa ni se presenta ninguna puerta (REQ-21.7). Proyectar el roster no puede activar la puerta de integración que bloquea el archive (`archiveDependencyFromGovernance`) ni la dependencia de `handoff.md` en verify (`verifyDependencyFromHandoff`, REQ-21.15). En `continuous` no existen ni la una ni el otro.
+- **Puertas en `continuous`.** No se evalúa ni se presenta ninguna puerta (RF-GAT-01). Proyectar el roster no puede activar la puerta de integración que bloquea el archive (`archiveDependencyFromGovernance`) ni la dependencia de `handoff.md` en verify (`verifyDependencyFromHandoff`, RF-RCL-03). En `continuous` no existen ni la una ni el otro.
 - **Autoridad de edición multirol.** Cada rol aplica en paralelo en su repo, así que la autoridad se evalúa sobre la unidad de trabajo actual de **cada** `tasks.<rol>.md` y se unen las raíces no autorizadas. Así un único sobre de consentimiento cubre los repos de todos los roles activos.
 - **Herramientas de los subagentes.**
   - `sdd-explore` solo recibe Write, para `exploration.md`; no recibe Bash.
@@ -164,7 +164,7 @@ Defectos P0 observados en la prueba, registrados en `HALLAZGOS_AXIOM.md` de la c
     - En `continuous`, `loadGovernance` devuelve el kickoff, el roster y `gates: []`, sin leer el registro de puertas.
     - Quedan protegidos `firstOpenGate` (que cubre `gateQuestion`, `await-gate` y el bloqueo por puerta), `resolveNextRecommended`, `artifactBlockedReasonsForRoleTasks`, `archiveDependencyFromGovernance` (sin puerta de integración) y `verifyDependencyFromHandoff` (sin `handoff.md`).
     - La v2 lleva `governance` con el roster y `gates: []`; el contrato congelado lo admite.
-    - Se acota D-05: REQ-21.7 solo prohíbe las puertas. La nota está en el comentario del código.
+    - Se acota D-05: RF-GAT-01 solo prohíbe las puertas. La nota está en el comentario del código.
     - `sdd-status-contract.md` documenta el bloque `governance`.
   - Decisión: no se añade progreso por rol. `taskProgress` ya agrega todos los roles y `artifactPaths.tasks` sigue el orden del roster; queda como seguimiento opcional.
   - Pruebas:

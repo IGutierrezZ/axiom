@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// Las pruebas de la traza de identificadores asignados (D12, REQ-47.6). Todos los textos
+// Las pruebas de la traza de identificadores asignados (D12, RF-RID-14). Todos los textos
 // son inventados.
 
 const goodTrace = `schema: axiom.requirement-ids/v1

@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-30.32 (conducta): `technical_context` vive solo en `axiom.yaml`. Una clave
+// RF-CTX-21 (conducta): `technical_context` vive solo en `axiom.yaml`. Una clave
 // con ese nombre en `openspec/config.yaml` no tiene efecto: el status no la
 // proyecta y el archivado no la lee; y `governance.context` convive con la
 // declaración de `axiom.yaml` sin confundirse con ella.

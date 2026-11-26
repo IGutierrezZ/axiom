@@ -11,7 +11,7 @@
 
 Estrategias y salvaguardas de actualización del binario `axiom` para entornos Windows, macOS y Linux: resolución segura del destino de instalación, vía resiliente `sourceBuildUpgrade`, encadenamiento `upgrade` ➔ `sync` en Web UI y TUI, y preservación del contrato CLI solo-binario.
 
-### Requirement: Ejecución segura de la actualización en Windows (REQ-22.1)
+### Requirement: Ejecución segura de la actualización en Windows (RF-UPD-01)
 
 El sistema DEBE aplicar, en entorno Windows, una estrategia de actualización de la herramienta del fork que no falle por discrepancia de ruta de módulo en `go.mod` y que reemplace el binario de forma segura y transparente. Cuando ninguna estrategia automatizada pueda garantizar esas dos condiciones, el sistema DEBE degradar a una instrucción de actualización manual accionable con `ManualFallbackError` y NO DEBE dejar el binario a medias ni duplicar binarios en PATH.
 
@@ -23,7 +23,7 @@ El sistema DEBE aplicar, en entorno Windows, una estrategia de actualización de
 
 ---
 
-### Requirement: Predicado de identidad del módulo para Go install (REQ-22.2)
+### Requirement: Predicado de identidad del módulo para Go install (RF-UPD-02)
 
 Las instrucciones de instalación y las comprobaciones de compatibilidad DEBEN derivarse de la estructura `ToolInfo` asociada al binario (`GoModulePath`, `GoImportPath`), reconociendo la identidad del fork mediante el predicado `IsSelfToolName`/`IsSelfTool`. La función `GoInstallResolvable()` DEBE validar que la ruta declarada sea alcanzable mediante `go install` estándar antes de seleccionar esa estrategia.
 
@@ -35,7 +35,7 @@ Las instrucciones de instalación y las comprobaciones de compatibilidad DEBEN d
 
 ---
 
-### Requirement: Salvaguardas de actualización ancladas a la identidad del fork (REQ-22.3)
+### Requirement: Salvaguardas de actualización ancladas a la identidad del fork (RF-UPD-03)
 
 Todas las salvaguardas de comprobación previa de binarios en ejecución, renombrado atómico temporal y validación de procedencia DEBEN operar sobre la identidad del fork (`axiom`) y no sobre literales heredados de upstream (`gentle-ai`).
 
@@ -47,7 +47,7 @@ Todas las salvaguardas de comprobación previa de binarios en ejecución, renomb
 
 ---
 
-### Requirement: Endpoint Web UI encadena upgrade ➔ sync con reporte consolidado (REQ-22.4)
+### Requirement: Endpoint Web UI encadena upgrade ➔ sync con reporte consolidado (RF-UPD-04)
 
 El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuencialmente la fase de actualización de binarios (`upgrade`) seguida de la fase de sincronización de reglas y configuraciones (`sync`), retornando un DTO consolidado con el desglose por fases (`phases.upgrade`, `phases.sync`). Si la fase `upgrade` requiere reinicio del proceso (`restart_required: true`), la fase `sync` DEBE omitirse limpiamente (`skipped_reason: "restart-required"`).
 
@@ -59,7 +59,7 @@ El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuen
 
 ---
 
-### Requirement: No-regresión del verbo CLI axiom upgrade (REQ-22.5)
+### Requirement: No-regresión del verbo CLI axiom upgrade (RF-UPD-05)
 
 El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una operación **solo-binario**; NO DEBE encadenar automáticamente `sync` ni `install`. La composición de `upgrade` ➔ `sync` es exclusiva de la superficie reactiva interactiva (Web UI).
 (Previously: la composición era exclusiva de las superficies reactivas interactivas (Web UI y TUI).)
@@ -70,7 +70,7 @@ El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una op
 - **ENTONCES** solo se actualizan los binarios
 - **Y** no se mutan configuraciones ni se disparan sincronizaciones de agentes
 
-### Requirement: Identidad visible del fork en vistas de actualización (REQ-22.7)
+### Requirement: Identidad visible del fork en vistas de actualización (RF-UPD-06)
 
 Todos los mensajes de confirmación, cabeceras, títulos y diálogos en la Web UI DEBEN referirse exclusivamente a la identidad de `axiom`.
 (Previously: la identidad aplicaba a TUI y Web UI; el escenario comprobaba la pantalla `ScreenUpgradeSync`.)
@@ -80,7 +80,7 @@ Todos los mensajes de confirmación, cabeceras, títulos y diálogos en la Web U
 - **CUANDO** se renderizan los diálogos de progreso
 - **ENTONCES** todos los textos nombran `axiom`
 
-### Requirement: Versión de build visible y consistente (REQ-22.8)
+### Requirement: Versión de build visible y consistente (RF-UPD-07)
 
 El símbolo de versión en `cmd/axiom/main.go` DEBE declararse como variable mutable sin valor por defecto (`var version string`), para que el linker (`-X main.version=...`) inyecte el tag exacto en los flujos de CI y GoReleaser. La versión informada DEBE resolverse con esta prioridad:
 1. el valor inyectado;
@@ -99,7 +99,7 @@ El símbolo de versión en `cmd/axiom/main.go` DEBE declararse como variable mut
 
 ---
 
-### Requirement: Registro durable de la versión upstream de referencia (REQ-22.9)
+### Requirement: Registro durable de la versión upstream de referencia (RF-UPD-08)
 
 El archivo de estado de usuario (`~/.axiom/state.json`) DEBE mantener la clave de auditoría `upstream_version` inicializada con el techo de referencia (`"3.4.0"`), sin ser sobreescrita ni consumida automáticamente por rutas de ejecución.
 

@@ -48,7 +48,7 @@ func requireContains(t *testing.T, output string, wants ...string) {
 	}
 }
 
-// REQ-30.21: `archive sync` y `archive coldstart` se rechazan con código distinto
+// RF-TOP-12: `archive sync` y `archive coldstart` se rechazan con código distinto
 // de cero desde cualquier punto de partida del canónico, con el error tipado de la
 // retirada y la migración, sin crear openspec/specs ni INDEX.md.
 func TestArchiveSyncAndColdstartAreRejectedWithAResidualBaseline(t *testing.T) {
@@ -72,7 +72,7 @@ func TestArchiveSyncAndColdstartAreRejectedWithAResidualBaseline(t *testing.T) {
 	}
 }
 
-// REQ-30.21 y REQ-1.1: con un `baseline:` residual `archive list` lee
+// RF-TOP-12 y RF-LDO-01: con un `baseline:` residual `archive list` lee
 // openspec/specs/ como siempre (código 0) y avisa del bloque retirado; ya no hay
 // catálogo externo.
 func TestArchiveListWarnsAboutAResidualBaseline(t *testing.T) {
@@ -97,7 +97,7 @@ func TestArchiveListWarnsAboutAResidualBaseline(t *testing.T) {
 	requireNoLivingSpecs(t, ws)
 }
 
-// REQ-30.21 y REQ-2.2: `axiom init` sobre un `axiom.yaml` con un `baseline:`
+// RF-TOP-12 y RF-HUB-04: `axiom init` sobre un `axiom.yaml` con un `baseline:`
 // residual se rechaza con código distinto de cero y la migración, sin escribir ni
 // registrar nada (tampoco con --force); sobre una carpeta maestra con puntero hacia
 // otro planning home se rechaza igualmente.

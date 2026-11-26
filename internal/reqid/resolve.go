@@ -24,7 +24,7 @@ const SupersededSuffix = " [SUPERSEDED / DEPRECADO]"
 func IsSuperseded(name string) bool { return strings.HasSuffix(name, SupersededSuffix) }
 
 // Resolve devuelve el índice, en names (los requisitos de la canónica, en orden), del
-// requisito al que se refiere el nombre de una delta (REQ-30.22):
+// requisito al que se refiere el nombre de una delta (RF-ARC-11):
 //
 //   - un nombre sin identificador válido se busca por título exacto (la primera
 //     coincidencia);

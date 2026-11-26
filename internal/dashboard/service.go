@@ -123,7 +123,7 @@ func (s *Service) getRootPath() string {
 // (`<planning home>/changes`, `<planning home>/specs`). Resuelve
 // workspace.Locate desde la ruta registrada en cada llamada, sin guardar el
 // resultado: el servicio vive mucho tiempo y la ruta registrada puede cambiar
-// (SwitchWorkspace) o el espacio de trabajo cambiar en disco (REQ-24.10, D-07).
+// (SwitchWorkspace) o el espacio de trabajo cambiar en disco (RF-PLH-10, D-07).
 // `rootPath` sigue siendo la ruta registrada en el Hub: en la topología canónica,
 // la carpeta maestra, que no es el repositorio de especificaciones.
 func (s *Service) planningRoot() (string, error) {
@@ -215,9 +215,9 @@ func (s *Service) GetWorkspace() (*WorkspaceDTO, error) {
 }
 
 // GetIncrements escanea y lista los incrementos activos y archivados. Agrega a los del checkout
-// principal los cambios activos de los worktrees registrados (REQ-25.34): si uno figura en ambos
+// principal los cambios activos de los worktrees registrados (RF-WEB-11): si uno figura en ambos
 // sitios, prevalece el del worktree. Marca como `pendingArchive` los cambios activos ya presentes en la
-// rama de integración (REQ-25.20). Además del listado devuelve los avisos informativos que viajan en la
+// rama de integración (RF-BRA-21). Además del listado devuelve los avisos informativos que viajan en la
 // cabecera `X-Axiom-Notes`: los cambios pendientes de archivar, los worktrees desaparecidos y la falta de
 // la referencia de integración. Ninguno es un error ni bloquea el listado.
 func (s *Service) GetIncrements() ([]IncrementSummaryDTO, []string, error) {
@@ -501,7 +501,7 @@ func (s *Service) inspectIncrement(path, name, kind string) IncrementSummaryDTO 
 
 // FindIncrementPath busca la ruta de un incremento por nombre o prefijo/sufijo.
 // Un cambio activo que vive en un worktree registrado se resuelve en el worktree y prevalece sobre
-// el del checkout principal (REQ-25.34).
+// el del checkout principal (RF-WEB-11).
 func (s *Service) FindIncrementPath(name string) (string, string, error) {
 	location, err := s.locateIncrement(name)
 	if err != nil {
@@ -773,7 +773,7 @@ func (s *Service) GetSkillsInbox() ([]SkillProposalDTO, error) {
 }
 
 // newAutoskillManager builds the autoskill manager with the production index
-// regenerator wired in (REQ-22.13): Manager.Approve refreshes the unified
+// regenerator wired in (RF-SKI-04): Manager.Approve refreshes the unified
 // skills index so a promoted skill is available immediately.
 func newAutoskillManager(rootPath string) *autoskill.Manager {
 	manager := autoskill.NewManager(rootPath, nil, nil, nil)
@@ -787,7 +787,7 @@ func (s *Service) ScanSkills(ctx context.Context, role string, offline bool) (*a
 }
 
 // ApproveSkill aprueba y promociona una skill del buzón a skills/. La
-// regeneración del índice vive en Manager.Approve (REQ-22.13); su fallo se
+// regeneración del índice vive en Manager.Approve (RF-SKI-04); su fallo se
 // devuelve como aviso y nunca deshace la promoción (D-12).
 func (s *Service) ApproveSkill(name string) (warning string, err error) {
 	outcome, err := s.autoskillManager.Approve(name)
@@ -951,7 +951,7 @@ func (s *Service) MigrateIncompleteTasksToCumulative(changeName, role string) (i
 	if err != nil {
 		return 0, err
 	}
-	// REQ-25.19: la guarda A protege el cambio de origen, que es un cambio activo con rama propia; el
+	// RF-BRA-20: la guarda A protege el cambio de origen, que es un cambio activo con rama propia; el
 	// destino `cumulative-<rol>` es un sumidero exento por nombre y un origen archivado ya no es
 	// un cambio. El rechazo no deja nada escrito.
 	if kind == "active" {
@@ -1076,7 +1076,7 @@ func (s *Service) CreateIncrement(req CreateIncrementRequest) (*CreateIncrementR
 		}
 	}
 
-	// REQ-25.32: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
+	// RF-WEB-09: `ensure` prepara la rama (y, en modo worktree, el worktree) del cambio antes de
 	// escribir nada; el escritor guardado escribe en el planning home que devuelve.
 	planningHome, err := s.ensureIncrementBranch(name, req.Mode)
 	if err != nil {
@@ -1198,7 +1198,7 @@ func (s *Service) CreateHandoff(req CreateHandoffRequest) (*CreateHandoffRespons
 		return nil, fmt.Errorf("handoff inválido: %w", err)
 	}
 
-	// REQ-25.19: guarda A antes de escribir `handoff.md`; fuera de la rama del cambio se niega sin escribir.
+	// RF-BRA-20: guarda A antes de escribir `handoff.md`; fuera de la rama del cambio se niega sin escribir.
 	if err := guardIncrementFolder(targetPath, change, "crear el handoff"); err != nil {
 		return nil, err
 	}
@@ -1336,11 +1336,11 @@ var (
 // ejecuta (spec §2.2).
 const upgradeSequenceLiteral = "upgrade->sync"
 
-// RunUpgradeSequence ejecuta la cadena upgrade -> sync (REQ-22.4) y devuelve el
+// RunUpgradeSequence ejecuta la cadena upgrade -> sync (RF-UPD-04) y devuelve el
 // reporte consolidado de ambas fases.
 //
 // La fase upgrade es solo-binario: corresponde exactamente al comportamiento de
-// `axiom upgrade`, que NO invoca install ni sync (REQ-22.5). La fase sync se
+// `axiom upgrade`, que NO invoca install ni sync (RF-UPD-05). La fase sync se
 // ejecuta solo cuando la regla de salto compartida lo permite; en caso contrario
 // queda `executed: false` con su motivo explícito (REQ-22.6, D-08).
 //

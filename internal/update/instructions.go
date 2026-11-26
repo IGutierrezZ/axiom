@@ -12,7 +12,7 @@ const WindowsDistributionHoldMessage = "Windows binary distribution and Scoop ar
 // SourceInstallCommand returns the actionable install/update instruction for a
 // tool at an exact release, a beta main build, or the latest release when
 // version is empty. It emits a `go install` ONLY when the tool's declared module
-// makes that command resolvable (REQ-22.2); otherwise it emits a clone-and-build
+// makes that command resolvable (RF-UPD-02); otherwise it emits a clone-and-build
 // instruction naming the tool's own Owner/Repo and never names upstream (D-04).
 func SourceInstallCommand(tool ToolInfo, version string) string {
 	target := sourceInstallTarget(version)
@@ -38,7 +38,7 @@ func sourceInstallTarget(version string) string {
 
 // sourceCloneBuildCommand returns the manual clone-and-build instruction used
 // when `go install` is not resolvable. It names the tool's own repository and
-// ./cmd/<Name> package and contains zero `go install` (REQ-22.2). The empty
+// ./cmd/<Name> package and contains zero `go install` (RF-UPD-02). The empty
 // "latest" target clones the repository's default branch; exact releases and
 // the beta channel pin the branch explicitly.
 func sourceCloneBuildCommand(tool ToolInfo, target string) string {

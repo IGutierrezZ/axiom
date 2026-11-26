@@ -22,7 +22,7 @@ func Scenarios(blockText string) []string {
 	return names
 }
 
-// CheckScenarios aplica REQ-29.10 y la regla de nombres repetidos de REQ-29.6:
+// CheckScenarios aplica RF-ARC-09 y la regla de nombres repetidos de RF-ISO-06:
 // un requisito ADDED o MODIFIED sin escenarios, o con dos escenarios del mismo
 // nombre, produce un hallazgo. REMOVED y RENAMED no llevan escenarios y quedan
 // exentos.

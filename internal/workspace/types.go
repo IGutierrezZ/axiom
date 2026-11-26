@@ -2,7 +2,7 @@ package workspace
 
 // TopologyType define las topologías de espacio de trabajo admitidas en Axiom.
 // La topología de repositorio de especificaciones separado que existió antes de
-// INC-25 fue retirada (REQ-25.25) y ya no tiene constante: el cargador la
+// INC-25 fue retirada (RF-TOP-08) y ya no tiene constante: el cargador la
 // rechaza con un mensaje que nombra `multirepo` (loader.go).
 type TopologyType string
 
@@ -55,12 +55,12 @@ type GovernanceConfig struct {
 // estricta (D-04), por eso llevan yaml:"-": la decodificación base ignora esas
 // claves y parseLayered las rellena solo cuando el bloque es válido.
 //
-// Git es la política de ramas ya resuelta (REQ-25.26): tras una carga correcta
+// Git es la política de ramas ya resuelta (RF-TOP-09): tras una carga correcta
 // nunca es nil, y lo que axiom.yaml no declara lleva su valor por defecto. Es nil
 // solo en una configuración construida a mano o cuando el bloque `git:` es
 // inválido (el motivo queda en Declarations.GitErr).
 //
-// Workflow es el carril de trabajo ya resuelto (REQ-27.1): tras una carga correcta
+// Workflow es el carril de trabajo ya resuelto (RF-TOP-11): tras una carga correcta
 // nunca es nil y Lane siempre está relleno (`sdd` sin declaración). Es nil solo en
 // una configuración construida a mano o cuando el bloque `workflow:` es inválido
 // (el motivo queda en Declarations.WorkflowErr).
@@ -69,7 +69,7 @@ type GovernanceConfig struct {
 // grande): es nil sin bloque y también cuando el bloque es inválido (el motivo
 // queda en Declarations.DeliveryErr).
 //
-// Repositories, en cambio, conserva lo declarado en `repositories:` (REQ-25.27),
+// Repositories, en cambio, conserva lo declarado en `repositories:` (RF-TOP-10),
 // sin resolver la herencia de Git: es nil sin bloque o sin entradas, y también
 // cuando el bloque es inválido (el motivo queda en Declarations.RepositoriesErr).
 type WorkspaceConfig struct {

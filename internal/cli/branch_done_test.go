@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch done` (INC-25, S6, REQ-25.16, REQ-25.17, REQ-25.1): la ayuda, el uso de las
+// `axiom branch done` (INC-25, S6, RF-BRA-17, RF-BRA-18, RF-BRA-01): la ayuda, el uso de las
 // banderas, el resultado `axiom.branch-result/v1` por rama y la eliminación del worktree y de la
 // rama local de un cambio fusionado y el rechazo de uno sin fusionar. El comportamiento del motor
 // se prueba en internal/branch/engine.
@@ -85,7 +85,7 @@ func TestBranchDoneHelpDocumentsTheSafetyRules(t *testing.T) {
 	}
 }
 
-// REQ-25.1 y REQ-25.2: un error de uso sale con 2, no escribe en stdout y nombra la continuación.
+// RF-BRA-01 y RF-BRA-02: un error de uso sale con 2, no escribe en stdout y nombra la continuación.
 func TestBranchDoneUsageErrorsExitWithCode2(t *testing.T) {
 	for name, tc := range map[string]struct {
 		args []string
@@ -210,7 +210,7 @@ func TestBranchDoneRemovesAMergedChangeAndRefusesAnUnmergedOne(t *testing.T) {
 	}
 }
 
-// REQ-25.17 (rechazos previos): un nombre de cambio inválido y un directorio que no es un
+// RF-BRA-18 (rechazos previos): un nombre de cambio inválido y un directorio que no es un
 // repositorio salen con 1 y un código tipado, sin datos de ninguna rama.
 func TestBranchDoneRefusesAnInvalidChangeNameAndAnUnusableDirectory(t *testing.T) {
 	t.Parallel()

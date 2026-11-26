@@ -9,7 +9,7 @@ import (
 )
 
 // Rechazos de las excepciones por cambio y del repositorio de specs de un multirepo en `ensure`
-// (REQ-25.3, REQ-25.5, REQ-25.12, design D-04 y D-05). Cada uno nombra una orden ejecutable con las
+// (RF-BRA-03, RF-BRA-05, RF-BRA-12, design D-04 y D-05). Cada uno nombra una orden ejecutable con las
 // rutas citadas por pathquote.Quote (tasks.md, regla 11).
 
 // ensureInvocation es la orden de `ensure` con el cambio, el carril (el de por defecto, `sdd`, no
@@ -32,7 +32,7 @@ func ensureInvocation(operation, change, cwd string, lane Lane, exceptions Excep
 }
 
 // ValidateExceptions rechaza con `invalid_name`, sin efectos, una excepción de la invocación que no
-// es válida (REQ-25.3): un `--prefix` o un `--branch` que no son nombres de referencia git, o una
+// es válida (RF-BRA-03): un `--prefix` o un `--branch` que no son nombres de referencia git, o una
 // `--base` que empieza por «-» y git leería como una opción (`--base` es una referencia que
 // resuelve git, no un nombre). operation, dir y change componen la continuación. El motor lo
 // comprueba antes de bloquear el cambio ni leer nada con él.
@@ -49,7 +49,7 @@ func ValidateExceptions(operation, dir, change string, exceptions Exceptions) *R
 }
 
 // ExceptionConflict es el rechazo `plan_conflict` de una excepción que contradice la ya
-// materializada del cambio (REQ-25.12): una excepción no cambia lo que ya existe, y la repetición
+// materializada del cambio (RF-BRA-12): una excepción no cambia lo que ya existe, y la repetición
 // idéntica es idempotente. Nombra cada excepción que difiere, con su valor registrado y el pedido
 // (un valor registrado vacío es la política del proyecto). No se ha tocado nada; la continuación
 // repite `ensure` con las excepciones registradas.
@@ -79,7 +79,7 @@ func ExceptionConflict(operation, change, cwd string, lane Lane, materialized, r
 	}
 }
 
-// SpecsRepoNotOnIntegration es el rechazo `specs_repo_not_on_integration` (REQ-25.5): en un
+// SpecsRepoNotOnIntegration es el rechazo `specs_repo_not_on_integration` (RF-BRA-05): en un
 // multirepo, `ensure` trabaja el repositorio de specs in situ, en su rama de integración, y nunca
 // hace checkout en él; si está en otra rama (una ajena o una rama de rol del cambio) o con HEAD
 // desacoplado (detached), no se crea nada en ningún repositorio. current es la rama actual (vacía

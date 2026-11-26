@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// Matriz de amenazas «Integración de proceso (hook)» (REQ-25.21, REQ-25.22, design D-18): una carga
+// Matriz de amenazas «Integración de proceso (hook)» (RF-BRA-22, RF-BRA-23, design D-18): una carga
 // mal formada o enorme, un `..`, un tiempo agotado y un pánico no hacen nada (fallo en abierto), no
 // se lanza ningún proceso y el protocolo de salida es el de cada runtime. Las pruebas funcionales
 // usan un presupuesto holgado: lo que prueban es el protocolo, no la velocidad de la máquina.
@@ -84,7 +84,7 @@ func codexPatch(t *testing.T, event, cwd, path string) string {
 	return string(data)
 }
 
-// REQ-25.21 y D-18, protocolo de salida: Claude Code y Codex bloquean con salida 2 y el motivo por
+// RF-BRA-22 y D-18, protocolo de salida: Claude Code y Codex bloquean con salida 2 y el motivo por
 // `stderr`; OpenCode sale siempre con 0 y entrega `{"action","message"}` por `stdout`; VS Code
 // Copilot sale siempre con 0 y bloquea con `{"permissionDecision":"deny",…}` por `stdout`.
 func TestGuardHookOutputProtocolOfEachRuntime(t *testing.T) {
@@ -401,7 +401,7 @@ func TestGuardHookCleansDotDotPathsThatLeaveTheChange(t *testing.T) {
 	}
 }
 
-// REQ-25.21, escenario «Sin motivo de aviso no se lanza ningún proceso»: ni al bloquear ni al dejar
+// RF-BRA-22, escenario «Sin motivo de aviso no se lanza ningún proceso»: ni al bloquear ni al dejar
 // pasar se registra una sola invocación de git (la única posible, `git check-ignore` antes de un
 // aviso, la cubre TestGuardWarnLaunchesOnlyOneCheckIgnoreBeforeWarning).
 func TestGuardHookLaunchesNoProcess(t *testing.T) {

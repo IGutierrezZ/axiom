@@ -98,7 +98,7 @@ export function formatBytes(bytes) {
 
 // ---- Cadena upgrade -> sync ------------------------------------------------------------
 
-// Presenta el resultado de ambas fases de la cadena upgrade->sync (REQ-22.4),
+// Presenta el resultado de ambas fases de la cadena upgrade->sync (RF-UPD-04),
 // incluida la omisión de sync con su motivo y la instrucción de reinicio
 // cuando el binario en ejecución fue reemplazado. No inventa estados que el
 // DTO no declara: lee exactamente phases.upgrade y phases.sync.

@@ -21,7 +21,7 @@ import (
 //
 // Es de solo lectura y no lanza procesos. Aplica las mismas cotas que Locate: el
 // techo de pruebas, la raíz de un worktree enlazado y, si este no tiene marcador
-// propio, el checkout principal de su clon (REQ-25.28). Un start inexistente, que
+// propio, el checkout principal de su clon (RF-PLH-13). Un start inexistente, que
 // no es un directorio o es la raíz del sistema de ficheros nunca es un proyecto.
 // No cambia la semántica de markerAt ni de Locate, que siguen aceptando openspec/.
 func IsAxiomProject(start string) (root string, ok bool) {

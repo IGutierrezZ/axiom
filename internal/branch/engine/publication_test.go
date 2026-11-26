@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de `Engine.PublicationTarget` (REQ-27.7, REQ-27.14, REQ-25.19, DD-07): con git real, entorno
+// Pruebas de `Engine.PublicationTarget` (RF-PUB-03, RF-ARC-08, RF-BRA-20, DD-07): con git real, entorno
 // aislado y sin red. Cubren las reglas de rama por topología, la rama de archivado, la atadura con
 // `--branch` y que el cálculo es una lectura que no publica ni trae nada.
 
@@ -50,7 +50,7 @@ func statusPRTarget(t *testing.T, cwd, name string) string {
 	return ""
 }
 
-// REQ-27.7 y matriz «Estado del push»: en un monorepo embebido la rama del cambio y las de rol son
+// RF-PUB-03 y matriz «Estado del push»: en un monorepo embebido la rama del cambio y las de rol son
 // publicables, cada una con su `prTarget` (el mismo que `status`), y el destino lleva la raíz git del
 // worktree donde se está, no la del checkout principal.
 func TestPublicationTargetMonorepoChangeAndRoleBranches(t *testing.T) {
@@ -96,7 +96,7 @@ func TestPublicationTargetMonorepoChangeAndRoleBranches(t *testing.T) {
 	})
 }
 
-// REQ-27.13 (C-05-b): en `continuous` con `docs_publication: auto` se publica también al terminar
+// RF-PUB-08 (C-05-b): en `continuous` con `docs_publication: auto` se publica también al terminar
 // `spec` y `design`, antes de que exista `tasks.md`. El destino no depende de la fase: con solo
 // `proposal.md` y la spec en la rama del cambio, ya es esa rama.
 func TestPublicationTargetResolvesTheChangeBranchBeforeTasks(t *testing.T) {
@@ -119,7 +119,7 @@ func TestPublicationTargetResolvesTheChangeBranchBeforeTasks(t *testing.T) {
 	}
 }
 
-// S9, REQ-27.7: la rama de integración de un repositorio que no es el de specs de un multirepo no se
+// S9, RF-PUB-03: la rama de integración de un repositorio que no es el de specs de un multirepo no se
 // publica, y HEAD desacoplado no tiene rama. Un rechazo no escribe nada.
 func TestPublicationTargetRefusesIntegrationBranchAndDetachedHead(t *testing.T) {
 	repo := handOffMonorepo(t, "core")
@@ -152,7 +152,7 @@ func TestPublicationTargetRefusesIntegrationBranchAndDetachedHead(t *testing.T) 
 // mustRefuse deja pasar el rechazo y descarta el destino, para componer las comprobaciones.
 func mustRefuse(_ branch.PublicationTarget, refusal *branch.Refusal) *branch.Refusal { return refusal }
 
-// REQ-27.7 regla 4: `--branch` distinto de la rama permitida es `wrong_branch`.
+// RF-PUB-03 regla 4: `--branch` distinto de la rama permitida es `wrong_branch`.
 func TestPublicationTargetBranchFlagMismatchIsWrongBranch(t *testing.T) {
 	repo := handOffMonorepo(t, "core")
 	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
@@ -165,7 +165,7 @@ func TestPublicationTargetBranchFlagMismatchIsWrongBranch(t *testing.T) {
 	}
 }
 
-// REQ-27.14 y REQ-25.19: la rama de archivado solo se publica con `--archive`, y una rama del cambio
+// RF-ARC-08 y RF-BRA-20: la rama de archivado solo se publica con `--archive`, y una rama del cambio
 // con `--archive` es `wrong_branch`; la continuación nombra el flag que falta o sobra.
 func TestPublicationTargetArchiveBranchNeedsTheArchiveFlag(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -209,7 +209,7 @@ func TestPublicationTargetArchiveBranchNeedsTheArchiveFlag(t *testing.T) {
 	})
 }
 
-// S9, REQ-27.7 regla 2: el repositorio de specs de un multirepo se trabaja in situ y solo se publica
+// S9, RF-PUB-03 regla 2: el repositorio de specs de un multirepo se trabaja in situ y solo se publica
 // su rama de integración, sin `prTarget`; con `--archive` el destino es el mismo, porque no hay rama
 // de archivado.
 func TestPublicationTargetMultirepoSpecsPublishesTheIntegrationBranchInPlace(t *testing.T) {
@@ -241,7 +241,7 @@ func TestPublicationTargetMultirepoSpecsPublishesTheIntegrationBranchInPlace(t *
 	})
 }
 
-// REQ-25.1, REQ-27.11: calcular el destino es una lectura. No lanza `push`, `commit`, `fetch`, `pull`
+// RF-BRA-01, RF-PUB-07: calcular el destino es una lectura. No lanza `push`, `commit`, `fetch`, `pull`
 // ni `ls-remote`, y no deja nada nuevo en el repositorio.
 func TestPublicationTargetOnlyReads(t *testing.T) {
 	repo := handOffMonorepo(t, "core")

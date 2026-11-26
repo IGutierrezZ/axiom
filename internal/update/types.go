@@ -4,7 +4,7 @@ import "strings"
 
 // SelfToolName is the registry name of the primary CLI product (this binary).
 // Every upgrade safeguard MUST route through IsSelfToolName instead of comparing
-// against a literal (REQ-22.3).
+// against a literal (RF-UPD-03).
 const SelfToolName = "axiom"
 
 // IsSelfToolName reports whether name identifies the primary CLI product.
@@ -50,7 +50,7 @@ const (
 	InstallOpenCodePlugin InstallMethod = "opencode-plugin"
 	// InstallSourceBuild compiles the tool from a controlled source clone
 	// (git clone of the exact tag, then go build). Used as the resilient
-	// Windows path when `go install` is not resolvable (REQ-22.1, D-02).
+	// Windows path when `go install` is not resolvable (RF-UPD-01, D-02).
 	InstallSourceBuild InstallMethod = "source-build"
 )
 
@@ -68,7 +68,7 @@ type ToolInfo struct {
 
 	// GoModulePath is the `module` directive the published source actually
 	// declares. It is the single source of truth for whether `go install
-	// <GoImportPath>@ver` is resolvable by the toolchain (REQ-22.2).
+	// <GoImportPath>@ver` is resolvable by the toolchain (RF-UPD-02).
 	GoModulePath string
 
 	// FallbackPaths returns a list of absolute paths to check when exec.LookPath
@@ -86,7 +86,7 @@ type ToolInfo struct {
 // resolved against the declared module path. It reads ONLY GoModulePath and
 // GoImportPath; it never derives the module from Owner/Repo (D-01). For the
 // fork this is false while go.mod declares the upstream module, and the system
-// MUST NOT emit or run any `go install` for it (REQ-22.2).
+// MUST NOT emit or run any `go install` for it (RF-UPD-02).
 func (t ToolInfo) GoInstallResolvable() bool {
 	m := strings.TrimSpace(t.GoModulePath)
 	p := strings.TrimSpace(t.GoImportPath)

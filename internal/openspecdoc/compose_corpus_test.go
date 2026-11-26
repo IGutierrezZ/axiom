@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// REQ-30.22 y REQ-44.4: no regresión sobre el corpus de las specs vivas. Para cada
+// RF-ARC-11 y RF-RID-04: no regresión sobre el corpus de las specs vivas. Para cada
 // requisito de cada spec de openspec/specs/ (lectura, nunca escritura):
 //   - Resolve lo encuentra a sí mismo con el patrón por defecto, y
 //   - un MODIFIED identidad (la delta repite el bloque tal cual) compone la spec

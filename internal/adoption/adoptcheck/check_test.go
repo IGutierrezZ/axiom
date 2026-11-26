@@ -186,7 +186,7 @@ func TestCheck_ColisionConOtroCambioActivo(t *testing.T) {
 	requireFailure(t, report, RuleUniqueness, "RF-002", "el cambio activo otro")
 }
 
-// REQ-30.12 (C-03-c): ya no hay regla de serie. Un cambio puede mezclar series y usar una
+// RF-ADP-04 (C-03-c): ya no hay regla de serie. Un cambio puede mezclar series y usar una
 // serie que ya existe en las specs; solo cuentan el formato y la unicidad por serie y número.
 func TestCheck_YaNoHayReglaDeSerie(t *testing.T) {
 	f := newCheckFixture(t)
@@ -358,7 +358,7 @@ func TestCheck_ElOrigenSeConservaTalCualEnLaDelta(t *testing.T) {
 	}
 }
 
-// REQ-30.9: `proposed_id_pattern` no altera la obsolescencia del inventario (solo cuenta
+// RF-ADP-01: `proposed_id_pattern` no altera la obsolescencia del inventario (solo cuenta
 // el SHA-256 de cada origen) ni el resumen, y editar axiom.yaml tampoco la altera.
 func TestCheck_ElPatronPropuestoNoAlteraLaObsolescencia(t *testing.T) {
 	f := newCheckFixture(t)
@@ -390,7 +390,7 @@ func TestCheck_ElPatronPropuestoNoAlteraLaObsolescencia(t *testing.T) {
 	}
 }
 
-// REQ-30.10 y REQ-30.11: formato del título (D4): definitivo, provisional compatible o rechazo.
+// RF-ADP-02 y RF-ADP-03: formato del título (D4): definitivo, provisional compatible o rechazo.
 func TestCheck_FormatoDelTitulo(t *testing.T) {
 	retitle := func(from, to string) string { return strings.Replace(validDelta, "Alta de usuario (RF-001)", to, 1) }
 	cases := []struct {
@@ -437,7 +437,7 @@ func TestCheck_FormatoDelTitulo(t *testing.T) {
 	}
 }
 
-// REQ-30.11 y REQ-30.12: unicidad por serie y número (D4).
+// RF-ADP-03 y RF-ADP-04: unicidad por serie y número (D4).
 func TestCheck_UnicidadPorClave(t *testing.T) {
 	t.Run("misma clave con distinto ancho", func(t *testing.T) {
 		f := newCheckFixture(t)

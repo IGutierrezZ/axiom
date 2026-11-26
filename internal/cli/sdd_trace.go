@@ -25,7 +25,7 @@ import (
 const traceSchema = "axiom.sdd-trace/v1"
 
 // RunSDDTrace es `axiom sdd trace --cwd <ruta> --change <c> [--integration-branch
-// <ref>] [--json]` (REQ-29.9, design D14 y §6.4). Es de solo lectura: deriva con
+// <ref>] [--json]` (RF-ISO-09, design D14 y §6.4). Es de solo lectura: deriva con
 // `git log --first-parent` el commit de integración del código y el del archivado
 // del cambio, sin estado persistido y con el mismo resultado con squash, merge o
 // rebase, y los contrasta con la evidencia `pr_merged` de la compuerta
@@ -76,7 +76,7 @@ func RunSDDTrace(args []string, stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("sdd trace: %w", err)
 	}
-	// REQ-44.9: el patrón se lee en vivo de axiom.yaml; inaccesible, el verbo termina con error
+	// RF-RID-08: el patrón se lee en vivo de axiom.yaml; inaccesible, el verbo termina con error
 	// y la continuación de `axiom workspace validate`, sin tocar git.
 	pattern, err := projectIDPattern("sdd trace", loc)
 	if err != nil {
@@ -330,7 +330,7 @@ type traceMatrixRow struct {
 }
 
 // requirementKeys devuelve los identificadores de un texto: los válidos del patrón y, hasta
-// archivar, el provisional de un ADDED (REQ-29.3).
+// archivar, el provisional de un ADDED (RF-ISO-03).
 func requirementKeys(text string, pattern reqid.Pattern) []string {
 	valid, provisional, _ := isoevidence.RequirementKeys(text, pattern)
 	return append(valid, provisional...)

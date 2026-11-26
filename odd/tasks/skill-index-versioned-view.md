@@ -33,12 +33,12 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 - **Repositorio:**
   - regenerar el bloque de `AGENTS.md`;
   - adaptar `TestIssueCreationAuthorityBoundary` para que compruebe que existe una fila `issue-creation` cuya ruta es `internal/assets/skills/issue-creation/SKILL.md`, en lugar del texto literal;
-  - actualizar REQ-22.11 en `openspec/specs/axiom-skills-index-governance/spec.md` y la documentación afectada.
+  - actualizar RF-SKI-02 en `openspec/specs/axiom-skills-index-governance/spec.md` y la documentación afectada.
 
 ## Restricciones
 
 - Fuera de alcance: cambiar el orden estático de `ProjectSkillDirs("")`, porque está fijado por `internal/assets/skill_registry_plugin_guard_test.go:90-100` y el plugin `opencode/plugins/skill-registry.ts`. Tampoco se modifican la exclusión por nombre (`_shared`, `skill-registry`, `sdd-*`) ni el formato de fila.
-- Hay que mantener la idempotencia byte a byte de REQ-22.12 y la no fatalidad de Engram de REQ-22.11.
+- Hay que mantener la idempotencia byte a byte de RF-SKI-03 y la no fatalidad de Engram de RF-SKI-02.
 - Una sola llamada a git por regeneración. Si git falla, se aplica la vista sin filtro git, nunca un error fatal.
 - Heurística orientativa de unas 400 líneas por tarea. No es un límite, ni justifica recortar tests o comentarios.
 
@@ -81,7 +81,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
 - [x] **T3 · Aplicar en el repositorio**: `f223c594`, `19f4d79c` y `b1af7c09`
   - Declarar `internal/assets/skills` en `axiom.yaml`.
   - Regenerar `AGENTS.md` y adaptar `TestIssueCreationAuthorityBoundary`.
-  - Actualizar REQ-22.11 y los escenarios en la spec viva, y la documentación afectada.
+  - Actualizar RF-SKI-02 y los escenarios en la spec viva, y la documentación afectada.
   - Ruta: delegada (writer). Disparador: preparación de escritura sobre 3 o más ficheros.
 
 ## Criterios de aceptación
@@ -156,7 +156,7 @@ Que el bloque `axiom:skills-index` de `AGENTS.md`, que está versionado, sea det
     - `AGENTS.md` se ha regenerado con `Regenerate` sin mirror, usando un programa temporal ya eliminado, para no escribir en el Engram del usuario.
     - `TestIssueCreationAuthorityBoundary` comprueba la fila por su nombre y su ruta, a través del helper `skillsIndexRowPaths`, y se añade `TestSkillsIndexRowPathsAcceptsEveryPathFormat`.
   - **`19f4d79c` `docs(skillregistry)`** (108 líneas):
-    - La spec viva pasa a la versión 1.1.0. REQ-22.11 se reescribe con dos vistas y seis escenarios nuevos, y se añade REQ-22.15 sobre `workspace.skill_roots`, con dos escenarios.
+    - La spec viva pasa a la versión 1.1.0. RF-SKI-02 se reescribe con dos vistas y seis escenarios nuevos, y se añade RF-SKI-06 sobre `workspace.skill_roots`, con dos escenarios.
     - `docs/skill-registry.md` incorpora la sección «Versioned View».
   - **`b1af7c09` `docs(openspec)`:** `INDEX.md` regenerado con `axiom archive sync`. Solo cambian este dominio y los totales de cabecera.
   - **Bloque de `AGENTS.md`:**

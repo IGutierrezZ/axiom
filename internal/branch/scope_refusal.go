@@ -6,7 +6,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos de `axiom branch scope` (REQ-25.51, D3). Todos se devuelven antes de calcular nada y
+// Rechazos de `axiom branch scope` (RF-BRA-35, D3). Todos se devuelven antes de calcular nada y
 // sin mutar el repositorio.
 
 // ScopeKickoffNotSealed es el rechazo `kickoff_not_sealed` de `scope` ante un cambio inexistente o
@@ -32,7 +32,7 @@ func ScopeNotApplicableOdd(change, cwd, document string) *Refusal {
 }
 
 // ScopeNotApplicableWithoutSnapshot es el rechazo `scope_not_applicable` de un kickoff sellado sin
-// bloque `git:` (un cambio retro-sellado o anterior a la instantánea de política, REQ-25.36).
+// bloque `git:` (un cambio retro-sellado o anterior a la instantánea de política, RF-KOF-06).
 func ScopeNotApplicableWithoutSnapshot(change, cwd string) *Refusal {
 	return &Refusal{
 		Code:         CodeScopeNotApplicable,

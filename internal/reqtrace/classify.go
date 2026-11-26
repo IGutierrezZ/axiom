@@ -118,7 +118,7 @@ func newMatcher(p reqid.Pattern, eq equivalence, key string) *matcher {
 
 // idTokens devuelve los identificadores del texto (válidos, provisionales y heredados) que
 // coinciden exactamente con el conjunto: `REQ-1.1` nunca casa con `REQ-1.10` ni con
-// `REQ-11.1`. ctx son las capacidades del contexto del texto: la de su delta, las del cambio
+// `RF-MRK-01`. ctx son las capacidades del contexto del texto: la de su delta, las del cambio
 // o las del documento ODD; puede ser vacío.
 func (m *matcher) idTokens(text string, ctx []string) []string {
 	valid, provisional, _ := isoevidence.RequirementKeys(text, m.p)

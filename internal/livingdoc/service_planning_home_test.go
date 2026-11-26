@@ -33,7 +33,7 @@ func catalogDomains(catalog *LivingCatalog) []string {
 }
 
 // TestServiceReadsThePlanningHomeRegardlessOfSpecsRepository cubre REQ-1.1 y
-// REQ-1.2: la raíz de las especificaciones y el índice salen del planning home.
+// RF-LDO-02: la raíz de las especificaciones y el índice salen del planning home.
 func TestServiceReadsThePlanningHomeRegardlessOfSpecsRepository(t *testing.T) {
 	for _, specsRepository := range []string{"", ".", "openspec", "specs"} {
 		t.Run("embebido con specs_repository="+specsRepository, func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestServiceReadsThePlanningHomeRegardlessOfSpecsRepository(t *testing.T) {
 }
 
 // TestServiceWarnsAboutADivergentLegacyLocation cubre el escenario «Ubicación
-// antigua divergente emite un aviso» de REQ-1.1 y REQ-24.10 (Q14).
+// antigua divergente emite un aviso» de REQ-1.1 y RF-PLH-10 (Q14).
 func TestServiceWarnsAboutADivergentLegacyLocation(t *testing.T) {
 	ws := workspacetest.Embedded(t, "specs")
 	legacySpecs := filepath.Join(ws.Master, "specs", "specs")

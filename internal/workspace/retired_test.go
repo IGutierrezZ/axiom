@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-30.21: un bloque `baseline:` residual nunca se ignora ni se degrada a «sin
+// RF-TOP-12: un bloque `baseline:` residual nunca se ignora ni se degrada a «sin
 // baseline»: cada canal de carga lo recibe como *BaselineRetiredError.
 
 func TestRetiredBaselineIsATypedErrorOnParse(t *testing.T) {

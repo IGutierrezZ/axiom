@@ -390,7 +390,7 @@ jobs:
   # Blocking: init, project, change, workspace, handoff, role, skill,
   # archive, and ui in their help or no-argument form -- the
   # exclusive surface axiom-distribution-identity's build-identity
-  # contract touches (REQ-20.15). The odd verb blocked here too until
+  # contract touches (RF-CIB-01). The odd verb blocked here too until
   # this increment's Phase 11 (F6.2a) retired the `axiom odd` command
   # entirely; it no longer exists, so it no longer appears in this list
   # or in the smoke table below.

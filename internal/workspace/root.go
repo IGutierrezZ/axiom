@@ -34,7 +34,7 @@ const (
 //
 // En un worktree enlazado la raíz es siempre la del propio worktree, nunca la del
 // checkout principal: si el worktree no tiene marcador propio, IsAxiomProject
-// resuelve desde el checkout principal (REQ-25.28) y aquí se descarta ese
+// resuelve desde el checkout principal (RF-PLH-13) y aquí se descarta ese
 // resultado, porque escribir allí ensuciaría otro árbol de trabajo.
 //
 // homeDir, si no está vacío, nunca se toma como raíz git: quien versiona su

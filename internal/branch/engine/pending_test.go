@@ -15,8 +15,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de los cambios pendientes de archivar (REQ-25.20, design D-17) y de `status`
-// sin `--change` (REQ-25.15, escenario «`status` sin `--change` lista registrados y
+// Pruebas de los cambios pendientes de archivar (RF-BRA-21, design D-17) y de `status`
+// sin `--change` (RF-BRA-16, escenario «`status` sin `--change` lista registrados y
 // pendientes»), con git real y sin red.
 
 // addChanges confirma en la rama actual de repo las carpetas de cambio dadas bajo
@@ -56,7 +56,7 @@ func pendingNames(t *testing.T, result branch.Result) []string {
 }
 
 // wantPendingNames comprueba los nombres pendientes y que cada uno nombra la
-// continuación para archivarlo (REQ-25.20).
+// continuación para archivarlo (RF-BRA-21).
 func wantPendingNames(t *testing.T, result branch.Result, want ...string) {
 	t.Helper()
 	if want == nil {
@@ -80,7 +80,7 @@ func requested(t *testing.T, result branch.Result) bool {
 	return *result.PendingArchive.Requested
 }
 
-// REQ-25.20, escenario «Un cambio fusionado y sin archivar figura como pendiente», y
+// RF-BRA-21, escenario «Un cambio fusionado y sin archivar figura como pendiente», y
 // «Los pendientes no producen código de fallo»: con dos pendientes, la salida es 0.
 func TestStatusWithoutChangeListsMergedAndUnarchivedChangesAsPending(t *testing.T) {
 	t.Parallel()
@@ -104,7 +104,7 @@ func TestStatusWithoutChangeListsMergedAndUnarchivedChangesAsPending(t *testing.
 	}
 }
 
-// REQ-25.20, escenarios «Solo `archive/` no genera pendientes» y «Un fichero suelto no
+// RF-BRA-21, escenarios «Solo `archive/` no genera pendientes» y «Un fichero suelto no
 // cuenta como cambio»: la lista está vacía, pero evaluada (se imprime `[]`).
 func TestPendingArchiveIgnoresTheArchiveFolderAndLooseFiles(t *testing.T) {
 	t.Parallel()
@@ -124,7 +124,7 @@ func TestPendingArchiveIgnoresTheArchiveFolderAndLooseFiles(t *testing.T) {
 	}
 }
 
-// REQ-25.20, escenario «Los sumideros exentos no son pendientes»: `e2e-cumulative` y
+// RF-BRA-21, escenario «Los sumideros exentos no son pendientes»: `e2e-cumulative` y
 // `cumulative-<rol>` se excluyen por nombre; lo que solo se les parece, no.
 func TestPendingArchiveExemptsTheCumulativeSinksByName(t *testing.T) {
 	t.Parallel()
@@ -181,8 +181,8 @@ func TestPendingArchiveQuotesUnusualNamesInTheContinuation(t *testing.T) {
 	}
 }
 
-// REQ-25.20 y design D-06: la evaluación usa la referencia de integración local de
-// REQ-25.10: `origin/<integración>` si existe en local y, si no, la rama local.
+// RF-BRA-21 y design D-06: la evaluación usa la referencia de integración local de
+// RF-BRA-10: `origin/<integración>` si existe en local y, si no, la rama local.
 func TestPendingArchiveEvaluatesTheLocalIntegrationReference(t *testing.T) {
 	t.Parallel()
 	repo := embeddedProject(t)
@@ -202,7 +202,7 @@ func TestPendingArchiveEvaluatesTheLocalIntegrationReference(t *testing.T) {
 	})
 }
 
-// REQ-25.20, escenario «La evaluación no usa la red» y «sin cambiar de rama»: con un
+// RF-BRA-21, escenario «La evaluación no usa la red» y «sin cambiar de rama»: con un
 // remoto inalcanzable configurado y otra rama desplegada, ninguna invocación de git es
 // remota, solo se lanza la lista cerrada de lecturas, y ni la rama actual ni el árbol de
 // trabajo cambian.
@@ -248,7 +248,7 @@ func TestPendingArchiveUsesNoNetworkAndNeverChangesBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.20, escenario «Sin referencia de integración la lista se omite con aviso»: sin
+// RF-BRA-21, escenario «Sin referencia de integración la lista se omite con aviso»: sin
 // la rama de integración ni local ni remota local, la salida sigue siendo 0, el campo no
 // se imprime y un aviso lo explica.
 func TestPendingArchiveWithoutTheIntegrationReferenceIsOmittedWithAWarning(t *testing.T) {
@@ -275,7 +275,7 @@ func TestPendingArchiveWithoutTheIntegrationReferenceIsOmittedWithAWarning(t *te
 	}
 }
 
-// REQ-25.20, escenario «El repositorio de specs de un multirepo no tiene pendientes»: los
+// RF-BRA-21, escenario «El repositorio de specs de un multirepo no tiene pendientes»: los
 // cambios activos viven allí en la rama de integración de forma normal, así que la lista
 // está vacía (evaluada) y sin avisos, y `--change` indica que no está pendiente.
 func TestPendingArchiveOfAMultirepoSpecsRepositoryIsEmpty(t *testing.T) {
@@ -339,7 +339,7 @@ func TestPendingArchiveOfAProjectWithoutAChangesFolderIsEmpty(t *testing.T) {
 	}
 }
 
-// REQ-25.15 y REQ-25.20, escenario «`status --change` indica que el cambio solicitado
+// RF-BRA-16 y RF-BRA-21, escenario «`status --change` indica que el cambio solicitado
 // está pendiente»: verdadero con la continuación para archivarlo, o falso; un cambio
 // fusionado que nunca tuvo ramas sigue siendo `not_started`.
 func TestStatusWithChangeInformsWhetherItIsPendingToArchive(t *testing.T) {
@@ -390,7 +390,7 @@ func TestStatusWithChangeInformsWhetherItIsPendingToArchive(t *testing.T) {
 	})
 }
 
-// REQ-25.15, escenario «`status` sin `--change` lista registrados y pendientes»: `x`
+// RF-BRA-16, escenario «`status` sin `--change` lista registrados y pendientes»: `x`
 // registrado y `y` fusionado y pendiente; los registrados salen ordenados, con su modo y
 // sus ramas con rutas absolutas, y solo los del carril pedido.
 func TestStatusWithoutChangeListsRegisteredAndPending(t *testing.T) {

@@ -54,7 +54,7 @@ El sistema DEBE consultar.
 	if names := requirementNames(got.Renamed); !reflect.DeepEqual(names, []string{"Antigua → Nueva"}) {
 		t.Errorf("Renamed = %v", names)
 	}
-	// El ID ya no es un campo de Requirement: se deriva del título con el patrón (REQ-44.4).
+	// El ID ya no es un campo de Requirement: se deriva del título con el patrón (RF-RID-04).
 	p := reqid.Default()
 	if p.InTitle(got.Added[0].Name) != "REQ-31.1" || p.InTitle(got.Added[1].Name) != "REQ-31.2" || p.InTitle(got.Modified[0].Name) != "REQ-31.3" {
 		t.Errorf("IDs = %q %q %q", p.InTitle(got.Added[0].Name), p.InTitle(got.Added[1].Name), p.InTitle(got.Modified[0].Name))

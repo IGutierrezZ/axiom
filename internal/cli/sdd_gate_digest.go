@@ -141,7 +141,7 @@ func specArtifactPathsForDigest(changeRoot string) ([]string, error) {
 	if len(files) == 0 {
 		// D20: un bug sin delta declara su informe en proposal.md, y la compuerta
 		// `spec` juzga ese fichero. El criterio es el de sddstatus (declaración
-		// completa de REQ-29.15), para que la huella coincida con la del status.
+		// completa de RF-CLI-10), para que la huella coincida con la del status.
 		proposal := filepath.Join(changeRoot, "proposal.md")
 		if declaration := isoevidence.ParseBugDeclaration(readFileOrEmpty(proposal)); declaration.Kind != isoevidence.BugKindNone && declaration.Valid {
 			files = []string{proposal}

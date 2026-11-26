@@ -71,7 +71,7 @@ openspec/changes/{change-name}/
 └── tasks.md               ← You create this
 ```
 
-**Multi-role sealed roster (REQ-21.10):** when `kickoff.yaml` seals more than one role, produce one `tasks.<role>.md` per sealed role instead of a single `tasks.md` — each role's own breakdown, scoped to that role's assignment. Present every role's file together at the `tasks` block-review gate; never gate `apply` on one role's file alone. A single-role seal (including the default `fullstack`) keeps the plain `tasks.md`.
+**Multi-role sealed roster (RF-GAT-04):** when `kickoff.yaml` seals more than one role, produce one `tasks.<role>.md` per sealed role instead of a single `tasks.md` — each role's own breakdown, scoped to that role's assignment. Present every role's file together at the `tasks` block-review gate; never gate `apply` on one role's file alone. A single-role seal (including the default `fullstack`) keeps the plain `tasks.md`.
 
 **Doctrina de Autonomía de Roles (ODD-1.4):**
 El Arquitecto define la visión global, contratos técnicos y patrones en `design.md`. Sin embargo, cada rol técnico (`backend`, `frontend`, `qa`, etc.) posee autonomía para elaborar su propio checklist `tasks.<rol>.md` basándose en dichos contratos. Esto previene cuellos de botella en la fase de diseño y garantiza que los especialistas sean dueños de sus tareas de bajo nivel y sus respectivos informes `verify-report.<rol>.md`.

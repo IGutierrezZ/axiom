@@ -266,8 +266,8 @@ var (
 	driveReference = regexp.MustCompile(`^[A-Za-z]:[\\/]`)
 )
 
-// ValidateMatrix valida la matriz contra los escenarios afectados (REQ-29.6 a
-// REQ-29.8 y REQ-29.19). Nunca ejecuta el comando registrado de una fila: solo
+// ValidateMatrix valida la matriz contra los escenarios afectados (RF-ISO-06 a
+// RF-ISO-08 y RF-ISO-10). Nunca ejecuta el comando registrado de una fila: solo
 // contrasta que la prueba existe en el árbol y que el comando y su código de
 // salida quedaron registrados. noImpactBug indica un bug sin impacto en la
 // spec, que no tiene escenarios afectados.
@@ -358,7 +358,7 @@ func ValidateMatrix(m Matrix, affected []ScenarioKey, noImpactBug bool, tree Tre
 	return result
 }
 
-// validateNoImpactMatrix aplica REQ-29.19: sin escenarios afectados, una matriz
+// validateNoImpactMatrix aplica RF-ISO-10: sin escenarios afectados, una matriz
 // ausente o sin filas es válida y de éxito, y cualquier fila la invalida.
 func validateNoImpactMatrix(m Matrix) MatrixResult {
 	findings := append([]Finding{}, m.Issues...)
@@ -546,7 +546,7 @@ func rawCellSpan(line string, n int) (start, end int, ok bool) {
 
 // RewriteMatrix sustituye, solo en la columna `Requisito` de las filas de la matriz de un
 // verify-report.md, los identificadores del mapa por su sustituto, sin tocar ningún otro byte
-// del informe (REQ-47.4). Es la misma celda que lee ParseMatrix y que cita AffectedFromDelta.
+// del informe (RF-RID-12). Es la misma celda que lee ParseMatrix y que cita AffectedFromDelta.
 func RewriteMatrix(text string, m reqid.IDMap) string {
 	if m.Count() == 0 {
 		return text

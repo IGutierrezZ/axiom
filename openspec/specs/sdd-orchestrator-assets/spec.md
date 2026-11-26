@@ -8,7 +8,7 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
 
 ## Requirements
 
-### Requirement: Chain Strategy Guidance Parity
+### Requirement: Chain Strategy Guidance Parity (RF-ORQ-01)
 
 Los activos del orquestador SDD de Claude DEBEN incluir una guía explícita de estrategia de cadena equivalente a la de OpenCode para la planificación de entregas revisables. La guía DEBE enumerar exactamente estas estrategias seleccionables:
 - `stacked-to-main`
@@ -39,7 +39,7 @@ La sección DEBE indicar que la estrategia de cadena solo se activa cuando la pe
 
 ---
 
-### Requirement: Chain Strategy Propagation to Downstream Phases
+### Requirement: Chain Strategy Propagation to Downstream Phases (RF-ORQ-02)
 
 La guía del orquestador de Claude DEBE exigir pasar `chain_strategy` junto con `delivery_strategy` a `sdd-tasks` y `sdd-apply` cuando la persona haya pedido `chained`. Si la entrega es `single-pr` (valor por defecto), el orquestador DEBE reenviar solo `delivery_strategy: single-pr` y NO DEBE reenviar `chain_strategy`. Un `delivery_strategy: chained` reenviado con su `chain_strategy` prevalece sobre el valor por defecto `single-pr` del bloque de pre-vuelo.
 (Previously: el reenvío de `chain_strategy` era incondicional siempre que la planificación de entrega fuera relevante)
@@ -67,7 +67,7 @@ La guía del orquestador de Claude DEBE exigir pasar `chain_strategy` junto con 
 
 ---
 
-### Requirement: Non-Claude Chain Strategy Guidance Parity
+### Requirement: Non-Claude Chain Strategy Guidance Parity (RF-ORQ-03)
 
 Los activos del orquestador SDD que no son de Claude y admiten planificación de entregas DEBEN incluir una guía explícita de estrategia de cadena equivalente en intención a la guía de referencia de Claude y OpenCode. La guía DEBE enumerar exactamente estas estrategias seleccionables:
 - `stacked-to-main`
@@ -98,7 +98,7 @@ La sección DEBE indicar, igual que en Claude, que la estrategia de cadena solo 
 
 ---
 
-### Requirement: Non-Claude Strategy Propagation to Downstream Phases
+### Requirement: Non-Claude Strategy Propagation to Downstream Phases (RF-ORQ-04)
 
 Los activos del orquestador SDD que no son de Claude y lanzan fases de entrega DEBEN exigir pasar `chain_strategy` junto con `delivery_strategy` a `sdd-tasks` y `sdd-apply` cuando la persona haya pedido `chained`; con la entrega por defecto `single-pr` solo se reenvía `delivery_strategy` y NO se reenvía `chain_strategy`.
 (Previously: el reenvío de `chain_strategy` era incondicional siempre que la planificación de entrega fuera relevante)
@@ -125,7 +125,7 @@ Los activos del orquestador SDD que no son de Claude y lanzan fases de entrega D
 
 ---
 
-### Requirement: Platform-Native Solo Inline Semantics Preservation
+### Requirement: Platform-Native Solo Inline Semantics Preservation (RF-ORQ-05)
 
 For non-Claude solo-inline and platform-native orchestrator assets, the system MUST preserve platform-accurate inline execution wording and MUST NOT add inaccurate subagent or OpenCode persistence claims.
 (Previously: the first scenario also covered the Windsurf asset.)
@@ -144,7 +144,7 @@ For non-Claude solo-inline and platform-native orchestrator assets, the system M
 - THEN wording stays platform-accurate
 - AND wording does not introduce inaccurate subagent or OpenCode persistence guarantees
 
-### Requirement: chained-pr Skill Binding in Chain Strategy Guidance
+### Requirement: chained-pr Skill Binding in Chain Strategy Guidance (RF-ORQ-06)
 
 Los activos del orquestador SDD DEBEN enlazar la skill `chained-pr` en su guía de estrategia de cadena. Cuando la persona pida PRs encadenadas o apiladas, el orquestador DEBE resolver la skill `chained-pr` por su nombre de registro (no por una ruta del sistema de ficheros fija) mediante su Sub-Agent Launch Pattern, y DEBE inyectar la ruta resuelta en los prompts de las fases `sdd-tasks` y `sdd-apply` bajo `## Skills to load before work`. Esas fases DEBEN leer y seguir la skill ANTES de planificar o crear cualquier PR. Con la entrega `single-pr` por defecto la skill NO se resuelve ni se inyecta, y la propia skill `chained-pr` se activa solo cuando la persona pide encadenar, apilar o rebanar, o con `delivery_strategy: chained`, sin ningún umbral numérico.
 
@@ -188,7 +188,7 @@ El enlace DEBE referenciar la skill por el nombre de registro `chained-pr` (fron
 - **ENTONCES** la activación se describe como una petición de la persona de encadenar, apilar o rebanar
 - **Y** no contienen ningún número de líneas como umbral ni `400-line budget risk`
 
-### Requirement: Inline Chain Strategy Summary Retained
+### Requirement: Inline Chain Strategy Summary Retained (RF-ORQ-07)
 
 Los 12 activos del orquestador SDD DEBEN conservar un resumen en línea breve de las estrategias `stacked-to-main` y `feature-branch-chain` en su sección de estrategia de cadena. El enlace complementa, y NO sustituye, el resumen en línea existente. Los nombres canónicos de estrategia DEBEN seguir apareciendo literalmente para que los escenarios «Strategy naming remains canonical» sigan cumpliéndose. El resumen NO DEBE condicionar la cadena a ningún tamaño, riesgo o valor heredado: la cadena es a petición de la persona.
 (Previously: el requisito no precisaba qué condiciona la cadena)
@@ -212,7 +212,7 @@ Los 12 activos del orquestador SDD DEBEN conservar un resumen en línea breve de
 
 ---
 
-### Requirement: Cursor Chain Strategy Section Parity
+### Requirement: Cursor Chain Strategy Section Parity (RF-ORQ-08)
 
 La plantilla `cursor/sdd-orchestrator.md` DEBE incluir una sección `### Chain Strategy` en paridad con las otras 11 plantillas. La sección DEBE enumerar ambos nombres canónicos de estrategia, reenviar `chain_strategy` a las fases posteriores cuando la persona haya pedido `chained` e incluir el enlace a la skill `chained-pr`.
 (Previously: el reenvío de `chain_strategy` era incondicional)
@@ -245,7 +245,7 @@ La plantilla `cursor/sdd-orchestrator.md` DEBE incluir una sección `### Chain S
 - **CUANDO** se ejecuta la comprobación
 - **ENTONCES** ningún alias ni valor renombrado sustituye a los nombres canónicos `stacked-to-main` y `feature-branch-chain`
 
-### Requirement: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
+### Requirement: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts (RF-ORQ-09)
 
 For solo-inline and platform-native orchestrator hosts (antigravity), the skill-binding instruction MUST phrase "inject under `## Skills to load before work`" in a way that maps to each host's actual phase-context mechanism. The binding MUST NOT reintroduce OpenCode-style persisted-delegation claims that the existing spec forbids for these hosts.
 (Previously: the hosts were windsurf, antigravity, kimi and kiro, with a second scenario for kimi and kiro.)
@@ -258,7 +258,7 @@ For solo-inline and platform-native orchestrator hosts (antigravity), the skill-
 - AND the wording maps skill injection to the host's inline or platform-native phase-context mechanism
 - AND the wording does not claim persisted OpenCode plugin-backed background delegation
 
-### Requirement: Golden Fixture and Static Assertion Coverage for the Binding
+### Requirement: Golden Fixture and Static Assertion Coverage for the Binding (RF-ORQ-10)
 
 Static-validation tests and golden fixtures that cover chain strategy content MUST be updated to assert the presence of the `chained-pr` skill binding. Golden churn MUST be limited to the intended binding wording and the new Cursor chain strategy section; no unrelated content changes are permitted.
 (Previously: the scenarios counted 12 templates and 12 golden fixtures.)
@@ -290,7 +290,7 @@ Static-validation tests and golden fixtures that cover chain strategy content MU
 - WHEN the test executes
 - THEN the assertion verifies that the `chained-pr` skill binding is present in generated prompts for `sdd-tasks` and `sdd-apply` when chain strategy is active
 
-### Requirement: Claude-Native Delegation Semantics
+### Requirement: Claude-Native Delegation Semantics (RF-ORQ-11)
 
 Claude-targeted guidance MUST describe delegation behavior accurately for Claude Code and MUST NOT imply OpenCode plugin-backed persisted background delegation.
 
@@ -308,7 +308,7 @@ Claude-targeted guidance MUST describe delegation behavior accurately for Claude
 
 ---
 
-### Requirement: Claude Golden and Static Validation Coverage
+### Requirement: Claude Golden and Static Validation Coverage (RF-ORQ-12)
 
 The system MUST keep Claude golden outputs and static text assertions synchronized with the current Claude orchestrator guidance asset.
 
@@ -343,7 +343,7 @@ The system MUST also keep direct static assertions and impacted golden fixtures 
 
 ---
 
-### Requirement: Orchestrator-Owned Discovery and Confirmed Handoff
+### Requirement: Orchestrator-Owned Discovery and Confirmed Handoff (RF-ORQ-13)
 
 Orchestrators MUST own discovery after exploration/research. Interactive mode MAY question; automatic mode MUST use confirmed facts or block. They MUST invoke `sdd-propose` only with selected research `done`, decisions `confirmed`, valid references/readiness; proposal executors MUST NOT interview.
 
@@ -359,7 +359,7 @@ Orchestrators MUST own discovery after exploration/research. Interactive mode MA
 - WHEN the pre-proposal gate runs
 - THEN it emits one lossless grouped prompt, persists state, and blocks proposal
 
-### Requirement: Optional-Lane and Status-v1 Compatibility
+### Requirement: Optional-Lane and Status-v1 Compatibility (RF-ORQ-14)
 
 Research MUST be optional before selection; no-request changes MUST skip only that branch. Native status-v1 shape, tokens, and routing MUST stay unchanged; orchestrators gate `propose` with readiness.
 
@@ -375,7 +375,7 @@ Research MUST be optional before selection; no-request changes MUST skip only th
 - WHEN status-v1 is validated
 - THEN no research token is emitted/accepted; the orchestrator gate handles it
 
-### Requirement: Optional Research Lifecycle Parity Across Catalog Agents
+### Requirement: Optional Research Lifecycle Parity Across Catalog Agents (RF-ORQ-15)
 
 All source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render that guidance, including Pi/VS Code Copilot/Trae using the generic runtime family.
 (Previously: «All 12 source orchestrator templates» and «all 16 supported IDs», including OpenCode/Kilocode sharing and OpenClaw in the generic family; the requirement also demanded that every rendered variant carry the canonical bounded review execution contract, which belonged to RDD and is retired.)
@@ -388,7 +388,7 @@ All source orchestrator templates MUST render equivalent optional research lifec
 - AND no rendered variant contains a `Review Execution Contract` section, its marker, `review/start(target)` or a refuter batch
 - AND optional research guidance is rendered identically across the equivalent runtime families
 
-### Requirement: Read-Only Judgment Day Judges
+### Requirement: Read-Only Judgment Day Judges (RF-ORQ-16)
 
 Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Cursor assets MUST use their equivalent read-only capability boundary.
 (Previously: Kiro and Kimi assets were also listed; the requirement covered every dedicated reviewer, Judgment Day judge, and refuter, and reviewers and refuters belonged to RDD and are retired.)
@@ -400,9 +400,9 @@ Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-
 - THEN it returns structured findings and terminates
 - AND it cannot modify files or launch another role
 
-### Requirement: Guía y Doctrina del Modo ISO, `Cubre:`, la Matriz y el Bug sin Delta, con la Excepción ISO, en Paridad entre Runtimes (REQ-29.17)
+### Requirement: Guía y Doctrina del Modo ISO, `Cubre:`, la Matriz y el Bug sin Delta, con la Excepción ISO, en Paridad entre Runtimes (RF-ORQ-17)
 
-Las skills `sdd-*` (sobre todo `sdd-verify`, con su referencia del formato de informe, `sdd-tasks` y `sdd-archive`), la doctrina compartida (`_shared/persistence-contract.md`, `_shared/sdd-status-contract.md` y `_shared/sdd-orchestrator-sections.md`) y los orquestadores proyectados a cada runtime DEBEN describir las opciones de este cambio: el modo ISO y la proyección de `sdd.iso` en el status (REQ-29.2), `kickoff seal` copiando `iso` del proyecto en `kickoff.yaml` (REQ-29.13), la línea `Cubre:` de las tareas, la matriz de verify con sus filas automáticas y manuales y las formas de referencia de prueba admitidas (`ruta/fichero:símbolo` y `TestX`; REQ-29.6 a REQ-29.8), el perfil de bug con sus tres rutas (REQ-29.15): bug con requisito existente (sin delta, con `Cubre:`), bug sin impacto en la spec (sin delta, sin `Cubre:`, con `## Impacto en la spec` y la línea literal `Sin impacto en la spec` más `Motivo:`; en ISO el motivo es la evidencia y la matriz vacía es válida, REQ-29.19) y bug con delta como cambio normal; el formato de `## Informe de bug` (`Observado:` y `Esperado:` obligatorias, `Referencia:` opcional); y la derivación de la traza (REQ-29.9). La guía de bug DEBE reproducir esos textos exactamente, porque el carril ODD usa la misma sección y la misma línea. Las skills describen los formatos; la validación reside en el motor. La doctrina `persistence-contract.md` DEBE conservar íntegra la regla «Missing or failed verification never gates archive» para los cambios no ISO y DEBE declarar la excepción del modo ISO (REQ-29.11) sin reescribir la regla general: en ISO, la matriz de verify válida y con éxito bloquea el archivado, y los hallazgos de revisión siguen siendo informativos. La skill `sdd-verify` DEBE indicar que, en un cambio ISO, la matriz es una sección adicional del informe sin líneas `verdict:`. La skill `sdd-archive` NO DEBE cambiar su descripción del flujo de archivado: la rama `-archive` y el PR documental aparte siguen siendo el único modo. Las skills y la guía de kickoff DEBEN dejar de indicar que se cree a mano la carpeta del cambio antes de `kickoff seal` (REQ-29.12). Toda esa guía DEBE salir de una fuente única, con pines de texto que verifiquen la paridad entre runtimes, y las copias versionadas y los goldens DEBEN regenerarse con la herramienta de actualización, nunca a mano.
+Las skills `sdd-*` (sobre todo `sdd-verify`, con su referencia del formato de informe, `sdd-tasks` y `sdd-archive`), la doctrina compartida (`_shared/persistence-contract.md`, `_shared/sdd-status-contract.md` y `_shared/sdd-orchestrator-sections.md`) y los orquestadores proyectados a cada runtime DEBEN describir las opciones de este cambio: el modo ISO y la proyección de `sdd.iso` en el status (RF-ISO-02), `kickoff seal` copiando `iso` del proyecto en `kickoff.yaml` (RF-KOF-12), la línea `Cubre:` de las tareas, la matriz de verify con sus filas automáticas y manuales y las formas de referencia de prueba admitidas (`ruta/fichero:símbolo` y `TestX`; RF-ISO-06 a RF-ISO-08), el perfil de bug con sus tres rutas (RF-CLI-10): bug con requisito existente (sin delta, con `Cubre:`), bug sin impacto en la spec (sin delta, sin `Cubre:`, con `## Impacto en la spec` y la línea literal `Sin impacto en la spec` más `Motivo:`; en ISO el motivo es la evidencia y la matriz vacía es válida, RF-ISO-10) y bug con delta como cambio normal; el formato de `## Informe de bug` (`Observado:` y `Esperado:` obligatorias, `Referencia:` opcional); y la derivación de la traza (RF-ISO-09). La guía de bug DEBE reproducir esos textos exactamente, porque el carril ODD usa la misma sección y la misma línea. Las skills describen los formatos; la validación reside en el motor. La doctrina `persistence-contract.md` DEBE conservar íntegra la regla «Missing or failed verification never gates archive» para los cambios no ISO y DEBE declarar la excepción del modo ISO (RF-ARC-10) sin reescribir la regla general: en ISO, la matriz de verify válida y con éxito bloquea el archivado, y los hallazgos de revisión siguen siendo informativos. La skill `sdd-verify` DEBE indicar que, en un cambio ISO, la matriz es una sección adicional del informe sin líneas `verdict:`. La skill `sdd-archive` NO DEBE cambiar su descripción del flujo de archivado: la rama `-archive` y el PR documental aparte siguen siendo el único modo. Las skills y la guía de kickoff DEBEN dejar de indicar que se cree a mano la carpeta del cambio antes de `kickoff seal` (RF-KOF-11). Toda esa guía DEBE salir de una fuente única, con pines de texto que verifiquen la paridad entre runtimes, y las copias versionadas y los goldens DEBEN regenerarse con la herramienta de actualización, nunca a mano.
 
 #### Scenario: La doctrina conserva la regla general y declara la excepción ISO
 
@@ -457,14 +457,14 @@ Las skills `sdd-*` (sobre todo `sdd-verify`, con su referencia del formato de in
 
 - **DADO** `_shared/sdd-status-contract.md`
 - **CUANDO** se inspecciona (pin de texto)
-- **ENTONCES** documenta la proyección de `sdd.iso`, los motivos tipados de ISO (REQ-29.16) y que un cambio sin instantánea es no ISO
+- **ENTONCES** documenta la proyección de `sdd.iso`, los motivos tipados de ISO (RF-CLI-11) y que un cambio sin instantánea es no ISO
 
 #### Scenario: Los goldens y las copias versionadas están en paridad
 
 - **DADO** la guía actualizada
 - **CUANDO** se regeneran los goldens y las copias versionadas con la herramienta de actualización
 - **ENTONCES** las pruebas de paridad pasan sin ediciones manuales de los goldens
-### Requirement: Skills y Convención Compartida sin Baseline Ajena (REQ-30.28)
+### Requirement: Skills y Convención Compartida sin Baseline Ajena (RF-ORQ-18)
 
 Las skills `sdd-*` y los ficheros compartidos (`_shared/`) distribuidos por Axiom NO DEBEN contener ramas, prosa ni escenarios que describan `baseline:`, `baseline.documents`, los modos de integración `compose`, `directed` o `register`, `axiom sdd integrate` ni `axiom sdd archive-compose --document` o `--in-place`. La skill `sdd-spec` DEBE leer la spec viva de `openspec/specs/{dominio}/spec.md` como única fuente del comportamiento vigente. La convención compartida del proyecto (`_shared/project-baseline-convention.md`) DEBE quedar reducida al contexto técnico (declaración, lectura, delta de contexto e integración con `axiom archive context`) y a la regla de «Sin impacto». La skill `sdd-archive` DEBE prescribir `axiom archive context check|prepare|verify|show` para el contexto mantenido. La prosa que se proyecta a los runtimes se regenera con la herramienta de goldens y permanece en paridad entre runtimes.
 
@@ -497,7 +497,7 @@ Las skills `sdd-*` y los ficheros compartidos (`_shared/`) distribuidos por Axio
 
 ---
 
-### Requirement: Skill o Referencia de Adopción de OpenSpec (REQ-30.31)
+### Requirement: Skill o Referencia de Adopción de OpenSpec (RF-ORQ-19)
 
 Axiom DEBE distribuir una skill o una referencia compartida de adopción que describa, en un texto idéntico para todos los runtimes, el flujo de migración a OpenSpec: ejecutar `axiom archive adopt scan --change <cambio>`; revisar el patrón de identificadores propuesto y sus conflictos y declararlo la persona en `sdd.id_pattern` de `axiom.yaml` (el escáner no lo escribe) antes de `adopt check` y de archivar; redactar la delta de adopción con solo `## ADDED Requirements`, al menos un escenario y una línea `Origen:` por requisito, y en cada título el identificador del cliente conservado (que debe coincidir con el `<ID original>` de su `Origen:`) o, cuando la unidad no trae identificador, un provisional `prov:<series>:<ordinal>` cuyo número se asigna al archivar; listar con motivo las unidades descartadas en `Descartado:`; normalizar a mano las mezclas de identificadores que el escáner informa como conflicto; ejecutar `axiom archive adopt check --change <cambio>` hasta que no reporte fallos (incluida la regla `pattern_undeclared`); someter la compuerta `spec` a la aprobación humana; y archivar con `axiom sdd archive-integrate`. El texto NO DEBE afirmar que Go juzga la fidelidad semántica de la migración, NO DEBE exigir «un `(REQ-n.m)` de una serie nueva», NO DEBE contener la excepción «hasta C-03-c» y NO DEBE ordenar `archive-compose --canonical --delta` para la adopción.
 (Previously: la delta se redactaba con «un identificador `(REQ-n.m)` de una serie nueva» y el texto no mencionaba el patrón del cliente, los provisionales ni `archive-integrate`.)
@@ -528,13 +528,13 @@ Axiom DEBE distribuir una skill o una referencia compartida de adopción que des
 - **DADO** dos runtimes soportados
 - **CUANDO** se renderiza la guía de adopción
 - **ENTONCES** el contenido normativo es idéntico entre ambos
-### Requirement: La Entrega es `single-pr` por Defecto sin Preguntar, `chained` Solo a Petición y se Leen los Valores Heredados mediante Alias (REQ-32.3)
+### Requirement: La Entrega es `single-pr` por Defecto sin Preguntar, `chained` Solo a Petición y se Leen los Valores Heredados mediante Alias (RF-ORQ-20)
 
 La doctrina de los orquestadores SDD de todos los runtimes (plantillas, copias en línea, reservas que compone el instalador y la convención compartida `sdd-phase-common.md`) DEBE declarar que la estrategia de entrega por defecto es `single-pr` (una PR con un commit por unidad de trabajo), que NO se pregunta, y que `chained` (con `stacked-to-main` o `feature-branch-chain`) solo se activa cuando la persona lo pide durante la sesión; si lo pide sin indicar la estrategia de cadena, el orquestador formula una única pregunta por la estrategia de cadena. El dominio canónico es `single-pr | chained`. Al **leer** un valor de entrega ya existente (un `tasks.md`, un prompt o una caché heredados), el orquestador y las fases DEBEN aplicar estos alias de lectura: `ask-on-risk` y `exception-ok` → `single-pr`; `auto-chain` → `chained`. Cualquier otro valor DEBE seguir siendo inválido y reportarse sin mapearlo. NO se escribe ningún valor nuevo con vocabulario heredado, y no se reescribe ningún artefacto existente.
 
-`chained` se mantiene solo en la caché de la sesión del orquestador (como las demás preferencias de sesión, REQ-28.2): NO se escribe en `kickoff.yaml`, en `gates.yaml` ni como campo de `tasks.md`; en una sesión nueva la entrega vuelve a `single-pr`. El bloque de pre-vuelo expresa el valor por defecto de la sesión: un `delivery_strategy: chained` reenviado por el orquestador con su `chain_strategy` prevalece sobre él, y `sdd-apply` solo lo usa para elegir la rama destino y nunca se detiene por ello.
+`chained` se mantiene solo en la caché de la sesión del orquestador (como las demás preferencias de sesión, RF-REV-02): NO se escribe en `kickoff.yaml`, en `gates.yaml` ni como campo de `tasks.md`; en una sesión nueva la entrega vuelve a `single-pr`. El bloque de pre-vuelo expresa el valor por defecto de la sesión: un `delivery_strategy: chained` reenviado por el orquestador con su `chain_strategy` prevalece sobre él, y `sdd-apply` solo lo usa para elegir la rama destino y nunca se detiene por ello.
 
-Ninguna doctrina ni skill DEBE contener un presupuesto numérico de revisión ni una parada por carga de revisión. En concreto: la sección `Review Workload Guard` y su bloque de decisión no existen en ningún runtime; `sdd-tasks` conserva solo una previsión cualitativa (tamaño estimado y unidades de trabajo) sin los campos `400-line budget risk`, `Decision needed before apply` ni `Chained PRs recommended`; y `sdd-apply` no contiene el paso de decisión de carga de trabajo ni la regla `workload-decision-required`. Si `delivery.split_hint_lines` está fijada, se aplica el aviso único no bloqueante de REQ-32.2 de `workspace-topology`. Quedan fuera de este requisito, por no ser umbrales de entrega, los literales de migración de prompts antiguos de `internal/components/sdd/inject.go`, el umbral de barrido de `jd-judge-a` y `jd-judge-b` de judgment-day.
+Ninguna doctrina ni skill DEBE contener un presupuesto numérico de revisión ni una parada por carga de revisión. En concreto: la sección `Review Workload Guard` y su bloque de decisión no existen en ningún runtime; `sdd-tasks` conserva solo una previsión cualitativa (tamaño estimado y unidades de trabajo) sin los campos `400-line budget risk`, `Decision needed before apply` ni `Chained PRs recommended`; y `sdd-apply` no contiene el paso de decisión de carga de trabajo ni la regla `workload-decision-required`. Si `delivery.split_hint_lines` está fijada, se aplica el aviso único no bloqueante de RF-TOP-15 de `workspace-topology`. Quedan fuera de este requisito, por no ser umbrales de entrega, los literales de migración de prompts antiguos de `internal/components/sdd/inject.go`, el umbral de barrido de `jd-judge-a` y `jd-judge-b` de judgment-day.
 (Previously: la lista de exclusiones citaba también las lentes `review-*` y `rdd-defect-workflow` de RDD y el umbral de riesgo del paquete de revisión de RDD; RDD se retira (C-01-e, P20).)
 
 #### Scenario: La entrega por defecto es `single-pr` y no se pregunta
@@ -608,9 +608,9 @@ Ninguna doctrina ni skill DEBE contener un presupuesto numérico de revisión ni
 - **ENTONCES** indica que, si `axiom.yaml` declara `delivery.split_hint_lines` y la previsión la supera, se avisa una vez de que el cambio es grande y se continúa sin bloquear
 - **Y** no contiene ningún valor por defecto de esa clave
 
-### Requirement: Sección «Commit Review» de Fuente Única Proyectada a Todos los Runtimes (REQ-33.8)
+### Requirement: Sección «Commit Review» de Fuente Única Proyectada a Todos los Runtimes (RF-ORQ-21)
 
-La doctrina SDD DEBE incluir una sección «Commit Review» con una única fuente en `_shared/sdd-orchestrator-sections.md`, referenciada solo por su marcador desde el orquestador de cada runtime soportado y desde el flujo del orquestador de Claude, de modo que el texto proyectado sea idéntico en todos. La sección DEBE registrarse en la lista de secciones compartidas, de modo que la prueba de fuente única y la de ausencia de deriva la cubran. La sección «SDD Change Kickoff and Block Gates» DEBE enlazar la interacción de la puerta `tasks` de REQ-33.5. La sección NO DEBE mencionar RDD ni recibos.
+La doctrina SDD DEBE incluir una sección «Commit Review» con una única fuente en `_shared/sdd-orchestrator-sections.md`, referenciada solo por su marcador desde el orquestador de cada runtime soportado y desde el flujo del orquestador de Claude, de modo que el texto proyectado sea idéntico en todos. La sección DEBE registrarse en la lista de secciones compartidas, de modo que la prueba de fuente única y la de ausencia de deriva la cubran. La sección «SDD Change Kickoff and Block Gates» DEBE enlazar la interacción de la puerta `tasks` de RF-GAT-23. La sección NO DEBE mencionar RDD ni recibos.
 
 #### Scenario: Todos los orquestadores proyectan la sección
 
@@ -630,9 +630,9 @@ La doctrina SDD DEBE incluir una sección «Commit Review» con una única fuent
 - **CUANDO** se regeneran con la herramienta de actualización y se ejecutan las pruebas
 - **ENTONCES** pasan sin ediciones manuales
 
-### Requirement: Contenido Común de la Doctrina «Commit Review» (REQ-33.9)
+### Requirement: Contenido Común de la Doctrina «Commit Review» (RF-ORQ-22)
 
-La sección DEBE establecer, como mínimo: (a) al cerrar cada tarea con commit, el orquestador avisa en el chat con el sha, la tarea y la orden `git show <sha>`; (b) los tres modos de REQ-33.1 y su efecto, aclarando que en `stop` y `stop-before-commit` la pausa por tarea no es una puerta, no usa las tres salidas y no escribe en `gates.yaml`; (c) en `notify` el trabajo continúa sin parar; (d) pedir la PR da por validados todos los commits pendientes, no existe aprobación commit a commit y nada bloquea la PR; (e) solo se registran los commits sobre los que la persona pidió cambios; (f) para cambios sobre un commit ya superado, si la rama no está publicada (ningún remoto la contiene) se usa `git commit --fixup=<sha>` y un autosquash no interactivo diferido hasta antes de abrir la PR, y si ya está publicada se usa un commit correctivo nuevo, y nunca se reescribe historia publicada; (g) para intercalar un `fixup!` se termina o se aparca primero la tarea en curso; (h) se recomienda fusionar con merge commit, sin squash, para que los commits revisados lleguen a la rama destino, y Axiom no fusiona. Los modos 2 y 3 DEBEN describir además el avance tarea a tarea y, en el modo 3, que el commit solo se hace tras la aprobación de la persona. El comportamiento por tarea DEBE cumplirse aunque la fase de implementación devuelva varias tareas juntas: el aviso es uno por commit y se emite por el orquestador al recuperar el control.
+La sección DEBE establecer, como mínimo: (a) al cerrar cada tarea con commit, el orquestador avisa en el chat con el sha, la tarea y la orden `git show <sha>`; (b) los tres modos de RF-GAT-19 y su efecto, aclarando que en `stop` y `stop-before-commit` la pausa por tarea no es una puerta, no usa las tres salidas y no escribe en `gates.yaml`; (c) en `notify` el trabajo continúa sin parar; (d) pedir la PR da por validados todos los commits pendientes, no existe aprobación commit a commit y nada bloquea la PR; (e) solo se registran los commits sobre los que la persona pidió cambios; (f) para cambios sobre un commit ya superado, si la rama no está publicada (ningún remoto la contiene) se usa `git commit --fixup=<sha>` y un autosquash no interactivo diferido hasta antes de abrir la PR, y si ya está publicada se usa un commit correctivo nuevo, y nunca se reescribe historia publicada; (g) para intercalar un `fixup!` se termina o se aparca primero la tarea en curso; (h) se recomienda fusionar con merge commit, sin squash, para que los commits revisados lleguen a la rama destino, y Axiom no fusiona. Los modos 2 y 3 DEBEN describir además el avance tarea a tarea y, en el modo 3, que el commit solo se hace tras la aprobación de la persona. El comportamiento por tarea DEBE cumplirse aunque la fase de implementación devuelva varias tareas juntas: el aviso es uno por commit y se emite por el orquestador al recuperar el control.
 
 #### Scenario: La sección contiene el aviso y la orden de revisión
 
@@ -670,9 +670,9 @@ La sección DEBE establecer, como mínimo: (a) al cerrar cada tarea con commit, 
 - **CUANDO** el orquestador recupera el control
 - **ENTONCES** emite tres avisos, uno por sha, cada uno con su tarea y su `git show <sha>`
 
-### Requirement: Contrato `commit_review` de `sdd-apply` (REQ-33.10)
+### Requirement: Contrato `commit_review` de `sdd-apply` (RF-ORQ-23)
 
-La skill `sdd-apply` DEBE documentar el parámetro de lanzamiento `commit_review` con el vocabulario de REQ-33.1, tomado de la proyección de `status` (REQ-33.4), con `notify` por defecto cuando falta. En `notify` DEBE devolver, junto a cada tarea completada, el sha de su commit. En `stop` y `stop-before-commit` DEBE devolver el control al orquestador tras cada tarea. En `stop-before-commit` NO DEBE hacer el commit de la tarea hasta recibir la aprobación de la persona, dejando el trabajo de esa tarea sin confirmar y dejando constancia del estado de la tarea para poder reanudar. La skill DEBE indicar dónde se registran, en SDD, los commits con cambios pedidos (REQ-33.9 e), en un artefacto de seguimiento del rol cuya ubicación fija design, sin reabrir la puerta `tasks`.
+La skill `sdd-apply` DEBE documentar el parámetro de lanzamiento `commit_review` con el vocabulario de RF-GAT-19, tomado de la proyección de `status` (RF-GAT-22), con `notify` por defecto cuando falta. En `notify` DEBE devolver, junto a cada tarea completada, el sha de su commit. En `stop` y `stop-before-commit` DEBE devolver el control al orquestador tras cada tarea. En `stop-before-commit` NO DEBE hacer el commit de la tarea hasta recibir la aprobación de la persona, dejando el trabajo de esa tarea sin confirmar y dejando constancia del estado de la tarea para poder reanudar. La skill DEBE indicar dónde se registran, en SDD, los commits con cambios pedidos (RF-ORQ-22 e), en un artefacto de seguimiento del rol cuya ubicación fija design, sin reabrir la puerta `tasks`.
 
 #### Scenario: `notify` devuelve un sha por tarea
 
@@ -699,9 +699,9 @@ La skill `sdd-apply` DEBE documentar el parámetro de lanzamiento `commit_review
 - **CUANDO** se registra un commit con cambios pedidos
 - **ENTONCES** la puerta `tasks` sigue `approved`, no se reabre y conserva su `commit_review`, aunque cambie el contenido del fichero de tareas
 
-### Requirement: La Skill `work-unit-commits` Incluye `fixup!`, Autosquash y Merge sin Squash, en Paridad (REQ-33.11)
+### Requirement: La Skill `work-unit-commits` Incluye `fixup!`, Autosquash y Merge sin Squash, en Paridad (RF-ORQ-24)
 
-Las dos copias de la skill `work-unit-commits` (la embebida en `internal/assets/skills/` y la del repositorio en `skills/`) DEBEN recibir las reglas de REQ-33.9 (f) y (h) con el mismo texto, y la paridad entre ambas DEBE seguir vigilada por la prueba de paridad de copias.
+Las dos copias de la skill `work-unit-commits` (la embebida en `internal/assets/skills/` y la del repositorio en `skills/`) DEBEN recibir las reglas de RF-ORQ-22 (f) y (h) con el mismo texto, y la paridad entre ambas DEBE seguir vigilada por la prueba de paridad de copias.
 
 #### Scenario: Las copias mantienen la paridad
 
@@ -714,7 +714,7 @@ Las dos copias de la skill `work-unit-commits` (la embebida en `internal/assets/
 - **DADO** una copia con las reglas y otra sin ellas
 - **CUANDO** se ejecuta la prueba de paridad
 - **ENTONCES** falla
-### Requirement: La Doctrina Proyectada No Contiene la Prosa de RDD (REQ-46.3)
+### Requirement: La Doctrina Proyectada No Contiene la Prosa de RDD (RF-ORQ-25)
 
 La doctrina de los orquestadores SDD y ODD proyectada a los doce runtimes, la fuente compartida `_shared/sdd-orchestrator-sections.md`, las skills `judgment-day` y `sdd-verify`, la convención `openspec-convention.md` y los goldens regenerados NO DEBEN contener la sección `Review Execution Contract` ni su marcador, la sección «Receipt-driven development is user-owned», el vocabulario de revisión por recibos (`lineage`, `receipt`, `acknowledge`, `burn`, `review/start(target)`, `review-refuter`) ni comandos `axiom review`. La prosa de entrega (`single-pr`), de Commit Review y de Judgment Day NO cambia salvo por la retirada de sus menciones a RDD.
 
@@ -732,7 +732,7 @@ La doctrina de los orquestadores SDD y ODD proyectada a los doce runtimes, la fu
 - **ENTONCES** no contienen `RDD`, `receipt` ni `axiom review`
 - **Y** `judgment-day` conserva sus dos jueces ciegos y sus artefactos `review-ledger`
 
-### Requirement: `axiom sync` No Instala Agentes, Plugins, Skill ni Hook de RDD (REQ-46.4)
+### Requirement: `axiom sync` No Instala Agentes, Plugins, Skill ni Hook de RDD (RF-ORQ-26)
 
 `axiom sync` y la instalación NO DEBEN escribir ningún agente `review-*` (`review-risk`, `review-resilience`, `review-readability`, `review-reliability`, `review-refuter`, `review-validator`) en ningún runtime, ni sus entradas en los overlays de OpenCode, ni los plugins `opencode-review-transport.ts`, ni la skill `rdd-defect-workflow`, ni ningún hook `Stop` o `SessionStart` cuya orden sea `axiom review stop-hook` (o `gentle-ai review stop-hook`). Tampoco DEBEN modificar ni borrar los que ya estuvieran instalados por una versión anterior: la limpieza es manual (sección de migración manual de la propuesta C-01-e). Los agentes de Judgment Day (`jd-judge-a`, `jd-judge-b`, `jd-fix-agent`) y los demás agentes SDD NO cambian.
 

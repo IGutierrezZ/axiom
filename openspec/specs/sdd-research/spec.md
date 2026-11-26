@@ -8,7 +8,7 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
 
 ## Requirements
 
-### Requirement: Open Capability Admission for Optional Research (formerly: Closed Capability Admission)
+### Requirement: Open Capability Admission for Optional Research (formerly: Closed Capability Admission) (RF-RES-01)
 
 The selected-research lane is optional, not mandatory, following the absorption of upstream's replacement of closed admission (commit `ba3ed690`). The lane MUST continue to accept only the classes `documentation` and `open-web`; admission MUST continue to verify declaration and exact grant. Bash, generic MCP, and unnamed legacy tools MUST continue to be denied. The absence of a selected-research invocation for a given change MUST NOT by itself block the proposal or any other SDD artifact.
 
@@ -36,7 +36,7 @@ The selected-research lane is optional, not mandatory, following the absorption 
 - AND any block declared in `sdd-propose` comes from a reason other than the absence of selected research
 (Previously: the lane named the schema `gentle-ai.sdd-research-capability/v1`, which no Axiom code or asset uses any more.)
 
-### Requirement: Auditable Evidence Integrity
+### Requirement: Auditable Evidence Integrity (RF-RES-02)
 
 Completed artifacts MUST record questions, admission/grants, source IDs (class/title/publisher/URL/access date/excerpt), claim mappings, contradictions, uncertainty/freshness, and separate product choices.
 
@@ -52,7 +52,7 @@ Completed artifacts MUST record questions, admission/grants, source IDs (class/t
 - WHEN its artifact is persisted
 - THEN outcome is explicit, unvalidated claims are excluded, and readiness is false
 
-### Requirement: Hybrid Completion and Recovery
+### Requirement: Hybrid Completion and Recovery (RF-RES-03)
 
 Selected research MUST persist revisioned intent, admission, outcome, and references. `openspec` validates OpenSpec only, `engram` validates Engram only, `hybrid` requires matching OpenSpec/Engram writes, and `none` cannot set `proposal_ready`. Failure, missing artifact, divergence, partial, or blocked MUST retain intent and block.
 

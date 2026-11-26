@@ -11,7 +11,7 @@
 
 Método normativo de absorción de commits de upstream por tandas temáticas: deriva obligatoriamente la lista de ficheros de cada tanda desde el commit de origen, exige verificación sin filtrar, comprueba el inventario de no-reversión y las rutas protegidas en cada tanda, y sostiene el registro durable de absorción con su espejo en Engram.
 
-### Requirement: Derivación obligatoria de la lista de ficheros de una tanda (REQ-20.1)
+### Requirement: Derivación obligatoria de la lista de ficheros de una tanda (RF-UPS-01)
 
 Toda tanda de absorción DEBE derivar su lista de ficheros de `git show <sha-upstream> --stat` para cada commit de upstream que la compone. El diff resultante de la tanda DEBE contrastarse contra esa derivación, y todo fichero presente en la derivación y ausente del diff DEBE llevar un motivo escrito en el registro durable de absorción. Un artefacto de planificación (`design.md`, `tasks.md`) que enumere ficheros de una tanda sin citar su derivación de `git show --stat` NO DEBE aceptarse; es motivo de rechazo de la tanda.
 
@@ -29,7 +29,7 @@ Toda tanda de absorción DEBE derivar su lista de ficheros de `git show <sha-ups
 
 ---
 
-### Requirement: Verificación sin filtrar (REQ-20.2)
+### Requirement: Verificación sin filtrar (RF-UPS-02)
 
 Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...` y `go test ./...` sin la bandera `-run`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) DEBE aceptarse como evidencia de cierre de una tanda.
 (Previously: exigía además `e2e/e2e_test.sh` en verde, que se retira con la suite e2e en contenedores; antes, la cláusula que exigía declarar que `bench/` quedaba fuera de la suite raíz, retirada con el módulo `bench/` (C-01-e, P21).)
@@ -45,7 +45,7 @@ Toda tanda de absorción DEBE presentar como evidencia de verificación `go buil
 - **ENTONCES** la tanda no se acepta como verificada
 - **Y** no se marca `absorbido` en el registro para ninguno de sus commits
 
-### Requirement: Inventario de no-reversión por tanda (REQ-20.3)
+### Requirement: Inventario de no-reversión por tanda (RF-UPS-03)
 
 El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode, no forzado de `theme`, persona Axiom en castellano peninsular, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
 (Previously: la entrada V3 hablaba del logo «en presets», retirados por C-08-f, y la V6 incluía la localización íntegra de la TUI, retirada por C-08-f.)
@@ -56,7 +56,7 @@ El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario d
 - **ENTONCES** se rechaza
 - **Y** se detiene el incremento hasta el último estado verde
 
-### Requirement: Rutas protegidas fuera de alcance (REQ-20.4)
+### Requirement: Rutas protegidas fuera de alcance (RF-UPS-04)
 
 Ninguna tanda de absorción DEBE contener ficheros bajo `internal/hub/`, `openspec/INDEX.md` u `openspec/config.yaml`. Un diff que toque cualquiera de esas rutas DEBE rechazarse y detener el incremento hasta el último estado verde.
 (Previously: el segundo párrafo prohibía ficheros bajo `bench/` salvo una tanda de reconciliación del corpus; el módulo `bench/` se retira (C-01-e, P21).)
@@ -66,7 +66,7 @@ Ninguna tanda de absorción DEBE contener ficheros bajo `internal/hub/`, `opensp
 - **CUANDO** se evalúa la tanda para su cierre
 - **ENTONCES** se rechaza
 - **Y** se revierte hasta el último estado verde
-### Requirement: Estructura y estados del registro durable de absorción (REQ-20.5)
+### Requirement: Estructura y estados del registro durable de absorción (RF-UPS-05)
 
 El sistema DEBE mantener el registro durable de absorción en `docs/upstream-absorption-ledger.md`, con una fila por cada uno de los 91 commits de upstream sin fusiones entre el ancestro común `266574b0` y el techo congelado `82a6de96` (etiqueta `v3.4.0` de upstream), medidos el 2026-09-19. Cada fila DEBE registrar como mínimo: el sha de upstream, la tanda del fork que lo absorbe, su estado (`absorbido`, `descartado-deliberadamente` o `revertido`), su evidencia de verificación, y un motivo escrito cuando el estado sea `descartado-deliberadamente` o `revertido`.
 
@@ -74,7 +74,7 @@ El sistema DEBE mantener el registro durable de absorción en `docs/upstream-abs
 - **DADO** el commit de upstream `18fa04fb` absorbido por la tanda F4
 - **CUANDO** se consulta su fila en el registro
 - **ENTONCES** el estado es `absorbido`
-- **Y** cita su evidencia de verificación sin filtrar conforme a REQ-20.2
+- **Y** cita su evidencia de verificación sin filtrar conforme a RF-UPS-02
 
 #### Scenario: Fila con motivo para un commit descartado
 - **DADO** un commit de upstream cuyo contenido colisiona con una divergencia deliberada del inventario V1–V8
@@ -83,7 +83,7 @@ El sistema DEBE mantener el registro durable de absorción en `docs/upstream-abs
 
 ---
 
-### Requirement: Completitud del registro al cierre, espejo en Engram e inmutabilidad de las filas (REQ-20.6)
+### Requirement: Completitud del registro al cierre, espejo en Engram e inmutabilidad de las filas (RF-UPS-06)
 
 Al cierre del incremento, el registro DEBE contener las 91 filas correspondientes a los 91 commits de upstream sin fusiones medidos el 2026-09-19 entre `266574b0` y el techo congelado `82a6de96` (etiqueta `v3.4.0`, decisión D4), cada una con un estado asignado. El sistema DEBE mantener un espejo del registro en Engram, con su medición fechada. Ninguna fila DEBE borrarse: revertir una tanda ya absorbida DEBE actualizar el estado de sus filas a `revertido`, conservando el resto de sus campos, nunca eliminar la fila.
 

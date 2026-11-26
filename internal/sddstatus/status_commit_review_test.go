@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// Proyección de `commitReview` en la puerta `tasks` (REQ-33.4, REQ-33.5, REQ-33.6).
+// Proyección de `commitReview` en la puerta `tasks` (RF-GAT-22, RF-GAT-23, RF-GAT-24).
 
 func approvedGate(gate kickoff.GateKey, mutate ...func(*kickoff.GateRecord)) kickoff.GateRecord {
 	record := kickoff.GateRecord{Gate: gate, Decision: kickoff.DecisionApproved, Reason: "conforme", Actor: "reviewer"}
@@ -104,7 +104,7 @@ func TestStatusCommitReviewSurvivesTheHandOff(t *testing.T) {
 	}
 }
 
-// REQ-33.4: ni una puerta tasks pendiente, ni otra puerta aprobada, ni un cambio continuo lo proyectan.
+// RF-GAT-22: ni una puerta tasks pendiente, ni otra puerta aprobada, ni un cambio continuo lo proyectan.
 func TestStatusOmitsCommitReviewWhereItDoesNotApply(t *testing.T) {
 	t.Parallel()
 	t.Run("tasks pendiente", func(t *testing.T) {
@@ -141,7 +141,7 @@ func TestStatusOmitsCommitReviewWhereItDoesNotApply(t *testing.T) {
 	})
 }
 
-// REQ-33.6: un rechazo posterior a la aprobación no cambia el modo proyectado.
+// RF-GAT-24: un rechazo posterior a la aprobación no cambia el modo proyectado.
 func TestStatusCommitReviewIsNotChangedByALaterRejection(t *testing.T) {
 	t.Parallel()
 	records := append(planningApproved(withCommitReview(kickoff.CommitReviewStop)),
@@ -152,7 +152,7 @@ func TestStatusCommitReviewIsNotChangedByALaterRejection(t *testing.T) {
 	}
 }
 
-// REQ-33.4: la proyección es informativa; la ruta, las dependencias y los avisos no cambian.
+// RF-GAT-22: la proyección es informativa; la ruta, las dependencias y los avisos no cambian.
 func TestStatusCommitReviewNeverChangesTheRoute(t *testing.T) {
 	t.Parallel()
 	plain, _ := commitReviewFixture(t, kickoff.ExecutionCheckpointed, planningApproved()...)
@@ -172,7 +172,7 @@ func TestStatusCommitReviewNeverChangesTheRoute(t *testing.T) {
 	}
 }
 
-// REQ-33.5: la pregunta tipada de la puerta `tasks` conserva sus tres opciones y no menciona el modo.
+// RF-GAT-23: la pregunta tipada de la puerta `tasks` conserva sus tres opciones y no menciona el modo.
 func TestTasksGateQuestionKeepsThreeOptionsAndNeverMentionsTheMode(t *testing.T) {
 	t.Parallel()
 	status, _ := commitReviewFixture(t, kickoff.ExecutionCheckpointed,

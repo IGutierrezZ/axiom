@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 )
 
-// `axiom branch guard` (INC-25, S11, REQ-25.21, design D-18): el hook de los runtimes con hooks
+// `axiom branch guard` (INC-25, S11, RF-BRA-22, design D-18): el hook de los runtimes con hooks
 // que `axiom sync` instala. La decisión vive en el motor (internal/branch/engine); aquí solo están
 // las banderas, la ayuda y la entrega al motor de la carga que el runtime envía por la entrada
 // estándar. Es la única orden de la familia pensada para que la ejecute un runtime y no una persona.

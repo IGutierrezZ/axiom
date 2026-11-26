@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// `done` en un multirepo de dos etapas (C-02-a, REQ-25.49, W2 del informe de verificación): cada
+// `done` en un multirepo de dos etapas (C-02-a, RF-BRA-31, W2 del informe de verificación): cada
 // repositorio de código se evalúa con su propio modo de promoción y el de specs, que se trabaja in
 // situ y no recibe ramas del cambio, queda omitido. Con git real y sin red.
 

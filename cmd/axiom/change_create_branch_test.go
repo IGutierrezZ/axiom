@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-25.32 y decisión T4 (INC-25 S8-c4): `axiom change create` comparte escritor con el dashboard
+// RF-WEB-09 y decisión T4 (INC-25 S8-c4): `axiom change create` comparte escritor con el dashboard
 // (`Service.CreateIncrement`): ejecuta `ensure` y escribe `proposal.md` en el planning home que
 // devuelve. Se ejecuta en proceso (`runChange`, sin compilar ningún ejecutable propio) sobre un
 // monorepo embebido con git real, entorno aislado, preferencias de worktree en el hub del HOME de
@@ -88,7 +88,7 @@ func changeCreateWorktreeOf(t *testing.T, repo, name string) string {
 	return ""
 }
 
-// REQ-25.32 escenario 1, vía CLI: desde `main`, `axiom change create x` crea la rama `feat/x` y su
+// RF-WEB-09 escenario 1, vía CLI: desde `main`, `axiom change create x` crea la rama `feat/x` y su
 // worktree y escribe `proposal.md` en el `openspec/changes/x/` del worktree; el checkout principal
 // no recibe la carpeta del cambio.
 func TestChangeCreateRunsEnsureAndWritesInTheWorktree(t *testing.T) {
@@ -131,7 +131,7 @@ func TestChangeCreateRunsEnsureAndWritesInTheWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.32 escenario 4, vía CLI: un rechazo de `ensure` (árbol sucio en `in_place`) sale con 1, nombra
+// RF-WEB-09 escenario 4, vía CLI: un rechazo de `ensure` (árbol sucio en `in_place`) sale con 1, nombra
 // la continuación y no deja carpeta ni rama.
 func TestChangeCreateRefusedEnsureLeavesNoFolder(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")

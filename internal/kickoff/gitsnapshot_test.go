@@ -11,13 +11,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Pruebas de la instantánea de política git de `kickoff.yaml` (REQ-25.36, REQ-25.37, design D-12
+// Pruebas de la instantánea de política git de `kickoff.yaml` (RF-KOF-06, RF-KOF-07, design D-12
 // y §4.5): ida y vuelta YAML, ausencia tolerada, forma validada con gitref, sin SHAs ni rutas
 // absolutas, lectura no estricta (un binario anterior la ignora) y escritura única con el
 // sellado.
 
 // sampleSnapshot es la instantánea de un multirepo (único lugar con ramas de rol: en un monorepo
-// el único rol es `fullstack`, REQ-2.2 de `workspace-topology`) con los roles core y qa sobre el
+// el único rol es `fullstack`, RF-TOP-04 de `workspace-topology`) con los roles core y qa sobre el
 // mismo repositorio de código, la integración `main` y el prefijo `feat`; el repositorio de specs
 // se trabaja in situ y no lleva ramas.
 func sampleSnapshot() *GitSnapshot {
@@ -50,7 +50,7 @@ func snapshotKickoff(change string) Kickoff {
 	return k
 }
 
-// REQ-25.36: la instantánea sobrevive a escribir y leer `kickoff.yaml`, campo a campo.
+// RF-KOF-06: la instantánea sobrevive a escribir y leer `kickoff.yaml`, campo a campo.
 func TestGitSnapshotRoundTripsThroughKickoffYAML(t *testing.T) {
 	changeRoot := t.TempDir()
 
@@ -80,7 +80,7 @@ func TestGitSnapshotRoundTripsThroughKickoffYAML(t *testing.T) {
 	}
 }
 
-// REQ-25.36: sin SHAs ni rutas absolutas ni de worktree en lo que se escribe.
+// RF-KOF-06: sin SHAs ni rutas absolutas ni de worktree en lo que se escribe.
 func TestGitSnapshotWritesNeitherShasNorAbsolutePaths(t *testing.T) {
 	changeRoot := t.TempDir()
 	if _, _, err := Seal(changeRoot, snapshotKickoff("x")); err != nil {
@@ -98,7 +98,7 @@ func TestGitSnapshotWritesNeitherShasNorAbsolutePaths(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y REQ-25.37: la lectura tolera la ausencia de instantánea y el documento no emite la
+// RF-KOF-06 y RF-KOF-07: la lectura tolera la ausencia de instantánea y el documento no emite la
 // clave `git:` si no la hay, de modo que un kickoff antiguo no cambia ni un byte.
 func TestKickoffWithoutSnapshotReadsAndWritesNoGitBlock(t *testing.T) {
 	changeRoot := t.TempDir()
@@ -118,7 +118,7 @@ func TestKickoffWithoutSnapshotReadsAndWritesNoGitBlock(t *testing.T) {
 	}
 }
 
-// REQ-25.36: un binario anterior —que decodifica sin estricto y no conoce `git:`— ignora el bloque
+// RF-KOF-06: un binario anterior —que decodifica sin estricto y no conoce `git:`— ignora el bloque
 // sin error, y ParseKickoff tolera claves desconocidas dentro de él (versiones futuras).
 func TestGitSnapshotIsIgnoredByAnOlderDecoderAndToleratesUnknownKeys(t *testing.T) {
 	data, err := yaml.Marshal(snapshotKickoff("x"))
@@ -140,7 +140,7 @@ func TestGitSnapshotIsIgnoredByAnOlderDecoderAndToleratesUnknownKeys(t *testing.
 	}
 }
 
-// REQ-25.36 y D-12: Validate comprueba la forma de la instantánea con gitref si el bloque
+// RF-KOF-06 y D-12: Validate comprueba la forma de la instantánea con gitref si el bloque
 // existe, y nunca la coacciona.
 func TestGitSnapshotValidateChecksTheShape(t *testing.T) {
 	mutations := map[string]func(g *GitSnapshot){
@@ -195,7 +195,7 @@ func TestGitSnapshotValidateChecksTheShape(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y D-12: un `kickoff.yaml` con la instantánea mal formada no se acepta al leer.
+// RF-KOF-06 y D-12: un `kickoff.yaml` con la instantánea mal formada no se acepta al leer.
 func TestParseKickoffRejectsAMalformedSnapshot(t *testing.T) {
 	k := snapshotKickoff("x")
 	k.Git.Repositories[0].Role = "otro"
@@ -208,7 +208,7 @@ func TestParseKickoffRejectsAMalformedSnapshot(t *testing.T) {
 	}
 }
 
-// REQ-25.36: la instantánea se escribe una sola vez, con el resto de la configuración sellada
+// RF-KOF-06: la instantánea se escribe una sola vez, con el resto de la configuración sellada
 // y en la misma escritura: un segundo sellado devuelve al ganador sin reescribir los bytes, y
 // una instantánea distinta del segundo no sustituye a la primera.
 func TestSealWritesTheSnapshotOnceAndReturnsTheWinnerWithoutRewriting(t *testing.T) {
@@ -242,7 +242,7 @@ func TestSealWritesTheSnapshotOnceAndReturnsTheWinnerWithoutRewriting(t *testing
 	}
 }
 
-// REQ-25.36: los ficheros se escriben con `\n`, también en Windows.
+// RF-KOF-06: los ficheros se escriben con `\n`, también en Windows.
 func TestSealedSnapshotUsesUnixLineEndings(t *testing.T) {
 	changeRoot := t.TempDir()
 	if _, _, err := Seal(changeRoot, snapshotKickoff("x")); err != nil {
@@ -257,7 +257,7 @@ func TestSealedSnapshotUsesUnixLineEndings(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y REQ-25.46: la rama principal sellada y el modo de promoción ya materializado
+// RF-KOF-06 y RF-BRA-28: la rama principal sellada y el modo de promoción ya materializado
 // sobreviven a escribir y leer `kickoff.yaml`; ambos campos son válidos con `branch` y `release`.
 func TestGitSnapshotRoundTripsTheMainBranchAndThePromotion(t *testing.T) {
 	for _, mode := range []string{"branch", "release"} {
@@ -291,7 +291,7 @@ func TestGitSnapshotRoundTripsTheMainBranchAndThePromotion(t *testing.T) {
 	}
 }
 
-// REQ-25.36: sin los campos nuevos no se emite ninguna clave y un kickoff anterior se lee sin ellos.
+// RF-KOF-06: sin los campos nuevos no se emite ninguna clave y un kickoff anterior se lee sin ellos.
 func TestGitSnapshotWithoutPromotionFieldsEmitsNoNewKeysAndReadsOldDocuments(t *testing.T) {
 	changeRoot := t.TempDir()
 	if _, _, err := Seal(changeRoot, snapshotKickoff("x")); err != nil {

@@ -14,8 +14,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Preferencias personales de worktree en el dashboard (INC-25, REQ-3.1, REQ-25.29,
-// REQ-25.33, design D-20). Viven en el hub (`~/.axiom/workspaces.json`) y nunca en `axiom.yaml`:
+// Preferencias personales de worktree en el dashboard (INC-25, RF-HUB-05, RF-HUB-07,
+// RF-WEB-10, design D-20). Viven en el hub (`~/.axiom/workspaces.json`) y nunca en `axiom.yaml`:
 // ninguna ruta de este fichero escribe un fichero del proyecto.
 
 // projectNotRegisteredError dice que el proyecto que el dashboard tiene abierto no está en el
@@ -28,7 +28,7 @@ func (e *projectNotRegisteredError) Error() string {
 }
 
 // worktreePrefsOf devuelve las preferencias guardadas en la entrada del hub y las efectivas
-// (REQ-25.29): para lo que no está guardado, el modo `worktree` y la raíz
+// (RF-HUB-07): para lo que no está guardado, el modo `worktree` y la raíz
 // `<padre>/<nombre>-wt`. Se calcula sobre la propia entrada, sin releer el hub. Una entrada con
 // un valor guardado inválido (editada a mano) no rompe el listado: rigen los valores por
 // defecto, y las guardadas se devuelven tal cual para que el usuario vea qué hay en el fichero.
@@ -109,12 +109,12 @@ func (s *Service) SetActiveWorktreePrefs(p hub.WorktreePrefs) (*ProjectWorktreeP
 }
 
 // validateWorktreePrefs comprueba unas preferencias antes de que ninguna operación toque el
-// hub, con los mensajes en castellano del hub (REQ-25.29).
+// hub, con los mensajes en castellano del hub (RF-HUB-07).
 func validateWorktreePrefs(mode, root string) error {
 	return hub.ValidateWorktreePrefs(hub.WorktreePrefs{Mode: mode, Root: root})
 }
 
-// handleActiveWorktreePrefs sirve `GET|PUT /api/projects/active/worktree-prefs` (REQ-25.33).
+// handleActiveWorktreePrefs sirve `GET|PUT /api/projects/active/worktree-prefs` (RF-WEB-10).
 // El PUT sustituye ambas preferencias; un valor inválido responde 400 sin cambiar el hub y un
 // proyecto activo sin registrar responde 404.
 func (s *Server) handleActiveWorktreePrefs(w http.ResponseWriter, r *http.Request) {

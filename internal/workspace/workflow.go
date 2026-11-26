@@ -7,7 +7,7 @@ import (
 )
 
 // WorkflowLane es el carril de trabajo que el proyecto declara en `workflow.lane`
-// de axiom.yaml (REQ-27.1).
+// de axiom.yaml (RF-TOP-11).
 type WorkflowLane string
 
 const (
@@ -21,11 +21,11 @@ const (
 	WorkflowLaneAsk WorkflowLane = "ask"
 
 	// DefaultWorkflowLane es el carril cuando axiom.yaml no declara `workflow.lane`
-	// (REQ-27.1).
+	// (RF-TOP-11).
 	DefaultWorkflowLane = WorkflowLaneSDD
 )
 
-// WorkflowConfig es el bloque `workflow:` de axiom.yaml (REQ-27.1).
+// WorkflowConfig es el bloque `workflow:` de axiom.yaml (RF-TOP-11).
 //
 // En Declarations.Workflow conserva lo escrito (Lane vacío si no se declaró la
 // clave). En WorkspaceConfig.Workflow, Lane está siempre relleno.

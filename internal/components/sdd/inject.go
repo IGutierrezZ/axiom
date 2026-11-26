@@ -1761,7 +1761,7 @@ func ensureClaudeSDDPreflightHook(settingsPath string, agentID model.AgentID) (b
 	return wr.Changed, nil
 }
 
-// The matchers and timeout of the `axiom branch guard` hook (REQ-25.22, design
+// The matchers and timeout of the `axiom branch guard` hook (RF-BRA-23, design
 // D-18). They are constants on purpose: the command is the identity of the
 // entry, and Codex binds the trust of an unmanaged hook to the hash of its
 // entry (spike-guard-runtimes.md, A-2), so a changed command, matcher or
@@ -1975,7 +1975,7 @@ func ManagedOpenCodePluginNamesFor(agent model.AgentID) []string {
 func managedOpenCodePluginNames(agent model.AgentID) []string {
 	switch agent {
 	case model.AgentOpenCode:
-		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, REQ-25.22): solo OpenCode.
+		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, RF-BRA-23): solo OpenCode.
 		return []string{"axiom-branch-guard.ts", "model-variants.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
 	default:
 		return nil

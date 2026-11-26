@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Matriz de amenazas «Rutas con aspecto de documentación» (REQ-25.21, design D-18, paso 2): la
+// Matriz de amenazas «Rutas con aspecto de documentación» (RF-BRA-22, design D-18, paso 2): la
 // guarda D clasifica por segmentos de ruta y nunca ejecuta ni interpreta el contenido. Son pruebas
 // puras: no usan git ni tocan el disco.
 

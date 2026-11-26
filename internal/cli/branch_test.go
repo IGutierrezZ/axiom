@@ -169,7 +169,7 @@ type branchRegistryJSON struct {
 	Present bool `json:"present"`
 }
 
-// branchDecisionJSON es la `decision` de un `decision_required` (REQ-25.8, design §4.3).
+// branchDecisionJSON es la `decision` de un `decision_required` (RF-BRA-08, design §4.3).
 type branchDecisionJSON struct {
 	Question string `json:"question"`
 	Choices  []struct {
@@ -253,7 +253,7 @@ func helpVerbs(help string) []string {
 	return verbs
 }
 
-// REQ-25.1, escenario «La ayuda lista los cinco verbos»: la ayuda lista `ensure`, `status`, `scope`,
+// RF-BRA-01, escenario «La ayuda lista los cinco verbos»: la ayuda lista `ensure`, `status`, `scope`,
 // `done` y `guard`; ni `push`, ni `pr`, ni el retirado `check`.
 func TestBranchHelpListsTheFiveVerbs(t *testing.T) {
 	implemented := []string{"ensure", "status", "scope", "done", "guard"}
@@ -285,7 +285,7 @@ func TestBranchHelpListsTheFiveVerbs(t *testing.T) {
 	}
 }
 
-// REQ-25.1, escenario «Un subcomando no listado no existe».
+// RF-BRA-01, escenario «Un subcomando no listado no existe».
 func TestBranchRejectsUnrecognisedSubcommandsWithCode2(t *testing.T) {
 	for _, subcommand := range []string{"push", "pr", "check", "inexistente"} {
 		t.Run(subcommand, func(t *testing.T) {
@@ -305,7 +305,7 @@ func TestBranchRejectsUnrecognisedSubcommandsWithCode2(t *testing.T) {
 	}
 }
 
-// REQ-25.2: `status --change x --json --cwd <ruta>` imprime un `axiom.branch-result/v1`
+// RF-BRA-02: `status --change x --json --cwd <ruta>` imprime un `axiom.branch-result/v1`
 // con el cambio, el carril y la topología y, por repositorio, su nombre, papel, raíz
 // git, git common dir, rama actual (por ReadHead), rama de integración y base, con las
 // ramas del plan.
@@ -366,7 +366,7 @@ func TestBranchStatusPrintsTheResultAsJSON(t *testing.T) {
 	}
 }
 
-// REQ-25.15 y REQ-25.2 (escenarios «Cambio no iniciado» y «Los valores del JSON son
+// RF-BRA-16 y RF-BRA-02 (escenarios «Cambio no iniciado» y «Los valores del JSON son
 // tokens en inglés con etiqueta en castellano»): un cambio sin ramas es `not_started`
 // con la etiqueta «no iniciado» y código de salida 0.
 func TestBranchStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
@@ -465,7 +465,7 @@ func TestBranchStatusWarnsWhenHeadHasAnUnknownForm(t *testing.T) {
 	}
 }
 
-// REQ-25.2, escenario «`--cwd` fija el directorio de partida»: el resultado es el
+// RF-BRA-02, escenario «`--cwd` fija el directorio de partida»: el resultado es el
 // del `--cwd`, no el del directorio de trabajo del proceso; sin `--cwd` rige este.
 func TestBranchStatusCwdFixesTheStartingDirectory(t *testing.T) {
 	repo := newBranchRepository(t)
@@ -500,7 +500,7 @@ func TestBranchStatusCwdFixesTheStartingDirectory(t *testing.T) {
 	})
 }
 
-// REQ-25.2: fuera de git, `not_a_git_repository` con código 1, token con etiqueta y
+// RF-BRA-02: fuera de git, `not_a_git_repository` con código 1, token con etiqueta y
 // una continuación en castellano con la ruta citada.
 func TestBranchStatusOutsideGitIsRefusedWithATypedCode(t *testing.T) {
 	t.Parallel()
@@ -540,7 +540,7 @@ func TestBranchStatusOfAMissingDirectoryIsRefusedWithTheSameCode(t *testing.T) {
 	}
 }
 
-// REQ-25.3 y REQ-25.11: un nombre de cambio inválido es `invalid_name`, con código de
+// RF-BRA-03 y RF-BRA-11: un nombre de cambio inválido es `invalid_name`, con código de
 // salida 1, antes de leer nada con él.
 func TestBranchStatusRefusesAnInvalidChangeNameAsInvalidName(t *testing.T) {
 	t.Parallel()
@@ -638,7 +638,7 @@ func TestBranchStatusUsageErrorsExitWithCode2(t *testing.T) {
 	})
 }
 
-// REQ-25.13: el carril ODD se elige con `--lane odd` y el resultado nombra el documento
+// RF-BRA-14: el carril ODD se elige con `--lane odd` y el resultado nombra el documento
 // `odd/tasks/<feature>.md`.
 func TestBranchStatusOddLane(t *testing.T) {
 	t.Parallel()
@@ -661,7 +661,7 @@ func TestBranchStatusOddLane(t *testing.T) {
 	}
 }
 
-// REQ-25.4: con dos roles sellados, el JSON lleva la rama de seguimiento y una rama por
+// RF-BRA-04: con dos roles sellados, el JSON lleva la rama de seguimiento y una rama por
 // rol, con su tipo y su etiqueta y el destino propuesto de su PR, y el aviso de
 // publicar la de seguimiento.
 func TestBranchStatusWithTwoSealedRolesShowsTheRoleBranches(t *testing.T) {
@@ -704,7 +704,7 @@ func TestBranchStatusWithTwoSealedRolesShowsTheRoleBranches(t *testing.T) {
 }
 
 // branchRemoteOperation dice si una invocación de git es de las que `status` no
-// puede lanzar (REQ-25.1): fetch, pull, push o ls-remote.
+// puede lanzar (RF-BRA-01): fetch, pull, push o ls-remote.
 func branchRemoteOperation(args []string) (string, bool) {
 	for i := 0; i < len(args); i++ {
 		switch arg := args[i]; {
@@ -720,7 +720,7 @@ func branchRemoteOperation(args []string) (string, bool) {
 	return "", false
 }
 
-// REQ-25.1, escenario «Ningún subcomando publica ni abre PR»: con un remoto
+// RF-BRA-01, escenario «Ningún subcomando publica ni abre PR»: con un remoto
 // configurado y un observador en el único punto que ejecuta git, `status` no lanza
 // ninguna operación remota, ni ninguna fuera de la lista cerrada de lecturas.
 func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
@@ -750,7 +750,7 @@ func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
 		if subcommand, remote := branchRemoteOperation(invocation[1:]); remote {
 			t.Errorf("status lanzó la operación remota git %s: %v", subcommand, invocation)
 		}
-		// El HEAD se lee de ficheros (REQ-25.21) y solo se lanzan las lecturas de la
+		// El HEAD se lee de ficheros (RF-BRA-22) y solo se lanzan las lecturas de la
 		// lista cerrada de `internal/branch/gitcli`.
 		switch invocation[1] {
 		case "rev-parse", "worktree", "status", "rev-list", "ls-tree":
@@ -760,7 +760,7 @@ func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
 	}
 }
 
-// REQ-25.2 (G-4): cada token del JSON lleva su etiqueta en castellano en un campo
+// RF-BRA-02 (G-4): cada token del JSON lleva su etiqueta en castellano en un campo
 // hermano, tanto en un resultado listo como en un rechazo.
 func TestBranchStatusPairsEveryTokenWithItsLabel(t *testing.T) {
 	t.Parallel()
@@ -798,7 +798,7 @@ func TestBranchStatusPairsEveryTokenWithItsLabel(t *testing.T) {
 	}
 }
 
-// REQ-25.3: sin configuración rige `main`; el bloque `git:` lo sustituye; una entrada
+// RF-BRA-03: sin configuración rige `main`; el bloque `git:` lo sustituye; una entrada
 // de `repositories:` prevalece sobre `git:` solo en su repositorio.
 func TestBranchStatusShowsTheIntegrationBranchPerRepository(t *testing.T) {
 	t.Parallel()
@@ -944,7 +944,7 @@ repositories:
 	})
 }
 
-// REQ-25.3: un valor inválido o una configuración ilegible en axiom.yaml es
+// RF-BRA-03: un valor inválido o una configuración ilegible en axiom.yaml es
 // `config_invalid`, con código de salida 1, la causa en el mensaje y la continuación
 // ejecutable con la carpeta maestra citada.
 func TestBranchStatusRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) {
@@ -989,7 +989,7 @@ func TestBranchStatusRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) 
 	}
 }
 
-// REQ-25.2: un fallo de git que ningún otro código cubre es `git_failed` y nombra la
+// RF-BRA-02: un fallo de git que ningún otro código cubre es `git_failed` y nombra la
 // operación y resume el error. Aquí git no se puede ejecutar: el PATH no lo contiene.
 func TestBranchStatusReportsGitFailedWhenGitCannotRun(t *testing.T) {
 	repo := newBranchRepository(t)

@@ -2,7 +2,7 @@
 // programable por ruta, con registro de peticiones y tiempo virtual, que simula la revisión (rev)
 // de los work items; un reloj manual; y la instalación en las costuras del marco de integraciones.
 //
-// Garantía de REQ-45.16: ninguna prueba que use este paquete puede llamar a Azure DevOps real. El
+// Garantía de RF-ADO-16: ninguna prueba que use este paquete puede llamar a Azure DevOps real. El
 // cliente HTTP que entrega Server.HTTPClient rechaza (y hace fallar la prueba) cualquier petición a
 // un host que no sea local.
 //
@@ -106,7 +106,7 @@ func (s *Server) Options() azuredevops.Options {
 }
 
 // localOnlyTransport rechaza cualquier petición a un host que no sea de bucle local y hace fallar la
-// prueba: ninguna prueba puede llamar a Azure DevOps real (REQ-45.16).
+// prueba: ninguna prueba puede llamar a Azure DevOps real (RF-ADO-16).
 type localOnlyTransport struct {
 	t    testing.TB
 	base http.RoundTripper

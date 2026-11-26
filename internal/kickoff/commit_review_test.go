@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Pruebas del modo de revisión por commit (REQ-33.1, REQ-33.3, REQ-33.4, REQ-33.6).
+// Pruebas del modo de revisión por commit (RF-GAT-19, RF-GAT-21, RF-GAT-22, RF-GAT-24).
 
 func TestCommitReviewVocabularyIsClosedAndOrdered(t *testing.T) {
 	want := []CommitReviewMode{"notify", "stop", "stop-before-commit"}
@@ -111,7 +111,7 @@ func TestParseGateLedgerCommitReview(t *testing.T) {
 	})
 }
 
-// REQ-33.4 y REQ-33.6: el modo es el del primer approved de la puerta; un rechazo posterior no lo
+// RF-GAT-22 y RF-GAT-24: el modo es el del primer approved de la puerta; un rechazo posterior no lo
 // cambia y un ledger anterior da modo vacío (efectivo notify).
 func TestEvaluateGatesCommitReviewComesFromTheClosingApproval(t *testing.T) {
 	cases := []struct {

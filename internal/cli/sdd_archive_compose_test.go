@@ -100,7 +100,7 @@ func TestRunSDDArchiveComposeSupersedeFlag(t *testing.T) {
 	}
 }
 
-// REQ-47.3, REQ-47.8: un identificador inexistente nombra la capacidad por la carpeta de la
+// RF-RID-11, RF-ARC-15: un identificador inexistente nombra la capacidad por la carpeta de la
 // delta, y un provisional lleva la continuación al verbo que asigna; sin escribir en ambos.
 func TestRunSDDArchiveComposeTypedIDErrors(t *testing.T) {
 	cases := []struct {
@@ -137,7 +137,7 @@ func TestRunSDDArchiveComposeTypedIDErrors(t *testing.T) {
 	}
 }
 
-// REQ-30.23: un nombre superado inexistente sigue ignorándose en archive-compose.
+// RF-ARC-12: un nombre superado inexistente sigue ignorándose en archive-compose.
 func TestRunSDDArchiveComposeStillIgnoresUnknownSupersededName(t *testing.T) {
 	root := t.TempDir()
 	canonicalPath, deltaPath := filepath.Join(root, "spec.md"), filepath.Join(root, "delta.md")

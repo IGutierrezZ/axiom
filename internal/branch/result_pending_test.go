@@ -8,12 +8,12 @@ import (
 )
 
 // Pruebas del resultado de `status` sin `--change` (los cambios registrados y los
-// pendientes de archivar, REQ-25.15 y REQ-25.20) y del campo `pendingArchive` de
+// pendientes de archivar, RF-BRA-16 y RF-BRA-21) y del campo `pendingArchive` de
 // `status --change`.
 
 func boolPointer(value bool) *bool { return &value }
 
-// REQ-25.15 y design §4.3: `pendingArchive` es una lista de cambios pendientes sin
+// RF-BRA-16 y design §4.3: `pendingArchive` es una lista de cambios pendientes sin
 // `--change` y un booleano con él; la lista evaluada y vacía se imprime como `[]` y la que
 // no se evaluó (sin referencia de integración) no se imprime.
 func TestPendingArchiveSerialisesAsAListOrAsABoolean(t *testing.T) {
@@ -50,7 +50,7 @@ func TestPendingArchiveSerialisesAsAListOrAsABoolean(t *testing.T) {
 	}
 }
 
-// REQ-25.20: la continuación de un cambio pendiente es una orden ejecutable `axiom
+// RF-BRA-21: la continuación de un cambio pendiente es una orden ejecutable `axiom
 // branch ensure --change <c> --archive`; un nombre con caracteres que el intérprete
 // leería de otro modo va citado.
 func TestPendingChangeNamesTheArchiveContinuation(t *testing.T) {
@@ -64,7 +64,7 @@ func TestPendingChangeNamesTheArchiveContinuation(t *testing.T) {
 	}
 }
 
-// REQ-25.15: un cambio registrado se resume con su carril, su modo y su origen (cada
+// RF-BRA-16: un cambio registrado se resume con su carril, su modo y su origen (cada
 // token con su etiqueta) y las ramas del registro con su worktree, con rutas absolutas.
 func TestNewRegisteredChangeSummarisesTheRecord(t *testing.T) {
 	record := Record{

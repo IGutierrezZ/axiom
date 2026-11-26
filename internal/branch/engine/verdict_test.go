@@ -14,8 +14,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas de `VerdictFor` y de la guarda A con git real, entorno aislado y sin red (REQ-25.18,
-// REQ-25.21, REQ-25.42, design D-10 y D-11). `VerdictFor` responde leyendo ficheros: ninguna
+// Pruebas de `VerdictFor` y de la guarda A con git real, entorno aislado y sin red (RF-BRA-19,
+// RF-BRA-22, RF-CLI-05, design D-10 y D-11). `VerdictFor` responde leyendo ficheros: ninguna
 // de estas pruebas observa un solo proceso de git durante la consulta.
 
 func verdictFor(t *testing.T, q VerdictQuery) branch.Verdict {
@@ -58,7 +58,7 @@ func continuationCWD(t *testing.T, continuation string) string {
 	return match[1]
 }
 
-// REQ-25.18 y REQ-25.21: sin kickoff, los nombres esperados salen de la política y el HEAD, de
+// RF-BRA-19 y RF-BRA-22: sin kickoff, los nombres esperados salen de la política y el HEAD, de
 // los ficheros: no se lanza ningún proceso (el observador queda vacío). La prueba mueve HEAD
 // entre las dos consultas con git directo, que no pasa por gitcommon.Run ni por el observador.
 func TestVerdictForReadsOnlyFilesAndLaunchesNoProcess(t *testing.T) {
@@ -84,7 +84,7 @@ func TestVerdictForReadsOnlyFilesAndLaunchesNoProcess(t *testing.T) {
 	}
 }
 
-// REQ-25.18 (S-7): sin `kickoff.yaml` los nombres salen de la política de `axiom.yaml`, con su
+// RF-BRA-19 (S-7): sin `kickoff.yaml` los nombres salen de la política de `axiom.yaml`, con su
 // prefijo y su integración.
 func TestVerdictForTakesTheNamesFromThePolicyWhenThereIsNoKickoff(t *testing.T) {
 	t.Parallel()
@@ -101,7 +101,7 @@ func TestVerdictForTakesTheNamesFromThePolicyWhenThereIsNoKickoff(t *testing.T) 
 	}
 }
 
-// REQ-25.18 y REQ-25.12: el registro local manda sobre la política. Con una excepción `--prefix`
+// RF-BRA-19 y RF-BRA-12: el registro local manda sobre la política. Con una excepción `--prefix`
 // registrada la rama del cambio es la del registro, vista igual desde el checkout principal y
 // desde el worktree enlazado (el registro vive en el common dir); la de archivado deriva de ella.
 func TestVerdictForTakesTheNamesFromTheRegistryFromTheMainCheckoutAndFromALinkedWorktree(t *testing.T) {
@@ -132,7 +132,7 @@ func TestVerdictForTakesTheNamesFromTheRegistryFromTheMainCheckoutAndFromALinked
 	}
 }
 
-// REQ-25.18 (continuación): desde un worktree enlazado en la rama equivocada la orden de
+// RF-BRA-19 (continuación): desde un worktree enlazado en la rama equivocada la orden de
 // `ensure` apunta a la carpeta maestra del checkout principal, no a la del worktree.
 func TestVerdictForPointsTheContinuationAtTheMainCheckout(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -148,7 +148,7 @@ func TestVerdictForPointsTheContinuationAtTheMainCheckout(t *testing.T) {
 	}
 }
 
-// REQ-25.18: las ramas de rol que se van a sellar (SealRoles) son correctas aunque aún no haya
+// RF-BRA-19: las ramas de rol que se van a sellar (SealRoles) son correctas aunque aún no haya
 // kickoff; sin ellas esa misma rama es incorrecta.
 func TestVerdictForAcceptsTheRoleBranchesAboutToBeSealed(t *testing.T) {
 	t.Parallel()
@@ -159,12 +159,12 @@ func TestVerdictForAcceptsTheRoleBranchesAboutToBeSealed(t *testing.T) {
 	withRoles := verdictFor(t, VerdictQuery{Path: changeRootOf(repo), Change: "x", SealRoles: []string{"core", "qa"}})
 	wantKind(t, withRoles, branch.VerdictCorrect)
 
-	// Un único rol no genera ramas de rol (REQ-25.4): `feat/x-qa` sigue siendo ajena.
+	// Un único rol no genera ramas de rol (RF-BRA-04): `feat/x-qa` sigue siendo ajena.
 	oneRole := verdictFor(t, VerdictQuery{Path: changeRootOf(repo), Change: "x", SealRoles: []string{"qa"}})
 	wantKind(t, oneRole, branch.VerdictWrongBranch)
 }
 
-// REQ-25.37: un cambio cuyo `kickoff.yaml` existe y no tiene instantánea queda exento, y
+// RF-KOF-07: un cambio cuyo `kickoff.yaml` existe y no tiene instantánea queda exento, y
 // también los sumideros acumulativos por nombre; en los dos casos aunque la rama sea la de
 // integración, sin continuación ni aviso.
 func TestVerdictForExemptsAChangeWithoutSnapshotAndTheCumulativeSinks(t *testing.T) {
@@ -212,7 +212,7 @@ func TestVerdictForAnInvalidChangeNameWithoutKickoffIsNotApplicableWithAWarning(
 	wantKind(t, verdictFor(t, VerdictQuery{Path: changeRootOf(repo), Change: "x"}), branch.VerdictWrongBranch)
 }
 
-// REQ-25.18 y REQ-25.42: fuera de un repositorio git la consulta no bloquea y avisa, sin
+// RF-BRA-19 y RF-CLI-05: fuera de un repositorio git la consulta no bloquea y avisa, sin
 // buscar nada más.
 func TestVerdictForOutsideGitIsNotApplicableWithAWarning(t *testing.T) {
 	t.Parallel()
@@ -229,7 +229,7 @@ func TestVerdictForOutsideGitIsNotApplicableWithAWarning(t *testing.T) {
 	}
 }
 
-// REQ-25.21 (HEAD ilegible): un `HEAD` con la forma del backend reftable, que no se puede leer
+// RF-BRA-22 (HEAD ilegible): un `HEAD` con la forma del backend reftable, que no se puede leer
 // sin git, es `not_applicable` con aviso: la consulta no bloquea.
 func TestVerdictForAReftableHeadIsNotApplicableWithAWarning(t *testing.T) {
 	t.Parallel()
@@ -244,7 +244,7 @@ func TestVerdictForAReftableHeadIsNotApplicableWithAWarning(t *testing.T) {
 	}
 }
 
-// REQ-25.18: un HEAD desacoplado es `wrong_branch` y el veredicto lo dice.
+// RF-BRA-19: un HEAD desacoplado es `wrong_branch` y el veredicto lo dice.
 func TestVerdictForADetachedHeadIsWrong(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)
@@ -258,7 +258,7 @@ func TestVerdictForADetachedHeadIsWrong(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenario «Los cambios activos en la rama de integración no alteran el
+// RF-BRA-19, escenario «Los cambios activos en la rama de integración no alteran el
 // veredicto»: un cambio `y` fusionado en `main` no hace correcta a `main` para `x` ni incorrecta
 // a `feat/x`.
 func TestVerdictForIgnoresTheActiveChangesOfTheIntegrationBranch(t *testing.T) {
@@ -272,7 +272,7 @@ func TestVerdictForIgnoresTheActiveChangesOfTheIntegrationBranch(t *testing.T) {
 	wantKind(t, verdictFor(t, VerdictQuery{Path: changeRootOf(repo), Change: "x"}), branch.VerdictCorrect)
 }
 
-// REQ-25.18 (archivado): el registro guarda el prefijo con el que se creó la rama de archivado y
+// RF-BRA-19 (archivado): el registro guarda el prefijo con el que se creó la rama de archivado y
 // el veredicto de archivado lo usa; sin él, la rama de archivado es `<rama del cambio>-archive`.
 func TestVerdictForTakesTheArchiveBranchFromTheRegistryPrefix(t *testing.T) {
 	t.Parallel()
@@ -292,7 +292,7 @@ func TestVerdictForTakesTheArchiveBranchFromTheRegistryPrefix(t *testing.T) {
 	}
 }
 
-// REQ-25.18 y REQ-25.38 (multirepo): el repositorio de specs exige su integración, también en
+// RF-BRA-19 y RF-KOF-08 (multirepo): el repositorio de specs exige su integración, también en
 // el contexto de archivado, y una rama de rol es incorrecta; el de código solo responde al
 // consultante `apply`.
 func TestVerdictForAMultirepoChecksTheSpecsRepositoryAndTheCodeOnlyWhenApplying(t *testing.T) {
@@ -347,7 +347,7 @@ func TestVerdictForTheODDLaneNeedsNoKickoffAndRepeatsTheLane(t *testing.T) {
 	wantKind(t, verdictFor(t, odd), branch.VerdictCorrect)
 }
 
-// REQ-25.42 y D-10: el `error` se reserva para los fallos internos (configuración, kickoff o
+// RF-CLI-05 y D-10: el `error` se reserva para los fallos internos (configuración, kickoff o
 // registro ilegibles) y es un rechazo tipado `config_invalid` con su continuación.
 func TestVerdictForReportsAnUnreadableConfigurationKickoffOrRegistryAsConfigInvalid(t *testing.T) {
 	t.Parallel()
@@ -379,7 +379,7 @@ func TestVerdictForReportsAnUnreadableConfigurationKickoffOrRegistryAsConfigInva
 	}
 }
 
-// REQ-25.19 y D-11: la guarda A deja pasar `correct` y `not_applicable` devolviendo el aviso, se
+// RF-BRA-20 y D-11: la guarda A deja pasar `correct` y `not_applicable` devolviendo el aviso, se
 // niega con `wrong_branch` (rechazo tipado con la continuación) y falla en cerrado ante un
 // fallo interno, con `config_invalid`.
 func TestRequireChangeBranchAllowsCorrectAndNotApplicableAndRefusesWrongBranch(t *testing.T) {

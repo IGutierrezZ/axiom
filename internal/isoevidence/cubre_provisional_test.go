@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// REQ-29.4: Cubre acepta el provisional de un ADDED y lo cuenta como cobertura.
+// RF-ISO-04: Cubre acepta el provisional de un ADDED y lo cuenta como cobertura.
 func TestCheckCoverageProvisional(t *testing.T) {
 	p := reqid.Default()
 	added := req(SectionAdded, "pagos", "Cobro con IVA (prov:30:1)", "Con IVA")

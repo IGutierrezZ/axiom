@@ -10,17 +10,17 @@
 // El paquete se organiza en capas:
 //
 //   - model.go: Section, Requirement, Stage, Code, Finding y la composición del
-//     motivo `blocked(<token>): <detalle>; <continuación>` (REQ-29.16).
+//     motivo `blocked(<token>): <detalle>; <continuación>` (RF-CLI-11).
 //   - fence.go: lectura de líneas con la marca de «dentro de una valla», que
 //     comparten todos los analizadores de Markdown.
 //   - reqid.go: identificadores de requisito (patrón del proyecto, por defecto `REQ-<n>.<m>`) en el nombre de los requisitos
-//     (REQ-29.3, con la tolerancia del archivado interrumpido).
-//   - scenarios.go: escenarios por requisito (REQ-29.10 y nombres repetidos de
-//     REQ-29.6).
+//     (RF-ISO-03, con la tolerancia del archivado interrumpido).
+//   - scenarios.go: escenarios por requisito (RF-ARC-09 y nombres repetidos de
+//     RF-ISO-06).
 //   - bug.go y cubre.go: perfil de bug sin delta, líneas `Cubre:` y cobertura
-//     (REQ-29.4, REQ-29.5, REQ-29.14, REQ-29.15 y REQ-29.19).
+//     (RF-ISO-04, RF-ISO-05, RF-BAS-01, RF-CLI-10 y RF-ISO-10).
 //   - matrix.go y testref.go: matriz de verificación y resolución de las
-//     referencias de prueba contra el árbol (REQ-29.6 a REQ-29.8).
+//     referencias de prueba contra el árbol (RF-ISO-06 a RF-ISO-08).
 //   - trace.go: traza por `--first-parent` detrás de un puerto de historial
-//     (REQ-29.9).
+//     (RF-ISO-09).
 package isoevidence

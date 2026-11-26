@@ -51,7 +51,7 @@ func requireNoOpenSpecAt(t *testing.T, dirs ...string) {
 	}
 }
 
-// TestPlanningHomeResolvesFromTheRegisteredPath cubre REQ-24.10: con la ruta
+// TestPlanningHomeResolvesFromTheRegisteredPath cubre RF-PLH-10: con la ruta
 // registrada en la carpeta maestra o en un repositorio de código, los cambios se
 // leen de <planning home>/changes, y rootPath sigue siendo la ruta registrada.
 func TestPlanningHomeResolvesFromTheRegisteredPath(t *testing.T) {
@@ -110,8 +110,8 @@ func TestCreateIncrementWritesUnderThePlanningHome(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			svc, ws := canonicalService(t, tt.start)
-			// REQ-25.32: `ensure` precede a la escritura. En un multirepo el repositorio de specs se
-			// trabaja in situ, en su rama de integración (REQ-25.5), de modo que solo necesita git.
+			// RF-WEB-09: `ensure` precede a la escritura. En un multirepo el repositorio de specs se
+			// trabaja in situ, en su rama de integración (RF-BRA-05), de modo que solo necesita git.
 			commitGitRepo(t, ws.Specs)
 
 			res, err := svc.CreateIncrement(CreateIncrementRequest{Name: "mi-cambio", Intent: "Propósito X"})

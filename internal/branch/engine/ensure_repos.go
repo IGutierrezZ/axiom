@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Excepciones por cambio y selección de repositorios de `ensure` (REQ-25.12, REQ-25.13, design
+// Excepciones por cambio y selección de repositorios de `ensure` (RF-BRA-12, RF-BRA-14, design
 // D-04): lo que la invocación pide con `--prefix`, `--branch`, `--base` y `--repo` se contrasta con
 // el registro del cambio y se traduce en los hechos que entran al planificador.
 
@@ -28,7 +28,7 @@ type gatherOptions struct {
 	sealRoles []string
 }
 
-// mergeExceptions devuelve las excepciones efectivas del cambio (REQ-25.12). Sin registro rigen
+// mergeExceptions devuelve las excepciones efectivas del cambio (RF-BRA-12). Sin registro rigen
 // las pedidas. Con registro, las no indicadas son las registradas y una pedida igual a la
 // registrada es una repetición idempotente; una pedida distinta es `plan_conflict` cuando el cambio
 // ya tiene ramas materializadas (una excepción no cambia lo que ya existe) y, mientras no las
@@ -77,7 +77,7 @@ type chosenRepositories struct {
 	warnings []string
 }
 
-// chooseRepositories aplica `--repo` (REQ-25.12, REQ-25.13):
+// chooseRepositories aplica `--repo` (RF-BRA-12, RF-BRA-14):
 //
 //   - en el carril ODD, que no divide en roles, incluye los repositorios pedidos y los que el
 //     registro del cambio ya guarda (de modo que repetir `ensure` o `status` sin `--repo` los
@@ -85,7 +85,7 @@ type chosenRepositories struct {
 //   - en el carril SDD acota a los pedidos los repositorios de código que declaran los roles del
 //     cambio, solo en esta ejecución; uno pedido que no es del plan se ignora con un aviso.
 //
-// Una ruta que no existe o no es un repositorio git se omite sin abortar (REQ-25.6). Sin `--repo`
+// Una ruta que no existe o no es un repositorio git se omite sin abortar (RF-BRA-06). Sin `--repo`
 // y sin registro, los repositorios son los declarados.
 func (e *Engine) chooseRepositories(ctx context.Context, operation string, location workspace.Location, planning branch.RepoFacts, lane branch.Lane, code []branch.RepoFacts, record *branch.Record, repos []string) (chosenRepositories, *branch.Refusal) {
 	chosen := chosenRepositories{code: code}
@@ -184,7 +184,7 @@ func (e *Engine) resolveRepositoryPath(ctx context.Context, location workspace.L
 }
 
 // skipRepository compone la ruta omitida de `--repo` (o del registro): nombra la ruta, de dónde
-// sale y el motivo (REQ-25.6).
+// sale y el motivo (RF-BRA-06).
 func skipRepository(path string, location workspace.Location, origin, reason string) branch.SkippedPath {
 	dir := path
 	if !filepath.IsAbs(dir) {
@@ -207,7 +207,7 @@ func pointers(repositories []branch.RepoFacts) []*branch.RepoFacts {
 	return list
 }
 
-// checkSpecsRepository es la comprobación del repositorio de specs de un multirepo (REQ-25.5): se
+// checkSpecsRepository es la comprobación del repositorio de specs de un multirepo (RF-BRA-05): se
 // trabaja in situ, en su rama de integración, y `ensure` nunca hace checkout en él. Fuera de ella
 // (otra rama, una rama de rol del cambio o HEAD desacoplado) rechaza con
 // `specs_repo_not_on_integration`. La rama actual se lee de ficheros, sin lanzar procesos.

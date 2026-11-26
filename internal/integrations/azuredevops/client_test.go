@@ -343,7 +343,7 @@ func TestPluginNewClientSharesStateByOrganizationIgnoringCase(t *testing.T) {
 	}
 }
 
-// REQ-45.16: el endpoint efectivo de las pruebas es el servidor local, nunca dev.azure.com.
+// RF-ADO-16: el endpoint efectivo de las pruebas es el servidor local, nunca dev.azure.com.
 func TestTestOptionsPointAtTheLocalServer(t *testing.T) {
 	srv := adotest.NewServer(t, nil)
 	client, _ := newTestClient(t, srv, nil)

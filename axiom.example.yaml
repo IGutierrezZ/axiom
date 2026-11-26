@@ -91,7 +91,7 @@ workspace:
 # debe ser un booleano sin comillas y una clave desconocida es un error.
 #
 # El patrón de los identificadores de requisito se declara con 'id_pattern', una
-# plantilla de texto entre comillas; sin ella rige REQ-<n>.<m> (p. ej. REQ-30.4).
+# plantilla de texto entre comillas; sin ella rige REQ-<n>.<m> (p. ej. RF-OLS-04).
 # Marcadores: <DOM> código de dominio en mayúsculas (USU), <n> número de serie,
 # <m> número de secuencia sin relleno y <NN> a <NNNNNN> número de secuencia con
 # relleno a 2-6 cifras (<NN> da 01, 09, 10, 100). Debe empezar por un literal en

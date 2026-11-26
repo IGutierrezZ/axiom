@@ -11,7 +11,7 @@ import (
 )
 
 // TestReqidImportsOnlyStandardLibrary fija que internal/reqid es un paquete hoja:
-// sus ficheros de producción solo importan la biblioteca estándar (REQ-44.4).
+// sus ficheros de producción solo importan la biblioteca estándar (RF-RID-04).
 func TestReqidImportsOnlyStandardLibrary(t *testing.T) {
 	files, err := filepath.Glob("*.go")
 	if err != nil {

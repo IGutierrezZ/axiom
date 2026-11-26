@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-25.19 (guarda A): `axiom handoff create` escribe en la carpeta del cambio y por eso consulta
+// RF-BRA-20 (guarda A): `axiom handoff create` escribe en la carpeta del cambio y por eso consulta
 // el veredicto de rama antes de `handoff.WriteFile` (contexto `ordinary`, design §2.11). Se ejecuta
 // como subproceso con el patrón runAxiom (el binario de `go test` relanzado; sin compilar ningún
 // ejecutable propio) sobre un monorepo embebido con git real, entorno aislado y sin red.

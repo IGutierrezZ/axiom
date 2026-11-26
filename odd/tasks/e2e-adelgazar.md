@@ -60,7 +60,7 @@ Fuera de alcance: `Darwin Runtime` (fallo de red, no de prueba), `internal/cli/*
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Verificación sin filtrar (REQ-20.2)
+### Requirement: Verificación sin filtrar (RF-UPS-02)
 
 Toda tanda de absorción DEBE presentar como evidencia de verificación `go build ./...`, `go vet ./...` y `go test ./...` sin la bandera `-run`, todos en verde. Ninguna ejecución filtrada por patrón (`-run <patrón>`) DEBE aceptarse como evidencia de cierre de una tanda.
 (Previously: exigía además `e2e/e2e_test.sh` en verde, que se retira con la suite e2e en contenedores; antes, la cláusula que exigía declarar que `bench/` quedaba fuera de la suite raíz, retirada con el módulo `bench/` (C-01-e, P21).)

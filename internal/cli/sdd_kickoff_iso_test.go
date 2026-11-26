@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-29.12 y REQ-29.13: `seal` prepara la carpeta del cambio tras todas las
+// RF-KOF-11 y RF-KOF-12: `seal` prepara la carpeta del cambio tras todas las
 // validaciones y copia `sdd.iso` a la instantánea. Los nombres de las pruebas
 // empiezan por TestRunSDDKickoffSeal para entrar en el mismo patrón de `-run`.
 
@@ -48,7 +48,7 @@ func listDir(t *testing.T, dir string) []string {
 	return names
 }
 
-// REQ-29.12: un cambio sin carpeta se sella creándola.
+// RF-KOF-11: un cambio sin carpeta se sella creándola.
 func TestRunSDDKickoffSealOnNonexistentChangeCreatesTheFolder(t *testing.T) {
 	root := t.TempDir()
 	mustMkdirAllCLI(t, filepath.Join(root, "openspec", "changes"))
@@ -66,7 +66,7 @@ func TestRunSDDKickoffSealOnNonexistentChangeCreatesTheFolder(t *testing.T) {
 	}
 }
 
-// REQ-29.12: la carpeta existente queda intacta y un segundo sellado no reescribe nada.
+// RF-KOF-11: la carpeta existente queda intacta y un segundo sellado no reescribe nada.
 func TestRunSDDKickoffSealKeepsAnExistingFolderAndIsIdempotent(t *testing.T) {
 	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
 	writeCLIFixture(t, filepath.Join(changeRoot, "proposal.md"), "# propuesta\n")
@@ -94,7 +94,7 @@ func TestRunSDDKickoffSealKeepsAnExistingFolderAndIsIdempotent(t *testing.T) {
 	}
 }
 
-// REQ-29.12 (amenaza 9.1): un nombre de cambio peligroso se rechaza sin crear nada,
+// RF-KOF-11 (amenaza 9.1): un nombre de cambio peligroso se rechaza sin crear nada,
 // ni dentro ni fuera de openspec/changes/.
 func TestRunSDDKickoffSealRejectsUnsafeChangeNamesWithoutCreatingAnything(t *testing.T) {
 	for _, name := range []string{"../x", "archive", "a:(b", "a*b", "a..b", "..", "x/y", `x\y`, "a b", ".oculto", "x.lock", "con"} {
@@ -120,7 +120,7 @@ func TestRunSDDKickoffSealRejectsUnsafeChangeNamesWithoutCreatingAnything(t *tes
 	}
 }
 
-// REQ-29.12: wrong_branch no deja carpeta ni kickoff.yaml aunque el cambio no exista.
+// RF-KOF-11: wrong_branch no deja carpeta ni kickoff.yaml aunque el cambio no exista.
 func TestRunSDDKickoffSealWrongBranchLeavesNoFolder(t *testing.T) {
 	captureSealWarnings(t)
 	isolateIntegrateGit(t)
@@ -137,7 +137,7 @@ func TestRunSDDKickoffSealWrongBranchLeavesNoFolder(t *testing.T) {
 	}
 }
 
-// REQ-29.1 y REQ-29.12: un `sdd:` inválido o contradictorio con workflow.lane se
+// RF-ISO-01 y RF-KOF-11: un `sdd:` inválido o contradictorio con workflow.lane se
 // rechaza sin carpeta ni kickoff.yaml, con la carpeta ausente y con ella presente.
 func TestRunSDDKickoffSealRejectsAnInvalidOrContradictorySDDDeclaration(t *testing.T) {
 	cases := map[string]struct {
@@ -181,7 +181,7 @@ func TestRunSDDKickoffSealRejectsAnInvalidOrContradictorySDDDeclaration(t *testi
 	}
 }
 
-// REQ-29.13: con sdd.iso true el sellado copia la instantánea una sola vez y el
+// RF-KOF-12: con sdd.iso true el sellado copia la instantánea una sola vez y el
 // resumen, en texto y JSON, lo dice; con iso false o sin bloque no aparece nada.
 func TestRunSDDKickoffSealCopiesSDDISOToTheSnapshot(t *testing.T) {
 	t.Run("iso true crea la carpeta y copia la instantánea", func(t *testing.T) {
@@ -232,7 +232,7 @@ func TestRunSDDKickoffSealCopiesSDDISOToTheSnapshot(t *testing.T) {
 	}
 }
 
-// REQ-29.12: si el sellado falla tras crear la carpeta, se retira lo creado; una
+// RF-KOF-11: si el sellado falla tras crear la carpeta, se retira lo creado; una
 // carpeta que ya existía no se borra.
 func TestRunSDDKickoffSealRemovesTheCreatedFolderWhenSealFails(t *testing.T) {
 	failing := func(string, kickoff.Kickoff) (kickoff.Kickoff, bool, error) {
@@ -268,7 +268,7 @@ func TestRunSDDKickoffSealRemovesTheCreatedFolderWhenSealFails(t *testing.T) {
 	})
 }
 
-// REQ-29.13 y REQ-29.12: `--infer` sigue exigiendo una carpeta existente y nunca
+// RF-KOF-12 y RF-KOF-11: `--infer` sigue exigiendo una carpeta existente y nunca
 // copia `iso`, aunque el proyecto lo declare.
 func TestRunSDDKickoffSealInferNeverCreatesTheFolderNorCopiesISO(t *testing.T) {
 	t.Run("sin carpeta", func(t *testing.T) {

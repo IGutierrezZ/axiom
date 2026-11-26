@@ -10,7 +10,7 @@ import (
 
 // SamePlanningHome compara dos planning homes por identidad
 // (pathidentity.SameDirectory) y, cuando alguno no existe, por ruta absoluta
-// limpia, sin distinguir mayúsculas en Windows. REQ-2.2 compara por ruta y no
+// limpia, sin distinguir mayúsculas en Windows. RF-HUB-04 compara por ruta y no
 // exige que existan: axiom init es quien crea <ruta>/openspec.
 //
 // Ese respaldo léxico queda fuera de la política de internal/pathidentity, que

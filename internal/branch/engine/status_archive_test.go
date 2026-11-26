@@ -8,13 +8,13 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Pruebas de la rama de archivado en `status` (REQ-25.15 escenario «La rama de archivado
-// figura en el plan», REQ-25.4 escenario «La rama de archivado no pertenece al modelo de
-// roles», REQ-25.45), con git real y sin red. La rama de archivado figura cuando existe, con
+// Pruebas de la rama de archivado en `status` (RF-BRA-16 escenario «La rama de archivado
+// figura en el plan», RF-BRA-04 escenario «La rama de archivado no pertenece al modelo de
+// roles», RF-BRA-13), con git real y sin red. La rama de archivado figura cuando existe, con
 // los mismos datos que las demás y el destino de su PR en la rama de integración.
 
 // fullstackProject es un monorepo con el rol único `fullstack` sellado en el cambio `x`: en
-// `monorepo-embedded` no existen ramas de rol (REQ-2.2 de `workspace-topology`).
+// `monorepo-embedded` no existen ramas de rol (RF-TOP-04 de `workspace-topology`).
 func fullstackProject(t *testing.T) string {
 	t.Helper()
 	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
@@ -30,7 +30,7 @@ func branchNamesOf(repository branch.RepositoryResult) []string {
 	return names
 }
 
-// REQ-25.15: con la rama de archivado y su worktree, `status` la incluye con la ruta absoluta
+// RF-BRA-16: con la rama de archivado y su worktree, `status` la incluye con la ruta absoluta
 // de su worktree, su tipo (con etiqueta), su estado respecto de la base y el destino de su PR,
 // que es la integración; la rama del cambio sigue como estaba.
 func TestStatusIncludesTheArchiveBranchWithItsWorktreeAndTheIntegrationAsPRTarget(t *testing.T) {
@@ -64,7 +64,7 @@ func TestStatusIncludesTheArchiveBranchWithItsWorktreeAndTheIntegrationAsPRTarge
 	}
 }
 
-// REQ-25.4, escenario «La rama de archivado no pertenece al modelo de roles»: con el rol único
+// RF-BRA-04, escenario «La rama de archivado no pertenece al modelo de roles»: con el rol único
 // `fullstack` de un monorepo (sin ramas de rol), el destino del PR de `feat/x` es la integración,
 // el de la rama de archivado `feat/x-archive` también y el plan no contiene ninguna rama de rol.
 func TestStatusArchiveBranchDoesNotBelongToTheRoleModel(t *testing.T) {
@@ -96,7 +96,7 @@ func TestStatusArchiveBranchDoesNotBelongToTheRoleModel(t *testing.T) {
 	}
 }
 
-// REQ-25.15: sin rama de archivado, `status` no la inventa: ni se lista ni cuenta para que el
+// RF-BRA-16: sin rama de archivado, `status` no la inventa: ni se lista ni cuenta para que el
 // cambio esté iniciado.
 func TestStatusWithoutAnArchiveBranchDoesNotListOne(t *testing.T) {
 	t.Parallel()
@@ -124,7 +124,7 @@ func TestStatusWithoutAnArchiveBranchDoesNotListOne(t *testing.T) {
 	})
 }
 
-// REQ-25.12 y REQ-25.45: la rama de archivado deriva de la rama del cambio registrada
+// RF-BRA-12 y RF-BRA-13: la rama de archivado deriva de la rama del cambio registrada
 // (`--branch inc/inc-25-x` da `inc/inc-25-x-archive`) y, con un prefijo de archivado
 // registrado, de él (`doc/x-archive`), sin `plan_conflict` con el prefijo del cambio.
 func TestStatusNamesTheArchiveBranchFromTheRegistry(t *testing.T) {
@@ -177,7 +177,7 @@ func TestStatusNamesTheArchiveBranchFromTheRegistry(t *testing.T) {
 	})
 }
 
-// REQ-25.45: el carril ODD y el multirepo no tienen rama de archivado: `status` no la muestra
+// RF-BRA-13: el carril ODD y el multirepo no tienen rama de archivado: `status` no la muestra
 // aunque exista una rama con ese nombre.
 func TestStatusNeverListsAnArchiveBranchForTheODDLaneOrAMultirepo(t *testing.T) {
 	t.Parallel()
@@ -213,7 +213,7 @@ func TestStatusNeverListsAnArchiveBranchForTheODDLaneOrAMultirepo(t *testing.T) 
 	})
 }
 
-// REQ-25.1 y REQ-25.15: incluir la rama de archivado solo lee con la lista cerrada de
+// RF-BRA-01 y RF-BRA-16: incluir la rama de archivado solo lee con la lista cerrada de
 // subcomandos y nunca hace una operación remota.
 func TestStatusArchiveBranchLaunchesNoRemoteOrWriteOperation(t *testing.T) {
 	repo := embeddedCoreProject(t)

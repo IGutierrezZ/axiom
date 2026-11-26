@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Publication states (REQ-27.18). The field is absent when there is nothing to commit or push.
+// Publication states (RF-PUB-11). The field is absent when there is nothing to commit or push.
 const (
 	// publicationPending: documentation is uncommitted or commits are unpushed and `axiom sdd
 	// publish` would act on them; Invocation is the command to run.
@@ -33,7 +33,7 @@ const (
 )
 
 // PublicationProjection is the additive `publication` field of `axiom sdd status --json`
-// (REQ-27.18): whether `axiom sdd publish` has something to do for the selected change right now.
+// (RF-PUB-11): whether `axiom sdd publish` has something to do for the selected change right now.
 // It lives at the root of the status, next to `gateQuestion`, and is structurally absent (nil,
 // omitempty) when there is nothing to publish or the publication does not apply, so a status
 // without it is byte-identical to the one that predates it. It is computed with reads only: no
@@ -61,7 +61,7 @@ func publicationEngine() *engine.Engine {
 	return engine.Default()
 }
 
-// decoratePublication projects `publication` after the other additive decorations (REQ-27.18). The
+// decoratePublication projects `publication` after the other additive decorations (RF-PUB-11). The
 // cheap checks run first, so a change that does not meet the moment of publication pays no git read.
 func decoratePublication(status *Status, location workspace.Location) {
 	eng := publicationEngine()
@@ -93,7 +93,7 @@ func decoratePublicationWith(status *Status, location workspace.Location, read p
 }
 
 // publicationDue says whether the change is at a moment where `axiom sdd publish` is expected
-// (REQ-27.13) and, in that case, whether it is the archive moment. The conditions run in order and
+// (RF-PUB-08) and, in that case, whether it is the archive moment. The conditions run in order and
 // the first that fails ends it:
 //
 //  1. a change is selected;
@@ -148,7 +148,7 @@ func publicationDue(status *Status, location workspace.Location) (archive, due b
 	return false, planned && status.TaskProgress.Completed == 0 && status.Artifacts["verifyReport"] != ArtifactDone
 }
 
-// continuousAutoPublication reports the sealed authorization to publish without asking (REQ-27.4).
+// continuousAutoPublication reports the sealed authorization to publish without asking (RF-KOF-10).
 func continuousAutoPublication(config kickoff.FlowConfig) bool {
 	return config.ExecutionStyle == kickoff.ExecutionContinuous && config.DocsPublication == kickoff.DocsPublicationAuto
 }

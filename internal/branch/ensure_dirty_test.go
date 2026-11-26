@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `dirty_worktree` de `ensure` en modo `in_place` y el plan sin worktrees (REQ-25.8, REQ-25.9,
+// `dirty_worktree` de `ensure` en modo `in_place` y el plan sin worktrees (RF-BRA-08, RF-BRA-09,
 // design D-05): el rechazo nombra el repositorio, los ficheros y una continuación ejecutable,
 // y el planificador no coloca ni mide worktrees cuando las ramas se despliegan en el propio
 // repositorio. Pruebas puras, sin git.
@@ -76,7 +76,7 @@ func TestDirtyWorktreeSummarisesALongListOfFiles(t *testing.T) {
 	}
 }
 
-// design D-05 y REQ-25.8: en `in_place` las ramas se planifican igual, pero sin ruta de
+// design D-05 y RF-BRA-08: en `in_place` las ramas se planifican igual, pero sin ruta de
 // worktree: ni se coloca ni se mide en Windows, de modo que ni una raíz de worktrees dentro del
 // repositorio ni una demasiado larga impiden el plan, y el workspace es el propio checkout.
 func TestPlanInPlaceHasNoWorktreesAndIgnoresThePlacementRules(t *testing.T) {

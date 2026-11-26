@@ -6,7 +6,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// REQ-25.3: `main_branch` y `promotion` entran a la política con la herencia
+// RF-BRA-03: `main_branch` y `promotion` entran a la política con la herencia
 // actual. Sin ellas, la política es idéntica a la de antes.
 func TestPolicyPromotionDefaultsToNothingDeclared(t *testing.T) {
 	for name, policy := range map[string]Policy{
@@ -26,7 +26,7 @@ func TestPolicyPromotionDefaultsToNothingDeclared(t *testing.T) {
 	}
 }
 
-// REQ-25.3 y REQ-25.46: un repositorio hereda `promotion` del bloque `git:` salvo que
+// RF-BRA-03 y RF-BRA-28: un repositorio hereda `promotion` del bloque `git:` salvo que
 // su entrada la declare, y `PromotionSource` dice de qué capa sale.
 func TestPolicyPromotionInheritsFieldByField(t *testing.T) {
 	policy := loadPolicy(t, `git:

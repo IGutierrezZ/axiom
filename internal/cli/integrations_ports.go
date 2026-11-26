@@ -62,7 +62,7 @@ Banderas:
 Sale con 0 si el descubrimiento terminó; con 1 si falló; con 2 por un error de uso.
 `
 
-// Errores tipados de los verbos que despachan por puertos (REQ-45.12 y REQ-45.13). Se comprueban con
+// Errores tipados de los verbos que despachan por puertos (RF-ADO-12 y RF-ADO-13). Se comprueban con
 // errors.Is. La persona lee el mensaje de integrationVerbError, que dice qué corregir; el texto del
 // centinela solo aparece si alguien lo imprime suelto, y aun así nombra la salida o declara por qué
 // no hay comando que la resuelva.
@@ -210,7 +210,7 @@ type integrationsConnectCandidateJSON struct {
 }
 
 // integrationsConnectJSON es el documento de `connect --json`. organization repite account con el
-// nombre que le da Azure DevOps (REQ-45.12); account es la clave genérica del almacén de identidad.
+// nombre que le da Azure DevOps (RF-ADO-12); account es la clave genérica del almacén de identidad.
 type integrationsConnectJSON struct {
 	Schema       string                             `json:"schema"`
 	Plugin       string                             `json:"plugin"`

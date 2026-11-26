@@ -1,10 +1,10 @@
 // Package gitcli son las operaciones tipadas de git del motor de ramas (INC-25, design
 // D-01): el adaptador de los puertos de `internal/branch` sobre gitcommon.Run, el único
-// punto que ejecuta git (REQ-25.1, G-7). Las lecturas usan una lista cerrada de
+// punto que ejecuta git (RF-BRA-01, G-7). Las lecturas usan una lista cerrada de
 // subcomandos (`rev-parse`, `worktree list`, `status`, `rev-list`, `ls-tree`, `cat-file blob`, `log`,
 // `reflog show` y `merge-base --is-ancestor`) y las escrituras son solo `branch` (crear y eliminar), `worktree add`,
 // `worktree remove` y `switch` (modo `in_place`); ninguna es remota. La única
-// operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, REQ-25.10):
+// operación remota es Fetch (`git fetch origin`, `ensure --fetch` y `done --fetch`, RF-BRA-10):
 // el puerto no tiene ningún método que publique. La capa de árbol equivalente de `done`
 // (`git merge-tree --write-tree`, desde git 2.38) y la lectura de la versión de git están en
 // capability.go.
@@ -305,7 +305,7 @@ var objectName = regexp.MustCompile(`^[0-9a-f]{40}([0-9a-f]{24})?$`)
 
 // CreateBranch crea la rama local name apuntando a startPoint (`git branch --no-track
 // <name> <startPoint>`). Nunca mueve ni reinicia una rama existente: si name ya existe,
-// git falla y la rama queda donde estaba (REQ-25.7). `--no-track` evita que git configure
+// git falla y la rama queda donde estaba (RF-BRA-07). `--no-track` evita que git configure
 // un upstream cuando el punto de partida es una referencia remota ya traída a local:
 // `axiom branch` nunca publica ni sigue una rama remota. dir es el checkout principal.
 func (*Git) CreateBranch(ctx context.Context, dir, name, startPoint string) error {
@@ -341,7 +341,7 @@ func (*Git) CreateTrackingBranch(ctx context.Context, dir, name, remoteRef strin
 // (`git worktree add <path> <branch>`). Nunca crea la rama: si no existe, git falla y no
 // deja nada. path debe ser absoluta (los worktrees nunca se colocan por una ruta relativa
 // al directorio del proceso) y dir es el checkout principal, que no cambia de rama, de
-// índice ni de árbol de trabajo (REQ-25.8).
+// índice ni de árbol de trabajo (RF-BRA-08).
 func (*Git) AddWorktree(ctx context.Context, dir, path, branchName string) error {
 	if !filepath.IsAbs(path) {
 		return errors.New("la ruta " + strconv.Quote(path) + " del worktree no es válida para git: debe ser absoluta")
@@ -353,11 +353,11 @@ func (*Git) AddWorktree(ctx context.Context, dir, path, branchName string) error
 }
 
 // Switch despliega la rama local existente name en el propio repositorio (`git switch
-// --no-guess <name>`): es el cambio de rama del modo `in_place` (REQ-25.8). Nunca crea la
+// --no-guess <name>`): es el cambio de rama del modo `in_place` (RF-BRA-08). Nunca crea la
 // rama ni la adivina desde una referencia remota local del mismo nombre, que crearía una rama
 // con seguimiento (`--no-guess`): si no existe, git falla y el repositorio queda como estaba.
 // Tampoco sobrescribe cambios sin confirmar: ante un conflicto, git se niega. Quien llama
-// comprueba antes, sin efectos, que el árbol está limpio (REQ-25.9). dir es el checkout
+// comprueba antes, sin efectos, que el árbol está limpio (RF-BRA-09). dir es el checkout
 // principal del repositorio, que es el que cambia de rama.
 func (*Git) Switch(ctx context.Context, dir, name string) error {
 	if err := plainArgument(name); err != nil {
@@ -367,7 +367,7 @@ func (*Git) Switch(ctx context.Context, dir, name string) error {
 }
 
 // IsAncestor dice si ancestor es ancestro de descendant, o el mismo commit (`git merge-base
-// --is-ancestor`): la capa 1 de la detección de fusión de `done` (`ancestry`, REQ-25.16). Es una
+// --is-ancestor`): la capa 1 de la detección de fusión de `done` (`ancestry`, RF-BRA-17). Es una
 // lectura que usa solo referencias locales. Una referencia que git no resuelve no es «no es
 // ancestro» sino un error: quien llama comprueba antes que existen.
 func (*Git) IsAncestor(ctx context.Context, dir, ancestor, descendant string) (bool, error) {
@@ -392,7 +392,7 @@ func (*Git) IsAncestor(ctx context.Context, dir, ancestor, descendant string) (b
 }
 
 // RemoveWorktree retira el worktree enlazado de path (`git worktree remove [--force] <path>`) y
-// su registro en git: es el primer paso del desmontaje de `done` (REQ-25.17). Sin force, git se
+// su registro en git: es el primer paso del desmontaje de `done` (RF-BRA-18). Sin force, git se
 // niega ante un worktree con cambios sin confirmar; con él los descarta. path debe ser absoluta y
 // dir es el checkout principal, nunca el worktree que se retira. Nunca borra la rama.
 func (*Git) RemoveWorktree(ctx context.Context, dir, path string, force bool) error {
@@ -430,7 +430,7 @@ func (*Git) RemoveEmptyDir(_ context.Context, path string) error {
 
 // DeleteBranch elimina la rama local name aunque git no la considere fusionada
 // (`git branch -D <name>`): tras un squash o un rebase la fusión ya está confirmada por las capas
-// de `done`, y `-d` se negaría (REQ-25.17). Solo toca `refs/heads/<name>`: nunca una rama remota.
+// de `done`, y `-d` se negaría (RF-BRA-18). Solo toca `refs/heads/<name>`: nunca una rama remota.
 // git se niega si la rama está desplegada en algún worktree, de modo que se retira antes. dir es
 // el checkout principal.
 func (*Git) DeleteBranch(ctx context.Context, dir, name string) error {
@@ -441,7 +441,7 @@ func (*Git) DeleteBranch(ctx context.Context, dir, name string) error {
 }
 
 // Fetch trae las referencias del remoto (`git fetch <remote>`, sin `--prune`): es la única
-// operación remota del motor y solo la lanza `ensure --fetch` (REQ-25.10, design D-06).
+// operación remota del motor y solo la lanza `ensure --fetch` (RF-BRA-10, design D-06).
 // Actualiza las referencias remotas locales (`refs/remotes/<remote>/*`) y no mueve la rama
 // actual ni toca el árbol de trabajo. dir es el checkout principal. Un fallo (remoto
 // inexistente o inalcanzable) devuelve un error en castellano con el comando, el directorio

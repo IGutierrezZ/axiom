@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// Arnés de S9-c3 (REQ-25.43, REQ-24.9, design D-14): `axiom sdd status x --json` con tareas que nombran
+// Arnés de S9-c3 (RF-CLI-06, RF-PLH-09, design D-14): `axiom sdd status x --json` con tareas que nombran
 // el worktree que `axiom branch ensure` registró para el cambio. Entra por RunSDDStatus, el punto de
 // entrada de la CLI, con el repositorio montado solo con ficheros y el registro escrito con el almacén
 // real; sin él, el worktree exige concesión (`blocked(edit_authority_missing)`), con él no.

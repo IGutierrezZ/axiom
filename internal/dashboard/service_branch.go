@@ -14,8 +14,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Escritores guardados del dashboard y `ensure` al crear un cambio (INC-25, REQ-25.19 y
-// REQ-25.32, design D-11 y D-20; decisión T4 de tasks.md). Todo escritor de la carpeta de un
+// Escritores guardados del dashboard y `ensure` al crear un cambio (INC-25, RF-BRA-20 y
+// RF-WEB-09, design D-11 y D-20; decisión T4 de tasks.md). Todo escritor de la carpeta de un
 // cambio llama a la guarda A (cli.GuardChangeWriter, contexto `ordinary`) antes de escribir y,
 // fuera de la rama del cambio, devuelve el *branch.RefusalError de la guarda sin crear nada.
 //
@@ -26,7 +26,7 @@ import (
 
 // ensureIncrementBranch ejecuta `ensure` para el cambio name del carril SDD y devuelve el
 // planning home donde hay que escribir. mode es la respuesta a un `decision_required`
-// (`CreateIncrementRequest.Mode`, REQ-25.32): vacío, rige el modo efectivo que resuelve `ensure`
+// (`CreateIncrementRequest.Mode`, RF-WEB-09): vacío, rige el modo efectivo que resuelve `ensure`
 // (el del registro, el de las preferencias del hub o `worktree`); con valor, `ensure` lo aplica y lo
 // registra para este cambio. Cualquier resultado que no sea `ready` (incluido `decision_required`)
 // se devuelve como *branch.RefusalError, sin escribir nada.
@@ -70,7 +70,7 @@ func ensureRefusal(result branch.Result, name, cwd string) *branch.RefusalError 
 	return &branch.RefusalError{Refusal: refusal}
 }
 
-// writeIncrement es el escritor guardado de la creación de un incremento (REQ-25.19, D-11):
+// writeIncrement es el escritor guardado de la creación de un incremento (RF-BRA-20, D-11):
 // extraído del cuerpo de escritura de CreateIncrement, escribe `proposal.md` bajo
 // `<planningHome>/changes/<name>`. Consulta la guarda A antes de crear la carpeta: invocado sin
 // `ensure` en una rama que no es la del cambio, se niega con `wrong_branch` y no crea nada.
@@ -155,7 +155,7 @@ func guardIncrementFolder(changeRoot, change, op string) error {
 }
 
 // planningIntegration es la rama de integración resuelta del proyecto registrado (design D-22,
-// REQ-25.23): `git.integration_branch` de su axiom.yaml o, sin él o sin poder localizar el
+// RF-BRA-24): `git.integration_branch` de su axiom.yaml o, sin él o sin poder localizar el
 // espacio de trabajo, el valor por defecto de branch.ResolvePolicy. Sustituye al literal `main`
 // que GetSpecsSyncStatus informaba cuando git no sabe decir la rama actual.
 func (s *Service) planningIntegration() string {
@@ -167,10 +167,10 @@ func (s *Service) planningIntegration() string {
 }
 
 // branchPolicyView proyecta la política de ramas del proyecto para `GET /api/workspace`
-// (REQ-1.1, design D-20): la política efectiva del workspace, que resuelve branch.ResolvePolicy
+// (RF-WEB-01, design D-20): la política efectiva del workspace, que resuelve branch.ResolvePolicy
 // (con `cfg == nil`, sin `git:` o con un bloque inválido, rigen los valores por defecto), y las
 // entradas de `repositories:` tal como se declararon, en su orden y sin aplicar la herencia. Es
-// solo lectura: no escribe axiom.yaml (REQ-25.33). `repositories` nunca es nil.
+// solo lectura: no escribe axiom.yaml (RF-WEB-10). `repositories` nunca es nil.
 func branchPolicyView(cfg *workspace.WorkspaceConfig) (BranchPolicyDTO, []RepositoryPolicyDTO) {
 	policy := branch.ResolvePolicy(cfg)
 	repositories := []RepositoryPolicyDTO{}

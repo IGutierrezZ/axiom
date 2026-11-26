@@ -14,22 +14,22 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 ## REMOVED Requirements
 
-### Requirement: Estructura Canónica del Documento Vivo ODD (REQ-19.1)
+### Requirement: Estructura Canónica del Documento Vivo ODD (RF-ODO-01)
 
 (Motivo: la Decisión D1 retira por completo el paquete Go `internal/odd` —incluidos `document.go`, `render.go`, `template.go` y `store.go`, que implementaban esta estructura de doce secciones— y lo sustituye por el protocolo ODD de upstream, basado en instrucciones de agente inyectadas en `internal/components/agentguidance/routing.go`.)
 (Migración: los documentos `odd/tasks/<feature>.md` y sus espejos Engram `odd/<feature>/tasks` ya existentes no se modifican ni se eliminan; son datos, no código. El contrato de forma del documento continúa como convención de facto sostenida por instrucciones de agente, fuera del alcance de `openspec/specs/`; no existe una capacidad Go sucesora verificable por test para esta estructura.)
 
-### Requirement: Identidad Estable de Feature y Ubicación del Fichero (REQ-19.2)
+### Requirement: Identidad Estable de Feature y Ubicación del Fichero (RF-ODO-02)
 
 (Motivo: la validación de kebab-case y el rechazo de colisión de nombre de *feature* los implementaba `internal/odd/name.go`, retirado junto con el resto del paquete por la Decisión D1.)
 (Migración: ninguna. La resolución de nombre de *feature* pasa a ser una convención de agente sin verificación Go.)
 
-### Requirement: Identificadores Estables de Tarea y Derivación de Progreso (REQ-19.3)
+### Requirement: Identificadores Estables de Tarea y Derivación de Progreso (RF-ODO-03)
 
 (Motivo: la derivación de progreso mediante `multirole.CountTasks` sobre el checklist accionable estaba implementada en `internal/odd/parse.go` y `internal/odd/document.go`, retirados por la Decisión D1.)
 (Migración: el protocolo ODD de upstream reporta continuidad de *feature*, TDD configurado y commit por unidad de trabajo como doctrina de agente, sin un mecanismo Go equivalente y verificable por test en este fork.)
 
-### Requirement: Contrato del Espejo de Recuperación en Engram y Política de Divergencia (REQ-19.4)
+### Requirement: Contrato del Espejo de Recuperación en Engram y Política de Divergencia (RF-ODO-04)
 
 (Motivo: la comparación fichero-vs-espejo y la política de autoridad las implementaba `internal/odd/mirror.go`, retirado por la Decisión D1.)
 (Migración: el espejo Engram `odd/<feature>/tasks` sigue siendo la convención que el agente mantiene por MCP, ahora sin ninguna verificación del lado Go; no hay comprobación automática de divergencia equivalente a `--check-mirror` tras esta retirada.)

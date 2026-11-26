@@ -33,22 +33,22 @@ type VerdictQuery struct {
 }
 
 // VerdictFor responde «¿esta rama es la que corresponde a este cambio en este repositorio según
-// su papel?» (REQ-25.18, design D-10). Es la consulta única de las guardas A, B y D y obtiene
-// todos los hechos leyendo ficheros, sin lanzar un solo proceso de git (REQ-25.21: lee `HEAD`
-// sin procesos; REQ-25.42: si git no está disponible, no bloquea): `workspace.Locate`,
+// su papel?» (RF-BRA-19, design D-10). Es la consulta única de las guardas A, B y D y obtiene
+// todos los hechos leyendo ficheros, sin lanzar un solo proceso de git (RF-BRA-22: lee `HEAD`
+// sin procesos; RF-CLI-05: si git no está disponible, no bloquea): `workspace.Locate`,
 // `gitcommon.GitRootFromFiles`, `gitcommon.CommonDirFromFiles`, `gitcommon.ReadHead`,
 // `kickoff.Load`, el registro local y la política de `axiom.yaml`.
 //
 // Un veredicto `not_applicable` explica su exención en Detail (un cambio con `kickoff.yaml` sin
-// instantánea, REQ-25.37, y los sumideros acumulativos por nombre, REQ-25.18) y, cuando no pudo
+// instantánea, RF-KOF-07, y los sumideros acumulativos por nombre, RF-BRA-19) y, cuando no pudo
 // comprobar la rama (una ruta fuera de git, un `HEAD` ilegible), además avisa en Warning sin
 // bloquear; así también un cambio sin kickoff cuyo nombre no forma un nombre de rama válido.
 // El `error` se reserva para los fallos internos —configuración, kickoff o registro
 // ilegibles— y es siempre un *branch.RefusalError `config_invalid` con su continuación.
 //
 // Los nombres esperados salen, para la rama del cambio y las de rol, de la instantánea del
-// kickoff (REQ-25.36) si tiene entrada para el repositorio y, sin kickoff, del registro local
-// (REQ-25.12) y de la política (expectedNames). No consulta los cambios activos de la rama de
+// kickoff (RF-KOF-06) si tiene entrada para el repositorio y, sin kickoff, del registro local
+// (RF-BRA-12) y de la política (expectedNames). No consulta los cambios activos de la rama de
 // integración.
 func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict, error) {
 	if err := ctx.Err(); err != nil {
@@ -66,7 +66,7 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 	}
 
 	if isCumulativeSink(q.Change) {
-		return exempt(in, fmt.Sprintf("«%s» es un sumidero acumulativo y no un cambio: queda exento de las guardas de rama (REQ-25.18)", q.Change)), nil
+		return exempt(in, fmt.Sprintf("«%s» es un sumidero acumulativo y no un cambio: queda exento de las guardas de rama (RF-BRA-19)", q.Change)), nil
 	}
 	start := existingDirectory(q.Path)
 	root, inGit := gitcommon.GitRootFromFiles(start)
@@ -83,7 +83,7 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 	}
 
 	// Con kickoff, la instantánea de política git fija los nombres esperados; un kickoff sin ella (un
-	// cambio preexistente, un retro-sellado con `--infer`) deja el cambio exento (REQ-25.37, R15).
+	// cambio preexistente, un retro-sellado con `--infer`) deja el cambio exento (RF-KOF-07, R15).
 	var snapshot *kickoff.GitSnapshot
 	if in.Lane != branch.LaneODD {
 		sealed, err := kickoff.Load(filepath.Join(loc.PlanningHome, "changes", q.Change))
@@ -92,7 +92,7 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 		}
 		if sealed != nil {
 			if sealed.Git == nil {
-				return exempt(in, "el kickoff.yaml del cambio no tiene instantánea de política git: queda exento de las guardas de rama (REQ-25.37)"), nil
+				return exempt(in, "el kickoff.yaml del cambio no tiene instantánea de política git: queda exento de las guardas de rama (RF-KOF-07)"), nil
 			}
 			snapshot = sealed.Git
 		}
@@ -151,7 +151,7 @@ func exempt(in branch.VerdictInput, reason string) branch.Verdict {
 
 // unchecked es el veredicto de una consulta que no pudo comprobar la rama (una ruta fuera de
 // git, un `HEAD` ilegible): `not_applicable`, con el aviso que lo dice, porque la guarda no
-// bloquea lo que no puede comprobar (REQ-25.42).
+// bloquea lo que no puede comprobar (RF-CLI-05).
 func unchecked(in branch.VerdictInput, reason string) branch.Verdict {
 	verdict := exempt(in, "no se comprobó la rama del cambio: "+reason)
 	verdict.Warning = fmt.Sprintf("no se pudo comprobar la rama del cambio %s: %s; no se bloquea", in.Change, reason)
@@ -169,7 +169,7 @@ func invalidChangeName(in branch.VerdictInput, invalid error) branch.Verdict {
 }
 
 // isCumulativeSink dice si name es un sumidero acumulativo, `e2e-cumulative` o `cumulative-<rol>`:
-// viven en `changes/` pero no son cambios y quedan exentos por nombre (REQ-25.18).
+// viven en `changes/` pero no son cambios y quedan exentos por nombre (RF-BRA-19).
 func isCumulativeSink(name string) bool {
 	return name == "e2e-cumulative" || cumulativeSink.MatchString(name)
 }
@@ -212,7 +212,7 @@ func (e *Engine) loadRecord(commonDir string, lane branch.Lane, change string) (
 	return e.registry.Load(commonDir, lane, change)
 }
 
-// roleOf es el papel del repositorio consultado según la topología (REQ-25.5): en monorepo
+// roleOf es el papel del repositorio consultado según la topología (RF-BRA-05): en monorepo
 // embebido todos reciben el modelo de ramas del cambio; en multirepo, el repositorio del
 // planning home (el de specs) se trabaja in situ y los demás son de código.
 func roleOf(loc workspace.Location, isPlanning bool) branch.RepoRole {
@@ -229,7 +229,7 @@ func roleOf(loc workspace.Location, isPlanning bool) branch.RepoRole {
 // expectedNames compone los nombres esperados del repositorio cuya raíz es root y cuyo git
 // common dir es repoCommon (design D-10, «Nombres esperados»). Para la rama del cambio y las de
 // rol: (1) la instantánea del kickoff, si tiene entrada para el repositorio; (2) sin ella, el
-// registro (la rama registrada o las excepciones de REQ-25.12); (3) la política del repositorio.
+// registro (la rama registrada o las excepciones de RF-BRA-12); (3) la política del repositorio.
 // Para la de archivado: el registro si `ensure --archive` recibió `--prefix`; si no, la instantánea;
 // si no, `<rama del cambio>-archive`. El carril ODD no tiene rama de archivado.
 func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record, snapshot *kickoff.GitSnapshot, root, repoCommon string) branch.ExpectedNames {
@@ -263,7 +263,7 @@ func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record
 	}
 	names := branch.ExpectedNames{Change: changeBranch, Integration: effective.IntegrationBranch}
 
-	// Con dos o más roles que tocan el repositorio hay ramas de rol (REQ-25.4); las registradas
+	// Con dos o más roles que tocan el repositorio hay ramas de rol (RF-BRA-04); las registradas
 	// valen aunque el kickoff aún no las nombre.
 	roles := make(map[string]bool, len(recordedRoles))
 	switch {

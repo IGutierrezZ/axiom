@@ -178,7 +178,7 @@ func usesBetaMainHeadCheck(tool ToolInfo, currentVersion string) bool {
 
 // isSelfToolRepo reports whether tool is the primary CLI product. It delegates
 // to the shared identity predicate so the beta main-head check follows the
-// registry name (REQ-22.3, D-01).
+// registry name (RF-UPD-03, D-01).
 func isSelfToolRepo(tool ToolInfo) bool {
 	return IsSelfTool(tool)
 }

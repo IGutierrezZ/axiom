@@ -18,7 +18,7 @@ import (
 )
 
 // Pruebas de las capas 2 y 3 de la detección de fusión de `done` y de la sonda de linajes RDD
-// (REQ-25.16, REQ-25.17, design D-09, Q1 y A-4), con git real, entorno aislado y sin red.
+// (RF-BRA-17, RF-BRA-18, design D-09, Q1 y A-4), con git real, entorno aislado y sin red.
 
 // commitFile confirma en dir un fichero con contenido propio: un commit vacío tendría el mismo árbol
 // que su base y la capa del árbol equivalente lo daría por fusionado.
@@ -82,7 +82,7 @@ func invocations(seen [][]string, subcommand string) [][]string {
 	return found
 }
 
-// REQ-25.16 (escenario «Merge por squash detectado por la capa `equivalent_tree`») y REQ-25.17
+// RF-BRA-17 (escenario «Merge por squash detectado por la capa `equivalent_tree`») y RF-BRA-18
 // (escenario «Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`»): con
 // `feat/x` integrada en `main` mediante un squash y `main` con commits posteriores, la rama no es
 // ancestro de `main` y la capa del árbol equivalente la confirma; se elimina aunque git no la
@@ -116,7 +116,7 @@ func TestDoneConfirmsASquashMergeByEquivalentTreeEvenWhenMainAdvanced(t *testing
 	}
 }
 
-// REQ-25.16 (escenarios «Sin soporte de `merge-tree` la capa se omite» y «Nada confirma la fusión»)
+// RF-BRA-17 (escenarios «Sin soporte de `merge-tree` la capa se omite» y «Nada confirma la fusión»)
 // y Q1: sin soporte (la variable de prueba o un git anterior a la 2.38), la capa 2 se omite sin
 // error y con un aviso, no se lanza `merge-tree` y, sin evidencia `pr_merged`, `done` exige
 // `--force`, que da la rama por `forced` con su punta.
@@ -168,7 +168,7 @@ func recordIntegration(t *testing.T, changeRoot string, decision kickoff.GateDec
 	}
 }
 
-// REQ-25.16 (escenario «Evidencia `pr_merged` confirma la fusión»): con una rama integrada con
+// RF-BRA-17 (escenario «Evidencia `pr_merged` confirma la fusión»): con una rama integrada con
 // squash y sin soporte de `merge-tree`, el `gates.yaml` del cambio (activo o archivado, con
 // kickoff.ArchivedChangeRoot) con la compuerta `integration` aprobada con evidencia `pr_merged` y
 // `verified: true` confirma la rama por el token `pr_merged`. La evidencia no verificada o de una
@@ -231,7 +231,7 @@ func TestDoneConfirmsByPRMergedEvidenceWhenTheTreeLayerIsUnavailable(t *testing.
 	})
 }
 
-// REQ-25.16 (escenarios «La evidencia `pr_merged` no confirma la rama de archivado» y «La rama de
+// RF-BRA-17 (escenarios «La evidencia `pr_merged` no confirma la rama de archivado» y «La rama de
 // archivado se confirma por `equivalent_tree` tras un squash»): con evidencia `pr_merged` del PR del
 // cambio, la rama de archivado sin fusionar se rechaza con `merge_not_confirmed`; integrada con un
 // squash, la confirma la capa del árbol equivalente.

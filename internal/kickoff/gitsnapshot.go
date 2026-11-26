@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 )
 
-// La instantánea de política git (REQ-25.36, design D-12 y §4.5) es el bloque `git:` de
+// La instantánea de política git (RF-KOF-06, design D-12 y §4.5) es el bloque `git:` de
 // `kickoff.yaml`: lo que `kickoff seal` escribe, una sola vez y en la misma escritura que el
 // resto de la configuración sellada, con la política que regía al sellar. Contiene entradas
 // de política —la integración y el prefijo resueltos, las excepciones por cambio de `ensure`
@@ -18,7 +18,7 @@ import (
 //
 // El bloque es aditivo: la lectura de `kickoff.yaml` no es estricta, así que un binario
 // anterior lo ignora sin error, y su ausencia (un cambio preexistente, un retro-sellado con
-// `--infer`) deja el cambio exento de las guardas de rama (REQ-25.37).
+// `--infer`) deja el cambio exento de las guardas de rama (RF-KOF-07).
 
 // GitSnapshot es la instantánea de política git de un cambio.
 type GitSnapshot struct {
@@ -27,7 +27,7 @@ type GitSnapshot struct {
 	BranchPrefix      string `yaml:"branch_prefix"`
 	// MainBranch es `git.main_branch` declarada al sellar; vacía si no la había. Es el marcador
 	// con el que la resolución de la promoción distingue una instantánea anterior a la promoción
-	// de una sellada con ella (REQ-25.36, REQ-25.46).
+	// de una sellada con ella (RF-KOF-06, RF-BRA-28).
 	MainBranch string `yaml:"main_branch,omitempty"`
 	// Exceptions son las excepciones por cambio de `ensure` que regían al sellar; nil si no había.
 	Exceptions *GitExceptions `yaml:"exceptions,omitempty"`

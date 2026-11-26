@@ -16,7 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de `axiom sdd kickoff seal` con la guarda A (REQ-25.38, REQ-25.37 escenario 2, design
+// Pruebas de `axiom sdd kickoff seal` con la guarda A (RF-KOF-08, RF-KOF-07 escenario 2, design
 // D-11 y D-12): sin `--infer` consulta el veredicto de rama del repositorio del planning home
 // antes de escribir y se niega con `wrong_branch` y la continuación de `ensure`. Con git real,
 // entorno aislado y sin red; reutilizan los ayudantes de sdd_integrate_test.go.
@@ -25,7 +25,7 @@ const sealChange = "x"
 
 var sealBaseArgs = []string{"--execution-style", "continuous", "--handoff-policy", "none"}
 
-// sealRolesArgs sella checkpointed: continuous solo admite el rol único fullstack (REQ-28.12), así
+// sealRolesArgs sella checkpointed: continuous solo admite el rol único fullstack (RF-PRE-04), así
 // que los casos con roles especializados usan este estilo.
 var sealRolesArgs = []string{"--execution-style", "checkpointed", "--handoff-policy", "none"}
 
@@ -129,7 +129,7 @@ func wantWrongBranch(t *testing.T, err error, current, expected, master string) 
 	}
 }
 
-// REQ-25.38, escenario «Sellar en la rama de integración de un monorepo se rechaza»: rama
+// RF-KOF-08, escenario «Sellar en la rama de integración de un monorepo se rechaza»: rama
 // actual `main`, esperada `feat/x`, la continuación exacta de `ensure`, sin kickoff.yaml y
 // con error (código de salida distinto de cero).
 func TestKickoffSealRefusesTheIntegrationBranchOfAMonorepo(t *testing.T) {
@@ -145,7 +145,7 @@ func TestKickoffSealRefusesTheIntegrationBranchOfAMonorepo(t *testing.T) {
 	}
 }
 
-// REQ-25.38, escenario «Sellar en la rama del cambio procede»; y la política: el prefijo
+// RF-KOF-08, escenario «Sellar en la rama del cambio procede»; y la política: el prefijo
 // configurado cambia la rama esperada.
 func TestKickoffSealProceedsOnTheChangeBranch(t *testing.T) {
 	captureSealWarnings(t)
@@ -180,7 +180,7 @@ func TestKickoffSealTakesTheExpectedBranchFromThePolicyPrefix(t *testing.T) {
 	wantKickoffWritten(t, ws)
 }
 
-// REQ-28.19: un monorepo ya no sella roles especializados; el rechazo por topología llega antes
+// RF-PRE-11: un monorepo ya no sella roles especializados; el rechazo por topología llega antes
 // que la guarda de rama (D8), con independencia de la rama en la que se esté.
 func TestKickoffSealRejectsSpecializedRolesInAMonorepoBeforeTheBranchGuard(t *testing.T) {
 	captureSealWarnings(t)
@@ -195,7 +195,7 @@ func TestKickoffSealRejectsSpecializedRolesInAMonorepoBeforeTheBranchGuard(t *te
 	wantKickoffAbsent(t, ws)
 }
 
-// REQ-25.38 y REQ-25.18: con los roles que se van a sellar, una rama de rol del cambio es
+// RF-KOF-08 y RF-BRA-19: con los roles que se van a sellar, una rama de rol del cambio es
 // correcta; una rama ajena no. Cubre un kickoff sellado antes de C-01-b (sin reglas de topología).
 func TestKickoffSealAcceptsTheRoleBranchesOfTheRolesBeingSealed(t *testing.T) {
 	captureSealWarnings(t)
@@ -214,7 +214,7 @@ func TestKickoffSealAcceptsTheRoleBranchesOfTheRolesBeingSealed(t *testing.T) {
 	wantKickoffWritten(t, ws)
 }
 
-// REQ-25.37, escenario «`seal --infer` funciona desde cualquier rama y no escribe
+// RF-KOF-07, escenario «`seal --infer` funciona desde cualquier rama y no escribe
 // instantánea»: desde `main` se completa sin exigir rama (y sin consultar el veredicto).
 func TestKickoffSealInferWorksFromAnyBranch(t *testing.T) {
 	warnings := captureSealWarnings(t)
@@ -234,7 +234,7 @@ func TestKickoffSealInferWorksFromAnyBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.37: un cambio cuyo kickoff.yaml ya existe sin instantánea queda exento: volver a
+// RF-KOF-07: un cambio cuyo kickoff.yaml ya existe sin instantánea queda exento: volver a
 // sellarlo desde `main` no se rechaza y devuelve al ganador sin reescribirlo.
 func TestKickoffSealOfAnAlreadySealedChangeWithoutSnapshotIsExempt(t *testing.T) {
 	captureSealWarnings(t)
@@ -278,7 +278,7 @@ func loadSealed(t *testing.T, ws workspacetest.Workspace) kickoff.Kickoff {
 	return *loaded
 }
 
-// REQ-25.36, escenario «El sellado escribe la instantánea»: desde la rama del cambio, en la misma
+// RF-KOF-06, escenario «El sellado escribe la instantánea»: desde la rama del cambio, en la misma
 // única escritura, `kickoff.yaml` lleva la integración, el prefijo, la base y los nombres
 // `feat/x`, `feat/x-core`, `feat/x-qa` y `feat/x-archive`, sin SHAs ni rutas absolutas.
 func TestKickoffSealWritesTheGitSnapshotOnce(t *testing.T) {
@@ -321,7 +321,7 @@ func TestKickoffSealWritesTheGitSnapshotOnce(t *testing.T) {
 	}
 }
 
-// REQ-25.36, escenario «La instantánea no se reescribe»: un segundo sellado desde la rama
+// RF-KOF-06, escenario «La instantánea no se reescribe»: un segundo sellado desde la rama
 // correcta devuelve al ganador y no modifica kickoff.yaml; desde `main` la instantánea ya no
 // exime y el segundo sellado se rechaza como `wrong_branch` sin tocar nada.
 func TestKickoffSealDoesNotRewriteTheSnapshotOnASecondSeal(t *testing.T) {
@@ -354,7 +354,7 @@ func TestKickoffSealDoesNotRewriteTheSnapshotOnASecondSeal(t *testing.T) {
 	}
 }
 
-// REQ-25.37: `seal --infer` no escribe instantánea aunque la rama sea la del cambio.
+// RF-KOF-07: `seal --infer` no escribe instantánea aunque la rama sea la del cambio.
 func TestKickoffSealInferWritesNoSnapshot(t *testing.T) {
 	captureSealWarnings(t)
 	ws := embeddedSealProject(t, twoRoleConfig)
@@ -369,7 +369,7 @@ func TestKickoffSealInferWritesNoSnapshot(t *testing.T) {
 	}
 }
 
-// REQ-25.42 (fuera de git): sin repositorio no hay política que instantaneizar; se sella igual,
+// RF-CLI-05 (fuera de git): sin repositorio no hay política que instantaneizar; se sella igual,
 // con aviso y sin bloque `git:`.
 func TestKickoffSealOutsideGitWritesNoSnapshot(t *testing.T) {
 	warnings := captureSealWarnings(t)
@@ -388,7 +388,7 @@ func TestKickoffSealOutsideGitWritesNoSnapshot(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y REQ-25.38: en un multirepo la instantánea lista el repositorio de specs in situ,
+// RF-KOF-06 y RF-KOF-08: en un multirepo la instantánea lista el repositorio de specs in situ,
 // sin ramas, y los de código con la rama del cambio, con rutas relativas a la carpeta maestra.
 func TestKickoffSealOfAMultirepoWritesTheSnapshotOfEveryRepository(t *testing.T) {
 	captureSealWarnings(t)
@@ -438,7 +438,7 @@ func multirepoSealProject(t *testing.T) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-25.38, escenarios «Sellar en un multirepo exige la integración del repositorio de specs»
+// RF-KOF-08, escenarios «Sellar en un multirepo exige la integración del repositorio de specs»
 // y «...con el repositorio de specs en su integración procede»: solo se comprueba el
 // repositorio de specs; la rama de `repo-backend` no interviene.
 func TestKickoffSealOfAMultirepoRequiresTheSpecsIntegrationBranchAndIgnoresTheCodeRepositories(t *testing.T) {

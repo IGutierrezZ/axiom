@@ -202,7 +202,7 @@ func TestWorkItemSimulationGetAndBatch(t *testing.T) {
 }
 
 // Install instala un registro cuyo plugin habla con el servidor local y un almacén en memoria; el
-// endpoint efectivo es el servidor local (guarda de REQ-45.16).
+// endpoint efectivo es el servidor local (guarda de RF-ADO-16).
 func TestInstallPointsThePluginAtTheLocalServer(t *testing.T) {
 	srv := NewServer(t, nil)
 	memory := Install(t, srv)

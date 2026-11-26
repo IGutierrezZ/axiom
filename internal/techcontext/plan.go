@@ -114,8 +114,8 @@ type gathered struct {
 	contextPresent bool
 }
 
-// gather lee la declaración y el delta de contexto (REQ-24.62, REQ-30.19,
-// REQ-30.30). Devuelve false si el resto de comprobaciones no tiene sentido:
+// gather lee la declaración y el delta de contexto (REQ-24.62, RF-CTX-17,
+// RF-CTX-20). Devuelve false si el resto de comprobaciones no tiene sentido:
 // declaración ilegible o inválida, o un almacén sin ficheros.
 func gather(t Target, report *Report) (*gathered, bool) {
 	loc := t.Location
@@ -134,7 +134,7 @@ func gather(t Target, report *Report) (*gathered, bool) {
 	report.Context.Declared = g.maintained
 
 	if g.maintained && (t.ArtifactStore == "engram" || t.ArtifactStore == "none") {
-		report.fail("el contexto técnico mantenido ('technical_context.maintained') exige un almacén de artefactos de ficheros y el almacén de este cambio es %q: sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar (REQ-30.19). Continuación: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración", t.ArtifactStore)
+		report.fail("el contexto técnico mantenido ('technical_context.maintained') exige un almacén de artefactos de ficheros y el almacén de este cambio es %q: sin la carpeta del cambio en ficheros no hay delta de contexto ni traza que integrar (RF-CTX-17). Continuación: declara `artifact_store: openspec` o `hybrid` en `openspec/config.yaml`, o retira la declaración", t.ArtifactStore)
 		return g, false
 	}
 
@@ -159,7 +159,7 @@ type evaluation struct {
 	creates      map[string]bool // documentos que archive crea, por ruta relativa
 }
 
-// evaluate valida el delta de contexto (REQ-24.31, REQ-24.32, REQ-24.30): su
+// evaluate valida el delta de contexto (RF-CTX-06, RF-CTX-07, RF-CTX-05): su
 // formato, que cada documento esté bajo una ruta mantenida y no bajo una de
 // referencia, y que cada ancla resuelva según su acción. Prepara los trabajos de
 // edición. No escribe nada.
@@ -170,7 +170,7 @@ func evaluate(t Target, g *gathered, report *Report) evaluation {
 	}
 	delta, err := ParseDelta(g.contextData)
 	if err != nil {
-		report.fail("%s (REQ-24.31): %v. Continuación: corrige el formato del delta de contexto (`## Entrada: <ruta>` con `- Ancla:`, `- Acción:` y `- Motivo:`, o `Sin impacto: <motivo>`)", DeltaFileName, err)
+		report.fail("%s (RF-CTX-06): %v. Continuación: corrige el formato del delta de contexto (`## Entrada: <ruta>` con `- Ancla:`, `- Acción:` y `- Motivo:`, o `Sin impacto: <motivo>`)", DeltaFileName, err)
 	}
 	report.Context.Reason = delta.Reason
 	switch {
@@ -241,7 +241,7 @@ func prepareCommand(t Target) string {
 
 // Check hace las validaciones del contexto técnico sin exigir git ni autorización
 // de edición, y no escribe nada, tampoco en la carpeta del cambio (REQ-24.42,
-// REQ-30.15). Un delta de contexto ausente es un aviso. Quien llama sale con un
+// RF-CTX-13). Un delta de contexto ausente es un aviso. Quien llama sale con un
 // código distinto de cero si Report.Errors no está vacío; el error devuelto es
 // solo de ejecución.
 func Check(ctx context.Context, t Target) (Report, error) {
@@ -252,7 +252,7 @@ func Check(ctx context.Context, t Target) (Report, error) {
 	}
 	evaluate(t, g, &report)
 	if g.maintained && !g.contextPresent {
-		report.warn("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: registra el impacto previsto o «Sin impacto: <motivo>» antes de archivar; la ausencia nunca se asume como «Sin impacto» (REQ-24.36)", DeltaFileName)
+		report.warn("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: registra el impacto previsto o «Sin impacto: <motivo>» antes de archivar; la ausencia nunca se asume como «Sin impacto» (RF-CTX-11)", DeltaFileName)
 	}
 	return report, ctx.Err()
 }
@@ -332,7 +332,7 @@ func (e *PlanChangedError) Error() string {
 
 // Prepare valida el delta, comprueba las precondiciones de la integración
 // (REQ-24.49) y la autorización de edición de las rutas mantenidas fuera del
-// repositorio de especificaciones (REQ-24.37), registra el HEAD y la foto de
+// repositorio de especificaciones (RF-CTX-12), registra el HEAD y la foto de
 // suciedad de cada repositorio afectado y escribe `<carpeta del cambio>/
 // integration.yaml`: nunca escribe en las rutas mantenidas. Con un plan existente
 // lo reemite si las entradas coinciden, rechaza como «ya integrado» si todas lo
@@ -370,7 +370,7 @@ func Prepare(ctx context.Context, t Target) (Trace, Report, error) {
 
 	ev := evaluate(t, g, &report)
 	if g.maintained && !g.contextPresent {
-		report.fail("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: archive se detiene hasta que se registre el impacto previsto o «Sin impacto: <motivo>»; la ausencia nunca se asume como «Sin impacto» (REQ-24.36, REQ-24.56). Continuación: redacta %s en la carpeta del cambio", DeltaFileName, DeltaFileName)
+		report.fail("el cambio no lleva delta de contexto %s y el contexto técnico mantenido está declarado: archive se detiene hasta que se registre el impacto previsto o «Sin impacto: <motivo>»; la ausencia nunca se asume como «Sin impacto» (RF-CTX-11, RF-ARC-05). Continuación: redacta %s en la carpeta del cambio", DeltaFileName, DeltaFileName)
 	}
 	if len(report.Errors) > 0 {
 		return Trace{}, report, ctx.Err()
@@ -426,7 +426,7 @@ func Prepare(ctx context.Context, t Target) (Trace, Report, error) {
 // bajo alguna raíz de edición autorizada del cambio (actionContext.allowedEditRoots).
 // El repositorio de especificaciones siempre lo está; los de código hermanos solo
 // con una autorización por cambio, que nunca se concede de forma implícita
-// (REQ-24.37).
+// (RF-CTX-12).
 func authorizeEdits(ctx context.Context, t Target, ev evaluation, report *Report) {
 	allowed := t.AllowedRoots
 	if len(allowed) == 0 {
@@ -449,13 +449,13 @@ func authorizeEdits(ctx context.Context, t Target, ev evaluation, report *Report
 		if repo, err := openRepository(ctx, target); err == nil {
 			root = repo.root
 		}
-		report.fail("la entrada %s edita %s, que no está bajo ninguna raíz de edición autorizada del cambio (actionContext.allowedEditRoots): falta la autorización de edición de %s. Continuación: concédela por cambio con `axiom sdd-attempt grant --cwd %s --change %s --root %s` (más `--change-instance`, `--request-id`, `--actor` y `--reason`); nunca se concede de forma implícita (REQ-24.37)",
+		report.fail("la entrada %s edita %s, que no está bajo ninguna raíz de edición autorizada del cambio (actionContext.allowedEditRoots): falta la autorización de edición de %s. Continuación: concédela por cambio con `axiom sdd-attempt grant --cwd %s --change %s --root %s` (más `--change-instance`, `--request-id`, `--actor` y `--reason`); nunca se concede de forma implícita (RF-CTX-12)",
 			item.ID, item.Document, pathquote.Quote(root), pathquote.Quote(t.Location.WorkspaceRoot), pathquote.ShellWord(t.Change), pathquote.Quote(root))
 	}
 }
 
 // affectedPath es un documento que la integración edita. Creates indica que
-// archive lo crea (REQ-24.55): queda excluido de la precondición de cambios sin
+// archive lo crea (RF-ARC-04): queda excluido de la precondición de cambios sin
 // confirmar (REQ-24.49).
 type affectedPath struct {
 	Path    string // absoluta

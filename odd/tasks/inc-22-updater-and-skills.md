@@ -18,7 +18,7 @@ Las fases 1-2 se implementaron ya en el carril SDD (`901c8f88`, `ce5e7e85`, inte
 
 ## 3. Alcance autorizado
 
-**Dentro:** las fases 3-22 de `openspec/changes/inc-22-axiom-updater-and-skills-index-governance/tasks.md`, tal como están descritas en `spec.md` (REQ-22.1–REQ-22.14) y `design.md` (D-01–D-14), agrupadas en las unidades ODD de abajo.
+**Dentro:** las fases 3-22 de `openspec/changes/inc-22-axiom-updater-and-skills-index-governance/tasks.md`, tal como están descritas en `spec.md` (RF-UPD-01–RF-SKI-05) y `design.md` (D-01–D-14), agrupadas en las unidades ODD de abajo.
 
 **Fuera:** rehacer las fases 1-2 (cerradas y validadas) · abrir PRs o hacer push (decisión humana) · arreglar los fallos ambientales preexistentes de `internal/sddstatus` e `internal/update` · publicar binarios Windows en Releases · framework de sincronización upstream · modificar el motor `filemerge` · retirar o renombrar `axiom skill-registry`.
 
@@ -47,7 +47,7 @@ Referencia cruzada: `F<n>` = fase `n` de `tasks.md` del cambio SDD.
 
 ## 6. Criterios de aceptación (globales)
 
-1. Los 14 requerimientos `REQ-22.1`–`REQ-22.14` quedan cubiertos por comportamiento observable, con la trazabilidad tarea→REQ→decisión de `tasks.md` respetada.
+1. Los 14 requerimientos `RF-UPD-01`–`RF-SKI-05` quedan cubiertos por comportamiento observable, con la trazabilidad tarea→REQ→decisión de `tasks.md` respetada.
 2. `axiom upgrade` sigue siendo **solo-binario**: NO invoca `install` ni `sync`. La compuerta de control es `internal/app/upgrade_test.go` (`TestRunArgs_UpgradeDryRun`, `TestRunArgs_UpgradeOutput_BinariesOnly`).
 3. `axiom skill-registry` conserva su contrato byte a byte (no se retira ni se renombra; el plugin `skill-registry.ts` lo invoca por argv literal).
 4. Ninguna instrucción `go install` emitida contradice el `module` de `go.mod` ni nombra un binario que no sea `axiom`.
@@ -63,7 +63,7 @@ Referencia cruzada: `F<n>` = fase `n` de `tasks.md` del cambio SDD.
 ## 8. Decisiones abiertas
 
 - **O-2 (resuelta, 2026-09-23, decisión humana — NO reabrir):** formato de la columna `Path` de la tabla `## Skills` regenerada de `AGENTS.md`: **ruta relativa a la raíz del repositorio** (separada con `/`) para skills de scope `project`; scope `user` conserva la ruta descubierta (absoluta), porque vive fuera del repositorio. `.atl/skill-registry.md` y `axiom skill index list`/`--json` conservan la **ruta descubierta** (absoluta), que es su papel de índice local de máquina. Ambas tablas salen del mismo renderizador (`skillregistry.renderSkillsTable`) con el formato de ruta como parámetro (`PathRepoRelative` para `AGENTS.md`, `PathDiscovered` para el registro). Consecuencia ligada: R-3 — la primera regeneración reescribe la tabla de 3 columnas con enlaces a 4 con código.
-- Resuelta y NO reabrir: el símbolo de versión es `var version = "v0.1.0"` en `cmd/axiom` (REQ-22.8 + cierre de O-1 del diseño).
+- Resuelta y NO reabrir: el símbolo de versión es `var version = "v0.1.0"` en `cmd/axiom` (RF-UPD-07 + cierre de O-1 del diseño).
 
 ## 9. Progreso
 

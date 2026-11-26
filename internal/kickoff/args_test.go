@@ -45,11 +45,11 @@ func TestParseSealArgsKnownAndUnknownFlags(t *testing.T) {
 	}
 }
 
-// TestParseSealArgsRequiresExecutionStyleOrSessionPace covers REQ-21.5's
+// TestParseSealArgsRequiresExecutionStyleOrSessionPace covers RF-PRE-01's
 // second scenario: an ambiguous or absent modality must never fall back to
 // a silent default.
 func TestParseSealArgsRequiresExecutionStyleOrSessionPace(t *testing.T) {
-	// REQ-21.5: la sintaxis se acepta y el estilo obligatorio lo aplica
+	// RF-PRE-01: la sintaxis se acepta y el estilo obligatorio lo aplica
 	// ApplyTopology (sin topología conocida no hay valor por defecto).
 	parsed, err := ParseSealArgs([]string{"--cwd", "/repo", "--change", "inc-99-example", "--handoff-policy", "none"})
 	if err != nil {
@@ -115,7 +115,7 @@ func TestParseSealArgsExecutionStyleExplicitOverridesSessionPace(t *testing.T) {
 	}
 }
 
-// TestParseSealArgsDefaultsRoleToFullstackBlocking covers REQ-21.6: no
+// TestParseSealArgsDefaultsRoleToFullstackBlocking covers RF-PRE-02: no
 // --role flags declared seals exactly one role, fullstack:blocking.
 func TestParseSealArgsDefaultsRoleToFullstackBlocking(t *testing.T) {
 	parsed, err := ParseSealArgs([]string{"--change", "inc-99-example", "--execution-style", "continuous", "--handoff-policy", "none"})
@@ -283,7 +283,7 @@ func TestParseGateRecordArgsKnownAndUnknownFlags(t *testing.T) {
 	}
 }
 
-// TestParseGateRecordArgsRejectedRequiresReason is REQ-21.12's hard rule:
+// TestParseGateRecordArgsRejectedRequiresReason is RF-GAT-06's hard rule:
 // a rejection without a recorded reason is refused.
 func TestParseGateRecordArgsRejectedRequiresReason(t *testing.T) {
 	_, err := ParseGateRecordArgs([]string{"--change", "inc-99-example", "--gate", "spec", "--decision", "rejected"})
@@ -302,7 +302,7 @@ func TestParseGateRecordArgsApprovedDoesNotRequireReason(t *testing.T) {
 	}
 }
 
-// TestParseGateRecordArgsHandOff fija la validación de forma de --hand-off (REQ-26.1, REQ-26.3,
+// TestParseGateRecordArgsHandOff fija la validación de forma de --hand-off (RF-GAT-07, RF-GAT-09,
 // DD-01): solo acompaña a approved, no con integration ni con evidencia, y no exige --reason. Los
 // registros sin la bandera se siguen leyendo con HandOff == false.
 func TestParseGateRecordArgsHandOff(t *testing.T) {
@@ -370,7 +370,7 @@ func TestParseGateRecordArgsHandOff(t *testing.T) {
 	}
 }
 
-// TestParseGateRecordArgsLeavesBaseRefToTheCaller fija D-22 (REQ-25.23, escenario 5): el parseo
+// TestParseGateRecordArgsLeavesBaseRefToTheCaller fija D-22 (RF-BRA-24, escenario 5): el parseo
 // de argumentos no conoce la rama de integración del proyecto, así que ya no inventa `main` ante
 // un --base-ref vacío; lo completa quien conoce el repositorio (runSDDGateRecord). Un --base-ref
 // explícito se conserva tal cual.
@@ -492,7 +492,7 @@ func TestParseShowArgsRejectsChangeContainmentVector(t *testing.T) {
 	}
 }
 
-// TestParseSealArgsDocsPublication cubre REQ-27.4: --docs-publication solo admite `auto`, solo
+// TestParseSealArgsDocsPublication cubre RF-KOF-10: --docs-publication solo admite `auto`, solo
 // acompaña a continuous (también el derivado de --from-session-pace) y nunca a --infer.
 func TestParseSealArgsDocsPublication(t *testing.T) {
 	tests := []struct {
@@ -532,7 +532,7 @@ func TestParseSealArgsDocsPublication(t *testing.T) {
 	}
 }
 
-// TestParseSealArgsContinuousRosterRule fija REQ-28.12 y REQ-28.13: continuous
+// TestParseSealArgsContinuousRosterRule fija RF-PRE-04 y RF-PRE-05: continuous
 // solo se sella con el rol único fullstack, también cuando el estilo se deriva
 // de --from-session-pace auto, y la regla se aplica sin resolver --change.
 func TestParseSealArgsContinuousRosterRule(t *testing.T) {

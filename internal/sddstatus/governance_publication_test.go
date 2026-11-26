@@ -10,8 +10,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de la publicación que lleva la pregunta de una compuerta de planificación (REQ-27.7,
-// REQ-27.12, DD-11): el destino se calcula con el motor de ramas, solo con lecturas.
+// Pruebas de la publicación que lleva la pregunta de una compuerta de planificación (RF-PUB-03,
+// RF-GAT-15, DD-11): el destino se calcula con el motor de ramas, solo con lecturas.
 
 // checkpointedMonorepo monta un monorepo embebido con un kickoff checkpointed y la instantánea de
 // política git, con el HEAD en la rama dada y la compuerta spec abierta.
@@ -95,7 +95,7 @@ func TestGateQuestionCarriesThePublicationOfTheCurrentBranch(t *testing.T) {
 	}
 }
 
-// REQ-27.7: con la rama equivocada la pregunta lleva `publicationUnavailable` con el código y las
+// RF-PUB-03: con la rama equivocada la pregunta lleva `publicationUnavailable` con el código y las
 // opciones siguen siendo las de `gate record`.
 func TestGateQuestionReportsPublicationUnavailableOnTheWrongBranch(t *testing.T) {
 	root := checkpointedMonorepo(t, "feat/x")
@@ -127,7 +127,7 @@ func TestGateQuestionReportsPublicationUnavailableOnTheWrongBranch(t *testing.T)
 	}
 }
 
-// REQ-26.6 e integración: con un almacén sin ficheros y en la compuerta de integración no hay
+// RF-GAT-12 e integración: con un almacén sin ficheros y en la compuerta de integración no hay
 // publicación ni etiquetas que la prometan.
 func TestGateQuestionCarriesNoPublicationForFilelessStoresOrIntegration(t *testing.T) {
 	root := checkpointedMonorepo(t, "feat/x")

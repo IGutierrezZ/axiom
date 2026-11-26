@@ -63,7 +63,7 @@ func seedConsentChange(t *testing.T, planning, name, tasks string) {
 
 // retroSealConsentChange writes a kickoff.yaml without a git policy snapshot for the change, the
 // shape `kickoff seal` left before the snapshot existed (a pre-existing change): such a change is
-// exempt from the change-branch guard (REQ-25.37, R15). The planning repositories of these
+// exempt from the change-branch guard (RF-KOF-07, R15). The planning repositories of these
 // fixtures stay on `main`, and a change with no kickoff.yaml at all is not exempt (S-7), so the
 // writers `sdd continue` runs would refuse with wrong_branch. It seals with `continuous` and the
 // default single role, writing the kickoff directly instead of through the guarded seal.

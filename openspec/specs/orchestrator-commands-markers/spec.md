@@ -12,7 +12,7 @@ Definir los requerimientos funcionales y escenarios de prueba para el agente orq
 
 Identidad y configuración formal del agente orquestador en perfiles de OpenCode.
 
-### Requirement: Registro de axiom-orchestrator en overlays de OpenCode (REQ-11.1)
+### Requirement: Registro de axiom-orchestrator en overlays de OpenCode (RF-MRK-01)
 El generador de configuración de OpenCode DEBE registrar el agente principal bajo la clave `axiom-orchestrator`, con descripción y prompt alineados con la metodología SDD de Axiom.
 
 #### Scenario: Generación de opencode.json con agente axiom-orchestrator
@@ -21,7 +21,7 @@ El generador de configuración de OpenCode DEBE registrar el agente principal ba
 - **ENTONCES** contiene la clave `"axiom-orchestrator"` en la sección `"agent"`
 - **Y** la descripción indica "Axiom SDD Orchestrator - coordinates sub-agents, never does work inline"
 
-### Requirement: Retrocompatibilidad de lectura con gentle-orchestrator (REQ-11.2)
+### Requirement: Retrocompatibilidad de lectura con gentle-orchestrator (RF-MRK-02)
 Si un archivo `opencode.json` existente contiene asignaciones de modelo para `gentle-orchestrator`, el parser DEBE reconocerlas y aplicarlas a `axiom-orchestrator`.
 
 #### Scenario: Migración transparente de configuraciones existentes
@@ -36,7 +36,7 @@ Si un archivo `opencode.json` existente contiene asignaciones de modelo para `ge
 
 Provisión de comandos slash limpios y estandarizados para Claude Code.
 
-### Requirement: Comandos slash sin prefijo en Claude Code (REQ-11.3)
+### Requirement: Comandos slash sin prefijo en Claude Code (RF-MRK-03)
 Los comandos slash instalados en `~/.claude/commands/` DEBEN utilizar la convención directa `/sdd-*` sin prefijos propietarios.
 
 #### Scenario: Nombres de comandos slash en Claude Code
@@ -51,7 +51,7 @@ Los comandos slash instalados en `~/.claude/commands/` DEBEN utilizar la convenc
 
 Soporte de marcadores de inyección en archivos Markdown y centinelas de cambio.
 
-### Requirement: Soporte de marcadores axiom: con lectura de marcadores legados (REQ-11.4)
+### Requirement: Soporte de marcadores axiom: con lectura de marcadores legados (RF-MRK-04)
 Las rutinas de inyección y eliminación de secciones en Markdown DEBEN emitir marcadores canónicos `<!-- axiom:<id> -->` y reconocer tanto `axiom:` como `gentle-ai:` para operaciones de limpieza o reemplazo.
 
 #### Scenario: Inyección de secciones con marcador canónico

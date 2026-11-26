@@ -52,7 +52,7 @@ func makeProject(t *testing.T) string {
 }
 
 // TestSkillIndexExitCodeTable pins the exit-code table of spec §1.1
-// (REQ-22.10), including the non-fatal mirror failure.
+// (RF-SKI-01), including the non-fatal mirror failure.
 func TestSkillIndexExitCodeTable(t *testing.T) {
 	home := t.TempDir()
 	setFakeHome(t, home)
@@ -286,7 +286,7 @@ func TestSkillIndexDestinationLineLiterals(t *testing.T) {
 	})
 }
 
-// TestSkillIndexListWritesNothing covers REQ-22.10 «list --json devuelve el
+// TestSkillIndexListWritesNothing covers RF-SKI-01 «list --json devuelve el
 // índice sin escribir»: no registry, cache, AGENTS.md, .gitignore or memory.
 func TestSkillIndexListWritesNothing(t *testing.T) {
 	home := t.TempDir()

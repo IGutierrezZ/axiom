@@ -25,7 +25,7 @@ func renderedOrchestratorForStops(t *testing.T, agent model.AgentID) string {
 	return content
 }
 
-// TestEveryOrchestratorRendersTheSingleStopExitsText guards REQ-26.8: the twelve
+// TestEveryOrchestratorRendersTheSingleStopExitsText guards RF-GAT-14: the twelve
 // composed orchestrator templates (every runtime that shares them, Pi through the
 // generic one included) carry the very text agentguidance.StopExits returns, once,
 // with the marker resolved.

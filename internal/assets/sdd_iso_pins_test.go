@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 )
 
-// carril-sdd-versatil U21 (REQ-29.17): pins de texto de la guía ISO, el perfil de
+// carril-sdd-versatil U21 (RF-ORQ-17): pins de texto de la guía ISO, el perfil de
 // bug, la matriz de verify y la excepción ISO. Las skills describen los formatos y
 // el motor los valida; estas pruebas fijan que la guía conserve los literales
 // exactos, porque el carril ODD usa la misma sección y la misma línea.
@@ -57,14 +57,14 @@ func TestSDDISOConvention(t *testing.T) {
 		"axiom sdd archive-check --cwd <workspaceRoot> --change <name>",
 		"run `axiom sdd archive-integrate` again: it skips what is already integrated and keeps the numbers already assigned",
 		"axiom sdd trace --cwd <dir> --change <name>",
-		// La matriz histórica baja a nivel 3 con fecha (REQ-28.8, D10).
+		// La matriz histórica baja a nivel 3 con fecha (RF-REV-08, D10).
 		"### Matriz de verificación (histórica, AAAA-MM-DD)",
 		"A report with history never has two level-2 matrix sections.",
 		// Las tres rutas del bug.
 		"| Existing requirement |",
 		"| No impact on the spec |",
 		"| Delta |",
-		// REQ-29.19: en ISO el motivo es la evidencia y la matriz vacía es válida.
+		// RF-ISO-10: en ISO el motivo es la evidencia y la matriz vacía es válida.
 		"the `Motivo:` is the evidence of a bug without impact",
 		"an absent or empty matrix is valid",
 	)
@@ -114,7 +114,7 @@ func TestReportFormatHistoricalMatrix(t *testing.T) {
 	)
 }
 
-// carril-sdd-versatil U22 (REQ-29.17, REQ-29.10, REQ-29.11): la negativa del
+// carril-sdd-versatil U22 (RF-ORQ-17, RF-ARC-09, RF-ARC-10): la negativa del
 // archivado ISO la decide Go, pero la skill es quien invoca el verbo; este pin
 // falla si pierde el paso previo a componer o mover.
 func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
@@ -143,7 +143,7 @@ func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
 		}
 	}
 
-	// REQ-29.17: el flujo de archivado no cambia; la rama `-archive` y el PR
+	// RF-ORQ-17: el flujo de archivado no cambia; la rama `-archive` y el PR
 	// documental aparte siguen siendo el único modo.
 	requireContains(t, "sdd-archive/SKILL.md", skill,
 		"`axiom branch ensure --cwd \"<workspaceRoot>\" --change <c> --archive --json`",
@@ -151,7 +151,7 @@ func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
 	)
 }
 
-// carril-sdd-versatil U23 (REQ-29.2, REQ-29.16, REQ-29.17): el contrato de status
+// carril-sdd-versatil U23 (RF-ISO-02, RF-CLI-11, RF-ORQ-17): el contrato de status
 // documenta la proyección `iso`, la ruta `verify` y la lista cerrada de motivos,
 // que coincide con la de isoevidence.
 func TestSDDStatusContractISO(t *testing.T) {
@@ -243,13 +243,13 @@ func TestSDDISOPins(t *testing.T) {
 			"there `verify` is mandatory before archive (status routes to `verify` while the matrix is missing or invalid)",
 			"the verification matrix of the report does condition archive",
 			"the block comes from the validity of the matrix and never from a finding, a `JUDGMENT: ESCALATED` verdict or a coverage review, which stay informational",
-			// REQ-28.4 remite a la condición de REQ-21.15 sin repetirla.
-			"is enabled by the condition that status projects (REQ-21.15)",
-			// REQ-28.6: en ISO una matriz que falla hace que el verify no sea limpio.
+			// RF-REV-04 remite a la condición de RF-RCL-03 sin repetirla.
+			"is enabled by the condition that status projects (RF-RCL-03)",
+			// RF-REV-06: en ISO una matriz que falla hace que el verify no sea limpio.
 			"counts as a failed required check: the verify is not clean",
 		)
 		if strings.Contains(section, "keeps waiting for every `role-apply` approval") {
-			t.Error("SDD Independent Review repeats the verify condition of REQ-21.15 instead of referring to it")
+			t.Error("SDD Independent Review repeats the verify condition of RF-RCL-03 instead of referring to it")
 		}
 	})
 
@@ -299,7 +299,7 @@ func TestSDDISOPins(t *testing.T) {
 	})
 }
 
-// C-03-b (REQ-47.10): sdd-spec describe el identificador provisional del ADDED, su cita en
+// C-03-b (RF-RID-15): sdd-spec describe el identificador provisional del ADDED, su cita en
 // `Cubre:` y la forma con ángulos para los textos validados.
 func TestSDDSpecDescribesProvisionalIdentifiers(t *testing.T) {
 	const path = "skills/sdd-spec/SKILL.md"
@@ -314,7 +314,7 @@ func TestSDDSpecDescribesProvisionalIdentifiers(t *testing.T) {
 	)
 }
 
-// C-03-b (REQ-47.10): la convención ISO cubre el provisional en el ADDED, en `Cubre:` y en la
+// C-03-b (RF-RID-15): la convención ISO cubre el provisional en el ADDED, en `Cubre:` y en la
 // matriz, y nombra el verbo.
 func TestSDDISOConventionCoversProvisionalIdentifiers(t *testing.T) {
 	requireContains(t, sddISOConventionPath, MustRead(sddISOConventionPath),
@@ -327,7 +327,7 @@ func TestSDDISOConventionCoversProvisionalIdentifiers(t *testing.T) {
 	)
 }
 
-// C-03-b (REQ-47.10, REQ-47.8): sdd-archive integra el cambio con una sola invocación del verbo,
+// C-03-b (RF-RID-15, RF-ARC-15): sdd-archive integra el cambio con una sola invocación del verbo,
 // después de `archive-check` y antes de `archive sync` y del movimiento, manda `--check` tras
 // cada rebase y ya no conserva el bucle `archive-compose` por dominio ni la copia `cp` de una
 // capacidad nueva.

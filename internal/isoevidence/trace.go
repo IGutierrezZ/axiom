@@ -10,7 +10,7 @@ import (
 )
 
 // History es el puerto de solo lectura sobre el historial de la rama de
-// integración (REQ-29.9). Las implementaciones leen con `git log
+// integración (RF-ISO-09). Las implementaciones leen con `git log
 // --first-parent`, `git ls-tree` y `git merge-base --is-ancestor`; este paquete
 // no ejecuta ninguna orden.
 type History interface {

@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch ensure --prefix --branch --base --repo` (INC-25, S4.12, REQ-25.12, REQ-25.13): la
+// `axiom branch ensure --prefix --branch --base --repo` (INC-25, S4.12, RF-BRA-12, RF-BRA-14): la
 // ayuda, los errores de uso con código 2, y las excepciones por cambio (registro, idempotencia,
 // `plan_conflict` e `invalid_name`) con código de salida, JSON y texto, sobre repositorios reales.
 // El comportamiento del motor se prueba en internal/branch/engine.
@@ -58,7 +58,7 @@ func TestBranchEnsureExceptionFlagsUsageErrorsExitWithCode2(t *testing.T) {
 	}
 }
 
-// REQ-25.12 (harness S4.13): `--branch` fija el nombre de la rama del cambio y se registra; repetirlo
+// RF-BRA-12 (harness S4.13): `--branch` fija el nombre de la rama del cambio y se registra; repetirlo
 // es idempotente (código 0 y el mismo JSON); una excepción posterior contradictoria sale con 1 y
 // `plan_conflict`, con la continuación que repite la excepción registrada y sin cambiar nada; un
 // nombre inválido sale con 1 e `invalid_name` sin efectos.
@@ -117,7 +117,7 @@ func TestBranchEnsureExceptionBranchIsIdempotentAndAContradictionExitsWithCode1(
 	}
 }
 
-// REQ-25.13 (harness S4.13): `--lane odd --repo <ruta>` incluye los repositorios indicados; una
+// RF-BRA-14 (harness S4.13): `--lane odd --repo <ruta>` incluye los repositorios indicados; una
 // ruta que no existe se omite con `not_a_git_repository` sin impedir el resto, y el documento ODD
 // y la ausencia de kickoff se mantienen.
 func TestBranchEnsureOddLaneRepoFlagSkipsAPathThatIsNotARepository(t *testing.T) {

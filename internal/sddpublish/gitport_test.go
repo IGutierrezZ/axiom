@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/docpaths"
 )
 
-// Pruebas del adaptador del puerto Git (DD-08, REQ-27.6, REQ-27.9, REQ-27.11) con git real,
+// Pruebas del adaptador del puerto Git (DD-08, RF-PUB-02, RF-PUB-05, RF-PUB-07) con git real,
 // repositorios y remotos desnudos temporales y sin red.
 
 func TestGitPortRemoteAndResolveCommit(t *testing.T) {
@@ -456,7 +456,7 @@ func TestPublishIgnoresGitDirEnvironment(t *testing.T) {
 	}
 }
 
-// MODIFIED REQ-27.5, matriz «Estado del commit»: la cola de integraciones de la carpeta archivada
+// MODIFIED RF-PUB-01, matriz «Estado del commit»: la cola de integraciones de la carpeta archivada
 // (sin seguimiento, o preparada a mano) nunca entra en el commit y queda como estaba, igual que
 // `.gates.lock` en la carpeta ordinaria.
 func TestCommitExcludesArchivedLocalState(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// anchorSeparator separa los elementos de la ruta de un ancla (REQ-24.32, D-16).
+// anchorSeparator separa los elementos de la ruta de un ancla (RF-CTX-07, D-16).
 const anchorSeparator = " > "
 
 // Anchor es el ancla de una entrada del delta de contexto: la ruta de títulos
@@ -220,7 +220,7 @@ func isSetextUnderline(line string) bool {
 }
 
 // CheckAnchor valida la acción de una entrada contra el estado del documento
-// (REQ-24.32, REQ-24.55). exists dice si el documento existe; si no existe, solo
+// (RF-CTX-07, RF-ARC-04). exists dice si el documento existe; si no existe, solo
 // `add` es válido, y archive lo crea. Con el documento existente: más de una
 // coincidencia se rechaza, con la línea y la ruta completa de cada una; ninguna
 // coincidencia solo es válida con `add`; y con una, las tres acciones son

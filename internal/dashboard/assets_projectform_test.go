@@ -116,7 +116,7 @@ func TestProjectFormValidationRuntime(t *testing.T) {
 		t.Errorf("splitList = %q", res.SplitList)
 	}
 
-	// REQ-3.3: en monorepo-embedded el formulario no envía roles (el servidor
+	// RF-HUB-12: en monorepo-embedded el formulario no envía roles (el servidor
 	// escribe el fullstack canónico) ni valida las tarjetas; multirepo los conserva.
 	if len(res.MonoRoles.Roles) != 0 || len(res.MonoRoles.Violations) != 0 {
 		t.Errorf("monorepo-embedded debe devolver roles vacíos sin violaciones de roles: %+v", res.MonoRoles)
@@ -203,7 +203,7 @@ func TestAddProjectModalShowsSpecsRepositoryOnlyForMultirepo(t *testing.T) {
 	if !strings.Contains(modal, `id="field-project-specs-repository" hidden`) || !strings.Contains(modal, `id="input-project-specs-repository"`) {
 		t.Error("el campo del repositorio de specs debe estar en el modal de alta y oculto por defecto")
 	}
-	// REQ-3.3: el constructor de roles también queda oculto salvo en multirepo.
+	// RF-HUB-12: el constructor de roles también queda oculto salvo en multirepo.
 	if !strings.Contains(modal, `id="field-project-roles" hidden`) || !strings.Contains(modal, `id="roles-builder-container"`) {
 		t.Error("la sección de roles debe estar en el modal de alta y oculta por defecto (monorepo-embedded)")
 	}

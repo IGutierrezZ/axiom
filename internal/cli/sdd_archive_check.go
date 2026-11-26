@@ -80,7 +80,7 @@ func RunSDDArchiveCheck(args []string, stdout io.Writer) error {
 				Token: string(finding.Code), Subject: finding.Subject, Reason: finding.Reason(),
 			})
 		}
-		// REQ-44.9: sin el patrón accesible no se decide qué está compuesto; el verbo termina con
+		// RF-RID-08: sin el patrón accesible no se decide qué está compuesto; el verbo termina con
 		// error y la continuación de `axiom workspace validate`.
 		pattern, patternErr := projectIDPattern("sdd archive-check", loc)
 		if patternErr != nil {
@@ -124,7 +124,7 @@ type archiveCheckReport struct {
 	Error    string                `json:"error,omitempty"`
 	Findings []archiveCheckFinding `json:"findings"`
 	// Assignments es el mapa de provisional a definitivo guardado en ids.yaml y PendingProvisionals
-	// los provisionales que las deltas declaran y aún no tienen número (REQ-47.6, REQ-47.8).
+	// los provisionales que las deltas declaran y aún no tienen número (RF-RID-14, RF-ARC-15).
 	Assignments         []livespec.AssignmentReport `json:"assignments,omitempty"`
 	PendingProvisionals []string                    `json:"pendingProvisionals,omitempty"`
 	Domains             []archiveCheckDomain        `json:"domains"`
@@ -180,7 +180,7 @@ func renderArchiveCheck(stdout io.Writer, asJSON bool, report archiveCheckReport
 }
 
 // alreadyComposed dice, por dominio de la delta, si la baseline ya contiene la
-// delta entera (D17, REQ-29.3): todo ADDED con el mismo nombre y bloque, todo
+// delta entera (D17, RF-ISO-03): todo ADDED con el mismo nombre y bloque, todo
 // MODIFIED con el bloque de la delta, todo REMOVED ausente (borrado, o superado:
 // con --supersede el compositor renombra el requisito) y todo RENAMED con el
 // nombre nuevo presente y el antiguo ausente. La comparación de bloques es la que hace el compositor al
@@ -226,7 +226,7 @@ func requirementComposed(requirement isoevidence.Requirement, canonical map[stri
 		// Borrado o superado: en ambos casos el requisito deja de resolverse (con
 		// --supersede el compositor lo renombra), y volver a componer fallaría con
 		// «no canonical requirement named». Se resuelve como el compositor, por
-		// identificador con vuelta al título exacto (REQ-30.22): un REMOVED por
+		// identificador con vuelta al título exacto (RF-ARC-11): un REMOVED por
 		// identificador con el título obsoleto sigue sin componer mientras el requisito
 		// existe bajo otro título.
 		_, match := openspecdoc.Resolve(names, requirement.Name, pattern)
@@ -256,7 +256,7 @@ func renderSDDArchiveCheckHelp(stdout io.Writer) error {
 }
 
 // archiveCheckIdentifiers lee lo que el cambio dice de sus identificadores provisionales
-// (REQ-47.6, REQ-47.8): el mapa guardado en `ids.yaml`, que reconoce una asignación ya hecha
+// (RF-RID-14, RF-ARC-15): el mapa guardado en `ids.yaml`, que reconoce una asignación ya hecha
 // tras un archivado interrumpido, y los provisionales que sus deltas declaran en un ADDED y
 // el mapa aún no asigna. Con el patrón inaccesible no decide nada (lo reporta la rama ISO); una
 // traza ilegible es un error tipado.

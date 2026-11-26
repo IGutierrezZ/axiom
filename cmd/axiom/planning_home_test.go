@@ -94,7 +94,7 @@ func writeDesign(t *testing.T, ws workspacetest.Workspace, roles ...string) {
 	workspacetest.WriteFile(t, filepath.Join(canonicalChangeDir(ws), "design.md"), design.String())
 }
 
-// REQ-24.8: `role list` lee los roles de la configuración que apunta el puntero
+// RF-PLH-08: `role list` lee los roles de la configuración que apunta el puntero
 // y el cambio del repositorio de especificaciones, desde cualquier punto de
 // partida. La carpeta maestra no tiene axiom.yaml propio.
 func TestRoleListHonoursThePointerFromEveryStart(t *testing.T) {
@@ -140,7 +140,7 @@ func TestRoleStatusAndBarrierResolveTheChangeFromACodeRepository(t *testing.T) {
 	}
 }
 
-// REQ-24.8: handoff create, validate y show operan sobre el planning home del
+// RF-PLH-08: handoff create, validate y show operan sobre el planning home del
 // espacio canónico con independencia del punto de partida.
 func TestHandoffVerbsUseThePlanningHomeFromEveryStart(t *testing.T) {
 	ws := workspacetest.Canonical(t)

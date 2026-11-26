@@ -100,7 +100,7 @@ All neutral consumers that are not covered by an agent-specific override MUST re
 - THEN the combined content of the residual persona section and the output-style asset preserves all generic neutral requirements
 - AND the residual persona section alone is not required to independently preserve tone/language/philosophy content
 
-### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters
+### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters (RF-PER-03)
 
 For any adapter with an active output-style channel — Claude Code (gated by `SupportsOutputStyles()`) — the output-style asset MUST be the exclusive source of persona tone, language, and philosophy. The system-prompt persona section for these adapters MUST be reduced to a residual block containing only `## Rules`, `## Expertise`, `## Contextual Skill Loading (MANDATORY)` and a one-line pointer to the output style. The residual MUST NOT duplicate tone/language/philosophy content.
 (Previously: Kimi was an explicit carve-out with its own `## Kimi-native notes` section.)
@@ -112,7 +112,7 @@ For any adapter with an active output-style channel — Claude Code (gated by `S
 - THEN it contains only Rules, Expertise, Contextual Skill Loading and a pointer to the output style
 - AND it contains no tone, language, or philosophy prose
 
-### Requirement: Persona Section Parity for Non-Output-Style Adapters
+### Requirement: Persona Section Parity for Non-Output-Style Adapters (RF-PER-04)
 
 Adapters without an active output-style channel MUST continue to receive the full persona section — tone, language, philosophy, rules, expertise, and skill loading — unchanged by this change.
 (Previously: the scenario excluded Kimi as well as Claude Code.)
@@ -123,7 +123,7 @@ Adapters without an active output-style channel MUST continue to receive the ful
 - WHEN its persona asset is inspected
 - THEN it contains the full persona section, including tone/language/philosophy, as before this change
 
-### Requirement: Legacy Fingerprint Continuity
+### Requirement: Legacy Fingerprint Continuity (RF-PER-06)
 
 Uninstall and auto-heal fingerprint checks that rely on literal markers from the persona section (e.g., `## Rules`, `Senior Architect`) MUST continue to match on-disk content after tone/philosophy content is removed, or the fingerprint constants MUST be updated so uninstall and auto-heal continue to function correctly.
 (Previously: the scenario also covered Kimi installations.)
@@ -135,7 +135,7 @@ Uninstall and auto-heal fingerprint checks that rely on literal markers from the
 - THEN both checks match the residual on-disk content
 - AND auto-heal does not false-positive a repair
 
-### Requirement: Per-Adapter Test and Golden Coverage
+### Requirement: Per-Adapter Test and Golden Coverage (RF-PER-07)
 
 Automated tests and golden fixtures MUST cover the residual persona section, the reconciled canonical output-style content, and unaffected non-output-style adapter behavior, and MUST be updated in strict-TDD lockstep with implementation changes.
 (Previously: Kimi's residual section and output style were covered by unit assertions.)
@@ -158,7 +158,7 @@ Automated tests and golden fixtures MUST cover the residual persona section, the
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Platform-Native Solo Inline Semantics Preservation
+### Requirement: Platform-Native Solo Inline Semantics Preservation (RF-ORQ-05)
 
 For non-Claude solo-inline and platform-native orchestrator assets, the system MUST preserve platform-accurate inline execution wording and MUST NOT add inaccurate subagent or OpenCode persistence claims.
 (Previously: the first scenario also covered the Windsurf asset.)
@@ -177,7 +177,7 @@ For non-Claude solo-inline and platform-native orchestrator assets, the system M
 - THEN wording stays platform-accurate
 - AND wording does not introduce inaccurate subagent or OpenCode persistence guarantees
 
-### Requirement: chained-pr Skill Binding in Chain Strategy Guidance
+### Requirement: chained-pr Skill Binding in Chain Strategy Guidance (RF-ORQ-06)
 
 Los activos del orquestador SDD DEBEN enlazar la skill `chained-pr` en su guía de estrategia de cadena. Cuando la persona pida PRs encadenadas o apiladas, el orquestador DEBE resolver la skill `chained-pr` por su nombre de registro (no por una ruta del sistema de ficheros fija) mediante su Sub-Agent Launch Pattern, y DEBE inyectar la ruta resuelta en los prompts de las fases `sdd-tasks` y `sdd-apply` bajo `## Skills to load before work`. Esas fases DEBEN leer y seguir la skill ANTES de planificar o crear cualquier PR. Con la entrega `single-pr` por defecto la skill NO se resuelve ni se inyecta, y la propia skill `chained-pr` se activa solo cuando la persona pide encadenar, apilar o rebanar, o con `delivery_strategy: chained`, sin ningún umbral numérico.
 
@@ -221,7 +221,7 @@ El enlace DEBE referenciar la skill por el nombre de registro `chained-pr` (fron
 - **ENTONCES** la activación se describe como una petición de la persona de encadenar, apilar o rebanar
 - **Y** no contienen ningún número de líneas como umbral ni `400-line budget risk`
 
-### Requirement: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
+### Requirement: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts (RF-ORQ-09)
 
 For solo-inline and platform-native orchestrator hosts (antigravity), the skill-binding instruction MUST phrase "inject under `## Skills to load before work`" in a way that maps to each host's actual phase-context mechanism. The binding MUST NOT reintroduce OpenCode-style persisted-delegation claims that the existing spec forbids for these hosts.
 (Previously: the hosts were windsurf, antigravity, kimi and kiro, with a second scenario for kimi and kiro.)
@@ -234,7 +234,7 @@ For solo-inline and platform-native orchestrator hosts (antigravity), the skill-
 - AND the wording maps skill injection to the host's inline or platform-native phase-context mechanism
 - AND the wording does not claim persisted OpenCode plugin-backed background delegation
 
-### Requirement: Golden Fixture and Static Assertion Coverage for the Binding
+### Requirement: Golden Fixture and Static Assertion Coverage for the Binding (RF-ORQ-10)
 
 Static-validation tests and golden fixtures that cover chain strategy content MUST be updated to assert the presence of the `chained-pr` skill binding. Golden churn MUST be limited to the intended binding wording and the new Cursor chain strategy section; no unrelated content changes are permitted.
 (Previously: the scenarios counted 12 templates and 12 golden fixtures.)
@@ -266,7 +266,7 @@ Static-validation tests and golden fixtures that cover chain strategy content MU
 - WHEN the test executes
 - THEN the assertion verifies that the `chained-pr` skill binding is present in generated prompts for `sdd-tasks` and `sdd-apply` when chain strategy is active
 
-### Requirement: Optional Research Lifecycle Parity Across Catalog Agents
+### Requirement: Optional Research Lifecycle Parity Across Catalog Agents (RF-ORQ-15)
 
 All source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render that guidance, including Pi/VS Code Copilot/Trae using the generic runtime family.
 (Previously: «All 12 source orchestrator templates» and «all 16 supported IDs», including OpenCode/Kilocode sharing and OpenClaw in the generic family; the requirement also demanded that every rendered variant carry the canonical bounded review execution contract, which belonged to RDD and is retired.)
@@ -279,7 +279,7 @@ All source orchestrator templates MUST render equivalent optional research lifec
 - AND no rendered variant contains a `Review Execution Contract` section, its marker, `review/start(target)` or a refuter batch
 - AND optional research guidance is rendered identically across the equivalent runtime families
 
-### Requirement: Read-Only Judgment Day Judges
+### Requirement: Read-Only Judgment Day Judges (RF-ORQ-16)
 
 Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Cursor assets MUST use their equivalent read-only capability boundary.
 (Previously: Kiro and Kimi assets were also listed; the requirement covered every dedicated reviewer, Judgment Day judge, and refuter, and reviewers and refuters belonged to RDD and are retired.)
@@ -297,7 +297,7 @@ Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Rutas de instrucciones con nomenclatura Axiom (REQ-09.4)
+### Requirement: Rutas de instrucciones con nomenclatura Axiom (RF-VIS-01)
 Los adaptadores de agentes DEBEN utilizar rutas y nombres de archivos que contengan el prefijo o identificador `axiom` en lugar de `gentle-ai`.
 (Previously: también fijaba la ruta del steering de Kiro IDE, `~/.kiro/steering/axiom.md`, agente retirado por C-08-d.)
 
@@ -317,7 +317,7 @@ Los adaptadores de agentes DEBEN utilizar rutas y nombres de archivos que conten
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Diagnóstico de Salud del Sistema (Axiom Doctor) en Web UI (REQ-17.1)
+### Requirement: Diagnóstico de Salud del Sistema (Axiom Doctor) en Web UI (RF-UIP-01)
 El servidor HTTP local DEBE exponer el endpoint `GET /api/ecosystem/doctor` que recopila y retorna el estado de salud de los agentes compatibles (Claude Code, OpenCode, Codex, Pi), herramientas del sistema (Git, Go, Node.js), permisos del directorio de usuario (`~/.axiom/`) y configuración general. El frontend web DEBE renderizar estos diagnósticos en tarjetas con indicadores visuales claros (verde: saludable, amarillo: advertencia, rojo: error).
 (Previously: la lista de agentes incluía Kiro, retirado por C-08-d.)
 

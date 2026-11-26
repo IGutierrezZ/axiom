@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Excepciones por cambio de `ensure` (REQ-25.12, REQ-25.3, design D-04 y D-05): `--prefix`,
+// Excepciones por cambio de `ensure` (RF-BRA-12, RF-BRA-03, design D-04 y D-05): `--prefix`,
 // `--branch` y `--base` se registran por cambio, una excepción posterior contradictoria es
 // `plan_conflict`, la repetición idéntica es idempotente y un nombre inválido de la invocación
 // es `invalid_name` sin efectos. Con git real, entorno aislado y sin red. Salvo la prueba de la
@@ -31,7 +31,7 @@ func commitAll(t *testing.T, repo, message string) {
 	commit(t, repo, message)
 }
 
-// REQ-25.12, escenario «`--branch` fija el nombre de la rama del cambio»: la rama del cambio es
+// RF-BRA-12, escenario «`--branch` fija el nombre de la rama del cambio»: la rama del cambio es
 // la indicada y no `feat/x`; el worktree sigue componiéndose con el nombre del cambio, no con el
 // de la rama (`<raíz>/<cambio>/<repo>`), y la excepción queda registrada.
 func TestEnsureExceptionBranchFixesTheChangeBranchName(t *testing.T) {
@@ -58,7 +58,7 @@ func TestEnsureExceptionBranchFixesTheChangeBranchName(t *testing.T) {
 	}
 }
 
-// REQ-25.12, escenario «`--branch` con ramas de rol deriva los nombres»: la rama de seguimiento
+// RF-BRA-12, escenario «`--branch` con ramas de rol deriva los nombres»: la rama de seguimiento
 // es la indicada y las de rol son `<rama>-<rol>`.
 func TestEnsureExceptionBranchWithRoleBranchesDerivesTheRoleNames(t *testing.T) {
 	t.Parallel()
@@ -93,7 +93,7 @@ func wantNamesEqual(t *testing.T, what string, got []string, want ...string) {
 	}
 }
 
-// REQ-25.12, escenario «`--base` fija la base», y REQ-25.10 (`base_not_found` nombra la
+// RF-BRA-12, escenario «`--base` fija la base», y RF-BRA-10 (`base_not_found` nombra la
 // referencia fijada): `base.ref` es la indicada, la rama del cambio sale de ella y una base que
 // no existe es `base_not_found` sin crear nada.
 func TestEnsureExceptionBaseFixesTheBaseOfTheChange(t *testing.T) {
@@ -132,7 +132,7 @@ func TestEnsureExceptionBaseFixesTheBaseOfTheChange(t *testing.T) {
 	})
 }
 
-// REQ-25.12, escenarios «Una excepción posterior contradictoria se rechaza» y «Una repetición
+// RF-BRA-12, escenarios «Una excepción posterior contradictoria se rechaza» y «Una repetición
 // idéntica de la excepción es idempotente»: contradecir lo materializado (cualquiera de las tres
 // excepciones) es `plan_conflict` con una continuación ejecutable que repite la excepción
 // registrada, sin escribir nada; repetirla o no indicarla da el mismo JSON byte a byte.
@@ -198,7 +198,7 @@ func TestEnsureExceptionALaterContradictionIsPlanConflictAndARepeatIsIdempotent(
 	}
 }
 
-// REQ-25.12 y REQ-25.14: mientras el cambio no tiene ramas materializadas (un multirepo antes del
+// RF-BRA-12 y RF-BRA-15: mientras el cambio no tiene ramas materializadas (un multirepo antes del
 // sellado solo tiene el repositorio de specs, sin ramas), la excepción aún no contradice nada: se
 // registra y una nueva la sustituye; cuando el sellado añade el repositorio de código, la rama
 // registrada se aplica sin repetir la excepción.
@@ -240,7 +240,7 @@ func loadRecordAt(t *testing.T, planningRepo string, lane branch.Lane, change st
 	return record
 }
 
-// REQ-25.3 y REQ-25.12: un `--prefix`, un `--branch` o un `--base` inválidos de la invocación
+// RF-BRA-03 y RF-BRA-12: un `--prefix`, un `--branch` o un `--base` inválidos de la invocación
 // son `invalid_name` sin efectos (ni ramas, ni worktrees, ni registro, ni su bloqueo), con el
 // campo y el valor en los detalles; un prefijo inválido de `axiom.yaml` sigue siendo
 // `config_invalid`.

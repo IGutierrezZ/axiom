@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// `axiom branch ensure --promotion` (C-02-a, REQ-25.47, REQ-25.45): la ayuda documenta la bandera
+// `axiom branch ensure --promotion` (C-02-a, RF-BRA-29, RF-BRA-13): la ayuda documenta la bandera
 // y cada valor que no es una respuesta es un error de uso con código 2 y sin leer nada del
 // repositorio. El comportamiento del motor se prueba en internal/branch/engine.
 

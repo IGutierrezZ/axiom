@@ -220,7 +220,7 @@ func impactDoc(section string) string {
 	return featureDoc("Tipo: bug\n\n", "## Impacto en la spec\n\n"+section)
 }
 
-// El contrato fijo del marcador (REQ-29.15 de carril-sdd-versatil): la línea exacta
+// El contrato fijo del marcador (RF-CLI-10 de carril-sdd-versatil): la línea exacta
 // `Sin impacto en la spec` y una línea `Motivo:` con texto, sin rechazar el documento.
 func TestImpactMarker(t *testing.T) {
 	tests := []struct {
@@ -303,10 +303,10 @@ func TestDocErrorProblemsKeepTheirOrder(t *testing.T) {
 }
 
 // idOfName deriva el identificador del título con el patrón por defecto: el ID ya no es un
-// campo de openspecdoc.Requirement (REQ-44.4).
+// campo de openspecdoc.Requirement (RF-RID-04).
 func idOfName(name string) string { return reqid.Default().InTitle(name) }
 
-// REQ-47.6 / D11: la sección de traza no altera la validación del documento ODD; una
+// RF-RID-14 / D11: la sección de traza no altera la validación del documento ODD; una
 // sección de traza duplicada la rechaza la lectura de la traza, no ParseFeatureDoc.
 func TestParseFeatureDocValidatesTheSameWithTheIDTraceSection(t *testing.T) {
 	body := "## Spec viva\n\n" + capability("pagos", fence("## ADDED Requirements\n\n### Requirement: Alta (prov:30:1)\n\nCuerpo.\n"))

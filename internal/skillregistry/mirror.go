@@ -1,6 +1,6 @@
 package skillregistry
 
-// Engram mirror constants (D-11, REQ-22.11). The unified index persists to a
+// Engram mirror constants (D-11, RF-SKI-02). The unified index persists to a
 // single stable topic so two workspaces cannot clobber each other's history.
 const (
 	// MirrorTopicKey is the stable Engram upsert key for the skills index.
@@ -10,7 +10,7 @@ const (
 )
 
 // MirrorRequest is the observation the unified skills index persists to the
-// Engram topic `skill-registry` (REQ-22.11, D-11). It is the engine-side shape;
+// Engram topic `skill-registry` (RF-SKI-02, D-11). It is the engine-side shape;
 // the wiring layer translates it into an engram MCP `mem_save` call.
 type MirrorRequest struct {
 	// Project scopes the observation to one workspace so two projects cannot

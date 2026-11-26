@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos de `axiom branch ensure --role <rol>` (REQ-43.24, design D-13). Todos se devuelven
+// Rechazos de `axiom branch ensure --role <rol>` (RF-BRA-33, design D-13). Todos se devuelven
 // antes de llamar al motor: no se ha creado ninguna rama, worktree ni registro. El motor de
 // `ensure` no conoce el rol.
 

@@ -8,7 +8,7 @@ import (
 )
 
 // commitReviewFlag es la bandera de `axiom sdd gate record` que persiste el modo de revisión por
-// commit (REQ-33.2). Se separa aquí de los argumentos, antes de kickoff.ParseGateRecordArgs, para
+// commit (RF-GAT-20). Se separa aquí de los argumentos, antes de kickoff.ParseGateRecordArgs, para
 // no tocar internal/kickoff/args.go (decisión D2 del diseño).
 const commitReviewFlag = "--commit-review"
 
@@ -25,7 +25,7 @@ func commitReviewVocabulary() string {
 // splitCommitReviewFlag quita `--commit-review <modo>` de args y devuelve el modo ("" si la bandera
 // no está) y el resto de los argumentos sin cambios y en su orden. Rechaza la bandera repetida, sin
 // valor, con un valor fuera del vocabulario (incluidas la cadena vacía y las variantes de
-// mayúsculas, REQ-33.1). No toca args.
+// mayúsculas, RF-GAT-19). No toca args.
 //
 // La separación previa no es ambigua: `requireFlagValue` rechaza cualquier valor que empiece por
 // `-`, así que `--commit-review` nunca puede ser el valor de otra bandera.
@@ -62,7 +62,7 @@ func splitCommitReviewFlag(args []string) (kickoff.CommitReviewMode, []string, e
 	return mode, rest, nil
 }
 
-// validateCommitReviewShape es la comprobación de forma de `--commit-review` (REQ-33.2, D3), antes
+// validateCommitReviewShape es la comprobación de forma de `--commit-review` (RF-GAT-20, D3), antes
 // de tocar el disco: solo con `--gate tasks`, solo con `--decision approved` y nunca con
 // `--evidence-kind`. Cada rechazo nombra la orden que sigue siendo válida. Sin modo no hace nada.
 func validateCommitReviewShape(parsed kickoff.GateRecordArgs, mode kickoff.CommitReviewMode) error {
@@ -84,7 +84,7 @@ func validateCommitReviewShape(parsed kickoff.GateRecordArgs, mode kickoff.Commi
 	return nil
 }
 
-// requireCommitReviewStops es la comprobación de estado de `--commit-review` (REQ-33.2, D3): el
+// requireCommitReviewStops es la comprobación de estado de `--commit-review` (RF-GAT-20, D3): el
 // cambio debe estar sellado `checkpointed`. En uno continuo, o sin sellar, no hay puerta `tasks` que
 // proyecte el modo, y se rechaza nombrando la aprobación sin la bandera.
 func requireCommitReviewStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kickoff, workspaceRoot string) error {

@@ -10,11 +10,11 @@ import (
 )
 
 // PublicationTarget calcula, solo con lecturas, el destino de la publicación de los documentos de un
-// cambio (REQ-27.7, DD-07): el repositorio del planning home, su raíz git, la rama que se publica y
+// cambio (RF-PUB-03, DD-07): el repositorio del planning home, su raíz git, la rama que se publica y
 // la de integración. Se construye sobre el mismo camino de lectura que `Status` y `HandOff`
 // (`gather` y la planificación pura): no toma el cerrojo del cambio, no escribe el registro ni el
 // ledger y no hace `fetch`, y el puerto de git no tiene ningún método que publique, así que nunca
-// ejecuta `commit` ni `push` (REQ-25.1). Lo consultan la pregunta de la puerta, `gate record` y
+// ejecuta `commit` ni `push` (RF-BRA-01). Lo consultan la pregunta de la puerta, `gate record` y
 // `axiom sdd publish`, de modo que la rama que se nombra es exactamente la que se sube.
 //
 // Reglas de rama (S9), con la rama actual leída del repositorio del planning home:

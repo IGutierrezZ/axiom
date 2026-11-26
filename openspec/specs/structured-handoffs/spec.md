@@ -10,7 +10,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El paquete `internal/handoff` provee el modelo de datos, la deserialización/serialización y la validación semántica de los relevos de fase en el ciclo de vida de SDD.
 
-### Requirement: Esquema y Formato Canónico del Handoff (REQ-1.1)
+### Requirement: Esquema y Formato Canónico del Handoff (RF-HND-01)
 
 El artefacto `handoff.md` DEBE componerse de un bloque de metadatos frontal en formato YAML delimitado por `---` seguido obligatoriamente por cinco secciones descriptivas en español.
 
@@ -49,7 +49,7 @@ Las secciones Markdown requeridas son:
 
 ---
 
-### Requirement: Parser y Serializador Bidireccional (REQ-1.2)
+### Requirement: Parser y Serializador Bidireccional (RF-HND-02)
 
 El paquete `internal/handoff` DEBE ser capaz de leer un archivo o flujo `io.Reader` con formato markdown/YAML y convertirlo a una estructura Go tipificada (`Handoff`), así como serializar dicha estructura a un documento markdown idéntico y canónico (*round-trip* sin pérdida de información).
 
@@ -60,7 +60,7 @@ El paquete `internal/handoff` DEBE ser capaz de leer un archivo o flujo `io.Read
 
 ---
 
-### Requirement: Motor de Validación Semántica de Transiciones (REQ-1.3)
+### Requirement: Motor de Validación Semántica de Transiciones (RF-HND-03)
 
 El validador de `internal/handoff` DEBE verificar que la transición entre fases declarada en el handoff sea coherente con la máquina de estados de SDD y con la topología de workspace declarada en `axiom.yaml`.
 
@@ -96,7 +96,7 @@ Se admiten transiciones de retroceso explícito por remediación únicamente si 
 
 ---
 
-### Requirement: Formato de Espejo para Engram MCP (REQ-1.4)
+### Requirement: Formato de Espejo para Engram MCP (RF-HND-04)
 
 El paquete `internal/handoff` DEBE proporcionar la función `ToEngramObservation(h)` que serializa el relevo en el payload exacto esperado para registrarlo en Engram bajo la clave `topic_key: sdd/{change}/handoff`, con tipo `architecture` y título normalizado.
 
@@ -112,7 +112,7 @@ El paquete `internal/handoff` DEBE proporcionar la función `ToEngramObservation
 
 La CLI `axiom` proporciona comandos dedicados para gestionar, inspeccionar y validar los relevos de manera interactiva o automatizada.
 
-### Requirement: Subcomando axiom handoff show (REQ-2.1)
+### Requirement: Subcomando axiom handoff show (RF-HND-05)
 
 El comando `axiom handoff show [--change <nombre>]` DEBE mostrar en terminal un resumen formateado del relevo activo del cambio, incluyendo estado, roles, fases y la última sección de instrucciones directas.
 
@@ -130,7 +130,7 @@ El comando `axiom handoff show [--change <nombre>]` DEBE mostrar en terminal un 
 
 ---
 
-### Requirement: Subcomando axiom handoff create (REQ-2.2)
+### Requirement: Subcomando axiom handoff create (RF-HND-06)
 
 El comando `axiom handoff create` DEBE generar una plantilla canónica de `handoff.md` con los metadatos suministrados por argumentos de línea de comandos.
 
@@ -151,7 +151,7 @@ Parámetros requeridos:
 
 ---
 
-### Requirement: Subcomando axiom handoff validate (REQ-2.3)
+### Requirement: Subcomando axiom handoff validate (RF-HND-07)
 
 El comando `axiom handoff validate [--change <nombre>]` DEBE analizar el archivo `handoff.md` del cambio activo y verificar el cumplimiento de todas las reglas del esquema y de transición de fases.
 

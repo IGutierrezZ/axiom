@@ -13,8 +13,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Preferencias personales de worktree y modo de trabajo efectivo de `ensure` (REQ-25.8,
-// REQ-25.29, design D-08). Las preferencias salen del hub, nunca de `axiom.yaml`; el modo
+// Preferencias personales de worktree y modo de trabajo efectivo de `ensure` (RF-BRA-08,
+// RF-HUB-07, design D-08). Las preferencias salen del hub, nunca de `axiom.yaml`; el modo
 // efectivo de un cambio se resuelve con la prioridad registro > `--mode` > hub > defecto.
 
 // hubPrefs implementa el puerto branch.Prefs sobre `~/.axiom/workspaces.json`.

@@ -31,7 +31,7 @@ func mockGoEnvError() func(name string, args ...string) *exec.Cmd {
 
 // TestPreflightWindowsSelfBinaryWrite covers the single provenance gate shared
 // by every write path (D-03, T-5). The guarantee: never create a second
-// PATH-visible binary (REQ-22.1).
+// PATH-visible binary (RF-UPD-01).
 func TestPreflightWindowsSelfBinaryWrite(t *testing.T) {
 	origLookPath := lookPathFn
 	t.Cleanup(func() { lookPathFn = origLookPath })

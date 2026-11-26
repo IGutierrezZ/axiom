@@ -30,7 +30,7 @@ func requirementsJSON(t *testing.T, status Status) string {
 	return string(data)
 }
 
-// REQ-47.9: modifies y creates ordenados, sin id para un nombre sin ID, provisional marcado,
+// RF-CLI-14: modifies y creates ordenados, sin id para un nombre sin ID, provisional marcado,
 // RENAMED por su nombre antiguo y capacidad nueva como spec completa que cuenta como ADDED.
 func TestRequirementsProjectsModifiesAndCreates(t *testing.T) {
 	t.Parallel()
@@ -78,7 +78,7 @@ func TestRequirementsProjectsModifiesAndCreates(t *testing.T) {
 	}
 }
 
-// REQ-47.9: sin deltas legibles el campo se omite y la salida no lo nombra.
+// RF-CLI-14: sin deltas legibles el campo se omite y la salida no lo nombra.
 func TestRequirementsOmittedWithoutReadableDeltas(t *testing.T) {
 	t.Parallel()
 	ws := isoDefaultProject(t)
@@ -95,7 +95,7 @@ func TestRequirementsOmittedWithoutReadableDeltas(t *testing.T) {
 	}
 }
 
-// REQ-47.9: con un cambio archivado el campo se omite.
+// RF-CLI-14: con un cambio archivado el campo se omite.
 func TestRequirementsOmittedForArchivedChange(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -110,7 +110,7 @@ func TestRequirementsOmittedForArchivedChange(t *testing.T) {
 	}
 }
 
-// REQ-47.9: con el patrón inaccesible el campo se omite.
+// RF-CLI-14: con el patrón inaccesible el campo se omite.
 func TestRequirementsOmittedWithInaccessiblePattern(t *testing.T) {
 	t.Parallel()
 	ws := isoDefaultProject(t)
@@ -122,7 +122,7 @@ func TestRequirementsOmittedWithInaccessiblePattern(t *testing.T) {
 	}
 }
 
-// REQ-47.9: con el almacén engram o none no hay ficheros de delta y el campo se omite; y el
+// RF-CLI-14: con el almacén engram o none no hay ficheros de delta y el campo se omite; y el
 // campo nunca altera nextRecommended, dependencies ni motivos.
 func TestRequirementsStoreAndRoutingIndependence(t *testing.T) {
 	t.Parallel()

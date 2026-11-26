@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// carril-sdd-versatil U24 (REQ-29.17): la plantilla axiom.example.yaml y el
+// carril-sdd-versatil U24 (RF-ORQ-17): la plantilla axiom.example.yaml y el
 // manual documentan el modo ISO sin desviarse del esquema.
 
 func readExampleConfig(t *testing.T) string {
@@ -60,7 +60,7 @@ func TestExampleConfigLoads(t *testing.T) {
 	if declarations.SDD == nil || !declarations.SDD.ISO {
 		t.Fatalf("el bloque documentado declara iso: true: %+v", declarations.SDD)
 	}
-	// REQ-44.1: el bloque descomentado declara también la plantilla de ejemplo.
+	// RF-RID-01: el bloque descomentado declara también la plantilla de ejemplo.
 	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
 		t.Fatalf("el bloque documentado declara id_pattern RF-<DOM>-<NN>: %q, %v", p.Template(), err)
 	}
@@ -105,7 +105,7 @@ func TestManualDocumentsTheISOMode(t *testing.T) {
 	)
 }
 
-// REQ-43.21: la plantilla documenta el bloque `integrations:` comentado con `azure-devops`
+// RF-TOP-18: la plantilla documenta el bloque `integrations:` comentado con `azure-devops`
 // (`organization`, `project` y `team`) y la regla de que los secretos nunca se escriben en
 // axiom.yaml. Al estar comentado, la plantilla sigue cargando sin errores; descomentado, carga con el
 // catálogo por defecto.
@@ -117,7 +117,7 @@ func TestExampleConfigDocumentsIntegrations(t *testing.T) {
 }
 
 // El bloque comentado de la plantilla, descomentado, carga con el catálogo por defecto y declara
-// organization, project y team (REQ-43.21).
+// organization, project y team (RF-TOP-18).
 func TestExampleConfigIntegrationsBlockLoadsWhenUncommented(t *testing.T) {
 	var block []string
 	in := false

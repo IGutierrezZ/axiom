@@ -191,7 +191,7 @@ func PlanIDs(in IDPlanInput) (IDPlan, error) {
 	}
 
 	// b. Los tokens provisionales de los textos validados: gramática y patrón. Un token
-	// dentro de código de la delta es un ejemplo y no cuenta (REQ-47.4).
+	// dentro de código de la delta es un ejemplo y no cuenta (RF-RID-12).
 	var refs []tokenRef
 	for _, c := range caps {
 		for _, span := range reqid.ScanProvisionalRefs(c.Text) {
@@ -398,7 +398,7 @@ func checkKnownIDs(c CapabilitySource, item classified, p reqid.Pattern) error {
 
 // checkDefinitiveAdded comprueba los ADDED pendientes con identificador definitivo y sin
 // entrada en la traza: no existen en el registro ni se repiten en el propio cambio (A2,
-// REQ-30.4). Los que la traza ya conoce los trata la reintegración (D5). Se compara por
+// RF-OLS-04). Los que la traza ya conoce los trata la reintegración (D5). Se compara por
 // identidad (serie y número), no por cadena: con un patrón de ancho libre (`<m>`), `RF-1` y
 // `RF-001` son el mismo identificador.
 func checkDefinitiveAdded(in IDPlanInput, items []classified) error {
@@ -777,7 +777,7 @@ func buildPlan(in IDPlanInput, adds []*addedItem, items []classified) (IDPlan, e
 
 // Duplicate es un identificador que aparece más de una vez en la spec viva resultante.
 // Blocking es verdadero si lo escribe la integración; los históricos ajenos solo se
-// informan (REQ-47.5).
+// informan (RF-RID-13).
 type Duplicate struct {
 	ID           string   `json:"id"`
 	Capabilities []string `json:"capabilities"`

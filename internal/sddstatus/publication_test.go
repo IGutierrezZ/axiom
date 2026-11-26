@@ -16,7 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de la proyección `publication` del status (REQ-27.18, C-05-c): cuándo procede proyectar
+// Pruebas de la proyección `publication` del status (RF-PUB-11, C-05-c): cuándo procede proyectar
 // y cómo se traducen los hechos de git a un estado. Es aditiva: sin estado, el JSON no cambia.
 
 const publicationChange = "x"
@@ -64,7 +64,7 @@ func sealArchivedChange(t *testing.T, root string, style kickoff.ExecutionStyle,
 	}
 }
 
-// REQ-27.13: solo se proyecta en el momento en que `axiom sdd publish` se espera.
+// RF-PUB-08: solo se proyecta en el momento en que `axiom sdd publish` se espera.
 func TestPublicationDue(t *testing.T) {
 	planned := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactMissing, "tasks": ArtifactMissing}
 	reviewed := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactDone, "tasks": ArtifactDone, "verifyReport": ArtifactDone}

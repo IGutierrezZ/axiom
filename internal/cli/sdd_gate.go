@@ -15,7 +15,7 @@ import (
 
 // lastRoleNoticeMarker is the stable phrase RunSDDGate's last-role notice
 // always contains. The notice fires exactly once, when an approval closes the
-// last active role (REQ-21.13), and writes no handoff.md. Keeping this as a
+// last active role (RF-RCL-01), and writes no handoff.md. Keeping this as a
 // named constant, rather than duplicating a literal string at every call and
 // assertion site, is what lets both this file and its test check "did the
 // notice fire" without agreeing on prose by coincidence.
@@ -71,7 +71,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	}
 	workspaceRoot := loc.WorkspaceRoot
 	parsed = completeGateBaseRef(parsed, loc)
-	// Guarda A (REQ-25.19): una sola consulta cubre AppendGate de esta invocación; la compuerta
+	// Guarda A (RF-BRA-20): una sola consulta cubre AppendGate de esta invocación; la compuerta
 	// de integración se registra en la rama de archivado (G-10).
 	writerContext := branch.ContextOrdinary
 	if parsed.Gate == kickoff.GateIntegration {
@@ -95,7 +95,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 			return err
 		}
 		// Sin cesión, prepareHandOff no corre: la puerta aún pendiente se comprueba aquí antes de
-		// calcular nada más y otra vez bajo el cerrojo (REQ-33.2).
+		// calcular nada más y otra vez bajo el cerrojo (RF-GAT-20).
 		if !parsed.HandOff {
 			ledger, err := kickoff.LoadGates(changeRoot)
 			if err != nil {
@@ -182,7 +182,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	emitActorIdentityWarning(actorWarning)
 	emitGateIntegrationEvent(loc, changeRoot, record)
 
-	// REQ-27.12: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
+	// RF-GAT-15: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
 	// `axiom sdd publish` que sigue al registro, para que el orquestador la ejecute una vez.
 	publish := resolveGatePublish(parsed, workspaceRoot, handOff)
 
@@ -212,12 +212,12 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 			closedValue = closed
 			pendingNonBlocking = pending
 			// The notice is the only thing the approval of the last blocking role adds
-			// (REQ-21.13): no handoff.md is written any more, the ledger already says every
-			// blocking role closed and `status` opens verify from it (REQ-21.15). It
+			// (RF-RCL-01): no handoff.md is written any more, the ledger already says every
+			// blocking role closed and `status` opens verify from it (RF-RCL-03). It
 			// accompanies exit 2 and exit 3 alike, names the deferred and optional roles
 			// still open, and is not repeated when one of them closes later.
 			if closed && !parsed.JSON {
-				if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (REQ-21.13, REQ-21.15).%s\n", lastRoleNoticeMarker, parsed.Change, pendingNonBlockingNotice(pending)); err != nil {
+				if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (RF-RCL-01, RF-RCL-03).%s\n", lastRoleNoticeMarker, parsed.Change, pendingNonBlockingNotice(pending)); err != nil {
 					return err
 				}
 			}
@@ -233,7 +233,7 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 // pendingNonBlockingNotice is the sentence the last-role notice appends when roles
 // with policy deferred or optional still have their role-apply gate open: each role
 // with its policy and the state of its gate, and that none of them blocks the global
-// verification (REQ-21.13). Empty when there is none, so a change with only blocking
+// verification (RF-RCL-01). Empty when there is none, so a change with only blocking
 // roles prints the notice exactly as before.
 func pendingNonBlockingNotice(pending []kickoff.PendingRole) string {
 	if len(pending) == 0 {
@@ -322,12 +322,12 @@ func gateKeyInRoster(key kickoff.GateKey, roster []multirole.RoleAssignment) boo
 }
 
 // lastBlockingRoleJustClosed reports whether the approval of gate just closed the
-// last role with policy blocking (REQ-21.13): gate belongs to a blocking role and,
+// last role with policy blocking (RF-RCL-01): gate belongs to a blocking role and,
 // with it, every blocking role-apply gate of the roster is approved in the change's
 // ledger. It reuses kickoff.EvaluateGates and kickoff.LastBlockingRoleClosed
 // rather than re-deriving gate status by hand. It also returns the roles with
 // policy deferred or optional whose gate is still open, which the notice names;
-// they never block the global verification (REQ-21.15).
+// they never block the global verification (RF-RCL-03).
 //
 // The approval of a deferred or optional role never closes anything, so it never
 // repeats the notice. With every role blocking, or with the single fullstack role,

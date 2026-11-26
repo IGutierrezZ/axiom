@@ -30,7 +30,7 @@ const (
 	RuleDiscardReason    = "discard_reason"
 	RuleInventoryMissing = "inventory_missing"
 	RuleInventoryStale   = "inventory_stale"
-	// Reglas de conservación del ID del cliente (REQ-30.11 f).
+	// Reglas de conservación del ID del cliente (RF-ADP-03 f).
 	RuleOriginID          = "origin_id"
 	RulePatternUndeclared = "pattern_undeclared"
 	RuleForeignIDConflict = "foreign_id_conflict"
@@ -71,9 +71,9 @@ type addedRequirement struct {
 // Check verifica de forma determinista, sin modelo y sin escribir, el cambio de adopción
 // de loc con el patrón de identificadores efectivo del proyecto (el declarado en
 // `sdd.id_pattern` o el defecto): formato, unicidad por serie y número, escenarios,
-// procedencia, cobertura del inventario y motivos de los descartes (REQ-30.11 y
-// REQ-30.12). No decide nada de la compuerta `spec` ni juzga la fidelidad semántica de la
-// migración (REQ-30.13).
+// procedencia, cobertura del inventario y motivos de los descartes (RF-ADP-03 y
+// RF-ADP-04). No decide nada de la compuerta `spec` ni juzga la fidelidad semántica de la
+// migración (RF-ADP-05).
 func Check(loc workspace.Location, change string, pattern reqid.Pattern) (CheckReport, error) {
 	changeRoot := filepath.Join(loc.PlanningHome, "changes", change)
 	if info, err := os.Stat(changeRoot); err != nil || !info.IsDir() {
@@ -182,7 +182,7 @@ func (c *checker) loadDeltas() error {
 // lastParen extrae el último "(…)" de un título, sin los paréntesis.
 var lastParen = regexp.MustCompile(`\(([^()]*)\)`)
 
-// classifyTitle aplica la regla de formato (REQ-30.10 y REQ-30.11 a) al título de un
+// classifyTitle aplica la regla de formato (RF-ADP-02 y RF-ADP-03 a) al título de un
 // requisito ADDED y devuelve su identificador definitivo o su provisional compatible con
 // el patrón efectivo; ambos vacíos si el título incumple (el fallo ya consta).
 func (c *checker) classifyTitle(a addedRequirement) (id, prov string) {
@@ -223,7 +223,7 @@ type identityKey struct {
 	number int
 }
 
-// checkIdentifiers aplica la unicidad (REQ-30.11 b): dentro del cambio por serie y número,
+// checkIdentifiers aplica la unicidad (RF-ADP-03 b): dentro del cambio por serie y número,
 // los provisionales por token y contra el registro de specs y cambios activos con
 // LookupIdentity.
 func (c *checker) checkIdentifiers() error {
@@ -316,7 +316,7 @@ func countScenarios(body string) int {
 	return count
 }
 
-// checkOrigins aplica la regla de procedencia (REQ-30.11 d) y devuelve las unidades que
+// checkOrigins aplica la regla de procedencia (RF-ADP-03 d) y devuelve las unidades que
 // citan los `Origen:` (clave `<ruta>#<ancla>`).
 func (c *checker) checkOrigins() map[string]bool {
 	covered := map[string]bool{}
@@ -386,7 +386,7 @@ func (c *checker) checkOrigin(a addedRequirement, o adoption.Origin) string {
 	return rel
 }
 
-// checkCoverage aplica la cobertura (REQ-30.11 e), los motivos de los descartes y la
+// checkCoverage aplica la cobertura (RF-ADP-03 e), los motivos de los descartes y la
 // vigencia del inventario.
 func (c *checker) checkCoverage(origins map[string]bool, discards []adoption.Discard) {
 	discarded := map[string]bool{}

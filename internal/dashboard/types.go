@@ -15,11 +15,11 @@ type WorkspaceDTO struct {
 	Message         string              `json:"message"`
 	IsConfigured    bool                `json:"is_configured"`
 	DetectedTech    interface{}         `json:"detected_tech,omitempty"`
-	// BranchPolicy es la política de ramas efectiva del proyecto (REQ-1.1): la del bloque `git:`
-	// con los valores por defecto aplicados. Solo lectura (REQ-25.33).
+	// BranchPolicy es la política de ramas efectiva del proyecto (RF-WEB-01): la del bloque `git:`
+	// con los valores por defecto aplicados. Solo lectura (RF-WEB-10).
 	BranchPolicy BranchPolicyDTO `json:"branchPolicy"`
 	// Repositories son las entradas de `repositories:` tal como se declararon, en solo lectura
-	// (REQ-1.1, REQ-25.33). Es siempre un array, vacío sin entradas.
+	// (RF-WEB-01, RF-WEB-10). Es siempre un array, vacío sin entradas.
 	Repositories []RepositoryPolicyDTO `json:"repositories"`
 }
 
@@ -65,12 +65,12 @@ type IncrementSummaryDTO struct {
 	// Title es el título legible de una feature ODD (el encabezado de su documento); vacío en SDD.
 	Title string `json:"title,omitempty"`
 	// WorktreePath y Branch indican dónde vive un cambio que se lee de un worktree registrado
-	// (REQ-25.34): la ruta absoluta del worktree y su rama. Ausentes, el cambio está en el checkout
+	// (RF-WEB-11): la ruta absoluta del worktree y su rama. Ausentes, el cambio está en el checkout
 	// principal. Los campos de INC-25 van en camelCase (design D-20), a diferencia del resto del DTO.
 	WorktreePath string `json:"worktreePath,omitempty"`
 	Branch       string `json:"branch,omitempty"`
 	// PendingArchive marca un cambio activo ya presente en la rama de integración que aún no se
-	// ha archivado (REQ-25.20). Es informativo: no bloquea nada.
+	// ha archivado (RF-BRA-21). Es informativo: no bloquea nada.
 	PendingArchive bool `json:"pendingArchive,omitempty"`
 }
 
@@ -213,7 +213,7 @@ type ProjectSwitchRequest struct {
 }
 
 // ProjectAddRequest representa la solicitud para registrar un proyecto en el Hub. Las
-// preferencias personales de worktree (REQ-25.29) son opcionales: vacías, no se guarda ninguna.
+// preferencias personales de worktree (RF-HUB-07) son opcionales: vacías, no se guarda ninguna.
 type ProjectAddRequest struct {
 	Path         string `json:"path"`
 	Name         string `json:"name,omitempty"`
@@ -238,7 +238,7 @@ type ProjectInitRequest struct {
 	WorktreeRoot string   `json:"worktree_root,omitempty"`
 }
 
-// WorktreePrefsDTO son unas preferencias personales de worktree (REQ-25.29): el modo y la
+// WorktreePrefsDTO son unas preferencias personales de worktree (RF-HUB-07): el modo y la
 // raíz de worktrees. Es el cuerpo del PUT de `/api/projects/active/worktree-prefs` y, en las
 // respuestas, la forma de `worktree_prefs` (lo guardado en el hub, donde un campo vacío es «sin
 // preferencia») y de `effective_worktree_prefs` (lo que rige, con los valores por defecto
@@ -278,7 +278,7 @@ type CreateIncrementRequest struct {
 	Intent       string `json:"intent"`
 	Type         string `json:"type,omitempty"`          // "feature", "fix", "refactor", "architecture"
 	ProposalBody string `json:"proposal_body,omitempty"` // INC-19: cuerpo ya renderizado (promoción ODD), sustituye la plantilla generada cuando no está vacío
-	// Mode es la respuesta a un `decision_required` (REQ-25.32): `worktree` o `in_place`. Vacío, rige
+	// Mode es la respuesta a un `decision_required` (RF-WEB-09): `worktree` o `in_place`. Vacío, rige
 	// el modo efectivo que resuelve `ensure` (registro, hub o `worktree`); el valor se registra por cambio.
 	Mode string `json:"mode,omitempty"`
 }
@@ -394,7 +394,7 @@ type EcosystemActionResponse struct {
 }
 
 // EcosystemPhases agrupa el reporte por fases de la cadena upgrade->sync,
-// en orden de ejecución (D-07, REQ-22.4).
+// en orden de ejecución (D-07, RF-UPD-04).
 type EcosystemPhases struct {
 	Upgrade UpgradePhaseReport `json:"upgrade"`
 	Sync    SyncPhaseReport    `json:"sync"`

@@ -10,7 +10,7 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
 
 El binario ejecutable `axiom` proporciona la interfaz unificada de línea de comandos para la plataforma.
 
-### Requirement: Información de Versión e Identidad (REQ-1.1)
+### Requirement: Información de Versión e Identidad (RF-TOP-01)
 
 El ejecutable `axiom` DEBE soportar la bandera `--version`, `-v` y el subcomando `version`, imprimiendo el nombre de la plataforma, la versión semántica y la información del release.
 
@@ -28,9 +28,9 @@ El ejecutable `axiom` DEBE soportar la bandera `--version`, `-v` y el subcomando
 
 ---
 
-### Requirement: Subcomando axiom workspace validate (REQ-1.2)
+### Requirement: Subcomando axiom workspace validate (RF-TOP-02)
 
-El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, REQ-30.19), DEBE rechazar un bloque `baseline:` residual con el error tipado de REQ-30.21 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de REQ-25.25. Una clave `governance.semantic_analysis` residual NO DEBE invalidar la configuración: se sigue leyendo, se ignora y DEBE reportarse como advertencia que nombra la clave y no altera el resultado.
+El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, RF-CTX-17), DEBE rechazar un bloque `baseline:` residual con el error tipado de RF-TOP-12 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de RF-TOP-08. Una clave `governance.semantic_analysis` residual NO DEBE invalidar la configuración: se sigue leyendo, se ignora y DEBE reportarse como advertencia que nombra la clave y no altera el resultado.
 (Previously: `governance.semantic_analysis` elegía el conector de `axiom semantic` y se validaba en silencio; C-08-l retira ese comando y la clave pasa a advertencia.)
 
 #### Scenario: Validación de espacio de trabajo conforme
@@ -92,7 +92,7 @@ El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, e
 
 El paquete `internal/workspace` implementa la lógica de dominio para la lectura de `axiom.yaml` y la verificación determinista de la estructura de repositorios y roles bajo la carpeta maestra.
 
-### Requirement: Estructura del Esquema axiom.yaml (REQ-2.1)
+### Requirement: Estructura del Esquema axiom.yaml (RF-TOP-03)
 
 El motor de configuración DEBE deserializar y validar el archivo `axiom.yaml`, exigiendo los campos obligatorios:
 - `workspace.name` (cadena no vacía)
@@ -100,7 +100,7 @@ El motor de configuración DEBE deserializar y validar el archivo `axiom.yaml`, 
 - `workspace.specs_repository` (ruta relativa al directorio de especificaciones)
 - `roles` (mapa con al menos 1 rol definido, conteniendo `name` y una lista de `repositories`)
 
-Además DEBE aceptar los bloques opcionales de primer nivel `technical_context` (REQ-24.26), `git` (REQ-25.26), `repositories` (REQ-25.27), `workflow` (REQ-27.1) y `delivery` (REQ-32.1): su ausencia no altera la validación y, cuando están presentes, se validan de forma estricta (claves desconocidas, rutas y valores). Un bloque `baseline` NO es un bloque admitido: se rechaza con el error tipado de REQ-30.21. Las claves desconocidas fuera de esos bloques se siguen ignorando.
+Además DEBE aceptar los bloques opcionales de primer nivel `technical_context` (RF-CTX-01), `git` (RF-TOP-09), `repositories` (RF-TOP-10), `workflow` (RF-TOP-11) y `delivery` (RF-TOP-14): su ausencia no altera la validación y, cuando están presentes, se validan de forma estricta (claves desconocidas, rutas y valores). Un bloque `baseline` NO es un bloque admitido: se rechaza con el error tipado de RF-TOP-12. Las claves desconocidas fuera de esos bloques se siguen ignorando.
 (Previously: la lista de bloques opcionales de primer nivel era `technical_context`, `git`, `repositories` y `workflow`)
 
 #### Scenario: El bloque `workflow` es opcional y se valida cuando está presente
@@ -121,9 +121,9 @@ Además DEBE aceptar los bloques opcionales de primer nivel `technical_context` 
 
 - **DADO** un `axiom.yaml` con los campos obligatorios y un bloque `baseline:`
 - **CUANDO** el usuario ejecuta `axiom workspace validate`
-- **ENTONCES** la validación falla con el error tipado de REQ-30.21 y no lo trata como clave desconocida ignorable
+- **ENTONCES** la validación falla con el error tipado de RF-TOP-12 y no lo trata como clave desconocida ignorable
 
-### Requirement: Topología Monorepo Embebido (REQ-2.2)
+### Requirement: Topología Monorepo Embebido (RF-TOP-04)
 
 En la topología `monorepo-embedded`, el repositorio de especificaciones DEBE apuntar a la raíz del propio monorrepo (`"."`) o a una subcarpeta interna existente (como `openspec` o `specs`). Además, el único rol admitido es `fullstack`: un monorepo no se subdivide en roles especializados, porque los roles especializados (`core`, `web`, `qa`, etc.) pertenecen a `multirepo`. `axiom workspace validate` DEBE reportar como error, en español, cualquier rol de `monorepo-embedded` distinto de `fullstack`, nombrando la topología, el rol y los pasos de migración (dejar solo el rol `fullstack` o declarar la topología `multirepo`), y DEBE finalizar con código de salida `1`. Ese rechazo es solo de validación: la carga de la configuración (`workspace.Locate`) NO DEBE fallar por ello, de modo que `axiom sdd status`, `axiom branch` y el resto de verbos siguen funcionando sobre un `axiom.yaml` existente. La regla NO se aplica a `multirepo`, que admite cualquier conjunto de roles válido.
 (Previously: solo fijaba la ubicación del repositorio de especificaciones; un monorepo admitía cualquier conjunto de roles)
@@ -161,13 +161,13 @@ En la topología `monorepo-embedded`, el repositorio de especificaciones DEBE ap
 - **CUANDO** se ejecuta `axiom workspace validate`
 - **ENTONCES** no se reporta ningún error de roles
 
-### Requirement: Topología Monorepo Desacoplado (REQ-2.3) [SUPERSEDED / DEPRECADO]
+### Requirement: Topología Monorepo Desacoplado (RF-TOP-05) [SUPERSEDED / DEPRECADO]
 > [!CAUTION]
 > **REQUISITO HISTÓRICO SUPERADO / DEPRECADO:** Este requisito ha sido superado o deprecado.
 > Motivo: `monorepo-decoupled` no se comportaba de forma distinta a `multirepo`: ambas separaban el repositorio de especificaciones y se resolvían con la misma lógica, y ninguna superficie de usuario —`axiom init`, el dashboard, el hub— la ofrecía ya. Retirarla elimina un valor de enumeración y mensajes redundantes, sin cambio de comportamiento para `multirepo`.
 
 
-En la topología `monorepo-decoupled`, el repositorio de especificaciones DEBE residir en un directorio independiente dentro de la carpeta maestra común, distinto del repositorio de código del monorrepo. Esta topología DEBE admitir el patrón canónico: una carpeta maestra con `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, en el que el planning home es `<repositorio de especificaciones>/openspec` (capacidad `planning-home-resolution`, REQ-24.3).
+En la topología `monorepo-decoupled`, el repositorio de especificaciones DEBE residir en un directorio independiente dentro de la carpeta maestra común, distinto del repositorio de código del monorrepo. Esta topología DEBE admitir el patrón canónico: una carpeta maestra con `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, en el que el planning home es `<repositorio de especificaciones>/openspec` (capacidad `planning-home-resolution`, RF-PLH-03).
 (Previously: no contemplaba el patrón canónico con puntero ni la ubicación del planning home)
 
 #### Scenario: Monorepo desacoplado con repositorio de specs presente
@@ -188,9 +188,9 @@ En la topología `monorepo-decoupled`, el repositorio de especificaciones DEBE r
 
 ---
 
-### Requirement: Topología Multirepo Federado (REQ-2.4)
+### Requirement: Topología Multirepo Federado (RF-TOP-06)
 
-En la topología `multirepo`, múltiples repositorios de código coexisten bajo la carpeta maestra común. Es REQUISITO OBLIGATORIO que exista un repositorio canónico de especificaciones dentro de dicha carpeta. Esta topología DEBE admitir el patrón canónico: una carpeta maestra no versionada con `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, en el que el planning home es `<repositorio canónico de especificaciones>/openspec` y los verbos SDD resuelven el mismo planning home desde la carpeta maestra, desde el repositorio de especificaciones o desde un repositorio de código (capacidad `planning-home-resolution`, REQ-24.3 y REQ-24.8).
+En la topología `multirepo`, múltiples repositorios de código coexisten bajo la carpeta maestra común. Es REQUISITO OBLIGATORIO que exista un repositorio canónico de especificaciones dentro de dicha carpeta. Esta topología DEBE admitir el patrón canónico: una carpeta maestra no versionada con `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, en el que el planning home es `<repositorio canónico de especificaciones>/openspec` y los verbos SDD resuelven el mismo planning home desde la carpeta maestra, desde el repositorio de especificaciones o desde un repositorio de código (capacidad `planning-home-resolution`, RF-PLH-03 y RF-PLH-08).
 (Previously: no contemplaba el patrón canónico con puntero ni la ubicación del planning home)
 
 #### Scenario: Multirepo conforme con todos sus repositorios
@@ -217,7 +217,7 @@ En la topología `multirepo`, múltiples repositorios de código coexisten bajo 
 
 ---
 
-### Requirement: Reporte de Validación Estructurado (REQ-2.5)
+### Requirement: Reporte de Validación Estructurado (RF-TOP-07)
 
 La función `ValidateTopology` DEBE retornar un objeto estructurado `ValidationReport` que contenga:
 - `Valid` (booleano: `true` si cumple todas las reglas, `false` si hay errores)
@@ -230,7 +230,7 @@ La función `ValidateTopology` DEBE retornar un objeto estructurado `ValidationR
 - **DADO** una ejecución de validación con errores
 - **CUANDO** se obtiene el resultado
 - **ENTONCES** el objeto `ValidationReport` contiene `Valid: false`, la lista de errores y las rutas inspeccionadas
-### Requirement: Retirada de la Topología `monorepo-decoupled` con Error Accionable (REQ-25.25)
+### Requirement: Retirada de la Topología `monorepo-decoupled` con Error Accionable (RF-TOP-08)
 
 El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga (`LoadConfig`), ni en la validación (`axiom workspace validate`), ni en la resolución del workspace, ni en las superficies de usuario (CLI, dashboard, TUI, hub). Un `axiom.yaml` que lo declare DEBE rechazarse con un mensaje en español que indique que la topología fue retirada y que la corrección es `multirepo`, y `axiom workspace validate` DEBE finalizar con código de salida `1`. No existe alias ni migración automática: el mensaje es la migración. La especificación viva, el manual de inicio (`docs/manual-de-inicio.md`) y `axiom.example.yaml` NO DEBEN presentar el valor como válido.
 
@@ -248,7 +248,7 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 #### Scenario: Un puntero hacia una configuración con la topología retirada rechaza la resolución
 - **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con `workspace.topology: monorepo-decoupled`
 - **CUANDO** se ejecuta `axiom sdd status --json` desde la carpeta del puntero
-- **ENTONCES** se rechaza nombrando la topología retirada, `multirepo` y `axiom workspace validate`, conforme a REQ-24.7
+- **ENTONCES** se rechaza nombrando la topología retirada, `multirepo` y `axiom workspace validate`, conforme a RF-PLH-07
 - **Y** no se devuelve ningún status
 
 #### Scenario: Ninguna documentación presenta el valor como válido
@@ -259,9 +259,9 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 
 ---
 
-### Requirement: Bloque `git:` Opcional de `axiom.yaml` (REQ-25.26)
+### Requirement: Bloque `git:` Opcional de `axiom.yaml` (RF-TOP-09)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `git:` con las claves opcionales `integration_branch`, `branch_prefix`, `main_branch` y `promotion`. Sin el bloque, o sin una de las claves, `integration_branch` vale `main` y `branch_prefix` vale `feat`; `main_branch` NO tiene valor por defecto (su ausencia significa que la rama de integración es la única etapa y la rama principal no existe como concepto distinto) y `promotion` NO tiene valor por defecto declarado: cuando hay dos etapas y no se declara, el modo de promoción efectivo es `branch` (REQ-25.46 de `change-branch-lifecycle`). `integration_branch`, `branch_prefix` y `main_branch` DEBEN ser cadenas no vacías que formen nombres de referencia git válidos (`branch_prefix` sin `/` inicial ni final, sin `..` ni espacios). `promotion` DEBE ser una de las cadenas `branch`, `release` o `ask`; `ask` es válido en la configuración y significa que la persona decide el modo al crear la rama de cada cambio. Una clave desconocida dentro de `git:` y un valor inválido DEBEN reportarse como error nombrando la clave, y el mensaje que enumera las claves admitidas DEBE listar las cuatro. Los valores del bloque son política del proyecto y se versionan: el modo de trabajo y la raíz de los worktrees NO DEBEN declararse en `axiom.yaml` (viven en el hub personal, capacidad `multi-project-hub`).
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `git:` con las claves opcionales `integration_branch`, `branch_prefix`, `main_branch` y `promotion`. Sin el bloque, o sin una de las claves, `integration_branch` vale `main` y `branch_prefix` vale `feat`; `main_branch` NO tiene valor por defecto (su ausencia significa que la rama de integración es la única etapa y la rama principal no existe como concepto distinto) y `promotion` NO tiene valor por defecto declarado: cuando hay dos etapas y no se declara, el modo de promoción efectivo es `branch` (RF-BRA-28 de `change-branch-lifecycle`). `integration_branch`, `branch_prefix` y `main_branch` DEBEN ser cadenas no vacías que formen nombres de referencia git válidos (`branch_prefix` sin `/` inicial ni final, sin `..` ni espacios). `promotion` DEBE ser una de las cadenas `branch`, `release` o `ask`; `ask` es válido en la configuración y significa que la persona decide el modo al crear la rama de cada cambio. Una clave desconocida dentro de `git:` y un valor inválido DEBEN reportarse como error nombrando la clave, y el mensaje que enumera las claves admitidas DEBE listar las cuatro. Los valores del bloque son política del proyecto y se versionan: el modo de trabajo y la raíz de los worktrees NO DEBEN declararse en `axiom.yaml` (viven en el hub personal, capacidad `multi-project-hub`).
 
 `promotion` sin `main_branch`, o con `main_branch` igual a la rama de integración resuelta, NO tiene efecto: `axiom workspace validate` DEBE emitir una advertencia no bloqueante que lo indique, sin cambiar el estado `COMPLIANT` ni el código de salida.
 (Previously: `git:` admitía solo `integration_branch` y `branch_prefix`)
@@ -328,9 +328,9 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 
 ---
 
-### Requirement: Bloque `repositories:` de Primer Nivel con Ajustes por Repositorio (REQ-25.27)
+### Requirement: Bloque `repositories:` de Primer Nivel con Ajustes por Repositorio (RF-TOP-10)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `repositories:` con una lista de entradas, cada una con `path` (obligatorio, relativo a la carpeta maestra) y, opcionalmente, `integration_branch`, `branch_prefix` y `promotion` propios del repositorio, con las mismas reglas de validez que `git:` (supuesto S-13): `promotion` es `branch`, `release` o `ask`. `main_branch` NO es una clave de `repositories:`: la rama principal es única del proyecto y declararla en una entrada DEBE reportarse como clave desconocida. Un repositorio sin entrada, o sin una de las claves, hereda el valor del bloque `git:`, campo a campo. `path` NO DEBE ser absoluta ni salir de la carpeta maestra y DEBE existir como directorio; DOS entradas que resuelvan a la misma raíz git DEBEN rechazarse nombrando ambas. Una entrada cuyo `path` no pertenezca a ningún repositorio git NO DEBE ser un error de validación: DEBE emitir una advertencia que la nombre (REQ-25.6). Una clave desconocida en una entrada DEBE reportarse como error, y el mensaje que enumera las claves admitidas DEBE listar `path`, `integration_branch`, `branch_prefix` y `promotion`. Una entrada con `promotion` cuyo repositorio no tenga dos etapas (sin `git.main_branch` o con `git.main_branch` igual a la rama de integración resuelta de ese repositorio) DEBE emitir una advertencia no bloqueante que la nombre, sin cambiar el estado ni el código de salida. La resolución de la raíz git de cada entrada sigue REQ-25.6.
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `repositories:` con una lista de entradas, cada una con `path` (obligatorio, relativo a la carpeta maestra) y, opcionalmente, `integration_branch`, `branch_prefix` y `promotion` propios del repositorio, con las mismas reglas de validez que `git:` (supuesto S-13): `promotion` es `branch`, `release` o `ask`. `main_branch` NO es una clave de `repositories:`: la rama principal es única del proyecto y declararla en una entrada DEBE reportarse como clave desconocida. Un repositorio sin entrada, o sin una de las claves, hereda el valor del bloque `git:`, campo a campo. `path` NO DEBE ser absoluta ni salir de la carpeta maestra y DEBE existir como directorio; DOS entradas que resuelvan a la misma raíz git DEBEN rechazarse nombrando ambas. Una entrada cuyo `path` no pertenezca a ningún repositorio git NO DEBE ser un error de validación: DEBE emitir una advertencia que la nombre (RF-BRA-06). Una clave desconocida en una entrada DEBE reportarse como error, y el mensaje que enumera las claves admitidas DEBE listar `path`, `integration_branch`, `branch_prefix` y `promotion`. Una entrada con `promotion` cuyo repositorio no tenga dos etapas (sin `git.main_branch` o con `git.main_branch` igual a la rama de integración resuelta de ese repositorio) DEBE emitir una advertencia no bloqueante que la nombre, sin cambiar el estado ni el código de salida. La resolución de la raíz git de cada entrada sigue RF-BRA-06.
 (Previously: las entradas admitían solo `integration_branch` y `branch_prefix`)
 
 #### Scenario: Entrada con rama de integración propia
@@ -388,9 +388,9 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 - **CUANDO** el usuario ejecuta `axiom workspace validate`
 - **ENTONCES** la salida incluye una advertencia que nombra la entrada y explica que `promotion` no tiene efecto
 - **Y** el estado sigue siendo `COMPLIANT` y el código de salida es `0`
-### Requirement: Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto (REQ-27.1)
+### Requirement: Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto (RF-TOP-11)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `workflow:` con la clave opcional `lane`, cuyos valores válidos son `odd`, `sdd` y `ask`. Sin el bloque, o sin la clave, el carril efectivo del proyecto vale `sdd`. El bloque DEBE decodificarse de forma estricta por lista cerrada de claves, con el mismo patrón que `git:` (REQ-25.26): una clave desconocida dentro de `workflow:` y un valor de `lane` fuera de los tres admitidos DEBEN reportarse como error accionable que nombre la clave (`workflow.lane` o la clave desconocida) y los valores admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. Un `workflow:` que no sea un mapa también DEBE reportarse como error. Las claves desconocidas de primer nivel fuera de los bloques reconocidos se siguen ignorando (con la excepción de `baseline`, que se rechaza con el error tipado de REQ-30.21): un binario anterior a este cambio DEBE cargar un `axiom.yaml` con el bloque `workflow:` sin error y sin interpretarlo. El carril es política del proyecto y se versiona; la elección del modo de trabajo personal NO DEBE declararse en `axiom.yaml`. El valor por defecto `sdd` rige en `monorepo-embedded` y en `multirepo`; en `multirepo` el carril `odd` sigue estando permitido.
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `workflow:` con la clave opcional `lane`, cuyos valores válidos son `odd`, `sdd` y `ask`. Sin el bloque, o sin la clave, el carril efectivo del proyecto vale `sdd`. El bloque DEBE decodificarse de forma estricta por lista cerrada de claves, con el mismo patrón que `git:` (RF-TOP-09): una clave desconocida dentro de `workflow:` y un valor de `lane` fuera de los tres admitidos DEBEN reportarse como error accionable que nombre la clave (`workflow.lane` o la clave desconocida) y los valores admitidos, tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. Un `workflow:` que no sea un mapa también DEBE reportarse como error. Las claves desconocidas de primer nivel fuera de los bloques reconocidos se siguen ignorando (con la excepción de `baseline`, que se rechaza con el error tipado de RF-TOP-12): un binario anterior a este cambio DEBE cargar un `axiom.yaml` con el bloque `workflow:` sin error y sin interpretarlo. El carril es política del proyecto y se versiona; la elección del modo de trabajo personal NO DEBE declararse en `axiom.yaml`. El valor por defecto `sdd` rige en `monorepo-embedded` y en `multirepo`; en `multirepo` el carril `odd` sigue estando permitido.
 (Previously: las claves desconocidas de primer nivel se ignoraban citando REQ-24.17 de `spec-baseline-declaration`, que se retira; `baseline` deja de ser un bloque reconocido y se rechaza)
 
 #### Scenario: Sin bloque el carril efectivo es `sdd`
@@ -458,7 +458,7 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 - **CUANDO** se inspeccionan (prueba de pin)
 - **ENTONCES** ambos documentan `workflow.lane`, sus tres valores y el valor por defecto `sdd`
 
-### Requirement: Un Bloque `baseline:` Residual se Rechaza con Error Tipado y Guía de Migración (REQ-30.21)
+### Requirement: Un Bloque `baseline:` Residual se Rechaza con Error Tipado y Guía de Migración (RF-TOP-12)
 
 `axiom.yaml` NO DEBE admitir un bloque de primer nivel `baseline:`: la spec viva es únicamente `openspec/specs/`. Un `baseline:` residual NO DEBE ignorarse en silencio ni degradar a «sin baseline». DEBE producir una causa tipada que nombre el bloque `baseline:` y la continuación («retira `baseline:` y migra los requisitos con `axiom archive adopt`») en: (a) la carga de `axiom.yaml`; (b) `axiom workspace validate`, que DEBE finalizar con código de salida `1`; (c) `axiom sdd status`, que DEBE marcar el archivado como bloqueado (`dependencies.archive` en `blocked`) con esa causa sin bloquear las dependencias de las fases de planificación ni la resolución del planning home; y (d) el archivado, que DEBE detenerse sin escribir en `openspec/specs/` ni mover el cambio. El status NO DEBE proyectar ninguna clave `baseline`. Un `axiom.yaml` sin `baseline:` NO DEBE verse afectado.
 
@@ -492,7 +492,7 @@ El valor `monorepo-decoupled` NO DEBE aceptarse en ningún punto: ni en la carga
 - **ENTONCES** la carga reporta la causa tipada que nombra `baseline:`
 - **Y** no se degrada a «sin baseline»
 
-### Requirement: El Almacén de Artefactos Declarado Solo Admite Ficheros: `engram` y `none` se Reportan (REQ-2.6)
+### Requirement: El Almacén de Artefactos Declarado Solo Admite Ficheros: `engram` y `none` se Reportan (RF-TOP-13)
 
 En Axiom el almacén de artefactos de una sesión SDD es siempre `hybrid`. `axiom workspace validate` DEBE reportar como error, en español, un `artifact_store` (clave `artifact_store` o `artifactStore` de `openspec/config.yaml`) declarado `engram` o `none`, con independencia de que exista contexto técnico mantenido. El mensaje DEBE nombrar la clave, el valor declarado, la causa (con esos almacenes no hay paradas de tres salidas, ni publicación de compuertas ni relevo con `--hand-off`) y la migración (retirar la clave o declarar `hybrid`), y la validación DEBE finalizar con código de salida `1`. Un `artifact_store` declarado `openspec` o `hybrid`, o la ausencia de declaración, NO DEBE reportarse. El rechazo es solo de validación: la carga (`workspace.Locate`), `axiom sdd status` (que sin declaración sigue resolviendo `openspec`), la publicación y el archivado NO cambian de comportamiento. Este binario NO reescribe `openspec/config.yaml`.
 
@@ -518,9 +518,9 @@ En Axiom el almacén de artefactos de una sesión SDD es siempre `hybrid`. `axio
 - **CUANDO** se resuelve con `workspace.Locate` y se ejecuta `axiom sdd status --json`
 - **ENTONCES** la carga y el status funcionan como antes de este cambio
 - **Y** el almacén declarado sigue leyéndose como `engram`
-### Requirement: Bloque `delivery:` Opcional de `axiom.yaml` con el Umbral del Aviso de Cambio Grande (REQ-32.1)
+### Requirement: Bloque `delivery:` Opcional de `axiom.yaml` con el Umbral del Aviso de Cambio Grande (RF-TOP-14)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `delivery:` con la clave opcional `split_hint_lines`, un entero positivo (mayor o igual que 1) que fija el número de líneas a partir del cual el orquestador avisa de que un cambio es grande (REQ-32.2). Sin el bloque, o sin la clave, el aviso está desactivado: no hay umbral por defecto y ninguna superficie lo sustituye por un número. El valor `0` NO es una forma de desactivar el aviso: se rechaza; la forma de desactivarlo es no declarar la clave. El bloque DEBE decodificarse de forma estricta por lista cerrada de claves, con el mismo patrón y el mismo canal de error que `git:` (REQ-25.26) y `workflow:` (REQ-27.1), tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. DEBEN reportarse como error accionable que nombre la clave: una clave desconocida o repetida dentro de `delivery:`, un `delivery:` que no sea un mapa, y un valor de `split_hint_lines` que no sea un entero, que sea `0` o negativo, o que sea nulo (`delivery.split_hint_lines`). Las claves desconocidas de primer nivel fuera de los bloques reconocidos se siguen ignorando: un binario anterior a este cambio DEBE cargar un `axiom.yaml` con el bloque `delivery:` sin error y sin interpretarlo. `axiom init --force` DEBE preservar un bloque `delivery:` ya declarado, igual que los demás bloques declarados. La clave es política del proyecto y se versiona. El manual de inicio (`docs/manual-de-inicio.md`) DEBE documentar la clave, su dominio y que su ausencia desactiva el aviso.
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `delivery:` con la clave opcional `split_hint_lines`, un entero positivo (mayor o igual que 1) que fija el número de líneas a partir del cual el orquestador avisa de que un cambio es grande (RF-TOP-15). Sin el bloque, o sin la clave, el aviso está desactivado: no hay umbral por defecto y ninguna superficie lo sustituye por un número. El valor `0` NO es una forma de desactivar el aviso: se rechaza; la forma de desactivarlo es no declarar la clave. El bloque DEBE decodificarse de forma estricta por lista cerrada de claves, con el mismo patrón y el mismo canal de error que `git:` (RF-TOP-09) y `workflow:` (RF-TOP-11), tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. DEBEN reportarse como error accionable que nombre la clave: una clave desconocida o repetida dentro de `delivery:`, un `delivery:` que no sea un mapa, y un valor de `split_hint_lines` que no sea un entero, que sea `0` o negativo, o que sea nulo (`delivery.split_hint_lines`). Las claves desconocidas de primer nivel fuera de los bloques reconocidos se siguen ignorando: un binario anterior a este cambio DEBE cargar un `axiom.yaml` con el bloque `delivery:` sin error y sin interpretarlo. `axiom init --force` DEBE preservar un bloque `delivery:` ya declarado, igual que los demás bloques declarados. La clave es política del proyecto y se versiona. El manual de inicio (`docs/manual-de-inicio.md`) DEBE documentar la clave, su dominio y que su ausencia desactiva el aviso.
 
 #### Scenario: Sin bloque el aviso está desactivado
 
@@ -596,9 +596,9 @@ En Axiom el almacén de artefactos de una sesión SDD es siempre `hybrid`. `axio
 
 ---
 
-### Requirement: Con `delivery.split_hint_lines` Fijada el Orquestador Avisa una Vez de un Cambio Grande y Nunca Bloquea (REQ-32.2)
+### Requirement: Con `delivery.split_hint_lines` Fijada el Orquestador Avisa una Vez de un Cambio Grande y Nunca Bloquea (RF-TOP-15)
 
-Cuando `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1) y la previsión de líneas del trabajo la supera, el orquestador DEBE emitir **un único aviso** por cambio (SDD) o por feature (ODD) indicando que el cambio es grande y que la persona puede pedir PRs encadenadas, y DEBE continuar sin esperar respuesta. El aviso NUNCA bloquea ni detiene el avance, no cambia la estrategia de entrega (sigue siendo `single-pr` salvo petición expresa de la persona) y no exige ninguna decisión. La previsión que se compara es la estimación cualitativa de tamaño de `sdd-tasks` en SDD y la previsión del documento de la feature en ODD. El orquestador lee la clave directamente de `axiom.yaml` (no se proyecta en `axiom sdd status`). Sin la clave NO hay aviso ni ningún número de comparación: ni la doctrina ni los orquestadores DEBEN contener un umbral por defecto.
+Cuando `axiom.yaml` declara `delivery.split_hint_lines` (RF-TOP-14) y la previsión de líneas del trabajo la supera, el orquestador DEBE emitir **un único aviso** por cambio (SDD) o por feature (ODD) indicando que el cambio es grande y que la persona puede pedir PRs encadenadas, y DEBE continuar sin esperar respuesta. El aviso NUNCA bloquea ni detiene el avance, no cambia la estrategia de entrega (sigue siendo `single-pr` salvo petición expresa de la persona) y no exige ninguna decisión. La previsión que se compara es la estimación cualitativa de tamaño de `sdd-tasks` en SDD y la previsión del documento de la feature en ODD. El orquestador lee la clave directamente de `axiom.yaml` (no se proyecta en `axiom sdd status`). Sin la clave NO hay aviso ni ningún número de comparación: ni la doctrina ni los orquestadores DEBEN contener un umbral por defecto.
 
 #### Scenario: Con la clave fijada y la previsión superada se avisa una vez
 
@@ -632,11 +632,11 @@ Cuando `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1) y la previsi�
 - **CUANDO** la persona no responde
 - **ENTONCES** el trabajo continúa sin parada ni decisión pendiente
 - **Y** `sdd-apply` no se detiene por ese motivo
-### Requirement: Bloque `integrations:` Opcional y Estricto de `axiom.yaml` (REQ-43.19)
+### Requirement: Bloque `integrations:` Opcional y Estricto de `axiom.yaml` (RF-TOP-16)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `integrations:`, un mapeo `<plugin>: <mapeo de configuración>`. SOLO DEBE admitir identificadores presentes en el catálogo de manifiestos (REQ-43.4) y, dentro de cada uno, solo las claves de configuración de su manifiesto (REQ-43.3). Son error de carga, en `ParseConfig`, `LoadConfig` y `axiom workspace validate`: un plugin desconocido, una clave desconocida, un valor del bloque nulo o que no es un mapeo, una clave duplicada un valor de plugin nulo o que no es un mapeo, un valor de tipo distinto del declarado en el esquema del manifiesto, un valor fuera del enumerado y una clave obligatoria ausente (esta última solo si `enabled` no es `false`). Dentro de cada plugin, además de las claves del manifiesto, se admite la clave reservada `enabled` (booleano estricto, por defecto `true`); un plugin con `enabled: false` no configura nada y no recibe eventos. Los valores por defecto del manifiesto se aplican al proyectar el bloque. Los errores se acumulan todos, con línea y alternativas (con el catálogo vacío, «plugins admitidos: ninguno en esta versión»). `integrations: {}` es válido y no configura nada. El mensaje DEBE incluir la línea y la lista de claves o plugins admitidos, con el mismo formato que el resto de bloques. Sin el bloque, NO DEBE cambiar ningún comportamiento (REQ-43.5). Ningún secreto DEBE poder declararse en este bloque: los secretos no son claves de configuración del manifiesto (REQ-43.3), así que una clave con el nombre de un secreto es una clave desconocida.
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `integrations:`, un mapeo `<plugin>: <mapeo de configuración>`. SOLO DEBE admitir identificadores presentes en el catálogo de manifiestos (RF-INT-04) y, dentro de cada uno, solo las claves de configuración de su manifiesto (RF-INT-03). Son error de carga, en `ParseConfig`, `LoadConfig` y `axiom workspace validate`: un plugin desconocido, una clave desconocida, un valor del bloque nulo o que no es un mapeo, una clave duplicada un valor de plugin nulo o que no es un mapeo, un valor de tipo distinto del declarado en el esquema del manifiesto, un valor fuera del enumerado y una clave obligatoria ausente (esta última solo si `enabled` no es `false`). Dentro de cada plugin, además de las claves del manifiesto, se admite la clave reservada `enabled` (booleano estricto, por defecto `true`); un plugin con `enabled: false` no configura nada y no recibe eventos. Los valores por defecto del manifiesto se aplican al proyectar el bloque. Los errores se acumulan todos, con línea y alternativas (con el catálogo vacío, «plugins admitidos: ninguno en esta versión»). `integrations: {}` es válido y no configura nada. El mensaje DEBE incluir la línea y la lista de claves o plugins admitidos, con el mismo formato que el resto de bloques. Sin el bloque, NO DEBE cambiar ningún comportamiento (RF-INT-05). Ningún secreto DEBE poder declararse en este bloque: los secretos no son claves de configuración del manifiesto (RF-INT-03), así que una clave con el nombre de un secreto es una clave desconocida.
 
-(Placement: section "Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto (REQ-27.1)", a continuación)
+(Placement: section "Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto (RF-TOP-11)", a continuación)
 
 #### Scenario: Bloque válido
 - **DADO** el doble registrado en el catálogo y `integrations: { <doble>: { <clave válida>: valor } }`
@@ -683,7 +683,7 @@ Cuando `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1) y la previsi�
 - **CUANDO** se carga la configuración
 - **ENTONCES** falla como clave desconocida y el mensaje no contiene `abc`
 
-### Requirement: `Locate` Expone el Error del Bloque sin Rechazar y no Bloquea el Archivado (REQ-43.20)
+### Requirement: `Locate` Expone el Error del Bloque sin Rechazar y no Bloquea el Archivado (RF-TOP-17)
 
 `workspace.Locate` NO DEBE rechazar por un bloque `integrations:` inválido: DEBE exponerlo como `Declarations.IntegrationsErr`, igual que `git:`, `workflow:` y `sdd:`. El bloque `integrations:` NO DEBE bloquear el archivado (`axiom sdd status` no lo cuenta entre las declaraciones inválidas que bloquean). `axiom init --force` DEBE tratar `integrations:` como bloque propio del usuario y no sobrescribirlo (`declares()` conoce `Integrations`).
 
@@ -691,7 +691,7 @@ Cuando `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1) y la previsi�
 - **DADO** un `axiom.yaml` con `integrations:` inválido
 - **CUANDO** se llama a `workspace.Locate`
 - **ENTONCES** no devuelve error por ello
-- **Y** `Declarations.IntegrationsErr` contiene el error de REQ-43.19
+- **Y** `Declarations.IntegrationsErr` contiene el error de RF-TOP-16
 
 #### Scenario: Archivado no bloqueado
 - **DADO** un `axiom.yaml` con `integrations:` inválido y un cambio listo para archivar
@@ -703,7 +703,7 @@ Cuando `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1) y la previsi�
 - **CUANDO** se ejecuta `axiom init --force`
 - **ENTONCES** el bloque `integrations:` se conserva sin cambios
 
-### Requirement: Plantilla y Manual Documentan `integrations:` (REQ-43.21)
+### Requirement: Plantilla y Manual Documentan `integrations:` (RF-TOP-18)
 
 `axiom.example.yaml` DEBE incluir un bloque `integrations:` comentado que contenga el bloque `integrations.azure-devops` con las claves `organization`, `project` y `team`, y `docs/manual-de-inicio.md` (sección 6) DEBE incluir un apartado `integrations:` que describa el bloque, el catálogo de plugins (`azure-devops`), el secreto `pat` y su variable `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`, los scopes mínimos del PAT por operación (`vso.work_write`, `vso.project` y `vso.code`), que el PAT es de una sola organización y que los secretos nunca se escriben en `axiom.yaml`, y los verbos `axiom integrations`, incluidos `connect` y `discover`. Las pruebas de contrato (`example_config_test.go`, `docs_contract_test.go`) DEBEN fijar ambos y NO DEBEN afirmar que el catálogo está vacío.
 (Previously: la plantilla y el manual describían un bloque genérico con el catálogo vacío hasta C-07-c, sin el bloque `azure-devops`, scopes, secreto `pat` ni los verbos `connect` y `discover`)

@@ -11,7 +11,7 @@ import (
 )
 
 // Las expresiones heredadas se copian aquí: son la referencia con la que el
-// defecto debe coincidir byte a byte (REQ-44.2).
+// defecto debe coincidir byte a byte (RF-RID-02).
 var (
 	legacyCandidate = regexp.MustCompile(`\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`)
 	legacyValid     = regexp.MustCompile(`^REQ-\d+\.\d+$`)

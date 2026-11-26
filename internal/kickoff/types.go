@@ -26,7 +26,7 @@ type ExecutionStyle string
 // HandoffPolicy was the sealed choice of whether the change produced
 // intermediate handoff.md documents.
 //
-// Deprecated: handoff_policy has no effect any more (REQ-26.9). It is still
+// Deprecated: handoff_policy has no effect any more (RF-PRE-03). It is still
 // read so that kickoff.yaml files sealed before the three-exit stops keep
 // validating, and new kickoffs always write HandoffNone as a compatibility
 // value for older binaries, which reject a kickoff without the key.
@@ -76,7 +76,7 @@ const (
 
 // SealedByInferred marks a kickoff written by the conservative retro-seal
 // (InferKickoff). ValidateForSeal exempts it from the continuous-roster rule
-// because it freezes the roles a change already declares (REQ-21.4).
+// because it freezes the roles a change already declares (RF-KOF-04).
 const SealedByInferred = "inferred"
 
 // FallbackActor es el actor y el sellador que se registran cuando no hay
@@ -118,26 +118,26 @@ type FlowConfig struct {
 	FlowMode             FlowMode       `yaml:"flow_mode"`
 	ExecutionStyle       ExecutionStyle `yaml:"execution_style"`
 	ExecutionStyleSource string         `yaml:"execution_style_source"`
-	// Deprecated: handoff_policy has no effect (REQ-26.9). New kickoffs write
+	// Deprecated: handoff_policy has no effect (RF-PRE-03). New kickoffs write
 	// HandoffNone; an empty value from a hand-edited file is accepted.
 	HandoffPolicy HandoffPolicy `yaml:"handoff_policy,omitempty"`
 	Roles         []KickoffRole `yaml:"roles"`
 	// DocsPublication es la autorizacion sellada de publicar los documentos del cambio sin
-	// preguntar en el estilo continuous (REQ-27.4, REQ-27.13). Vacia significa que no se publica
+	// preguntar en el estilo continuous (RF-KOF-10, RF-PUB-08). Vacia significa que no se publica
 	// automaticamente; un binario anterior ignora la clave.
 	DocsPublication DocsPublication `yaml:"docs_publication,omitempty"`
 }
 
 // DocsPublication es la autorizacion, sellada, de publicar los documentos del cambio sin preguntar
-// en el estilo continuous (REQ-27.4). Vacia significa «no se publica automaticamente».
+// en el estilo continuous (RF-KOF-10). Vacia significa «no se publica automaticamente».
 type DocsPublication string
 
 // DocsPublicationAuto autoriza publicar al terminar `spec` y `design`, al cerrar `tasks` y tras archivar,
-// sin preguntar (REQ-27.13).
+// sin preguntar (RF-PUB-08).
 const DocsPublicationAuto DocsPublication = "auto"
 
 // CommitReviewMode is the per-commit review mode chosen at the tasks gate of a
-// checkpointed change (REQ-33.1). The empty value means "not recorded" and is
+// checkpointed change (RF-GAT-19). The empty value means "not recorded" and is
 // read as CommitReviewNotify.
 type CommitReviewMode string
 
@@ -184,16 +184,16 @@ type Kickoff struct {
 	SealedBy  string     `yaml:"sealed_by"`
 	Config    FlowConfig `yaml:"kickoff"`
 	Lifecycle Lifecycle  `yaml:"lifecycle"`
-	// Git es la instantánea de política git que escribe `seal` (REQ-25.36); nil en un kickoff
+	// Git es la instantánea de política git que escribe `seal` (RF-KOF-06); nil en un kickoff
 	// preexistente o retro-sellado (gitsnapshot.go).
 	Git *GitSnapshot `yaml:"git,omitempty"`
-	// SDD es la instantánea de la declaración `sdd:` de axiom.yaml al sellar (REQ-29.13);
+	// SDD es la instantánea de la declaración `sdd:` de axiom.yaml al sellar (RF-KOF-12);
 	// nil salvo en un cambio ISO, y siempre nil en un kickoff preexistente o retro-sellado.
 	SDD *SDDSnapshot `yaml:"sdd,omitempty"`
 }
 
 // SDDSnapshot es la instantánea de la declaración `sdd:` de axiom.yaml al sellar
-// (REQ-29.13). Solo existe en un cambio ISO: con iso falso no se escribe.
+// (RF-KOF-12). Solo existe en un cambio ISO: con iso falso no se escribe.
 type SDDSnapshot struct {
 	ISO bool `yaml:"iso,omitempty"`
 }
@@ -227,7 +227,7 @@ type GateRecord struct {
 	// HandedOff: el roster cambia despues y la cesion no debe cambiar con el.
 	HandedOffTo string `yaml:"handed_off_to,omitempty"`
 	// CommitReview is the mode recorded with the approval that closes the tasks
-	// gate (REQ-33.2). Only `gate record --commit-review` writes it; omitempty
+	// gate (RF-GAT-20). Only `gate record --commit-review` writes it; omitempty
 	// keeps every other record byte-identical, and an older binary ignores it.
 	CommitReview CommitReviewMode `yaml:"commit_review,omitempty"`
 	// Actor es quien registró la decisión: --actor si se indica; si no, la identidad git
@@ -240,7 +240,7 @@ type GateRecord struct {
 
 // GateLedger is the full append-only content of gates.yaml: every decision
 // ever recorded for the change, in the order they were appended. No verb
-// ever removes or edits a record (REQ-21.12): rejection history is
+// ever removes or edits a record (RF-GAT-06): rejection history is
 // evidence.
 type GateLedger struct {
 	Schema  string       `yaml:"schema"`
@@ -270,7 +270,7 @@ type GateState struct {
 	// HandedOffTo es la fase cedida que persistio ese mismo registro; vacia en un
 	// ledger anterior a este campo, y entonces se calcula (HandedOffTo).
 	HandedOffTo string
-	// CommitReview es el modo del registro approved que cierra la puerta (REQ-33.4); vacio si
+	// CommitReview es el modo del registro approved que cierra la puerta (RF-GAT-22); vacio si
 	// el registro no lo lleva (modo efectivo notify).
 	CommitReview CommitReviewMode
 }

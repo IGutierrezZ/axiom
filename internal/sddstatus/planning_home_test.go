@@ -47,7 +47,7 @@ func resolveFrom(t *testing.T, cwd, change string) Status {
 	return status
 }
 
-// REQ-24.4: el layout embebido resuelve igual con cualquier specs_repository y
+// RF-PLH-04: el layout embebido resuelve igual con cualquier specs_repository y
 // también sin axiom.yaml, sin claves nuevas, sin notas y sin bloquear archive.
 func TestResolveEmbeddedLayoutIsEquivalentForEverySpecsRepository(t *testing.T) {
 	t.Parallel()
@@ -94,7 +94,7 @@ func TestResolveEmbeddedLayoutIsEquivalentForEverySpecsRepository(t *testing.T) 
 	}
 }
 
-// REQ-24.8: el mismo planning home desde la carpeta maestra, el repositorio de
+// RF-PLH-08: el mismo planning home desde la carpeta maestra, el repositorio de
 // especificaciones y un repositorio de código del espacio canónico.
 func TestResolveCanonicalWorkspaceFromThreeStartingPoints(t *testing.T) {
 	t.Parallel()
@@ -162,7 +162,7 @@ func TestResolveRejectsAnInvalidStartingDirectory(t *testing.T) {
 	}
 }
 
-// REQ-24.7, caso 3: un axiom.yaml directo que no se puede cargar conserva la
+// RF-PLH-07, caso 3: un axiom.yaml directo que no se puede cargar conserva la
 // resolución embebida y el status lo avisa sin bloquear.
 func TestResolveReportsLocationNotesWithoutBlocking(t *testing.T) {
 	t.Parallel()

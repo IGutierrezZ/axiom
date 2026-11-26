@@ -20,7 +20,7 @@ func isoDefaultProject(t *testing.T) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-29.3 y REQ-29.4 (C-03-b): un ADDED con provisional, citado por `Cubre:`, no bloquea.
+// REQ-29.3 y RF-ISO-04 (C-03-b): un ADDED con provisional, citado por `Cubre:`, no bloquea.
 func TestISOAcceptsAProvisionalInAnAddedAndInCubre(t *testing.T) {
 	t.Parallel()
 	ws := isoDefaultProject(t)
@@ -47,7 +47,7 @@ func TestISORejectsAProvisionalOutsideAdded(t *testing.T) {
 	}
 }
 
-// REQ-29.4: un provisional citado que ningún ADDED declara bloquea con iso_cubre_unknown, y
+// RF-ISO-04: un provisional citado que ningún ADDED declara bloquea con iso_cubre_unknown, y
 // el ADDED sin cita bloquea por cobertura.
 func TestISOCubreOfAnUndeclaredProvisional(t *testing.T) {
 	t.Parallel()

@@ -12,9 +12,9 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El orquestador determina el carril de ejecución (ODD o SDD) en el primer contacto con cualquier solicitud de trabajo, antes de crear ningún artefacto, y sella esa decisión para el resto del ciclo de vida del cambio.
 
-### Requirement: Evaluación de Alcance y Pregunta Bloqueante de Selección de Carril (REQ-21.1)
+### Requirement: Evaluación de Alcance y Pregunta Bloqueante de Selección de Carril (RF-KOF-01)
 
-El orquestador DEBE evaluar el alcance de toda solicitud de trabajo nueva antes de crear cualquier artefacto de trabajo (documento vivo ODD o propuesta SDD). Cuando el carril proyectado por el proyecto es `ask`, o cuando no hay carril declarado utilizable (REQ-27.3), y el alcance detectado es acotado y admite razonablemente ambos carriles, el orquestador DEBE formular explícitamente la pregunta bloqueante de selección de carril ("¿Deseas abordarla mediante vía ágil ODD o vía formal SDD?") y DEBE detenerse a esperar la respuesta del usuario antes de continuar. El orquestador NO DEBE crear `odd/tasks/<feature>.md` ni `openspec/changes/<cambio>/proposal.md` mientras la pregunta esté pendiente de respuesta. Con carril proyectado `sdd` u `odd` el orquestador NO DEBE formular esta pregunta (REQ-27.3).
+El orquestador DEBE evaluar el alcance de toda solicitud de trabajo nueva antes de crear cualquier artefacto de trabajo (documento vivo ODD o propuesta SDD). Cuando el carril proyectado por el proyecto es `ask`, o cuando no hay carril declarado utilizable (RF-KOF-09), y el alcance detectado es acotado y admite razonablemente ambos carriles, el orquestador DEBE formular explícitamente la pregunta bloqueante de selección de carril ("¿Deseas abordarla mediante vía ágil ODD o vía formal SDD?") y DEBE detenerse a esperar la respuesta del usuario antes de continuar. El orquestador NO DEBE crear `odd/tasks/<feature>.md` ni `openspec/changes/<cambio>/proposal.md` mientras la pregunta esté pendiente de respuesta. Con carril proyectado `sdd` u `odd` el orquestador NO DEBE formular esta pregunta (RF-KOF-09).
 
 #### Scenario: Alcance acotado formula la pregunta y bloquea hasta obtener respuesta
 
@@ -34,17 +34,17 @@ El orquestador DEBE evaluar el alcance de toda solicitud de trabajo nueva antes 
 - **DADO** un proyecto con carril proyectado `sdd` o `odd` y una solicitud de alcance acotado que admite ambos carriles
 - **CUANDO** el orquestador recibe la solicitud
 - **ENTONCES** no formula la pregunta de selección de carril
-- **Y** sigue el carril declarado según REQ-27.3
+- **Y** sigue el carril declarado según RF-KOF-09
 
 ---
 
-### Requirement: Carril ODD sin Fricción Adicional (REQ-21.2)
+### Requirement: Carril ODD sin Fricción Adicional (RF-KOF-02)
 
-Si el carril es ODD, ya sea porque el usuario lo elige en respuesta a la pregunta de REQ-21.1 o porque el proyecto lo declara (REQ-27.3), el orquestador NO DEBE formular ninguna pregunta adicional de gobernanza (modalidad de avance, roles, política de relevos), DEBE ejecutar el trabajo "del tirón" sin dividirlo en roles ni generar ningún `handoff.md`, y DEBE mantener el trabajo exclusivamente en `odd/tasks/<feature>.md`. El carril ODD NO tiene ninguna parada: el orquestador NO DEBE detenerse tras crear el documento de feature para ofrecer salidas ni para pedir aprobación del plan (REQ-27.17 de `organic-agent-trigger-rules`); solo se interrumpe por preguntas de producto o de entorno.
+Si el carril es ODD, ya sea porque el usuario lo elige en respuesta a la pregunta de RF-KOF-01 o porque el proyecto lo declara (RF-KOF-09), el orquestador NO DEBE formular ninguna pregunta adicional de gobernanza (modalidad de avance, roles, política de relevos), DEBE ejecutar el trabajo "del tirón" sin dividirlo en roles ni generar ningún `handoff.md`, y DEBE mantener el trabajo exclusivamente en `odd/tasks/<feature>.md`. El carril ODD NO tiene ninguna parada: el orquestador NO DEBE detenerse tras crear el documento de feature para ofrecer salidas ni para pedir aprobación del plan (RF-RUT-18 de `organic-agent-trigger-rules`); solo se interrumpe por preguntas de producto o de entorno.
 
 #### Scenario: Elección de ODD sin preguntas adicionales
 
-- **DADO** que el usuario elige el carril ODD en respuesta a la pregunta de REQ-21.1
+- **DADO** que el usuario elige el carril ODD en respuesta a la pregunta de RF-KOF-01
 - **CUANDO** el orquestador inicia el trabajo
 - **ENTONCES** no formula ninguna pregunta adicional de configuración de gobernanza
 - **Y** el trabajo se registra exclusivamente en `odd/tasks/<feature>.md`
@@ -72,9 +72,9 @@ Si el carril es ODD, ya sea porque el usuario lo elige en respuesta a la pregunt
 
 ---
 
-### Requirement: Entrada al Cuestionario de Pre-Vuelo de SDD (REQ-21.3)
+### Requirement: Entrada al Cuestionario de Pre-Vuelo de SDD (RF-KOF-03)
 
-Si el usuario elige el carril SDD en respuesta a la pregunta de REQ-21.1, si el proyecto declara el carril `sdd` (REQ-27.3), si el usuario pide SDD explícitamente en la solicitud, o si el alcance detectado ya es inequívocamente de arquitectura o gran alcance con el carril proyectado `ask` (REQ-21.1, segundo escenario), el orquestador DEBE entrar al cuestionario de pre-vuelo de SDD descrito en la capacidad `sdd-preflight-configuration` antes de crear `proposal.md`.
+Si el usuario elige el carril SDD en respuesta a la pregunta de RF-KOF-01, si el proyecto declara el carril `sdd` (RF-KOF-09), si el usuario pide SDD explícitamente en la solicitud, o si el alcance detectado ya es inequívocamente de arquitectura o gran alcance con el carril proyectado `ask` (RF-KOF-01, segundo escenario), el orquestador DEBE entrar al cuestionario de pre-vuelo de SDD descrito en la capacidad `sdd-preflight-configuration` antes de crear `proposal.md`.
 
 #### Scenario: Entrada al pre-vuelo tras elección explícita o alcance ya determinado
 
@@ -91,9 +91,9 @@ Si el usuario elige el carril SDD en respuesta a la pregunta de REQ-21.1, si el 
 
 ---
 
-### Requirement: Idempotencia del Kickoff ante un Cambio con Artefactos o Configuración Ya Sellada (REQ-21.4)
+### Requirement: Idempotencia del Kickoff ante un Cambio con Artefactos o Configuración Ya Sellada (RF-KOF-04)
 
-El orquestador NO DEBE volver a formular la pregunta de selección de carril (REQ-21.1) ni el cuestionario de pre-vuelo de SDD (capacidad `sdd-preflight-configuration`) para un cambio que ya tiene al menos un artefacto persistido (`proposal.md`, un `spec.md` bajo `specs/`, `design.md` o `tasks.md`) o cuya configuración de kickoff ya está sellada. En ese caso, el orquestador DEBE continuar respetando el carril y la configuración ya selladas en el primer kickoff, sin interrogar de nuevo al usuario. El retro-sello (`axiom sdd kickoff seal --infer`, `sealed_by: inferred`) está **exento** de la regla «`continuous` solo con el rol `fullstack`» (REQ-28.12 de `sdd-preflight-configuration`): conserva `continuous` con los roles que la detección de roles ya vigente infiere, aunque no sean `fullstack`, y esa regla solo se aplica a los sellados explícitos.
+El orquestador NO DEBE volver a formular la pregunta de selección de carril (RF-KOF-01) ni el cuestionario de pre-vuelo de SDD (capacidad `sdd-preflight-configuration`) para un cambio que ya tiene al menos un artefacto persistido (`proposal.md`, un `spec.md` bajo `specs/`, `design.md` o `tasks.md`) o cuya configuración de kickoff ya está sellada. En ese caso, el orquestador DEBE continuar respetando el carril y la configuración ya selladas en el primer kickoff, sin interrogar de nuevo al usuario. El retro-sello (`axiom sdd kickoff seal --infer`, `sealed_by: inferred`) está **exento** de la regla «`continuous` solo con el rol `fullstack`» (RF-PRE-04 de `sdd-preflight-configuration`): conserva `continuous` con los roles que la detección de roles ya vigente infiere, aunque no sean `fullstack`, y esa regla solo se aplica a los sellados explícitos.
 
 (Previamente: esta especificación indicaba que, al retro-sellar un cambio preexistente sin kickoff sellado, el rol por defecto congelado era el rol único `fullstack`. Se corrige tras la pregunta abierta O-1 planteada en `sdd-design` y resuelta explícitamente por el usuario con evidencia de código —`internal/multirole/detector.go:35-55` cae siempre a `core`, nunca a `fullstack`; `internal/multirole/detector.go:58-64` rechaza cualquier rol ausente de `axiom.yaml`; y `axiom.yaml:7-28` no declara `fullstack`—: el retro-sello DEBE congelar el rol que la detección de roles ya vigente infiere para ese cambio, nunca introducir la identidad `fullstack`.)
 (Previously: la configuración sellada incluía la política de relevos y el retro-sello inferido nombraba «sin `handoff.md` intermedios»; la política de relevos ya no forma parte de la configuración sellada)
@@ -119,7 +119,7 @@ El orquestador NO DEBE volver a formular la pregunta de selección de carril (RE
 - **CUANDO** el orquestador retoma ese cambio
 - **ENTONCES** infiere y sella la configuración por defecto documentada (modalidad continua y el rol que la detección de roles ya vigente infiere para ese cambio —hoy, `core`, cuando existe un `design.md` sin roles explícitos—) sin bloquear el trabajo ni interrogar retroactivamente al usuario
 - **Y** el retro-sello no introduce la identidad `fullstack` ni ningún rol nuevo: es conservador por definición y se limita a congelar el rol y el comportamiento que la detección de roles ya aplica hoy para ese cambio, sin redefinirlo
-- **Y** el retro-sello no infiere ninguna política de relevos: escribe `handoff_policy: none` solo como valor de compatibilidad (REQ-26.9 de `sdd-preflight-configuration`)
+- **Y** el retro-sello no infiere ninguna política de relevos: escribe `handoff_policy: none` solo como valor de compatibilidad (RF-PRE-03 de `sdd-preflight-configuration`)
 - **Y** dicha configuración inferida queda registrada para no volver a inferirse en la siguiente reanudación
 
 #### Scenario: El retro-sello conserva continuous con roles distintos de fullstack
@@ -127,7 +127,7 @@ El orquestador NO DEBE volver a formular la pregunta de selección de carril (RE
 - **DADO** un cambio preexistente sin kickoff cuya detección de roles infiere `core`
 - **CUANDO** se ejecuta el retro-sello
 - **ENTONCES** el sellado se completa con `execution_style: continuous`, `sealed_by: inferred` y el rol `core`
-- **Y** no se rechaza por la regla de REQ-28.12 ni se infiere `checkpointed`
+- **Y** no se rechaza por la regla de RF-PRE-04 ni se infiere `checkpointed`
 - **Y** no se abre ninguna puerta `pending` para artefactos ya escritos
 
 #### Scenario: El retro-sello de varios roles detectados también conserva continuous
@@ -141,14 +141,14 @@ El orquestador NO DEBE volver a formular la pregunta de selección de carril (RE
 
 - **DADO** un cambio con artefactos pero sin kickoff, que el usuario sella de forma explícita (sin `--infer`) en `continuous` con los roles `core` y `web`
 - **CUANDO** se ejecuta el sellado
-- **ENTONCES** se rechaza conforme a REQ-28.12
+- **ENTONCES** se rechaza conforme a RF-PRE-04
 - **Y** la exención del retro-sello no se extiende a esa ruta
 
 #### Scenario: Un retro-sello sin ningún rol detectable conserva su comportamiento
 
 - **DADO** un cambio preexistente cuya detección de roles no puede determinar ningún rol y devuelve un error
 - **CUANDO** se ejecuta el retro-sello
-- **ENTONCES** se comporta exactamente como antes de este cambio, sin tratarlo como un caso de la regla de REQ-28.12
+- **ENTONCES** se comporta exactamente como antes de este cambio, sin tratarlo como un caso de la regla de RF-PRE-04
 
 #### Scenario: El retro-sello no altera qué `tasks.<rol>.md` consulta la barrera
 
@@ -156,9 +156,9 @@ El orquestador NO DEBE volver a formular la pregunta de selección de carril (RE
 - **CUANDO** el orquestador retro-sella la configuración de kickoff de ese cambio conforme al escenario anterior
 - **ENTONCES** la barrera de sincronización sigue consultando exactamente `tasks.core.md`, el mismo fichero que consultaba antes del sellado
 - **Y** el retro-sello no crea, renombra ni redirige ningún fichero `tasks.<rol>.md`, ni introduce `tasks.fullstack.md` como fuente de verdad nueva para ese cambio
-### Requirement: `ensure` al Nombrar el Cambio, antes de Escribir en su Carpeta (REQ-25.35)
+### Requirement: `ensure` al Nombrar el Cambio, antes de Escribir en su Carpeta (RF-KOF-05)
 
-Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado por el proyecto en REQ-27.3) y nombrado el cambio (SDD) o la feature (ODD), el orquestador DEBE ejecutar `axiom branch ensure` para ese nombre (con `--lane odd` en ODD) **antes de crear cualquier artefacto de trabajo** (`proposal.md`, `odd/tasks/<feature>.md`) y, en SDD, antes del cuestionario de pre-vuelo y de `axiom sdd kickoff seal`. A partir de ese momento DEBE usar como `--cwd` de las órdenes posteriores las rutas absolutas que devuelve el JSON de `ensure` (REQ-25.2 de `change-branch-lifecycle`) y NO el directorio de trabajo heredado. La ejecución de `ensure` NO es la creación de un artefacto de trabajo, por lo que no contraviene REQ-21.1. Si `ensure` devuelve `decision_required` (modo `ask`), el orquestador DEBE presentar la elección al usuario y repetir la orden con la respuesta; esa pregunta es una preferencia de entorno personal y NO una pregunta de gobernanza, por lo que NO contraviene REQ-21.2 (supuesto S-10). Al reanudar un cambio ya sellado, `ensure` DEBE poder repetirse de forma idempotente sin repetir la selección de carril ni el pre-vuelo (REQ-21.4) y sin volver a preguntar el modo ya respondido.
+Una vez determinado el carril (elegido por el usuario en RF-KOF-01 o declarado por el proyecto en RF-KOF-09) y nombrado el cambio (SDD) o la feature (ODD), el orquestador DEBE ejecutar `axiom branch ensure` para ese nombre (con `--lane odd` en ODD) **antes de crear cualquier artefacto de trabajo** (`proposal.md`, `odd/tasks/<feature>.md`) y, en SDD, antes del cuestionario de pre-vuelo y de `axiom sdd kickoff seal`. A partir de ese momento DEBE usar como `--cwd` de las órdenes posteriores las rutas absolutas que devuelve el JSON de `ensure` (RF-BRA-02 de `change-branch-lifecycle`) y NO el directorio de trabajo heredado. La ejecución de `ensure` NO es la creación de un artefacto de trabajo, por lo que no contraviene RF-KOF-01. Si `ensure` devuelve `decision_required` (modo `ask`), el orquestador DEBE presentar la elección al usuario y repetir la orden con la respuesta; esa pregunta es una preferencia de entorno personal y NO una pregunta de gobernanza, por lo que NO contraviene RF-KOF-02 (supuesto S-10). Al reanudar un cambio ya sellado, `ensure` DEBE poder repetirse de forma idempotente sin repetir la selección de carril ni el pre-vuelo (RF-KOF-04) y sin volver a preguntar el modo ya respondido.
 
 #### Scenario: SDD ejecuta `ensure` antes del sellado y de `proposal.md`
 - **DADO** que el carril es SDD (elegido o declarado) y se nombra el cambio `x`
@@ -193,9 +193,9 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 - **DADO** el texto de la doctrina ODD generada (`routing.go`) y de los orquestadores SDD por runtime
 - **CUANDO** se inspecciona (pin de texto)
 - **ENTONCES** indica ejecutar `axiom branch ensure` antes de escribir en la carpeta del cambio y usar las rutas absolutas del resultado con `--cwd`
-### Requirement: Instantánea de Política Git en `kickoff.yaml`, Escrita una Sola Vez por `seal` (REQ-25.36)
+### Requirement: Instantánea de Política Git en `kickoff.yaml`, Escrita una Sola Vez por `seal` (RF-KOF-06)
 
-`axiom sdd kickoff seal` DEBE escribir en `kickoff.yaml`, junto al resto de la configuración sellada y en la misma única escritura, la instantánea de política git del cambio: la rama de integración y el prefijo resueltos, la base (nombre de rama, no SHA) de cada repositorio y los nombres de rama derivados del cambio (rama del cambio, por repositorio con dos o más roles las ramas de rol y, en los repositorios con rama de cambio, la rama de archivado `<prefijo>/<cambio>-archive`), calculados con la política de `axiom.yaml`, las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`) y los roles que se sellan. Siempre que haya dos etapas al sellar (`git.main_branch` declarada y distinta de la rama de integración de algún repositorio del plan, REQ-25.46 de `change-branch-lifecycle`), la instantánea DEBE guardar además el campo opcional `main_branch` (la rama principal declarada al sellar), que actúa de marcador: distingue un cambio sellado con dos etapas de uno sellado antes de existir esta capacidad. Además, la instantánea DEBE copiar el modo de promoción (`branch` o `release`) de un repositorio solo cuando ese modo ya estaba resuelto en el registro local al sellar (la rama del cambio se creó antes del sellado, como en el monorepo SDD), y la base de ese repositorio DEBE ser su base efectiva (la rama principal en `branch`, la de integración en `release`). El modo es un campo opcional de cada repositorio: NO DEBE escribirse en los repositorios de una sola etapa ni en los repositorios cuyo modo no estaba resuelto en el registro al sellar (como los repositorios de código de un `multirepo`, cuyas ramas y respuestas nacen en un `ensure` posterior al sellado); su ausencia, con `main_branch` presente en la instantánea, significa que el modo se resuelve al crear la rama, nunca que el repositorio sea de una sola etapa. Sin dos etapas al sellar, la instantánea no contiene `main_branch`. La instantánea contiene entradas de política, nunca resultados: NO DEBE incluir SHAs, rutas absolutas ni rutas de worktree, que son personales o cambian. La instantánea se escribe una sola vez: conserva la semántica de sellado único, en la que gana la primera publicación, y NINGUNA otra orden, incluida `ensure`, DEBE modificarla. Un segundo `seal` desde la rama del cambio NO DEBE reescribir `kickoff.yaml`: DEBE terminar con éxito, devolver el kickoff ya sellado e indicar que no escribió (texto «Kickoff ya estaba sellado»; `wrote: false` en `--json`). Un segundo `seal` desde otra rama DEBE rechazarse con `wrong_branch` (veredicto de REQ-25.18 de `change-branch-lifecycle`) sin modificar nada. La lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarla sin error, incluidos los campos opcionales `main_branch` y el modo de promoción.
+`axiom sdd kickoff seal` DEBE escribir en `kickoff.yaml`, junto al resto de la configuración sellada y en la misma única escritura, la instantánea de política git del cambio: la rama de integración y el prefijo resueltos, la base (nombre de rama, no SHA) de cada repositorio y los nombres de rama derivados del cambio (rama del cambio, por repositorio con dos o más roles las ramas de rol y, en los repositorios con rama de cambio, la rama de archivado `<prefijo>/<cambio>-archive`), calculados con la política de `axiom.yaml`, las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`) y los roles que se sellan. Siempre que haya dos etapas al sellar (`git.main_branch` declarada y distinta de la rama de integración de algún repositorio del plan, RF-BRA-28 de `change-branch-lifecycle`), la instantánea DEBE guardar además el campo opcional `main_branch` (la rama principal declarada al sellar), que actúa de marcador: distingue un cambio sellado con dos etapas de uno sellado antes de existir esta capacidad. Además, la instantánea DEBE copiar el modo de promoción (`branch` o `release`) de un repositorio solo cuando ese modo ya estaba resuelto en el registro local al sellar (la rama del cambio se creó antes del sellado, como en el monorepo SDD), y la base de ese repositorio DEBE ser su base efectiva (la rama principal en `branch`, la de integración en `release`). El modo es un campo opcional de cada repositorio: NO DEBE escribirse en los repositorios de una sola etapa ni en los repositorios cuyo modo no estaba resuelto en el registro al sellar (como los repositorios de código de un `multirepo`, cuyas ramas y respuestas nacen en un `ensure` posterior al sellado); su ausencia, con `main_branch` presente en la instantánea, significa que el modo se resuelve al crear la rama, nunca que el repositorio sea de una sola etapa. Sin dos etapas al sellar, la instantánea no contiene `main_branch`. La instantánea contiene entradas de política, nunca resultados: NO DEBE incluir SHAs, rutas absolutas ni rutas de worktree, que son personales o cambian. La instantánea se escribe una sola vez: conserva la semántica de sellado único, en la que gana la primera publicación, y NINGUNA otra orden, incluida `ensure`, DEBE modificarla. Un segundo `seal` desde la rama del cambio NO DEBE reescribir `kickoff.yaml`: DEBE terminar con éxito, devolver el kickoff ya sellado e indicar que no escribió (texto «Kickoff ya estaba sellado»; `wrote: false` en `--json`). Un segundo `seal` desde otra rama DEBE rechazarse con `wrong_branch` (veredicto de RF-BRA-19 de `change-branch-lifecycle`) sin modificar nada. La lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarla sin error, incluidos los campos opcionales `main_branch` y el modo de promoción.
 (Previously: la instantánea no incluía `main_branch` ni el modo de promoción y la base de cada repositorio era siempre la rama de integración)
 
 #### Scenario: El sellado escribe la instantánea
@@ -208,7 +208,7 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 
 #### Scenario: El sellado en multirepo escribe las ramas de rol y ninguna rama de archivado
 - **DADO** un multirepo con `git.integration_branch: main`, `git.branch_prefix: feat` y los roles `core` y `qa` sobre el mismo repositorio de código `repo-backend`
-- **CUANDO** se ejecuta `axiom sdd kickoff seal --change x ...` desde la rama que corresponde (REQ-25.38)
+- **CUANDO** se ejecuta `axiom sdd kickoff seal --change x ...` desde la rama que corresponde (RF-KOF-08)
 - **ENTONCES** `kickoff.yaml` contiene la integración `main`, el prefijo `feat`, la base `main` de `repo-backend` y, para `repo-backend`, los nombres `feat/x`, `feat/x-core` y `feat/x-qa`
 - **Y** no contiene rama de archivado para `repo-backend`
 - **Y** no contiene SHAs ni rutas absolutas
@@ -279,9 +279,9 @@ Una vez determinado el carril (elegido por el usuario en REQ-21.1 o declarado po
 - **DADO** un cambio sellado con la instantánea con el modo `branch`
 - **CUANDO** se cambia `git.promotion` a `release` en `axiom.yaml` y se ejecuta de nuevo `kickoff seal` y `ensure`
 - **ENTONCES** `kickoff.yaml` conserva el modo `branch` sin modificarse
-### Requirement: Exención de Cambios Preexistentes sin Instantánea y de `seal --infer` (REQ-25.37)
+### Requirement: Exención de Cambios Preexistentes sin Instantánea y de `seal --infer` (RF-KOF-07)
 
-Las guardas de rama (veredicto de REQ-25.18 de `change-branch-lifecycle`) NO DEBEN bloquear un cambio cuyo `kickoff.yaml` existe y no contiene instantánea (cambio preexistente sellado antes de esta capacidad). El retro-sellado `axiom sdd kickoff seal --infer` (REQ-21.4) NO DEBE exigir una rama determinada y NO DEBE escribir instantánea, de modo que un cambio retro-sellado permanezca exento. El producto NO añade ninguna otra exención para cambios preexistentes: solo quedan exentos por nombre los sumideros acumulativos `e2e-cumulative` y `cumulative-<rol>` (REQ-25.18).
+Las guardas de rama (veredicto de RF-BRA-19 de `change-branch-lifecycle`) NO DEBEN bloquear un cambio cuyo `kickoff.yaml` existe y no contiene instantánea (cambio preexistente sellado antes de esta capacidad). El retro-sellado `axiom sdd kickoff seal --infer` (RF-KOF-04) NO DEBE exigir una rama determinada y NO DEBE escribir instantánea, de modo que un cambio retro-sellado permanezca exento. El producto NO añade ninguna otra exención para cambios preexistentes: solo quedan exentos por nombre los sumideros acumulativos `e2e-cumulative` y `cumulative-<rol>` (RF-BRA-19).
 
 #### Scenario: Cambio preexistente sin instantánea no se bloquea
 - **DADO** un cambio con `kickoff.yaml` sin instantánea y el repositorio desplegado en la rama de integración
@@ -301,9 +301,9 @@ Las guardas de rama (veredicto de REQ-25.18 de `change-branch-lifecycle`) NO DEB
 
 ---
 
-### Requirement: `kickoff seal` se Niega Fuera de la Rama que Corresponde (REQ-25.38)
+### Requirement: `kickoff seal` se Niega Fuera de la Rama que Corresponde (RF-KOF-08)
 
-`axiom sdd kickoff seal` DEBE consultar el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el repositorio del planning home antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir `kickoff.yaml`, con código de salida distinto de cero, el código tipado `wrong_branch` y la continuación exacta (`axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane`). En `monorepo-embedded` exige estar en la rama del cambio (o en una rama de rol del cambio). En `multirepo` exige que el repositorio de specs esté en su rama de integración y no en una rama de rol; los repositorios de código no se comprueban en el sellado. Si el cambio aún no tiene `kickoff.yaml`, los nombres esperados se obtienen de la política de `axiom.yaml`.
+`axiom sdd kickoff seal` DEBE consultar el veredicto de rama (RF-BRA-19 de `change-branch-lifecycle`) para el repositorio del planning home antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir `kickoff.yaml`, con código de salida distinto de cero, el código tipado `wrong_branch` y la continuación exacta (`axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane`). En `monorepo-embedded` exige estar en la rama del cambio (o en una rama de rol del cambio). En `multirepo` exige que el repositorio de specs esté en su rama de integración y no en una rama de rol; los repositorios de código no se comprueban en el sellado. Si el cambio aún no tiene `kickoff.yaml`, los nombres esperados se obtienen de la política de `axiom.yaml`.
 
 #### Scenario: Sellar en la rama de integración de un monorepo se rechaza
 - **DADO** un monorepo con la política por defecto y el repositorio desplegado en `main`
@@ -328,15 +328,15 @@ Las guardas de rama (veredicto de REQ-25.18 de `change-branch-lifecycle`) NO DEB
 - **CUANDO** se ejecuta `axiom sdd kickoff seal --change x ...`
 - **ENTONCES** el sellado se completa
 - **Y** no se comprueba la rama de `repo-backend`
-### Requirement: El Carril Declarado en el Proyecto Gobierna la Pregunta de Carril (REQ-27.3)
+### Requirement: El Carril Declarado en el Proyecto Gobierna la Pregunta de Carril (RF-KOF-09)
 
-Antes de decidir el carril de una solicitud de trabajo sustancial, el orquestador DEBE leer el campo `workflow` de `axiom sdd status` (REQ-27.2 de `axiom-sdd-cli-integration`) y DEBE actuar según el carril proyectado, sin formular la pregunta bloqueante de selección de carril (REQ-21.1) cuando el carril no es `ask`:
+Antes de decidir el carril de una solicitud de trabajo sustancial, el orquestador DEBE leer el campo `workflow` de `axiom sdd status` (RF-CLI-08 de `axiom-sdd-cli-integration`) y DEBE actuar según el carril proyectado, sin formular la pregunta bloqueante de selección de carril (RF-KOF-01) cuando el carril no es `ask`:
 
 - `sdd`: el orquestador entra directamente al cuestionario de pre-vuelo de SDD (capacidad `sdd-preflight-configuration`) para el trabajo sustancial, sin preguntar el carril.
 - `odd`: el orquestador trabaja en el carril ODD sin preguntar el carril, incluso ante un alcance inequívocamente arquitectónico. La persona puede pedir SDD explícitamente en una solicitud concreta, y esa petición prevalece para esa solicitud.
-- `ask`: el comportamiento es el de REQ-21.1 sin cambios.
+- `ask`: el comportamiento es el de RF-KOF-01 sin cambios.
 
-El carril declarado cuenta como petición explícita de ese carril. NO modifica el trabajo pequeño y entendido, que en cualquier carril no crea artefactos duraderos. Si `workflow.source` es `no_workspace` o `invalid` (carril proyectado `ask`), o si el orquestador no puede obtener la proyección, DEBE comportarse como `ask`, nunca como `sdd` automático. La lectura de la proyección NO es la creación de un artefacto de trabajo ni una pregunta de gobernanza. El orden de la regla de rama (REQ-25.35) no cambia: `axiom branch ensure` se ejecuta después de determinar el carril y antes del primer artefacto.
+El carril declarado cuenta como petición explícita de ese carril. NO modifica el trabajo pequeño y entendido, que en cualquier carril no crea artefactos duraderos. Si `workflow.source` es `no_workspace` o `invalid` (carril proyectado `ask`), o si el orquestador no puede obtener la proyección, DEBE comportarse como `ask`, nunca como `sdd` automático. La lectura de la proyección NO es la creación de un artefacto de trabajo ni una pregunta de gobernanza. El orden de la regla de rama (RF-KOF-05) no cambia: `axiom branch ensure` se ejecuta después de determinar el carril y antes del primer artefacto.
 
 #### Scenario: Carril `sdd` entra al pre-vuelo sin preguntar el carril
 
@@ -399,9 +399,9 @@ El carril declarado cuenta como petición explícita de ese carril. NO modifica 
 
 ---
 
-### Requirement: `kickoff.yaml` Registra la Autorización de Publicación Automática en el Estilo `continuous` (REQ-27.4)
+### Requirement: `kickoff.yaml` Registra la Autorización de Publicación Automática en el Estilo `continuous` (RF-KOF-10)
 
-Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, la pregunta DEBE nombrar la publicación de documentos en la propia opción: «sin paradas; sube los documentos a `origin/<rama>` al cerrar spec, design y tasks y al archivar», con la rama real del cambio. Si la persona elige esa opción, `axiom sdd kickoff seal` DEBE registrar en `kickoff.yaml` el campo opcional `docs_publication: auto`, dentro de la misma única escritura de sellado y con la semántica de sellado único de REQ-25.36. El campo NO DEBE escribirse con el estilo `checkpointed` ni cuando la persona no autoriza la publicación, y la ausencia del campo significa «no se publica automáticamente». La serialización DEBE omitir el campo cuando está vacío (`omitempty`); la lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarlo sin error. Sellar con `continuous` sin esa autorización DEBE seguir siendo posible. El campo NO modifica el estilo ni las compuertas y NO autoriza ninguna operación distinta de la publicación de documentos de REQ-27.13 de `sdd-docs-publication`.
+Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, la pregunta DEBE nombrar la publicación de documentos en la propia opción: «sin paradas; sube los documentos a `origin/<rama>` al cerrar spec, design y tasks y al archivar», con la rama real del cambio. Si la persona elige esa opción, `axiom sdd kickoff seal` DEBE registrar en `kickoff.yaml` el campo opcional `docs_publication: auto`, dentro de la misma única escritura de sellado y con la semántica de sellado único de RF-KOF-06. El campo NO DEBE escribirse con el estilo `checkpointed` ni cuando la persona no autoriza la publicación, y la ausencia del campo significa «no se publica automáticamente». La serialización DEBE omitir el campo cuando está vacío (`omitempty`); la lectura de `kickoff.yaml` DEBE tolerar su ausencia y un binario anterior DEBE ignorarlo sin error. Sellar con `continuous` sin esa autorización DEBE seguir siendo posible. El campo NO modifica el estilo ni las compuertas y NO autoriza ninguna operación distinta de la publicación de documentos de RF-PUB-08 de `sdd-docs-publication`.
 (Previously: la opción decía que subía los documentos al cerrar `tasks` y al archivar)
 
 #### Scenario: La opción `continuous` nombra remoto y rama
@@ -447,9 +447,9 @@ Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, 
 - **ENTONCES** termina con éxito indicando «Kickoff ya estaba sellado»
 - **Y** `kickoff.yaml` conserva `docs_publication: auto`
 
-### Requirement: `kickoff seal` Prepara la Carpeta del Cambio si No Existe (REQ-29.12)
+### Requirement: `kickoff seal` Prepara la Carpeta del Cambio si No Existe (RF-KOF-11)
 
-`axiom sdd kickoff seal` DEBE dejar preparada la carpeta del cambio en el planning home (`changes/<cambio>/`) cuando no existe, en lugar de exigir que el orquestador o la persona la cree antes. La carpeta se crea después de superar la guarda de rama (REQ-25.38): ante `wrong_branch` el comando se niega sin crear la carpeta ni escribir `kickoff.yaml`. Si la carpeta ya existe, el comando NO DEBE modificar ni borrar ninguno de sus ficheros. Preparar la carpeta NO crea ningún otro artefacto (`proposal.md`, specs, `design.md` ni `tasks.md`): solo la carpeta y `kickoff.yaml`. Un sellado que se rechaza por cualquier otro motivo (argumentos inválidos, declaración `sdd:` inválida) NO DEBE dejar la carpeta creada. El retro-sellado `seal --infer` (REQ-21.4) conserva su comportamiento. El comando DEBE ser idempotente: repetirlo no cambia la carpeta ni su contenido. El orquestador y la skill de kickoff NO DEBEN pedir que se cree a mano la carpeta antes de sellar.
+`axiom sdd kickoff seal` DEBE dejar preparada la carpeta del cambio en el planning home (`changes/<cambio>/`) cuando no existe, en lugar de exigir que el orquestador o la persona la cree antes. La carpeta se crea después de superar la guarda de rama (RF-KOF-08): ante `wrong_branch` el comando se niega sin crear la carpeta ni escribir `kickoff.yaml`. Si la carpeta ya existe, el comando NO DEBE modificar ni borrar ninguno de sus ficheros. Preparar la carpeta NO crea ningún otro artefacto (`proposal.md`, specs, `design.md` ni `tasks.md`): solo la carpeta y `kickoff.yaml`. Un sellado que se rechaza por cualquier otro motivo (argumentos inválidos, declaración `sdd:` inválida) NO DEBE dejar la carpeta creada. El retro-sellado `seal --infer` (RF-KOF-04) conserva su comportamiento. El comando DEBE ser idempotente: repetirlo no cambia la carpeta ni su contenido. El orquestador y la skill de kickoff NO DEBEN pedir que se cree a mano la carpeta antes de sellar.
 
 #### Scenario: Sellar un cambio sin carpeta la crea y escribe `kickoff.yaml`
 
@@ -494,9 +494,9 @@ Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, 
 
 ---
 
-### Requirement: Instantánea de `sdd.iso` en `kickoff.yaml`, Escrita una Sola Vez por `seal` (REQ-29.13)
+### Requirement: Instantánea de `sdd.iso` en `kickoff.yaml`, Escrita una Sola Vez por `seal` (RF-KOF-12)
 
-`axiom sdd kickoff seal` DEBE copiar en `kickoff.yaml`, dentro de la misma única escritura de sellado y con la semántica de sellado único de REQ-25.36, el valor que el proyecto declara en el bloque `sdd:` de `axiom.yaml` para la declaración ISO (clave `iso`, REQ-29.1 de `sdd-iso-evidence`). Es una instantánea, igual que la de política git (REQ-25.36) y que el campo `docs_publication` (REQ-27.4): el valor sigue siendo del proyecto y nadie elige ISO por cambio. Las reglas ISO de ESE cambio (REQ-29.3 a REQ-29.11 y REQ-29.19) DEBEN leerse de su instantánea y NO de `axiom.yaml` en vivo; la declaración de `axiom.yaml` solo es la fuente en el momento de sellar. Un proyecto que no declara `iso`, o lo declara desactivado, sella un cambio no ISO. `iso` es un booleano y la serialización DEBE omitir los campos vacíos (`omitempty`): con `iso` falso la clave no se escribe, de modo que solo un cambio ISO lleva la clave `iso` en `kickoff.yaml`. La lectura de `kickoff.yaml` DEBE tolerar la ausencia de la clave, y un cambio sin la clave `iso` cuenta como no ISO, igual que uno sin instantánea. Un binario anterior DEBE ignorar la clave sin error. Un cambio sellado antes de esta versión, sin instantánea de `sdd:`, DEBE contar como no ISO, que es el comportamiento actual. Cambiar `sdd:` en `axiom.yaml` solo afecta a los cambios sellados después: un cambio ya sellado conserva su valor hasta que se archive. `axiom sdd status` PUEDE avisar con una nota no bloqueante de la discrepancia entre la instantánea del cambio y la declaración vigente del proyecto, y NO DEBE bloquear por ella. El retrosellado `axiom sdd kickoff seal --infer` de un cambio preexistente DEBE congelar lo que ya rige ese cambio, como exige REQ-21.4: NO escribe la clave `iso` (que, por la regla `omitempty` de este mismo requisito, queda ausente) y NO lee la declaración `sdd:` de `axiom.yaml`. Un cambio retro-sellado cuenta así como no ISO, igual que uno sin instantánea, y ningún cambio en curso pasa a ISO por retrosellarse. El retrosellado NO escribe la instantánea de política git de REQ-25.36: REQ-25.37 no cambia y el cambio retro-sellado sigue exento de las guardas de rama. Un `sdd:` inválido DEBE rechazar el sellado sin escribir nada (REQ-29.1): nunca se sella «no ISO» por defecto ante una declaración inválida. Un segundo `seal` NO DEBE reescribir la instantánea (REQ-25.36).
+`axiom sdd kickoff seal` DEBE copiar en `kickoff.yaml`, dentro de la misma única escritura de sellado y con la semántica de sellado único de RF-KOF-06, el valor que el proyecto declara en el bloque `sdd:` de `axiom.yaml` para la declaración ISO (clave `iso`, RF-ISO-01 de `sdd-iso-evidence`). Es una instantánea, igual que la de política git (RF-KOF-06) y que el campo `docs_publication` (RF-KOF-10): el valor sigue siendo del proyecto y nadie elige ISO por cambio. Las reglas ISO de ESE cambio (RF-ISO-03 a RF-ARC-10 y RF-ISO-10) DEBEN leerse de su instantánea y NO de `axiom.yaml` en vivo; la declaración de `axiom.yaml` solo es la fuente en el momento de sellar. Un proyecto que no declara `iso`, o lo declara desactivado, sella un cambio no ISO. `iso` es un booleano y la serialización DEBE omitir los campos vacíos (`omitempty`): con `iso` falso la clave no se escribe, de modo que solo un cambio ISO lleva la clave `iso` en `kickoff.yaml`. La lectura de `kickoff.yaml` DEBE tolerar la ausencia de la clave, y un cambio sin la clave `iso` cuenta como no ISO, igual que uno sin instantánea. Un binario anterior DEBE ignorar la clave sin error. Un cambio sellado antes de esta versión, sin instantánea de `sdd:`, DEBE contar como no ISO, que es el comportamiento actual. Cambiar `sdd:` en `axiom.yaml` solo afecta a los cambios sellados después: un cambio ya sellado conserva su valor hasta que se archive. `axiom sdd status` PUEDE avisar con una nota no bloqueante de la discrepancia entre la instantánea del cambio y la declaración vigente del proyecto, y NO DEBE bloquear por ella. El retrosellado `axiom sdd kickoff seal --infer` de un cambio preexistente DEBE congelar lo que ya rige ese cambio, como exige RF-KOF-04: NO escribe la clave `iso` (que, por la regla `omitempty` de este mismo requisito, queda ausente) y NO lee la declaración `sdd:` de `axiom.yaml`. Un cambio retro-sellado cuenta así como no ISO, igual que uno sin instantánea, y ningún cambio en curso pasa a ISO por retrosellarse. El retrosellado NO escribe la instantánea de política git de RF-KOF-06: RF-KOF-07 no cambia y el cambio retro-sellado sigue exento de las guardas de rama. Un `sdd:` inválido DEBE rechazar el sellado sin escribir nada (RF-ISO-01): nunca se sella «no ISO» por defecto ante una declaración inválida. Un segundo `seal` NO DEBE reescribir la instantánea (RF-KOF-06).
 
 #### Scenario: El sellado copia `iso` en `kickoff.yaml`
 
@@ -523,7 +523,7 @@ Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, 
 
 - **DADO** un cambio `x` sellado con `iso` y después el proyecto retira `iso` de `axiom.yaml`
 - **CUANDO** se ejecuta `axiom sdd status x --json` en la fase `archive` con una matriz inválida
-- **ENTONCES** el archivado sigue bloqueado con el motivo tipado de matriz (REQ-29.11)
+- **ENTONCES** el archivado sigue bloqueado con el motivo tipado de matriz (RF-ARC-10)
 
 #### Scenario: Un cambio sellado antes de esta versión cuenta como no ISO
 
@@ -552,7 +552,7 @@ Cuando la persona elige el estilo `continuous` en el cuestionario de pre-vuelo, 
 - **CUANDO** se ejecuta `axiom sdd kickoff seal --infer --change x`
 - **ENTONCES** el cambio queda sellado sin la clave `iso` en `kickoff.yaml`, sin leer la declaración `sdd:`
 - **Y** `axiom sdd status x --json` lo proyecta como no ISO, igual que un cambio sin instantánea
-- **Y** el retrosellado no escribe la instantánea de política git (REQ-25.37) ni cambia el rol que ya infería
+- **Y** el retrosellado no escribe la instantánea de política git (RF-KOF-07) ni cambia el rol que ya infería
 
 #### Scenario: El retrosellado sigue exento de las guardas de rama
 

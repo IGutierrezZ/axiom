@@ -121,7 +121,7 @@ func requireNote(t *testing.T, notes []string, fragment string) {
 	}
 }
 
-// multi-project-hub REQ-2.2: un puntero propio hacia otro planning home rechaza
+// multi-project-hub RF-HUB-04: un puntero propio hacia otro planning home rechaza
 // la inicialización, con cualquier perfil, sin escribir ni registrar.
 func TestInitRejectsAnOwnPointerToAnotherPlanningHome(t *testing.T) {
 	for _, profile := range []string{"", "full", "knowledge"} {
@@ -155,7 +155,7 @@ func TestInitRejectsAnOwnPointerToAnotherPlanningHome(t *testing.T) {
 	}
 }
 
-// REQ-24.6 y REQ-24.7: un puntero propio que no resuelve rechaza con el mismo
+// RF-PLH-06 y RF-PLH-07: un puntero propio que no resuelve rechaza con el mismo
 // error del primitivo de resolución.
 func TestInitRejectsAnOwnPointerThatCannotBeResolved(t *testing.T) {
 	tests := []struct {
@@ -197,7 +197,7 @@ func TestInitRejectsAnOwnPointerThatCannotBeResolved(t *testing.T) {
 	}
 }
 
-// REQ-2.2: un puntero que resuelve a <directorio>/openspec no se rechaza, aunque
+// RF-HUB-04: un puntero que resuelve a <directorio>/openspec no se rechaza, aunque
 // ese directorio no exista todavía. No se reescribe el axiom.yaml del puntero.
 func TestInitAcceptsAnOwnPointerToItsOwnPlanningHome(t *testing.T) {
 	tests := []struct {
@@ -260,7 +260,7 @@ func TestInitUsesThePointedConfigAsTheExistingOne(t *testing.T) {
 	}
 }
 
-// REQ-2.2: un puntero solo en un directorio ancestro no impide inicializar; el
+// RF-HUB-04: un puntero solo en un directorio ancestro no impide inicializar; el
 // marcador más cercano gana y el nuevo axiom.yaml pasa a serlo.
 func TestInitIgnoresAPointerInAnAncestor(t *testing.T) {
 	ws := workspacetest.Canonical(t)
@@ -298,7 +298,7 @@ func TestInitIgnoresABrokenPointerInAnAncestor(t *testing.T) {
 	}
 }
 
-// REQ-30.21: un `baseline:` residual rechaza el alta con el error tipado y la
+// RF-TOP-12: un `baseline:` residual rechaza el alta con el error tipado y la
 // guía de migración, antes de escribir ni registrar nada: el axiom.yaml existente
 // no se toca y no se crea ningún andamiaje.
 func TestInitRejectsAResidualBaseline(t *testing.T) {
@@ -357,7 +357,7 @@ func TestInitWithAnUnreadableConfigSkipsTheSpecs(t *testing.T) {
 	}
 }
 
-// REQ-2.2, punto 4: init valida el axiom.yaml que encuentra, informa de cada
+// RF-HUB-04, punto 4: init valida el axiom.yaml que encuentra, informa de cada
 // violación con la continuación y no cambia el código de salida.
 func TestInitReportsEveryViolationOfAnExistingConfig(t *testing.T) {
 	t.Run("technical_context invalido no impide la baseline por defecto", func(t *testing.T) {
@@ -558,7 +558,7 @@ func TestInitWithoutForceKeepsTheExistingConfig(t *testing.T) {
 	}
 }
 
-// REQ-29.1: `sdd:` también es una declaración que la regeneración perdería, sea
+// RF-ISO-01: `sdd:` también es una declaración que la regeneración perdería, sea
 // válida, inválida o contradictoria con `workflow.lane`.
 func TestDeclaresCountsSDD(t *testing.T) {
 	if (ownMarkers{}).declares() {
@@ -587,7 +587,7 @@ func TestDeclaresCountsSDD(t *testing.T) {
 	}
 }
 
-// REQ-43.20: `integrations:` también es una declaración que la regeneración perdería, sea válida o
+// RF-TOP-17: `integrations:` también es una declaración que la regeneración perdería, sea válida o
 // inválida (el catálogo de esta versión solo admite azure-devops: cualquier otro plugin es un error de carga).
 func TestDeclaresCountsIntegrations(t *testing.T) {
 	for name, declarations := range map[string]workspace.Declarations{
@@ -602,7 +602,7 @@ func TestDeclaresCountsIntegrations(t *testing.T) {
 	}
 }
 
-// REQ-43.20: `init --force` conserva el bloque `integrations:` del axiom.yaml existente.
+// RF-TOP-17: `init --force` conserva el bloque `integrations:` del axiom.yaml existente.
 func TestInitForceKeepsIntegrationsBlock(t *testing.T) {
 	dir := t.TempDir()
 	configPath := filepath.Join(dir, "axiom.yaml")

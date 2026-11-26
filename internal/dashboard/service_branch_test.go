@@ -20,8 +20,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Escritores guardados del dashboard y `ensure` al crear un cambio (INC-25 S8-c4; REQ-25.19
-// escenarios 4 y 5, REQ-25.32 escenarios 1 y 4; decisión T4). Pruebas con git real, entorno
+// Escritores guardados del dashboard y `ensure` al crear un cambio (INC-25 S8-c4; RF-BRA-20
+// escenarios 4 y 5, RF-WEB-09 escenarios 1 y 4; decisión T4). Pruebas con git real, entorno
 // aislado y sin red: un monorepo embebido en un directorio temporal, con las preferencias de
 // worktree en el hub del HOME de pruebas y la raíz de worktrees también temporal. Ninguna crea
 // worktrees del repositorio real.
@@ -46,7 +46,7 @@ func runGit(t *testing.T, dir string, args ...string) string {
 }
 
 // setWorktreePrefs registra project en el hub del HOME de pruebas con el modo de trabajo y la raíz
-// de worktrees indicados (REQ-25.29).
+// de worktrees indicados (RF-HUB-07).
 func setWorktreePrefs(t *testing.T, project, mode, root string) {
 	t.Helper()
 	manager, err := hub.NewManager("")
@@ -161,7 +161,7 @@ func postIncrement(t *testing.T, svc *Service, body CreateIncrementRequest) *htt
 	return rr
 }
 
-// REQ-25.32 escenario 1: la creación ejecuta `ensure` (rama y worktree de `feat/x`) y escribe
+// RF-WEB-09 escenario 1: la creación ejecuta `ensure` (rama y worktree de `feat/x`) y escribe
 // `proposal.md` en el `openspec/changes/x/` del worktree; el checkout principal no recibe nada.
 func TestCreateIncrementEnsuresThenWritesInTheWorktree(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)
@@ -198,7 +198,7 @@ func TestCreateIncrementEnsuresThenWritesInTheWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.32 escenario 4: un rechazo de `ensure` (árbol sucio en `in_place`) no deja carpeta, ni rama,
+// RF-WEB-09 escenario 4: un rechazo de `ensure` (árbol sucio en `in_place`) no deja carpeta, ni rama,
 // ni worktree, y llega con su código tipado y su continuación.
 func TestCreateIncrementRejectedEnsureLeavesNoFolder(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeInPlace)
@@ -210,7 +210,7 @@ func TestCreateIncrementRejectedEnsureLeavesNoFolder(t *testing.T) {
 	_, err := svc.CreateIncrement(CreateIncrementRequest{Name: "x"})
 	wantRefusal(t, err, branch.CodeDirtyWorktree)
 
-	// REQ-25.32: por HTTP el rechazo es un 409 con `{code, error, continuation}`.
+	// RF-WEB-09: por HTTP el rechazo es un 409 con `{code, error, continuation}`.
 	rr := postIncrement(t, svc, CreateIncrementRequest{Name: "x"})
 	body := wantConflict(t, rr)
 	if body["code"] != string(branch.CodeDirtyWorktree) {
@@ -251,7 +251,7 @@ func wantConflict(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
 	return body
 }
 
-// REQ-25.32 escenario 2: modo `ask` sin respuesta. El servicio devuelve `decision_required` con su
+// RF-WEB-09 escenario 2: modo `ask` sin respuesta. El servicio devuelve `decision_required` con su
 // decisión y el HTTP, un 409 con `{status, statusLabel, code, decision}`; no se crea nada.
 func TestCreateIncrementInAskModeReturnsTheDecisionWithoutWriting(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeAsk)
@@ -294,7 +294,7 @@ func TestCreateIncrementInAskModeReturnsTheDecisionWithoutWriting(t *testing.T) 
 	}
 }
 
-// REQ-25.32 escenario 3: repetir la creación con `mode` completa la creación (`in_place` hace
+// RF-WEB-09 escenario 3: repetir la creación con `mode` completa la creación (`in_place` hace
 // checkout de `feat/x` y escribe allí) y la respuesta es solo de ese cambio: otro cambio en modo
 // `ask` vuelve a devolver `decision_required`.
 func TestCreateIncrementRepeatedWithModeCompletesTheCreation(t *testing.T) {
@@ -324,7 +324,7 @@ func TestCreateIncrementRepeatedWithModeCompletesTheCreation(t *testing.T) {
 	}
 }
 
-// REQ-25.32: un `mode` que `ensure` no admite es un rechazo (409) y no crea nada.
+// RF-WEB-09: un `mode` que `ensure` no admite es un rechazo (409) y no crea nada.
 func TestCreateIncrementRefusesAnUnknownMode(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)
 	svc := NewService(ws.Master)
@@ -340,7 +340,7 @@ func TestCreateIncrementRefusesAnUnknownMode(t *testing.T) {
 	}
 }
 
-// REQ-25.32 escenario 5: en un multirepo el repositorio de specs se trabaja in situ, en su rama de
+// RF-WEB-09 escenario 5: en un multirepo el repositorio de specs se trabaja in situ, en su rama de
 // integración: la creación escribe allí por HTTP, sin worktree ni rama de cambio.
 func TestCreateIncrementInMultirepoWritesInSituInTheSpecsRepository(t *testing.T) {
 	t.Parallel()
@@ -363,7 +363,7 @@ func TestCreateIncrementInMultirepoWritesInSituInTheSpecsRepository(t *testing.T
 	}
 }
 
-// REQ-25.19 escenario 5: el escritor guardado invocado sin `ensure` en `main` se niega con
+// RF-BRA-20 escenario 5: el escritor guardado invocado sin `ensure` en `main` se niega con
 // `wrong_branch` y la continuación de `ensure`, y no crea la carpeta; en la rama del cambio escribe.
 func TestWriteIncrementWithoutEnsureOnMainIsWrongBranch(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)

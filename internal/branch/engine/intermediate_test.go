@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de la fusión intermedia de planificación (REQ-26.11, REQ-25.20, REQ-25.45, DD-09, supuestos A-7
+// Pruebas de la fusión intermedia de planificación (RF-BRA-26, RF-BRA-21, RF-BRA-13, DD-09, supuestos A-7
 // y A-8): un cambio cuya PR de una salida 2 ya está en la integración, con la marca de cesión en su
 // `gates.yaml` y algún rol sin su `role-apply` aprobado, no figura como pendiente de archivar y
 // `ensure --archive` lo rechaza. Con git real y sin red.
@@ -51,7 +51,7 @@ func pendingContains(t *testing.T, result branch.Result, change string) bool {
 	return false
 }
 
-// REQ-26.11, escenarios 1 a 5: la fusión intermedia no figura; el cambio terminado, sí.
+// RF-BRA-26, escenarios 1 a 5: la fusión intermedia no figura; el cambio terminado, sí.
 func TestPendingArchiveSkipsAnIntermediateMergeAndListsAFinishedChange(t *testing.T) {
 	t.Parallel()
 	roles := []string{"core", "web"}
@@ -112,7 +112,7 @@ func TestPendingArchiveTreatsAHandedOffChangeWithAnEmptyRosterAsIntermediate(t *
 	wantPendingNames(t, status(t, repo, "", branch.LaneSDD))
 }
 
-// REQ-26.11, escenario 6 y A-8: un `gates.yaml` o un `kickoff.yaml` ilegibles, o la marca sin kickoff, se
+// RF-BRA-26, escenario 6 y A-8: un `gates.yaml` o un `kickoff.yaml` ilegibles, o la marca sin kickoff, se
 // tratan como hasta ahora, sin error y sin aviso.
 func TestPendingArchiveTreatsUnreadableFilesAsBefore(t *testing.T) {
 	t.Parallel()
@@ -151,7 +151,7 @@ func TestPendingArchiveTreatsUnreadableFilesAsBefore(t *testing.T) {
 	}
 }
 
-// REQ-26.11, escenarios 7 y 8: la evaluación no usa la red y no bloquea `status --change`.
+// RF-BRA-26, escenarios 7 y 8: la evaluación no usa la red y no bloquea `status --change`.
 func TestIntermediateMergeUsesNoNetworkAndDoesNotBlockStatus(t *testing.T) {
 	repo := embeddedProject(t)
 	runGit(t, repo, "remote", "add", "origin", "https://ejemplo.invalid/repo.git")
@@ -204,7 +204,7 @@ func TestPendingArchiveWarnsWhenGitFailsReadingTheFiles(t *testing.T) {
 	}
 }
 
-// REQ-26.11 y REQ-25.45 (S-16 enmendado): `ensure --archive` sobre una fusión intermedia rechaza con
+// RF-BRA-26 y RF-BRA-13 (S-16 enmendado): `ensure --archive` sobre una fusión intermedia rechaza con
 // `change_not_integrated`, dice que es intermedia, no sugiere `--fetch` y no crea nada.
 func TestEnsureArchiveRefusesAnIntermediateMergeWithoutSuggestingFetch(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -270,7 +270,7 @@ func TestEnsureArchiveBehavesAsBeforeWithoutAnIntermediateMerge(t *testing.T) {
 	})
 }
 
-// REQ-26.11, último escenario de recogida: quien recoge la cesión obtiene la rama del cambio desde la
+// RF-BRA-26, último escenario de recogida: quien recoge la cesión obtiene la rama del cambio desde la
 // base fusionada con `ensure`, sin operaciones remotas.
 func TestEnsurePicksUpAnIntermediateMergeFromTheMergedBaseWithoutNetwork(t *testing.T) {
 	repo := embeddedCoreProject(t)

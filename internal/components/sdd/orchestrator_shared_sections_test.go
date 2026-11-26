@@ -96,7 +96,7 @@ var sharedOrchestratorSectionNames = []string{
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
 	"SDD Change Kickoff and Block Gates",
-	// sdd-revision-independiente (REQ-28.1 a REQ-28.3, REQ-28.10, REQ-28.14): the optional
+	// sdd-revision-independiente (RF-REV-01 a RF-REV-03, RF-GAT-16, RF-PRE-06): the optional
 	// independent review (per-role verify, judgment and coverage review) and its preference.
 	"SDD Independent Review",
 	// single-pr (C-02-c): the one canonical Delivery Strategy body (delivery is
@@ -104,7 +104,7 @@ var sharedOrchestratorSectionNames = []string{
 	// warning). Every runtime references it by placeholder, so no inline copy of
 	// the retired four-way strategy can come back.
 	"Delivery Strategy",
-	// aviso-commit (C-02-d, REQ-33.8): the per-commit notice, the three review modes and
+	// aviso-commit (C-02-d, RF-ORQ-21): the per-commit notice, the three review modes and
 	// the fixup rules live once here; every runtime references them by placeholder.
 	"Commit Review",
 }

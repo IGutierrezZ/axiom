@@ -17,7 +17,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 )
 
-// Pruebas de `Engine.PublicationState` (REQ-27.18): con git real, entorno aislado y remotos
+// Pruebas de `Engine.PublicationState` (RF-PUB-11): con git real, entorno aislado y remotos
 // desnudos locales, sin red. Fijan que los hechos son los que `axiom sdd publish` vería (la misma
 // lista cerrada de rutas y el mismo rango de exclusiones) y que calcularlos solo lee.
 
@@ -194,7 +194,7 @@ func TestPublicationStateMultirepoSpecsInPlaceMeasuresAgainstTheRemoteIntegratio
 	}
 }
 
-// REQ-27.14: con `Archive`, el destino es la rama de archivado y el estado mira su carpeta archivada.
+// RF-ARC-08: con `Archive`, el destino es la rama de archivado y el estado mira su carpeta archivada.
 func TestPublicationStateArchiveBranch(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	mergeChange(t, repo, "x")
@@ -254,7 +254,7 @@ func TestPublicationStateWithoutAnyIntegrationReferenceIsRangeUnknown(t *testing
 	}
 }
 
-// REQ-25.1: calcular el estado es una lectura. No lanza `push`, `commit`, `fetch`, `pull`,
+// RF-BRA-01: calcular el estado es una lectura. No lanza `push`, `commit`, `fetch`, `pull`,
 // `ls-remote` ni `add`, y no cambia nada del repositorio.
 func TestPublicationStateReadOnlyNoNetwork(t *testing.T) {
 	repo, worktree, _ := stateWorktree(t)

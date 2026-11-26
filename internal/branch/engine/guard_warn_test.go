@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas del aviso de la guarda D con git real, entorno aislado y sin red (REQ-25.21 punto 2 y sus
+// Pruebas del aviso de la guarda D con git real, entorno aislado y sin red (RF-BRA-22 punto 2 y sus
 // escenarios, design D-18 paso 4): con el evento `post` y un fichero que no es un documento de
 // Axiom, avisa sin bloquear cuando el checkout que lo contiene no está en la rama de ningún cambio
 // activo registrado por `ensure` y git no ignora el fichero, y no hace nada en cualquier otro caso.
@@ -61,7 +61,7 @@ func inPlaceChange(t *testing.T) string {
 	return repo
 }
 
-// REQ-25.21, escenarios 3, 4 y 6: un fichero de código escrito en el checkout principal en `main`
+// RF-BRA-22, escenarios 3, 4 y 6: un fichero de código escrito en el checkout principal en `main`
 // avisa sin bloquear con el worktree correcto; con varios cambios activos nombra los de todos; y no
 // avisa dentro del worktree del cambio, cuyo HEAD es la rama registrada.
 func TestGuardWarnNamesTheCorrectWorktreeOfEveryActiveChange(t *testing.T) {
@@ -93,7 +93,7 @@ func TestGuardWarnNamesTheCorrectWorktreeOfEveryActiveChange(t *testing.T) {
 	})
 }
 
-// REQ-25.21, escenario 5 («En modo `in_place` el aviso nombra la rama esperada»): sin worktree
+// RF-BRA-22, escenario 5 («En modo `in_place` el aviso nombra la rama esperada»): sin worktree
 // que nombrar, el aviso dice la rama esperada; en la rama del cambio no avisa, y en otra rama o con
 // un HEAD desacoplado sí.
 func TestGuardWarnNamesTheExpectedBranchInPlace(t *testing.T) {
@@ -135,7 +135,7 @@ func gitIgnores(t *testing.T, repo string, patterns ...string) {
 	writeFile(t, filepath.Join(repo, ".gitignore"), strings.Join(patterns, "\n")+"\n")
 }
 
-// REQ-25.21, escenarios «Sin aviso en un fichero ignorado por git» y «Un fichero versionado avisa
+// RF-BRA-22, escenarios «Sin aviso en un fichero ignorado por git» y «Un fichero versionado avisa
 // aunque coincida con un patrón de exclusión»: en `main` con el cambio `x` activo, escribir un
 // fichero que git ignora —por su nombre o por un directorio excluido— no avisa; un fichero
 // versionado avisa aunque coincida con un patrón (git no lo cuenta como ignorado), y el resto de
@@ -173,7 +173,7 @@ func TestGuardWarnSkipsFilesIgnoredByGit(t *testing.T) {
 	})
 }
 
-// REQ-25.21, escenario «Si la consulta a git falla, el aviso se emite»: con el índice corrupto,
+// RF-BRA-22, escenario «Si la consulta a git falla, el aviso se emite»: con el índice corrupto,
 // `git check-ignore` termina con error y el fichero, aunque esté excluido, se avisa como antes de
 // existir la consulta. La guarda nunca bloquea por ella.
 func TestGuardWarnWarnsWhenTheIgnoreCheckFails(t *testing.T) {
@@ -189,7 +189,7 @@ func TestGuardWarnWarnsWhenTheIgnoreCheckFails(t *testing.T) {
 	wantWarned(t, guardOf(t, postWrite(local)), local, "rama esperada «feat/x»")
 }
 
-// REQ-25.21, escenario «Si la consulta a git falla, el aviso se emite»: sin git en el `PATH` la
+// RF-BRA-22, escenario «Si la consulta a git falla, el aviso se emite»: sin git en el `PATH` la
 // consulta no se puede lanzar y el aviso sale igual. No es paralela: cambia el entorno del proceso.
 func TestGuardWarnWarnsWithoutGit(t *testing.T) {
 	repo := inPlaceChange(t)
@@ -225,7 +225,7 @@ func TestGuardWarnEachEventHasASingleResponsibility(t *testing.T) {
 	wantNothing(t, guardOf(t, unknown))
 }
 
-// REQ-25.21, escenario 7: sin cambio activo registrado en el repositorio la guarda no hace nada
+// RF-BRA-22, escenario 7: sin cambio activo registrado en el repositorio la guarda no hace nada
 // con el código: ni sin registro, ni con el registro de otro repositorio.
 func TestGuardWarnDoesNothingWithoutAnActiveChangeRegisteredInTheRepository(t *testing.T) {
 	t.Parallel()
@@ -249,7 +249,7 @@ func TestGuardWarnDoesNothingWithoutAnActiveChangeRegisteredInTheRepository(t *t
 	})
 }
 
-// REQ-25.21: la rama registrada de cualquier tipo —cambio, rol o archivado— y de cualquier cambio
+// RF-BRA-22: la rama registrada de cualquier tipo —cambio, rol o archivado— y de cualquier cambio
 // activo es una rama correcta y no avisa; otra sí, y nombra los worktrees de ambos carriles, SDD y
 // ODD, sin dar el de archivado como lugar de escritura del código.
 func TestGuardWarnRegisteredBranchesOfAnyKindAndLaneDoNotWarn(t *testing.T) {
@@ -280,7 +280,7 @@ func TestGuardWarnRegisteredBranchesOfAnyKindAndLaneDoNotWarn(t *testing.T) {
 	}
 }
 
-// REQ-25.21, escenario 8: el repositorio de specs de un multirepo queda exento del aviso aunque no
+// RF-BRA-22, escenario 8: el repositorio de specs de un multirepo queda exento del aviso aunque no
 // esté en su rama de integración (no del bloqueo de documentos); un repositorio de código con el
 // cambio registrado sí avisa.
 func TestGuardWarnExemptsTheSpecsRepositoryOfAMultirepo(t *testing.T) {
@@ -326,7 +326,7 @@ func TestGuardWarnExemptsTheSpecsRepositoryEvenIfARecordNamesIt(t *testing.T) {
 	wantNothing(t, guardOf(t, postWrite(file)))
 }
 
-// REQ-25.21, escenarios «Inerte fuera de un proyecto Axiom» y «Fail-open»: configuración o registro
+// RF-BRA-22, escenarios «Inerte fuera de un proyecto Axiom» y «Fail-open»: configuración o registro
 // ilegibles, un HEAD que no se puede leer, un contexto cancelado y un pánico recuperado no avisan.
 func TestGuardWarnFailsOpen(t *testing.T) {
 	t.Parallel()
@@ -399,7 +399,7 @@ func TestGuardWarnFailsOpen(t *testing.T) {
 	})
 }
 
-// REQ-25.21, escenarios «Sin motivo de aviso no se lanza ningún proceso» y «Antes de avisar, como
+// RF-BRA-22, escenarios «Sin motivo de aviso no se lanza ningún proceso» y «Antes de avisar, como
 // mucho una consulta `git check-ignore`»: lo que se decide con ficheros —`pre` en otro fichero, un
 // documento de Axiom con `post`, una ruta fuera de un proyecto, el worktree o la rama correctos— no
 // lanza ni un proceso; cuando los ficheros piden el aviso, se lanza una sola invocación de git,

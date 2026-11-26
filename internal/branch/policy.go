@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Policy es la política de ramas de un proyecto (REQ-25.3): la rama de integración
+// Policy es la política de ramas de un proyecto (RF-BRA-03): la rama de integración
 // y el prefijo del workspace, y los ajustes propios de cada repositorio que declara
 // `repositories:`. La precedencia, de mayor a menor, es: excepción por cambio de
 // `ensure` (se aplica en el planificador, sobre lo que devuelve For), entrada del
@@ -125,7 +125,7 @@ func repoKey(path string) string {
 }
 
 // ConfigRefusal devuelve el rechazo `config_invalid` cuando la configuración del
-// proyecto impide planificar las ramas (REQ-25.3): un axiom.yaml ilegible, o un
+// proyecto impide planificar las ramas (RF-BRA-03): un axiom.yaml ilegible, o un
 // bloque `git:` o `repositories:` inválido. Es nil cuando no hay nada que rechazar,
 // también sin axiom.yaml, donde rigen los valores por defecto. Los errores de otras
 // declaraciones (baseline, technical_context) no son asunto de la política de ramas.

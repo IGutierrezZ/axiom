@@ -6,7 +6,7 @@
 // escriben llegan con las siguientes rebanadas.
 //
 // No lanza procesos ni abre la red: toda lectura de git pasa por gitcommon.Run a través
-// de internal/branch/gitcli (REQ-25.1). Los textos para el usuario están en castellano.
+// de internal/branch/gitcli (RF-BRA-01). Los textos para el usuario están en castellano.
 package engine
 
 import (
@@ -62,10 +62,10 @@ var _ gitReader = (*gitcli.Git)(nil)
 // fases 3 y 4, y D-09): crear la rama y desplegarla en un worktree (modo `worktree`) o en el
 // propio repositorio con `Switch` (modo `in_place`), retirar el worktree y borrar la rama local en
 // `done`, siempre con dir en el checkout principal, y `Fetch`, la única operación remota
-// (`--fetch`, REQ-25.10). Es un subconjunto del puerto branch.Git y, como las lecturas, crece con
+// (`--fetch`, RF-BRA-10). Es un subconjunto del puerto branch.Git y, como las lecturas, crece con
 // el primer llamador. Fetch sigue siendo la única operación remota; ningún método publica:
-// `axiom branch` nunca ejecuta `push` (REQ-25.1). CreateTrackingBranch adopta una referencia
-// remota ya traída a local (REQ-27.15).
+// `axiom branch` nunca ejecuta `push` (RF-BRA-01). CreateTrackingBranch adopta una referencia
+// remota ya traída a local (RF-BRA-27).
 type gitWriter interface {
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
 	CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error
@@ -84,7 +84,7 @@ type Engine struct {
 	git      gitReader
 	writer   gitWriter
 	registry *registry.Store
-	// prefs son las preferencias personales de worktree del hub (REQ-25.29). nil, en las
+	// prefs son las preferencias personales de worktree del hub (RF-HUB-07). nil, en las
 	// pruebas que construyen el motor a mano, equivale a los valores por defecto sin leer
 	// el hub.
 	prefs branch.Prefs
@@ -139,8 +139,8 @@ func (e *Engine) gatherUnder(ctx context.Context, operation, cwd, change string,
 }
 
 // gatherWith es gatherUnder con las peticiones de `ensure` que condicionan el plan: las
-// excepciones de la invocación, que se contrastan con las del registro (REQ-25.12), y los
-// repositorios de `--repo` (REQ-25.13).
+// excepciones de la invocación, que se contrastan con las del registro (RF-BRA-12), y los
+// repositorios de `--repo` (RF-BRA-14).
 func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, lane branch.Lane, lock func(commonDir string) *branch.Refusal, options gatherOptions) (changeFacts, *branch.Refusal) {
 	if reason := directoryProblem(cwd); reason != "" {
 		return changeFacts{}, branch.UnusableDirectory(operation, reason)
@@ -171,7 +171,7 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 			return changeFacts{}, refusal
 		}
 	}
-	// El registro vive en el git common dir del repositorio del planning home (REQ-25.14).
+	// El registro vive en el git common dir del repositorio del planning home (RF-BRA-15).
 	record, err := e.registry.Load(planning.CommonDir, lane, change)
 	if err != nil {
 		return changeFacts{}, registryRefusal(err, cwd, change)
@@ -281,7 +281,7 @@ func registryRefusal(err error, cwd, change string) *branch.Refusal {
 }
 
 // repositoryFacts lee la raíz git y el git common dir del repositorio que contiene dir
-// (REQ-25.6: con las consultas de git, nunca suponiendo un `.git` literal). declared es
+// (RF-BRA-06: con las consultas de git, nunca suponiendo un `.git` literal). declared es
 // la ruta tal como se declaró. errorDir es el directorio que citan los rechazos.
 func (e *Engine) repositoryFacts(ctx context.Context, operation string, location workspace.Location, dir, declared, errorDir string) (branch.RepoFacts, *branch.Refusal) {
 	root, err := e.git.TopLevel(ctx, dir)
@@ -308,8 +308,8 @@ func (e *Engine) completeFacts(ctx context.Context, operation string, location w
 }
 
 // sealedRoles devuelve los roles sellados en el kickoff del cambio. El carril ODD no
-// tiene kickoff (REQ-25.13) y un cambio sin sellar no tiene roles aún: ambos devuelven
-// hasKickoff = false. Con instantánea de política git (REQ-25.36) la devuelve también: el plan
+// tiene kickoff (RF-BRA-14) y un cambio sin sellar no tiene roles aún: ambos devuelven
+// hasKickoff = false. Con instantánea de política git (RF-KOF-06) la devuelve también: el plan
 // conserva sus nombres de rama (decisión T2). Un kickoff que no se puede leer no se trata como
 // «sin sellar» (T-10): es un rechazo.
 func sealedRoles(cwd string, location workspace.Location, change string, lane branch.Lane) (hasKickoff bool, roles []string, snapshot *kickoff.GitSnapshot, refusal *branch.Refusal) {
@@ -343,7 +343,7 @@ type declaredRepository struct{ role, path string }
 // declaran los roles sellados del cambio (`fullstack` toca los de todos los roles), y
 // asocia a cada raíz los roles que la declaran. Los que resuelven a la raíz del
 // planning home se anotan en planning. Una ruta que no existe o no es un repositorio
-// git se omite sin abortar (REQ-25.6).
+// git se omite sin abortar (RF-BRA-06).
 func (e *Engine) declaredRepositories(ctx context.Context, operation string, location workspace.Location, planning *branch.RepoFacts, sealed []string) ([]branch.RepoFacts, []branch.SkippedPath, *branch.Refusal) {
 	var code []*branch.RepoFacts
 	var skipped []branch.SkippedPath
@@ -388,7 +388,7 @@ func (e *Engine) declaredRepositories(ctx context.Context, operation string, loc
 
 // declaredPaths son las rutas que declaran, en axiom.yaml, los roles sellados del
 // cambio, en orden estable (por rol y, dentro de cada rol, por orden de declaración).
-// `fullstack` cuenta como todos los roles declarados (REQ-25.4, S-3).
+// `fullstack` cuenta como todos los roles declarados (RF-BRA-04, S-3).
 func declaredPaths(cfg *workspace.WorkspaceConfig, sealed []string) []declaredRepository {
 	if cfg == nil || len(sealed) == 0 {
 		return nil
@@ -432,7 +432,7 @@ func missingPath(dir string) string {
 	return ""
 }
 
-// skip compone la ruta omitida: nombra la ruta, el rol y el motivo (REQ-25.6).
+// skip compone la ruta omitida: nombra la ruta, el rol y el motivo (RF-BRA-06).
 func skip(dir, role, reason string) branch.SkippedPath {
 	return branch.SkippedPath{
 		Path:    dir,
@@ -459,7 +459,7 @@ func directoryProblem(dir string) string {
 
 // gitRefusal traduce un fallo de las lecturas de git: «no es un repositorio» es un
 // rechazo (`not_a_git_repository`); cualquier otro es `git_failed`, que nombra la
-// operación y resume el error de git (REQ-25.2).
+// operación y resume el error de git (RF-BRA-02).
 func gitRefusal(operation, dir, gitOperation string, err error) *branch.Refusal {
 	if errors.Is(err, gitcommon.ErrNotGitRepository) {
 		return branch.NotAGitRepository(operation, dir)

@@ -3,8 +3,8 @@ package multirole
 import "strings"
 
 // RoleFullstack is the reserved role identity the kickoff assigns when a
-// change is not subdivided into specialized roles (REQ-21.6). It is valid
-// in every workspace, declared in axiom.yaml or not, because REQ-21.6
+// change is not subdivided into specialized roles (RF-PRE-02). It is valid
+// in every workspace, declared in axiom.yaml or not, because RF-PRE-02
 // requires every SDD change to carry at least one informed role and a
 // workspace cannot be excluded from that guarantee just because its
 // axiom.yaml was never edited to list it (design.md D-07).

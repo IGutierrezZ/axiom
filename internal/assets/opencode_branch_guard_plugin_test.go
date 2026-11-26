@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// Arnés en proceso del plugin axiom-branch-guard.ts (REQ-25.22; R10): Node ejecuta el plugin real
+// Arnés en proceso del plugin axiom-branch-guard.ts (RF-BRA-23; R10): Node ejecuta el plugin real
 // con `spawn` sustituido por un doble que registra la orden, los argumentos y la carga por stdin.
 // No se lanza ningún proceso `axiom` y no se necesita OpenCode instalado.
 

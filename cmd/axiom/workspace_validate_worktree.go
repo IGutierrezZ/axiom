@@ -10,7 +10,7 @@ import (
 // validationTarget devuelve la carpeta maestra contra la que `workspace validate`
 // evalúa las rutas, el axiom.yaml que carga y los avisos de la resolución.
 //
-// `--path` conserva su papel de carpeta maestra (REQ-25.28, D-15): solo cuando no
+// `--path` conserva su papel de carpeta maestra (RF-PLH-13, D-15): solo cuando no
 // tiene marcador propio y está en un worktree enlazado, por ejemplo el de un
 // repositorio de código de un multirepo creado fuera de la carpeta maestra, toma la
 // carpeta maestra y la configuración de workspace.Locate(--path), de modo que los

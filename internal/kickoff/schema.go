@@ -97,12 +97,12 @@ func (k Kickoff) Validate() error {
 	if !validExecutionStyles[k.Config.ExecutionStyle] {
 		return fmt.Errorf("kickoff: execution_style desconocido %q", k.Config.ExecutionStyle)
 	}
-	// handoff_policy is deprecated (REQ-26.9): an empty value is valid, a
+	// handoff_policy is deprecated (RF-PRE-03): an empty value is valid, a
 	// value outside the closed vocabulary is still rejected.
 	if k.Config.HandoffPolicy != "" && !validHandoffPolicies[k.Config.HandoffPolicy] {
 		return fmt.Errorf("kickoff: handoff_policy desconocido %q", k.Config.HandoffPolicy)
 	}
-	// docs_publication (REQ-27.4): vacio o auto, y auto solo acompana a continuous.
+	// docs_publication (RF-KOF-10): vacio o auto, y auto solo acompana a continuous.
 	if k.Config.DocsPublication != "" {
 		if !validDocsPublications[k.Config.DocsPublication] {
 			return fmt.Errorf("kickoff: docs_publication desconocido %q", k.Config.DocsPublication)
@@ -152,7 +152,7 @@ func checkContinuousRoster(style ExecutionStyle, roles []string, fromSessionPace
 // ValidateForSeal es Validate() más la regla de sellado de continuous. Solo la
 // usa el camino de sellado explícito: ParseKickoff y Load siguen con Validate()
 // para leer cualquier kickoff ya sellado o archivado (D7). El retrosellado
-// (SealedBy == SealedByInferred) queda exento (P2, REQ-21.4).
+// (SealedBy == SealedByInferred) queda exento (P2, RF-KOF-04).
 func (k Kickoff) ValidateForSeal() error {
 	if err := k.Validate(); err != nil {
 		return err
@@ -210,7 +210,7 @@ func (r GateRecord) Validate() error {
 	if r.EvidenceKind != "" && !validEvidenceKinds[r.EvidenceKind] {
 		return fmt.Errorf("gate record: evidence_kind desconocido %q", r.EvidenceKind)
 	}
-	// commit_review (REQ-33.1, REQ-33.3): vacio u uno de los tres tokens, y solo en la
+	// commit_review (RF-GAT-19, RF-GAT-21): vacio u uno de los tres tokens, y solo en la
 	// aprobacion de la puerta tasks.
 	if r.CommitReview != "" {
 		if !validCommitReviewModes[r.CommitReview] {

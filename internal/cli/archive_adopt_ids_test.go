@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Prueba de integración del criterio de terminado de C-03-c (REQ-30.9 a REQ-30.13): una
+// Prueba de integración del criterio de terminado de C-03-c (RF-ADP-01 a RF-ADP-05): una
 // adopción con IDs del cliente `RF-001…RF-120` los conserva hasta la spec viva y un
 // provisional posterior recibe `RF-121`. Todos los textos son inventados.
 
@@ -115,7 +115,7 @@ func lastChars(s string, n int) string {
 	return s[len(s)-n:]
 }
 
-// REQ-30.9, REQ-30.11, REQ-30.12 y REQ-30.13: de `scan` a la spec viva con los IDs conservados.
+// RF-ADP-01, RF-ADP-03, RF-ADP-04 y RF-ADP-05: de `scan` a la spec viva con los IDs conservados.
 func TestAdoptIDsCriterion(t *testing.T) {
 	const total = 120
 	ws := adoptIDsProject(t, adoptIDsDoc(total), adoptIDsDeclare)
@@ -196,7 +196,7 @@ func adoptIDsIntegrateSecond(t *testing.T, ws workspacetest.Workspace, change, b
 	}
 }
 
-// REQ-30.12: los definitivos ocupan primero; un provisional anterior en la delta recibe máximo+1.
+// RF-ADP-04: los definitivos ocupan primero; un provisional anterior en la delta recibe máximo+1.
 func TestAdoptIDsProvisionalBeforeTheHighestDefinitive(t *testing.T) {
 	const total = 120
 	ws := adoptIDsProject(t, adoptIDsDoc(total), adoptIDsDeclare)
@@ -219,7 +219,7 @@ func TestAdoptIDsProvisionalBeforeTheHighestDefinitive(t *testing.T) {
 	}
 }
 
-// REQ-30.9 y REQ-30.11: sin el patrón declarado el cambio no pasa y el fallo cita la línea a copiar.
+// RF-ADP-01 y RF-ADP-03: sin el patrón declarado el cambio no pasa y el fallo cita la línea a copiar.
 func TestAdoptIDsPatternUndeclaredFails(t *testing.T) {
 	const total = 120
 	ws := adoptIDsProject(t, adoptIDsDoc(total), "")
@@ -244,7 +244,7 @@ func TestAdoptIDsPatternUndeclaredFails(t *testing.T) {
 	}
 }
 
-// REQ-30.12: un origen sin IDs, sin patrón declarado, usa provisionales y el patrón por defecto.
+// RF-ADP-04: un origen sin IDs, sin patrón declarado, usa provisionales y el patrón por defecto.
 func TestAdoptIDsOriginWithoutIDsUsesTheDefaultPattern(t *testing.T) {
 	doc := "# Requisitos\n\n## Alta de usuario\n\nTexto.\n\n## Baja de usuario\n\nTexto.\n"
 	ws := adoptIDsProject(t, doc, "")

@@ -8,11 +8,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// ScopeSchema es el contrato de salida de `axiom branch scope` (REQ-25.51): propio y distinto del
+// ScopeSchema es el contrato de salida de `axiom branch scope` (RF-BRA-35): propio y distinto del
 // `axiom.branch-result/v1` de `status`.
 const ScopeSchema = "axiom.branch-scope/v1"
 
-// Resultado tipado de cada repositorio (REQ-25.53): dominio cerrado.
+// Resultado tipado de cada repositorio (RF-BRA-37): dominio cerrado.
 const (
 	ScopeOutcomeOK           = "ok"
 	ScopeOutcomeEmpty        = "empty"
@@ -20,7 +20,7 @@ const (
 	ScopeOutcomeExempt       = "exempt"
 )
 
-// Motivos de `unverifiable` y de un pendiente (REQ-25.53, REQ-25.54): los tres primeros son el
+// Motivos de `unverifiable` y de un pendiente (RF-BRA-37, RF-BRA-38): los tres primeros son el
 // dominio cerrado de `unverifiable`; `not_merged` solo aparece en la lista `pending` del resumen,
 // para una rama `ok` que aún no está fusionada en la integración.
 const (
@@ -30,7 +30,7 @@ const (
 	ScopeReasonNotMerged             = "not_merged"
 )
 
-// Oferta de verificación conjunta del resumen (REQ-25.54).
+// Oferta de verificación conjunta del resumen (RF-BRA-38).
 const (
 	ScopeOfferUnverifiable    = "unverifiable"
 	ScopeOfferPendingMerge    = "pending_merge"
@@ -67,7 +67,7 @@ type ScopeResult struct {
 	Repositories  []RepositoryScope      `json:"repositories,omitempty"`
 }
 
-// ScopeSummary es el resumen a nivel de cambio con la oferta de verificación conjunta (REQ-25.54).
+// ScopeSummary es el resumen a nivel de cambio con la oferta de verificación conjunta (RF-BRA-38).
 type ScopeSummary struct {
 	Offer      string         `json:"offer"`
 	OfferLabel string         `json:"offerLabel"`
@@ -83,7 +83,7 @@ type ScopePending struct {
 	ReasonLabel string `json:"reasonLabel"`
 }
 
-// RepositoryScope es la entrada de un repositorio de la instantánea (REQ-25.51, REQ-25.53).
+// RepositoryScope es la entrada de un repositorio de la instantánea (RF-BRA-35, RF-BRA-37).
 type RepositoryScope struct {
 	Name          string            `json:"name"`
 	GitRoot       string            `json:"gitRoot"`
@@ -186,7 +186,7 @@ func (s *RepositoryScope) SetMerged(merged bool, by MergeLayer) {
 	}
 }
 
-// SummarizeScope calcula el resumen del cambio (REQ-25.54, D8): `pending` lista cada repositorio
+// SummarizeScope calcula el resumen del cambio (RF-BRA-38, D8): `pending` lista cada repositorio
 // `unverifiable` con su motivo y cada `ok` sin fusionar con `not_merged`; `offer` sigue la
 // precedencia `unverifiable` > `pending_merge` > `nothing_to_verify` > `offerable`. Los repositorios
 // `empty` y `exempt` no son pendientes.
@@ -223,7 +223,7 @@ func SummarizeScope(repos []RepositoryScope) ScopeSummary {
 }
 
 // ExitCode es la salida del proceso: 0 cuando el alcance se calculó (aunque haya repositorios
-// `unverifiable`, REQ-25.2) y 1 ante un rechazo tipado o un error. El 2 es de los errores de uso,
+// `unverifiable`, RF-BRA-02) y 1 ante un rechazo tipado o un error. El 2 es de los errores de uso,
 // que no producen un resultado.
 func (r ScopeResult) ExitCode() int {
 	if r.Status == StatusReady {

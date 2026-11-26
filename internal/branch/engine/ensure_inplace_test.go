@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Modo `in_place` de `ensure` (REQ-25.8, REQ-25.9, design D-05 fases 3 y 4, matriz de
+// Modo `in_place` de `ensure` (RF-BRA-08, RF-BRA-09, design D-05 fases 3 y 4, matriz de
 // amenazas «Estado del commit»): la comprobación de suciedad va en la fase 3, antes de
 // cualquier escritura, y el cambio de rama es un `git switch` en el propio repositorio, sin
 // worktree. Con git real, entorno aislado y sin red. `in_place` no crea worktrees, que son
@@ -55,7 +55,7 @@ func resetTree(t *testing.T, repo string) {
 	runGit(t, repo, "clean", "-fdq")
 }
 
-// REQ-25.9 y matriz de amenazas «Estado del commit»: con cambios con stage, sin stage o sin
+// RF-BRA-09 y matriz de amenazas «Estado del commit»: con cambios con stage, sin stage o sin
 // seguimiento, `in_place` rechaza con `dirty_worktree` sin modificar el repositorio (HEAD,
 // rama, índice y árbol idénticos antes y después), nombrando los ficheros y las salidas
 // (confirmar o guardar, o el modo `worktree`), sin lanzar ninguna escritura y sin crear la
@@ -139,7 +139,7 @@ func TestEnsureInPlaceRefusesADirtyTreeWithoutModifyingTheRepository(t *testing.
 	})
 }
 
-// REQ-25.9: un fichero ignorado no cuenta como cambio sin confirmar: `in_place` procede.
+// RF-BRA-09: un fichero ignorado no cuenta como cambio sin confirmar: `in_place` procede.
 func TestEnsureInPlaceTreatsAnIgnoredFileAsClean(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)
@@ -159,7 +159,7 @@ func TestEnsureInPlaceTreatsAnIgnoredFileAsClean(t *testing.T) {
 	}
 }
 
-// REQ-25.8, escenario «Modo `in_place` hace checkout en el propio repositorio», y design D-05
+// RF-BRA-08, escenario «Modo `in_place` hace checkout en el propio repositorio», y design D-05
 // fase 4 y 5: con el árbol limpio, `ensure` crea la rama desde la base y la despliega con
 // `git switch` en el propio repositorio, sin worktree ni raíz de worktrees; el registro guarda
 // el modo con `inPlace` en lugar del worktree y repetir da el mismo JSON byte a byte, sin
@@ -241,7 +241,7 @@ func TestEnsureInPlaceSwitchesTheRepositoryToTheChangeBranchWithoutAWorktree(t *
 	})
 }
 
-// REQ-25.9, escenario «Ya en la rama esperada con el árbol sucio es un no-op»: sin cambiar de
+// RF-BRA-09, escenario «Ya en la rama esperada con el árbol sucio es un no-op»: sin cambiar de
 // rama no hay nada que proteger; `ensure` termina con código 0 sin modificar nada (ni escribe
 // el árbol, ni lanza una escritura de git), también si el registro aún no existía.
 func TestEnsureInPlaceIsANoOpWhenAlreadyOnTheExpectedBranchWithADirtyTree(t *testing.T) {
@@ -275,7 +275,7 @@ func TestEnsureInPlaceIsANoOpWhenAlreadyOnTheExpectedBranchWithADirtyTree(t *tes
 	}
 }
 
-// REQ-25.9 con un cambio ya materializado en `in_place`: si el repositorio salió de la rama
+// RF-BRA-09 con un cambio ya materializado en `in_place`: si el repositorio salió de la rama
 // del cambio y tiene el árbol sucio, `ensure` rechaza igual, pero no ofrece `--mode worktree`,
 // que el registro rechazaría con `plan_conflict`: solo confirmar o guardar y repetir.
 func TestEnsureInPlaceOffersNoWorktreeModeForAChangeAlreadyMaterializedInPlace(t *testing.T) {
@@ -321,7 +321,7 @@ func TestEnsureInPlaceDeploysAnExistingBranchWithoutMovingIt(t *testing.T) {
 	}
 }
 
-// design D-08 y REQ-25.8: el hub en `in_place` fija el modo cuando no hay registro ni
+// design D-08 y RF-BRA-08: el hub en `in_place` fija el modo cuando no hay registro ni
 // `--mode` (origen `hub`), y un cambio materializado en `in_place` rechaza un `--mode worktree`
 // con `plan_conflict` sin tocar nada.
 func TestEnsureInPlaceFromTheHubAndAModeConflictWithTheRegistry(t *testing.T) {
@@ -452,7 +452,7 @@ func TestEnsureInPlaceChecksEveryRepositoryForDirtinessBeforeSwitchingAny(t *tes
 	})
 }
 
-// REQ-25.2 y D-05: un fallo de git en el `git switch` es `git_failed`, que nombra la operación;
+// RF-BRA-02 y D-05: un fallo de git en el `git switch` es `git_failed`, que nombra la operación;
 // la rama ya creada se conserva, el repositorio no cambia de rama, no se escribe el registro y
 // repetir `ensure` completa lo pendiente.
 func TestEnsureInPlaceReportsGitFailedWhenSwitchFailsAndRepeatingCompletes(t *testing.T) {
@@ -482,7 +482,7 @@ func TestEnsureInPlaceReportsGitFailedWhenSwitchFailsAndRepeatingCompletes(t *te
 	}
 }
 
-// REQ-25.8 y REQ-25.9: la suciedad solo importa en `in_place`. En `worktree`, `ensure` no
+// RF-BRA-08 y RF-BRA-09: la suciedad solo importa en `in_place`. En `worktree`, `ensure` no
 // cambia el checkout principal y por tanto no la mira (escenario «El checkout principal no
 // se toca en modo `worktree`»).
 func TestEnsureWorktreeModeIgnoresADirtyTree(t *testing.T) {

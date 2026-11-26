@@ -157,7 +157,7 @@ type entryIdentity struct{ plugin, source, itemID string }
 // cambió. Quien llama sostiene el cerrojo del cambio.
 //
 // Los campos que controla el plugin se validan y cualquier incumplimiento es un error permanente.
-// En una carpeta archivada cualquier intento de escritura se rechaza con el mensaje de REQ-21.18.
+// En una carpeta archivada cualquier intento de escritura se rechaza con el mensaje de RF-ARC-03.
 func mergeLinks(f Folder, pluginID, key string, now time.Time, out Outcome) (bool, error) {
 	if len(out.Links) == 0 && len(out.TimeEntries) == 0 {
 		return false, nil

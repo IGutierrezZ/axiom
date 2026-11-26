@@ -66,12 +66,12 @@ type Integration struct {
 	Capabilities []CapabilityPlan
 	Context      *ContextReport
 	// Assignments es el mapa de provisional a definitivo con el estado de cada entrada
-	// (REQ-47.6); vacío sin provisionales.
+	// (RF-RID-14); vacío sin provisionales.
 	Assignments []PlannedEntry
-	// Requirements son los requisitos que las deltas del documento tocan y crean (REQ-47.7).
+	// Requirements son los requisitos que las deltas del documento tocan y crean (RF-OLS-10).
 	Requirements openspecdoc.Declaration
 	// Duplicates son los identificadores repetidos en la spec viva resultante; los que no
-	// escribe la integración se informan sin bloquear (REQ-47.5).
+	// escribe la integración se informan sin bloquear (RF-RID-13).
 	Duplicates []Duplicate
 	// Check dice que la integración se planificó solo para informar (`--check`): no se aplica.
 	Check bool
@@ -93,7 +93,7 @@ func (i Integration) NothingToIntegrate() bool {
 	return i.docText == ""
 }
 
-// CollisionError es el rechazo de un requisito ADDED cuyo identificador ya existe (REQ-30.4).
+// CollisionError es el rechazo de un requisito ADDED cuyo identificador ya existe (RF-OLS-04).
 type CollisionError struct {
 	ID string
 	// Where nombra dónde colisiona: la capacidad, el cambio activo o, si es un duplicado
@@ -108,7 +108,7 @@ func (e *CollisionError) Error() string {
 }
 
 // DivergentRequirementError es el rechazo de un requisito ADDED que la especificación ya
-// contiene con un cuerpo distinto (REQ-30.3).
+// contiene con un cuerpo distinto (RF-OLS-03).
 type DivergentRequirementError struct {
 	Capability  string
 	Requirement string
@@ -121,7 +121,7 @@ func (e *DivergentRequirementError) Error() string {
 }
 
 // MissingCapabilityError es el rechazo de una operación MODIFIED, REMOVED o RENAMED sobre
-// una capacidad que no existe en openspec/specs/ (REQ-30.1).
+// una capacidad que no existe en openspec/specs/ (RF-OLS-01).
 type MissingCapabilityError struct {
 	Capability  string
 	Section     string
@@ -154,15 +154,15 @@ type classified struct {
 }
 
 // PlanIntegration calcula en memoria la integración de cada capacidad del documento
-// sobre <planning home>/specs, sin escribir nada (REQ-30.2). Antes comprueba la obligación
+// sobre <planning home>/specs, sin escribir nada (RF-OLS-02). Antes comprueba la obligación
 // de impacto de los bugs (CheckImpact). Después valida y asigna los identificadores de todas
 // las capacidades con el plan único (PlanIDs: provisionales, traza del documento,
-// colisiones, REQ-30.4), sustituye el mapa en las deltas, clasifica cada requisito contra
+// colisiones, RF-OLS-04), sustituye el mapa en las deltas, clasifica cada requisito contra
 // la especificación canónica (D5: `already` si ya está con el mismo cuerpo, rechazo si un
 // ADDED está con otro cuerpo, `pending` en el resto), compone solo lo pendiente con la
-// composición del archivado SDD, comprueba los duplicados entre capacidades (REQ-47.5),
+// composición del archivado SDD, comprueba los duplicados entre capacidades (RF-RID-13),
 // reescribe el documento con el mapa y su traza y, al final, comprueba el contexto técnico
-// de la rama (REQ-30.6). El primer error rechaza todo el plan.
+// de la rama (RF-OLS-06). El primer error rechaza todo el plan.
 func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Integration, error) {
 	if err := CheckImpact(doc); err != nil {
 		return Integration{}, err
@@ -257,7 +257,7 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 	}
 
 	// La comprobación del contexto es lo último que se calcula: Apply es la única
-	// escritura y solo se alcanza si todo el plan, contexto incluido, es válido (REQ-30.6).
+	// escritura y solo se alcanza si todo el plan, contexto incluido, es válido (RF-OLS-06).
 	report, err := checkContext(context.Background(), loc, doc.Feature)
 	if err != nil {
 		return Integration{}, err
@@ -283,7 +283,7 @@ func specPath(loc workspace.Location, capability string) string {
 
 // classifyIn separa lo pendiente de lo ya integrado en la delta de una capacidad. MODIFIED y
 // REMOVED se emparejan con la canónica como el compositor, por identificador con vuelta al
-// título exacto (REQ-30.22), de modo que la segunda ejecución de una integración es
+// título exacto (RF-ARC-11), de modo que la segunda ejecución de una integración es
 // `already`; ADDED y RENAMED siguen por título exacto. Opera sobre una especificación canónica ya leída,
 // compartida por el carril ODD y el SDD (D3 paso 2.e). previous es el texto de la canónica
 // y existed dice si la capacidad existe; path solo sirve para los motivos.

@@ -6,7 +6,7 @@ import (
 )
 
 // PlanningIntegration devuelve la rama de integración resuelta del repositorio del planning home
-// (design D-22, REQ-25.23): la de `git.integration_branch`, o la de su entrada de
+// (design D-22, RF-BRA-24): la de `git.integration_branch`, o la de su entrada de
 // `repositories:` si la declara, o `main` solo como valor por defecto de branch.ResolvePolicy.
 // Es la rama contra la que se comprueba que un commit llegó a integración (`sdd gate record
 // --evidence-kind pr_merged`) y la que informa el estado de sincronización de especificaciones.

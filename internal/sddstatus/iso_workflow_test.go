@@ -6,7 +6,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// REQ-29.1 y REQ-29.2: ante la contradicción `sdd.iso: true` con `workflow.lane:
+// RF-ISO-01 y RF-ISO-02: ante la contradicción `sdd.iso: true` con `workflow.lane:
 // odd` el status no asume el carril odd, sino que pregunta (ask / invalid); un
 // error ordinario de `sdd:` no cambia el carril del proyecto.
 func TestProjectWorkflowISOContradiction(t *testing.T) {

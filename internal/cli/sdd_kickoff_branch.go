@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// La política de ramas de `axiom sdd kickoff seal` (REQ-25.36, REQ-25.37, REQ-25.38, design D-11
+// La política de ramas de `axiom sdd kickoff seal` (RF-KOF-06, RF-KOF-07, RF-KOF-08, design D-11
 // y D-12). Sin `--infer`, y por este orden:
 //
 //  1. la guarda A: se consulta el veredicto de rama del repositorio del planning home. En un

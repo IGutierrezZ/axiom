@@ -95,7 +95,7 @@ func remoteCopies(name string) []string {
 // --format=%H%x09%gs refs/heads/<name> --`): sha es el commit en que se creó la rama y from, el
 // origen que declara el asunto `branch: Created from <origen>`. ok es falso si no hay entrada (rama
 // solo remota, reflog caducado), si el asunto no es de una creación con `git branch` o si la rama
-// se adoptó de su propia copia remota (`origin/<rama>`, REQ-27.15): en esos casos el commit de
+// se adoptó de su propia copia remota (`origin/<rama>`, RF-BRA-27): en esos casos el commit de
 // creación no dice dónde empezó el trabajo propio. Es una lectura local.
 func (*Git) BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error) {
 	if err := plainArgument(name); err != nil {

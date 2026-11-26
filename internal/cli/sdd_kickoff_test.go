@@ -164,8 +164,8 @@ func TestRunSDDKickoffSealOnArchivedRootRefusesNamingBugOrNewIncrement(t *testin
 	if err == nil {
 		t.Fatal("RunSDDKickoff() = nil error, se esperaba rechazo por raiz archivada (D-14)")
 	}
-	if !strings.Contains(err.Error(), "REQ-21.18") {
-		t.Fatalf("error = %v, se esperaba que nombrase REQ-21.18 (bug o nuevo incremento)", err)
+	if !strings.Contains(err.Error(), "RF-ARC-03") {
+		t.Fatalf("error = %v, se esperaba que nombrase RF-ARC-03 (bug o nuevo incremento)", err)
 	}
 	if _, statErr := os.Stat(filepath.Join(archivedRoot, "kickoff.yaml")); !os.IsNotExist(statErr) {
 		t.Fatalf("kickoff.yaml se escribio pese al rechazo por raiz archivada: statErr = %v", statErr)
@@ -239,11 +239,11 @@ func TestRunSDDKickoffShowOnSealedChangeDisplaysIt(t *testing.T) {
 
 // La prueba que exigía que la carpeta del cambio existiera
 // (TestRunSDDKickoffSealOnNonexistentChangeNamesResolvedPath) se invirtió por
-// REQ-29.12: `seal` crea la carpeta tras las validaciones. Su sustituta es
+// RF-KOF-11: `seal` crea la carpeta tras las validaciones. Su sustituta es
 // TestRunSDDKickoffSealOnNonexistentChangeCreatesTheFolder
 // (sdd_kickoff_iso_test.go); `--infer` conserva el rechazo.
 
-// --- REQ-26.9: handoff_policy is deprecated. The flag is accepted and ignored,
+// --- RF-PRE-03: handoff_policy is deprecated. The flag is accepted and ignored,
 // never required, never named by help, errors or text, and the JSON echoes the
 // value only when the file carries one.
 
@@ -320,7 +320,7 @@ func TestRunSDDKickoffSealIgnoresDeprecatedFlagAndRejectsUnknownValue(t *testing
 	}
 }
 
-// TestRunSDDKickoffSealInferWritesNoneAsCompatibilityValue is REQ-21.4's
+// TestRunSDDKickoffSealInferWritesNoneAsCompatibilityValue is RF-KOF-04's
 // retro-seal without any policy inference: none is only the compatibility value.
 func TestRunSDDKickoffSealInferWritesNoneAsCompatibilityValue(t *testing.T) {
 	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
@@ -398,7 +398,7 @@ func TestRunSDDKickoffJSONEmitsHandoffPolicyOnlyWhenTheFileCarriesIt(t *testing.
 	}
 }
 
-// TestRunSDDKickoffSealDocsPublication cubre REQ-27.4 de extremo a extremo: `continuous` con
+// TestRunSDDKickoffSealDocsPublication cubre RF-KOF-10 de extremo a extremo: `continuous` con
 // `--docs-publication auto` escribe el campo; con checkpointed o --infer se rechaza sin escribir
 // kickoff.yaml; sellar sin el flag no escribe el campo; un segundo seal no lo reescribe.
 func TestRunSDDKickoffSealDocsPublication(t *testing.T) {
@@ -461,7 +461,7 @@ func TestRunSDDKickoffSealDocsPublication(t *testing.T) {
 	})
 }
 
-// TestRunSDDKickoffSealContinuousRosterRule cubre REQ-28.12 y REQ-21.4 de extremo a extremo: continuous
+// TestRunSDDKickoffSealContinuousRosterRule cubre RF-PRE-04 y RF-KOF-04 de extremo a extremo: continuous
 // solo se sella con el rol único fullstack, el rechazo no escribe nada, un seal repetido con los
 // argumentos antiguos se rechaza dejando el kickoff intacto y el retrosellado sigue admitiendo roles.
 func TestRunSDDKickoffSealContinuousRosterRule(t *testing.T) {
@@ -544,7 +544,7 @@ func sealMultirepoChangeRoot(ws workspacetest.Workspace, change string) string {
 	return filepath.Join(ws.Home, "changes", change, "kickoff.yaml")
 }
 
-// REQ-28.19: en multirepo el sellado sin estilo deriva checkpointed y lo registra con origen topology.
+// RF-PRE-11: en multirepo el sellado sin estilo deriva checkpointed y lo registra con origen topology.
 func TestRunSDDKickoffSealMultirepoDerivesCheckpointed(t *testing.T) {
 	captureSealWarnings(t)
 	ws := workspacetest.Canonical(t)
@@ -565,7 +565,7 @@ func TestRunSDDKickoffSealMultirepoDerivesCheckpointed(t *testing.T) {
 	}
 }
 
-// REQ-28.19: en multirepo continuous, explícito o por ritmo auto, se rechaza sin escribir nada.
+// RF-PRE-11: en multirepo continuous, explícito o por ritmo auto, se rechaza sin escribir nada.
 func TestRunSDDKickoffSealMultirepoRejectsContinuous(t *testing.T) {
 	for name, extra := range map[string][]string{
 		"estilo explicito": {"--execution-style", "continuous"},
@@ -586,7 +586,7 @@ func TestRunSDDKickoffSealMultirepoRejectsContinuous(t *testing.T) {
 	}
 }
 
-// REQ-28.19 y D8: en monorepo el rechazo por roles precede a la guarda de rama: no emite avisos,
+// RF-PRE-11 y D8: en monorepo el rechazo por roles precede a la guarda de rama: no emite avisos,
 // no devuelve wrong_branch y no escribe kickoff.yaml.
 func TestRunSDDKickoffSealMonorepoRejectsRolesBeforeBranchGuard(t *testing.T) {
 	warnings := captureSealWarnings(t)
@@ -636,7 +636,7 @@ func TestRunSDDKickoffSealInferIsExemptFromTopology(t *testing.T) {
 	}
 }
 
-// REQ-44.1: un `sdd.id_pattern` inválido se rechaza al sellar, sin carpeta ni
+// RF-RID-01: un `sdd.id_pattern` inválido se rechaza al sellar, sin carpeta ni
 // kickoff.yaml, con el error del patrón; uno válido sella sin copiar el patrón.
 func TestRunSDDKickoffSealIDPattern(t *testing.T) {
 	t.Run("patrón inválido se rechaza sin escribir", func(t *testing.T) {

@@ -18,8 +18,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de las preferencias personales de worktree en el dashboard (INC-25, REQ-3.1,
-// REQ-3.2, REQ-25.29, REQ-25.33). Decodifican el JSON con tipos propios de la prueba, no con
+// Pruebas de las preferencias personales de worktree en el dashboard (INC-25, RF-HUB-05,
+// RF-HUB-06, RF-HUB-07, REQ-25.33). Decodifican el JSON con tipos propios de la prueba, no con
 // los DTO de producción: así fijan los nombres de los campos del contrato HTTP.
 
 // prefsJSON y projectJSON son la forma observable de `worktree_prefs` y de cada proyecto de
@@ -414,7 +414,7 @@ func TestProjectsWorktreePrefsHarness(t *testing.T) {
 
 // El servidor sirve la página con los campos de worktree del modal de registro y el módulo que los
 // envía. El detalle de los campos y de la lógica (rediseño) lo cubre assets_branch_test.go; aquí se
-// fija solo que lo que el navegador recibe por HTTP es lo que ofrece las preferencias (REQ-25.29,
+// fija solo que lo que el navegador recibe por HTTP es lo que ofrece las preferencias (RF-HUB-07,
 // REQ-25.33) y que la interfaz no deja editar el bloque `git:`.
 func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
 	t.Parallel()

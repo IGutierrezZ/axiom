@@ -43,13 +43,13 @@ type StatusV2Projection struct {
 	// additive optional v2 field, present only with a valid declaration. Like
 	// Consent, the wire type already matches the public contract 1:1.
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
-	// Workflow projects Status.Workflow unchanged (REQ-27.2): the wire type
+	// Workflow projects Status.Workflow unchanged (RF-CLI-08): the wire type
 	// already matches the public contract 1:1.
 	Workflow *WorkflowProjection `json:"workflow,omitempty"`
-	// ISO projects Status.ISO unchanged (REQ-29.2): additive and omitted when
+	// ISO projects Status.ISO unchanged (RF-ISO-02): additive and omitted when
 	// axiom.yaml has no `sdd:` block and the change is not ISO.
 	ISO *ISOProjection `json:"iso,omitempty"`
-	// Requirements projects Status.Requirements unchanged (REQ-47.9): additive and
+	// Requirements projects Status.Requirements unchanged (RF-CLI-14): additive and
 	// omitted without readable deltas, for an archived change, with a store that keeps
 	// no files or with an inaccessible ID pattern.
 	Requirements *RequirementsProjection `json:"requirements,omitempty"`
@@ -58,7 +58,7 @@ type StatusV2Projection struct {
 	// translation type is needed (design.md S5.5 defines the wire shape
 	// directly).
 	GateQuestion *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
-	// Publication projects Status.Publication unchanged (REQ-27.18): additive and omitted when
+	// Publication projects Status.Publication unchanged (RF-PUB-11): additive and omitted when
 	// there is nothing to commit or push.
 	Publication       *PublicationProjection `json:"publication,omitempty"`
 	PhaseInstructions *phaseInstructionsV2   `json:"phaseInstructions,omitempty"`
@@ -134,12 +134,12 @@ type kickoffV2 struct {
 	Schema         string `json:"schema"`
 	FlowMode       string `json:"flowMode"`
 	ExecutionStyle string `json:"executionStyle"`
-	// HandoffPolicy is deprecated (REQ-26.9): it is projected only when an older
+	// HandoffPolicy is deprecated (RF-PRE-03): it is projected only when an older
 	// kickoff.yaml carries it, and never influences any projection.
 	HandoffPolicy string `json:"handoffPolicy,omitempty"`
 	SealedAt      string `json:"sealedAt"`
 	SealedBy      string `json:"sealedBy"`
-	// DocsPublication es la autorizacion sellada de publicar los documentos sin preguntar (REQ-27.4);
+	// DocsPublication es la autorizacion sellada de publicar los documentos sin preguntar (RF-KOF-10);
 	// ausente cuando el kickoff no la lleva.
 	DocsPublication string `json:"docsPublication,omitempty"`
 }
@@ -150,12 +150,12 @@ type gateV2 struct {
 	Blocks   string `json:"blocks"`
 	Reason   string `json:"reason,omitempty"`
 	Reopened bool   `json:"reopened,omitempty"`
-	// HandedOff marks a gate approved with exit 2 of the stop (REQ-26.7);
+	// HandedOff marks a gate approved with exit 2 of the stop (RF-GAT-13);
 	// HandedOffTo names the phase it handed over. Both are omitted for exits 1
 	// and 3, so a change that never used exit 2 projects what it always did.
 	HandedOff   bool   `json:"handedOff,omitempty"`
 	HandedOffTo string `json:"handedOffTo,omitempty"`
-	// CommitReview is the effective per-commit review mode of the approved tasks gate (REQ-33.4):
+	// CommitReview is the effective per-commit review mode of the approved tasks gate (RF-GAT-22):
 	// the recorded mode, or notify when the record has none. Absent on any other gate, on a
 	// pending tasks gate and in continuous, where there are no gates. Informative: it never
 	// changes nextRecommended or the dependencies.

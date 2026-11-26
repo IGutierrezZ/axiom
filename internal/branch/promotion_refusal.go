@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos y decisión de la promoción de ramas (REQ-25.47). Como los del modo de trabajo, cada
+// Rechazos y decisión de la promoción de ramas (RF-BRA-29). Como los del modo de trabajo, cada
 // uno nombra una orden `axiom branch ensure` ejecutable con las rutas citadas por
 // pathquote.Quote, y conserva en ella lo que la invocación ya daba (excepciones, `--repo` y
 // las respuestas de `--promotion` anteriores).
@@ -94,7 +94,7 @@ func (a EnsureArgs) withoutPromotions() EnsureArgs {
 }
 
 // PromotionDecisionRequired es el resultado `decision_required` de un repositorio de dos etapas
-// cuyo modo de promoción es `ask` y el cambio no tiene respuesta registrada (REQ-25.47): no se ha
+// cuyo modo de promoción es `ask` y el cambio no tiene respuesta registrada (RF-BRA-29): no se ha
 // creado nada. Pregunta por un solo repositorio (el primero del plan que lo necesita); las
 // respuestas de los demás llegan en llamadas sucesivas, cada una con las anteriores en su
 // invocación. qualify es cierto cuando el plan tiene dos o más repositorios con ramas: la
@@ -134,7 +134,7 @@ func PromotionDecisionRequired(args EnsureArgs, repo RepoPlan, qualify bool) *Re
 }
 
 // PromotionConflict es el rechazo `plan_conflict` de un `--promotion` distinto del modo con el
-// que el repositorio del cambio ya está materializado (REQ-25.47): un cambio no cambia de modo y
+// que el repositorio del cambio ya está materializado (RF-BRA-29): un cambio no cambia de modo y
 // nunca se rehace la base. No se ha tocado nada; source es el origen del modo materializado.
 func PromotionConflict(args EnsureArgs, repo RepoPlan, materialized, requested Promotion, source string) *Refusal {
 	// La respuesta se cualifica siempre: la cualificada prevalece sobre una sin cualificar, que

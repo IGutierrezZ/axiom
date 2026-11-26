@@ -34,7 +34,7 @@ func parseIDs(t *testing.T, idx *Indexer, domain, content string) []string {
 	return requirementIDs(entry)
 }
 
-// REQ-44.6: un encabezado con identificador lo conserva; sin él recibe un sintético que
+// RF-RID-06: un encabezado con identificador lo conserva; sin él recibe un sintético que
 // nunca es válido para el patrón, y la lectura laxa no valida.
 func TestIndexerKeepsHeadingIDsAndSynthesizesOutsideTheValidSpace(t *testing.T) {
 	spec := "# Cobros\n\n" +
@@ -73,7 +73,7 @@ func TestIndexerSyntheticWithoutLowercaseDomainStaysOutsideTheValidSpace(t *test
 	}
 }
 
-// REQ-44.6: el sintético es estable entre ejecuciones.
+// RF-RID-06: el sintético es estable entre ejecuciones.
 func TestIndexerSyntheticIDsAreStableAcrossRuns(t *testing.T) {
 	spec := "# X\n\n### Requirement: Uno\n\n### Requirement: Dos\n"
 	first := parseIDs(t, NewIndexer(), "pagos", spec)
@@ -109,7 +109,7 @@ func writeProject(t *testing.T, sddBlock, spec string) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-44.6: el servicio indexa con el patrón del workspace.
+// RF-RID-06: el servicio indexa con el patrón del workspace.
 func TestServiceIndexesWithTheWorkspacePattern(t *testing.T) {
 	spec := "# Usuarios\n\n### Requirement: Alta (RF-USU-01)\n\n#### Scenario: A\n- DADO x\n"
 	ws := writeProject(t, "sdd:\n  id_pattern: \"RF-<DOM>-<NN>\"\n", spec)
@@ -130,7 +130,7 @@ func TestServiceIndexesWithTheWorkspacePattern(t *testing.T) {
 	}
 }
 
-// REQ-44.6 y REQ-44.9: con el patrón inaccesible livingdoc, que es informativo, indexa con el
+// RF-RID-06 y RF-RID-08: con el patrón inaccesible livingdoc, que es informativo, indexa con el
 // defecto y avisa nombrando el error del patrón, sin fallar.
 func TestServiceWithAnInaccessiblePatternIndexesWithTheDefaultAndWarns(t *testing.T) {
 	spec := "# Usuarios\n\n### Requirement: Alta (REQ-30.1)\n\n#### Scenario: A\n- DADO x\n"
@@ -157,7 +157,7 @@ func TestServiceWithAnInaccessiblePatternIndexesWithTheDefaultAndWarns(t *testin
 	}
 }
 
-// REQ-47.1 / D11: un `(prov:…)` final no se toma como candidato a identificador con
+// RF-RID-09 / D11: un `(prov:…)` final no se toma como candidato a identificador con
 // ningún patrón; el requisito recibe un sintético y conserva el título entero.
 func TestIndexerDoesNotTakeAProvisionalAsATrailingCandidate(t *testing.T) {
 	for template, token := range map[string]string{

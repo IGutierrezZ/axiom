@@ -17,7 +17,7 @@ import (
 // paquete nunca lanza procesos. Si el checkout principal no se puede determinar por
 // ficheros (un common dir que no se llama `.git`, un repositorio desnudo o ilegible)
 // o tampoco tiene marcador, la resolución es la del directorio de partida con una
-// nota que lo explica, nunca un rechazo (REQ-24.2).
+// nota que lo explica, nunca un rechazo (RF-PLH-02).
 //
 // La ubicación del worktree nunca interviene en la deducción de la carpeta maestra
 // (REQ-25.28.3): la ascensión y deduceMaster trabajan sobre rutas del checkout

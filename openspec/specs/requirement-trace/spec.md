@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (REQ-47.6 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
+Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (RF-RID-14 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
 
 ## Requirements
 
-### Requirement: Verbo `axiom trace <ID>` y Sus Opciones (REQ-48.1)
+### Requirement: Verbo `axiom trace <ID>` y Sus Opciones (RF-TRC-01)
 
-El sistema MUST ofrecer el verbo `axiom trace <ID>` con las opciones `--json`, `--integration-branch <rama>` y `--cwd <dir>`. El ID MUST darse como argumento posicional y es obligatorio. El verbo MUST aparecer en la ayuda global (`axiom --help`) y tener ayuda propia (`axiom trace --help`). Sin ID, o con una opción desconocida, MUST fallar con un mensaje que cite el uso y con código de salida distinto de 0. Sin `--json` MUST escribir texto legible; con `--json` MUST escribir únicamente el documento JSON del requisito REQ-48.9.
+El sistema MUST ofrecer el verbo `axiom trace <ID>` con las opciones `--json`, `--integration-branch <rama>` y `--cwd <dir>`. El ID MUST darse como argumento posicional y es obligatorio. El verbo MUST aparecer en la ayuda global (`axiom --help`) y tener ayuda propia (`axiom trace --help`). Sin ID, o con una opción desconocida, MUST fallar con un mensaje que cite el uso y con código de salida distinto de 0. Sin `--json` MUST escribir texto legible; con `--json` MUST escribir únicamente el documento JSON del requisito RF-TRC-09.
 
 #### Scenario: La ayuda muestra el verbo
 
@@ -25,9 +25,9 @@ El sistema MUST ofrecer el verbo `axiom trace <ID>` con las opciones `--json`, `
 - **Y** el código de salida es distinto de 0
 - **Y** no se escribe ningún fichero
 
-### Requirement: Validación del ID Contra el Patrón del Proyecto con Error Tipado (REQ-48.2)
+### Requirement: Validación del ID Contra el Patrón del Proyecto con Error Tipado (RF-TRC-02)
 
-El sistema MUST validar el ID de entrada contra el patrón de identificadores efectivo del proyecto (`axiom.yaml`, REQ-44.1). Un ID que sea válido bajo el patrón MUST aceptarse. Si no lo es, el sistema MUST intentar interpretarlo como identificador provisional válido bajo ese patrón (REQ-47.1). Si no es ni lo uno ni lo otro, MUST fallar con un error tipado que nombre el ID recibido, el patrón efectivo y la continuación (escribir un ID con la forma del patrón o un provisional válido), con código de salida distinto de 0, sin consultar git ni escanear ningún fichero.
+El sistema MUST validar el ID de entrada contra el patrón de identificadores efectivo del proyecto (`axiom.yaml`, RF-RID-01). Un ID que sea válido bajo el patrón MUST aceptarse. Si no lo es, el sistema MUST intentar interpretarlo como identificador provisional válido bajo ese patrón (RF-RID-09). Si no es ni lo uno ni lo otro, MUST fallar con un error tipado que nombre el ID recibido, el patrón efectivo y la continuación (escribir un ID con la forma del patrón o un provisional válido), con código de salida distinto de 0, sin consultar git ni escanear ningún fichero.
 
 #### Scenario: ID que no cumple el patrón
 
@@ -50,9 +50,9 @@ El sistema MUST validar el ID de entrada contra el patrón de identificadores ef
 - **CUANDO** se ejecuta `axiom trace «prov»`
 - **ENTONCES** la consulta se ejecuta sin error de validación
 
-### Requirement: Resolución Entre Provisional y Definitivo por la Traza (REQ-48.3)
+### Requirement: Resolución Entre Provisional y Definitivo por la Traza (RF-TRC-03)
 
-El sistema MUST resolver el conjunto de IDs equivalentes al consultado mediante la traza `axiom.requirement-ids/v1` (REQ-47.6): el `ids.yaml` de cada cambio SDD archivado y la sección `## Identificadores asignados` de cada documento ODD. Consultar por el identificador definitivo o por el provisional de una asignación MUST devolver el mismo conjunto de incrementos y el mismo conjunto de IDs resueltos. Los `Previous` de cada entrada de traza MUST contarse como equivalentes. La asignación (provisional y definitivo) MUST ser visible en el incremento que la contiene. Un ID sin entrada de traza se resuelve solo a sí mismo.
+El sistema MUST resolver el conjunto de IDs equivalentes al consultado mediante la traza `axiom.requirement-ids/v1` (RF-RID-14): el `ids.yaml` de cada cambio SDD archivado y la sección `## Identificadores asignados` de cada documento ODD. Consultar por el identificador definitivo o por el provisional de una asignación MUST devolver el mismo conjunto de incrementos y el mismo conjunto de IDs resueltos. Los `Previous` de cada entrada de traza MUST contarse como equivalentes. La asignación (provisional y definitivo) MUST ser visible en el incremento que la contiene. Un ID sin entrada de traza se resuelve solo a sí mismo.
 
 #### Scenario: Provisional y definitivo dan el mismo resultado
 
@@ -68,7 +68,7 @@ El sistema MUST resolver el conjunto de IDs equivalentes al consultado mediante 
 - **ENTONCES** los IDs resueltos incluyen `«ID»` y `«ID-viejo»`
 - **Y** el resultado incluye los incrementos que tocaron cualquiera de los dos
 
-### Requirement: Punto de Extensión de Alias (REQ-48.4)
+### Requirement: Punto de Extensión de Alias (RF-TRC-04)
 
 La resolución de equivalentes MUST pasar por un punto de extensión de alias sustituible, de modo que una capacidad futura (el mapa `REQ-n.m` a ID nuevo de C-03-e) pueda añadir equivalentes sin modificar la consulta. La implementación por defecto MUST devolver únicamente el propio ID, su pareja provisional/definitivo y los `Previous` de las trazas. Este requisito NO exige implementar ningún mapa de IDs antiguos.
 
@@ -85,7 +85,7 @@ La resolución de equivalentes MUST pasar por un punto de extensión de alias su
 - **CUANDO** se consulta
 - **ENTONCES** los IDs resueltos son solo el ID consultado
 
-### Requirement: Incrementos SDD Archivados como Fuente (REQ-48.5)
+### Requirement: Incrementos SDD Archivados como Fuente (RF-TRC-05)
 
 El sistema MUST recorrer los cambios archivados `openspec/changes/archive/<fecha>-<cambio>/` del árbol de trabajo y reconocer un incremento SDD cuando el ID (o uno de sus equivalentes) aparece en: el título de un requisito de una delta `specs/*/spec.md` bajo ADDED, MODIFIED, REMOVED o RENAMED (en RENAMED, tanto el nombre origen como el destino cuando los incluyen); una línea `Cubre:` de un fichero `tasks*.md` del cambio; o una entrada de `ids.yaml`. El rol de la aparición MUST ser `created` (ADDED), `modified`, `removed`, `renamed` o `covered` (línea `Cubre:`). Cuando un mismo cambio toca el ID con varios roles, MUST informarse un incremento por rol. Las tareas que citan el ID en `Cubre:` MUST listarse con su fichero y línea. Los cambios activos (no archivados) MUST ignorarse. Un incremento SDD MUST anclarse por su carpeta archivada, no por el nombre del cambio, de modo que dos carpetas con el mismo nombre de cambio no se confundan.
 
@@ -114,7 +114,7 @@ El sistema MUST recorrer los cambios archivados `openspec/changes/archive/<fecha
 - **CUANDO** se consulta `«ID»`
 - **ENTONCES** solo aparece la carpeta que lo cita, con su ruta completa
 
-### Requirement: Clasificación de Bug en Cambios SDD (REQ-48.6)
+### Requirement: Clasificación de Bug en Cambios SDD (RF-TRC-06)
 
 El sistema MUST clasificar un incremento SDD como `bug` cuando la propuesta (`proposal.md`) del cambio contiene una declaración de bug reconocida por el parseo de la declaración de bug de ISO (`ParseBugDeclaration`: `## Informe de bug` o `## Impacto en la spec`), y como `increment` en caso contrario. La clasificación MUST aplicarse a todos los incrementos del cambio, con cualquier rol. Un cambio de bug cuyo requisito estaba mal especificado, que lleva delta y ninguna de las dos secciones, MUST informarse como `increment`; esta limitación MUST quedar documentada.
 
@@ -136,9 +136,9 @@ El sistema MUST clasificar un incremento SDD como `bug` cuando la propuesta (`pr
 - **CUANDO** se consulta un ID que añade
 - **ENTONCES** el incremento tiene el tipo `increment`
 
-### Requirement: Documentos ODD como Fuente (REQ-48.7)
+### Requirement: Documentos ODD como Fuente (RF-TRC-07)
 
-El sistema MUST recorrer los documentos `odd/tasks/*.md` y reconocer un incremento ODD cuando el ID (o un equivalente) aparece en: un título de requisito de la sección `## Spec viva` (ADDED, MODIFIED, REMOVED o RENAMED, con los roles de REQ-48.5); una línea `Cubre:` del documento; o la traza `## Identificadores asignados`. Un documento con la línea `Tipo: bug` MUST clasificarse como `bug`; cualquier otro, como `increment`. Solo MUST contar un documento ODD integrado en la rama de integración: uno que la línea `--first-parent` de esa rama no contiene MUST omitirse del resultado.
+El sistema MUST recorrer los documentos `odd/tasks/*.md` y reconocer un incremento ODD cuando el ID (o un equivalente) aparece en: un título de requisito de la sección `## Spec viva` (ADDED, MODIFIED, REMOVED o RENAMED, con los roles de RF-TRC-05); una línea `Cubre:` del documento; o la traza `## Identificadores asignados`. Un documento con la línea `Tipo: bug` MUST clasificarse como `bug`; cualquier otro, como `increment`. Solo MUST contar un documento ODD integrado en la rama de integración: uno que la línea `--first-parent` de esa rama no contiene MUST omitirse del resultado.
 
 Un documento ODD anterior a la traza (sin `## Identificadores asignados`) MUST encontrarse por el ID escrito en sus títulos y no MUST producir error. Un documento ODD que no se pueda interpretar con el parseo estricto de documentos de feature MUST caer a una búsqueda textual del ID, MUST añadir una advertencia que nombre el documento y NUNCA MUST abortar la consulta.
 
@@ -181,7 +181,7 @@ Un documento ODD anterior a la traza (sin `## Identificadores asignados`) MUST e
 - **CUANDO** se consulta un ID que cita
 - **ENTONCES** el documento no aparece en el resultado
 
-### Requirement: Commit de Integración en la Línea `--first-parent` (REQ-48.8)
+### Requirement: Commit de Integración en la Línea `--first-parent` (RF-TRC-08)
 
 El sistema MUST asociar a cada incremento su commit de integración, calculado solo sobre la línea `--first-parent` de la rama de integración, con la historia de git leída mediante el puerto de historia existente. Para un incremento SDD, el commit de código y el de archivado MUST derivarse como en `axiom sdd trace`, anclados por la carpeta archivada. Para un incremento ODD, el commit MUST ser el primero de la línea `--first-parent` que incorpora `odd/tasks/<feature>.md`. La asociación MUST funcionar con integración por merge, squash y rebase. Cuando no se encuentra el commit, el incremento MUST informarse con `found: false` y la consulta NUNCA MUST fallar por ello. El resultado MUST documentar que, en ODD, el commit es el que trae el documento y no necesariamente el que añadió su `## Spec viva`.
 
@@ -198,7 +198,7 @@ El sistema MUST asociar a cada incremento su commit de integración, calculado s
 - **ENTONCES** el incremento figura con `found: false`
 - **Y** el código de salida es 0
 
-### Requirement: Contrato JSON `axiom.trace/v1` y Salida de Texto (REQ-48.9)
+### Requirement: Contrato JSON `axiom.trace/v1` y Salida de Texto (RF-TRC-09)
 
 Con `--json` el sistema MUST escribir un único documento JSON con `schema` igual a `axiom.trace/v1` y, como mínimo: el ID consultado (`id`), los IDs resueltos (`resolvedIds`), la rama de integración (`integrationBranch`), la lista `increments` y la lista `warnings` (presente y vacía si no hay advertencias; la lista `increments` presente y vacía si no hay apariciones). Cada incremento MUST llevar: el carril (`lane`: `sdd` u `odd`), su ruta relativa al repositorio, el nombre, el tipo (`increment` o `bug`), el rol (`created`, `modified`, `removed`, `renamed` o `covered`), las tareas (fichero y línea), el commit de integración con su indicador `found` y, si existe, la asignación (provisional y definitivo). El esquema es versionado: un cambio incompatible MUST subir la versión. Sin `--json`, el sistema MUST escribir un texto legible que muestre, por incremento, el carril, el nombre, el tipo, el rol, el commit abreviado o su ausencia y las advertencias; el texto no es un contrato estable.
 
@@ -217,7 +217,7 @@ Con `--json` el sistema MUST escribir un único documento JSON con `schema` igua
 - **ENTONCES** la salida es texto que menciona ambos incrementos con su carril, tipo y rol
 - **Y** no es un documento JSON
 
-### Requirement: Solo Lectura (REQ-48.10)
+### Requirement: Solo Lectura (RF-TRC-10)
 
 La consulta MUST ser de solo lectura: NUNCA MUST crear, modificar ni borrar ficheros del proyecto, ni crear estado, caché o índice persistente, y MUST recalcular el resultado en cada ejecución. Respecto a git, MUST ejecutar únicamente comandos de lectura y NUNCA MUST ejecutar `fetch`, `checkout`, `commit`, `merge`, `reset`, `push` ni otro comando que cambie el repositorio o la red.
 
@@ -229,9 +229,9 @@ La consulta MUST ser de solo lectura: NUNCA MUST crear, modificar ni borrar fich
 - **Y** el árbol de trabajo y el índice son idénticos antes y después
 - **Y** no aparece ningún fichero nuevo en el proyecto
 
-### Requirement: ID Válido sin Apariciones (REQ-48.11)
+### Requirement: ID Válido sin Apariciones (RF-TRC-11)
 
-Un ID válido (o provisional válido) que no aparezca en ningún incremento MUST producir un resultado vacío y código de salida 0: con `--json`, `increments` es una lista vacía; sin `--json`, un texto que indica que no hay apariciones. Esto MUST distinguirse del error de validación del requisito REQ-48.2.
+Un ID válido (o provisional válido) que no aparezca en ningún incremento MUST producir un resultado vacío y código de salida 0: con `--json`, `increments` es una lista vacía; sin `--json`, un texto que indica que no hay apariciones. Esto MUST distinguirse del error de validación del requisito RF-TRC-02.
 
 #### Scenario: ID válido sin apariciones
 
@@ -240,7 +240,7 @@ Un ID válido (o provisional válido) que no aparezca en ningún incremento MUST
 - **ENTONCES** `increments` es una lista vacía
 - **Y** el código de salida es 0
 
-### Requirement: Rama de Integración Ausente con Remedio (REQ-48.12)
+### Requirement: Rama de Integración Ausente con Remedio (RF-TRC-12)
 
 La rama de integración MUST resolverse como en `axiom sdd trace`: la indicada con `--integration-branch` o, si no se da, la que determina esa lógica. Si la rama no existe en el clon, el sistema MUST fallar con un error que nombre la rama y ofrezca el remedio de indicar otra con `--integration-branch`, con código de salida distinto de 0, sin ejecutar `fetch`. Cuando la rama se da con `--integration-branch`, MUST prevalecer sobre la inferida.
 
@@ -259,7 +259,7 @@ La rama de integración MUST resolverse como en `axiom sdd trace`: la indicada c
 - **ENTONCES** el resultado se calcula sobre la línea `--first-parent` de `«rama»`
 - **Y** `integrationBranch` del JSON es `«rama»`
 
-### Requirement: Orden Determinista (REQ-48.13)
+### Requirement: Orden Determinista (RF-TRC-13)
 
 El resultado MUST ordenarse de forma determinista: por la posición del commit de integración en la línea `--first-parent` (del más antiguo al más reciente); los incrementos sin commit encontrado MUST ir al final, y los empates MUST resolverse por una clave estable (carril, ruta, rol). Dos ejecuciones sobre el mismo estado MUST producir una salida idéntica byte a byte. `resolvedIds`, `warnings` y las tareas MUST emitirse también en un orden estable.
 
@@ -281,9 +281,9 @@ El resultado MUST ordenarse de forma determinista: por la posición del commit d
 - **CUANDO** se ejecuta dos veces `axiom trace «ID» --json`
 - **ENTONCES** ambas salidas son idénticas
 
-### Requirement: Topología Multirepo con Rutas Ancladas en su Raíz Git (REQ-48.14)
+### Requirement: Topología Multirepo con Rutas Ancladas en su Raíz Git (RF-TRC-14)
 
-En `monorepo-embedded` el sistema MUST soportar la consulta completa sobre el único repositorio. En `multirepo` MUST anclar cada ruta (carpeta archivada de specs, documento `odd/tasks/…`) con la raíz git del repositorio que la contiene, y calcular su commit de integración con la historia de ese repositorio y su rama de integración, sin mezclar historias. La ruta de cada incremento en el resultado MUST ser relativa a la raíz git que la contiene. Un repositorio inaccesible o sin rama de integración MUST tratarse con el error de REQ-48.12 o con una advertencia que nombre el repositorio, sin dar un commit de otro repositorio.
+En `monorepo-embedded` el sistema MUST soportar la consulta completa sobre el único repositorio. En `multirepo` MUST anclar cada ruta (carpeta archivada de specs, documento `odd/tasks/…`) con la raíz git del repositorio que la contiene, y calcular su commit de integración con la historia de ese repositorio y su rama de integración, sin mezclar historias. La ruta de cada incremento en el resultado MUST ser relativa a la raíz git que la contiene. Un repositorio inaccesible o sin rama de integración MUST tratarse con el error de RF-TRC-12 o con una advertencia que nombre el repositorio, sin dar un commit de otro repositorio.
 
 #### Scenario: Specs y ODD en repositorios distintos
 
@@ -293,9 +293,9 @@ En `monorepo-embedded` el sistema MUST soportar la consulta completa sobre el ú
 - **Y** el commit del incremento ODD procede de la historia del repositorio que contiene `odd/tasks`
 - **Y** cada ruta es relativa a su propia raíz git
 
-### Requirement: Criterio de Terminado de Trazabilidad de Punta a Punta (REQ-48.15)
+### Requirement: Criterio de Terminado de Trazabilidad de Punta a Punta (RF-TRC-15)
 
-Dado un requisito tocado por un cambio SDD archivado y por una feature ODD, ambos integrados, `axiom trace <ID> --json` MUST devolver ambos incrementos, cada uno con su commit de integración en la línea `--first-parent`. Un bug SDD cuyas tareas cubren ese ID con `Cubre:` MUST aparecer en el mismo resultado con el tipo `bug` y el rol `covered`. Consultar por el provisional o por el definitivo de una asignación MUST dar el mismo resultado (REQ-48.3).
+Dado un requisito tocado por un cambio SDD archivado y por una feature ODD, ambos integrados, `axiom trace <ID> --json` MUST devolver ambos incrementos, cada uno con su commit de integración en la línea `--first-parent`. Un bug SDD cuyas tareas cubren ese ID con `Cubre:` MUST aparecer en el mismo resultado con el tipo `bug` y el rol `covered`. Consultar por el provisional o por el definitivo de una asignación MUST dar el mismo resultado (RF-TRC-03).
 
 #### Scenario: SDD y ODD sobre el mismo ID
 

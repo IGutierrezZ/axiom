@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de RegisteredChanges (REQ-25.44, design D-16): el listado de los cambios que viven en
+// Pruebas de RegisteredChanges (RF-CLI-07, design D-16): el listado de los cambios que viven en
 // worktrees registrados se lee solo de ficheros (el registro local del git common dir del planning
 // home), de modo que estas pruebas montan los repositorios con una carpeta `.git` y no necesitan git.
 
@@ -77,7 +77,7 @@ func listingChanges(t *testing.T, loc workspace.Location) ([]RegisteredChange, [
 	return changes, warnings
 }
 
-// REQ-25.44, D-16: por entrada devuelve nombre, rama, tipo, raíz del worktree, planning home y
+// RF-CLI-07, D-16: por entrada devuelve nombre, rama, tipo, raíz del worktree, planning home y
 // `changeRoot` si existe; las ramas de cambio y de archivado cuentan, la de rol no.
 func TestRegisteredChangesListsTheChangeAndArchiveWorktrees(t *testing.T) {
 	root, loc := listingProject(t)
@@ -127,7 +127,7 @@ func TestRegisteredChangesKeepsThePlanningHomeRelativePathAndOmitsAMissingChange
 	}
 }
 
-// REQ-25.44, escenario «Un worktree desaparecido se omite con aviso»: la entrada se omite y el aviso
+// RF-CLI-07, escenario «Un worktree desaparecido se omite con aviso»: la entrada se omite y el aviso
 // nombra la ruta ausente y la continuación.
 func TestRegisteredChangesOmitsAMissingWorktreeWithAWarning(t *testing.T) {
 	root, loc := listingProject(t)
@@ -167,7 +167,7 @@ func TestRegisteredChangesIgnoresWhatHasNoWorktreeOfTheChange(t *testing.T) {
 	}
 }
 
-// REQ-25.34, D-16: la agregación por nombre que comparten el dashboard y la TUI deja un solo cambio por
+// RF-WEB-11, D-16: la agregación por nombre que comparten el dashboard y la TUI deja un solo cambio por
 // nombre, con el worktree de archivado por delante del del cambio, y no cuenta lo que no tiene la carpeta
 // del cambio en su worktree.
 func TestRegisteredChangesByNameKeepsTheArchiveWorktreeAndSkipsMissingChangeRoots(t *testing.T) {

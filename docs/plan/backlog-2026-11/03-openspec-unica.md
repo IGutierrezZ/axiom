@@ -22,7 +22,7 @@ El backlog original planteaba tres temas, en palabras del usuario:
   - `axiom archive adopt scan|check`, en `internal/cli/archive_adopt.go:28`, paquetes `internal/adoption` e `internal/adoption/adoptcheck`.
 - El contexto técnico se reubicó en `internal/techcontext`.
 - El documento ODD lleva su delta en `## Spec viva` (`internal/livespec/odddoc.go:36`, guía en `internal/components/agentguidance/routing.go:77`).
-- Un proyecto ISO no puede declarar `workflow.lane: odd` (`internal/workspace/sdd.go:22`, REQ-29.1).
+- Un proyecto ISO no puede declarar `workflow.lane: odd` (`internal/workspace/sdd.go:22`, RF-ISO-01).
 
 **Tema 3: pendiente.** De ahí sale todo lo que contiene esta sección.
 
@@ -31,7 +31,7 @@ El backlog original planteaba tres temas, en palabras del usuario:
 Todas son del 2026-11-12 y las tomó el usuario. Se citan tal como quedaron y se usan en los cambios siguientes:
 
 - **D-03-1:** «un proyecto con iso no va a usar odd, usara sdd». Ya está en código (`internal/workspace/sdd.go:20-22`).
-- **D-03-2:** corregir `carril-sdd-versatil` antes de implementarlo: «Sí, antes». Ya se cumplió: D4 invertida, D5 = solo OpenSpec, fuera `identity: id`. Queda un residuo: REQ-29.3 sigue atado a `REQ-<n>.<m>`. Se trata en C-03-a.
+- **D-03-2:** corregir `carril-sdd-versatil` antes de implementarlo: «Sí, antes». Ya se cumplió: D4 invertida, D5 = solo OpenSpec, fuera `identity: id`. Queda un residuo: RF-ISO-03 sigue atado a `REQ-<n>.<m>`. Se trata en C-03-a.
 - **D-03-3:** IDs funcionales tipo `RF-USU-01` en lugar de `REQ-<incremento>.<n>`: «IDs funcionales».
 - **D-03-4:** «además si un incremento toca un id funcional existente en el incremento tiene que quedar reflejado que se va a tocar ese. si va a crear uno nuevo lo mismo aunque aun no se sepa el numero hasta que se integre.»
 - **D-03-5:** el mecanismo de D-03-4 (ID provisional y número asignado al integrar) entra «Solo en el cambio RF». P6 conservó su numeración `REQ-n.m`.
@@ -62,9 +62,9 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
   - Análisis: el patrón se declara en el bloque `sdd:` de `axiom.yaml` (`internal/workspace/sdd.go:17`, hoy `sddKeys = []string{"iso"}`). Tiene decodificador estricto y Axiom no interpreta `openspec/config.yaml`. La clave concreta se decide en el design.
   - Análisis: sin declaración, el patrón por defecto debe admitir los `REQ-n.m` existentes hasta que C-03-e migre las specs de Axiom. Así no se rompe nada entre olas.
   - Análisis: el compositor empareja por ID cuando el título lo tiene, y por título si no. Renombrar el título deja de romper la identidad.
-  - Análisis: REQ-29.3 (`openspec/specs/sdd-iso-evidence/spec.md:244-246`) dice hoy literalmente «DEBE contener un identificador con la forma `REQ-<n>.<m>`». Se reescribe para que pida «un identificador válido según el patrón declarado del proyecto».
+  - Análisis: RF-ISO-03 (`openspec/specs/sdd-iso-evidence/spec.md:244-246`) dice hoy literalmente «DEBE contener un identificador con la forma `REQ-<n>.<m>`». Se reescribe para que pida «un identificador válido según el patrón declarado del proyecto».
 - **Fuera de alcance:** IDs provisionales y asignación (C-03-b), adopción (C-03-c), `axiom trace` (C-03-d) y la migración de las specs de Axiom (C-03-e).
-- **Carril propuesto:** SDD. Modifica requisitos vivos (REQ-29.3, la integración ODD REQ-30.x y el compositor) y cambia un contrato que consumen ISO, ODD y adopción.
+- **Carril propuesto:** SDD. Modifica requisitos vivos (RF-ISO-03, la integración ODD REQ-30.x y el compositor) y cambia un contrato que consumen ISO, ODD y adopción.
 - **Tamaño:** L.
 - **Depende de:** nada de esta sección. **Bloquea a:** C-03-b, C-03-c, C-03-d y C-03-e.
 - **Ficheros y paquetes que toca:**
@@ -80,12 +80,12 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
   - `internal/workspace/sdd.go` y `axiom.example.yaml`. **[COMPARTIDO]: esquema de `axiom.yaml`.**
   - Guías que citan `REQ-<n>.<m>`: `internal/assets/skills/_shared/sdd-iso-convention.md`, `internal/assets/skills/_shared/openspec-convention.md` y `internal/components/agentguidance/routing.go:68,77`. **[COMPARTIDO]: guías de agente.**
   - Goldens en `testdata/golden/` (89 ficheros) que fijen ese texto. **[COMPARTIDO].**
-  - Delta de `openspec/specs/sdd-iso-evidence/spec.md` (REQ-29.3) y de las capacidades de integración ODD y adopción.
+  - Delta de `openspec/specs/sdd-iso-evidence/spec.md` (RF-ISO-03) y de las capacidades de integración ODD y adopción.
 - **Criterio de terminado:**
   - `rg 'REQ-' --type go internal cmd -g '!*_test.go'` solo encuentra coincidencias en el paquete del puerto, en el valor por defecto y en comentarios.
   - Un proyecto de prueba con patrón `RF-<DOM>-<NN>` integra una delta ODD y archiva un cambio SDD sin errores.
   - El compositor aplica un MODIFIED cuyo título cambió pero conserva el ID.
-  - REQ-29.3 está reescrito.
+  - RF-ISO-03 está reescrito.
   - `go test ./...` en verde (salvo el fallo conocido de `internal/components/filemerge` en Windows, `verify-report.md:23` de P6).
 - **Riesgos y avisos:**
   - Cuatro paquetes tienen semánticas distintas: `livingdoc` acepta `REQ-[^)]+` y genera IDs sintéticos; `isoevidence` distingue un ID candidato de uno válido. Hay que conservar los mensajes de error tipados.
@@ -138,7 +138,7 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
   - Análisis: `Origen: <ruta>#<ancla> (<ID original>)` (`check.go:265`) se mantiene como trazabilidad. Cuando el ID se conserva, el original coincide con el de la spec.
   - Análisis: un requisito del origen sin ID recibe un provisional y su número se asigna al integrar (C-03-b).
 - **Fuera de alcance:** validar normas ISO publicadas (D-03-7).
-- **Carril propuesto:** SDD. Modifica los requisitos de adopción REQ-30.9 a 30.14.
+- **Carril propuesto:** SDD. Modifica los requisitos de adopción RF-ADP-01 a RF-ADP-06.
 - **Tamaño:** M.
 - **Depende de:** C-03-a y C-03-b. **Bloquea a:** la adopción de proyectos reales (A-03-2).
 - **Ficheros y paquetes que toca:**
@@ -158,7 +158,7 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
 - **Objetivo:** dado un ID, responder qué incrementos (SDD archivados, documentos ODD), tareas (`Cubre:`), bugs y commits de integración lo crearon o tocaron. Hoy `axiom sdd trace` está ligado a un cambio (`internal/cli/sdd_trace.go:38`, `resolveTraceChangeRoot` en `:143`) y no cubre ODD.
 - **Decisiones:**
   - Tema 3 del origen (usuario): «que los incrementos y los bugs se relacionen con ese ID para que todo quede trazado».
-  - Análisis: la consulta lee los cambios archivados, los documentos `odd/tasks/*.md` integrados y las trazas provisional→definitivo de C-03-b. Tras C-03-e también lee el mapa `REQ-n.m`→nuevo, así que `axiom trace REQ-24.3` responde con el ID nuevo.
+  - Análisis: la consulta lee los cambios archivados, los documentos `odd/tasks/*.md` integrados y las trazas provisional→definitivo de C-03-b. Tras C-03-e también lee el mapa `REQ-n.m`→nuevo, así que `axiom trace RF-PLH-03` responde con el ID nuevo.
   - Análisis: solo lectura, salida JSON versionada, sin estado nuevo y anclada en el commit de integración `--first-parent`, como el `sdd trace` actual.
 - **Fuera de alcance:** el envío al tercero. Este verbo es la fuente que puede consumir la sección 07. **Aviso:** el tema 3 del origen pide «si hay integración con un tercero, enviarlo allí también», y ningún cambio de la sección 07 envía el ID funcional del requisito al WI (C-07-d vincula el cambio con el WI mediante `external_ref`, no los requisitos). Queda como decisión del usuario (ver `revision-03.md`).
 - **Carril propuesto:** SDD. Es un verbo nuevo con contrato JSON.
@@ -198,7 +198,7 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
 - **Criterio de terminado:**
   - `rg 'REQ-[0-9]+\.[0-9]+'` fuera de `openspec/changes/archive/` y del mapa no encuentra nada.
   - `go test ./...` en verde.
-  - `axiom trace REQ-24.3` resuelve al ID nuevo.
+  - `axiom trace RF-PLH-03` resuelve al ID nuevo.
   - `INDEX.md` se regenera sin diferencias inesperadas.
 - **Riesgos y avisos:**
   - Es el cambio más conflictivo del backlog por solapes. Cualquier cambio en vuelo que añada o cite `REQ-n.m` choca con él, así que debe ir en una ventana sin otros cambios SDD abiertos, o rebasar estos sobre el mapa.
@@ -221,8 +221,8 @@ Estos cambios forman el «cambio RF» de la consolidación. Se parten en unidade
 Contrastado con Engram `analisis-backlog/consolidacion` (#2167):
 
 1. **Cifras de la migración.** La consolidación habla de «las 536 specs de Axiom». En `5f6b05b4` son **553 requisitos en 71 capacidades**, y además «specs» se refería a requisitos, no a capacidades.
-2. **Pregunta pendiente de comprobar.** La consolidación pedía comprobar «si REQ-29.3 quedó atado a REQ-n.m y si la asignación de IDs está en un solo punto». Comprobado:
-   - REQ-29.3 **sí está atado** a `REQ-<n>.<m>` (`openspec/specs/sdd-iso-evidence/spec.md:246`).
+2. **Pregunta pendiente de comprobar.** La consolidación pedía comprobar «si RF-ISO-03 quedó atado a REQ-n.m y si la asignación de IDs está en un solo punto». Comprobado:
+   - RF-ISO-03 **sí está atado** a `REQ-<n>.<m>` (`openspec/specs/sdd-iso-evidence/spec.md:246`).
    - La asignación **no está en un solo punto**: hay al menos cuatro regex independientes (`openspec/specs` vía `internal/openspecdoc/parse.go:33`, `internal/isoevidence/reqid.go:13-14`, `internal/livespec/registry.go:59` e `internal/livingdoc/indexer.go:17`).
    - Por eso existe C-03-a como primer paso del cambio RF.
 3. **`ids.go` no se portó.** La consolidación (tema 4, consumo por agentes) dice «si se retira specbaseline, mover contextdelta.go y plan.go». Eso ya se hizo en `internal/techcontext`. Pero la lógica de IDs provisionales de `specbaseline/ids.go` **se borró sin portar** (commit `1166efca`), y C-03-b debe rehacerla tomando el historial como referencia.

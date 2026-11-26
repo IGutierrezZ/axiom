@@ -1263,7 +1263,7 @@ func TestComponentOperationsSDD_ClaudeRemovesReviewAndPreflightHooks(t *testing.
 	}
 }
 
-// REQ-25.22: cuando el componente SDD del runtime deja de estar instalado, se retiran las entradas
+// RF-BRA-23: cuando el componente SDD del runtime deja de estar instalado, se retiran las entradas
 // de `axiom branch guard` (identidad por la orden exacta) y se conserva todo lo demás.
 func TestComponentOperationsSDD_RemovesBranchGuardHooks(t *testing.T) {
 	cases := []struct {
@@ -1452,7 +1452,7 @@ func TestComponentOperationsSDD_OpenCodeRemovesManagedPluginsUnderXDGConfigHome(
 	}
 }
 
-// Retirada del plugin de la guarda de rama (REQ-25.22): quitar el componente SDD de OpenCode
+// Retirada del plugin de la guarda de rama (RF-BRA-23): quitar el componente SDD de OpenCode
 // elimina axiom-branch-guard.ts y deja intactos los plugins ajenos del mismo directorio.
 func TestComponentOperationsSDD_OpenCodeRemovesBranchGuardPluginAndKeepsForeignPlugins(t *testing.T) {
 	homeDir := t.TempDir()

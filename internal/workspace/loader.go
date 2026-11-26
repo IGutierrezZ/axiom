@@ -102,11 +102,11 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	if declarations.TechnicalContextErr == nil {
 		cfg.TechnicalContext = declarations.TechnicalContext
 	}
-	// La política de ramas se proyecta ya resuelta, también sin bloque (REQ-25.26).
+	// La política de ramas se proyecta ya resuelta, también sin bloque (RF-TOP-09).
 	if declarations.GitErr == nil {
 		cfg.Git = resolveGit(declarations.Git)
 	}
-	// El carril de trabajo se proyecta ya resuelto, también sin bloque (REQ-27.1).
+	// El carril de trabajo se proyecta ya resuelto, también sin bloque (RF-TOP-11).
 	if declarations.WorkflowErr == nil {
 		cfg.Workflow = resolveWorkflow(declarations.Workflow)
 	}
@@ -115,11 +115,11 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 		cfg.Delivery = declarations.Delivery
 	}
 	// Las entradas de `repositories:` se proyectan tal como se declararon: la
-	// herencia de `git:` la resuelve quien consume la política (REQ-25.27).
+	// herencia de `git:` la resuelve quien consume la política (RF-TOP-10).
 	if declarations.RepositoriesErr == nil {
 		cfg.Repositories = declarations.Repositories
 	}
-	// El bloque `integrations:` se proyecta tal como se declaró: nil sin bloque (REQ-43.19).
+	// El bloque `integrations:` se proyecta tal como se declaró: nil sin bloque (RF-TOP-16).
 	if declarations.IntegrationsErr == nil {
 		cfg.Integrations = declarations.Integrations
 	}
@@ -147,14 +147,14 @@ func ReadDeclarations(configPath string) Declarations {
 }
 
 // retiredTopologyMonorepoDecoupled es el literal de la topología retirada en
-// INC-25 (REQ-25.25). No es una TopologyType: nada lo acepta ni lo trata como
+// INC-25 (RF-TOP-08). No es una TopologyType: nada lo acepta ni lo trata como
 // valor válido, solo se reconoce para dar un mensaje propio en lugar del genérico.
 const retiredTopologyMonorepoDecoupled = "monorepo-decoupled"
 
 // topologyError devuelve el error de una topología que no es válida, o nil si lo
 // es. El literal retirado tiene mensaje propio, que es también su migración
 // (sin alias ni sustitución automática); el resto de valores conserva el mensaje
-// de siempre con los dos valores admitidos (REQ-2.1).
+// de siempre con los dos valores admitidos (RF-TOP-03).
 func topologyError(topology TopologyType) error {
 	switch topology {
 	case TopologyMonorepoEmbedded, TopologyMultirepo:

@@ -35,7 +35,7 @@ func (e *UnappliedDeltaError) Error() string {
 
 // UnknownRequirementIDError es el rechazo de un MODIFIED, un REMOVED o el nombre antiguo de un
 // RENAMED cuyo nombre lleva un identificador válido que ningún requisito de la canónica
-// lleva (REQ-47.3). El paquete no conoce la capacidad: la añade quien la sabe (livespec o
+// lleva (RF-RID-11). El paquete no conoce la capacidad: la añade quien la sabe (livespec o
 // la orden `archive-compose`, por la carpeta).
 type UnknownRequirementIDError struct {
 	Section     string
@@ -63,7 +63,7 @@ func (e *UnknownRequirementIDError) searched() string {
 
 // ProvisionalIDError es el rechazo de un requisito cuyo nombre o cuerpo contiene un
 // identificador provisional: la composición produce la spec viva, y un provisional nunca
-// llega a ella (REQ-47.1, REQ-30.22).
+// llega a ella (RF-RID-09, RF-ARC-11).
 type ProvisionalIDError struct {
 	Section     string
 	Requirement string
@@ -311,7 +311,7 @@ type ComposeOptions struct {
 	// ExplicitSuperseded lista nombres de requisitos adicionales que deben marcarse como superados.
 	ExplicitSuperseded []string
 	// IDPattern es el patrón de identificadores del proyecto con el que MODIFIED, REMOVED y el
-	// nombre antiguo de RENAMED se resuelven por identificador (REQ-30.22). El valor cero es el
+	// nombre antiguo de RENAMED se resuelven por identificador (RF-ARC-11). El valor cero es el
 	// patrón por defecto, `REQ-<n>.<m>`.
 	IDPattern reqid.Pattern
 }
@@ -378,8 +378,8 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 	}
 
 	// Un provisional en el nombre o el cuerpo de cualquier requisito se rechaza antes de
-	// tocar nada (REQ-30.22). Se mira en el orden en que se aplican las secciones. Un token
-	// dentro de código es un ejemplo de la forma, no un provisional (REQ-47.4).
+	// tocar nada (RF-ARC-11). Se mira en el orden en que se aplican las secciones. Un token
+	// dentro de código es un ejemplo de la forma, no un provisional (RF-RID-12).
 	for _, group := range []struct {
 		section string
 		blocks  []specRequirementBlock
@@ -404,7 +404,7 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		return -1
 	}
 	// resolve empareja el nombre de una delta con un requisito de la canónica por
-	// identificador, con vuelta al título exacto (REQ-30.22). Devuelve el índice del
+	// identificador, con vuelta al título exacto (RF-ARC-11). Devuelve el índice del
 	// segmento y, si no hay emparejamiento, la causa para el rechazo.
 	resolve := func(section, name, display string) (int, error) {
 		var names []string
@@ -463,7 +463,7 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		}
 		segments[i].Text = ensureTrailingNewline(r.Text)
 		// El segmento toma el nombre de la delta: las operaciones siguientes de la misma
-		// delta lo ven con el título nuevo (REQ-30.22).
+		// delta lo ven con el título nuevo (RF-ARC-11).
 		segments[i].Name = r.Name
 	}
 

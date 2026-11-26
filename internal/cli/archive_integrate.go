@@ -20,18 +20,18 @@ import (
 )
 
 // RunArchiveIntegrate es el punto de entrada de la CLI de
-// `axiom archive integrate --odd <feature>` (REQ-30.2). Es un adaptador fino: resuelve
-// el workspace con workspace.Locate (en multirepo, el repositorio de specs, REQ-30.8),
+// `axiom archive integrate --odd <feature>` (RF-OLS-02). Es un adaptador fino: resuelve
+// el workspace con workspace.Locate (en multirepo, el repositorio de specs, RF-OLS-08),
 // consulta la guarda A en el carril ODD, lee odd/tasks/<feature>.md y entrega todo a
 // livespec, que es dueño de cada decisión: analiza el documento, comprueba los
 // identificadores, compone cada delta sobre openspec/specs/ en memoria y las escribe
 // todas o ninguna. No tiene compuertas y no crea artefactos SDD. Cuando el documento lleva
 // identificadores provisionales, asigna el número y reescribe el propio documento dentro
-// del mismo conjunto atómico (REQ-30.2); sin provisionales no lo modifica.
+// del mismo conjunto atómico (RF-OLS-02); sin provisionales no lo modifica.
 //
 // El orden de rechazos es configuración (incluidos `baseline:` residual e ISO), rama, documento, secciones, impacto,
 // identificadores, composición y contexto técnico; la primera escritura ocurre tras la
-// última comprobación. Con `--check` (REQ-47.7) recorre exactamente la misma secuencia
+// última comprobación. Con `--check` (RF-OLS-10) recorre exactamente la misma secuencia
 // salvo la guarda de rama y la escritura: no escribe nada, ni el índice.
 func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
@@ -50,7 +50,7 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	// Un `baseline:` residual (REQ-30.21) y un proyecto ISO (REQ-30.7) se rechazan
+	// Un `baseline:` residual (RF-TOP-12) y un proyecto ISO (RF-OLS-07) se rechazan
 	// antes de leer el documento ODD y sin escribir nada.
 	if retired := loc.Declarations.BaselineRetiredErr; retired != nil {
 		return retired
@@ -58,7 +58,7 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if err := livespec.RefuseISOProject(loc.Declarations.SDD != nil && loc.Declarations.SDD.ISO, loc.ConfigPath, loc.WorkspaceRoot, parsed.feature); err != nil {
 		return err
 	}
-	// REQ-44.9: el patrón de identificadores se lee en vivo de axiom.yaml; inaccesible (bloque
+	// RF-RID-08: el patrón de identificadores se lee en vivo de axiom.yaml; inaccesible (bloque
 	// `sdd:` inválido, también por `iso`, o configuración ilegible), la integración se niega sin
 	// escribir y con la continuación de `axiom workspace validate`.
 	pattern, err := projectIDPattern("archive integrate", loc)

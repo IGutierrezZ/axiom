@@ -39,7 +39,7 @@ Salida 0 con published y up_to_date, y 1 con una negativa tipada.
 `
 
 // RunSDDPublish es el punto de entrada de `axiom sdd publish` (DD-10): un adaptador de E/S delgado
-// sobre sddpublish.Publisher, el único código del producto que confirma y sube (REQ-27.11). Es el
+// sobre sddpublish.Publisher, el único código del producto que confirma y sube (RF-PUB-07). Es el
 // único fichero de este paquete que importa sddpublish.
 func RunSDDPublish(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
@@ -84,7 +84,7 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// Guarda A (REQ-25.19): publicar escribe en la carpeta del cambio, ordinaria o archivada.
+	// Guarda A (RF-BRA-20): publicar escribe en la carpeta del cambio, ordinaria o archivada.
 	writerContext := branch.ContextOrdinary
 	if *archive {
 		writerContext = branch.ContextArchive

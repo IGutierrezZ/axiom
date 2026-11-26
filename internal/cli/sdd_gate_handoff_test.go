@@ -14,8 +14,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de la salida 2 de una parada, `axiom sdd gate record --hand-off` (REQ-26.1, REQ-26.3 a
-// REQ-26.6; DD-02, DD-07, DD-08). Con git real, entorno aislado y sin red, sobre el punto de
+// Pruebas de la salida 2 de una parada, `axiom sdd gate record --hand-off` (RF-GAT-07, RF-GAT-09 a
+// RF-GAT-12; DD-02, DD-07, DD-08). Con git real, entorno aislado y sin red, sobre el punto de
 // entrada en proceso `RunSDDGate`.
 
 var (
@@ -49,7 +49,7 @@ func handOffLedger(t *testing.T, ws workspacetest.Workspace) kickoff.GateLedger 
 }
 
 // wantRefusedWithoutWriting comprueba que la salida 2 se rechazó con la continuación esperada y sin
-// dejar ningún rastro en la carpeta del cambio (REQ-26.3, REQ-26.4, REQ-26.6).
+// dejar ningún rastro en la carpeta del cambio (RF-GAT-09, RF-GAT-10, RF-GAT-12).
 func wantRefusedWithoutWriting(t *testing.T, ws workspacetest.Workspace, args []string, wantFragments ...string) {
 	t.Helper()
 	before := consentCLISnapshot(t, guardChangeRoot(ws))
@@ -71,7 +71,7 @@ func wantRefusedWithoutWriting(t *testing.T, ws workspacetest.Workspace, args []
 	}
 }
 
-// REQ-26.3, REQ-26.5 y REQ-27.12: la salida 2 en un monorepo escribe `approved` con la marca y
+// RF-GAT-09, RF-GAT-11 y RF-GAT-15: la salida 2 en un monorepo escribe `approved` con la marca y
 // devuelve la orden de publicación atada a la rama, el destino de su PR y la reanudación (`git
 // fetch origin` y `axiom branch ensure`), sin exigir una PR fusionada ni órdenes de commit o push.
 func TestGateRecordHandOffInAMonorepoWritesTheMarkAndReturnsTheDelivery(t *testing.T) {
@@ -151,7 +151,7 @@ func TestGateRecordHandOffNeverRunsRemoteGitOrCommit(t *testing.T) {
 	}
 }
 
-// REQ-26.4, último escenario: la guarda `wrong_branch` se aplica antes que la comprobación de
+// RF-GAT-10, último escenario: la guarda `wrong_branch` se aplica antes que la comprobación de
 // artefactos, aunque estos también estén sin confirmar.
 func TestGateRecordHandOffReportsWrongBranchBeforeUncommittedArtifacts(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
@@ -165,8 +165,8 @@ func TestGateRecordHandOffReportsWrongBranchBeforeUncommittedArtifacts(t *testin
 	wantNoWrite(t, ws, before)
 }
 
-// REQ-26.1 (modalidad continua), REQ-26.6 (almacén sin ficheros), REQ-26.4 (artefacto ausente o sin
-// confirmar) y REQ-26.3 (puerta ya resuelta): cada rechazo lleva una continuación ejecutable y deja
+// RF-GAT-07 (modalidad continua), RF-GAT-12 (almacén sin ficheros), RF-GAT-10 (artefacto ausente o sin
+// confirmar) y RF-GAT-09 (puerta ya resuelta): cada rechazo lleva una continuación ejecutable y deja
 // la carpeta del cambio intacta.
 func TestGateRecordHandOffRefusals(t *testing.T) {
 	handOff := []string{"--decision", "approved", "--hand-off"}
@@ -218,7 +218,7 @@ func TestGateRecordHandOffRefusals(t *testing.T) {
 		}
 	})
 
-	// REQ-26.4 y DD-12: la cesión ya no comprueba qué está confirmado. Los documentos pendientes los
+	// RF-GAT-10 y DD-12: la cesión ya no comprueba qué está confirmado. Los documentos pendientes los
 	// confirma `axiom sdd publish`, y `uncommitted_artifacts` deja de existir.
 	t.Run("un artefacto modificado sin confirmar ya no se rechaza", func(t *testing.T) {
 		ws := handOffProject(t, guardSealArgs)
@@ -261,7 +261,7 @@ func TestGateRecordHandOffRefusals(t *testing.T) {
 	})
 }
 
-// REQ-26.3, REQ-21.13 (cuarto escenario) y DD-06: en role-apply la fase cedida es `apply:<roles que
+// RF-GAT-09, RF-RCL-01 (cuarto escenario) y DD-06: en role-apply la fase cedida es `apply:<roles que
 // faltan>` y, con el último rol, `verify` con el aviso de último rol.
 func TestGateRecordHandOffOfARoleApplyNamesWhatIsHandedOver(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
@@ -322,7 +322,7 @@ func TestGateRecordHandOffPhaseSurvivesALaterApprovalOfTheOtherRole(t *testing.T
 	}
 }
 
-// REQ-26.4 y DD-12: con código del rol sin confirmar la cesión de un role-apply ya no se rechaza.
+// RF-GAT-10 y DD-12: con código del rol sin confirmar la cesión de un role-apply ya no se rechaza.
 // `gate record` no inspecciona el trabajo del rol; el código sin subir lo informa después
 // `axiom sdd publish`.
 func TestGateRecordHandOffOfARoleApplyDoesNotInspectTheRoleWork(t *testing.T) {
@@ -341,7 +341,7 @@ func TestGateRecordHandOffOfARoleApplyDoesNotInspectTheRoleWork(t *testing.T) {
 	}
 }
 
-// REQ-26.1 y REQ-26.3: las salidas 1 y 3 no escriben la marca.
+// RF-GAT-07 y RF-GAT-09: las salidas 1 y 3 no escriben la marca.
 func TestGateRecordExitsOneAndThreeNeverWriteTheHandOffMark(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -403,7 +403,7 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 				t.Errorf("la salida 3 no lleva %q: %v", key, document)
 			}
 		}
-		// REQ-27.12: toda aprobaciÃ³n calcula la orden de publicaciÃ³n y no la ejecuta.
+		// RF-GAT-15: toda aprobaciÃ³n calcula la orden de publicaciÃ³n y no la ejecuta.
 		publish, _ := document["publish"].(map[string]any)
 		if publish["branch"] != "feat/x" || publish["prTarget"] != "main" || !strings.Contains(publish["invocation"].(string), "--branch feat/x") {
 			t.Errorf("la salida 3 lleva publish con la rama real: %v", document)
@@ -422,7 +422,7 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 		if !ok || delivery["topology"] != "monorepo-embedded" {
 			t.Fatalf("delivery = %v", document["delivery"])
 		}
-		// REQ-27.12: se retira mergeRequired y la cesión no exige PR fusionada.
+		// RF-GAT-15: se retira mergeRequired y la cesión no exige PR fusionada.
 		if _, present := delivery["mergeRequired"]; present {
 			t.Errorf("delivery ya no lleva mergeRequired: %v", delivery)
 		}
@@ -471,7 +471,7 @@ func TestGateRecordJSONInEveryExit(t *testing.T) {
 	})
 }
 
-// REQ-26.3, A-1: la salida 2 y la salida 3 de la misma puerta pendiente, a la vez. Si la salida 2
+// RF-GAT-09, A-1: la salida 2 y la salida 3 de la misma puerta pendiente, a la vez. Si la salida 2
 // se registra es porque su marca es la del primer approved; si se rechaza es porque la salida 3 ganó
 // y ningún registro lleva marca: nunca queda una cesión invisible tras otra aprobación.
 func TestGateRecordConcurrentHandOffAndPlainApprovalNeverHideTheMark(t *testing.T) {
@@ -514,9 +514,9 @@ func TestGateRecordConcurrentHandOffAndPlainApprovalNeverHideTheMark(t *testing.
 	}
 }
 
-// REQ-26.5, segundo escenario: en el repositorio de specs de un multirepo, que se trabaja in situ en
+// RF-GAT-11, segundo escenario: en el repositorio de specs de un multirepo, que se trabaja in situ en
 // la integración, la salida 2 entrega la publicaciÃ³n de la rama `main`, sin rama de cambio
-// ni destino de PR (REQ-27.12).
+// ni destino de PR (RF-GAT-15).
 func TestGateRecordHandOffInTheSpecsRepositoryOfAMultirepoIsInPlace(t *testing.T) {
 	captureSealWarnings(t)
 	captureWriterWarnings(t)

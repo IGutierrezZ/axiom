@@ -53,7 +53,7 @@ Ruta: todas en línea (borrado guiado por el compilador; ninguna unidad necesita
 
 ## Spec viva
 
-Retira las tres capacidades de `axiom knowledge` y `axiom semantic` (comandos, motor AST nativo y panel semántico del dashboard) y adapta los requisitos que las citaban. `knowledge-query-engine`, `knowledge-sweep-command` y `semantic-code` se quedan sin requisitos y se borran tras integrar, con sus entradas de `openspec/INDEX.md`. REQ-1.2 de `workspace-topology` recoge el aviso de la clave obsoleta `governance.semantic_analysis`.
+Retira las tres capacidades de `axiom knowledge` y `axiom semantic` (comandos, motor AST nativo y panel semántico del dashboard) y adapta los requisitos que las citaban. `knowledge-query-engine`, `knowledge-sweep-command` y `semantic-code` se quedan sin requisitos y se borran tras integrar, con sus entradas de `openspec/INDEX.md`. RF-TOP-02 de `workspace-topology` recoge el aviso de la clave obsoleta `governance.semantic_analysis`.
 
 ### Capacidad: knowledge-query-engine
 
@@ -158,9 +158,9 @@ Retira las tres capacidades de `axiom knowledge` y `axiom semantic` (comandos, m
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Subcomando axiom workspace validate (REQ-1.2)
+### Requirement: Subcomando axiom workspace validate (RF-TOP-02)
 
-El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, REQ-30.19), DEBE rechazar un bloque `baseline:` residual con el error tipado de REQ-30.21 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de REQ-25.25. Una clave `governance.semantic_analysis` residual NO DEBE invalidar la configuración: se sigue leyendo, se ignora y DEBE reportarse como advertencia que nombra la clave y no altera el resultado.
+El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, el cual evalúa el archivo `axiom.yaml` del directorio actual (o de la ruta especificada mediante `--path`) y verifica la conformidad de la topología y de los repositorios asociados a los roles. Además DEBE validar los bloques opcionales `technical_context`, `git` y `repositories` de `axiom.yaml`: la sintaxis y la contención de rutas se reportan como errores y las rutas de contexto técnico inexistentes como advertencias que no alteran el resultado. También DEBE reportar como error que un contexto técnico mantenido se declare con un almacén de artefactos sin ficheros (`engram` o `none`, RF-CTX-17), DEBE rechazar un bloque `baseline:` residual con el error tipado de RF-TOP-12 y DEBE rechazar la topología retirada `monorepo-decoupled` con el mensaje accionable de RF-TOP-08. Una clave `governance.semantic_analysis` residual NO DEBE invalidar la configuración: se sigue leyendo, se ignora y DEBE reportarse como advertencia que nombra la clave y no altera el resultado.
 (Previously: `governance.semantic_analysis` elegía el conector de `axiom semantic` y se validaba en silencio; C-08-l retira ese comando y la clave pasa a advertencia.)
 
 #### Scenario: Validación de espacio de trabajo conforme
@@ -224,7 +224,7 @@ El binario `axiom` DEBE proporcionar el subcomando `axiom workspace validate`, e
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Configuración Canónica de axiom.yaml en Topología Multirepo (REQ-23.2)
+### Requirement: Configuración Canónica de axiom.yaml en Topología Multirepo (RF-KNW-02)
 
 Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 - `workspace.topology: "multirepo"`.
@@ -247,9 +247,9 @@ Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (REQ-24.10)
+### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (RF-PLH-10)
 
-El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de RF-PLH-01 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
 (Previously: los consumidores de catálogo incluían `knowledge` (raíz de especificaciones por defecto de `axiom knowledge sweep`), que C-08-l retira, y antes la TUI.)
 
 #### Scenario: Catálogo del workspace canónico
@@ -274,7 +274,7 @@ El servicio de documentación viva (livingdoc, incluido el sintetizador de arran
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Construcción y ejercicio bloqueante de la superficie exclusiva de axiom (REQ-20.15)
+### Requirement: Construcción y ejercicio bloqueante de la superficie exclusiva de axiom (RF-CIB-01)
 
 El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloqueante su superficie exclusiva: `init`, `change`, `project`, `workspace`, `handoff`, `role`, `skill`, `archive`, y el arranque/ayuda de `ui`.
 (Previously: la superficie incluía `semantic`, que C-08-l retira.)
@@ -295,7 +295,7 @@ El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloque
 
 - 2026-11-26: T3 hecha. `workspace.ObsoleteKeyWarnings` avisa desde `Validate` de `governance.semantic_analysis` sin invalidar (lo ven `workspace validate`, `doctor`, el dashboard y la validación de `init`); el campo se sigue leyendo; `hub/init.go` y `axiom.example.yaml` ya no lo escriben. Test nuevo `TestValidateWarnsAboutObsoleteSemanticAnalysis`. `go vet` limpio y `go test` focalizado en verde (`workspace -run ObsoleteSemantic|ValidateTopology|ValidateSkillRoots|Docs|Example|Declarations|Template|Manual`, `hub -run Init|Knowledge`).
 
-- 2026-11-26: T4 hecha. `axiom archive integrate --odd retirar-knowledge-semantic` compuso 7 capacidades; se borran `knowledge-query-engine`, `knowledge-sweep-command` y `semantic-code` (vacías) y `axiom archive sync` regenera `openspec/INDEX.md` (48 dominios, 514 → 494 requisitos, 2212 → 2188 escenarios). MODIFIED: REQ-1.2 (aviso de la clave), REQ-23.2, REQ-24.10 y REQ-20.15 (coordinación: va en esta Spec viva). Notas de limpieza manual en `docs/releases/notas-retirada-knowledge-semantic.md`. `docs/redesign/README.md`: solo las citas operativas a `/api/semantic/*` y la navegación (coordinación). Criterio `rg -l 'internal/(knowledge|semantic)"' -g '*.go'` sin resultados. `go test` en verde de `livespec`, `livingdoc` y `dashboard` completo.
+- 2026-11-26: T4 hecha. `axiom archive integrate --odd retirar-knowledge-semantic` compuso 7 capacidades; se borran `knowledge-query-engine`, `knowledge-sweep-command` y `semantic-code` (vacías) y `axiom archive sync` regenera `openspec/INDEX.md` (48 dominios, 514 → 494 requisitos, 2212 → 2188 escenarios). MODIFIED: RF-TOP-02 (aviso de la clave), RF-KNW-02, RF-PLH-10 y RF-CIB-01 (coordinación: va en esta Spec viva). Notas de limpieza manual en `docs/releases/notas-retirada-knowledge-semantic.md`. `docs/redesign/README.md`: solo las citas operativas a `/api/semantic/*` y la navegación (coordinación). Criterio `rg -l 'internal/(knowledge|semantic)"' -g '*.go'` sin resultados. `go test` en verde de `livespec`, `livingdoc` y `dashboard` completo.
 
 ## Siguiente paso
 

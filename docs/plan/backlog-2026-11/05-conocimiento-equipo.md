@@ -59,26 +59,26 @@ Al rechazar el tema 1, el usuario abrió un objetivo nuevo: que la documentació
   - (usuario) «no me convence lo que me cuentas del engram, como axiom es siempre both y tenemos las informacion en openspec, tendra que ser suficiente, tendremos que ayudar mucho en axiom a que la documentacion este siempre subida a cada cambio que se confirme.»
   - (usuario) «cada cambio que se confirme» significa: «Cada parada aprobada».
   - (usuario) «En SDD sin paradas con docs_publication: auto, si no cuesta mucho, meteria subir tambien tras spec y design.»
-  - (análisis) La autorización sellada sigue siendo la misma: publicar solo documentos (REQ-27.4). Los kickoffs ya sellados con `auto` heredan los momentos nuevos sin volver a preguntar.
-  - (análisis) Sigue sin haber paradas en `continuous`, y una negativa de `publish` sigue siendo informativa (REQ-27.13).
+  - (análisis) La autorización sellada sigue siendo la misma: publicar solo documentos (RF-KOF-10). Los kickoffs ya sellados con `auto` heredan los momentos nuevos sin volver a preguntar.
+  - (análisis) Sigue sin haber paradas en `continuous`, y una negativa de `publish` sigue siendo informativa (RF-PUB-08).
 - **Fuera de alcance:**
-  - `checkpointed`, que ya publica en cada aprobación (REQ-27.12, `openspec/specs/sdd-block-review-gates/spec.md:234-235`).
+  - `checkpointed`, que ya publica en cada aprobación (RF-GAT-15, `openspec/specs/sdd-block-review-gates/spec.md:234-235`).
   - ODD. Decisión del usuario: «ODD no pasa nada, esta enfocado a monorepos. no hace falta subirlos automaticamente.»
   - Los kickoffs `continuous` sin `docs_publication`.
-- **Carril propuesto: ODD con sección `## Spec viva`.** Es un cambio acotado y entendido. El delta toca REQ-27.13 y REQ-27.4, y ODD puede integrarlo con `axiom archive integrate --odd`. Si la sesión padre prefiere tramitar por SDD todo cambio de contrato de publicación, también vale.
+- **Carril propuesto: ODD con sección `## Spec viva`.** Es un cambio acotado y entendido. El delta toca RF-PUB-08 y RF-KOF-10, y ODD puede integrarlo con `axiom archive integrate --odd`. Si la sesión padre prefiere tramitar por SDD todo cambio de contrato de publicación, también vale.
 - **Tamaño: S.**
 - **Depende de / bloquea a:**
   - No depende funcionalmente de nada. Su valor presupone la persistencia siempre hybrid de la sección 01: con `engram` o `none` no se publica nada.
   - Comparte `sdd-orchestrator-sections.md:88` con C-05-c y con el texto del pre-vuelo que cambia la sección 01: conviene ordenarlos o fusionarlos.
 - **Ficheros:**
-  - `openspec/specs/sdd-docs-publication/spec.md:286-288` (REQ-27.13, «exactamente en dos momentos»; escenarios a partir de `:290`).
-  - `openspec/specs/sdd-lane-kickoff/spec.md:358,364` (REQ-27.4, texto de la opción del pre-vuelo «al cerrar `tasks` y al archivar»).
+  - `openspec/specs/sdd-docs-publication/spec.md:286-288` (RF-PUB-08, «exactamente en dos momentos»; escenarios a partir de `:290`).
+  - `openspec/specs/sdd-lane-kickoff/spec.md:358,364` (RF-KOF-10, texto de la opción del pre-vuelo «al cerrar `tasks` y al archivar»).
   - [COMPARTIDO] `internal/assets/skills/_shared/sdd-orchestrator-sections.md:88` («When to publish…»).
   - [COMPARTIDO] El texto del pre-vuelo en `internal/components/sdd/session_preflight.go`, que también cambia la sección 01.
   - [COMPARTIDO] Los goldens de `testdata/golden/` que incluyen esa sección.
   - `internal/kickoff/types.go:119-130` (`DocsPublicationAuto`). El comentario de la línea 129 dice «al cerrar `tasks` y tras archivar» y hay que actualizarlo.
 - **Criterio de terminado:**
-  - REQ-27.13 nombra cuatro momentos: spec, design, tasks y archivo.
+  - RF-PUB-08 nombra cuatro momentos: spec, design, tasks y archivo.
   - La sección del orquestador ordena `axiom sdd publish --cwd <root> --change <name> --json` al terminar `spec` y `design` con `docsPublication: auto`.
   - La opción del pre-vuelo dice «sube los documentos a `origin/<rama>` al cerrar spec, design y tasks y al archivar».
   - Goldens regenerados y `go test ./internal/assets/... ./internal/components/... ./internal/kickoff/...` en verde.
@@ -89,17 +89,17 @@ Al rechazar el tema 1, el usuario abrió un objetivo nuevo: que la documentació
 
 ### C-05-c · Estado «aprobada sin publicar» en `axiom sdd status`
 
-- **Objetivo.** Hoy `axiom sdd gate record` registra la aprobación y devuelve la orden de `axiom sdd publish`, pero no la ejecuta (REQ-26.5, `internal/cli/sdd_gate_handoff.go:165-190`). La ejecuta el orquestador por instrucción. Si se le olvida, se corta la sesión, se compacta el contexto o falla el push, la aprobación queda registrada pero los documentos no llegan a `origin`, y nadie lo detecta. Resultado esperado: el status lo detecta y lo proyecta con la orden exacta, y el orquestador lo resuelve antes de la fase siguiente o al reanudar.
+- **Objetivo.** Hoy `axiom sdd gate record` registra la aprobación y devuelve la orden de `axiom sdd publish`, pero no la ejecuta (RF-GAT-11, `internal/cli/sdd_gate_handoff.go:165-190`). La ejecuta el orquestador por instrucción. Si se le olvida, se corta la sesión, se compacta el contexto o falla el push, la aprobación queda registrada pero los documentos no llegan a `origin`, y nadie lo detecta. Resultado esperado: el status lo detecta y lo proyecta con la orden exacta, y el orquestador lo resuelve antes de la fase siguiente o al reanudar.
 - **Decisiones:**
   - (usuario) «3, ok creo que lo entiendo y me parece bien lo del estado, si puedes explicarmelo mejor, pero seguramente hagamos lo que dices.» Se le dio la explicación ampliada, sin nuevas objeciones. Queda aprobado salvo cambio en el diseño.
   - (análisis) Condición de `publication: pending`. Primero, existe una aprobación registrada de una compuerta distinta de `integration`, o un momento `auto` cumplido en `continuous` (C-05-b). Además, se cumple al menos una de estas dos cosas:
-    - las rutas de documentación del cambio (la lista cerrada de REQ-27.5 en `sdd-docs-publication`) tienen cambios sin confirmar;
+    - las rutas de documentación del cambio (la lista cerrada de RF-PUB-01 en `sdd-docs-publication`) tienen cambios sin confirmar;
     - la rama del cambio va por delante de `origin/<rama>`.
   - (análisis) Se mide sin red, con las referencias locales. El ahead/behind ya existe en `internal/branch/engine/status.go:301` (`AheadBehind`). Tras un push propio la referencia de seguimiento está al día, así que el cálculo es fiable sin fetch.
   - (análisis) La proyección incluye la invocación exacta, la misma que `publication.invocation` de la pregunta de compuerta.
   - (análisis) La doctrina del orquestador ordena: si el status proyecta `publication: pending`, ejecutar esa invocación una vez antes de lanzar la fase siguiente, y también al reanudar. Una negativa sigue siendo informativa.
 - **Fuera de alcance:**
-  - Que `gate record` ejecute git, porque REQ-26.5 se mantiene.
+  - Que `gate record` ejecute git, porque RF-GAT-11 se mantiene.
   - ODD.
   - Hooks que bloqueen el cierre de turno, porque el hook Stop de RDD se retira (sección 01).
 - **Carril propuesto: SDD.** Es un campo nuevo del contrato JSON de `axiom sdd status`, toca varios paquetes (sddstatus, branch engine y doctrina) y necesita requisito y escenarios nuevos.
@@ -152,9 +152,9 @@ Al rechazar el tema 1, el usuario abrió un objetivo nuevo: que la documentació
   - fetch de los repos de código;
   - prune;
   - cualquier memoria de Engram;
-  - autorización por `axiom.yaml`. Es una preferencia personal: REQ-25.29 establece que las preferencias salen del hub y nunca de `axiom.yaml`.
-- **Carril propuesto: SDD.** Cambia un contrato vivo. REQ-25.10 (`openspec/specs/change-branch-lifecycle/spec.md:95,116`) dice «ninguna orden hace `fetch`, `pull`, `push` ni consulta remota sin una opción explícita». Hay que reformularlo para que la preferencia persistente cuente como opción explícita. Además, el cambio añade una escritura de git nueva (`merge --ff-only`) al motor de ramas y toca hooks de varios adaptadores.
-- **Tamaño: M.** En el análisis se estimó S-M, ~300-500 líneas. El delta de REQ-25.10 y los hooks por adaptador lo empujan a M.
+  - autorización por `axiom.yaml`. Es una preferencia personal: RF-HUB-07 establece que las preferencias salen del hub y nunca de `axiom.yaml`.
+- **Carril propuesto: SDD.** Cambia un contrato vivo. RF-BRA-10 (`openspec/specs/change-branch-lifecycle/spec.md:95,116`) dice «ninguna orden hace `fetch`, `pull`, `push` ni consulta remota sin una opción explícita». Hay que reformularlo para que la preferencia persistente cuente como opción explícita. Además, el cambio añade una escritura de git nueva (`merge --ff-only`) al motor de ramas y toca hooks de varios adaptadores.
+- **Tamaño: M.** En el análisis se estimó S-M, ~300-500 líneas. El delta de RF-BRA-10 y los hooks por adaptador lo empujan a M.
 - **Depende de / bloquea a:**
   - Después de C-05-a, que deja `AGENTS.md:17` y `GEMINI.md:48` en «solo con autorización»; aquí se reescriben para nombrar el interruptor.
   - Sección 01 (RDD apagado y retirado): no apoyarse en el SessionStart de RDD (`internal/cli/review_stop_hook.go:44-63`) ni en el código de `axiom review mode` (`internal/cli/review_mode.go`, `internal/reviewtransaction/rdd_mode.go`), porque se retiran. Se copia el patrón de interruptor del usuario, no el código.
@@ -172,10 +172,10 @@ Al rechazar el tema 1, el usuario abrió un objetivo nuevo: que la documentació
   - `AGENTS.md:17,20` y `GEMINI.md:48`.
   - `docs/manual-de-inicio.md:226,236,243`, que describen `--fetch` «solo con tu autorización».
   - `internal/workspace/docs_contract_test.go`, que fija frases de la política local de `AGENTS.md` y del manual.
-  - `openspec/specs/change-branch-lifecycle/spec.md` (REQ-25.10).
+  - `openspec/specs/change-branch-lifecycle/spec.md` (RF-BRA-10).
   - `openspec/specs/sdd-block-review-gates/spec.md:410` («`axiom branch ensure --fetch` con su autorización»), si cambia la redacción.
 - **Criterio de terminado:**
-  - Con el interruptor apagado, ninguna orden hace red (los tests actuales de REQ-25.10 siguen pasando).
+  - Con el interruptor apagado, ninguna orden hace red (los tests actuales de RF-BRA-10 siguen pasando).
   - Con el interruptor encendido:
     - el SessionStart hace fetch y avisa solo de lo relevante;
     - la integración limpia avanza;
@@ -206,6 +206,6 @@ Referencia: Engram `analisis-backlog/consolidacion`, revisión del 2026-11-13.
 
 - La limpieza (C-05-a) amplía su alcance respecto a lo consolidado, por hallazgos en `5f6b05b4`. Además de `.engram/`, `docs/engram.md` y `AGENTS.md:17`, incluye `GEMINI.md:48` (la misma orden de fetch pasivo), `docs/intended-usage.md:30-31,172` y `docs/codebase/sync-and-cloud.md:12,39,52`.
 - Las líneas citadas se han movido: `docs/engram.md` es ahora `:50-62` (no `:52-62`) y el bloque de Engram de `.gitignore` está en `:53-55`.
-- El autofetch figura como S-M sin más. Hay que anotar que contradice REQ-25.10 («sin `fetch` implícito», `change-branch-lifecycle/spec.md:95,116`): exige delta de spec y carril SDD, y se estima en M.
+- El autofetch figura como S-M sin más. Hay que anotar que contradice RF-BRA-10 («sin `fetch` implícito», `change-branch-lifecycle/spec.md:95,116`): exige delta de spec y carril SDD, y se estima en M.
 - El autofetch no puede reutilizar el hook SessionStart ni el código de `axiom review mode`, que se retiran con RDD (sección 01). Solo se copia el patrón.
 - Hay que precisar el carril de cada cambio: C-05-a por ODD (lote 1), C-05-b por ODD con `## Spec viva` (o SDD si la sesión padre lo prefiere), C-05-c por SDD y C-05-d por SDD.

@@ -10,8 +10,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// refuseISOCompose es la tercera barrera del archivado ISO (design D13, REQ-29.10
-// y REQ-29.11): tras `dependencies.archive` del status y `axiom sdd archive-check`,
+// refuseISOCompose es la tercera barrera del archivado ISO (design D13, RF-ARC-09
+// y RF-ARC-10): tras `dependencies.archive` del status y `axiom sdd archive-check`,
 // `archive-compose` se niega, antes de leer la canónica y sin escribir, a componer
 // la delta de un cambio ISO que no cumple la regla del archivado (escenarios de
 // todas las deltas y matriz de verify válida y de éxito).

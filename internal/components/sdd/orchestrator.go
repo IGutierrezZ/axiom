@@ -81,7 +81,7 @@ var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{AXIOM_SDD_SEC
 // The stop-exits marker is the one token a canonical body does carry. It is not
 // a nested section reference: it is a distinct token that a second, explicit
 // step resolves after the section pass, so the three-exit text has a single
-// source (agentguidance.StopExits) shared with the ODD doctrine (REQ-26.8).
+// source (agentguidance.StopExits) shared with the ODD doctrine (RF-GAT-14).
 func substituteSharedOrchestratorSections(content string) string {
 	content = sharedOrchestratorSectionPlaceholder.ReplaceAllStringFunc(content, func(match string) string {
 		name := sharedOrchestratorSectionPlaceholder.FindStringSubmatch(match)[1]

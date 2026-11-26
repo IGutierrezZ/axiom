@@ -635,7 +635,7 @@ func (f *wrapperFixture) behindIntegration(t *testing.T, branch string) string {
 	return tip
 }
 
-// REQ-25.24: `done` avanza la rama de integración que declara `axiom branch status`
+// RF-BRA-25: `done` avanza la rama de integración que declara `axiom branch status`
 // y cae en `main` cuando el JSON no la trae.
 func TestScriptsAxiomWorktreeDoneSyncsTheResolvedIntegrationBranch(t *testing.T) {
 	type runner func(t *testing.T, f *wrapperFixture) (string, string, int)
@@ -687,7 +687,7 @@ func TestScriptsAxiomWorktreeDoneSyncsTheResolvedIntegrationBranch(t *testing.T)
 	})
 }
 
-// REQ-25.24: `pr` toma la base de prTarget, también cuando es la rama principal de la
+// RF-BRA-25: `pr` toma la base de prTarget, también cuando es la rama principal de la
 // segunda etapa.
 func TestScriptsAxiomWorktreePrTargetsTheMainBranchOfTheSecondStage(t *testing.T) {
 	f := newWrapperFixture(t)

@@ -69,7 +69,7 @@ func TestContinuousMultiRoleProjectsRosterWithoutGates(t *testing.T) {
 }
 
 // With every role done, archive is ready and recommended: the "integration"
-// gate does not exist in continuous mode, so it cannot be missing (REQ-21.16
+// gate does not exist in continuous mode, so it cannot be missing (RF-ARC-01
 // constrains gated changes only).
 func TestContinuousMultiRoleArchiveNotBlockedByIntegrationGate(t *testing.T) {
 	t.Parallel()
@@ -93,7 +93,7 @@ func TestContinuousMultiRoleArchiveNotBlockedByIntegrationGate(t *testing.T) {
 }
 
 // Multi-role (and per_checkpoint) gated changes require handoff.md before
-// verify (REQ-21.15). handoff.md is only written when the last role-apply
+// verify (RF-RCL-03). handoff.md is only written when the last role-apply
 // gate is approved, which a continuous change never has.
 func TestContinuousMultiRoleVerifyNotBlockedByMissingHandoff(t *testing.T) {
 	t.Parallel()

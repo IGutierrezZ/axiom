@@ -2,7 +2,7 @@
 
 ## Requirements
 
-### Requirement: Artifact Language Independence
+### Requirement: Artifact Language Independence (RF-PER-01)
 
 Persona voice MUST govern only direct chat replies to the user. Generated technical artifacts MUST default to English and neutral professional wording regardless of the persona, unless the user explicitly requests a different artifact language or the existing project artifact convention requires it.
 (Previously: the scenarios used the retired `neutral` and `gentleman` personas.)
@@ -14,7 +14,7 @@ Persona voice MUST govern only direct chat replies to the user. Generated techni
 - THEN the generated artifact uses neutral professional wording without the persona's conversational register
 - AND it defaults to English unless the project artifact convention requires otherwise
 
-### Requirement: Safe Persona Fallback Semantics
+### Requirement: Safe Persona Fallback Semantics (RF-PER-02)
 
 When the `persona` component is selected, install and sync MUST apply the Axiom persona. Persisted persona state that is missing, empty, `axiom`, or a retired or unknown value (such as `gentleman`, `neutral`, `gentleman-neutral-artifacts` or `custom`) MUST NOT block sync and MUST NOT select any other persona. A retired or unknown persisted value MUST be reported with a warning and MUST NOT be written back to the state.
 (Previously: the fallback for missing or invalid state was the `neutral` persona, and an explicit `gentleman` selection was honored.)
@@ -33,7 +33,7 @@ When the `persona` component is selected, install and sync MUST apply the Axiom 
 - AND it reports that the persisted persona no longer exists
 - AND the next state write no longer contains the retired persona
 
-### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters
+### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters (RF-PER-03)
 
 For any adapter with an active output-style channel — Claude Code (gated by `SupportsOutputStyles()`) — the output-style asset MUST be the exclusive source of persona tone, language, and philosophy. The system-prompt persona section for these adapters MUST be reduced to a residual block containing only `## Rules`, `## Expertise`, `## Contextual Skill Loading (MANDATORY)` and a one-line pointer to the output style. The residual MUST NOT duplicate tone/language/philosophy content.
 (Previously: the scenario covered the retired `gentleman` and `neutral` personas; Kimi was an explicit carve-out before C-08-d.)
@@ -45,7 +45,7 @@ For any adapter with an active output-style channel — Claude Code (gated by `S
 - THEN it contains only Rules, Expertise, Contextual Skill Loading and a pointer to the output style
 - AND it contains no tone, language, or philosophy prose
 
-### Requirement: Persona Section Parity for Non-Output-Style Adapters
+### Requirement: Persona Section Parity for Non-Output-Style Adapters (RF-PER-04)
 
 Adapters without an active output-style channel MUST continue to receive the full persona section — tone, language, philosophy, rules, expertise, and skill loading — unchanged by this change.
 (Previously: the scenario excluded Kimi as well as Claude Code.)
@@ -56,7 +56,7 @@ Adapters without an active output-style channel MUST continue to receive the ful
 - WHEN its persona asset is inspected
 - THEN it contains the full persona section, including tone/language/philosophy, as before this change
 
-### Requirement: Idempotent Convergence on Re-Injection
+### Requirement: Idempotent Convergence on Re-Injection (RF-PER-05)
 
 Upgrading an installation that has an existing full (pre-slim) persona section MUST converge the on-disk system-prompt persona section to the residual block via the marker-delimited section-replace mechanism. Repeated injection MUST be idempotent.
 
@@ -69,7 +69,7 @@ Upgrading an installation that has an existing full (pre-slim) persona section M
 
 ---
 
-### Requirement: Legacy Fingerprint Continuity
+### Requirement: Legacy Fingerprint Continuity (RF-PER-06)
 
 Uninstall and auto-heal fingerprint checks that rely on literal markers from the persona section (e.g., `## Rules`, `Senior Architect`) MUST continue to match on-disk content after tone/philosophy content is removed, or the fingerprint constants MUST be updated so uninstall and auto-heal continue to function correctly.
 (Previously: the scenario also covered Kimi installations.)
@@ -81,7 +81,7 @@ Uninstall and auto-heal fingerprint checks that rely on literal markers from the
 - THEN both checks match the residual on-disk content
 - AND auto-heal does not false-positive a repair
 
-### Requirement: Per-Adapter Test and Golden Coverage
+### Requirement: Per-Adapter Test and Golden Coverage (RF-PER-07)
 
 Automated tests and golden fixtures MUST cover the residual persona section, the reconciled canonical output-style content, and unaffected non-output-style adapter behavior, and MUST be updated in strict-TDD lockstep with implementation changes.
 (Previously: Kimi's residual section and output style were covered by unit assertions.)
@@ -98,7 +98,7 @@ Automated tests and golden fixtures MUST cover the residual persona section, the
 - WHEN the same fixture is regenerated after this change
 - THEN its persona section content is unchanged
 
-### Requirement: Axiom Persona Definition and Default Selection (REQ-10.1 & REQ-10.2)
+### Requirement: Axiom Persona Definition and Default Selection (RF-PER-08)
 
 The system MUST support `axiom` as its only managed persona. The persona MUST prescribe senior architect guidance in Peninsular Spanish (castellano peninsular) with professional tuteo ("tienes", "haz", "revisa"), strictly prohibiting forced Rioplatense voseo ("che", "tenés", "podés", "hacé") and informal regionalisms. The CLI MUST NOT offer a persona choice: selecting the `persona` component installs the Axiom persona, and deselecting it installs none.
 (Previously: `axiom` was the default among several personas, and the TUI and CLI presented it as the default selection.)
@@ -110,7 +110,7 @@ The system MUST support `axiom` as its only managed persona. The persona MUST pr
 - THEN the installed persona is `axiom`
 - AND its instructions enforce Peninsular Spanish without voseo or Rioplatense regionalisms
 
-### Requirement: SDD Language Domain Contract for Axiom Projects (REQ-10.3 & REQ-10.4)
+### Requirement: SDD Language Domain Contract for Axiom Projects (RF-PER-09)
 
 In Axiom-governed projects and repositories with Spanish language rules declared, all SDD technical artifacts (`proposal.md`, `spec.md`, `design.md`, `tasks.md`, `verify-report.md`, `archive-report.md`) MUST be authored in Spanish (castellano peninsular). English is strictly preserved for source code identifiers and language keywords. Orchestrators MUST NOT enforce unconditional "default to English" rules for documentation when operating under Axiom governance.
 

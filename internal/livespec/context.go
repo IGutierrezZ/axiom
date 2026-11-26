@@ -18,7 +18,7 @@ import (
 )
 
 // ReferencePathError es el rechazo de una rama que modifica, crea o elimina ficheros bajo
-// `technical_context.reference.paths` (REQ-30.6 a, REQ-24.30). Files son esos ficheros,
+// `technical_context.reference.paths` (RF-OLS-06 a, RF-CTX-05). Files son esos ficheros,
 // relativos a la raíz del workspace y con `/`.
 type ReferencePathError struct {
 	Files []string
@@ -30,7 +30,7 @@ func (e *ReferencePathError) Error() string {
 }
 
 // BaseUnresolvedError es el rechazo, con fallo cerrado, de una rama cuya base no puede
-// determinarse: sin ella no se puede garantizar la regla de referencia (REQ-30.6).
+// determinarse: sin ella no se puede garantizar la regla de referencia (RF-OLS-06).
 type BaseUnresolvedError struct {
 	// Repository es la raíz del repositorio git cuya base no se resuelve.
 	Repository string
@@ -118,7 +118,7 @@ func commitResolves(ctx context.Context, repoRoot, ref string) bool {
 	return err == nil && result.ExitCode == 0
 }
 
-// checkContext es la comprobación estructural del contexto técnico de la rama (REQ-30.6).
+// checkContext es la comprobación estructural del contexto técnico de la rama (RF-OLS-06).
 // Sin `technical_context` declarado no produce informe ni error. Con él calcula, por cada
 // repositorio que contiene una ruta declarada y contra su base (D7), los ficheros que la
 // rama cambió (confirmados, en el índice, sin confirmar y no seguidos) y los clasifica

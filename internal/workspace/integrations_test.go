@@ -277,7 +277,7 @@ func TestLocateLoadsValidIntegrations(t *testing.T) {
 	}
 }
 
-// Con el catálogo por defecto (sin costura), azure-devops es el único plugin admitido (REQ-45.2).
+// Con el catálogo por defecto (sin costura), azure-devops es el único plugin admitido (RF-ADO-02).
 func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 	const valid = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Fabrikam Team\n"
 

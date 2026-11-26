@@ -55,7 +55,7 @@ type Roster struct {
 //     discrepancy is surfaced as a non-blocking Conflict — never resolved
 //     in silence, and never allowed to override the sealed roster.
 //  2. sealed empty: ResolveRoster delegates entirely to
-//     DetectRoles(designPath, wsConfig), UNMODIFIED — REQ-1.1 of
+//     DetectRoles(designPath, wsConfig), UNMODIFIED — RF-FAN-01 of
 //     multi-role-fan-out-engine is not touched by this function. The
 //     result is classified as RosterSourceDesign when design.md declared
 //     an explicit "roles:" block, or RosterSourceCompatibility when

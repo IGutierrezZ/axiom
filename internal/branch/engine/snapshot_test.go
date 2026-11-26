@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Pruebas de `Engine.Snapshot` (REQ-25.36, design D-12 y §4.5) con git real, entorno aislado y
+// Pruebas de `Engine.Snapshot` (RF-KOF-06, design D-12 y §4.5) con git real, entorno aislado y
 // sin red: la instantánea contiene entradas de política (integración, prefijo, base y los
 // nombres de rama derivados del cambio, también la de archivado), nunca resultados: ni SHAs ni
 // rutas absolutas. Calcularla no escribe nada.
@@ -65,9 +65,9 @@ func sealWithSnapshot(t *testing.T, repo, change string, snapshot *kickoff.GitSn
 	}
 }
 
-// REQ-25.36, escenario «El sellado escribe la instantánea»: integración `main`, prefijo `feat`,
+// RF-KOF-06, escenario «El sellado escribe la instantánea»: integración `main`, prefijo `feat`,
 // la base `main` y los nombres `feat/x` y la rama de archivado `feat/x-archive` de un monorepo
-// con el rol único `fullstack` (sin ramas de rol, REQ-2.2 de `workspace-topology`).
+// con el rol único `fullstack` (sin ramas de rol, RF-TOP-04 de `workspace-topology`).
 func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithFullstack(t *testing.T) {
 	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, "git:\n  integration_branch: main\n  branch_prefix: feat\n"))
@@ -96,9 +96,9 @@ func TestSnapshotNamesTheDerivedBranchesOfAMonorepoWithFullstack(t *testing.T) {
 	assertSnapshotHasNoSHAsOrPaths(t, got, repo)
 }
 
-// REQ-25.36 en un multirepo con los roles `core` y `qa` sobre `repo-backend` (único lugar con
+// RF-KOF-06 en un multirepo con los roles `core` y `qa` sobre `repo-backend` (único lugar con
 // ramas de rol): el repositorio de código lleva `feat/x`, `feat/x-core` y `feat/x-qa` y el de
-// specs, que se trabaja in situ, no lleva ramas; no hay rama de archivado (REQ-25.45).
+// specs, que se trabaja in situ, no lleva ramas; no hay rama de archivado (RF-BRA-13).
 func TestSnapshotNamesTheDerivedBranchesOfAMultirepoWithTwoRoles(t *testing.T) {
 	t.Parallel()
 	master, _ := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
@@ -146,7 +146,7 @@ func assertSnapshotHasNoSHAsOrPaths(t *testing.T, got *kickoff.GitSnapshot, repo
 	}
 }
 
-// Con un único rol solo existe la rama del cambio (REQ-25.4) y, además, la de archivado; la
+// Con un único rol solo existe la rama del cambio (RF-BRA-04) y, además, la de archivado; la
 // política del repositorio (prefijo e integración) es la de axiom.yaml.
 func TestSnapshotOfASingleRoleHasOnlyTheChangeAndArchiveBranches(t *testing.T) {
 	t.Parallel()
@@ -167,7 +167,7 @@ func TestSnapshotOfASingleRoleHasOnlyTheChangeAndArchiveBranches(t *testing.T) {
 	}
 }
 
-// REQ-25.36, escenario «La instantánea refleja las excepciones por cambio»: tras
+// RF-KOF-06, escenario «La instantánea refleja las excepciones por cambio»: tras
 // `ensure --change x --branch inc/x` la instantánea nombra `inc/x` y deriva de ella la rama de
 // archivado (monorepo con el rol único `fullstack`, sin ramas de rol); las excepciones quedan
 // registradas en el bloque.
@@ -191,7 +191,7 @@ func TestSnapshotReflectsTheRegisteredExceptions(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y REQ-25.5: en un multirepo el repositorio de specs entra sin ramas (se trabaja in
+// RF-KOF-06 y RF-BRA-05: en un multirepo el repositorio de specs entra sin ramas (se trabaja in
 // situ), cada repositorio de código lleva la rama del cambio desde su propia integración, y no hay
 // rama de archivado. Las rutas son relativas a la carpeta maestra.
 func TestSnapshotOfAMultirepoListsTheSpecsRepositoryWithoutBranches(t *testing.T) {
@@ -221,7 +221,7 @@ func TestSnapshotOfAMultirepoListsTheSpecsRepositoryWithoutBranches(t *testing.T
 	}
 }
 
-// REQ-25.36: la política por repositorio de `repositories:` entra en su entrada.
+// RF-KOF-06: la política por repositorio de `repositories:` entra en su entrada.
 func TestSnapshotUsesThePerRepositoryPolicy(t *testing.T) {
 	t.Parallel()
 	master, _ := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}}, "repo-backend")
@@ -255,7 +255,7 @@ func TestSnapshotWritesNothing(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y D-04: un nombre inválido no llega a la instantánea: se rechaza con el código
+// RF-KOF-06 y D-04: un nombre inválido no llega a la instantánea: se rechaza con el código
 // tipado del planificador (aquí, un rol `archive` que colisiona con la rama de archivado).
 func TestSnapshotRefusesAnInvalidNameInsteadOfWritingIt(t *testing.T) {
 	t.Parallel()
@@ -338,7 +338,7 @@ func TestVerdictForTheArchiveBranchPrefersTheRegistryThenTheSnapshot(t *testing.
 	wantNamesEqual(t, "rama de archivado esperada", wrong.Expected, "doc/x-archive")
 }
 
-// REQ-25.37: un kickoff con instantánea ya no está exento: desde `main` es `wrong_branch`;
+// RF-KOF-07: un kickoff con instantánea ya no está exento: desde `main` es `wrong_branch`;
 // uno retro-sellado (sin instantánea) sigue exento.
 func TestVerdictForAChangeWithASnapshotIsNoLongerExempt(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -350,7 +350,7 @@ func TestVerdictForAChangeWithASnapshotIsNoLongerExempt(t *testing.T) {
 	wantKind(t, verdictFor(t, VerdictQuery{Path: filepath.Join(repo, "openspec", "changes", "y"), Change: "y"}), branch.VerdictNotApplicable)
 }
 
-// REQ-25.18 (multirepo) con instantánea: el repositorio de specs sigue exigiendo su integración y
+// RF-BRA-19 (multirepo) con instantánea: el repositorio de specs sigue exigiendo su integración y
 // un repositorio de código sin entrada en la instantánea se evalúa con los nombres de la política.
 func TestVerdictForAMultirepoWithASnapshotKeepsTheSpecsIntegrationRule(t *testing.T) {
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}}, "repo-backend")
@@ -407,7 +407,7 @@ func TestRegisteredChangeBranchFollowsRegistrySnapshotThenPolicy(t *testing.T) {
 	}
 }
 
-// REQ-25.36 y REQ-25.46: sin modo materializado la instantánea solo lleva la rama principal
+// RF-KOF-06 y RF-BRA-28: sin modo materializado la instantánea solo lleva la rama principal
 // declarada (el marcador) y la base efectiva; no congela una política que aún no se ha aplicado.
 func TestSnapshotRecordsTheMainBranchAndTheEffectiveBaseButNotAnUnappliedPromotion(t *testing.T) {
 	t.Parallel()
@@ -424,7 +424,7 @@ func TestSnapshotRecordsTheMainBranchAndTheEffectiveBaseButNotAnUnappliedPromoti
 	}
 }
 
-// REQ-25.36 y REQ-25.46: monorepo SDD con la rama creada por `ensure` antes del sellado: el modo
+// RF-KOF-06 y RF-BRA-28: monorepo SDD con la rama creada por `ensure` antes del sellado: el modo
 // del registro se congela con `main_branch` y la base efectiva; con `release` la base es la
 // integración. `ensure` nunca reescribe `kickoff.yaml` y, con el registro borrado, el modo se
 // resuelve desde la instantánea con origen `snapshot`.
@@ -474,7 +474,7 @@ func TestSnapshotFreezesTheRecordedPromotionAndResolvesItBackWhenTheRecordIsGone
 	})
 }
 
-// REQ-25.36 y REQ-25.46 (invariante): sin `main_branch` la
+// RF-KOF-06 y RF-BRA-28 (invariante): sin `main_branch` la
 // instantánea no lleva ninguno de los campos nuevos.
 func TestSnapshotWithoutMainBranchCarriesNoPromotionFields(t *testing.T) {
 	t.Parallel()

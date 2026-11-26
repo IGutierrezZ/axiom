@@ -13,8 +13,8 @@ import (
 )
 
 // Pruebas de `axiom branch status` sobre el registro local de solo lectura, los
-// multirepos y la colocación de los worktrees (REQ-25.5, REQ-25.11, REQ-25.14,
-// REQ-25.15): el contrato visible de la CLI, con git real y sin red.
+// multirepos y la colocación de los worktrees (RF-BRA-05, RF-BRA-11, RF-BRA-15,
+// RF-BRA-16): el contrato visible de la CLI, con git real y sin red.
 
 // writeBranchRegistry escribe a mano el registro de un cambio en el git common dir de
 // un repositorio normal (`.git`), como lo haría `ensure`, y devuelve su ruta.
@@ -52,7 +52,7 @@ func branchRecord(repo string) branch.Record {
 	}
 }
 
-// REQ-25.14, escenario «Registro ausente informado por `status`»: el JSON indica que el
+// RF-BRA-15, escenario «Registro ausente informado por `status`»: el JSON indica que el
 // cambio no tiene registro y el comando no falla.
 func TestBranchStatusReportsAnAbsentRegistry(t *testing.T) {
 	t.Parallel()
@@ -75,7 +75,7 @@ func TestBranchStatusReportsAnAbsentRegistry(t *testing.T) {
 	}
 }
 
-// REQ-25.14 y REQ-25.15: con un registro escrito a mano, `status` informa del modo
+// RF-BRA-15 y RF-BRA-16: con un registro escrito a mano, `status` informa del modo
 // materializado y su origen (token y etiqueta) y del worktree registrado, tanto en JSON
 // como en el texto en castellano.
 func TestBranchStatusReadsTheRegistry(t *testing.T) {
@@ -117,7 +117,7 @@ func TestBranchStatusReadsTheRegistry(t *testing.T) {
 	})
 }
 
-// REQ-25.14: un registro corrupto es `config_invalid` con código de salida 1, el
+// RF-BRA-15: un registro corrupto es `config_invalid` con código de salida 1, el
 // fichero nombrado y la continuación de borrarlo y reconstruirlo con `ensure`.
 func TestBranchStatusRefusesACorruptRegistry(t *testing.T) {
 	t.Parallel()
@@ -156,7 +156,7 @@ func TestBranchStatusRefusesACorruptRegistry(t *testing.T) {
 	})
 }
 
-// REQ-25.5 y REQ-25.15 (multirepo): el repositorio de specs se informa in situ y sin
+// RF-BRA-05 y RF-BRA-16 (multirepo): el repositorio de specs se informa in situ y sin
 // ramas, y cada repositorio de código con su rama del cambio; el JSON lleva el papel con
 // su etiqueta.
 func TestBranchStatusMultirepoReportsTheSpecsRepositoryInPlace(t *testing.T) {
@@ -209,7 +209,7 @@ roles:
 	wantBranchDirectory(t, "workspaceRoot", result.WorkspaceRoot, filepath.Join(master, "repo-specs"))
 }
 
-// REQ-25.11 y design D-04: sin proyecto, la carpeta maestra es la subcarpeta de partida
+// RF-BRA-11 y design D-04: sin proyecto, la carpeta maestra es la subcarpeta de partida
 // y su raíz de worktrees (`<carpeta>-wt`) quedaría dentro del repositorio: `plan_conflict`
 // con código de salida 1 y una continuación ejecutable con la carpeta citada.
 func TestBranchStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
@@ -236,7 +236,7 @@ func TestBranchStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
 	}
 }
 
-// REQ-25.11 (límite real de 220 caracteres): solo tiene sentido en Windows; el resto de
+// RF-BRA-11 (límite real de 220 caracteres): solo tiene sentido en Windows; el resto de
 // sistemas no tiene límite propio y la regla se prueba en el planificador y en el motor
 // con las reglas de Windows inyectadas. El carril ODD no lee el kickoff, de modo que el
 // nombre largo no obliga a la prueba a crear ficheros de más de 260 caracteres.

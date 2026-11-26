@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Pruebas de `ensure --archive` (REQ-25.45, REQ-25.7, REQ-25.8, REQ-25.9, REQ-25.11, REQ-25.12,
+// Pruebas de `ensure --archive` (RF-BRA-13, RF-BRA-07, RF-BRA-08, RF-BRA-09, RF-BRA-11, RF-BRA-12,
 // design D-25 y D-06) con git real, entorno aislado y remotos desnudos locales: la rama de
 // archivado sale de la integración con el cambio ya fusionado, sin tocar las ramas del cambio ni
 // las de rol y sin publicar nada. Cada `git worktree add` cuesta segundos en Windows, de modo
@@ -76,12 +76,12 @@ func wantOnlyArchiveBranch(t *testing.T, result branch.Result, name string) bran
 	return archive
 }
 
-// REQ-25.45 (escenario «Crea la rama de archivado desde la integración con el cambio fusionado»),
-// REQ-25.11 (ruta de la rama de archivado) y REQ-25.4: con el cambio fusionado con un merge commit
+// RF-BRA-13 (escenario «Crea la rama de archivado desde la integración con el cambio fusionado»),
+// RF-BRA-11 (ruta de la rama de archivado) y RF-BRA-04: con el cambio fusionado con un merge commit
 // en `origin/main` (referencia local), nace `feat/x-archive` desde `origin/main` con su worktree
 // en `<raíz>/x-archive/<repo>`, la base es `origin/main` con `fetched=false`, la rama del cambio
 // no se crea, el checkout principal queda como estaba y el registro guarda la rama con `kind:
-// archive`. Repetirlo es idempotente (REQ-25.7): el mismo JSON, el mismo estado, ninguna escritura
+// archive`. Repetirlo es idempotente (RF-BRA-07): el mismo JSON, el mismo estado, ninguna escritura
 // y ninguna operación remota, ni `push`.
 func TestEnsureArchiveCreatesTheArchiveBranchFromTheIntegrationWithItsWorktree(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -166,7 +166,7 @@ func TestEnsureArchiveCreatesTheArchiveBranchFromTheIntegrationWithItsWorktree(t
 	})
 }
 
-// REQ-25.45 y REQ-25.7: una rama de archivado que ya existe se reutiliza sin moverla (solo se
+// RF-BRA-13 y RF-BRA-07: una rama de archivado que ya existe se reutiliza sin moverla (solo se
 // añade su worktree) y la repetición no la publica.
 func TestEnsureArchiveReusesAnExistingArchiveBranchWithoutMovingIt(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -192,7 +192,7 @@ func TestEnsureArchiveReusesAnExistingArchiveBranchWithoutMovingIt(t *testing.T)
 	}
 }
 
-// REQ-25.45 (escenarios «La base local sin el cambio fusionado se rechaza y sugiere `--fetch`» y
+// RF-BRA-13 (escenarios «La base local sin el cambio fusionado se rechaza y sugiere `--fetch`» y
 // «`--fetch` explícito permite alcanzar el cambio fusionado»): con el cambio solo en el remoto,
 // `ensure --archive` rechaza con `change_not_integrated` nombrando la base evaluada (origin/main)
 // y la carpeta que falta, sugiere `--fetch` con una orden ejecutable, no crea ninguna rama,
@@ -261,7 +261,7 @@ func TestEnsureArchiveRefusesAChangeTheBaseDoesNotContainAndFetchReachesIt(t *te
 	})
 }
 
-// REQ-25.10, supuesto S-8: con `--fetch` y un remoto inalcanzable, `fetch_failed` y no se crea
+// RF-BRA-10, supuesto S-8: con `--fetch` y un remoto inalcanzable, `fetch_failed` y no se crea
 // nada, ni registro.
 func TestEnsureArchiveFetchFailureLeavesNoEffects(t *testing.T) {
 	t.Parallel()
@@ -282,7 +282,7 @@ func TestEnsureArchiveFetchFailureLeavesNoEffects(t *testing.T) {
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// REQ-25.45, G-13: si la base ya contiene el cambio archivado (`changes/archive/<fecha>-<cambio>/`
+// RF-BRA-13, G-13: si la base ya contiene el cambio archivado (`changes/archive/<fecha>-<cambio>/`
 // y no `changes/<cambio>/`), el mismo código `change_not_integrated` con un mensaje que nombra la
 // entrada archivada y dice que no hay nada que archivar; una carpeta de otro cambio o sin fecha no
 // cuenta como la entrada archivada de este.
@@ -326,7 +326,7 @@ func TestEnsureArchiveNamesTheArchivedEntryWhenTheBaseAlreadyHoldsTheArchivedCha
 	})
 }
 
-// REQ-25.45 (escenarios «Multirepo no tiene rama de archivado» y «El carril ODD no tiene rama de
+// RF-BRA-13 (escenarios «Multirepo no tiene rama de archivado» y «El carril ODD no tiene rama de
 // archivado»): `archive_branch_not_applicable` sin crear nada, también con un hub en `ask`: la
 // aplicabilidad se decide antes de preguntar por el modo.
 func TestEnsureArchiveIsNotApplicableToMultirepoOrTheODDLane(t *testing.T) {
@@ -369,7 +369,7 @@ func TestEnsureArchiveIsNotApplicableToMultirepoOrTheODDLane(t *testing.T) {
 	})
 }
 
-// REQ-25.12, supuesto S-16 (escenario «`--branch` y `--base` no se admiten con `--archive`»):
+// RF-BRA-12, supuesto S-16 (escenario «`--branch` y `--base` no se admiten con `--archive`»):
 // `plan_conflict` sin crear nada ni registrar nada, también con un hub en `ask`; un `--prefix`
 // inválido es `invalid_name` como en `ensure`.
 func TestEnsureArchiveRejectsBranchAndBaseAndAnInvalidPrefix(t *testing.T) {
@@ -403,7 +403,7 @@ func TestEnsureArchiveRejectsBranchAndBaseAndAnInvalidPrefix(t *testing.T) {
 	}
 }
 
-// REQ-25.12 (escenario «`--prefix` fija el prefijo de la rama de archivado») y REQ-25.45: con
+// RF-BRA-12 (escenario «`--prefix` fija el prefijo de la rama de archivado») y RF-BRA-13: con
 // `--prefix doc` la rama es `doc/x-archive` con su worktree en `<raíz>/x-archive/<repo>`, la rama
 // del cambio no se crea ni se contradice, el registro guarda el prefijo de archivado y repetir
 // (con el mismo prefijo o sin él) es idempotente; otro prefijo daría otro nombre y es
@@ -469,8 +469,8 @@ func TestEnsureArchivePrefixNamesTheBranchAndIsRegistered(t *testing.T) {
 	})
 }
 
-// REQ-25.9 (escenarios «Modo `in_place` hace checkout de la rama de archivado» y «Modo `in_place`
-// con árbol sucio se rechaza») y REQ-25.8: con `in_place` y el árbol sucio, `dirty_worktree` sin
+// RF-BRA-09 (escenarios «Modo `in_place` hace checkout de la rama de archivado» y «Modo `in_place`
+// con árbol sucio se rechaza») y RF-BRA-08: con `in_place` y el árbol sucio, `dirty_worktree` sin
 // modificar nada (con una continuación que repite `--archive`); con el árbol limpio, `git switch`
 // a la rama de archivado y ningún worktree; ya en ella con el árbol sucio es un no-op.
 func TestEnsureArchiveInPlaceSwitchesToTheArchiveBranchAndRefusesADirtyTree(t *testing.T) {
@@ -522,7 +522,7 @@ func TestEnsureArchiveInPlaceSwitchesToTheArchiveBranchAndRefusesADirtyTree(t *t
 	wantNoWrites(t, *seen, "ya en la rama de archivado con el árbol sucio es un no-op")
 }
 
-// REQ-25.8 (escenario de la respuesta a `ask` reutilizada) y D-25 paso 6: con un hub en `ask` y
+// RF-BRA-08 (escenario de la respuesta a `ask` reutilizada) y D-25 paso 6: con un hub en `ask` y
 // sin respuesta, `decision_required` cuya continuación repite `--archive` y sin crear nada; con el
 // cambio ya registrado (respuesta `in_place`), `--archive` la reutiliza sin preguntar y conserva
 // su origen; sin registro, `--mode` es la respuesta y se registra.
@@ -592,7 +592,7 @@ func TestEnsureArchiveReusesTheRegisteredModeAndAsksOnlyWithoutAnAnswer(t *testi
 	})
 }
 
-// REQ-25.7, REQ-25.14 y REQ-25.12: `--archive` no altera las ramas del cambio ni las de rol, y el
+// RF-BRA-07, RF-BRA-15 y RF-BRA-12: `--archive` no altera las ramas del cambio ni las de rol, y el
 // `ensure` ordinario posterior (aquí con `--branch`, que un registro con solo la rama de archivado
 // no contradice) conserva la rama de archivado y su prefijo en el registro; `status` las muestra
 // juntas, con la de archivado nombrada por el registro aunque la del cambio use otro nombre.
@@ -689,7 +689,7 @@ func TestEnsureArchiveIgnoresTheChangeBaseExceptionAndUsesTheIntegration(t *test
 	}
 }
 
-// REQ-25.7 y matriz de amenazas «Estado del push»: ninguna invocación de `--archive` contiene
+// RF-BRA-07 y matriz de amenazas «Estado del push»: ninguna invocación de `--archive` contiene
 // `push` y el puerto de escritura no tiene ningún método que publique.
 func TestEnsureArchiveNeverPublishes(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -711,7 +711,7 @@ func TestEnsureArchiveNeverPublishes(t *testing.T) {
 	}
 }
 
-// REQ-25.7 (escenario «`--archive` no altera las ramas del cambio») y REQ-25.4: en un monorepo con
+// RF-BRA-07 (escenario «`--archive` no altera las ramas del cambio») y RF-BRA-04: en un monorepo con
 // el rol único `fullstack` (sin ramas de rol) y `feat/x` ya creada con su PR fusionado,
 // `ensure --archive` crea `feat/x-archive` y el commit al que apunta `feat/x` no cambia, ni
 // aparecen otras ramas.
@@ -749,7 +749,7 @@ func TestEnsureArchiveDoesNotAlterTheChangeBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.14 y REQ-25.45: `ensure --archive` ejecutado desde el worktree enlazado del cambio (la
+// RF-BRA-15 y RF-BRA-13: `ensure --archive` ejecutado desde el worktree enlazado del cambio (la
 // raíz git es la del worktree, el git common dir es el del checkout principal) encuentra el
 // registro, deriva el nombre de la rama del cambio registrada, comprueba la integración sobre el
 // árbol de la base y crea la rama de archivado y su worktree junto a los de la raíz de worktrees

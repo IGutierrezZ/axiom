@@ -59,7 +59,7 @@ Ruta: T1, en línea. T2, escritor delegado (disparador: proteger el contexto del
 
 ## Spec viva
 
-Retira requisitos y escenarios que solo hablaban de la persona `gentleman`/`neutral`, los presets, los temas, el logo de OpenCode, el agent builder y la TUI, y adapta los que siguen en vigor (Axiom como única persona; `axiom` sin argumentos abre la UI). REQ-14.2 de `axiom-tui-branding` alinea además la spec con el código sin TTY: la spec decía «imprime la ayuda con código 0» y el código ya devolvía un error, que es el comportamiento que el usuario manda conservar. `tui-spanish-localization` e `installer-picker-navigation` se quedan sin requisitos y se borran tras integrar; el texto narrativo fuera de requisitos (cabeceras y propósitos que citan la TUI) se corrige a mano en el mismo commit.
+Retira requisitos y escenarios que solo hablaban de la persona `gentleman`/`neutral`, los presets, los temas, el logo de OpenCode, el agent builder y la TUI, y adapta los que siguen en vigor (Axiom como única persona; `axiom` sin argumentos abre la UI). RF-TUI-01 de `axiom-tui-branding` alinea además la spec con el código sin TTY: la spec decía «imprime la ayuda con código 0» y el código ya devolvía un error, que es el comportamiento que el usuario manda conservar. `tui-spanish-localization` e `installer-picker-navigation` se quedan sin requisitos y se borran tras integrar; el texto narrativo fuera de requisitos (cabeceras y propósitos que citan la TUI) se corrige a mano en el mismo commit.
 
 ### Capacidad: axiom-tui-branding
 
@@ -72,8 +72,8 @@ Retira requisitos y escenarios que solo hablaban de la persona `gentleman`/`neut
 
 ## MODIFIED Requirements
 
-### Requirement: Lanzamiento de TUI interactiva por defecto y subcomando axiom tui (REQ-14.2)
-Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo (TTY) tanto en entrada estándar como en salida estándar, DEBE abrirse la UI web, con el mismo comportamiento que `axiom ui` (REQ-3.1 de `local-web-dashboard`). Si no hay TTY disponible, DEBE terminar con un error y código distinto de `0` que indica que, para uso no interactivo, se usen `--version`, `axiom update` o `--help`. La opción `--help` imprime la ayuda textual. El subcomando `axiom tui` deja de existir: no queda ninguna interfaz de terminal interactiva.
+### Requirement: Lanzamiento de TUI interactiva por defecto y subcomando axiom tui (RF-TUI-01)
+Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo (TTY) tanto en entrada estándar como en salida estándar, DEBE abrirse la UI web, con el mismo comportamiento que `axiom ui` (RF-WEB-08 de `local-web-dashboard`). Si no hay TTY disponible, DEBE terminar con un error y código distinto de `0` que indica que, para uso no interactivo, se usen `--version`, `axiom update` o `--help`. La opción `--help` imprime la ayuda textual. El subcomando `axiom tui` deja de existir: no queda ninguna interfaz de terminal interactiva.
 (Previously: sin argumentos y con TTY se iniciaba la TUI de Bubbletea; sin TTY se imprimía la ayuda con código `0`; el subcomando `axiom tui` lanzaba siempre la TUI.)
 
 #### Scenario: Ejecución de axiom sin argumentos en sesión interactiva TTY
@@ -174,7 +174,7 @@ Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo
 
 ## MODIFIED Requirements
 
-### Requirement: No-regresión del verbo CLI axiom upgrade (REQ-22.5)
+### Requirement: No-regresión del verbo CLI axiom upgrade (RF-UPD-05)
 
 El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una operación **solo-binario**; NO DEBE encadenar automáticamente `sync` ni `install`. La composición de `upgrade` ➔ `sync` es exclusiva de la superficie reactiva interactiva (Web UI).
 (Previously: la composición era exclusiva de las superficies reactivas interactivas (Web UI y TUI).)
@@ -185,7 +185,7 @@ El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una op
 - **ENTONCES** solo se actualizan los binarios
 - **Y** no se mutan configuraciones ni se disparan sincronizaciones de agentes
 
-### Requirement: Identidad visible del fork en vistas de actualización (REQ-22.7)
+### Requirement: Identidad visible del fork en vistas de actualización (RF-UPD-06)
 
 Todos los mensajes de confirmación, cabeceras, títulos y diálogos en la Web UI DEBEN referirse exclusivamente a la identidad de `axiom`.
 (Previously: la identidad aplicaba a TUI y Web UI; el escenario comprobaba la pantalla `ScreenUpgradeSync`.)
@@ -201,9 +201,9 @@ Todos los mensajes de confirmación, cabeceras, títulos y diálogos en la Web U
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Guarda A en Todo Escritor Go de la Carpeta del Cambio (REQ-25.19)
+### Requirement: Guarda A en Todo Escritor Go de la Carpeta del Cambio (RF-BRA-20)
 
-Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de REQ-25.18 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom archive context prepare` y `axiom archive context verify` (plan y traza del contexto, que consultan el veredicto en el contexto de archivado), `axiom archive adopt scan --change` (inventario de adopción) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. Cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (REQ-25.18). Cada escritor DEBE tener una prueba propia de negativa.
+Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de RF-BRA-19 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom archive context prepare` y `axiom archive context verify` (plan y traza del contexto, que consultan el veredicto en el contexto de archivado), `axiom archive adopt scan --change` (inventario de adopción) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. Cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (RF-BRA-19). Cada escritor DEBE tener una prueba propia de negativa.
 (Previously: la lista incluía `axiom sdd integrate` (`integration.yaml`), retirado; ahora incluye `axiom archive context prepare|verify` y `axiom archive adopt scan --change`)
 (Previously: añadía que la TUI solo lista cambios y no ejecuta `ensure`, con un escenario propio.)
 
@@ -253,9 +253,9 @@ Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Los Listados Agregan los Cambios de los Worktrees Registrados (REQ-25.34)
+### Requirement: Los Listados Agregan los Cambios de los Worktrees Registrados (RF-WEB-11)
 
-Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios activos del checkout principal, los cambios activos de los worktrees registrados en el registro local de `axiom branch` (REQ-25.14) para el proyecto activo en `GET /api/increments`, y DEBE resolver también esos cambios en `GET /api/increments/{name}`, `GET /api/roles?change={name}` y `GET /api/handoffs?change={name}`. Cada incremento listado desde un worktree DEBE indicar la ruta absoluta de su worktree y su rama. Si un mismo cambio activo figura en el checkout principal (por ejemplo, un sumidero acumulativo) y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado. El dashboard DEBE mostrar los cambios pendientes de archivar (REQ-25.20 de `change-branch-lifecycle`), es decir, los cambios activos presentes en la rama de integración que aún no se han archivado, con la continuación para archivarlos. El aviso de cambios pendientes de archivar DEBE viajar en la cabecera `X-Axiom-Notes` de la respuesta de `GET /api/increments`; los avisos de este requisito, incluido el de una entrada del registro cuyo worktree ya no existe en disco (que DEBE omitirse sin error), viajan en esa misma cabecera. Los cambios pendientes NO producen ningún error ni bloqueo. Las escrituras del dashboard sobre un cambio que vive en un worktree DEBEN dirigirse a ese worktree.
+Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios activos del checkout principal, los cambios activos de los worktrees registrados en el registro local de `axiom branch` (RF-BRA-15) para el proyecto activo en `GET /api/increments`, y DEBE resolver también esos cambios en `GET /api/increments/{name}`, `GET /api/roles?change={name}` y `GET /api/handoffs?change={name}`. Cada incremento listado desde un worktree DEBE indicar la ruta absoluta de su worktree y su rama. Si un mismo cambio activo figura en el checkout principal (por ejemplo, un sumidero acumulativo) y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado. El dashboard DEBE mostrar los cambios pendientes de archivar (RF-BRA-21 de `change-branch-lifecycle`), es decir, los cambios activos presentes en la rama de integración que aún no se han archivado, con la continuación para archivarlos. El aviso de cambios pendientes de archivar DEBE viajar en la cabecera `X-Axiom-Notes` de la respuesta de `GET /api/increments`; los avisos de este requisito, incluido el de una entrada del registro cuyo worktree ya no existe en disco (que DEBE omitirse sin error), viajan en esa misma cabecera. Los cambios pendientes NO producen ningún error ni bloqueo. Las escrituras del dashboard sobre un cambio que vive en un worktree DEBEN dirigirse a ese worktree.
 (Previously: el requisito se apoyaba en un invariante de la rama de integración, eliminado por D17, y los avisos viajaban en el cuerpo de la respuesta)
 (Previously: añadía que la pantalla de ciclo de vida de incrementos de la TUI listaba el mismo conjunto de cambios y solo listaba, con un escenario propio.)
 
@@ -308,9 +308,9 @@ Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (REQ-24.10)
+### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (RF-PLH-10)
 
-El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío), knowledge (raíz de especificaciones por defecto) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío), knowledge (raíz de especificaciones por defecto) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de RF-PLH-01 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
 (Previously: los consumidores de catálogo incluían la TUI, y el escenario comprobaba también su pantalla de ciclo de vida de incrementos.)
 
 #### Scenario: Catálogo del workspace canónico
@@ -340,7 +340,7 @@ El servicio de documentación viva (livingdoc, incluido el sintetizador de arran
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Unified public agent ID
+### Requirement: Unified public agent ID (RF-AGV-01)
 
 The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separate public `antigravity-cli` agent option.
 (Previously: the scenario also checked that the option was not listed in the TUI.)
@@ -358,7 +358,7 @@ The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separa
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Inventario de no-reversión por tanda (REQ-20.3)
+### Requirement: Inventario de no-reversión por tanda (RF-UPS-03)
 
 El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode, no forzado de `theme`, persona Axiom en castellano peninsular, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
 (Previously: la entrada V3 hablaba del logo «en presets», retirados por C-08-f, y la V6 incluía la localización íntegra de la TUI, retirada por C-08-f.)
@@ -401,7 +401,7 @@ El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario d
 
 ## MODIFIED Requirements
 
-### Requirement: Artifact Language Independence
+### Requirement: Artifact Language Independence (RF-PER-01)
 
 Persona voice MUST govern only direct chat replies to the user. Generated technical artifacts MUST default to English and neutral professional wording regardless of the persona, unless the user explicitly requests a different artifact language or the existing project artifact convention requires it.
 (Previously: the scenarios used the retired `neutral` and `gentleman` personas.)
@@ -413,7 +413,7 @@ Persona voice MUST govern only direct chat replies to the user. Generated techni
 - THEN the generated artifact uses neutral professional wording without the persona's conversational register
 - AND it defaults to English unless the project artifact convention requires otherwise
 
-### Requirement: Safe Persona Fallback Semantics
+### Requirement: Safe Persona Fallback Semantics (RF-PER-02)
 
 When the `persona` component is selected, install and sync MUST apply the Axiom persona. Persisted persona state that is missing, empty, `axiom`, or a retired or unknown value (such as `gentleman`, `neutral`, `gentleman-neutral-artifacts` or `custom`) MUST NOT block sync and MUST NOT select any other persona. A retired or unknown persisted value MUST be reported with a warning and MUST NOT be written back to the state.
 (Previously: the fallback for missing or invalid state was the `neutral` persona, and an explicit `gentleman` selection was honored.)
@@ -432,7 +432,7 @@ When the `persona` component is selected, install and sync MUST apply the Axiom 
 - AND it reports that the persisted persona no longer exists
 - AND the next state write no longer contains the retired persona
 
-### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters
+### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters (RF-PER-03)
 
 For any adapter with an active output-style channel — Claude Code (gated by `SupportsOutputStyles()`) — the output-style asset MUST be the exclusive source of persona tone, language, and philosophy. The system-prompt persona section for these adapters MUST be reduced to a residual block containing only `## Rules`, `## Expertise`, `## Contextual Skill Loading (MANDATORY)` and a one-line pointer to the output style. The residual MUST NOT duplicate tone/language/philosophy content.
 (Previously: the scenario covered the retired `gentleman` and `neutral` personas; Kimi was an explicit carve-out before C-08-d.)
@@ -444,7 +444,7 @@ For any adapter with an active output-style channel — Claude Code (gated by `S
 - THEN it contains only Rules, Expertise, Contextual Skill Loading and a pointer to the output style
 - AND it contains no tone, language, or philosophy prose
 
-### Requirement: Axiom Persona Definition and Default Selection (REQ-10.1 & REQ-10.2)
+### Requirement: Axiom Persona Definition and Default Selection (RF-PER-08)
 
 The system MUST support `axiom` as its only managed persona. The persona MUST prescribe senior architect guidance in Peninsular Spanish (castellano peninsular) with professional tuteo ("tienes", "haz", "revisa"), strictly prohibiting forced Rioplatense voseo ("che", "tenés", "podés", "hacé") and informal regionalisms. The CLI MUST NOT offer a persona choice: selecting the `persona` component installs the Axiom persona, and deselecting it installs none.
 (Previously: `axiom` was the default among several personas, and the TUI and CLI presented it as the default selection.)
@@ -462,7 +462,7 @@ The system MUST support `axiom` as its only managed persona. The persona MUST pr
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Saneamiento del Preset Predeterminado de Skills (REQ-46.9)
+### Requirement: Saneamiento del Preset Predeterminado de Skills (RF-SKI-07)
 
 El conjunto de skills que Axiom instala por defecto DEBE contener únicamente skills de producto para usuarios, segregando las skills de colaboración interna del repositorio (`contributorSkills`).
 (Previously: hablaba del «preset básico»; C-08-f sustituye los presets por un conjunto por defecto. Trasladado desde REQ-18.5 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)

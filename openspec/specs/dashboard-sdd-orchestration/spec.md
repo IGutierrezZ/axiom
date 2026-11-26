@@ -12,7 +12,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 Permite a desarrolladores y agentes gobernar el flujo de trabajo Spec-Driven Development de forma interactiva y visual desde el servidor local embebido.
 
-### Requirement: Creación de Incrementos y Andamiaje SDD vía API (REQ-15.1)
+### Requirement: Creación de Incrementos y Andamiaje SDD vía API (RF-DSO-01)
 
 El servidor HTTP local DEBE exponer el endpoint `POST /api/increments` para recibir peticiones de creación de un nuevo incremento. La petición DEBE incluir el nombre del cambio (`name`, en formato kebab-case), el propósito o intención (`intent`), opcionalmente el tipo de cambio (`type`), y opcionalmente un cuerpo de propuesta ya renderizado (`proposal_body`) que sustituye el contenido de la plantilla generada por defecto. El servidor DEBE validar que el nombre no contenga caracteres inválidos ni coincida con un cambio existente en `openspec/changes/` o `openspec/changes/archive/`. Al validarse, el servidor DEBE crear el directorio del cambio y generar el archivo `proposal.md`: si se aportó `proposal_body` con contenido no vacío, DEBE escribir ese contenido de forma literal; si no se aportó o está vacío, DEBE generar la plantilla canónica vigente redactada en español castellano, byte a byte idéntica a la que producía antes de admitir este campo.
 
@@ -58,7 +58,7 @@ El servidor HTTP local DEBE exponer el endpoint `POST /api/increments` para reci
 
 ---
 
-### Requirement: Validación Formal de Verificación vía API (REQ-15.3)
+### Requirement: Validación Formal de Verificación vía API (RF-DSO-02)
 El servidor HTTP local DEBE exponer el endpoint `POST /api/increments/verify` para validar formalmente el reporte de verificación (`verify-report.md`) de un incremento activo contra los requerimientos y escenarios BDD de las especificaciones vigentes.
 
 #### Scenario: Validación de reporte de verificación existente
@@ -69,7 +69,7 @@ El servidor HTTP local DEBE exponer el endpoint `POST /api/increments/verify` pa
 
 ---
 
-### Requirement: Compositor y Registro de Handoffs Estructurados (REQ-15.4)
+### Requirement: Compositor y Registro de Handoffs Estructurados (RF-DSO-03)
 El servidor HTTP local DEBE exponer el endpoint `POST /api/handoffs` para recibir los datos de un relevo formal entre fases o roles concurrentes. El servidor DEBE construir un objeto `handoff.Handoff`, validar las fases y estados según el contrato de INC-02, y serializar el artefacto canónico en `openspec/changes/<cambio>/handoff.md` con Frontmatter YAML y las 5 secciones obligatorias en castellano.
 
 #### Scenario: Registro exitoso de handoff formal desde el Dashboard Web
@@ -99,7 +99,7 @@ El servidor HTTP local DEBE exponer el endpoint `POST /api/handoffs` para recibi
 
 Permite inicializar y crear cambios SDD desde la línea de comandos canónica `axiom`.
 
-### Requirement: Subcomando axiom change create en la CLI (REQ-15.5)
+### Requirement: Subcomando axiom change create en la CLI (RF-DSO-04)
 La CLI `axiom` DEBE proveer el subcomando `axiom change create <nombre>` (con alias plano `axiom change new <nombre>`), admitiendo banderas opcionales `--intent` (o `-i`) y `--type` (o `-t`). Al ejecutarse, DEBE validar el nombre, crear la estructura de carpetas en `openspec/changes/<nombre>/` y generar el archivo `proposal.md` canónico con plantilla en español, informando la ruta creada en la salida estándar con código de salida `0`.
 
 #### Scenario: Creación de cambio mediante CLI con flags

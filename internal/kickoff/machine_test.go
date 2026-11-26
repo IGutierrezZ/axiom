@@ -216,7 +216,7 @@ func TestEvaluateGatesRejectedGateStaysRejectedWhenDigestUnchanged(t *testing.T)
 }
 
 // TestEvaluateGatesRejectedGateReopensWhenDigestChanges is D-08's second
-// reopening rule, and REQ-21.12 without an explicit "reopen" verb: once
+// reopening rule, and RF-GAT-06 without an explicit "reopen" verb: once
 // the judged artifact's digest differs from the one the rejection judged,
 // remediation happened, and the gate returns to pending on its own.
 func TestEvaluateGatesRejectedGateReopensWhenDigestChanges(t *testing.T) {
@@ -433,10 +433,10 @@ func findGateState(t *testing.T, states []GateState, key GateKey) GateState {
 	return GateState{}
 }
 
-// TestEvaluateGatesHandedOffMarkComesFromTheFirstApproval fija REQ-26.7: la
+// TestEvaluateGatesHandedOffMarkComesFromTheFirstApproval fija RF-GAT-13: la
 // marca de cesion es la del primer registro approved, el que cierra la puerta.
 // Un approved posterior no la anade ni la quita, y un rejected posterior deja
-// la puerta approved con su marca (REQ-26.3).
+// la puerta approved con su marca (RF-GAT-09).
 func TestEvaluateGatesHandedOffMarkComesFromTheFirstApproval(t *testing.T) {
 	cases := []struct {
 		name    string

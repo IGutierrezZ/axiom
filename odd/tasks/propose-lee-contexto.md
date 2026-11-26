@@ -21,7 +21,7 @@ La exploración ya lee el `entry`; sin ella, nadie lo hace antes de design. Leer
 - La profundidad del contexto técnico sigue siendo cosa de design; con exploración, propose no lee nada nuevo; spec y tasks siguen sin leer (análisis, aceptado).
 - Descartados: explore obligatorio antes de propose; que propose lea siempre el contexto técnico.
 - **Disparador (de la sesión, no cambia el alcance):** «no exploration was received» significa que no hay hallazgos de exploración del orquestador, ni `exploration.md` en la carpeta del cambio, ni la observación `sdd/{change-name}/explore`. Los localizadores salen del status, como en el resto de fases (sección 1 de la convención).
-- La spec viva se modifica (REQ-24.29 de `project-technical-context`) en vez de añadir un requisito nuevo, para no asignar un identificador antes de C-03-b (mismo criterio que C-04-b).
+- La spec viva se modifica (RF-CTX-04 de `project-technical-context`) en vez de añadir un requisito nuevo, para no asignar un identificador antes de C-03-b (mismo criterio que C-04-b).
 
 ## Alcance autorizado
 
@@ -44,7 +44,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
   - Test: subcaso `sdd-propose` con la frase condicional, sin la frase incondicional de las cuatro fases lectoras, y la excepción en la convención.
   - Comprobación: `go test ./internal/assets/...` y `go test ./internal/components/ -run Golden`.
 - [x] **T2 · Spec viva** (ruta: en línea)
-  - MODIFIED REQ-24.29 (`project-technical-context`) en `## Spec viva`; integración con `axiom archive integrate --odd propose-lee-contexto` en el commit que cierra la feature.
+  - MODIFIED RF-CTX-04 (`project-technical-context`) en `## Spec viva`; integración con `axiom archive integrate --odd propose-lee-contexto` en el commit que cierra la feature.
   - Comprobación: la integración termina sin rechazo y repetirla da `already_integrated`.
 
 ## Criterio de terminado
@@ -62,7 +62,7 @@ Una sola PR (`single-pr`) con etiqueta `type:feat`; previsión, unas 100-150 lí
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura (REQ-24.29)
+### Requirement: Lectura del Contexto por las Fases Lectoras y Presupuesto de Lectura (RF-CTX-04)
 
 Cuando el status proyecta `technicalContext`, las skills `sdd-explore`, `sdd-design`, `sdd-apply` y `sdd-verify` DEBEN leer el fichero `entry` de cada modo declarado y DEBEN consultar el resto de `paths` solo bajo demanda, sin cargarlo por anticipado. `sdd-propose` DEBE leer el fichero `entry` de cada modo declarado solo cuando no recibió exploración (ni hallazgos de exploración del orquestador, ni `exploration.md`, ni la observación `sdd/{change-name}/explore`), y NO DEBE consultar el resto de `paths`; con exploración NO DEBE leer nada del contexto técnico. Las demás fases NO están obligadas a leerlo. Las skills DEBEN obtener los localizadores del status y NO DEBEN interpretar `axiom.yaml`.
 (Previously: `sdd-propose` estaba entre las fases no obligadas a leer el contexto técnico, también cuando se saltaba la exploración)
@@ -103,4 +103,4 @@ Plan stop: approved 2026-11-18; implementation continues
 - `go test ./internal/assets/...`: ok.
 - `go test ./internal/components/ -run Golden`: ok. Ningún golden ni fichero de `testdata` fija el texto tocado.
 - `axiom archive integrate --odd propose-lee-contexto`: compuesto; segunda ejecución `already_integrated`.
-- Aviso: la integración quita la regla `---` que separaba REQ-24.29 de REQ-24.30 en `openspec/specs/project-technical-context/spec.md`. Es el mismo defecto de composición de un MODIFIED que anotaron C-04-a y C-04-b. No se corrige aquí: fuera de alcance.
+- Aviso: la integración quita la regla `---` que separaba RF-CTX-04 de RF-CTX-05 en `openspec/specs/project-technical-context/spec.md`. Es el mismo defecto de composición de un MODIFIED que anotaron C-04-a y C-04-b. No se corrige aquí: fuera de alcance.

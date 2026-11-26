@@ -14,11 +14,11 @@ import (
 )
 
 // cumulativeSink reconoce, por nombre, los sumideros `cumulative-<rol>` de los
-// verificadores acumulativos: viven en `changes/` pero no son cambios (REQ-25.20).
+// verificadores acumulativos: viven en `changes/` pero no son cambios (RF-BRA-21).
 var cumulativeSink = regexp.MustCompile(`^cumulative-[A-Za-z0-9._-]+$`)
 
 // isPendingChange dice si una carpeta de `changes/` cuenta como cambio: no lo son
-// `archive`, `e2e-cumulative` ni los `cumulative-<rol>`, excluidos por nombre (REQ-25.20).
+// `archive`, `e2e-cumulative` ni los `cumulative-<rol>`, excluidos por nombre (RF-BRA-21).
 func isPendingChange(name string) bool {
 	if name == "archive" || name == "e2e-cumulative" {
 		return false
@@ -26,17 +26,17 @@ func isPendingChange(name string) bool {
 	return !cumulativeSink.MatchString(name)
 }
 
-// PendingArchive lista los cambios pendientes de archivar (REQ-25.20, design D-17): las
+// PendingArchive lista los cambios pendientes de archivar (RF-BRA-21, design D-17): las
 // carpetas de `<planning home>/changes` presentes en el árbol de la rama de integración
 // del repositorio del planning home, es decir, ya fusionadas y aún sin archivar. Es
 // información, no una comprobación: nunca falla, nunca bloquea y no tiene código de fallo.
 //
-// La evaluación se hace sobre la referencia de integración local de REQ-25.10
+// La evaluación se hace sobre la referencia de integración local de RF-BRA-10
 // (`origin/<integración>` si existe en local y, si no, la rama local), leyendo su árbol
 // con `git ls-tree` sin cambiar de rama ni usar la red. Los pendientes salen ordenados
 // por nombre, cada uno con la orden para archivarlo. Una carpeta que es una fusión intermedia de
 // planificación (aprobaciones con la marca de cesión y algún rol sin su `role-apply` aprobado,
-// REQ-26.11) no cuenta: el cambio no está terminado y aún no hay nada que archivar. El dashboard
+// RF-BRA-26) no cuenta: el cambio no está terminado y aún no hay nada que archivar. El dashboard
 // y la TUI heredan el criterio porque leen esta lista.
 //
 // El resultado distingue tres casos: no nil y vacío, se evaluó y no hay pendientes (también
@@ -84,7 +84,7 @@ func (e *Engine) PendingArchive(ctx context.Context, loc workspace.Location) ([]
 		}
 		// Una fusión intermedia de planificación (salida 2 de una parada) deja la carpeta en
 		// la integración sin que el cambio esté terminado: no está pendiente de archivar
-		// (REQ-26.11).
+		// (RF-BRA-26).
 		intermediate, warning := e.intermediateMerge(ctx, root, base.sha, changesPath, dir)
 		if warning != "" {
 			warnings = append(warnings, warning)
@@ -99,7 +99,7 @@ func (e *Engine) PendingArchive(ctx context.Context, loc workspace.Location) ([]
 }
 
 // integrationBranchOf es la rama de integración del repositorio de raíz git root según la
-// política del proyecto (REQ-25.3): la entrada de `repositories:` o, sin ella o con el
+// política del proyecto (RF-BRA-03): la entrada de `repositories:` o, sin ella o con el
 // repositorio fuera de la carpeta maestra, la del workspace.
 func integrationBranchOf(loc workspace.Location, root string) string {
 	policy := branch.ResolvePolicy(loc.Config)
@@ -110,7 +110,7 @@ func integrationBranchOf(loc workspace.Location, root string) string {
 }
 
 // reportPendingArchive añade a un resultado de `status --change` si el cambio pedido está
-// pendiente de archivar y, si lo está, la orden para archivarlo (REQ-25.15, REQ-25.20). El
+// pendiente de archivar y, si lo está, la orden para archivarlo (RF-BRA-16, RF-BRA-21). El
 // carril ODD no archiva, así que no lo informa. Si no se pudo evaluar, deja el campo
 // omitido y añade el aviso.
 func (e *Engine) reportPendingArchive(ctx context.Context, result *branch.Result, location workspace.Location, change string, lane branch.Lane) {

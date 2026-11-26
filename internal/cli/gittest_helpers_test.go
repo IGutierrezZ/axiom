@@ -12,7 +12,7 @@ import (
 
 // Ayudantes de git y de línea de comando compartidos por las pruebas de la CLI.
 // Antes vivían en las pruebas de `axiom sdd integrate`, retirado con la baseline
-// ajena (REQ-30.25); los demás verbos los siguen usando.
+// ajena (RF-ARC-14); los demás verbos los siguen usando.
 
 // isolateIntegrateGit omite la prueba con -short o sin git. TestMain ya aisló git del entorno
 // del usuario (testenv.IsolateGit): HOME temporal, sin configuración global ni del sistema y

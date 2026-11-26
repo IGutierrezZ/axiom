@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
-// REQ-21.13 y REQ-21.15: solo los roles con política blocking abren la fase verify
+// REQ-21.13 y RF-RCL-03: solo los roles con política blocking abren la fase verify
 // global y cierran el último rol; los deferred y optional se informan sin bloquear.
 
 func roleGate(role, status string) GateState {
@@ -120,7 +120,7 @@ func TestPendingNonBlockingRoles(t *testing.T) {
 	}
 }
 
-// REQ-21.15 y H4: la salida 2 cede verify al cerrar el último rol blocking, aunque
+// RF-RCL-03 y H4: la salida 2 cede verify al cerrar el último rol blocking, aunque
 // un deferred u optional siga pendiente.
 func TestHandedOffToIgnoresNonBlockingRoles(t *testing.T) {
 	roster := []multirole.RoleAssignment{

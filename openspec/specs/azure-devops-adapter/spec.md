@@ -6,9 +6,9 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
 
 ## Requirements
 
-### Requirement: Manifiesto y Alta del Plugin `azure-devops` (REQ-45.1)
+### Requirement: Manifiesto y Alta del Plugin `azure-devops` (RF-ADO-01)
 
-El paquete `internal/integrations/azuredevops` DEBE ofrecer el plugin `azure-devops`. Su manifiesto DEBE declarar el identificador `azure-devops`, las capacidades `items.read` y `discovery`, el evento `change.start` como único evento escuchado, las claves de configuración `organization`, `project` y `team`, el secreto `pat` y la identidad `{source: plugin, secret: pat}`. El manifiesto DEBE superar la validación de REQ-43.3 y ser idéntico a la entrada del catálogo cerrado (REQ-43.4). La variable de entorno del secreto DEBE ser `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`. El manifiesto NO DEBE declarar capacidades que este cambio no entrega.
+El paquete `internal/integrations/azuredevops` DEBE ofrecer el plugin `azure-devops`. Su manifiesto DEBE declarar el identificador `azure-devops`, las capacidades `items.read` y `discovery`, el evento `change.start` como único evento escuchado, las claves de configuración `organization`, `project` y `team`, el secreto `pat` y la identidad `{source: plugin, secret: pat}`. El manifiesto DEBE superar la validación de RF-INT-03 y ser idéntico a la entrada del catálogo cerrado (RF-INT-04). La variable de entorno del secreto DEBE ser `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`. El manifiesto NO DEBE declarar capacidades que este cambio no entrega.
 
 #### Scenario: El manifiesto es válido e idéntico al del catálogo
 - **DADO** el plugin `azure-devops` y el catálogo de manifiestos por defecto
@@ -26,7 +26,7 @@ El paquete `internal/integrations/azuredevops` DEBE ofrecer el plugin `azure-dev
 - **CUANDO** se enumeran sus capacidades
 - **ENTONCES** no incluye `items.transition`, `items.create`, `relations`, `assignment`, `estimation`, `time`, `tags`, `attachments` ni `vcs_links`
 
-### Requirement: Configuración `integrations.azure-devops` y Secreto `pat` (REQ-45.2)
+### Requirement: Configuración `integrations.azure-devops` y Secreto `pat` (RF-ADO-02)
 
 El bloque `integrations.azure-devops` de `axiom.yaml` DEBE aceptar las claves `organization`, `project` y `team` (y la reservada `enabled`) y NO DEBE contener secretos ni datos personales. Una clave desconocida DEBE ser un error de carga. El PAT DEBE obtenerse únicamente del almacén de secretos del marco de integraciones (keyring en Windows y macOS, solo entorno en Linux) en el momento de cada llamada, nunca de `axiom.yaml`. La URL base DEBE construirse como `https://dev.azure.com/{organization}` desde `organization` y NO DEBE ser configurable.
 
@@ -56,7 +56,7 @@ El bloque `integrations.azure-devops` de `axiom.yaml` DEBE aceptar las claves `o
 - **ENTONCES** devuelve un error tipado que nombra el secreto `pat` y la variable `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`
 - **Y** no se envía ninguna petición HTTP
 
-### Requirement: Cliente REST con Autenticación, Versión y Timeout (REQ-45.3)
+### Requirement: Cliente REST con Autenticación, Versión y Timeout (RF-ADO-03)
 
 El cliente REST DEBE tener un único punto de salida HTTP que concentre autenticación, timeout, espera, reintentos y saneado de errores. Toda petición DEBE llevar `api-version=7.1`, autenticación `Basic` con `:{PAT}` en base64, y un timeout propio por petición. El cliente DEBE respetar la cancelación del `ctx` en cualquier espera, incluida la de reintentos. La URL base y el `*http.Client` DEBEN poder inyectarse para las pruebas.
 
@@ -82,7 +82,7 @@ El cliente REST DEBE tener un único punto de salida HTTP que concentre autentic
 - **CUANDO** se construye la URL base
 - **ENTONCES** el nombre se escapa y la petición no sale de `dev.azure.com/{organization}`
 
-### Requirement: Límites de Tasa y Reintentos Acotados (REQ-45.4)
+### Requirement: Límites de Tasa y Reintentos Acotados (RF-ADO-04)
 
 El cliente DEBE respetar `Retry-After` también en una respuesta HTTP 200, esperando antes de la siguiente petición. DEBE reintentar las respuestas 429 y 503, y los errores de red transitorios, con un presupuesto de intentos acotado y retroceso exponencial con tope; cuando la respuesta trae `Retry-After`, la espera NO DEBE ser menor que ese valor. DEBE leer y exponer las cabeceras `X-RateLimit-Delay`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` y `X-RateLimit-Limit`, y NO DEBE usar `X-RateLimit-Resource` en ningún cálculo. Agotado el presupuesto, DEBE devolver un error tipado de límite de tasa que indica el número de intentos. Las esperas DEBEN usar un reloj sustituible para que las pruebas no duerman.
 
@@ -120,7 +120,7 @@ El cliente DEBE respetar `Retry-After` también en una respuesta HTTP 200, esper
 - **CUANDO** el cliente realiza una lectura
 - **ENTONCES** la lectura termina con éxito tras dos peticiones
 
-### Requirement: Errores Tipados y Saneados con Scope Probable (REQ-45.5)
+### Requirement: Errores Tipados y Saneados con Scope Probable (RF-ADO-05)
 
 Todo fallo del cliente DEBE ser un error tipado, nunca silenciado. El cuerpo de error de Azure DevOps DEBE incluirse acotado en tamaño y saneado; el error NO DEBE contener cabeceras ni la petición. Una respuesta 401, una 203 con página de inicio de sesión y una 403 DEBEN producir un error de autenticación que nombra el scope probable de la operación (`vso.work_write` para work items, `vso.project` para proyectos, equipos y miembros, `vso.work` para iteraciones, `vso.code` para repositorios) y recuerda que los PAT globales se retiran. Los códigos 4xx distintos de los anteriores no se reintentan.
 
@@ -157,7 +157,7 @@ Todo fallo del cliente DEBE ser un error tipado, nunca silenciado. El cuerpo de 
 - **CUANDO** el cliente realiza una lectura
 - **ENTONCES** devuelve un error tipado de respuesta inválida y no un valor vacío
 
-### Requirement: Lectura de Work Items y Lotes (REQ-45.6)
+### Requirement: Lectura de Work Items y Lotes (RF-ADO-06)
 
 El cliente DEBE leer un work item con `GET .../_apis/wit/workitems/{id}?$expand=relations` y devolver su identificador, revisión (`rev`), campos y relaciones. DEBE leer varios con `POST .../_apis/wit/workitemsbatch`, troceando la lista en lotes del máximo que admite la API y conservando el orden de los identificadores pedidos. Un work item inexistente DEBE producir un error tipado de no encontrado.
 
@@ -184,7 +184,7 @@ El cliente DEBE leer un work item con `GET .../_apis/wit/workitems/{id}?$expand=
 - **CUANDO** el cliente la lee en lote
 - **ENTONCES** devuelve un resultado vacío sin enviar ninguna petición
 
-### Requirement: Escritura con Concurrencia Optimista `test /rev` (REQ-45.7)
+### Requirement: Escritura con Concurrencia Optimista `test /rev` (RF-ADO-07)
 
 Toda modificación de un work item DEBE enviarse con `PATCH .../_apis/wit/workitems/{id}` y `Content-Type: application/json-patch+json`, y su primera operación DEBE ser siempre `{"op":"test","path":"/rev","value":N}` con la revisión leída. Cualquier rechazo de esa prueba (HTTP 412, o 400/409 con el error de test de Azure DevOps) DEBE devolverse como `ErrRevConflict`: el cliente NO DEBE reintentarlo, NO DEBE releer para reaplicar y NO DEBE modificar el work item. Una petición de modificación sin la operación `test /rev` NO DEBE poder construirse. Un `PATCH` aplicado cuya respuesta se pierde y se reintenta falla por `/rev` y se informa como conflicto, nunca se aplica dos veces.
 
@@ -222,7 +222,7 @@ Toda modificación de un work item DEBE enviarse con `PATCH .../_apis/wit/workit
 - **CUANDO** se intenta construir la petición
 - **ENTONCES** se rechaza con un error tipado y no se envía nada
 
-### Requirement: Repositorios Git con Caché por Proceso (REQ-45.8)
+### Requirement: Repositorios Git con Caché por Proceso (RF-ADO-08)
 
 El cliente DEBE listar los repositorios git del proyecto con `_apis/git/repositories`, devolviendo nombre y GUID, y DEBE cachear el resultado durante la vida del proceso: una segunda consulta del mismo proyecto NO DEBE enviar petición. Un fallo NO DEBE cachearse.
 
@@ -241,7 +241,7 @@ El cliente DEBE listar los repositorios git del proyecto con `_apis/git/reposito
 - **CUANDO** el cliente lista los repositorios dos veces
 - **ENTONCES** la primera devuelve error y la segunda devuelve el listado
 
-### Requirement: Descubrimiento del Proceso del Proyecto (REQ-45.9)
+### Requirement: Descubrimiento del Proceso del Proyecto (RF-ADO-09)
 
 El descubrimiento DEBE devolver, con un esquema versionado: los tipos de work item del proyecto; para cada tipo, sus estados con la categoría tal como la devuelve la API (`Proposed`, `InProgress`, `Resolved`, `Completed`, `Removed`, sin normalizar); para cada tipo, sus campos; las iteraciones del equipo (a partir de `values`, con fechas y `timeFrame`); y los miembros del equipo con su `id` y `displayName`, obtenidos con paginación `$top/$skip` hasta agotarlos. Las sugerencias de asignación DEBEN salir de la lista de miembros; el código NO DEBE contener direcciones de correo.
 
@@ -273,7 +273,7 @@ El descubrimiento DEBE devolver, con un esquema versionado: los tipos de work it
 - **ENTONCES** el descubrimiento falla con un error de autenticación que nombra `vso.project`
 - **Y** no devuelve un resultado parcial como si fuera completo
 
-### Requirement: Resolución de la Identidad de la Persona (REQ-45.10)
+### Requirement: Resolución de la Identidad de la Persona (RF-ADO-10)
 
 Al conectar, el adaptador DEBE intentar `GET _apis/connectionData` y, si responde con un `authenticatedUser` utilizable (con identificador y nombre visible), esa es la identidad y su origen es `connection_data`. Si la petición falla o no trae un usuario utilizable, la identidad DEBE resolverse entre los miembros del equipo mediante el usuario que la persona indique de forma explícita (`--user`), con origen `member_selection`. Con `--user` indicado, el adaptador NO DEBE consultar `connectionData`. El usuario indicado debe coincidir con el `id` de un miembro; si no coincide, error tipado que nombra los candidatos. NO DEBE haber pregunta interactiva. El contrato de `connectionData` con un PAT real queda marcado como no verificado: solo se prueba con `httptest`.
 
@@ -306,7 +306,7 @@ Al conectar, el adaptador DEBE intentar `GET _apis/connectionData` y, si respond
 - **ENTONCES** devuelve un error tipado que nombra `zzz` y los candidatos
 - **Y** no se guarda ninguna identidad
 
-### Requirement: Fichero de Identidad por Persona Indexado por Organización (REQ-45.11)
+### Requirement: Fichero de Identidad por Persona Indexado por Organización (RF-ADO-11)
 
 La identidad resuelta DEBE guardarse únicamente en `~/.axiom/` de la persona (respetando `AXIOM_STATE_DIR` mediante `system.AxiomDir`), en un fichero propio junto a `workspaces.json` que NO DEBE versionarse, con esquema versionado, escritura atómica y modo 0600, indexado por organización (una entrada por organización de Azure DevOps). Cada entrada DEBE llevar el `id` de Azure DevOps, el `displayName`, el origen (`connection_data` o `member_selection`) y la fecha. El fichero NO DEBE contener el PAT ni ningún secreto y NO DEBE alterar el esquema de `workspaces.json`. Guardar la identidad de una organización NO DEBE alterar las entradas de las demás.
 
@@ -341,9 +341,9 @@ La identidad resuelta DEBE guardarse únicamente en `~/.axiom/` de la persona (r
 - **CUANDO** se intenta guardar una identidad
 - **ENTONCES** se devuelve un error tipado que nombra el fichero y no se sobrescribe el contenido ilegible
 
-### Requirement: Verbo `axiom integrations connect` (REQ-45.12)
+### Requirement: Verbo `axiom integrations connect` (RF-ADO-12)
 
-`axiom integrations connect --plugin <id> [--user <id>] [--cwd <ruta>] [--json]` DEBE probar la conexión con el PAT del almacén de secretos, resolver la identidad (REQ-45.10) y guardarla (REQ-45.11). La salida DEBE nombrar la organización, el identificador y el nombre visible, y el origen; con `--json` DEBE ser un documento con esquema versionado. Sin `connectionData` utilizable y sin `--user`, el verbo DEBE listar los miembros del equipo y terminar con código distinto de cero pidiendo repetir con `--user`, sin pregunta interactiva. Un `--plugin` desconocido, un bloque `integrations.<plugin>` ausente, un plugin con `enabled: false` o un error de configuración DEBEN ser un error tipado del verbo, no un aviso. Si el plugin no ofrece el puerto de identidad, el error DEBE ser el de REQ-45.17.
+`axiom integrations connect --plugin <id> [--user <id>] [--cwd <ruta>] [--json]` DEBE probar la conexión con el PAT del almacén de secretos, resolver la identidad (RF-ADO-10) y guardarla (RF-ADO-11). La salida DEBE nombrar la organización, el identificador y el nombre visible, y el origen; con `--json` DEBE ser un documento con esquema versionado. Sin `connectionData` utilizable y sin `--user`, el verbo DEBE listar los miembros del equipo y terminar con código distinto de cero pidiendo repetir con `--user`, sin pregunta interactiva. Un `--plugin` desconocido, un bloque `integrations.<plugin>` ausente, un plugin con `enabled: false` o un error de configuración DEBEN ser un error tipado del verbo, no un aviso. Si el plugin no ofrece el puerto de identidad, el error DEBE ser el de RF-INT-23.
 
 #### Scenario: Conexión por `connectionData`
 - **DADO** un workspace con `integrations.azure-devops` configurado, el PAT en el entorno y un servidor `httptest` que devuelve `authenticatedUser`
@@ -380,9 +380,9 @@ La identidad resuelta DEBE guardarse únicamente en `~/.axiom/` de la persona (r
 - **CUANDO** se ejecuta `axiom integrations --help`
 - **ENTONCES** la lista cerrada de subcomandos incluye `connect` y `discover`
 
-### Requirement: Verbo `axiom integrations discover` (REQ-45.13)
+### Requirement: Verbo `axiom integrations discover` (RF-ADO-13)
 
-`axiom integrations discover --plugin <id> [--cwd <ruta>] [--json]` DEBE imprimir el descubrimiento de REQ-45.9 del plugin indicado. Con `--json` DEBE emitir un documento con esquema versionado que contiene tipos, estados con categoría, campos por tipo, iteraciones y miembros. Sin `--json`, una salida legible equivalente. El verbo NO DEBE escribir ningún fichero. Los errores de configuración y de autorización son errores tipados del verbo. Si el plugin no ofrece el puerto de descubrimiento, el error DEBE ser el de REQ-45.17.
+`axiom integrations discover --plugin <id> [--cwd <ruta>] [--json]` DEBE imprimir el descubrimiento de RF-ADO-09 del plugin indicado. Con `--json` DEBE emitir un documento con esquema versionado que contiene tipos, estados con categoría, campos por tipo, iteraciones y miembros. Sin `--json`, una salida legible equivalente. El verbo NO DEBE escribir ningún fichero. Los errores de configuración y de autorización son errores tipados del verbo. Si el plugin no ofrece el puerto de descubrimiento, el error DEBE ser el de RF-INT-23.
 
 #### Scenario: Descubrimiento en JSON
 - **DADO** un workspace con `integrations.azure-devops` configurado, el PAT en el entorno y un servidor `httptest` completo
@@ -402,9 +402,9 @@ La identidad resuelta DEBE guardarse únicamente en `~/.axiom/` de la persona (r
 - **CUANDO** se ejecuta `axiom integrations discover --plugin azure-devops`
 - **ENTONCES** termina con código distinto de cero y un error que nombra `vso.project`
 
-### Requirement: `Deliver` sin Efectos del Ciclo de Vida (REQ-45.14)
+### Requirement: `Deliver` sin Efectos del Ciclo de Vida (RF-ADO-14)
 
-Este cambio NO DEBE emitir ningún evento del ciclo de vida hacia Azure DevOps. El manifiesto declara solo `change.start`, que ningún verbo emite en este cambio. Si `Deliver` se invocara, DEBE devolver un error permanente tipado sin realizar ninguna petición HTTP ni escribir ficheros. Con el bloque `integrations.azure-devops` configurado y activo, los verbos que despachan eventos (`gate record`, `branch ensure --role`, `sdd publish --archive`) DEBEN producir la misma salida y no crear ficheros, porque ningún plugin activo escucha sus eventos (REQ-43.5).
+Este cambio NO DEBE emitir ningún evento del ciclo de vida hacia Azure DevOps. El manifiesto declara solo `change.start`, que ningún verbo emite en este cambio. Si `Deliver` se invocara, DEBE devolver un error permanente tipado sin realizar ninguna petición HTTP ni escribir ficheros. Con el bloque `integrations.azure-devops` configurado y activo, los verbos que despachan eventos (`gate record`, `branch ensure --role`, `sdd publish --archive`) DEBEN producir la misma salida y no crear ficheros, porque ningún plugin activo escucha sus eventos (RF-INT-05).
 
 #### Scenario: `Deliver` devuelve error permanente
 - **DADO** el plugin `azure-devops` y un servidor `httptest` que falla la prueba si recibe alguna petición
@@ -418,7 +418,7 @@ Este cambio NO DEBE emitir ningún evento del ciclo de vida hacia Azure DevOps. 
 - **ENTONCES** stdout, stderr y código de salida coinciden con los de un workspace sin el bloque
 - **Y** la carpeta del cambio no contiene `integrations.yaml` ni `.integrations-outbox.yaml`
 
-### Requirement: El PAT No Aparece en Ninguna Salida (REQ-45.15)
+### Requirement: El PAT No Aparece en Ninguna Salida (RF-ADO-15)
 
 El PAT y su forma codificada en la cabecera `Authorization: Basic` (base64 de `:{PAT}`) NO DEBEN aparecer en stdout, stderr, errores, logs, el fichero de identidad, `axiom.yaml` ni la salida de `discover`. El cliente NO DEBE volcar cabeceras ni peticiones en errores o logs, y DEBE redactar además el valor codificado. Una prueba canario DEBE usar un PAT reconocible y buscar él y su base64 en todos esos destinos.
 
@@ -437,7 +437,7 @@ El PAT y su forma codificada en la cabecera `Authorization: Basic` (base64 de `:
 - **CUANDO** el cliente realiza una petición
 - **ENTONCES** la cabecera de autenticación se construye con ese valor y ningún otro origen es consultado
 
-### Requirement: Pruebas Herméticas sin Azure DevOps Real (REQ-45.16)
+### Requirement: Pruebas Herméticas sin Azure DevOps Real (RF-ADO-16)
 
 Ninguna prueba de este cambio DEBE llamar a Azure DevOps real ni usar credenciales reales: todas usan un servidor `httptest` local, un reloj y esperas sustituibles y un almacén de secretos sustituible. Las pruebas NO DEBEN compilar binarios sueltos y se ejecutan con `go test`.
 

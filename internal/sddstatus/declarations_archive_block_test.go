@@ -142,7 +142,7 @@ func TestArchiveBlockedByAnInvalidDeclaration(t *testing.T) {
 			t.Fatalf("archive = %q next = %q", status.Dependencies.Archive, status.NextRecommended)
 		}
 		wantContains(t, "blockedReasons", status.BlockedReasons, "La declaración de axiom.yaml no es válida", "error al parsear axiom.yaml", "axiom workspace validate")
-		// El aviso de resolución del caso 3 (REQ-24.7) sigue presente.
+		// El aviso de resolución del caso 3 (RF-PLH-07) sigue presente.
 		wantContains(t, "notes", status.Notes, "se conserva la resolución embebida")
 		if status.Dependencies.Proposal != DependencyAllDone || status.Dependencies.Apply == DependencyBlocked {
 			t.Errorf("la planificación y apply no se bloquean: %+v", status.Dependencies)
@@ -204,7 +204,7 @@ func TestArchiveNotBlockedWithoutDeclarations(t *testing.T) {
 	}
 }
 
-// REQ-24.36: la ausencia del delta de contexto nunca se asume, también en
+// RF-CTX-11: la ausencia del delta de contexto nunca se asume, también en
 // modalidad continua.
 func TestArchiveBlockedWithoutTheContextDelta(t *testing.T) {
 	t.Run("sin delta: bloquea archive y nombra el fichero", func(t *testing.T) {
@@ -367,7 +367,7 @@ func TestArchiveBlockedByAFilelessStore(t *testing.T) {
 
 // D-05: con contexto mantenido, phaseInstructions.archive nombra el verbo que
 // prepara la integración del contexto; con un `baseline:` residual no nombra
-// ningún verbo retirado (REQ-30.25).
+// ningún verbo retirado (RF-ARC-14).
 func TestArchiveInstructionsNameContextPrepare(t *testing.T) {
 	t.Parallel()
 	t.Run("contexto mantenido", func(t *testing.T) {
@@ -447,7 +447,7 @@ func TestStatusWarnsAboutSiblingRepositoryPathsWithoutDotDot(t *testing.T) {
 	})
 }
 
-// REQ-43.20: un bloque `integrations:` inválido no bloquea el archivado. `invalidDeclarationErrors`
+// RF-TOP-17: un bloque `integrations:` inválido no bloquea el archivado. `invalidDeclarationErrors`
 // solo reúne la lectura de YAML, la baseline retirada y technical_context, como `git:`, `workflow:`
 // y `sdd:`; el error de integraciones lo reportan `workspace validate` y los verbos de integración.
 func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
@@ -468,7 +468,7 @@ func TestArchiveNotBlockedByAnInvalidIntegrationsBlock(t *testing.T) {
 	}
 }
 
-// REQ-21.18 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
+// RF-ARC-03 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
 // carpeta archivada es estado local: no cambia la entrada archivada de un cambio ni su proyección.
 func TestArchivedOutboxDoesNotChangeTheArchivedProjection(t *testing.T) {
 	t.Parallel()

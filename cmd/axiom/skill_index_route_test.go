@@ -12,7 +12,7 @@ import (
 )
 
 // countCollisionLines counts the lines that clarify the `skill list` vs
-// `skill index list` collision (REQ-22.10: exactly one per help surface).
+// `skill index list` collision (RF-SKI-01: exactly one per help surface).
 func countCollisionLines(text string) int {
 	count := 0
 	for _, line := range strings.Split(text, "\n") {
@@ -76,7 +76,7 @@ func TestSkillGroupRoutesIndexToUnifiedEngine(t *testing.T) {
 	}
 }
 
-// TestSkillGroupHelpListsIndexAndCollisionNote covers REQ-22.10: the `axiom
+// TestSkillGroupHelpListsIndexAndCollisionNote covers RF-SKI-01: the `axiom
 // skill` help lists `index` alongside `scan`, `list`, `approve`, `reject` and
 // clarifies the collision in exactly one line.
 func TestSkillGroupHelpListsIndexAndCollisionNote(t *testing.T) {
@@ -103,7 +103,7 @@ func TestAxiomHelpListsSkillIndexAndCollisionNote(t *testing.T) {
 	}
 }
 
-// TestSkillRegistryCompatArgvLiteral covers gate 4 (REQ-22.14): the plugin's
+// TestSkillRegistryCompatArgvLiteral covers gate 4 (RF-SKI-05): the plugin's
 // literal argv terminates 0 and writes the registry.
 func TestSkillRegistryCompatArgvLiteral(t *testing.T) {
 	project, _ := makeSkillIndexProject(t)
@@ -142,7 +142,7 @@ func TestSkillRegistryCompatRefreshPrimaryLineOnly(t *testing.T) {
 	}
 }
 
-// TestSkillRegistryCompatListJSONShape covers REQ-22.14 «list de
+// TestSkillRegistryCompatListJSONShape covers RF-SKI-05 «list de
 // compatibilidad conserva su forma de salida».
 func TestSkillRegistryCompatListJSONShape(t *testing.T) {
 	project, _ := makeSkillIndexProject(t)
@@ -165,7 +165,7 @@ func TestSkillRegistryCompatListJSONShape(t *testing.T) {
 	}
 }
 
-// TestSkillRegistryCompatErrorMessages covers REQ-22.14: the legacy error
+// TestSkillRegistryCompatErrorMessages covers RF-SKI-05: the legacy error
 // messages are byte-identical to the pre-INC-22 ones.
 func TestSkillRegistryCompatErrorMessages(t *testing.T) {
 	makeSkillIndexProject(t)
@@ -217,7 +217,7 @@ func TestSkillRegistryCompatErrorMessages(t *testing.T) {
 
 // TestRunSkillApproveWarnsOnIndexRegenerationFailure covers F18: the hook
 // lives in Manager.Approve, the CLI reports a regeneration failure as a
-// warning, and the exit code stays 0 (REQ-22.13).
+// warning, and the exit code stays 0 (RF-SKI-04).
 func TestRunSkillApproveWarnsOnIndexRegenerationFailure(t *testing.T) {
 	workspace, _ := makeSkillIndexProject(t)
 	inbox := filepath.Join(workspace, ".axiom", "skills", "inbox", "branch-pr")

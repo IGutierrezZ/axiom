@@ -84,8 +84,8 @@ func routingSection(t *testing.T, rendered, heading string) string {
 	return body
 }
 
-// TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection guards REQ-25.40
-// and REQ-25.41: the subsection is identical for every adapter, names the
+// TestRenderRoutingProjectsTheBranchesAndWorktreesSubsection guards RF-RUT-15
+// and RF-RUT-16: the subsection is identical for every adapter, names the
 // mechanism (JSON paths with --cwd and git -C), keeps decision_required as the
 // only interaction, never authorizes --fetch, and carries the one line that
 // bans the runtime-specific worktree primitives.

@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Adopción de la rama publicada (REQ-27.15, DD-13): si la rama del cambio, de rol o de
+// Adopción de la rama publicada (RF-BRA-27, DD-13): si la rama del cambio, de rol o de
 // archivado no existe en local pero `refs/remotes/origin/<rama>` ya está traída, `ensure` la
 // crea desde ella con seguimiento y sin red. Los remotos son repositorios desnudos locales.
 
@@ -119,7 +119,7 @@ func TestEnsureWithoutAPublishedBranchCreatesItFromTheBaseAndWarns(t *testing.T)
 	wantNoRemoteOperations(t, *seen)
 }
 
-// Las ramas de rol solo existen en `multirepo` (REQ-2.2 de `workspace-topology`): los roles `core`
+// Las ramas de rol solo existen en `multirepo` (RF-TOP-04 de `workspace-topology`): los roles `core`
 // y `qa` comparten el repositorio de código `repo-backend`, que es el que tiene remoto.
 func TestEnsureRoleBranchesAdoptTheirPublishedBranch(t *testing.T) {
 	master, specs := newMultirepo(t, map[string][]string{"core": {"repo-backend"}, "qa": {"repo-backend"}}, "repo-backend")
@@ -231,7 +231,7 @@ func TestEnsureInPlaceAdoptsThePublishedBranch(t *testing.T) {
 	wantNoRemoteOperations(t, *seen)
 }
 
-// REQ-27.15: createdFrom y createdFromRef solo salen en la ejecución que crea la rama; la
+// RF-BRA-27: createdFrom y createdFromRef solo salen en la ejecución que crea la rama; la
 // repetición describe el estado final sin ellos.
 func TestEnsureReportsCreatedFromOnlyOnTheRunThatCreatesTheBranch(t *testing.T) {
 	repo := embeddedCoreProject(t)

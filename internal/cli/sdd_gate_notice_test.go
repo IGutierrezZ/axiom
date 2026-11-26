@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// REQ-21.13: el aviso de último rol se emite al aprobarse el role-apply del último
+// RF-RCL-01: el aviso de último rol se emite al aprobarse el role-apply del último
 // rol blocking, nombra los roles deferred y optional aún abiertos y no se repite
 // cuando uno de ellos cierra después. Los nombres empiezan por
 // TestGateRecordLastRoleNotice para entrar en el mismo patrón de `-run`.

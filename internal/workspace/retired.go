@@ -8,14 +8,14 @@ import (
 )
 
 // BaselineRetiredCode es el código estable del error de un bloque `baseline:`
-// residual (REQ-30.21).
+// residual (RF-TOP-12).
 const BaselineRetiredCode = "baseline_retired"
 
 // BaselineRetiredError es la causa tipada de un `axiom.yaml` que aún declara el
 // bloque de primer nivel `baseline:`, retirado: la spec viva es únicamente
 // `openspec/specs/`. El bloque nunca se ignora en silencio ni se degrada a «sin
 // baseline»: cada consumidor (carga, `workspace validate`, status, archivado,
-// `init`) lo recibe como error y nombra la continuación (REQ-30.21).
+// `init`) lo recibe como error y nombra la continuación (RF-TOP-12).
 type BaselineRetiredError struct {
 	// Path es el axiom.yaml que declara el bloque; vacío cuando se analizan bytes
 	// sin fichero (ParseConfig).
@@ -68,7 +68,7 @@ func (d Declarations) bindConfigPath(path string) Declarations {
 
 // GuardSpecsWrite devuelve nil si op puede crear o actualizar
 // <planning home>/specs o <planning home>/INDEX.md, y un *BaselineRetiredError si
-// el axiom.yaml resuelto declara aún un bloque `baseline:` (REQ-30.21 d): la
+// el axiom.yaml resuelto declara aún un bloque `baseline:` (RF-TOP-12 d): la
 // escritura se detiene sin tocar `openspec/specs/`.
 func (l Location) GuardSpecsWrite(op string) error {
 	if l.Declarations.BaselineRetiredErr == nil {

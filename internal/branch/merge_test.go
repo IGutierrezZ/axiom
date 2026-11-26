@@ -2,7 +2,7 @@ package branch
 
 import "testing"
 
-// REQ-25.16 y REQ-25.17, design D-09: la confirmación de la fusión por capas es una función pura
+// RF-BRA-17 y RF-BRA-18, design D-09: la confirmación de la fusión por capas es una función pura
 // de la evidencia que reúne el motor. Se detiene en la primera capa que confirma, la capa del árbol
 // equivalente solo cuenta si git la admite, la evidencia `pr_merged` nunca confirma la rama de
 // archivado y `--force` solo se aplica cuando ninguna capa confirma.
@@ -121,7 +121,7 @@ func TestConfirmMergeStopsAtTheFirstLayerThatConfirms(t *testing.T) {
 }
 
 // Una capa sin confirmar no deja ningún token: el JSON de `done` nunca lleva un `confirmedBy`
-// vacío con su etiqueta, y cada capa que sí confirma tiene la suya (REQ-25.2).
+// vacío con su etiqueta, y cada capa que sí confirma tiene la suya (RF-BRA-02).
 func TestConfirmMergeNeverReturnsALayerWithoutALabel(t *testing.T) {
 	for _, evidence := range []MergeEvidence{
 		{Ancestry: true},

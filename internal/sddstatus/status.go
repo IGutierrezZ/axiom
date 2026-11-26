@@ -193,19 +193,19 @@ type Status struct {
 	// `technical_context:` declaration of axiom.yaml. Structural absence (nil,
 	// omitempty) when the declaration is absent or invalid: an invalid block is
 	// never projected, not even partially. The retired `baseline:` block is never
-	// projected (REQ-30.21): it blocks archiving through a typed cause instead.
+	// projected (RF-TOP-12): it blocks archiving through a typed cause instead.
 	TechnicalContext *TechnicalContextProjection `json:"technicalContext,omitempty"`
 	// Workflow is the project lane declared in the `workflow:` block of axiom.yaml
-	// (REQ-27.2): always filled by decorateWorkspaceDeclarations, with or without a
+	// (RF-CLI-08): always filled by decorateWorkspaceDeclarations, with or without a
 	// selected change. `omitempty` only protects hand-built statuses in tests.
 	Workflow *WorkflowProjection `json:"workflow,omitempty"`
-	// ISO is the additive projection of REQ-29.2: the project's `sdd:` declaration
+	// ISO is the additive projection of RF-ISO-02: the project's `sdd:` declaration
 	// and the selected change's ISO snapshot. Structural absence (nil, omitempty)
 	// when axiom.yaml has no `sdd:` block and the change is not ISO, so a consumer
 	// that predates it sees no difference (decorateISO).
 	ISO *ISOProjection `json:"iso,omitempty"`
 	// Requirements is C-03-b's additive projection of what the change's deltas
-	// create and modify (REQ-47.9). Structural absence (nil, omitempty) when there
+	// create and modify (RF-CLI-14). Structural absence (nil, omitempty) when there
 	// are no readable deltas, the change is archived, the store keeps no files or
 	// the ID pattern is inaccessible (decorateRequirements).
 	Requirements *RequirementsProjection `json:"requirements,omitempty"`
@@ -218,7 +218,7 @@ type Status struct {
 	// kickoff_absence_regression_test.go already guards for Governance.
 	GateQuestion *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
 	// Publication is C-05-c's additive projection of the publication pending for the selected
-	// change (REQ-27.18): structural absence (nil, omitempty) when there is nothing to commit or
+	// change (RF-PUB-11): structural absence (nil, omitempty) when there is nothing to commit or
 	// push, so a status without it is byte-identical to the one that predates it
 	// (decoratePublication).
 	Publication       *PublicationProjection `json:"publication,omitempty"`
@@ -240,7 +240,7 @@ type Status struct {
 	isoMatrix *ISOMatrixProjection
 }
 
-// WorkflowProjection is the effective project lane (REQ-27.2). Lane is odd, sdd
+// WorkflowProjection is the effective project lane (RF-CLI-08). Lane is odd, sdd
 // or ask; Source says where it comes from: declared (the block sets `lane`),
 // default (a valid axiom.yaml without `workflow.lane`), no_workspace (there is
 // no axiom.yaml) or invalid (axiom.yaml or its `workflow:` block cannot be
@@ -280,7 +280,7 @@ type ResolveOptions struct {
 	ChangeName          string
 	IncludeInstructions bool
 
-	// worktreeCandidates son los cambios activos de los worktrees registrados (REQ-25.44): sin nombre,
+	// worktreeCandidates son los cambios activos de los worktrees registrados (RF-CLI-07): sin nombre,
 	// se unen a los del checkout actual para el `select-change`. Solo los rellena Resolve.
 	worktreeCandidates []string
 
@@ -290,7 +290,7 @@ type ResolveOptions struct {
 	master string
 
 	// declarations son las declaraciones de axiom.yaml de la ubicación resuelta: de ellas sale
-	// el patrón de identificadores de requisito, que las reglas ISO leen en vivo (REQ-44.1).
+	// el patrón de identificadores de requisito, que las reglas ISO leen en vivo (RF-RID-01).
 	// Solo las rellena Resolve; vacías equivalen a «sin declaraciones» (patrón por defecto).
 	declarations workspace.Declarations
 }
@@ -536,7 +536,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 	}
 	options.WorkspaceRoot = workspaceRoot
 	if !explicitRoot {
-		// REQ-25.44 (design D-16): los cambios que viven en worktrees registrados se resuelven en ellos.
+		// RF-CLI-07 (design D-16): los cambios que viven en worktrees registrados se resuelven en ellos.
 		// Una raíz explícita es la de una llamada interna que ya sabe dónde está su cambio y no se mueve.
 		options, location = rerootOnRegisteredWorktrees(options, location)
 		workspaceRoot = options.WorkspaceRoot
@@ -685,7 +685,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		ApplyProgress: singleArtifactState(artifactPaths.ApplyProgress),
 		VerifyReport:  singleArtifactState(artifactPaths.VerifyReport),
 	}.statesFor(ArtifactStoreOpenSpec)
-	// REQ-29.15 (design D9): sin delta, un bug declarado en proposal.md cumple el
+	// RF-CLI-10 (design D9): sin delta, un bug declarado en proposal.md cumple el
 	// artefacto de specs; una declaración incompleta lo deja `missing` con un
 	// motivo por cada falta. Vale en todo proyecto, sea o no ISO.
 	bug := evaluateBugProfile(artifacts["specs"], artifactPaths.Proposal)
@@ -715,7 +715,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		return Status{}, err
 	}
 
-	// REQ-29.3 a REQ-29.5 y REQ-29.19 (design D6): las reglas de un cambio ISO se
+	// RF-ISO-03 a RF-ISO-05 y RF-ISO-10 (design D6): las reglas de un cambio ISO se
 	// leen de su instantánea de kickoff.yaml, nunca de axiom.yaml en vivo. Un
 	// cambio sin instantánea, o con iso falso, no evalúa nada.
 	var iso *isoEvaluation
@@ -746,7 +746,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 		blockedReasons.genuine = append(blockedReasons.genuine, openSpecSpecsLayoutReason(changeName))
 	}
 	blockedReasons.genuine = append(blockedReasons.genuine, findingReasons(bug.findings)...)
-	// Guarda B (REQ-25.42, design D-13): un único punto, después de resolveApplyState y loadGovernance
+	// Guarda B (RF-CLI-05, design D-13): un único punto, después de resolveApplyState y loadGovernance
 	// y antes de la autoridad de edición. Con la rama equivocada esta no se evalúa (S-9): sin sobre de
 	// consentimiento ni marcador pendiente; tras corregir la rama aparece edit_authority_missing.
 	bctx := resolveBranchContext(branchQuery{
@@ -822,7 +822,7 @@ func resolveByPreferenceOrder(options ResolveOptions) (Status, error) {
 	// D19: en un cambio ISO el verify es obligatorio y el status ruta a él.
 	nextRecommended = iso.verifyRoute(nextRecommended, applyState, governance)
 	if bctx.wrongBranch != nil {
-		// Ninguna fase ni compuerta se autoriza con la rama equivocada (REQ-25.42): tampoco hay
+		// Ninguna fase ni compuerta se autoriza con la rama equivocada (RF-CLI-05): tampoco hay
 		// pregunta de compuerta, que se construye solo para await-gate.
 		nextRecommended = "resolve-blockers"
 	}
@@ -1367,7 +1367,7 @@ func RenderNativePhasePrompt(status Status, phase Phase) string {
 // resolveWorkspaceRoot returns the workspace root: an explicit
 // ResolveOptions.WorkspaceRoot keeps its previous behaviour (validated, never
 // searched), and a CWD is resolved with workspace.Locate, which walks up to the
-// nearest marker and roots the workspace by topology (inc-24, REQ-24.2).
+// nearest marker and roots the workspace by topology (inc-24, RF-PLH-02).
 func resolveWorkspaceRoot(options ResolveOptions) (string, error) {
 	if strings.TrimSpace(options.WorkspaceRoot) != "" {
 		return resolveExplicitWorkspaceRoot(options.WorkspaceRoot)
@@ -1811,7 +1811,7 @@ func resolveNextRecommended(dependencies Dependencies, applyState ApplyState, go
 	// one sealed in continuous mode) leaves every branch below exactly
 	// as it was before this increment (kickoff_absence_regression_test.go
 	// guards that identity byte for byte). A pending or rejected gate takes
-	// precedence over every other route: REQ-21.8-21.11 forbid starting the
+	// precedence over every other route: RF-GAT-02–RF-GAT-05 forbid starting the
 	// NEXT phase (or the next role's apply) while its own gate is
 	// undecided, even when that next phase would otherwise already look
 	// ready by dependency state alone.

@@ -212,7 +212,7 @@ func TestParseGateLedgerUnknownSchema(t *testing.T) {
 	}
 }
 
-// TestKickoffDocsPublicationValidation cubre REQ-27.4: el campo admite vacío y `auto`, `auto` solo
+// TestKickoffDocsPublicationValidation cubre RF-KOF-10: el campo admite vacío y `auto`, `auto` solo
 // con continuous, y un fichero con el campo lo lee un struct congelado anterior sin error.
 func TestKickoffDocsPublicationValidation(t *testing.T) {
 	doc := func(style, publication string) string {
@@ -299,7 +299,7 @@ func sealRosterKickoff(style ExecutionStyle, sealedBy string, roles ...string) K
 }
 
 // TestKickoffValidateForSealContinuousRoster fija la regla de sellado
-// (REQ-28.12, DD-01, DD-02): continuous solo admite el roster exacto
+// (RF-PRE-04, DD-01, DD-02): continuous solo admite el roster exacto
 // [fullstack]; el retrosellado inferido queda exento (REQ-21.4).
 func TestKickoffValidateForSealContinuousRoster(t *testing.T) {
 	tests := []struct {

@@ -277,7 +277,7 @@ func MergeDestination(repo RepoPlan, planned BranchPlan) (destination string, pr
 }
 
 // PromotionStage decide adónde va la siguiente PR de la rama del cambio de un repositorio de
-// dos etapas en modo `branch` (REQ-25.48), sin fingir certeza. aheadOfMain son los commits
+// dos etapas en modo `branch` (RF-BRA-30), sin fingir certeza. aheadOfMain son los commits
 // que la rama lleva por delante de la rama principal (nil si no se calculó) y evidence, las
 // capas 1 y 2 evaluadas contra la integración:
 //   - nil o 0 por delante: `integration`; la rama no lleva nada que la principal no tenga y

@@ -20,14 +20,14 @@ import (
 // --output (default stdout); on an unapplied delta, nothing is written and
 // the error names the offending section and requirement.
 //
-// The only mode is the native one (--canonical --delta, REQ-30.22): it is
+// The only mode is the native one (--canonical --delta, RF-ARC-11): it is
 // byte for byte the composition that every accepted delta always produced. The
 // document and change modes (--document, --change, --in-place) belonged to the
 // foreign `baseline:` and were retired with it: their use is rejected with a
 // *ComposeModeRetiredError that names the continuation. When the composed spec
 // goes to a file, the workspace of that destination is resolved and a residual
 // `baseline:` stops the command without writing (*workspace.BaselineRetiredError,
-// REQ-30.21 d).
+// RF-TOP-12 d).
 func RunSDDArchiveCompose(args []string, stdout io.Writer) error {
 	return runSDDArchiveCompose(args, stdout)
 }
@@ -107,10 +107,10 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 		}
 	}
 
-	// Guarda A (REQ-25.19): componer un delta de `changes/<c>/` a un fichero solo se hace en la
+	// Guarda A (RF-BRA-20): componer un delta de `changes/<c>/` a un fichero solo se hace en la
 	// rama de archivado. La previsualización por la salida estándar no escribe y no se guarda.
 	if output := resolve(*outputPath); output != "-" && strings.TrimSpace(output) != "" {
-		// REQ-30.21 d: un `baseline:` residual en el workspace del destino detiene
+		// RF-TOP-12 d: un `baseline:` residual en el workspace del destino detiene
 		// la escritura de la spec viva.
 		if err := refuseRetiredBaselineAtDestination(output); err != nil {
 			return err
@@ -120,13 +120,13 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 		}
 	}
 
-	// REQ-29.10 y REQ-29.11 (D13): un cambio ISO que no cumple la regla del archivado no se
+	// RF-ARC-09 y RF-ARC-10 (D13): un cambio ISO que no cumple la regla del archivado no se
 	// compone; se niega antes de leer la canónica y sin escribir.
 	if err := refuseISOCompose(loc, resolve(*deltaPath), nil); err != nil {
 		return err
 	}
 
-	// REQ-44.9 y REQ-30.22: el compositor empareja por identificador con el patrón del workspace
+	// RF-RID-08 y RF-ARC-11: el compositor empareja por identificador con el patrón del workspace
 	// de `--cwd` o, sin él, del que contiene la delta; sin workspace rige el patrón por defecto.
 	// Con el patrón inaccesible se niega sin escribir y con la continuación de validate.
 	pattern, err := composeIDPattern(loc, strings.TrimSpace(*cwd) != "", resolve(*deltaPath))
@@ -162,7 +162,7 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 
 // refuseRetiredBaselineAtDestination resolves the workspace of the output file
 // and rejects the write with the typed retirement error when its axiom.yaml
-// still declares `baseline:` (REQ-30.21 d). An output outside any workspace is
+// still declares `baseline:` (RF-TOP-12 d). An output outside any workspace is
 // not a spec of a project and is not guarded.
 func refuseRetiredBaselineAtDestination(output string) error {
 	absolute, err := filepath.Abs(output)
@@ -178,7 +178,7 @@ func refuseRetiredBaselineAtDestination(output string) error {
 
 // explainComposeError añade a un rechazo de la composición lo que solo la orden sabe: la
 // capacidad (la carpeta de la delta) de un identificador inexistente y la continuación de un
-// provisional, que esta orden no asigna (REQ-47.8). El error original se conserva con %w.
+// provisional, que esta orden no asigna (RF-ARC-15). El error original se conserva con %w.
 func explainComposeError(err error, deltaPath string) error {
 	var unknown *openspecdoc.UnknownRequirementIDError
 	if errors.As(err, &unknown) {

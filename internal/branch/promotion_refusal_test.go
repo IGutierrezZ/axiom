@@ -11,7 +11,7 @@ import (
 
 const promotionTestCWD = `C:\repos\mi proyecto`
 
-// REQ-25.47 (D10): sin banderas opcionales, EnsureArgs.Invocation produce exactamente la cadena
+// RF-BRA-29 (D10): sin banderas opcionales, EnsureArgs.Invocation produce exactamente la cadena
 // de la orden de modo de siempre, byte a byte.
 func TestEnsureArgsInvocationWithoutOptionalFlagsKeepsTheCurrentString(t *testing.T) {
 	for _, tc := range []struct {
@@ -81,7 +81,7 @@ func promotionRepo(name string) RepoPlan {
 	return RepoPlan{Name: name, GitRoot: `C:\repos\` + name, IntegrationBranch: "develop", MainBranch: "master", Promotion: PromotionAsk}
 }
 
-// REQ-25.47: la pregunta de promoción nombra las ramas reales y lleva una invocación por respuesta.
+// RF-BRA-29: la pregunta de promoción nombra las ramas reales y lleva una invocación por respuesta.
 func TestPromotionDecisionRequiredNamesTheRealBranches(t *testing.T) {
 	args := EnsureArgs{Operation: "ensure", Change: "x", CWD: promotionTestCWD, Lane: LaneSDD, Mode: ModeWorktree}
 	refusal := PromotionDecisionRequired(args, promotionRepo("api"), false)

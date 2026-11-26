@@ -83,7 +83,7 @@ func TestHandedOffToRoleApply(t *testing.T) {
 	})
 
 	t.Run("un rol blocking rechazado cuenta como pendiente", func(t *testing.T) {
-		// Con qa blocking, un rechazo lo deja pendiente. (REQ-21.15: con qa deferred la
+		// Con qa blocking, un rechazo lo deja pendiente. (RF-RCL-03: con qa deferred la
 		// verificación global ya está abierta, véase TestHandedOffToIgnoresNonBlockingRoles.)
 		allBlocking := []multirole.RoleAssignment{
 			{Role: "web", GatePolicy: multirole.PolicyBlocking},
@@ -166,7 +166,7 @@ func notApprovedCheck(gate GateKey) func(GateLedger) error {
 // TestAppendGateCheckedRunsTheCheckUnderTheLock simula la salida 2 y la salida
 // 3 de la misma puerta pendiente a la vez: la comprobacion corre bajo el
 // cerrojo, asi que solo uno anexa su approved y el otro recibe el error del
-// check sin escribir nada (REQ-26.3, A-1).
+// check sin escribir nada (RF-GAT-09, A-1).
 func TestAppendGateCheckedRunsTheCheckUnderTheLock(t *testing.T) {
 	changeRoot := t.TempDir()
 	records := []GateRecord{

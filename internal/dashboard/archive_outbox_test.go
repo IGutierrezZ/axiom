@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-21.18 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
+// RF-ARC-03 (MODIFIED): la cola de integraciones `.integrations-outbox.yaml` de la raíz de una
 // carpeta archivada es estado local, no contenido del incremento: el listado de incrementos es el
 // mismo con y sin ella.
 func TestArchiveOutboxIsNotIncrementContent(t *testing.T) {

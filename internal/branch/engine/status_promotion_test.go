@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// `status` y la siguiente PR de la promoción de ramas (C-02-a, REQ-25.48, REQ-25.15, design D8): en
+// `status` y la siguiente PR de la promoción de ramas (C-02-a, RF-BRA-30, RF-BRA-16, design D8): en
 // modo `branch` la rama del cambio sale de `master` y su primera PR va a `develop`; tras confirmar
 // con git local que está fusionada en `develop`, `prTarget` pasa a `master` y `promotionStage` a
 // `main`. Con git real y sin red.
@@ -108,7 +108,7 @@ func TestStatusPromotionTargetsTheIntegrationBeforeTheMergeAndTheMainBranchAfter
 	})
 }
 
-// REQ-25.48: sin la capa del árbol equivalente (git anterior a la 2.38) un squash no se puede
+// RF-BRA-30: sin la capa del árbol equivalente (git anterior a la 2.38) un squash no se puede
 // comprobar: la etapa es `integration` y se avisa, en lugar de fingir certeza. La ascendencia sigue
 // valiendo sin esa capa.
 func TestStatusPromotionWithoutTheTreeLayerDoesNotPretendCertainty(t *testing.T) {
@@ -140,7 +140,7 @@ func TestStatusPromotionWithoutTheTreeLayerDoesNotPretendCertainty(t *testing.T)
 	})
 }
 
-// REQ-25.48: con `ask` pendiente (sin registro) `status` no calcula etapa y avisa de que el modo
+// RF-BRA-30: con `ask` pendiente (sin registro) `status` no calcula etapa y avisa de que el modo
 // está pendiente; en `release` la rama sale de la integración y no hay etapa.
 func TestStatusPromotionAskPendingWarnsWithoutAStageAndReleaseHasNone(t *testing.T) {
 	t.Run("ask pendiente avisa sin etapa", func(t *testing.T) {
@@ -171,7 +171,7 @@ func TestStatusPromotionAskPendingWarnsWithoutAStageAndReleaseHasNone(t *testing
 	})
 }
 
-// REQ-25.48 y REQ-25.14: desde un worktree enlazado `status` resuelve el registro y la etapa igual
+// RF-BRA-30 y RF-BRA-15: desde un worktree enlazado `status` resuelve el registro y la etapa igual
 // que desde el checkout principal.
 func TestStatusPromotionFromALinkedWorktreeSeesTheRecordedMode(t *testing.T) {
 	t.Parallel()

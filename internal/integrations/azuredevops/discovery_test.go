@@ -40,7 +40,7 @@ func discoverWith(t *testing.T, srv *adotest.Server, mutate func(*azuredevops.Op
 }
 
 // emailLike construye en tiempo de ejecución un valor con forma de correo: así ninguna fuente del
-// paquete contiene una dirección literal y el escaneo de REQ-45.9 sigue siendo significativo.
+// paquete contiene una dirección literal y el escaneo de RF-ADO-09 sigue siendo significativo.
 func emailLike() string { return "persona" + string(rune(64)) + "ejemplo.test" }
 
 func member(id, name string) map[string]any {
@@ -362,7 +362,7 @@ func TestDiscoveryOutputNeverContainsEmailAddresses(t *testing.T) {
 	}
 }
 
-// TestPackageSourcesContainNoEmailAddresses recorre el código y los fixtures del adaptador (REQ-45.9:
+// TestPackageSourcesContainNoEmailAddresses recorre el código y los fixtures del adaptador (RF-ADO-09:
 // el código no contiene direcciones de correo).
 func TestPackageSourcesContainNoEmailAddresses(t *testing.T) {
 	email := regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}`)

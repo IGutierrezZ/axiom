@@ -11,7 +11,7 @@ import (
 )
 
 // Las pruebas de la integración ODD con identificadores provisionales (REQ-30.2, REQ-30.3,
-// REQ-47.4, REQ-47.5, REQ-47.6). Todos los textos son inventados.
+// RF-RID-12, RF-RID-13, RF-RID-14). Todos los textos son inventados.
 
 const oddIDFacturacion = "# Especificación: facturacion\n\n## Requirements\n\n### Requirement: Alta de factura (REQ-31.1)\n\nEl sistema DEBE dar de alta una factura.\n"
 
@@ -187,7 +187,7 @@ func TestODDDocRewriteIsAtomicWithTheDocumentAsLastDestination(t *testing.T) {
 }
 
 // Dos ramas concurrentes con un ADDED provisional en la misma capacidad reciben números
-// distintos al integrarse una tras otra (REQ-30.3, REQ-47.5).
+// distintos al integrarse una tras otra (REQ-30.3, RF-RID-13).
 func TestODDDocRewriteConcurrentBranchesGetDistinctNumbers(t *testing.T) {
 	loc, docA := oddIDProject(t, oddIDDoc("prov:31:1", "Nota de abono", "Cuerpo de A."))
 	oddIDIntegrate(t, loc, docA)
@@ -284,7 +284,7 @@ func TestODDDocRewriteAChangedTitleWithTheSameBodyIsRecognisedAsIntegrated(t *te
 }
 
 // Un duplicado entre capacidades que la integración escribe se rechaza sin escribir
-// (REQ-47.5); uno ajeno solo se informa.
+// (RF-RID-13); uno ajeno solo se informa.
 func TestODDDocRewriteDuplicatesBlockOnlyWhenTheIntegrationWritesThem(t *testing.T) {
 	loc := applyProject(t, map[string]string{
 		"specs/facturacion/spec.md": oddIDFacturacion,

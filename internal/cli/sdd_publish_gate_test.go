@@ -15,8 +15,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de integración de `axiom sdd publish` encadenado tras `axiom sdd gate record` (REQ-27.8,
-// REQ-27.11, REQ-27.12, REQ-27.15; DD-11, DD-14): en proceso, con git real, un remoto desnudo
+// Pruebas de integración de `axiom sdd publish` encadenado tras `axiom sdd gate record` (RF-PUB-04,
+// RF-PUB-07, RF-GAT-15, RF-BRA-27; DD-11, DD-14): en proceso, con git real, un remoto desnudo
 // temporal local y sin red. `gate record` solo registra y calcula la orden; `publish` la ejecuta y
 // es el único que confirma y sube.
 
@@ -92,7 +92,7 @@ func recordForPublish(t *testing.T, ws workspacetest.Workspace, extra ...string)
 	return document
 }
 
-// REQ-27.12 y REQ-27.11: la salida 2 registra con `gate record` y la invocación que devuelve publica
+// RF-GAT-15 y RF-PUB-07: la salida 2 registra con `gate record` y la invocación que devuelve publica
 // `gates.yaml` y los documentos de la carpeta del cambio, sin subir el código que hay en el árbol.
 func TestSDDPublishGateChainsAfterHandOffAndPublishesOnlyDocuments(t *testing.T) {
 	ws, bare := publishGateProject(t)
@@ -136,7 +136,7 @@ func TestSDDPublishGateChainsAfterHandOffAndPublishesOnlyDocuments(t *testing.T)
 	}
 }
 
-// REQ-27.8 y REQ-26.4: un role-apply con un commit de código sin subir se registra igualmente (la
+// RF-PUB-04 y RF-GAT-10: un role-apply con un commit de código sin subir se registra igualmente (la
 // cesión no inspecciona el trabajo del rol) y `publish` informa `code_commits_unpublished` sin
 // deshacer la aprobación: el commit de documentación se conserva en local.
 func TestSDDPublishGateRefusesUnpublishedCodeAndKeepsTheRecordedApproval(t *testing.T) {
@@ -172,7 +172,7 @@ func TestSDDPublishGateRefusesUnpublishedCodeAndKeepsTheRecordedApproval(t *test
 	}
 }
 
-// REQ-27.15: quien sigue hace `git fetch origin` en otra copia y `axiom branch ensure` adopta la rama
+// RF-BRA-27: quien sigue hace `git fetch origin` en otra copia y `axiom branch ensure` adopta la rama
 // publicada (`createdFrom: remote`), sin PR fusionada.
 func TestSDDPublishGateWhoFollowsAdoptsThePublishedBranchWithEnsure(t *testing.T) {
 	ws, bare := publishGateProject(t)
@@ -225,7 +225,7 @@ func containsCreatedFromRemote(value any) bool {
 	return false
 }
 
-// REQ-27.11: ni `gate record` ni los verbos de `axiom branch` ejecutan `push` o `commit`: solo
+// RF-PUB-07: ni `gate record` ni los verbos de `axiom branch` ejecutan `push` o `commit`: solo
 // `publish` lo hace. Observador dinámico de la cadena completa.
 func TestSDDPublishGateOnlyPublishRunsCommitAndPush(t *testing.T) {
 	ws, _ := publishGateProject(t)

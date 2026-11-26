@@ -46,7 +46,7 @@ func nominalPRQuestion() string {
 	return testSDDPreflightQuestion("PR strategy", testSDDPreflightNominalPR, "Ask me", "Single PR", "Auto")
 }
 
-// TestSDDPreflightHookRequiredGroupsByTopology pins REQ-28.15 and REQ-28.22:
+// TestSDDPreflightHookRequiredGroupsByTopology pins RF-PRE-07 and RF-PRE-14:
 // the groups the hook requires come from the topology of the session's
 // directory, and an unresolvable directory never asks fewer groups.
 func TestSDDPreflightHookRequiredGroupsByTopology(t *testing.T) {
@@ -159,7 +159,7 @@ func TestSDDPreflightHookAcceptsLegacyNumberedMarkersAndIgnoresArtifacts(t *test
 	}
 }
 
-// REQ-28.15 and REQ-28.17: multirepo asks nothing, so no transcript is needed and
+// RF-PRE-07 and RF-PRE-09: multirepo asks nothing, so no transcript is needed and
 // the derived block carries the fixed values.
 func TestSDDPreflightHookMultirepoAsksNothing(t *testing.T) {
 	canonical := workspacetest.Canonical(t)
@@ -182,7 +182,7 @@ func TestSDDPreflightHookMultirepoAsksNothing(t *testing.T) {
 	}
 }
 
-// REQ-28.16: a legacy pr-strategy answer in a multirepo transcript is tolerated
+// RF-PRE-08: a legacy pr-strategy answer in a multirepo transcript is tolerated
 // and ignored, whatever was answered.
 func TestSDDPreflightHookMultirepoIgnoresAnsweredPRStrategy(t *testing.T) {
 	canonical := workspacetest.Canonical(t)
@@ -194,7 +194,7 @@ func TestSDDPreflightHookMultirepoIgnoresAnsweredPRStrategy(t *testing.T) {
 	}
 }
 
-// REQ-28.16: a monorepo-embedded transcript that still answers the retired
+// RF-PRE-08: a monorepo-embedded transcript that still answers the retired
 // pr-strategy group (nominal or numbered marker, any label) is accepted and the
 // block says single-pr.
 func TestSDDPreflightHookIgnoresLegacyPRStrategyAnswers(t *testing.T) {
@@ -254,7 +254,7 @@ func TestSDDPreflightHookIgnoresUnknownNamedGroup(t *testing.T) {
 	}
 }
 
-// REQ-28.14: the interaction of the independent-review preference carries no
+// RF-PRE-06: the interaction of the independent-review preference carries no
 // preflight prefix, so it is never recognized as a preflight and cannot
 // authorize a dispatch on its own.
 func TestSDDPreflightHookIgnoresPreferenceInteractionAlone(t *testing.T) {
@@ -294,7 +294,7 @@ func TestSDDPreflightHookZeroRequiredGroupsKeepsChildAndModelDenials(t *testing.
 	denyCase(t, forged, "model-authored preflight text")
 }
 
-// REQ-28.21: the two generations of the OpenCode plugin declare the same group
+// RF-PRE-13: the two generations of the OpenCode plugin declare the same group
 // and block-field tables as the hook: same groups, legacy numbers, topologies,
 // labels, tokens and block lines. A change to one table that misses the other
 // fails here instead of governing Claude Code and OpenCode differently.

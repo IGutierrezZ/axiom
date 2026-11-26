@@ -48,7 +48,7 @@ func wantPreviousBinaryToleratesTheBlock(t *testing.T, block string) {
 	}
 }
 
-// REQ-25.26 (escenario «Sin bloque rigen los valores por defecto»): sin `git:`
+// RF-TOP-09 (escenario «Sin bloque rigen los valores por defecto»): sin `git:`
 // no hay declaración, pero la política resuelta es `main` y `feat`.
 func TestGitAbsentBlockAppliesTheDefaults(t *testing.T) {
 	cfg, baseErr, declarations := parseLayered([]byte(declarationsBase))
@@ -67,7 +67,7 @@ func TestGitAbsentBlockAppliesTheDefaults(t *testing.T) {
 	wantGit(t, viaParse, "main", "feat")
 }
 
-// REQ-25.26 (escenario «Bloque parcial completa con los valores por defecto»):
+// RF-TOP-09 (escenario «Bloque parcial completa con los valores por defecto»):
 // la declaración conserva lo escrito y la política resuelta completa el resto.
 func TestGitPartialBlockIsCompletedWithTheDefaults(t *testing.T) {
 	tests := []struct {
@@ -98,7 +98,7 @@ func TestGitPartialBlockIsCompletedWithTheDefaults(t *testing.T) {
 	}
 }
 
-// REQ-25.26 (escenario «Valor inválido»): un valor inválido es un error de carga
+// RF-TOP-09 (escenario «Valor inválido»): un valor inválido es un error de carga
 // que nombra la clave, el valor y la regla incumplida.
 func TestGitInvalidValuesAreLoadErrorsNamingTheKeyAndTheValue(t *testing.T) {
 	tests := []struct {
@@ -139,7 +139,7 @@ func TestGitInvalidValuesAreLoadErrorsNamingTheKeyAndTheValue(t *testing.T) {
 	}
 }
 
-// REQ-25.26 (escenario «Clave desconocida en `git:`»): el modo de trabajo y la
+// RF-TOP-09 (escenario «Clave desconocida en `git:`»): el modo de trabajo y la
 // raíz de los worktrees viven en el hub personal, no en axiom.yaml.
 func TestGitUnknownKeysAreRejected(t *testing.T) {
 	_, _, declarations := parseDeclarations(t, "git:\n  worktree_mode: worktree\n")
@@ -215,7 +215,7 @@ func TestGitErrorsShareTheLoadWithTheOtherBlocksAndTheBase(t *testing.T) {
 	})
 }
 
-// REQ-25.26 (compatibilidad con el binario anterior): el binario que no conoce
+// RF-TOP-09 (compatibilidad con el binario anterior): el binario que no conoce
 // `git:` decodifica la base ignorando esa clave, aunque el bloque sea inválido.
 func TestGitBlockIsToleratedByThePreviousBinary(t *testing.T) {
 	for name, block := range map[string]string{
@@ -241,7 +241,7 @@ func TestGitBlockIsToleratedByThePreviousBinary(t *testing.T) {
 	}
 }
 
-// REQ-25.26 y D-03: `Locate` nunca rechaza por un `git:` inválido; solo fallan
+// RF-TOP-09 y D-03: `Locate` nunca rechaza por un `git:` inválido; solo fallan
 // la carga (`LoadConfig`, `ParseConfig`) y `workspace validate`.
 func TestLocateIsNeverRejectedByAnInvalidGitBlock(t *testing.T) {
 	const invalidGit = "git:\n  branch_prefix: \"inc//\"\n"
@@ -292,7 +292,7 @@ func TestLocateIsNeverRejectedByAnInvalidGitBlock(t *testing.T) {
 
 // LoadConfig es la carga de `workspace validate`: un `git:` inválido la hace
 // fallar nombrando la clave y el valor, y uno válido la completa con los
-// defectos (REQ-1.2 y REQ-25.26).
+// defectos (RF-TOP-02 y RF-TOP-09).
 func TestLoadConfigAppliesAndValidatesTheGitBlock(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "axiom.yaml")
@@ -341,7 +341,7 @@ func uncommentedExampleBlock(t *testing.T, key string) string {
 	return strings.Join(block, "\n") + "\n"
 }
 
-// REQ-25.26: el bloque `git:` documentado en axiom.example.yaml, una vez
+// RF-TOP-09: el bloque `git:` documentado en axiom.example.yaml, una vez
 // descomentado, es válido (la plantilla no puede desviarse del esquema).
 func TestExampleGitBlockIsValidOnceUncommented(t *testing.T) {
 	block := uncommentedExampleBlock(t, "git")
@@ -371,8 +371,8 @@ func wantRepositories(t *testing.T, got []RepositoryPolicy, want ...RepositoryPo
 	}
 }
 
-// REQ-2.1 (escenario «Los bloques opcionales ausentes no alteran la validación») y
-// REQ-25.27 (escenario «Sin bloque `repositories:` todos heredan»): sin el bloque
+// RF-TOP-03 (escenario «Los bloques opcionales ausentes no alteran la validación») y
+// RF-TOP-10 (escenario «Sin bloque `repositories:` todos heredan»): sin el bloque
 // no hay entradas ni error, y la política de cualquier repositorio es la de `git:`.
 func TestRepositoriesAbsentBlockLeavesThemEmptyAndEveryRepositoryInherits(t *testing.T) {
 	for name, blocks := range map[string]string{
@@ -402,7 +402,7 @@ func TestRepositoriesAbsentBlockLeavesThemEmptyAndEveryRepositoryInherits(t *tes
 	wantGit(t, cfg, "main", "inc") // la política que heredan todos los repositorios
 }
 
-// REQ-25.27 (escenario «Entrada con rama de integración propia») y S-13: una
+// RF-TOP-10 (escenario «Entrada con rama de integración propia») y S-13: una
 // entrada puede llevar su `integration_branch` y su `branch_prefix`; lo que no
 // escribe queda vacío y se hereda del bloque `git:`.
 func TestRepositoriesEntriesCarryTheirOwnBranchSettings(t *testing.T) {
@@ -464,7 +464,7 @@ func TestRepositoriesEntriesCarryTheirOwnBranchSettings(t *testing.T) {
 	})
 }
 
-// REQ-25.27: `path` absoluta, con unidad de disco o que sale de la carpeta maestra
+// RF-TOP-10: `path` absoluta, con unidad de disco o que sale de la carpeta maestra
 // se rechaza en la carga, nombrando la entrada, la ruta y la regla incumplida.
 func TestRepositoriesInvalidPathsAreLoadErrors(t *testing.T) {
 	tests := []struct {
@@ -502,7 +502,7 @@ func TestRepositoriesInvalidPathsAreLoadErrors(t *testing.T) {
 	}
 }
 
-// REQ-25.27: los valores propios de una entrada siguen las reglas de `git:`
+// RF-TOP-10: los valores propios de una entrada siguen las reglas de `git:`
 // (S-13) y el error nombra la entrada, la clave y el valor.
 func TestRepositoriesInvalidBranchValuesNameTheEntryTheKeyAndTheValue(t *testing.T) {
 	tests := []struct {
@@ -532,7 +532,7 @@ func TestRepositoriesInvalidBranchValuesNameTheEntryTheKeyAndTheValue(t *testing
 	}
 }
 
-// REQ-2.1 (escenario «Clave desconocida dentro de un bloque nuevo») y REQ-25.27:
+// RF-TOP-03 (escenario «Clave desconocida dentro de un bloque nuevo») y RF-TOP-10:
 // una clave desconocida dentro de una entrada es un error que la nombra.
 func TestRepositoriesUnknownKeysAreRejected(t *testing.T) {
 	_, _, declarations := parseDeclarations(t, "repositories:\n  - path: a\n    worktree_mode: worktree\n")
@@ -545,7 +545,7 @@ func TestRepositoriesUnknownKeysAreRejected(t *testing.T) {
 	}
 }
 
-// REQ-25.27: dos entradas que declaran la misma ruta se rechazan nombrando las
+// RF-TOP-10: dos entradas que declaran la misma ruta se rechazan nombrando las
 // dos, aunque la escriban de forma distinta; que dos rutas distintas resuelvan a
 // la misma raíz git lo comprueba `workspace validate` en disco.
 func TestRepositoriesDuplicatedPathsAreRejectedNamingBothEntries(t *testing.T) {
@@ -676,7 +676,7 @@ func TestRepositoriesErrorsShareTheLoadWithTheOtherBlocksAndTheBase(t *testing.T
 	})
 }
 
-// REQ-2.1 (escenario «Una versión anterior del binario tolera los bloques
+// RF-TOP-03 (escenario «Una versión anterior del binario tolera los bloques
 // nuevos»): el binario que no conoce `repositories:` decodifica la base ignorando
 // esa clave de primer nivel, aunque el bloque sea inválido.
 func TestRepositoriesBlockIsToleratedByThePreviousBinary(t *testing.T) {
@@ -704,7 +704,7 @@ func TestRepositoriesBlockIsToleratedByThePreviousBinary(t *testing.T) {
 	}
 }
 
-// REQ-25.27 y D-03: `Locate` nunca rechaza por un `repositories:` inválido; solo
+// RF-TOP-10 y D-03: `Locate` nunca rechaza por un `repositories:` inválido; solo
 // fallan la carga (`LoadConfig`, `ParseConfig`) y `workspace validate`.
 func TestLocateIsNeverRejectedByAnInvalidRepositoriesBlock(t *testing.T) {
 	const invalidRepositories = "repositories:\n  - path: /opt/repo\n"
@@ -754,7 +754,7 @@ func TestLocateIsNeverRejectedByAnInvalidRepositoriesBlock(t *testing.T) {
 }
 
 // LoadConfig es la carga de `workspace validate`: un `repositories:` inválido la
-// hace fallar nombrando la entrada y la ruta, y uno válido se carga (REQ-1.2).
+// hace fallar nombrando la entrada y la ruta, y uno válido se carga (RF-TOP-02).
 func TestLoadConfigAppliesAndValidatesTheRepositoriesBlock(t *testing.T) {
 	dir := t.TempDir()
 	file := filepath.Join(dir, "axiom.yaml")
@@ -775,7 +775,7 @@ func TestLoadConfigAppliesAndValidatesTheRepositoriesBlock(t *testing.T) {
 	wantErrorContains(t, err, "repositories[0].path", "'../fuera'", "sale de la carpeta maestra")
 }
 
-// REQ-25.27: el bloque `repositories:` documentado en axiom.example.yaml, una vez
+// RF-TOP-10: el bloque `repositories:` documentado en axiom.example.yaml, una vez
 // descomentado, es válido (la plantilla no puede desviarse del esquema).
 func TestExampleRepositoriesBlockIsValidOnceUncommented(t *testing.T) {
 	block := uncommentedExampleBlock(t, "repositories")
@@ -862,7 +862,7 @@ func wantOneMessage(t *testing.T, messages []string, wants ...string) {
 	}
 }
 
-// REQ-25.27: sin entradas, o sin configuración, no hay nada que comprobar en disco.
+// RF-TOP-10: sin entradas, o sin configuración, no hay nada que comprobar en disco.
 func TestValidateRepositoryPoliciesWithoutEntriesChecksNothing(t *testing.T) {
 	for name, cfg := range map[string]*WorkspaceConfig{
 		"configuración nula": nil,
@@ -878,7 +878,7 @@ func TestValidateRepositoryPoliciesWithoutEntriesChecksNothing(t *testing.T) {
 	}
 }
 
-// REQ-25.27 (escenarios «Dos entradas de la misma raíz git» y «Ruta que no es un
+// RF-TOP-10 (escenarios «Dos entradas de la misma raíz git» y «Ruta que no es un
 // repositorio git solo avisa»): cada entrada se comprueba en disco; repositorios
 // reales y distintos, o una subcarpeta de uno de ellos, no dan errores ni avisos.
 func TestValidateRepositoryPoliciesAcceptsRealRepositories(t *testing.T) {
@@ -905,7 +905,7 @@ func TestValidateRepositoryPoliciesAcceptsTheMasterFolderItself(t *testing.T) {
 	}
 }
 
-// REQ-25.27 (escenario «Dos entradas de la misma raíz git»): dos rutas dentro de
+// RF-TOP-10 (escenario «Dos entradas de la misma raíz git»): dos rutas dentro de
 // un mismo repositorio son un error que nombra ambas y la raíz compartida.
 func TestValidateRepositoryPoliciesRejectsTwoEntriesOfTheSameGitRoot(t *testing.T) {
 	requireRealGit(t)
@@ -974,7 +974,7 @@ func TestValidateRepositoryPoliciesComparesGitRootsByIdentity(t *testing.T) {
 	})
 }
 
-// REQ-25.27 (escenario «Ruta inexistente o fuera de la carpeta maestra»): una ruta
+// RF-TOP-10 (escenario «Ruta inexistente o fuera de la carpeta maestra»): una ruta
 // que no existe, o que no es un directorio, es un error por entrada nombrando la
 // ruta y la regla incumplida.
 func TestValidateRepositoryPoliciesReportsMissingAndNonDirectoryPaths(t *testing.T) {
@@ -990,7 +990,7 @@ func TestValidateRepositoryPoliciesReportsMissingAndNonDirectoryPaths(t *testing
 	wantOneMessage(t, errs, "'fichero.txt'", "repositories[1].path", "no es un directorio")
 }
 
-// REQ-25.27 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
+// RF-TOP-10 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
 // que existe pero no pertenece a ningún repositorio es una advertencia, nunca un
 // error, de modo que el resultado sigue siendo conforme.
 func TestValidateRepositoryPoliciesWarnsAboutAPathThatIsNotAGitRepository(t *testing.T) {

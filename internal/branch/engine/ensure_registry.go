@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// El registro local en `ensure` (design D-05 fases 5 y 6, D-07, REQ-25.14): `ensure` lo
+// El registro local en `ensure` (design D-05 fases 5 y 6, D-07, RF-BRA-15): `ensure` lo
 // compone siempre desde el plan y el estado final de git, y `registry.Store.Save` solo
 // escribe si cambian sus bytes. Por eso no hay un camino de «reconstrucción» aparte: un
 // registro que falta, o que se quedó corto porque el sellado añadió ramas, se compone con

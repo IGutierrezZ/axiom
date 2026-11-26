@@ -16,7 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de la capacidad change-actor-identity (REQ-42.1 a REQ-42.6 y REQ-42.9): `gate record`
+// Pruebas de la capacidad change-actor-identity (RF-ACT-01 a RF-ACT-06 y RF-ACT-09): `gate record`
 // registra la identidad git como `actor` y `kickoff seal` como `sealed_by`. El TestMain fija un
 // resolvedor determinista; estas pruebas lo sustituyen localmente.
 
@@ -118,7 +118,7 @@ func sealedBy(t *testing.T, changeRoot string) string {
 	return sealed.SealedBy
 }
 
-// partialIdentities son las tres identidades incompletas de REQ-42.5.
+// partialIdentities son las tres identidades incompletas de RF-ACT-05.
 var partialIdentities = []struct {
 	name     string
 	identity gitidentity.Identity

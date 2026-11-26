@@ -41,7 +41,7 @@ func TestRequirementKeys(t *testing.T) {
 	}
 }
 
-// REQ-29.3: un ADDED puede llevar un provisional; fuera de ADDED y combinado con otro
+// RF-ISO-03: un ADDED puede llevar un provisional; fuera de ADDED y combinado con otro
 // identificador bloquea; el provisional es único en el cambio.
 func TestCheckRequirementIDsProvisional(t *testing.T) {
 	rfDom, err := reqid.Parse("RF-<DOM>-<NN>")

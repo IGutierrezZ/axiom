@@ -10,10 +10,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Snapshot calcula la instantánea de política git de un cambio (REQ-25.36, design D-12 y §4.5)
+// Snapshot calcula la instantánea de política git de un cambio (RF-KOF-06, design D-12 y §4.5)
 // que `kickoff seal` escribe una sola vez junto al resto de la configuración sellada: la
 // integración y el prefijo del workspace, las excepciones por cambio que ya registró `ensure`
-// (REQ-25.12) y, por repositorio, su ruta relativa a la carpeta maestra, su nombre, su papel, su
+// (RF-BRA-12) y, por repositorio, su ruta relativa a la carpeta maestra, su nombre, su papel, su
 // integración, su base (un nombre de rama, nunca un SHA) y los nombres de rama derivados del
 // cambio: la del cambio, las de rol de los repositorios que tocan dos o más de los roles que se
 // sellan y, en el repositorio del planning home de un repositorio con rama de cambio, la de
@@ -84,7 +84,7 @@ func (e *Engine) Snapshot(ctx context.Context, loc workspace.Location, change st
 }
 
 // archiveBranchOf es el nombre de la rama de archivado del repositorio del planning home, o la
-// cadena vacía donde no existe (un multirepo, donde el archive se hace in situ, REQ-25.5). Es el
+// cadena vacía donde no existe (un multirepo, donde el archive se hace in situ, RF-BRA-05). Es el
 // plan de archivado de `ensure --archive`, que comparte con `status` (archivePlanInput): el nombre
 // deriva de la rama del cambio registrada o, sin ella, de la política.
 func archiveBranchOf(facts changeFacts, plan branch.ChangePlan) (string, *branch.Refusal) {

@@ -13,7 +13,7 @@ import (
 )
 
 // treeSnapshot lista, de forma ordenada, todo lo que hay bajo root. Sirve para
-// comprobar que la resolución no escribe nada (REQ-24.1).
+// comprobar que la resolución no escribe nada (RF-PLH-01).
 func treeSnapshot(t *testing.T, root string) []string {
 	t.Helper()
 	var entries []string
@@ -457,9 +457,9 @@ func retiredTopologyConfig(specsRepository string) string {
 	return "workspace: {name: x, topology: monorepo-decoupled, specs_repository: " + specsRepository + "}\nroles: {a: {name: a, repositories: [{path: .}]}}\n"
 }
 
-// workspace-topology REQ-25.25 (escenario «Un puntero hacia una configuración con
+// workspace-topology RF-TOP-08 (escenario «Un puntero hacia una configuración con
 // la topología retirada rechaza la resolución») y planning-home-resolution
-// REQ-24.7 (caso 2): la configuración base no se carga, así que el planning home
+// RF-PLH-07 (caso 2): la configuración base no se carga, así que el planning home
 // es desconocido y no hay resolución que devolver.
 func TestLocateRejectsAPointerToARetiredTopology(t *testing.T) {
 	ws := workspacetest.Canonical(t)
@@ -477,9 +477,9 @@ func TestLocateRejectsAPointerToARetiredTopology(t *testing.T) {
 	}
 }
 
-// REQ-24.7 (caso 3) y REQ-25.25: un axiom.yaml directo con la topología retirada
+// RF-PLH-07 (caso 3) y RF-TOP-08: un axiom.yaml directo con la topología retirada
 // no se rechaza. Conserva la resolución embebida y avisa, sin darle la semántica
-// de repositorio de especificaciones separado que tenía antes (REQ-24.3).
+// de repositorio de especificaciones separado que tenía antes (RF-PLH-03).
 func TestLocateKeepsTheEmbeddedResolutionForADirectConfigWithARetiredTopology(t *testing.T) {
 	master := t.TempDir()
 	workspacetest.WriteFile(t, filepath.Join(master, "axiom.yaml"), retiredTopologyConfig("especificacion"))
@@ -502,7 +502,7 @@ func TestLocateKeepsTheEmbeddedResolutionForADirectConfigWithARetiredTopology(t 
 	}
 }
 
-// REQ-24.3 y REQ-24.5: el enraizado por repositorio de especificaciones y la
+// RF-PLH-03 y RF-PLH-05: el enraizado por repositorio de especificaciones y la
 // deducción de la carpeta maestra por sufijo rigen solo para multirepo. Un valor
 // retirado que llegara a una configuración construida a mano tampoco los recibe.
 func TestOnlyMultirepoSeparatesTheSpecsRepository(t *testing.T) {
@@ -926,7 +926,7 @@ func linkWorktreeOfCheckout(t *testing.T, main, worktree, name string) {
 	linkWorktree(t, filepath.Join(main, ".git"), worktree, name)
 }
 
-// REQ-25.28 (escenario «Un worktree de un monorepo embebido resuelve su propio
+// RF-PLH-13 (escenario «Un worktree de un monorepo embebido resuelve su propio
 // planning home»): con marcador propio dentro del worktree, gana el más cercano y
 // el planning home es el del worktree, no el del checkout principal.
 func TestLocateALinkedWorktreeOfAnEmbeddedMonorepoResolvesItsOwnPlanningHome(t *testing.T) {
@@ -960,7 +960,7 @@ func embeddedConfigOf(t *testing.T, root string) string {
 	return string(data)
 }
 
-// REQ-25.28 (escenario «Un worktree de un repositorio de código de un multirepo
+// RF-PLH-13 (escenario «Un worktree de un repositorio de código de un multirepo
 // resuelve el planning home de la carpeta maestra»): sin marcador en el worktree
 // se resuelve como desde el checkout principal, y la ascensión no sale del
 // worktree: un marcador en el directorio que lo contiene no cuenta.
@@ -1000,7 +1000,7 @@ func TestLocateALinkedWorktreeWithoutMarkerResolvesFromTheMainCheckout(t *testin
 	}
 }
 
-// REQ-25.28 (escenario «Sin marcador ni siquiera en el checkout principal»).
+// RF-PLH-13 (escenario «Sin marcador ni siquiera en el checkout principal»).
 func TestLocateALinkedWorktreeWithoutMarkerAnywhereRootsAtTheStart(t *testing.T) {
 	main := evalTempDir(t)
 	worktree := filepath.Join(evalTempDir(t), "x")
@@ -1057,7 +1057,7 @@ func TestLocateALinkedWorktreeNeverMovesTheMasterFolder(t *testing.T) {
 	}
 }
 
-// REQ-25.28: un checkout principal, un directorio sin git y LocateAt no cambian.
+// RF-PLH-13: un checkout principal, un directorio sin git y LocateAt no cambian.
 func TestLocateKeepsItsBehaviourOutsideLinkedWorktrees(t *testing.T) {
 	t.Run("checkout principal con marcador", func(t *testing.T) {
 		ws := workspacetest.Embedded(t, "openspec")

@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 )
 
-// `axiom branch done` (INC-25, S6, REQ-25.16, REQ-25.17, design D-09): elimina el worktree y la
+// `axiom branch done` (INC-25, S6, RF-BRA-17, RF-BRA-18, design D-09): elimina el worktree y la
 // rama local de cada rama de un cambio ya fusionado. El comportamiento vive en el motor
 // (internal/branch/engine); aquí solo están las banderas, la ayuda y la salida.
 

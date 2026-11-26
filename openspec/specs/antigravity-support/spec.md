@@ -4,7 +4,7 @@ Defines the required behavior for supporting Google Antigravity through the publ
 
 ## Requirements
 
-### Requirement: Unified public agent ID
+### Requirement: Unified public agent ID (RF-AGV-01)
 
 The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separate public `antigravity-cli` agent option.
 (Previously: the scenario also checked that the option was not listed in the TUI.)
@@ -16,7 +16,7 @@ The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separa
 - THEN `antigravity` is accepted
 - AND the separate `antigravity-cli` option is not listed in the catalog.
 
-### Requirement: Antigravity writes to the supported config surface
+### Requirement: Antigravity writes to the supported config surface (RF-AGV-02)
 
 The system MUST write Antigravity settings, MCP config, plugins, and skills under `~/.gemini/antigravity-cli/`.
 
@@ -28,7 +28,7 @@ The system MUST write Antigravity settings, MCP config, plugins, and skills unde
 - AND MCP config is merged at `~/.gemini/antigravity-cli/mcp_config.json`
 - AND skills are installed under `~/.gemini/antigravity-cli/skills/`.
 
-### Requirement: Antigravity uses dynamic subagents
+### Requirement: Antigravity uses dynamic subagents (RF-AGV-03)
 
 The Antigravity orchestrator MUST use runtime dynamic subagent tools rather than static subagent files.
 
@@ -39,7 +39,7 @@ The Antigravity orchestrator MUST use runtime dynamic subagent tools rather than
 - THEN the prompt instructs Antigravity to call `define_subagent`
 - AND then call `invoke_subagent`.
 
-### Requirement: Antigravity shares the Gemini global prompt surface
+### Requirement: Antigravity shares the Gemini global prompt surface (RF-AGV-04)
 
 The system MUST write global prompt/persona content for Antigravity to `~/.gemini/GEMINI.md`.
 

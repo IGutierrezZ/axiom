@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `ensure` en un multirepo (REQ-25.5, REQ-25.6, REQ-25.11, design D-04 y D-05): el repositorio de
+// `ensure` en un multirepo (RF-BRA-05, RF-BRA-06, RF-BRA-11, design D-04 y D-05): el repositorio de
 // specs se trabaja in situ (nunca recibe ramas, worktrees ni checkout) y cada repositorio de
 // código recibe `<prefijo>/<cambio>` desde su propia integración. Con git real, entorno aislado y
 // sin red. Salvo la prueba de las rutas del JSON, usan `in_place`, que no crea worktrees.
@@ -46,8 +46,8 @@ func wantAbsolute(t *testing.T, what, path string) {
 	}
 }
 
-// REQ-25.5 (escenario «El repositorio de specs de un multirepo no recibe ramas ni worktrees»),
-// REQ-25.11 y el JSON con rutas absolutas: el de specs conserva `main` desplegada sin ramas ni
+// RF-BRA-05 (escenario «El repositorio de specs de un multirepo no recibe ramas ni worktrees»),
+// RF-BRA-11 y el JSON con rutas absolutas: el de specs conserva `main` desplegada sin ramas ni
 // worktrees y el resultado lo lista in situ con su raíz git absoluta y su integración; el de
 // código crea su worktree en la raíz de worktrees, fuera de la carpeta maestra; el registro
 // guarda ambos repositorios.
@@ -102,7 +102,7 @@ func TestEnsureMultirepoWorksTheSpecsRepositoryInPlaceAndListsEveryRepositoryWit
 	wantAbsolute(t, "planningRepo del registro", record.PlanningRepo)
 }
 
-// REQ-25.5 (escenarios «Repositorio de specs fuera de su rama de integración» y «Repositorio de
+// RF-BRA-05 (escenarios «Repositorio de specs fuera de su rama de integración» y «Repositorio de
 // specs en una rama de rol del cambio»): `ensure` no hace checkout en el repositorio de specs;
 // fuera de su integración (una rama ajena, una rama de rol del cambio o HEAD desacoplado) rechaza
 // con `specs_repo_not_on_integration`, nombra la rama actual y la integración y ofrece una
@@ -175,7 +175,7 @@ func TestEnsureMultirepoRefusesASpecsRepositoryOutsideItsIntegrationBranch(t *te
 	}
 }
 
-// REQ-25.5 (repositorios de código) y REQ-25.3: cada repositorio de código con un rol recibe
+// RF-BRA-05 (repositorios de código) y RF-BRA-03: cada repositorio de código con un rol recibe
 // `<prefijo>/<cambio>` desde su propia integración, con su propia política (`repositories:`); el
 // de specs no recibe nada y su suciedad no cuenta en `in_place` (el kickoff sellado queda sin
 // seguimiento en él), mientras que la de un repositorio de código sí: se comprueba antes de
@@ -241,7 +241,7 @@ func TestEnsureMultirepoGivesEveryCodeRepositoryTheChangeBranchFromItsOwnIntegra
 	})
 }
 
-// REQ-25.6 (escenario «Dos roles sobre rutas del mismo repositorio se deduplican») y REQ-25.4:
+// RF-BRA-06 (escenario «Dos roles sobre rutas del mismo repositorio se deduplican») y RF-BRA-04:
 // dos roles sobre rutas del mismo repositorio de código dan un único repositorio con la rama de
 // seguimiento y una rama por rol; solo la de seguimiento se despliega en `in_place` (R26).
 func TestEnsureMultirepoSharedRepositoryOfTwoRolesGetsTheTrackingAndTheRoleBranches(t *testing.T) {
@@ -278,7 +278,7 @@ func TestEnsureMultirepoSharedRepositoryOfTwoRolesGetsTheTrackingAndTheRoleBranc
 	}
 }
 
-// REQ-25.12 (`--repo` acota los repositorios del plan SDD) y REQ-25.6: con `--repo` solo entran al
+// RF-BRA-12 (`--repo` acota los repositorios del plan SDD) y RF-BRA-06: con `--repo` solo entran al
 // plan los repositorios de código indicados; uno que no pertenece al plan se avisa y se ignora, y
 // una ruta que no existe o no es un repositorio git se omite con `not_a_git_repository`.
 func TestEnsureMultirepoRepoFlagNarrowsTheCodeRepositoriesOfTheSDDPlan(t *testing.T) {

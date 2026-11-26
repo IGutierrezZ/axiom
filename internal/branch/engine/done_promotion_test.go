@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// `done` y la promoción de ramas (C-02-a, REQ-25.49, REQ-25.16, REQ-25.17, REQ-25.50, design D7): en
+// `done` y la promoción de ramas (C-02-a, RF-BRA-31, RF-BRA-17, RF-BRA-18, RF-BRA-32, design D7): en
 // modo `branch` la rama del cambio solo se elimina cuando la tiene `master`, el destino final; la
 // evidencia `pr_merged` acredita la PR hacia `develop` y nunca la segunda. En `release` y en las
 // demás ramas el destino sigue siendo la integración. Con git real y sin red.
@@ -79,7 +79,7 @@ func TestDonePromotionBranchModeConfirmsAgainstTheMainBranch(t *testing.T) {
 	})
 }
 
-// REQ-25.49: `pr_merged` verificada en `gates.yaml` acredita la PR hacia la integración, no la
+// RF-BRA-31: `pr_merged` verificada en `gates.yaml` acredita la PR hacia la integración, no la
 // segunda: en modo `branch` no confirma sin la fusión en `master`; `--force` deja la rama por
 // `forced` con su punta.
 func TestDonePromotionBranchModeNeverConfirmsByPRMergedAndForceStillWorks(t *testing.T) {
@@ -106,7 +106,7 @@ func TestDonePromotionBranchModeNeverConfirmsByPRMergedAndForceStillWorks(t *tes
 	}
 }
 
-// REQ-25.49: en `release` el destino sigue siendo la integración y la capa `pr_merged` sigue
+// RF-BRA-31: en `release` el destino sigue siendo la integración y la capa `pr_merged` sigue
 // valiendo.
 func TestDonePromotionReleaseModeConfirmsAgainstTheIntegration(t *testing.T) {
 	t.Run("fusionada en develop se elimina", func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestDonePromotionReleaseModeConfirmsAgainstTheIntegration(t *testing.T) {
 	})
 }
 
-// REQ-25.49 y REQ-25.50: la rama de archivado sigue confirmándose contra la integración, también en
+// RF-BRA-31 y RF-BRA-32: la rama de archivado sigue confirmándose contra la integración, también en
 // modo `branch`, y sin la capa `pr_merged`.
 func TestDonePromotionArchiveBranchStillConfirmsAgainstTheIntegration(t *testing.T) {
 	repo, _, _ := twoStageProject(t, "")
@@ -152,7 +152,7 @@ func TestDonePromotionArchiveBranchStillConfirmsAgainstTheIntegration(t *testing
 	}
 }
 
-// REQ-25.49: con el registro borrado y el modo `ask` sin respuesta no se sabe cómo se promociona:
+// RF-BRA-31: con el registro borrado y el modo `ask` sin respuesta no se sabe cómo se promociona:
 // se toma el destino más exigente, `master`, y la rama se conserva aunque esté en `develop`.
 func TestDonePromotionAskPendingWithoutRecordKeepsTheBranchUntilMaster(t *testing.T) {
 	repo, _, _ := twoStageProject(t, "  promotion: ask\n")
@@ -169,7 +169,7 @@ func TestDonePromotionAskPendingWithoutRecordKeepsTheBranchUntilMaster(t *testin
 	wantOutcome(t, branchByName(t, onlyRepository(t, removed), "feat/x"), branch.OutcomeRemoved, branch.LayerAncestry, "")
 }
 
-// REQ-25.49 y REQ-25.17: `done` ejecutado desde el worktree del propio cambio resuelve el modo del
+// RF-BRA-31 y RF-BRA-18: `done` ejecutado desde el worktree del propio cambio resuelve el modo del
 // registro y confirma contra `master`: retira el worktree y elimina la rama.
 func TestDonePromotionFromTheChangeWorktreeConfirmsAgainstTheMainBranch(t *testing.T) {
 	repo, _, _ := twoStageProject(t, "")

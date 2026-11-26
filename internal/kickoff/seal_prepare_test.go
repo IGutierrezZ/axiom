@@ -11,7 +11,7 @@ func isDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-// REQ-29.12: crea los padres ausentes y la retirada borra solo lo creado, en
+// RF-KOF-11: crea los padres ausentes y la retirada borra solo lo creado, en
 // orden inverso.
 func TestPrepareChangeRoot(t *testing.T) {
 	t.Run("crea padres ausentes y la retirada los borra", func(t *testing.T) {

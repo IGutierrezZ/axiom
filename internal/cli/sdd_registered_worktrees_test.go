@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// Arnés de S9-c4 (REQ-25.44, design D-16): `axiom sdd status x --json --cwd <checkout principal>` y
+// Arnés de S9-c4 (RF-CLI-07, design D-16): `axiom sdd status x --json --cwd <checkout principal>` y
 // `axiom sdd continue x --cwd <checkout principal>` con el cambio solo en su worktree registrado. Entra por
 // RunSDDStatus y RunSDDContinue, los puntos de entrada de la CLI, con el checkout principal y el worktree
 // montados solo con ficheros y el registro escrito con el almacén real; sin registro el cambio no existe

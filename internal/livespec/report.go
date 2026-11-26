@@ -10,7 +10,7 @@ import (
 const ReportSchema = "axiom.odd-integration/v1"
 
 // Report es el informe de una integración ODD: lo que se integró, lo que se escribió y,
-// cuando el proyecto declara contexto técnico, la comprobación estructural de REQ-30.6.
+// cuando el proyecto declara contexto técnico, la comprobación estructural de RF-OLS-06.
 type Report struct {
 	Schema  string `json:"schema"`
 	Feature string `json:"feature"`
@@ -25,14 +25,14 @@ type Report struct {
 	// Written son los ficheros que la orden escribió, relativos a la raíz del workspace y con `/`.
 	Written            []string `json:"written"`
 	NothingToIntegrate bool     `json:"nothingToIntegrate"`
-	// Check es verdadero con `--check`: la integración se planificó sin escribir (REQ-47.7).
+	// Check es verdadero con `--check`: la integración se planificó sin escribir (RF-OLS-10).
 	Check bool `json:"check,omitempty"`
 	// Requirements solo está con `--check`: lo que las deltas tocan y crean.
 	Requirements *openspecdoc.Declaration `json:"requirements,omitempty"`
 	// Assignments es el mapa de provisional a definitivo, con la capacidad y el estado de
-	// cada entrada (REQ-47.6); no está si el documento no tiene provisionales.
+	// cada entrada (RF-RID-14); no está si el documento no tiene provisionales.
 	Assignments []AssignmentReport `json:"assignments,omitempty"`
-	// Duplicates son los identificadores repetidos en la spec viva resultante (REQ-47.5).
+	// Duplicates son los identificadores repetidos en la spec viva resultante (RF-RID-13).
 	Duplicates []Duplicate `json:"duplicates,omitempty"`
 }
 
@@ -65,7 +65,7 @@ func AssignmentReports(entries []PlannedEntry) []AssignmentReport {
 	return out
 }
 
-// ContextReport es la comprobación estructural del contexto técnico de la rama (REQ-30.6).
+// ContextReport es la comprobación estructural del contexto técnico de la rama (RF-OLS-06).
 type ContextReport struct {
 	Declared          bool     `json:"declared"`
 	MaintainedTouched []string `json:"maintainedTouched"`

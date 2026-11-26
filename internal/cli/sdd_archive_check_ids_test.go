@@ -12,7 +12,7 @@ import (
 )
 
 // Las pruebas de `axiom sdd archive-check` con provisionales y de la traza tras archivar
-// (REQ-47.5, REQ-47.6, REQ-47.8). Todos los textos son inventados.
+// (RF-RID-13, RF-RID-14, RF-ARC-15). Todos los textos son inventados.
 
 const sddCheckTrace = `schema: axiom.requirement-ids/v1
 pattern: REQ-<n>.<m>

@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// Pruebas de `axiom branch guard` (REQ-25.21, REQ-25.1): el verbo, sus errores de uso y el
+// Pruebas de `axiom branch guard` (RF-BRA-22, RF-BRA-01): el verbo, sus errores de uso y el
 // protocolo de salida de cada runtime con git real, entorno aislado y la carga simulada por la
 // entrada estándar. La decisión de la guarda tiene su batería en internal/branch/engine; aquí se
 // prueba lo que añade la CLI. Llevan el prefijo propio `TestBranchGuard` para filtrarlas sin
@@ -122,7 +122,7 @@ func (r failingReader) Read([]byte) (int, error) {
 	return 0, io.EOF
 }
 
-// REQ-25.21, escenarios «Bloquea un documento de Axiom en rama equivocada» y «Permite un documento
+// RF-BRA-22, escenarios «Bloquea un documento de Axiom en rama equivocada» y «Permite un documento
 // de Axiom en la rama correcta», con el protocolo de salida de cada runtime: Claude Code y Codex
 // salen con 2 y el motivo por stderr; OpenCode siempre con 0 y el JSON por stdout.
 func TestBranchGuardBlocksADocumentOnTheWrongBranchWithTheProtocolOfEachRuntime(t *testing.T) {

@@ -15,7 +15,7 @@ Read the state from `axiom sdd status --cwd <repo> --json`, never from `axiom.ya
 
 ## Requirement Identifiers and Scenarios (spec phase)
 
-- Each requirement name of a delta carries exactly one valid identifier according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`), for example `### Requirement: Cobro con IVA (REQ-30.1)`. A repeated copy of the same identifier counts as one; a malformed token (one that starts like the pattern and does not fit it, such as `REQ-30` with the default pattern) does not count.
+- Each requirement name of a delta carries exactly one valid identifier according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`), for example `### Requirement: Cobro con IVA (RF-OLS-01)`. A repeated copy of the same identifier counts as one; a malformed token (one that starts like the pattern and does not fit it, such as `REQ-30` with the default pattern) does not count.
 - A provisional identifier (`prov:<series>:<ordinal>`, for example `(prov:30:1)`) is valid in the name of an ADDED requirement instead of a number, once per name and with no other identifier beside it; it is never valid in MODIFIED, REMOVED or RENAMED (`iso_requirement_id`). The number is assigned when the change is archived with `axiom sdd archive-integrate`.
 - An ADDED identifier is unique among all the ADDED requirements of the change and absent from the baseline. MODIFIED and REMOVED requirements carry the identifier of the requirement they name; for a requirement that has none, use a RENAMED entry first. A RENAMED entry carries it in the new name.
 - Every ADDED or MODIFIED requirement has at least one `#### Scenario:` outside code fences, and no scenario name repeats within a requirement. REMOVED and RENAMED requirements need none.
@@ -71,8 +71,8 @@ In an ISO change, `verify` is mandatory before archive: status routes to `verify
 
 | Requisito | Escenario | Tipo | Referencia | Comando | Salida | Responsable | Fecha | Justificación | Resultado | Commit |
 |---|---|---|---|---|---|---|---|---|---|---|
-| REQ-30.1 | Cobro con IVA general | unitario | `internal/pagos/cobro_test.go:TestCobraIVA` | `go test ./internal/pagos -run TestCobraIVA -count=1` | 0 | | | | pass | 1a2b3c4 |
-| REQ-30.2 | Recibo impreso | manual | acta-12 | | | Ana Pérez | 2026-11-12 | La impresora fiscal no tiene emulador | pass | |
+| RF-OLS-01 | Cobro con IVA general | unitario | `internal/pagos/cobro_test.go:TestCobraIVA` | `go test ./internal/pagos -run TestCobraIVA -count=1` | 0 | | | | pass | 1a2b3c4 |
+| RF-OLS-02 | Recibo impreso | manual | acta-12 | | | Ana Pérez | 2026-11-12 | La impresora fiscal no tiene emulador | pass | |
 ```
 
 - Columns are recognized by name, in any order. Required: Requisito, Escenario, Tipo, Referencia, Comando, Salida, Responsable, Fecha, Justificación, Resultado. `Commit` is optional and never validated. A cell that does not apply stays empty or holds `-`.

@@ -993,7 +993,7 @@ func sealFullstackKickoff(t *testing.T, changeRoot, changeName string, style kic
 // the original assertion. Now that archiveDependencyFromGovernance wires
 // that condition in, a sealed change with no approved "integration" gate is
 // correctly blocked from archiving regardless of what else is pending
-// (REQ-21.16): this fixture has neither a favorable verify-report.md nor
+// (RF-ARC-01): this fixture has neither a favorable verify-report.md nor
 // any integration-gate decision, so archive is doubly ungrounded here, not
 // merely "not yet checked".
 func TestResolveRoutesToAwaitGateWhenABlockReviewGateIsPending(t *testing.T) {
@@ -1014,7 +1014,7 @@ func TestResolveRoutesToAwaitGateWhenABlockReviewGateIsPending(t *testing.T) {
 		t.Fatalf("BlockedReasons = %v, want a genuine reason naming the pending spec gate", status.BlockedReasons)
 	}
 	if status.Dependencies.Archive != DependencyBlocked {
-		t.Fatalf("Dependencies.Archive = %q, want blocked: no integration gate is approved yet (REQ-21.16, Phase 21)", status.Dependencies.Archive)
+		t.Fatalf("Dependencies.Archive = %q, want blocked: no integration gate is approved yet (RF-ARC-01, Phase 21)", status.Dependencies.Archive)
 	}
 }
 
@@ -1098,7 +1098,7 @@ func TestResolveContinuousExecutionStyleProjectsRosterNeverGates(t *testing.T) {
 }
 
 // --- INC-21 Phase 21 (P6c): archive precondition wired into
-// dependencies.Archive (design.md S4.6, D-13; REQ-21.16). Every fixture
+// dependencies.Archive (design.md S4.6, D-13; RF-ARC-01). Every fixture
 // below seals a checkpointed, single-role fullstack kickoff with every core
 // artifact done, every task checked off, and a favorable local
 // verify-report.md -- exactly the state
@@ -1108,7 +1108,7 @@ func TestResolveContinuousExecutionStyleProjectsRosterNeverGates(t *testing.T) {
 
 // writeFavorableVerifyReport seeds verify-report.md so machine.go's
 // VerifyFound input opens the "integration" gate at all: EvaluateGates
-// never surfaces it otherwise (machine.go, Phase 5). REQ-21.16 itself
+// never surfaces it otherwise (machine.go, Phase 5). RF-ARC-01 itself
 // presupposes a favorable local verify report already exists before
 // archive's own integration/deployment precondition is even asked about.
 func writeFavorableVerifyReport(t *testing.T, changeRoot string) {
@@ -1121,7 +1121,7 @@ func writeFavorableVerifyReport(t *testing.T, changeRoot string) {
 // every task checked off, and a favorable local verify-report.md still
 // reports dependencies.Archive blocked while no "integration" gate is
 // approved -- naming the missing precondition and the exact invocation that
-// satisfies it (REQ-21.16, second scenario).
+// satisfies it (RF-ARC-01, second scenario).
 func TestArchiveDependencyBlockedWithoutApprovedIntegrationGate(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -1135,7 +1135,7 @@ func TestArchiveDependencyBlockedWithoutApprovedIntegrationGate(t *testing.T) {
 		t.Fatalf("Resolve() error = %v", err)
 	}
 	if status.Dependencies.Archive != DependencyBlocked {
-		t.Fatalf("Dependencies.Archive = %q, want blocked without an approved integration gate (REQ-21.16)", status.Dependencies.Archive)
+		t.Fatalf("Dependencies.Archive = %q, want blocked without an approved integration gate (RF-ARC-01)", status.Dependencies.Archive)
 	}
 	joined := strings.Join(status.BlockedReasons, "\n")
 	if !strings.Contains(joined, `"integration"`) {
@@ -1148,7 +1148,7 @@ func TestArchiveDependencyBlockedWithoutApprovedIntegrationGate(t *testing.T) {
 
 // TestArchiveDependencyReadyWithApprovedIntegrationGate is task 21.3's
 // second case: once the "integration" gate is approved, dependencies.Archive
-// becomes ready (REQ-21.16, first scenario).
+// becomes ready (RF-ARC-01, first scenario).
 func TestArchiveDependencyReadyWithApprovedIntegrationGate(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
@@ -1199,9 +1199,9 @@ func TestArchiveDependencyUnsealedChangeUnaffectedByGovernance(t *testing.T) {
 // way, so a change with no approved "integration" gate stays exactly where
 // it was -- never moved under openspec/changes/archive/, and
 // openspec/specs/ is never touched -- while dependencies.Archive reports
-// blocked (REQ-21.16, second scenario); once the gate is approved, the same
+// blocked (RF-ARC-01, second scenario); once the gate is approved, the same
 // tree, still untouched by Resolve itself, projects dependencies.Archive
-// ready (REQ-21.16, first scenario).
+// ready (RF-ARC-01, first scenario).
 func TestArchivePreconditionIntegrationEndToEnd(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()

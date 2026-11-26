@@ -740,7 +740,7 @@ func TestSDDPreflightHookRejectsPositionalArguments(t *testing.T) {
 }
 
 // El hook corrobora solo la interacción canónica del pre-vuelo: la interacción propia de la preferencia de
-// revisión independiente (REQ-28.14), con otras preguntas y sin el prefijo del pre-vuelo, no se reconoce ni altera la
+// revisión independiente (RF-PRE-06), con otras preguntas y sin el prefijo del pre-vuelo, no se reconoce ni altera la
 // autoridad ya corroborada, aunque llegue después en el mismo transcript.
 func TestSDDPreflightHookIgnoresIndependentReviewPreferenceInteraction(t *testing.T) {
 	dir := t.TempDir()

@@ -624,7 +624,7 @@ function initAddProject() {
       // Fallo parcial: el proyecto existe, pero los adaptadores no se instalaron.
       const warning = adapterWarning(response);
       if (warning) toast(warning, 'warn');
-      // Informe de orígenes de migración y candidatos a contexto técnico (REQ-30.27).
+      // Informe de orígenes de migración y candidatos a contexto técnico (RF-HUB-11).
       const adoption = adoptionPanel(response);
       if (adoption) showAdoptionPanel(adoption);
     } catch (err) {
@@ -637,7 +637,7 @@ function initAddProject() {
 
 // showAdoptionPanel muestra, tras el alta, el informe de orígenes de migración y de
 // candidatos a technical_context y la instrucción para lanzar la adopción desde el agente
-// (REQ-30.27). Solo informa: no ejecuta ninguna orden ni crea el cambio de adopción; la
+// (RF-HUB-11). Solo informa: no ejecuta ninguna orden ni crea el cambio de adopción; la
 // instrucción se copia con el botón [data-copy] que ya atiende bindCopyButtons.
 function showAdoptionPanel(panel) {
   const dialog = $('#modal-adoption');

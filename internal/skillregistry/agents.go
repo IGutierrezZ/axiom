@@ -29,7 +29,7 @@ const AgentsRelPath = agentsRelPath
 // filemerge.InjectMarkdownSection. It exists because InjectMarkdownSection
 // APPENDS at end of file when it finds no marker pair
 // (internal/components/filemerge/section.go), which would duplicate the
-// section on the current AGENTS.md (REQ-22.12). The filemerge engine is reused
+// section on the current AGENTS.md (RF-SKI-03). The filemerge engine is reused
 // unmodified (D-10).
 //
 // Contract (spec §3.5):

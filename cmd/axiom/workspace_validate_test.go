@@ -38,7 +38,7 @@ func wantOutput(t *testing.T, output string, wants ...string) {
 	}
 }
 
-// workspace-topology REQ-1.2 y REQ-24.17: una declaración válida y compatible
+// workspace-topology RF-TOP-02 y REQ-24.17: una declaración válida y compatible
 // con el almacén finaliza con COMPLIANT y código 0.
 func TestWorkspaceValidateAcceptsAValidDeclaration(t *testing.T) {
 	for name, openSpecConfig := range map[string]string{
@@ -62,7 +62,7 @@ func TestWorkspaceValidateAcceptsAValidDeclaration(t *testing.T) {
 	}
 }
 
-// REQ-24.27 y workspace-topology REQ-1.2: una ruta de contexto inexistente solo
+// RF-CTX-02 y workspace-topology RF-TOP-02: una ruta de contexto inexistente solo
 // avisa, y las advertencias se imprimen también con COMPLIANT.
 func TestWorkspaceValidatePrintsWarningsWithCompliant(t *testing.T) {
 	master := validateWorkspace(t, validateContext, "")
@@ -79,7 +79,7 @@ func TestWorkspaceValidatePrintsWarningsWithCompliant(t *testing.T) {
 	}
 }
 
-// REQ-24.27 y REQ-24.17: un error por cada ruta de contexto inválida, con código 1.
+// RF-CTX-02 y REQ-24.17: un error por cada ruta de contexto inválida, con código 1.
 func TestWorkspaceValidateReportsOneErrorPerInvalidPath(t *testing.T) {
 	blocks := "technical_context:\n  maintained:\n    paths: [../../fuera/, /abs/dos, valida/]\n"
 	master := validateWorkspace(t, blocks, "")
@@ -105,7 +105,7 @@ func TestWorkspaceValidateReportsOneErrorPerInvalidPath(t *testing.T) {
 	}
 }
 
-// REQ-30.21 y REQ-24.17: un `baseline:` residual, sea cual sea su contenido,
+// RF-TOP-12 y REQ-24.17: un `baseline:` residual, sea cual sea su contenido,
 // finaliza con 1 y el error tipado con la migración; un contexto inválido también.
 func TestWorkspaceValidateRejectsAResidualBaselineAndAnInvalidContext(t *testing.T) {
 	for name, tc := range map[string]struct {
@@ -149,7 +149,7 @@ func TestWorkspaceValidateRejectsAFileDeclarationWithAFilelessStore(t *testing.T
 		})
 	}
 
-	// project-technical-context REQ-30.19 y workspace-topology REQ-2.6: sin
+	// project-technical-context RF-CTX-17 y workspace-topology RF-TOP-13: sin
 	// contexto mantenido no hay error de la declaración, pero el almacén engram
 	// se rechaza igualmente porque el almacén de Axiom es siempre hybrid.
 	t.Run("solo contexto de referencia no exige almacen de ficheros pero rechaza engram", func(t *testing.T) {
@@ -187,8 +187,8 @@ func TestWorkspaceValidateResolvesDeclarationsAgainstTheSpecsRepository(t *testi
 	}
 }
 
-// workspace-topology REQ-25.25 (escenario «La validación termina con código 1 y
-// la corrección») y REQ-1.2 (escenario «Topología retirada finaliza con error
+// workspace-topology RF-TOP-08 (escenario «La validación termina con código 1 y
+// la corrección») y RF-TOP-02 (escenario «Topología retirada finaliza con error
 // accionable»): la topología retirada no se acepta y el mensaje nombra multirepo.
 func TestWorkspaceValidateRejectsTheRetiredTopology(t *testing.T) {
 	master := t.TempDir()
@@ -210,7 +210,7 @@ func TestWorkspaceValidateRejectsTheRetiredTopology(t *testing.T) {
 }
 
 // Sin bloques nuevos el comando se comporta como antes. El almacén es hybrid:
-// engram y none se rechazan siempre (workspace-topology REQ-2.6).
+// engram y none se rechazan siempre (workspace-topology RF-TOP-13).
 func TestWorkspaceValidateWithoutDeclarationsIsUnchanged(t *testing.T) {
 	master := validateWorkspace(t, "", "artifact_store: hybrid\n")
 	output, code := runAxiom(t, "workspace", "validate", "--path", master)
@@ -252,8 +252,8 @@ func outsideAnyGitRepository(t *testing.T, dir string) {
 	}
 }
 
-// workspace-topology REQ-1.2 (escenario «Bloque `git:` o `repositories:` inválido
-// finaliza con error»), REQ-25.26 y REQ-25.27: un bloque inválido, de forma o de
+// workspace-topology RF-TOP-02 (escenario «Bloque `git:` o `repositories:` inválido
+// finaliza con error»), RF-TOP-09 y RF-TOP-10: un bloque inválido, de forma o de
 // sistema de ficheros, termina con código 1 y detalla en castellano la clave o la
 // ruta y la regla incumplida.
 func TestWorkspaceValidateRejectsAnInvalidGitOrRepositoriesBlock(t *testing.T) {
@@ -294,7 +294,7 @@ func TestWorkspaceValidateRejectsAnInvalidGitOrRepositoriesBlock(t *testing.T) {
 	}
 }
 
-// REQ-25.27 (escenario «Dos entradas de la misma raíz git»): dos rutas de un mismo
+// RF-TOP-10 (escenario «Dos entradas de la misma raíz git»): dos rutas de un mismo
 // repositorio real son un error que nombra ambas y la raíz compartida.
 func TestWorkspaceValidateRejectsTwoEntriesOfTheSameGitRoot(t *testing.T) {
 	requireRealGit(t)
@@ -310,7 +310,7 @@ func TestWorkspaceValidateRejectsTwoEntriesOfTheSameGitRoot(t *testing.T) {
 	wantOutput(t, output, "NO CONFORME", "'app/web'", "'app/api'", "mismo repositorio git", filepath.Join(master, "app"), "NON-COMPLIANT")
 }
 
-// REQ-1.2 y REQ-25.27: bloques `git:` y `repositories:` válidos, con repositorios
+// RF-TOP-02 y RF-TOP-10: bloques `git:` y `repositories:` válidos, con repositorios
 // reales, terminan con COMPLIANT, sin advertencias y con código 0.
 func TestWorkspaceValidateAcceptsValidGitAndRepositoriesBlocks(t *testing.T) {
 	requireRealGit(t)
@@ -330,7 +330,7 @@ func TestWorkspaceValidateAcceptsValidGitAndRepositoriesBlocks(t *testing.T) {
 	}
 }
 
-// REQ-25.27 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
+// RF-TOP-10 (escenario «Ruta que no es un repositorio git solo avisa»): una ruta
 // que existe pero no pertenece a ningún repositorio es una advertencia, con
 // COMPLIANT y código 0.
 func TestWorkspaceValidateOnlyWarnsAboutAPathThatIsNotAGitRepository(t *testing.T) {
@@ -348,7 +348,7 @@ func TestWorkspaceValidateOnlyWarnsAboutAPathThatIsNotAGitRepository(t *testing.
 	}
 }
 
-// workspace-topology REQ-25.24 (escenario «`axiom.yaml` de este repositorio
+// workspace-topology RF-BRA-25 (escenario «`axiom.yaml` de este repositorio
 // declara `git:`») y decisión T5: el axiom.yaml versionado declara de forma
 // explícita `integration_branch: main` y `branch_prefix: inc`, y supera la
 // validación con COMPLIANT. La prueba lee el fichero con una ruta relativa al
@@ -401,7 +401,7 @@ func addLinkedWorktree(t *testing.T, repo, worktree, branch string) {
 	}
 }
 
-// workspace-planning-home REQ-25.28 (escenario «La validación desde un worktree
+// workspace-planning-home RF-PLH-13 (escenario «La validación desde un worktree
 // externo no da falsos errores»): un worktree de repo-backend fuera de la carpeta
 // maestra, sin marcador propio, valida contra la carpeta maestra resuelta desde su
 // checkout principal y termina con COMPLIANT. Es el arnés de S9-c1: el CLI se
@@ -448,7 +448,7 @@ func TestWorkspaceValidateFromALinkedWorktreeWithoutAnyMarkerKeepsTheError(t *te
 	wantOutput(t, output, "No se pudo cargar la configuración de Axiom")
 }
 
-// REQ-25.28: `--path` sigue siendo la carpeta maestra cuando tiene marcador propio,
+// RF-PLH-13: `--path` sigue siendo la carpeta maestra cuando tiene marcador propio,
 // también en un worktree enlazado de un monorepo embebido: no se redirige al
 // checkout principal.
 func TestWorkspaceValidateKeepsPathAsTheMasterWhenTheWorktreeHasItsOwnMarker(t *testing.T) {

@@ -9,10 +9,10 @@ import (
 
 // RequirementKeys extrae los identificadores del nombre de un requisito. Es válido el que
 // encaja exactamente con el patrón p del proyecto (`REQ-<n>.<m>` por defecto); es
-// provisional el token `prov:…` que el patrón admite (REQ-47.1); el resto de candidatos
+// provisional el token `prov:…` que el patrón admite (RF-RID-09); el resto de candidatos
 // (`REQ-30`, `REQ-x.1`, un provisional que el patrón no admite) son mal formados. Cada
 // lista va sin repetidos y en el orden de aparición. El análisis es del puerto reqid
-// (REQ-44.5).
+// (RF-RID-05).
 func RequirementKeys(name string, p reqid.Pattern) (valid, provisional, malformed []string) {
 	valid, malformed = p.Scan(name)
 	seen := map[string]bool{}
@@ -50,7 +50,7 @@ func describeRequirement(r Requirement) string {
 	return fmt.Sprintf("dominio %q, sección %s, requisito %q", r.Domain, r.Section, r.Name)
 }
 
-// continuations son las continuaciones de REQ-29.3; nombran el patrón efectivo con
+// continuations son las continuaciones de RF-ISO-03; nombran el patrón efectivo con
 // su plantilla, de modo que con el defecto el texto es el de siempre.
 type continuations struct {
 	addID, renamed, unique, oneID, sameID, provisionalAdded, uniqueProvisional string
@@ -69,12 +69,12 @@ func continuationsFor(p reqid.Pattern) continuations {
 	}
 }
 
-// CheckRequirementIDs aplica la regla REQ-29.3 a los requisitos de la delta con el
+// CheckRequirementIDs aplica la regla RF-ISO-03 a los requisitos de la delta con el
 // patrón p del proyecto. Solo se comprueban los de la delta, nunca el resto de la
 // baseline. ADDED, la colisión y la tolerancia D17 siguen por título e identificador
 // exactos; un MODIFIED o REMOVED lleva el identificador de su nombre, que es el del
 // requisito existente, así que un título cambiado con el mismo identificador pasa igual
-// (REQ-30.22).
+// (RF-ARC-11).
 func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Finding {
 	c := continuationsFor(p)
 	var findings []Finding
@@ -108,7 +108,7 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 	}
 
 	// provisionals recoge, por token, los ADDED que lo declaran: un provisional es único en el
-	// cambio, en el mismo dominio o en otro (REQ-47.1).
+	// cambio, en el mismo dominio o en otro (RF-RID-09).
 	provisionals := map[string][]Requirement{}
 	var provisionalOrder []string
 

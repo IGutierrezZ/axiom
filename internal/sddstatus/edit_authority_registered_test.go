@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// S9-c3 (REQ-25.43, REQ-24.9, design D-14): las raíces que `axiom branch ensure` registra entran en
+// S9-c3 (RF-CLI-06, RF-PLH-09, design D-14): las raíces que `axiom branch ensure` registra entran en
 // `allowedEditRoots`, las tareas se resuelven contra el worktree que corresponde y una ruta del
 // checkout principal de un repositorio registrado se reubica en su worktree. Los registros de estas
 // pruebas se escriben con registry.Store y los repositorios se montan solo con ficheros.
@@ -129,7 +129,7 @@ func TestEditAuthorityDetectorsApplyTheRebaseToEveryResolvedPath(t *testing.T) {
 	}
 }
 
-// REQ-25.43, escenario «Las tareas de un cambio en worktree no exigen autorización»: un monorepo con
+// RF-CLI-06, escenario «Las tareas de un cambio en worktree no exigen autorización»: un monorepo con
 // el cambio en un worktree registrado. Sin registro, un worktree fuera del workspace exige concesión;
 // con el registro entra en `allowedEditRoots` y deja de bloquear.
 func TestEditAuthorityTasksOfAChangeInARegisteredWorktreeNeedNoGrant(t *testing.T) {
@@ -165,7 +165,7 @@ func TestEditAuthorityTasksOfAChangeInARegisteredWorktreeNeedNoGrant(t *testing.
 	}
 }
 
-// REQ-25.43, escenario «La tarea de un rol se resuelve contra el worktree del rol»: `tasks.core.md`
+// RF-CLI-06, escenario «La tarea de un rol se resuelve contra el worktree del rol»: `tasks.core.md`
 // se resuelve contra el worktree de la rama de rol; un rol sin worktree propio y `tasks.md` contra el
 // del cambio. La raíz del worktree del rol figura en `allowedEditRoots`.
 func TestEditAuthorityRoleTasksResolveAgainstTheRoleWorktree(t *testing.T) {
@@ -225,7 +225,7 @@ func TestEditAuthorityPlanBasesFallBackToTheWorkspace(t *testing.T) {
 	}
 }
 
-// REQ-25.43 y REQ-24.9, escenarios «Un repositorio de código registrado por `ensure` entra en las
+// RF-CLI-06 y RF-PLH-09, escenarios «Un repositorio de código registrado por `ensure` entra en las
 // raíces», «Una ruta del checkout principal de un repositorio registrado se reescribe» y «Un
 // repositorio no registrado exige concesión».
 func TestEditAuthorityRegisteredCodeRepositoryRebasesAndUnregisteredStillNeedsAGrant(t *testing.T) {
@@ -277,7 +277,7 @@ func TestEditAuthorityRegisteredCodeRepositoryRebasesAndUnregisteredStillNeedsAG
 	}
 }
 
-// REQ-25.43, escenario «Un repositorio de código registrado por `ensure` entra en las raíces»: entra
+// RF-CLI-06, escenario «Un repositorio de código registrado por `ensure` entra en las raíces»: entra
 // aunque ninguna tarea lo nombre.
 func TestEditAuthorityRegisteredCodeRepositoryEntersTheRootsWithoutTasksNamingIt(t *testing.T) {
 	t.Parallel()
@@ -328,7 +328,7 @@ func TestEditAuthorityRegisteredRootsCoverArchiveInPlaceAndSkipMissingWorktrees(
 	}
 }
 
-// REQ-25.43, escenario «Sin registro el comportamiento es el anterior»: sin registro, y con uno
+// RF-CLI-06, escenario «Sin registro el comportamiento es el anterior»: sin registro, y con uno
 // ilegible, `allowedEditRoots` es el workspace más las concesiones; el registro ilegible deja un
 // aviso en `notes` y no bloquea.
 func TestEditAuthorityWithoutARegistryKeepsTheRootsOfBeforeTheIncrement(t *testing.T) {

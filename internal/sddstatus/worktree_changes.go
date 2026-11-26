@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Cambios que viven en worktrees registrados (REQ-25.44, design D-16).
+// Cambios que viven en worktrees registrados (RF-CLI-07, design D-16).
 //
 // `axiom branch ensure` deja registrados los worktrees de la rama del cambio y de la de archivado. Desde el
 // checkout principal, u otro directorio del proyecto, el cambio no está en `openspec/changes`: Resolve lo
@@ -32,7 +32,7 @@ const registeredWorktreesNote = "note(registered_worktrees): "
 // status se reenraíza en él. Sin nombre, los candidatos son la unión de los del checkout actual y los de los
 // worktrees: con uno solo, se selecciona (y, si vive en un worktree, se reenraíza); con varios, el
 // `select-change` de siempre actúa sobre la unión. Con `--cwd` dentro de un worktree enlazado el cambio se
-// resuelve en su propio árbol (REQ-25.28) y no se mira el registro. Nunca falla: lo que no se puede leer deja
+// resuelve en su propio árbol (RF-PLH-13) y no se mira el registro. Nunca falla: lo que no se puede leer deja
 // un aviso y el status se resuelve donde estaba.
 func rerootOnRegisteredWorktrees(options ResolveOptions, location workspace.Location) (ResolveOptions, workspace.Location) {
 	if gitcommon.LinkedWorktreeRoot(location.WorkspaceRoot) != "" {
@@ -83,7 +83,7 @@ func rerootOnRegisteredWorktrees(options ResolveOptions, location workspace.Loca
 		relocated.Notes = appendNote(relocated.Notes, note)
 	}
 	relocated.Notes = appendNote(relocated.Notes, fmt.Sprintf(
-		"%sel cambio %s se resuelve en el worktree %s de la rama %s (REQ-25.44), no en %s",
+		"%sel cambio %s se resuelve en el worktree %s de la rama %s (RF-CLI-07), no en %s",
 		registeredWorktreesNote, name, winner.WorktreeRoot, winner.Branch, location.WorkspaceRoot))
 	options.ChangeName = name
 	options.WorkspaceRoot = relocated.WorkspaceRoot

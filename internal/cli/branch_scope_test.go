@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de `axiom branch scope` (C-02-b, REQ-25.1, REQ-25.2, REQ-25.51): banderas, códigos de
+// Pruebas de `axiom branch scope` (C-02-b, RF-BRA-01, RF-BRA-02, RF-BRA-35): banderas, códigos de
 // salida y salida en JSON y en texto. El cálculo del alcance se prueba en internal/branch/engine;
 // aquí solo el contrato de la línea de órdenes, en proceso con RunBranch.
 
@@ -54,7 +54,7 @@ func sealBranchChangeWithSnapshot(t *testing.T, repo, change string, roles ...st
 	}
 }
 
-// REQ-25.51: `--fetch`, una bandera desconocida, `--change` ausente o en blanco y un nombre
+// RF-BRA-35: `--fetch`, una bandera desconocida, `--change` ausente o en blanco y un nombre
 // inválido son errores de uso (2) antes de leer ningún repositorio.
 func TestBranchScopeRejectsMisuseWithCode2BeforeReadingAnything(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-existe")
@@ -97,7 +97,7 @@ func TestBranchScopeHelpDocumentsOnlyItsFlags(t *testing.T) {
 	}
 }
 
-// REQ-25.51: sin kickoff ni documento ODD el cambio no está sellado; sale con 1.
+// RF-BRA-35: sin kickoff ni documento ODD el cambio no está sellado; sale con 1.
 func TestBranchScopeRefusesAChangeWithoutKickoff(t *testing.T) {
 	t.Parallel()
 	repo := newBranchRepository(t)
@@ -110,7 +110,7 @@ func TestBranchScopeRefusesAChangeWithoutKickoff(t *testing.T) {
 	}
 }
 
-// REQ-25.51: un cambio con documento ODD no es aplicable; sale con 1.
+// RF-BRA-35: un cambio con documento ODD no es aplicable; sale con 1.
 func TestBranchScopeIsNotApplicableToAnOddChange(t *testing.T) {
 	t.Parallel()
 	repo := newBranchRepository(t)
@@ -133,7 +133,7 @@ func TestBranchScopeIsNotApplicableToAnOddChange(t *testing.T) {
 	}
 }
 
-// REQ-25.2 y REQ-25.51: con kickoff e instantánea, `--json` imprime `axiom.branch-scope/v1` y
+// RF-BRA-02 y RF-BRA-35: con kickoff e instantánea, `--json` imprime `axiom.branch-scope/v1` y
 // sale con 0 aunque el repositorio sea `unverifiable` (la rama del cambio no existe); la `--cwd`
 // relativa se resuelve a rutas absolutas y `pending` es una lista.
 func TestBranchScopeJSONAndRelativeCwd(t *testing.T) {

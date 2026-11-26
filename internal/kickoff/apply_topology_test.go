@@ -26,7 +26,7 @@ func sealRoleNames(parsed SealArgs) string {
 	return strings.Join(names, ",")
 }
 
-// REQ-28.19: en multirepo el sellado deriva checkpointed y rechaza continuous.
+// RF-PRE-11: en multirepo el sellado deriva checkpointed y rechaza continuous.
 func TestSealArgsApplyTopologyMultirepo(t *testing.T) {
 	t.Run("sin estilo deriva checkpointed con origen topology", func(t *testing.T) {
 		parsed := sealArgs(t)
@@ -85,7 +85,7 @@ func TestSealArgsApplyTopologyMultirepo(t *testing.T) {
 	}
 }
 
-// REQ-28.19 y REQ-21.6: en monorepo-embedded solo se sella fullstack.
+// RF-PRE-11 y RF-PRE-02: en monorepo-embedded solo se sella fullstack.
 func TestSealArgsApplyTopologyMonorepo(t *testing.T) {
 	rejected := []struct {
 		name string
@@ -134,8 +134,8 @@ func TestSealArgsApplyTopologyMonorepo(t *testing.T) {
 	t.Run("sin estilo sigue siendo obligatorio", func(t *testing.T) {
 		parsed := sealArgs(t)
 		err := parsed.ApplyTopology(workspace.TopologyMonorepoEmbedded)
-		if err == nil || !strings.Contains(err.Error(), "REQ-21.5") {
-			t.Fatalf("ApplyTopology() error = %v, se esperaba el rechazo de REQ-21.5", err)
+		if err == nil || !strings.Contains(err.Error(), "RF-PRE-01") {
+			t.Fatalf("ApplyTopology() error = %v, se esperaba el rechazo de RF-PRE-01", err)
 		}
 	})
 }
@@ -152,13 +152,13 @@ func TestSealArgsApplyTopologyPrecedence(t *testing.T) {
 	}
 }
 
-// REQ-21.5, REQ-28.12 y REQ-28.13 siguen intactas sin axiom.yaml (topología "").
+// RF-PRE-01, RF-PRE-04 y RF-PRE-05 siguen intactas sin axiom.yaml (topología "").
 func TestSealArgsApplyTopologyWithoutTopology(t *testing.T) {
 	t.Run("estilo obligatorio", func(t *testing.T) {
 		parsed := sealArgs(t)
 		err := parsed.ApplyTopology("")
-		if err == nil || !strings.Contains(err.Error(), "REQ-21.5") {
-			t.Fatalf("ApplyTopology() error = %v, se esperaba REQ-21.5", err)
+		if err == nil || !strings.Contains(err.Error(), "RF-PRE-01") {
+			t.Fatalf("ApplyTopology() error = %v, se esperaba RF-PRE-01", err)
 		}
 	})
 	t.Run("continuous con roles se rechaza por la regla de roster", func(t *testing.T) {

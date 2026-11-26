@@ -18,8 +18,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de `ensure` con git real, entorno aislado y sin red (REQ-25.7, REQ-25.8,
-// REQ-25.10, REQ-25.11, matriz de amenazas «Selección de repositorio git», «Estado del
+// Pruebas de `ensure` con git real, entorno aislado y sin red (RF-BRA-07, RF-BRA-08,
+// RF-BRA-10, RF-BRA-11, matriz de amenazas «Selección de repositorio git», «Estado del
 // commit» y «Estado del push»). Cubren el modo `worktree` con la base sin red; el registro
 // local con escritura está en ensure_registry_test.go y `--fetch`, en ensure_fetch_test.go.
 
@@ -28,7 +28,7 @@ func ensureOf(t *testing.T, cwd, change string) branch.Result {
 	return Default().Ensure(context.Background(), EnsureRequest{CWD: cwd, Change: change, Lane: branch.LaneSDD})
 }
 
-// resultJSON es el JSON del resultado sin `createdFrom` ni `createdFromRef` (REQ-27.15): esos
+// resultJSON es el JSON del resultado sin `createdFrom` ni `createdFromRef` (RF-BRA-27): esos
 // dos campos describen una acción, no el estado final, y solo salen en la ejecución que crea la
 // rama; con ellos fuera, las pruebas de idempotencia comparan el estado final byte a byte.
 // rawResultJSON los conserva.
@@ -79,7 +79,7 @@ func repositoryState(t *testing.T, repo string) string {
 }
 
 // checkoutState es lo que `ensure` no debe tocar del checkout principal en modo
-// `worktree` (REQ-25.8): HEAD, rama actual, índice y estado del árbol de trabajo.
+// `worktree` (RF-BRA-08): HEAD, rama actual, índice y estado del árbol de trabajo.
 func checkoutState(t *testing.T, repo string) string {
 	t.Helper()
 	return strings.Join([]string{
@@ -109,7 +109,7 @@ func embeddedCoreProject(t *testing.T) string {
 	return newProject(t, configWithRoles(map[string][]string{"core": {"."}}, ""))
 }
 
-// REQ-25.7, REQ-25.8, REQ-25.11 y REQ-25.10: en un monorepo de un rol, `ensure` crea la
+// RF-BRA-07, RF-BRA-08, RF-BRA-11 y RF-BRA-10: en un monorepo de un rol, `ensure` crea la
 // rama `<prefijo>/<cambio>` desde la base local y un worktree en
 // `<raíz>/<cambio>/<repo>`; el checkout principal queda como estaba y el resultado
 // describe el estado final, con la base y el modo.
@@ -117,7 +117,7 @@ func TestEnsureCreatesTheChangeBranchAndItsWorktree(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)
 	head := runGit(t, repo, "rev-parse", "HEAD")
-	// El checkout principal tiene trabajo sin confirmar: no se toca (REQ-25.8).
+	// El checkout principal tiene trabajo sin confirmar: no se toca (RF-BRA-08).
 	writeFile(t, filepath.Join(repo, "axiom.yaml"), configWithRoles(map[string][]string{"core": {"."}}, "# cambio local\n"))
 	writeFile(t, filepath.Join(repo, "nuevo.txt"), "sin seguimiento\n")
 	runGit(t, repo, "add", "nuevo.txt")
@@ -159,7 +159,7 @@ func TestEnsureCreatesTheChangeBranchAndItsWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.7, escenario «Segunda ejecución sin cambios»: el mismo JSON byte a byte, las mismas
+// RF-BRA-07, escenario «Segunda ejecución sin cambios»: el mismo JSON byte a byte, las mismas
 // ramas y los mismos worktrees, y la segunda ejecución no lanza ninguna escritura.
 func TestEnsureIsIdempotentByteForByte(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -188,7 +188,7 @@ func TestEnsureIsIdempotentByteForByte(t *testing.T) {
 	}
 }
 
-// REQ-25.7, escenario «La rama existente se reutiliza sin moverla»: una rama con commits
+// RF-BRA-07, escenario «La rama existente se reutiliza sin moverla»: una rama con commits
 // propios y sin worktree recibe su worktree y no cambia de commit.
 func TestEnsureReusesAnExistingBranchWithoutMovingIt(t *testing.T) {
 	t.Parallel()
@@ -212,7 +212,7 @@ func TestEnsureReusesAnExistingBranchWithoutMovingIt(t *testing.T) {
 	}
 }
 
-// REQ-25.7, escenario «Rama desplegada en un worktree desconocido»: `branch_checked_out_elsewhere`
+// RF-BRA-07, escenario «Rama desplegada en un worktree desconocido»: `branch_checked_out_elsewhere`
 // con la ruta existente y sin crear nada, sea un worktree ajeno o el propio checkout principal.
 func TestEnsureRefusesABranchCheckedOutInAnUnknownWorktree(t *testing.T) {
 	t.Parallel()
@@ -259,8 +259,8 @@ func TestEnsureRefusesABranchCheckedOutInAnUnknownWorktree(t *testing.T) {
 	})
 }
 
-// REQ-25.7, escenario «Ejecución previa al sellado y posterior al sellado» (multirepo, único
-// lugar con ramas de rol, REQ-2.2 de `workspace-topology`): los roles `core` y `qa` comparten
+// RF-BRA-07, escenario «Ejecución previa al sellado y posterior al sellado» (multirepo, único
+// lugar con ramas de rol, RF-TOP-04 de `workspace-topology`): los roles `core` y `qa` comparten
 // el repositorio de código `repo-backend`. Antes de sellar el repositorio de specs se trabaja
 // in situ y no hay nada que crear; con los dos roles sellados se completan en `repo-backend`,
 // sin alterar lo ya creado, `feat/x` y, desde ella, `feat/x-core` y `feat/x-qa`, cada una con
@@ -305,7 +305,7 @@ func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
 	}
 	wantSameDirectory(t, "worktree de feat/x", branchByName(t, repository, "feat/x").Worktree, plannedWorktree(t, master, "x", "repo-backend"))
 
-	// Una tercera ejecución con el mismo estado no cambia nada (REQ-25.7: idempotencia).
+	// Una tercera ejecución con el mismo estado no cambia nada (RF-BRA-07: idempotencia).
 	state := repositoryState(t, backend)
 	wantReady(t, ensureOf(t, master, "x"))
 	if got := repositoryState(t, backend); got != state {
@@ -313,7 +313,7 @@ func TestEnsureCompletesIncrementallyBeforeAndAfterSealing(t *testing.T) {
 	}
 }
 
-// REQ-25.7, escenario «En monorepo la ejecución posterior al sellado no añade ramas»: con el
+// RF-BRA-07, escenario «En monorepo la ejecución posterior al sellado no añade ramas»: con el
 // rol único `fullstack` ambas ejecuciones dejan solo `feat/x` y la segunda no cambia nada.
 func TestEnsureInAMonorepoAddsNoBranchesAfterSealingFullstack(t *testing.T) {
 	t.Parallel()
@@ -345,7 +345,7 @@ func TestEnsureInAMonorepoAddsNoBranchesAfterSealingFullstack(t *testing.T) {
 	}
 }
 
-// REQ-25.7, escenario «Se rechaza un nombre de cambio que no es válido»: `invalid_name`
+// RF-BRA-07, escenario «Se rechaza un nombre de cambio que no es válido»: `invalid_name`
 // antes de crear nada.
 func TestEnsureRefusesAnInvalidChangeNameBeforeCreatingAnything(t *testing.T) {
 	t.Parallel()
@@ -378,7 +378,7 @@ func remoteWithMain(t *testing.T, repo string) string {
 	return remote
 }
 
-// REQ-25.10: con `origin/main` y `main` en commits distintos, la base es la referencia
+// RF-BRA-10: con `origin/main` y `main` en commits distintos, la base es la referencia
 // remota ya traída a local y la rama nace de ella; sin remoto, la rama local.
 func TestEnsureTakesTheBaseFromTheRemoteTrackingReferenceIfItExists(t *testing.T) {
 	t.Parallel()
@@ -414,7 +414,7 @@ func TestEnsureTakesTheBaseFromTheRemoteTrackingReferenceIfItExists(t *testing.T
 	})
 }
 
-// REQ-25.10, escenario «Sin `--fetch` no hay operaciones remotas», y matriz de amenazas
+// RF-BRA-10, escenario «Sin `--fetch` no hay operaciones remotas», y matriz de amenazas
 // «Estado del push»: con un remoto configurado y un observador en el único punto que ejecuta
 // git, `ensure` sin `--fetch` no lanza ninguna operación remota (ni `fetch`: la lista
 // cerrada de subcomandos no lo incluye) y solo escribe con `git branch` y `git worktree
@@ -448,7 +448,7 @@ func TestEnsureLaunchesNoRemoteOperationWithoutFetch(t *testing.T) {
 	}
 }
 
-// REQ-25.10, escenario «Rama de integración inexistente»: `base_not_found` nombrando la rama
+// RF-BRA-10, escenario «Rama de integración inexistente»: `base_not_found` nombrando la rama
 // esperada, sin crear nada; también en un repositorio sin commits (matriz «Estado del commit»).
 func TestEnsureRefusesAMissingIntegrationBranch(t *testing.T) {
 	t.Parallel()
@@ -545,7 +545,7 @@ func (f failingWriter) Fetch(ctx context.Context, dir, remote string) error {
 	return f.real.Fetch(ctx, dir, remote)
 }
 
-// REQ-25.2 y D-05: un fallo de git durante la aplicación es `git_failed`, que nombra la
+// RF-BRA-02 y D-05: un fallo de git durante la aplicación es `git_failed`, que nombra la
 // operación y resume el error; repetir `ensure` completa lo pendiente.
 func TestEnsureReportsGitFailedNamingTheOperationAndRepeatingCompletes(t *testing.T) {
 	flaky := func(w failingWriter) *Engine {
@@ -611,7 +611,7 @@ func TestEnsureReportsGitFailedNamingTheOperationAndRepeatingCompletes(t *testin
 	})
 }
 
-// REQ-25.2: un axiom.yaml ilegible o con un valor de política inválido es `config_invalid`
+// RF-BRA-02: un axiom.yaml ilegible o con un valor de política inválido es `config_invalid`
 // y no se crea nada.
 func TestEnsureRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) {
 	t.Parallel()
@@ -696,7 +696,7 @@ func TestEnsureRunsEveryWriteFromTheMainCheckout(t *testing.T) {
 
 // Matriz de amenazas «Selección de repositorio git»: una ruta de rol con `..` se resuelve a
 // la raíz git real que la contiene, nunca por texto, y una que no es un repositorio se
-// omite con `not_a_git_repository` sin impedir el resto del plan (REQ-25.6).
+// omite con `not_a_git_repository` sin impedir el resto del plan (RF-BRA-06).
 func TestEnsureResolvesRolePathsToTheirRealGitRoot(t *testing.T) {
 	t.Parallel()
 	requireGit(t)
@@ -755,7 +755,7 @@ func TestEnsureResolvesRolePathsToTheirRealGitRoot(t *testing.T) {
 	}
 }
 
-// REQ-25.5, REQ-25.11 y matriz «Selección de repositorio git»: en un multirepo el
+// RF-BRA-05, RF-BRA-11 y matriz «Selección de repositorio git»: en un multirepo el
 // repositorio de specs no recibe ramas ni worktrees y los repositorios de código crean los
 // suyos fuera de la carpeta maestra, en la raíz de worktrees.
 func TestEnsureCreatesTheWorktreesOfAMultirepoOutsideTheMasterFolder(t *testing.T) {
@@ -897,7 +897,7 @@ func TestEnsureRefusesAPlannedPathThatIsNotFree(t *testing.T) {
 	})
 }
 
-// REQ-25.11 y D-04: el límite de Windows se comprueba antes de crear nada.
+// RF-BRA-11 y D-04: el límite de Windows se comprueba antes de crear nada.
 func TestEnsureAppliesTheWindowsPathLimitBeforeCreatingAnything(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)
