@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/azuredevops/adotest"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/identitystore"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
 // adoCanary es el PAT ficticio y reconocible de RF-ADO-15. Nunca es una credencial real.
@@ -234,5 +236,190 @@ func TestADOCanaryScannerDetectsAPlantedValue(t *testing.T) {
 
 	if scanned != 2 || len(hits) != 1 || filepath.Base(hits[0]) != "x.json" {
 		t.Fatalf("el escaneo debía detectar solo el fichero sembrado: %v (recorridos %d)", hits, scanned)
+	}
+}
+
+// canaryVerb es un escenario de los verbos y eventos nuevos: prepara un workspace con el doble de
+// Azure DevOps y el PAT canario en el entorno, y ejecuta el flujo con y sin --json devolviendo todo lo
+// que mostró (stdout, stderr y avisos).
+type canaryVerb struct {
+	name  string
+	setup func(t *testing.T) (e *adoEnv, run func(t *testing.T, asJSON bool) []string)
+}
+
+// canaryCLI ejecuta un verbo de integrations y devuelve su stdout y stderr etiquetados.
+func canaryCLI(t *testing.T, label string, asJSON bool, root string, args ...string) []string {
+	t.Helper()
+	full := append(append([]string{}, args...), "--cwd", root)
+	if asJSON {
+		full = append(full, "--json")
+	}
+	_, out, errOut := runIntegrationsCLI(t, "", full...)
+	label += fmt.Sprintf(" json=%v", asJSON)
+	return []string{label + " stdout: " + out, label + " stderr: " + errOut}
+}
+
+func canaryVerbs() []canaryVerb {
+	cli := func(label string, args ...string) func(*testing.T, *adoEnv) func(*testing.T, bool) []string {
+		return func(_ *testing.T, e *adoEnv) func(*testing.T, bool) []string {
+			return func(t *testing.T, asJSON bool) []string { return canaryCLI(t, label, asJSON, e.root, args...) }
+		}
+	}
+	tasks := func(t *testing.T) (*tasksEnv, *adoEnv) {
+		e := newTasksEnv(t, kickoff.ExecutionContinuous, tasksDesign)
+		return e, e.adoEnv
+	}
+	timeSetup := func(t *testing.T) *adoEnv { return newTimeEnv(t, kickoff.ExecutionContinuous, closeToDone).adoEnv }
+	return []canaryVerb{
+		{"tasks create", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			_, e := tasks(t)
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("tasks create", "tasks", "create", "--change", "x")(t, e)
+		}},
+		{"tasks bind", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			te, e := tasks(t)
+			te.seedTask(300, "", tasksParentID, nil)
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("tasks bind", "tasks", "bind", "--change", "x", "--role", "fullstack=300", "--estimate", "fullstack=5", "--replace")(t, e)
+		}},
+		{"summary push", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			e := newSummaryEnv(t, kickoff.ExecutionContinuous, "").adoEnv
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("summary push", "summary", "push", "--change", "x")(t, e)
+		}},
+		{"time propose", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			e := timeSetup(t)
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("time propose", "time", "propose", "--change", "x", "--role", "fullstack")(t, e)
+		}},
+		{"time record", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			e := timeSetup(t)
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("time record", "time", "record", "--change", "x", "--role", "fullstack", "--hours", "2")(t, e)
+		}},
+		{"time record --close-only", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			e := timeSetup(t)
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, cli("time record --close-only", "time", "record", "--change", "x", "--role", "fullstack", "--close-only")(t, e)
+		}},
+		{"gate record role-apply (evento)", func(t *testing.T) (*adoEnv, func(*testing.T, bool) []string) {
+			e := newADOEnv(t, adoBlock)
+			seedADOTaskProcess(e, "Active")
+			bindADOTask(t, e.root, filepath.Join(e.root, "openspec", "changes", "x"))
+			sealForGateTest(t, e.root, "x")
+			t.Setenv(adoPATEnv, adoCanary)
+			return e, func(t *testing.T, asJSON bool) []string {
+				var warnings bytes.Buffer
+				previous := integrationWarnings
+				integrationWarnings = &warnings
+				t.Cleanup(func() { integrationWarnings = previous })
+				args := []string{"--gate", "role-apply:fullstack", "--decision", "approved", "--reason", "ok", "--actor", "Ana"}
+				if asJSON {
+					args = append(args, "--json")
+				}
+				text, err := gateRecordRun(t, e.root, args...)
+				items := []string{"gate record stdout: " + text, "gate record avisos: " + warnings.String()}
+				if err != nil {
+					items = append(items, "gate record error: "+err.Error())
+				}
+				return items
+			}
+		}},
+	}
+}
+
+// canaryRoute es una ruta REST (método y ruta decodificada) que un flujo llegó a tocar.
+type canaryRoute struct{ method, path string }
+
+func distinctRoutes(e *adoEnv) []canaryRoute {
+	seen := map[canaryRoute]bool{}
+	var routes []canaryRoute
+	for _, r := range e.srv.Requests() {
+		route := canaryRoute{r.Method, r.Path}
+		if !seen[route] {
+			seen[route] = true
+			routes = append(routes, route)
+		}
+	}
+	return routes
+}
+
+// prov:ADO:8 y prov:INT:10: el PAT canario no aparece en stdout, stderr, avisos, JSON ni ficheros del
+// cambio ni del directorio de estado cuando los verbos y eventos nuevos (tasks create y bind, summary
+// push, time propose y record, y la entrega de role.apply.approved) tocan las rutas REST nuevas
+// (POST $Task, wiql, fields, states, PATCH, lecturas de work items) en el camino feliz y con un 401,
+// 403, 429, 500 y 500 con eco de la cabecera Authorization en cada una de ellas, con y sin --json.
+func TestADOCanaryNewVerbsAndEventsNeverLeakThePAT(t *testing.T) {
+	echo := func(status int, extra http.Header) func(*adotest.Request) adotest.Response {
+		return func(r *adotest.Request) adotest.Response {
+			return adotest.Response{Status: status, Header: extra, JSON: map[string]any{
+				"message": fmt.Sprintf("rechazado %s; Authorization=%s; pat=%s", adoCanary, r.Header.Get("Authorization"), adoCanary),
+			}}
+		}
+	}
+	failures := []struct {
+		name string
+		h    func(*adotest.Request) adotest.Response
+	}{
+		{"401", func(*adotest.Request) adotest.Response {
+			return adotest.Response{Status: http.StatusUnauthorized, Body: "no autorizado " + adoCanary}
+		}},
+		{"403", func(*adotest.Request) adotest.Response {
+			return adotest.Response{Status: http.StatusForbidden, Body: "prohibido " + adoCanary}
+		}},
+		{"429", echo(http.StatusTooManyRequests, http.Header{"Retry-After": {"2"}})},
+		{"500", func(*adotest.Request) adotest.Response {
+			return adotest.Response{Status: http.StatusInternalServerError, Body: "fallo " + adoCanary}
+		}},
+		{"500 con eco de la cabecera", echo(http.StatusInternalServerError, nil)},
+	}
+
+	check := func(t *testing.T, label string, e *adoEnv, items []string) {
+		t.Helper()
+		assertNoCanary(t, label, items)
+		hits, _, _ := findCanaryInFiles(t, e.root, e.stateDir)
+		for _, hit := range hits {
+			t.Errorf("%s: el fichero %s contiene el PAT o su forma codificada", label, hit)
+		}
+	}
+
+	for _, verb := range canaryVerbs() {
+		t.Run(verb.name, func(t *testing.T) {
+			// Camino feliz: descubre las rutas que toca el flujo y comprueba que la credencial viajó.
+			var routes []canaryRoute
+			t.Run("camino feliz", func(t *testing.T) {
+				e, run := verb.setup(t)
+				var items []string
+				items = append(items, run(t, false)...)
+				items = append(items, run(t, true)...)
+				check(t, "camino feliz", e, items)
+				seen := false
+				for _, r := range e.srv.Requests() {
+					seen = seen || r.Header.Get("Authorization") == canaryForms()[2]
+				}
+				if !seen {
+					t.Fatal("el servidor debía recibir la cabecera Authorization con el canario: la prueba sería vacua")
+				}
+				routes = distinctRoutes(e)
+			})
+			if len(routes) == 0 {
+				t.Fatal("el flujo no tocó ninguna ruta REST")
+			}
+			for _, route := range routes {
+				for _, failure := range failures {
+					t.Run(fmt.Sprintf("%s %s con %s", route.method, route.path, failure.name), func(t *testing.T) {
+						e, run := verb.setup(t)
+						e.srv.Handle(route.method, route.path, failure.h)
+						var items []string
+						items = append(items, run(t, false)...)
+						if e.srv.Count(route.method, route.path) == 0 {
+							t.Fatalf("el flujo no llegó a la ruta %s %s: el fallo programado no se ejercitó", route.method, route.path)
+						}
+						items = append(items, run(t, true)...)
+						check(t, failure.name, e, items)
+					})
+				}
+			}
+		})
 	}
 }
