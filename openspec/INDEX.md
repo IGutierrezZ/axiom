@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 04:39:50 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 511 | **Total Escenarios BDD:** 2261
+> **Última Sincronización:** 2026-11-26 04:57:12 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2293
 
 ---
 
@@ -45,7 +45,7 @@
 | `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 52 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
+| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 84 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 118 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
@@ -2321,6 +2321,40 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* El plugin devuelve vínculos en `archive`
   - *Escenario BDD:* Intento de escribir `integrations.yaml` archivado
   - *Escenario BDD:* Entrega fallida de `archive`
+- **[REQ-27.18]** El Status Nativo Proyecta la Publicación Pendiente
+  - *Escenario BDD:* Compuerta aprobada con documentación sin confirmar
+  - *Escenario BDD:* Varios motivos a la vez
+  - *Escenario BDD:* Tras un `publish` correcto deja de proyectarse
+  - *Escenario BDD:* Rama por delante de origin solo con commits de documentación
+  - *Escenario BDD:* Primera publicación con algo que subir
+  - *Escenario BDD:* Sin referencia remota y sin nada que subir no se proyecta
+  - *Escenario BDD:* Repositorio sin remoto `origin` no proyecta
+  - *Escenario BDD:* Commits de código sin subir proyectan un estado informativo aparte
+  - *Escenario BDD:* Documentación sin confirmar prevalece sobre el código sin subir
+  - *Escenario BDD:* Más de 500 commits sin subir
+  - *Escenario BDD:* Una negativa del destino o un fallo de git es `unavailable`
+  - *Escenario BDD:* Rango sin subir desconocido es `unavailable`
+  - *Escenario BDD:* Almacén `engram` o `none` no proyecta
+  - *Escenario BDD:* Sin aprobaciones ni momentos cumplidos no proyecta
+  - *Escenario BDD:* La compuerta `integration` no cuenta
+  - *Escenario BDD:* Un cambio `continuous` con `auto` proyecta al cumplirse un momento
+  - *Escenario BDD:* En `continuous`, durante `apply` o `verify` no se proyecta
+  - *Escenario BDD:* Archivado `continuous` con `auto` lleva `--archive`
+  - *Escenario BDD:* Archivado `checkpointed` no proyecta
+  - *Escenario BDD:* Multirepo mide contra la integración del repositorio de specs
+  - *Escenario BDD:* Una carpeta sin seguimiento con solo estado local no cuenta
+  - *Escenario BDD:* Una carpeta sin seguimiento con `kickoff.yaml` es documentación
+  - *Escenario BDD:* Paridad con `publish`
+  - *Escenario BDD:* El cálculo no toca la red ni escribe
+  - *Escenario BDD:* `gate record` sigue sin ejecutar git
+- **[REQ-27.19]** El Orquestador Resuelve la Publicación Pendiente Antes de la Fase Siguiente
+  - *Escenario BDD:* Se ejecuta la invocación una vez antes de la fase siguiente
+  - *Escenario BDD:* Se ejecuta una vez al reanudar
+  - *Escenario BDD:* La negativa es informativa
+  - *Escenario BDD:* `code_unpublished` presenta el `pushCommand` sin ejecutarlo
+  - *Escenario BDD:* `unavailable` se presenta como información
+  - *Escenario BDD:* El campo nunca cambia el enrutado
+  - *Escenario BDD:* Sin proyección no se publica por esta regla
 
 ### Dominio: `sdd-independent-review` — Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura)
 
