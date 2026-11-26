@@ -92,14 +92,14 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 5: Doctrina
 
-- [ ] T8 Doctrina del orquestador (párrafo **Explainer HTML.** al final de `SDD Change Kickoff and Block Gates`), contrato de estado, test del hook y test del plugin de OpenCode.
+- [x] T8 Doctrina del orquestador (párrafo **Explainer HTML.** al final de `SDD Change Kickoff and Block Gates`), contrato de estado, test del hook y test del plugin de OpenCode.
   - Cubre: prov:PRE:1, prov:KOF:4, prov:GAT:2 (presentación en paradas)
   - Ficheros: `internal/assets/skills/_shared/sdd-orchestrator-sections.md`, `internal/assets/skills/_shared/sdd-status-contract.md`, `internal/cli/sdd_preflight_hook_test.go`, `internal/assets/opencode_sdd_preflight_topology_test.go`, `internal/assets/explainer_html_doctrine_test.go` (parte del orquestador y del contrato)
   - Pruebas: el orquestador contiene el marcador `Axiom SDD kickoff explainer:`, el orden (tras `axiom branch ensure`, antes de `kickoff seal`), la restricción a `ask`, una vez por cambio, nunca en ODD ni con `--infer` ni al reanudar, y `--explainer-html` (hueco spec #11); presenta el HTML y su frescura en las paradas `spec` y `design` de `checkpointed` sin sustituir al md (hueco spec #7); el contrato de estado nombra `explainerHtml`, `expectedDigest`, `reason`, `fresh|stale|missing`; gemelo del hook con pregunta y con cabecera que empiezan por el marcador (autoridad intacta; alinea la palabra «cabecera» de la pregunta abierta del diseño); plugin v1 y v2 (`SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX]`, el marcador no empieza por el prefijo, arnés de node); `TestOrchestratorSectionDriftDoesNotGrow` sigue verde.
   - Verificación: `go test ./internal/assets -run 'Explainer|TestOrchestratorSectionDriftDoesNotGrow|TestOpenCodePluginIgnoresExplainerQuestion|TestOpenCodeSDDPreflightTopologyContract'` y `go test ./internal/cli -run 'TestSDDPreflightHookIgnores'`
   - Ruta: inline (~300 líneas; depende de T4).
 
-- [ ] T9 Documento compartido `sdd-explainer-html.md`, pasos en `sdd-spec` y `sdd-design`, y seis copias por agente (decisiones 9 y 12).
+- [x] T9 Documento compartido `sdd-explainer-html.md`, pasos en `sdd-spec` y `sdd-design`, y seis copias por agente (decisiones 9 y 12).
   - Cubre: prov:GAT:1, prov:GAT:2
   - Ficheros: `internal/assets/skills/_shared/sdd-explainer-html.md`, `internal/assets/skills/sdd-spec/SKILL.md`, `internal/assets/skills/sdd-design/SKILL.md`, `internal/assets/claude/agents/sdd-{spec,design}.md`, `internal/assets/cursor/agents/sdd-{spec,design}.md`, `internal/assets/copilot/agents/sdd-{spec,design}.agent.md`, `internal/assets/explainer_html_doctrine_test.go` (parte de skills, copias y esqueleto)
   - Pruebas (RED primero): skills, seis copias y documento compartido contienen `castellano`, `<script>`, `external`, `axiom-source-digest` y `data-axiom-ref` (falla si falta uno en cualquiera); esqueleto `html` sin hallazgos de `explainer.Validate`; `CitedIDs` no vacío, cada ID citado existe en el md de ejemplo y cada requisito del md de ejemplo está citado (hueco diseño #9); el paso cubre: HTML que no se logra escribir o incumple termina igualmente con el md, avisa y deja `missing`/`stale` sin bloquear (hueco spec #2); regeneración tras rechazo, con HTML previo ausente y tras edición manual del md (hueco spec #6, solo como regla de regeneración); `engram`/`none` no escriben HTML.
@@ -108,21 +108,21 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 6: Goldens y docs
 
-- [ ] T10 Regenerar los 12 goldens (10 de orquestador y 2 de agentes) y revisar el diff.
+- [x] T10 Regenerar los 12 goldens (10 de orquestador y 2 de agentes) y revisar el diff.
   - Cubre: prov:PRE:1, prov:GAT:1 (doctrina desplegada)
   - Ficheros: `testdata/golden/*` listados en «Goldens» del diseño
   - Orden: `go test ./internal/components -run 'TestGolden' -update`, después `go test ./internal/components -run 'TestGolden'` sin `-update`.
   - Terminado cuando: el diff solo muestra el párrafo **Explainer HTML.** y la sección de los agentes; nunca se edita un golden a mano.
   - Ruta: inline (mecánica).
 
-- [ ] T11 Documentación de usuario donde el diseño la pide: `axiom.example.yaml` ya cubierto en T2; revisar y, si existe una guía de `kickoff seal` o de configuración SDD en `docs/`, añadir `sdd.explainer_html`, `--explainer-html` y la pestaña «Explicación». Si no hay documento que hable de `docs_publication` o `sdd.iso`, no se crea ninguno nuevo y se anota en el resultado.
+- [x] T11 Documentación de usuario donde el diseño la pide: `axiom.example.yaml` ya cubierto en T2; revisar y, si existe una guía de `kickoff seal` o de configuración SDD en `docs/`, añadir `sdd.explainer_html`, `--explainer-html` y la pestaña «Explicación». Si no hay documento que hable de `docs_publication` o `sdd.iso`, no se crea ninguno nuevo y se anota en el resultado.
   - Cubre: prov:KOF:1, prov:KOF:3, prov:WEB:2
   - Verificación: lectura estructural; sin comando de prueba (docs).
   - Ruta: inline.
 
 ## Fase 7: Verificación
 
-- [ ] T12 Verificación localizada final: ejecutar cada `-run` de T1 a T10 una vez, en el orden de las tareas, sin suite completa, sin compilar binarios sueltos y sin `go build` de `axiom.exe`:
+- [x] T12 Verificación localizada final: ejecutar cada `-run` de T1 a T10 una vez, en el orden de las tareas, sin suite completa, sin compilar binarios sueltos y sin `go build` de `axiom.exe`:
   - `go test ./internal/explainer`
   - `go test ./internal/workspace -run 'TestDecodeSDD|TestSDDLoad|TestExample|TestDeclarationsExplainer'`
   - `go test ./internal/kickoff -run 'Explainer|TestParseSealArgs|TestInfer|TestLegacy'`
