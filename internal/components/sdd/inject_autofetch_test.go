@@ -47,12 +47,17 @@ func readAutofetchHooks(t *testing.T, path string) (map[string]any, []byte) {
 	return hooks, raw
 }
 
-// assertAutofetchEntry exige exactamente una orden canónica, bajo SessionStart, con el matcher y el timeout fijados.
-func assertAutofetchEntry(t *testing.T, path, command string) {
+// assertAutofetchEntry exige exactamente un handler canónico, bajo SessionStart, con el matcher, el
+// timeout y el `commandWindows` fijados (ausente cuando commandWindows es "").
+func assertAutofetchEntry(t *testing.T, path, command, commandWindows string) {
 	t.Helper()
 	hooks, raw := readAutofetchHooks(t, path)
-	if n := strings.Count(string(raw), autofetchHookMarker); n != 1 {
-		t.Fatalf("%s: %d órdenes de autofetch, se esperaba 1\n%s", path, n, raw)
+	want := 1
+	if commandWindows != "" {
+		want = 2
+	}
+	if n := strings.Count(string(raw), autofetchHookMarker); n != want {
+		t.Fatalf("%s: %d apariciones de la orden de autofetch, se esperaban %d\n%s", path, n, want, raw)
 	}
 	entries, _ := hooks["SessionStart"].([]any)
 	for _, item := range entries {
@@ -64,6 +69,13 @@ func assertAutofetchEntry(t *testing.T, path, command string) {
 			}
 			if entry["matcher"] != "startup|resume" || hook["type"] != "command" || hook["timeout"] != float64(10) {
 				t.Fatalf("entrada con matcher %v type %v timeout %v\n%s", entry["matcher"], hook["type"], hook["timeout"], raw)
+			}
+			gotWindows, hasWindows := hook["commandWindows"]
+			if commandWindows == "" && hasWindows {
+				t.Fatalf("el handler no debe llevar commandWindows\n%s", raw)
+			}
+			if commandWindows != "" && gotWindows != commandWindows {
+				t.Fatalf("commandWindows = %v, se esperaba %q\n%s", gotWindows, commandWindows, raw)
 			}
 			return
 		}
@@ -98,7 +110,7 @@ func TestEnsureAutofetchHookInstallsOnceAndKeepsForeignAndGuard(t *testing.T) {
 			if changed, err := tc.ensure(tc.path, tc.agent); err != nil || !changed {
 				t.Fatalf("la primera instalación debe cambiar: changed=%v err=%v", changed, err)
 			}
-			assertAutofetchEntry(t, tc.path, command)
+			assertAutofetchEntry(t, tc.path, command, AutofetchHookCommandWindows(tc.agent))
 			first, _ := os.ReadFile(tc.path)
 			if changed, err := tc.ensure(tc.path, tc.agent); err != nil || changed {
 				t.Fatalf("la segunda instalación debe ser un no-op: changed=%v err=%v", changed, err)
@@ -137,10 +149,11 @@ func TestPruneStaleAutofetchHooksLeavesOnlyCanonicalUnderSessionStart(t *testing
 			if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
 				t.Fatal(err)
 			}
-			if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command); err != nil || !changed {
+			windows := AutofetchHookCommandWindows(agent)
+			if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command, windows); err != nil || !changed {
 				t.Fatalf("changed=%v err=%v", changed, err)
 			}
-			assertAutofetchEntry(t, path, command)
+			assertAutofetchEntry(t, path, command, windows)
 			hooks, raw := readAutofetchHooks(t, path)
 			if _, ok := hooks["Stop"]; ok {
 				t.Fatalf("el evento Stop vaciado debe borrarse:\n%s", raw)
@@ -151,7 +164,7 @@ func TestPruneStaleAutofetchHooksLeavesOnlyCanonicalUnderSessionStart(t *testing
 				}
 			}
 			first := raw
-			if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command); err != nil || changed {
+			if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command, windows); err != nil || changed {
 				t.Fatalf("segunda pasada: changed=%v err=%v", changed, err)
 			}
 			if second, _ := os.ReadFile(path); !bytes.Equal(first, second) {
@@ -173,10 +186,50 @@ func TestPruneStaleAutofetchHooksRemovesDuplicatesAndOtherOSForm(t *testing.T) {
 	if err := os.WriteFile(path, seed, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command); err != nil || !changed {
+	if changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, command, ""); err != nil || !changed {
 		t.Fatalf("changed=%v err=%v", changed, err)
 	}
-	assertAutofetchEntry(t, path, command)
+	assertAutofetchEntry(t, path, command, "")
+}
+
+// Una instalación de Codex anterior, sin `commandWindows`, se sustituye por la canónica con el
+// campo, y el sync siguiente no cambia nada.
+func TestEnsureCodexAutofetchHookMigratesEntryWithoutCommandWindows(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	command := AutofetchHookCommand(model.AgentCodex, runtimeGOOSForTest())
+	seed, _ := json.Marshal(map[string]any{"hooks": map[string]any{"SessionStart": []any{
+		map[string]any{"matcher": autofetchHookMatcher, "hooks": []any{map[string]any{"type": "command", "command": command, "timeout": 10}}},
+		map[string]any{"matcher": "startup", "hooks": []any{map[string]any{"type": "command", "command": "echo foreign start"}}},
+	}}})
+	if err := os.WriteFile(path, seed, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := ensureCodexAutofetchHook(path, model.AgentCodex); err != nil || !changed {
+		t.Fatalf("la migración debe cambiar: changed=%v err=%v", changed, err)
+	}
+	assertAutofetchEntry(t, path, command, AutofetchHookCommandWindows(model.AgentCodex))
+	first, _ := os.ReadFile(path)
+	if !strings.Contains(string(first), "echo foreign start") {
+		t.Fatalf("la entrada ajena no se conservó:\n%s", first)
+	}
+	if changed, err := ensureCodexAutofetchHook(path, model.AgentCodex); err != nil || changed {
+		t.Fatalf("el segundo sync debe ser un no-op: changed=%v err=%v", changed, err)
+	}
+	if second, _ := os.ReadFile(path); !bytes.Equal(first, second) {
+		t.Fatalf("el segundo sync cambió los bytes:\n%s\n%s", first, second)
+	}
+}
+
+func TestAutofetchHookCommandWindowsOnlyForCodex(t *testing.T) {
+	if got, want := AutofetchHookCommandWindows(model.AgentCodex), "axiom autofetch run --agent codex 2>nul & exit /b 0"; got != want {
+		t.Fatalf("AutofetchHookCommandWindows(codex) = %q, se esperaba %q", got, want)
+	}
+	if got := AutofetchHookCommandWindows(model.AgentClaudeCode); got != "" {
+		t.Fatalf("Claude Code no lleva commandWindows: %q", got)
+	}
 }
 
 func TestPruneStaleAutofetchHooksWithEmptyCanonicalRemovesAll(t *testing.T) {
@@ -184,7 +237,7 @@ func TestPruneStaleAutofetchHooksWithEmptyCanonicalRemovesAll(t *testing.T) {
 		"SessionStart": []any{map[string]any{"matcher": autofetchHookMatcher, "hooks": []any{map[string]any{"command": "axiom autofetch run --agent codex || true"}}}},
 		"Stop":         []any{map[string]any{"hooks": []any{map[string]any{"command": "echo keep"}}}},
 	}
-	if !pruneStaleAutofetchHooks(hooks, autofetchHookMatcher, "") {
+	if !pruneStaleAutofetchHooks(hooks, autofetchHookMatcher, "", "") {
 		t.Fatal("debe informar del cambio")
 	}
 	if _, ok := hooks["SessionStart"]; ok || hooks["Stop"] == nil {
@@ -198,7 +251,7 @@ func TestEnsureAutofetchHookRejectsUnexpectedShapeWithoutTouchingFile(t *testing
 		if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, "axiom autofetch run --agent codex || true")
+		changed, err := ensureAutofetchHookEntries(path, "test", autofetchHookMatcher, "axiom autofetch run --agent codex || true", "")
 		if err == nil || changed {
 			t.Fatalf("%s: changed=%v err=%v", seed, changed, err)
 		}
@@ -221,6 +274,6 @@ func TestInstallSkillRegistryAutomationAutofetchReachesClaudeAndCodexOnly(t *tes
 	if _, err := installSkillRegistryAutomation(home, codex); err != nil {
 		t.Fatal(err)
 	}
-	assertAutofetchEntry(t, claude.SettingsPath(home), AutofetchHookCommand(model.AgentClaudeCode, runtimeGOOSForTest()))
-	assertAutofetchEntry(t, filepath.Join(codex.GlobalConfigDir(home), "hooks.json"), AutofetchHookCommand(model.AgentCodex, runtimeGOOSForTest()))
+	assertAutofetchEntry(t, claude.SettingsPath(home), AutofetchHookCommand(model.AgentClaudeCode, runtimeGOOSForTest()), "")
+	assertAutofetchEntry(t, filepath.Join(codex.GlobalConfigDir(home), "hooks.json"), AutofetchHookCommand(model.AgentCodex, runtimeGOOSForTest()), AutofetchHookCommandWindows(model.AgentCodex))
 }

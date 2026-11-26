@@ -1474,10 +1474,8 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 		hooksMap = map[string]any{}
 	}
 
-	changed := false
-	if replaceHookCommand(hooksMap, "SessionStart", legacyCommand, command) {
-		changed = true
-	} else if !hookCommandExists(hooksMap, "SessionStart", command) {
+	changed := replaceHookCommand(hooksMap, "SessionStart", legacyCommand, command)
+	if !hookCommandExists(hooksMap, "SessionStart", command) {
 		sessionRaw, hasSessionStart := hooksMap["SessionStart"]
 		sessionStart, _ := sessionRaw.([]any)
 		if hasSessionStart && sessionStart == nil {
@@ -1487,14 +1485,18 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 			"matcher": "startup|resume|clear|compact",
 			"hooks": []any{
 				map[string]any{
-					"type":          "command",
-					"command":       command,
-					"timeout":       30,
-					"statusMessage": "Refreshing skill registry",
+					"type":                 "command",
+					"command":              command,
+					codexCommandWindowsKey: codexSkillRegistryCommandWindows,
+					"timeout":              30,
+					"statusMessage":        "Refreshing skill registry",
 				},
 			},
 		})
 		hooksMap["SessionStart"] = sessionStart
+		changed = true
+	} else if setHookField(hooksMap, "SessionStart", command, codexCommandWindowsKey, codexSkillRegistryCommandWindows) {
+		// Una instalación anterior sin `commandWindows` recibe el campo en su sitio.
 		changed = true
 	}
 
@@ -1548,6 +1550,45 @@ func hookCommandExists(hooksMap map[string]any, event, command string) bool {
 		}
 	}
 	return false
+}
+
+// codexCommandWindowsKey es el campo del handler de Codex con la orden para Windows. Codex
+// ejecuta los hooks con `cmd.exe /C` en Windows y usa este campo en lugar de `command` cuando
+// existe (`codex-rs/hooks/src/engine/discovery.rs`, `command_windows.unwrap_or(command)`).
+const codexCommandWindowsKey = "commandWindows"
+
+// codexCmdAlwaysZero envuelve una orden para `cmd.exe` de modo que termine siempre con 0:
+// `cmd.exe` no tiene `true` ni entiende `|| true`, y la salida de error se descarta para que un
+// `axiom` ausente no ensucie el arranque (fail-open, RF-BRA-40).
+func codexCmdAlwaysZero(command string) string {
+	return command + " 2>nul & exit /b 0"
+}
+
+// codexSkillRegistryCommandWindows es la forma de `cmd.exe` del hook de skill-registry de Codex.
+// No pasa `--cwd`: `refresh` toma el directorio de trabajo del proceso (el `%CD%` de `cmd.exe`),
+// y `--cwd "%CD%"` se trocearía mal en la raíz de una unidad (en `"C:\"` la barra escapa la comilla).
+var codexSkillRegistryCommandWindows = codexCmdAlwaysZero("axiom skill-registry refresh --quiet --no-gitignore")
+
+// setHookField fija key=value en los handlers de event cuya orden es command y devuelve true si
+// cambió alguno. No crea handlers.
+func setHookField(hooksMap map[string]any, event, command, key, value string) bool {
+	entries, _ := hooksMap[event].([]any)
+	changed := false
+	for _, entry := range entries {
+		entryMap, _ := entry.(map[string]any)
+		hooks, _ := entryMap["hooks"].([]any)
+		for _, hook := range hooks {
+			hookMap, _ := hook.(map[string]any)
+			if hookMap == nil || hookMap["command"] != command {
+				continue
+			}
+			if current, _ := hookMap[key].(string); current != value {
+				hookMap[key] = value
+				changed = true
+			}
+		}
+	}
+	return changed
 }
 
 func ensureClaudeSkillRegistryHook(settingsPath string) (bool, error) {
@@ -1949,21 +1990,33 @@ func AutofetchHookCommand(agent model.AgentID, goos string) string {
 	return command + " || true"
 }
 
-// ensureClaudeAutofetchHook instala el hook SessionStart de autofetch en settings.json de Claude Code.
-func ensureClaudeAutofetchHook(settingsPath string, agentID model.AgentID) (bool, error) {
-	return ensureAutofetchHookEntries(settingsPath, "Claude settings", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS))
+// AutofetchHookCommandWindows es la orden del hook de autofetch que Codex ejecuta en Windows
+// (campo `commandWindows`), con `cmd.exe /C`: termina siempre con 0 sin depender de un `true` en
+// el PATH. Claude Code no tiene ese campo (su forma de Windows va en AutofetchHookCommand) y
+// devuelve "".
+func AutofetchHookCommandWindows(agent model.AgentID) string {
+	if agent != model.AgentCodex {
+		return ""
+	}
+	return codexCmdAlwaysZero(fmt.Sprintf("%s --agent %s", autofetchHookMarker, agent))
 }
 
-// ensureCodexAutofetchHook instala el mismo hook en el hooks.json de Codex.
+// ensureClaudeAutofetchHook instala el hook SessionStart de autofetch en settings.json de Claude Code.
+func ensureClaudeAutofetchHook(settingsPath string, agentID model.AgentID) (bool, error) {
+	return ensureAutofetchHookEntries(settingsPath, "Claude settings", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS), "")
+}
+
+// ensureCodexAutofetchHook instala el mismo hook en el hooks.json de Codex, con `commandWindows`.
 func ensureCodexAutofetchHook(hooksPath string, agentID model.AgentID) (bool, error) {
-	return ensureAutofetchHookEntries(hooksPath, "Codex hooks", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS))
+	return ensureAutofetchHookEntries(hooksPath, "Codex hooks", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS), AutofetchHookCommandWindows(agentID))
 }
 
 // ensureAutofetchHookEntries generaliza ensureBranchGuardHookEntries a un solo evento
 // (`SessionStart`): primero poda las órdenes de `axiom autofetch run` que ya no son la canónica,
 // después añade la canónica si falta, y escribe solo si algo cambió. Una forma inesperada es un
-// error que deja el fichero intacto.
-func ensureAutofetchHookEntries(path, label, matcher, command string) (bool, error) {
+// error que deja el fichero intacto. commandWindows, si no está vacío, va en el campo
+// `commandWindows` del handler y forma parte de su identidad.
+func ensureAutofetchHookEntries(path, label, matcher, command, commandWindows string) (bool, error) {
 	root := map[string]any{}
 	if data, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(data))) > 0 {
 		if err := json.Unmarshal(data, &root); err != nil {
@@ -1986,12 +2039,16 @@ func ensureAutofetchHookEntries(path, label, matcher, command string) (bool, err
 		return false, fmt.Errorf("%s %q has unsupported hooks.SessionStart shape: want array", label, path)
 	}
 
-	changed := pruneStaleAutofetchHooks(hooksMap, matcher, command)
+	changed := pruneStaleAutofetchHooks(hooksMap, matcher, command, commandWindows)
 	entries, _ := hooksMap["SessionStart"].([]any)
 	if !claudeHookListContains(entries, command) {
+		handler := map[string]any{"type": "command", "command": command, "timeout": autofetchHookTimeout}
+		if commandWindows != "" {
+			handler[codexCommandWindowsKey] = commandWindows
+		}
 		hooksMap["SessionStart"] = append(entries, map[string]any{
 			"matcher": matcher,
-			"hooks":   []any{map[string]any{"type": "command", "command": command, "timeout": autofetchHookTimeout}},
+			"hooks":   []any{handler},
 		})
 		changed = true
 	}
@@ -2015,13 +2072,14 @@ func ensureAutofetchHookEntries(path, label, matcher, command string) (bool, err
 	return wr.Changed, nil
 }
 
-// pruneStaleAutofetchHooks retira, en cualquier evento, toda orden que contenga
-// `axiom autofetch run` y no sea exactamente la canónica bajo `SessionStart` con el matcher
-// canónico (forma anterior, evento antiguo, forma de otro sistema operativo o duplicado), y borra
-// las entradas y eventos que queden vacíos. Con `canonical == ""` retira todas. Sigue el
-// precedente de pruneLegacyClaudeHook. Lo que no tiene la forma esperada no se toca. Devuelve
-// true si modificó algo.
-func pruneStaleAutofetchHooks(hooksMap map[string]any, matcher, canonical string) (changed bool) {
+// pruneStaleAutofetchHooks retira, en cualquier evento, todo handler cuyo `command` o
+// `commandWindows` contenga `axiom autofetch run` y no sea exactamente el canónico bajo
+// `SessionStart`, con el matcher y el `commandWindows` canónicos (forma anterior, evento antiguo,
+// forma de otro sistema operativo, sin `commandWindows` o duplicado), y borra las entradas y
+// eventos que queden vacíos. Con `canonical == ""` retira todos. Sigue el precedente de
+// pruneLegacyClaudeHook. Lo que no tiene la forma esperada no se toca. Devuelve true si modificó
+// algo.
+func pruneStaleAutofetchHooks(hooksMap map[string]any, matcher, canonical, canonicalWindows string) (changed bool) {
 	keptCanonical := false
 	for event, raw := range hooksMap {
 		entries, ok := raw.([]any)
@@ -2046,8 +2104,9 @@ func pruneStaleAutofetchHooks(hooksMap map[string]any, matcher, canonical string
 			for _, h := range inner {
 				hMap, ok := h.(map[string]any)
 				cmd, _ := hMap["command"].(string)
-				if ok && strings.Contains(cmd, autofetchHookMarker) {
-					isCanonical := canonical != "" && event == "SessionStart" && cmd == canonical && entryMatcher == matcher
+				cmdWindows, _ := hMap[codexCommandWindowsKey].(string)
+				if ok && (strings.Contains(cmd, autofetchHookMarker) || strings.Contains(cmdWindows, autofetchHookMarker)) {
+					isCanonical := canonical != "" && event == "SessionStart" && cmd == canonical && cmdWindows == canonicalWindows && entryMatcher == matcher
 					if isCanonical && !keptCanonical {
 						keptCanonical = true
 					} else {

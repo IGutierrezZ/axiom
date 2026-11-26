@@ -1459,6 +1459,22 @@ func rewriteSkillRegistryHook(path string, agentID model.AgentID) operation {
 	}
 }
 
+// isManagedHookCommand dice si cmd es una orden de hook que instala Axiom (o su predecesor
+// gentle-ai) en los ficheros de hooks de los runtimes.
+func isManagedHookCommand(cmd, branchGuardCommand string) bool {
+	if cmd == "" {
+		return false
+	}
+	return strings.Contains(cmd, "axiom skill-registry refresh") ||
+		strings.Contains(cmd, "gentle-ai skill-registry refresh") ||
+		strings.Contains(cmd, "axiom review stop-hook") ||
+		strings.Contains(cmd, "gentle-ai review stop-hook") ||
+		strings.Contains(cmd, "axiom sdd-preflight-hook") ||
+		strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
+		strings.Contains(cmd, "axiom autofetch run") ||
+		cmd == branchGuardCommand
+}
+
 func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, bool, error) {
 	root := map[string]any{}
 	if err := json.Unmarshal(raw, &root); err != nil {
@@ -1490,14 +1506,9 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 			for _, hook := range hooks {
 				hookMap, ok := hook.(map[string]any)
 				cmd, _ := hookMap["command"].(string)
-				if ok && (strings.Contains(cmd, "axiom skill-registry refresh") ||
-					strings.Contains(cmd, "gentle-ai skill-registry refresh") ||
-					strings.Contains(cmd, "axiom review stop-hook") ||
-					strings.Contains(cmd, "gentle-ai review stop-hook") ||
-					strings.Contains(cmd, "axiom sdd-preflight-hook") ||
-					strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
-					strings.Contains(cmd, "axiom autofetch run") ||
-					cmd == branchGuardCommand) {
+				// Codex guarda en `commandWindows` la forma de `cmd.exe` del mismo hook.
+				cmdWindows, _ := hookMap["commandWindows"].(string)
+				if ok && (isManagedHookCommand(cmd, branchGuardCommand) || isManagedHookCommand(cmdWindows, branchGuardCommand)) {
 					changed = true
 					continue
 				}
