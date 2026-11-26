@@ -28,6 +28,15 @@
 - Tests: `TestTasksGateArtifactPaths` (sddstatus), `TestGateArtifactDigestTasksGateAcceptanceTests` (sin `pruebas.md` digest idéntico a `tasks.md`, en blanco fuera, editar cambia el digest, paridad registro/status, aprobada terminal) y `TestGateArtifactDigestTasksGateRejectedReopensOnAcceptanceTestsEdit` (rechazada pasa a pending reabierta).
 - Verificación: `go test ./internal/sddstatus -run 'TasksGate|Governance'`, `go test ./internal/cli -run 'GateArtifactDigest|RunSDDGateRecord|GateDigest'`, `go test ./internal/kickoff -run EvaluateGates` ok; `go vet ./internal/sddstatus ./internal/cli` ok.
 
+## T5 completada: `AcceptanceTestsFor` y proyección `acceptanceTests`
+
+- En `internal/sddstatus/acceptance_tests.go`: `AcceptanceTestsFor(location workspace.Location, changeRoot string) AcceptanceTestsResult` (campos `Active`, `Environments`, `DeclarationError`, `Present`, `Missing`, `Error`, `Report`, `Findings`; `Findings` incluye `pruebas_ausente` si `Missing`), `AcceptanceTestsProjection` (`active`, `environments`, `error`, `warning`, `battery{path,cases,scenarios,requirements,findings,error}`) y `decorateAcceptanceTests`, enganchado en `Resolve` tras `decorateExplainer` y copiado en `status_v2.go`.
+- Con la función no activa y `pruebas.md` presente se ejecuta `Check` con `SkipEnvironments`; con `changeRoot` vacío solo se lee la declaración; fallos de kickoff, patrón o delta van a `Error` sin informe parcial. Omitida para archivados y sin bloque ni `pruebas.md`.
+- Contrato documentado en `internal/assets/skills/_shared/sdd-status-contract.md`.
+- Tests: `acceptance_tests_projection_test.go` (14 casos: omisión con JSON idéntico, activa con batería, `enabled:false`, bloque inválido y topología, aviso sin cambiar enrutado, no activa con fichero, kickoff ilegible, archivado no bloqueado, archivados omitidos).
+- Verificación: `go test ./internal/sddstatus -run 'AcceptanceTests|TasksGate|Governance|Explainer|Declarations|Requirements|StatusV2'`, `go test ./internal/assets -run StatusContract`, `go test ./internal/components -run TestGolden` ok; `go vet ./internal/sddstatus`; `go build ./...` ok.
+- Para T6/T8: `AcceptanceTestsResult.Findings` ya trae `pruebas_ausente`; el verbo decide «antes de tasks» con `Missing == false && !Present`.
+
 ## Pendientes
 
-T5 a T10.
+T6 a T10.
