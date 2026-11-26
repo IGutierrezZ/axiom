@@ -191,8 +191,9 @@ func TestAutofetchStampAbsentUnreadableOrFutureMeansNoPreviousFetch(t *testing.T
 func TestAutofetchStampWriteFailureIsAWarningAndTheCycleContinues(t *testing.T) {
 	repo := embeddedCoreProject(t)
 	remoteWithMain(t, repo)
-	// Un fichero donde debería haber una carpeta impide crear el sello.
-	writeFile(t, filepath.Join(repo, ".git", "axiom"), "no es una carpeta")
+	// Un fichero donde debería estar la carpeta del sello impide crearlo; el resto de
+	// `.git/axiom` (el registro de cambios) sigue legible en todas las plataformas.
+	writeFile(t, filepath.Join(repo, ".git", "axiom", "autofetch"), "no es una carpeta")
 
 	result := autofetchRun(t, autofetchOn, repo, time.Time{})
 

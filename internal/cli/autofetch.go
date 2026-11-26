@@ -134,6 +134,13 @@ type autofetchOptions struct {
 	asJSON   bool
 }
 
+// newAutofetchContext crea el contexto de cada ciclo de `run`. El motor acota el ciclo con su
+// presupuesto de 10 s y respeta además cualquier plazo anterior del contexto; las pruebas lo
+// sustituyen por uno más corto para ejercitar el modo hook con un remoto lento.
+var newAutofetchContext = func() (context.Context, context.CancelFunc) {
+	return context.WithCancel(context.Background())
+}
+
 // RunAutofetch ejecuta `axiom autofetch <subcomando>` con el hub del usuario y devuelve el código
 // de salida. stdin solo lo lee `run --agent` (la carga del hook).
 func RunAutofetch(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -194,7 +201,7 @@ func parseAutofetchFlags(subcommand string, args []string) (autofetchOptions, er
 		return options, err
 	}
 	if flags.NArg() > 0 {
-		return options, fmt.Errorf("argumento inesperado '%s'", flags.Arg(0))
+		return options, fmt.Errorf("argumento inesperado '%s': consulta la forma válida con `axiom autofetch %s --help`", flags.Arg(0), subcommand)
 	}
 	flags.Visit(func(given *flag.Flag) {
 		if given.Name == "cwd" {
@@ -209,13 +216,13 @@ func parseAutofetchFlags(subcommand string, args []string) (autofetchOptions, er
 func resolveAutofetchCWD(options autofetchOptions) (string, error) {
 	if options.cwdGiven {
 		if strings.TrimSpace(options.cwd) == "" || !filepath.IsAbs(options.cwd) {
-			return "", fmt.Errorf("--cwd '%s' debe ser una ruta absoluta", options.cwd)
+			return "", fmt.Errorf("--cwd '%s' debe ser una ruta absoluta: repite la orden con una, por ejemplo `axiom autofetch status --cwd <ruta absoluta del proyecto>`", options.cwd)
 		}
 		return options.cwd, nil
 	}
 	dir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("no se pudo determinar el directorio de trabajo (%v): indica una ruta absoluta con --cwd", err)
+		return "", fmt.Errorf("no se pudo determinar el directorio de trabajo (%v): indica una ruta absoluta con --cwd, por ejemplo `axiom autofetch status --cwd <ruta absoluta del proyecto>`", err)
 	}
 	return dir, nil
 }
@@ -254,7 +261,9 @@ func runAutofetchRun(args []string, stdout, stderr io.Writer, hubPath string) in
 	if err != nil {
 		return autofetchUsage(stderr, "run", err)
 	}
-	result := engine.DefaultWithHubPath(hubPath).Autofetch(context.Background(), engine.AutofetchRequest{CWD: cwd})
+	ctx, cancel := newAutofetchContext()
+	defer cancel()
+	result := engine.DefaultWithHubPath(hubPath).Autofetch(ctx, engine.AutofetchRequest{CWD: cwd})
 	if options.asJSON {
 		if err := writeIndentedJSON(stdout, result); err != nil {
 			fmt.Fprintf(stderr, "Error: no se pudo escribir el resultado: %v. Repite `axiom autofetch run --json`.\n", err)
@@ -289,7 +298,9 @@ func runAutofetchHook(args []string, stdin io.Reader, stdout io.Writer, hubPath 
 			return branch.ExitReady
 		}
 	}
-	result := engine.DefaultWithHubPath(hubPath).Autofetch(context.Background(), engine.AutofetchRequest{CWD: cwd})
+	ctx, cancel := newAutofetchContext()
+	defer cancel()
+	result := engine.DefaultWithHubPath(hubPath).Autofetch(ctx, engine.AutofetchRequest{CWD: cwd})
 	if result.Autofetch != branch.AutofetchStateEnabled || len(result.Notices) == 0 {
 		return branch.ExitReady
 	}

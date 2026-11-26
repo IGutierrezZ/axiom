@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
-	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
@@ -590,7 +590,11 @@ func TestAutofetchHookRespectsTheBudgetWithASlowRemote(t *testing.T) {
 	if code, _, stderr := autofetchCLI(t, hubPath, "", "enable", "--cwd", repo); code != 0 {
 		t.Fatalf("enable terminó con %d: %s", code, stderr)
 	}
-	t.Cleanup(engine.SetAutofetchRunBudget(600 * time.Millisecond))
+	previousContext := newAutofetchContext
+	newAutofetchContext = func() (context.Context, context.CancelFunc) {
+		return context.WithTimeout(context.Background(), 600*time.Millisecond)
+	}
+	t.Cleanup(func() { newAutofetchContext = previousContext })
 
 	started := time.Now()
 	code, stdout, stderr := autofetchCLI(t, hubPath, "", "run", "--agent", "claude-code", "--cwd", repo)
