@@ -226,10 +226,14 @@ type Status struct {
 	// explanatory HTML (decorateExplainer). Informational only: it never changes NextRecommended,
 	// Dependencies, BlockedReasons, ISO or a gate. Structural absence (nil, omitempty) unless axiom.yaml
 	// has an `sdd:` block or the selected change is sealed with explainer_html yes.
-	Explainer         *ExplainerProjection `json:"explainer,omitempty"`
-	PhaseInstructions *PhaseInstructions   `json:"phaseInstructions,omitempty"`
-	NextRecommended   string               `json:"nextRecommended"`
-	BlockedReasons    []string             `json:"blockedReasons"`
+	Explainer *ExplainerProjection `json:"explainer,omitempty"`
+	// AcceptanceTests es la proyección aditiva de acceptance_tests y de pruebas.md (decorateAcceptanceTests,
+	// RF-KOF-22). Informativa: nunca cambia NextRecommended, Dependencies, BlockedReasons, las puertas ni sus
+	// digests. Se omite salvo que axiom.yaml declare el bloque o el cambio seleccionado, no archivado, tenga pruebas.md.
+	AcceptanceTests   *AcceptanceTestsProjection `json:"acceptanceTests,omitempty"`
+	PhaseInstructions *PhaseInstructions         `json:"phaseInstructions,omitempty"`
+	NextRecommended   string                     `json:"nextRecommended"`
+	BlockedReasons    []string                   `json:"blockedReasons"`
 	// Notes carries non-blocking diagnostics for a consumer to report, never to
 	// gate on: a non-empty Notes never withholds apply, sync, archive, or a
 	// terminal route. Always serialized as an array — `[]` when there is nothing
@@ -557,6 +561,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 	decorateRequirements(&status, location)
 	decoratePublication(&status, location)
 	decorateExplainer(&status, location)
+	decorateAcceptanceTests(&status, location)
 	return status, nil
 }
 

@@ -56,6 +56,9 @@ type StatusV2Projection struct {
 	// Explainer projects Status.Explainer unchanged (C-06-b): additive and omitted unless axiom.yaml
 	// has an `sdd:` block or the selected change is sealed with explainer_html yes.
 	Explainer *ExplainerProjection `json:"explainer,omitempty"`
+	// AcceptanceTests projects Status.AcceptanceTests unchanged (C-06-c): additive and omitted unless axiom.yaml
+	// declares acceptance_tests or the selected change has pruebas.md; omitted equals active: false.
+	AcceptanceTests *AcceptanceTestsProjection `json:"acceptanceTests,omitempty"`
 	// GateQuestion projects Status.GateQuestion unchanged: like Consent, the
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
@@ -268,6 +271,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 	projected.ISO = status.ISO
 	projected.Requirements = status.Requirements
 	projected.Explainer = status.Explainer
+	projected.AcceptanceTests = status.AcceptanceTests
 	if status.PhaseInstructions != nil {
 		projected.PhaseInstructions = &phaseInstructionsV2{
 			Apply: status.PhaseInstructions.Apply, Verify: status.PhaseInstructions.Verify,

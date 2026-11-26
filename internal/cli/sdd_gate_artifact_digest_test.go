@@ -473,3 +473,109 @@ func TestGateArtifactDigestExplainerHTMLNeverReopensAGate(t *testing.T) {
 		t.Fatalf("con el HTML borrado la puerta es %q, se esperaba approved", got)
 	}
 }
+
+// tasksGateStatus returns the recorded status of the "tasks" gate as the status
+// read reports it.
+func tasksGateStatus(t *testing.T, root string) (string, bool) {
+	t.Helper()
+	status, err := sddstatus.Resolve(sddstatus.ResolveOptions{CWD: root, ChangeName: "inc-99-example"})
+	if err != nil || status.Governance == nil {
+		t.Fatalf("sddstatus.Resolve() = (governance=%v, err=%v)", status.Governance != nil, err)
+	}
+	for _, gate := range status.Governance.Gates {
+		if gate.Key == kickoff.GateTasks {
+			return string(gate.Status), gate.Reopened
+		}
+	}
+	t.Fatal(`no se encontro la compuerta "tasks"`)
+	return "", false
+}
+
+func recordTasksGate(t *testing.T, root, decision string) {
+	t.Helper()
+	args := []string{"record", "--cwd", root, "--change", "inc-99-example", "--gate", "tasks", "--decision", decision, "--reason", "motivo", "--actor", "reviewer"}
+	if err := RunSDDGate(args, &bytes.Buffer{}); err != nil {
+		t.Fatalf("RunSDDGate(%s) error = %v", decision, err)
+	}
+}
+
+// TestGateArtifactDigestTasksGateAcceptanceTests fija RF-GAT-31: pruebas.md entra
+// en el digest de la compuerta tasks solo si existe y no esta vacio, el digest
+// cambia al editarlo, y gate record y status calculan el mismo valor.
+func TestGateArtifactDigestTasksGateAcceptanceTests(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example")
+	tasksPath := filepath.Join(changeRoot, "tasks.md")
+	if err := os.WriteFile(tasksPath, []byte("- [ ] 1.1 algo\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	sealed := mustLoadKickoff(t, changeRoot)
+
+	base, err := gateArtifactDigest(changeRoot, kickoff.GateTasks, sealed)
+	if err != nil || base == "" {
+		t.Fatalf("digest base = (%q, %v)", base, err)
+	}
+	want, err := kickoff.ArtifactDigest([]string{tasksPath})
+	if err != nil || base != want {
+		t.Fatalf("sin pruebas.md el digest debe ser el de tasks.md: %q vs %q (%v)", base, want, err)
+	}
+
+	pruebas := filepath.Join(changeRoot, "pruebas.md")
+	if err := os.WriteFile(pruebas, []byte("  \n\t\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := gateArtifactDigest(changeRoot, kickoff.GateTasks, sealed); got != base {
+		t.Fatalf("un pruebas.md en blanco no debe entrar en el digest")
+	}
+
+	if err := os.WriteFile(pruebas, []byte("# Pruebas\n\nuno\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	first, _ := gateArtifactDigest(changeRoot, kickoff.GateTasks, sealed)
+	if first == base {
+		t.Fatal("pruebas.md con contenido debe cambiar el digest")
+	}
+	if err := os.WriteFile(pruebas, []byte("# Pruebas\n\ndos\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if second, _ := gateArtifactDigest(changeRoot, kickoff.GateTasks, sealed); second == first {
+		t.Fatal("editar pruebas.md debe cambiar el digest")
+	}
+
+	// Paridad: el registro y el status coinciden, asi que una aprobacion no se reabre.
+	recordTasksGate(t, root, "approved")
+	if st, reopened := tasksGateStatus(t, root); st != "approved" || reopened {
+		t.Fatalf("tasks = {%s %v}, se esperaba approved sin reabrir (paridad cli/status)", st, reopened)
+	}
+	// Una compuerta aprobada es terminal (D-08): editar pruebas.md no la reabre.
+	if err := os.WriteFile(pruebas, []byte("# Pruebas\n\ntres\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := tasksGateStatus(t, root); st != "approved" {
+		t.Fatalf("tasks aprobada = %s tras editar pruebas.md, se esperaba approved", st)
+	}
+}
+
+// TestGateArtifactDigestTasksGateRejectedReopensOnAcceptanceTestsEdit: una
+// compuerta tasks rechazada vuelve a pending al editar solo pruebas.md.
+func TestGateArtifactDigestTasksGateRejectedReopensOnAcceptanceTestsEdit(t *testing.T) {
+	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
+	sealForGateTest(t, root, "inc-99-example")
+	if err := os.WriteFile(filepath.Join(changeRoot, "tasks.md"), []byte("- [ ] 1.1 algo\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	pruebas := filepath.Join(changeRoot, "pruebas.md")
+	if err := os.WriteFile(pruebas, []byte("# Pruebas\n\nuno\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	recordTasksGate(t, root, "rejected")
+	if st, reopened := tasksGateStatus(t, root); st != "rejected" || reopened {
+		t.Fatalf("tasks = {%s %v}, se esperaba rejected persistente", st, reopened)
+	}
+	if err := os.WriteFile(pruebas, []byte("# Pruebas\n\ncorregido\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if st, reopened := tasksGateStatus(t, root); st != "pending" || !reopened {
+		t.Fatalf("tasks = {%s %v}, se esperaba pending reabierta", st, reopened)
+	}
+}

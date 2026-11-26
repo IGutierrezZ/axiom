@@ -22,6 +22,10 @@ Execute all steps from the skill directly in this context window:
 
 Do NOT implement — produce the checklist only.
 
+## Acceptance Tests
+
+Only in SDD and only when `axiom sdd status` projects `acceptanceTests.active: true`, write `pruebas.md` as the skill's Step 3b says: the nine-column table, minimized in four layers, never in ODD. Run `axiom sdd tests check`, return `pruebas.md` in `artifacts` with the result, and declare its absence when the feature is active and you did not write it. With the feature not active, do not mention it.
+
 ## Engram Save (mandatory)
 
 After completing work, call `mem_save` with:

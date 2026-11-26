@@ -25,6 +25,7 @@
    - [Aviso de Cambio Grande (`delivery:`)](#aviso-de-cambio-grande-delivery)
    - [Modo ISO y Perfil de Bug (`sdd:`)](#modo-iso-y-perfil-de-bug-sdd)
    - [Integraciones con Trackers (`integrations:`)](#integraciones-con-trackers-integrations)
+   - [Batería de Pruebas de Aceptación (`acceptance_tests:`)](#batería-de-pruebas-de-aceptación-acceptance_tests)
 7. [Gobernanza de Skills y Autoskills](#7-gobernanza-de-skills-y-autoskills)
    - [Flujo Human-in-the-Loop](#flujo-human-in-the-loop)
    - [Uso por CLI y por Web UI](#uso-por-cli-y-por-web-ui)
@@ -507,6 +508,22 @@ integrations:
 - **Identidad por persona.** `connect` guarda la identidad en `~/.axiom/integration-identities.json` (o en el directorio que fije `AXIOM_STATE_DIR`), junto a `workspaces.json`: un fichero personal que no se versiona, con modo `0600`, indexado por plugin y por organización, con el `id`, el nombre, el origen (`connection_data` o `member_selection`) y la fecha. Nunca contiene el PAT. Si el fichero está corrupto, `connect` lo indica y no lo sobrescribe: revísalo o bórralo a mano.
 - Sin el bloque, con `integrations: {}` o sin plugins activos que escuchen el evento, ningún verbo lee ni escribe estos ficheros: el coste es cero.
 - Los binarios anteriores ignoran el bloque, como el de `git:`.
+
+### Batería de Pruebas de Aceptación (`acceptance_tests:`)
+
+En una topología `multirepo`, `axiom.yaml` puede declarar un bloque opcional `acceptance_tests:` para que `sdd-tasks` genere `pruebas.md`, una batería de pruebas de aceptación que cubre los escenarios de las specs delta del cambio:
+
+```yaml
+acceptance_tests:
+  enabled: true
+  environments: [local, dev, pre]
+```
+
+- **Estricto.** Solo admite las claves `enabled` (booleano, sin comillas) y `environments` (lista de cadenas). Una clave desconocida o repetida, un bloque nulo o que no es un mapeo, y un `enabled` que no sea `true` o `false` son errores de carga con su línea; nunca se asume un valor.
+- **Entornos.** Con `enabled: true`, `environments` es obligatorio, no puede estar vacío ni repetir entornos (la comparación distingue mayúsculas), y ningún entorno puede estar vacío ni contener `;`, que separa los entornos de cada caso en `pruebas.md`.
+- **Solo multirepo.** `enabled: true` en `monorepo-embedded` lo rechaza `axiom workspace validate`, con un error que nombra la clave y la topología. `enabled: false` y la ausencia del bloque son equivalentes y válidos en cualquier topología.
+- **No bloquea.** Un bloque inválido no impide localizar el espacio de trabajo ni archivar un cambio: el error se expone y la función queda no activa. `axiom init --force` conserva el bloque.
+- **Comprobación.** `axiom sdd tests check --cwd <raíz> --change <cambio>` cruza `pruebas.md` con las specs delta del cambio.
 
 ---
 

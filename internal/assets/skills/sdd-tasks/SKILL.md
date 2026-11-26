@@ -150,6 +150,10 @@ Use available signals: number of files, phases, integration points, tests, docs,
 
 Do not bury the forecast in prose. Put it near the top of the tasks artifact so the user sees it before implementation starts.
 
+### Step 3b: Acceptance test battery
+
+Only in the SDD lane and only when `axiom sdd status` projects `acceptanceTests.active: true`: write `pruebas.md` next to `tasks.md`, run `axiom sdd tests check` and return it in `artifacts` with its result, following `../_shared/sdd-acceptance-tests.md`. Never in ODD. When the feature is not active, do not write it and do not mention it.
+
 ### Phase Organization Guidelines
 
 ```

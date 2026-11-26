@@ -47,6 +47,8 @@ type Declarations struct {
 	IntegrationsErr     error
 	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (RF-TOP-10)
 	RepositoriesErr     error
+	AcceptanceTests     *AcceptanceTestsConfig // lo declarado en `acceptance_tests:`; nil sin bloque o con bloque inválido (RF-TOP-19)
+	AcceptanceTestsErr  error
 }
 
 // IDPattern devuelve la plantilla de identificadores de requisito del proyecto
@@ -137,6 +139,9 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	}
 	if node, ok := mappingValue(root, "repositories"); ok {
 		declarations.Repositories, declarations.RepositoriesErr = decodeRepositories(node)
+	}
+	if node, ok := mappingValue(root, "acceptance_tests"); ok {
+		declarations.AcceptanceTests, declarations.AcceptanceTestsErr = decodeAcceptanceTests(node)
 	}
 	return declarations
 }

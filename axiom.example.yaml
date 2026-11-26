@@ -114,6 +114,20 @@ workspace:
 #   explainer_html: ask
 
 # ------------------------------------------------------------------------------
+# Batería de Pruebas de Aceptación (opcional, solo multirepo)
+# ------------------------------------------------------------------------------
+# En una topología multirepo, 'sdd-tasks' puede generar 'pruebas.md', una batería de
+# pruebas de aceptación manuales o automatizables que cubre los escenarios de las
+# specs delta del cambio. Se activa con 'enabled: true' y declara los entornos en
+# los que se prueba ('environments'). 'enabled: false' y la ausencia del bloque son
+# equivalentes: no activan nada. Con 'enabled: true' fuera de multirepo,
+# 'axiom workspace validate' falla. 'environments' no admite entradas vacías, con ';'
+# ni repetidas. Se comprueba con 'axiom sdd tests check --change <cambio>'.
+# acceptance_tests:
+#   enabled: true
+#   environments: [local, dev, pre]
+
+# ------------------------------------------------------------------------------
 # Integraciones con Trackers (opcional)
 # ------------------------------------------------------------------------------
 # Un proyecto puede conectar sus cambios con un tracker externo mediante plugins de

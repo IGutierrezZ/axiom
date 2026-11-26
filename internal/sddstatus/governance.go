@@ -478,10 +478,9 @@ func governanceArtifactInputs(changeRoot string, roles []kickoff.KickoffRole) (m
 	// A per-role change's shared "tasks" digest covers every role file, and only
 	// once ALL of them exist: a subset is not the artifact the gate judges, and
 	// internal/cli's gate-record digest applies the same all-or-nothing rule.
-	tasksPaths := artifactPaths.Tasks
-	if expected := roleTaskPaths(changeRoot, roles); len(expected) != 0 && len(tasksPaths) != len(expected) {
-		tasksPaths = nil
-	}
+	// The set is computed once by TasksGateArtifactPaths (shared with gate record);
+	// setGovernanceArtifactDigest applies the all-present-and-non-empty rule.
+	tasksPaths := TasksGateArtifactPaths(changeRoot, roles)
 
 	// D20: en un bug sin delta la compuerta `spec` juzga proposal.md, que lleva el
 	// informe de bug y, en su caso, la marca de «sin impacto». Con delta juzga las
