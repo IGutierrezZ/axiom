@@ -94,7 +94,9 @@ func (a *Adapter) SystemPromptFile(homeDir string) string {
 
 // SkillsDir es la misma carpeta que usa el adaptador de VS Code Copilot cuando no
 // hay COPILOT_HOME. Que dos agentes escriban en ella es intencionado: las skills
-// son idénticas, y el uninstall de uno no debe retirar las del otro.
+// son idénticas, y el uninstall de uno no debe retirar las del otro. Con
+// COPILOT_HOME, VS Code sigue en ~/.copilot/skills, que es lo único que documenta
+// (véase vscode.Adapter.SkillsDir), y cada agente tiene su carpeta.
 func (a *Adapter) SkillsDir(homeDir string) string {
 	return filepath.Join(copilotconfig.Root(homeDir), "skills")
 }

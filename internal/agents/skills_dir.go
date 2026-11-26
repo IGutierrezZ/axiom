@@ -17,7 +17,9 @@ func IsSharedWorkspaceSkillsDir(root, skillsDir string) bool {
 // SharesSkillsDirWithAnotherAdapter indica si algún otro adaptador registrado
 // escribe sus skills en la misma carpeta que adapter para homeDir.
 //
-// Hoy ocurre con VS Code Copilot y Copilot CLI, que comparten ~/.copilot/skills. Es
+// Hoy ocurre con VS Code Copilot y Copilot CLI, que comparten ~/.copilot/skills
+// cuando COPILOT_HOME no está definida (con ella, Copilot CLI usa
+// $COPILOT_HOME/skills y VS Code sigue en ~/.copilot/skills). Es
 // una propiedad estática del registro y no de qué agentes estén seleccionados: el
 // contenido de la carpeta no puede depender de quién la escriba ni de cuántos haya,
 // o dos agentes se pisarían la copia en cada sync.

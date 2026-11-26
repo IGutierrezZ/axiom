@@ -225,7 +225,8 @@ func TestUninstallOneCopilotAgentKeepsTheSharedSkillsOfTheOther(t *testing.T) {
 	}
 }
 
-// Con COPILOT_HOME las carpetas de skills son distintas: cada agente retira las suyas.
+// Con COPILOT_HOME las carpetas de skills son distintas (VS Code sigue en
+// ~/.copilot/skills, que es lo que documenta): cada agente retira las suyas.
 func TestUninstallCopilotCLIWithCopilotHomeRemovesOnlyItsOwnSkills(t *testing.T) {
 	home := copilotHome(t)
 	custom := filepath.Join(t.TempDir(), "custom-copilot")

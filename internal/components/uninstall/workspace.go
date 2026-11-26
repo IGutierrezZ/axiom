@@ -107,7 +107,9 @@ func (s *Service) otherInstalledAgentsInScope() []model.AgentID {
 // skillsDirStaysInUse dice si la carpeta de skills sigue siendo de otro agente que
 // permanece instalado en el mismo ámbito. En el proyecto, varios agentes comparten
 // .agents/skills; en el global, VS Code Copilot y Copilot CLI comparten
-// ~/.copilot/skills. Si se retira solo uno, las skills se quedan para los demás.
+// ~/.copilot/skills si COPILOT_HOME no está definida. Si se retira solo uno, las
+// skills se quedan para los demás. Con COPILOT_HOME las rutas resueltas difieren y
+// cada uno retira las suyas.
 func (s *Service) skillsDirStaysInUse(skillDir string) bool {
 	if skillDir == "" {
 		return false

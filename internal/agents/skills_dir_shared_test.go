@@ -29,7 +29,9 @@ func TestSharesSkillsDirWithAnotherAdapter(t *testing.T) {
 	}
 }
 
-// Con COPILOT_HOME, Copilot CLI deja de compartir carpeta con VS Code Copilot.
+// Con COPILOT_HOME, Copilot CLI deja de compartir carpeta con VS Code Copilot. Es
+// intencionado: VS Code documenta COPILOT_HOME solo para mcp-config.json y sus skills
+// siguen en ~/.copilot/skills (véase vscode.Adapter.SkillsDir).
 func TestSharesSkillsDirEndsWithCopilotHome(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
