@@ -43,7 +43,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y el usuario no 
 
 ## Entrega
 
-`single-pr`: una PR con un commit por tarea, con la etiqueta `type:feature`. La rama sale de `origin/main` con la IGutierrezZ/axiom#323 fusionada encima (merge de `origin/inc/vscode-mcp-guardas`), porque reutiliza su `RetireLegacyVSCodeServer`. No se fusiona hasta que la IGutierrezZ/axiom#323 esté en `main`.
+`single-pr`: una PR con un commit por tarea, con la etiqueta `type:feature`. La rama reutiliza `RetireLegacyVSCodeServer`, de la IGutierrezZ/axiom#323, ya en `main`.
 
 ## Tareas
 
@@ -68,8 +68,8 @@ Una sola tarea: instalación, `sync` y desinstalación son un mismo comportamien
 
 ## Progreso
 
-- Worktree creado desde `origin/main` (`b7e91d67`), con `origin/inc/vscode-mcp-guardas` fusionada (`38fd7b9d`).
-- T1 hecha y comprobada (ver la evidencia de la tarea).
+- Worktree creado desde `origin/main` (`b7e91d67`) y apilado sobre `origin/inc/vscode-mcp-guardas`. Tras fusionarse la IGutierrezZ/axiom#323 (y la #324), los commits se reaplicaron sobre `origin/main` (`931c2f4d`) sin el merge de apilado.
+- T1 `9abdfeb3`, hecha y comprobada (ver la evidencia de la tarea).
 
 ## No verificado
 
@@ -79,4 +79,4 @@ Una sola tarea: instalación, `sync` y desinstalación son un mismo comportamien
 
 ## Siguiente paso
 
-Abrir la PR (`type:feature`). Fusionarla solo después de la IGutierrezZ/axiom#323.
+Abrir la PR (`type:feature`), CI en verde, merge commit y `done`.
