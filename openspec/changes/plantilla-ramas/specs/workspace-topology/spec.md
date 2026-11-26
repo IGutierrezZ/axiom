@@ -8,7 +8,10 @@ La plantilla de nombre de rama (`git.branch_template`, `repositories[].branch_te
 
 - que las llaves están bien formadas (cada `{` cierra con `}` sin anidar ni dejar llaves sueltas) y que toda variable es una de las siete conocidas;
 - que la plantilla efectiva de la rama que lleva `openspec/` no usa `{role}` ni `{task_ref}`: la plantilla de `git:` en `monorepo-embedded`, y en `multirepo` la entrada de `repositories:` del repositorio de specs si existe y la declara, o si no la de `git:`; las plantillas de rol nunca se aplican a esa rama;
+- que contiene al menos una de `{change}`, `{slug}`, `{ref}` o `{task_ref}`, para que no haya nombres constantes compartidos entre cambios;
 - que el nombre, renderizado con valores de muestra seguros para git, es un nombre de referencia git válido.
+
+En `multirepo`, la entrada de `repositories:` del repositorio de specs se identifica por el `path` declarado que coincide con el repositorio de specs de la topología. Su plantilla efectiva se valida igual aunque ese repositorio trabaje in situ (RF-BRA-05 de `change-branch-lifecycle`). Un `git.branch_template` con `{task_ref}` es válido en `multirepo` solo si el repositorio de specs declara su propia plantilla.
 
 Una plantilla inválida DEBE reportarse como error de configuración (`config_invalid` al ejecutar `ensure`, y salida `1` en `axiom workspace validate`), acumulándose con los demás errores, sin crear nada. En `monorepo-embedded`, una `roles.<id>.branch_template` NO tiene efecto, porque la única rama es la del cambio y lleva `openspec/`; `axiom workspace validate` DEBE emitir una advertencia no bloqueante que la nombre, sin cambiar el estado `COMPLIANT` ni el código de salida (mismo precedente que `promotion` sin `main_branch`). Una plantilla vacía o ausente significa que no hay plantilla en ese nivel.
 
@@ -45,6 +48,24 @@ Una plantilla inválida DEBE reportarse como error de configuración (`config_in
 - **DADO** un multirepo con `git.branch_template: "feature/{task_ref}"` y una entrada de `repositories:` para el repositorio de specs con `branch_template: "{prefix}/{change}"`
 - **CUANDO** el usuario ejecuta `axiom workspace validate`
 - **ENTONCES** el estado es `COMPLIANT`
+
+#### Scenario: `{task_ref}` en `git:` de un multirepo sin plantilla propia del repositorio de specs
+- **DADO** un multirepo con `git.branch_template: "feature/{task_ref}"` y sin entrada de `repositories:` para el repositorio de specs
+- **CUANDO** el usuario ejecuta `axiom workspace validate`
+- **ENTONCES** la salida nombra `git.branch_template` y la rama con `openspec/`
+- **Y** el código de salida es `1`
+
+#### Scenario: La plantilla del repositorio de specs se valida aunque trabaje in situ
+- **DADO** un multirepo con el repositorio de specs trabajando in situ y una entrada de `repositories:` para él con `branch_template: "{prefix}/{role}/{change}"`
+- **CUANDO** el usuario ejecuta `axiom workspace validate`
+- **ENTONCES** la salida nombra `repositories[].branch_template`, la ruta del repositorio de specs y la rama con `openspec/`
+- **Y** el código de salida es `1`
+
+#### Scenario: Una plantilla sin ninguna variable propia del cambio se rechaza
+- **DADO** `git.branch_template: "{prefix}/trabajo"`
+- **CUANDO** el usuario ejecuta `axiom workspace validate`
+- **ENTONCES** la salida nombra `git.branch_template` y enumera `{change}`, `{slug}`, `{ref}` y `{task_ref}`
+- **Y** el código de salida es `1` y `ensure` rechazaría con `config_invalid`
 
 #### Scenario: Nombre renderizado inválido
 - **DADO** `git.branch_template: "{prefix}/{change}.lock"`
@@ -112,7 +133,7 @@ Además DEBE aceptar los bloques opcionales de primer nivel `technical_context` 
 
 ### Requirement: Bloque `git:` Opcional de `axiom.yaml` (RF-TOP-09)
 
-`axiom.yaml` PUEDE declarar un bloque de primer nivel `git:` con las claves opcionales `integration_branch`, `branch_prefix`, `main_branch`, `promotion` y `branch_template`. Sin el bloque, o sin una de las claves, `integration_branch` vale `main` y `branch_prefix` vale `feat`; `main_branch` NO tiene valor por defecto (su ausencia significa que la rama de integración es la única etapa y la rama principal no existe como concepto distinto) y `promotion` NO tiene valor por defecto declarado: cuando hay dos etapas y no se declara, el modo de promoción efectivo es `branch` (RF-BRA-28 de `change-branch-lifecycle`). `integration_branch`, `branch_prefix` y `main_branch` DEBEN ser cadenas no vacías que formen nombres de referencia git válidos (`branch_prefix` sin `/` inicial ni final, sin `..` ni espacios). `promotion` DEBE ser una de las cadenas `branch`, `release` o `ask`; `ask` es válido en la configuración y significa que la persona decide el modo al crear la rama de cada cambio. Una clave desconocida dentro de `git:` y un valor inválido DEBEN reportarse como error nombrando la clave, y el mensaje que enumera las claves admitidas DEBE listar las cinco. `branch_template` NO tiene valor por defecto (su ausencia en todos los niveles significa los nombres de rama de siempre), es una cadena que DEBE cumplir prov:TOP:1 y es la plantilla de nombre de rama de menor precedencia, tras la del rol y la del repositorio (prov:BRA:3 de `change-branch-lifecycle`). Los valores del bloque son política del proyecto y se versionan: el modo de trabajo y la raíz de los worktrees NO DEBEN declararse en `axiom.yaml` (viven en el hub personal, capacidad `multi-project-hub`).
+`axiom.yaml` PUEDE declarar un bloque de primer nivel `git:` con las claves opcionales `integration_branch`, `branch_prefix`, `main_branch`, `promotion` y `branch_template`. Sin el bloque, o sin una de las claves, `integration_branch` vale `main` y `branch_prefix` vale `feat`; `main_branch` NO tiene valor por defecto (su ausencia significa que la rama de integración es la única etapa y la rama principal no existe como concepto distinto) y `promotion` NO tiene valor por defecto declarado: cuando hay dos etapas y no se declara, el modo de promoción efectivo es `branch` (RF-BRA-28 de `change-branch-lifecycle`). `integration_branch`, `branch_prefix` y `main_branch` DEBEN ser cadenas no vacías que formen nombres de referencia git válidos (`branch_prefix` sin `/` inicial ni final, sin `..` ni espacios). `promotion` DEBE ser una de las cadenas `branch`, `release` o `ask`; `ask` es válido en la configuración y significa que la persona decide el modo al crear la rama de cada cambio. Una clave desconocida dentro de `git:` y un valor inválido DEBEN reportarse como error nombrando la clave, y el mensaje que enumera las claves admitidas DEBE listar las cinco. `branch_template` NO tiene valor por defecto (su ausencia en todos los niveles significa los nombres de rama de siempre), es una cadena que DEBE cumplir prov:TOP:1 y es la plantilla de nombre de rama de menor precedencia, tras la del rol y la del repositorio (prov:BRA:3 de `change-branch-lifecycle`). `axiom.example.yaml` DEBE incluir ejemplos comentados de `branch_template` (en `git:`, en una entrada de `repositories:` y en un rol) que validen al descomentarse, comprobado por `TestExampleGitBlockIsValidOnceUncommented`, y el bloque `git:` DEBE documentarse con sus cinco claves. Los valores del bloque son política del proyecto y se versionan: el modo de trabajo y la raíz de los worktrees NO DEBEN declararse en `axiom.yaml` (viven en el hub personal, capacidad `multi-project-hub`).
 
 `promotion` sin `main_branch`, o con `main_branch` igual a la rama de integración resuelta, NO tiene efecto: `axiom workspace validate` DEBE emitir una advertencia no bloqueante que lo indique, sin cambiar el estado `COMPLIANT` ni el código de salida.
 (Previously: `git:` admitía solo `integration_branch` y `branch_prefix`)
@@ -183,6 +204,11 @@ Además DEBE aceptar los bloques opcionales de primer nivel `technical_context` 
 - **DADO** un `axiom.yaml` con `git: {branch_prefix: inc, branch_template: "{prefix}/{ref}-{slug}"}`
 - **CUANDO** el usuario ejecuta `axiom workspace validate` y se resuelve la política de ramas
 - **ENTONCES** el estado es `COMPLIANT` y la política declara esa plantilla
+
+#### Scenario: Los ejemplos comentados de `axiom.example.yaml` validan al descomentarse
+- **DADO** `axiom.example.yaml` con los ejemplos comentados de `branch_template`
+- **CUANDO** se descomentan y se ejecuta `TestExampleGitBlockIsValidOnceUncommented`
+- **ENTONCES** el resultado es válido y `axiom workspace validate` lo declara `COMPLIANT`
 
 #### Scenario: Sin `branch_template` rige el nombre de siempre
 - **DADO** un `axiom.yaml` con `git: {branch_prefix: inc}`
@@ -329,6 +355,29 @@ El catálogo para un proyecto concreto DEBE filtrarse: en `monorepo-embedded` NO
 - **DADO** el dashboard y `PUT /api/settings` con `git.branch_template: "{prefix}/{ticket}"`
 - **CUANDO** se procesa la escritura
 - **ENTONCES** se rechaza nombrando `git.branch_template` y la variable desconocida
+- **Y** `axiom.yaml` no se modifica
+
+#### Scenario: Una plantilla inválida de repositorio o de rol se rechaza con la ruta del elemento
+- **DADO** el dashboard de un `multirepo` y `PUT /api/settings` con `repositories[].branch_template: "feature/{ref"` para `repo-backend`, y por separado `roles[].branch_template: "{y"` para `backend`
+- **CUANDO** se procesa cada escritura
+- **ENTONCES** cada una se rechaza nombrando su clave y la ruta del elemento (`repo-backend` o el rol `backend`)
+- **Y** `axiom.yaml` no se modifica
+
+#### Scenario: Una plantilla válida de repositorio o de rol enviada como ajuste se escribe
+- **DADO** el dashboard de un `multirepo` y `PUT /api/settings` con `repositories[].branch_template: "feature/{ref}-{slug}"` para `repo-backend` y `roles[].branch_template: "feature/TASK-{task_ref}"` para `backend`
+- **CUANDO** se procesa la escritura
+- **ENTONCES** `axiom.yaml` contiene ambas plantillas en la entrada y en el rol indicados y vuelve a cargarse como `COMPLIANT`
+
+#### Scenario: Una plantilla con `{role}` en la rama con `openspec/` se rechaza por la API
+- **DADO** el dashboard de un `monorepo-embedded` y `PUT /api/settings` con `git.branch_template: "{prefix}/{role}/{change}"`
+- **CUANDO** se procesa la escritura
+- **ENTONCES** se rechaza nombrando `git.branch_template` y la rama con `openspec/`
+- **Y** `axiom.yaml` no se modifica
+
+#### Scenario: Una plantilla de rol enviada en `monorepo-embedded` no está disponible
+- **DADO** el dashboard de un `monorepo-embedded` y `PUT /api/settings` con `roles[].branch_template`
+- **CUANDO** se procesa la escritura
+- **ENTONCES** se rechaza porque la clave no aplica a esa topología (no figura en su catálogo)
 - **Y** `axiom.yaml` no se modifica
 
 #### Scenario: Una plantilla válida enviada como ajuste se escribe

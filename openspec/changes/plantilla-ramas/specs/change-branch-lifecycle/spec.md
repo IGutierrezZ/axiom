@@ -11,7 +11,7 @@ El sistema DEBE poder renderizar el nombre de una rama a partir de una plantilla
 | `{prefix}` | El `branch_prefix` efectivo, incluido el que fija `--prefix` en la invocación. |
 | `{kind}` | `fix` cuando se conoce que el cambio tiene perfil bug; si no, `feature`. |
 | `{change}` | El nombre del cambio. |
-| `{slug}` | El nombre del cambio sin el prefijo del ID de work item (`us-2525-alta-de-usuarios` produce `alta-de-usuarios`); igual a `{change}` si el cambio no tiene work item o su nombre no empieza por ese prefijo. |
+| `{slug}` | El nombre del cambio sin el prefijo del ID de work item (`us-2525-alta-de-usuarios` produce `alta-de-usuarios`). Se quita el prefijo `^<letras>-<ref>-` (letras ASCII, el `{ref}` conocido y un guion), sin distinguir mayúsculas, y solo cuando `{ref}` es conocido. Es igual a `{change}` si no hay `{ref}` conocido, si el nombre no casa con ese prefijo o si al quitarlo quedaría vacío (`us-2525`): `{slug}` nunca es vacío. |
 | `{role}` | El identificador del rol al que se atribuye la rama. |
 | `{ref}` | El `id` del vínculo `kind: work_item` (por ejemplo `2525`), nunca la referencia externa completa (`ado:2525`). |
 | `{task_ref}` | El `id` del vínculo `kind: task` del rol al que se atribuye la rama. |
@@ -37,6 +37,21 @@ Cada valor sustituido, salvo `{prefix}`, DEBE ser un componente de rama válido 
 - **DADO** la plantilla `{slug}` y el cambio `plantilla-ramas` sin work item
 - **CUANDO** se renderiza
 - **ENTONCES** el nombre es `plantilla-ramas`
+
+#### Scenario: `{slug}` no distingue mayúsculas al quitar el prefijo
+- **DADO** la plantilla `{slug}`, el `{ref}` `2525` y el cambio `US-2525-alta-de-usuarios`
+- **CUANDO** se renderiza
+- **ENTONCES** el nombre es `alta-de-usuarios`
+
+#### Scenario: `{slug}` nunca queda vacío
+- **DADO** la plantilla `{prefix}/{slug}`, el `{ref}` `2525` y el cambio `us-2525`
+- **CUANDO** se renderiza
+- **ENTONCES** `{slug}` vale `us-2525` y el nombre es `<prefijo>/us-2525`
+
+#### Scenario: `{slug}` sin prefijo que case vale `{change}`
+- **DADO** la plantilla `{slug}`, el `{ref}` `2525` y el cambio `alta-de-usuarios`
+- **CUANDO** se renderiza
+- **ENTONCES** el nombre es `alta-de-usuarios`
 
 #### Scenario: `{prefix}` admite barras
 - **DADO** el prefijo `equipo/inc` y la plantilla `{prefix}/{change}`
@@ -64,11 +79,11 @@ Cada valor sustituido, salvo `{prefix}`, DEBE ser un componente de rama válido 
 `ensure` y el cálculo de la instantánea (RF-KOF-06 de `sdd-lane-kickoff`) DEBEN compartir el mismo cálculo de valores y obtener cada uno de su fuente, con este orden de precedencia:
 
 - `{ref}`: el valor congelado en la instantánea del kickoff si existe (prov:KOF:1 de `sdd-lane-kickoff`); si no, el `id` del vínculo `kind: work_item` de `integrations.yaml`; si el vínculo aún no existe, el `id` del work item del staging de `change start`, que se lee del git common dir y que la fase de adopción retira después del seal.
-- `{kind}`: el valor congelado en la instantánea si existe; si no, `fix` si el staging o el vínculo de `change start` indican el perfil bug; si no, `feature`.
+- `{kind}`: el valor congelado en la instantánea si existe; si no hay instantánea (el cambio se está creando), `fix` si el staging o el vínculo de `change start` indican el perfil bug y, si no, `feature`; en un cambio sellado con plantilla pero sin `kind` en la instantánea, `feature` (prov:KOF:1).
 - `{task_ref}`: el `id` del vínculo `kind: task` del rol al que se atribuye la rama.
 - `{change}`, `{slug}`, `{prefix}` y `{role}` salen del nombre del cambio, del `id` del work item, de la política y del rol atribuido.
 
-Cuando hay un plugin de work items activo y `integrations.yaml` no se puede leer, el sistema DEBE fallar cerrado: rechazar con un error tipado y no producir ningún nombre con valores incompletos, igual que la barrera `task_not_bound` (RF-BRA-33). Un valor ausente NUNCA DEBE sustituirse por una cadena vacía.
+Cuando hay un plugin de work items activo y `integrations.yaml` no se puede leer, el sistema DEBE fallar cerrado con `integrations_links_invalid` si la plantilla usa cualquiera de `{ref}`, `{slug}`, `{kind}` o `{task_ref}` y su valor no está congelado en la instantánea: no produce ningún nombre con valores incompletos, igual que la barrera `task_not_bound` (RF-BRA-33). Un valor ausente NUNCA DEBE sustituirse por una cadena vacía.
 
 #### Scenario: `{ref}` del staging en el primer `ensure`, antes de la adopción
 - **DADO** un `axiom.yaml` con `git.branch_template: "{prefix}/{ref}-{slug}"`, el prefijo `inc`, el staging de `change start` del cambio `us-2525-alta-de-usuarios` con `id` `2525` y sin vínculo `work_item` todavía en `integrations.yaml`
@@ -98,6 +113,17 @@ Cuando hay un plugin de work items activo y `integrations.yaml` no se puede leer
 - **ENTONCES** se rechaza con un error tipado con continuación
 - **Y** no se crea ninguna rama ni worktree ni se escribe el registro
 
+#### Scenario: `integrations.yaml` ilegible con `{slug}` o `{kind}` sin congelar falla cerrado
+- **DADO** un plugin de work items activo, un `integrations.yaml` ilegible, una instantánea sin `kind` ni `ref` y la plantilla `{kind}/{slug}`
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** se rechaza con `integrations_links_invalid`
+- **Y** no se crea ninguna rama ni worktree ni se escribe el registro
+
+#### Scenario: `integrations.yaml` ilegible no impide usar valores congelados
+- **DADO** un plugin de work items activo, un `integrations.yaml` ilegible y una instantánea con `kind` y `ref` congelados para la plantilla `{kind}/{ref}-{slug}`
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** la rama se nombra con los valores congelados y no se rechaza
+
 #### Scenario: `{task_ref}` del rol sin Task se rechaza
 - **DADO** la plantilla `feature/TASK-{task_ref}` para el rol `backend` y ese rol sin vínculo `kind: task`
 - **CUANDO** se intenta resolver el nombre de su rama
@@ -113,9 +139,9 @@ La atribución de cada rama a un rol y la plantilla que le corresponde son:
 - **Rama de seguimiento de un repositorio tocado por dos o más roles**: no se atribuye a ningún rol; plantilla efectiva repositorio > proyecto.
 - **Rama de rol de un repositorio tocado por dos o más roles**: se atribuye a ese rol; usa su `roles.<id>.branch_template` si la declara y, si no, `<nombre de la rama de seguimiento>-<rol>`.
 - **Rama que lleva `openspec/`** (la del cambio en `monorepo-embedded`, la del repositorio de specs en `multirepo`): sin rol; plantilla efectiva repositorio > proyecto, sin las plantillas de rol.
-- **Rama de archivado**: sigue derivándose de la rama del cambio ya resuelta (`<rama del cambio>-archive`); no tiene plantilla propia.
+- **Rama de archivado**: sigue derivándose de la rama del cambio ya resuelta (`<rama del cambio>-archive`); no tiene plantilla propia. La rama del cambio ya resuelta es la que sale, por este orden, del registro, de la instantánea o del renderizado, y todos los consumidores del archivado (el plan de archivado, `branch done`, los cambios pendientes de archivar y la autocaptura) DEBEN obtenerla del mismo cálculo. Con plantilla, `--prefix` en `ensure --archive` NO cambia esa derivación; sin plantilla, el resultado es el de siempre.
 
-Para cada rama, la precedencia de su nombre DEBE ser, de mayor a menor: (1) la excepción por cambio `--branch` (RF-BRA-12), que solo sustituye el nombre de la rama del cambio; (2) el nombre de la instantánea del kickoff; (3) el nombre congelado en el registro local (RF-BRA-15); (4) la plantilla efectiva, de la instantánea o, si el cambio no tiene instantánea, de la política; (5) el nombre por defecto. El nombre de la carpeta del worktree NO DEBE cambiar: sigue usando el nombre del cambio. Si dos ramas del mismo repositorio resuelven al mismo nombre, el sistema DEBE rechazar con `invalid_name` nombrando ambas ramas y el repositorio, sin crear nada.
+Para cada rama, la precedencia de su nombre DEBE ser, de mayor a menor: (1) la excepción por cambio `--branch` (RF-BRA-12), que solo sustituye el nombre de la rama del cambio (la de seguimiento en un repositorio con ramas de rol) y es válida también con `--role`, con la misma semántica; si esa rama estaba pendiente por `{task_ref}`, `--branch` le da nombre y deja de estar pendiente, de modo que se crea en ese `ensure`; (2) el nombre de la instantánea del kickoff; (3) el nombre congelado en el registro local (RF-BRA-15); (4) la plantilla efectiva, de la instantánea o, si el cambio no tiene instantánea, de la política; (5) el nombre por defecto. La precedencia se aplica por rama: una instantánea sin nombre para una rama (la que usa `{task_ref}`) deja pasar al registro y, si este no lo tiene, a la plantilla. `--prefix` solo alimenta `{prefix}` y los nombres por defecto: si la plantilla no usa `{prefix}`, no tiene efecto y no da aviso. Las ramas de rol sin plantilla de rol siguen siendo `<rama de seguimiento>-<rol>`. El nombre de la carpeta del worktree NO DEBE cambiar: sigue usando el nombre del cambio. La colisión de nombres DEBE detectarse en el planificador sobre todos los nombres resueltos del repositorio en ese plan, incluidos los congelados del registro; al entrar un rol, su nombre renderizado se compara con los ya registrados del mismo repositorio. Si dos ramas del mismo repositorio resuelven al mismo nombre, el sistema DEBE rechazar con `invalid_name` nombrando ambas ramas y el repositorio, sin crear nada.
 
 #### Scenario: Sin plantilla, nombres idénticos a los actuales
 - **DADO** un `axiom.yaml` sin `branch_template` en ningún nivel, el prefijo `feat` y dos roles `core` y `qa` sobre el mismo repositorio de código
@@ -150,6 +176,52 @@ Para cada rama, la precedencia de su nombre DEBE ser, de mayor a menor: (1) la e
 - **CUANDO** se planifica
 - **ENTONCES** la rama del cambio es `fix/x`
 
+#### Scenario: `--prefix` no tiene efecto si la plantilla no usa `{prefix}`
+- **DADO** `git.branch_template: "feature/{change}"` y la invocación `ensure --change x --prefix fix`
+- **CUANDO** se planifica
+- **ENTONCES** la rama del cambio es `feature/x`
+- **Y** no se emite ningún aviso por el prefijo
+
+#### Scenario: `--branch` prevalece sobre el nombre de la instantánea
+- **DADO** un cambio sellado cuya instantánea nombra la rama del cambio `inc/2525-alta-de-usuarios` y la invocación `ensure --change us-2525-alta-de-usuarios --branch hotfix/alta`
+- **CUANDO** se planifica
+- **ENTONCES** la rama del cambio es `hotfix/alta`
+
+#### Scenario: `--branch` en un repositorio con ramas de rol nombra solo la de seguimiento
+- **DADO** un repositorio compartido por los roles `core` y `qa` y la invocación `ensure --change x --branch hotfix/x`
+- **CUANDO** se planifica
+- **ENTONCES** la rama de seguimiento es `hotfix/x`
+- **Y** las ramas de rol siguen siendo `hotfix/x-core` y `hotfix/x-qa`
+
+#### Scenario: `--branch` con `--role` da nombre a la rama pendiente y la crea
+- **DADO** `repositories[].branch_template: "feature/TASK-{task_ref}"` para `repo-frontend`, el rol `frontend` único sobre él con su Task vinculada y la invocación `ensure --change x --role frontend --branch hotfix/front`
+- **CUANDO** se ejecuta
+- **ENTONCES** `repo-frontend` recibe la rama `hotfix/front` y esa rama deja de estar pendiente
+- **Y** el nombre queda registrado
+
+#### Scenario: Instantánea sin nombre y registro con nombre
+- **DADO** una instantánea que solo guarda la plantilla `feature/TASK-{task_ref}` de `repo-frontend` y un registro que congela `feature/TASK-1235`, con la plantilla de `axiom.yaml` cambiada después
+- **CUANDO** se ejecuta `ensure --change x --role frontend`
+- **ENTONCES** el nombre es `feature/TASK-1235`, el del registro
+- **Y** no se renderiza la plantilla de `axiom.yaml`
+
+#### Scenario: Con plantilla, `--prefix` no cambia la rama de archivado
+- **DADO** la rama del cambio `inc/2525-alta-de-usuarios` resuelta por plantilla y registrada
+- **CUANDO** se ejecuta `ensure --change us-2525-alta-de-usuarios --archive --prefix fix`
+- **ENTONCES** la rama de archivado es `inc/2525-alta-de-usuarios-archive`
+
+#### Scenario: Los consumidores del archivado usan la rama del cambio resuelta
+- **DADO** un cambio pendiente de archivar con rama del cambio `inc/2525-alta-de-usuarios` por plantilla, sin instantánea completa ni registro
+- **CUANDO** el plan de archivado, `branch done` y `status` (cambios pendientes de archivar) calculan el nombre de su rama
+- **ENTONCES** los tres obtienen `inc/2525-alta-de-usuarios` y su archivado `inc/2525-alta-de-usuarios-archive`, del mismo cálculo
+- **Y** sin plantilla el resultado es idéntico, byte a byte, al de antes de esta capacidad
+
+#### Scenario: Un nombre ya registrado de otro rol colisiona al entrar un rol
+- **DADO** el rol `core` con su rama `feature/7` registrada en un repositorio compartido y el rol `qa` cuya plantilla de rol renderiza `feature/7`
+- **CUANDO** se ejecuta `ensure --change x --role qa`
+- **ENTONCES** se rechaza con `invalid_name` nombrando ambas ramas y el repositorio
+- **Y** no se crea ninguna rama
+
 #### Scenario: El worktree conserva el nombre del cambio
 - **DADO** una plantilla que produce la rama `inc/2525-alta-de-usuarios` para el cambio `us-2525-alta-de-usuarios` en modo `worktree`
 - **CUANDO** se ejecuta `ensure`
@@ -172,8 +244,9 @@ Todo rechazo de la resolución de plantillas DEBE ser un rechazo tipado de `bran
 
 - **Variable sin valor** al resolver (`{ref}` sin work item ni staging, `{task_ref}` sin Task del rol, integraciones ilegibles con plugin activo): código tipado propio de variable sin valor, cuyo nombre exacto fija el diseño; la continuación DEBE nombrar la variable, el rol cuando proceda y la orden o la clave de `axiom.yaml` que lo resuelve.
 - **Nombre renderizado inválido** o valor de variable no seguro para git: `invalid_name`, nombrando la variable, el valor y la clave de plantilla.
-- **Rama compartida por dos o más roles**: la rama de seguimiento de un repositorio tocado por dos o más roles, o la rama que lleva `openspec/`, cuya plantilla efectiva use `{role}` o `{task_ref}`, DEBE rechazarse al planificar con un código tipado que nombra el repositorio y la clave `repositories[].branch_template` como continuación; no existe rama ni nombre alternativo.
-- **Carril ODD**: `{role}` y `{task_ref}` NO resuelven en ODD, que no tiene roles ni Tasks (RF-BRA-14): su uso en la plantilla aplicable DEBE rechazarse con un código tipado que nombra la variable y la clave.
+- **Rama compartida por dos o más roles**: la rama de seguimiento de un repositorio tocado por dos o más roles, o la rama que lleva `openspec/`, cuya plantilla efectiva use `{role}` o `{task_ref}`, DEBE rechazarse al planificar con el código `branch_template_not_applicable` (motivo `shared_branch` u `openspec_branch`) que nombra el repositorio y la clave `repositories[].branch_template` como continuación; no existe rama ni nombre alternativo. El mismo rechazo se produce en `axiom sdd kickoff seal`, que planifica, propaga el rechazo y no escribe `kickoff.yaml` (para no sellar una instantánea irresoluble), en `ensure` (SDD y ODD) y en `axiom workspace validate` solo para lo detectable de forma estática (la rama con `openspec/`, prov:TOP:1 de `workspace-topology`).
+- **Carril ODD**: `{role}` y `{task_ref}` NO resuelven en ODD, que no tiene roles ni Tasks (RF-BRA-14): su uso en la plantilla aplicable DEBE rechazarse con `branch_template_not_applicable` (motivo `odd_lane`) que nombra la variable y la clave.
+- **Nombre que choca con una rama reservada**: un nombre renderizado igual a la rama de integración o a `main_branch` del repositorio DEBE rechazarse con `invalid_name` en el `ensure`, sin crear nada. La colisión con la rama de otro cambio activo queda fuera de esta capacidad como limitación declarada: una plantilla sin variable propia del cambio (`{change}`, `{slug}`, `{ref}` o `{task_ref}`) se rechaza al cargar (prov:TOP:1), que es la mitigación.
 - **Plantilla inválida en `axiom.yaml`** (variable desconocida, llaves mal formadas): se rechaza al cargar con `config_invalid` (prov:TOP:1 de `workspace-topology`).
 
 Los códigos nuevos DEBEN figurar con su etiqueta y su continuación en el conjunto de rechazos de producción, de modo que el trinquete de resolución de rechazos los cubra.
@@ -209,6 +282,29 @@ Los códigos nuevos DEBEN figurar con su etiqueta y su continuación en el conju
 - **ENTONCES** se rechaza con un código tipado que nombra `{role}` y `git.branch_template`
 - **Y** no se crea ninguna rama ni worktree
 
+#### Scenario: El seal rechaza la rama compartida con `{role}` o `{task_ref}`
+- **DADO** un repositorio compartido por los roles `core` y `qa` con `git.branch_template: "feature/{task_ref}"` como plantilla de seguimiento
+- **CUANDO** se ejecuta `axiom sdd kickoff seal --change x ...`
+- **ENTONCES** se rechaza con `branch_template_not_applicable` (motivo `shared_branch`) y la continuación nombra `repositories[].branch_template`
+- **Y** no se escribe `kickoff.yaml`
+
+#### Scenario: La rama con `openspec/` rechaza `{role}` en `ensure`
+- **DADO** un `monorepo-embedded` con `git.branch_template: "{prefix}/{role}/{change}"`
+- **CUANDO** se ejecuta `ensure --change x`
+- **ENTONCES** se rechaza con `branch_template_not_applicable` (motivo `openspec_branch`) y no se crea nada
+
+#### Scenario: Un nombre igual a la rama de integración se rechaza
+- **DADO** `git.integration_branch: develop` y la plantilla `{change}` con el cambio `develop`
+- **CUANDO** se ejecuta `ensure --change develop`
+- **ENTONCES** se rechaza con `invalid_name` que nombra la rama de integración
+- **Y** no se crea ninguna rama
+
+#### Scenario: Un nombre igual a `main_branch` se rechaza
+- **DADO** `git.main_branch: master` y la plantilla `{change}` con el cambio `master`
+- **CUANDO** se ejecuta `ensure --change master`
+- **ENTONCES** se rechaza con `invalid_name` que nombra `main_branch`
+- **Y** no se crea ninguna rama
+
 #### Scenario: Cada rechazo lleva continuación
 - **DADO** el conjunto de rechazos de producción de `branch`
 - **CUANDO** se ejecuta el trinquete de resolución de rechazos
@@ -217,6 +313,8 @@ Los códigos nuevos DEBEN figurar con su etiqueta y su continuación en el conju
 ### Requirement: Diferido de las Ramas con `{task_ref}` a la Entrada del Rol (prov:BRA:5)
 
 Una rama cuya plantilla efectiva usa `{task_ref}` DEBE estar **pendiente** hasta que entre el rol al que se atribuye: NO DEBE crearse ni nombrarse en un `ensure` sin `--role`, ni en un `ensure --role <otro rol>`, ni al arrancar el cambio. DEBE crearse en el `ensure --change <c> --role <rol>` de su rol, después de la barrera `task_not_bound` (RF-BRA-33) y de la resolución de `{task_ref}`. El motor de `ensure` DEBE recibir el rol de `--role` solo para ese fin. Una rama cuya plantilla no usa `{task_ref}`, y toda rama sin plantilla, DEBE crearse en el mismo momento en que se crea hoy. Una rama pendiente DEBE listarse como pendiente, con su repositorio, su rol y su plantilla, tanto en la salida de `ensure` como en la de `status` (RF-BRA-16), mediante un campo aditivo del JSON; un binario anterior ignora ese campo. `ensure --role` DEBE ser idempotente: repetirlo no vuelve a crear la rama ni cambia su nombre. La entrada de un rol NO DEBE crear ni nombrar ramas pendientes de otro rol.
+
+`status` NUNCA DEBE mutar nada. Una rama pendiente se lista con su plantilla, su rol y la orden que la crea (`axiom branch ensure --cwd <ruta> --change <c> --role <rol>`), y sin nombre esperado si aún no se puede resolver. Con un plugin de work items activo y `integrations.yaml` ilegible, `status` DEBE informar el código del rechazo (`integrations_links_invalid`) en la entrada afectada, sin fallar la orden entera. La base, el destino de PR y la resolución del modo de promoción de una rama diferida, incluida la pregunta `ask` (RF-BRA-28 y RF-BRA-29), se resuelven en el `ensure --role` que la crea, con la misma regla que si se creara al arrancar el cambio. El worktree de una rama diferida solo se materializa al crearla: mientras tanto, un repositorio sin ninguna rama creada no tiene worktree.
 
 #### Scenario: La rama con `{task_ref}` nace al entrar el rol
 - **DADO** un multirepo con `repositories[].branch_template: "feature/TASK-{task_ref}"` para `repo-frontend`, el rol `frontend` único sobre él y su Task `1235` vinculada, y el cambio ya sellado
@@ -246,6 +344,31 @@ Una rama cuya plantilla efectiva usa `{task_ref}` DEBE estar **pendiente** hasta
 - **DADO** un plugin activo con `items.create`, un vínculo `work_item` y el rol `frontend` sin Task
 - **CUANDO** se ejecuta `ensure --change x --role frontend`
 - **ENTONCES** se rechaza con `task_not_bound` y no se crea la rama pendiente
+
+#### Scenario: Segundo clon con `ensure --role`, sin registro y con la rama ya publicada
+- **DADO** un cambio sellado con `repositories[].branch_template: "feature/TASK-{task_ref}"` para `repo-frontend`, la Task `1235` del rol `frontend` vinculada y versionada en `integrations.yaml`, la rama `feature/TASK-1235` ya publicada en el remoto por otra persona, y un segundo clon sin registro ni staging
+- **CUANDO** se ejecuta `ensure --change x --role frontend` en el segundo clon
+- **ENTONCES** el nombre es `feature/TASK-1235`, obtenido de la plantilla de la instantánea y de los vínculos versionados
+- **Y** se adopta la rama publicada (RF-BRA-27) sin crear otra ni modificarla
+- **Y** el registro se reconstruye con ese nombre
+
+#### Scenario: `status` no muta y lista la rama pendiente con su orden
+- **DADO** una rama pendiente de `repo-frontend` para el rol `frontend` cuyo `{task_ref}` aún no se puede resolver
+- **CUANDO** se ejecuta `axiom branch status --change x --json`
+- **ENTONCES** la entrada pendiente incluye la plantilla, el rol `frontend` y la orden `axiom branch ensure --cwd <ruta> --change x --role frontend`, sin nombre esperado
+- **Y** no se crea ninguna rama, worktree ni registro
+
+#### Scenario: `status` con `integrations.yaml` ilegible informa el código sin fallar
+- **DADO** un plugin de work items activo, un `integrations.yaml` ilegible y una rama pendiente por `{task_ref}`
+- **CUANDO** se ejecuta `axiom branch status --change x --json`
+- **ENTONCES** la entrada afectada informa `integrations_links_invalid`
+- **Y** el resto del estado se devuelve y la orden no falla
+
+#### Scenario: La promoción `ask` de una rama diferida se resuelve al crearla
+- **DADO** `git.main_branch: master`, `git.promotion: ask` y una rama pendiente de `repo-frontend`
+- **CUANDO** se ejecuta `ensure --change x` y después `ensure --change x --role frontend`
+- **ENTONCES** la primera no pregunta por el modo de promoción de `repo-frontend` ni crea su worktree
+- **Y** la segunda resuelve la base, el destino de PR y el modo (incluida la pregunta `ask`) con la misma regla que si la rama se hubiera creado al arrancar
 
 #### Scenario: Sin `{task_ref}` nada se difiere
 - **DADO** plantillas sin `{task_ref}` o sin plantillas
@@ -388,7 +511,7 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 
 ### Requirement: Carril ODD con la Misma Política (RF-BRA-14)
 
-`ensure --lane odd --change <feature>` DEBE aplicar la misma política que SDD, incluida la plantilla de nombre de rama: la rama de la feature se nombra con la plantilla efectiva (`git.branch_template`, o `repositories[].branch_template` en un repositorio de código incluido con `--repo`) y su nombre se congela en el registro local (RF-BRA-15). El carril ODD no tiene roles ni Tasks, por lo que `{role}` y `{task_ref}` NO resuelven y su uso se rechaza con el código tipado de prov:BRA:4; `roles.<id>.branch_template` no se aplica nunca. Con estas particularidades: el documento ODD es `<workspaceRoot>/odd/tasks/<feature>.md`, en el repositorio del planning home. En `monorepo-embedded`, la rama es `<prefijo>/<feature>` con worktree según el modo; en `multirepo`, el repositorio de specs se trabaja in situ en su rama de integración (RF-BRA-05) y los repositorios de código se incluyen solo bajo demanda con `--repo <ruta>`, porque ODD no divide en roles y cada repositorio incluido recibe solo la rama `<prefijo>/<feature>`. En el carril ODD no existe `kickoff.yaml` ni instantánea ni rama de archivado: las únicas protecciones que se aplican son la propia política de `ensure` y la guarda D (RF-BRA-22), que bloquea las escrituras del agente en `odd/tasks/` fuera de la rama que corresponde, porque no hay escritor Go del documento ODD.
+`ensure --lane odd --change <feature>` DEBE aplicar la misma política que SDD, incluida la plantilla de nombre de rama: la rama de la feature se nombra con la plantilla efectiva (`git.branch_template`, o `repositories[].branch_template` en un repositorio de código incluido con `--repo`) y su nombre se congela en el registro local (RF-BRA-15) en el primer `ensure`. El carril ODD no tiene roles ni Tasks, por lo que `{role}` y `{task_ref}` NO resuelven y su uso se rechaza con el código tipado de prov:BRA:4; `roles.<id>.branch_template` no se aplica nunca. Como no hay `kickoff.yaml`, los valores salen así: `{ref}` del vínculo `work_item` de `integrations.yaml` (que ODD también escribe al adoptar) o, si aún no existe, del staging de `change start`; `{kind}` del perfil del staging o del documento adoptado y, si no hay, `feature`; `{slug}` según prov:BRA:1. Una plantilla con `{ref}` y sin work item en ODD se rechaza con el código de variable sin valor de prov:BRA:4. Con estas particularidades: el documento ODD es `<workspaceRoot>/odd/tasks/<feature>.md`, en el repositorio del planning home. En `monorepo-embedded`, la rama es `<prefijo>/<feature>` con worktree según el modo; en `multirepo`, el repositorio de specs se trabaja in situ en su rama de integración (RF-BRA-05) y los repositorios de código se incluyen solo bajo demanda con `--repo <ruta>`, porque ODD no divide en roles y cada repositorio incluido recibe solo la rama `<prefijo>/<feature>`. En el carril ODD no existe `kickoff.yaml` ni instantánea ni rama de archivado: las únicas protecciones que se aplican son la propia política de `ensure` y la guarda D (RF-BRA-22), que bloquea las escrituras del agente en `odd/tasks/` fuera de la rama que corresponde, porque no hay escritor Go del documento ODD.
 (Previously: la rama de la feature era siempre `<prefijo>/<feature>`)
 
 #### Scenario: ODD en monorepo prepara rama y worktree
@@ -430,6 +553,23 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 - **CUANDO** se ejecuta `ensure --lane odd --change mi-feature`
 - **ENTONCES** la rama es `feat/mi-feature`
 
+#### Scenario: ODD toma `{ref}` y `{kind}` del staging
+- **DADO** `git.branch_template: "{kind}/{ref}-{slug}"`, el staging de `change start` del cambio `us-2525-alta` con `id` `2525` y perfil bug, y sin vínculo `work_item` todavía
+- **CUANDO** se ejecuta `ensure --lane odd --change us-2525-alta`
+- **ENTONCES** la rama es `fix/2525-alta`
+- **Y** el registro congela ese nombre
+
+#### Scenario: ODD con `{kind}` sin perfil conocido vale `feature`
+- **DADO** `git.branch_template: "{kind}/{change}"` y un cambio ODD sin staging ni perfil en el documento
+- **CUANDO** se ejecuta `ensure --lane odd --change mi-feature`
+- **ENTONCES** la rama es `feature/mi-feature`
+
+#### Scenario: ODD con `{ref}` sin work item se rechaza
+- **DADO** `git.branch_template: "{prefix}/{ref}"` y un cambio ODD sin vínculo `work_item` ni staging
+- **CUANDO** se ejecuta `ensure --lane odd --change mi-feature`
+- **ENTONCES** se rechaza con el código de variable sin valor que nombra `ref`
+- **Y** no se crea ninguna rama ni worktree
+
 #### Scenario: ODD rechaza `{task_ref}`
 - **DADO** `git.branch_template: "feature/{task_ref}"`
 - **CUANDO** se ejecuta `ensure --lane odd --change mi-feature`
@@ -438,7 +578,7 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 
 ### Requirement: Registro Local en el Git Common Dir (RF-BRA-15)
 
-`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (RF-BRA-08) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (RF-BRA-28). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. Cuando el nombre de una rama se obtiene de una plantilla (prov:BRA:3), el primer `ensure` que crea esa rama DEBE congelar el nombre resuelto en el registro, y las ejecuciones posteriores DEBEN leer ese nombre sin volver a renderizar la plantilla, de modo que un cambio posterior de la plantilla en `axiom.yaml` no renombra ni duplica una rama ya creada. Si el registro se borra, `ensure` DEBE recuperar el nombre de las ramas existentes, de la instantánea y de la plantilla con las mismas entradas versionadas, sin renombrar nada. Una rama pendiente (prov:BRA:5) NO DEBE figurar en el registro. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (RF-BRA-28), mientras `status` DEBE informar que el cambio no tiene registro.
+`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (RF-BRA-08) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (RF-BRA-28). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. Cuando el nombre de una rama se obtiene de una plantilla (prov:BRA:3), el primer `ensure` que crea esa rama DEBE congelar el nombre resuelto en el registro, y las ejecuciones posteriores DEBEN leer ese nombre sin volver a renderizar la plantilla, de modo que un cambio posterior de la plantilla en `axiom.yaml` no renombra ni duplica una rama ya creada. El registro es la fuente de verdad del nombre congelado. Si el registro se borra, `ensure` DEBE recuperar el nombre de la instantánea o, si esta no lo guarda, de renderizar la plantilla de la instantánea con las entradas versionadas actuales, y reutilizar la rama existente con ese nombre sin renombrar nada; un error de git distinto de «la rama no existe» al comprobarla se propaga como error y nunca se trata como ausencia. Es una limitación declarada: si la Task de un rol se revinculó a otro `id` después de crear la rama y el registro se perdió, el nombre renderizado puede diferir del de la rama existente; la salida es `--branch` con el nombre existente o restaurar el vínculo anterior. Una rama pendiente (prov:BRA:5) NO DEBE figurar en el registro. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (RF-BRA-28), mientras `status` DEBE informar que el cambio no tiene registro.
 (Previously: el registro no guardaba el modo de promoción ni su origen y la reconstrucción no consultaba la instantánea)
 (Previously: el registro no congelaba el nombre de las ramas nombradas por plantilla ni leía ese nombre al planificar)
 (Previously: la cláusula sobre la coexistencia con el estado local de RDD (`<git common dir>/gentle-ai/`) y sus linajes; RDD se retira (C-01-e) y `ensure` ya no tiene nada que preservar de él.)
@@ -494,6 +634,12 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 - **CUANDO** se ejecuta `ensure --change x --role frontend`
 - **ENTONCES** la rama se reutiliza sin modificarla y el registro se reconstruye con el nombre `feature/TASK-1235`
 
+#### Scenario: Task revinculada y registro borrado: limitación declarada
+- **DADO** la rama `feature/TASK-1235` creada y registrada, la Task del rol `frontend` revinculada después a `1300` en `integrations.yaml` y el registro borrado
+- **CUANDO** se ejecuta `ensure --change x --role frontend`
+- **ENTONCES** el nombre se renderiza con el vínculo actual (`feature/TASK-1300`) y no se renombra ni se borra la rama `feature/TASK-1235`
+- **Y** la continuación ofrece `--branch feature/TASK-1235` o restaurar el vínculo anterior
+
 #### Scenario: La rama pendiente no figura en el registro
 - **DADO** una rama pendiente por `{task_ref}` y un `ensure --change x` sin `--role`
 - **CUANDO** termina
@@ -501,7 +647,7 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 
 ### Requirement: `status`: Estado de Ramas y Worktrees del Cambio (RF-BRA-16)
 
-`axiom branch status` DEBE informar, para cada repositorio del cambio, su papel (repositorio con rama de cambio, repositorio de specs in situ o repositorio de código), la rama esperada y la rama actual, la ruta absoluta del worktree si existe, si el árbol tiene cambios sin confirmar, el modo de trabajo materializado, la base, y el número de commits que la rama lleva de atraso o de adelanto respecto de su base calculado solo con referencias locales, y la rama destino propuesta para el PR (RF-BRA-04). En un repositorio con dos etapas, la base es la base efectiva de su modo de promoción (RF-BRA-29) y DEBE informar además de ese modo, de la rama principal y, en modo `branch` con la rama del cambio ya fusionada en la integración, de la siguiente PR con destino la rama principal (RF-BRA-30). Cuando existe la rama de archivado, DEBE incluirla con los mismos datos. `--change` es opcional: sin él, `status` lista los cambios registrados y los cambios pendientes de archivar (RF-BRA-21); con él, además informa de si el cambio solicitado está pendiente de archivar. NUNCA DEBE realizar operaciones remotas. DEBE poder ejecutarse desde el checkout principal, desde cualquier worktree del cambio y con `--cwd`. Un cambio sin ramas creadas DEBE informarse como no iniciado (`not_started`), no como error. DEBE listar además las ramas pendientes por `{task_ref}` (prov:BRA:5), con su repositorio, su rol y su plantilla, en un campo aditivo del JSON; una rama pendiente no tiene rama esperada ni actual.
+`axiom branch status` DEBE informar, para cada repositorio del cambio, su papel (repositorio con rama de cambio, repositorio de specs in situ o repositorio de código), la rama esperada y la rama actual, la ruta absoluta del worktree si existe, si el árbol tiene cambios sin confirmar, el modo de trabajo materializado, la base, y el número de commits que la rama lleva de atraso o de adelanto respecto de su base calculado solo con referencias locales, y la rama destino propuesta para el PR (RF-BRA-04). En un repositorio con dos etapas, la base es la base efectiva de su modo de promoción (RF-BRA-29) y DEBE informar además de ese modo, de la rama principal y, en modo `branch` con la rama del cambio ya fusionada en la integración, de la siguiente PR con destino la rama principal (RF-BRA-30). Cuando existe la rama de archivado, DEBE incluirla con los mismos datos. `--change` es opcional: sin él, `status` lista los cambios registrados y los cambios pendientes de archivar (RF-BRA-21); con él, además informa de si el cambio solicitado está pendiente de archivar. NUNCA DEBE realizar operaciones remotas. DEBE poder ejecutarse desde el checkout principal, desde cualquier worktree del cambio y con `--cwd`. Un cambio sin ramas creadas DEBE informarse como no iniciado (`not_started`), no como error. DEBE listar además las ramas pendientes por `{task_ref}` (prov:BRA:5), con su repositorio, su rol y su plantilla, en un campo aditivo del JSON; una rama pendiente no tiene rama esperada ni actual, y se lista con la orden que la crea (prov:BRA:5). Con `integrations.yaml` ilegible y plugin activo, `status` informa el código del rechazo en la entrada afectada sin fallar la orden entera.
 (Previously: `status` no listaba ramas pendientes)
 (Previously: `status` no informaba del modo de promoción ni de la siguiente PR, y la base era siempre la de integración)
 
@@ -565,7 +711,7 @@ Las guardas A (RF-BRA-20), B (`blocked(wrong_branch)` de `axiom-sdd-cli-integrat
 - **Repositorio de código en multirepo**: el veredicto solo se evalúa cuando el consultante es apply (el estado de aplicación de `sdd status` o la guarda D sobre una ruta de ese repositorio); en otras fases es `not_applicable`.
 - **Exenciones**: es `not_applicable` para un cambio cuyo `kickoff.yaml` no contiene instantánea (RF-KOF-07), para los sumideros `e2e-cumulative` y `cumulative-<rol>` por nombre, y cuando la ruta no pertenece a ningún repositorio git o git no está disponible (en esos casos la consulta NO DEBE bloquear y DEBE advertirlo).
 
-Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuando existe (RF-KOF-06) y, para las ramas nombradas por plantilla cuyo nombre no está en la instantánea (las que usan `{task_ref}`), del nombre congelado en el registro local (RF-BRA-15) o, si el registro no lo tiene, de renderizar la plantilla de la instantánea con los vínculos versionados; si el cambio aún no tiene kickoff (se está creando), de la política de `axiom.yaml` (RF-BRA-03). El veredicto NUNCA DEBE recomponer el nombre como `<prefijo>/<cambio>` cuando el cambio usa plantilla, de modo que una rama nombrada por plantilla no se marca como `wrong_branch`. Un repositorio cuya única rama está pendiente (prov:BRA:5) es `not_applicable`, y su detalle y su continuación indican `axiom branch ensure --cwd <ruta> --change <c> --role <rol>`; el nombre de la rama de archivado se toma del registro local si `ensure --archive` recibió `--prefix` (RF-BRA-12). Un `wrong_branch` DEBE incluir la rama actual, la esperada, el repositorio y la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane` o `--archive`. El veredicto NO consulta si la rama de integración contiene cambios activos: con el archive en un PR documental aparte es normal que los contenga temporalmente (RF-BRA-21).
+Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuando existe (RF-KOF-06) y, para las ramas nombradas por plantilla cuyo nombre no está en la instantánea (las que usan `{task_ref}`), del nombre congelado en el registro local (RF-BRA-15) o, si el registro no lo tiene, de renderizar la plantilla de la instantánea con los vínculos versionados; si el cambio aún no tiene kickoff (se está creando), de la política de `axiom.yaml` (RF-BRA-03). El veredicto NUNCA DEBE recomponer el nombre como `<prefijo>/<cambio>` cuando el cambio usa plantilla, de modo que una rama nombrada por plantilla no se marca como `wrong_branch`. Sin registro, el nombre esperado se obtiene igual que en el plan: el de la instantánea, si no el del registro, si no el renderizado de la plantilla de la instantánea con los vínculos versionados; para las ramas de rol pendientes, el de la plantilla de rol con el `{task_ref}` de ese rol. Un repositorio sin ninguna rama creada y con todas sus ramas pendientes (prov:BRA:5) es `not_applicable` con `Details.reason=awaiting_role`, los roles pendientes y la continuación `axiom branch ensure --cwd <ruta> --change <c> --role <rol>`; si algún rol ya entró, el veredicto se calcula sobre las ramas creadas y las pendientes se informan aparte; el nombre de la rama de archivado se toma del registro local si `ensure --archive` recibió `--prefix` (RF-BRA-12). Un `wrong_branch` DEBE incluir la rama actual, la esperada, el repositorio y la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane` o `--archive`. El veredicto NO consulta si la rama de integración contiene cambios activos: con el archive en un PR documental aparte es normal que los contenga temporalmente (RF-BRA-21).
 (Previously: lo consultaban cuatro capas, incluida una de CI; el veredicto no distinguía el contexto de archivado y los valores eran etiquetas en castellano)
 (Previously: los nombres esperados salían de la instantánea o de `<prefijo>/<cambio>` y no leían el registro ni conocían las ramas pendientes)
 
@@ -653,7 +799,13 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 - **DADO** un repositorio de código con su rama pendiente por `{task_ref}` y desplegado en `main`
 - **CUANDO** se consulta el veredicto desde la aplicación de una tarea de otro rol
 - **ENTONCES** es `not_applicable`
-- **Y** el detalle indica que la rama está pendiente y la continuación es `axiom branch ensure --cwd <ruta> --change x --role frontend`
+- **Y** el detalle indica `awaiting_role`, nombra el rol pendiente `frontend` y la continuación es `axiom branch ensure --cwd <ruta> --change x --role frontend`
+
+#### Scenario: Con un rol ya dentro el veredicto se calcula sobre las ramas creadas
+- **DADO** un repositorio compartido por `core` (rama creada, desplegado en ella) y `qa` (rama pendiente por `{task_ref}`)
+- **CUANDO** se consulta el veredicto en la fase de aplicación
+- **ENTONCES** es `correct`
+- **Y** la rama pendiente de `qa` se informa aparte y no cambia el veredicto
 
 ### Requirement: `ensure --role` Validado contra el Roster Sellado (RF-BRA-33)
 
@@ -726,4 +878,8 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 - **DADO** un cambio con vínculo `kind: work_item` y sin plugin activo (por ejemplo con `integrations.azure-devops.enabled: false`)
 - **CUANDO** se ejecuta `ensure --change x --role backend`
 - **ENTONCES** la salida y el JSON coinciden con los de antes de este cambio y no se rechaza por `task_not_bound`
+
+## Registro de remediación
+
+2026-11-26: cobertura ronda 1; se cierran S1 a S12 y las decisiones G2, G4, G8, G9, G10 y G11: `{slug}` (prefijo, mayúsculas, nunca vacío), segundo clon con `--role`, limitación declarada de la Task revinculada, `--branch`/`--prefix`, rechazo de rama compartida en seal/ensure/ODD/validate, nombres reservados, `status` sin mutar, origen de valores en ODD, archivado con rama resuelta, `awaiting_role`, fallo cerrado con `{slug}`/`{kind}`/`{task_ref}`, precedencia por rama y colisión sobre nombres registrados; en `sdd-lane-kickoff` y `workspace-topology` se ajustan kind siempre congelado, cambio sellado sin `kind`, plantilla con variable propia del cambio, repositorio de specs en multirepo, claves de la API de ajustes y ejemplos de `axiom.example.yaml`.
 
