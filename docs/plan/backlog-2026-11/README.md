@@ -510,7 +510,7 @@ Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con l
 | C-07-d | fusionado | | `inc/arranque-desde-wi` | #359 (`64fd72a0`); archive #360 (`e365e538`) |
 | C-07-e | en curso | | `inc/eventos-ado` | |
 | C-07-f | pendiente | | | |
-| C-07-g | pendiente | | | |
+| C-07-g | fusionado | | `inc/mcp-ado` | #368 (`711807e6`); remate #373 (`67ce26e1`) |
 | C-07-h | pendiente | | | |
 | C-08-a | fusionado | | `inc/paquetes-huerfanos` | #298 (`7abf7590`) |
 | C-08-b | fusionado | | `inc/suite-local-windows` | #301 (`3c520778`) |
