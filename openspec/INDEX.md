@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 04:36:29 UTC
-> **Total Dominios:** 48 | **Total Requerimientos:** 496 | **Total Escenarios BDD:** 2225
+> **Última Sincronización:** 2026-11-26 04:39:50 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 511 | **Total Escenarios BDD:** 2261
 
 ---
 
@@ -42,6 +42,7 @@
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 123 | [Ver Spec](specs/requirement-identifiers/spec.md) |
+| `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 10 | 52 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
@@ -1898,6 +1899,64 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* La guía de `sdd-spec` describe el provisional
   - *Escenario BDD:* La guía de `sdd-archive` usa el paso de archivado del cambio
   - *Escenario BDD:* La convención ISO admite el provisional hasta archivar
+
+### Dominio: `requirement-trace` — Especificación de requirement-trace
+
+Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lectura `axiom trace <ID>` responde qué incrementos lo crearon, modificaron, retiraron, renombraron o cubrieron: cambios SDD archivados y documentos ODD integrados. De cada uno da el tipo (incremento o bug), las tareas y el commit de integración en la línea `--first-parent`. Un identificador que fue provisional se resuelve por la traza de identificadores (REQ-47.6 de `requirement-identifiers`). En los escenarios, `«ID»` es un identificador válido bajo el patrón del proyecto y `«prov»` un provisional válido. El mapa de `REQ-n.m` al identificador nuevo de C-03-e queda fuera; solo se exige el punto de extensión.
+
+**Archivo:** [`specs/requirement-trace/spec.md`](specs/requirement-trace/spec.md)
+
+- **[REQ-48.1]** Verbo `axiom trace <ID>` y Sus Opciones
+  - *Escenario BDD:* La ayuda muestra el verbo
+  - *Escenario BDD:* Falta el ID
+- **[REQ-48.2]** Validación del ID Contra el Patrón del Proyecto con Error Tipado
+  - *Escenario BDD:* ID que no cumple el patrón
+  - *Escenario BDD:* El patrón del proyecto manda
+  - *Escenario BDD:* Un provisional válido se acepta
+- **[REQ-48.3]** Resolución Entre Provisional y Definitivo por la Traza
+  - *Escenario BDD:* Provisional y definitivo dan el mismo resultado
+  - *Escenario BDD:* Un ID anterior se resuelve al vigente
+- **[REQ-48.4]** Punto de Extensión de Alias
+  - *Escenario BDD:* Un alias inyectado se incorpora a la consulta
+  - *Escenario BDD:* Sin resolutor adicional solo cuentan las trazas
+- **[REQ-48.5]** Incrementos SDD Archivados como Fuente
+  - *Escenario BDD:* Roles por sección de la delta
+  - *Escenario BDD:* Cubre con tareas
+  - *Escenario BDD:* Un cambio activo no cuenta
+  - *Escenario BDD:* Carpetas archivadas con el mismo nombre de cambio
+- **[REQ-48.6]** Clasificación de Bug en Cambios SDD
+  - *Escenario BDD:* Bug SDD que cubre un requisito
+  - *Escenario BDD:* Bug sin impacto en la spec
+  - *Escenario BDD:* Cambio sin declaración de bug
+- **[REQ-48.7]** Documentos ODD como Fuente
+  - *Escenario BDD:* Feature ODD con Spec viva
+  - *Escenario BDD:* Bug ODD
+  - *Escenario BDD:* Traza ODD
+  - *Escenario BDD:* Documento antiguo sin traza
+  - *Escenario BDD:* Documento que no parsea
+  - *Escenario BDD:* Documento no integrado
+- **[REQ-48.8]** Commit de Integración en la Línea `--first-parent`
+  - *Escenario BDD:* Integración por merge, squash y rebase
+  - *Escenario BDD:* Commit no encontrado
+- **[REQ-48.9]** Contrato JSON `axiom.trace/v1` y Salida de Texto
+  - *Escenario BDD:* Forma del documento JSON
+  - *Escenario BDD:* Salida de texto
+- **[REQ-48.10]** Solo Lectura
+  - *Escenario BDD:* Ninguna escritura ni git mutante
+- **[REQ-48.11]** ID Válido sin Apariciones
+  - *Escenario BDD:* ID válido sin apariciones
+- **[REQ-48.12]** Rama de Integración Ausente con Remedio
+  - *Escenario BDD:* Rama inexistente
+  - *Escenario BDD:* Rama explícita
+- **[REQ-48.13]** Orden Determinista
+  - *Escenario BDD:* Orden cronológico
+  - *Escenario BDD:* Los no encontrados van al final
+  - *Escenario BDD:* Salida reproducible
+- **[REQ-48.14]** Topología Multirepo con Rutas Ancladas en su Raíz Git
+  - *Escenario BDD:* Specs y ODD en repositorios distintos
+- **[REQ-48.15]** Criterio de Terminado de Trazabilidad de Punta a Punta
+  - *Escenario BDD:* SDD y ODD sobre el mismo ID
+  - *Escenario BDD:* El bug SDD aparece como bug
 
 ### Dominio: `sdd-archive-lifecycle` — Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21)
 
