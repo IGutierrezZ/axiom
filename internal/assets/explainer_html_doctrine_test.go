@@ -1,11 +1,8 @@
 package assets
 
 import (
-	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/explainer"
 )
 
 // html-explicativo (C-06-b): pins de texto de la doctrina del HTML explicativo. El orquestador pregunta una vez
@@ -109,56 +106,5 @@ func TestExplainerHTMLPhaseSteps(t *testing.T) {
 	)
 }
 
-// fencedBlock devuelve el contenido del primer bloque con la etiqueta dada.
-func fencedBlock(t *testing.T, text, label string) string {
-	t.Helper()
-	open := "```" + label + "\n"
-	from := strings.Index(text, open)
-	if from < 0 {
-		t.Fatalf("no hay bloque ```%s", label)
-	}
-	rest := text[from+len(open):]
-	to := strings.Index(rest, "\n```")
-	if to < 0 {
-		t.Fatalf("el bloque ```%s no se cierra", label)
-	}
-	return rest[:to]
-}
-
-// El esqueleto que lee el modelo es el que valida el contrato, y cita exactamente los requisitos del md de ejemplo.
-func TestExplainerHTMLSkeletonMatchesExample(t *testing.T) {
-	shared := MustRead("skills/_shared/sdd-explainer-html.md")
-	md := fencedBlock(t, shared, "markdown")
-	html := []byte(fencedBlock(t, shared, "html"))
-
-	if findings := explainer.Validate(html); len(findings) != 0 {
-		t.Fatalf("el esqueleto incumple el contrato: %+v", findings)
-	}
-	cited := explainer.CitedIDs(html)
-	if len(cited) == 0 {
-		t.Fatal("el esqueleto no cita ningún ID")
-	}
-	var required []string
-	for _, match := range regexp.MustCompile(`(?m)^#{2,4} (RF-[A-Z]+-\d+)`).FindAllStringSubmatch(md, -1) {
-		required = append(required, match[1])
-	}
-	if len(required) == 0 {
-		t.Fatal("el md de ejemplo no tiene requisitos con ID")
-	}
-	inMD := map[string]bool{}
-	for _, id := range required {
-		inMD[id] = true
-	}
-	inHTML := map[string]bool{}
-	for _, id := range cited {
-		inHTML[id] = true
-		if !inMD[id] {
-			t.Errorf("el esqueleto cita %q, que no existe en el md de ejemplo", id)
-		}
-	}
-	for _, id := range required {
-		if !inHTML[id] {
-			t.Errorf("el requisito %q del md de ejemplo no está citado en el esqueleto", id)
-		}
-	}
-}
+// El esqueleto de sdd-explainer-html.md se valida contra el contrato en internal/explainer
+// (TestExplainerHTMLSkeletonMatchesExample), donde vive Validate.

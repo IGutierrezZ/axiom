@@ -1040,4 +1040,4 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .alert p { margin: 0; }
 
 /* Pestaña «Explicación»: el iframe en sandbox ocupa el ancho del panel. */
-.explainer-frame { width: 100%; min-height: 70vh; border: 1px solid var(--border, currentColor); border-radius: 8px; background: #fff; }
+.explainer-frame { width: 100%; min-height: 70vh; border: 1px solid var(--border, currentColor); border-radius: 8px; background: var(--surface); }

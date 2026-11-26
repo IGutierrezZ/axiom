@@ -1,9 +1,11 @@
 // Package explainer define el contrato del HTML explicativo de spec y design
 // (`resumen-spec.html` y `resumen-design.html`): nombres de fichero, lectura
-// acotada, lectura del `<meta>` del digest de origen, IDs citados y validación.
+// acotada y lectura del `<meta>` del digest de origen.
 //
-// Es un paquete hoja: solo usa la biblioteca estándar, de modo que sddstatus,
-// el dashboard y los tests de assets lo comparten sin ciclos de importación.
+// Es un paquete hoja: solo usa la biblioteca estándar, de modo que sddstatus y
+// el dashboard lo comparten sin ciclos de importación. La validación del
+// contrato (Validate, CitedIDs) no se ejecuta en producción y vive en
+// contract_test.go, que también contrasta el esqueleto de la doctrina.
 package explainer
 
 import (
@@ -49,9 +51,6 @@ var (
 	// ErrNotRegular indica que la ruta no es un fichero regular (directorio o enlace simbólico).
 	ErrNotRegular = errors.New("el resumen no es un fichero regular")
 )
-
-// Kinds devuelve los tipos válidos, en este orden.
-func Kinds() []Kind { return []Kind{KindSpec, KindDesign} }
 
 // ValidKind indica si k es uno de los tipos admitidos.
 func ValidKind(k Kind) bool { return k == KindSpec || k == KindDesign }
@@ -101,17 +100,7 @@ var (
 	metaTag     = regexp.MustCompile(`(?is)<meta\b[^>]*>`)
 	metaName    = regexp.MustCompile(`(?is)\bname\s*=\s*["']` + MetaName + `["']`)
 	metaContent = regexp.MustCompile(`(?is)\bcontent\s*=\s*["']([^"']*)["']`)
-	digestValue = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	refAttr     = regexp.MustCompile(`(?is)\b` + RefAttribute + `\s*=\s*["']([^"']+)["']`)
-
-	scriptTag   = regexp.MustCompile(`(?i)<script\b`)
-	externalURL = regexp.MustCompile(`(?is)\b(?:src|href|xlink:href|action|poster|srcset)\s*=\s*["']?\s*(?:https?:)?//`)
-	cssURL      = regexp.MustCompile(`(?i)url\(\s*["']?\s*(?:https?:)?//`)
-	cssImport   = regexp.MustCompile(`(?i)@import\b`)
-	spaces      = regexp.MustCompile(`\s+`)
 )
-
-const approvalNotice = "lo que se aprueba es el md"
 
 // SourceDigest devuelve el content del primer <meta name="axiom-source-digest">,
 // recortado y en minúsculas. El booleano es falso si no hay ninguna etiqueta con
@@ -128,53 +117,4 @@ func SourceDigest(html []byte) (string, bool) {
 		return strings.ToLower(strings.TrimSpace(string(m[1]))), true
 	}
 	return "", false
-}
-
-// CitedIDs devuelve, en orden de aparición y sin repetir, los valores de data-axiom-ref.
-func CitedIDs(html []byte) []string {
-	var ids []string
-	seen := map[string]bool{}
-	for _, m := range refAttr.FindAllSubmatch(html, -1) {
-		id := strings.TrimSpace(string(m[1]))
-		if id == "" || seen[id] {
-			continue
-		}
-		seen[id] = true
-		ids = append(ids, id)
-	}
-	return ids
-}
-
-// Finding es un incumplimiento del contrato detectado por Validate.
-type Finding struct{ Code, Detail string }
-
-// Códigos de Finding.
-const (
-	CodeScriptTag             = "script_tag"
-	CodeExternalURL           = "external_url"
-	CodeDigestMetaMissing     = "digest_meta_missing"
-	CodeApprovalNoticeMissing = "approval_notice_missing"
-	CodeCitedIDsMissing       = "cited_ids_missing"
-)
-
-// Validate comprueba el contrato del HTML. No se ejecuta en producción: lo usan los tests.
-func Validate(html []byte) []Finding {
-	var out []Finding
-	if scriptTag.Match(html) {
-		out = append(out, Finding{CodeScriptTag, "el HTML contiene una etiqueta <script>"})
-	}
-	if externalURL.Match(html) || cssURL.Match(html) || cssImport.Match(html) {
-		out = append(out, Finding{CodeExternalURL, "el HTML referencia un recurso externo (URL absoluta, // o @import)"})
-	}
-	if v, ok := SourceDigest(html); !ok || !digestValue.MatchString(v) {
-		out = append(out, Finding{CodeDigestMetaMissing, `falta <meta name="` + MetaName + `"> con un valor sha256:<64 hex>`})
-	}
-	text := strings.ToLower(spaces.ReplaceAllString(string(html), " "))
-	if !strings.Contains(text, approvalNotice) {
-		out = append(out, Finding{CodeApprovalNoticeMissing, "falta el aviso «lo que se aprueba es el md»"})
-	}
-	if len(CitedIDs(html)) == 0 {
-		out = append(out, Finding{CodeCitedIDsMissing, "ningún bloque cita su ID con " + RefAttribute})
-	}
-	return out
 }
