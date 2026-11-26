@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Con Tracker Activo el Archivado Reenvía el Resumen con los IDs Definitivos (prov:ARC:1)
+### Requirement: Con Tracker Activo el Archivado Reenvía el Resumen con los IDs Definitivos (RF-ARC-16)
 
 Con un vínculo `kind: work_item` y un plugin de work items activo, cuando la fase `archive` termina, la doctrina DEBE ordenar `axiom integrations summary push --change <cambio>` sobre la carpeta archivada, para que la descripción y las etiquetas de IDs funcionales del WI pasen de los identificadores provisionales a los definitivos asignados al archivar (RF-ARC-15). El verbo DEBE leer los definitivos de la carpeta archivada y NO DEBE dejar ningún provisional en el WI. La transición del WI al estado de archivado, si está configurada, la aplica el evento `archive` (RF-INT-19) y no este paso. Un fallo del reenvío NO DEBE deshacer el archivado ni impedir su `done`: se informa en el informe de archivado con el comando de reintento. El paso NO DEBE modificar ningún fichero de la carpeta archivada ni escribir `integrations.yaml`. Sin tracker activo, el archivado NO DEBE invocar el verbo ni mencionarlo.
 
@@ -29,7 +29,7 @@ Con un vínculo `kind: work_item` y un plugin de work items activo, cuando la fa
 - **CUANDO** termina `archive`
 - **ENTONCES** no se invoca `summary push`
 
-### Requirement: Resumen Final de `continuous` con Estimaciones, Horas, Quién y Cuándo (prov:ARC:2)
+### Requirement: Resumen Final de `continuous` con Estimaciones, Horas, Quién y Cuándo (RF-ARC-17)
 
 En un cambio sellado `continuous` con tracker activo, el resumen final (el informe de cierre de la fase `archive`) DEBE incluir una sección con, por cada Task vinculada: el rol, el identificador y la URL de la Task, la estimación (`estimate_hours`), las horas imputadas (suma de los minutos de sus imputaciones), y por cada imputación quién (`actor`), cuánto (horas) y cuándo (`date`). DEBE obtenerse de `integrations.yaml` sin consultar la red. DEBE incluir también, como pendientes o fallidos, los avisos y rechazos que la ejecución sin paradas recogió (`req_tags_over_limit`, un `rev_conflict`, un estado de cierre inexistente, una Task sin imputar). Un rol sin imputaciones DEBE aparecer con cero horas imputadas y no omitirse. En un cambio `checkpointed` o sin tracker activo esta sección NO DEBE añadirse.
 

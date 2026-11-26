@@ -52,7 +52,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 1.9 Verificar: `go test -count=1 ./internal/integrations/`, `go vet ./internal/integrations/`, `gofmt -l internal/integrations`.
   - [x] 1.10 Crear `internal/integrations/notes.go` (D20): diario `.tracker-notes.yaml` (`axiom.integrations-tracker-notes/v1`), solo de añadir y bajo el cerrojo del cambio, con `AppendTrackerNote(f, note)` (`{at, verb, role, code, message, continuation}`) y `TrackerNotes(f)`. Comprobar que no casa con `.integrations-*.yaml` y que `docpaths.LocalState` lo trata como estado local.
   - [x] 1.11 Ajustar la API del diario pendiente (D9): la intención se borra solo cuando consta que no se aplicó; la reconciliación la hace el llamante sobre `PendingTime.ItemID`. Pruebas de `notes_test.go`: solo de añadir, varios sucesos en orden, cerrojo y no publicación (con `docpaths.LocalState`).
-  - Cubre: prov:INT:9 (precondiciones y rechazo de ODD no escriben), prov:INT:8 (diario pendiente, parte de núcleo), RF-INT-09 (modificado), prov:ADO:6 (datos de entrega `Deliverer` e `Identities`).
+  - Cubre: RF-INT-33 (precondiciones y rechazo de ODD no escriben), RF-INT-32 (diario pendiente, parte de núcleo), RF-INT-09 (modificado), RF-ADO-25 (datos de entrega `Deliverer` e `Identities`).
 
 - [x] 2. **U2 Puerto de Tasks en el núcleo y fake** (un commit; depende de U1)
   - [x] 2.1 Crear `internal/integrations/tasks.go` con `PortTasks`, los tipos neutrales (`TaskHours`, `TaskItem`, `TaskOutcome`, `Warning`, peticiones y resultados, `EstimateMode`, `TransitionRule`), la interfaz `TaskTracker` de ocho métodos, los errores centinela (`ErrTaskNotFound`, `ErrNotATask`, `ErrNotChildOfWorkItem`, `ErrTaskAmbiguous`, `ErrTaskParentLinkFailed`, `ErrFieldMissing`, `ErrStateUnknown`, `ErrRevConflict`, `ErrTrackerRejected`, `ErrTaskNotBound`) y los tipos `TaskAmbiguousError`, `FieldMissingError`, `StateUnknownError`, `RevConflictError`, tal como fija el diseño.
@@ -61,7 +61,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 2.4 Ampliar `internal/integrations/integrationstest/fake.go` con un `TaskTracker` programable: hijas, creación, lectura, horas, conflicto de `rev`, transición y resumen.
   - [x] 2.5 Pruebas: `WithTaskTracker` sin puerto, con pánico y con el secreto saneado en el error; errores neutrales recuperables con `errors.Is` y `errors.As`; el fake cumple la interfaz. Confirmar que `internal/integrations/imports_test.go` sigue en verde (el núcleo no importa `internal/cli` ni el adaptador).
   - [x] 2.6 Verificar: `go test -count=1 ./internal/integrations/ ./internal/integrations/integrationstest/`, `go vet` y `gofmt -l` de ambas carpetas.
-  - Cubre: prov:INT:1, prov:ADO:8 (sin filtrado del PAT en errores del puerto).
+  - Cubre: RF-INT-25, RF-ADO-27 (sin filtrado del PAT en errores del puerto).
 
 - [x] 3. **U3 Configuración nueva** (un commit; independiente de U1 y U2)
   - [x] 3.1 En `internal/integrations/manifest/manifest.go` y `format.go`, añadir `ConfigField.Min` y `ConfigField.Max *int` (aplicables a `int`) y los formatos `non_empty`, `tag_prefix` (1 a 100 caracteres, sin `,` ni `;`, sin empezar por `axiom:` ni `axiom-task:` sin distinguir mayúsculas) y `weekday_set` (`string_list` no vacía, sin duplicados, `mon` a `sun`). El manifiesto sigue siendo hoja de la biblioteca estándar.
@@ -83,7 +83,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 4.6 Pruebas del adaptador con `adotest`: creación con marca, relación, horas, `AreaPath` e `IterationPath`; reutilización por marca; `POST` con respuesta perdida sin reintento y recuperación en el siguiente intento; dos marcas dan `task_ambiguous`; el título no decide; `Removed` ignorada; huérfana reparada por WIQL; WIQL caído sin `POST`; 400 en `POST` activa el camino alternativo; campo de horas ausente sin `POST`; `ValidateTask` (404, tipo, otro padre, sin padre); horas con `test /rev`, piso en cero, conflicto con valores y `AfterRetry` recuperado; `SetEstimate` `if_missing` (con y sin `OriginalEstimate`) y `replace`; `RecordHours` con `CompletedWork` ausente en el proceso (`FieldMissingError`, sin escritura) y ausente en el valor (leído como 0); `TransportError` sin respuesta en el intento y en el reintento devuelto como resultado incierto, distinguible de un conflicto en el primer intento y de un 4xx; el PAT nunca aparece en errores.
   - [x] 4.8 Prueba con nombre propio `TestADOLifecycleConfigDefaults` en `internal/integrations/azuredevops/`: carga con `workspace.Locate` un bloque sin claves nuevas y comprueba con `lifecycleConfigFrom` los valores `Active`, `Tech Review` (apply y cierre derivado), `req:`, 50, 8 h, `mon` a `fri` y ningún estado de archivado (escenario «Valores por defecto de las claves nuevas» de RF-ADO-02). Comando: `go test -count=1 ./internal/integrations/azuredevops/ -run TestADOLifecycleConfigDefaults`.
   - [x] 4.7 Verificar: `go test -count=1 ./internal/integrations/azuredevops/...`, `go vet ./internal/integrations/azuredevops/...`, `gofmt -l internal/integrations/azuredevops`.
-  - Cubre: prov:ADO:1, prov:ADO:2, prov:ADO:3, prov:ADO:8.
+  - Cubre: RF-ADO-20, RF-ADO-21, RF-ADO-22, RF-ADO-27.
 
 - [x] 5. **U5 Adaptador: resumen, transiciones y `Deliver`** (un commit; depende de U1, U3 y U4)
   - [x] 5.1 Crear `internal/integrations/azuredevops/summary.go` con `UpdateSummary` (D12): lee el WI, calcula descripción y conjunto de etiquetas y envía un único `PATCH` con `test /rev` solo con las operaciones necesarias; sin diferencias no escribe; ante conflicto relee y repite hasta 3 veces. Etiquetas propias = las que empiezan por `req_tag_prefix` (con distinción de mayúsculas); las ajenas y `axiom:<cambio>` se conservan. Por encima de `req_tag_max`, de 100 en total, de 400 caracteres o con `,` o `;`, el conjunto final son solo las ajenas, con avisos `req_tags_over_limit` o `req_tag_invalid`, y la descripción se actualiza igualmente.
@@ -95,7 +95,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 5.9 Asignación independiente de la regla de estado (D13): `TransitionTask` asigna aunque la Task esté en el destino o retenida por `task_state_kept`, y `Deliver` copia `TransitionResult.Warnings` a `Outcome.Warnings` con la forma `"<código>: <mensaje>"`.
   - [x] 5.6 Pruebas de CLI: `gate record` con el bloque activo no cambia su salida ni su código; `sync` muestra los avisos de entrega y los abandonos tipados.
   - [x] 5.7 Verificar: `go test -count=1 ./internal/integrations/azuredevops/... ./internal/integrations/manifest/`; `go test -count=1 ./internal/cli/ -run 'TestGateRecordADO|TestIntegrationsSync'`; `go vet` y `gofmt -l` de los paquetes tocados.
-  - Cubre: prov:ADO:4, prov:ADO:5, prov:ADO:6, prov:ADO:7, prov:ADO:8, RF-ADO-01 (eventos), RF-ADO-14.
+  - Cubre: RF-ADO-23, RF-ADO-24, RF-ADO-25, RF-ADO-26, RF-ADO-27, RF-ADO-01 (eventos), RF-ADO-14.
 
 ## Fase 3: Lógica de verbos y renderizador (U6)
 
@@ -105,7 +105,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 6.3 Pruebas de `internal/specsummary/`: estructura, lista blanca sin atributos, escape total, determinismo byte a byte, marcado sin cerrar, orden del fichero con una delta que pone `MODIFIED` antes de `ADDED` y un `REMOVED` en medio, `REMOVED` y `RENAMED` con `h3` más `p` y su marcador `strong`, ningún `ul` ni `li`, primer bloque que no es párrafo, tope de 64 KiB; fuzz corto del escape.
   - [x] 6.4 Pruebas de `internal/trackersync/` para `SpecModel` con `prov:` y con `ids.yaml`.
   - [x] 6.5 Verificar: `go test -count=1 ./internal/specsummary/ ./internal/trackersync/`, `go vet` y `gofmt -l` de ambos paquetes.
-  - Cubre: prov:INT:5, prov:INT:4 (modelo de IDs), prov:ARC:1 (IDs definitivos).
+  - Cubre: RF-INT-29, RF-INT-28 (modelo de IDs), RF-ARC-16 (IDs definitivos).
 
 ## Fase 4: Verbos de CLI (U7 a U9)
 
@@ -117,14 +117,14 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 7.5 Pruebas de `trackersync`: estimación decimal, malformada, repetida, fuera del roster, en valla.
   - [x] 7.6 Pruebas de CLI con `adotest`: rutas de la spec, orden de precondiciones, `not_applicable` sin red ni ficheros, ODD rechazado sin ficheros, `gate_not_approved` con digest caducado, JSON `axiom.integrations-tasks/v1`, salidas 0, 1 y 2, fallo de creación que deja la compuerta aprobada y nombra `tasks create` y `tasks bind`, `bind` con ID inexistente, no Task y de otro padre, `--replace` (sustitución, validación fallida sin cambios, idempotente), ayuda; `status: partial` con dos roles donde falla solo el primero, el segundo vinculado y `gates.yaml` intacto; `--estimate` con 0, negativo, tres decimales, 1001 o rol repetido → error de uso sin ninguna petición al doble; `BindTask` fallido tras el `POST` → `write_failed` y el reintento da `found_by_mark` sin segundo `POST`; `tasks bind` en `checkpointed` con `design` pendiente procede; `estimate_not_recorded`; `.tracker-notes.yaml` escrito solo en `continuous`.
   - [x] 7.7 Verificar: `go test -count=1 ./internal/trackersync/`; `go test -count=1 ./internal/cli/ -run 'TestIntegrationsTasks|TestIntegrationsHelp|TestEveryProductionRefusal'`; `go test -count=1 ./internal/cli/ -run 'TestEveryNamedReviewContinuationIsStructurallyReal'`; `go vet` y `gofmt -l` de los paquetes tocados.
-  - Cubre: prov:INT:2, prov:INT:3, prov:INT:6, prov:INT:9, prov:INT:10, RF-INT-18 (ayuda de `tasks`), prov:ADO:1, prov:ADO:2.
+  - Cubre: RF-INT-26, RF-INT-27, RF-INT-30, RF-INT-33, RF-INT-34, RF-INT-18 (ayuda de `tasks`), RF-ADO-20, RF-ADO-21.
 
 - [x] 8. **U8 Verbo `summary push`** (un commit; depende de U5, U6 y U7)
   - [x] 8.1 Crear `internal/cli/integrations_summary.go`: `summary push` resuelve carpeta ordinaria o archivada (`kickoff.ArchivedChangeRoot`, la de fecha mayor), aplica D14 (en archivada, solo este verbo), arma el modelo con `SpecModel`, renderiza HTML y llama a `UpdateSummary`; sin cambios no escribe. Salida `axiom.integrations-summary/v1` con `description{changed,bytes,sha256}`, `tags{prefix,desired,added,removed,sent}`, `wrote` y `folder`. Un `prov:` sin traducción da `provisional_ids_unresolved`, cuya continuación es `axiom sdd archive-check --cwd <raíz> --change <c> --json`. Un WI sin edición da `tracker_rejected` con el reintento. En `continuous`, los rechazos, avisos y éxitos se añaden a `.tracker-notes.yaml` (D20).
   - [x] 8.2 Registrar `summary` en `internal/cli/integrations.go` y su ayuda.
   - [x] 8.3 Pruebas con `adotest`: dos ejecuciones idénticas byte a byte; segunda ejecución sin `PATCH`; etiquetas añadidas, retiradas y ajenas conservadas; tope que retira todas las `prov:`; archivado pasa de `prov:` a IDs definitivos con descripción reenviada; descripción editada a mano reemplazada con `description.changed: true`; `spec` no aprobada en `checkpointed` da `gate_not_approved`; en `continuous` basta con que el artefacto exista; ODD rechazado.
   - [x] 8.4 Verificar: `go test -count=1 ./internal/cli/ -run 'TestIntegrationsSummary|TestEveryProductionRefusal'`, `go vet ./internal/cli/` y `gofmt -l internal/cli`.
-  - Cubre: prov:INT:4, prov:INT:9, prov:INT:10, prov:ADO:4, prov:ADO:5, prov:ARC:1.
+  - Cubre: RF-INT-28, RF-INT-33, RF-INT-34, RF-ADO-23, RF-ADO-24, RF-ARC-16.
 
 - [x] 9. **U9 Verbos `time propose|record`** (un commit; depende de U1, U4, U5 y U7)
   - [x] 9.1 Crear `internal/trackersync/clock.go` con `ProposeHours` (D7): zona `time.Local` nombrada en la salida; `since = max(started_at, última imputación role.close/<rol>/*)`; ventana diaria anclada a la hora local de `started_at` con duración absoluta; solo `workdays`; jornada que cruza la medianoche imputada al día de inicio; minutos truncados y horas en cuartos de hora. Crear `internal/trackersync/source.go` con el cálculo de `role.close/<rol>/<n>`.
@@ -145,7 +145,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 9.4 Pruebas de `trackersync`: los tres escenarios de reloj de la spec (lunes 09:00 a martes 12:00 da 11 h; 00:00 a 23:59 del lunes da 8 h; sábado a domingo da 0 h), segundo cierre desde la última imputación, cambio de hora en `Europe/Madrid` (último domingo de marzo y de octubre), ancla nocturna que cruza la medianoche, cuartos de hora.
   - [x] 9.5 Pruebas de CLI con `adotest`: propuesta recortada a la jornada junto a estimación y `CompletedWork` leído de ADO; `time record` con `test /rev` y registro con actor, minutos y fecha solo tras éxito; `rev` obsoleto devuelve conflicto sin reaplicar; diario (no aplicado, recuperado, ambiguo, `--resolve-pending`, incompatibilidad con `--hours`, sin publicar); `time *` sin vínculo de Task en `continuous` da `task_not_bound`; `role-apply:<rol>` no aprobada en `checkpointed` da `gate_not_approved`; ODD rechazado.
   - [x] 9.6 Verificar: `go test -count=1 ./internal/trackersync/`; `go test -count=1 ./internal/cli/ -run 'TestIntegrationsTime|TestEveryProductionRefusal'`; `go vet` y `gofmt -l` de los paquetes tocados.
-  - Cubre: prov:INT:7, prov:INT:8, prov:INT:9, prov:INT:10, prov:ADO:3, prov:ADO:6 (cierre en `continuous`).
+  - Cubre: RF-INT-31, RF-INT-32, RF-INT-33, RF-INT-34, RF-ADO-22, RF-ADO-25 (cierre en `continuous`).
 
 ## Fase 5: Barrera, canario y doctrina (U10 a U12)
 
@@ -156,12 +156,12 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 10.4 Pruebas: `ensure --role` con barrera; roster antes que barrera; sin WI ni plugin no cambia nada; `started_at` registrado en `ready` y no en reentrada; fallo de escritura da aviso; `role.start` ve el vínculo con `started_at`; arquitectura de `internal/branch` intacta.
   - [x] 10.6 Pruebas de `prov:BRA:1` que faltaban (hueco 6 del design): un `ensure --role` que termina en `decision_required` no registra `started_at`; `ensure --change x` sin `--role` deja `integrations.yaml` byte a byte igual; la ruta del dashboard que da de alta un incremento llamando al motor (`engine.Default().Ensure`) deja `integrations.yaml` igual.
   - [x] 10.5 Verificar: `go test -count=1 ./internal/branch/ -run Role`; `go test -count=1 ./internal/cli/ -run 'TestEnsureRole|TestBranchEnsure.*Role'`; `go test -count=1 ./internal/cli/ -run 'TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign|TestEveryNamedReviewContinuationIsStructurallyReal'`; `go vet` y `gofmt -l` de los paquetes tocados.
-  - Cubre: prov:BRA:1, RF-BRA-33 (modificado), prov:ORQ:2.
+  - Cubre: RF-BRA-41, RF-BRA-33 (modificado), RF-ORQ-30.
 
 - [x] 11. **U11 Canario de secretos** (un commit; depende de U7, U8 y U9)
   - [x] 11.1 Ampliar `internal/cli/integrations_ado_canary_test.go` con las rutas REST nuevas (`POST $Task`, `wiql`, `fields`, `states`, `PATCH`) en camino feliz, 401, 403, 429 y 500, con los cinco verbos y con y sin `--json`: el PAT sembrado no aparece en stdout, stderr, JSON ni ficheros del cambio.
   - [x] 11.2 Verificar: `go test -count=1 ./internal/cli/ -run 'TestADOCanary|TestIntegrationsCanary'`, `go vet ./internal/cli/` y `gofmt -l internal/cli`.
-  - Cubre: prov:ADO:8, prov:INT:10.
+  - Cubre: RF-ADO-27, RF-INT-34.
 
 - [x] 12. **U12 Doctrina, skills y goldens** (un commit; depende de U7 a U10)
   - [x] 12.1 En `internal/assets/skills/_shared/sdd-orchestrator-sections.md`, añadir el párrafo «Tracker writes» tras «Work item of origin» (en inglés): condición, momentos por estilo (`spec` → `summary push`; `design` → `tasks create`; antes de cada `apply` → `axiom branch ensure --change <c> --role <rol>`; cierre del rol → `time propose` y `time record`; `archive` → `summary push` sobre la carpeta archivada antes de `axiom sdd publish --archive`), fallos (nunca deshacen la aprobación; `task_not_bound` bloquea el `apply` también en `continuous`; en `continuous` los fallos de `summary push`, `time` y la transición quedan en `.tracker-notes.yaml` y la cadena sigue; propuesta de 0 h o `time propose` fallido salvo por `task_not_bound` → `time record --close-only`, informado como «sin imputación») y prohibiciones (ni en ODD ni sin tracker activo).
@@ -172,7 +172,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 12.6 Añadir o ampliar pruebas de regla: el párrafo aparece en todos los runtimes, ODD sin verbos, paridad de copias; la doctrina nombra `--close-only` para 0 h y para un `time propose` fallido; `sdd-archive` nombra `.tracker-notes.yaml` antes del paso que mueve la carpeta.
   - [x] 12.8 Prueba `TestTrackerDoctrineNamesNoSecretsOrTrackerRoutes` (hueco 16 del design, `prov:ORQ:5`), en `internal/components/sdd/`. Recorre el texto proyectado del orquestador en cada runtime y las skills `sdd-design`, `sdd-apply` y `sdd-archive`, y falla si aparece `_apis/`, `dev.azure.com`, `workitems/`, `Authorization`, `Basic `, `pat=`, el valor del canario de PAT o el `uniqueName` de un fixture. Se incluye en el patrón `-run 'Tracker|…'` de 12.7.
   - [x] 12.7 Verificar: `go test -count=1 ./internal/components/sdd/ ./internal/components/agentguidance/ ./internal/assets/ -run 'Tracker|WorkItem|Parity|Shared'`; `go test -count=1 ./internal/components/ -run TestGolden`; `go vet` y `gofmt -l` de los paquetes tocados.
-  - Cubre: prov:ORQ:1, prov:ORQ:2, prov:ORQ:3, prov:ORQ:4, prov:ORQ:5, prov:ARC:1, prov:ARC:2, prov:INT:6.
+  - Cubre: RF-ORQ-29, RF-ORQ-30, RF-ORQ-31, RF-ORQ-32, RF-ORQ-33, RF-ARC-16, RF-ARC-17, RF-INT-30.
 
 ## Fase 6: Documentación y cierre (U13)
 
@@ -181,7 +181,7 @@ Reparto aproximado por unidad: U1 400-550, U2 400-500, U3 250-350, U4 900-1.200,
   - [x] 13.2 Revisión final de `axiom.example.yaml`: claves y valores por defecto coinciden con el manifiesto.
   - [x] 13.3 Ejecutar los trinquetes sobre la cabeza de la rama: `go test -count=1 ./internal/idmigration/ -run TestRepositoryLegacyIDResidues`; `go test -count=1 ./internal/cli/ -run 'TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign|TestEveryNamedReviewContinuationIsStructurallyReal'`; `scripts/deadcode-ratchet.sh` (todo el código nuevo, incluidas las funciones de U1 y U2, debe ser alcanzable desde `cmd/axiom`; si el entorno local no lo admite, queda para CI y se declara). Sin compilar binarios sueltos.
   - [x] 13.4 Comprobar que no hay tokens heredados en `openspec/changes/eventos-ado/` ni `go build -o` en los scripts nuevos, y que los rechazos y continuaciones nuevos están cubiertos.
-  - Cubre: prov:INT:9, prov:INT:10, prov:ORQ:5, RF-INT-18, RF-ADO-02.
+  - Cubre: RF-INT-33, RF-INT-34, RF-ORQ-33, RF-INT-18, RF-ADO-02.
 
 ## Registro de ejecución
 

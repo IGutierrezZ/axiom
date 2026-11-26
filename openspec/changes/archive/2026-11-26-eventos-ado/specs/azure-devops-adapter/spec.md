@@ -9,7 +9,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Creación de una Task Hija con Marca Determinista y sin Duplicados (prov:ADO:1)
+### Requirement: Creación de una Task Hija con Marca Determinista y sin Duplicados (RF-ADO-20)
 
 El adaptador DEBE poder crear una Task hija del work item (WI) de origen con `POST .../_apis/wit/workitems/$Task` y `Content-Type: application/json-patch+json`. El cuerpo DEBE llevar el título, la etiqueta marca `axiom-task:<cambio>:<rol>`, la relación `System.LinkTypes.Hierarchy-Reverse` hacia el WI y, cuando hay estimación, los campos `OriginalEstimate` y `RemainingWork` con el mismo valor. La marca NO DEBE usar el prefijo `axiom:` (para no activar el rechazo de etiquetas `axiom:*` ajenas de RF-ADO-19). El `POST` NO DEBE reintentarse automáticamente (RF-ADO-04). El control de duplicados DEBE hacerse solo por la marca exacta y NUNCA por heurísticas de título. Para decidir si crear, el adaptador DEBE leer las Tasks hijas del WI y buscar la marca exacta en sus etiquetas: con una coincidencia la devuelve como existente sin crear nada; con varias coincidencias DEBE devolver un error tipado `task_ambiguous`; solo con cero coincidencias crea. Si el proceso del proyecto no tiene alguno de los campos de horas necesarios, DEBE devolver un error tipado que nombra el campo y NO DEBE escribir nada (sin Task creada a medias). Si el `POST` con relación padre es rechazado, el adaptador DEBE seguir el camino alternativo descrito en los supuestos (creación seguida de `PATCH` de relación con `test /rev`) y, si la Task queda sin padre, la siguiente búsqueda DEBE poder recuperarla por la marca.
 
@@ -48,7 +48,7 @@ El adaptador DEBE poder crear una Task hija del work item (WI) de origen con `PO
 - **ENTONCES** devuelve un error tipado que nombra el campo ausente
 - **Y** el servidor no recibe ningún `POST`
 
-### Requirement: Validación de la Task Vinculada a Mano (prov:ADO:2)
+### Requirement: Validación de la Task Vinculada a Mano (RF-ADO-21)
 
 El adaptador DEBE ofrecer la lectura de una Task por identificador con su tipo, su padre, su estado, su `rev` y sus horas (`OriginalEstimate`, `RemainingWork`, `CompletedWork`). Para la validación de un vínculo manual DEBE comprobar, por este orden y con un error tipado distinto para cada fallo, que el elemento existe (`task_not_found`), que su tipo es Task (`not_a_task`) y que cuelga del WI del cambio mediante `System.LinkTypes.Hierarchy-Reverse` (`not_child_of_work_item`). La validación NO DEBE modificar nada en Azure DevOps. Ninguno de los errores DEBE incluir el PAT (RF-ADO-15).
 
@@ -77,7 +77,7 @@ El adaptador DEBE ofrecer la lectura de una Task por identificador con su tipo, 
 - **CUANDO** se valida contra el WI 100
 - **ENTONCES** devuelve `not_child_of_work_item`
 
-### Requirement: Lectura y Escritura de Horas con `test /rev` (prov:ADO:3)
+### Requirement: Lectura y Escritura de Horas con `test /rev` (RF-ADO-22)
 
 El adaptador DEBE leer `OriginalEstimate`, `RemainingWork` y `CompletedWork` de una Task y escribirlos con `PATCH` bajo RF-ADO-07 (primera operación `test /rev`). Un campo ausente en la Task se lee como cero. La imputación de `h` horas DEBE hacerse en una sola modificación que fije `CompletedWork` en la suma del valor leído más `h` y `RemainingWork` en el máximo entre cero y el valor leído menos `h`. Un rechazo de `test /rev` DEBE devolverse como `ErrRevConflict` junto con los valores releídos del servidor, sin reaplicar la suma ni reintentar. Si el proceso no tiene alguno de los campos, DEBE devolver un error tipado que lo nombra, sin escritura parcial.
 
@@ -108,7 +108,7 @@ El adaptador DEBE leer `OriginalEstimate`, `RemainingWork` y `CompletedWork` de 
 - **CUANDO** el adaptador intenta imputar
 - **ENTONCES** devuelve un error tipado que nombra el campo y el servidor no recibe ninguna escritura
 
-### Requirement: Sustitución Idempotente de `System.Description` (prov:ADO:4)
+### Requirement: Sustitución Idempotente de `System.Description` (RF-ADO-23)
 
 El adaptador DEBE sustituir `System.Description` completo por el HTML recibido mediante `PATCH` bajo RF-ADO-07. Si el valor actual es idéntico byte a byte al HTML recibido, y no hay etiquetas que cambiar, NO DEBE enviar ninguna petición de escritura. El adaptador NO DEBE modificar `System.Title` ni ningún otro campo del WI de origen. El texto original queda en el historial de revisiones del WI.
 
@@ -127,7 +127,7 @@ El adaptador DEBE sustituir `System.Description` completo por el HTML recibido m
 - **CUANDO** el adaptador sustituye la descripción
 - **ENTONCES** el `PATCH` no contiene operaciones sobre `System.Title`, `System.State` ni `System.AssignedTo`
 
-### Requirement: Etiquetas de IDs Funcionales como Conjunto Idempotente (prov:ADO:5)
+### Requirement: Etiquetas de IDs Funcionales como Conjunto Idempotente (RF-ADO-24)
 
 El adaptador DEBE sincronizar los IDs funcionales de la spec en `System.Tags` con una etiqueta por ID: el prefijo configurado (`req_tag_prefix`, por defecto `req:`) seguido del ID. Sincronizar DEBE: añadir las etiquetas con ese prefijo que falten, retirar las que tengan ese prefijo y ya no correspondan, y conservar sin tocar las demás, incluidas `axiom:<cambio>` y las marcas `axiom-task:*`. Todo DEBE ir en una sola modificación con `test /rev`, y la misma modificación PUEDE llevar la descripción. Una etiqueta DEBE tener como máximo 400 caracteres y no contener `,` ni `;`. Si el número de IDs supera el tope configurado (`req_tag_max`) o si el total de etiquetas del WI resultante superara 100, el adaptador NO DEBE enviar ninguna etiqueta de ID (ni siquiera parcialmente) y DEBE devolver el aviso tipado `req_tags_over_limit`, que no impide actualizar la descripción. Si el conjunto resultante es idéntico al actual, NO DEBE enviar escritura. La comparación de etiquetas es sensible a mayúsculas.
 
@@ -168,7 +168,7 @@ El adaptador DEBE sincronizar los IDs funcionales de la spec en `System.Tags` co
 - **ENTONCES** relee el WI y reintenta como máximo 3 veces, igual que el enlace de vuelta de RF-ADO-19
 - **Y** si el conflicto persiste devuelve `ErrRevConflict`
 
-### Requirement: Estado y Asignación de la Task por Evento (prov:ADO:6)
+### Requirement: Estado y Asignación de la Task por Evento (RF-ADO-25)
 
 `Deliver` DEBE aplicar sobre la Task vinculada al rol del evento, de forma idempotente: en `role.start`, pasarla al estado configurado `task_state_start` (por defecto `Active`) y asignarla a la identidad de Azure DevOps de la persona guardada por `connect` (RF-ADO-10, RF-ADO-11); en `role.apply.approved`, pasarla al estado `task_state_apply_approved` (por defecto `Tech Review`). Si la Task ya está en el estado destino NO DEBE escribir. La asignación NO DEBE hacerse con una identidad distinta de la de la persona que originó el evento: si el actor del evento no coincide con la persona de la identidad guardada en la máquina que entrega, o no hay identidad guardada, DEBE omitir la asignación, aplicar igualmente el estado y devolver un aviso tipado que nombra `axiom integrations connect`. Un estado que no existe en el proceso del proyecto DEBE terminar como error permanente tipado que lista los estados válidos de `discovery` y NO DEBE modificar la Task. Si el rol del evento no tiene Task vinculada en la instantánea de vínculos, DEBE terminar como error permanente tipado `task_not_bound` sin modificar nada. Todas las escrituras DEBEN cumplir RF-ADO-07.
 
@@ -209,7 +209,7 @@ El adaptador DEBE sincronizar los IDs funcionales de la spec en `System.Tags` co
 - **CUANDO** se entrega `role.start`
 - **ENTONCES** la entrega termina con un error permanente `task_not_bound` y no se envía ninguna escritura
 
-### Requirement: Transición del Work Item al Archivar (prov:ADO:7)
+### Requirement: Transición del Work Item al Archivar (RF-ADO-26)
 
 `Deliver` DEBE aplicar en el evento `archive` la transición del WI de origen (el vínculo `kind: work_item` de la instantánea) al estado configurado `work_item_state_archive`. Si la clave no está configurada, NO DEBE hacer ninguna transición y la entrega termina con éxito. Si el WI ya está en el estado destino NO DEBE escribir. Un estado inexistente en el proceso termina como error permanente tipado que lista los estados válidos. La entrega NO DEBE devolver vínculos ni imputaciones (RF-INT-21).
 
@@ -233,7 +233,7 @@ El adaptador DEBE sincronizar los IDs funcionales de la spec en `System.Tags` co
 - **CUANDO** termina
 - **ENTONCES** no devuelve vínculos ni imputaciones
 
-### Requirement: Las Escrituras Nuevas Son Herméticas y No Filtran el PAT (prov:ADO:8)
+### Requirement: Las Escrituras Nuevas Son Herméticas y No Filtran el PAT (RF-ADO-27)
 
 Toda escritura nueva del adaptador (creación, lectura de hijos y de Task, horas, descripción, etiquetas, estado, asignación) DEBE pasar por el cliente único (RF-ADO-03 a RF-ADO-05) y verificarse con el servidor `httptest` `adotest` sin tocar Azure DevOps real. El PAT NO DEBE aparecer en ninguna salida ni error de las rutas nuevas (RF-ADO-15), y las rutas `/api` nuevas DEBEN estar cubiertas por el canario de secretos del adaptador.
 
