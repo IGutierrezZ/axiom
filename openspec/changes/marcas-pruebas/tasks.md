@@ -96,12 +96,12 @@ U1 -> (U2 ∥ U3) -> U4 -> (U5 ∥ U6); U7 depende solo de U2 y puede ir tras U2
 
 ## Phase 7: Doctrina y goldens (U7; depende de U2)
 
-- [ ] 7.1 Modificar `internal/assets/skills/sdd-archive/SKILL.md`: «Step 2c: Acceptance Marks Summary» antes del Step 3; `## Marcas de pruebas` con el texto literal solo con `summary` (entradas válidas); aviso de marcas sin publicar con `pending > 0`; aviso de fichero ilegible con `error`; sin clave, sin sección; nunca bloquea y el fichero se mueve intacto.
+- [x] 7.1 Modificar `internal/assets/skills/sdd-archive/SKILL.md`: «Step 2c: Acceptance Marks Summary» antes del Step 3; `## Marcas de pruebas` con el texto literal solo con `summary` (entradas válidas); aviso de marcas sin publicar con `pending > 0`; aviso de fichero ilegible con `error`; sin clave, sin sección; nunca bloquea y el fichero se mueve intacto.
   Cubre: prov:ARC:1
-- [ ] 7.2 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: en `integration`, el `summary` literal y las pendientes como información (no cambia las dos salidas ni la evidencia, no va a `gates.yaml`; `ko`, `blocked`, sin marcar o caducado nunca como limpio); en `continuous`, al resumen final.
+- [x] 7.2 Modificar `internal/assets/skills/_shared/sdd-orchestrator-sections.md`: en `integration`, el `summary` literal y las pendientes como información (no cambia las dos salidas ni la evidencia, no va a `gates.yaml`; `ko`, `blocked`, sin marcar o caducado nunca como limpio); en `continuous`, al resumen final.
   Cubre: prov:GAT:1
-- [ ] 7.3 Regenerar goldens: `go test ./internal/components -run TestGolden -update` y verificar sin `-update`: `go test ./internal/components -run TestGolden`.
-- [ ] 7.4 Cierre U7: commit `docs(sdd): resumen de marcas en archive e integration` (con `testdata/golden/*`).
+- [x] 7.3 Regenerar goldens: `go test ./internal/components -run TestGolden -update` y verificar sin `-update`: `go test ./internal/components -run TestGolden`.
+- [x] 7.4 Cierre U7: commit `docs(sdd): resumen de marcas en archive e integration` (con `testdata/golden/*`).
 
 ## Criterios transversales (verificar en el apply de cada unidad)
 
