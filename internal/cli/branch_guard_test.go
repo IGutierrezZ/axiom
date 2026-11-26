@@ -59,10 +59,23 @@ func TestBranchGuardHelpDescribesTheHookAndExitsZero(t *testing.T) {
 		if code != 0 || stderr != "" {
 			t.Errorf("%s: código %d, stderr %q; se esperaba 0 y stderr vacío", flagName, code, stderr)
 		}
-		for _, want := range []string{"--agent <runtime>", "claude-code, codex u opencode", "falla en\nabierto", "256 KiB", "axiom branch ensure", "Código 2", "opencode"} {
+		for _, want := range []string{"--agent <runtime>", "claude-code, codex, opencode o\n                      vscode-copilot", "--event <evento>", "permissionDecision", "falla en\nabierto", "256 KiB", "axiom branch ensure", "Código 2", "opencode"} {
 			if !strings.Contains(stdout, want) {
 				t.Errorf("%s: la ayuda debe contener %q:\n%s", flagName, want, stdout)
 			}
+		}
+	}
+}
+
+// Con --agent vscode-copilot y --event, la orden entrega la carga al motor: una carga sin escritura
+// vigilada sale con 0 y sin salida, como pide el arnés de Copilot para no decidir nada.
+func TestBranchGuardVSCodeCopilotWithEventRunsTheGuard(t *testing.T) {
+	t.Parallel()
+	for _, event := range []string{"pre", "post"} {
+		var out, errOut bytes.Buffer
+		payload := strings.NewReader(`{"cwd":".","toolName":"view","toolArgs":"{\"path\":\"README.md\"}"}`)
+		if code := runBranch([]string{"guard", "--agent", "vscode-copilot", "--event", event}, payload, &out, &errOut); code != 0 || out.Len() != 0 || errOut.Len() != 0 {
+			t.Errorf("--event %s: código %d, stdout %q, stderr %q; se esperaba 0 y sin salida", event, code, out.String(), errOut.String())
 		}
 	}
 }
@@ -72,15 +85,18 @@ func TestBranchGuardHelpDescribesTheHookAndExitsZero(t *testing.T) {
 func TestBranchGuardRejectsUsageErrorsWithCode2WithoutReadingTheInput(t *testing.T) {
 	t.Parallel()
 	cases := map[string][]string{
-		"sin --agent":                    {},
-		"--agent vacío":                  {"--agent", ""},
-		"--agent desconocido":            {"--agent", "vim"},
-		"--agent de otro runtime (pi)":   {"--agent", "pi"},
-		"argumento suelto":               {"--agent", "codex", "sobra"},
-		"bandera desconocida":            {"--agent", "codex", "--json"},
-		"--agent sin valor":              {"--agent"},
-		"--agent con mayúsculas":         {"--agent", "Claude-Code"},
-		"--agent con espacios alrededor": {"--agent", " codex "},
+		"sin --agent":                                    {},
+		"--agent vacío":                                  {"--agent", ""},
+		"--agent desconocido":                            {"--agent", "vim"},
+		"--agent de otro runtime (pi)":                   {"--agent", "pi"},
+		"argumento suelto":                               {"--agent", "codex", "sobra"},
+		"bandera desconocida":                            {"--agent", "codex", "--json"},
+		"--agent sin valor":                              {"--agent"},
+		"--agent con mayúsculas":                         {"--agent", "Claude-Code"},
+		"--agent con espacios alrededor":                 {"--agent", " codex "},
+		"vscode-copilot sin --event":                     {"--agent", "vscode-copilot"},
+		"vscode-copilot con otro evento":                 {"--agent", "vscode-copilot", "--event", "PreToolUse"},
+		"--event con un runtime que lo trae en la carga": {"--agent", "claude-code", "--event", "pre"},
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {

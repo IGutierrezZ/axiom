@@ -519,6 +519,44 @@ func RemoveTopLevelJSONCValue(raw []byte, key string) []byte {
 	return []byte(content[:start] + content[end:])
 }
 
+// RemoveJSONCObjectMember retira parent.member de un documento JSON/JSONC y conserva
+// el texto del resto de miembros de primer nivel, comentarios incluidos. Si parent
+// queda vacío, lo retira también. Un miembro ausente devuelve raw sin cambios; un
+// documento ilegible o con parent duplicado es un error y raw no se toca.
+func RemoveJSONCObjectMember(raw []byte, parent, member string) ([]byte, bool, error) {
+	root, err := unmarshalJSONObject(raw)
+	if err != nil {
+		return raw, false, err
+	}
+	container, ok := root[parent].(map[string]any)
+	if !ok {
+		return raw, false, nil
+	}
+	if _, declared := container[member]; !declared {
+		return raw, false, nil
+	}
+	if topLevelJSONCKeyCount(string(raw), parent) > 1 {
+		return raw, false, fmt.Errorf("refuse to edit jsonc with duplicate top-level key %q", parent)
+	}
+	delete(container, member)
+	if len(container) == 0 {
+		return RemoveTopLevelJSONCValue(raw, parent), true, nil
+	}
+	encoded, err := MarshalJSONPreservingPermissions(raw, root)
+	if err != nil {
+		return raw, false, err
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(encoded, &members); err != nil {
+		return raw, false, err
+	}
+	updated := upsertTopLevelJSONCValue(string(raw), parent, string(members[parent]))
+	if !strings.HasSuffix(updated, "\n") {
+		updated += "\n"
+	}
+	return []byte(updated), true, nil
+}
+
 func topLevelJSONCPropertyRange(content, key string) (int, int, bool) {
 	nameStart, _, end, ok := topLevelJSONCPropertyValueRange(content, key)
 	if ok {

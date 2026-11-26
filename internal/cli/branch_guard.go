@@ -17,7 +17,7 @@ import (
 // las banderas, la ayuda y la entrega al motor de la carga que el runtime envía por la entrada
 // estándar. Es la única orden de la familia pensada para que la ejecute un runtime y no una persona.
 
-const branchGuardHelp = `Uso: axiom branch guard --agent <runtime>
+const branchGuardHelp = `Uso: axiom branch guard --agent <runtime> [--event pre|post]
 
 Hook que instala axiom sync en los runtimes con hooks. Lee de la entrada estándar la carga que el
 runtime envía antes (evento pre) o después (evento post) de cada escritura del agente y bloquea las
@@ -38,17 +38,25 @@ a un editor humano ni a las órdenes de la CLI.
 Protocolo de salida por runtime:
   claude-code, codex   Código 2 con el motivo por la salida de error si bloquea; 0 en otro caso
   opencode             Siempre código 0; por la salida estándar, {"action":"none|block|warn","message":"..."}
+  vscode-copilot       Siempre código 0; por la salida estándar, {"permissionDecision":"deny",
+                       "permissionDecisionReason":"..."} si bloquea, {"additionalContext":"..."} si
+                       avisa y nada en otro caso
 
 Banderas:
-  --agent <runtime>   Runtime que envía la carga (obligatorio): claude-code, codex u opencode
+  --agent <runtime>   Runtime que envía la carga (obligatorio): claude-code, codex, opencode o
+                      vscode-copilot
+  --event <evento>    Evento del hook, pre o post: obligatorio con vscode-copilot, cuya carga no lo
+                      trae, y no admitido con el resto
 `
 
 // runBranchGuard ejecuta `axiom branch guard`: --agent es obligatorio y solo admite los runtimes
-// con hook. Los errores de uso salen con el código 2 de la familia y no llegan a leer la carga.
+// con hook; --event, solo y siempre con los runtimes cuya carga no trae el evento. Los errores de
+// uso salen con el código 2 de la familia y no llegan a leer la carga.
 func runBranchGuard(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("branch guard", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	agent := flags.String("agent", "", "runtime que envía la carga: claude-code, codex u opencode")
+	agent := flags.String("agent", "", "runtime que envía la carga: claude-code, codex, opencode o vscode-copilot")
+	event := flags.String("event", "", "evento del hook (pre o post) con vscode-copilot")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			fmt.Fprint(stdout, branchGuardHelp)
@@ -65,5 +73,13 @@ func runBranchGuard(args []string, stdin io.Reader, stdout, stderr io.Writer) in
 		fmt.Fprintf(stderr, "Error: --agent '%s' no es válido: usa %s. Ejecuta `axiom branch guard --help`.\n", *agent, strings.Join(engine.GuardAgents, ", "))
 		return branch.ExitUsage
 	}
-	return engine.RunGuard(*agent, stdin, stdout, stderr)
+	if !engine.GuardAgentNeedsEvent(*agent) && *event != "" {
+		fmt.Fprintf(stderr, "Error: --event no se admite con --agent %s: su carga ya trae el evento. Ejecuta `axiom branch guard --help`.\n", *agent)
+		return branch.ExitUsage
+	}
+	if engine.GuardAgentNeedsEvent(*agent) && *event != engine.GuardEventPre && *event != engine.GuardEventPost {
+		fmt.Fprintf(stderr, "Error: --agent %s necesita --event pre o --event post (recibido '%s'). Ejecuta `axiom branch guard --help`.\n", *agent, *event)
+		return branch.ExitUsage
+	}
+	return engine.RunGuard(*agent, *event, stdin, stdout, stderr)
 }

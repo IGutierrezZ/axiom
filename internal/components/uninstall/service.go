@@ -1087,6 +1087,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
 		}
+		if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
+			if path := provider.BranchGuardHooksFile(homeDir); path != "" {
+				targets = append(targets, path)
+				ops = append(ops, s.removeManagedBranchGuardHooksFile(path, adapter.Agent()), quietDirIfEmpty(filepath.Dir(path)))
+			}
+		}
 		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {
 				var defaultPlan *opencodedefault.UninstallPlan

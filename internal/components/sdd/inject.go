@@ -1,6 +1,7 @@
 package sdd
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -1399,6 +1400,17 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 		}
 		return InjectionResult{Changed: changed || branchGuardChanged, Files: []string{hooksPath}}, nil
 	}
+	if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
+		hooksPath := provider.BranchGuardHooksFile(homeDir)
+		if hooksPath == "" {
+			return InjectionResult{}, nil
+		}
+		write, err := filemerge.WriteFileAtomic(hooksPath, VSCodeBranchGuardHooksJSON(adapter.Agent()), 0o644)
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("install VS Code branch guard hook: %w", err)
+		}
+		return InjectionResult{Changed: write.Changed, Files: []string{hooksPath}}, nil
+	}
 	if adapter.Agent() != model.AgentClaudeCode {
 		return InjectionResult{}, nil
 	}
@@ -1761,6 +1773,63 @@ const (
 // it to retire exactly the entry this package installed.
 func BranchGuardHookCommand(agentID model.AgentID) string {
 	return fmt.Sprintf("axiom branch guard --agent %s", agentID)
+}
+
+// copilotBranchGuardMatcher son las herramientas de escritura del arnés de Copilot
+// (`toolName`); el arnés ancla la expresión (`^(?:…)$`).
+const copilotBranchGuardMatcher = "create|edit|str_replace_editor|apply_patch"
+
+// copilotBranchGuardTimeoutSec es el límite del arnés para cada ejecución. Un tiempo
+// agotado es fail-open en el arnés de Copilot, también en `preToolUse`.
+const copilotBranchGuardTimeoutSec = 10
+
+// copilotHookEntry es una entrada `type: command` de .github/hooks/*.json.
+type copilotHookEntry struct {
+	Type       string `json:"type"`
+	Bash       string `json:"bash"`
+	PowerShell string `json:"powershell"`
+	Matcher    string `json:"matcher"`
+	TimeoutSec int    `json:"timeoutSec"`
+}
+
+// VSCodeBranchGuardHooksJSON es el contenido de .github/hooks/axiom-branch-guard.json:
+// la guarda de rama en `preToolUse` (bloquea los documentos de Axiom en la rama
+// equivocada) y `postToolUse` (avisa del resto), con el formato del arnés de Copilot
+// (docs.github.com/en/copilot/reference/hooks-reference).
+//
+// En `preToolUse` del arnés, cualquier código de salida distinto de 0 deniega la
+// escritura: un `axiom` ausente del PATH o sin `--agent vscode-copilot` bloquearía
+// todas las escrituras. Por eso la orden termina siempre con 0 (`|| true` en bash,
+// `; exit 0` en PowerShell): la decisión va solo por la salida estándar, y un fallo
+// deja la escritura permitida (fail-open). El fichero es entero de Axiom: sync lo
+// reescribe y la desinstalación lo borra si no cambió.
+func VSCodeBranchGuardHooksJSON(agentID model.AgentID) []byte {
+	entry := func(event string) []copilotHookEntry {
+		command := fmt.Sprintf("%s --event %s", BranchGuardHookCommand(agentID), event)
+		return []copilotHookEntry{{
+			Type:       "command",
+			Bash:       command + " || true",
+			PowerShell: command + "; exit 0",
+			Matcher:    copilotBranchGuardMatcher,
+			TimeoutSec: copilotBranchGuardTimeoutSec,
+		}}
+	}
+	document := struct {
+		Version int `json:"version"`
+		Hooks   struct {
+			PreToolUse  []copilotHookEntry `json:"preToolUse"`
+			PostToolUse []copilotHookEntry `json:"postToolUse"`
+		} `json:"hooks"`
+	}{Version: 1}
+	document.Hooks.PreToolUse = entry("pre")
+	document.Hooks.PostToolUse = entry("post")
+
+	var out bytes.Buffer
+	encoder := json.NewEncoder(&out)
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(document)
+	return out.Bytes()
 }
 
 // ensureClaudeBranchGuardHook installs the `axiom branch guard` PreToolUse

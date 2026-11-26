@@ -12,6 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -127,6 +128,19 @@ func (s *Service) skillsDirStaysInUse(skillDir string) bool {
 	return false
 }
 
+// projectMCPJSONStaysInUse dice si <proyecto>/.mcp.json sigue siendo de otro agente
+// que permanece instalado en el proyecto. Claude Code y VS Code Copilot declaran ahí
+// sus servidores MCP con la misma entrada, así que si se retira solo uno, las de
+// Axiom se quedan para el otro.
+func (s *Service) projectMCPJSONStaysInUse() bool {
+	for _, other := range s.otherAgentsInProject() {
+		if other == model.AgentClaudeCode || other == model.AgentVSCodeCopilot {
+			return true
+		}
+	}
+	return false
+}
+
 // isManagedMCPServer dice si la entrada de un servidor MCP tiene la forma que
 // Axiom escribe para ese servidor. Una entrada del usuario con el mismo nombre pero
 // otra definición no se retira.
@@ -223,11 +237,13 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 		mcpJSON := filepath.Join(root, ".mcp.json")
 		settings := adapter.SettingsPath(root)
 		legacy := adapter.MCPConfigPath(root, name)
-		targets = []string{mcpJSON, settings, legacy}
-		ops = []operation{
-			s.rewriteManagedMCPServer(mcpJSON, jsonPath{"mcpServers"}, name),
-			s.rewriteManagedMCPServer(settings, jsonPath{"mcpServers"}, name),
+		// .mcp.json lo comparte con VS Code Copilot: si sigue instalado, se queda.
+		if !s.projectMCPJSONStaysInUse() {
+			targets = append(targets, mcpJSON)
+			ops = append(ops, s.rewriteManagedMCPServer(mcpJSON, jsonPath{"mcpServers"}, name))
 		}
+		targets = append(targets, settings, legacy)
+		ops = append(ops, s.rewriteManagedMCPServer(settings, jsonPath{"mcpServers"}, name))
 		if name == "context7" {
 			ops = append(ops, removeManagedContext7File(legacy))
 		} else {
@@ -250,6 +266,19 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 		path := adapter.MCPConfigPath(root, name)
 		if path == "" {
 			return nil, nil
+		}
+		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
+			if legacy := provider.LegacyWorkspaceMCPConfigPath(root); legacy != "" {
+				// VS Code Copilot en el proyecto: <proyecto>/.mcp.json, compartido con
+				// Claude Code, y el .vscode/mcp.json de las instalaciones anteriores.
+				targets = []string{legacy}
+				ops = []operation{s.rewriteManagedMCPServer(legacy, jsonPath{"servers"}, name)}
+				if !s.projectMCPJSONStaysInUse() {
+					targets = append(targets, path)
+					ops = append(ops, s.rewriteManagedMCPServer(path, jsonPath{"mcpServers"}, name))
+				}
+				return targets, ops
+			}
 		}
 		parent := jsonPath{"mcpServers"}
 		if adapter.Agent() == model.AgentVSCodeCopilot {
@@ -291,6 +320,35 @@ func (s *Service) removeManagedOutputStyle(path, assetPath string) operation {
 			}
 			embedded, embeddedErr := assets.Read(assetPath)
 			if embeddedErr != nil || strings.ReplaceAll(string(content), "\r\n", "\n") != strings.ReplaceAll(embedded, "\r\n", "\n") {
+				s.notices = append(s.notices, fmt.Sprintf("Conservado %s: su contenido no es el que instala Axiom (lo editaste tú). Bórralo a mano si ya no lo necesitas.", path))
+				return false, false, nil
+			}
+			if err := removeFileIfExists(path); err != nil {
+				return false, false, err
+			}
+			return true, true, nil
+		},
+	}
+}
+
+// removeManagedBranchGuardHooksFile borra el fichero de hooks propio de Axiom con la
+// guarda de rama (.github/hooks/axiom-branch-guard.json de VS Code Copilot) solo si su
+// contenido es el que escribe Axiom; si el usuario lo editó, lo conserva y avisa. Los
+// demás ficheros de .github/hooks son del equipo y no se tocan.
+func (s *Service) removeManagedBranchGuardHooksFile(path string, agentID model.AgentID) operation {
+	return operation{
+		typeID: opRemoveFile,
+		path:   path,
+		apply: func(path string) (bool, bool, error) {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return false, false, nil
+				}
+				return false, false, err
+			}
+			managed := strings.ReplaceAll(string(sdd.VSCodeBranchGuardHooksJSON(agentID)), "\r\n", "\n")
+			if strings.ReplaceAll(string(content), "\r\n", "\n") != managed {
 				s.notices = append(s.notices, fmt.Sprintf("Conservado %s: su contenido no es el que instala Axiom (lo editaste tú). Bórralo a mano si ya no lo necesitas.", path))
 				return false, false, nil
 			}
