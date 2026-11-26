@@ -538,3 +538,44 @@ type SpecsPullResultDTO struct {
 	Message string `json:"message"`
 	Output  string `json:"output,omitempty"`
 }
+
+// ProjectAgentDTO es un agente del catálogo visto desde el proyecto activo
+// (GET /api/agents): si Axiom lo admite, si se detecta en el equipo, si está
+// instalado en el proyecto y si se puede instalar en él (ámbito workspace).
+// Reason explica en castellano por qué no se puede instalar en el proyecto.
+type ProjectAgentDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Supported bool   `json:"supported"`
+	Detected  bool   `json:"detected"`
+	Installed bool   `json:"installed"`
+	Workspace bool   `json:"workspace"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+// ProjectAgentsDTO es la respuesta de GET /api/agents. Project dice si la raíz activa es un
+// proyecto de Axiom (sin él no se puede instalar). Recorded dice si el estado
+// del proyecto registra su lista de agentes: sin ella ninguno figura como
+// instalado (la lista global no cuenta). StateError lleva el motivo cuando el
+// estado del proyecto no se pudo leer.
+type ProjectAgentsDTO struct {
+	ProjectRoot string            `json:"project_root"`
+	Project     bool              `json:"project"`
+	Recorded    bool              `json:"recorded"`
+	StateError  string            `json:"state_error,omitempty"`
+	Agents      []ProjectAgentDTO `json:"agents"`
+}
+
+// AgentInstallRequest es el cuerpo de POST /api/agents/install: un único agente.
+type AgentInstallRequest struct {
+	Agent string `json:"agent"`
+}
+
+// AgentInstallResponse es el resultado de instalar un agente en el proyecto activo.
+type AgentInstallResponse struct {
+	Success bool     `json:"success"`
+	Agent   string   `json:"agent"`
+	Message string   `json:"message"`
+	Agents  []string `json:"agents,omitempty"`
+	Error   string   `json:"error,omitempty"`
+}

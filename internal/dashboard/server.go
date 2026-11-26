@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net"
@@ -75,6 +76,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
 	s.mux.HandleFunc("/api/projects/init", s.handleProjectsInit)
 	s.mux.HandleFunc("/api/adapters", s.handleAdapters)
+	s.mux.HandleFunc("/api/agents", s.handleAgents)
+	s.mux.HandleFunc("/api/agents/install", s.handleAgentsInstall)
 	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
@@ -346,6 +349,45 @@ func (s *Server) handleAdapters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.respondJSON(w, http.StatusOK, map[string]any{"adapters": s.service.ListAdapters()})
+}
+
+// handleAgents devuelve los agentes del catálogo con sus tres marcas (admitido,
+// detectado en el equipo e instalado en el proyecto activo). Es de solo lectura.
+func (s *Server) handleAgents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	s.respondJSON(w, http.StatusOK, s.service.ListProjectAgents())
+}
+
+// handleAgentsInstall instala un agente en el proyecto activo (ámbito workspace).
+// Escribe en el repositorio y, según el agente, en la carpeta de usuario: solo la
+// acepta el propio dashboard.
+func (s *Server) handleAgentsInstall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
+	var req AgentInstallRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
+		return
+	}
+	resp, err := s.service.InstallProjectAgent(req.Agent)
+	var rejected *AgentInstallError
+	switch {
+	case errors.As(err, &rejected):
+		s.respondJSON(w, rejected.Status, map[string]string{"error": rejected.Error()})
+	case err != nil:
+		s.respondJSON(w, http.StatusInternalServerError, resp)
+	default:
+		s.respondJSON(w, http.StatusOK, resp)
+	}
 }
 
 func (s *Server) handleFSDirectories(w http.ResponseWriter, r *http.Request) {
