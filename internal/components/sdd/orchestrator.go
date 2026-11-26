@@ -19,7 +19,7 @@ const (
 	// dispatcher guard. Sections that genuinely differ per runtime stay in the
 	// runtime asset; only the ones measured as non-drifted moved here.
 	sharedOrchestratorSectionsAsset = "skills/_shared/sdd-orchestrator-sections.md"
-	sharedOrchestratorSectionOpen   = "{{GENTLE_AI_SDD_SECTION:"
+	sharedOrchestratorSectionOpen   = "{{AXIOM_SDD_SECTION:"
 	// stopExitsMarker stands for the single text of the three-exit stops. The
 	// shared gates section carries it and substituteSharedOrchestratorSections
 	// resolves it with agentguidance.StopExits (DD-12).
@@ -65,8 +65,8 @@ func sharedOrchestratorSection(name string) string {
 	return strings.TrimSpace(source[start:end])
 }
 
-// sharedOrchestratorSectionPlaceholder matches one {{GENTLE_AI_SDD_SECTION:<name>}}.
-var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_SDD_SECTION:([^}]*)\}\}`)
+// sharedOrchestratorSectionPlaceholder matches one {{AXIOM_SDD_SECTION:<name>}}.
+var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{AXIOM_SDD_SECTION:([^}]*)\}\}`)
 
 // substituteSharedOrchestratorSections resolves every shared-section
 // placeholder in one pass. An unresolvable placeholder panics rather than

@@ -10,38 +10,38 @@ Your role: decide WHAT to do next, delegate to the correct phase subagent, synth
 
 ### Lossless Blocking Prompts (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Contract}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Contract}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Fallback}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
+{{AXIOM_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
 
 ### Language Domain Contract
 
-{{GENTLE_AI_SDD_SECTION:Language Domain Contract}}
+{{AXIOM_SDD_SECTION:Language Domain Contract}}
 
 ### Delegation Rules
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules}}
+{{AXIOM_SDD_SECTION:Delegation Rules}}
 
 Use Kiro's native bounded worker for delegated-direct work; reserve `sdd-*` agents for a selected SDD route.
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules Handoff}}
+{{AXIOM_SDD_SECTION:Delegation Rules Handoff}}
 
 #### Mandatory Delegation Triggers
 
-{{GENTLE_AI_SDD_SECTION:Mandatory Delegation Triggers}}
+{{AXIOM_SDD_SECTION:Mandatory Delegation Triggers}}
 
 #### Delegated Verification Gate (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
 #### Cost and Context Balance
 
-{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
+{{AXIOM_SDD_SECTION:Cost and Context Balance}}
 
 ## Kiro-Native SDD Integration
 
@@ -119,11 +119,11 @@ Approve to proceed with implementation?
 
 ## SDD Workflow (Spec-Driven Development)
 
-{{GENTLE_AI_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
+{{AXIOM_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
 
 ### Artifact Store Policy
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Policy (Engram via MCP)}}
+{{AXIOM_SDD_SECTION:Artifact Store Policy (Engram via MCP)}}
 
 ### Commands
 
@@ -147,15 +147,15 @@ Meta-commands (type directly — orchestrator handles them, will not appear in a
 
 ### Native SDD Dispatcher Guard
 
-{{GENTLE_AI_SDD_SECTION:Native SDD Dispatcher Guard}}
+{{AXIOM_SDD_SECTION:Native SDD Dispatcher Guard}}
 
 ### SDD Change Kickoff and Block Gates
 
-{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
+{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
 ### SDD Independent Review
 
-{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+{{AXIOM_SDD_SECTION:SDD Independent Review}}
 
 ### SDD Init Guard (MANDATORY)
 
@@ -186,7 +186,7 @@ Cache the mode choice for the session — don't ask again unless the user explic
 
 Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" approve only the immediate next phase, not the rest of the SDD pipeline. Do not treat a generated artifact as approved until the user has had a chance to review or explicitly delegate that review.
 
-{{GENTLE_AI_RESEARCH_LIFECYCLE}}
+{{AXIOM_RESEARCH_LIFECYCLE}}
 
 ### Automatic Mode Gatekeeper (MANDATORY)
 
@@ -214,11 +214,11 @@ The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never r
 
 ### Artifact Store Mode
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
+{{AXIOM_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 
-{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
+{{AXIOM_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
@@ -233,7 +233,7 @@ When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chain
 
 ### Commit Review
 
-{{GENTLE_AI_SDD_SECTION:Commit Review}}
+{{AXIOM_SDD_SECTION:Commit Review}}
 
 ### Apply/Verify Context Forwarding (MANDATORY)
 
@@ -250,11 +250,11 @@ The Kiro phase result must prove that persistence contract. Refresh prior progre
 
 ### Dependency Graph
 
-{{GENTLE_AI_SDD_SECTION:Dependency Graph}}
+{{AXIOM_SDD_SECTION:Dependency Graph}}
 
 ### Result Contract
 
-{{GENTLE_AI_SDD_SECTION:Result Contract}}
+{{AXIOM_SDD_SECTION:Result Contract}}
 
 <!-- axiom:sdd-model-assignments -->
 ## Model Assignments
@@ -315,7 +315,7 @@ Before each phase execution:
 
 ### Skill Resolution Feedback
 
-{{GENTLE_AI_SDD_SECTION:Skill Resolution Feedback (Kiro and Windsurf)}}
+{{AXIOM_SDD_SECTION:Skill Resolution Feedback (Kiro and Windsurf)}}
 
 ### Phase Execution Protocol
 
@@ -338,15 +338,15 @@ For phases with required dependencies, retrieve artifacts from Engram using topi
 
 ### Archive Final-State Handoff (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
 
 ### Non-SDD Tasks
 
-{{GENTLE_AI_SDD_SECTION:Non-SDD Tasks}}
+{{AXIOM_SDD_SECTION:Non-SDD Tasks}}
 
 ## Engram Topic Key Format
 
-{{GENTLE_AI_SDD_SECTION:Engram Topic Key Format}}
+{{AXIOM_SDD_SECTION:Engram Topic Key Format}}
 
 ## State and Conventions
 
@@ -356,4 +356,4 @@ Existing state snapshots are optional recovery hints; use native status and actu
 
 ## Recovery Rule
 
-{{GENTLE_AI_SDD_SECTION:Recovery Rule}}
+{{AXIOM_SDD_SECTION:Recovery Rule}}

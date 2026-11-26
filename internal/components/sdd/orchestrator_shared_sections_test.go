@@ -26,7 +26,7 @@ import (
 
 // The fork renamed the binary and flattened the verb, so the shipped assets
 // spell the status invocation `axiom sdd status`. Upstream still ships
-// `gentle-ai sdd-status`, and absorbing it must not reopen this contract:
+// `axiom sdd-status`, and absorbing it must not reopen this contract:
 // either spelling satisfies it.
 func containsStatusContinuationInvocation(text string) bool {
 	return strings.Contains(text, "axiom sdd status [change] --cwd <repo> --json --instructions") ||
@@ -37,7 +37,7 @@ func containsStatusContinuationInvocation(text string) bool {
 func assertStatusContinuationContract(t *testing.T, content string) {
 	t.Helper()
 	if !containsStatusContinuationInvocation(content) {
-		t.Errorf("missing status/continuation contract invocation (neither `axiom sdd status` nor `gentle-ai sdd-status` spelling)")
+		t.Errorf("missing status/continuation contract invocation (neither `axiom sdd status` nor `axiom sdd-status` spelling)")
 	}
 	for _, want := range []string{
 		"every declared artifact store, including Engram", "native v2",
@@ -119,7 +119,7 @@ var sharedOrchestratorSectionNames = []string{
 	// INC-21 (design.md S4.7, H-2): the per-change kickoff questionnaire and
 	// the four block-review gates, plus their normative boundary against
 	// RDD (design.md S1.3). Registered here, in Phase 22, ahead of Phase
-	// 23 inserting the {{GENTLE_AI_SDD_SECTION:...}} marker into the
+	// 23 inserting the {{AXIOM_SDD_SECTION:...}} marker into the
 	// twelve per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
@@ -266,7 +266,7 @@ func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
 		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
-		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{GENTLE_AI_SDD_SECTION:") {
+		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{AXIOM_SDD_SECTION:") {
 			t.Errorf("%s kept a raw shared-section placeholder", agent)
 		}
 	}

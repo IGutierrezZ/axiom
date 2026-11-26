@@ -92,7 +92,7 @@ func TestRunInstallPersistsConfiguredSelection(t *testing.T) {
 	t.Cleanup(func() { osUserHomeDir = original })
 	// This test targets state persistence, not agent install behavior, so
 	// simulate Cursor as already installed (its Detect checks for ~/.cursor)
-	// — otherwise gentle-ai correctly refuses to proceed for an undetected
+	// — otherwise axiom correctly refuses to proceed for an undetected
 	// desktop-app agent.
 	if err := os.MkdirAll(filepath.Join(home, ".cursor"), 0o755); err != nil {
 		t.Fatalf("MkdirAll(.cursor): %v", err)
@@ -189,7 +189,7 @@ func TestMergeExplicitAgentInstallStateFailsHonestlyOnCorruptState(t *testing.T)
 // pipeline (files written, verification passed) and RunInstall returned
 // (result, nil) -- reported success -- WITHOUT ever calling state.Write. The
 // user believed the install fully completed; state.json stayed corrupted
-// forever, silently breaking every future `gentle-ai sync`.
+// forever, silently breaking every future `axiom sync`.
 func TestRunInstallFailsHonestlyWhenExistingStateIsCorruptDuringExplicitAgentInstall(t *testing.T) {
 	home := t.TempDir()
 	original := osUserHomeDir

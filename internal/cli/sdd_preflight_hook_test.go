@@ -161,7 +161,7 @@ func TestSDDPreflightHookAllowsCorroboratedCanonicalPreflight(t *testing.T) {
 }
 
 // rewriteSDDPreflightTranscriptPrefix rewrites every preflight question and
-// answer key in the transcript to the given brand prefix ("Gentle AI" or
+// answer key in the transcript to the given brand prefix ("Axiom" or
 // "Axiom"), whichever brand the fixture constants currently use.
 func rewriteSDDPreflightTranscriptPrefix(t *testing.T, path, brand string) {
 	t.Helper()

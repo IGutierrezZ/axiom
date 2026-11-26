@@ -271,9 +271,9 @@ func TestWriteAndRead(t *testing.T) {
 }
 
 // TestPersonaRoundTrip verifies the Persona field round-trips through
-// Write/Read. Both `gentle-ai install` (CLI in run.go) and the TUI app
+// Write/Read. Both `axiom install` (CLI in run.go) and the TUI app
 // (internal/app/app.go) write this field after a successful install so that
-// `gentle-ai sync` regenerates the persona the user actually selected — not a
+// `axiom sync` regenerates the persona the user actually selected — not a
 // hard-coded default.
 func TestPersonaRoundTrip(t *testing.T) {
 	for _, persona := range []string{"gentleman", "neutral", "custom"} {

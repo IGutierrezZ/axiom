@@ -153,7 +153,7 @@ func runOpenCodePluginHarness(t *testing.T, modules map[string]string, harness, 
 		t.Fatal(err)
 	}
 	// Current plugins spawn "axiom"; the legacy pre-registry fixture models an
-	// older managed copy that still spawns "gentle-ai", so both names resolve
+	// older managed copy that still spawns "axiom", so both names resolve
 	// to the same fake relay.
 	for _, name := range []string{"axiom", "gentle-ai"} {
 		if err := os.WriteFile(filepath.Join(bin, name), []byte(relay), 0o700); err != nil {

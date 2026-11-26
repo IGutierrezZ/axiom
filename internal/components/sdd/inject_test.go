@@ -2880,12 +2880,12 @@ func TestInjectFileAppendCutsLegacyBlockAtEarliestMarkerOfEitherPrefix(t *testin
 		last  string
 	}{
 		{
-			name:  "axiom before gentle-ai",
+			name:  "axiom before axiom",
 			first: "<!-- axiom:persona -->\nAxiom persona body\n<!-- /axiom:persona -->\n",
 			last:  "<!-- gentle-ai:engram-protocol -->\nGentle engram body\n<!-- /gentle-ai:engram-protocol -->\n",
 		},
 		{
-			name:  "gentle-ai before axiom",
+			name:  "axiom before axiom",
 			first: "<!-- gentle-ai:persona -->\nGentle persona body\n<!-- /gentle-ai:persona -->\n",
 			last:  "<!-- axiom:engram-protocol -->\nAxiom engram body\n<!-- /axiom:engram-protocol -->\n",
 		},
@@ -5841,7 +5841,7 @@ func TestInjectWindsurf_WorkflowsFoundFromSubdirectory(t *testing.T) {
 		t.Fatalf("write go.mod: %v", err)
 	}
 
-	// Simulate running gentle-ai from a subdirectory inside that project.
+	// Simulate running axiom from a subdirectory inside that project.
 	subDir := filepath.Join(projectRoot, "internal", "foo")
 	if err := os.MkdirAll(subDir, 0o755); err != nil {
 		t.Fatalf("mkdir subDir: %v", err)

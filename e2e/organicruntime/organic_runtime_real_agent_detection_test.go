@@ -6,7 +6,7 @@
 // running and depending on ambient machine state, or skipping in a way that
 // reads as passing.
 //
-// Claude Code and OpenCode's routing-guidance cases need gentle-ai's real
+// Claude Code and OpenCode's routing-guidance cases need axiom's real
 // Detect() to find a real installed binary on PATH: install now refuses
 // instead of installing a missing runtime (agentInstallStep in
 // internal/cli/run.go), so without the real binary these cases fail with a

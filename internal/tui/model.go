@@ -2192,7 +2192,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		if m.OperationRunning {
 			return m, nil
 		}
-		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
+		// If axiom itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
 		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
@@ -2236,7 +2236,7 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		if m.OperationRunning {
 			return m, nil
 		}
-		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
+		// If axiom itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
 		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
@@ -3507,7 +3507,7 @@ func (m Model) detectProjectEngramData() bool {
 // startUpgradeSync runs upgrade then sync sequentially via tea.Sequence.
 // Design decision: sync normally runs regardless of tool-level upgrade outcome.
 // Tool-level upgrade failures are per-tool (in UpgradeReport.Results), not fatal.
-// Exception: if gentle-ai itself was upgraded, sync is skipped so the old
+// Exception: if axiom itself was upgraded, sync is skipped so the old
 // running binary cannot rewrite configs after installing a newer binary.
 //
 // The first command runs the upgrade and sends UpgradePhaseCompletedMsg
@@ -3531,7 +3531,7 @@ func (m Model) startUpgradeSync() tea.Cmd {
 
 	syncCmd := func() tea.Msg {
 		if selfUpdated {
-			// Deferred sync (task 4.8): gentle-ai was upgraded in this session.
+			// Deferred sync (task 4.8): axiom was upgraded in this session.
 			// Set PendingSync=true so the new binary runs sync on next launch
 			// instead of silently skipping it. Non-fatal if state write fails.
 			//
@@ -4739,7 +4739,7 @@ func (m *Model) buildDependencyPlan() {
 	m.DependencyPlan = resolved
 }
 
-// agentsToManage returns the canonical list of agents gentle-ai should manage.
+// agentsToManage returns the canonical list of agents axiom should manage.
 // A persisted selection is authoritative, including a deliberately configured
 // empty selection. Only state without an install selection falls back to detected
 // agents, then to the first-install catalog default.

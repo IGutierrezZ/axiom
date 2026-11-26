@@ -405,7 +405,7 @@ func main() {
 		os.Exit(runSDD(append([]string{"preflight-hook"}, os.Args[2:]...), os.Stdout, os.Stderr))
 
 	// These four existed only in internal/app, so they were reachable through
-	// the deprecated `gentle-ai` wrapper and not through the canonical binary.
+	// the deprecated `axiom` wrapper and not through the canonical binary.
 	// Nobody noticed because no CI step exercised cmd/axiom. `skill-registry`
 	// delegates to app because its implementation
 	// is unexported there.

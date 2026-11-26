@@ -1,10 +1,10 @@
 /**
  * model-variants
- * Exports per-model variant (effort level) data for gentle-ai.
+ * Exports per-model variant (effort level) data for Axiom.
  *
  * On OpenCode startup, fetches the provider list via the in-process SDK client,
  * extracts variant keys per model, and writes a minimal JSON cache to
- * ~/.axiom/cache/model-variants.json. gentle-ai reads this file
+ * ~/.axiom/cache/model-variants.json. Axiom reads this file
  * to populate the effort level picker without needing a live API connection.
  */
 

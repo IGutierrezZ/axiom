@@ -604,7 +604,7 @@ func TestSelfUpdate_ConfirmUpdateTable(t *testing.T) {
 // ─── Slice 4 RED: PendingSync written on successful self-upgrade ─────────────
 
 // TestSelfUpdate_SetsPendingSyncOnSuccess verifies that after a successful
-// gentle-ai self-upgrade, PendingSync=true is written to state before the
+// axiom self-upgrade, PendingSync=true is written to state before the
 // process exits (re-exec or print message). This is the deferred-sync flag
 // that the next launch reads to run sync automatically.
 func TestSelfUpdate_SetsPendingSyncOnSuccess(t *testing.T) {
@@ -655,7 +655,7 @@ func TestSelfUpdate_SetsPendingSyncOnSuccess(t *testing.T) {
 }
 
 // TestSelfUpdate_DoesNotSetPendingSyncOnFailure verifies that when the
-// gentle-ai upgrade fails, PendingSync is NOT set in state (no retry needed
+// axiom upgrade fails, PendingSync is NOT set in state (no retry needed
 // since sync was never deferred).
 func TestSelfUpdate_DoesNotSetPendingSyncOnFailure(t *testing.T) {
 	unsetEnv(t, envNoSelfUpdate)
@@ -723,7 +723,7 @@ func TestSelfUpdate_NoClobberOnCorruptStateFile(t *testing.T) {
 	selfUpdateHomeDirFn = func() (string, error) { return tmpHome, nil }
 
 	// Write a corrupt (non-missing) state file so state.Read returns a non-ErrNotExist error.
-	stateDir := filepath.Join(tmpHome, ".gentle-ai")
+	stateDir := filepath.Join(tmpHome, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}

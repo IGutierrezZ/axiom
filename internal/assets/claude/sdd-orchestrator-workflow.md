@@ -69,7 +69,7 @@ This is collected by `SDD Session Preflight`. If missing, enforce the hard gate 
 
 No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight. After scope approval, expect zero further prompts on the happy path and at most one actionable prompt per recoverable failure; the gatekeeper summarizes phase progress instead of interrupting except on a second consecutive gate failure or a genuine scope/product decision. Interactive approval is phase-scoped; words like "continue", "dale", or "go on" approve only the immediate next phase.
 
-{{GENTLE_AI_RESEARCH_LIFECYCLE}}
+{{AXIOM_RESEARCH_LIFECYCLE}}
 
 ### Automatic Mode Gatekeeper (MANDATORY)
 
@@ -97,7 +97,7 @@ The artifact store is never asked: in Axiom the session store is always `hybrid`
 
 ### Delivery Strategy
 
-{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
+{{AXIOM_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
@@ -112,7 +112,7 @@ Pass it as `chain_strategy` to `sdd-tasks` and `sdd-apply` prompts alongside `de
 
 ### Commit Review
 
-{{GENTLE_AI_SDD_SECTION:Commit Review}}
+{{AXIOM_SDD_SECTION:Commit Review}}
 
 #Verification is optional and may inspect partial work. Diagnostic findings never trigger the gatekeeper retry loop or gate archive. Archive records actual unfinished tasks and findings, not synthetic completion.
 
@@ -206,4 +206,4 @@ Convention files live under the agent's global skills directory, including `engr
 
 ### Recovery
 
-{{GENTLE_AI_SDD_SECTION:Recovery Rule}}
+{{AXIOM_SDD_SECTION:Recovery Rule}}

@@ -30,7 +30,7 @@ func TestRenderBackupsShowsDisplayLabel(t *testing.T) {
 
 func TestRenderBackupsMakesHistoricalFallbackExplicit(t *testing.T) {
 	historical := backup.Manifest{
-		ID:        "gentle-ai-history",
+		ID:        "axiom-history",
 		CreatedAt: time.Date(2026, 3, 22, 15, 4, 5, 0, time.UTC),
 		Source:    backup.BackupSourceSync,
 		Origin:    backup.BackupOriginUnknown,

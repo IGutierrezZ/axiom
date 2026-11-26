@@ -106,8 +106,8 @@ func TestRunUpgrade_ReturnsErrorBeforeExecutingWhenChecksFail(t *testing.T) {
 	}
 }
 
-// TestRunUpgrade_RestartsAfterAxiomUpgrade verifies that `gentle-ai upgrade`
-// prints the restart guidance message after a successful gentle-ai upgrade.
+// TestRunUpgrade_RestartsAfteraxiomUpgrade verifies that `axiom upgrade`
+// prints the restart guidance message after a successful axiom upgrade.
 // After task 4.6, no re-exec occurs on any OS — the message is always printed.
 func TestRunUpgrade_RestartsAfterAxiomUpgrade(t *testing.T) {
 	unsetEnv(t, envSelfUpdateDone)
@@ -283,7 +283,7 @@ func TestRunUpgrade_ForwardsParsedArgsOnceWithoutReparsing(t *testing.T) {
 
 // TestPrintPostUpgradeDoctorAdvisory_OutputFormat verifies the advisory
 // message format: starts with a newline, has the [info] tag, and names the
-// `gentle-ai doctor` command. The exact wording is part of the public contract
+// `axiom doctor` command. The exact wording is part of the public contract
 // because the issue (#1901) specifies the literal expected output.
 func TestPrintPostUpgradeDoctorAdvisory_OutputFormat(t *testing.T) {
 	var buf bytes.Buffer
@@ -302,7 +302,7 @@ func TestPrintPostUpgradeDoctorAdvisory_OutputFormat(t *testing.T) {
 }
 
 // TestRunUpgrade_PrintsDoctorAdvisoryAfterAxiomUpgrade verifies that a
-// successful `gentle-ai upgrade` of the gentle-ai binary prints the doctor
+// successful `axiom upgrade` of the axiom binary prints the doctor
 // advisory (per #1901). The advisory must appear AFTER the restart message
 // and must NOT appear in dry-run mode.
 func TestRunUpgrade_PrintsDoctorAdvisoryAfterAxiomUpgrade(t *testing.T) {
@@ -381,8 +381,8 @@ func TestRunUpgrade_DryRunDoesNotPrintDoctorAdvisory(t *testing.T) {
 }
 
 // TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory verifies that
-// upgrading a tool other than gentle-ai (e.g. engram, gga) does NOT trigger
-// the doctor advisory. The advisory is gated on gentle-ai specifically.
+// upgrading a tool other than axiom (e.g. engram, gga) does NOT trigger
+// the doctor advisory. The advisory is gated on axiom specifically.
 func TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
 	origCheckFiltered := updateCheckFiltered
 	origUpgradeExecuteWithOptions := upgradeExecuteWithOptions
@@ -414,6 +414,6 @@ func TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
 		t.Fatalf("runUpgrade() error = %v", err)
 	}
 	if strings.Contains(buf.String(), "ecosystem health after upgrade") {
-		t.Fatalf("non-gentle-ai upgrade must NOT print post-upgrade doctor advisory:\n%s", buf.String())
+		t.Fatalf("non-axiom upgrade must NOT print post-upgrade doctor advisory:\n%s", buf.String())
 	}
 }

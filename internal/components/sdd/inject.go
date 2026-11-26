@@ -233,7 +233,7 @@ type bootstrapper interface {
 //  3. Weak marker (package.json only) — record as candidate but keep walking
 //     upward, since a monorepo marker may exist higher up.
 //
-// Walking upward means users can run gentle-ai from any subdirectory of their
+// Walking upward means users can run axiom from any subdirectory of their
 // project (e.g. repo/packages/app) and still detect the correct workspace root.
 // In a JS/TS monorepo, every package has package.json, so we must not stop at
 // the first one — we keep walking to find the highest ancestor with package.json
@@ -841,7 +841,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 
 	// 3b. Write native workflow files (Windsurf Hybrid-First, and any future
 	// agent that implements the workflowInjector optional interface).
-	// findProjectRoot walks upward from WorkspaceDir so gentle-ai can be
+	// findProjectRoot walks upward from WorkspaceDir so axiom can be
 	// invoked from any subdirectory (e.g. repo/internal/foo) and still inject
 	// workflows at the real project root. Skips silently if no root is found
 	// (e.g. running from home dir without a project).
@@ -1426,7 +1426,7 @@ func renderPreservedOpenCodeOrchestratorPrompt(
 	return strings.ReplaceAll(migrated, runtimeAgentIDPlaceholder, string(agent))
 }
 
-// stripOpenCodeBackgroundPolicy removes only the complete Gentle AI-owned block.
+// stripOpenCodeBackgroundPolicy removes only the complete Axiom-owned block.
 // Callers validate marker integrity before preserving a prompt from disk.
 func stripOpenCodeBackgroundPolicy(content string) string {
 	start := strings.Index(content, openCodeBackgroundPolicyMarker)
@@ -2291,7 +2291,7 @@ func claudeHookListContains(hookEntries []any, command string) bool {
 	return false
 }
 
-// ManagedOpenCodePluginNames lists every OpenCode plugin gentle-ai manages as
+// ManagedOpenCodePluginNames lists every OpenCode plugin axiom manages as
 // versioned runtime artifacts. Their content is tied to the installed binary
 // version: install writes them and sync must keep already-installed copies
 // byte-equal to the embedded assets (issue #1440).
@@ -2388,7 +2388,7 @@ func RefreshInstalledOpenCodePlugins(homeDir string, adapter agents.Adapter) (In
 	return InjectionResult{Changed: changed, Files: files}, nil
 }
 
-// installOpenCodePluginsDirectory copies the OpenCode-compatible plugins that gentle-ai
+// installOpenCodePluginsDirectory copies the OpenCode-compatible plugins that axiom
 // still manages by default. Native OpenCode subagents replace the legacy
 // background-agents plugin, so that legacy cleanup is scoped to OpenCode only.
 func installOpenCodePluginsDirectory(homeDir string, adapter agents.Adapter, assetDir string) (InjectionResult, error) {
@@ -3090,7 +3090,7 @@ func stripBareOrchestratorForFilePrompt(content string) string {
 
 // legacyPiSystemPromptSectionIDs are the only marker pairs this cleanup owns.
 // Pi's package owns APPEND_SYSTEM.md, so unmarked and non-allowlisted content
-// must never be interpreted as Gentle AI content.
+// must never be interpreted as Axiom content.
 var legacyPiSystemPromptSectionIDs = []string{
 	"persona", "engram-protocol", "sdd-orchestrator", "strict-tdd-mode",
 	"agent-routing", "trigger-rules", "codegraph-guidance",

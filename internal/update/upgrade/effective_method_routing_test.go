@@ -65,12 +65,12 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 	}
 }
 
-// selfImportPath is the module path gentle-ai publishes its command under.
+// selfImportPath is the module path axiom publishes its command under.
 // It is asserted against the registry below so the tests and the shipped
 // declaration cannot drift apart.
 const selfImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/axiom"
 
-// registrySelfTool returns the shipped gentle-ai registry entry. Routing tests
+// registrySelfTool returns the shipped axiom registry entry. Routing tests
 // use the real declaration rather than a hand-built ToolInfo so a regression in
 // registry.go cannot hide behind a synthetic fixture.
 func registrySelfTool(t *testing.T) update.ToolInfo {
@@ -80,7 +80,7 @@ func registrySelfTool(t *testing.T) update.ToolInfo {
 			return tool
 		}
 	}
-	t.Fatal("gentle-ai is missing from the tool registry")
+	t.Fatal("axiom is missing from the tool registry")
 	return update.ToolInfo{}
 }
 
@@ -89,7 +89,7 @@ func registrySelfTool(t *testing.T) update.ToolInfo {
 // install from and falls back to the source-install refusal.
 func TestRegistryDeclaresAxiomGoImportPath(t *testing.T) {
 	if got := registrySelfTool(t).GoImportPath; got != selfImportPath {
-		t.Fatalf("gentle-ai GoImportPath = %q, want %q", got, selfImportPath)
+		t.Fatalf("axiom GoImportPath = %q, want %q", got, selfImportPath)
 	}
 }
 

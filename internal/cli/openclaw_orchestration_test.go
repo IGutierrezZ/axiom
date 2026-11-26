@@ -389,7 +389,7 @@ func assertOpenClawInstructionsInWorkspace(t *testing.T, workspace string) {
 
 	soulText := readOpenClawTestFile(t, filepath.Join(workspace, "SOUL.md"))
 	if !containsAnyOpenClawMarker(soulText, "gentle-ai:persona") || !strings.Contains(soulText, "Senior Architect") {
-		t.Fatalf("active workspace SOUL.md missing Gentle AI persona; got:\n%s", soulText)
+		t.Fatalf("active workspace SOUL.md missing Axiom persona; got:\n%s", soulText)
 	}
 }
 

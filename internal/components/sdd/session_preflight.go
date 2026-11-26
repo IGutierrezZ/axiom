@@ -34,7 +34,7 @@ const (
 
 // The native workflow consumes installed authority, never a second policy body.
 const windsurfSessionPreflightReference = "Read `~/.codeium/windsurf/memories/global_rules.md` before any SDD-owned mutation. Follow its SDD Session Preflight, then its native dispatcher and init guards for `/sdd-new`. If that installed authority is missing, malformed, or cannot resolve the session, STOP; do not initialize, infer defaults, or recreate policy in this workflow."
-const windsurfSessionPreflightPlaceholder = "{{GENTLE_AI_SDD_SESSION_PREFLIGHT_AUTHORITY}}"
+const windsurfSessionPreflightPlaceholder = "{{AXIOM_SDD_SESSION_PREFLIGHT_AUTHORITY}}"
 
 func renderWindsurfSessionPreflightEntry(content string) (string, error) {
 	if _, err := sddSessionPreflightNewline(content); err != nil {

@@ -531,7 +531,7 @@ func TestInjectClaudeWritesUserConfigAndIsIdempotent(t *testing.T) {
 	}
 
 	// Loosen the mode: the byte-identical run must still re-tighten 0600, and
-	// that mode-only repair is a change (gentle-ai #5014).
+	// that mode-only repair is a change (axiom #5014).
 	loosened := false
 	if runtime.GOOS != "windows" {
 		if err := os.Chmod(userConfigPath, 0o644); err != nil {
@@ -599,7 +599,7 @@ func TestInjectClaudeWritesUserConfigAndIsIdempotent(t *testing.T) {
 
 // TestInjectClaudeSettingsInertBlockCleanup: the inert settings.json block is
 // removed when it only holds the managed context7 entry, and left untouched
-// when it carries servers gentle-ai does not manage.
+// when it carries servers axiom does not manage.
 func TestInjectClaudeSettingsInertBlockCleanup(t *testing.T) {
 	cases := []struct {
 		name           string

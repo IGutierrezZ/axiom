@@ -109,9 +109,9 @@ var (
 	probeEngramProtocolFlag        = engram.ProbeProtocolFlag
 	probeEngramProtocolFlagCommand = engram.ProbeProtocolFlagCommand
 
-	// AppVersion is the gentle-ai version that will be written into backup manifests.
+	// AppVersion is the axiom version that will be written into backup manifests.
 	// It is set by app.go before any CLI operation so that every backup created during
-	// an install or sync records which version of gentle-ai made it.
+	// an install or sync records which version of axiom made it.
 	// Default "dev" matches the ldflags default in app.Version.
 	AppVersion = "dev"
 )
@@ -334,7 +334,7 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		agentIDs = append(agentIDs, string(a))
 	}
 
-	// When the user ran `gentle-ai install --agent X` (explicit agent flag),
+	// When the user ran `axiom install --agent X` (explicit agent flag),
 	// merge into the existing state so that previously installed agents and
 	// model assignments are preserved. A full install (no --agent flag) keeps
 	// overwrite semantics so the TUI selection is the source of truth.
@@ -542,7 +542,7 @@ func withReadyAgentRunNote(report verify.Report, resolved planner.ResolvedPlan) 
 
 // withFailedVerificationNote replaces the generic verify.VerificationIssuesMessage
 // with one naming the concrete command that retries the install for the
-// agents that were actually resolved this run: `gentle-ai install --agent
+// agents that were actually resolved this run: `axiom install --agent
 // <agent1>,<agent2>`. There is no `repair` case in the CLI dispatcher
 // (internal/app/app.go), so the old generic text named a command that could
 // never succeed -- a false continuation worse than no note at all.
@@ -1276,7 +1276,7 @@ type prepareBackupStep struct {
 	source      backup.BackupSource
 	description string
 
-	// appVersion is the gentle-ai version that created this backup.
+	// appVersion is the axiom version that created this backup.
 	// When set, it is written into the manifest as CreatedByVersion.
 	appVersion string
 }
@@ -1513,9 +1513,9 @@ func (s agentInstallStep) ID() string {
 // Run executes Pi's package installation commands only. Other selected
 // agents remain config targets regardless of whether their runtime is present.
 //
-// The `pi` binary itself is never installed by gentle-ai
+// The `pi` binary itself is never installed by axiom
 // (validatePiInstallPreflight refuses if it is not already on PATH), but once
-// it is present, its own `pi install ...` subcommands install gentle-ai's Pi
+// it is present, its own `pi install ...` subcommands install axiom's Pi
 // package stack through that already-present tool.
 func (s agentInstallStep) Run() error {
 	if s.agent != model.AgentPi {
@@ -2721,7 +2721,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 			case model.StrategyTOMLFile:
 				if p := adapter.MCPConfigPath(targetDir, "engram"); p != "" {
 					paths = append(paths, p)
-					// Track the gentle-ai files written alongside the Codex config.toml
+					// Track the axiom files written alongside the Codex config.toml
 					// so they are restored on rollback and removed on uninstall.
 					codexHomeDir := filepath.Dir(p)
 					if _, inProject := adapter.(agents.WorkspaceInlineInstructionsProvider); inProject && scope == ScopeWorkspace {
@@ -3368,7 +3368,7 @@ func engramInstallCommand(agentIDs []model.AgentID) string {
 // when Antigravity and Gemini CLI are selected together. These agents
 // intentionally share ~/.gemini/GEMINI.md because Antigravity uses a
 // Gemini-compatible prompt surface; the last synced SDD orchestrator owns the
-// shared gentle-ai:sdd-orchestrator section.
+// shared axiom:sdd-orchestrator section.
 func antigravityCollisionCheck(agents []model.AgentID) []verify.Check {
 	hasAntigravitySurface := false
 	hasGemini := false
@@ -3391,7 +3391,7 @@ func antigravityCollisionCheck(agents []model.AgentID) []verify.Check {
 			Run: func(context.Context) error {
 				return fmt.Errorf(
 					"Antigravity and Gemini CLI write rules to ~/.gemini/GEMINI.md\n" +
-						"Antigravity intentionally uses the Gemini-compatible global prompt surface; the last synced SDD orchestrator owns the shared gentle-ai:sdd-orchestrator section.\n" +
+						"Antigravity intentionally uses the Gemini-compatible global prompt surface; the last synced SDD orchestrator owns the shared axiom:sdd-orchestrator section.\n" +
 						"Prefer Antigravity for new installs; keep Gemini CLI selected only when you intentionally want that legacy prompt to be the active one.",
 				)
 			},
@@ -3486,7 +3486,7 @@ func claudeAliasesToStrings(m map[string]model.ClaudeModelAlias) map[string]stri
 	out := make(map[string]string, len(m))
 	for k, v := range m {
 		// Claude Code owns the main session/orchestrator model; do not persist it
-		// as a Gentle AI model assignment.
+		// as an Axiom model assignment.
 		if k == "orchestrator" {
 			continue
 		}

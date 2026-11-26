@@ -146,7 +146,7 @@ func consentInstanceToken(t *testing.T, invocation string) string {
 	return ""
 }
 
-// consentShellEnvironment prepends a directory holding a `gentle-ai` shim for
+// consentShellEnvironment prepends a directory holding a `axiom` shim for
 // the built binary, so the envelope's invocation runs VERBATIM through a
 // POSIX shell exactly as the agent would run it (the invocation's paths are
 // pathquote-quoted shell tokens, not pre-split argv).
@@ -172,7 +172,6 @@ func consentShellEnvironment(t *testing.T, home string) []string {
 			}
 		}
 	}
-	createShim("gentle-ai")
 	createShim("axiom")
 	environment := organicEnvironment(home)
 	for index, entry := range environment {
@@ -185,8 +184,8 @@ func consentShellEnvironment(t *testing.T, home string) []string {
 
 func runConsentInvocation(t *testing.T, environment []string, dir, invocation string) {
 	t.Helper()
-	if !strings.HasPrefix(invocation, "gentle-ai ") && !strings.HasPrefix(invocation, "axiom ") {
-		t.Fatalf("invocation is not a gentle-ai or axiom command: %q", invocation)
+	if !strings.HasPrefix(invocation, "axiom ") {
+		t.Fatalf("invocation is not an axiom command: %q", invocation)
 	}
 	sh := "sh"
 	if _, err := exec.LookPath("sh"); err != nil {
@@ -248,7 +247,7 @@ func TestSDDEditAuthorityConsentGrantLoop(t *testing.T) {
 	if blocked.Consent == nil {
 		t.Fatalf("blocked(edit_authority_missing) status carries no consent envelope: %s", blockedPayload)
 	}
-	if (blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" && blocked.Consent.Schema != "axiom.sdd-integration.consent/v1") || blocked.Consent.Change != change ||
+	if blocked.Consent.Schema != "axiom.sdd-integration.consent/v1" || blocked.Consent.Change != change ||
 		len(blocked.Consent.Choices) != 2 || blocked.Consent.Choices[0].Answer != "granted" ||
 		blocked.Consent.Choices[1].Answer != "declined" {
 		t.Fatalf("consent envelope identity is wrong: %s", blockedPayload)
@@ -336,7 +335,7 @@ func TestSDDSameParentRepositoryConsentGrantLoop(t *testing.T) {
 		!strings.Contains(strings.Join(blocked.BlockedReasons, "\n"), "blocked(edit_authority_missing)") {
 		t.Fatalf("same-parent fixture is not blocked on edit authority: %s", blockedPayload)
 	}
-	if blocked.Consent == nil || (blocked.Consent.Schema != "gentle-ai.sdd-integration.consent/v1" && blocked.Consent.Schema != "axiom.sdd-integration.consent/v1") ||
+	if blocked.Consent == nil || blocked.Consent.Schema != "axiom.sdd-integration.consent/v1" ||
 		blocked.Consent.Change != change || len(blocked.Consent.MissingRoots) != 1 ||
 		blocked.Consent.MissingRoots[0] != service {
 		t.Fatalf("same-parent consent envelope = %#v, want one missing root %s: %s", blocked.Consent, service, blockedPayload)
@@ -407,10 +406,6 @@ func TestSDDPreparationInvocationRoundTripsSpacedChange(t *testing.T) {
 			initial, payload := consentStatus(t, environment, planning, change)
 			prefix := "`axiom sdd continue "
 			_, tail, found := strings.Cut(strings.Join(initial.BlockedReasons, "\n"), prefix)
-			if !found {
-				prefix = "`gentle-ai sdd-continue "
-				_, tail, found = strings.Cut(strings.Join(initial.BlockedReasons, "\n"), prefix)
-			}
 			arguments, _, closed := strings.Cut(tail, "`")
 			if !found || !closed || initial.Consent != nil {
 				t.Fatalf("missing preparation-only invocation: %s", payload)

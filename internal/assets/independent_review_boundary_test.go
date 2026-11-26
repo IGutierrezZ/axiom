@@ -222,8 +222,8 @@ const (
 const (
 	independentReviewSectionStart = "<!-- sdd-orchestrator-section:SDD Independent Review:start -->"
 	independentReviewSectionEnd   = "<!-- sdd-orchestrator-section:SDD Independent Review:end -->"
-	independentReviewTemplateTag  = "{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}"
-	blockGatesTemplateTag         = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
+	independentReviewTemplateTag  = "{{AXIOM_SDD_SECTION:SDD Independent Review}}"
+	blockGatesTemplateTag         = "{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
 )
 
 var independentReviewRuntimes = []string{

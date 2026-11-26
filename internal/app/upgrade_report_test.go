@@ -167,7 +167,7 @@ func TestRunUpgradeReport_RestartRequiredOnlyForSelfToolSuccess(t *testing.T) {
 		wantRestart bool
 	}{
 		{name: "self-tool axiom succeeded", toolName: "axiom", status: upgrade.UpgradeSucceeded, wantRestart: true},
-		{name: "self-tool gentle-ai succeeded", toolName: "axiom", status: upgrade.UpgradeSucceeded, wantRestart: true},
+		{name: "self-tool axiom succeeded", toolName: "axiom", status: upgrade.UpgradeSucceeded, wantRestart: true},
 		{name: "self-tool skipped", toolName: "axiom", status: upgrade.UpgradeSkipped, wantRestart: false},
 		{name: "self-tool failed", toolName: "axiom", status: upgrade.UpgradeFailed, wantRestart: false},
 		{name: "other tool succeeded", toolName: "engram", status: upgrade.UpgradeSucceeded, wantRestart: false},

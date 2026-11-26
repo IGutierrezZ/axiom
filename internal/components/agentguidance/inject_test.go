@@ -706,7 +706,7 @@ func containsRemoteAuthMarker(content string) bool {
 	return strings.Contains(content, "<!-- axiom:remote-authorization -->") || strings.Contains(content, "<!-- gentle-ai:remote-authorization -->")
 }
 
-// managedRoutingBlock returns only the content Gentle AI owns, so assertions
+// managedRoutingBlock returns only the content Axiom owns, so assertions
 // about the block never accidentally inspect surrounding user content.
 func managedRoutingBlock(content string) string {
 	for _, prefix := range []string{"<!-- axiom:", "<!-- gentle-ai:"} {

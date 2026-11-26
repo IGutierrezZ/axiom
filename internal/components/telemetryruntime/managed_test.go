@@ -43,7 +43,7 @@ func TestShippedPluginDigestAllowlistIsComplete(t *testing.T) {
 			t.Errorf("digest %s is not in the shipped allowlist", digest)
 		}
 	}
-	if _, ok := shippedPluginDigests[shippedPluginDigestGentleAIV3]; !ok {
+	if _, ok := shippedPluginDigests[shippedPluginDigestUpstreamV3]; !ok {
 		t.Error("upstream v3.0.2 digest is not in the shipped allowlist")
 	}
 	if len(shippedPluginDigests) != 4 {

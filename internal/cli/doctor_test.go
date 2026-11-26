@@ -791,7 +791,7 @@ func TestCheckEngramReachable_MissingRelativeWindowsExecutableWarns(t *testing.T
 }
 
 // TestCheckEngramReachable_StdioDefault_NoHTTPListener is matrix cell (a) of
-// #2078: a default install. gentle-ai only ever configures Engram as a stdio
+// #2078: a default install. axiom only ever configures Engram as a stdio
 // MCP server (engram mcp --tools=agent, written by
 // internal/components/engram/inject.go); it never configures an HTTP
 // transport. With the stdio transport healthy and no HTTP listener anywhere,

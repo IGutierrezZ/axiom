@@ -87,12 +87,12 @@ var kilocodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n
 
 // Inject performs a full persona injection: the marker-bound markdown block,
 // the OpenCode/Kilocode `gentleman` agent definition in settings JSON, AND
-// the Claude Code output-style overlay. Used by `gentle-ai install`.
+// the Claude Code output-style overlay. Used by `axiom install`.
 func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
 	return injectInternal(homeDir, adapter, persona, false)
 }
 
-// InjectForSync regenerates the persona assets that `gentle-ai sync` is
+// InjectForSync regenerates the persona assets that `axiom sync` is
 // allowed to touch. It writes:
 //   - The marker-bound persona block in the agent's prompt file (markdown).
 //   - The Gentleman output-style file + outputStyle settings overlay (Claude
@@ -680,7 +680,7 @@ var osReadFile = func(path string) ([]byte, error) {
 }
 
 // preserveManagedSections checks whether the existing file content has
-// gentle-ai managed sections (SDD orchestrator, engram protocol, etc.) and
+// axiom managed sections (SDD orchestrator, engram protocol, etc.) and
 // returns new content that preserves those sections while replacing only the
 // persona text before them. Returns ("", false) when no preservation is needed
 // (empty file, Gentleman persona, or no managed markers found).

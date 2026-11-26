@@ -18,7 +18,7 @@ import (
 // --change-instance (added by S5) and admitting the optional
 // --expected-revision a widening grant chains on:
 //
-//	gentle-ai sdd-attempt grant --cwd <repo> --change <name> [--expected-revision <rev>] --root <path>... --actor <actor> --reason <reason> --request-id <id> --change-instance <token>
+//	axiom sdd-attempt grant --cwd <repo> --change <name> [--expected-revision <rev>] --root <path>... --actor <actor> --reason <reason> --request-id <id> --change-instance <token>
 var sddConsentGrantInvocationShape = regexp.MustCompile(
 	`^axiom sdd-attempt grant --cwd \S+ --change \S+( --expected-revision \S+)?( --root \S+)+ --actor \S+ --reason \S+ --request-id \S+ --change-instance \S+$`)
 

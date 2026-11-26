@@ -377,7 +377,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			break
 		}
 		// Engram v1.10.3+ writes an absolute path for the command field when
-		// `engram setup <agent>` is invoked. gentle-ai's Inject() runs after
+		// `engram setup <agent>` is invoked. axiom's Inject() runs after
 		// engram setup, so we must preserve any absolute command path already
 		// present instead of silently overwriting it with the relative "engram".
 		// See: https://github.com/Gentleman-Programming/gentle-ai/issues (engram absolute path regression)
@@ -552,7 +552,7 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		changed = changed || tomlWrite.Changed
 		files = append(files, configPath)
 
-		// Write gentle-ai SDD model-selection profile files only when Codex is
+		// Write axiom SDD model-selection profile files only when Codex is
 		// installed and supports GPT-5.6. Without the executable, shared config
 		// still works, but existing CLI-only profiles must remain untouched.
 		if runtimeErr == nil {
@@ -670,7 +670,7 @@ func upsertCodexTableKeyBeforeMCPServers(content, section, key, rawValue string)
 func injectClaudeUserConfig(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	// The plugin and direct MCP entry expose the same Engram tools. When the
 	// plugin is enabled, suppress direct registration without deleting any
-	// existing entry: matching config shape is not proof that gentle-ai owns it.
+	// existing entry: matching config shape is not proof that axiom owns it.
 	if claudeEngramPluginEnabled(homeDir) {
 		return InjectionResult{}, nil
 	}
@@ -1017,7 +1017,7 @@ func isStandardAgent(id model.AgentID) bool {
 // Code).
 //
 // Engram v1.10.3+ writes an absolute command path when `engram setup` is run.
-// gentle-ai runs Inject() after setup, so we must not overwrite that absolute
+// axiom runs Inject() after setup, so we must not overwrite that absolute
 // path with the relative "engram" string from defaultEngramServerJSON.
 //
 // Logic:
@@ -1078,14 +1078,14 @@ func managedLegacyClaudeEngramCommand(content []byte) (string, bool) {
 }
 
 // IsManagedLegacyClaudeConfig reports whether content has the exact legacy
-// standalone Engram server shape emitted by Gentle AI.
+// standalone Engram server shape emitted by Axiom.
 func IsManagedLegacyClaudeConfig(content []byte) bool {
 	_, ok := managedLegacyClaudeEngramCommand(content)
 	return ok
 }
 
 // RemoveManagedLegacyClaudeConfig removes only the exact standalone shape
-// emitted by Gentle AI. Its parent is removed only when the same real directory
+// emitted by Axiom. Its parent is removed only when the same real directory
 // remains empty after that managed file is deleted; symlinks are never unlinked.
 func RemoveManagedLegacyClaudeConfig(path string) (bool, error) {
 	info, err := os.Lstat(path)

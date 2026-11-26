@@ -794,7 +794,7 @@ func (s *Service) executePlan(p plan, agentsToRemove []model.AgentID) (Result, e
 
 		// Pi's SupportsSystemPrompt() gate keeps componentOperations() from
 		// ever queuing a rewrite for its SystemPromptFile, so a stale
-		// gentle-ai block left there by an older install is never cleaned up
+		// axiom block left there by an older install is never cleaned up
 		// by the generic persona/SDD rewrite ops above. Retire it directly.
 		if piAdapter, ok := s.registry.Get(model.AgentPi); ok {
 			promptPath := piAdapter.SystemPromptFile(s.homeDir)
@@ -957,7 +957,7 @@ func firstOrEmpty(items []string) string {
 }
 
 // retainedPiResources returns existing Pi-owned runtime and configuration paths
-// that gentle-ai deliberately leaves intact because they can be shared with Pi,
+// that axiom deliberately leaves intact because they can be shared with Pi,
 // gentle-pi packages, or user-managed configuration.
 func retainedPiResources(homeDir, workspaceDir string) []string {
 	paths := []string{

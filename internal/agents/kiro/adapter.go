@@ -111,7 +111,7 @@ func (a *Adapter) SkillsDir(homeDir string) string {
 }
 
 func (a *Adapter) SettingsPath(homeDir string) string {
-	// Kiro's OS app settings remain a secondary Gentle AI path; CodeGraph MCP
+	// Kiro's OS app settings remain a secondary Axiom path; CodeGraph MCP
 	// ownership is rooted independently under ~/.kiro/settings.
 	return filepath.Join(a.kiroConfigDir(homeDir), "settings.json")
 }

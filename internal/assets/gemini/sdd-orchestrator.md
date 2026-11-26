@@ -4,106 +4,106 @@ Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply i
 
 ## Agent Teams Orchestrator
 
-{{GENTLE_AI_SDD_SECTION:Agent Teams Orchestrator}}
+{{AXIOM_SDD_SECTION:Agent Teams Orchestrator}}
 
 ### Lossless Blocking Prompts (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Contract}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Contract}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Fallback}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
+{{AXIOM_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
 
 ### Language Domain Contract
 
-{{GENTLE_AI_SDD_SECTION:Language Domain Contract}}
+{{AXIOM_SDD_SECTION:Language Domain Contract}}
 
 ### Delegation Rules
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules}}
+{{AXIOM_SDD_SECTION:Delegation Rules}}
 
 Use Gemini's native bounded worker for delegated-direct work; reserve `sdd-*` agents for a selected SDD route.
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules Handoff}}
+{{AXIOM_SDD_SECTION:Delegation Rules Handoff}}
 
 #### Mandatory Delegation Triggers
 
-{{GENTLE_AI_SDD_SECTION:Mandatory Delegation Triggers}}
+{{AXIOM_SDD_SECTION:Mandatory Delegation Triggers}}
 
 #### Delegated Verification Gate (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
 #### Cost and Context Balance
 
-{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
+{{AXIOM_SDD_SECTION:Cost and Context Balance}}
 
 ## SDD Workflow (Spec-Driven Development)
 
-{{GENTLE_AI_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
+{{AXIOM_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
 
 ### Artifact Store Policy
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Policy}}
+{{AXIOM_SDD_SECTION:Artifact Store Policy}}
 
 ### Commands
 
-{{GENTLE_AI_SDD_SECTION:Commands}}
+{{AXIOM_SDD_SECTION:Commands}}
 
 ### Native SDD Dispatcher Guard
 
-{{GENTLE_AI_SDD_SECTION:Native SDD Dispatcher Guard}}
+{{AXIOM_SDD_SECTION:Native SDD Dispatcher Guard}}
 
 ### SDD Change Kickoff and Block Gates
 
-{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
+{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
 ### SDD Independent Review
 
-{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+{{AXIOM_SDD_SECTION:SDD Independent Review}}
 
 ### SDD Init Guard (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:SDD Init Guard (MANDATORY)}}
+{{AXIOM_SDD_SECTION:SDD Init Guard (MANDATORY)}}
 
 ### Execution Mode
 
-{{GENTLE_AI_SDD_SECTION:Execution Mode}}
+{{AXIOM_SDD_SECTION:Execution Mode}}
 
 ### Automatic Mode Gatekeeper (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Automatic Mode Gatekeeper (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Automatic Mode Gatekeeper (MANDATORY)}}
 
 ### Artifact Store Mode
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
+{{AXIOM_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 
-{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
+{{AXIOM_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
-{{GENTLE_AI_SDD_SECTION:Chain Strategy}}
+{{AXIOM_SDD_SECTION:Chain Strategy}}
 
 ### Commit Review
 
-{{GENTLE_AI_SDD_SECTION:Commit Review}}
+{{AXIOM_SDD_SECTION:Commit Review}}
 
 ### Dependency Graph
 
-{{GENTLE_AI_SDD_SECTION:Dependency Graph}}
+{{AXIOM_SDD_SECTION:Dependency Graph}}
 
 ### Result Contract
 
-{{GENTLE_AI_SDD_SECTION:Result Contract}}
+{{AXIOM_SDD_SECTION:Result Contract}}
 
 ### Sub-Agent Launch Deduplication (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Sub-Agent Launch Deduplication (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Sub-Agent Launch Deduplication (MANDATORY)}}
 
 ### Sub-Agent Launch Pattern
 
@@ -128,37 +128,37 @@ For each sub-agent launch:
 
 ### Skill Resolution Feedback
 
-{{GENTLE_AI_SDD_SECTION:Skill Resolution Feedback}}
+{{AXIOM_SDD_SECTION:Skill Resolution Feedback}}
 
 ### Sub-Agent Context Protocol
 
-{{GENTLE_AI_SDD_SECTION:Sub-Agent Context Protocol}}
+{{AXIOM_SDD_SECTION:Sub-Agent Context Protocol}}
 
 #### Non-SDD Tasks (general delegation)
 
-{{GENTLE_AI_SDD_SECTION:Non-SDD Tasks (general delegation)}}
+{{AXIOM_SDD_SECTION:Non-SDD Tasks (general delegation)}}
 
 #### SDD Phases
 
-{{GENTLE_AI_SDD_SECTION:SDD Phases}}
+{{AXIOM_SDD_SECTION:SDD Phases}}
 
 #### Archive Final-State Handoff (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
 
 #### Strict TDD Forwarding (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Strict TDD Forwarding (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Strict TDD Forwarding (MANDATORY)}}
 
 #### Apply-Progress Continuity (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Apply-Progress Continuity (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Apply-Progress Continuity (MANDATORY)}}
 
 #### Engram Topic Key Format
 
 When launching sub-agents for SDD phases with engram mode, pass these exact topic_keys as artifact references:
 
-{{GENTLE_AI_SDD_SECTION:Engram Topic Key Format (Generic and Cursor)}}
+{{AXIOM_SDD_SECTION:Engram Topic Key Format (Generic and Cursor)}}
 
 ### State and Conventions
 
@@ -166,4 +166,4 @@ Convention files under `{{AXIOM_SKILLS_DIR}}/_shared/`: `engram-convention.md`, 
 
 ### Recovery Rule
 
-{{GENTLE_AI_SDD_SECTION:Recovery Rule}}
+{{AXIOM_SDD_SECTION:Recovery Rule}}

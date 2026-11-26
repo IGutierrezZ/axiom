@@ -30,7 +30,7 @@ const (
 	// Commit a9cab7dd embedded telemetry-runtime.ts (v1) with this digest.
 	shippedPluginDigestA9cab7dd = "902fe09299c0bb04590f12ba993a196b838e1fbbd8a94e96100ea3d5f30182b7"
 	// Upstream Gentle-AI v3.0.2 embedded telemetry-runtime.ts with this digest.
-	shippedPluginDigestGentleAIV3 = "54150f7d76d684c39d2567312d22bd5a188390be5d98da16eb1e8833f9665bd4"
+	shippedPluginDigestUpstreamV3 = "54150f7d76d684c39d2567312d22bd5a188390be5d98da16eb1e8833f9665bd4"
 	// The last Axiom v1 plugin (OpenCode 1.x).
 	shippedPluginDigestAxiomV1 = "ff05ed23208eb57264b2bcb74ca9c386a2ceedc399362df8b2199cfedc612479"
 	// The last Axiom v2 plugin (OpenCode 2.x).
@@ -39,7 +39,7 @@ const (
 
 var shippedPluginDigests = map[string]struct{}{
 	shippedPluginDigestA9cab7dd:   {},
-	shippedPluginDigestGentleAIV3: {},
+	shippedPluginDigestUpstreamV3: {},
 	shippedPluginDigestAxiomV1:    {},
 	shippedPluginDigestAxiomV2:    {},
 }

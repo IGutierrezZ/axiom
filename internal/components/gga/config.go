@@ -19,7 +19,7 @@ import (
 // On Linux and macOS, GGA follows the XDG convention and reads from
 // ~/.config/gga.
 //
-// gentle-ai must write to the same location that GGA reads from; using
+// axiom must write to the same location that GGA reads from; using
 // %USERPROFILE%\.config on Windows is incorrect and results in `gga config`
 // reporting no provider even when the config file was generated.
 //

@@ -14,7 +14,7 @@ type orchestratorContractSection struct {
 	marker string
 	// A sentinel holding "|" accepts any of its alternatives. The fork renamed
 	// the binary and flattened the verb, so a shipped invocation can read
-	// either `axiom sdd attempt acquire` or `gentle-ai sdd-attempt acquire`;
+	// either `axiom sdd attempt acquire` or `axiom sdd-attempt acquire`;
 	// absorbing upstream must not reopen this contract. No sentinel carries a
 	// literal "|", so the separator is unambiguous.
 	sentinels []string

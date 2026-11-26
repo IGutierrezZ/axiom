@@ -9,13 +9,13 @@ import (
 
 // Issue #3278 (secondary defect, tracked as #2790's ambiguity half): the
 // ambiguity continuations emitted by ambiguousChangeSelectionReasons rendered
-// `gentle-ai sdd-status --cwd <repo> --change <name>`, but ParseCommandArgs
+// `axiom sdd-status --cwd <repo> --change <name>`, but ParseCommandArgs
 // has no --change flag — the change selector is positional. Every command the
 // refusal told the operator to run was rejected by the very parser it targets,
 // so following our own guidance burned the operator's single sanctioned
 // observation on a syntax error.
 //
-// The guard: every runnable `gentle-ai sdd-status ...` continuation emitted in
+// The guard: every runnable `axiom sdd-status ...` continuation emitted in
 // BlockedReasons must parse through ParseCommandArgs, and ambiguity
 // continuations must carry the change selector through to the parsed result.
 

@@ -268,7 +268,7 @@ type goreleaserConfig struct {
 // publishes a build whose main package is canonicalBinaryPath under the
 // "axiom" binary name [D-04, D-08]. Phase F0.a and F0.b ran this guard
 // before it existed; this phase (F0.c1) adds it RED (only
-// main: ./cmd/gentle-ai published) and turned it GREEN by splitting
+// main: ./cmd/axiom published) and turned it GREEN by splitting
 // .goreleaser.yaml's single build. The retired ./cmd/gentle-ai build has since
 // been removed, leaving the canonical build as the only one.
 func TestReleaseArtifactBuildsCanonicalBinary(t *testing.T) {

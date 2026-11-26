@@ -485,7 +485,7 @@ func TestExecute_PerToolSuccessAndFailure(t *testing.T) {
 // --- TestExecute_DevBuildIsSkipped ---
 
 // TestExecute_DevBuildIsSkipped verifies the spec requirement:
-// gentle-ai with DevBuild status must appear in Results as UpgradeSkipped
+// axiom with DevBuild status must appear in Results as UpgradeSkipped
 // with a non-empty ManualHint explaining it is a source/dev build.
 // DevBuild tools must NOT be auto-executed, and engram/gga remain eligible.
 func TestExecute_DevBuildIsSkipped(t *testing.T) {
@@ -503,7 +503,7 @@ func TestExecute_DevBuildIsSkipped(t *testing.T) {
 
 	report := Execute(context.Background(), results, linuxProfile(), t.TempDir(), false)
 
-	// gentle-ai (DevBuild) MUST appear as UpgradeSkipped with a ManualHint.
+	// axiom (DevBuild) MUST appear as UpgradeSkipped with a ManualHint.
 	var devResult *ToolUpgradeResult
 	for i := range report.Results {
 		if report.Results[i].ToolName == "axiom" {
@@ -512,13 +512,13 @@ func TestExecute_DevBuildIsSkipped(t *testing.T) {
 		}
 	}
 	if devResult == nil {
-		t.Fatalf("gentle-ai (DevBuild) must appear in Results — was not found")
+		t.Fatalf("axiom (DevBuild) must appear in Results — was not found")
 	}
 	if devResult.Status != UpgradeSkipped {
-		t.Errorf("gentle-ai DevBuild Status = %q, want UpgradeSkipped", devResult.Status)
+		t.Errorf("axiom DevBuild Status = %q, want UpgradeSkipped", devResult.Status)
 	}
 	if devResult.ManualHint == "" {
-		t.Errorf("gentle-ai DevBuild ManualHint must be non-empty")
+		t.Errorf("axiom DevBuild ManualHint must be non-empty")
 	}
 
 	// engram should still be processed as succeeded.
@@ -581,7 +581,7 @@ func TestExecute_FailureDoesNotImplyConfigLoss(t *testing.T) {
 // --- TestExecute_DevBuildSurfacedAsSkipped ---
 
 // TestExecute_DevBuildSurfacedAsSkipped verifies the spec gap:
-// A DevBuild tool (e.g. gentle-ai with version="dev") MUST appear in UpgradeReport.Results
+// A DevBuild tool (e.g. axiom with version="dev") MUST appear in UpgradeReport.Results
 // with Status=UpgradeSkipped and a non-empty ManualHint explaining it is a dev/source build.
 // Previously, DevBuild tools were silently omitted from Results entirely.
 func TestExecute_DevBuildSurfacedAsSkipped(t *testing.T) {
@@ -599,7 +599,7 @@ func TestExecute_DevBuildSurfacedAsSkipped(t *testing.T) {
 
 	report := Execute(context.Background(), results, linuxProfile(), t.TempDir(), false)
 
-	// gentle-ai (DevBuild) MUST appear in results as UpgradeSkipped.
+	// axiom (DevBuild) MUST appear in results as UpgradeSkipped.
 	var devResult *ToolUpgradeResult
 	for i := range report.Results {
 		if report.Results[i].ToolName == "axiom" {
@@ -609,15 +609,15 @@ func TestExecute_DevBuildSurfacedAsSkipped(t *testing.T) {
 	}
 
 	if devResult == nil {
-		t.Fatalf("gentle-ai DevBuild must appear in Results as UpgradeSkipped, but was not found")
+		t.Fatalf("axiom DevBuild must appear in Results as UpgradeSkipped, but was not found")
 	}
 
 	if devResult.Status != UpgradeSkipped {
-		t.Errorf("gentle-ai DevBuild Status = %q, want UpgradeSkipped", devResult.Status)
+		t.Errorf("axiom DevBuild Status = %q, want UpgradeSkipped", devResult.Status)
 	}
 
 	if devResult.ManualHint == "" {
-		t.Errorf("gentle-ai DevBuild ManualHint must be non-empty — should explain dev/source build")
+		t.Errorf("axiom DevBuild ManualHint must be non-empty — should explain dev/source build")
 	}
 
 	// engram (UpdateAvailable) must still be processed normally.
@@ -716,7 +716,7 @@ func TestToolUpgradeResult_ErrorWrapping(t *testing.T) {
 // --- Upgrade Backup Hardening Tests ---
 
 // TestConfigPathsForBackup_CoversManagedAgentPaths verifies that upgrade
-// backups include Gentle AI-managed files for installed agents, without treating
+// backups include Axiom-managed files for installed agents, without treating
 // every file in an agent config directory as backup-owned.
 func TestConfigPathsForBackup_CoversManagedAgentPaths(t *testing.T) {
 	homeDir := t.TempDir()

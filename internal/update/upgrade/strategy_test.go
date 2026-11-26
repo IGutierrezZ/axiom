@@ -138,7 +138,7 @@ func TestRunStrategy_BetaAxiomSelfUpgradeUsesGoInstallMain(t *testing.T) {
 
 	_, err := runStrategy(context.Background(), r, profile)
 	if err != nil {
-		t.Fatalf("runStrategy beta gentle-ai: unexpected error: %v", err)
+		t.Fatalf("runStrategy beta axiom: unexpected error: %v", err)
 	}
 
 	if gotName != "go" {
@@ -279,7 +279,7 @@ func TestRunStrategy_GoInstallFailure(t *testing.T) {
 }
 
 // TestEffectiveMethodAxiomOnWindowsUsesFailClosedBinaryPolicy verifies that
-// Windows never routes gentle-ai through a remote installer, and that when no
+// Windows never routes axiom through a remote installer, and that when no
 // usable `go install` target is declared it falls back to the binary strategy —
 // which on Windows is an explicit refusal naming a runnable source-install
 // command, not a download.
@@ -328,7 +328,7 @@ func TestEffectiveMethodAxiomOnWindowsUsesFailClosedBinaryPolicy(t *testing.T) {
 // --- TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary ---
 
 // TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary verifies that tools
-// OTHER than gentle-ai on Windows still use their declared install method
+// OTHER than axiom on Windows still use their declared install method
 // (binary, script, etc.).
 func TestEffectiveMethod_NonAxiomToolsOnWindowsUseBinary(t *testing.T) {
 	tests := []struct {

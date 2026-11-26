@@ -714,7 +714,7 @@ func TestComponentPathsSDDCodexIncludesHooksJSONOnlyForCodex(t *testing.T) {
 }
 
 // TestComponentPathsPermissionsCodexContributesNoPaths pins that the
-// Permission component claims nothing under ~/.codex. gentle-ai does not write
+// Permission component claims nothing under ~/.codex. axiom does not write
 // Codex's permissions config — not a profile, and not the legacy cleanup that
 // used to strip one — so there is no injection target to verify and nothing to
 // snapshot for rollback. A path reappearing here would mean something started
@@ -1180,7 +1180,7 @@ func TestInstallRoutingGuidanceWorkspaceScopeDeliversOpenCodeToHome(t *testing.T
 
 // TestAgentRoutingGuidanceStepRetiresPiManagedBlocks covers issue #3508: Pi
 // owns APPEND_SYSTEM.md, so routing never injects a new block but does remove
-// the paired stale block an older gentle-ai release wrote.
+// the paired stale block an older axiom release wrote.
 func TestAgentRoutingGuidanceStepRetiresPiManagedBlocks(t *testing.T) {
 	home := t.TempDir()
 	promptPath := systemPromptFileFor(t, home, model.AgentPi)

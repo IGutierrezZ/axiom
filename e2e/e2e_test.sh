@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# e2e_test.sh — End-to-end tests for gentle-ai installer
+# e2e_test.sh — End-to-end tests for Axiom installer
 #
 # Test tiers (controlled by environment variables):
 #   (default)            Tier 1: binary existence + dry-run tests (fast, no side-effects)
@@ -1568,13 +1568,10 @@ test_edge_theme_not_in_presets() {
         # theme-only must not inject SDD, persona, or other components.
         if [ -f "$HOME/.claude/CLAUDE.md" ]; then
             local sections
-            # Compare bare section ids, not full markers: the fork renamed the
-            # namespace to `axiom:` and upstream still ships `gentle-ai:`, so
-            # matching one namespace alone would report every section missing.
-            # The set comparison stays exact — this is still "these two and no
-            # others".
-            sections=$(grep -Eo '<!-- (axiom|gentle-ai):[a-z0-9-]+ -->' "$HOME/.claude/CLAUDE.md" \
-                | sed -E 's/<!-- (axiom|gentle-ai):([a-z0-9-]+) -->/\2/' | sort -u | tr '\n' ' ')
+            # Compare bare section ids, not full markers. The set comparison
+            # stays exact — this is still "these two and no others".
+            sections=$(grep -Eo '<!-- axiom:[a-z0-9-]+ -->' "$HOME/.claude/CLAUDE.md" \
+                | sed -E 's/<!-- axiom:([a-z0-9-]+) -->/\1/' | sort -u | tr '\n' ' ')
             if [ "$(printf '%s' "$sections" | xargs)" = "agent-routing remote-authorization" ]; then
                 log_pass "Theme-only: CLAUDE.md carries routing and remote authorization only"
             else

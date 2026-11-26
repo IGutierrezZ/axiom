@@ -1416,7 +1416,7 @@ func TestStopEngramProcessesUsesPowerShellResolver(t *testing.T) {
 // Related: PR #937 (PowerShell 5.1 fallback for SHA256 checksum verification)
 func TestSHA256ChecksumContract(t *testing.T) {
 	// Test data: arbitrary content to hash
-	testData := []byte("Gentle AI SHA256 contract test")
+	testData := []byte("Axiom SHA256 contract test")
 
 	// Calculate hash using Go's crypto/sha256 (same as engramDownloadToFile)
 	h := sha256.Sum256(testData)

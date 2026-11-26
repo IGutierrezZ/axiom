@@ -294,7 +294,7 @@ func TestReleaseDistributionPolicyAssertionFailsClosed(t *testing.T) {
 			mutate: func(t *testing.T, root string) {
 				replaceReleasePolicyFile(t, root, filepath.Join(".github", "workflows", "release.yml"),
 					"      - name: Verify published assets from GitHub\n",
-					"      - name: Create release through GitHub API\n        run: gh api --method POST repos/Gentleman-Programming/gentle-ai/releases\n\n      - name: Verify published assets from GitHub\n")
+					"      - name: Create release through GitHub API\n        run: gh api --method POST repos/IGutierrezZ/axiom/releases\n\n      - name: Verify published assets from GitHub\n")
 			},
 		},
 	} {
@@ -328,7 +328,7 @@ func TestModifiedReleaseVerifierCannotGainWriteAuthority(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := file.WriteString("\ngh api --method POST repos/Gentleman-Programming/gentle-ai/releases\n"); err != nil {
+	if _, err := file.WriteString("\ngh api --method POST repos/IGutierrezZ/axiom/releases\n"); err != nil {
 		_ = file.Close()
 		t.Fatal(err)
 	}

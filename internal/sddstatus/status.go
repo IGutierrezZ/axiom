@@ -174,7 +174,7 @@ type Status struct {
 	Relationships Relationships            `json:"relationships"`
 	// Consent is #2563's (S4b of #2540) edit-authority consent question:
 	// present exactly when the status reports blocked(edit_authority_missing),
-	// carrying the typed gentle-ai.sdd-integration.consent/v1 envelope whose
+	// carrying the typed axiom.sdd-integration.consent/v1 envelope whose
 	// granted choice names the exact runnable grant invocation. Structural
 	// absence (nil, omitempty) everywhere else.
 	Consent *SDDIntegrationConsentResult `json:"consent,omitempty"`
@@ -1423,14 +1423,14 @@ func resolveExplicitWorkspaceRoot(workspaceRoot string) (string, error) {
 // The markdown dispatcher already spelled these commands out, but --json never
 // reaches it, and --json is what machine consumers read. #2117 step 5 is the
 // cost: the SDD task-failure envelope hands back
-// `gentle-ai sdd-status --cwd <cwd> --json` as its continuation, which lands
+// `axiom sdd-status --cwd <cwd> --json` as its continuation, which lands
 // here whenever more than one change is active, and the caller found a reason
 // that listed options and named no command. The list stays first because it is
 // what a human scanning the refusal wants; the commands follow because that is
 // what makes the refusal runnable.
 //
 // The selector is positional: ParseCommandArgs has no --change flag, so the
-// emitted spelling must be `gentle-ai sdd-status <change> --cwd <root>`. The
+// emitted spelling must be `axiom sdd-status <change> --cwd <root>`. The
 // first shipped spelling used `--change` and every emitted command was
 // rejected by the very parser it targets (#3278, #2790), burning the
 // operator's single sanctioned observation on a syntax error. The guard test

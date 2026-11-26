@@ -35,7 +35,7 @@ import (
 // run_integration_test.go).
 //
 // It does the same for claude/opencode/gemini/qwen/kilocode/openclaw's own
-// LookPathOverride: since gentle-ai now refuses instead of installing a
+// LookPathOverride: since axiom now refuses instead of installing a
 // missing agent runtime (agentInstallStep in run.go), the many tests in this
 // package whose real target is protocol forwarding, engram provisioning,
 // workspace resolution, or config injection — not install/detection

@@ -9,7 +9,7 @@ import (
 // same way internal/app.ResolveVersion does, without importing internal/app
 // (this package must not depend on the top-level command dispatcher).
 // AppVersion is the build's stamped version, handed to this package by
-// internal/app at startup. It is the same string `gentle-ai --version` prints.
+// internal/app at startup. It is the same string `axiom --version` prints.
 //
 // Reading build info alone was wrong and a tester caught it: for any stamped
 // build the module pseudo-version disagrees with what --version reports, so

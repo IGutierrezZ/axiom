@@ -2257,7 +2257,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	overrides.apply(&selection)
 
 	// Restore Codex effort and carril model assignments from state so that
-	// `gentle-ai sync` preserves the user's per-phase effort and per-carril
+	// `axiom sync` preserves the user's per-phase effort and per-carril
 	// model choices instead of falling back to canonical defaults every time.
 	// This mirrors the TUI path (loadPersistedAssignments in app.go).
 	if len(selection.CodexModelAssignments) == 0 && len(persistedState.CodexModelAssignments) > 0 {

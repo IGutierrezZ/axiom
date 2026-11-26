@@ -118,7 +118,7 @@ func TestListBackupsWithSourceMetadata(t *testing.T) {
 	}
 }
 
-// TestRunArgsRestoreListIsDispatched verifies that `gentle-ai restore --list`
+// TestRunArgsRestoreListIsDispatched verifies that `axiom restore --list`
 // is correctly dispatched through RunArgs and produces a meaningful response
 // (either a backup list or a "no backups" message — never "unknown command").
 func TestRunArgsRestoreListIsDispatched(t *testing.T) {
@@ -1342,7 +1342,7 @@ func TestLoadPersistedAssignmentsWiresEffort(t *testing.T) {
 	}
 }
 
-// TestVersionBeforeSystemGuards verifies that `gentle-ai version` returns the
+// TestVersionBeforeSystemGuards verifies that `axiom version` returns the
 // version string without going through system detection or platform guards.
 func TestVersionBeforeSystemGuards(t *testing.T) {
 	var buf bytes.Buffer
@@ -1351,7 +1351,7 @@ func TestVersionBeforeSystemGuards(t *testing.T) {
 		t.Fatalf("version should not fail: %v", err)
 	}
 	if !strings.Contains(buf.String(), "axiom") && !strings.Contains(buf.String(), "axiom") {
-		t.Error("version output should contain 'axiom' or 'gentle-ai'")
+		t.Error("version output should contain 'axiom' or 'axiom'")
 	}
 }
 
@@ -1376,14 +1376,14 @@ func TestHelpCommand(t *testing.T) {
 }
 
 // TestUnknownCommandSuggestsHelp verifies that an unrecognised command returns
-// an error whose message suggests running 'axiom help' or 'gentle-ai help'.
+// an error whose message suggests running 'axiom help' or 'axiom help'.
 func TestUnknownCommandSuggestsHelp(t *testing.T) {
 	var buf bytes.Buffer
 	err := RunArgs([]string{"notacommand"}, &buf)
 	if err == nil {
 		t.Fatal("unknown command should return error")
 	}
-	if !strings.Contains(err.Error(), "axiom help") && !strings.Contains(err.Error(), "gentle-ai help") {
+	if !strings.Contains(err.Error(), "axiom help") {
 		t.Error("unknown command error should suggest 'axiom help'")
 	}
 }
@@ -1668,7 +1668,7 @@ func TestTUIExecuteReturnsStatePersistenceFailure(t *testing.T) {
 	if _, readErr := os.ReadFile(configPath); !os.IsNotExist(readErr) {
 		t.Fatalf("config after failed TUI install read error = %v, want absent", readErr)
 	}
-	if _, readErr := os.Stat(filepath.Join(home, ".gentle-ai", "bin", "opencode")); !os.IsNotExist(readErr) {
+	if _, readErr := os.Stat(filepath.Join(home, ".axiom", "bin", "opencode")); !os.IsNotExist(readErr) {
 		t.Fatalf("launcher after failed TUI install stat error = %v, want absent", readErr)
 	}
 	finalState, readErr := os.ReadFile(target)
@@ -1702,7 +1702,7 @@ func TestTUIExecuteRollsBackOnMalformedState(t *testing.T) {
 		t.Fatalf("tuiExecute() error = %v, want state read failure", result.Err)
 	}
 
-	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "bin", "opencode")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(home, ".axiom", "bin", "opencode")); !os.IsNotExist(err) {
 		t.Fatalf("launcher after failed TUI install stat error = %v, want absent", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "opencode.json")); !os.IsNotExist(err) {
@@ -2040,7 +2040,7 @@ func writeAppSDDStatusFile(t *testing.T, path string, content string) {
 }
 
 // TestRunArgs_TUIRestartsAfterAxiomUpgradeResult verifies that when the TUI
-// reports a successful gentle-ai upgrade, RunArgs calls restartAfterSelfUpgrade
+// reports a successful axiom upgrade, RunArgs calls restartAfterSelfUpgrade
 // which (after task 4.6) prints the restart guidance message instead of re-execing.
 func TestRunArgs_TUIRestartsAfterAxiomUpgradeResult(t *testing.T) {
 	assumeInteractiveTTY(t)

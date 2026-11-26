@@ -22,7 +22,7 @@ var (
 	codeGraphTempDir     = os.TempDir
 )
 
-// RunCodeGraph exposes the safe, Gentle-AI-owned initialization boundary used
+// RunCodeGraph exposes the safe, Axiom-owned initialization boundary used
 // by generated agent guidance. It intentionally accepts no raw CodeGraph args.
 func RunCodeGraph(args []string, stdout io.Writer) error {
 	if len(args) != 3 || args[0] != "init" || args[1] != "--cwd" || strings.TrimSpace(args[2]) == "" {

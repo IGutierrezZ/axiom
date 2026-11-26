@@ -234,7 +234,7 @@ func TestWindowsInstallScriptCreatesDashboardShortcuts(t *testing.T) {
 // a module-major migration that only rewrites the literal module string
 // (e.g. a blanket search-and-replace of the old "gentle-ai" + "/v2" pair)
 // misses this line, because it hardcodes the version suffix separately from
-// the "gentle-ai" literal. The expected major is derived from go.mod so the
+// the "axiom" literal. The expected major is derived from go.mod so the
 // next migration fails here first.
 func TestInstallScriptsGoInstallPackageMatchesModuleMajor(t *testing.T) {
 	goMod, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))

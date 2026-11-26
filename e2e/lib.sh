@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lib.sh — shared test helpers for gentle-ai E2E tests
+# lib.sh — shared test helpers for Axiom E2E tests
 # Sourced by e2e_test.sh; never executed directly.
 #
 # Deliberately NO `set -e` here: `source` shares shell options with the
@@ -83,7 +83,7 @@ cleanup_test_env() {
     rm -f "$HOME/.claude.json" 2>/dev/null || true
     rm -rf "$HOME/.codex" 2>/dev/null || true
     rm -rf "$HOME/.gemini" 2>/dev/null || true
-    rm -rf "$HOME/.gentle-ai" 2>/dev/null || true
+    rm -rf "$HOME/.axiom" 2>/dev/null || true
     rm -rf "$HOME/.codeium" 2>/dev/null || true
     rm -rf "$HOME/.cursor" 2>/dev/null || true
     rm -rf "$HOME/.qwen" 2>/dev/null || true
@@ -94,7 +94,7 @@ cleanup_test_env() {
 
 # setup_fake_engram_binary — install a deterministic local engram shim for E2E.
 #
-# Full Docker E2E validates gentle-ai's agent/config injection behavior, not the
+# Full Docker E2E validates axiom's agent/config injection behavior, not the
 # external Engram release CDN. The real installer skips the network download when
 # an `engram` binary already exists on PATH, so this shim keeps coverage of the
 # install pipeline while avoiding flaky GitHub API/rate-limit failures.
@@ -106,7 +106,7 @@ setup_fake_engram_binary() {
         return 0
     fi
 
-    local fake_bin_dir="$HOME/.gentle-ai-e2e/bin"
+    local fake_bin_dir="$HOME/.axiom-e2e/bin"
     local fake_engram="$fake_bin_dir/engram"
 
     mkdir -p "$fake_bin_dir"
@@ -259,37 +259,27 @@ assert_file_matches() {
     fi
 }
 
-# The fork renamed the managed section-marker namespace from `gentle-ai:` to
-# `axiom:`. Upstream still ships `gentle-ai:`, so marker assertions accept
-# either namespace and absorbing upstream does not reopen this contract.
+# Managed section markers use the `axiom:` namespace and the install state root
+# under $HOME is `.axiom`: every production writer resolves the backup root
+# through `internal/backup`, which writes `.axiom/backups`.
 #
-# Use these instead of assert_file_contains with a hardcoded namespace: a
-# negative assertion written against one namespace alone passes vacuously once
-# the other namespace ships, which is a false green, not a check.
-#
-# The same split applies to the install state roots under $HOME. INC-20 made
-# every production writer resolve the backup root through `internal/backup`,
-# which writes `.axiom/backups`; upstream still writes `.gentle-ai/backups`.
-#
-# These assertions read the output of a real `$BINARY install`, so naming one
-# root literally ties them to whichever product wrote it. Worse, they count
-# directories: a literal that no writer fills any more does not fail loudly, it
-# reports zero and fails for a reason that has nothing to do with backups.
+# These assertions read the output of a real `$BINARY install`, so they count
+# directories: a literal that no writer fills does not fail loudly, it reports
+# zero and fails for a reason that has nothing to do with backups.
 #
 # The Go guard `TestUserStateRootsResolveThroughOwningPackage` cannot cover this
-# file — it parses Go ASTs, and a shell literal is invisible to it. That is why
-# the audit that found 18 Go assertion sites missed these five.
+# file — it parses Go ASTs, and a shell literal is invisible to it.
 #
-# find_backup_snapshots prints every snapshot directory under either root, one
+# find_backup_snapshots prints every snapshot directory under the root, one
 # per line, newest last. Callers keep using `wc -l` and `tail -1` unchanged.
 find_backup_snapshots() {
-    find "$HOME/.axiom/backups" "$HOME/.gentle-ai/backups" \
+    find "$HOME/.axiom/backups" \
         -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort
 }
 
 # SECTION_ID is the bare section id (e.g. `persona`), never the full marker.
 managed_marker_pattern() {
-    printf '<!-- /?(axiom|gentle-ai):%s -->' "$1"
+    printf '<!-- /?axiom:%s -->' "$1"
 }
 
 # assert_file_contains_marker FILE SECTION_ID LABEL
@@ -476,7 +466,7 @@ assert_md5_match() {
 }
 
 # assert_no_duplicate_section FILE SECTION_ID LABEL
-# Checks that the gentle-ai section marker appears exactly once (no duplicates).
+# Checks that the Axiom section marker appears exactly once (no duplicates).
 assert_no_duplicate_section() {
     local file="$1"
     local section_id="$2"
@@ -485,12 +475,8 @@ assert_no_duplicate_section() {
         log_fail "Cannot check sections — file not found: $file"
         return 1
     fi
-    # Namespace-agnostic: the fork renamed the marker namespace to `axiom:` and
-    # upstream still ships `gentle-ai:`. Counting a single namespace would
-    # report zero here and, worse, would miss a genuine duplicate written in
-    # the other one.
     local marker
-    marker="<!-- (axiom|gentle-ai):${section_id} -->"
+    marker="<!-- axiom:${section_id} -->"
     local count
     # `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would
     # yield the two-line string "0\n0" and break the numeric comparisons below.

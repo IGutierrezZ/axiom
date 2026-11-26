@@ -29,7 +29,7 @@ var retiredWorkRunCeremonyTokens = []string{
 	"Capability stop rule",
 	"connectorSessionRef",
 	"GENTLE_AI_PRODUCTIVE_RUNTIME",
-	"{{GENTLE_AI_RUNTIME_AGENT_ID}}",
+	"{{AXIOM_RUNTIME_AGENT_ID}}",
 	"--contract gentle-ai.work-",
 }
 
@@ -119,7 +119,7 @@ func TestOrchestratorsProjectOrganicRouting(t *testing.T) {
 // TestEveryRuntimeRendersTheSharedSections confirms the resolved body
 // actually reaches the rendered prompt once this marker exists.
 func TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker(t *testing.T) {
-	const marker = "{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
+	const marker = "{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}"
 	paths := allSDDOrchestratorAssetPaths(t)
 	if len(paths) != 12 {
 		t.Fatalf("orchestrator coverage sees %d assets, want 12", len(paths))
@@ -768,7 +768,7 @@ func TestSkillRegistryPluginContract(t *testing.T) {
 			t.Fatalf("skill-registry.ts missing %q", want)
 		}
 	}
-	// stdout belongs to OpenCode commands whose output gentle-ai parses
+	// stdout belongs to OpenCode commands whose output axiom parses
 	// (`opencode models --verbose`); plugin logging must stay on stderr.
 	for _, forbidden := range []string{"console.info", "console.log"} {
 		if strings.Contains(src, forbidden) {
@@ -4013,7 +4013,7 @@ func TestEveryOrchestratorReferencesTheCommitReviewSection(t *testing.T) {
 	if len(paths) != 12 {
 		t.Fatalf("expected twelve orchestrators, got %d: %v", len(paths), paths)
 	}
-	const block = "### Commit Review\n\n{{GENTLE_AI_SDD_SECTION:Commit Review}}"
+	const block = "### Commit Review\n\n{{AXIOM_SDD_SECTION:Commit Review}}"
 	for _, path := range paths {
 		content := MustRead(path)
 		if strings.Count(content, block) != 1 {

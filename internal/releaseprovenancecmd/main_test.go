@@ -135,7 +135,7 @@ func TestCIBuildStillProducesReleaseProvenance(t *testing.T) {
 	t.Run("another repository still refuses", func(t *testing.T) {
 		out, args := provenanceArgs(t)
 		ciEnvironment(t)
-		t.Setenv("GITHUB_REPOSITORY", "someone-else/gentle-ai")
+		t.Setenv("GITHUB_REPOSITORY", "someone-else/axiom")
 		if err := run(args); err == nil {
 			t.Fatal("CI build accepted another repository")
 		}

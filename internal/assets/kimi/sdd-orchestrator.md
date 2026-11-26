@@ -4,50 +4,50 @@ Bind this to the dedicated `sdd-orchestrator` agent or rule only. Do NOT apply i
 
 ## Agent Teams Orchestrator
 
-{{GENTLE_AI_SDD_SECTION:Agent Teams Orchestrator}}
+{{AXIOM_SDD_SECTION:Agent Teams Orchestrator}}
 
 ### Lossless Blocking Prompts (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Contract}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}}
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Contract}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Native Route (Plain Fallback Only)}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Fallback}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
+{{AXIOM_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
 
 ### Language Domain Contract
 
-{{GENTLE_AI_SDD_SECTION:Language Domain Contract}}
+{{AXIOM_SDD_SECTION:Language Domain Contract}}
 
 ### Delegation Rules
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules}}
+{{AXIOM_SDD_SECTION:Delegation Rules}}
 
 Use Kimi's `kimi_cli.tools.multiagent:Task` with a bounded general worker for delegated-direct work; reserve installed `sdd-*` subagents for a selected SDD route.
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules Handoff}}
+{{AXIOM_SDD_SECTION:Delegation Rules Handoff}}
 
 #### Mandatory Delegation Triggers
 
-{{GENTLE_AI_SDD_SECTION:Mandatory Delegation Triggers}}
+{{AXIOM_SDD_SECTION:Mandatory Delegation Triggers}}
 
 #### Delegated Verification Gate (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
 #### Cost and Context Balance
 
-{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
+{{AXIOM_SDD_SECTION:Cost and Context Balance}}
 
 ## SDD Workflow (Spec-Driven Development)
 
-{{GENTLE_AI_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
+{{AXIOM_SDD_SECTION:SDD Workflow (Spec-Driven Development)}}
 
 ### Artifact Store Policy
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Policy}}
+{{AXIOM_SDD_SECTION:Artifact Store Policy}}
 
 ### Commands
 
@@ -75,15 +75,15 @@ Do NOT invent custom `/sdd-*` command files. On Kimi, user-facing entrypoints ar
 
 ### Native SDD Dispatcher Guard
 
-{{GENTLE_AI_SDD_SECTION:Native SDD Dispatcher Guard}}
+{{AXIOM_SDD_SECTION:Native SDD Dispatcher Guard}}
 
 ### SDD Change Kickoff and Block Gates
 
-{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
+{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
 ### SDD Independent Review
 
-{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+{{AXIOM_SDD_SECTION:SDD Independent Review}}
 
 ### SDD Init Guard (MANDATORY)
 
@@ -106,7 +106,7 @@ No mode is assumed by default: `multirepo` always runs **Interactive** and never
 
 Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" approve only the immediate next phase, not the rest of the SDD pipeline. Do not treat a generated artifact as approved until the user has had a chance to review or explicitly delegate that review.
 
-{{GENTLE_AI_RESEARCH_LIFECYCLE}}
+{{AXIOM_RESEARCH_LIFECYCLE}}
 
 ### Automatic Mode Gatekeeper (MANDATORY)
 
@@ -134,11 +134,11 @@ The gatekeeper runs in addition to the Mandatory Delegation Triggers; it never r
 
 ### Artifact Store Mode
 
-{{GENTLE_AI_SDD_SECTION:Artifact Store Mode}}
+{{AXIOM_SDD_SECTION:Artifact Store Mode}}
 
 ### Delivery Strategy
 
-{{GENTLE_AI_SDD_SECTION:Delivery Strategy}}
+{{AXIOM_SDD_SECTION:Delivery Strategy}}
 
 ### Chain Strategy
 
@@ -153,15 +153,15 @@ When `delivery_strategy` is `chained`, treat `chained-pr` (registry skill `chain
 
 ### Commit Review
 
-{{GENTLE_AI_SDD_SECTION:Commit Review}}
+{{AXIOM_SDD_SECTION:Commit Review}}
 
 ### Dependency Graph
 
-{{GENTLE_AI_SDD_SECTION:Dependency Graph}}
+{{AXIOM_SDD_SECTION:Dependency Graph}}
 
 ### Result Contract
 
-{{GENTLE_AI_SDD_SECTION:Result Contract}}
+{{AXIOM_SDD_SECTION:Result Contract}}
 
 ### Apply/Verify Context Forwarding (MANDATORY)
 
@@ -208,7 +208,7 @@ After every delegation that returns a result, check the `skill_resolution` field
 
 ### Sub-Agent Context Protocol
 
-{{GENTLE_AI_SDD_SECTION:Sub-Agent Context Protocol}}
+{{AXIOM_SDD_SECTION:Sub-Agent Context Protocol}}
 
 #### SDD Phases
 
@@ -225,7 +225,7 @@ After every delegation that returns a result, check the `skill_resolution` field
 
 ### Archive Final-State Handoff (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Archive Final-State Handoff (MANDATORY)}}
 
 ### Engram Topic Key Format
 
@@ -248,4 +248,4 @@ Convention files live under `~/.config/agents/skills/_shared/` (global) or `.age
 
 ### Recovery Rule
 
-{{GENTLE_AI_SDD_SECTION:Recovery Rule}}
+{{AXIOM_SDD_SECTION:Recovery Rule}}

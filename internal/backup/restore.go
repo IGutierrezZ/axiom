@@ -121,7 +121,7 @@ func MachineRoots(home string) []string {
 // When Roots is empty, Restore falls back to the directory returned by
 // UserHomeDirFn plus MachineRoots(home) — the historical, backward-compatible
 // behavior extended to the Axiom machine roots outside home. This is the
-// correct default for standalone restores (`gentle-ai restore <id>` and the
+// correct default for standalone restores (`axiom restore <id>` and the
 // TUI "restore from list" screen): the backup being restored may be
 // arbitrarily old, and the workspace root that was in effect when it was
 // created is not something the current process can safely rediscover on its

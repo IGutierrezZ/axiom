@@ -14,10 +14,10 @@ import (
 // line of the shared sections asset.
 var sharedSectionMarkerLine = regexp.MustCompile(`(?m)^<!-- sdd-orchestrator-section:(.+):start -->$`)
 
-// anyOrchestratorSectionPlaceholder matches every `{{GENTLE_AI_..._SECTION:` token,
+// anyOrchestratorSectionPlaceholder matches every `{{AXIOM_..._SECTION:` token,
 // not only the SDD one, so a future family of shared sections cannot ship
 // unresolved either.
-var anyOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_[A-Z_]*SECTION:`)
+var anyOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{AXIOM_[A-Z_]*SECTION:`)
 
 // resolvedOrchestratorSource returns an orchestrator template with its shared
 // sections expanded and nothing else applied. Tests that assert over the text a
@@ -111,7 +111,7 @@ func TestSharedOrchestratorSectionsAreNotCopiedBackIntoTemplates(t *testing.T) {
 		raw := assets.MustRead(templatePath)
 		for _, name := range names {
 			if body := sharedOrchestratorSection(name); strings.Contains(raw, body) {
-				t.Errorf("%s carries the body of shared section %q inline; it must carry {{GENTLE_AI_SDD_SECTION:%s}} instead", templatePath, name, name)
+				t.Errorf("%s carries the body of shared section %q inline; it must carry {{AXIOM_SDD_SECTION:%s}} instead", templatePath, name, name)
 			}
 		}
 	}

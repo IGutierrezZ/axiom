@@ -31,6 +31,7 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"af143abb8250087431110739af3e6ae7b16c963f200968b777e1f38b3e58d8ff", // 0efb8b92
 			"b24f83e90d455807dbd122f12a953952e7ff6550e3a0d733030c22843f0ce148", // 682d3fe4
 			"d402d2414b3c9ec5b31cad6f85787d152037e76148c3cea18fd443c1d7f5eab4", // e23b27b6
+			"9fb2486c7cd25722adc1511b9b2ec5926530d8479eaf7dc0ec375b901d923766", // 0873b436
 		},
 		"v2": {
 			"c2b4382c014c2c15d4b18c70df8d65c272e557d2639e2b2f1ad8d9236142dc48", // 5a395e45
@@ -46,6 +47,7 @@ var historicalOpenCodePluginDigests = map[string]map[string][]string{
 			"f34c4e9c33848d5c34792a65a36a2279063ccb8e071f24cb6d9b2e83bce6e01b", // a517efde
 			"fdcbf9c6e4c398216c32394abf4c1ee2f9ed17eb96b1238c226bf5dd6a08416f", // 27fc25ec
 			"52367d825a500d97c066af36f13fb8ca58ce85c7f156a7d4d05478d5e645bec1", // 3c55c493
+			"ad88348ee64c5632fc99fc13f9bb5851803edabd52c1ebfe6c6025d3cbb75af2", // 0873b436
 		},
 		"v2": {
 			"6c894d141b97b67f2689b41afc79579ce3be2f3aa57aa2de9586645fbf0b18f4", // 3c55c493

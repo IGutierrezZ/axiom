@@ -106,7 +106,7 @@ func TestWindowsBetaAxiomUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
 		}
 	}
 	if tool.GoImportPath == "" {
-		t.Fatal("shipped gentle-ai registry entry must declare GoImportPath")
+		t.Fatal("shipped axiom registry entry must declare GoImportPath")
 	}
 
 	gobin := t.TempDir()

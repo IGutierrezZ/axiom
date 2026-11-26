@@ -8,7 +8,7 @@ import (
 )
 
 // TestSelfToolIdentityDetection verifies that the three H-4 sites detect the
-// self-tool under both historical names: axiom and gentle-ai (F7.2).
+// self-tool under both historical names: axiom and axiom (F7.2).
 func TestSelfToolIdentityDetection(t *testing.T) {
 	tests := []struct {
 		name     string
