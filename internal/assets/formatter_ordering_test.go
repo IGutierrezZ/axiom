@@ -119,7 +119,7 @@ func TestRequiredChecksFailClosedWhenFormatFails(t *testing.T) {
 			if job.ifTokens == nil {
 				expectedIf := "    if: always()\n"
 				if !strings.Contains(section, expectedIf) {
-					expectedIf = "    if: github.event_name == 'workflow_dispatch'\n"
+					expectedIf = "    if: github.event_name == 'workflow_dispatch' && inputs.full\n"
 				}
 				required = append(required, expectedIf)
 			} else {
