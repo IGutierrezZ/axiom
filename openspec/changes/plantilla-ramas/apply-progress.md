@@ -11,13 +11,16 @@
 
 - [x] 3.1 `branch.ResolveChangeBranch(change, prefix, ...ChangeBranchSource)` y `ArchiveBranchFor(changeBranch)` (`change_branch.go`), adoptados por planner, planner_archive, archive_plan, verdict y autofetch_relevance conservando su orden de fuentes. Commit `refactor(branch): ResolveChangeBranch como único punto de composición`. Las pruebas existentes pasan sin tocar expectativas.
 
+- [x] 3.2 Códigos `branch_template_unresolved`/`branch_template_not_applicable`, `PendingReasonAwaitingRole`, etiquetas, constructores en `template_refusal.go` y `Verdict.Details`. Commit `feat(branch): códigos y constructores de rechazo de plantilla`.
+
 ## Pendientes
 
-3.2, 3.3, 4.1, 4.2, 5.1.
+3.3, 4.1, 4.2, 5.1.
 
 ## Desviaciones
 
 - Constantes de variable con prefijo `Var*` (`VarSlug`, etc.) en lugar de `Slug`, que chocaba con la función `Slug` del mismo paquete. Las tareas posteriores deben usar `nametemplate.VarRef`, etc.
 - TDD: en 1.1 la implementación y las pruebas se escribieron juntas; en 2.1 se observó RED (fallo de compilación de las pruebas) antes de implementar.
 - 2.1: `openspecHostPath` trata `specs_repository` vacío, `.` u `openspec` como entrada `.` (el desplazamiento léxico vacío del repositorio de specs es la propia carpeta maestra); solo un `specs_repository` absoluto cae a `git:`.
+- 3.2: pruebas escritas junto con el código (sin RED separado). Firmas: `TemplateUnresolved(change, master, key, variable, role, lane)`, `TemplateNotApplicable(change, master, key, reason, lane)`, `TemplateInvalidName(change, master, key, field, value, cause)`, `TemplateCollision`/`TemplateCandidateCollision(change, master, repo, name, roles)`, `TemplateReservedName(change, master, repo, name, reserved)`, `IntegrationsLinksUnreadable(operation, change, master, cause)`; constantes `TemplateReason*`.
 - 2.1: la sección de usuario se añadió como `## Plantillas de nombre de rama (branch_template)` en `docs/usage.md` y la lista de claves editables ya cita las tres claves, aunque las filas del catálogo llegan en 2.2 (misma PR).

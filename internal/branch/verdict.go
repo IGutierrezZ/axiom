@@ -65,6 +65,9 @@ type Verdict struct {
 	// Continuation es la orden exacta de `axiom branch ensure` que pone el repositorio en la rama
 	// que corresponde; solo la lleva `wrong_branch`.
 	Continuation string
+	// Details amplía el veredicto con datos de máquina (`reason`, `roles`, `pendingRoles`) cuando
+	// una rama del cambio aún no existe porque espera la entrada de su rol; vacío en el resto.
+	Details map[string]string
 }
 
 // Decide calcula el veredicto de rama (RF-BRA-19). Las reglas, por papel del repositorio:

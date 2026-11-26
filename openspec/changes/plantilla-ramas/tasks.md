@@ -76,13 +76,14 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
   - Alcanzabilidad: ambos símbolos se llaman desde el planificador, el archivado, la guarda y el autofetch.
   - Commit: `refactor(branch): ResolveChangeBranch como único punto de composición`.
 
-- [ ] 3.2 **Unidad 6a. Códigos, etiquetas y constructores de rechazo.**
+- [x] 3.2 **Unidad 6a. Códigos, etiquetas y constructores de rechazo.**
   - Ficheros: `internal/branch/types.go`, `internal/branch/labels.go`, crear `internal/branch/template_refusal.go` y su prueba.
   - Qué: `CodeBranchTemplateUnresolved`, `CodeBranchTemplateNotApplicable`, `PendingReasonAwaitingRole`; etiquetas; constructores `TemplateUnresolved`, `TemplateNotApplicable` (`Details.reason` = `shared_branch` | `openspec_branch` | `odd_lane`), `TemplateInvalidName`, `TemplateCollision`, `TemplateReservedName`, `TemplateCandidateCollision`, `IntegrationsLinksUnreadable`; todos con `Continuation` no vacía (D-11).
   - RED previstos: cada código tiene etiqueta y continuación; el trinquete de rechazos de producción en `internal/cli` (`TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`) en verde con los códigos nuevos (ejercitado en 3.3, cuando existen las rutas de producción).
   - Cubre: prov:BRA:4.
   - Verificación: `go test ./internal/branch/ -run 'Refusal\|Label'`.
   - Commit: se integra con 3.3 en el commit de la unidad 6 si no compila sola con el trinquete de código muerto; en otro caso `feat(branch): códigos y constructores de rechazo de plantilla`.
+  - Evidencia: `go test ./internal/branch/ -run 'Refusal|Label|Decide|Verdict'` ok; `go vet ./internal/branch/...` ok; `go build ./...` ok; trinquete `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign` ok. Se añadió también `Verdict.Details`.
 
 - [ ] 3.3 **Unidad 6b. Plantilla en el plan, valores de variables, instantánea con plantilla e ODD (RED primero).**
   - Ficheros: `internal/branch/policy.go` (`Policy.BranchTemplate`, `RoleTemplates`, `RepoPolicy.BranchTemplate`/`BranchTemplateKey`, `For` hereda), `internal/branch/planner.go` (`TemplateValues`, `PlanInput.EnteringRole/TemplateValues/Describe`, `RepoFacts.Frozen`, `BranchPlan.Template`, precedencia D-05), crear `internal/branch/planner_template.go` (`effectiveTemplate`, `renderBranch`, `checkTemplateCollisions`), `internal/branch/planner_snapshot.go`, `internal/branch/planner_archive.go` (con plantilla, `Exceptions.Prefix` no aplica), `internal/branch/change_branch.go` (rama con plantilla), `internal/branch/engine/engine.go` (`gatherWith`: `needs` y `resolveTemplateValues`), crear `internal/branch/engine/template_values.go` (`templatesInPlay`, `resolveTemplateValues`), `internal/branch/engine/snapshot.go` (escribe `Template`, `PendingBranches` y `TemplateValues`; plan con `sealing=true`), `internal/changestart/staging.go` (`WorkItemFacts` exportada) y pruebas en `internal/branch/`, `internal/branch/engine/`, `internal/changestart/`, `internal/cli/sdd_kickoff_branch_test.go`.

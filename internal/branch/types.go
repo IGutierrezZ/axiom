@@ -160,7 +160,16 @@ const (
 	// CodeScopeNotApplicable es el rechazo de `axiom branch scope` ante un cambio del carril `odd` o
 	// con un kickoff sin instantánea de repositorios (RF-BRA-35).
 	CodeScopeNotApplicable Code = "scope_not_applicable"
+
+	// Rechazos de la plantilla de nombre de rama (design D-11): una variable sin valor y una
+	// plantilla válida que no aplica a la rama.
+	CodeBranchTemplateUnresolved    Code = "branch_template_unresolved"
+	CodeBranchTemplateNotApplicable Code = "branch_template_not_applicable"
 )
+
+// PendingReasonAwaitingRole es el motivo de una rama pendiente que espera la entrada de su rol
+// (design D-10, `Details["reason"]` del veredicto y `reason` de las ramas pendientes).
+const PendingReasonAwaitingRole = "awaiting_role"
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,
 // `--base`, RF-BRA-12). Se registran en el registro local (Record).
