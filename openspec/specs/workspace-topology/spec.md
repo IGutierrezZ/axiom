@@ -860,9 +860,13 @@ El sistema DEBE ofrecer un catálogo de las claves de `axiom.yaml` que se pueden
 
 Claves editables: `workspace.name`, `git.integration_branch`, `git.branch_prefix`, `git.main_branch`, `git.promotion`, `git.branch_template`, `workflow.lane`, `delivery.split_hint_lines`, `sdd.iso`, `sdd.id_pattern`, `sdd.explainer_html`; y, solo en `multirepo`, `repositories[].integration_branch`, `repositories[].branch_prefix`, `repositories[].promotion`, `repositories[].branch_template`, `acceptance_tests.enabled`, `acceptance_tests.environments`, `roles[].gate_policy` (con `blocking`, `deferred` y `optional`) y `roles[].branch_template`. Las tres claves `branch_template` son de tipo cadena, sin vocabulario cerrado, y una escritura con un valor que incumple RF-TOP-24 (por ejemplo, por `PUT /api/settings`) DEBE rechazarse nombrando la clave, sin modificar `axiom.yaml`. `sdd.iso` y `sdd.id_pattern` DEBEN llevar un efecto descrito explícito.
 
+Claves de integración editables: `integrations[<plugin>].enabled` y `integrations[<plugin>].<clave>` por cada campo de configuración (`ConfigField`) que declara el manifiesto del plugin. El catálogo DEBE derivar de ese manifiesto el tipo, si es obligatoria, los valores permitidos (enumeración), el formato y los mínimos y máximos de cada clave, sin repetir literales del plugin, de modo que un campo nuevo del manifiesto aparezca sin editar el catálogo. Una prueba de coherencia DEBE fallar si el catálogo declara un valor o un límite que el decodificador estricto de `integrations` rechaza, o al revés. El PAT y cualquier secreto NO DEBEN ser claves del catálogo; el catálogo solo depende del manifiesto del plugin, no de su adaptador.
+
+(Previously: el catálogo excluía `integrations.*`.)
+
 Claves de solo lectura (con `editable: false`): `technical_context`, `workspace.root`, `skill_roots`, `governance.*`, `workspace.topology` y `workspace.specs_repository`. `artifact_store` NO DEBE estar en el catálogo como editable.
 
-El catálogo NO DEBE contener `integrations.*`, ni controles de RDD, ni `commit_review` ni `docs_publication` (no son claves de `axiom.yaml`). Las claves documentadas al registrarlas, `sdd.explainer_html`, `acceptance_tests.*` y `delivery.split_hint_lines`, DEBEN estar registradas con su tipo y su vocabulario.
+El catálogo NO DEBE contener claves de `integrations` que el manifiesto del plugin no declare, ni controles de RDD, ni `commit_review` ni `docs_publication` (no son claves de `axiom.yaml`). Las claves documentadas al registrarlas, `sdd.explainer_html`, `acceptance_tests.*` y `delivery.split_hint_lines`, DEBEN estar registradas con su tipo y su vocabulario.
 
 El catálogo para un proyecto concreto DEBE filtrarse: en `monorepo-embedded` NO DEBE incluir `roles`, `gate_policy`, `repositories` ni `acceptance_tests`; en un proyecto ISO (`sdd.iso: true`) los valores permitidos de `workflow.lane` NO DEBEN incluir `odd`.
 
@@ -891,7 +895,7 @@ El catálogo para un proyecto concreto DEBE filtrarse: en `monorepo-embedded` NO
 
 #### Scenario: Exclusiones del catálogo
 - **DADO** el catálogo de cualquier proyecto
-- **CUANDO** se buscan `integrations`, `artifact_store`, `rdd`, `commit_review` y `docs_publication`
+- **CUANDO** se buscan `artifact_store`, `rdd`, `commit_review` y `docs_publication`, y cualquier clave de PAT o de secreto
 - **ENTONCES** ninguna aparece como entrada editable
 
 #### Scenario: Claves registradas de cambios anteriores
@@ -905,6 +909,22 @@ El catálogo para un proyecto concreto DEBE filtrarse: en `monorepo-embedded` NO
 - **ENTONCES** los valores permitidos de `workflow.lane` son `sdd` y `ask`
 
 
+
+#### Scenario: El catálogo incluye las claves de integración derivadas del manifiesto
+- **DADO** el plugin `azuredevops` con su manifiesto
+- **CUANDO** se consulta el catálogo
+- **ENTONCES** incluye `integrations[azuredevops].enabled` y una entrada `integrations[azuredevops].<clave>` por cada campo del manifiesto, con tipo, obligatoriedad, vocabulario, formato y límites tomados de él
+- **Y** ninguna entrada es un PAT ni un secreto
+
+#### Scenario: Un campo nuevo del manifiesto aparece sin editar el catálogo
+- **DADO** un manifiesto de prueba con un campo de enumeración añadido
+- **CUANDO** se construye el catálogo
+- **ENTONCES** la clave aparece con exactamente los valores del manifiesto
+
+#### Scenario: Una prueba de coherencia falla ante una divergencia con el decodificador
+- **DADO** un valor o un límite del catálogo que el decodificador estricto de `integrations` rechaza, o al revés
+- **CUANDO** se ejecuta la prueba de coherencia
+- **ENTONCES** la prueba falla
 
 #### Scenario: Las tres claves `branch_template` figuran en el catálogo
 - **DADO** el catálogo de un proyecto `multirepo`
@@ -940,17 +960,25 @@ El catálogo para un proyecto concreto DEBE filtrarse: en `monorepo-embedded` NO
 - **ENTONCES** se rechaza porque la clave no aplica a esa topología (no figura en su catálogo)
 - **Y** `axiom.yaml` no se modifica
 
+#### Scenario: Una clave de integración enviada como ajuste se valida con el decodificador estricto
+- **DADO** el dashboard y `PUT /api/settings` con una clave de `integrations[azuredevops]` de valor inválido para el manifiesto
+- **CUANDO** se procesa la escritura
+- **ENTONCES** se rechaza nombrando la clave y `axiom.yaml` no se modifica
+
 #### Scenario: Una plantilla válida enviada como ajuste se escribe
 - **DADO** el dashboard y `PUT /api/settings` con `git.branch_template: "{prefix}/{ref}-{slug}"`
 - **CUANDO** se procesa la escritura
 - **ENTONCES** `axiom.yaml` contiene `git.branch_template: "{prefix}/{ref}-{slug}"` y vuelve a cargarse como `COMPLIANT`
+
 ### Requirement: Escritor de Round-Trip de `axiom.yaml` que Conserva Comentarios y Orden y Revalida el Documento Completo (RF-TOP-22)
 
-El sistema DEBE ofrecer un escritor que aplique un parche de claves del catálogo sobre `axiom.yaml` operando sobre el árbol YAML, de modo que el resto del documento conserve sus comentarios (de cabecera, de línea y de pie), el orden de las claves y los bloques que no se tocan. El escritor DEBE aplicar solo claves editables del catálogo y rechazar cualquier otra con un error tipado.
+El sistema DEBE ofrecer un escritor que aplique un parche de claves del catálogo sobre `axiom.yaml` operando sobre el árbol YAML, de modo que el resto del documento conserve sus comentarios (de cabecera, de línea y de pie), el orden de las claves y los bloques que no se tocan. El escritor DEBE aplicar solo claves editables del catálogo y rechazar cualquier otra con un error tipado. Esto incluye el bloque `integrations`: el escritor edita `integrations.<plugin>` sobre el mismo árbol, con las mismas garantías que los demás bloques, y NO existe un escritor aparte para él.
 
-El parche es un mapa de claves del catálogo a valores, con `nil` para retirar. Las claves por elemento se direccionan como `repositories[<path>].<campo>` (el selector se compara con la ruta normalizada, `\` a `/` y `path.Clean`) y `roles[<id>].<campo>`. Todos los cambios del parche se aplican sobre el mismo árbol y se validan juntos, como un lote atómico de todo o nada: si uno falla, no se escribe ninguno. La comprobación de tipo y de vocabulario de cada clave se hace contra el vocabulario sin filtrar por ISO; la contradicción ISO la decide la validación del documento resultante, de modo que desactivar ISO y elegir `odd` en el mismo lote es válido.
+(Previously: el escritor no editaba el bloque `integrations`.)
 
-Un valor `null` para una clave DEBE retirarla del fichero (el motor vuelve a su valor por defecto); si un bloque queda vacío, DEBE borrarse también. Al retirar el último campo de ajuste de una entrada de `repositories`, la entrada se borra, y al quedar vacía la secuencia, el bloque. `workspace.name` es obligatoria y no admite `null`. El escritor DEBE rechazar editar un documento que contenga anclas, alias o claves de mezcla `<<`, más de un documento YAML (reescribirlo borraría los siguientes) o una clave repetida en el mapeo que se edita, con un error tipado en castellano que nombra la construcción y su línea, sin escribir.
+El parche es un mapa de claves del catálogo a valores, con `nil` para retirar. Las claves por elemento se direccionan como `repositories[<path>].<campo>` (el selector se compara con la ruta normalizada, `\` a `/` y `path.Clean`), `roles[<id>].<campo>` e `integrations[<plugin>].<clave>` (el identificador del plugin puede contener guiones y se interpreta íntegro). Todos los cambios del parche se aplican sobre el mismo árbol y se validan juntos, como un lote atómico de todo o nada: si uno falla, no se escribe ninguno. La comprobación de tipo y de vocabulario de cada clave se hace contra el vocabulario sin filtrar por ISO; la contradicción ISO la decide la validación del documento resultante, de modo que desactivar ISO y elegir `odd` en el mismo lote es válido.
+
+Retirar la última clave de `integrations.<plugin>` borra la entrada del plugin y, al quedar vacío, el bloque `integrations`. Un valor `null` para una clave DEBE retirarla del fichero (el motor vuelve a su valor por defecto); si un bloque queda vacío, DEBE borrarse también. Al retirar el último campo de ajuste de una entrada de `repositories`, la entrada se borra, y al quedar vacía la secuencia, el bloque. `workspace.name` es obligatoria y no admite `null`. El escritor DEBE rechazar editar un documento que contenga anclas, alias o claves de mezcla `<<`, más de un documento YAML (reescribirlo borraría los siguientes) o una clave repetida en el mapeo que se edita, con un error tipado en castellano que nombra la construcción y su línea, sin escribir.
 
 El round-trip DEBE conservar el formato del fichero, incluidas las líneas en blanco entre bloques, los finales de línea CRLF y el BOM UTF-8 si el original los tenía: un parche sin efecto NO DEBE alterar el fichero ni un solo byte, y uno con efecto solo cambia las líneas afectadas.
 
@@ -1024,10 +1052,40 @@ La escritura DEBE ser atómica: fichero temporal en el mismo directorio y `renam
 - **Y** aplicar `sdd.iso: true` sobre un proyecto con `workflow.lane: odd` se rechaza del mismo modo
 
 #### Scenario: Clave no editable rechazada
-- **DADO** un parche que incluye `workspace.topology` o `integrations.<algo>`
+- **DADO** un parche que incluye `workspace.topology`
 - **CUANDO** se aplica
 - **ENTONCES** se rechaza con un error tipado de clave no editable
 - **Y** el fichero no cambia
+
+#### Scenario: Se edita `integrations` conservando comentarios y orden
+- **DADO** un `axiom.yaml` comentado con un bloque `integrations.azuredevops`
+- **CUANDO** se aplica `integrations[azuredevops].<clave>` con un valor válido
+- **ENTONCES** solo cambia esa línea y los comentarios, el orden y los bloques ajenos permanecen idénticos
+
+#### Scenario: Se activa un plugin que no estaba en el fichero
+- **DADO** un `axiom.yaml` sin bloque `integrations`
+- **CUANDO** se aplica `integrations[azuredevops].enabled: true` junto con los campos obligatorios en el mismo lote
+- **ENTONCES** se crea el bloque y el documento resultante vuelve a cargarse como `COMPLIANT`
+
+#### Scenario: Retirar la última clave borra la entrada y el bloque
+- **DADO** un `axiom.yaml` cuyo bloque `integrations` solo tiene un plugin con una clave
+- **CUANDO** se aplica `null` a esa clave
+- **ENTONCES** desaparecen la entrada del plugin y el bloque `integrations`
+
+#### Scenario: Un bloque `integrations` con ancla, alias o `<<` se rechaza
+- **DADO** un `axiom.yaml` cuyo bloque `integrations` usa un ancla, un alias o `<<`
+- **CUANDO** se aplica cualquier parche
+- **ENTONCES** se rechaza con `unsupported_document` sin escribir
+
+#### Scenario: Un lote de integración inválido en conjunto se rechaza
+- **DADO** un parche válido por clave pero que deja el plugin activo sin un campo obligatorio
+- **CUANDO** se aplica
+- **ENTONCES** se rechaza con `validation_failed` y el fichero no cambia
+
+#### Scenario: Un plugin con guion en su identificador se direcciona entero
+- **DADO** un plugin cuyo identificador contiene un guion
+- **CUANDO** se aplica `integrations[<plugin>].<clave>`
+- **ENTONCES** la clave se escribe en la entrada de ese plugin
 
 #### Scenario: Escritura atómica
 - **DADO** un parche válido
@@ -1040,9 +1098,6 @@ La escritura DEBE ser atómica: fichero temporal en el mismo directorio y `renam
 - **CUANDO** se aplica un parche
 - **ENTONCES** se escribe la ruta que devuelve `Locate().ConfigPath`
 - **Y** no se crea ni modifica ningún `axiom.yaml` en el repositorio de código
-
----
-
 ### Requirement: Revisión SHA-256 del Fichero con Recomprobación Justo Antes del Reemplazo (RF-TOP-23)
 
 La lectura del catálogo DEBE devolver la revisión actual de `axiom.yaml`, el SHA-256 de su contenido. Toda escritura DEBE exigir la revisión esperada, es decir, la que el llamante leyó. Si la revisión esperada no coincide con la del fichero, el escritor DEBE rechazar con un error tipado de revisión obsoleta, sin escribir. Tras serializar y validar, y justo antes del `rename`, el escritor DEBE volver a calcular la revisión del fichero y, si cambió, rechazar sin escribir y sin dejar temporales. Una escritura correcta DEBE devolver la revisión nueva. Si el resultado es idéntico al original, no se escribe. Limitación declarada: ningún sistema operativo ofrece un `rename` condicional, así que subsiste una ventana residual de milisegundos entre la recomprobación y el reemplazo en la que una edición externa podría perderse; esa ventana se acepta y se documenta, y la recomprobación se hace justo antes de entregar el reemplazo atómico, no entre el temporal y su `rename`.
