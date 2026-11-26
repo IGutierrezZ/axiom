@@ -1,7 +1,8 @@
 // Visor de especificaciones vivas: convierte el Markdown de openspec/specs/<dominio>/spec.md
 // en bloques estructurados.
 //
-// - «### Requirement: Título (REQ-x)» abre un requisito; «#### Scenario: Título» abre un
+// - «### Requirement: Título (ID)» abre un requisito (ID heredado REQ-x o del patrón declarado,
+//   como RF-TRC-02); «#### Scenario: Título» abre un
 //   escenario dentro de él.
 // - En un escenario, las líneas «- **DADO** …», «- **CUANDO** …», «- **ENTONCES** …» (y su
 //   forma inglesa GIVEN/WHEN/THEN, más Y/AND/PERO/BUT) se pintan como pasos estructurados.
@@ -22,7 +23,12 @@ const KEYWORDS = 'DADO|CUANDO|ENTONCES|Y|PERO|GIVEN|WHEN|THEN|AND|BUT';
 // clave principales y en mayúsculas (una «Y» suelta al inicio de una frase no es un paso).
 const STEP_BOLD = new RegExp(`^\\s*[-*+]\\s+(?:\\*\\*|__)\\s*(${KEYWORDS})\\s*:?\\s*(?:\\*\\*|__)\\s*:?\\s*(.*)$`, 'i');
 const STEP_PLAIN = /^\s*[-*+]\s+(DADO|CUANDO|ENTONCES|GIVEN|WHEN|THEN)(?::|\s)\s*(.*)$/;
-const REQ_ID = /^(.*?)\s*\(((?:REQ|REQUISITO)[^)]*)\)\s*$/i;
+// El ID va entre paréntesis al final del título. Se admite la forma heredada (REQ… o
+// Requisito…, sin distinguir mayúsculas) y cualquier ID con la forma de un patrón declarable
+// (sdd.id_pattern): un literal inicial en mayúsculas y cifras, un separador y el resto en
+// mayúsculas, cifras, «.», «_» o «-» (RF-TRC-02, HU-001). Un paréntesis normal no es un ID.
+const REQ_ID_LEGACY = /^(.*?)\s*\(((?:REQ|REQUISITO)[^)]*)\)\s*$/i;
+const REQ_ID_DECLARED = /^(.*?)\s*\(([A-Z][A-Z0-9]*[-._][A-Z0-9][A-Z0-9._-]*)\)\s*$/;
 const MODAL = /\b(NO DEBEN?|DEBEN?|MUST NOT|MUST|SHALL NOT|SHALL)\b/g;
 
 const KIND = { DADO: 'given', GIVEN: 'given', CUANDO: 'when', WHEN: 'when', ENTONCES: 'then', THEN: 'then', Y: 'and', AND: 'and', PERO: 'and', BUT: 'and' };
@@ -64,7 +70,7 @@ export function parseSpec(src) {
   const openReq = (title) => {
     flushMd();
     closeReq();
-    const m = REQ_ID.exec(title);
+    const m = REQ_ID_LEGACY.exec(title) || REQ_ID_DECLARED.exec(title);
     req = { type: 'requirement', id: m ? m[2].trim() : '', title: (m ? m[1] : title).trim(), bodyLines: [], scenarios: [] };
   };
 
