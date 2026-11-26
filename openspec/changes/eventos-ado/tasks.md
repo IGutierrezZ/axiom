@@ -8,7 +8,7 @@
 > - Ninguna prueba llama a Azure DevOps real: se usa el doble `adotest` y el fake de `integrationstest`.
 > - Los fixtures solo usan IDs `prov:...` o `RF-...`; nunca el prefijo heredado (trinquete `TestRepositoryLegacyIDResidues`, que escanea `openspec/changes/`).
 > - Los rechazos nuevos de `internal/cli` nombran un comando `axiom ...` o llevan `// refusal:by-design <forma>: <motivo>` (trinquete `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`).
-> - Toda continuación nombrada debe existir de verdad (trinquete `TestEveryNamedReviewContinuationIsStructurallyReal`).
+> - Toda continuación nombrada debe existir de verdad. El trinquete vigente es `TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign`; `TestEveryNamedReviewContinuationIsStructurallyReal` no existe en este árbol (solo se cita en comentarios de `internal/cli/refusal_resolution_ratchet_test.go`), así que su patrón en `-run` no ejecuta nada (WARNING del verify, corregido aquí).
 > - Las rutas son relativas a la raíz del worktree `C:\repos\axiom-wt\eventos-ado\axiom`.
 
 ## Delivery Forecast
