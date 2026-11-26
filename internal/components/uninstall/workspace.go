@@ -12,6 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -319,6 +320,35 @@ func (s *Service) removeManagedOutputStyle(path, assetPath string) operation {
 			}
 			embedded, embeddedErr := assets.Read(assetPath)
 			if embeddedErr != nil || strings.ReplaceAll(string(content), "\r\n", "\n") != strings.ReplaceAll(embedded, "\r\n", "\n") {
+				s.notices = append(s.notices, fmt.Sprintf("Conservado %s: su contenido no es el que instala Axiom (lo editaste tú). Bórralo a mano si ya no lo necesitas.", path))
+				return false, false, nil
+			}
+			if err := removeFileIfExists(path); err != nil {
+				return false, false, err
+			}
+			return true, true, nil
+		},
+	}
+}
+
+// removeManagedBranchGuardHooksFile borra el fichero de hooks propio de Axiom con la
+// guarda de rama (.github/hooks/axiom-branch-guard.json de VS Code Copilot) solo si su
+// contenido es el que escribe Axiom; si el usuario lo editó, lo conserva y avisa. Los
+// demás ficheros de .github/hooks son del equipo y no se tocan.
+func (s *Service) removeManagedBranchGuardHooksFile(path string, agentID model.AgentID) operation {
+	return operation{
+		typeID: opRemoveFile,
+		path:   path,
+		apply: func(path string) (bool, bool, error) {
+			content, err := os.ReadFile(path)
+			if err != nil {
+				if os.IsNotExist(err) {
+					return false, false, nil
+				}
+				return false, false, err
+			}
+			managed := strings.ReplaceAll(string(sdd.VSCodeBranchGuardHooksJSON(agentID)), "\r\n", "\n")
+			if strings.ReplaceAll(string(content), "\r\n", "\n") != managed {
 				s.notices = append(s.notices, fmt.Sprintf("Conservado %s: su contenido no es el que instala Axiom (lo editaste tú). Bórralo a mano si ya no lo necesitas.", path))
 				return false, false, nil
 			}

@@ -25,8 +25,13 @@ import (
 //     SDD, con el modelo y el esfuerzo elegidos, y es el mismo fichero que lee
 //     Copilot CLI desde ~/.copilot/agents. VS Code lee además .claude/agents, así que
 //     en un proyecto con Claude Code también ve los agentes de Claude.
-//   - .github/prompts/*.prompt.md y .github/hooks/*.json: prompts y hooks. Axiom no
-//     instala ninguno, así que no hay carpeta de proyecto que mapear para ellos.
+//   - .github/hooks/*.json: hooks del arnés de Copilot (en preview; exigen carpeta de
+//     confianza y `chat.useHooks` los apaga). Axiom instala uno propio,
+//     .github/hooks/axiom-branch-guard.json, con la guarda de rama (`axiom branch
+//     guard --agent vscode-copilot`) en `preToolUse` y `postToolUse`. El arnés lee
+//     además los hooks de .claude/settings.json del repositorio.
+//   - .github/prompts/*.prompt.md: prompts. Axiom no instala ninguno, así que no hay
+//     carpeta de proyecto que mapear para ellos.
 //
 // No se usan .github/copilot-instructions.md ni el AGENTS.md de la raíz: son
 // ficheros del equipo, normalmente versionados y compartidos con otras
@@ -155,6 +160,16 @@ func (a *WorkspaceAdapter) MCPConfigPath(dir string, serverName string) string {
 		return filepath.Join(dir, ".mcp.json")
 	}
 	return a.Adapter.MCPConfigPath(dir, serverName)
+}
+
+// BranchGuardHooksFile es .github/hooks/axiom-branch-guard.json en el proyecto: el
+// fichero propio de Axiom con el hook de la guarda de rama. Fuera del proyecto no
+// devuelve nada: la instalación global no instala hooks en VS Code.
+func (a *WorkspaceAdapter) BranchGuardHooksFile(dir string) string {
+	if !a.InWorkspace(dir) {
+		return ""
+	}
+	return filepath.Join(dir, githubDirName, "hooks", "axiom-branch-guard.json")
 }
 
 // LegacyWorkspaceMCPConfigPath es .vscode/mcp.json en el proyecto, donde las

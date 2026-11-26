@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -397,6 +398,54 @@ func TestSkillsDirStaysInUseWhileAnotherAgentOfTheProjectUsesIt(t *testing.T) {
 	}
 	if !slices.Contains(svc.otherAgentsInProject(), model.AgentClaudeCode) {
 		t.Errorf("otherAgentsInProject() = %v, want claude-code", svc.otherAgentsInProject())
+	}
+}
+
+// El fichero de hooks de la guarda de VS Code Copilot se borra si no cambió; editado por el
+// usuario, se conserva con un aviso. Los demás ficheros de .github/hooks no se tocan.
+func TestWorkspaceVSCodeUninstallRemovesTheManagedBranchGuardHooksFile(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		content   []byte
+		wantGone  bool
+		wantNotes int
+	}{
+		{name: "sin cambios", content: sdd.VSCodeBranchGuardHooksJSON(model.AgentVSCodeCopilot), wantGone: true},
+		{name: "editado", content: []byte(`{"version":1,"hooks":{}}`), wantGone: false, wantNotes: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			hooksDir := filepath.Join(workspace, ".github", "hooks")
+			if err := os.MkdirAll(hooksDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			managed := filepath.Join(hooksDir, "axiom-branch-guard.json")
+			team := filepath.Join(hooksDir, "equipo.json")
+			if err := os.WriteFile(managed, tc.content, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(team, []byte(`{"version":1}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			svc, err := NewScopedService(t.TempDir(), workspace, "dev", Options{Scope: ScopeWorkspace})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			op := svc.removeManagedBranchGuardHooksFile(managed, model.AgentVSCodeCopilot)
+			if _, _, err := op.apply(op.path); err != nil {
+				t.Fatalf("apply error = %v", err)
+			}
+			if _, statErr := os.Stat(managed); os.IsNotExist(statErr) != tc.wantGone {
+				t.Errorf("borrado = %v, want %v", os.IsNotExist(statErr), tc.wantGone)
+			}
+			if _, statErr := os.Stat(team); statErr != nil {
+				t.Errorf("el hook del equipo debe conservarse: %v", statErr)
+			}
+			if len(svc.notices) != tc.wantNotes {
+				t.Errorf("notices = %v, want %d", svc.notices, tc.wantNotes)
+			}
+		})
 	}
 }
 

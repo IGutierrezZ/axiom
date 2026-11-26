@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
@@ -72,7 +73,8 @@ func seedVSCodeTeamFiles(t *testing.T, workspace string) map[string][]byte {
 	team := map[string][]byte{
 		filepath.Join(".github", "copilot-instructions.md"): []byte("# Instrucciones del equipo\n\n## Personality\nSenior Architect (texto del equipo con las mismas palabras que la persona antigua).\n"),
 		"AGENTS.md": []byte("# Reglas del equipo\n\nNo tocar.\n"),
-		filepath.Join(".vscode", "settings.json"): []byte("{\n  // ajustes del equipo\n  \"editor.tabSize\": 2\n}\n"),
+		filepath.Join(".vscode", "settings.json"):        []byte("{\n  // ajustes del equipo\n  \"editor.tabSize\": 2\n}\n"),
+		filepath.Join(".github", "hooks", "equipo.json"): []byte("{\"version\": 1, \"hooks\": {\"sessionStart\": [{\"type\": \"command\", \"command\": \"echo equipo\"}]}}\n"),
 	}
 	for rel, content := range team {
 		mustWriteFile(t, filepath.Join(workspace, rel), content)
@@ -163,8 +165,12 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(workspace, ".github", "agents", "sdd-apply.agent.md")); err != nil {
 		t.Errorf("falta el agente sdd-apply en .github/agents: %v", err)
 	}
-	// Prompts y hooks: Axiom no instala ninguno para VS Code.
-	assertNothingUnder(t, workspace, filepath.Join(".github", "prompts"), filepath.Join(".github", "hooks"), filepath.Join(".github", "AGENTS.md"))
+	// Prompts: Axiom no instala ninguno para VS Code. Hooks: solo el suyo, con la guarda de rama.
+	assertNothingUnder(t, workspace, filepath.Join(".github", "prompts"), filepath.Join(".github", "AGENTS.md"))
+	hooks, err := os.ReadFile(filepath.Join(workspace, ".github", "hooks", "axiom-branch-guard.json"))
+	if err != nil || !bytes.Equal(hooks, sdd.VSCodeBranchGuardHooksJSON(model.AgentVSCodeCopilot)) {
+		t.Errorf("falta el hook de la guarda de rama en .github/hooks (err=%v):\n%s", err, hooks)
+	}
 	// La guía de enrutado va al fichero de proyecto: ninguna distribución del perfil
 	// de usuario de VS Code (macOS, Windows o Linux) aparece dentro del proyecto.
 	assertNothingUnder(t, workspace, "Library", "AppData", ".config")

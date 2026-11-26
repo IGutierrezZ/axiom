@@ -18,6 +18,7 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 		"SubAgentsDir":     {a.SubAgentsDir(root), filepath.Join(root, ".github", "agents")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".mcp.json")},
 		"LegacyMCPConfig":  {a.LegacyWorkspaceMCPConfigPath(root), filepath.Join(root, ".vscode", "mcp.json")},
+		"BranchGuardHooks": {a.BranchGuardHooksFile(root), filepath.Join(root, ".github", "hooks", "axiom-branch-guard.json")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".vscode", "settings.json")},
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".github")},
 	} {
@@ -63,6 +64,9 @@ func TestWithWorkspaceKeepsGlobalLayoutElsewhere(t *testing.T) {
 	}
 	if legacy := a.LegacyWorkspaceMCPConfigPath(home); legacy != "" {
 		t.Errorf("LegacyWorkspaceMCPConfigPath(home) = %q, quiero vacío: el perfil de usuario no cambia", legacy)
+	}
+	if hooks := a.BranchGuardHooksFile(home); hooks != "" {
+		t.Errorf("BranchGuardHooksFile(home) = %q, quiero vacío: la instalación global no instala hooks", hooks)
 	}
 	if a.InWorkspace(home) {
 		t.Errorf("InWorkspace(home) debe ser falso")

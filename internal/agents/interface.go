@@ -126,6 +126,15 @@ type LegacyWorkspaceMCPConfigProvider interface {
 	LegacyWorkspaceMCPConfigPath(dir string) string
 }
 
+// BranchGuardHooksFileProvider es una capacidad opcional de los adaptadores ligados a la
+// raíz de un proyecto cuyo runtime lee los hooks de una carpeta de ficheros (VS Code
+// Copilot: .github/hooks/*.json del arnés de Copilot). Devuelve el fichero propio de
+// Axiom con el hook de `axiom branch guard` en la raíz del proyecto dir, o "" fuera de
+// ella. El fichero es entero de Axiom: los hooks del equipo van en otros ficheros.
+type BranchGuardHooksFileProvider interface {
+	BranchGuardHooksFile(dir string) string
+}
+
 // WorkspaceScopedProvider es una capacidad opcional de los adaptadores ligados a la
 // raíz de un proyecto: indica si dir es esa raíz. Lo usan los componentes que, con
 // una instalación de proyecto, no deben tocar rutas que solo tienen sentido en la

@@ -2599,6 +2599,13 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// <project>/.codex/hooks.json for a workspace one.
 				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
+			if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
+				// VS Code Copilot en el proyecto: el hook de la guarda de rama va en su
+				// propio fichero de .github/hooks.
+				if path := provider.BranchGuardHooksFile(targetDir); path != "" {
+					paths = append(paths, path)
+				}
+			}
 		case model.ComponentSkills:
 			for _, skillID := range selectedSkillIDs(selection) {
 				if skills.IsSDDSkill(skillID) {
