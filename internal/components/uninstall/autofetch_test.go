@@ -10,8 +10,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// RF-BRA-40: la desinstalación retira las órdenes de `axiom autofetch run` (en cualquier forma y
-// evento) y conserva las ajenas y la guarda de rama.
+// RF-BRA-40: la desinstalación retira las órdenes de `axiom autofetch run` y de skill-registry (en
+// cualquier forma y evento, también las que solo aparecen en `commandWindows`, el campo de Codex
+// para `cmd.exe`) y conserva las ajenas y la guarda de rama.
 func TestComponentOperationsSDD_AutofetchRemovesHookAndKeepsForeign(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -39,7 +40,10 @@ func TestComponentOperationsSDD_AutofetchRemovesHookAndKeepsForeign(t *testing.T
 			initial := `{"hooks":{
   "SessionStart":[
     {"matcher":"startup|resume","hooks":[{"type":"command","command":"axiom autofetch run --agent codex || true","timeout":10},{"type":"command","command":"echo keep start"}]},
-    {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command 'axiom autofetch run --agent claude-code; exit 0'"}]}
+    {"matcher":"startup|resume","hooks":[{"type":"command","command":"powershell -NoProfile -Command 'axiom autofetch run --agent claude-code; exit 0'"}]},
+    {"matcher":"startup|resume","hooks":[{"type":"command","command":"axiom autofetch run --agent codex || true","commandWindows":"axiom autofetch run --agent codex 2>nul & exit /b 0","timeout":10}]},
+    {"matcher":"startup|resume|clear|compact","hooks":[{"type":"command","command":"axiom skill-registry refresh --quiet --no-gitignore --cwd \"$PWD\" || true","commandWindows":"axiom skill-registry refresh --quiet --no-gitignore 2>nul & exit /b 0","timeout":30}]},
+    {"matcher":"startup","hooks":[{"type":"command","command":"echo posix only","commandWindows":"axiom autofetch run --agent codex 2>nul & exit /b 0"}]}
   ],
   "UserPromptSubmit":[{"hooks":[{"type":"command","command":"axiom autofetch run --agent codex || true"}]}],
   "PreToolUse":[{"matcher":"x","hooks":[{"type":"command","command":"echo keep pre"}]}]
@@ -63,8 +67,10 @@ func TestComponentOperationsSDD_AutofetchRemovesHookAndKeepsForeign(t *testing.T
 				t.Fatal(err)
 			}
 			text := string(raw)
-			if strings.Contains(text, "axiom autofetch run") || strings.Contains(text, "UserPromptSubmit") {
-				t.Fatalf("el hook de autofetch y los eventos vaciados deben retirarse:\n%s", text)
+			for _, gone := range []string{"axiom autofetch run", "axiom skill-registry refresh", "commandWindows", "UserPromptSubmit"} {
+				if strings.Contains(text, gone) {
+					t.Fatalf("%q: los hooks de Axiom y los eventos vaciados deben retirarse:\n%s", gone, text)
+				}
 			}
 			if !strings.Contains(text, "echo keep start") || !strings.Contains(text, "echo keep pre") {
 				t.Fatalf("lo ajeno debe conservarse:\n%s", text)

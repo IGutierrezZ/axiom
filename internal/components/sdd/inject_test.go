@@ -6422,9 +6422,7 @@ func TestEnsureCodexSkillRegistryHookWritesSessionStartHookIdempotently(t *testi
 		t.Fatal(err)
 	}
 	text := string(data)
-	if strings.Count(text, "axiom skill-registry refresh") != 1 {
-		t.Fatalf("hook command count mismatch:\n%s", text)
-	}
+	assertCodexSkillRegistryHandler(t, text)
 	if strings.Contains(text, "telemetry") || strings.Contains(text, `"Stop"`) || strings.Contains(text, `"SubagentStop"`) {
 		t.Fatalf("fresh Codex install must not write telemetry hooks:\n%s", text)
 	}
@@ -6477,8 +6475,56 @@ func TestEnsureCodexSkillRegistryHookMigratesLegacyCommands(t *testing.T) {
 	if strings.Contains(text, "gentle-ai") {
 		t.Fatalf("legacy gentle-ai command still present after migration:\n%s", text)
 	}
-	if strings.Count(text, "axiom skill-registry refresh") != 1 {
-		t.Fatalf("expected 1 axiom skill-registry refresh, got:\n%s", text)
+	assertCodexSkillRegistryHandler(t, text)
+}
+
+// assertCodexSkillRegistryHandler exige un único handler de skill-registry, con la orden POSIX en
+// `command` y la forma de `cmd.exe` en `commandWindows`.
+func assertCodexSkillRegistryHandler(t *testing.T, text string) {
+	t.Helper()
+	if n := strings.Count(text, `"command": "axiom skill-registry refresh --quiet --no-gitignore --cwd \"$PWD\" || true"`); n != 1 {
+		t.Fatalf("expected 1 skill-registry command, got %d:\n%s", n, text)
+	}
+	if n := strings.Count(text, `"commandWindows": "axiom skill-registry refresh --quiet --no-gitignore 2\u003enul \u0026 exit /b 0"`); n != 1 {
+		t.Fatalf("expected 1 skill-registry commandWindows, got %d:\n%s", n, text)
+	}
+}
+
+// Una instalación anterior sin `commandWindows` recibe el campo en su sitio y el sync siguiente
+// no cambia nada (RF-BRA-40 en Windows, donde Codex usa `cmd.exe /C`).
+func TestEnsureCodexSkillRegistryHookAddsCommandWindowsToExistingEntry(t *testing.T) {
+	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
+	if err := os.MkdirAll(filepath.Dir(hooksPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	previous := `{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {"type": "command", "command": "axiom skill-registry refresh --quiet --no-gitignore --cwd \"$PWD\" || true", "timeout": 30}
+        ]
+      }
+    ]
+  }
+}`
+	if err := os.WriteFile(hooksPath, []byte(previous), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if changed, err := ensureCodexSkillRegistryHook(hooksPath); err != nil || !changed {
+		t.Fatalf("first call: changed=%v err=%v", changed, err)
+	}
+	first, err := os.ReadFile(hooksPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCodexSkillRegistryHandler(t, string(first))
+	if changed, err := ensureCodexSkillRegistryHook(hooksPath); err != nil || changed {
+		t.Fatalf("second call must be a no-op: changed=%v err=%v", changed, err)
+	}
+	if second, _ := os.ReadFile(hooksPath); string(second) != string(first) {
+		t.Fatalf("second call changed the bytes:\n%s\n%s", first, second)
 	}
 }
 
@@ -7524,9 +7570,7 @@ func TestInstallSkillRegistryAutomationBranchGuardReachesClaudeAndCodexOnly(t *t
 	if text := string(claudeFirst); strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 || strings.Count(text, "axiom skill-registry refresh") != 1 {
 		t.Fatalf("la instalación de la guarda alteró los demás hooks de Claude:\n%s", text)
 	}
-	if text := string(codexFirst); strings.Count(text, "axiom skill-registry refresh") != 1 {
-		t.Fatalf("la instalación de la guarda alteró el hook de skill-registry de Codex:\n%s", text)
-	}
+	assertCodexSkillRegistryHandler(t, string(codexFirst))
 
 	// Pi no tiene canal demostrado: no recibe ninguna entrada ni escribe ningún fichero.
 	piAdapter, err := agents.NewAdapter(model.AgentPi)
