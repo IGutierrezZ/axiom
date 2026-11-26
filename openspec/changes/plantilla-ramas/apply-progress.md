@@ -17,7 +17,7 @@
 
 ## Pendientes
 
-4.2, 5.1.
+5.1.
 
 ## Desviaciones
 
@@ -29,3 +29,5 @@
 - 3.3: la tarea se aplicó con TDD (RED por fallo de compilación). El tipo de `changestart.WorkItemFacts` se llama `WorkItemOrigin`. `PlanInput.Sealing` es el interruptor de «plan del sellado» (política aplica aunque haya kickoff sin instantánea). El planificador ya consume `RepoFacts.Frozen`, pero el motor aún no lo rellena (4.1). `EnteringRole` y `Describe` están en el planificador; el motor los cablea en 4.2. En ODD solo SDD escribe el vínculo `work_item`, así que `{ref}` sale del staging o del `work-item.json` adoptado.
 
 - [x] 4.1 Registro congelado, recuperación y guarda. `RecordBranch.Template`; `engine/frozen.go` (`freezeFromRecord` rellena `RepoFacts.Frozen` en `gatherWith`, `recoverPending` con `BranchExists` solo en `refs/heads`, propagación de errores, `TemplateCandidateCollision`); `branch/planner_guard.go` (`RenderGuardBranches`, `ChangeBranchTemplated`, `FrozenFrom`); `engine/verdict_names.go` (`expectedNames` con orden D-10, render sin registro, `PendingRoles`, archivado sin `ArchivePrefix` con plantilla); `Decide` con `awaiting_role` y `Details.pendingRoles`; `registeredChangeBranch` y `newArchiveRecord` con plantilla (S9). Commit `feat(branch): nombres congelados, recuperación y veredicto con plantilla`. Sin RED separado. Desviaciones: `recoverPending` va dentro del cierre `gather` de `Ensure` y planifica con `InPlace=true`; la guarda reutiliza `repoNaming` del planificador. Pendientes: 4.2 (aquí `EnteringRole` y `Describe` siguen sin cablear), 5.1.
+
+- [x] 4.2 Diferido por rol, `status` y CLI. `EnsureRequest.Role` → `PlanInput.EnteringRole` (en el cierre `gather` de `Ensure`, tras `recoverPending`); `status` con `Describe`; `planWithPromotion` salta repositorios con todas las ramas pendientes (la pregunta `ask` se hace en el `ensure --role` que crea la rama); `RepositoryResult.PendingBranches` / `PendingBranchResult` / `NewPendingBranchResult` (JSON aditivo `pendingBranches`, texto «Rama pendiente …»); `scopeRepository` trata un repositorio solo pendiente como `unverifiable` con `branch_missing` sin `fetch`; `internal/cli/branch.go` pasa `Role: *role` y su ayuda lo documenta; `docs/usage.md` actualizado; `TestEnsureRequestHasNoRoleField` invertido. Commit `feat(branch): ramas con task_ref diferidas a ensure --role`. Sin RED separado; GREEN observado. Pendiente: 5.1.

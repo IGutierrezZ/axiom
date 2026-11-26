@@ -144,18 +144,33 @@ type branchBranchJSON struct {
 	CreatedFromRef     string `json:"createdFromRef"`
 }
 
+// branchPendingBranchJSON es una rama de plantilla pendiente (C-07-f, D-15).
+type branchPendingBranchJSON struct {
+	Kind         string `json:"kind"`
+	KindLabel    string `json:"kindLabel"`
+	Role         string `json:"role"`
+	Template     string `json:"template"`
+	Name         string `json:"name"`
+	Reason       string `json:"reason"`
+	ReasonLabel  string `json:"reasonLabel"`
+	Code         string `json:"code"`
+	Message      string `json:"message"`
+	Continuation string `json:"continuation"`
+}
+
 type branchRepositoryJSON struct {
-	Name              string             `json:"name"`
-	GitRoot           string             `json:"gitRoot"`
-	CommonDir         string             `json:"commonDir"`
-	Role              string             `json:"role"`
-	RoleLabel         string             `json:"roleLabel"`
-	Roles             []string           `json:"roles"`
-	IntegrationBranch string             `json:"integrationBranch"`
-	CurrentBranch     string             `json:"currentBranch"`
-	Detached          bool               `json:"detached"`
-	Base              *branchBaseJSON    `json:"base"`
-	Branches          []branchBranchJSON `json:"branches"`
+	Name              string                    `json:"name"`
+	GitRoot           string                    `json:"gitRoot"`
+	CommonDir         string                    `json:"commonDir"`
+	Role              string                    `json:"role"`
+	RoleLabel         string                    `json:"roleLabel"`
+	Roles             []string                  `json:"roles"`
+	IntegrationBranch string                    `json:"integrationBranch"`
+	CurrentBranch     string                    `json:"currentBranch"`
+	Detached          bool                      `json:"detached"`
+	Base              *branchBaseJSON           `json:"base"`
+	Branches          []branchBranchJSON        `json:"branches"`
+	PendingBranches   []branchPendingBranchJSON `json:"pendingBranches"`
 }
 
 type branchSkippedJSON struct {

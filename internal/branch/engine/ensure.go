@@ -38,6 +38,10 @@ type EnsureRequest struct {
 	// pregunta de promoción de un repositorio de dos etapas o su modo explícito. Vacío si no se
 	// dieron.
 	Promotions []branch.PromotionRequest
+	// Role es `--role` ya validado por el adaptador (RF-BRA-33): el rol que entra. Solo él hace
+	// salir de «pendiente» a su rama con `{task_ref}`: la crea con su base, destino y promoción
+	// resueltos en este momento. Vacío, ninguna rama pendiente se crea (design D-07 y D-08).
+	Role string
 }
 
 // Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
@@ -140,6 +144,11 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 		}
 		if refusal == nil && r.Archive {
 			refusal = useArchivePlan(&facts, r)
+		}
+		if refusal == nil && !r.Archive {
+			// Después de recoverPending, que solo recupera candidatos ya existentes: la entrada del
+			// rol no adopta ninguna rama que no haya creado ya la orden.
+			facts.input.EnteringRole = r.Role
 		}
 		return facts, refusal
 	}
