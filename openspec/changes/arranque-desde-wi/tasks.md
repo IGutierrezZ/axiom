@@ -86,12 +86,12 @@ Cubre: prov:74:4 (resolución), prov:74:13 (PAT restringido en la descarga), pro
 
 Commit: `feat(changestart): convertir HTML a Markdown y marcar el contenido importado como dato no fiable`. Ruta: inline. Dependencias: T2 (tipos neutrales para `render`).
 
-- [ ] 3.1 RED: crear `internal/changestart/htmlmd/convert_test.go` con `TestConvertBasic`, `TestConvertHostile` (`script`, `style`, `iframe`, sin cierre, `<!--`), `TestConvertLinkSchemes` (solo `http`, `https`, `mailto`, sin `userinfo`), `TestConvertTables` (GFM y degradación con `colspan`), `TestConvertCodeFences`, `TestConvertEntities`, `TestConvertInputCap` (1 MiB) y `FuzzConvert` (sin pánico y sin etiqueta cruda).
-- [ ] 3.2 Crear `internal/changestart/htmlmd/tokenize.go` y `internal/changestart/htmlmd/convert.go` (D-09): tokenizador conservador, subconjunto de etiquetas, `html.UnescapeString`, `<` seguido de letra, `/`, `!` o `?` escrito `&lt;`, lista ordenada de imágenes (`src`, `alt`). GREEN.
-- [ ] 3.3 RED: crear `internal/changestart/untrusted_test.go` con `TestNeutralizeInjectedDelimiter`, `TestNeutralizeForgedHeader` (dos puntos de anchura completa `：`, `﹕`, `꞉`, `∶`, espacios intermedios, sin distinguir mayúsculas), `TestNeutralizeTitlesNamesReasons`, `TestNeutralizeZeroWidthAndBidi`, `TestInlineNeutral` (saltos de línea, tope de 64 runas, `«»`).
-- [ ] 3.4 Crear `internal/changestart/untrusted.go` con `neutralize` e `inlineNeutral` (D-10, D-28). GREEN.
-- [ ] 3.5 RED: crear `internal/changestart/render_test.go` con `TestRenderHeaderFirstLine`, `TestRenderRelations`, `TestRenderOmitsEmptySections`, `TestRenderTrustMetadataOutsideBlock` (`external_ref`, `plugin`, `id`, `url`, `perfil`, `importado` fuera del bloque `AXIOM::INICIO-DATOS`). Crear `internal/changestart/render.go` con la composición de `work-item.md` en tres partes. GREEN.
-- [ ] 3.6 Ejecutar `go test ./internal/changestart/... -run 'TestConvert|TestNeutralize|TestInlineNeutral|TestRender'` y un fuzz acotado `go test ./internal/changestart/htmlmd -run '^$' -fuzz FuzzConvert -fuzztime 20s`; `go vet`, `gofmt -l`; commit.
+- [x] 3.1 RED: crear `internal/changestart/htmlmd/convert_test.go` con `TestConvertBasic`, `TestConvertHostile` (`script`, `style`, `iframe`, sin cierre, `<!--`), `TestConvertLinkSchemes` (solo `http`, `https`, `mailto`, sin `userinfo`), `TestConvertTables` (GFM y degradación con `colspan`), `TestConvertCodeFences`, `TestConvertEntities`, `TestConvertInputCap` (1 MiB) y `FuzzConvert` (sin pánico y sin etiqueta cruda).
+- [x] 3.2 Crear `internal/changestart/htmlmd/tokenize.go` y `internal/changestart/htmlmd/convert.go` (D-09): tokenizador conservador, subconjunto de etiquetas, `html.UnescapeString`, `<` seguido de letra, `/`, `!` o `?` escrito `&lt;`, lista ordenada de imágenes (`src`, `alt`). GREEN.
+- [x] 3.3 RED: crear `internal/changestart/untrusted_test.go` con `TestNeutralizeInjectedDelimiter`, `TestNeutralizeForgedHeader` (dos puntos de anchura completa `：`, `﹕`, `꞉`, `∶`, espacios intermedios, sin distinguir mayúsculas), `TestNeutralizeTitlesNamesReasons`, `TestNeutralizeZeroWidthAndBidi`, `TestInlineNeutral` (saltos de línea, tope de 64 runas, `«»`).
+- [x] 3.4 Crear `internal/changestart/untrusted.go` con `neutralize` e `inlineNeutral` (D-10, D-28). GREEN.
+- [x] 3.5 RED: crear `internal/changestart/render_test.go` con `TestRenderHeaderFirstLine`, `TestRenderRelations`, `TestRenderOmitsEmptySections`, `TestRenderTrustMetadataOutsideBlock` (`external_ref`, `plugin`, `id`, `url`, `perfil`, `importado` fuera del bloque `AXIOM::INICIO-DATOS`). Crear `internal/changestart/render.go` con la composición de `work-item.md` en tres partes. GREEN.
+- [x] 3.6 Ejecutar `go test ./internal/changestart/... -run 'TestConvert|TestNeutralize|TestInlineNeutral|TestRender'` y un fuzz acotado `go test ./internal/changestart/htmlmd -run '^$' -fuzz FuzzConvert -fuzztime 20s`; `go vet`, `gofmt -l`; commit.
 
 Cubre: prov:74:10, prov:74:11 (amenaza de inyección de instrucciones, matriz específica).
 
@@ -227,3 +227,9 @@ Secuencial, un solo escritor. T0 y T1 son independientes (T0 es solo documentaci
 ## Registro de remediación
 
 (vacío)
+
+## Registro de commits (apply)
+
+- T0: `774936401` docs(spec): alinear las deltas de arranque-desde-wi con los huecos del diseño.
+- T1: `5369974f0` feat(integrations): declarar item_keys, ref_alias y capacidades tags y attachments en azure-devops.
+- T2: `820cfc0e9` feat(integrations): puerto WorkItemSource con lectura tipada, descarga binaria y enlace de vuelta. Desviación mínima: `readItem` y `stateCategory` viven en `azuredevops/workitem_port.go` (no en `workitems.go`), sin cambio de comportamiento; `ErrItemRef` (adaptador) cubre «referencia inválida» sin ampliar los centinelas neutrales.
