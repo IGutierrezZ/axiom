@@ -65,11 +65,12 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
   - Verificación: `go test ./internal/branch/engine -run AutofetchRelevance`.
   - Evidencia: `go test ./internal/branch/engine -run AutofetchRelevance`: ok; `go test ./internal/branch/engine -run "AutofetchCycle|AutofetchStamp|AutofetchProject|AutofetchBudget"`: ok; `go vet ./internal/branch/...`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline. La relevancia se calcula en `autofetchRelevance` antes del punto de avance; `autofetchCycle` añade los avisos (a), deja el hueco de T6 y añade los (b).
 
-- [ ] T6 Avance ff-only y tabla D-08 (~350 líneas; depende de T4)
+- [x] T6 Avance ff-only y tabla D-08 (~350 líneas; depende de T4)
   - Ficheros: `internal/branch/engine/autofetch_advance.go`, ampliación de las pruebas del motor.
   - Cubre: RF-BRA-39 (ff con árbol limpio, ya al día, sucio, divergencia, no desplegada, operación en curso, `HEAD` desacoplado, `main_branch` distinta o igual a la integración, sin presupuesto).
   - Pruebas por fila: 1 (sin `R`/sin `L`/igual), 2 (local por delante), 3 `integration_diverged`, 4 `integration_operation_in_progress` con `rebase` y `merge` con conflicto reales (índice y ficheros intactos) y `cherry-pick`, 5 `integration_detached` con `switch --detach`, 6 `integration_not_deployed` con `fetch . refs/remotes/origin/<int>:refs/heads/<int>`, 7 `integration_dirty` (preparado y sin seguimiento), 8 sin presupuesto (`autofetchAdvanceReserve`), 9 avance sin crear commits (`RevList` igual al remoto), 10 `integration_ff_failed` por `index.lock` sin reintento; integración al día con árbol sucio sin aviso; `main_branch` distinta intocable (SHA comparado, sin `merge`); iguales avanza; worktree enlazado con la integración desplegada.
   - Verificación: `go test ./internal/branch/engine -run AutofetchAdvance`.
+- Evidencia: `go test ./internal/branch/engine -run AutofetchAdvance`: ok; `go test ./internal/branch/engine -run "AutofetchCycle|AutofetchStamp|AutofetchProject|AutofetchBudget|AutofetchRelevance"`: ok (aserciones de no avance de T4 y T5 relajadas a «solo merge --ff-only»); `go test ./internal/gitcommon -run TestArchitecture`: ok; `go test ./internal/sddpublish -run TestIsolation`: ok; `go vet ./internal/branch/...`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline. Los avisos de no avance se insertan en `autofetchCycle` entre (a) y (b).
 
 ## Fase 3: Superficie
 

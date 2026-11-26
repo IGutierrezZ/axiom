@@ -69,8 +69,8 @@ func stampOf(commonDir string) string {
 func noRemoteOperations(t *testing.T, seen [][]string) {
 	t.Helper()
 	for _, invocation := range seen {
-		if slices.Contains([]string{"push", "pull", "ls-remote", "merge", "commit"}, invocation[1]) || slices.Contains(invocation, "--prune") {
-			t.Errorf("el ciclo base solo trae origin, sin publicar, podar ni avanzar: %v", invocation)
+		if slices.Contains([]string{"push", "pull", "ls-remote", "commit"}, invocation[1]) || (invocation[1] == "merge" && !slices.Contains(invocation, "--ff-only")) || slices.Contains(invocation, "--prune") {
+			t.Errorf("el ciclo base solo trae origin y avanza con merge --ff-only, sin publicar ni podar: %v", invocation)
 		}
 	}
 }
@@ -120,8 +120,8 @@ func TestAutofetchCycleFetchesOriginAndWritesTheStamp(t *testing.T) {
 	if got := runGit(t, repo, "rev-parse", "refs/remotes/origin/main"); got != advanced {
 		t.Errorf("origin/main = %s, se esperaba el commit traído %s", got, advanced)
 	}
-	if got := runGit(t, repo, "rev-parse", "refs/heads/main"); got != localMain {
-		t.Errorf("la rama local main se movió de %s a %s: el ciclo base no avanza", localMain, got)
+	if got := runGit(t, repo, "rev-parse", "refs/heads/main"); got != advanced {
+		t.Errorf("la rama local main está en %s (era %s), se esperaba el avance por fast-forward a %s", got, localMain, advanced)
 	}
 	fetches := fetchInvocations(*seen)
 	if len(fetches) != 1 || !reflect.DeepEqual(fetches[0][1:], []string{"fetch", "origin"}) || !pathidentity.SameDirectory(fetches[0][0], repo) {

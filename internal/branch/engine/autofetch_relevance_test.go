@@ -147,8 +147,8 @@ func TestAutofetchRelevanceIncomingCommitsByPrefixes(t *testing.T) {
 	if notice.Command != wantCommand {
 		t.Errorf("orden %q, se esperaba %q", notice.Command, wantCommand)
 	}
-	if got := runGit(t, repo, "rev-parse", "refs/heads/main"); got != localMain {
-		t.Errorf("la relevancia no avanza la integración: main pasó de %s a %s", localMain, got)
+	if got, want := runGit(t, repo, "rev-parse", "refs/heads/main"), runGit(t, repo, "rev-parse", "refs/remotes/origin/main"); got != want {
+		t.Errorf("el avance llega tras la relevancia: main en %s, se esperaba origin/main %s", got, want)
 	}
 }
 

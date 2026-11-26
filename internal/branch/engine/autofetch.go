@@ -130,7 +130,8 @@ func (e *Engine) autofetchCycle(ctx context.Context, r AutofetchRequest, result 
 	// tras los de no avance de T6 (D-08), los de las ramas del cambio.
 	relevance := e.autofetchRelevance(ctx, project, result)
 	result.Notices = append(result.Notices, relevance.incoming...)
-	// T6: avance por fast-forward estricto y avisos de no avance (D-08), aquí.
+	// Avance por fast-forward estricto y avisos de no avance (D-08), entre (a) y (b).
+	result.Notices = append(result.Notices, e.autofetchAdvance(ctx, project, result)...)
 	result.Notices = append(result.Notices, relevance.branches...)
 }
 
