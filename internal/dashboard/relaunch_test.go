@@ -254,7 +254,6 @@ func freePort(t *testing.T) int {
 // El proceso relanzado debe quedarse con el MISMO puerto aunque el viejo tarde unos
 // instantes en liberarlo; no sondea otro.
 func TestListenAndServeWithRetry_WaitsForTheSamePort(t *testing.T) {
-	t.Parallel()
 	port := freePort(t)
 	held, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	if err != nil {
@@ -277,7 +276,6 @@ func TestListenAndServeWithRetry_WaitsForTheSamePort(t *testing.T) {
 }
 
 func TestListenAndServeWithRetry_FailsWhenThePortStaysBusy(t *testing.T) {
-	t.Parallel()
 	port := freePort(t)
 	held, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(port))
 	if err != nil {

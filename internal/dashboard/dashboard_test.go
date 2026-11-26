@@ -194,7 +194,6 @@ func TestHTTPEndpoints(t *testing.T) {
 }
 
 func TestListenAndServeNoReassign(t *testing.T) {
-	t.Parallel()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("Error abriendo listener de prueba: %v", err)
@@ -250,7 +249,6 @@ func TestDefaultPort(t *testing.T) {
 }
 
 func TestProbeAxiom(t *testing.T) {
-	t.Parallel()
 	ctx := context.Background()
 	portOf := func(srv *httptest.Server) int { return srv.Listener.Addr().(*net.TCPAddr).Port }
 
