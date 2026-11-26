@@ -21,6 +21,10 @@ type WorkspaceRecord struct {
 	// los ignora.
 	WorktreeMode string `json:"worktree_mode,omitempty"`
 	WorktreeRoot string `json:"worktree_root,omitempty"`
+	// Autofetch es el interruptor personal del autofetch del repositorio de specs (RF-HUB-13,
+	// prefs.go): apagado por defecto, no cambia el esquema `"1.0"` y un binario anterior lo
+	// ignora.
+	Autofetch bool `json:"autofetch,omitempty"`
 }
 
 // HubConfig representa el archivo de configuración central ~/.axiom/workspaces.json.

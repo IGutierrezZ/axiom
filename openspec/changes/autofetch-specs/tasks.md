@@ -28,11 +28,12 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
 
 ## Fase 1: Fundamentos
 
-- [ ] T1 Preferencia `autofetch` en el hub (~260 líneas)
+- [x] T1 Preferencia `autofetch` en el hub (~260 líneas)
   - Ficheros: `internal/hub/types.go` (campo `Autofetch bool \`json:"autofetch,omitempty"\``), `internal/hub/prefs.go` (`LookupAutofetch`, `SetAutofetch` sin escritura si no cambia, `ErrProjectNotRegistered`, búsqueda con `sameProject`), `internal/branch/ports.go` (`Prefs.Autofetch(projectMaster) (bool, AutofetchPrefState, string)`), `internal/branch/engine/prefs.go` (`hubPrefs` con `Autofetch`, `DefaultWithHubPath`), `internal/branch/engine/ensure_mode_test.go` (doble de `Prefs`), `internal/hub/prefs_autofetch_test.go` (crear).
   - Cubre: RF-HUB-07, RF-HUB-13 (parte hub), huecos 8 y 12 (D-03).
   - Pruebas: apagado por defecto y clave ausente; persistencia; idempotencia de `SetAutofetch` (bytes de `workspaces.json` iguales); sobrevive a `Register` y al dashboard, desaparece con `Unregister`; hub ilegible no escribe; no registrado devuelve `errors.Is(err, hub.ErrProjectNotRegistered)`; binario anterior (unmarshal en struct sin el campo); `axiom.yaml` con clave `autofetch` ignorada; en Windows `C:\Repos\X` se encuentra desde `c:\repos\x`; los cuatro `state` (`enabled|disabled|unregistered|unreadable`) con aviso de `axiom project add "<maestra>"`.
   - Verificación: `go test ./internal/hub -run Autofetch`; `go test ./internal/branch/engine -run Prefs`.
+  - Evidencia: `go test ./internal/hub -run Autofetch`: ok; `go test ./internal/branch/engine -run Prefs`: ok; `go vet ./internal/hub ./internal/branch/... ./internal/cli ./internal/dashboard`: sin salida; `gofmt -l internal/hub internal/branch`: vacío. Ruta: inline.
 
 - [ ] T2 Primitivas de git (~220 líneas)
   - Ficheros: `internal/branch/gitcli/ops.go` (`FetchWithin` sobre `gitcommon.RunWithTimeout` sin `--prune`, envolviendo `gitcommon.ErrTimeout`; `FastForward` = `merge --ff-only` con `plainArgument`/`runWrite`; `RemoteBranches` = `for-each-ref refs/remotes/origin/<prefix>/`, sin red), `internal/branch/ports.go` (`Git`), `internal/branch/engine/engine.go` (`gitReader`, `gitWriter`, campo `now`, comentarios de operaciones remotas), `internal/branch/gitcli/ops_write_test.go`.

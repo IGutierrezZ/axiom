@@ -18,17 +18,49 @@ import (
 // efectivo de un cambio se resuelve con la prioridad registro > `--mode` > hub > defecto.
 
 // hubPrefs implementa el puerto branch.Prefs sobre `~/.axiom/workspaces.json`.
-type hubPrefs struct{}
+type hubPrefs struct {
+	// path es la ruta de `workspaces.json`; vacía, la del hub del usuario. Las pruebas de
+	// `internal/cli` inyectan la suya con DefaultWithHubPath.
+	path string
+}
 
 var _ branch.Prefs = hubPrefs{}
+
+// DefaultWithHubPath monta el motor como Default pero con las preferencias leídas del hub de
+// esa ruta, sin tocar el del usuario.
+func DefaultWithHubPath(path string) *Engine {
+	e := Default()
+	e.prefs = hubPrefs{path: path}
+	return e
+}
+
+// Autofetch dice si el autofetch está encendido para el proyecto de esa carpeta maestra
+// (RF-HUB-13, design D-03). Un hub ilegible o un proyecto no registrado dan enabled=false con
+// el estado que lo explica y un aviso en castellano; no escribe nada.
+func (p hubPrefs) Autofetch(projectMaster string) (bool, branch.AutofetchPrefState, string) {
+	manager, err := hub.NewManager(p.path)
+	if err != nil {
+		return false, branch.AutofetchUnreadable, fmt.Sprintf("no se pudo leer el hub (%v): el autofetch queda apagado", err)
+	}
+	enabled, registered, err := manager.LookupAutofetch(projectMaster)
+	switch {
+	case err != nil:
+		return false, branch.AutofetchUnreadable, fmt.Sprintf("no se pudo leer el hub (%v): el autofetch queda apagado", err)
+	case !registered:
+		return false, branch.AutofetchUnregistered, fmt.Sprintf("el proyecto no está registrado en el hub, así que el autofetch queda apagado: registra el proyecto con axiom project add \"%s\"", projectMaster)
+	case enabled:
+		return true, branch.AutofetchEnabled, ""
+	}
+	return false, branch.AutofetchDisabled, ""
+}
 
 // WorktreePrefs devuelve el modo de trabajo de las preferencias del proyecto cuya carpeta
 // maestra es projectMaster, la raíz de worktrees, de dónde sale el modo (`hub` si el hub lo
 // guarda, `default` si no) y un aviso. Un hub que no se puede leer, o con un valor guardado
 // inválido, no impide trabajar: devuelve los valores por defecto (modo `worktree` y la raíz
 // de por defecto) con un aviso que lo explica (design D-08).
-func (hubPrefs) WorktreePrefs(projectMaster string) (branch.Mode, string, string, string) {
-	manager, err := hub.NewManager("")
+func (p hubPrefs) WorktreePrefs(projectMaster string) (branch.Mode, string, string, string) {
+	manager, err := hub.NewManager(p.path)
 	if err != nil {
 		return defaultPrefs(projectMaster, err)
 	}

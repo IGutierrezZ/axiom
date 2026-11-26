@@ -28,6 +28,8 @@ type fakePrefs struct {
 	source  string
 	warning string
 	asked   *[]string
+	// autofetch enciende el interruptor del autofetch del doble.
+	autofetch bool
 }
 
 func (f fakePrefs) WorktreePrefs(master string) (branch.Mode, string, string, string) {
@@ -39,6 +41,14 @@ func (f fakePrefs) WorktreePrefs(master string) (branch.Mode, string, string, st
 		root = branch.DefaultWorktreeRoot(master)
 	}
 	return f.mode, root, f.source, f.warning
+}
+
+// Autofetch es el doble del interruptor: siempre apagado, salvo que el doble lo encienda.
+func (f fakePrefs) Autofetch(string) (bool, branch.AutofetchPrefState, string) {
+	if f.autofetch {
+		return true, branch.AutofetchEnabled, ""
+	}
+	return false, branch.AutofetchDisabled, ""
 }
 
 var (
