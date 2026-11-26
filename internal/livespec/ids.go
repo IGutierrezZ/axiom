@@ -190,10 +190,11 @@ func PlanIDs(in IDPlanInput) (IDPlan, error) {
 		return IDPlan{}, err
 	}
 
-	// b. Los tokens provisionales de los textos validados: gramática y patrón.
+	// b. Los tokens provisionales de los textos validados: gramática y patrón. Un token
+	// dentro de código de la delta es un ejemplo y no cuenta (REQ-47.4).
 	var refs []tokenRef
 	for _, c := range caps {
-		for _, span := range reqid.ScanProvisional(c.Text) {
+		for _, span := range reqid.ScanProvisionalRefs(c.Text) {
 			line := c.LineBase + lineAt(c.Text, span.Start)
 			if err := checkToken(p, span.Token, c.Name, c.File, line); err != nil {
 				return IDPlan{}, err

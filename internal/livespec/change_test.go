@@ -199,6 +199,38 @@ func TestPlanChangeRejectsAFlatDelta(t *testing.T) {
 	wantPlanError(t, err, CodeFlatDeltaUnsupported)
 }
 
+func TestPlanChangeIgnoresProvisionalExamplesInCodeAndTaskProse(t *testing.T) {
+	body := "El sistema DEBE cobrar con IVA.\n\n#### Scenario: Ejemplo\n\n- **DADO** un título `(prov:40:1)` y la clave `prov::1`\n\n```text\nTítulo (prov:40:2)\n```\n"
+	files := map[string]string{
+		"specs/pagos/spec.md": pagosCanon,
+		changeFile("pagos"):   added(block("Cobro con IVA (prov:30:1)", body)),
+		"changes/mi-cambio/tasks.md": "- [ ] 1.1 Hacer\n  Cubre: prov:30:1\n\nEjemplo en prosa: prov:40:9 y `prov::1`.\n\n" +
+			"```text\nprov:40:3\n```\n",
+	}
+	loc, reg := changeFixture(t, reqid.Default(), files)
+	plan := planChange(t, loc, reg, ChangeOptions{})
+	got := capabilityOf(t, plan, "pagos")
+	if !strings.Contains(got.Content, "### Requirement: Cobro con IVA (REQ-30.3)") || !strings.Contains(got.Content, "`(prov:40:1)`") {
+		t.Fatalf("pagos = %+v", got)
+	}
+	if len(plan.Assignments) != 1 || plan.Assignments[0].Definitive != "REQ-30.3" {
+		t.Fatalf("assignments = %+v", plan.Assignments)
+	}
+}
+
+func TestPlanChangeStillRejectsAnUndeclaredProvisionalInDeltaProse(t *testing.T) {
+	files := map[string]string{
+		"specs/pagos/spec.md": pagosCanon,
+		changeFile("pagos"):   added(block("Alta (prov:30:1)", "Depende de prov:30:7.")),
+	}
+	loc, reg := changeFixture(t, reqid.Default(), files)
+	_, err := PlanChange(loc, changeName, ChangeOptions{}, reg)
+	var planErr *IDPlanError
+	if !errors.As(err, &planErr) || planErr.Code != CodeProvisionalUndeclared || planErr.Token != "prov:30:7" {
+		t.Fatalf("error = %v", err)
+	}
+}
+
 func TestPlanChangeRejectsAnUndeclaredCitationInTheTasks(t *testing.T) {
 	files := map[string]string{
 		"specs/pagos/spec.md":        pagosCanon,

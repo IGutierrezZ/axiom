@@ -201,8 +201,9 @@ type changeArtifact struct {
 
 // changeArtifacts lee los ficheros de tareas (`tasks.md`, `tasks.<rol>.md`) y los informes de
 // verify (`verify-report.md`, `verify-report.<rol>.md`) del cambio, y devuelve las citas que
-// el plan valida (D6): todo provisional de un fichero de tareas y los de la columna
-// `Requisito` de la matriz de cada informe de verify.
+// el plan valida (D6): los provisionales de las líneas `Cubre:` de un fichero de tareas y
+// los de la columna `Requisito` de la matriz de cada informe de verify. El resto de esos
+// ficheros no se valida (REQ-47.4).
 func changeArtifacts(changeRoot string, relative func(string) string) ([]changeArtifact, []Citation, error) {
 	entries, err := os.ReadDir(changeRoot)
 	if err != nil {
@@ -233,11 +234,7 @@ func changeArtifacts(changeRoot string, relative func(string) string) ([]changeA
 		out = append(out, changeArtifact{path: path, text: text, kind: kind})
 		file := relative(path)
 		if kind == kindTasks {
-			for i, line := range strings.Split(text, "\n") {
-				for _, span := range reqid.ScanProvisional(line) {
-					citations = append(citations, Citation{File: file, Line: i + 1, Token: span.Token})
-				}
-			}
+			citations = append(citations, cubreCitations(file, text)...)
 			continue
 		}
 		for _, row := range isoevidence.ParseMatrix(text).Rows {

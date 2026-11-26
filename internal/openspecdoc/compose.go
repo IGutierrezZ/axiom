@@ -365,13 +365,14 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 	}
 
 	// Un provisional en el nombre o el cuerpo de cualquier requisito se rechaza antes de
-	// tocar nada (REQ-30.22). Se mira en el orden en que se aplican las secciones.
+	// tocar nada (REQ-30.22). Se mira en el orden en que se aplican las secciones. Un token
+	// dentro de código es un ejemplo de la forma, no un provisional (REQ-47.4).
 	for _, group := range []struct {
 		section string
 		blocks  []specRequirementBlock
 	}{{"RENAMED", deltaDoc.Renamed}, {"MODIFIED", deltaDoc.Modified}, {"REMOVED", deltaDoc.Removed}, {"ADDED", deltaDoc.Added}} {
 		for _, r := range group.blocks {
-			if spans := reqid.ScanProvisional(r.Text); len(spans) > 0 {
+			if spans := reqid.ScanProvisionalRefs(r.Text); len(spans) > 0 {
 				return "", &ProvisionalIDError{Section: group.section, Requirement: r.Name, Token: spans[0].Token}
 			}
 		}

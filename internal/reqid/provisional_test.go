@@ -2,6 +2,7 @@ package reqid_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
@@ -152,6 +153,37 @@ func TestScanProvisionalWholeTokenRule(t *testing.T) {
 				if s.Token != tc.want[i] || s.Lax != tc.wantLax[i] || tc.text[s.Start:s.End] != s.Token {
 					t.Errorf("span %d = %+v, quería %q lax=%v", i, s, tc.want[i], tc.wantLax[i])
 				}
+			}
+		})
+	}
+}
+
+func TestScanProvisionalRefsSkipsCode(t *testing.T) {
+	cases := []struct {
+		name, text string
+		want       []string
+	}{
+		{"en prosa cuenta", "Cobro (prov:30:1) y prov:a:2.", []string{"prov:30:1", "prov:a:2"}},
+		{"código en línea", "Ejemplo `prov::1` y `(prov:40:1)`; real prov:30:1.", []string{"prov:30:1"}},
+		{"tirada doble", "Ejemplo ``x `prov:40:1` y`` fin prov:30:2", []string{"prov:30:2"}},
+		{"tirada sin cierre es literal", "Abre ` y sigue prov:30:3", []string{"prov:30:3"}},
+		{"el código en línea no cruza líneas", "`abre\nprov:30:4 `cierra`", []string{"prov:30:4"}},
+		{"bloque vallado", "Antes prov:30:5\n```text\nprov:40:1\n```\nDespués prov:30:6\n", []string{"prov:30:5", "prov:30:6"}},
+		{"valla de virgulillas sin cerrar", "prov:30:7\n~~~\nprov:40:2\nprov:40:3\n", []string{"prov:30:7"}},
+		{"cierre más corto no cierra", "````\n```\nprov:40:4\n````\nprov:30:8", []string{"prov:30:8"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			spans := reqid.ScanProvisionalRefs(tc.text)
+			var got []string
+			for _, s := range spans {
+				if tc.text[s.Start:s.End] != s.Token {
+					t.Errorf("span %+v no casa con el texto", s)
+				}
+				got = append(got, s.Token)
+			}
+			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+				t.Fatalf("tokens = %v, quería %v", got, tc.want)
 			}
 		})
 	}
