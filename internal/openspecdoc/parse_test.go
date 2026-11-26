@@ -129,3 +129,38 @@ func requirementNames(reqs []Requirement) []string {
 	}
 	return names
 }
+
+func TestParseDeltaIgnoresRequirementHeadingsInsideFences(t *testing.T) {
+	delta := "## ADDED Requirements\n\n" +
+		"### Requirement: Real\n\nCuerpo con ejemplo:\n\n" +
+		"```markdown\n## REMOVED Requirements\n\n### Requirement: Falso en valla\n```\n\n" +
+		"Texto tras la valla.\n\n" +
+		"## MODIFIED Requirements\n\n### Requirement: Otro\n\ncuerpo\n"
+	got := ParseDelta(delta)
+	if names := requirementNames(got.Added); !reflect.DeepEqual(names, []string{"Real"}) {
+		t.Errorf("Added = %v; el requisito dentro de la valla no cuenta", names)
+	}
+	if len(got.Removed) != 0 {
+		t.Errorf("Removed = %v; la sección dentro de la valla no cuenta", requirementNames(got.Removed))
+	}
+	if names := requirementNames(got.Modified); !reflect.DeepEqual(names, []string{"Otro"}) {
+		t.Errorf("Modified = %v", names)
+	}
+	if !strings.Contains(got.Added[0].Body, "### Requirement: Falso en valla") || !strings.Contains(got.Added[0].Body, "Texto tras la valla.") {
+		t.Errorf("el cuerpo de Real debe conservar la valla completa y el texto posterior: %q", got.Added[0].Body)
+	}
+}
+
+func TestParseDeltaIgnoresHeadingsInsideNestedFences(t *testing.T) {
+	delta := "## ADDED Requirements\n\n" +
+		"### Requirement: Real\n\n" +
+		"````markdown\n```text\n### Requirement: Interno\n```\n## ADDED Requirements\n\n### Requirement: Falso\n````\n\n" +
+		"Fin.\n"
+	got := ParseDelta(delta)
+	if names := requirementNames(got.Added); !reflect.DeepEqual(names, []string{"Real"}) {
+		t.Errorf("Added = %v; ninguna cabecera dentro de vallas anidadas cuenta", names)
+	}
+	if !strings.Contains(got.Added[0].Body, "Fin.") {
+		t.Errorf("el cuerpo de Real debe llegar hasta el final: %q", got.Added[0].Body)
+	}
+}

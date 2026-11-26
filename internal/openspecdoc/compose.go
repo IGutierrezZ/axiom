@@ -225,14 +225,20 @@ type openSpecDelta struct {
 // parseOpenSpecDelta splits a delta spec into its ADDED/MODIFIED/REMOVED/
 // RENAMED requirement blocks (skills/_shared/openspec-convention.md).
 func parseOpenSpecDelta(text string) openSpecDelta {
-	sections := openSpecDeltaSectionHeading.FindAllStringSubmatchIndex(text, -1)
+	fences := fencedRanges(text)
+	var sections [][]int
+	for _, m := range openSpecDeltaSectionHeading.FindAllStringSubmatchIndex(text, -1) {
+		if !insideAnyRange(fences, m[0]) {
+			sections = append(sections, m)
+		}
+	}
 	var delta openSpecDelta
 	for i, m := range sections {
 		kind, start, end := text[m[2]:m[3]], m[1], len(text)
 		if i+1 < len(sections) {
 			end = sections[i+1][0]
 		}
-		blocks := parseDeltaRequirementBlocks(text[start:end])
+		blocks := parseDeltaRequirementBlocks(text[start:end], fences, start)
 		for j := range blocks {
 			blocks[j].Offset += start
 		}
@@ -250,8 +256,15 @@ func parseOpenSpecDelta(text string) openSpecDelta {
 	return delta
 }
 
-func parseDeltaRequirementBlocks(text string) []specRequirementBlock {
-	matches := openSpecReqHeadingLine.FindAllStringSubmatchIndex(text, -1)
+// parseDeltaRequirementBlocks recibe las vallas del documento completo y el desplazamiento de
+// text dentro de él para descartar los encabezados que empiezan dentro de una valla.
+func parseDeltaRequirementBlocks(text string, fences [][2]int, base int) []specRequirementBlock {
+	var matches [][]int
+	for _, m := range openSpecReqHeadingLine.FindAllStringSubmatchIndex(text, -1) {
+		if !insideAnyRange(fences, base+m[0]) {
+			matches = append(matches, m)
+		}
+	}
 	blocks := make([]specRequirementBlock, 0, len(matches))
 	for i, m := range matches {
 		end := len(text)

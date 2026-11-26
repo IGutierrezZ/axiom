@@ -33,10 +33,12 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
 
 ## Fase 1: Corrección de `ParseDelta` (commit a)
 
-- [ ] 1.1 RED: añadir en `internal/openspecdoc/parse_test.go` y `internal/openspecdoc/compose_test.go` pruebas de que una delta con `### Requirement:` y `## ADDED Requirements` dentro de una valla de código (incluidas vallas anidadas) no cuenta como requisito ni sección, tanto para `ParseDelta` como para `Compose`. Ejecutar y registrar el fallo observado antes de tocar producción.
+- [x] 1.1 RED: añadir en `internal/openspecdoc/parse_test.go` y `internal/openspecdoc/compose_test.go` pruebas de que una delta con `### Requirement:` y `## ADDED Requirements` dentro de una valla de código (incluidas vallas anidadas) no cuenta como requisito ni sección, tanto para `ParseDelta` como para `Compose`. Ejecutar y registrar el fallo observado antes de tocar producción.
   - Verificación: `go test ./internal/openspecdoc -run 'Fence|Fenced' -count=1` falla (RED observado y anotado en la evidencia).
-- [ ] 1.2 GREEN: en `internal/openspecdoc/compose.go`, calcular `fencedRanges(text)` una vez en `parseOpenSpecDelta` y descartar cabeceras de sección y de requisito que empiezan dentro de una valla; pasar el desplazamiento a `parseDeltaRequirementBlocks` (D9). `ParseDelta` y `Compose` comparten la función.
+  - Evidencia: RED observado, 3 pruebas fallan (TestParseDeltaIgnoresRequirementHeadingsInsideFences: Removed = [Falso en valla]; TestParseDeltaIgnoresHeadingsInsideNestedFences: Added = [Real Interno Falso]; TestComposeIgnoresRequirementHeadingsInsideFencedDeltaBlocks: Widget Expiration reemplazado y Widget Tagging perdido).
+- [x] 1.2 GREEN: en `internal/openspecdoc/compose.go`, calcular `fencedRanges(text)` una vez en `parseOpenSpecDelta` y descartar cabeceras de sección y de requisito que empiezan dentro de una valla; pasar el desplazamiento a `parseDeltaRequirementBlocks` (D9). `ParseDelta` y `Compose` comparten la función.
   - Verificación: `go test ./internal/openspecdoc ./internal/livespec -count=1` y `go vet ./internal/openspecdoc ./internal/livespec`.
+  - Evidencia: GREEN, `go test ./internal/openspecdoc ./internal/livespec -count=1` ok y `go vet` ok.
   - Commit: `fix(openspecdoc): ignorar requisitos dentro de vallas en la delta`.
 
 ## Fase 2: Resolución de IDs heredados en `axiom trace` (commit b)

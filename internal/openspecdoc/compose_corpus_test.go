@@ -48,8 +48,8 @@ func TestComposeCorpusIdentityModified(t *testing.T) {
 			}
 			k++
 
-			// El bloque debe sobrevivir al análisis de deltas (que no distingue vallas).
-			block := parseDeltaRequirementBlocks(s.Text)
+			// El bloque debe sobrevivir al análisis de deltas (que ignora lo que hay dentro de vallas).
+			block := parseDeltaRequirementBlocks(s.Text, fencedRanges(s.Text), 0)
 			if len(block) != 1 || block[0].Text != s.Text {
 				continue
 			}
