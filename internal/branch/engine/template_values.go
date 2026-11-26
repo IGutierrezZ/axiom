@@ -2,12 +2,10 @@ package engine
 
 import (
 	"path/filepath"
-	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/nametemplate"
 	"github.com/IGutierrezZ/axiom/v3/internal/changestart"
-	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -96,16 +94,14 @@ func resolveTemplateValues(in branch.PlanInput, location workspace.Location) bra
 
 	needsLinks := needs.ref && !values.RefFrozen || needs.kind && !values.KindFrozen || needs.taskRef
 	if active := activePlugins(location); needsLinks && len(active) > 0 && in.Lane != branch.LaneODD {
-		folder := integrations.Folder{WorkspaceRoot: location.WorkspaceRoot, Root: filepath.Join(location.PlanningHome, "changes", in.Change)}
-		if workItems, err := integrations.WorkItemLinks(folder); err != nil {
-			values.LinksErr = err
-		} else if tasks, err := integrations.TaskLinks(folder); err != nil {
+		ref, taskRefs, err := changestart.LinkedIDs(location.WorkspaceRoot, filepath.Join(location.PlanningHome, "changes", in.Change), active)
+		if err != nil {
 			values.LinksErr = err
 		} else {
 			if values.Ref == "" {
-				values.Ref = firstWorkItemID(workItems, active)
+				values.Ref = ref
 			}
-			values.TaskRefs = taskIDsByRole(tasks, active)
+			values.TaskRefs = taskRefs
 		}
 	}
 	if values.Ref == "" && hasOrigin {
@@ -123,39 +119,6 @@ func activePlugins(location workspace.Location) []string {
 	var ids []string
 	for _, plugin := range location.Declarations.Integrations.Active() {
 		ids = append(ids, plugin.ID)
-	}
-	return ids
-}
-
-// firstWorkItemID es el `id` del vínculo `work_item` del primer plugin activo que lo tiene.
-func firstWorkItemID(links []integrations.Link, active []string) string {
-	for _, plugin := range active {
-		for _, link := range links {
-			if link.Plugin == plugin && link.ID != "" {
-				return link.ID
-			}
-		}
-	}
-	return ""
-}
-
-// taskIDsByRole es el `id` del vínculo `task` de cada rol (en minúsculas) de los plugins activos; el
-// primero por orden de plugin y de vínculo gana.
-func taskIDsByRole(links []integrations.Link, active []string) map[string]string {
-	var ids map[string]string
-	for _, plugin := range active {
-		for _, link := range links {
-			role := strings.ToLower(link.Role)
-			if link.Plugin != plugin || link.ID == "" || role == "" {
-				continue
-			}
-			if ids == nil {
-				ids = map[string]string{}
-			}
-			if _, taken := ids[role]; !taken {
-				ids[role] = link.ID
-			}
-		}
 	}
 	return ids
 }
