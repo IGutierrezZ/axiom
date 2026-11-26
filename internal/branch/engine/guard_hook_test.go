@@ -23,7 +23,7 @@ const testGuardBudget = 30 * time.Second
 func runGuardFor(t *testing.T, agent, input string) (code int, stdout, stderr string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code = runGuard(Default(), testGuardBudget, agent, strings.NewReader(input), &out, &errOut)
+	code = runGuard(Default(), testGuardBudget, agent, "", strings.NewReader(input), &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
@@ -35,7 +35,7 @@ func runGuardEventFor(t *testing.T, agent, event, input string) (code int, stdou
 		event = ""
 	}
 	var out, errOut bytes.Buffer
-	code = runGuardForEvent(Default(), testGuardBudget, agent, event, strings.NewReader(input), &out, &errOut)
+	code = runGuard(Default(), testGuardBudget, agent, event, strings.NewReader(input), &out, &errOut)
 	return code, out.String(), errOut.String()
 }
 
@@ -207,7 +207,7 @@ func TestGuardHookVSCodeCopilotPayloads(t *testing.T) {
 	for name, tc := range nothing {
 		t.Run("no hace nada: "+name, func(t *testing.T) {
 			var out, errOut bytes.Buffer
-			code := runGuardForEvent(Default(), testGuardBudget, GuardAgentVSCode, tc.event, strings.NewReader(tc.input), &out, &errOut)
+			code := runGuard(Default(), testGuardBudget, GuardAgentVSCode, tc.event, strings.NewReader(tc.input), &out, &errOut)
 			if code != 0 || out.Len() != 0 || errOut.Len() != 0 {
 				t.Errorf("código %d, stdout %q, stderr %q; se esperaba 0 y sin salida", code, out.String(), errOut.String())
 			}
@@ -240,7 +240,7 @@ func TestGuardHookCodexDocumentedApplyPatchEnvelope(t *testing.T) {
 	}
 
 	for event, want := range map[string]string{"PreToolUse": GuardEventPre, "PostToolUse": GuardEventPost} {
-		got, err := ParseGuardPayload(GuardAgentCodex, strings.NewReader(envelope(event, event == "PostToolUse")))
+		got, err := ParseGuardPayload(GuardAgentCodex, "", strings.NewReader(envelope(event, event == "PostToolUse")))
 		if err != nil {
 			t.Fatalf("%s: ParseGuardPayload: %v", event, err)
 		}
@@ -333,7 +333,7 @@ func TestParseGuardPayloadRefusesMoreThanTheLimit(t *testing.T) {
 	t.Parallel()
 	reader := &countingReader{reader: strings.NewReader(strings.Repeat("a", 4*GuardMaxPayload))}
 
-	if _, err := ParseGuardPayload(GuardAgentClaudeCode, reader); err == nil {
+	if _, err := ParseGuardPayload(GuardAgentClaudeCode, "", reader); err == nil {
 		t.Fatal("una carga mayor que el límite debe ser un error")
 	}
 	if reader.read > GuardMaxPayload+1+4096 {
@@ -361,7 +361,7 @@ func TestGuardHookDoesNothingWhenTheBudgetIsExhausted(t *testing.T) {
 
 	var out, errOut bytes.Buffer
 	started := time.Now()
-	code := runGuard(Default(), 50*time.Millisecond, GuardAgentClaudeCode, blocked, &out, &errOut)
+	code := runGuard(Default(), 50*time.Millisecond, GuardAgentClaudeCode, "", blocked, &out, &errOut)
 
 	if elapsed := time.Since(started); elapsed > 5*time.Second {
 		t.Errorf("el hook tardó %s: debe terminar con el presupuesto", elapsed)
@@ -389,7 +389,7 @@ func TestGuardHookCleansDotDotPathsThatLeaveTheChange(t *testing.T) {
 	separator := string(filepath.Separator)
 	escaping := changeRootOf(repo) + separator + ".." + separator + ".." + separator + "internal" + separator + "a.go"
 
-	payload, err := ParseGuardPayload(GuardAgentClaudeCode, strings.NewReader(claudeWrite(t, "PreToolUse", repo, escaping)))
+	payload, err := ParseGuardPayload(GuardAgentClaudeCode, "", strings.NewReader(claudeWrite(t, "PreToolUse", repo, escaping)))
 	if err != nil {
 		t.Fatal(err)
 	}

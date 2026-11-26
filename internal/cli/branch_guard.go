@@ -73,16 +73,13 @@ func runBranchGuard(args []string, stdin io.Reader, stdout, stderr io.Writer) in
 		fmt.Fprintf(stderr, "Error: --agent '%s' no es válido: usa %s. Ejecuta `axiom branch guard --help`.\n", *agent, strings.Join(engine.GuardAgents, ", "))
 		return branch.ExitUsage
 	}
-	if !engine.GuardAgentNeedsEvent(*agent) {
-		if *event != "" {
-			fmt.Fprintf(stderr, "Error: --event no se admite con --agent %s: su carga ya trae el evento. Ejecuta `axiom branch guard --help`.\n", *agent)
-			return branch.ExitUsage
-		}
-		return engine.RunGuard(*agent, stdin, stdout, stderr)
+	if !engine.GuardAgentNeedsEvent(*agent) && *event != "" {
+		fmt.Fprintf(stderr, "Error: --event no se admite con --agent %s: su carga ya trae el evento. Ejecuta `axiom branch guard --help`.\n", *agent)
+		return branch.ExitUsage
 	}
-	if *event != engine.GuardEventPre && *event != engine.GuardEventPost {
+	if engine.GuardAgentNeedsEvent(*agent) && *event != engine.GuardEventPre && *event != engine.GuardEventPost {
 		fmt.Fprintf(stderr, "Error: --agent %s necesita --event pre o --event post (recibido '%s'). Ejecuta `axiom branch guard --help`.\n", *agent, *event)
 		return branch.ExitUsage
 	}
-	return engine.RunGuardForEvent(*agent, *event, stdin, stdout, stderr)
+	return engine.RunGuard(*agent, *event, stdin, stdout, stderr)
 }

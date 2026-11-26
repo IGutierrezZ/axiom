@@ -468,7 +468,7 @@ func TestParseGuardPayloadOfTheThreeRuntimes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := ParseGuardPayload(tc.agent, strings.NewReader(tc.input))
+			got, err := ParseGuardPayload(tc.agent, "", strings.NewReader(tc.input))
 			if err != nil {
 				t.Fatalf("ParseGuardPayload: %v", err)
 			}
@@ -493,7 +493,7 @@ func TestParseGuardPayloadWithoutPathsOrWithTheWrongShapeYieldsNoPaths(t *testin
 		"Codex con cabeceras que no son ruta": {GuardAgentCodex, `{"hook_event_name":"PreToolUse","tool_input":{"command":"echo *** Update File: a.go"}}`},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got, err := ParseGuardPayload(input.agent, strings.NewReader(input.body))
+			got, err := ParseGuardPayload(input.agent, "", strings.NewReader(input.body))
 			if err != nil || len(got.Paths) != 0 {
 				t.Errorf("carga = %+v (%v), se esperaba sin rutas y sin error", got, err)
 			}
@@ -505,12 +505,12 @@ func TestParseGuardPayloadWithoutPathsOrWithTheWrongShapeYieldsNoPaths(t *testin
 func TestParseGuardPayloadOfCodexIsDeterministic(t *testing.T) {
 	body := `{"hook_event_name":"PreToolUse","cwd":"` + filepath.ToSlash(t.TempDir()) + `","tool_input":{"b":"*** Add File: b.md","a":"*** Add File: a.md","c":["*** Add File: c.md"]}}`
 
-	first, err := ParseGuardPayload(GuardAgentCodex, strings.NewReader(body))
+	first, err := ParseGuardPayload(GuardAgentCodex, "", strings.NewReader(body))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for range 20 {
-		again, err := ParseGuardPayload(GuardAgentCodex, strings.NewReader(body))
+		again, err := ParseGuardPayload(GuardAgentCodex, "", strings.NewReader(body))
 		if err != nil || !slices.Equal(again.Paths, first.Paths) {
 			t.Fatalf("la carga debe dar siempre las mismas rutas: %v frente a %v (%v)", again.Paths, first.Paths, err)
 		}

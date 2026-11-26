@@ -89,7 +89,10 @@ Ruta de todas las tareas: inline. Las unidades se escribieron en un solo hilo: e
 ## Progreso
 
 - Worktree creado desde `origin/main` (`b4b5aa10`).
-- T1 `dacd6a84`, T2 `911ad6db`, T3 `7cdd3613`, T4 en el commit que cierra la feature.
+- T1 `dacd6a84`, T2 `911ad6db`, T3 `7cdd3613`, T4 `f2e589dc`. PR IGutierrezZ/axiom#323.
+- Corrección de la CI (commit nuevo, sin reescribir la rama publicada):
+  - `Deadcode Ratchet` marcaba `ParseGuardPayload` y `runGuard`, que solo llamaban las pruebas. Ahora cada uno recibe el evento y no quedan variantes `ForEvent`.
+  - `docs_contract_test.go` fijaba la frase anterior del manual sobre los runtimes con guarda.
 - Seguimiento fuera de alcance: el ámbito global de VS Code sigue escribiendo el `mcp.json` del perfil de usuario (`servers`, arnés Local). Su destino nativo es `~/.copilot/mcp-config.json` (`mcpServers`), que ya escribe el adaptador de Copilot CLI, así que conviene decidir entre unificarlos o retirarlo.
 
 ## No verificado

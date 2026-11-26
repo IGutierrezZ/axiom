@@ -49,7 +49,9 @@ const (
 )
 
 // ParseGuardPayload lee la carga del runtime agent de r, con un máximo de GuardMaxPayload bytes, y
-// devuelve el evento, la herramienta y las rutas destino, limpias y absolutas contra `cwd`.
+// devuelve el evento, la herramienta y las rutas destino, limpias y absolutas contra `cwd`. event
+// es el que declara la orden del hook para los runtimes cuya carga no lo trae
+// (GuardAgentNeedsEvent); con los demás se ignora y se pasa vacío.
 //
 //   - Claude Code: `hook_event_name` (`PreToolUse` o `PostToolUse`), `tool_name`, `cwd` y
 //     `tool_input.file_path` o `tool_input.notebook_path`.
@@ -58,16 +60,9 @@ const (
 //     `tool_input` porque la forma de la carga, tomada de la documentación oficial de Codex, no
 //     está verificada en una ejecución real (A-2, spike-guard-runtimes.md).
 //   - OpenCode: `{event, tool, filePath, cwd}`, que envía su plugin (`event` es `pre` o `post`).
-//   - VS Code Copilot: véase ParseGuardPayloadForEvent.
 //
 // Una carga demasiado grande, JSON inválido o un agente desconocido es un error: quien llama falla
 // en abierto.
-func ParseGuardPayload(agent string, r io.Reader) (GuardPayload, error) {
-	return ParseGuardPayloadForEvent(agent, "", r)
-}
-
-// ParseGuardPayloadForEvent es ParseGuardPayload con el evento que declara la orden del hook, para
-// los runtimes cuya carga no lo trae (GuardAgentNeedsEvent). Con los demás, event se ignora.
 //
 // VS Code Copilot (hooks camelCase `preToolUse` y `postToolUse` del arnés de Copilot,
 // docs.github.com/en/copilot/reference/hooks-reference) envía `{sessionId, timestamp, cwd,
@@ -77,7 +72,7 @@ func ParseGuardPayload(agent string, r io.Reader) (GuardPayload, error) {
 // un campo o como cadena entera. Solo cuentan las herramientas de escritura del arnés (`create`,
 // `edit`, `str_replace_editor` salvo su orden `view`, `apply_patch`); con cualquier otra no hay
 // rutas y la guarda no hace nada.
-func ParseGuardPayloadForEvent(agent, event string, r io.Reader) (GuardPayload, error) {
+func ParseGuardPayload(agent, event string, r io.Reader) (GuardPayload, error) {
 	data, err := io.ReadAll(io.LimitReader(r, GuardMaxPayload+1))
 	if err != nil {
 		return GuardPayload{}, fmt.Errorf("no se pudo leer la carga del hook: %w", err)
@@ -287,28 +282,19 @@ type guardOutput struct {
 // el protocolo del runtime, todo dentro de GuardBudget y en abierto. Devuelve el código de salida:
 // con `--agent claude-code` y `--agent codex`, 2 con el motivo por `stderr` si bloquea o avisa y 0
 // en otro caso; con `--agent opencode`, siempre 0 con `{"action":"none|block|warn","message":"…"}`
-// por `stdout`; con `--agent vscode-copilot`, véase RunGuardForEvent.
-func RunGuard(agent string, stdin io.Reader, stdout, stderr io.Writer) int {
-	return RunGuardForEvent(agent, "", stdin, stdout, stderr)
+// por `stdout`; con `--agent vscode-copilot`, siempre 0 (en `preToolUse` del arnés de Copilot,
+// cualquier código distinto de 0 deniega la escritura): el bloqueo va por `stdout` como
+// `{"permissionDecision":"deny","permissionDecisionReason":"…"}`, el aviso como
+// `{"additionalContext":"…"}`, que el modelo lee tras el resultado de la herramienta, y sin nada
+// que decir no escribe nada. event es el que declara la orden del hook (`pre` o `post`) para los
+// runtimes cuya carga no lo trae; con los demás va vacío.
+func RunGuard(agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
+	return runGuard(Default(), GuardBudget, agent, event, stdin, stdout, stderr)
 }
 
-// RunGuardForEvent es RunGuard con el evento que declara la orden del hook (`pre` o `post`), para
-// los runtimes cuya carga no lo trae. Con `--agent vscode-copilot` devuelve siempre 0: en
-// `preToolUse` del arnés de Copilot, cualquier código distinto de 0 deniega la escritura, así que
-// el bloqueo va por `stdout` como `{"permissionDecision":"deny","permissionDecisionReason":"…"}` y
-// el aviso como `{"additionalContext":"…"}`, que el modelo lee tras el resultado de la herramienta.
-// Sin nada que decir no escribe nada.
-func RunGuardForEvent(agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
-	return runGuardForEvent(Default(), GuardBudget, agent, event, stdin, stdout, stderr)
-}
-
-func runGuard(e *Engine, budget time.Duration, agent string, stdin io.Reader, stdout, stderr io.Writer) int {
-	return runGuardForEvent(e, budget, agent, "", stdin, stdout, stderr)
-}
-
-func runGuardForEvent(e *Engine, budget time.Duration, agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
+func runGuard(e *Engine, budget time.Duration, agent, event string, stdin io.Reader, stdout, stderr io.Writer) int {
 	decision := guardWithin(budget, func(ctx context.Context) GuardDecision {
-		payload, err := ParseGuardPayloadForEvent(agent, event, stdin)
+		payload, err := ParseGuardPayload(agent, event, stdin)
 		if err != nil {
 			return guardNone
 		}
