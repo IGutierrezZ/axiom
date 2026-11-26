@@ -52,7 +52,11 @@ Sin configuración de TDD en el proyecto (`axiom sdd status`: `tdd: null`) ni en
 
 ## Progreso
 
-T1 hecha en `0b2b7e75e`; T2 en `f0345705a`; T3 hecha (commit en el registro de la rama). Siguiente paso: integrar la spec viva con `axiom archive integrate --odd reinicio-ui-ultima-version` y abrir la PR con `type:feature`.
+T1 hecha en `0b2b7e75e`; T2 en `f0345705a`; T3 en `ea6688cf6`, que también integra la spec viva (RF-UPD-09 a 11). PR [#365](https://github.com/IGutierrezZ/axiom/pull/365) con `type:feature`.
+
+Corrección tras la primera ejecución de CI: falló `TestAxiomUpgradeWindowsAllowsResolvedGoDestination` (`go test ./internal/update/upgrade/`), que el filtro `-run` local no cubría. Su `go install` simulado no dejaba binario en el directorio temporal que ahora exige T1. Corregido en `094471477` con el ayudante `writeStagedSelfBinary`. Después pasan enteros `go test ./internal/update/upgrade/` y `go test ./internal/dashboard/`.
+
+Fusión con `origin/main` en `825f62199`: el único conflicto era la cabecera de totales de `openspec/INDEX.md`, regenerada con `axiom archive sync` (605 requisitos, 2926 escenarios). Tras la fusión, `go vet` de los paquetes tocados y de `cmd/axiom` limpio y `archive integrate --check` sin cambios. Siguiente paso: CI en verde y fusión de la PR (decisión de la persona).
 
 ## Criterio de terminado
 
