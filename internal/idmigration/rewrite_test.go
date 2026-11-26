@@ -351,13 +351,17 @@ func (c *fileCtx) processRegion(r region) {
 			c.out.keptAuto++
 			continue
 		}
+		// Un literal fijado por un mensaje de producción se reescribe aunque un residuo de ámbito
+		// completo cubra los fixtures del paquete: el residuo describe fixtures, no pines.
+		pinnedLiteral := false
 		if c.kind == kindGoTest {
 			if (r.Scope == scopeString && !c.env.pinned[tok]) || (r.Scope == scopeComment && c.env.testKeep[tok]) {
 				c.out.keptAuto++
 				continue
 			}
+			pinnedLiteral = r.Scope == scopeString
 		}
-		if e := coverage(c.env.res, c.path, r.Scope, tok); e != nil {
+		if e := coverage(c.env.res, c.path, r.Scope, tok); e != nil && !pinnedLiteral {
 			if why := forbiddenResidue(c.path, c.kind, r.Scope, e); why != "" {
 				c.fail("%s %s: %s", where, tok, why)
 				continue
@@ -869,6 +873,29 @@ func TestRewriteGoTestsPinnedLiteralsAndFixtureComments(t *testing.T) {
 	if !strings.Contains(got, `var _ = "RF-KOF-02"`) || !strings.Contains(got, `"## REQ-1.10 en un fixture"`) ||
 		!strings.Contains(got, "// REQ-1.10 describe el fixture; RF-TOP-01 es una cita.") {
 		t.Fatalf("Go de pruebas: %q", got)
+	}
+}
+
+func TestRewriteGoTestsPinnedLiteralBeatsWholeScopeResidue(t *testing.T) {
+	files := map[string]string{
+		"internal/foo/foo.go":      "package foo\n\nconst msg = \"falta REQ-27.2b\"\n",
+		"internal/foo/foo_test.go": "package foo\n\nvar _ = \"REQ-27.2b\"\nvar fixture = \"## REQ-1.10 en un fixture\"\n",
+	}
+	root := t.TempDir()
+	for p, c := range files {
+		writeFile(t, root, p, c)
+	}
+	entries := []mapEntry{asEntry("sdd-lane-kickoff", "RF-KOF-02", "REQ-27.2b"), asEntry("autoskills", "RF-ASK-03", "REQ-1.10")}
+	res := migrate(migrateIn{
+		Root: root, Files: []string{"internal/foo/foo.go", "internal/foo/foo_test.go"}, Entries: entries,
+		Res: []residueEntry{{Paths: []string{"internal/foo/*_test.go"}, Scope: "go-string", Category: "default-pattern-fixture", Reason: "fixtures"}},
+	})
+	if len(res.Failures) != 0 {
+		t.Fatalf("fallos: %v", res.Failures)
+	}
+	got := res.Files["internal/foo/foo_test.go"]
+	if !strings.Contains(got, `var _ = "RF-KOF-02"`) || !strings.Contains(got, `"## REQ-1.10 en un fixture"`) {
+		t.Fatalf("el pin gana al residuo de ámbito completo y el fixture se conserva: %q", got)
 	}
 }
 
