@@ -4,7 +4,7 @@
 
 ## ADDED Requirements
 
-### Requirement: El `archive-report` Incluye el Resumen de Marcas y las Marcas Nunca Bloquean el Archivado (prov:ARC:1)
+### Requirement: El `archive-report` Incluye el Resumen de Marcas y las Marcas Nunca Bloquean el Archivado (RF-ARC-18)
 
 Cuando el cambio tiene `pruebas-estado.yaml` con entradas, el `archive-report` DEBE incluir una sección con el resumen de marcas por entorno (casos `ok` vigentes sobre el total aplicable y marcas caducadas aparte), calculado con el mismo cálculo que el status (RF-KOF-22). Sin marcas, el informe NO DEBE incluir la sección. El archivado NO DEBE bloquearse, rechazarse ni condicionarse por marcas ausentes, `ko`, `blocked`, caducadas o por un `pruebas-estado.yaml` ilegible; un fichero ilegible se declara como aviso. El `pruebas-estado.yaml` DEBE archivarse junto con el resto de la carpeta del cambio, sin modificarlo. El resumen NO DEBE cambiar `nextRecommended`, dependencias ni digests.
 

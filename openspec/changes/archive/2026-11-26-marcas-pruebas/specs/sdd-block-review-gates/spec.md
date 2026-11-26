@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: La Presentación de `integration` Muestra el Resumen de Marcas por Entorno como Información (prov:GAT:1)
+### Requirement: La Presentación de `integration` Muestra el Resumen de Marcas por Entorno como Información (RF-GAT-33)
 
 En un cambio `checkpointed`, cuando el status proyecta el resumen de marcas de `pruebas.md` (RF-KOF-22), la presentación de la compuerta `integration` DEBE mostrarlo por entorno (casos `ok` vigentes sobre el total aplicable, y marcas caducadas aparte), junto a la declaración de la verificación conjunta (RF-GAT-26). Sin resumen proyectado, la presentación NO DEBE mencionarlo. La doctrina del orquestador y el skill `sdd-archive` DEBEN fijar esta regla. El resumen es solo informativo: NO DEBE cambiar las dos salidas de `integration`, NO DEBE alterar la evidencia de fusión exigida, NO DEBE registrarse en `gates.yaml` ni cambiar ningún digest, y NO DEBE condicionar la aprobación ni retrasar la presentación. Un resumen con casos `ko`, `blocked`, sin marcar o caducados se presenta como tal y nunca como limpio. En `continuous` no hay compuerta y el resumen solo aparece en el resumen final.
 
