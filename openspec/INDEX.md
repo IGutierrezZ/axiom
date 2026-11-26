@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-25 16:58:08 UTC
-> **Total Dominios:** 54 | **Total Requerimientos:** 533 | **Total Escenarios BDD:** 2150
+> **Última Sincronización:** 2026-11-26 00:46:39 UTC
+> **Total Dominios:** 54 | **Total Requerimientos:** 534 | **Total Escenarios BDD:** 2153
 
 ---
 
@@ -13,12 +13,12 @@
 | `antigravity-support` | Antigravity support | 4 | 4 | [Ver Spec](specs/antigravity-support/spec.md) |
 | `autoskills` | Especificación de Requerimientos: Autoskills (midudev/autoskills) y Minería Heurística con Gobernanza Human-in-the-Loop | 13 | 18 | [Ver Spec](specs/autoskills/spec.md) |
 | `axiom-binary-ci-coverage` | Especificación Viva: Cobertura de Integración Continua sobre el Binario Canónico | 2 | 2 | [Ver Spec](specs/axiom-binary-ci-coverage/spec.md) |
-| `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 9 | 11 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
+| `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 10 | 13 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 13 | 74 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 7 | 14 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
-| `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 9 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
+| `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 306 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
@@ -159,6 +159,9 @@ Contrato de nombre publicado por clase de superficie: instalador y tap, compuert
   - *Escenario BDD:* Los assets esperados no incluyen el bundle
   - *Escenario BDD:* Una release sin el bundle supera las compuertas
   - *Escenario BDD:* Los contratos de revisión no existen y el de SDD permanece
+- **[REQ-20.17]** Procedencia, firma y CI de release con identidad axiom
+  - *Escenario BDD:* La procedencia y la firma usan la identidad axiom
+  - *Escenario BDD:* La promoción consulta el repositorio propio
 
 ### Dominio: `axiom-sdd-cli-integration` — Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13)
 
@@ -339,15 +342,16 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
   - *Escenario BDD:* Ubicación de launchers en ~/.axiom/bin
 - **[REQ-12.2]** Migración defensiva desde ~/.gentle-ai
   - *Escenario BDD:* Migración automática en el primer arranque
-- **[REQ-12.3]** Precedencia de variables AXIOM_* sobre GENTLE_AI_*
-  - *Escenario BDD:* Variable AXIOM_* toma precedencia
-  - *Escenario BDD:* Fallback a GENTLE_AI_* si AXIOM_* no está definido
+  - *Escenario BDD:* La migración no pisa el destino y es idempotente
 - **[REQ-46.5]** La Lectura del Estado Tolera Restos de RDD
   - *Escenario BDD:* Un `state.json` con `rdd_mode` carga sin error
   - *Escenario BDD:* Una selección con `rdd-defect-workflow` no rompe `sync`
   - *Escenario BDD:* La siguiente escritura elimina los restos
 - **[REQ-46.8]** Aislamiento del Directorio de Trabajo (CWD) en la Gestión de Artefactos
   - *Escenario BDD:* Sincronización de agentes desde un subdirectorio anidado
+- **[REQ-12.4]** Variables de entorno exclusivamente AXIOM_*
+  - *Escenario BDD:* Variable AXIOM_* toma el valor
+  - *Escenario BDD:* GENTLE_AI_* se ignora
 
 ### Dominio: `azure-devops-adapter` — Especificación de azure-devops-adapter
 

@@ -48,7 +48,7 @@ Esto solo detiene la animación del indicador; las operaciones de instalación, 
 
 ### install
 
-Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace; si el proyecto aún no tiene el suyo, las preferencias parten del estado global como semilla de solo lectura, sin los agentes, véase [Estado de instalación por proyecto](#cli-flags-install)) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Si solo existe el estado heredado en `~/.gentle-ai/state.json`, Axiom puede migrarlo al directorio actual.
+Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace; si el proyecto aún no tiene el suyo, las preferencias parten del estado global como semilla de solo lectura, sin los agentes, véase [Estado de instalación por proyecto](#cli-flags-install)) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Axiom migra una vez el estado antiguo de `~/.gentle-ai/` a `~/.axiom/`.
 
 **Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall`, y también la TUI, trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
 
@@ -113,7 +113,7 @@ Actualiza los recursos gestionados a la versión vigente. Ejecútalo después de
 
 > **Importante:** `axiom sync` actualiza los agentes registrados como instalados por Axiom, no todos los directorios de configuración de agentes de tu equipo.
 >
-> Axiom guarda los destinos seleccionados en `~/.axiom/state.json` con `--scope global` y en `<raíz del workspace>/.axiom/state.json` con `--scope workspace` (el ámbito predeterminado de la TUI y de `setup`). Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. El estado existente en `~/.gentle-ai/state.json` es una fuente de migración heredada, no la ruta actual. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
+> Axiom guarda los destinos seleccionados en `~/.axiom/state.json` con `--scope global` y en `<raíz del workspace>/.axiom/state.json` con `--scope workspace` (el ámbito predeterminado de la TUI y de `setup`). Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. Axiom migra una vez el estado antiguo de `~/.gentle-ai/state.json` a `~/.axiom/`. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
 >
 > Antes de sincronizar, puedes previsualizar el ámbito activo con `axiom sync --dry-run`. Para sincronizar agentes que no figuran en la selección guardada, indícalos explícitamente con `--agent`.
 
@@ -216,7 +216,7 @@ Revierte lo que Axiom escribió en tu carpeta de usuario con la misma regla de �
 - **La copia de skills de compatibilidad** de `~/.agents/skills` (solo las skills de Axiom) y los shims y el script del modo PR que Axiom escribe para GGA. El binario y el runtime de GGA no son de Axiom y se quedan.
 - Con **`--purge-state`**, la raíz de estado de Axiom (`~/.axiom` o `AXIOM_STATE_DIR`): estado, caché, lanzadores y copias de seguridad, incluida la de esta desinstalación. Nunca se purga por defecto y solo se admite con `--all` y el ámbito global. Si el registro del hub (`workspaces.json`) lista proyectos, el hub se conserva y se borra todo lo demás; para borrarlo también hay que añadir **`--purge-hub`**. Una raíz de estado que contiene `HOME` o el proyecto, o la raíz del disco, no se purga nunca.
 
-`~/.gentle-ai`, el estado de versiones anteriores, no se borra aunque exista (comparte nombre con la herramienta original): el informe te avisa para que lo quites a mano.
+`~/.gentle-ai`, el estado de versiones anteriores, no se borra aunque quede algo en él (comparte nombre con la herramienta original): el informe te avisa para que lo quites a mano.
 
 #### Migrar de una instalación global a una por proyecto
 
@@ -231,7 +231,7 @@ Una skill personal con el mismo nombre que una skill de proyecto prevalece sobre
 
 ### update / upgrade
 
-Busca e instala nuevas versiones de Axiom. La copia de seguridad previa a la actualización incluye únicamente los agentes registrados en `state.InstalledAgents` (`~/.axiom/state.json`), no todos los directorios de configuración de agentes que existan en el equipo. Los ficheros `~/.gentle-ai/state.json` que ya existan son fuentes de migración heredadas.
+Busca e instala nuevas versiones de Axiom. La copia de seguridad previa a la actualización incluye únicamente los agentes registrados en `state.InstalledAgents` (`~/.axiom/state.json`), no todos los directorios de configuración de agentes que existan en el equipo.
 
 ```bash
 # Comprueba si hay una versión nueva
@@ -291,7 +291,7 @@ Checks performed:
 | Check | What it verifies |
 |-------|-----------------|
 | Tool binaries | Required tools (`axiom` and Engram, plus the binaries of the selected agents) present on `PATH`; shadow detection (wrong binary resolves first). GGA is only required when you selected it explicitly |
-| Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción; puede migrar `~/.gentle-ai/state.json` si todavía no existe estado de Axiom |
+| Validez de `state.json` | Analiza el estado del proyecto actual (`.axiom/state.json`) si existe y, si no, `~/.axiom/state.json`, e informa de errores de esquema o corrupción |
 | Engram MCP reachability | Confirms the Engram MCP server responds |
 | Huella de máquina | Apartado informativo que lista lo que Axiom tiene a nivel de usuario: los binarios de `axiom` y Engram y el registro del hub (declarados) y, si existen, GGA, `~/.agents/skills`, los plugins de OpenCode en HOME, los restos de Kilo (`opencode.json` y plugins), de Kiro (steering `axiom.md`) y de Codex (`context7`, `features.multi_agent` y `agents.max_*` de `config.toml`), cada uno con su agente, CodeGraph global, las entradas de PATH gestionadas y `~/.gentle-ai`. Marca como `resto global` lo que solo deja una instalación global. Con raíz de proyecto añade el tipo `duplicado` (véase [Contexto duplicado entre usuario y workspace](#contexto-duplicado-entre-usuario-y-workspace)). No cuenta como aviso ni como fallo |
 | Disk space | Warns when available space is critically low |
@@ -449,12 +449,12 @@ Lo que eliges de forma explícita (GGA, CodeGraph, plugins comunitarios de OpenC
 | Caché | `<raíz>/cache/` |
 | Lanzadores gestionados de OpenCode | `<raíz>/bin/` |
 
-Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axiom` ni `~/.gentle-ai`. Sin ella las rutas son las de siempre, así que nada cambia en un equipo existente. Efectos a tener en cuenta al estrenar la variable en un equipo que ya instaló:
+Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axiom`. Sin ella las rutas son las de siempre, así que nada cambia en un equipo existente. Efectos a tener en cuenta al estrenar la variable en un equipo que ya instaló:
 
 - **PATH.** El PATH de usuario ya registrado sigue apuntando a `~/.axiom/bin`; `<raíz>/bin` se añade al activar de nuevo OpenCode en segundo plano. Los lanzadores de `~/.axiom/bin` nunca se toman como el OpenCode real.
 - **Respaldos.** Las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco).
-- **Raíz heredada `~/.gentle-ai`.** Solo se lee (estado, respaldos y marcas de sesión de versiones anteriores); no se escribe nada nuevo en ella.
-- **Fuera de alcance.** La caché que escribe el plugin de OpenCode `model-variants` la gestiona el propio plugin y sigue en `~/.axiom/cache` (v1) o `~/.gentle-ai/cache/opencode-v2` (v2).
+- **Raíz antigua `~/.gentle-ai`.** Axiom migra una vez su contenido, si existe; no se escribe nada nuevo en ella.
+- **Fuera de alcance.** La caché que escribe el plugin de OpenCode `model-variants` la gestiona el propio plugin y sigue en `~/.axiom/cache` (v1) o `~/.axiom/cache/opencode-v2` (v2).
 
 **Estado de instalación por proyecto.** Lo que Axiom recuerda de una instalación (agentes instalados, selección de componentes y skills, persona, asignación de modelos de Claude, Kiro, Codex y OpenCode, herramientas de comunidad e intenciones de segundo plano) vive donde vive la instalación:
 

@@ -2,7 +2,7 @@
 
 ← [Volver al README](../README.md)
 
-Esta guía describe los componentes que Axiom puede configurar para los agentes compatibles. Los nombres de componentes, skills y presets son identificadores estables de la CLI; un identificador heredado no implica que Gentle AI siga siendo el producto actual.
+Esta guía describe los componentes que Axiom puede configurar para los agentes compatibles. Los nombres de componentes, skills y presets son identificadores estables de la CLI;
 
 ## Componentes
 

@@ -1,6 +1,6 @@
 # Copias de seguridad y restauración
 
-Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. La pantalla **Respaldos** de la TUI distingue las copias de Axiom de las copias históricas de Gentle AI: selecciona por defecto la copia más reciente de Axiom y mantiene las de Gentle AI disponibles para una restauración deliberada.
+Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. La pantalla **Respaldos** de la TUI selecciona por defecto la copia más reciente. Axiom migra una vez las copias antiguas de `~/.gentle-ai/backups/` a la raíz de estado.
 
 ## Qué se guarda
 
@@ -13,11 +13,11 @@ Cada operación de escritura:
 
 Un `sync` que termina bien sin escribir ningún fichero («no changes needed») descarta la copia que acababa de crear: sería idéntica al estado actual y no sirve de punto de restauración, así que las sincronizaciones sin cambios no acumulan copias. Un `sync` que sí escribe conserva su copia previa.
 
-Las copias de Axiom viven en `<raíz de estado>/backups/`, donde la raíz de estado es `~/.axiom` o, si defines `AXIOM_STATE_DIR`, esa carpeta. Con la variable definida, las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco); las históricas de Gentle AI en `~/.gentle-ai/backups/` se siguen leyendo.
+Las copias de Axiom viven en `<raíz de estado>/backups/`, donde la raíz de estado es `~/.axiom` o, si defines `AXIOM_STATE_DIR`, esa carpeta. Con la variable definida, las copias hechas antes en `~/.axiom/backups/` dejan de listarse (siguen en disco).
 
 El manifiesto registra el origen, la fecha, el número de ficheros, la huella y si una ruta existía antes de la operación. Las copias antiguas, anteriores al formato comprimido, conservan un directorio `files/`; Axiom también las admite al restaurar.
 
-El alcance de un respaldo de sincronización depende de los agentes registrados como instalados por Axiom. No presupongas que incluye los directorios de agentes configurados manualmente fuera de Axiom. Las copias de Axiom (`~/.axiom/backups/`) y las históricas de Gentle AI (`~/.gentle-ai/backups/`) mantienen su procedencia, aunque tengan identificadores repetidos.
+El alcance de un respaldo de sincronización depende de los agentes registrados como instalados por Axiom. No presupongas que incluye los directorios de agentes configurados manualmente fuera de Axiom.
 
 ## Retención
 
@@ -36,7 +36,7 @@ Abre la pantalla de respaldos:
 axiom tui
 ```
 
-En la pantalla **Respaldos**, utiliza `j`/`k` para elegir una copia y `Enter` para restaurarla. La selección inicial apunta a la copia de Axiom más reciente; elige expresamente una copia identificada como Gentle AI solo si quieres recuperar ese estado histórico.
+En la pantalla **Respaldos**, utiliza `j`/`k` para elegir una copia y `Enter` para restaurarla. La selección inicial apunta a la copia de Axiom más reciente.
 
 | Tecla | Acción |
 |-------|--------|
@@ -46,8 +46,6 @@ En la pantalla **Respaldos**, utiliza `j`/`k` para elegir una copia y `Enter` pa
 | `r` | Añadir o cambiar la descripción |
 | `d` | Eliminar la copia seleccionada |
 | `Esc` | Volver |
-
-La interfaz conserva la raíz/origen seleccionado al restaurar; no deduzcas el origen solo por el ID, porque puede repetirse entre Axiom y Gentle AI.
 
 ## Semántica de restauración
 
@@ -69,4 +67,3 @@ Para escoger un respaldo de un origen concreto, usa la pantalla **Respaldos**: e
 ## Límites
 
 - Las instalaciones realizadas mediante `brew`, `apt-get`, `pacman` o `dnf` no se desinstalan al restaurar una copia de configuración. Usa el gestor de paquetes correspondiente si también quieres retirarlas.
-- No selecciones una copia histórica de Gentle AI por ser la más reciente en conjunto: comprueba el origen que muestra la TUI antes de confirmar.

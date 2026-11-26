@@ -13,7 +13,7 @@ The system MUST render the Codex AGENTS.md protocol section, the `model_instruct
 #### Scenario: Codex outputs render from one source
 
 - GIVEN the canonical protocol asset
-- WHEN gentle-ai renders the Codex AGENTS.md section, `model_instructions_file`, and compact prompt
+- WHEN axiom renders the Codex AGENTS.md section, `model_instructions_file`, and compact prompt
 - THEN all three outputs MUST derive from that single canonical asset
 
 #### Scenario: PASSIVE CAPTURE content survives consolidation
@@ -27,8 +27,7 @@ The system MUST render the Codex AGENTS.md protocol section, the `model_instruct
 - GIVEN the pre-consolidation rendered Codex outputs (AGENTS.md section, `model_instructions_file`, compact prompt)
 - WHEN the same outputs are rendered after consolidation
 - THEN every normative rule (MUST/SHALL/SHOULD statement) present before consolidation MUST still be present after
-
----
+(Previously: the scenarios named the product `gentle-ai`.)
 
 ### Requirement: Conditional per-adapter section slimming
 
@@ -37,17 +36,16 @@ The system MUST slim an adapter's system-prompt Engram protocol section ONLY whe
 #### Scenario: Verified adapter gets the slim section
 
 - GIVEN an adapter is on the design-verified redundant-channel list
-- WHEN gentle-ai injects the Engram protocol section for that adapter
+- WHEN axiom injects the Engram protocol section for that adapter
 - THEN it MUST inject the slim variant
 - AND the slim variant MUST contain a pointer to the full protocol location
 
 #### Scenario: Unverified adapter keeps the full section
 
 - GIVEN an adapter is NOT on the design-verified redundant-channel list
-- WHEN gentle-ai injects the Engram protocol section for that adapter
+- WHEN axiom injects the Engram protocol section for that adapter
 - THEN it MUST inject the full section, unchanged from today's content
-
----
+(Previously: the scenarios named the product `gentle-ai`.)
 
 ### Requirement: Version-gated protocol-verbosity forwarding to engram setup
 
@@ -56,23 +54,22 @@ When invoking `engram setup`, the system MUST detect whether the installed engra
 #### Scenario: Supported binary receives the verbosity flag
 
 - GIVEN the installed engram binary supports the protocol-verbosity option
-- WHEN gentle-ai invokes `engram setup`
+- WHEN axiom invokes `engram setup`
 - THEN it MUST pass the configured verbosity value to the invocation
 
 #### Scenario: Unsupported binary is invoked unchanged
 
 - GIVEN the installed engram binary does not support the protocol-verbosity option
-- WHEN gentle-ai invokes `engram setup`
+- WHEN axiom invokes `engram setup`
 - THEN it MUST invoke setup with no unknown flags, identical to current behavior
 - AND full-text injection MUST remain in effect
 
 #### Scenario: Setup never fails due to verbosity detection
 
 - GIVEN any installed engram binary, supported or unsupported
-- WHEN gentle-ai performs verbosity detection and forwarding around `engram setup`
+- WHEN axiom performs verbosity detection and forwarding around `engram setup`
 - THEN the setup invocation MUST NOT fail as a result of that detection or forwarding logic
-
----
+(Previously: the scenarios named the product `gentle-ai`.)
 
 ### Requirement: Idempotent injection and clean uninstall across upgrades
 

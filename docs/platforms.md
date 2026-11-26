@@ -84,5 +84,5 @@ Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `work
 | Kiro IDE | `%USERPROFILE%\.kiro\steering\` (prompts) + `%USERPROFILE%\.kiro\skills\` (skills) + `%USERPROFILE%\.kiro\agents\` (SDD agents) + `%APPDATA%\kiro\User\settings.json` (settings) + `%USERPROFILE%\.kiro\settings\mcp.json` (MCP) |
 | OpenClaw | `%USERPROFILE%\.openclaw\openclaw.json` (global MCP/settings) + active workspace from `agents.defaults.workspace` for `AGENTS.md` / `SOUL.md` / workspace-scoped SDD skills |
 | Trae (solo global) | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
-| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Gentle AI support assets) |
+| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, gentle-pi support assets) |
 | Hermes (no disponible de momento) | `%USERPROFILE%\.hermes\` (config.yaml, SOUL.md, skills/) |
