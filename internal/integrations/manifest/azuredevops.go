@@ -7,7 +7,7 @@ const AzureDevOpsID = "azure-devops"
 // el catálogo cerrado (que valida axiom.yaml) y el Manifest() del plugin, de modo que no pueden
 // divergir. Cada llamada devuelve un valor nuevo.
 //
-// Solo declara lo que este adaptador entrega: lectura de work items y descubrimiento. La escritura
+// Declara lo que este adaptador entrega: lectura de work items, descubrimiento, etiquetas y adjuntos. La escritura
 // con test /rev existe como operación del cliente, pero ningún evento la invoca todavía, así que no
 // hay capacidades de escritura. El evento change.start es el único que escucha: ningún verbo lo
 // emite aún.
@@ -16,7 +16,8 @@ func AzureDevOps() Manifest {
 		Schema:       SchemaV1,
 		ID:           AzureDevOpsID,
 		Title:        "Azure DevOps",
-		Capabilities: []Capability{CapItemsRead, CapDiscovery},
+		Capabilities: []Capability{CapItemsRead, CapDiscovery, CapTags, CapAttachments},
+		RefAlias:     "ado",
 		Events:       []EventType{EventChangeStart},
 		Config: []ConfigField{
 			{Key: "organization", Type: FieldString, Required: true,
@@ -25,6 +26,9 @@ func AzureDevOps() Manifest {
 				Description: "Proyecto de Azure DevOps"},
 			{Key: "team", Type: FieldString, Required: true,
 				Description: "Equipo del proyecto (iteraciones y miembros)"},
+			{Key: "item_keys", Type: FieldStringList, Format: FormatTypePrefixPairs,
+				Default:     []string{"User Story=US", "Bug=BUG"},
+				Description: "Tipos de work item admitidos al arrancar un cambio, como Tipo=PREFIJO; el perfil bug solo se da al tipo Bug"},
 		},
 		Secrets: []SecretSpec{
 			{Name: "pat", Required: true,

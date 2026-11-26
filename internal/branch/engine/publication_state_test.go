@@ -48,6 +48,21 @@ func changeFile(worktree, name string) string {
 	return filepath.Join(worktree, "openspec", "changes", "x", name)
 }
 
+// D-16: el contexto importado de un work item (y sus temporales) es estado local: nunca cuenta como
+// documentación sucia del cambio.
+func TestPublicationStateIgnoresContext(t *testing.T) {
+	t.Parallel()
+	_, worktree, _ := stateWorktree(t)
+	request := branch.PublicationRequest{CWD: worktree, Change: "x"}
+
+	writeFile(t, changeFile(worktree, filepath.Join("context", "work-item.md")), "dato de un tercero\n")
+	writeFile(t, changeFile(worktree, filepath.Join("context", "attachments", "tasks.md")), "adjunto\n")
+	writeFile(t, changeFile(worktree, filepath.Join(".context-tmp", "abc", "work-item.md")), "temporal\n")
+	if state := wantPublicationState(t, request); len(state.DirtyDocs) != 0 {
+		t.Errorf("solo contexto: DirtyDocs = %v, el contexto nunca cuenta", state.DirtyDocs)
+	}
+}
+
 // Matriz de amenazas «Estado del commit»: lo preparado, lo borrado y lo sin seguimiento cuentan; el
 // estado local con punto no; una carpeta sin seguimiento se mira fichero a fichero.
 func TestPublicationStateDirtyDocsFollowTheClosedListAndIgnoreLocalState(t *testing.T) {

@@ -130,6 +130,8 @@ func portLabel(port string) string {
 		return "identidad"
 	case PortDiscovery:
 		return "descubrimiento"
+	case PortWorkItems:
+		return "work items"
 	}
 	return port
 }

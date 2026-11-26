@@ -2,6 +2,7 @@ package docpaths
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -151,6 +152,10 @@ func TestLocalStateArchivedRoot(t *testing.T) {
 	want := []string{
 		"openspec/changes/x/.*",
 		"openspec/changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/.*",
+		"openspec/changes/x/context/**",
+		"openspec/changes/x/.context-tmp/**",
+		"openspec/changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/context/**",
+		"openspec/changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/.context-tmp/**",
 	}
 	if got := set.LocalStateGlobs(); !reflect.DeepEqual(got, want) {
 		t.Errorf("LocalStateGlobs = %v, se esperaba %v", got, want)
@@ -163,6 +168,38 @@ func TestLocalStateArchivedRoot(t *testing.T) {
 	}
 	if got := root.LocalStateGlobs()[1]; got != "changes/archive/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-x/.*" {
 		t.Errorf("glob archivado con planning home vacío = %q", got)
+	}
+}
+
+// D-16: el contexto importado de un work item y sus temporales son estado local, activo y archivado.
+func TestLocalStateIncludesContext(t *testing.T) {
+	set := mustNew(t, "openspec", "x", nil, nil)
+	cases := map[string]bool{
+		"openspec/changes/x/context/work-item.md":                      true,
+		"openspec/changes/x/context/attachments/tasks.md":              true,
+		"openspec/changes/x/.context-tmp/abc/work-item.json":           true,
+		"openspec/changes/archive/2026-11-26-x/context/work-item.json": true,
+		"openspec/changes/archive/2026-11-26-x/.context-tmp/abc/a.png": true,
+		"openspec/changes/archive/2026-11-26-y/context/work-item.json": false, // otro cambio
+		"openspec/changes/y/context/work-item.md":                      false, // otro cambio
+		"openspec/changes/x/contexto/a.md":                             false, // solo la carpeta exacta
+		"openspec/changes/x/specs/context/a.md":                        false, // anidado: documentación
+		"openspec/changes/x/proposal.md":                               false,
+		"openspec/changes/archive/2026-11-26-x/proposal.md":            false,
+		"openspec/changes/archive/2026-11-26-x/specs/context/a.md":     false,
+		"openspec/changes/archive/x/context/a.md":                      false, // sin fecha
+		"openspec/changes/x/context":                                   false, // la carpeta sin contenido no es un fichero
+	}
+	for rel, want := range cases {
+		if got := set.LocalState(rel); got != want {
+			t.Errorf("LocalState(%q) = %v, se esperaba %v", rel, got, want)
+		}
+	}
+	joined := strings.Join(set.LocalStateGlobs(), "\n")
+	for _, glob := range []string{"openspec/changes/x/context/**", "openspec/changes/x/.context-tmp/**"} {
+		if !strings.Contains(joined, glob) {
+			t.Errorf("LocalStateGlobs no contiene %q: %v", glob, set.LocalStateGlobs())
+		}
 	}
 }
 

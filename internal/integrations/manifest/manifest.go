@@ -25,6 +25,8 @@ const (
 var (
 	idPattern     = regexp.MustCompile(`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`)
 	configPattern = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
+	refAliasPattern = regexp.MustCompile(`^[a-z][a-z0-9]{1,15}$`)
 )
 
 // forbiddenKeySegments son los segmentos (separados por "_") que delatan un secreto declarado
@@ -84,6 +86,8 @@ type Manifest struct {
 	Config       []ConfigField `json:"config"`
 	Secrets      []SecretSpec  `json:"secrets"`
 	Identity     IdentitySpec  `json:"identity"`
+	// RefAlias es el alias corto de la referencia externa de un cambio (external_ref: <alias>:<id>).
+	RefAlias string `json:"ref_alias,omitempty"`
 }
 
 // ConfigField declara una clave de configuración admitida bajo integrations.<plugin>.
@@ -94,6 +98,8 @@ type ConfigField struct {
 	Description string    `json:"description"`
 	Default     any       `json:"default,omitempty"`
 	Enum        []string  `json:"enum,omitempty"`
+	// Format declara el formato de los elementos de un string_list (lista cerrada).
+	Format ValueFormat `json:"format,omitempty"`
 }
 
 // SecretSpec declara un secreto que el plugin necesita. Su valor nunca vive en axiom.yaml.
@@ -147,6 +153,10 @@ func (m Manifest) Validate() error {
 	}
 	if m.Identity.Secret != "" && !secretNames[m.Identity.Secret] {
 		p = append(p, fmt.Sprintf("identity.secret %q no es un secreto declarado", m.Identity.Secret))
+	}
+
+	if m.RefAlias != "" && !refAliasPattern.MatchString(m.RefAlias) {
+		p = append(p, fmt.Sprintf("ref_alias %q debe cumplir %s", m.RefAlias, refAliasPattern.String()))
 	}
 
 	if len(p) == 0 {
@@ -253,7 +263,47 @@ func validateField(f ConfigField) []string {
 	if f.Default != nil && !defaultMatchesType(f.Default, f.Type) {
 		p = append(p, fmt.Sprintf("la clave %q: el valor por defecto no es del tipo declarado %q", f.Key, f.Type))
 	}
+	if f.Format != "" {
+		p = append(p, validateFormat(f)...)
+	}
 	return p
+}
+
+func validateFormat(f ConfigField) []string {
+	if !ValidFormat(f.Format) {
+		return []string{fmt.Sprintf("la clave %q: formato %q no admitido; admitido: %s", f.Key, f.Format, FormatTypePrefixPairs)}
+	}
+	if f.Type != FieldStringList {
+		return []string{fmt.Sprintf("la clave %q: el formato %q solo se admite en el tipo string_list", f.Key, f.Format)}
+	}
+	values, ok := defaultStrings(f.Default)
+	if !ok {
+		return nil // sin valor por defecto, o ya reportado por defaultMatchesType
+	}
+	var p []string
+	_, problems := ParseTypePrefixes(values)
+	for _, pr := range problems {
+		p = append(p, fmt.Sprintf("la clave %q: el valor por defecto %q no cumple el formato %s: %s", f.Key, pr.Element, f.Format, pr.Reason))
+	}
+	return p
+}
+
+func defaultStrings(v any) ([]string, bool) {
+	switch l := v.(type) {
+	case []string:
+		return l, true
+	case []any:
+		out := make([]string, 0, len(l))
+		for _, e := range l {
+			s, ok := e.(string)
+			if !ok {
+				return nil, false
+			}
+			out = append(out, s)
+		}
+		return out, true
+	}
+	return nil, false
 }
 
 func defaultMatchesType(v any, t FieldType) bool {

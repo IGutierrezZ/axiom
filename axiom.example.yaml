@@ -146,12 +146,25 @@ workspace:
 # Con el bloque configurado, 'axiom integrations connect --plugin azure-devops' prueba la conexión y
 # guarda tu identidad en ~/.axiom, y 'axiom integrations discover --plugin azure-devops' imprime los
 # tipos, estados, campos, iteraciones y miembros del proyecto.
+# 'axiom change start --from <id|url>' arranca un cambio desde un work item: 'item_keys' lista los
+# tipos de work item admitidos como Tipo=PREFIJO (el prefijo forma el nombre del cambio, p. ej.
+# US-2525-alta-de-usuarios). Sin la clave vale ["User Story=US", "Bug=BUG"] (proceso Agile); en
+# Scrum o Basic se configura con el tipo de ese proceso ("Product Backlog Item=PBI", "Issue=ISS").
+# El perfil 'bug' solo se da al tipo que se llama literalmente 'Bug': un tipo de defecto con otro
+# nombre (p. ej. 'Defect') arranca con perfil 'incremento'. '--from' acepta el identificador
+# numérico o la URL del navegador (/_workitems/edit/<id>, la de la API o un tablero con
+# '?workitem=<id>') de la organización y el proyecto configurados.
+# Los manifiestos tienen un alias de referencia (ref_alias: 'ado' en azure-devops, solo informativo):
+# la referencia externa del cambio es '<alias>:<id>', p. ej. 'ado:2525'.
 # integrations:
 #   azure-devops:
 #     enabled: true
 #     organization: contoso      # la de dev.azure.com/<organización>
 #     project: Fabrikam
 #     team: Fabrikam Team
+#     item_keys:
+#       - "User Story=US"
+#       - "Bug=BUG"
 
 # ------------------------------------------------------------------------------
 # Ajustes de Ramas por Repositorio (opcional)

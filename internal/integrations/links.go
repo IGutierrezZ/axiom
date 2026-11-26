@@ -260,3 +260,34 @@ func normalizeOutcome(pluginID, key string, now time.Time, out Outcome) ([]Link,
 	}
 	return links, entries, nil
 }
+
+// WorkItemLinkSource es el origen (source) del vínculo que escribe la adopción de un work item.
+const WorkItemLinkSource = "change.start"
+
+// LinkWorkItem escribe en integrations.yaml el vínculo de un work item con el cambio (C-07-d). Toma
+// el cerrojo del cambio y reutiliza la fusión idempotente de las entregas con la clave change.start:
+// los vínculos e imputaciones ya presentes se conservan y repetir la llamada no cambia el fichero.
+// Devuelve si el fichero cambió.
+func LinkWorkItem(f Folder, pluginID string, l Link, now time.Time) (bool, error) {
+	release, err := f.acquire()
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	return mergeLinks(f, pluginID, WorkItemLinkSource, now, Outcome{Links: []Link{l}})
+}
+
+// WorkItemLinks devuelve los vínculos kind work_item de integrations.yaml. Sin fichero, ninguno.
+func WorkItemLinks(f Folder) ([]Link, error) {
+	doc, err := readLinks(f)
+	if err != nil {
+		return nil, err
+	}
+	var out []Link
+	for _, l := range doc.Links {
+		if l.Kind == "work_item" {
+			out = append(out, l)
+		}
+	}
+	return out, nil
+}

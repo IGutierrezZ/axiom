@@ -17,13 +17,13 @@ func TestAzureDevOpsManifestIsValid(t *testing.T) {
 
 func TestAzureDevOpsManifestDeclaresOnlyDeliveredCapabilities(t *testing.T) {
 	m := AzureDevOps()
-	want := []Capability{CapItemsRead, CapDiscovery}
+	want := []Capability{CapItemsRead, CapDiscovery, CapTags, CapAttachments}
 	if !reflect.DeepEqual(m.Capabilities, want) {
 		t.Fatalf("capacidades = %v, esperaba exactamente %v", m.Capabilities, want)
 	}
 	for _, forbidden := range []Capability{
 		CapItemsTransition, CapItemsCreate, CapRelations, CapAssignment, CapEstimation,
-		CapTime, CapTags, CapAttachments, CapVCSLinks,
+		CapTime, CapVCSLinks,
 	} {
 		for _, c := range m.Capabilities {
 			if c == forbidden {
@@ -46,8 +46,8 @@ func TestAzureDevOpsManifestConfigKeys(t *testing.T) {
 	for _, f := range m.Config {
 		got[f.Key] = f
 	}
-	if len(got) != 3 {
-		t.Fatalf("claves = %v, esperaba organization, project y team", m.Config)
+	if len(got) != 4 {
+		t.Fatalf("claves = %v, esperaba organization, project, team e item_keys", m.Config)
 	}
 	for _, key := range []string{"organization", "project", "team"} {
 		f, ok := got[key]
@@ -75,11 +75,44 @@ func TestAzureDevOpsManifestSecretAndIdentity(t *testing.T) {
 
 func TestAzureDevOpsReturnsFreshValue(t *testing.T) {
 	a := AzureDevOps()
-	a.Capabilities[0] = CapTags
+	a.Capabilities[0] = CapVCSLinks
 	a.Config[0].Key = "mutado"
 	a.Secrets[0].Name = "mutado"
 	b := AzureDevOps()
 	if b.Capabilities[0] != CapItemsRead || b.Config[0].Key == "mutado" || b.Secrets[0].Name != "pat" {
 		t.Fatal("cada llamada debe devolver un valor nuevo e independiente")
+	}
+}
+
+func TestAzureDevOpsManifestCapabilities(t *testing.T) {
+	m := AzureDevOps()
+	want := []Capability{CapItemsRead, CapDiscovery, CapTags, CapAttachments}
+	if !reflect.DeepEqual(m.Capabilities, want) {
+		t.Fatalf("capacidades = %v, esperaba exactamente %v", m.Capabilities, want)
+	}
+}
+
+func TestAzureDevOpsManifestRefAlias(t *testing.T) {
+	if got := AzureDevOps().RefAlias; got != "ado" {
+		t.Fatalf("ref_alias = %q, esperaba ado", got)
+	}
+}
+
+func TestAzureDevOpsManifestItemKeys(t *testing.T) {
+	var f *ConfigField
+	m := AzureDevOps()
+	for i := range m.Config {
+		if m.Config[i].Key == "item_keys" {
+			f = &m.Config[i]
+		}
+	}
+	if f == nil {
+		t.Fatal("falta la clave item_keys")
+	}
+	if f.Type != FieldStringList || f.Format != FormatTypePrefixPairs || f.Required {
+		t.Fatalf("item_keys = %+v, esperaba string_list opcional con formato type_prefix_pairs", *f)
+	}
+	if !reflect.DeepEqual(f.Default, []string{"User Story=US", "Bug=BUG"}) {
+		t.Fatalf("default = %v", f.Default)
 	}
 }

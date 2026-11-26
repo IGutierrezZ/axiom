@@ -39,13 +39,15 @@ type Request struct {
 
 // Response es la respuesta programada para una ruta.
 type Response struct {
-	Status      int         // por defecto 200
-	Header      http.Header // cabeceras adicionales
-	ContentType string      // por defecto application/json; charset=utf-8
-	JSON        any         // cuerpo serializado a JSON (si Body está vacío)
-	Body        string      // cuerpo literal; gana a JSON
-	Hang        bool        // no responde hasta que el cliente cancele
-	Drop        bool        // cierra la conexión sin responder
+	Status        int         // por defecto 200
+	Header        http.Header // cabeceras adicionales
+	ContentType   string      // por defecto application/json; charset=utf-8
+	JSON          any         // cuerpo serializado a JSON (si Body está vacío)
+	Body          string      // cuerpo literal; gana a JSON
+	Hang          bool        // no responde hasta que el cliente cancele
+	Drop          bool        // cierra la conexión sin responder
+	Chunked       bool        // fuerza la codificación por trozos: la respuesta no lleva Content-Length
+	NoContentType bool        // no envía Content-Type (ni deja que el servidor lo deduzca)
 }
 
 // Handler responde a una petición.
@@ -67,6 +69,8 @@ type Server struct {
 	routes   []route
 	requests []Request
 	items    *workItemStore
+	states   map[string]stateSeed
+	blobs    map[string]Blob
 }
 
 // NewServer arranca el servidor y lo cierra con Cleanup. El tiempo virtual de las peticiones sale de
@@ -208,6 +212,9 @@ func (s *Server) find(req *Request) Handler {
 			return h
 		}
 	}
+	if h := s.matchExtras(req); h != nil {
+		return h
+	}
 	return func(*Request) Response {
 		return Response{Status: http.StatusNotFound, JSON: map[string]any{"message": "adotest: sin manejador para " + req.Method + " " + req.Path}}
 	}
@@ -242,7 +249,11 @@ func (s *Server) write(w http.ResponseWriter, r *http.Request, resp Response) {
 			w.Header().Add(k, v)
 		}
 	}
-	if len(body) > 0 || resp.ContentType != "" {
+	switch {
+	case resp.NoContentType:
+		// Un valor nil impide que net/http deduzca el tipo a partir del cuerpo.
+		w.Header()["Content-Type"] = nil
+	case len(body) > 0 || resp.ContentType != "":
 		ctype := resp.ContentType
 		if ctype == "" {
 			ctype = "application/json; charset=utf-8"
@@ -256,5 +267,8 @@ func (s *Server) write(w http.ResponseWriter, r *http.Request, resp Response) {
 	w.WriteHeader(status)
 	if status != http.StatusNoContent {
 		_, _ = w.Write(body)
+		if f, ok := w.(http.Flusher); ok && resp.Chunked {
+			f.Flush() // tras vaciar los primeros bytes, net/http usa codificación por trozos y omite Content-Length
+		}
 	}
 }

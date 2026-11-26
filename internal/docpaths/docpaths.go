@@ -172,7 +172,8 @@ func (s Set) Candidates() []string {
 	return unique
 }
 
-// LocalState dice si rel es estado local del cambio que nunca se versiona: un fichero cuyo nombre
+// LocalState dice si rel es estado local del cambio que nunca se versiona: el contenido de `context/` y
+// `.context-tmp/` (datos importados de un work item, D-16) o un fichero cuyo nombre
 // empieza por punto y que está directamente en la raíz de la carpeta del cambio o de su carpeta
 // archivada (`.gates.lock`, `.axiom-instance`, `.integrations-outbox.yaml`, temporales de
 // escritura atómica). Un fichero con punto anidado, o en la carpeta archivada de otro cambio, sigue
@@ -191,9 +192,20 @@ func (s Set) LocalState(rel string) bool {
 	return false
 }
 
-// localFile dice si name es un fichero de una sola componente cuyo nombre empieza por punto.
+// Carpetas de contexto importado de un work item (D-16): el contenido de `context/` y los temporales de
+// su copia son datos de un tercero que nunca se versionan.
+const (
+	contextDir    = "context"
+	contextTmpDir = ".context-tmp"
+)
+
+// localFile dice si name es estado local de la raíz de un cambio: un fichero de una sola componente cuyo
+// nombre empieza por punto, o cualquier ruta bajo `context/` o `.context-tmp/`.
 func localFile(name string) bool {
-	return !strings.Contains(name, "/") && strings.HasPrefix(name, ".")
+	if first, _, nested := strings.Cut(name, "/"); nested {
+		return first == contextDir || first == contextTmpDir
+	}
+	return strings.HasPrefix(name, ".")
 }
 
 // LocalStateGlobs devuelve los globs, relativos a la raíz git, que dejan fuera el estado local del
@@ -202,9 +214,14 @@ func localFile(name string) bool {
 // los añade como exclusiones de pathspec a las raíces que publica. Un nombre de cambio válido no
 // contiene metacaracteres de glob.
 func (s Set) LocalStateGlobs() []string {
+	archived := s.archiveDir + "/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-" + s.change
 	return []string{
 		s.changeDir + "/.*",
-		s.archiveDir + "/[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-" + s.change + "/.*",
+		archived + "/.*",
+		s.changeDir + "/" + contextDir + "/**",
+		s.changeDir + "/" + contextTmpDir + "/**",
+		archived + "/" + contextDir + "/**",
+		archived + "/" + contextTmpDir + "/**",
 	}
 }
 

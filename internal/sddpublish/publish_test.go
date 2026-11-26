@@ -200,6 +200,45 @@ func TestPublishExcludesLocalStateFiles(t *testing.T) {
 	}
 }
 
+// D-16 (prov:74:18): el contexto importado de un work item y sus temporales nunca entran en el commit de
+// documentos, aunque no haya ninguna regla de exclusión de git que los oculte (defensa en profundidad).
+func TestPublishExcludesContext(t *testing.T) {
+	t.Parallel()
+	repo, _ := newMonorepo(t)
+	folder := filepath.Join(repo, "openspec", "changes", "x")
+	writeFile(t, filepath.Join(folder, "gates.yaml"), "schema: axiom.sdd-gate-ledger/v1\n")
+	writeFile(t, filepath.Join(folder, "context", "work-item.md"), "dato de un tercero\n")
+	writeFile(t, filepath.Join(folder, "context", "attachments", "tasks.md"), "adjunto\n")
+	writeFile(t, filepath.Join(folder, ".context-tmp", "abc", "work-item.md"), "temporal\n")
+
+	result := run(t, repo, Request{})
+
+	wantPublished(t, result)
+	if want := []string{"openspec/changes/x/gates.yaml"}; !reflect.DeepEqual(commitFiles(t, repo, "HEAD"), want) || !reflect.DeepEqual(result.Commit.Paths, want) {
+		t.Errorf("el commit contiene %v (resultado %v), se esperaba %v", commitFiles(t, repo, "HEAD"), result.Commit.Paths, want)
+	}
+	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
+	for _, local := range []string{"context/work-item.md", "context/attachments/tasks.md", ".context-tmp/abc/work-item.md"} {
+		if !strings.Contains(status, "?? openspec/changes/x/"+local) {
+			t.Errorf("%s debe seguir sin seguimiento:\n%s", local, status)
+		}
+	}
+}
+
+// Con solo contexto sucio no hay nada que publicar: ni commit ni push.
+func TestPublishOnlyContextMakesNoCommit(t *testing.T) {
+	t.Parallel()
+	repo, _ := newMonorepo(t)
+	head := runGit(t, repo, "rev-parse", "HEAD")
+	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "context", "work-item.md"), "dato de un tercero\n")
+
+	result := run(t, repo, Request{})
+
+	if result.Commit != nil || runGit(t, repo, "rev-parse", "HEAD") != head {
+		t.Fatalf("solo contexto sucio no debe crear commit: %+v", result)
+	}
+}
+
 // RF-ARC-08: el archivado publica la carpeta archivada, los borrados de `changes/<x>/`, las specs y el
 // índice, con el mensaje de archivado y solo con `--archive` en la rama de archivado.
 func TestPublishCommitsArchiveDeletions(t *testing.T) {

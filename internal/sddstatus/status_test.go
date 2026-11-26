@@ -452,6 +452,68 @@ func TestResolveArtifactStatesAndTaskProgress(t *testing.T) {
 	}
 }
 
+// D-16 (prov:74:18): la carpeta `context/` de un cambio, con sus adjuntos, no altera el estado: ni los
+// artefactos, ni el progreso de tareas, ni la ruta recomendada, ni los bloqueos. Un adjunto llamado como
+// un artefacto (`tasks.md`, `spec.md`) vive en una subcarpeta y nunca parece uno.
+func TestStatusWithContextDir(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	tasks := "# Tasks\n\n- [x] 1.1 A\n- [ ] 1.2 B\n"
+	changeRoot := seedReadyChange(t, root, "with-context", tasks)
+	before, err := Resolve(ResolveOptions{CWD: root, ChangeName: "with-context"})
+	if err != nil {
+		t.Fatalf("Resolve() sin contexto: %v", err)
+	}
+
+	write(t, filepath.Join(changeRoot, "context", "work-item.md"), "dato de un tercero\n")
+	write(t, filepath.Join(changeRoot, "context", "work-item.json"), "{}\n")
+	for _, name := range []string{"tasks.md", "spec.md", "proposal.md", "design.md", "verify-report.md"} {
+		write(t, filepath.Join(changeRoot, "context", "attachments", name), "adjunto\n")
+	}
+	write(t, filepath.Join(changeRoot, ".context-tmp", "abc", "work-item.md"), "temporal\n")
+
+	after, err := Resolve(ResolveOptions{CWD: root, ChangeName: "with-context"})
+	if err != nil {
+		t.Fatalf("Resolve() con contexto: %v", err)
+	}
+	if !reflect.DeepEqual(before.Artifacts, after.Artifacts) || before.TaskProgress != after.TaskProgress ||
+		before.NextRecommended != after.NextRecommended || !reflect.DeepEqual(before.BlockedReasons, after.BlockedReasons) ||
+		before.Dependencies != after.Dependencies {
+		t.Fatalf("el contexto altera el estado:\nantes   %+v\ndespués %+v", before, after)
+	}
+	assertArtifact(t, after, "verifyReport", ArtifactMissing)
+}
+
+// prov:74:27: un cambio cuya propuesta no declara `external_ref` no bloquea el estado, con o sin
+// carpeta `context/`: la referencia es opcional y solo depende del vínculo del work item.
+func TestStatusDoesNotRequireExternalRef(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	changeRoot := seedReadyChange(t, root, "no-external-ref", "# Tasks\n\n- [ ] 1.1 A\n")
+	proposal, err := os.ReadFile(filepath.Join(changeRoot, "proposal.md"))
+	if err != nil {
+		t.Fatalf("leer proposal.md: %v", err)
+	}
+	if strings.Contains(string(proposal), "external_ref") {
+		t.Fatalf("la semilla ya declara external_ref; la prueba no cubriría su ausencia:\n%s", proposal)
+	}
+	for _, withContext := range []bool{false, true} {
+		if withContext {
+			write(t, filepath.Join(changeRoot, "context", "work-item.md"), "dato de un tercero\n")
+		}
+		status, err := Resolve(ResolveOptions{CWD: root, ChangeName: "no-external-ref"})
+		if err != nil {
+			t.Fatalf("Resolve() con contexto=%v: %v", withContext, err)
+		}
+		for _, reason := range status.BlockedReasons {
+			if strings.Contains(reason, "external_ref") || strings.Contains(reason, "Referencia") {
+				t.Fatalf("la ausencia de external_ref bloquea (contexto=%v): %q", withContext, reason)
+			}
+		}
+		assertArtifact(t, status, "proposal", ArtifactDone)
+	}
+}
+
 // #3311: status built Relationships.DependsOn as an unconditional empty list
 // and never read openspec/changes/<change>/state.yaml, the file the OpenSpec
 // convention names as the change's DAG state.
