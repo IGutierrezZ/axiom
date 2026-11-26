@@ -114,3 +114,56 @@ func readSDDTraces(src Source, folders []sddFolder) ([]traceSet, []Warning) {
 	}
 	return sets, warnings
 }
+
+// oddDocName es el nombre seguro de un documento ODD (decisión 11).
+var oddDocName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*\.md$`)
+
+// oddDoc es un documento `odd/tasks/<feature>.md` de nombre seguro y ya leído.
+type oddDoc struct {
+	// Name es la feature, sin `.md`.
+	Name string
+	// Path es la ruta del documento relativa a la raíz git.
+	Path string
+	Text string
+}
+
+// listODDDocs lee los documentos `*.md` de la raíz de la fuente ODD. Uno de nombre no seguro
+// se omite con unsafe_name y uno ilegible con unreadable; el directorio ausente o vacío da
+// una lista vacía sin advertencia.
+func listODDDocs(src Source) ([]oddDoc, []Warning) {
+	if src.Files == nil {
+		return nil, nil
+	}
+	entries, warnings := readDirOrEmpty(src.Files, ".", src.GitPrefix)
+	var docs []oddDoc
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+		path := joinPath(src.GitPrefix, entry.Name())
+		if !safeName(oddDocName, entry.Name()) {
+			warnings = append(warnings, unsafeName(path))
+			continue
+		}
+		data, err := fs.ReadFile(src.Files, entry.Name())
+		if err != nil {
+			warnings = append(warnings, unreadable(path, err))
+			continue
+		}
+		docs = append(docs, oddDoc{Name: strings.TrimSuffix(entry.Name(), ".md"), Path: path, Text: string(data)})
+	}
+	sort.Slice(docs, func(i, j int) bool { return docs[i].Name < docs[j].Name })
+	return docs, warnings
+}
+
+// readODDTraces lee la traza `## Identificadores asignados` de cada documento.
+func readODDTraces(docs []oddDoc) ([]traceSet, []Warning) {
+	var sets []traceSet
+	var warnings []Warning
+	for _, d := range docs {
+		set, w := readODDTrace(d.Text, d.Path)
+		sets = append(sets, set)
+		warnings = append(warnings, w...)
+	}
+	return sets, warnings
+}

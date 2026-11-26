@@ -2,8 +2,12 @@ package reqtrace
 
 import (
 	"errors"
+	"fmt"
+	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
 	"io/fs"
+	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
@@ -217,4 +221,126 @@ func classifySDD(src Source, p reqid.Pattern, eq equivalence, f sddFolder) ([]ca
 		change:    f.Change,
 	}
 	return h.candidates(base), warnings
+}
+
+// classifyODD clasifica un documento ODD: con ParseFeatureDoc correcto, roles por la delta de
+// cada `### Capacidad:`, covered por las líneas `Cubre:` y created por una entrada de la
+// traza sin aparición en la delta; el tipo es bug con `Tipo: bug`. Si el parseo estricto
+// falla y el documento cita el ID, añade odd_unparseable y busca en el texto.
+func classifyODD(p reqid.Pattern, eq equivalence, d oddDoc) ([]candidate, []Warning) {
+	match := eq.matchSet(d.Path)
+	h := hits{}
+	var warnings []Warning
+	kind := KindIncrement
+	deltaFound := false
+
+	doc, err := livespec.ParseFeatureDoc(d.Name, []byte(d.Text))
+	if err == nil {
+		if doc.Kind == livespec.KindBug {
+			kind = KindBug
+		}
+		for _, c := range doc.Capabilities {
+			if classifyDelta(h, c.Name, c.Delta, p, match) {
+				deltaFound = true
+			}
+		}
+		classifyCubre(h, d.Path, d.Text, p, match)
+	} else {
+		mentioned := len(idTokens(d.Text, p, match)) > 0
+		if mentioned {
+			warnings = append(warnings, Warning{
+				Code: WarnODDUnparseable, Path: d.Path,
+				Message: fmt.Sprintf("el documento %s no cumple el formato de feature (%s); se busca el ID en su texto: corrígelo para una traza fiable", d.Path, firstLine(err.Error())),
+			})
+		}
+		kind, deltaFound = tolerantODD(h, d, p, match)
+		if mentioned && len(h) == 0 && len(eq.touched[d.Path]) == 0 {
+			warnings = append(warnings, Warning{
+				Code: WarnUnclassifiedMention, Path: d.Path,
+				Message: fmt.Sprintf("el documento %s cita el ID solo en prosa, fuera de un título de requisito o de una línea Cubre:; no se clasifica ningún incremento", d.Path),
+			})
+		}
+	}
+	if !deltaFound {
+		for _, entry := range eq.touched[d.Path] {
+			h.record(RoleCreated, []string{entry.Definitive}, entry.Capability)
+		}
+	}
+	if len(h) == 0 {
+		return nil, warnings
+	}
+	base := candidate{
+		Increment: Increment{Lane: LaneODD, Name: d.Name, Path: d.Path, Type: kind, Assignments: eq.assignments(d.Path)},
+		change:    d.Name,
+	}
+	return h.candidates(base), warnings
+}
+
+func firstLine(s string) string {
+	line, _, _ := strings.Cut(s, "\n")
+	return line
+}
+
+var (
+	oddBugLine        = regexp.MustCompile(`^Tipo:[ \t]*bug[ \t]*$`)
+	oddCapabilityLine = regexp.MustCompile(`^### Capacidad:[ \t]*(\S+)[ \t]*$`)
+)
+
+// tolerantODD es la búsqueda textual de un documento que no parsea (decisión 4): la delta de
+// cada bloque vallado `openspec` (o el texto entero si no hay bloques), las líneas `Cubre:` y
+// el tipo por una línea `Tipo: bug` antes del primer `## `. Devuelve el tipo y si hubo
+// aparición en una delta.
+func tolerantODD(h hits, d oddDoc, p reqid.Pattern, match map[string]bool) (Kind, bool) {
+	type block struct {
+		capability string
+		text       string
+	}
+	var blocks []block
+	kind := KindIncrement
+	seenSection := false
+	capability := ""
+	inFence, fenceChar, fenceLen := false, byte(0), 0
+	inBlock := false
+	var current []string
+	for _, line := range strings.Split(strings.ReplaceAll(d.Text, "\r\n", "\n"), "\n") {
+		ch, n, hasInfo, ok := openspecdoc.FenceMarker(line)
+		switch {
+		case !inFence && ok:
+			inFence, fenceChar, fenceLen = true, ch, n
+			fields := strings.Fields(line[n:])
+			inBlock = len(fields) > 0 && fields[0] == "openspec"
+			current = nil
+		case inFence && ok && ch == fenceChar && n >= fenceLen && !hasInfo:
+			if inBlock {
+				blocks = append(blocks, block{capability: capability, text: strings.Join(current, "\n") + "\n"})
+			}
+			inFence, inBlock = false, false
+		case inFence:
+			if inBlock {
+				current = append(current, line)
+			}
+		case strings.HasPrefix(line, "## "):
+			seenSection = true
+		case !seenSection && oddBugLine.MatchString(line):
+			kind = KindBug
+		default:
+			if m := oddCapabilityLine.FindStringSubmatch(line); m != nil {
+				capability = m[1]
+			}
+		}
+	}
+	if inBlock {
+		blocks = append(blocks, block{capability: capability, text: strings.Join(current, "\n") + "\n"})
+	}
+	if len(blocks) == 0 {
+		blocks = []block{{text: d.Text}}
+	}
+	deltaFound := false
+	for _, b := range blocks {
+		if classifyDelta(h, b.capability, openspecdoc.ParseDelta(b.text), p, match) {
+			deltaFound = true
+		}
+	}
+	classifyCubre(h, d.Path, d.Text, p, match)
+	return kind, deltaFound
 }

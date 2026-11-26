@@ -83,10 +83,10 @@ Depende de: Fase 2.
 
 Depende de: Fase 3.
 
-- [ ] 4.1 Parte ODD de `scan.go`: leer `odd/tasks/*.md` con nombres seguros (`^[A-Za-z0-9][A-Za-z0-9._-]*\.md$`; el resto `unsafe_name`). `odd/tasks` inexistente o vacío da resultado vacío (hueco design 6). `livespec.ParseFeatureDoc` correcto: roles por la delta de cada `### Capacidad:`, `covered` por las líneas `Cubre:` del documento entero con fichero y línea, `created` por una entrada de `## Identificadores asignados` sin aparición en delta. Tipo `bug` si `Kind == livespec.KindBug`. Documento anterior a la traza: se encuentra por los títulos de su delta, sin error.
+- [x] 4.1 Parte ODD de `scan.go`: leer `odd/tasks/*.md` con nombres seguros (`^[A-Za-z0-9][A-Za-z0-9._-]*\.md$`; el resto `unsafe_name`). `odd/tasks` inexistente o vacío da resultado vacío (hueco design 6). `livespec.ParseFeatureDoc` correcto: roles por la delta de cada `### Capacidad:`, `covered` por las líneas `Cubre:` del documento entero con fichero y línea, `created` por una entrada de `## Identificadores asignados` sin aparición en delta. Tipo `bug` si `Kind == livespec.KindBug`. Documento anterior a la traza: se encuentra por los títulos de su delta, sin error.
   Cubre: prov:trace:7
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
-- [ ] 4.2 ODD tolerante: si `ParseFeatureDoc` falla, advertencia `odd_unparseable` con la ruta y búsqueda en el texto (bloques `openspec` con `FenceMarker` y `ParseDelta`, `Cubre:`, `Tipo: bug` antes del primer `## `). Mención solo en prosa: advertencia `unclassified_mention` y ningún incremento. Una traza ilegible: `trace_invalid`.
+- [x] 4.2 ODD tolerante: si `ParseFeatureDoc` falla, advertencia `odd_unparseable` con la ruta y búsqueda en el texto (bloques `openspec` con `FenceMarker` y `ParseDelta`, `Cubre:`, `Tipo: bug` antes del primer `## `). Mención solo en prosa: advertencia `unclassified_mention` y ningún incremento. Una traza ilegible: `trace_invalid`.
   Cubre: prov:trace:7
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
 
