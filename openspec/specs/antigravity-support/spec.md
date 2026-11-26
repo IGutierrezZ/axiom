@@ -7,13 +7,14 @@ Defines the required behavior for supporting Google Antigravity through the publ
 ### Requirement: Unified public agent ID
 
 The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separate public `antigravity-cli` agent option.
+(Previously: the scenario also checked that the option was not listed in the TUI.)
 
 #### Scenario: Install uses the unified Antigravity agent
 
 - GIVEN the installer is invoked for `antigravity`
 - WHEN agent validation runs
 - THEN `antigravity` is accepted
-- AND the separate `antigravity-cli` option is not listed in the catalog or TUI.
+- AND the separate `antigravity-cli` option is not listed in the catalog.
 
 ### Requirement: Antigravity writes to the supported config surface
 

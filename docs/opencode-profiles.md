@@ -42,15 +42,13 @@ Sessions started through `opencode serve`, `opencode attach`, or OpenCode Deskto
 
 Background jobs are process-local and non-durable: restarting OpenCode loses them. They provide no filesystem isolation, so do not use background work for dependent phases or writers, and never run parallel writers in one worktree.
 
-## Quick Start (TUI)
+## Quick Start (CLI)
 
-1. Launch the installer: `axiom` (or `go run ./cmd/axiom`).
-2. Select **"OpenCode SDD Profiles"** from the welcome screen.
-3. Select **"Create new profile"** (or press `n`).
-4. Enter a profile name in slug format (lowercase, hyphens ok). Example: `cheap`.
-5. Pick the orchestrator model (provider, then model -- reuses the existing model picker).
-6. Assign sub-agent models (use "Set all phases" for a uniform config, or set each phase individually).
-7. Confirm -- the installer writes the profile to `opencode.json` and runs sync.
+1. Pick a profile name in slug format (lowercase, hyphens ok). Example: `cheap`.
+2. Create it with `axiom sync --agent opencode --profile cheap:provider/model` (sets that model for every phase).
+3. Override a single phase when needed: `axiom sync --agent opencode --profile-phase cheap:sdd-design:provider/model`.
+
+Axiom writes the profile to `opencode.json` as part of the sync.
 
 Open OpenCode and press **Tab** -- your new orchestrator appears alongside `axiom-orchestrator`, the default OpenCode SDD conductor.
 
@@ -79,7 +77,7 @@ Use this table when reviewing configs or debugging profile sync:
 |---|---|---|
 | `axiom-orchestrator` | Canonical base OpenCode SDD conductor. All `/sdd-*` commands point here by default. | No |
 | `sdd-orchestrator`, `gentle-orchestrator` | Legacy base conductor keys. Sync migrates them to `axiom-orchestrator`. | No; let sync migrate them |
-| `sdd-orchestrator-{name}` | Generated named profile conductor, such as `sdd-orchestrator-cheap`. | No; use TUI or CLI |
+| `sdd-orchestrator-{name}` | Generated named profile conductor, such as `sdd-orchestrator-cheap`. | No; use the CLI (`--profile`) |
 | `sdd-{phase}` | Default sub-agent for a phase, such as `sdd-apply`. | No |
 | `sdd-{phase}-{name}` | Named profile sub-agent, such as `sdd-apply-cheap`. | No |
 
@@ -163,13 +161,7 @@ If you're using an external single-active manager instead, you typically keep wo
 
 ## Managing Profiles
 
-From the TUI profile list screen:
-
-| Action | Key | Notes |
-|---|---|---|
-| Edit a profile | `Enter` on the profile | Change models, then sync |
-| Delete a profile | `d` on the profile | Removes orchestrator + all sub-agents from JSON |
-| Create a new profile | `n` (or select "Create new profile") | Full creation flow |
+Create or update a profile with `axiom sync --profile name:provider/model` and `--profile-phase`, as described in [Usage](usage.md#sync).
 
 The `default` profile (`axiom-orchestrator`) can be edited but not deleted -- it always exists when SDD is configured.
 

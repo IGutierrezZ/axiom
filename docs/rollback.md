@@ -1,6 +1,6 @@
 # Copias de seguridad y restauración
 
-Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. La pantalla **Respaldos** de la TUI distingue las copias de Axiom de las copias históricas de Gentle AI: selecciona por defecto la copia más reciente de Axiom y mantiene las de Gentle AI disponibles para una restauración deliberada.
+Axiom crea una copia de los ficheros de configuración que va a modificar antes de instalar, sincronizar o actualizar componentes. Las copias de Axiom se distinguen de las copias históricas de Gentle AI por su carpeta de origen; la restauración se hace con `axiom restore`.
 
 ## Qué se guarda
 
@@ -28,26 +28,17 @@ El alcance de un respaldo de sincronización depende de los agentes registrados 
 | Duplicados | Omitidos | No se crea otra copia si la configuración no ha cambiado |
 | Compresión | Activada | Las nuevas copias usan `tar.gz` |
 
-## Restaurar desde la TUI
+## Restaurar desde la CLI
 
-Abre la pantalla de respaldos:
+Lista las copias disponibles y restaura una por su identificador, o la más reciente con `latest`:
 
 ```sh
-axiom tui
+axiom restore --list
+axiom restore <id>
+axiom restore latest
 ```
 
-En la pantalla **Respaldos**, utiliza `j`/`k` para elegir una copia y `Enter` para restaurarla. La selección inicial apunta a la copia de Axiom más reciente; elige expresamente una copia identificada como Gentle AI solo si quieres recuperar ese estado histórico.
-
-| Tecla | Acción |
-|-------|--------|
-| `j` / `k` | Mover la selección |
-| `Enter` | Restaurar la copia seleccionada |
-| `p` | Fijar o quitar la fijación |
-| `r` | Añadir o cambiar la descripción |
-| `d` | Eliminar la copia seleccionada |
-| `Esc` | Volver |
-
-La interfaz conserva la raíz/origen seleccionado al restaurar; no deduzcas el origen solo por el ID, porque puede repetirse entre Axiom y Gentle AI.
+`axiom restore` pide confirmación; `--yes` la omite. Elige expresamente una copia histórica de Gentle AI solo si quieres recuperar ese estado histórico, y no deduzcas el origen solo por el ID, porque puede repetirse entre Axiom y Gentle AI.
 
 ## Semántica de restauración
 
@@ -60,13 +51,11 @@ La interfaz conserva la raíz/origen seleccionado al restaurar; no deduzcas el o
 ## Si falla una verificación
 
 1. Lee qué comprobaciones han fallado y qué ficheros se han modificado.
-2. Abre la TUI y restaura la copia de Axiom apropiada desde **Respaldos**.
+2. Restaura la copia de Axiom apropiada con `axiom restore --list` y `axiom restore <id>`.
 3. Corrige la causa externa y valida el plan antes de repetir la operación con `axiom install --dry-run` o `axiom sync --dry-run`.
 4. Aplica de nuevo la operación solo cuando el plan sea el esperado.
-
-Para escoger un respaldo de un origen concreto, usa la pantalla **Respaldos**: el atajo de CLI `axiom restore latest` tiene una resolución independiente y no ofrece la misma preselección de origen de la TUI.
 
 ## Límites
 
 - Las instalaciones realizadas mediante `brew`, `apt-get`, `pacman` o `dnf` no se desinstalan al restaurar una copia de configuración. Usa el gestor de paquetes correspondiente si también quieres retirarlas.
-- No selecciones una copia histórica de Gentle AI por ser la más reciente en conjunto: comprueba el origen que muestra la TUI antes de confirmar.
+- No selecciones una copia histórica de Gentle AI por ser la más reciente en conjunto: comprueba su origen antes de confirmar.

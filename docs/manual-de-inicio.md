@@ -53,7 +53,7 @@ Los agentes de inteligencia artificial para desarrollo de software sufren frecue
 * **Memoria Persistente (Engram):** Contexto acumulativo entre sesiones y agentes.
 * **Gobernanza Determinista:** El estado del proyecto reside en el sistema de archivos (`axiom.yaml`, `openspec/`) y una CLI estricta en Go determina la única transición válida en cada momento.
 * **Aislamiento por Workspace:** Axiom puede auto-programarse y gestionar repositorios sin sobreescribir configuraciones globales de usuario ni colisionar con otros proyectos.
-* **Paridad de Interfaces:** Todo lo ejecutable por línea de comandos tiene su reflejo interactivo en la TUI de terminal (`axiom tui`) y en el Dashboard Web (`axiom ui`).
+* **Interfaces:** La CLI es la superficie completa; el Dashboard Web (`axiom ui`, que también abre `axiom` en una terminal interactiva) ofrece una vista interactiva del proyecto. Instalar agentes sigue siendo cosa de `axiom install`: la interfaz web aún no lo hace. La TUI se retiró; véanse las [notas de retirada](releases/notas-retirada-arranque.md).
 
 ---
 

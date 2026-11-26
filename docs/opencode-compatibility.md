@@ -8,7 +8,6 @@ version evidence refuses incompatible writes rather than assuming V2.
 | --- | --- | --- |
 | Config, model references and permissions | Existing behavior retained | Native config/profile/MCP handling and permission-preserving merges tested |
 | Managed plugins | Existing assets retained | Separate model catalog, skill registry, SDD and staged review assets (no telemetry plugin; a copy left by an earlier version is removed by hand) |
-| Gentle logo | Existing placement unchanged | Explicitly skipped; no equivalent `home_logo` slot, no relocation or config writes |
 | Community TUI plugins | Existing integration retained | Compatibility unproven; installation/update refuses, not silently omitted |
 | Native review | Existing V1 capability path retained | Unavailable; no positive review admission advertised |
 
@@ -36,7 +35,6 @@ review and complete runtime certification remain separate pending gates.
 New CLI installation advice uses `@opencode/cli`; its required install scripts must
 not be disabled. Plugin dependencies differ: V1 uses `@opencode-ai/plugin`, while
 V2 uses `@opencode/plugin`. Existing user-owned incompatible assets are preserved.
-The accepted temporary logo omission does not authorize dropping other features.
 
 The local conformance harness uses disposable configuration, an allowlisted
 environment, fixture authentication and process cleanup. Its loopback mode requires

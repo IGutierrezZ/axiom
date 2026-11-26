@@ -11,10 +11,8 @@ go run ./cmd/axiom install [flags]
 ## Supported flags
 
 - `--agent`, `--agents`: comma-separated and repeatable.
-- `--component`, `--components`: comma-separated and repeatable.
+- `--component`, `--components`: comma-separated and repeatable. Without it, `install` uses the default set: Engram, SDD, skills, Context7, permissions and persona.
 - `--skill`, `--skills`: comma-separated and repeatable.
-- `--persona`: explicit persona id.
-- `--preset`: explicit preset id.
 - `--sdd-mode`: `single` or `multi`.
 - `--scope`: `workspace` (default, writes agent-scoped files to the project root: the nearest `axiom.yaml`, else the git repository root, else the current directory) or `global` (writes to each selected agent's global config directory).
 - `--dry-run`: render plan without executing.
@@ -26,7 +24,7 @@ go run ./cmd/axiom install [flags]
 | `AXIOM_INSTALL_SCOPE` | `workspace` \| `global` | Sets the install scope without a flag. Useful in CI. Equivalent to `--scope`. Default: `workspace`. (Legacy `GENTLE_AI_INSTALL_SCOPE` is also supported). |
 | `AXIOM_NO_PERSISTENT_PATH` | `1` | On Windows, skips every write to the persistent user `PATH` (`HKCU\Environment`) and logs a short diagnostic instead; the current process `PATH` is still updated. Meant for test harnesses and CI that run the real binary. Only the exact value `1` enables it. |
 
-`workspace` scope applies to the selected agents' agent-scoped files such as system prompts, skills, SDD agents, and persona files. Global-only integrations, like package installs or agent settings that must live in the tool's global config, remain global.
+`workspace` scope applies to the selected agents' agent-scoped files such as system prompts, skills, SDD agents, and the persona file. Global-only integrations, like package installs or agent settings that must live in the tool's global config, remain global.
 
 ## Platform behavior
 
@@ -50,8 +48,6 @@ go run ./cmd/axiom install \
   --agent claude-code,opencode \
   --component engram,sdd,skills \
   --skill sdd-apply \
-  --persona gentleman \
-  --preset full-gentleman \
   --dry-run
 ```
 

@@ -19,7 +19,7 @@ axiom install --agent pi
 pi
 ```
 
-Axiom detects the `pi` binary first. If Pi is the only selected agent, the installer still provisions the real Engram™ component, but skips persona, ecosystem component selection, and Strict TDD prompts because `gentle-pi` owns those choices inside Pi. Axiom writes nothing into the Pi system prompt because `gentle-pi` owns it, so the review execution contract ships as `orchestration/pi.md` in the published provider contract bundle, which `gentle-pi` mirrors and injects at session start. Because `gentle-pi` owns that file, `install` and `sync` also remove any gentle-ai managed blocks an older build left in `~/.pi/agent/APPEND_SYSTEM.md`, including the routing guidance block; routing guidance is delivered to every other agent's system prompt, but Pi is skipped for that step too.
+Axiom detects the `pi` binary first. If Pi is the only selected agent, the installer still provisions the real Engram™ component, but skips persona, ecosystem component selection, and Strict TDD because `gentle-pi` owns those choices inside Pi. Axiom writes nothing into the Pi system prompt because `gentle-pi` owns it, so the review execution contract ships as `orchestration/pi.md` in the published provider contract bundle, which `gentle-pi` mirrors and injects at session start. Because `gentle-pi` owns that file, `install` and `sync` also remove any gentle-ai managed blocks an older build left in `~/.pi/agent/APPEND_SYSTEM.md`, including the routing guidance block; routing guidance is delivered to every other agent's system prompt, but Pi is skipped for that step too.
 
 ## Installed Packages
 
@@ -179,6 +179,6 @@ If you start Pi with `pi -ns`, Pi skips startup skill loading/hooks. That mode i
 
 - Read [Supported Agents](agents.md) for the full agent matrix.
 - Read [Engram Commands](engram.md) if you want to inspect or sync persistent memory.
-- Read [Usage](usage.md) for the general Axiom CLI and TUI flow.
+- Read [Usage](usage.md) for the general Axiom CLI flow.
 
 ← [Back to README](../README.md)

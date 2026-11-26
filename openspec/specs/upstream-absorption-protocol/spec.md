@@ -47,15 +47,14 @@ Toda tanda de absorción DEBE presentar como evidencia de verificación `go buil
 
 ### Requirement: Inventario de no-reversión por tanda (REQ-20.3)
 
-El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode en presets, no forzado de `theme`, persona Axiom en castellano peninsular con localización íntegra de la TUI, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
+El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode, no forzado de `theme`, persona Axiom en castellano peninsular, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
+(Previously: la entrada V3 hablaba del logo «en presets», retirados por C-08-f, y la V6 incluía la localización íntegra de la TUI, retirada por C-08-f.)
 
 #### Scenario: Reversión de una divergencia firme rechazada
 - **DADO** una tanda cuyo diff revierte, total o parcialmente, la detección dual de marcadores `axiom:` (V2) o cualquier otra entrada firme (V1, V3, V4, V5, V6 u V8)
 - **CUANDO** se evalúa la tanda
 - **ENTONCES** se rechaza
 - **Y** se detiene el incremento hasta el último estado verde
-
----
 
 ### Requirement: Rutas protegidas fuera de alcance (REQ-20.4)
 

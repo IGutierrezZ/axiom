@@ -1,8 +1,8 @@
-# Componentes, skills y presets
+# Componentes y skills
 
 ← [Volver al README](../README.md)
 
-Esta guía describe los componentes que Axiom puede configurar para los agentes compatibles. Los nombres de componentes, skills y presets son identificadores estables de la CLI; un identificador heredado no implica que Gentle AI siga siendo el producto actual.
+Esta guía describe los componentes que Axiom puede configurar para los agentes compatibles. Los nombres de componentes y skills son identificadores estables de la CLI; un identificador heredado no implica que Gentle AI siga siendo el producto actual.
 
 ## Componentes
 
@@ -12,12 +12,8 @@ Esta guía describe los componentes que Axiom puede configurar para los agentes 
 | SDD | `sdd` | Flujo Spec-Driven Development. El agente puede usarlo cuando el trabajo lo requiera o cuando se lo pidas; no necesitas memorizar los comandos. |
 | Skills | `skills` | Catálogo de skills de desarrollo que Axiom instala en la configuración de los agentes seleccionados. Con `--scope workspace` escribe una sola copia compartida en `.agents/skills` (y `.claude/skills` si Claude Code está entre los agentes); véase [Agentes](agents.md#skills-en---scope-workspace-una-sola-copia-compartida). |
 | Context7 | `context7` | Servidor MCP opcional para consultar documentación de frameworks y bibliotecas. |
-| Persona | `persona` | Inyección opcional de la persona de mentor (`gentleman`) o neutral; también puede mantenerse una persona personalizada sin gestión. |
-| Permisos | `permissions` | Valores predeterminados y guardas de seguridad. Solo escribe reglas protectoras: la lista `permissions.deny` de Claude Code, que se une a la del usuario (sus entradas primero y en su orden, sin duplicados), y las reglas `ask` y `deny` de OpenCode. Axiom nunca fija modos de autoaprobación (`bypassPermissions`, `auto_edit`, `chat.tools.autoApprove` ni un `allow` general en OpenCode) ni borra los que el usuario ya tenga, de modo que Gemini CLI, Qwen Code y VS Code Copilot no reciben nada. El destino sigue el ámbito de instalación: con `--scope workspace` (el predeterminado) escribe bajo la raíz del proyecto y con `--scope global`, en el HOME. Un agente sin modo workspace se omite con un aviso y nunca se escribe en el HOME. `axiom sync` lo incluye si figura en la selección guardada o con `--include-permissions`; la TUI añade esa opción por su cuenta al descubrir Codex, sin efecto, porque Codex no tiene overlay de permisos en ningún ámbito. Las rutas sensibles de Claude Code son `.env` y `.env.*`, `**/*.pem`, `**/*.key`, `**/secrets/*` y, ancladas al HOME con `~/` porque Claude Code resuelve el resto respecto al proyecto, `~/.ssh/**`, `~/.credentials/**`, `~/Library/Keychains/**`, `~/.aws/credentials` y `~/.config/gh/hosts.yml` (las reglas antiguas sin `~/` de instalaciones previas se reescriben en su sitio y la desinstalación también las retira). OpenCode deniegan la lectura de `*.env`, `*.env.*`, `**/.env`, `**/.env.*`, `**/secrets/**`, `**/credentials.json`, `**/.ssh/**`, `**/.credentials/**`, `**/Library/Keychains/**`, `**/.aws/credentials`, `**/.config/gh/hosts.yml`, `**/*.pem` y `**/*.key`. |
-
-### Temas visuales
-
-Axiom no incluye temas visuales en sus presets y no los instala ni sincroniza. En `axiom sync`, la retirada se limita a los ficheros de tema que Axiom pueda reconocer como propios por ruta y contenido exactos; las preferencias existentes, los temas modificados y los ficheros de procedencia incierta se conservan. El indicador heredado `--include-theme` sigue admitiéndose al interpretar invocaciones antiguas, pero ya no instala temas. Los nombres e IDs de temas heredados no deben interpretarse como opciones de instalación vigentes.
+| Persona | `persona` | Inyecta la persona de Axiom, la única que existe. Quien no la quiera no selecciona este componente. |
+| Permisos | `permissions` | Valores predeterminados y guardas de seguridad. Solo escribe reglas protectoras: la lista `permissions.deny` de Claude Code, que se une a la del usuario (sus entradas primero y en su orden, sin duplicados), y las reglas `ask` y `deny` de OpenCode. Axiom nunca fija modos de autoaprobación (`bypassPermissions`, `auto_edit`, `chat.tools.autoApprove` ni un `allow` general en OpenCode) ni borra los que el usuario ya tenga, de modo que Gemini CLI, Qwen Code y VS Code Copilot no reciben nada. El destino sigue el ámbito de instalación: con `--scope workspace` (el predeterminado) escribe bajo la raíz del proyecto y con `--scope global`, en el HOME. Un agente sin modo workspace se omite con un aviso y nunca se escribe en el HOME. `axiom sync` lo incluye si figura en la selección guardada o con `--include-permissions`. Codex no tiene overlay de permisos en ningún ámbito. Las rutas sensibles de Claude Code son `.env` y `.env.*`, `**/*.pem`, `**/*.key`, `**/secrets/*` y, ancladas al HOME con `~/` porque Claude Code resuelve el resto respecto al proyecto, `~/.ssh/**`, `~/.credentials/**`, `~/Library/Keychains/**`, `~/.aws/credentials` y `~/.config/gh/hosts.yml` (las reglas antiguas sin `~/` de instalaciones previas se reescriben en su sitio y la desinstalación también las retira). OpenCode deniegan la lectura de `*.env`, `*.env.*`, `**/.env`, `**/.env.*`, `**/secrets/**`, `**/credentials.json`, `**/.ssh/**`, `**/.credentials/**`, `**/Library/Keychains/**`, `**/.aws/credentials`, `**/.config/gh/hosts.yml`, `**/*.pem` y `**/*.key`. |
 
 ## Autorización de operaciones remotas
 
@@ -52,7 +48,7 @@ Axiom incorpora skills y las inyecta en la configuración de los agentes selecci
 
 | Skill | ID | Descripción |
 |-------|----|-------------|
-| Go Testing | `go-testing` | Patrones de pruebas Go, incluidas pruebas TUI de Bubble Tea. |
+| Go Testing | `go-testing` | Patrones de pruebas Go, incluidos patrones genéricos para pruebas de interfaces de terminal. |
 | Skill Creator | `skill-creator` | Crea skills para agentes siguiendo el formato Agent Skills. |
 | Skill Improver | `skill-improver` | Audita y mejora skills frente a las convenciones del repositorio. |
 | Skill Registry | `skill-registry` | Genera el índice de skills con sus activadores y rutas `SKILL.md`; cada skill apunta a una sola carpeta (la compartida `.agents/skills` si existe). Solo actúa dentro de un proyecto de Axiom (con `axiom.yaml`). |
@@ -60,7 +56,7 @@ Axiom incorpora skills y las inyecta en la configuración de los agentes selecci
 | Cognitive Doc Design | `cognitive-doc-design` | Diseña documentación clara y fácil de revisar. |
 | Work Unit Commits | `work-unit-commits` | Divide la implementación en unidades de trabajo revisables. |
 
-Las skills de base se incluyen en los presets no mínimos. Los identificadores de skills de este repositorio que no se instalan por defecto permanecen disponibles desde el selector de la TUI y mediante la resolución explícita de `--skills`. La lista canónica se mantiene en `contributorSkills` de `internal/components/skills/presets.go`.
+Las skills de base se incluyen en el conjunto por defecto. Los identificadores de skills de este repositorio que no se instalan por defecto permanecen disponibles mediante la resolución explícita de `--skills`. La lista canónica se mantiene en `contributorSkills` de `internal/components/skills/presets.go`.
 
 | Skill de contribución | ID | Descripción |
 |-----------------------|----|-------------|
@@ -72,15 +68,8 @@ Las skills de base se incluyen en los presets no mínimos. Los identificadores d
 
 Para skills específicas de frameworks (React, Angular, TypeScript, Tailwind, Zod o Playwright, entre otros), consulta [Gentleman-Programming/Gentleman-Skills](https://github.com/Gentleman-Programming/Gentleman-Skills). Es un repositorio comunitario independiente; sus skills se instalan aparte y no son necesarias para instalar Axiom.
 
-## Presets
+## Conjunto por defecto
 
-| Preset | ID | Contenido |
-|--------|----|-----------|
-| Completo | `full-gentleman` | Engram, SDD, Skills, Context7 y Permisos; se añade la persona seleccionada salvo que se elija mantenerla personalizada. El ID se conserva por compatibilidad y no instala temas visuales. |
-| Ecosistema | `ecosystem-only` | Engram, SDD, Skills y Context7; se añade la persona seleccionada salvo que se elija mantenerla personalizada. |
-| Mínimo | `minimal` | Engram y las skills SDD; la persona depende de la selección. |
-| Personalizado | `custom` | Permite elegir componentes y skills manualmente y dejar la persona existente sin gestionar. |
+Sin `--component`, `axiom install` instala Engram, SDD, skills, Context7, permisos y persona. Con `--component` (o `--components`) se elige cada componente y con `--skill` (o `--skills`), cada skill. Ya no existen los presets (`full-gentleman`, `ecosystem-only`, `minimal` y `custom`), la elección de persona (`gentleman`, `neutral`, `custom`) ni los temas visuales; la lista de limpieza manual de lo que dejaron las versiones anteriores está en [Notas de retirada](releases/notas-retirada-arranque.md).
 
-La persona se elige por separado y se aplica de forma independiente del preset. Ningún preset instala temas visuales.
-
-CodeGraph es opcional y ningún preset lo incluye: es una herramienta de la comunidad que se elige aparte en la TUI y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella con un aviso.
+CodeGraph es opcional y el conjunto por defecto no lo incluye: es una herramienta de la comunidad que se elige aparte y nunca viene marcada por defecto. CodeGraph se instala como paquete global y escribe su MCP y su guía en la configuración de usuario de los agentes detectados, también con `--scope workspace`: Axiom no lo integra con ubicación de proyecto, así que declara esa huella con un aviso.

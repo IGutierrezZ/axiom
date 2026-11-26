@@ -2,14 +2,14 @@
 
 [Back to Codebase Guide](../CODEBASE-GUIDE.md)
 
-Axiom exposes a CLI and TUI. It configures MCP for agents. It does not expose a local HTTP API in this repository.
+Axiom exposes a CLI and a local web dashboard (`axiom ui`, also opened by `axiom` in an interactive terminal). It configures MCP for agents. It does not expose a local HTTP API in this repository.
 
 ## Interface map
 
 | Interface | Status in this repo | Primary files | Read for details |
 |---|---|---|---|
 | CLI | Implemented | `cmd/axiom/main.go`, `internal/app/`, `internal/cli/` | [Usage](../usage.md) |
-| TUI | Implemented | `internal/tui/model.go`, `internal/tui/router.go`, `internal/tui/screens/` | [Usage](../usage.md) |
+| Web dashboard | Implemented | `internal/dashboard/` | [Dashboard](dashboard.md) |
 | MCP | Configured, not hosted by Axiom | `internal/components/engram/`, `internal/components/mcp/` | [Engram Commands](../engram.md) |
 | Local HTTP API | Not present in this source tree | No dashboard/server package found | Use external Engram docs if needed |
 
@@ -36,18 +36,6 @@ engram mcp --tools=agent
 ```
 
 OpenCode uses an array-style local MCP command in settings. Other agents use their adapter strategy: separate MCP files, merged settings, dedicated MCP config files, or TOML.
-
-## TUI flow
-
-The TUI is a Bubbletea state machine:
-
-| TUI layer | Job |
-|---|---|
-| `Model` | Stores selected agents, components, cursor, async state, and screen-specific state. |
-| `Screen` constants | Define the visible flow. |
-| `router.go` | Defines simple previous/next navigation. |
-| `screens/` | Renders individual screens. |
-| async messages | Report pipeline, sync, upgrade, update-check, uninstall, community tool, and plugin registration results. |
 
 ## Local HTTP API boundary
 

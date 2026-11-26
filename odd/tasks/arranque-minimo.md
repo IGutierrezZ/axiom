@@ -21,7 +21,7 @@ Decisión del usuario: «Me sobran muchos de inicio». Persona `gentleman` y `ne
 - **Lector tolerante (plan, C-08-f).** Un estado con `persona` o `preset` retirados carga con un aviso en `sync` y la siguiente escritura ya no los guarda; los componentes `theme`, `claude-theme` y `opencode-gentle-logo` se ignoran con el mecanismo de C-08-e (`model.IsKnownComponentID`).
 - **Coordinación (2026-11-26).** Sigue en ODD con `## Spec viva`: los MODIFIED son consecuencias mecánicas de P18 y P19 y el único cambio de semántica (fallback a Axiom con aviso) lo fija el plan. Si aparece un requisito con conducta nueva no fijada por P18, P19 o la lectura tolerante, se para y se avisa (sería SDD).
 - **Errata del plan: `components/opencodedefault` no es el logo (coordinación, 2026-11-26).** La sección 08 lo cita como `ComponentOpenCodeGentleLogo`, pero gestiona el `default_agent` de OpenCode (`axiom-orchestrator`) y su fichero de propiedad, que usan `components/sdd`, `agentguidance`, `cli/run` y `uninstall`: es núcleo SDD y se conserva. El logo heredado es el componente `opencode-gentle-logo`, el plugin `gentle-logo` de `opencodeplugin` y su `.tsx`, y eso es lo que se retira.
-- **Criterio `rg -il gentleman`.** No es alcanzable literalmente: Engram y su tap de Homebrew viven en la organización `Gentleman-Programming`, y hay atribución (`LICENSE`, `TRADEMARKS.md`, `CONTRIBUTORS.md`, `author:` de las skills). Se aplica a la persona, presets y temas `gentleman`; quedan esas referencias, la migración del agente SDD `gentleman` de OpenCode (`components/sdd`, núcleo fuera de alcance) y los históricos.
+- **Criterio `rg -il gentleman`.** No es alcanzable literalmente: Engram y su tap de Homebrew viven en la organización `Gentleman-Programming`, y hay atribución (`LICENSE`, `TRADEMARKS.md`, `CONTRIBUTORS.md`, `author:` de las skills). Se aplica a la persona, presets y temas `gentleman`; quedan esas referencias, la migración del agente SDD `gentleman` de OpenCode (`components/sdd` y su limpieza en `uninstall`, núcleo fuera de alcance), la retirada de `agent.gentleman` que ya hacía la persona de Axiom, la cabecera `description:` de las instrucciones SDD de VS Code (`filemerge.SDDInstructionsFrontmatter`: cambiarla rompería el reconocimiento por bytes de los ficheros ya instalados), los literales de los lectores tolerantes y sus tests, y los históricos.
 - **Históricos.** No se tocan `docs/archive`, `openspec/changes/archive`, `docs/audits`, `docs/plan`, `docs/releases` existentes, `docs/upstream-absorption-ledger.md`, `CONTRIBUTORS.md` ni los `odd/tasks/` cerrados.
 
 ## Alcance autorizado
@@ -43,9 +43,9 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T1 · Retirar el agent builder: paquete, pantallas, rutas, opción del menú, `PRD-AGENT-BUILDER.md` y sus tests.
 - [x] T2 · Retirar temas y logo de OpenCode: `components/theme`, componentes `theme`/`claude-theme`/`opencode-gentle-logo` y plugin `gentle-logo`, su limpieza en `uninstall`/`upgrade`/`sync`, y tests.
 - [x] T3 · Retirar la TUI: `internal/tui` entero, su arranque en `app` (`runTUI` y envoltorios), el verbo `axiom tui`, los tests de paridad TUI↔UI y el código que solo usaba la TUI; `axiom` sin argumentos abre la UI.
-- [ ] T4 · Persona solo Axiom: `PersonaID`, componente `persona`, assets y goldens de `gentleman`/`neutral`, `--persona`, fallback de `sync` y lector tolerante con aviso.
-- [ ] T5 · Presets fuera: conjunto por defecto, `--preset`, `SkillsForPreset` y lector tolerante con aviso.
-- [ ] T6 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd arranque-minimo` y criterio `rg`.
+- [x] T4 · Persona solo Axiom: `PersonaID`, componente `persona`, assets y goldens de `gentleman`/`neutral`, `--persona`, fallback de `sync` y lector tolerante con aviso.
+- [x] T5 · Presets fuera: conjunto por defecto, `--preset`, `SkillsForPreset` y lector tolerante con aviso.
+- [x] T6 · Docs, e2e, notas de limpieza manual, `## Spec viva` integrada con `axiom archive integrate --odd arranque-minimo` y criterio `rg`.
 
 Ruta: T1, en línea. T2, escritor delegado (disparador: proteger el contexto del padre, sesión larga; ~40 ficheros mecánicos), revisado por el padre con una comprobación puntual; la retirada de `--include-theme` la hizo el padre en línea. T3, escritor delegado (mismo disparador; borrado guiado por el compilador y las guardas de CI), y un lector delegado clasifica los requisitos de las specs vivas que hablan de la TUI (disparador de mapeo: decenas de specs).
 
@@ -360,14 +360,118 @@ The system MUST expose Antigravity as `antigravity` and MUST NOT expose a separa
 
 ### Requirement: Inventario de no-reversión por tanda (REQ-20.3)
 
-El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode en presets, no forzado de `theme`, persona Axiom en castellano peninsular, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
-(Previously: la entrada V6 incluía la localización íntegra de la TUI.)
+El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario de divergencias deliberadas (renombrado de producto, detección dual de marcadores `axiom:`, agente `axiom-orchestrator` y comandos slash sin prefijo, supresión del logo de OpenCode, no forzado de `theme`, persona Axiom en castellano peninsular, y la capa Hub multi-repositorio) como no-reversibles en toda tanda de absorción.
+(Previously: la entrada V3 hablaba del logo «en presets», retirados por C-08-f, y la V6 incluía la localización íntegra de la TUI, retirada por C-08-f.)
 
 #### Scenario: Reversión de una divergencia firme rechazada
 - **DADO** una tanda cuyo diff revierte, total o parcialmente, la detección dual de marcadores `axiom:` (V2) o cualquier otra entrada firme (V1, V3, V4, V5, V6 u V8)
 - **CUANDO** se evalúa la tanda
 - **ENTONCES** se rechaza
 - **Y** se detiene el incremento hasta el último estado verde
+```
+
+### Capacidad: persona-behavior-contract
+
+```openspec
+## REMOVED Requirements
+
+### Requirement: Neutral Mentor Behavior Parity
+
+(Reason: C-08-f retira las personas `neutral` y `gentleman` (P19); solo queda la persona de Axiom.)
+
+### Requirement: Neutral Interaction Discipline
+
+(Reason: C-08-f retira la persona `neutral` (P19); la disciplina de interacción de Axiom vive en su propio output style.)
+
+### Requirement: Claude Neutral Output Style Contract
+
+(Reason: C-08-f retira la persona `neutral` y su output style de Claude (P19).)
+
+### Requirement: Generic Neutral Asset Parity
+
+(Reason: C-08-f retira la persona `neutral` y sus assets genéricos (P19).)
+
+### Requirement: Explicit Persona Selection Preservation
+
+(Reason: C-08-f retira la elección de persona (P19); no queda ninguna selección explícita que preservar.)
+
+### Requirement: Persona Drift Reconciliation
+
+(Reason: C-08-f retira las variantes `gentleman` y `neutral`, las únicas que el requisito reconciliaba (P19).)
+
+## MODIFIED Requirements
+
+### Requirement: Artifact Language Independence
+
+Persona voice MUST govern only direct chat replies to the user. Generated technical artifacts MUST default to English and neutral professional wording regardless of the persona, unless the user explicitly requests a different artifact language or the existing project artifact convention requires it.
+(Previously: the scenarios used the retired `neutral` and `gentleman` personas.)
+
+#### Scenario: Axiom keeps generated artifacts free of conversational voice
+
+- GIVEN the Axiom persona is installed
+- WHEN the system generates code, identifiers, comments, UI copy, documentation, commit messages, PR descriptions, SDD artifacts, or tests without an explicit request for another language or tone
+- THEN the generated artifact uses neutral professional wording without the persona's conversational register
+- AND it defaults to English unless the project artifact convention requires otherwise
+
+### Requirement: Safe Persona Fallback Semantics
+
+When the `persona` component is selected, install and sync MUST apply the Axiom persona. Persisted persona state that is missing, empty, `axiom`, or a retired or unknown value (such as `gentleman`, `neutral`, `gentleman-neutral-artifacts` or `custom`) MUST NOT block sync and MUST NOT select any other persona. A retired or unknown persisted value MUST be reported with a warning and MUST NOT be written back to the state.
+(Previously: the fallback for missing or invalid state was the `neutral` persona, and an explicit `gentleman` selection was honored.)
+
+#### Scenario: Missing persisted persona applies Axiom
+
+- GIVEN persisted persona state is absent
+- WHEN sync applies the `persona` component
+- THEN it applies the Axiom persona
+
+#### Scenario: Retired persisted persona applies Axiom with a warning
+
+- GIVEN persisted state contains persona `gentleman`
+- WHEN sync loads the state and applies the `persona` component
+- THEN it applies the Axiom persona
+- AND it reports that the persisted persona no longer exists
+- AND the next state write no longer contains the retired persona
+
+### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters
+
+For any adapter with an active output-style channel — Claude Code (gated by `SupportsOutputStyles()`) — the output-style asset MUST be the exclusive source of persona tone, language, and philosophy. The system-prompt persona section for these adapters MUST be reduced to a residual block containing only `## Rules`, `## Expertise`, `## Contextual Skill Loading (MANDATORY)` and a one-line pointer to the output style. The residual MUST NOT duplicate tone/language/philosophy content.
+(Previously: the scenario covered the retired `gentleman` and `neutral` personas; Kimi was an explicit carve-out before C-08-d.)
+
+#### Scenario: Claude residual section carries no tone content
+
+- GIVEN Claude assets are generated with the Axiom persona
+- WHEN the CLAUDE.md persona section is inspected
+- THEN it contains only Rules, Expertise, Contextual Skill Loading and a pointer to the output style
+- AND it contains no tone, language, or philosophy prose
+
+### Requirement: Axiom Persona Definition and Default Selection (REQ-10.1 & REQ-10.2)
+
+The system MUST support `axiom` as its only managed persona. The persona MUST prescribe senior architect guidance in Peninsular Spanish (castellano peninsular) with professional tuteo ("tienes", "haz", "revisa"), strictly prohibiting forced Rioplatense voseo ("che", "tenés", "podés", "hacé") and informal regionalisms. The CLI MUST NOT offer a persona choice: selecting the `persona` component installs the Axiom persona, and deselecting it installs none.
+(Previously: `axiom` was the default among several personas, and the TUI and CLI presented it as the default selection.)
+
+#### Scenario: Axiom is the only persona and uses Peninsular Spanish
+
+- GIVEN the `persona` component is selected
+- WHEN Axiom installs it
+- THEN the installed persona is `axiom`
+- AND its instructions enforce Peninsular Spanish without voseo or Rioplatense regionalisms
+```
+
+### Capacidad: axiom-skills-index-governance
+
+```openspec
+## MODIFIED Requirements
+
+### Requirement: Saneamiento del Preset Predeterminado de Skills (REQ-46.9)
+
+El conjunto de skills que Axiom instala por defecto DEBE contener únicamente skills de producto para usuarios, segregando las skills de colaboración interna del repositorio (`contributorSkills`).
+(Previously: hablaba del «preset básico»; C-08-f sustituye los presets por un conjunto por defecto. Trasladado desde REQ-18.5 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)
+
+#### Scenario: Inspección del conjunto de skills por defecto
+
+- **DADO** el catálogo de skills en `internal/components/skills`
+- **CUANDO** se consulta el conjunto de skills por defecto
+- **ENTONCES** contiene únicamente skills fundacionales de producto y excluye las de contribución interna
 ```
 
 ### Capacidad: visual-decoupling
@@ -393,4 +497,7 @@ El sistema DEBE tratar las entradas V1, V2, V3, V4, V5, V6 y V8 del inventario d
 - 2026-11-26: worktree creado desde `origin/main` `814b3ce5`; documento creado. Carril confirmado por la coordinación.
 - 2026-11-26: T1 hecha (en línea). `go vet ./internal/tui/... ./internal/skillcheck/` limpio; `go test ./internal/tui/ ./internal/tui/screens/` en verde. El menú pierde una opción: se desplazan los índices de cursor de los tests de navegación y `TestWelcomeView_MinimumResizePreservesNonzeroCursor` baja a 19 filas para seguir cayendo en la vista mínima. Commit `0e34d4cf`.
 - 2026-11-26: T2 hecha. Fuera `components/theme`, los componentes `theme`, `claude-theme` y `opencode-gentle-logo`, el plugin `gentle-logo` (y su `.tsx`), su limpieza en `sync`, `uninstall` y `upgrade`, y la opción `axiom sync --include-theme`. `opencodedefault` se conserva (errata del plan). Lector tolerante probado con `state.TestReadIgnoresRetiredVisualComponents`. `go vet ./...` limpio; `go test` en verde de `model`, `catalog`, `planner`, `state`, `components/uninstall`, `components/opencodeplugin`, `update/upgrade`, `tui`, `tui/screens` y `cli -run 'Sync|Uninstall|Footprint|Plugin|RunInstall|Component|Install|Backup|Normalize|Restore|ParseSyncFlags'`. Goldens `preset-custom-*-next` regenerados (solo pierden la fila del logo). Commit `53af25bc`.
-- 2026-11-26: T3 hecha (escritor delegado, revisado por el padre). Fuera `internal/tui` entero, su cableado en `app`, el verbo `axiom tui`, los tests de paridad TUI↔UI y 56 funciones que solo alcanzaba la TUI (`scripts/deadcode-ratchet.sh` en verde; `--update` solo quita 19 líneas de la línea base). `axiom` sin argumentos conserva TTY, SO, detección, `PendingSync` y aviso de `doctor`, y abre la UI con `runUI(nil)`. Los puntos de entrada de sync que solo usaban la TUI pero que ejercitan unas 100 pruebas de `cli` (`RunSyncWithSelection*`, `SyncResult.Warnings`, `newInstallRuntime`, `SetCommandOutputStreaming`) pasan a `cli/selection_helpers_test.go`, y los ayudantes Codex de `model` a `model/export_test.go`. `go mod tidy` saca bubbles, bubbletea, lipgloss y sus indirectas. `go vet ./...` limpio; `go test` en verde de `app` (sin los que compilan el binario), `cmd/axiom -run 'Dispatch|Help|Verbs|DeadcodeRatchet|WriterInventory'`, `dashboard`, `branch/engine -run Writer`, `assets -run 'Shard|Workflow'`, `model`, `opencode`, `pipeline`, `update`, `backup`, `skillcheck`, `uninstall`, `opencodeplugin` y `cli`/`components` con `-run` focalizado. Pendiente para T6: textos que citan la TUI fuera de Go (`AGENTS.md`, `GEMINI.md`, `axiom.yaml`, `scripts/install.*`, plantillas de `.github`, skill `go-testing`).
+- 2026-11-26: T3 hecha (escritor delegado, revisado por el padre). Fuera `internal/tui` entero, su cableado en `app`, el verbo `axiom tui`, los tests de paridad TUI↔UI y 56 funciones que solo alcanzaba la TUI (`scripts/deadcode-ratchet.sh` en verde; `--update` solo quita 19 líneas de la línea base). `axiom` sin argumentos conserva TTY, SO, detección, `PendingSync` y aviso de `doctor`, y abre la UI con `runUI(nil)`. Los puntos de entrada de sync que solo usaban la TUI pero que ejercitan unas 100 pruebas de `cli` (`RunSyncWithSelection*`, `SyncResult.Warnings`, `newInstallRuntime`, `SetCommandOutputStreaming`) pasan a `cli/selection_helpers_test.go`, y los ayudantes Codex de `model` a `model/export_test.go`. `go mod tidy` saca bubbles, bubbletea, lipgloss y sus indirectas. `go vet ./...` limpio; `go test` en verde de `app` (sin los que compilan el binario), `cmd/axiom -run 'Dispatch|Help|Verbs|DeadcodeRatchet|WriterInventory'`, `dashboard`, `branch/engine -run Writer`, `assets -run 'Shard|Workflow'`, `model`, `opencode`, `pipeline`, `update`, `backup`, `skillcheck`, `uninstall`, `opencodeplugin` y `cli`/`components` con `-run` focalizado. Pendiente para T6: textos que citan la TUI fuera de Go (`AGENTS.md`, `GEMINI.md`, `axiom.yaml`, `scripts/install.*`, plantillas de `.github`). Commit `a5a53dd3`.
+- 2026-11-26: T4 hecha (escritor delegado, revisado por el padre). Fuera `PersonaID`, `Selection.Persona`, `--persona`, el alias, la resolución y migración de persona en `sync`, 7 assets y 8 goldens de `gentleman`/`neutral`, y la limpieza heredada de `filemerge` (`StripLegacyPersonaBlock`) y `persona`. `persona.Inject` sigue quitando `agent.gentleman` de `opencode.json`, como ya hacía con Axiom. Lector tolerante: `state.IgnoredPersona` y aviso `noteIgnoredStatePersona`. Goldens nuevos de la persona de Axiom para no perder cobertura. Commit `49d0d7d8`.
+- 2026-11-26: T5 hecha (mismo escritor). `model.DefaultComponents()` (Engram, SDD, skills, Context7, permisos y persona) y `skills.DefaultSkills()` (lo de `full-gentleman`) sustituyen a los presets; fuera `PresetID`, `--preset` y la línea de dry-run. Lector tolerante: `state.IgnoredPreset` con aviso. Cambio de conducta asumido: un estado con `preset: custom` sin skills sincroniza ahora las skills por defecto. `go vet ./...` limpio, `deadcode-ratchet` en verde y `go test` en verde de `model`, `state`, `planner`, `components/{persona,skills,filemerge,uninstall}`, `update/upgrade`, `assets`, `app`, `components -run Golden`, `dashboard -run 'Models|State'` y `cli` con `-run` focalizado. Commit `6d0a420a`.
+- 2026-11-26: T6 hecha. Docs, README, PRD, GEMINI, `axiom.yaml`, `scripts/install.*`, plantillas de issues y skill `axiom-branch-pr` sin TUI, persona heredada, presets, temas, logo ni agent builder (escritor delegado, disparador: paralelismo con la integración de specs, superficie disjunta). e2e: 28 casos de presets, personas y temas fuera; quedan dry-run sin flags y con `--component` (`bash -n` en verde). Notas de limpieza manual en `docs/releases/notas-retirada-arranque.md`. `axiom archive integrate --odd arranque-minimo` compuso 13 capacidades; se borran a mano `tui-spanish-localization` e `installer-picker-navigation` (vacías) y sus entradas de `openspec/INDEX.md` (51 dominios), y se corrigen las cabeceras narrativas que citaban la TUI, el logo o los temas. `go test` de `livespec`, `livingdoc` y `workspace -run 'Docs|Declarations'` en verde. Criterio `rg -il gentleman`: solo las excepciones de «Decisiones». Queda fuera de alcance: `AXIOM_NO_ANIMATION` ya no lo lee nadie pero sigue como ejemplo en un escenario de `axiom-user-state-and-env` (REQ-12.3).

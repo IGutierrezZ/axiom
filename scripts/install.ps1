@@ -365,7 +365,7 @@ function Show-NextSteps {
     if ($Channel -eq "beta") {
         Write-Host ('  Run ''$env:AXIOM_CHANNEL = "beta"; {0} install'' to keep using the beta channel' -f $BINARY_NAME) -ForegroundColor Cyan
     } else {
-        Write-Host "  Run '$BINARY_NAME' to start the TUI installer" -ForegroundColor Cyan
+        Write-Host "  Run '$BINARY_NAME install --agent <agent>' to configure your AI agent (add --dry-run to preview)" -ForegroundColor Cyan
     }
     if ($Shortcuts -or $ServerTask) {
         Write-Host ""

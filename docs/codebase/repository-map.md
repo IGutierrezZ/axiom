@@ -11,7 +11,6 @@ Use this page when you know what you need to change but not where it belongs.
 | `cmd/axiom/` | Binary entrypoint and version handoff. | Business rules or file mutation logic. |
 | `internal/app/` | Top-level command dispatch, help, version routing. | Component-specific install behavior. |
 | `internal/cli/` | Non-interactive install, sync, uninstall, restore, and flag normalization. | Agent path constants. |
-| `internal/tui/` | Bubbletea model, screen routing, async messages, interactive flows. | CLI-only flag parsing or component internals. |
 | `internal/model/` | Shared IDs, enums, and cross-package domain structs. | Platform-specific behavior. |
 | `internal/catalog/` | Supported agents and component definitions. | Detection, installation, or mutation code. |
 | `internal/system/` | OS detection, dependency checks, path guards. | Agent config injection. |
@@ -19,7 +18,7 @@ Use this page when you know what you need to change but not where it belongs.
 | `internal/pipeline/` | Staged execution, progress, rollback policy. | Component decision logic. |
 | `internal/components/` | Reusable component injection and verification helpers, including Engram, SDD, MCP, persona, skills, community tools, OpenCode plugins, uninstall, and file merge helpers. | Per-agent strategy definitions. |
 | `internal/components/communitytool/` | Community tool installation orchestration plus managed guidance/config/MCP reconciliation, currently for CodeGraph. | OpenCode plugin registration or external tool runtime implementation. |
-| `internal/components/uninstall/` | Managed cleanup services for installed component artifacts. | Interactive TUI state or backup storage. |
+| `internal/components/uninstall/` | Managed cleanup services for installed component artifacts. | Dashboard state or backup storage. |
 | `internal/agents/` | Adapter strategy, config paths, capability flags per agent. | Shared component behavior. |
 | `internal/assets/` | Embedded prompts, skills, personas, commands, and templates. | Runtime-generated user state. |
 | `internal/skillregistry/` | Skill registry scanning, cache behavior, and markdown generation. | Skill authoring rules or component injection. |
@@ -39,10 +38,9 @@ Use this page when you know what you need to change but not where it belongs.
 | Change Engram setup | `internal/components/engram/` | `docs/engram.md`, `internal/assets/*/engram-*` |
 | Change SDD prompt sync | `internal/components/sdd/` | `docs/opencode-profiles.md`, `internal/assets/*/sdd-*` |
 | Change CLI flags | `internal/cli/` | `docs/usage.md`, app dispatch tests |
-| Change TUI flow | `internal/tui/model.go`, `internal/tui/router.go` | `internal/tui/screens/` |
 | Change install ordering | `internal/planner/`, `internal/pipeline/` | component tests and dry-run output |
 | Change backups or restore | `internal/backup/`, `internal/cli/restore.go` | `docs/rollback.md` |
-| Change updates or upgrades | `internal/update/`, `internal/update/upgrade/` | `internal/tui/screens/upgrade_sync.go` |
+| Change updates or upgrades | `internal/update/`, `internal/update/upgrade/` | — |
 | Change OpenCode TUI plugins | `internal/components/opencodeplugin/` | README community integrations |
 | Change community tool install or guidance | `internal/components/communitytool/` | `docs/components.md`, `docs/usage.md` |
 | Change skill registry behavior | `internal/skillregistry/`, `internal/app/` skill-registry dispatch | `docs/skill-registry.md`, `.atl/skill-registry.md` |
@@ -56,7 +54,7 @@ Place code at the narrowest stable owner:
 2. **One component across agents** -> component package.
 3. **Ordering or dependencies** -> planner.
 4. **Execution lifecycle** -> pipeline.
-5. **Interactive state only** -> TUI.
+5. **Dashboard state only** -> `internal/dashboard/`.
 6. **User command surface** -> CLI plus docs.
 
 ## Contributor checklist
