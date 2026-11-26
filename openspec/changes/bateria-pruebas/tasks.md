@@ -68,7 +68,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
 
 ## Phase 3: Integración
 
-- [ ] T4 Digest de la puerta `tasks` con cálculo único en las dos rutas.
+- [x] T4 Digest de la puerta `tasks` con cálculo único en las dos rutas.
   - Crear `internal/sddstatus/acceptance_tests.go` con `TasksGateArtifactPaths(changeRoot string, roles []kickoff.KickoffRole) []string`: `tasks.md`, o cada `TasksFile` si `kickoff.RoleTaskFiles(roles)` no está vacío, más `filepath.Join(changeRoot, acceptancetests.FileName)` solo si `hasContent` (`status.go`) lo da por presente y no vacío.
   - `internal/cli/sdd_gate_digest.go`: `tasksArtifactPathsForDigest` delega en `sddstatus.TasksGateArtifactPaths`, con `roles` tomados de `sealed.Config.Roles` y `nil` si `sealed == nil` (no usar el pseudocódigo `rolesOf`).
   - `internal/sddstatus/governance.go`: `governanceArtifactInputs` sustituye el bloque `tasksPaths` por la nueva función. El digest por rol y el de `role-apply:<rol>` no incluyen `pruebas.md`. No tocar `internal/kickoff/machine.go`.

@@ -22,6 +22,12 @@
 - Decisiones: `ID#` sin nombre y las entradas vacías se representan como `CubreEntry{}` (ID vacío) y dan `caso_sin_cubre`; una cita repetida se cuenta una vez; los escenarios con `;` cuentan en el total y solo dan `escenario_ambiguo`; un requisito con más de un ID se informa como `requisito_sin_id`; las filas con otro número de celdas se descartan de `Parse` y `RewriteCubre` por igual.
 - Verificación: `go test ./internal/acceptancetests -count=1` ok; `go vet ./internal/acceptancetests` ok; `go build ./...` ok.
 
+## T4 completada: digest de la puerta `tasks` con cálculo único
+
+- Creado `internal/sddstatus/acceptance_tests.go` con `TasksGateArtifactPaths(changeRoot, roles)`: `tasks.md` o los `TasksFile` por rol, más `pruebas.md` solo si existe y no está en blanco. `governanceArtifactInputs` y `tasksArtifactPathsForDigest` (cli) delegan en ella; `internal/kickoff/machine.go` intacto. Los digests por rol y `role-apply` no incluyen `pruebas.md`.
+- Tests: `TestTasksGateArtifactPaths` (sddstatus), `TestGateArtifactDigestTasksGateAcceptanceTests` (sin `pruebas.md` digest idéntico a `tasks.md`, en blanco fuera, editar cambia el digest, paridad registro/status, aprobada terminal) y `TestGateArtifactDigestTasksGateRejectedReopensOnAcceptanceTestsEdit` (rechazada pasa a pending reabierta).
+- Verificación: `go test ./internal/sddstatus -run 'TasksGate|Governance'`, `go test ./internal/cli -run 'GateArtifactDigest|RunSDDGateRecord|GateDigest'`, `go test ./internal/kickoff -run EvaluateGates` ok; `go vet ./internal/sddstatus ./internal/cli` ok.
+
 ## Pendientes
 
-T4 a T10.
+T5 a T10.
