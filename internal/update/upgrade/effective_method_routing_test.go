@@ -296,6 +296,7 @@ func TestAxiomUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
 		}
 		if name == "go" && len(args) == 2 && args[0] == "install" {
 			goInstallCalls++
+			writeStagedSelfBinary(t, filepath.Join(goPath, "bin"))
 			return mockCmd("true")
 		}
 		t.Fatalf("Windows go-owned upgrade executed unexpected command %s %v", name, args)

@@ -3,7 +3,6 @@ package upgrade
 import (
 	"context"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -127,12 +126,7 @@ func TestWindowsBetaAxiomUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
 		}
 		gotName = name
 		gotArgs = args
-		// The Windows self-install builds into a staging directory inside the
-		// destination; the stub leaves the binary there, as `go install` would.
-		stages, _ := filepath.Glob(filepath.Join(gobin, selfInstallStagingPrefix+"*"))
-		for _, stage := range stages {
-			writeFakeBinary(t, stage, "axiom.exe")
-		}
+		writeStagedSelfBinary(t, gobin)
 		gotCmd = mockCmd("true")
 		return gotCmd
 	}

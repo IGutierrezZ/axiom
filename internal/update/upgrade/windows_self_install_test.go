@@ -22,6 +22,17 @@ func writeFileContent(t *testing.T, path, content string) {
 	}
 }
 
+// writeStagedSelfBinary is for tests that stub `go install` for the Windows
+// self-install: the real command builds into a staging directory inside the
+// destination, so the stub leaves the binary there, as `go install` would.
+func writeStagedSelfBinary(t *testing.T, destDir string) {
+	t.Helper()
+	stages, _ := filepath.Glob(filepath.Join(destDir, selfInstallStagingPrefix+"*"))
+	for _, stage := range stages {
+		writeFakeBinary(t, stage, "axiom.exe")
+	}
+}
+
 func readFileContent(t *testing.T, path string) string {
 	t.Helper()
 	data, err := os.ReadFile(path)
