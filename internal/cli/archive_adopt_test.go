@@ -30,7 +30,7 @@ const (
 
 ## ADDED Requirements
 
-### Requirement: Alta de usuario (REQ-40.1)
+### Requirement: Alta de usuario (RF-001)
 
 El sistema DEBE permitir el alta de un usuario.
 
@@ -41,7 +41,7 @@ Origen: docs/requisitos.md#rf-001-alta-de-usuario (RF-001)
 - **CUANDO** se da de alta
 - **ENTONCES** queda registrado
 
-### Requirement: Baja de usuario (REQ-40.2)
+### Requirement: Baja de usuario (RF-002)
 
 El sistema DEBE permitir la baja de un usuario.
 
@@ -268,6 +268,7 @@ func newAdoptCheckFixture(t *testing.T) adoptCheckFixture {
 
 func TestArchiveAdoptCheckValidChangePasses(t *testing.T) {
 	f := newAdoptCheckFixture(t)
+	declareAdoptPattern(t, f.ws, "sdd:\n  id_pattern: \"RF-<NNN>\"\n")
 	before := adoptSnapshot(t, f.ws.Master)
 	stdout, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
 	if err != nil {
@@ -407,8 +408,6 @@ func declareAdoptPattern(t *testing.T, ws workspacetest.Workspace, block string)
 func TestArchiveAdoptCheckMeasuresWithTheDeclaredPattern(t *testing.T) {
 	f := newAdoptCheckFixture(t)
 	declareAdoptPattern(t, f.ws, "sdd:\n  id_pattern: \"RF-<NNN>\"\n")
-	delta := strings.NewReplacer("(REQ-40.1)", "(RF-001)", "(REQ-40.2)", "(RF-002)").Replace(adoptCLIDelta)
-	workspacetest.WriteFile(t, filepath.Join(adoptChangeRoot(f.ws), "specs", "proyecto", "spec.md"), delta)
 	before := adoptSnapshot(t, f.ws.Master)
 
 	stdout, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
@@ -431,7 +430,8 @@ func TestArchiveAdoptCheckMeasuresWithTheDeclaredPattern(t *testing.T) {
 	}
 
 	// El patrón declarado no cae al defecto: los REQ-n.m de la delta original ya no valen.
-	workspacetest.WriteFile(t, filepath.Join(adoptChangeRoot(f.ws), "specs", "proyecto", "spec.md"), adoptCLIDelta)
+	delta := strings.NewReplacer("(RF-001)", "(REQ-40.1)", "(RF-002)", "(REQ-40.2)").Replace(adoptCLIDelta)
+	workspacetest.WriteFile(t, filepath.Join(adoptChangeRoot(f.ws), "specs", "proyecto", "spec.md"), delta)
 	if _, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json"); err == nil {
 		t.Fatal("con RF-<NNN> declarado, un (REQ-40.1) no es un identificador")
 	}
@@ -439,10 +439,8 @@ func TestArchiveAdoptCheckMeasuresWithTheDeclaredPattern(t *testing.T) {
 
 func TestArchiveAdoptCheckWithoutDeclarationReportsTheDefaultPattern(t *testing.T) {
 	f := newAdoptCheckFixture(t)
-	stdout, err := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
-	if err != nil {
-		t.Fatalf("archive adopt check: %v\n%s", err, stdout)
-	}
+	// Sin declaración el cambio no pasa (pattern_undeclared), pero el informe se mide con el defecto.
+	stdout, _ := runArchiveAdoptCLI(t, "check", "--path", f.ws.Master, "--change", adoptCLIChange, "--json")
 	var report adoptcheck.CheckReport
 	if err := json.Unmarshal([]byte(stdout), &report); err != nil {
 		t.Fatal(err)

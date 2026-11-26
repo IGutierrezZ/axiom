@@ -30,6 +30,10 @@ const (
 	RuleDiscardReason    = "discard_reason"
 	RuleInventoryMissing = "inventory_missing"
 	RuleInventoryStale   = "inventory_stale"
+	// Reglas de conservación del ID del cliente (REQ-30.11 f).
+	RuleOriginID          = "origin_id"
+	RulePatternUndeclared = "pattern_undeclared"
+	RuleForeignIDConflict = "foreign_id_conflict"
 )
 
 // Failure es un fallo tipado: la regla incumplida, el requisito o la unidad que la
@@ -87,11 +91,14 @@ func Check(loc workspace.Location, change string, pattern reqid.Pattern) (CheckR
 	}
 	c.checkScenarios()
 	covered := c.checkOrigins()
+	c.loadInventory()
+	c.checkOriginIDs()
 	discards, err := adoption.ReadDiscards(changeRoot)
 	if err != nil {
 		return CheckReport{}, err
 	}
 	c.checkCoverage(covered, discards)
+	c.checkProjectIDs(discards)
 
 	report := CheckReport{
 		Change:            change,
@@ -115,6 +122,9 @@ type checker struct {
 	added       []addedRequirement
 	failures    []Failure
 	units       map[string]map[string]bool // ruta → anclas existentes (nil si no se puede resolver)
+	inv         *adoption.Inventory        // inventario guardado, leído una sola vez (nil si no se lee)
+	invErr      error
+	invUnits    map[string]adoption.Unit // <ruta>#<ancla> → unidad del inventario
 }
 
 func (c *checker) fail(rule, subject, format string, args ...any) {
@@ -387,7 +397,11 @@ func (c *checker) checkCoverage(origins map[string]bool, discards []adoption.Dis
 		}
 	}
 
-	inv, err := adoption.ReadInventory(c.changeRoot)
+	err := c.invErr
+	inv := adoption.Inventory{}
+	if c.inv != nil {
+		inv = *c.inv
+	}
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
 		c.fail(RuleInventoryMissing, adoption.InventoryFileName, "el cambio no tiene inventario de adopción; genéralo con `%s`", c.scanCommand)
