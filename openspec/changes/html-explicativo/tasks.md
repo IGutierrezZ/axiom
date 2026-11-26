@@ -46,7 +46,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Verificación: `go test ./internal/workspace -run 'TestDecodeSDD|TestSDDLoad|TestExample|TestDeclarationsExplainer'`
   - Ruta: inline (~200 líneas).
 
-- [ ] T3 Campo sellado `explainer_html`, bandera, `ResolveExplainerHTML` y cableado en `seal` (decisiones 5 y 6).
+- [x] T3 Campo sellado `explainer_html`, bandera, `ResolveExplainerHTML` y cableado en `seal` (decisiones 5 y 6).
   - Cubre: prov:KOF:2, prov:KOF:3
   - Ficheros: `internal/kickoff/types.go`, `internal/kickoff/schema.go`, `internal/kickoff/args.go`, `internal/kickoff/explainer.go`, `internal/kickoff/{args,schema,infer}_test.go`, `internal/kickoff/explainer_test.go`, `internal/cli/sdd_kickoff.go`, `internal/cli/sdd_kickoff_test.go`
   - Pruebas (RED primero):

@@ -32,6 +32,11 @@ var (
 		DocsPublicationAuto: true,
 	}
 
+	validExplainerHTMLs = map[ExplainerHTML]bool{
+		ExplainerHTMLYes: true,
+		ExplainerHTMLNo:  true,
+	}
+
 	validGatePolicies = map[multirole.GatePolicy]bool{
 		multirole.PolicyBlocking: true,
 		multirole.PolicyDeferred: true,
@@ -110,6 +115,10 @@ func (k Kickoff) Validate() error {
 		if k.Config.ExecutionStyle != ExecutionContinuous {
 			return fmt.Errorf("kickoff: docs_publication %q solo es valido con execution_style continuous", k.Config.DocsPublication)
 		}
+	}
+	// explainer_html: vacio, yes o no; vale en continuous y en checkpointed.
+	if k.Config.ExplainerHTML != "" && !validExplainerHTMLs[k.Config.ExplainerHTML] {
+		return fmt.Errorf("kickoff: explainer_html desconocido %q; admitidos: yes, no", k.Config.ExplainerHTML)
 	}
 	for _, role := range k.Config.Roles {
 		if !validGatePolicies[role.GatePolicy] {
