@@ -499,6 +499,22 @@ type result struct {
 
 func under(q, dir string) bool { return dir == "." || strings.HasPrefix(q, dir+"/") }
 
+var importRe = regexp.MustCompile(`"[^"\s]+/v3/((?:internal|cmd)/[^"\s]+)"`)
+
+// importedDirs devuelve los directorios del repositorio que importan los ficheros Go de dir.
+func importedDirs(contents map[string]string, paths []string, dir string) map[string]bool {
+	out := map[string]bool{}
+	for _, p := range paths {
+		if path.Dir(p) != dir || !strings.HasSuffix(p, ".go") {
+			continue
+		}
+		for _, m := range importRe.FindAllStringSubmatch(contents[p], -1) {
+			out[m[1]] = true
+		}
+	}
+	return out
+}
+
 // migrate calcula en memoria toda la reescritura: nunca escribe. Los ficheros listados que no
 // existen, no son regulares o son binarios se omiten sin error.
 func migrate(in migrateIn) *result {
@@ -575,6 +591,17 @@ func migrate(in migrateIn) *result {
 			if under(q, dir) {
 				for tok := range o.rewritten {
 					pinned[tok] = true
+				}
+			}
+		}
+		// Un mensaje de producción de un paquete importado por el paquete también se fija en sus
+		// pruebas (p. ej. la guarda de archivada de kickoff, que prueban integrations).
+		for imp := range importedDirs(contents, paths, dir) {
+			for q, o := range outs {
+				if path.Dir(q) == imp {
+					for tok := range o.rewritten {
+						pinned[tok] = true
+					}
 				}
 			}
 		}
@@ -896,6 +923,27 @@ func TestRewriteGoTestsPinnedLiteralBeatsWholeScopeResidue(t *testing.T) {
 	got := res.Files["internal/foo/foo_test.go"]
 	if !strings.Contains(got, `var _ = "RF-KOF-02"`) || !strings.Contains(got, `"## REQ-1.10 en un fixture"`) {
 		t.Fatalf("el pin gana al residuo de ámbito completo y el fixture se conserva: %q", got)
+	}
+}
+
+func TestRewriteGoTestsPinnedByImportedPackageMessage(t *testing.T) {
+	files := map[string]string{
+		"internal/bar/bar.go":      "package bar\n\nconst Msg = \"falta REQ-27.2b\"\n",
+		"internal/foo/foo.go":      "package foo\n\nimport _ \"example.com/axiom/v3/internal/bar\"\n",
+		"internal/foo/foo_test.go": "package foo\n\nvar _ = \"REQ-27.2b\"\nvar fixture = \"## REQ-1.10 en un fixture\"\n",
+	}
+	root := t.TempDir()
+	for p, c := range files {
+		writeFile(t, root, p, c)
+	}
+	entries := []mapEntry{asEntry("sdd-lane-kickoff", "RF-KOF-02", "REQ-27.2b"), asEntry("autoskills", "RF-ASK-03", "REQ-1.10")}
+	res := migrate(migrateIn{Root: root, Files: []string{"internal/bar/bar.go", "internal/foo/foo.go", "internal/foo/foo_test.go"}, Entries: entries})
+	if len(res.Failures) != 0 {
+		t.Fatalf("fallos: %v", res.Failures)
+	}
+	got := res.Files["internal/foo/foo_test.go"]
+	if !strings.Contains(got, `var _ = "RF-KOF-02"`) || !strings.Contains(got, `"## REQ-1.10 en un fixture"`) {
+		t.Fatalf("el literal fijado por el paquete importado se reescribe y el fixture se conserva: %q", got)
 	}
 }
 
