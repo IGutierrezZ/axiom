@@ -56,8 +56,8 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 
 ## Pruebas que siguen en serie
 
-- `sddpublish`: las 7 que instalan `observe`, las 3 con `t.Setenv` (`TestGitPortIdentityConfigured`, `TestPublishIgnoresGitDirEnvironment`, `TestPublishIdentityMissingWritesNothing`) y `TestGitPortPushOutcomes` (sustituye `pushTimeout`).
-- `sddstatus`: 45 de 348 (las que usan `t.Setenv` de `ENGRAM_PROJECT` o `HOME`, `t.Chdir`, `useBranchGuard` y sus fixtures `branchMonorepo`, `checkpointedMonorepo` e `isoBranchMonorepo`, `stubEngramExport`, `publishChangeInstanceMarker` o `gitcommon.Observe`).
+- `sddpublish`: las 7 que instalan `observe`, las 3 con `t.Setenv` (`TestGitPortIdentityConfigured`, `TestPublishIgnoresGitDirEnvironment`, `TestPublishIdentityMissingWritesNothing`), `TestGitPortPushOutcomes` (sustituye `pushTimeout`) y `TestPublishUnpublishedRangeTooLarge` (sustituye `maxUnpublishedCommits`; la detectó `-race` en la CI).
+- `sddstatus`: 47 de 348 (además de `runtimeGrantClock`, `runtimeSyncDirectory` y `runtimeReplaceHead`, detectadas por `-race` en la CI; las que usan `t.Setenv` de `ENGRAM_PROJECT` o `HOME`, `t.Chdir`, `useBranchGuard` y sus fixtures `branchMonorepo`, `checkpointedMonorepo` e `isoBranchMonorepo`, `stubEngramExport`, `publishChangeInstanceMarker` o `gitcommon.Observe`).
 - `techcontext`: 6 de 69 (las de `t.Chdir`, `fixedClock` y `renameFile`).
 - `dashboard`: 75 de 253. Además de `t.Setenv`, `t.Chdir` y los seams del paquete (`runAppArgsFn`, `upgradeSequence*Fn`, los de `relaunch`, `installAdapters`, `discoverOpenCodeCatalog`), las que escriben preferencias de worktree en el hub del HOME compartido (`setWorktreePrefs` y sus fixtures `gitProject` y `embeddedProject`): `hub.Manager` reescribe `workspaces.json` con un renombrado sin bloqueo entre instancias, que en Windows choca con las escrituras de las pruebas paralelas. Son las de git más caras; inyectar el hub en el servicio sería un cambio de producción (fuera de alcance).
 - `cli`: de las 190 pruebas con git, 125 siguen en serie: además de `t.Setenv` y `t.Chdir`, sustituyen alguna de las 58 variables del paquete que las pruebas cambian (`resolveActorIdentity`, los avisos `*Warnings`, `cmdLookPath`, etc.), `backup.UserHomeDirFn`, los `LookPathOverride` o `gitcommon.Observe`, o escriben el hub compartido (`askModeHub`). El resto de `cli` (unas 1.000 pruebas sin git) queda como estaba: 209 `t.Setenv` y decenas de variables sustituidas impiden marcarlas sin reescribirlas.
@@ -71,7 +71,7 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 ## Progreso
 
 - T1 a T6 cerradas con su commit: `79126437`, `a8890ec1`, `59d4d19d`, `1bf86564`, `c12ec9d8` y `954e0329`.
-- `-race -shuffle=on`: paso temporal en `ci.yml` (grupos `rest` y `cli` de `Go Tests`), que se retira antes del merge. En Windows local se pasó `-shuffle=on` de cada paquete en verde; `dashboard`, además, con `-count=2`.
+- `-race -shuffle=on`: paso temporal en `ci.yml` (grupos `rest` y `cli` de `Go Tests`), que se retira antes del merge. En Windows local se pasó `-shuffle=on` de cada paquete en verde; `dashboard`, además, con `-count=2`. La primera ejecución detectó tres pruebas paralelas que sustituían variables del paquete en bloques `var (...)` que el primer inventario no leía; el inventario se rehízo en los cinco paquetes y esas tres volvieron a serie.
 - Comprobado en local: `go vet` y `go test` de `testenv`, `sddpublish`, `sddstatus`, `techcontext` y `dashboard`; en `cli`, las 190 pruebas con git y `-run 'Identity|Actor|Gitconfig|GitConfig|Home'`; en `assets`, las guardas de los workflows.
 
 ## Siguiente paso

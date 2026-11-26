@@ -757,7 +757,6 @@ func TestPublishRemoteWithNonexistentURLIsUnavailable(t *testing.T) {
 }
 
 func TestPublishUnpublishedRangeTooLarge(t *testing.T) {
-	t.Parallel()
 	repo, bare := newMonorepo(t)
 	previous := maxUnpublishedCommits
 	maxUnpublishedCommits = 2

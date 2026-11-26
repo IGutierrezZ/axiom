@@ -115,7 +115,6 @@ func TestEditGrantCannotFollowAuthoritySymlinks(t *testing.T) {
 }
 
 func TestEditGrantPublicationFailureCanReplayWithoutDuplicateAuthority(t *testing.T) {
-	t.Parallel()
 	store, request := grantTestStore(t)
 	original := runtimeReplaceHead
 	defer func() { runtimeReplaceHead = original }()
