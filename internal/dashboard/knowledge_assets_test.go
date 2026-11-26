@@ -3,7 +3,6 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,17 +12,16 @@ import (
 )
 
 // Las pruebas de este fichero cubren las pantallas de Conocimiento (T5): Skills,
-// Specs vivas y Código y grafo. Son estructurales (no hay motor de JavaScript en
-// `go test`) salvo el analizador de escenarios y el router, que se ejecutan con Node
-// si está disponible. Comprueban las reglas de D3 (sin historial ni specs afectadas),
-// D5 (aprobar y rechazar piden confirmación), accesibilidad y que los filtros de
-// símbolos viajan al servidor.
+// Specs vivas. Son estructurales (no hay motor de JavaScript en `go test`) salvo el
+// analizador de escenarios y el router, que se ejecutan con Node si está disponible.
+// Comprueban las reglas de D3 (sin historial ni specs afectadas), D5 (aprobar y
+// rechazar piden confirmación) y la accesibilidad.
 
 func TestKnowledgeAssetsAreServed(t *testing.T) {
 	h := assetServer(t)
 	for _, target := range []string{
 		"/js/core/spec.js", "/js/core/format.js",
-		"/js/screens/skills.js", "/js/screens/livingdoc.js", "/js/screens/semantic.js",
+		"/js/screens/skills.js", "/js/screens/livingdoc.js",
 	} {
 		rr := getAsset(t, h, target)
 		if rr.Code != http.StatusOK {
@@ -126,54 +124,6 @@ func TestSpecsViewerOmitsHistoryAndAffectedSpecs(t *testing.T) {
 	}
 }
 
-// Los filtros de símbolos (texto y tipo) viajan al servidor como query y kind.
-func TestSymbolFiltersAreServerSide(t *testing.T) {
-	js := readAsset(t, "js/screens/semantic.js")
-	for _, marker := range []string{"params.append('query', query)", "params.append('kind', kind)", "/api/semantic/symbols${qs ?", "setTimeout(", "250", "ctx.symbolsToken"} {
-		if !strings.Contains(js, marker) {
-			t.Errorf("semantic.js no contiene %q", marker)
-		}
-	}
-	for _, marker := range []string{"native_ast_ready", "codegraph_installed", "codegraph_indexed", "api('/api/semantic/reindex', { method: 'POST' })", "api('/api/semantic/dependencies')", "data.agents"} {
-		if !strings.Contains(js, marker) {
-			t.Errorf("semantic.js no contiene %q", marker)
-		}
-	}
-	if strings.Contains(strings.ToLower(js), "serena") {
-		t.Errorf("semantic.js no debe mencionar Serena: el conector se retiró del producto")
-	}
-	// El servidor acepta realmente el filtro por tipo.
-	root := t.TempDir()
-	writeFixtureFile(t, root, "sample/sample.go", "package sample\n\ntype Service struct{}\n\nfunc Helper() {}\n")
-	router := NewServer(NewService(root)).Router()
-	for kind, want := range map[string]string{"struct": "Service", "func": "Helper"} {
-		rr := httptest.NewRecorder()
-		router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/semantic/symbols?kind="+kind, nil))
-		if rr.Code != http.StatusOK {
-			t.Fatalf("GET /api/semantic/symbols?kind=%s = %d: %s", kind, rr.Code, rr.Body.String())
-		}
-		var symbols []struct{ Name, Kind string }
-		if err := json.Unmarshal(rr.Body.Bytes(), &symbols); err != nil {
-			t.Fatalf("JSON inválido: %v", err)
-		}
-		if len(symbols) == 0 {
-			t.Errorf("kind=%s no devolvió símbolos", kind)
-		}
-		for _, s := range symbols {
-			if s.Kind != kind {
-				t.Errorf("kind=%s devolvió el símbolo %q de tipo %q", kind, s.Name, s.Kind)
-			}
-		}
-		found := false
-		for _, s := range symbols {
-			found = found || s.Name == want
-		}
-		if !found {
-			t.Errorf("kind=%s no incluye %q: %+v", kind, want, symbols)
-		}
-	}
-}
-
 func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 	legacy := []string{"skill-card", "inbox-card", "inbox-grid", "inbox-section", "livingdoc-domain-item", "livingdoc-viewer-box", "livingdoc-stats-grid", "livingdoc-layout", "livingdoc-list", "badge-origin-", "stat-card", "legacy-card", "filter-btn", "agent-item", "dep-chip", "badge-connector", "badge-kind", "symbols-toolbar", "search-box", "loading-state", "empty-state", "error-banner", "subsection-title", "btn-preview-skill"}
 	html := readAsset(t, "index.html")
@@ -182,11 +132,10 @@ func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 		t.Fatalf("index.html: no se localizan las vistas de conocimiento")
 	}
 	sources := map[string]string{
-		"index.html (specs, skills y código)": html[start:end],
-		"skills.js":                           readAsset(t, "js/screens/skills.js"),
-		"livingdoc.js":                        readAsset(t, "js/screens/livingdoc.js"),
-		"semantic.js":                         readAsset(t, "js/screens/semantic.js"),
-		"spec.js":                             readAsset(t, "js/core/spec.js"),
+		"index.html (specs y skills)": html[start:end],
+		"skills.js":                   readAsset(t, "js/screens/skills.js"),
+		"livingdoc.js":                readAsset(t, "js/screens/livingdoc.js"),
+		"spec.js":                     readAsset(t, "js/core/spec.js"),
 	}
 	for name, src := range sources {
 		for _, class := range legacy {
@@ -200,7 +149,7 @@ func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 	}
 
 	css := readAsset(t, "style.css")
-	for _, marker := range []string{".kn-split", ".kn-layout-specs", ".kn-table-scroll", ".kn-search", ".spec-step", ".spec-kw", ".spec-must", ".kn-pp[aria-pressed=\"true\"]", ".kn-domain[aria-current=\"page\"]", "@media (max-width: 859px)", "@media (max-width: 480px)"} {
+	for _, marker := range []string{".kn-split", ".kn-layout-specs", ".kn-search", ".spec-step", ".spec-kw", ".spec-must", ".kn-pp[aria-pressed=\"true\"]", ".kn-domain[aria-current=\"page\"]", "@media (max-width: 859px)", "@media (max-width: 480px)"} {
 		if !strings.Contains(css, marker) {
 			t.Errorf("style.css no contiene %q", marker)
 		}
@@ -210,48 +159,29 @@ func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 	if strings.Contains(block, "outline: 0") || strings.Contains(block, "outline: none") {
 		t.Errorf("el bloque de Conocimiento no debe quitar el contorno de foco")
 	}
-	// Sin scroll horizontal de página: las cajas anchas desplazan por dentro.
-	if !strings.Contains(block, ".kn-table-scroll { max-height: 420px; overflow: auto; }") {
-		t.Errorf("la tabla de símbolos debe desplazarse dentro de su caja")
-	}
 }
 
 func TestKnowledgeScreensAreAccessible(t *testing.T) {
 	html := readAsset(t, "index.html")
-	for _, id := range []string{"specs-filter", "skills-filter", "semantic-search-input"} {
+	for _, id := range []string{"specs-filter", "skills-filter"} {
 		if !regexp.MustCompile(`<label class="sr-only" for="` + id + `">[^<]+</label>`).MatchString(html) {
 			t.Errorf("el buscador %q necesita una <label for> accesible", id)
 		}
 	}
 	for _, marker := range []string{
 		`aria-label="Dominios de especificación"`,
-		`id="semantic-kind-filters" role="group" aria-label="Filtrar por tipo de símbolo"`,
-		`id="deps-internal-toggle" aria-pressed="false"`,
-		`id="semantic-symbols-count" role="status" aria-live="polite"`,
 		`id="scan-feedback" class="hidden" role="status" aria-live="polite"`,
-		`id="reindex-feedback" class="hidden" role="status" aria-live="polite"`,
-		`aria-label="Salida de la reindexación"`,
 	} {
 		if !strings.Contains(html, marker) {
 			t.Errorf("index.html no contiene %q", marker)
 		}
 	}
 	// El estado se dice con texto (y icono), no solo con color.
-	sem := readAsset(t, "js/screens/semantic.js")
-	for _, text := range []string{"Instalado (CLI en PATH)", "No está en PATH", "Registrado en un agente", "Sin registrar en agentes", "Índice inicializado", "Sin índice", "Inicializar CodeGraph", "La inicialización ha fallado.", "Salida de la inicialización", "AST nativo listo", "AST nativo no disponible"} {
-		if !strings.Contains(sem, text) {
-			t.Errorf("semantic.js no expresa con texto el estado %q", text)
-		}
-	}
 	skills := readAsset(t, "js/screens/skills.js")
 	for _, text := range []string{"SHA-256 verificado", "Sin verificar", "aria-pressed=\"${current}\"", "role=\"group\" aria-label=\"Formato de SKILL.md\""} {
 		if !strings.Contains(skills, text) {
 			t.Errorf("skills.js no contiene %q", text)
 		}
-	}
-	// Las cajas con desplazamiento propio son enfocables con el teclado.
-	if !strings.Contains(sem, `role="region" aria-label="Símbolos" tabindex="0"`) {
-		t.Errorf("la tabla de símbolos debe ser una región enfocable con nombre")
 	}
 }
 
@@ -438,48 +368,5 @@ func TestEmbeddedModulesParse(t *testing.T) {
 		if out, err := exec.Command(node, "--check", target).CombinedOutput(); err != nil {
 			t.Errorf("%s no es JavaScript válido: %v\n%s", f, err, out)
 		}
-	}
-}
-
-// T9: Código (símbolos y dependencias, miles de filas) se carga al entrar por primera
-// vez en #/codigo; «Actualizar» solo lo repite si ya se abrió.
-func TestCodeScreenLoadsLazily(t *testing.T) {
-	main := readAsset(t, "js/main.js")
-	if strings.Contains(main, "loadSemanticData") {
-		t.Errorf("main.js no debe pedir los datos de Código al arrancar (loadSemanticData)")
-	}
-	for _, want := range []string{"refreshSemantic()", "if (route.name === 'codigo') enterSemantic();"} {
-		if !strings.Contains(main, want) {
-			t.Errorf("main.js debe contener %q", want)
-		}
-	}
-
-	node, err := exec.LookPath("node")
-	if err != nil {
-		t.Skip("node no está disponible: se omite la prueba de ejecución de la carga diferida")
-	}
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "lazy.mjs"), []byte(readAsset(t, "js/core/lazy.js")), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	script := "import { lazyLoader } from './lazy.mjs';\n" +
-		"let calls = 0;\n" +
-		"const l = lazyLoader(async () => { calls++; });\n" +
-		"const fail = (m) => { console.error(m); process.exit(1); };\n" +
-		"await l.refresh();\n" +
-		"if (calls !== 0 || l.started) fail('refresh antes de entrar no debe cargar');\n" +
-		"await l.enter();\n" +
-		"if (calls !== 1 || !l.started) fail('la primera entrada debe cargar una vez');\n" +
-		"await l.enter();\n" +
-		"if (calls !== 1) fail('volver a entrar no debe recargar');\n" +
-		"await l.refresh();\n" +
-		"if (calls !== 2) fail('refresh tras entrar debe recargar');\n"
-	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	cmd := exec.Command(node, "run.mjs")
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("carga diferida: %v\n%s", err, out)
 	}
 }

@@ -5,11 +5,11 @@
 //   #/incrementos/<name>/{artefactos,roles,handoff}
 //   #/specs
 //   #/specs/<dominio>                        (visor de la especificación viva)
-//   #/skills   #/codigo   #/ecosistema
+//   #/skills   #/ecosistema
 // Por defecto #/inicio. Atrás y adelante funcionan porque cada ruta es una
 // entrada del historial (location.hash).
 
-export const SIMPLE_ROUTES = ['inicio', 'incrementos', 'specs', 'skills', 'codigo', 'ecosistema'];
+export const SIMPLE_ROUTES = ['inicio', 'incrementos', 'specs', 'skills', 'ecosistema'];
 export const INCREMENT_TABS = ['artefactos', 'roles', 'handoff'];
 
 // parseHash convierte un hash en una ruta {name, change, tab} o {name:'specs', domain}.

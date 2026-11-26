@@ -6,8 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -15,7 +13,7 @@ import (
 )
 
 // Helpers that let a test run a side-effecting dashboard flow (sync, upgrade,
-// reindex, archive sync, git status) against a throwaway project instead of the
+// archive sync, git status) against a throwaway project instead of the
 // repository checkout. See TestMain for the package-wide guarantees.
 
 // writeFixtureFile writes content to rel (slash-separated) under root, creating
@@ -50,59 +48,6 @@ func initGitFixture(t *testing.T, root string) {
 			t.Fatalf("git %s en %s: %v\n%s", strings.Join(args, " "), root, err, out)
 		}
 	}
-}
-
-// installFakeCodeGraph puts a stand-in `codegraph` executable first on PATH for
-// the test. Each invocation writes its working directory and arguments (one per
-// line) to the returned file and exits with exitCode, so a test can prove which
-// project a reindex ran against without a real CodeGraph.
-func installFakeCodeGraph(t *testing.T, exitCode int) (recordPath string) {
-	t.Helper()
-	binDir := t.TempDir()
-	recordPath = filepath.Join(t.TempDir(), "codegraph-invocation.txt")
-
-	var name, script string
-	if runtime.GOOS == "windows" {
-		name = "codegraph.cmd"
-		script = "@echo off\r\n" +
-			">\"" + recordPath + "\" echo %cd%\r\n" +
-			">>\"" + recordPath + "\" echo %*\r\n" +
-			"exit /b " + strconv.Itoa(exitCode) + "\r\n"
-	} else {
-		name = "codegraph"
-		script = "#!/bin/sh\n" +
-			"{ pwd; echo \"$*\"; } > '" + recordPath + "'\n" +
-			"exit " + strconv.Itoa(exitCode) + "\n"
-	}
-	if err := os.WriteFile(filepath.Join(binDir, name), []byte(script), 0o755); err != nil {
-		t.Fatalf("escribir el codegraph de prueba: %v", err)
-	}
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	return recordPath
-}
-
-// withoutCodeGraph makes `codegraph` unresolvable for the test.
-func withoutCodeGraph(t *testing.T) {
-	t.Helper()
-	t.Setenv("PATH", t.TempDir())
-	if path, err := exec.LookPath("codegraph"); err == nil {
-		t.Fatalf("codegraph sigue resolviéndose en %s con el PATH vacío", path)
-	}
-}
-
-// recordedCodeGraph returns the working directory and arguments the fake
-// codegraph recorded.
-func recordedCodeGraph(t *testing.T, recordPath string) (dir string, args string) {
-	t.Helper()
-	raw, err := os.ReadFile(recordPath)
-	if err != nil {
-		t.Fatalf("el codegraph de prueba no fue invocado: %v", err)
-	}
-	lines := strings.Split(strings.TrimSpace(string(raw)), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("registro de codegraph inesperado: %q", raw)
-	}
-	return strings.TrimSpace(lines[0]), strings.TrimSpace(lines[1])
 }
 
 // syncRecorder captures what the dashboard asked `axiom` to run, from which
