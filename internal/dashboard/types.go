@@ -101,6 +101,52 @@ type IncrementDetailDTO struct {
 	BarrierReport *BarrierDTO       `json:"barrier_report,omitempty"`
 	// Explainer es el estado del HTML explicativo del cambio (nunca null).
 	Explainer IncrementExplainerDTO `json:"explainer"`
+	// AcceptanceTests es la batería pruebas.md del cambio (RF-WEB-17). Se omite (nil) para
+	// incrementos ODD, sin carpeta de cambio o archivados; la pestaña lo trata como no activo.
+	AcceptanceTests *IncrementAcceptanceTestsDTO `json:"acceptance_tests,omitempty"`
+}
+
+// IncrementAcceptanceTestsDTO resume la batería de pruebas de aceptación para la pestaña «Pruebas».
+// Se calcula con la misma función que `axiom sdd tests check` y `axiom sdd status`.
+type IncrementAcceptanceTestsDTO struct {
+	Active       bool                   `json:"active"`
+	Environments []string               `json:"environments,omitempty"`
+	Error        string                 `json:"error,omitempty"`
+	Present      bool                   `json:"present"`
+	Warning      string                 `json:"warning,omitempty"`
+	Cases        []AcceptanceCaseDTO    `json:"cases"`
+	Scenarios    AcceptanceCoverageDTO  `json:"scenarios"`
+	Requirements AcceptanceCoverageDTO  `json:"requirements"`
+	CaseCount    int                    `json:"case_count"`
+	Findings     []AcceptanceFindingDTO `json:"findings"`
+}
+
+// AcceptanceCoverageDTO es un recuento cubiertos sobre total.
+type AcceptanceCoverageDTO struct {
+	Covered int `json:"covered"`
+	Total   int `json:"total"`
+}
+
+// AcceptanceCaseDTO es una fila de la tabla de pruebas.md (nueve columnas y su línea).
+type AcceptanceCaseDTO struct {
+	Line          int    `json:"line"`
+	ID            string `json:"id"`
+	Role          string `json:"role"`
+	Type          string `json:"type"`
+	Priority      string `json:"priority"`
+	Preconditions string `json:"preconditions"`
+	Steps         string `json:"steps"`
+	Expected      string `json:"expected"`
+	Cubre         string `json:"cubre"`
+	Environments  string `json:"environments"`
+}
+
+// AcceptanceFindingDTO es un hallazgo del cruce de pruebas.md con las specs delta.
+type AcceptanceFindingDTO struct {
+	Code    string `json:"code"`
+	File    string `json:"file"`
+	Line    int    `json:"line"`
+	Message string `json:"message"`
 }
 
 // BarrierDTO es el contrato JSON propio del dashboard para la barrera de sincronización

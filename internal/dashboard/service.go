@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests"
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
 	"github.com/IGutierrezZ/axiom/v3/internal/autoskill"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -547,6 +548,9 @@ func (s *Service) GetIncrementDetail(name string) (*IncrementDetailDTO, error) {
 		HasArchive:  fileExists(filepath.Join(path, "archive-report.md")),
 	}
 	dto.Explainer = s.incrementExplainer(path)
+	if kind == "active" {
+		dto.AcceptanceTests = s.incrementAcceptanceTests(path)
+	}
 	dto.Specs, dto.Tasks = readArtifactFiles(path)
 	dto.HasSpec = len(dto.Specs) > 0
 	dto.HasTasks = len(dto.Tasks) > 0
@@ -1743,6 +1747,45 @@ func (s *Service) ReadExplainer(name string, kind explainer.Kind) ([]byte, error
 		return nil, ErrExplainerNotFound
 	}
 	return data, err
+}
+
+// incrementAcceptanceTests calcula el DTO de la batería con la misma función que el verbo
+// `axiom sdd tests check` y el status. Si no se puede localizar el workspace, el DTO lleva `error`
+// y el detalle se sirve igual.
+func (s *Service) incrementAcceptanceTests(changeRoot string) *IncrementAcceptanceTestsDTO {
+	dto := &IncrementAcceptanceTestsDTO{Cases: []AcceptanceCaseDTO{}, Findings: []AcceptanceFindingDTO{}}
+	loc, err := workspace.Locate(s.getRootPath())
+	if err != nil {
+		dto.Error = err.Error()
+		return dto
+	}
+	r := sddstatus.AcceptanceTestsFor(loc, changeRoot)
+	dto.Active = r.Active
+	dto.Environments = r.Environments
+	dto.Present = r.Present
+	dto.Error = r.DeclarationError
+	if r.Error != "" {
+		dto.Error = strings.TrimSpace(dto.Error + " " + r.Error)
+	}
+	if r.Missing {
+		dto.Warning = string(acceptancetests.CodeMissing) + ": " + acceptancetests.MissingFinding().Message
+	}
+	if r.Present && r.Error == "" {
+		dto.CaseCount = r.Report.Cases
+		dto.Scenarios = AcceptanceCoverageDTO(r.Report.Scenarios)
+		dto.Requirements = AcceptanceCoverageDTO(r.Report.Requirements)
+		for _, c := range r.Report.Battery.Cases {
+			dto.Cases = append(dto.Cases, AcceptanceCaseDTO{
+				Line: c.Line, ID: c.ID, Role: c.Role, Type: c.Type, Priority: c.Priority,
+				Preconditions: c.Preconditions, Steps: c.Steps, Expected: c.Expected,
+				Cubre: c.CubreRaw, Environments: strings.Join(c.Environments, "; "),
+			})
+		}
+	}
+	for _, f := range r.Findings {
+		dto.Findings = append(dto.Findings, AcceptanceFindingDTO{Code: string(f.Code), File: f.File, Line: f.Line, Message: f.Message})
+	}
+	return dto
 }
 
 // incrementExplainer calcula el DTO con la misma función de frescura que `axiom sdd status`.

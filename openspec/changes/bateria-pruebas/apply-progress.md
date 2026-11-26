@@ -50,6 +50,13 @@
 - Tests en `internal/livespec/change_acceptance_tests_test.go`: reescritura solo de `Cubre` (con `ID#nombre`, ID suelto, mezcla; byte a byte fuera, CRLF), idempotencia, definitivos y ausencia de fichero, provisional no declarado rechazado con la línea de la fila, tabla inválida.
 - Verificación: `go test ./internal/livespec -run 'AcceptanceTests|ChangeArtifacts|PlanChange' -count=1` ok; `go vet ./internal/livespec` ok.
 
+## T8 completada: dashboard, campo `acceptance_tests` y pestaña «Pruebas»
+
+- `internal/dashboard/types.go`: `IncrementDetailDTO.AcceptanceTests *IncrementAcceptanceTestsDTO` (`acceptance_tests,omitempty`) y DTOs de cobertura, caso (nueve columnas y línea) y hallazgo. `service.go`: `incrementAcceptanceTests` (`workspace.Locate` + `sddstatus.AcceptanceTestsFor`; si `Locate` falla lleva `error` y el detalle se sirve). El campo es nil para archivados; con `Locate` correcto se informa para todo cambio SDD activo (la pestaña trata activo falso y sin fichero como no activado).
+- Front de solo lectura: pestaña `pruebas` en `index.html`, `INCREMENT_TABS`, rama en `detalle.js` y módulo `detalle-pruebas.js` (resumen, aviso, hallazgos y tabla reutilizando `table-wrap`/`data-table`, cada celda con `escapeHtml`, sin literales de color). Sin ruta nueva.
+- Tests: `acceptance_tests_test.go` (DTO igual al compartido, hallazgos y texto hostil literal, no activada, activa sin fichero con aviso en multirepo, archivado omitido, error de `Locate`), `TestAcceptanceTestsTab` y pines de pestañas/router/assets.
+- Verificación: `go test ./internal/dashboard -run 'IncrementDetail|AcceptanceTests|Tabs|Router|Canary|AssetsAreServed|ExplainerTab' -count=1` ok; `go vet ./internal/dashboard`; `go build ./...` ok.
+
 ## Pendientes
 
-T8 a T10.
+T9 y T10.
