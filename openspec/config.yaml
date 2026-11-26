@@ -58,8 +58,8 @@ testing:
       tool: "net/http/httptest (built-in)"
     e2e:
       available: true
-      tool: "Docker-based E2E (e2e/docker-test.sh)"
-      note: "Dockerfile.ubuntu, Dockerfile.fedora, Dockerfile.arch — triggered by RUN_FULL_E2E=1"
+      tool: "go test -tags real_agent_e2e ./e2e/organicruntime"
+      note: "Organic Runtime E2E: needs real Claude Code and OpenCode binaries; runs in the organic-runtime-e2e CI job"
     tui:
       available: true
       tool: "bubbletea tea.KeyMsg simulation (no teatest — direct model.Update() testing)"
