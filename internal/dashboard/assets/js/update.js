@@ -109,19 +109,31 @@ export function renderUpdateBanner() {
     return;
   }
   const info = state.version;
-  if (!info || info.status !== 'update_available' || !info.update_available) {
+  // restart_required: el binario instalado ya no es el de este proceso y no hay nada
+  // más reciente que instalar; basta con reiniciar, no se ofrece actualizar.
+  const restartOnly = !!info && info.status === 'restart_required';
+  const updatable = !!info && info.status === 'update_available' && info.update_available;
+  if (!restartOnly && !updatable) {
     banner.hidden = true;
     banner.innerHTML = '';
     return;
   }
-  const release = safeReleaseUrl(info.release_url);
-  const link = release ? `<a class="link-btn" href="${escapeHtml(release)}" target="_blank" rel="noopener noreferrer">Ver la release</a>` : '';
   banner.className = 'alert alert-warn update-banner';
   banner.setAttribute('role', 'status');
   banner.hidden = false;
-  banner.innerHTML = `${icon('download', 18)}<p class="grow">Hay una versión nueva de Axiom: <span class="mono">${escapeHtml(info.current)}</span> → <strong class="mono">${escapeHtml(info.latest)}</strong>. ${link}</p>`
+  const recheckButton = button({ label: 'Comprobar de nuevo', iconName: 'refresh', size: 'sm', attrs: 'data-action="update-recheck"' });
+  if (restartOnly) {
+    banner.innerHTML = `${icon('refresh', 18)}<p class="grow">Axiom ya está instalado en otra versión (<strong class="mono">${escapeHtml(info.installed)}</strong>) y este dashboard sigue con la <span class="mono">${escapeHtml(info.current)}</span>. Reinicia el dashboard para usarla.</p>`
+      + button({ label: 'Reiniciar', iconName: 'refresh', variant: 'primary', size: 'sm', attrs: 'data-action="update-now"' })
+      + recheckButton;
+    return;
+  }
+  const release = safeReleaseUrl(info.release_url);
+  const link = release ? `<a class="link-btn" href="${escapeHtml(release)}" target="_blank" rel="noopener noreferrer">Ver la release</a>` : '';
+  const from = info.installed || info.current;
+  banner.innerHTML = `${icon('download', 18)}<p class="grow">Hay una versión nueva de Axiom: <span class="mono">${escapeHtml(from)}</span> → <strong class="mono">${escapeHtml(info.latest)}</strong>. ${link}</p>`
     + button({ label: 'Actualizar', iconName: 'download', variant: 'primary', size: 'sm', attrs: 'data-action="update-now"' })
-    + button({ label: 'Comprobar de nuevo', iconName: 'refresh', size: 'sm', attrs: 'data-action="update-recheck"' });
+    + recheckButton;
 }
 
 // checkVersion consulta la versión. Un fallo de red o de la API se queda en silencio:
@@ -141,7 +153,7 @@ async function recheck(btn) {
   const restore = setBusy(btn, 'Comprobando…');
   const info = await checkVersion({ refresh: true });
   restore();
-  if (info && info.status === 'update_available') return;
+  if (info && (info.status === 'update_available' || info.status === 'restart_required')) return;
   if (info && info.status === 'up_to_date') toast('Axiom ya está en la última versión.', 'ok');
   else if (info && info.status === 'dev_build') toast('Esta es una compilación de desarrollo: no se compara con las releases.', 'warn');
   else toast('No se pudo comprobar la versión nueva. Inténtalo más tarde.', 'bad');
@@ -170,11 +182,19 @@ let updateStarted = false;
 let startedFrom = '';
 let downSeen = false;
 let restartHint = '';
+// restartInstance: instancia del servidor que se va a sustituir. Un reinicio forzado
+// puede conservar la versión, así que también se recarga cuando responde otra
+// instancia (RF-UPD-10).
+let restartInstance = '';
 
 function trackUpdate(job) {
   updateStarted = true;
   startedFrom = job.from_version || '';
   downSeen = false;
+}
+
+function currentInstance() {
+  return (state.version && state.version.instance) || '';
 }
 
 function newProcessAnswered(job) {
@@ -198,7 +218,8 @@ async function pollRestart() {
   stopPolling();
   try {
     const info = await api('/api/system/version');
-    if (info && info.current && (restartFrom ? info.current !== restartFrom : sawDown)) {
+    const otherInstance = !!restartInstance && !!info && !!info.instance && info.instance !== restartInstance;
+    if (info && info.current && (otherInstance || (restartFrom ? info.current !== restartFrom : sawDown))) {
       window.location.reload();
       return;
     }
@@ -218,6 +239,7 @@ async function pollRestart() {
 function beginRestartWait(job) {
   if (restartFrom !== null) return;
   restartFrom = job.from_version || (state.version && state.version.current) || '';
+  restartInstance = currentInstance();
   restartStarted = Date.now();
   restartHint = job.manual_hint || '';
   sawDown = false;
@@ -249,7 +271,7 @@ async function pollUpdate() {
       set('updateJob', {
         phase: 'failed', running: false, sync: null,
         message: 'Se perdió la conexión con el dashboard durante la actualización.',
-        manual_hint: 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest'
+        manual_hint: manualUpdateCommand()
       });
       return;
     }
@@ -257,19 +279,50 @@ async function pollUpdate() {
   }
 }
 
-async function startUpdate(btn) {
-  const restore = setBusy(btn, 'Actualizando…');
+// manualUpdateCommand es el comando manual del canal en uso: la comprobación beta
+// anuncia main@<sha> e instala la cabeza de main, no la última release.
+const MANUAL_UPDATE = 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest';
+const MANUAL_UPDATE_BETA = 'go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main';
+
+function manualUpdateCommand() {
+  const latest = state.version && state.version.latest;
+  return typeof latest === 'string' && latest.startsWith('main@') ? MANUAL_UPDATE_BETA : MANUAL_UPDATE;
+}
+
+// launchJob lanza el trabajo de actualización o de reinicio y sigue su estado.
+async function launchJob(btn, url, busyLabel, failure) {
+  const restore = setBusy(btn, busyLabel);
   try {
-    const job = await api('/api/system/update', { method: 'POST' });
+    const job = await api(url, { method: 'POST' });
     pollErrors = 0;
     trackUpdate(job);
     set('updateJob', job);
     if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
   } catch (err) {
-    toast(`No se pudo iniciar la actualización: ${err.message}`, 'bad');
+    toast(`${failure}: ${err.message}`, 'bad');
   } finally {
     restore();
   }
+}
+
+function startUpdate(btn) {
+  const restartOnly = state.version && state.version.status === 'restart_required';
+  return launchJob(btn, '/api/system/update', restartOnly ? 'Reiniciando…' : 'Actualizando…', 'No se pudo iniciar la actualización');
+}
+
+// startRestart lanza el reinicio forzado con la última versión (RF-UPD-10): instala
+// si hay una versión más reciente y reinicia el dashboard siempre.
+function startRestart(btn) {
+  return launchJob(btn, '/api/system/restart', 'Reiniciando…', 'No se pudo iniciar el reinicio');
+}
+
+// renderRunningVersion muestra en la barra lateral la versión que sirve el dashboard.
+function renderRunningVersion() {
+  const label = $('#axiom-running-version');
+  if (!label) return;
+  const current = state.version && state.version.current;
+  label.textContent = current ? `Axiom ${current}` : 'Axiom';
+  label.title = current || '';
 }
 
 function dismiss() {
@@ -292,7 +345,10 @@ async function resumeUpdate() {
 
 export function initUpdate() {
   on('version', renderUpdateBanner);
+  on('version', renderRunningVersion);
   on('updateJob', renderUpdateBanner);
+  const restartButton = $('#btn-axiom-restart');
+  if (restartButton) restartButton.addEventListener('click', () => startRestart(restartButton));
   const banner = $('#update-banner');
   if (banner) {
     banner.addEventListener('click', (event) => {

@@ -72,6 +72,7 @@ var excludedRoutes = map[string]string{
 	"/api/system/version":                 "versión del binario",
 	"/api/system/update":                  "mutación (POST): actualiza Axiom",
 	"/api/system/update/status":           "estado de una actualización en curso",
+	"/api/system/restart":                 "mutación (POST): reinicia el dashboard con la última versión",
 	"/icons/icon-192.png":                 "recurso estático",
 	"/icons/icon-512.png":                 "recurso estático",
 	"/icons/icon-maskable-512.png":        "recurso estático",

@@ -71,6 +71,10 @@ func runTests(m *testing.M) int {
 	// temporal: un marcador (`.axiom-workspace`, `axiom.yaml` u `openspec/`) en un
 	// ancestro de ese directorio no puede alterar el resultado de las pruebas (R29).
 	workspace.DiscoveryCeilingOverride = []string{os.TempDir()}
+	// La versión instalada se lee ejecutando el binario que lanzaría un reinicio, que
+	// en las pruebas es el propio binario de pruebas: se sustituye por una sonda que
+	// no lee nada (las pruebas que la necesitan inyectan la suya en el comprobador).
+	installedVersionFn = noInstalledVersion
 
 	guard := newRepoGuard()
 	code := m.Run()

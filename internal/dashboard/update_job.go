@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
@@ -24,6 +25,19 @@ const (
 // manualUpdateHint es el comando manual que se ofrece cuando la actualización
 // automática no puede completarse y la herramienta no aporta uno propio.
 const manualUpdateHint = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@latest"
+
+// manualBetaUpdateHint es el comando manual del canal beta, que instala la cabeza
+// de main y no la última release.
+const manualBetaUpdateHint = "go install github.com/IGutierrezZ/axiom/v3/cmd/axiom@main"
+
+// manualUpdateHintFor devuelve el comando manual del canal al que pertenece latest:
+// la comprobación beta anuncia `main@<sha>`.
+func manualUpdateHintFor(latest string) string {
+	if strings.HasPrefix(strings.TrimSpace(latest), "main@") {
+		return manualBetaUpdateHint
+	}
+	return manualUpdateHint
+}
 
 // UpdateSyncSummary es el resultado de la sincronización del workspace asociada a
 // la actualización. Executed es false cuando se omitió (y SkippedReason dice por qué).
@@ -119,6 +133,17 @@ func (j *updateJobState) finish(phase, message, manualHint string, sync *UpdateS
 // vez: si ya hay uno en curso (en cualquier fase no terminal) devuelve su estado y
 // no lanza otro. Devuelve el estado y si se ha lanzado un trabajo nuevo.
 func (s *Service) StartUpdate() (UpdateJobStatus, bool) {
+	return s.startUpdateJob(false)
+}
+
+// StartRestart arranca el reinicio forzado con la última versión (RF-UPD-10): el
+// mismo trabajo que StartUpdate, pero relanza el dashboard siempre, también cuando
+// no hay nada que instalar. Comparte con StartUpdate el único trabajo del proceso.
+func (s *Service) StartRestart() (UpdateJobStatus, bool) {
+	return s.startUpdateJob(true)
+}
+
+func (s *Service) startUpdateJob(force bool) (UpdateJobStatus, bool) {
 	j := &s.update
 	j.mu.Lock()
 	if j.running {
@@ -132,7 +157,7 @@ func (s *Service) StartUpdate() (UpdateJobStatus, bool) {
 	st := j.snapshotLocked()
 	j.mu.Unlock()
 
-	go s.runUpdateJob()
+	go s.runUpdateJob(force)
 	return st, true
 }
 
@@ -144,7 +169,12 @@ func (s *Service) UpdateStatus() UpdateJobStatus {
 // runUpdateJob es el cuerpo del trabajo: comprobar, actualizar y, si el binario
 // no se ha reemplazado, sincronizar. Nunca propaga un pánico: lo convierte en una
 // fase failed con el comando manual, y el dashboard sigue sirviendo.
-func (s *Service) runUpdateJob() {
+//
+// Con force (reinicio forzado, RF-UPD-10) el dashboard se relanza siempre que no
+// falle la instalación: también al día, con una compilación de desarrollo o si la
+// comprobación de la última versión falla, porque reiniciar sigue cargando el
+// binario instalado.
+func (s *Service) runUpdateJob(force bool) {
 	j := &s.update
 	defer func() {
 		if r := recover(); r != nil {
@@ -154,12 +184,17 @@ func (s *Service) runUpdateJob() {
 
 	// 1. Comprobar. El trabajo no depende del contexto de la petición.
 	info := s.versions.Get(context.Background(), true)
-	switch info.Status {
-	case versionStatusUpdateAvailable:
-	case versionStatusUpToDate:
+	switch {
+	case info.Status == versionStatusUpdateAvailable:
+	case info.Status == versionStatusRestartRequired || force:
+		// El binario instalado ya no es el de este proceso y no hay nada más reciente
+		// que instalar, o el reinicio es forzado: basta con relanzar el dashboard.
+		s.restartWithInstalled(info)
+		return
+	case info.Status == versionStatusUpToDate:
 		j.finish(updatePhaseDone, "Axiom ya está en la última versión.", "", nil)
 		return
-	case versionStatusDevBuild:
+	case info.Status == versionStatusDevBuild:
 		j.finish(updatePhaseDone, "Esta es una compilación de desarrollo: no se actualiza automáticamente.", "", nil)
 		return
 	default:
@@ -168,14 +203,18 @@ func (s *Service) runUpdateJob() {
 	}
 
 	// 2. Actualizar con la misma cadena que el botón de Ecosistema (upgrade -> sync).
-	j.setPhase(updatePhaseUpgrading, fmt.Sprintf("Actualizando Axiom de %s a %s…", info.Current, info.Latest))
+	from := info.Current
+	if info.Installed != "" {
+		from = info.Installed
+	}
+	j.setPhase(updatePhaseUpgrading, fmt.Sprintf("Actualizando Axiom de %s a %s…", from, info.Latest))
 	resp, err := s.RunUpgradeSequence()
 	if err != nil || resp == nil || resp.Phases == nil {
 		msg := "La actualización no produjo resultado."
 		if err != nil {
 			msg = err.Error()
 		}
-		j.finish(updatePhaseFailed, msg, manualUpdateHint, nil)
+		j.finish(updatePhaseFailed, msg, manualUpdateHintFor(info.Latest), nil)
 		return
 	}
 	upgrade := resp.Phases.Upgrade
@@ -184,12 +223,12 @@ func (s *Service) runUpdateJob() {
 		if msg == "" {
 			msg = resp.Message
 		}
-		j.finish(updatePhaseFailed, msg, hintOrDefault(upgrade.ManualHint), nil)
+		j.finish(updatePhaseFailed, msg, hintOrDefault(upgrade.ManualHint, info.Latest), nil)
 		return
 	}
 	// «skipped»: la herramienta propia terminó en un relevo manual y no se reemplazó.
 	if upgrade.Status == app.UpgradeStatusSkipped && !upgrade.RestartRequired {
-		j.finish(updatePhaseFailed, "Axiom no se pudo actualizar automáticamente.", hintOrDefault(upgrade.ManualHint), nil)
+		j.finish(updatePhaseFailed, "Axiom no se pudo actualizar automáticamente.", hintOrDefault(upgrade.ManualHint, info.Latest), nil)
 		return
 	}
 
@@ -200,6 +239,11 @@ func (s *Service) runUpdateJob() {
 		// Si el relanzamiento falla, la UI ya tiene el comando manual.
 		j.setRestarting("Axiom se ha actualizado. Reiniciando el dashboard con la versión nueva…", manualRelaunchHint(s.getRootPath()))
 		s.afterSelfUpgrade(sync)
+		return
+	}
+	if force {
+		// El binario propio no se ha reemplazado, pero el reinicio es lo pedido.
+		s.restartWithInstalled(info)
 		return
 	}
 	j.finish(updatePhaseDone, resp.Message, "", sync)
@@ -216,11 +260,25 @@ func (s *Service) afterSelfUpgrade(sync *UpdateSyncSummary) {
 	s.update.finish(updatePhaseDone, "Axiom se ha actualizado. Reinicia el dashboard para usar la versión nueva.", "", sync)
 }
 
-func hintOrDefault(hint string) string {
+// restartWithInstalled relanza el dashboard con el binario instalado, sin
+// instalar nada. El proceso nuevo sincroniza el workspace al arrancar
+// (--post-update-sync).
+func (s *Service) restartWithInstalled(info VersionInfo) {
+	msg := "Reiniciando el dashboard con el binario instalado…"
+	if info.Installed != "" && info.Installed != info.Current {
+		msg = fmt.Sprintf("El binario instalado (%s) es distinto del que sirve el dashboard (%s). Reiniciando con el instalado…", info.Installed, info.Current)
+	}
+	s.update.setRestarting(msg, manualRelaunchHint(s.getRootPath()))
+	s.afterSelfUpgrade(nil)
+}
+
+// hintOrDefault devuelve la pista de la herramienta o, sin ella, el comando
+// manual del canal de latest.
+func hintOrDefault(hint, latest string) string {
 	if hint != "" {
 		return hint
 	}
-	return manualUpdateHint
+	return manualUpdateHintFor(latest)
 }
 
 func summarizeUpdateSync(p SyncPhaseReport) *UpdateSyncSummary {
@@ -245,6 +303,22 @@ func (s *Server) handleSystemUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st, _ := s.service.StartUpdate()
+	s.respondJSON(w, http.StatusAccepted, st)
+}
+
+// handleSystemRestart responde POST /api/system/restart: el reinicio forzado con la
+// última versión (RF-UPD-10). Como la actualización, solo lo admite el propio
+// dashboard y contesta enseguida con el estado del trabajo.
+func (s *Server) handleSystemRestart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
+	st, _ := s.service.StartRestart()
 	s.respondJSON(w, http.StatusAccepted, st)
 }
 

@@ -126,6 +126,7 @@ func TestWindowsBetaAxiomUpgradeUsesShippedRegistryGoTarget(t *testing.T) {
 		}
 		gotName = name
 		gotArgs = args
+		writeStagedSelfBinary(t, gobin)
 		gotCmd = mockCmd("true")
 		return gotCmd
 	}

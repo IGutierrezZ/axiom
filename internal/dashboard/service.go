@@ -66,6 +66,10 @@ type Service struct {
 	// restartFn lo registra el Server: relanza el dashboard tras autoactualizarse.
 	restartFn func(sync *UpdateSyncSummary)
 
+	// instance identifica este proceso servidor: la UI recarga cuando responde otro,
+	// aunque la versión no cambie (RF-UPD-10).
+	instance string
+
 	// marksMu protege marksPub; marksLocks es el cerrojo por cambio compartido entre marcar y
 	// publicar (D7) y marksClock el reloj inyectable de las marcas (service_marks.go).
 	marksMu    sync.Mutex
@@ -94,6 +98,7 @@ func NewService(rootPath string) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
 		versions:         newVersionChecker(),
+		instance:         newServerInstance(),
 	}
 
 	// Si el directorio tiene axiom.yaml y tenemos hubManager, auto-registrarlo (solo si no es un worktree)
@@ -122,6 +127,7 @@ func NewServiceWithHub(rootPath string, hubMgr *hub.Manager) *Service {
 		autoskillManager: newAutoskillManager(rootPath),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
 		versions:         newVersionChecker(),
+		instance:         newServerInstance(),
 	}
 }
 

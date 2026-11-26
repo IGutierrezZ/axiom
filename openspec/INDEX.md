@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 21:39:24 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 619 | **Total Escenarios BDD:** 3099
+> **Última Sincronización:** 2026-11-26 21:45:42 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 622 | **Total Escenarios BDD:** 3105
 
 ---
 
@@ -17,7 +17,7 @@
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 14 | 83 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 7 | 14 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 3 | 7 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
-| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 8 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
+| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 11 | 15 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 27 | 140 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
@@ -331,6 +331,15 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
   - *Escenario BDD:* Binario instalado con go install
 - **[RF-UPD-08]** Registro durable de la versión upstream de referencia
   - *Escenario BDD:* Conservación de la versión upstream de referencia
+- **[RF-UPD-09]** Reinicio pendiente detectado en el dashboard
+  - *Escenario BDD:* Binario ya actualizado por fuera
+  - *Escenario BDD:* Binario instalado también por detrás
+- **[RF-UPD-10]** Reinicio forzado con la última versión
+  - *Escenario BDD:* Reinicio forzado sin versión nueva
+  - *Escenario BDD:* Reinicio forzado con versión nueva
+- **[RF-UPD-11]** Instalación propia en Windows independiente del nombre apartado
+  - *Escenario BDD:* Nombre apartado ocupado por un dashboard anterior
+  - *Escenario BDD:* Falla la sustitución
 
 ### Dominio: `axiom-user-state-and-env` — Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12)
 

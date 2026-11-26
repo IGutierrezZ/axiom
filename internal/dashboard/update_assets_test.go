@@ -33,8 +33,10 @@ func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
 	t.Parallel()
 	src := readAsset(t, "js/update.js")
 	for _, marker := range []string{
-		// Solo se muestra con update_available; al día, dev_build y check_failed lo ocultan.
-		"info.status !== 'update_available'",
+		// Solo se muestra con update_available o restart_required; al día, dev_build y
+		// check_failed lo ocultan.
+		"info.status === 'update_available' && info.update_available",
+		"if (!restartOnly && !updatable)",
 		"banner.hidden = true",
 		"/api/system/version",
 		"/api/system/version?refresh=1",
@@ -50,6 +52,56 @@ func TestUpdateBannerOnlyShowsForAvailableUpdate(t *testing.T) {
 		`rel="noopener noreferrer"`,
 		"escapeHtml(info.current)", "escapeHtml(info.latest)",
 		"POST",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}
+
+// Con un binario instalado distinto del proceso y nada más reciente que instalar, el
+// aviso ofrece reiniciar y no actualizar (RF-UPD-09); la orden manual sigue el canal.
+func TestUpdateBannerOffersRestartWhenTheInstalledBinaryDiffers(t *testing.T) {
+	t.Parallel()
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"info.status === 'restart_required'",
+		"escapeHtml(info.installed)",
+		"Reinicia el dashboard para usarla.",
+		`label: 'Reiniciar'`,
+		"info.status === 'update_available' || info.status === 'restart_required'",
+		"const from = info.installed || info.current;",
+		"axiom@main",
+		"latest.startsWith('main@')",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+}
+
+// El botón permanente «Reiniciar con la última versión» lanza el reinicio forzado y
+// la página se recarga cuando responde otra instancia del servidor, aunque la versión
+// no cambie (RF-UPD-10).
+func TestRestartLatestButtonIsWired(t *testing.T) {
+	t.Parallel()
+	index := getAsset(t, assetServer(t), "/").Body.String()
+	for _, marker := range []string{
+		`id="btn-axiom-restart"`,
+		"Reiniciar con la última versión",
+		`id="axiom-running-version"`,
+	} {
+		if !strings.Contains(index, marker) {
+			t.Errorf("index.html no contiene %q", marker)
+		}
+	}
+	src := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"'/api/system/restart'",
+		"startRestart(restartButton)",
+		"restartInstance = currentInstance();",
+		"info.instance !== restartInstance",
+		"on('version', renderRunningVersion)",
 	} {
 		if !strings.Contains(src, marker) {
 			t.Errorf("js/update.js no contiene %q", marker)

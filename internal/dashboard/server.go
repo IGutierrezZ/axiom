@@ -115,6 +115,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/system/version", s.handleSystemVersion)
 	s.mux.HandleFunc("/api/system/update", s.handleSystemUpdate)
 	s.mux.HandleFunc("/api/system/update/status", s.handleSystemUpdateStatus)
+	s.mux.HandleFunc("/api/system/restart", s.handleSystemRestart)
 
 	// Iconos PNG de la aplicación, rasterizados en Go (sin binarios en el repo).
 	s.mux.HandleFunc("/icons/icon-192.png", iconHandler(192, false))
