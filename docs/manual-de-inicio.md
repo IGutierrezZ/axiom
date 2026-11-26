@@ -244,12 +244,23 @@ El modo de trabajo (`worktree` por defecto, `in_place` o `ask`) y la raíz de lo
 #### Flujo de la rama de archivado (monorepo)
 
 1. El PR del cambio se fusiona en la rama de integración.
-2. `axiom branch ensure --change <cambio> --archive` crea la rama `<prefijo>/<cambio>-archive` (y su worktree) desde la rama de integración. Si la referencia local de integración aún no contiene el cambio, rechaza con `change_not_integrated` y sugiere `--fetch`, que solo se usa con tu autorización.
+2. `axiom branch ensure --change <cambio> --archive` crea la rama `<prefijo>/<cambio>-archive` (y su worktree) desde la rama de integración. Si la referencia local de integración aún no contiene el cambio, rechaza con `change_not_integrated` y sugiere `--fetch`, que solo se usa con tu autorización, salvo que tengas activado autofetch (véase «Autofetch del repositorio de specs»).
 3. En esa rama, `sdd-archive` registra la evidencia `pr_merged`, compone el archivado y mueve el cambio a `openspec/changes/archive/`.
 4. La persona publica la rama y abre un PR documental aparte hacia la rama de integración.
 5. Tras fusionarlo, `axiom branch done --change <cambio>` retira el worktree y la rama de archivado. Si el PR documental se rechaza, se descarta la rama y el cambio sigue pendiente de archivar: `axiom branch status` lo lista con la orden que reinicia el flujo.
 
 Mientras no se archiva, un cambio ya fusionado figura como pendiente de archivar en `axiom branch status` y en el dashboard, sin bloquear nada. En multirepo no hay rama de archivado: el archive se hace in situ en el repositorio de especificaciones con la evidencia de integración o despliegue (`pr_merged`, `deployment` o `attestation`).
+
+#### Autofetch del repositorio de specs
+
+`axiom autofetch enable|disable|status|run` es un interruptor personal por proyecto, guardado en el hub y apagado por defecto. Con él encendido, Axiom:
+
+- hace `git fetch` del repositorio de specs;
+- avanza la rama de integración local solo en avance rápido (`--ff-only`);
+- avisa cuando lo traído es relevante para tus cambios activos;
+- hace el fetch implícito dentro de `axiom branch ensure`, sin que tengas que pasar `--fetch`.
+
+Nunca avanza ramas de cambio ni de código, nunca hace `push` y nunca hace `prune`. Se ejecuta desde el hook de sesión que `axiom sync` instala en Claude Code y Codex; `axiom autofetch run` lo lanza a mano y `axiom autofetch status` muestra el estado. Con el interruptor apagado, `--fetch` sigue exigiendo tu autorización explícita.
 
 #### Hook de guarda (capa D) e instalación
 

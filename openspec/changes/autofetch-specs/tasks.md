@@ -97,10 +97,11 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
   - Pasos: editar textos → `go test ./internal/components -run TestGolden -update` → revisar el diff de los 10 goldens → `go test ./internal/components -run TestGolden`.
   - Verificación: `go test ./internal/components -run TestGolden`; `go test ./internal/assets -run "Fetch|Orchestrator|Skill"`; `go test ./internal/components/agentguidance -run Routing`.
 
-- [ ] T10 Documentación y guardas de arquitectura (~100 líneas)
+- [x] T10 Documentación y guardas de arquitectura (~100 líneas)
   - Ficheros: `AGENTS.md` (líneas 17 y 20), `GEMINI.md` (línea 48), `docs/manual-de-inicio.md` (líneas 227, 238, 247 y nueva entrada `axiom autofetch`: subcomandos, hook, intervalo, prohibiciones).
   - Cubre: RF-BRA-40 (doctrina), RF-BRA-01 (guarda de único punto de ejecución).
   - Verificación: `go test ./internal/workspace -run "Agents|Manual|Guidance"` (pruebas que fijan AGENTS.md y el manual; si el patrón no casa, localizarlas con Grep y ajustarlo); `go test ./internal/gitcommon -run TestArchitecture`; `go test ./internal/sddpublish -run TestIsolation`.
+  - Evidencia: `go test ./internal/workspace -run "Agents|Manual|Guidance"`: ok; `go test ./internal/gitcommon -run TestArchitecture`: ok; `go test ./internal/sddpublish -run TestIsolation`: ok. Ruta: inline.
 
 ## Criterios absorbidos de la revisión de cobertura
 
