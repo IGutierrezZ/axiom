@@ -216,10 +216,15 @@ type Status struct {
 	// Structural absence (nil, omitempty) everywhere else, including every
 	// change this increment leaves unsealed -- the same D-05 identity
 	// kickoff_absence_regression_test.go already guards for Governance.
-	GateQuestion      *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
-	PhaseInstructions *PhaseInstructions       `json:"phaseInstructions,omitempty"`
-	NextRecommended   string                   `json:"nextRecommended"`
-	BlockedReasons    []string                 `json:"blockedReasons"`
+	GateQuestion *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
+	// Publication is C-05-c's additive projection of the publication pending for the selected
+	// change (REQ-27.18): structural absence (nil, omitempty) when there is nothing to commit or
+	// push, so a status without it is byte-identical to the one that predates it
+	// (decoratePublication).
+	Publication       *PublicationProjection `json:"publication,omitempty"`
+	PhaseInstructions *PhaseInstructions     `json:"phaseInstructions,omitempty"`
+	NextRecommended   string                 `json:"nextRecommended"`
+	BlockedReasons    []string               `json:"blockedReasons"`
 	// Notes carries non-blocking diagnostics for a consumer to report, never to
 	// gate on: a non-empty Notes never withholds apply, sync, archive, or a
 	// terminal route. Always serialized as an array — `[]` when there is nothing
@@ -545,6 +550,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 	decorateWorkspaceDeclarations(&status, location)
 	decorateISO(&status, location)
 	decorateRequirements(&status, location)
+	decoratePublication(&status, location)
 	return status, nil
 }
 

@@ -19,6 +19,8 @@ type Git interface {
 	BranchExists(ctx context.Context, dir, name string) (bool, error)
 	Worktrees(ctx context.Context, dir string) ([]WorktreeEntry, error)
 	DirtyPaths(ctx context.Context, dir string) ([]string, error)
+	RemoteConfigured(ctx context.Context, dir, remote string) (bool, error)            // git config --get remote.<r>.url, sin red
+	DirtyPathsUnder(ctx context.Context, dir string, paths []string) ([]string, error) // status --untracked-files=all bajo rutas literales
 	CreateBranch(ctx context.Context, dir, name, startPoint string) error
 	CreateTrackingBranch(ctx context.Context, dir, name, remoteRef string) error // adopta refs/remotes/origin/<name>, sin red
 	AddWorktree(ctx context.Context, dir, path, branch string) error

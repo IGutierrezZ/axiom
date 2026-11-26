@@ -57,11 +57,14 @@ type StatusV2Projection struct {
 	// wire type already matches the public contract 1:1, so no *V2
 	// translation type is needed (design.md S5.5 defines the wire shape
 	// directly).
-	GateQuestion      *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
-	PhaseInstructions *phaseInstructionsV2     `json:"phaseInstructions,omitempty"`
-	NextRecommended   string                   `json:"nextRecommended"`
-	BlockedReasons    []string                 `json:"blockedReasons"`
-	Notes             []string                 `json:"notes"`
+	GateQuestion *SDDGovernanceGateResult `json:"gateQuestion,omitempty"`
+	// Publication projects Status.Publication unchanged (REQ-27.18): additive and omitted when
+	// there is nothing to commit or push.
+	Publication       *PublicationProjection `json:"publication,omitempty"`
+	PhaseInstructions *phaseInstructionsV2   `json:"phaseInstructions,omitempty"`
+	NextRecommended   string                 `json:"nextRecommended"`
+	BlockedReasons    []string               `json:"blockedReasons"`
+	Notes             []string               `json:"notes"`
 }
 
 type planningHomeV2 struct {
@@ -248,6 +251,7 @@ func ProjectStatusV2(status Status) (StatusV2Projection, error) {
 		Archived:        status.Archived,
 		Governance:      projectGovernanceV2(status.Governance),
 		GateQuestion:    status.GateQuestion,
+		Publication:     status.Publication,
 		NextRecommended: status.NextRecommended,
 		BlockedReasons:  status.BlockedReasons,
 		Notes:           status.Notes,

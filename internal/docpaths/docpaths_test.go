@@ -198,3 +198,87 @@ func TestDocPathsZeroValueRecognisesNothing(t *testing.T) {
 		t.Error("el valor cero no debe reconocer ninguna ruta")
 	}
 }
+
+// FromWorkspace es el único punto de composición de la lista cerrada: debe dar el mismo conjunto
+// que componía `sddpublish` (rutas declaradas relativas al workspaceRoot, derivado del planning
+// home) y descartar lo que cae fuera de la raíz git.
+func TestFromWorkspaceRebasesDeclaredPathsOntoTheGitRoot(t *testing.T) {
+	cases := []struct {
+		name       string
+		planning   string
+		maintained []string
+		reference  []string
+		wantDocs   []string // deben ser documentación
+		wantCode   []string // deben ser código
+		candidates []string
+	}{
+		{
+			name:       "planning home en la raíz",
+			planning:   "",
+			maintained: []string{"docs/contexto"},
+			reference:  []string{"docs/contexto/ref"},
+			wantDocs:   []string{"changes/x/design.md", "docs/contexto/a.md"},
+			wantCode:   []string{"docs/contexto/ref/b.md", "docs/otro.md"},
+			candidates: []string{"changes/x", "changes/archive", "specs", "INDEX.md", "docs/contexto"},
+		},
+		{
+			name:       "openspec en la raíz git",
+			planning:   "openspec",
+			maintained: []string{"docs/contexto"},
+			wantDocs:   []string{"openspec/changes/x/spec.md", "docs/contexto/a.md"},
+			wantCode:   []string{"requirements.txt"},
+			candidates: []string{"openspec/changes/x", "openspec/changes/archive", "openspec/specs", "openspec/INDEX.md", "docs/contexto"},
+		},
+		{
+			name:       "workspace en un subdirectorio",
+			planning:   "sub/openspec",
+			maintained: []string{"docs/contexto"},
+			reference:  []string{"docs/contexto/ref"},
+			wantDocs:   []string{"sub/openspec/changes/x/spec.md", "sub/docs/contexto/a.md"},
+			wantCode:   []string{"docs/contexto/a.md", "sub/docs/contexto/ref/b.md"},
+			candidates: []string{"sub/openspec/changes/x", "sub/openspec/changes/archive", "sub/openspec/specs", "sub/openspec/INDEX.md", "sub/docs/contexto"},
+		},
+		{
+			name:       "rutas declaradas fuera de la raíz se descartan",
+			planning:   "sub/openspec",
+			maintained: []string{"../fuera", "/abs", `C:\abs`, ".", "docs/ok"},
+			wantDocs:   []string{"sub/docs/ok/a.md"},
+			wantCode:   []string{"fuera/a.md", "sub/docs/a.md"},
+			candidates: []string{"sub/openspec/changes/x", "sub/openspec/changes/archive", "sub/openspec/specs", "sub/openspec/INDEX.md", "sub/docs/ok"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			set, err := FromWorkspace(tc.planning, "x", tc.maintained, tc.reference)
+			if err != nil {
+				t.Fatalf("FromWorkspace: %v", err)
+			}
+			for _, rel := range tc.wantDocs {
+				if !set.Contains(rel) {
+					t.Errorf("Contains(%q) = false, se esperaba documentación", rel)
+				}
+			}
+			for _, rel := range tc.wantCode {
+				if set.Contains(rel) {
+					t.Errorf("Contains(%q) = true, se esperaba código", rel)
+				}
+			}
+			if got := set.Candidates(); !reflect.DeepEqual(got, tc.candidates) {
+				t.Errorf("Candidates() = %v, se esperaba %v", got, tc.candidates)
+			}
+			// Con el workspace en la raíz git, es el mismo conjunto que componer a mano con New.
+			if tc.planning == "" || tc.planning == "openspec" {
+				manual := mustNew(t, tc.planning, "x", tc.maintained, tc.reference)
+				if !reflect.DeepEqual(manual.Candidates(), set.Candidates()) {
+					t.Errorf("Candidates difiere de New: %v frente a %v", set.Candidates(), manual.Candidates())
+				}
+			}
+		})
+	}
+}
+
+func TestFromWorkspaceRejectsAnUnusableChangeName(t *testing.T) {
+	if _, err := FromWorkspace("openspec", "a/b", nil, nil); err == nil {
+		t.Fatal("FromWorkspace aceptó un nombre de cambio con barra")
+	}
+}

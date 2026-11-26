@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"slices"
 	"testing"
@@ -38,6 +39,26 @@ func TestPublishIsolationNoVerbButPublishPushesCommitsOrFetches(t *testing.T) {
 		if _, err := gateRecord(t, ws, args...); err != nil {
 			t.Fatalf("gate record %v: %v", args, err)
 		}
+	}
+
+	// Con la compuerta spec aprobada y su ledger sin confirmar, el status proyecta la publicación
+	// pendiente (REQ-27.18) solo con lecturas: lo que el bucle de abajo comprueba es que no hubo
+	// `push`, `commit` ni `fetch`.
+	var projected bytes.Buffer
+	if err := RunSDDStatus([]string{"x", "--cwd", ws.Master, "--json"}, &projected); err != nil {
+		t.Fatalf("RunSDDStatus tras aprobar las compuertas: %v", err)
+	}
+	var document struct {
+		Publication *struct {
+			State      string `json:"state"`
+			Invocation string `json:"invocation"`
+		} `json:"publication"`
+	}
+	if err := json.Unmarshal(projected.Bytes(), &document); err != nil {
+		t.Fatalf("el status no es JSON: %v\n%s", err, projected.String())
+	}
+	if document.Publication == nil || document.Publication.State != "pending" || document.Publication.Invocation == "" {
+		t.Errorf("publication = %+v, se esperaba pending con su invocación\n%s", document.Publication, projected.String())
 	}
 
 	// Después `axiom branch`, cuyas operaciones pueden cambiar de rama en `in_place`.

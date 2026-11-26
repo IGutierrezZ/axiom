@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
-	"github.com/IGutierrezZ/axiom/v3/internal/docpaths"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -96,7 +95,7 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 	result.Branch, result.InPlace = target.Branch, target.InPlace
 	dir := target.GitRoot
 
-	set, err := composeSet(location, target, req.Change)
+	set, err := target.DocPaths(location.Declarations, req.Change)
 	if err != nil {
 		return refused(refuse(Code(branch.CodeConfigInvalid),
 			fmt.Sprintf("las rutas de documentación declaradas en axiom.yaml no son válidas: %v", err),
@@ -310,61 +309,6 @@ func changeNotFound(change, planningHome string) *Refusal {
 	return refuse(CodeChangeNotFound,
 		fmt.Sprintf("el cambio %q no existe en %s: no hay documentos que publicar", change, planningHome),
 		fmt.Sprintf("comprueba el nombre con `axiom sdd status --cwd %s` y repite la orden", pathquote.Quote(filepath.Dir(planningHome))), nil)
-}
-
-// composeSet compone la lista cerrada de documentación (DD-06) con las rutas de
-// `technical_context` de axiom.yaml, que son relativas al workspaceRoot, convertidas a relativas a
-// la raíz git del destino.
-func composeSet(location workspace.Location, target branch.PublicationTarget, change string) (docpaths.Set, error) {
-	wsRel := workspaceRelative(target.PlanningRel)
-	var maintained, reference []string
-	declarations := location.Declarations
-	if technical := declarations.TechnicalContext; technical != nil {
-		if technical.Maintained != nil {
-			for _, declared := range technical.Maintained.Paths {
-				if rel, ok := fromWorkspace(wsRel, declared); ok {
-					maintained = append(maintained, rel)
-				}
-			}
-		}
-		if technical.Reference != nil {
-			for _, declared := range technical.Reference.Paths {
-				if rel, ok := fromWorkspace(wsRel, declared); ok {
-					reference = append(reference, rel)
-				}
-			}
-		}
-	}
-	return docpaths.New(target.PlanningRel, change, maintained, reference)
-}
-
-// workspaceRelative es el workspaceRoot relativo a la raíz git, derivado del planning home, que es
-// siempre `<workspaceRoot>/openspec`: vacío si ambos coinciden con la raíz.
-func workspaceRelative(planningRel string) string {
-	if planningRel == "" {
-		return ""
-	}
-	if dir := path.Dir(planningRel); dir != "." {
-		return dir
-	}
-	return ""
-}
-
-// fromWorkspace convierte una ruta declarada, relativa al workspaceRoot, a una relativa a la raíz
-// git. Las que caen fuera de la raíz git o son la propia raíz se descartan.
-func fromWorkspace(wsRel, declared string) (string, bool) {
-	clean := path.Clean(strings.ReplaceAll(strings.TrimSpace(declared), `\`, "/"))
-	switch {
-	case clean == "." || clean == "" || path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../"):
-		return "", false
-	case len(clean) > 1 && clean[1] == ':':
-		return "", false
-	}
-	joined := path.Join(wsRel, clean)
-	if joined == ".." || strings.HasPrefix(joined, "../") {
-		return "", false
-	}
-	return joined, true
 }
 
 func shortSHA(sha string) string {
