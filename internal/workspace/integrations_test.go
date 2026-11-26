@@ -287,7 +287,7 @@ func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 			t.Fatalf("decodeIntegrations = %+v, %v", got, err)
 		}
 		p := got.Plugins[0]
-		want := map[string]any{"organization": "contoso", "project": "Fabrikam", "team": "Fabrikam Team"}
+		want := map[string]any{"organization": "contoso", "project": "Fabrikam", "team": "Fabrikam Team", "item_keys": []string{"User Story=US", "Bug=BUG"}}
 		if p.ID != "azure-devops" || !p.Enabled || !reflect.DeepEqual(p.Values, want) {
 			t.Fatalf("plugin = %+v", p)
 		}
@@ -295,7 +295,7 @@ func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 
 	t.Run("clave desconocida base_url", func(t *testing.T) {
 		_, err := decodeIntegrations(integrationsNode(t, valid+"    base_url: https://example.test\n"))
-		wantErrorContains(t, err, "clave desconocida 'base_url'", "claves admitidas: enabled, organization, project, team")
+		wantErrorContains(t, err, "clave desconocida 'base_url'", "claves admitidas: enabled, organization, project, team, item_keys")
 	})
 
 	t.Run("pat no es una clave de configuración", func(t *testing.T) {
@@ -322,4 +322,48 @@ func TestDecodeIntegrationsAzureDevOpsWithDefaultCatalog(t *testing.T) {
 		_, err := decodeIntegrations(integrationsNode(t, "integrations:\n  jira:\n    project: p\n"))
 		wantErrorContains(t, err, "plugin desconocido 'jira'", "plugins admitidos: azure-devops")
 	})
+}
+
+// item_keys del plugin azure-devops (RF-ADO-02): lista de pares Tipo=PREFIJO validada al cargar.
+func TestItemKeysValid(t *testing.T) {
+	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
+	got, err := decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Product Backlog Item=PBI\n      - Bug=BUG\n"))
+	if err != nil {
+		t.Fatalf("decodeIntegrations: %v", err)
+	}
+	want := []string{"Product Backlog Item=PBI", "Bug=BUG"}
+	if !reflect.DeepEqual(got.Plugins[0].Values["item_keys"], want) {
+		t.Fatalf("item_keys = %v, esperaba %v", got.Plugins[0].Values["item_keys"], want)
+	}
+}
+
+func TestItemKeysDefaultApplied(t *testing.T) {
+	got, err := decodeIntegrations(integrationsNode(t, "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"))
+	if err != nil {
+		t.Fatalf("decodeIntegrations: %v", err)
+	}
+	want := []string{"User Story=US", "Bug=BUG"}
+	if !reflect.DeepEqual(got.Plugins[0].Values["item_keys"], want) {
+		t.Fatalf("item_keys = %v, esperaba el valor por defecto %v", got.Plugins[0].Values["item_keys"], want)
+	}
+}
+
+func TestItemKeysMalformed(t *testing.T) {
+	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
+	_, err := decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Bug=BUG\n      - SinIgual\n"))
+	wantErrorContains(t, err, "integrations.azure-devops.item_keys", "SinIgual", "línea 8")
+}
+
+func TestItemKeysDuplicate(t *testing.T) {
+	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
+	_, err := decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Bug=BUG\n      - bug=B2\n"))
+	wantErrorContains(t, err, "integrations.azure-devops.item_keys", "bug=B2", "repetido")
+	_, err = decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Bug=BUG\n      - Task=Bug\n"))
+	wantErrorContains(t, err, "Task=Bug", "repetido")
+}
+
+func TestItemKeysPrefixInvalid(t *testing.T) {
+	const head = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Equipo\n"
+	_, err := decodeIntegrations(integrationsNode(t, head+"    item_keys:\n      - Bug=B-G\n"))
+	wantErrorContains(t, err, "Bug=B-G", "prefijo")
 }

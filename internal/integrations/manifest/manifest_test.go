@@ -310,3 +310,49 @@ func TestCloneIsDeep(t *testing.T) {
 		t.Fatal("Clone debe devolver una copia profunda")
 	}
 }
+
+func TestManifestRefAliasPattern(t *testing.T) {
+	for alias, wantErr := range map[string]bool{
+		"":                  false, // opcional
+		"ado":               false,
+		"ab":                false,
+		"a":                 true,
+		"1ab":               true,
+		"Ado":               true,
+		"a-b":               true,
+		"abcdefghijklmnop":  false, // 16 caracteres
+		"abcdefghijklmnopq": true,  // 17 caracteres
+	} {
+		m := validManifest()
+		m.RefAlias = alias
+		err := m.Validate()
+		if (err != nil) != wantErr {
+			t.Errorf("ref_alias %q: error = %v, esperaba error=%v", alias, err, wantErr)
+		}
+	}
+}
+
+func TestManifestDefaultMustMatchFormat(t *testing.T) {
+	field := func(def any, f ValueFormat, typ FieldType) Manifest {
+		m := validManifest()
+		m.Config = append(m.Config, ConfigField{Key: "item_keys", Type: typ, Format: f, Default: def, Description: "x"})
+		return m
+	}
+	if err := field([]string{"Bug=BUG"}, FormatTypePrefixPairs, FieldStringList).Validate(); err != nil {
+		t.Fatalf("un default válido no debe fallar: %v", err)
+	}
+	if err := field([]any{"Bug=BUG"}, FormatTypePrefixPairs, FieldStringList).Validate(); err != nil {
+		t.Fatalf("un default []any válido no debe fallar: %v", err)
+	}
+	for name, m := range map[string]Manifest{
+		"default sin igual":   field([]string{"Bug"}, FormatTypePrefixPairs, FieldStringList),
+		"formato desconocido": field(nil, ValueFormat("otro"), FieldStringList),
+		"formato en string":   field(nil, FormatTypePrefixPairs, FieldString),
+		"prefijo inválido":    field([]string{"Bug=B-G"}, FormatTypePrefixPairs, FieldStringList),
+		"tipo repetido":       field([]string{"Bug=A", "bug=B"}, FormatTypePrefixPairs, FieldStringList),
+	} {
+		if err := m.Validate(); err == nil {
+			t.Errorf("%s: esperaba un error de validación", name)
+		}
+	}
+}

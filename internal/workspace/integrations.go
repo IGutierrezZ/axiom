@@ -227,6 +227,7 @@ func stringList(label string, field manifest.ConfigField, node *yaml.Node) ([]st
 	}
 	var errs []error
 	list := make([]string, 0, len(node.Content))
+	lines := make([]int, 0, len(node.Content))
 	for _, item := range node.Content {
 		item = resolveAlias(item)
 		if isNull(item) || item.Kind != yaml.ScalarNode || item.Tag != "!!str" {
@@ -238,6 +239,13 @@ func stringList(label string, field manifest.ConfigField, node *yaml.Node) ([]st
 			continue
 		}
 		list = append(list, item.Value)
+		lines = append(lines, item.Line)
+	}
+	if len(errs) == 0 && field.Format == manifest.FormatTypePrefixPairs {
+		_, problems := manifest.ParseTypePrefixes(list)
+		for _, p := range problems {
+			errs = append(errs, fmt.Errorf("%s: el elemento '%s' (línea %d) no es válido: %s", label, p.Element, lines[p.Index], p.Reason))
+		}
 	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
