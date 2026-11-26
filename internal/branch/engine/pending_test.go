@@ -653,6 +653,9 @@ func (f *fakeGit) RevList(context.Context, string, bool, ...string) ([]branch.Re
 func (f *fakeGit) CommitFiles(context.Context, string, ...string) ([]branch.CommitPaths, error) {
 	return nil, errors.New("no se usa")
 }
+func (f *fakeGit) MergeResolvedPaths(context.Context, string, string) ([]string, error) {
+	return nil, errors.New("no se usa")
+}
 func (f *fakeGit) BranchCreation(context.Context, string, string) (string, string, bool, error) {
 	return "", "", false, errors.New("no se usa")
 }

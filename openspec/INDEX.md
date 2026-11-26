@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 07:13:00 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2295
+> **Última Sincronización:** 2026-11-26 08:13:56 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2298
 
 ---
 
@@ -45,7 +45,7 @@
 | `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
-| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 84 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
+| `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 118 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
 | `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
@@ -2325,6 +2325,9 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
   - *Escenario BDD:* Entrega fallida de `archive`
 - **[RF-PUB-11]** El Status Nativo Proyecta la Publicación Pendiente
   - *Escenario BDD:* Compuerta aprobada con documentación sin confirmar
+  - *Escenario BDD:* Con la fase siguiente en iteración no se proyecta
+  - *Escenario BDD:* Con apply en curso tras aprobar tasks no se proyecta
+  - *Escenario BDD:* En `continuous`, un artefacto de planificación a medio escribir no proyecta
   - *Escenario BDD:* Varios motivos a la vez
   - *Escenario BDD:* Tras un `publish` correcto deja de proyectarse
   - *Escenario BDD:* Rama por delante de origin solo con commits de documentación

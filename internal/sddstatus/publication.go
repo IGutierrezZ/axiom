@@ -131,6 +131,11 @@ func publicationDue(status *Status, location workspace.Location) (archive, due b
 		return false, false
 	}
 	if governanceGated(governance) {
+		// Iterar no publica nada (RF-GAT-15): con la fase de la primera compuerta abierta en
+		// curso, la publicación espera a la aprobación siguiente, que vuelve a cumplir (a).
+		if open, found := firstOpenGate(governance); found && phaseInProgress(status, open.Key) {
+			return false, false
+		}
 		for _, gate := range governance.Gates {
 			if gate.Status == "approved" && gate.Key != kickoff.GateIntegration {
 				return false, true
@@ -143,9 +148,33 @@ func publicationDue(status *Status, location workspace.Location) (archive, due b
 	}
 	planned := false
 	for _, key := range []string{"specs", "design", "tasks"} {
+		// Un artefacto a medio escribir es una fase en curso, no un momento de RF-PUB-08.
+		if status.Artifacts[key] == ArtifactPartial {
+			return false, false
+		}
 		planned = planned || status.Artifacts[key] == ArtifactDone
 	}
 	return false, planned && status.TaskProgress.Completed == 0 && status.Artifacts["verifyReport"] != ArtifactDone
+}
+
+// phaseInProgress reports whether the phase that the open gate judges has already started: its
+// artifact exists (design, tasks) or apply has progress (role-apply). spec never has an approved
+// gate before it, and integration only closes the change, so neither counts.
+func phaseInProgress(status *Status, key kickoff.GateKey) bool {
+	started := func(artifact string) bool {
+		state := status.Artifacts[artifact]
+		return state == ArtifactPartial || state == ArtifactDone
+	}
+	switch key {
+	case kickoff.GateDesign:
+		return started("design")
+	case kickoff.GateTasks:
+		return started("tasks")
+	}
+	if _, roleApply := kickoff.RoleFromGate(key); roleApply {
+		return status.TaskProgress.Completed > 0 || started("applyProgress")
+	}
+	return false
 }
 
 // continuousAutoPublication reports the sealed authorization to publish without asking (RF-KOF-10).

@@ -35,6 +35,7 @@ type Git interface {
 	FileAt(ctx context.Context, dir, rev, relPath string) ([]byte, bool, error)                         // contenido, exists, err
 	RevList(ctx context.Context, dir string, firstParent bool, revisions ...string) ([]RevEntry, error) // rev-list --parents [--first-parent] <revs> --
 	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]CommitPaths, error)            // log -z --no-renames --name-only
+	MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error)                          // diff-tree --cc: rutas que resolvió la fusión
 	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)        // reflog show, entrada más antigua
 	Fetch(ctx context.Context, dir, remote string) error                                                // la única operación remota
 }

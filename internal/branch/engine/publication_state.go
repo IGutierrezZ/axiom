@@ -15,9 +15,9 @@ import (
 // (RF-PUB-04). No toma el cerrojo, no escribe, no hace `fetch`, `pull`, `ls-remote`, `commit`, `add`
 // ni `push`: el puerto de git no tiene ningún método que publique (RF-BRA-01).
 //
-// Límite aceptado: `CommitFiles` no lista rutas en un commit de fusión, mientras que `publish` lee
-// las que resolvió la fusión (`--cc`). En una fusión limpia coinciden (ninguna); solo una fusión con
-// conflictos resueltos sobre código puede dar aquí «sin código» donde `publish` se negaría.
+// `CommitFiles` no lista rutas en un commit de fusión; para esos commits se leen las que resolvió la
+// propia fusión (`MergeResolvedPaths`, `--cc`), como hace `publish`. Una fusión limpia no aporta
+// ninguna; una que resolvió conflictos sobre código cuenta como código.
 func (e *Engine) PublicationState(ctx context.Context, req branch.PublicationRequest) (branch.PublicationState, *branch.Refusal) {
 	const operation = "status"
 	target, location, refusal := e.resolvePublication(ctx, req)
@@ -108,7 +108,13 @@ func (e *Engine) PublicationState(ctx context.Context, req branch.PublicationReq
 	}
 	// CommitFiles devuelve del más reciente al más antiguo; el estado los da en el orden contrario.
 	for i := len(commits) - 1; i >= 0; i-- {
-		if slices.ContainsFunc(commits[i].Paths, func(rel string) bool { return !set.Contains(rel) }) {
+		paths := commits[i].Paths
+		if len(commits[i].Parents) > 1 {
+			if paths, err = e.git.MergeResolvedPaths(ctx, dir, commits[i].SHA); err != nil {
+				return failed("leer las rutas que resolvió la fusión "+shortSHA(commits[i].SHA), err)
+			}
+		}
+		if slices.ContainsFunc(paths, func(rel string) bool { return !set.Contains(rel) }) {
 			state.CodeCommits = append(state.CodeCommits, shortSHA(commits[i].SHA))
 		}
 	}

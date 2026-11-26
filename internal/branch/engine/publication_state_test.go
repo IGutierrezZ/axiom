@@ -165,6 +165,42 @@ func TestPublicationStateACleanMergeOfTheIntegrationIsNotCode(t *testing.T) {
 	}
 }
 
+// W2 de C-05-c: una fusión que resuelve un conflicto sobre código sí es código, como la ve
+// `publish` (`diff-tree --cc`): solo cuentan las rutas que la propia fusión resolvió.
+func TestPublicationStateAMergeThatResolvesCodeIsCode(t *testing.T) {
+	t.Parallel()
+	repo, worktree, _ := stateWorktree(t)
+	writeFile(t, filepath.Join(repo, "main.go"), "package main\n")
+	runGit(t, repo, "add", "main.go")
+	commit(t, repo, "código base en main")
+	runGit(t, repo, "push", "-q", "origin", "main")
+	runGit(t, worktree, "merge", "-q", "--no-edit", "origin/main")
+
+	// La rama cambia el código y lo sube; main cambia la misma línea.
+	writeFile(t, filepath.Join(worktree, "main.go"), "package main // rama\n")
+	runGit(t, worktree, "add", "main.go")
+	commit(t, worktree, "código en la rama")
+	runGit(t, worktree, "push", "-q", "origin", "feat/x")
+	writeFile(t, filepath.Join(repo, "main.go"), "package main // main\n")
+	runGit(t, repo, "add", "main.go")
+	commit(t, repo, "código en main")
+	runGit(t, repo, "push", "-q", "origin", "main")
+
+	// La fusión choca y se resuelve a mano sobre el código; es el único commit sin subir.
+	if output, err := exec.Command("git", "-C", worktree, "merge", "-q", "--no-ff", "-m", "fusiona main", "origin/main").CombinedOutput(); err == nil {
+		t.Fatalf("se esperaba un conflicto en la fusión:\n%s", output)
+	}
+	writeFile(t, filepath.Join(worktree, "main.go"), "package main // resuelto\n")
+	runGit(t, worktree, "add", "main.go")
+	runGit(t, worktree, "commit", "-q", "--no-edit")
+	merge := runGit(t, worktree, "rev-parse", "--short=7", "HEAD")
+
+	state := wantPublicationState(t, branch.PublicationRequest{CWD: worktree, Change: "x"})
+	if state.Unpushed != 1 || !slices.Equal(state.CodeCommits, []string{merge}) {
+		t.Errorf("estado = %+v, se esperaba 1 commit sin subir y la fusión %s como código", state, merge)
+	}
+}
+
 // El repositorio de specs de un multirepo se trabaja in situ y se mide contra `origin/<integración>`;
 // la raíz git del destino es absoluta, no la del proceso.
 func TestPublicationStateMultirepoSpecsInPlaceMeasuresAgainstTheRemoteIntegration(t *testing.T) {

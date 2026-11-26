@@ -85,6 +85,31 @@ func (*Git) CommitFiles(ctx context.Context, dir string, revisions ...string) ([
 	return commits, nil
 }
 
+// MergeResolvedPaths implementa branch.Git: las rutas de un commit de fusión que la propia fusión
+// resolvió (`git diff-tree -r --no-commit-id --name-only -z --no-renames --cc <sha>`), la misma
+// lectura con la que `axiom sdd publish` clasifica los commits. En una fusión limpia no hay
+// ninguna. Es una lectura local.
+func (*Git) MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error) {
+	if err := plainArgument(sha); err != nil {
+		return nil, err
+	}
+	args := []string{"diff-tree", "-r", "--no-commit-id", "--name-only", "-z", "--no-renames", "--cc", sha}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, err
+	}
+	if result.ExitCode != 0 {
+		return nil, commandFailed(dir, result, args...)
+	}
+	var paths []string
+	for _, path := range strings.Split(string(result.Stdout), "\x00") {
+		if path != "" {
+			paths = append(paths, path)
+		}
+	}
+	return paths, nil
+}
+
 // remoteCopies son los nombres con los que git escribe la copia remota de una rama en el asunto
 // del reflog cuando la rama se adopta de ella.
 func remoteCopies(name string) []string {
