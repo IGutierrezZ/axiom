@@ -30,7 +30,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
 
 ## Phase 1: Fundamentos
 
-- [ ] T1 Bloque `acceptance_tests` estricto en `workspace`, con `hub`, plantilla y manual.
+- [x] T1 Bloque `acceptance_tests` estricto en `workspace`, con `hub`, plantilla y manual.
   - Crear `internal/workspace/acceptance_tests.go`: `AcceptanceTestsConfig{Enabled bool; Environments []string}`, `decodeAcceptanceTests` (claves cerradas `enabled` y `environments` con `unknownKeys`, rechazo de claves duplicadas, `enabled` solo escalar `!!bool`, `environments` lista de cadenas no vacías, sin duplicados exactos y sin `;`; con `enabled: true` la lista debe existir y no estar vacía; con `enabled: false` no exige entornos). Un bloque nulo o que no es un mapeo es un error tipado (RF-TOP-19). Errores acumulados con línea.
   - En el mismo fichero, `acceptanceTestsTopologyError(cfg, topology)` (error si `Enabled` y la topología no es `TopologyMultirepo`) y `Declarations.EffectiveAcceptanceTests(topology) (AcceptanceTestsConfig, error)`: con `ParseErr`, `AcceptanceTestsErr` o regla de topología violada devuelve error envuelto con `%w` y nunca asume un valor; sin bloque devuelve el valor cero.
   - Modificar `internal/workspace/declarations.go` (par `AcceptanceTests`/`AcceptanceTestsErr` y lectura con `mappingValue(root, "acceptance_tests")` en `readDeclarationBlocks`), `internal/workspace/types.go` (`WorkspaceConfig.AcceptanceTests yaml:"-"`), `internal/workspace/loader.go` (`joinLoadErrors`, `parseLayered` proyecta solo con bloque válido, comentario de claves) y `internal/workspace/validator.go` (paso 3b: `enabled: true` fuera de multirepo, misma redacción de migración que RF-TOP-04).

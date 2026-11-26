@@ -83,3 +83,31 @@ func TestExampleYAMLDocumentsTheDeliveryBlock(t *testing.T) {
 		t.Errorf("la plantilla debe documentar `split_hint_lines: 600`: %+v", declarations.Delivery)
 	}
 }
+
+// RF-TOP-20: la plantilla axiom.example.yaml documenta el bloque `acceptance_tests:`
+// y, una vez descomentado, es válido y activa la función con sus entornos.
+func TestExampleYAMLDocumentsTheAcceptanceTestsBlock(t *testing.T) {
+	var block []string
+	for _, line := range strings.Split(strings.ReplaceAll(readRepoFile(t, "axiom.example.yaml"), "\r\n", "\n"), "\n") {
+		if len(block) == 0 {
+			if line == "# acceptance_tests:" {
+				block = append(block, "acceptance_tests:")
+			}
+			continue
+		}
+		if !strings.HasPrefix(line, "#   ") {
+			break
+		}
+		block = append(block, strings.TrimPrefix(line, "# "))
+	}
+	if len(block) < 3 {
+		t.Fatalf("axiom.example.yaml debe documentar un bloque `# acceptance_tests:` con sus dos claves, y se halló %q", block)
+	}
+	_, baseErr, declarations := parseDeclarations(t, strings.Join(block, "\n")+"\n")
+	if baseErr != nil || declarations.AcceptanceTestsErr != nil {
+		t.Fatalf("el bloque de la plantilla no es válido: base=%v acceptance_tests=%v\n%s", baseErr, declarations.AcceptanceTestsErr, block)
+	}
+	if got := declarations.AcceptanceTests; got == nil || !got.Enabled || len(got.Environments) == 0 {
+		t.Errorf("la plantilla debe documentar `enabled: true` con entornos: %+v", got)
+	}
+}

@@ -615,3 +615,32 @@ func TestInitForceKeepsIntegrationsBlock(t *testing.T) {
 		t.Errorf("--force no debe perder integrations:\n%s", got)
 	}
 }
+
+// RF-TOP-20: `acceptance_tests:` también es una declaración que la regeneración
+// perdería, sea válida o inválida.
+func TestDeclaresCountsAcceptanceTests(t *testing.T) {
+	for name, declarations := range map[string]workspace.Declarations{
+		"acceptance_tests valido":   {AcceptanceTests: &workspace.AcceptanceTestsConfig{Enabled: true, Environments: []string{"dev"}}},
+		"acceptance_tests invalido": {AcceptanceTestsErr: errors.New("enabled no es booleano")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !(ownMarkers{declarations: declarations}).declares() {
+				t.Errorf("declares() debe contar acceptance_tests: %+v", declarations)
+			}
+		})
+	}
+}
+
+// RF-TOP-20: `init --force` conserva el bloque `acceptance_tests:` del axiom.yaml existente.
+func TestInitForceKeepsAcceptanceTestsBlock(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "axiom.yaml")
+	config := initMultirepoOpen + "acceptance_tests:\n  enabled: true\n  environments: [dev, pre]\n"
+	workspacetest.WriteFile(t, configPath, config)
+	if _, err := newInitSandbox(t).initializer.Init(InitOptions{Path: dir, Name: "Nuevo", Force: true}); err != nil {
+		t.Fatalf("Init --force = %v", err)
+	}
+	if got := readFile(t, configPath); got != config {
+		t.Errorf("--force no debe perder acceptance_tests:\n%s", got)
+	}
+}

@@ -37,3 +37,20 @@ func readRepoFile(t *testing.T, rel string) string {
 	}
 	return string(raw)
 }
+
+// RF-TOP-20: el manual y docs/openspec-config.md documentan el bloque
+// `acceptance_tests:` y el verbo de comprobación.
+func TestDocsDocumentAcceptanceTests(t *testing.T) {
+	assertDocContains(t, readManualDeInicio(t),
+		"### Batería de Pruebas de Aceptación (`acceptance_tests:`)",
+		"acceptance_tests:\n  enabled: true\n  environments: [local, dev, pre]",
+		"**Solo multirepo.**",
+		"axiom sdd tests check",
+	)
+	config := readRepoFile(t, "docs/openspec-config.md")
+	for _, want := range []string{"`acceptance_tests` also lives only in `axiom.yaml`", "axiom sdd tests check"} {
+		if !strings.Contains(config, want) {
+			t.Errorf("docs/openspec-config.md no contiene %q", want)
+		}
+	}
+}

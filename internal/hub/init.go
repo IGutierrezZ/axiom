@@ -71,6 +71,7 @@ func (m ownMarkers) declares() bool {
 		d.SDD != nil || d.SDDErr != nil ||
 		d.Delivery != nil || d.DeliveryErr != nil ||
 		d.Integrations != nil || d.IntegrationsErr != nil ||
+		d.AcceptanceTests != nil || d.AcceptanceTestsErr != nil ||
 		len(d.Repositories) > 0 || d.RepositoriesErr != nil
 }
 
