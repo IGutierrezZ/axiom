@@ -74,7 +74,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T1 · Bloque A: VS Code declara sus MCP de proyecto en `.mcp.json` (`mcpServers`). `sync` y la desinstalación retiran las entradas de Axiom de `.vscode/mcp.json`. Aviso de Workspace Trust, comentario del adaptador y docs (`agents.md`, `usage.md`, `engram.md`, `platforms.md`, `manual-de-inicio.md`) actualizados. Pruebas nuevas: migración con comentarios e idempotencia, fichero vaciado, Claude y VS Code compartiendo `.mcp.json`, `.mcp.json` ilegible rechazado, `.vscode/mcp.json` ilegible intacto, desinstalación con Claude instalado, `RemoveJSONCObjectMember` y `RetireLegacyVSCodeServer`. Evidencia: `go test ./internal/agents/... ./internal/components/{mcp,engram,uninstall,filemerge}/ -run 'VSCode|Workspace|MCP|Context7|Uninstall|JSONC'` ok; `go test ./internal/cli/ -run 'VSCode|WorkspaceTrust|UninstallWorkspace|ComponentPaths|WorkspaceClaude|EngramClaudeWorkspace'` ok.
 - [x] T2 · Bloque B: `axiom branch guard --agent vscode-copilot --event pre|post` con el protocolo de Copilot (`ParseGuardPayloadForEvent`, `RunGuardForEvent`, ayuda de la orden y de `axiom`). Pruebas de carga y de salida: bloqueo con `permissionDecision`, aviso con `additionalContext`, rutas por `path`/`file_path`/`filePath`/objeto/parche, sin evento, lecturas, `view` y cargas inválidas sin salida, errores de uso de `--event`. Evidencia: `go test ./internal/branch/engine/ -run 'GuardHook|ParseGuardPayload|GuardWithin|GuardSources'` ok; `go test ./internal/cli/ -run BranchGuard` ok; `go test ./cmd/axiom/ -run 'Help|Usage'` ok.
 - [x] T3 · Bloque B: instalación, `sync` y desinstalación de `.github/hooks/axiom-branch-guard.json` sin tocar los hooks del usuario (`BranchGuardHooksFileProvider`, `VSCodeBranchGuardHooksJSON`, copia de seguridad del componente SDD). Comentario del adaptador y docs (`agents.md`, `usage.md`, `manual-de-inicio.md`). El manifiesto no cambia (ver Decisiones). Pruebas: formato del fichero (eventos, `matcher`, `|| true` y `; exit 0`), instalación idempotente en workspace y ninguna en global, borrado solo sin edición, hook del equipo intacto en la instalación y en la desinstalación de extremo a extremo. Evidencia: `go test ./internal/components/sdd/ -run 'BranchGuard|SkillRegistry|VSCode'` ok; `go test ./internal/components/uninstall/ ./internal/agents/vscode/ -run 'VSCode|Workspace'` ok; `go test ./internal/cli/ -run 'VSCode|WorkspaceTrust|UninstallWorkspace|ComponentPaths|WorkspaceClaude|BranchGuard|WorkspaceInstallSyncUninstall'` ok.
-- [ ] T4 · Preflight SDD: evaluación documentada en Decisiones (no viable). `## Spec viva` (REQ-25.22) integrada con `axiom archive integrate --odd vscode-mcp-guardas`.
+- [x] T4 · Preflight SDD: evaluación documentada en Decisiones (no viable). `## Spec viva` (REQ-25.22) integrada con `axiom archive integrate --odd vscode-mcp-guardas`. Evidencia: integración `composed` de `change-branch-lifecycle` (más `INDEX.md`); una segunda ejecución no cambia nada.
 
 ## Criterio de terminado
 
@@ -84,10 +84,76 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - `.github/hooks/axiom-branch-guard.json` se instala, se sincroniza y se retira sin tocar otros ficheros de `.github/hooks/`.
 - `go test` (con `-run`) de los paquetes tocados en verde.
 
+Ruta de todas las tareas: inline. Las unidades se escribieron en un solo hilo: el repositorio no admite escritores en paralelo sin worktrees aislados. La exploración amplia (mapa de MCP, hooks y desinstalación) y la lectura de la documentación oficial se delegaron en exploradores de solo lectura, porque superaban el presupuesto de evidencia en línea.
+
 ## Progreso
 
 - Worktree creado desde `origin/main` (`b4b5aa10`).
+- T1 `dacd6a84`, T2 `911ad6db`, T3 `7cdd3613`, T4 en el commit que cierra la feature.
+- Seguimiento fuera de alcance: el ámbito global de VS Code sigue escribiendo el `mcp.json` del perfil de usuario (`servers`, arnés Local). Su destino nativo es `~/.copilot/mcp-config.json` (`mcpServers`), que ya escribe el adaptador de Copilot CLI, así que conviene decidir entre unificarlos o retirarlo.
+
+## No verificado
+
+- Ninguna prueba ejecuta VS Code de verdad. El formato de `.github/hooks/*.json`, la carga camelCase y el protocolo de salida salen de la documentación oficial (25/11/2026) y los fijan pruebas de carga. Los argumentos de `create`, `edit`, `str_replace_editor` y `apply_patch` no están documentados: la lectura de `path`, `file_path` y `filePath` es defensiva.
+- Que el arnés de Copilot exponga las herramientas de un servidor de `.mcp.json` sin `tools` no está documentado. Por eso se escribe `tools: ["*"]`. Que Claude Code acepta esa clave y `type: "stdio"` se comprobó con `claude mcp get`.
 
 ## Siguiente paso
 
-T1.
+Abrir la PR (`type:feature`), CI en verde, merge commit y `done`.
+
+## Spec viva
+
+### Capacidad: change-branch-lifecycle
+
+```openspec
+## MODIFIED Requirements
+
+### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (REQ-25.22)
+
+`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex, OpenCode y VS Code Copilot) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2). En VS Code Copilot el hook se instala solo con el ámbito `workspace`, en un fichero propio de Axiom (`.github/hooks/axiom-branch-guard.json`, con el formato del arnés de Copilot) que no altera los demás ficheros de `.github/hooks`. Como en `preToolUse` de ese arnés cualquier código de salida distinto de 0 deniega la escritura, la orden instalada DEBE terminar con código 0 aunque `axiom` falte o falle, y la decisión DEBE ir solo por la salida estándar.
+(Previously: los runtimes con hook eran Claude Code, Codex y OpenCode)
+(Previously: la inercia exigida era solo fuera de proyectos Axiom)
+(Previously: la inercia se justificaba solo por la configuración global de Claude Code y un `openspec/` suelto valía como marcador de proyecto Axiom)
+
+#### Scenario: Instalación en los runtimes con hooks
+- **DADO** un proyecto con Claude Code, Codex, OpenCode y VS Code Copilot configurados
+- **CUANDO** se ejecuta `axiom sync`
+- **ENTONCES** cada uno incluye una entrada de hook que invoca `axiom branch guard`
+
+#### Scenario: Sincronizar dos veces no duplica
+- **DADO** la instalación anterior
+- **CUANDO** se ejecuta `axiom sync` por segunda vez
+- **ENTONCES** la configuración de cada runtime es byte a byte idéntica a la anterior
+
+#### Scenario: No se instalan hooks de git
+- **DADO** un proyecto con repositorios
+- **CUANDO** se ejecuta `axiom sync`
+- **ENTONCES** ningún repositorio contiene hooks de git nuevos
+
+#### Scenario: Las entradas ajenas se conservan
+- **DADO** un runtime con hooks propios del usuario
+- **CUANDO** se ejecuta `axiom sync`
+- **ENTONCES** los hooks del usuario permanecen sin alterar
+
+#### Scenario: Pi queda fuera
+- **DADO** Pi configurado como runtime
+- **CUANDO** se ejecuta `axiom sync`
+- **ENTONCES** no se instala el hook en Pi y la ejecución termina con normalidad
+
+#### Scenario: En un repositorio ajeno la instalación global es inerte
+- **DADO** el hook instalado en la configuración global de Claude Code y un repositorio de terceros sin `axiom.yaml` ni puntero `.axiom-workspace` resoluble (aunque tenga un `openspec/`)
+- **CUANDO** el runtime invoca el hook para escribir en ese repositorio
+- **ENTONCES** el hook no bloquea, no avisa, no lanza procesos y no escribe nada
+
+#### Scenario: VS Code Copilot recibe un fichero de hooks propio que nunca deniega por fallo
+- **DADO** un proyecto con VS Code Copilot y un fichero de hooks del equipo en `.github/hooks/`
+- **CUANDO** se ejecuta `axiom sync` con el ámbito `workspace`
+- **ENTONCES** `.github/hooks/axiom-branch-guard.json` declara `axiom branch guard --agent vscode-copilot` en `preToolUse` y en `postToolUse` para las herramientas de escritura
+- **Y** la orden termina con código 0 aunque `axiom` no esté en el `PATH`
+- **Y** el fichero de hooks del equipo queda byte a byte igual
+
+#### Scenario: Con el ámbito global VS Code Copilot no recibe hooks
+- **DADO** VS Code Copilot configurado
+- **CUANDO** se ejecuta `axiom sync --scope global`
+- **ENTONCES** no se escribe ningún fichero de hooks de VS Code Copilot
+```

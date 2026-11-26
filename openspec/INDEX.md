@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-25 23:55:22 UTC
-> **Total Dominios:** 53 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2136
+> **Última Sincronización:** 2026-11-26 00:39:10 UTC
+> **Total Dominios:** 53 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2138
 
 ---
 
@@ -21,7 +21,7 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 9 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 306 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 308 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
@@ -703,12 +703,14 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* El documento ODD está cubierto
   - *Escenario BDD:* Solo afecta al agente a través del runtime
 - **[REQ-25.22]** Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git
-  - *Escenario BDD:* Instalación en los tres runtimes
+  - *Escenario BDD:* Instalación en los runtimes con hooks
   - *Escenario BDD:* Sincronizar dos veces no duplica
   - *Escenario BDD:* No se instalan hooks de git
   - *Escenario BDD:* Las entradas ajenas se conservan
   - *Escenario BDD:* Pi queda fuera
   - *Escenario BDD:* En un repositorio ajeno la instalación global es inerte
+  - *Escenario BDD:* VS Code Copilot recibe un fichero de hooks propio que nunca deniega por fallo
+  - *Escenario BDD:* Con el ámbito global VS Code Copilot no recibe hooks
 - **[REQ-25.23]** Las Skills y la Doctrina Delegan en el Verbo
   - *Escenario BDD:* Retirada del cuestionario de worktree y de ODD-5.x
   - *Escenario BDD:* Spec y design ya no imponen `main`
