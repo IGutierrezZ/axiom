@@ -269,3 +269,20 @@ func TestCatalogParseKeyKeepsBracketsInSelector(t *testing.T) {
 		t.Errorf("normalizeRepoPath = %q", got)
 	}
 }
+
+// RF-TOP-21: las filas branch_template se filtran por topología.
+func TestCatalogBranchTemplateRowsFilterByTopology(t *testing.T) {
+	mono := readSnapshot(t, monoDoc)
+	mustEntry(t, mono, "git.branch_template")
+	for _, e := range mono.Entries {
+		if strings.HasSuffix(e.Key, "].branch_template") {
+			t.Errorf("la topología embebida no debe incluir %q", e.Key)
+		}
+	}
+	multi := readSnapshot(t, multiDoc+"repositories:\n  - path: repo-backend\n")
+	for _, key := range []string{"git.branch_template", "repositories[repo-backend].branch_template", "repositories[repo-frontend].branch_template", "roles[backend].branch_template", "roles[frontend].branch_template"} {
+		if e := mustEntry(t, multi, key); e.Type != TypeString || len(e.Allowed) != 0 {
+			t.Errorf("%s debe ser de tipo cadena sin vocabulario: %+v", key, e)
+		}
+	}
+}

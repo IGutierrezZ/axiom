@@ -353,3 +353,44 @@ func TestErrorMessageListsViolations(t *testing.T) {
 		t.Fatalf("Error() = %q", got)
 	}
 }
+
+// RF-TOP-21, prov:TOP:1: las tres claves branch_template se escriben y se rechazan
+// nombrando la clave o la ruta del elemento, sin tocar axiom.yaml.
+func TestWriteBranchTemplateKeys(t *testing.T) {
+	p := newProject(t, multiDoc, "repo-specs", "repo-backend", "repo-frontend")
+	if _, err := p.write(t, Patch{
+		"git.branch_template":                        "{prefix}/{ref}-{slug}",
+		"repositories[repo-backend].branch_template": "feature/{ref}-{slug}",
+		"roles[backend].branch_template":             "feature/TASK-{task_ref}",
+	}); err != nil {
+		t.Fatalf("plantillas válidas: %v", err)
+	}
+	got := string(p.bytes(t))
+	for _, want := range []string{`branch_template: "{prefix}/{ref}-{slug}"`, `branch_template: "feature/{ref}-{slug}"`, `branch_template: "feature/TASK-{task_ref}"`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("falta %s:\n%s", want, got)
+		}
+	}
+
+	q := newProject(t, multiDoc, "repo-specs", "repo-backend", "repo-frontend")
+	typed := q.rejects(t, Patch{"repositories[repo-backend].branch_template": "feature/{ref"}, CodeValidationFailed)
+	if joined := strings.Join(typed.Violations, "\n"); !strings.Contains(joined, "repositories[") || !strings.Contains(joined, "branch_template") {
+		t.Fatalf("la violación debe nombrar la ruta del elemento: %v", typed.Violations)
+	}
+	typed = q.rejects(t, Patch{"roles[backend].branch_template": "{y"}, CodeValidationFailed)
+	if joined := strings.Join(typed.Violations, "\n"); !strings.Contains(joined, "roles.backend.branch_template") {
+		t.Fatalf("la violación debe nombrar el rol: %v", typed.Violations)
+	}
+}
+
+// S10: la plantilla de la rama que aloja openspec/ no admite {role} ni {task_ref}.
+func TestWriteBranchTemplateRejectsRoleVariablesOnSpecsBranch(t *testing.T) {
+	p := newProject(t, monoDoc)
+	for _, tpl := range []string{"{prefix}/{role}/{change}", "{prefix}/{task_ref}-{slug}"} {
+		typed := p.rejects(t, Patch{"git.branch_template": tpl}, CodeValidationFailed)
+		if !strings.Contains(strings.Join(typed.Violations, "\n"), "branch_template") {
+			t.Fatalf("%s: la violación debe nombrar la clave: %v", tpl, typed.Violations)
+		}
+	}
+	p.rejects(t, Patch{"roles[fullstack].branch_template": "x/{slug}"}, CodeKeyNotApplicable)
+}
