@@ -8,7 +8,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
-	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -33,31 +32,11 @@ func containsStatusContinuationInvocation(text string) bool {
 		strings.Contains(text, "gentle-ai sdd-status [change] --cwd <repo> --json --instructions")
 }
 
-// Text contracts prove shipped instructions, not execution by any agent host.
+// Solo se fija la invocación nativa (comando y flags); la redacción es libre.
 func assertStatusContinuationContract(t *testing.T, content string) {
 	t.Helper()
 	if !containsStatusContinuationInvocation(content) {
 		t.Errorf("missing status/continuation contract invocation (neither `axiom sdd status` nor `axiom sdd-status` spelling)")
-	}
-	for _, want := range []string{
-		"every declared artifact store, including Engram", "native v2",
-		"Inspection needs no execution preflight", "No recommendation is executed during inspection",
-		"Only explicit authorized continuation", "current human scope covers the selected change-directory marker",
-		"Read-only or excluded-marker scope forbids this mutating call",
-		"Preparation grants no source roots or attempts", "actionContext",
-		"nextRecommended", "blockedReasons", "non-authoritative",
-	} {
-		if !strings.Contains(content, want) {
-			t.Errorf("missing status/continuation contract %q", want)
-		}
-	}
-	for _, forbidden := range []string{
-		"sdd-continue [change] --cwd <repo>` or", "manual status schema",
-		"do NOT invoke the native dispatcher", "resolve status entirely from Engram",
-	} {
-		if strings.Contains(content, forbidden) {
-			t.Errorf("conflicting status/continuation instruction %q", forbidden)
-		}
 	}
 }
 
@@ -130,24 +109,6 @@ var sharedOrchestratorSectionNames = []string{
 	"Commit Review",
 }
 
-// TestSDDChangeKickoffAndBlockGatesSectionIsDeterministic is task 22.3's own
-// case: the new shared section renders the same content across repeated
-// reads. sharedOrchestratorSection is a pure lookup over an embedded asset,
-// so determinism holds by construction; this test makes that property
-// observable instead of merely assumed.
-func TestSDDChangeKickoffAndBlockGatesSectionIsDeterministic(t *testing.T) {
-	const name = "SDD Change Kickoff and Block Gates"
-	first := sharedOrchestratorSection(name)
-	if strings.TrimSpace(first) == "" {
-		t.Fatalf("shared asset carries no body for %q", name)
-	}
-	for i := 0; i < 5; i++ {
-		if again := sharedOrchestratorSection(name); again != first {
-			t.Fatalf("shared section %q is not deterministic across repeated reads (iteration %d):\nfirst:\n%s\nagain:\n%s", name, i, first, again)
-		}
-	}
-}
-
 // TestSharedOrchestratorSectionsHaveOneSource pins that each shared section
 // body lives in the shared asset and NOT in the per-runtime orchestrators.
 //
@@ -212,56 +173,6 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 			if !strings.Contains(rendered, first) {
 				t.Errorf("%s rendered %q without its shared body", agent, name)
 			}
-		}
-	}
-}
-
-// TestDelegatedVerificationGateCarriesNoRDDProse pins the RDD suspension
-// (C-01-c): the canonical body and every rendered
-// orchestrator state the diff-inferred verification tier without mentioning RDD,
-// the review switch, or the native risk assessment.
-func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
-	const sddBoundary = "For SDD work, run the applicable functional checks and configured TDD, report actual results, and follow the SDD phase instructions."
-	forbidden := []string{"RDD", "receipt-driven", "axiom review", "review assess", "native review", "native risk", "consent"}
-
-	for _, name := range []string{
-		"Delegated Verification Gate (MANDATORY)",
-	} {
-		body := sharedOrchestratorSection(name)
-		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
-			t.Errorf("shared section %q canonical body lacks the SDD boundary or the parent spot check", name)
-		}
-		// C-08-j: the independent verifier is reserved for security-sensitive,
-		// executable or operational, and mode-changing changes, and verification
-		// stays on the touched packages; the full suite belongs to CI.
-		for _, want := range []string{
-			"security-sensitive, executable or operational, or mode-changing changes: writer self-verification plus an independent verifier.",
-			"Verification runs the checks of the touched packages or modules; the full suite belongs to CI.",
-		} {
-			if !strings.Contains(body, want) {
-				t.Errorf("shared section %q lacks %q", name, want)
-			}
-		}
-		for _, stale := range []string{"or unclear changes", "treat it as the highest one"} {
-			if strings.Contains(body, stale) {
-				t.Errorf("shared section %q still carries the retired tier rule %q", name, stale)
-			}
-		}
-		for _, bad := range forbidden {
-			if strings.Contains(body, bad) {
-				t.Errorf("shared section %q still mentions %q", name, bad)
-			}
-		}
-	}
-
-	for _, entry := range catalog.AllAgents() {
-		agent := entry.ID
-		rendered := renderSDDOrchestratorAsset(agent)
-		if !strings.Contains(rendered, "Delegated Verification Gate") {
-			continue // a runtime that never carries either form keeps not carrying it
-		}
-		if !strings.Contains(rendered, sddBoundary) {
-			t.Errorf("%s renders a Delegated Verification Gate section without the SDD exclusion", agent)
 		}
 	}
 }

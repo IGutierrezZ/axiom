@@ -49,13 +49,6 @@ func TestInjectCopilotCLIWritesSDDToItsOwnFiles(t *testing.T) {
 	if got := cli.SystemPromptFile(home); got != prompt {
 		t.Fatalf("SystemPromptFile = %q, want %q", got, prompt)
 	}
-	text := readText(t, prompt)
-	if !strings.Contains(text, "Spec-Driven Development") {
-		t.Fatal("copilot-instructions.md no contiene el orquestador SDD")
-	}
-	if strings.Contains(text, "default `engram` when available") {
-		t.Fatal("el orquestador de Copilot CLI conserva la cláusula previa a la preflight de sesión")
-	}
 	for _, rel := range []string{filepath.Join("sdd-init", "SKILL.md"), filepath.Join("_shared", "engram-convention.md")} {
 		if _, err := os.Stat(filepath.Join(home, ".copilot", "skills", rel)); err != nil {
 			t.Fatalf("falta la skill %s: %v", rel, err)

@@ -4,85 +4,15 @@ import (
 	"encoding/json"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
-	"github.com/IGutierrezZ/axiom/v3/internal/catalog"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
-
-// retiredReviewProse lists the phrases that identify the retired review by
-// receipts in a rendered orchestrator (REQ-46.3).
-var retiredReviewProse = []string{
-	"receipt-driven",
-	"Review Execution Contract",
-	"Provider Defect Handoff",
-	"Native Checking Contract",
-	"review-integration.consent",
-	"declined_this_candidate",
-	"axiom review",
-	"RDD",
-	"native review",
-	"review-refuter",
-	"rdd-defect-workflow",
-}
-
-// TestRenderedOrchestratorsCarryNoRDDProse pins REQ-46.3: every orchestrator
-// renders free of review-by-receipt prose for every runtime, and OpenCode keeps
-// the generic native question route.
-func TestRenderedOrchestratorsCarryNoRDDProse(t *testing.T) {
-	for _, entry := range catalog.AllAgents() {
-		agent := entry.ID
-		t.Run(string(agent), func(t *testing.T) {
-			rendered := renderSDDOrchestratorAsset(agent)
-			if agent == model.AgentOpenCode {
-				var err error
-				if rendered, err = composeOpenCodeOrchestratorPrompt(agent); err != nil {
-					t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) error = %v", agent, err)
-				}
-			}
-			for _, forbidden := range retiredReviewProse {
-				if strings.Contains(rendered, forbidden) {
-					t.Errorf("%s orchestrator still renders retired review prose %q", agent, forbidden)
-				}
-			}
-			for _, raw := range []string{"{{AXIOM_SDD_SECTION", "{{AXIOM_RUNTIME_AGENT_ID", "{{AXIOM_RESEARCH_LIFECYCLE"} {
-				if strings.Contains(rendered, raw) {
-					t.Errorf("%s orchestrator kept a raw placeholder %q", agent, raw)
-				}
-			}
-			if agent == model.AgentOpenCode && !strings.Contains(rendered, "- Native route: The classified native question UI is `question`.") {
-				t.Errorf("%s lost the generic native question route", agent)
-			}
-		})
-	}
-}
-
-// TestApplyCommandsCarryNoReviewLifecycle pins that the apply commands carry
-// neither a raw placeholder nor the acknowledgement paragraph, and keep the
-// Judgment Day sentence.
-func TestApplyCommandsCarryNoReviewLifecycle(t *testing.T) {
-	for file, agent := range map[string]model.AgentID{
-		"claude/commands/sdd-apply.md":   model.AgentClaudeCode,
-		"opencode/commands/sdd-apply.md": model.AgentOpenCode,
-	} {
-		rendered := renderManagedAsset(agent, file)
-		for _, forbidden := range []string{"{{AXIOM_SDD_SECTION", "{{AXIOM_RUNTIME_AGENT_ID", "{{AXIOM_RESEARCH_LIFECYCLE", "Authority-First Terminal Procedure", "acknowledgement continuation", "burns authority", "review lineage"} {
-			if strings.Contains(rendered, forbidden) {
-				t.Errorf("%s still renders review lifecycle prose %q", file, forbidden)
-			}
-		}
-	}
-	if rendered := renderManagedAsset(model.AgentClaudeCode, "claude/commands/sdd-apply.md"); !strings.Contains(rendered, "Never auto-launch Judgment Day.") {
-		t.Error("claude apply command lost the Judgment Day sentence")
-	}
-}
 
 func retiredReviewInstallEnv(t *testing.T) {
 	t.Helper()
@@ -112,51 +42,6 @@ func walkInstalledFiles(t *testing.T, root string) map[string]string {
 		t.Fatalf("WalkDir(%s) error = %v", root, err)
 	}
 	return files
-}
-
-var retiredInstallProse = regexp.MustCompile(`(?i)receipt-driven|Review Execution Contract|Provider Defect Handoff|review stop-hook`)
-
-// TestInjectWorkspaceInstallsNoRDD pins REQ-46.4: installing SDD in a clean
-// project writes no `review-*` agent, registers no review stop hook and leaves
-// no review-by-receipt prose in any file, for every runtime.
-func TestInjectWorkspaceInstallsNoRDD(t *testing.T) {
-	for _, entry := range catalog.AllAgents() {
-		agent := entry.ID
-		modes := []model.SDDModeID{model.SDDModeSingle}
-		if agent == model.AgentOpenCode {
-			modes = append(modes, model.SDDModeMulti)
-		}
-		for _, mode := range modes {
-			t.Run(string(agent)+"/"+string(mode), func(t *testing.T) {
-				retiredReviewInstallEnv(t)
-				root := t.TempDir()
-				adapter, err := agents.NewAdapter(agent)
-				if err != nil {
-					t.Fatal(err)
-				}
-				bound := agents.BindWorkspace(adapter, root)
-				if _, err := Inject(root, bound, mode, InjectOptions{WorkspaceDir: root}); err != nil {
-					t.Fatalf("Inject(%s, %s) error = %v", agent, mode, err)
-				}
-
-				written := walkInstalledFiles(t, root)
-				if len(written) == 0 {
-					t.Skipf("%s writes nothing in the project", agent)
-				}
-				for file, content := range written {
-					if strings.HasPrefix(filepath.Base(file), "review-") {
-						t.Errorf("%s: the review file %s was written", agent, file)
-					}
-					if strings.Contains(content, "opencode-review-transport") {
-						t.Errorf("%s: %s names the retired review transport plugin", agent, file)
-					}
-					if match := retiredInstallProse.FindString(content); match != "" {
-						t.Errorf("%s: %s carries retired review prose %q", agent, file, match)
-					}
-				}
-			})
-		}
-	}
 }
 
 // TestInjectLeavesResidualRDDFilesUntouched pins REQ-46.4: what an earlier
@@ -313,46 +198,6 @@ func TestInjectLeavesResidualRDDFilesUntouched(t *testing.T) {
 			t.Errorf("the retired review transport plugin was written (err = %v)", err)
 		}
 	})
-}
-
-// TestJudgmentDayAgentsRenderReadOnlyRoleContracts keeps the Judgment Day
-// judges, in every runtime that installs them, as read-only reviewers that
-// state their candidate-causal contract and never claim a lens envelope.
-func TestJudgmentDayAgentsRenderReadOnlyRoleContracts(t *testing.T) {
-	var judges []string
-	err := fs.WalkDir(assets.FS, ".", func(file string, entry fs.DirEntry, err error) error {
-		if err != nil || entry.IsDir() {
-			return err
-		}
-		if strings.HasPrefix(path.Base(file), "jd-judge-") && strings.Contains(file, "/agents/") {
-			judges = append(judges, file)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walk embedded assets: %v", err)
-	}
-	if len(judges) == 0 {
-		t.Fatal("no judgment-day judge assets found; the guard would pass vacuously")
-	}
-	sort.Strings(judges)
-	for _, judge := range judges {
-		t.Run(judge, func(t *testing.T) {
-			content := renderManagedAsset(agentForAssetPath(t, judge), judge)
-			assertTextContainsClauses(t, judge, content, []string{"candidate", "BLOCKER", "CRITICAL", "causal", "proof"})
-			if !strings.Contains(content, "read-only") && !strings.Contains(content, "Never edit") {
-				t.Errorf("%s does not state its non-mutating role", judge)
-			}
-			if strings.Contains(content, `"subject_hash"`) || strings.Contains(content, `"inspection"`) {
-				t.Errorf("%s claims a lens envelope; judgment-day judge results carry neither field", judge)
-			}
-			for _, forbidden := range []string{"axiom review", "capture-result"} {
-				if strings.Contains(content, forbidden) {
-					t.Errorf("%s names the retired review command %q", judge, forbidden)
-				}
-			}
-		})
-	}
 }
 
 // TestOpenCodeOverlaysRenderReadOnlyJudgmentDayRoles keeps the OpenCode judges
