@@ -53,7 +53,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
 
 ## Phase 2: Núcleo
 
-- [ ] T3 Núcleo puro `internal/acceptancetests` (`Parse`, `Check`, `RewriteCubre`).
+- [x] T3 Núcleo puro `internal/acceptancetests` (`Parse`, `Check`, `RewriteCubre`).
   - Crear `internal/acceptancetests/{doc,model,parse,check,rewrite}.go` con la API del design (`FileName`, `Code` con los 15 códigos de RF-KOF-20, `CubreEntry`, `Case`, `Battery`, `Finding`, `Coverage`, `Input`, `Report`, `Report.OK()`, `Parse`, `Check`, `RewriteCubre`, `MissingFinding`).
   - Gramática (RF-KOF-18, RF-KOF-19, D3): tabla única fuera de vallas; sin tabla, cabecera con columna ausente, extra, duplicada o con otra capitalización, o sin separadora: `tabla_invalida`; una segunda tabla fuera de vallas produce `tabla_invalida`; una tabla sin filas de datos da cero casos y los escenarios quedan sin cubrir; fila con número de celdas distinto: `tabla_invalida` con su línea y el resto de filas se evalúa. `Cubre` y `Entornos` se separan por `;`; `Cubre` se divide por el primer `#`. `ID#` con escenario vacío es `caso_sin_cubre` (entrada vacía). Una cita repetida en la misma celda o entre casos no es hallazgo y cuenta una sola vez en la cobertura. Dominios de `ID` (`^P-[0-9]{2,}$`), `Tipo`, `Prioridad`, `Rol` (roles sellados), `Entornos` (subconjunto no vacío y sin repetidos), `Pasos` y `Resultado esperado` no vacíos.
   - ID de entrada: `pattern.Valid(id)` o provisional admitido (`reqid.ScanProvisional` y `pattern.ParseProvisional`); cualquier otro, o ausente de la delta seleccionada (incluidos REMOVED y RENAMED), da `id_desconocido`.
