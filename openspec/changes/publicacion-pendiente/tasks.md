@@ -121,16 +121,16 @@ Depende de: U3. Paquetes: `internal/sddstatus`, `internal/cli` (solo prueba).
 
 Depende de: U4. Paquetes: `internal/assets`, `internal/components`, `testdata/golden`.
 
-- [ ] 5.1 RED: pin en `internal/assets/assets_test.go`: «When to publish» ordena ejecutar `publication.invocation` exactamente una vez antes de lanzar la fase siguiente y una vez al reanudar; `code_unpublished` presenta `pushCommand` sin ejecutarlo; `unavailable` presenta el código; el campo nunca cambia `nextRecommended`; `sdd-status-contract.md` documenta el campo `publication` (estados, motivos, campos y omisiones).
+- [x] 5.1 RED: pin en `internal/assets/assets_test.go`: «When to publish» ordena ejecutar `publication.invocation` exactamente una vez antes de lanzar la fase siguiente y una vez al reanudar; `code_unpublished` presenta `pushCommand` sin ejecutarlo; `unavailable` presenta el código; el campo nunca cambia `nextRecommended`; `sdd-status-contract.md` documenta el campo `publication` (estados, motivos, campos y omisiones).
   Cubre: REQ-27.19
   Verificación: `go test ./internal/assets -run 'Orchestrator|StatusContract'`
-- [ ] 5.2 GREEN: añadir la frase al final del párrafo «When to publish» de `internal/assets/skills/_shared/sdd-orchestrator-sections.md` y una viñeta en `sdd-status-contract.md` (sección *Governance*, tras la de `gateQuestion`), con el texto de `design.md`; sin cambiar REQ-27.12 ni REQ-27.13 ni hacer que `gate record` ejecute git.
+- [x] 5.2 GREEN: añadir la frase al final del párrafo «When to publish» de `internal/assets/skills/_shared/sdd-orchestrator-sections.md` y una viñeta en `sdd-status-contract.md` (sección *Governance*, tras la de `gateQuestion`), con el texto de `design.md`; sin cambiar REQ-27.12 ni REQ-27.13 ni hacer que `gate record` ejecute git.
   Cubre: REQ-27.19
   Verificación: `go test ./internal/assets/...`
-- [ ] 5.3 Goldens: regenerar los 10 ficheros afectados con `go test ./internal/components -run TestGolden -update`, revisar el diff (solo la frase nueva) y volver a ejecutar sin `-update`.
+- [x] 5.3 Goldens: regenerar los 10 ficheros afectados con `go test ./internal/components -run TestGolden -update`, revisar el diff (solo la frase nueva) y volver a ejecutar sin `-update`.
   Cubre: REQ-27.19
   Verificación: `go test ./internal/components -run TestGolden`
-- [ ] 5.4 Cierre de U5: `go vet ./internal/assets/... ./internal/components/...` y commit `docs(sdd): ordenar ejecutar la publicación pendiente una vez antes de la fase siguiente`.
+- [x] 5.4 Cierre de U5: `go vet ./internal/assets/... ./internal/components/...` y commit `docs(sdd): ordenar ejecutar la publicación pendiente una vez antes de la fase siguiente`.
   Cubre: REQ-27.19
   Verificación: `go test ./internal/assets/...` y `go test ./internal/components -run TestGolden`
 

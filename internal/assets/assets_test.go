@@ -1120,3 +1120,53 @@ func TestSDDResearchAgentToolGrantIsExact(t *testing.T) {
 		t.Fatalf("claude/agents/sdd-research.md tools = %q, want %q", tools, want)
 	}
 }
+
+// REQ-27.19 (C-05-c): la doctrina ordena ejecutar `publication.invocation` una sola vez antes de
+// lanzar la fase siguiente y otra al reanudar, presenta sin ejecutar la orden de push de
+// `code_unpublished`, trata `unavailable` como información y no deja que el campo cambie la ruta;
+// el contrato del status documenta el campo `publication`.
+func TestPendingPublicationDoctrineAndStatusContract(t *testing.T) {
+	sections := mustReadResolved("skills/_shared/sdd-orchestrator-sections.md")
+	for _, want := range []string{
+		"When the status projects `publication` with `state: pending`, run its `publication.invocation` exactly once before launching the next phase and exactly once when resuming the change",
+		"its refusal is informational, never undoes an approval and never stops the chain",
+		"With `state: code_unpublished`, present its `pushCommand` to the person and never run it",
+		"with `state: unavailable`, present its code as information",
+		"The field never changes `nextRecommended`.",
+	} {
+		if !strings.Contains(sections, want) {
+			t.Errorf("shared gates section missing the pending-publication rule %q", want)
+		}
+	}
+	// El texto vive una sola vez, dentro del párrafo «When to publish», y no toca la envoltura de la compuerta.
+	if got := strings.Count(sections, "run its `publication.invocation` exactly once"); got != 1 {
+		t.Errorf("the pending-publication rule appears %d times in the shared gates section, want exactly once", got)
+	}
+	paragraph := ""
+	for _, line := range strings.Split(sections, "\n") {
+		if strings.HasPrefix(line, "When to publish.") {
+			paragraph = line
+		}
+	}
+	if !strings.Contains(paragraph, "run its `publication.invocation` exactly once") {
+		t.Error("the pending-publication rule must close the \"When to publish\" paragraph, not a new one")
+	}
+
+	contract := mustReadResolved("skills/_shared/sdd-status-contract.md")
+	for _, want := range []string{
+		"- `publication` (optional, at the root of the status, next to `gateQuestion`)",
+		"calculated with reads only (no network, no writes)",
+		"`state` is `pending`",
+		"`code_unpublished`",
+		"`unavailable`",
+		"`docs_uncommitted`, `branch_ahead`, `remote_branch_missing`, `code_commits` and `range_too_big`",
+		"`invocation`, the same as `gateQuestion.publication.invocation`",
+		"`pushCommand` for the person",
+		"It is omitted when there is nothing to commit or push",
+		"`nextRecommended`, `dependencies` and `blockedReasons` never depend on it",
+	} {
+		if !strings.Contains(contract, want) {
+			t.Errorf("status contract missing the publication field rule %q", want)
+		}
+	}
+}
