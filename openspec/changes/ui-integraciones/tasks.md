@@ -91,7 +91,7 @@ Barandillas transversales (aplican a TODA tarea que toque Go):
 
 ## Fase 7: Doctrina y documentación
 
-- [ ] 7.1 Documentación de usuario del dashboard y guías (docs de integraciones, seguridad local de Host y Origin, CSP, pantalla y pestaña, alta desde work item, desviación H-20 sobre el sellado del kickoff); regenerar goldens solo si alguna prueba focalizada los exige. Localizar los ficheros afectados con `Grep` (docs del dashboard, guía de integraciones, catálogo de ajustes) antes de editar. Ficheros: los de docs identificados en esa búsqueda (sin tocar rutas `technicalContext.reference`).
+- [x] 7.1 Documentación de usuario del dashboard y guías (docs de integraciones, seguridad local de Host y Origin, CSP, pantalla y pestaña, alta desde work item, desviación H-20 sobre el sellado del kickoff); regenerar goldens solo si alguna prueba focalizada los exige. Localizar los ficheros afectados con `Grep` (docs del dashboard, guía de integraciones, catálogo de ajustes) antes de editar. Ficheros: los de docs identificados en esa búsqueda (sin tocar rutas `technicalContext.reference`).
   Cubre: prov:WEB:1, prov:WEB:2, prov:WEB:7, prov:WEB:8, prov:WEB:9, RF-TOP-21.
   Prueba: pruebas de docs/goldens afectadas con `-run` (p. ej. `go test ./internal/dashboard -run 'TestAssets'`).
   Hecho cuando: la documentación describe el comportamiento real y las pruebas focalizadas pasan.

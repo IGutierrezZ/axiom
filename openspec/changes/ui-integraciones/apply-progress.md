@@ -12,6 +12,8 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 - [x] 4.1 Pantalla «Integraciones» genérica (D-09 cliente, D-10).
 - [x] 5.1 `OutboxView` y pestaña «Integraciones» del cambio (D-07, D-09).
 - [x] 6.1 Alta desde un work item: servicio y rutas (D-08).
+- [x] 6.2 Interfaz del alta con work item.
+- [x] 7.1 Documentación de usuario del dashboard y guías.
 
 ## Evidencia de la unidad 1.1
 
@@ -138,3 +140,12 @@ Implementación: `core/branches.js` añade `startFromWorkItem` (un 409 `decision
 Decisiones: con work item, el campo de nombre se ignora (el cambio se deriva del work item); las advertencias del éxito se muestran en el diálogo y el botón pasa a «Abrir el cambio». Cancelar la decisión de modo ofrece reintentar o descartar.
 
 Riesgos: la interfaz no se ha visto en un navegador real; el reintento reenvía la intención y el tipo del formulario.
+
+## Evidencia de la unidad 7.1
+
+| Evidencia | Valor |
+|---|---|
+| Documentación | `docs/usage.md` (nueva sección «Integraciones desde el dashboard», guarda de Host y Origin ampliada a todo `/api/*`, CORS retirado, ajustes sin bloque `integrations`), `docs/codebase/dashboard.md` (barrera de red, CSP, PAT, no sellado de `kickoff.yaml`) y `docs/manual-de-inicio.md` (viñeta del dashboard). |
+| Pruebas | `go test ./internal/workspace -run TestDocs`: ver resultado del commit; sin otras pruebas de docs afectadas. |
+
+Desviaciones: no existe CHANGELOG ni guía propia del dashboard para integraciones; se actualizó solo documentación existente. `docs/codebase/integrations.md` trata de integraciones de agentes y no se toca. No se tocaron goldens, skills, `docs/plan/` ni la spec viva.

@@ -9,7 +9,8 @@ El panel web local (`axiom ui`) vive en `internal/dashboard/` (servidor HTTP, AP
 - Escucha siempre en `127.0.0.1:47700` (`dashboard.DefaultPort`). `--port` lo cambia.
 - No hay reasignación silenciosa: si el puerto está ocupado por otra aplicación, `axiom ui` falla con un error que sugiere `--port`.
 - `GET /api/health` devuelve `{"service":"axiom-dashboard", ...}` (`internal/dashboard/health.go`). `ProbeAxiom` lo usa para decidir si ya hay un Axiom activo: en ese caso `axiom ui` solo abre la ventana, de modo que ejecutarlo varias veces nunca levanta dos servidores.
-- No existe endpoint de apagado: la API acepta CORS `*` y permitiría a cualquier web local parar el servidor.
+- No existe endpoint de apagado: aunque la API ya no acepta CORS, un endpoint así seguiría siendo una acción de administración sin autenticación.
+- **Barrera de red** (`withHeaders` en `server.go`, accesible en las pruebas con `handler()`): toda respuesta lleva una CSP general (`default-src 'self'`, `style-src 'self'`, sin estilos ni scripts en línea), `nosniff` y `Referrer-Policy: no-referrer`; `/api/explainer` conserva su propia CSP, una sola vez. No se emite ninguna cabecera `Access-Control-*` y `OPTIONS` responde `405`. Los assets no pueden llevar `style=` ni `<script>` con cuerpo: el tema inicial vive en `assets/js/theme-init.js` y los valores dinámicos se pasan con `data-*` y `core/cssvars.js`.
 
 ## PWA
 
@@ -41,7 +42,9 @@ Guía de usuario: [usage.md](../usage.md#ui).
 - **No silent cloud coupling**: el estado remoto va detrás de una interfaz de transporte/cliente.
 - **Assets sin recursos externos** ni emojis (lo vigilan los tests de `internal/dashboard`).
 - **`axiom.yaml` solo se escribe por `PUT /api/settings`**, mediante `internal/settings` (catálogo, escritor de round-trip y revisión). Ninguna otra ruta modifica `axiom.yaml`, y `GET /api/workspace` sigue siendo solo lectura. `internal/dashboard/settings_api.go` solo traduce entre HTTP y ese paquete.
-- **Toda escritura exige `isLocalRequest`**, lo primero y antes de leer el cuerpo (`rejectNonLocal`): `PUT /api/settings`, `PUT /api/settings/personal` y `PUT /api/projects/active/worktree-prefs`. Los `GET` siguen abiertos. Una ruta nueva se registra en `server.go` con literal de cadena y se clasifica en `secrets_canary_test.go`.
+- **Guarda local de Host y Origin** en `withHeaders`, antes de cualquier handler y de leer el cuerpo: todo `/api/*` con cualquier método y cualquier método que mute en cualquier ruta exigen `Host` en `127.0.0.1`, `localhost` o `::1` (con el puerto enlazado) y, si hay `Origin`, el mismo origen local; si no, `403 forbidden_origin`. Un proxy inverso o un cliente de otra máquina quedan fuera por diseño. Solo los assets estáticos en `GET`/`HEAD` quedan sin guarda. Una ruta nueva se registra en `server.go` con literal de cadena y se clasifica en `secrets_canary_test.go`.
+- **El PAT nunca sale**: `/api/integrations*` (estado, secreto, `connect`, `discover`, `change`, `start`) usa `no-store`, y el PAT solo entra por `POST` (límite `secrets.MaxValueBytes`, 2048 bytes). Las respuestas solo informan del `source` (`keyring`, `env` o `missing`), y una variable de entorno `AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>` lo tapa (`shadowedByEnv`). En Linux no hay almacén del sistema: solo vale la variable de entorno. El canario de secretos siembra un centinela y comprueba que ninguna respuesta, cabecera ni log lo contiene.
+- **El dashboard no sella `kickoff.yaml`**: el alta desde un work item (`POST /api/integrations/start`) ejecuta las fases 1 y 2 de `axiom change start` y prepara rama y carpeta, pero el sellado del kickoff se hace al retomar el cambio con el orquestador.
 
 ## Navigation
 
