@@ -25,10 +25,10 @@ Cambio `ajustes-proyecto`. Rol único `fullstack`. Cada tarea es una unidad de t
 
 ## Fase 1: Cimientos de vocabulario
 
-- [ ] 1.1 Escribir antes la prueba (RED) de que cada accesor devuelve una copia nueva por llamada: `PromotionValues()` (`branch, release, ask`) en `internal/workspace/gitpolicy_promotion_test.go`, `WorkflowLanes()` (`odd, sdd, ask`) en `internal/workspace/workflow_test.go`, `ExplainerHTMLModes()` (`ask, always, never`) en `internal/workspace/sdd_test.go` y `GatePolicies()` (`blocking, deferred, optional`) en `internal/multirole/types_test.go`.
-- [ ] 1.2 Crear `PromotionValues` en `internal/workspace/gitpolicy.go`, `WorkflowLanes` en `internal/workspace/workflow.go` y `ExplainerHTMLModes` en `internal/workspace/sdd.go`; `validPromotion`, `workflowValidator` y `sddExplainerHTML` pasan a `slices.Contains` sobre ellos, sin cambiar el texto de los errores.
-- [ ] 1.3 Crear `GatePolicies` en `internal/multirole/types.go` y hacer que `policyViolations` de `internal/hub/init_validate.go` lo use, sin cambiar su mensaje.
-- [ ] 1.4 Verificar que las pruebas existentes de mensajes siguen en verde con el comando de la unidad 1. Cada función exportada tiene así uso de producción doble (validador y, desde la unidad 2, catálogo).
+- [x] 1.1 Escribir antes la prueba (RED) de que cada accesor devuelve una copia nueva por llamada: `PromotionValues()` (`branch, release, ask`) en `internal/workspace/gitpolicy_promotion_test.go`, `WorkflowLanes()` (`odd, sdd, ask`) en `internal/workspace/workflow_test.go`, `ExplainerHTMLModes()` (`ask, always, never`) en `internal/workspace/sdd_test.go` y `GatePolicies()` (`blocking, deferred, optional`) en `internal/multirole/types_test.go`.
+- [x] 1.2 Crear `PromotionValues` en `internal/workspace/gitpolicy.go`, `WorkflowLanes` en `internal/workspace/workflow.go` y `ExplainerHTMLModes` en `internal/workspace/sdd.go`; `validPromotion`, `workflowValidator` y `sddExplainerHTML` pasan a `slices.Contains` sobre ellos, sin cambiar el texto de los errores.
+- [x] 1.3 Crear `GatePolicies` en `internal/multirole/types.go` y hacer que `policyViolations` de `internal/hub/init_validate.go` lo use, sin cambiar su mensaje.
+- [x] 1.4 Verificar que las pruebas existentes de mensajes siguen en verde con el comando de la unidad 1. Cada función exportada tiene así uso de producción doble (validador y, desde la unidad 2, catálogo).
 
 Cubre: RF-TOP-21
 

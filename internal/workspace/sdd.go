@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -115,6 +116,12 @@ func sddPattern(line int, node *yaml.Node) (reqid.Pattern, error) {
 	return pattern, nil
 }
 
+// ExplainerHTMLModes devuelve el vocabulario cerrado de `sdd.explainer_html`
+// (ask, always y never), en una copia nueva por llamada.
+func ExplainerHTMLModes() []ExplainerHTMLMode {
+	return []ExplainerHTMLMode{ExplainerHTMLAsk, ExplainerHTMLAlways, ExplainerHTMLNever}
+}
+
 // sddExplainerHTML lee `sdd.explainer_html`: solo un escalar !!str con ask, always
 // o never. El nulo, las listas, los mapeos y el booleano sin comillas se rechazan.
 func sddExplainerHTML(line int, node *yaml.Node) (ExplainerHTMLMode, error) {
@@ -123,8 +130,7 @@ func sddExplainerHTML(line int, node *yaml.Node) (ExplainerHTMLMode, error) {
 	if node != nil && node.Kind == yaml.ScalarNode {
 		value = node.Value
 		if node.Tag == "!!str" {
-			switch mode := ExplainerHTMLMode(value); mode {
-			case ExplainerHTMLAsk, ExplainerHTMLAlways, ExplainerHTMLNever:
+			if mode := ExplainerHTMLMode(value); slices.Contains(ExplainerHTMLModes(), mode) {
 				return mode, nil
 			}
 		}

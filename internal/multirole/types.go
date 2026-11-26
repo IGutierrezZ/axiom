@@ -34,6 +34,12 @@ const (
 	PolicyOptional GatePolicy = "optional"
 )
 
+// GatePolicies devuelve el vocabulario cerrado de `gate_policy` (blocking,
+// deferred y optional), en una copia nueva por llamada.
+func GatePolicies() []GatePolicy {
+	return []GatePolicy{PolicyBlocking, PolicyDeferred, PolicyOptional}
+}
+
 // RoleAssignment representa la asignación formal de un rol en un cambio SDD.
 type RoleAssignment struct {
 	Role         string     `yaml:"role"`
