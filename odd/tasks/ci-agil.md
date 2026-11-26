@@ -55,16 +55,28 @@ Modo TDD: desactivado (`openspec/config.yaml`, `strict_tdd: false`). Ruta: todas
 
 ## Tiempos
 
-| Medida | Antes (ejecución 45725054482, PR) | Después |
+| Medida | Antes (ejecución 45725054482, PR) | Después (ejecución 45730104048, esta PR) |
 |---|---|---|
-| CI de PR hasta `Unit Tests` | 1:59 | pendiente |
-| `Go Tests (app-assets-update)` | 1:04 | pendiente |
+| CI de PR hasta `Unit Tests` | 1:59 | 1:45 |
+| `Go Tests (app-assets-update)` | 1:04 | 0:48 |
+| `Go Tests (rest)` | 1:40 | 1:08 |
+| `Toolchain Meta Tests` | (dentro de `Go Tests`) | 1:15, en paralelo; solo en PR que tocan sus entradas |
 | Ejecuciones de `ci.yml` por merge a `main` | 1 (≈2:00 cada una) | 0; una nocturna si hay commits |
+
+Esta PR toca sus entradas (`.github/workflows/**`), así que el job nuevo corrió: los 7 meta-tests pasaron (`7 toolchain meta-test(s) passed`). El camino crítico pasa a ser `Go Tests (cli)` (1:30). La diferencia de `rest` incluye la variación del runner.
+
+## Evidencia
+
+- Commits: `c4b92170` (T1), `e41c7e00` (T2), `192975f4` (T3), `621c5c07` (T4).
+- Comprobaciones locales en verde: guardas de `internal/assets` (partición, agregador, formato, meta-tests) y `TestRequireCISuccessSelectsNewestExactCommitRun`, `TestReleaseDocumentationStatesArchiveDownloadCeiling`, `TestReleaseSecurityScriptsAreSyntacticallyValidAndFailClosed` de `internal/update`.
+- Mutaciones de la guarda nueva: quitar `TestModifiedReleaseVerifierCannotGainWriteAuthority` del selector y seleccionar `TestRequireGoToolchainSkipsUnlessEnabled` (`internal/testenv`) fallan con el mensaje esperado.
+- CI de la PR #322 en verde, con `Go Format` y `Unit Tests` presentes.
+- Pendiente de observar tras el merge: la primera nocturna (corre si `main` se movió; salta si no).
 
 ## Progreso
 
-- 2026-11-26: worktree creado; documento abierto.
+- 2026-11-26: worktree creado; T1-T4 hechas; PR #322 abierta y en verde.
 
 ## Siguiente paso
 
-T1.
+Merge de la PR #322 y `done`.
