@@ -41,6 +41,9 @@ func (c *Chain) Set(ctx context.Context, ref Ref, value Secret) error {
 	if c.second == nil {
 		return &KeyringUnavailableError{Ref: ref, EnvVar: ref.EnvVar(), Cause: ErrNoWritableStore}
 	}
+	if len(value.Reveal()) > MaxValueBytes {
+		return &ValueTooLargeError{Ref: ref, Max: MaxValueBytes, EnvVar: ref.EnvVar()}
+	}
 	if err := c.second.Set(ctx, ref, value); err != nil {
 		return &KeyringUnavailableError{Ref: ref, EnvVar: ref.EnvVar(), Cause: err}
 	}

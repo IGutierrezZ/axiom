@@ -51,3 +51,14 @@ Decisiones: `applyCssData` se llama también de forma síncrona tras pintar el t
 | Arnés | `settings.Write` sobre `t.TempDir()`; sin binarios sueltos ni ADO real. |
 
 Decisiones: `keySpec.uiRequired` lleva la obligatoriedad del manifiesto solo para la interfaz (`required` queda a false para poder retirar el plugin entero); `pluginSpecs` y `findPluginSpec` se construyen al vuelo desde `manifest.Catalog()`/`Lookup`, sin tabla estática; un secreto del manifiesto da `unknown_key`. La pantalla de ajustes omite la sección `integrations` y enlaza a `#/integraciones` (la pantalla llega en 4.1); el control `int` usa `min`/`max` del catálogo (1 por defecto). Riesgo: un plugin con ancla, alias o `<<` en `integrations` ahora hace el documento no escribible (RF-TOP-22, intencionado).
+
+## Evidencia de la unidad 3.1
+
+| Evidencia | Valor |
+|---|---|
+| RED | `chain_test.go` (`MaxValueBytes`, `ValueTooLargeError` indefinidos: el paquete no compilaba) e `integrations_gateway_test.go` (`NewIntegrationsGateway` indefinido en `go vet ./internal/cli`) escritos antes del código. |
+| GREEN | `go test ./internal/integrations/secrets -count=1`: ok. `go test ./internal/cli -run 'TestIntegrationsGateway\|TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign\|TestIntegrations' -count=1`: ok (38 s). `go test ./internal/integrations -run 'TestImportsDirection\|TestAdapterAssemblyImportRules' -count=1`: ok. `go vet` de `cli` y `secrets`: limpio. |
+| Trinquete de código muerto | `bash scripts/deadcode-ratchet.sh` señala `NewIntegrationsGateway` y sus tres métodos como nuevos inalcanzables: la alcanzabilidad se cierra en 3.2 (`SetIntegrationsGateway` en `main.go`), cuando existe el puerto del dashboard. |
+| Arnés | `adoEnv`/`adotest` y `newStartEnv`; sin ADO real ni binarios. |
+
+Desviaciones: (1) `secrets.MaxValueBytes` vale 2048, no 4096 (hueco 10: el almacén de Windows admite unos 2,5 KB); el límite ya lo aplica `Chain.Set` con un `*ValueTooLargeError` tipado que nombra la variable de entorno y nunca lleva el valor, y `secret set` de la CLI usa la misma constante. (2) `WorkItemRefusal`, los resultados y métodos de work item (`StartWorkItem`, `WorkItemStaged`, `AdoptWorkItem`, `DiscardWorkItem`) se declaran en 6.1, que es quien los necesita; adelantarlos habría dejado más código inalcanzable. (3) Un fallo de `Set` del almacén por otra causa ya llega como `*KeyringUnavailableError` (tipado, con la variable de entorno), sin reflejar el valor.
