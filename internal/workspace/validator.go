@@ -137,6 +137,14 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 		}
 	}
 
+	// 3b bis. `acceptance_tests.enabled: true` solo se admite en multirepo (RF-TOP-19).
+	// Como la regla de roles, es solo validación: la carga no la aplica, para que
+	// Locate y el archivado toleren el error (RF-TOP-20).
+	if err := acceptanceTestsTopologyError(cfg.AcceptanceTests, cfg.Workspace.Topology); err != nil {
+		report.Valid = false
+		report.Errors = append(report.Errors, err.Error())
+	}
+
 	// 4. Validación de las raíces de skills versionadas. El escaneo del índice ignora
 	// en silencio las inválidas, así que este es el único punto donde se avisa.
 	for _, root := range cfg.Workspace.SkillRoots {

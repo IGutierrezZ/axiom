@@ -138,6 +138,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
   sdd archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)
+  sdd tests check      Comprueba la batería de pruebas de aceptación (pruebas.md) de un cambio (--json)
   sdd archive-integrate Integra el cambio entero en la spec viva: asigna los IDs provisionales, compone todas las capacidades y reescribe tareas, deltas y traza (--check, --json)
   sdd trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)
   trace                Traza un requisito por su ID: incrementos SDD archivados y ODD integrados, bugs, tareas y commits --first-parent (--json)
@@ -2011,6 +2012,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  kickoff          Sella la configuración de kickoff de un cambio (seal, show)")
 		fmt.Fprintln(stdout, "  gate             Registra o consulta decisiones de compuertas de revisión por bloque (record, show)")
 		fmt.Fprintln(stdout, "  publish          Publica los documentos de un cambio: confirma solo su documentación y sube su rama a origin")
+		fmt.Fprintln(stdout, "  tests            Comprueba la batería de pruebas de aceptación de un cambio (check)")
 		if len(args) < 1 {
 			return 1
 		}
@@ -2048,8 +2050,10 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		err = cli.RunSDDGate(subArgs, stdout)
 	case "publish":
 		err = cli.RunSDDPublish(subArgs, stdout)
+	case "tests":
+		err = cli.RunSDDTests(subArgs, stdout)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, archive-check, archive-integrate, trace, integrate, task-result, preflight-hook, kickoff, gate, publish\n", subCmd)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, archive-check, archive-integrate, trace, integrate, task-result, preflight-hook, kickoff, gate, publish, tests\n", subCmd)
 		return 1
 	}
 

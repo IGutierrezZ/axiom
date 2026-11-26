@@ -26,7 +26,7 @@ type CubreLine struct {
 // fichero y la línea para los motivos.
 func ParseCubre(file, text string) []CubreLine {
 	var out []CubreLine
-	for _, line := range splitLines(text) {
+	for _, line := range SplitLines(text) {
 		if line.Fenced {
 			continue
 		}
@@ -292,7 +292,7 @@ func RewriteCubre(text string, m reqid.IDMap) string {
 	if m.Count() == 0 {
 		return text
 	}
-	lines := splitLines(text)
+	lines := SplitLines(text)
 	raw := strings.SplitAfter(text, "\n")
 	var b strings.Builder
 	for i, l := range raw {

@@ -69,6 +69,10 @@ type GovernanceConfig struct {
 // grande): es nil sin bloque y también cuando el bloque es inválido (el motivo
 // queda en Declarations.DeliveryErr).
 //
+// AcceptanceTests conserva lo declarado en `acceptance_tests:` (RF-TOP-19): es nil
+// sin bloque y también cuando el bloque es inválido (el motivo queda en
+// Declarations.AcceptanceTestsErr).
+//
 // Repositories, en cambio, conserva lo declarado en `repositories:` (RF-TOP-10),
 // sin resolver la herencia de Git: es nil sin bloque o sin entradas, y también
 // cuando el bloque es inválido (el motivo queda en Declarations.RepositoriesErr).
@@ -82,6 +86,7 @@ type WorkspaceConfig struct {
 	Delivery         *DeliveryConfig         `yaml:"-"`
 	Repositories     []RepositoryPolicy      `yaml:"-"`
 	Integrations     *IntegrationsConfig     `yaml:"-"`
+	AcceptanceTests  *AcceptanceTestsConfig  `yaml:"-"`
 }
 
 // ValidationReport contiene el resultado determinista de la validación del espacio de trabajo.

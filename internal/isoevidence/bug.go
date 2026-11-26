@@ -119,7 +119,7 @@ func (d BugDeclaration) Findings() []Finding {
 func sectionLines(text, heading string) ([]string, bool) {
 	var lines []string
 	in, found := false, false
-	for _, line := range splitLines(text) {
+	for _, line := range SplitLines(text) {
 		if line.Fenced {
 			continue
 		}

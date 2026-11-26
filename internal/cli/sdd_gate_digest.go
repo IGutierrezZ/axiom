@@ -7,6 +7,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
 // gateArtifactDigest resolves the digest a recorded GateRecord must carry
@@ -63,16 +64,11 @@ func gateArtifactDigest(changeRoot string, gate kickoff.GateKey, sealed *kickoff
 // of them exist, which is exactly when sddstatus's governanceArtifactInputs sets
 // the shared "tasks" digest, so a recorded tasks gate matches the status read.
 func tasksArtifactPathsForDigest(changeRoot string, sealed *kickoff.Kickoff) []string {
+	var roles []kickoff.KickoffRole
 	if sealed != nil {
-		if names := kickoff.RoleTaskFiles(sealed.Config.Roles); len(names) != 0 {
-			paths := make([]string, 0, len(names))
-			for _, name := range names {
-				paths = append(paths, filepath.Join(changeRoot, name))
-			}
-			return paths
-		}
+		roles = sealed.Config.Roles
 	}
-	return []string{filepath.Join(changeRoot, "tasks.md")}
+	return sddstatus.TasksGateArtifactPaths(changeRoot, roles)
 }
 
 // roleApplyArtifactDigestForRecord resolves a role-apply:<rol> gate's

@@ -22,7 +22,7 @@ func TestWorkflowAssetsAreServed(t *testing.T) {
 	for _, target := range []string{
 		"/js/core/markdown.js", "/js/core/increment.js",
 		"/js/screens/incrementos.js", "/js/screens/detalle.js",
-		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js", "/js/screens/detalle-explicacion.js",
+		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js", "/js/screens/detalle-explicacion.js", "/js/screens/detalle-pruebas.js",
 	} {
 		rr := getAsset(t, h, target)
 		if rr.Code != 200 {
@@ -100,7 +100,7 @@ func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
 func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 	t.Parallel()
 	html := readAsset(t, "index.html")
-	for _, tab := range []string{"artefactos", "roles", "handoff", "explicacion"} {
+	for _, tab := range []string{"artefactos", "roles", "handoff", "explicacion", "pruebas"} {
 		if !strings.Contains(html, `data-tab="`+tab+`"`) {
 			t.Errorf("index.html no contiene la pestaña %q", tab)
 		}
@@ -381,6 +381,52 @@ func TestIncrementsODDChipAndHomeStatsRuntime(t *testing.T) {
 	}
 	if css := readAsset(t, "style.css"); !strings.Contains(css, ".type-odd") {
 		t.Errorf("style.css no define .type-odd")
+	}
+}
+
+// La pestaña «Pruebas» sigue a «Explicación», siempre es visible y es de solo lectura: cada celda
+// de pruebas.md pasa por escapeHtml y no hay Markdown ni controles de escritura (RF-WEB-17).
+func TestAcceptanceTestsTab(t *testing.T) {
+	t.Parallel()
+	html := readAsset(t, "index.html")
+	explicacion := strings.Index(html, `data-tab="explicacion"`)
+	tab := strings.Index(html, `data-tab="pruebas"`)
+	if explicacion < 0 || tab < explicacion {
+		t.Errorf("la pestaña «Pruebas» debe ir tras «Explicación» (explicacion=%d, pruebas=%d)", explicacion, tab)
+	}
+	if !regexp.MustCompile(`data-tab="pruebas"[^>]*>Pruebas<`).MatchString(html) {
+		t.Error("la pestaña «Pruebas» no tiene su rótulo")
+	}
+	if regexp.MustCompile(`data-tab="pruebas"[^>]*hidden`).MatchString(html) {
+		t.Error("la pestaña «Pruebas» debe ser siempre visible")
+	}
+	if !strings.Contains(html, `data-panel="pruebas"`) {
+		t.Error("index.html no contiene el panel pruebas")
+	}
+
+	src := readAsset(t, "js/screens/detalle-pruebas.js")
+	for _, forbidden := range []string{"renderMarkdown", "<button", "<textarea", "<input", "contenteditable", "method: 'POST'", "fetch(", "Guardar", "Ejecutar"} {
+		if strings.Contains(src, forbidden) {
+			t.Errorf("detalle-pruebas.js no debe contener %q", forbidden)
+		}
+	}
+	for _, marker := range []string{
+		"no están activadas", "Todavía no hay batería de pruebas", "escapeHtml(c[key]", "detail.acceptance_tests",
+		"Resultado esperado", "Entornos",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("detalle-pruebas.js no contiene %q", marker)
+		}
+	}
+	if !strings.Contains(readAsset(t, "js/screens/detalle.js"), "renderAcceptanceTests(") {
+		t.Error("detalle.js no pinta la pestaña «Pruebas»")
+	}
+	if !strings.Contains(readAsset(t, "js/core/router.js"), "'pruebas'") {
+		t.Error("router.js no registra la pestaña pruebas")
+	}
+	css := readAsset(t, "js/screens/detalle-pruebas.js")
+	if regexp.MustCompile(`#[0-9a-fA-F]{3,8}\b`).MatchString(css) {
+		t.Error("detalle-pruebas.js no debe usar colores literales")
 	}
 }
 

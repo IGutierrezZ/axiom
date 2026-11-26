@@ -40,7 +40,7 @@ func joinLoadErrors(baseErr error, declarations Declarations) error {
 	if declarations.BaselineRetiredErr != nil {
 		candidates = append(candidates, declarations.BaselineRetiredErr)
 	}
-	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.DeliveryErr, declarations.IntegrationsErr, declarations.RepositoriesErr) {
+	for _, err := range append(candidates, declarations.TechnicalContextErr, declarations.GitErr, declarations.WorkflowErr, declarations.SDDErr, declarations.DeliveryErr, declarations.IntegrationsErr, declarations.AcceptanceTestsErr, declarations.RepositoriesErr) {
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -122,6 +122,10 @@ func parseLayered(data []byte) (*WorkspaceConfig, error, Declarations) {
 	// El bloque `integrations:` se proyecta tal como se declaró: nil sin bloque (RF-TOP-16).
 	if declarations.IntegrationsErr == nil {
 		cfg.Integrations = declarations.Integrations
+	}
+	// El bloque `acceptance_tests:` se proyecta tal como se declaró: nil sin bloque (RF-TOP-19).
+	if declarations.AcceptanceTestsErr == nil {
+		cfg.AcceptanceTests = declarations.AcceptanceTests
 	}
 	return &cfg, nil, declarations
 }
