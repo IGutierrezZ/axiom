@@ -9,9 +9,9 @@ const AzureDevOpsID = "azure-devops"
 //
 // Declara lo que este adaptador entrega: lectura de work items, descubrimiento, etiquetas y
 // adjuntos, y las capacidades de escritura del ciclo de vida (crear Tasks, relaciones, estimación,
-// horas, transiciones y asignación) con sus claves de configuración. El evento change.start es el
-// único que escucha por ahora: los eventos del ciclo de vida se declaran cuando el adaptador los
-// entrega.
+// horas, transiciones y asignación) con sus claves de configuración. Escucha el evento
+// de arranque change.start, role.start, role.apply.approved y archive; los de compuerta
+// de spec y design no.
 func AzureDevOps() Manifest {
 	return Manifest{
 		Schema: SchemaV1,
@@ -22,7 +22,7 @@ func AzureDevOps() Manifest {
 			CapItemsCreate, CapRelations, CapEstimation, CapTime, CapItemsTransition, CapAssignment,
 		},
 		RefAlias: "ado",
-		Events:   []EventType{EventChangeStart},
+		Events:   []EventType{EventChangeStart, EventRoleStart, EventRoleApplyApproved, EventArchive},
 		Config: []ConfigField{
 			{Key: "organization", Type: FieldString, Required: true,
 				Description: "Organización de Azure DevOps: la de dev.azure.com/<organización>"},

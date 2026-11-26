@@ -31,10 +31,10 @@ func TestAzureDevOpsManifestDeclaresOnlyDeliveredCapabilities(t *testing.T) {
 	}
 }
 
-func TestAzureDevOpsManifestListensOnlyToChangeStart(t *testing.T) {
+func TestAzureDevOpsManifestListensToLifecycleEvents(t *testing.T) {
 	m := AzureDevOps()
-	if !reflect.DeepEqual(m.Events, []EventType{EventChangeStart}) {
-		t.Fatalf("eventos = %v, esperaba solo change.start", m.Events)
+	if !reflect.DeepEqual(m.Events, []EventType{EventChangeStart, EventRoleStart, EventRoleApplyApproved, EventArchive}) {
+		t.Fatalf("eventos = %v, esperaba change.start, role.start, role.apply.approved y archive", m.Events)
 	}
 }
 

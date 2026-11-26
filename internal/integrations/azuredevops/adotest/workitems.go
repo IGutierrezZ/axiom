@@ -30,11 +30,13 @@ type workItemStore struct {
 	scramble     bool
 	afterRead    map[int][]map[string]any // ediciones ajenas que se aplican tras cada lectura
 
-	base            string // URL base del servidor, para las URL de las relaciones
-	loseCreate      bool   // el siguiente POST $Task se aplica pero la conexión se corta
-	rejectRelations bool   // un POST $Task con relaciones responde 400 sin crear
-	wiqlStatus      int    // si no es 0, la consulta WIQL responde siempre con este estado
-	created         int    // POST $Task que crearon un work item
+	base            string   // URL base del servidor, para las URL de las relaciones
+	loseCreate      bool     // el siguiente POST $Task se aplica pero la conexión se corta
+	rejectRelations bool     // un POST $Task con relaciones responde 400 sin crear
+	wiqlStatus      int      // si no es 0, la consulta WIQL responde siempre con este estado
+	created         int      // POST $Task que crearon un work item
+	assignees       []Member // miembros contra los que se resuelve System.AssignedTo
+	rejectState     string   // si no está vacío, todo PATCH de System.State responde 400 con este mensaje
 }
 
 var (
@@ -295,8 +297,17 @@ func (st *workItemStore) patch(req *Request) Response {
 					"typeKey": "RuleValidationException",
 				}}
 			}
+			if name == "System.State" && st.rejectState != "" {
+				return Response{Status: http.StatusBadRequest, JSON: map[string]any{
+					"message": st.rejectState,
+					"typeKey": "RuleValidationException",
+				}}
+			}
 			var value any
 			_ = json.Unmarshal(op.Value, &value)
+			if name == "System.AssignedTo" {
+				value = st.resolveAssignee(value)
+			}
 			updated[name] = value
 		case op.Op == "add" && op.Path == "/relations/-":
 			var rel map[string]any
@@ -321,6 +332,34 @@ func (st *workItemStore) patch(req *Request) Response {
 		return Response{Drop: true}
 	}
 	return Response{JSON: render(it, false)}
+}
+
+// resolveAssignee resuelve el valor de System.AssignedTo como lo hace el servidor real: un nombre
+// visible se convierte en la identidad (id y nombre visible) del miembro que lo lleva; sin miembro
+// que coincida, la identidad queda sin id. Un valor que ya es una identidad no cambia. Se llama con
+// st.mu tomado.
+func (st *workItemStore) resolveAssignee(value any) any {
+	name, ok := value.(string)
+	if !ok {
+		return value
+	}
+	for _, m := range st.assignees {
+		if strings.EqualFold(m.DisplayName, name) {
+			return map[string]any{"id": m.ID, "displayName": m.DisplayName}
+		}
+	}
+	return map[string]any{"displayName": name}
+}
+
+// RejectStateChange hace que todo PATCH que escriba System.State responda 400 con message, como una
+// regla del proceso que prohíbe la transición (cadena vacía la restablece).
+func (s *Server) RejectStateChange(message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.store()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.rejectState = message
 }
 
 // EditAfterNextRead simula que otra persona edita el work item id justo después de la próxima

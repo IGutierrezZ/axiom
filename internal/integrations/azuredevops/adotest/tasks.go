@@ -92,6 +92,10 @@ func (s *Server) SeedMembers(members ...Member) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.members = append([]Member(nil), members...)
+	st := s.store()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.assignees = append([]Member(nil), members...)
 }
 
 // extraGet devuelve el manejador de los campos de tipo y los miembros sembrados. Se llama con s.mu
