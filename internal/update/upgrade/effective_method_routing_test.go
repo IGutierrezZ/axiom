@@ -43,13 +43,13 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 		},
 		{
 			name:    "no Go on Windows routes to source build",
-			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom"},
+			tool:    update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary, GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom"},
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: false},
 			want:    update.InstallSourceBuild,
 		},
 		{
 			name:    "no import path on Windows routes to source build",
-			tool:    update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+			tool:    update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 			profile: system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: true},
 			want:    update.InstallSourceBuild,
 		},
@@ -65,88 +65,88 @@ func TestEffectiveMethodWindowsPrecedenceIsUnchanged(t *testing.T) {
 	}
 }
 
-// gentleAIImportPath is the module path gentle-ai publishes its command under.
+// selfImportPath is the module path axiom publishes its command under.
 // It is asserted against the registry below so the tests and the shipped
 // declaration cannot drift apart.
-const gentleAIImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/axiom"
+const selfImportPath = "github.com/IGutierrezZ/axiom/v3/cmd/axiom"
 
-// registryGentleAI returns the shipped gentle-ai registry entry. Routing tests
+// registrySelfTool returns the shipped axiom registry entry. Routing tests
 // use the real declaration rather than a hand-built ToolInfo so a regression in
 // registry.go cannot hide behind a synthetic fixture.
-func registryGentleAI(t *testing.T) update.ToolInfo {
+func registrySelfTool(t *testing.T) update.ToolInfo {
 	t.Helper()
 	for _, tool := range update.Tools {
-		if tool.Name == "gentle-ai" {
+		if tool.Name == "axiom" {
 			return tool
 		}
 	}
-	t.Fatal("gentle-ai is missing from the tool registry")
+	t.Fatal("axiom is missing from the tool registry")
 	return update.ToolInfo{}
 }
 
-// TestRegistryDeclaresGentleAIGoImportPath pins the declaration that makes the
+// TestRegistryDeclaresAxiomGoImportPath pins the declaration that makes the
 // Windows self-upgrade possible. Without it, Windows has no import path to
 // install from and falls back to the source-install refusal.
-func TestRegistryDeclaresGentleAIGoImportPath(t *testing.T) {
-	if got := registryGentleAI(t).GoImportPath; got != gentleAIImportPath {
-		t.Fatalf("gentle-ai GoImportPath = %q, want %q", got, gentleAIImportPath)
+func TestRegistryDeclaresAxiomGoImportPath(t *testing.T) {
+	if got := registrySelfTool(t).GoImportPath; got != selfImportPath {
+		t.Fatalf("axiom GoImportPath = %q, want %q", got, selfImportPath)
 	}
 }
 
-// TestGentleAIOnWindowsWithGoAvailableUpgradesThroughGoInstall is the approved
+// TestAxiomOnWindowsWithGoAvailableUpgradesThroughGoInstall is the approved
 // policy change: Windows publishes no signed binaries, so `go install` from the
 // pinned release tag is the only automatic upgrade path available there.
-func TestGentleAIOnWindowsWithGoAvailableUpgradesThroughGoInstall(t *testing.T) {
+func TestAxiomOnWindowsWithGoAvailableUpgradesThroughGoInstall(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
 
 	profile := system.PlatformProfile{OS: "windows", PackageManager: "winget", GoAvailable: true}
-	if got := effectiveMethod(registryGentleAI(t), profile); got != update.InstallGoInstall {
+	if got := effectiveMethod(registrySelfTool(t), profile); got != update.InstallGoInstall {
 		t.Fatalf("effectiveMethod on Windows with Go = %q, want %q", got, update.InstallGoInstall)
 	}
 }
 
-// TestGentleAIOnLinuxNeverRoutesToGoInstall is a regression guard for the
+// TestAxiomOnLinuxNeverRoutesToGoInstall is a regression guard for the
 // authenticated-download requirement. Linux upgrades must keep downloading the
 // signed release asset and verifying it with minisign; declaring a GoImportPath
 // for the Windows path must never move Linux off that trust anchor.
 //
 // Do not delete this test. It is the only thing standing between a one-line
 // routing edit and silently dropping minisign verification on Linux.
-func TestGentleAIOnLinuxNeverRoutesToGoInstall(t *testing.T) {
+func TestAxiomOnLinuxNeverRoutesToGoInstall(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
 
 	for _, packageManager := range []string{"apt", "pacman", "dnf", "rpm-ostree", ""} {
 		profile := system.PlatformProfile{OS: "linux", PackageManager: packageManager, GoAvailable: true}
-		if got := effectiveMethod(registryGentleAI(t), profile); got != update.InstallBinary {
+		if got := effectiveMethod(registrySelfTool(t), profile); got != update.InstallBinary {
 			t.Errorf("effectiveMethod on linux/%s = %q, want %q (minisign-verified download)", packageManager, got, update.InstallBinary)
 		}
 	}
 }
 
-// TestGentleAIOnMacOSNeverRoutesToGoInstall is the macOS half of the same
-// regression guard. See TestGentleAIOnLinuxNeverRoutesToGoInstall.
-func TestGentleAIOnMacOSNeverRoutesToGoInstall(t *testing.T) {
+// TestAxiomOnMacOSNeverRoutesToGoInstall is the macOS half of the same
+// regression guard. See TestAxiomOnLinuxNeverRoutesToGoInstall.
+func TestAxiomOnMacOSNeverRoutesToGoInstall(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
 
 	for _, packageManager := range []string{"brew", ""} {
 		profile := system.PlatformProfile{OS: "darwin", PackageManager: packageManager, GoAvailable: true}
-		if got := effectiveMethod(registryGentleAI(t), profile); got != update.InstallBinary {
+		if got := effectiveMethod(registrySelfTool(t), profile); got != update.InstallBinary {
 			t.Errorf("effectiveMethod on darwin/%s = %q, want %q (minisign-verified download)", packageManager, got, update.InstallBinary)
 		}
 	}
 }
 
-// TestGentleAILegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows covers
+// TestAxiomLegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows covers
 // the second job of the Windows branch: a legacy InstallScript declaration must
 // not route to scriptUpgrade, which on Windows has no bash and would send the
 // user to a releases page that publishes no Windows assets.
-func TestGentleAILegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows(t *testing.T) {
+func TestAxiomLegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
@@ -158,15 +158,15 @@ func TestGentleAILegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows(t *te
 		goModulePath string
 		want         update.InstallMethod
 	}{
-		{name: "with Go available and resolvable module routes to go install", goAvailable: true, goImportPath: gentleAIImportPath, goModulePath: "github.com/IGutierrezZ/axiom/v3", want: update.InstallGoInstall},
-		{name: "without Go available routes to source build", goAvailable: false, goImportPath: gentleAIImportPath, want: update.InstallSourceBuild},
+		{name: "with Go available and resolvable module routes to go install", goAvailable: true, goImportPath: selfImportPath, goModulePath: "github.com/IGutierrezZ/axiom/v3", want: update.InstallGoInstall},
+		{name: "without Go available routes to source build", goAvailable: false, goImportPath: selfImportPath, want: update.InstallSourceBuild},
 		{name: "without an import path routes to source build", goAvailable: true, want: update.InstallSourceBuild},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tool := update.ToolInfo{
-				Name:          "gentle-ai",
+				Name:          "axiom",
 				Owner:         "Gentleman-Programming",
 				Repo:          "gentle-ai",
 				InstallMethod: update.InstallScript,
@@ -185,13 +185,13 @@ func TestGentleAILegacyScriptDeclarationNeverReachesScriptUpgradeOnWindows(t *te
 	}
 }
 
-// TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination proves the
+// TestAxiomUpgradeWindowsPreservesResolvedAppDataDestination proves the
 // public upgrade boundary refuses before a backup or go install can create a
 // filesystem mutation.
 // No real Windows execution happens here: the platform profile and detectOS are
 // synthetic, which is the only way to exercise Windows ".exe" behavior from a
 // Linux host.
-func TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T) {
+func TestAxiomUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
@@ -200,10 +200,10 @@ func TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T)
 	t.Cleanup(func() { detectOS = origDetectOS })
 	detectOS = func() string { return "windows" }
 
-	appDataBin := filepath.Join(t.TempDir(), "AppData", "Local", "gentle-ai", "bin")
-	active := writeFakeBinary(t, appDataBin, "gentle-ai.exe")
+	appDataBin := filepath.Join(t.TempDir(), "AppData", "Local", "axiom", "bin")
+	active := writeFakeBinary(t, appDataBin, "axiom.exe")
 	goPath := t.TempDir()
-	destination := filepath.Join(goPath, "bin", "gentle-ai.exe")
+	destination := filepath.Join(goPath, "bin", "axiom.exe")
 
 	var goInstallCalls int
 	origExecCommand := execCommand
@@ -231,7 +231,7 @@ func TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T)
 	lookPathFn = func(string) (string, error) { return active, nil }
 
 	r := update.UpdateResult{
-		Tool:          registryGentleAI(t),
+		Tool:          registrySelfTool(t),
 		LatestVersion: "2.2.0",
 		Status:        update.UpdateAvailable,
 	}
@@ -258,7 +258,7 @@ func TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T)
 	if report.BackupID != "" || report.BackupWarning != "" {
 		t.Errorf("manual fallback created a backup result: %#v", report)
 	}
-	backupRoot := backup.LegacyBackupRootFor(homeDir)
+	backupRoot := backup.BackupRootFor(homeDir)
 	if _, err := os.Stat(backupRoot); !os.IsNotExist(err) {
 		t.Errorf("manual fallback created or pruned backup tree %s: %v", backupRoot, err)
 	}
@@ -269,7 +269,7 @@ func TestGentleAIUpgradeWindowsPreservesResolvedAppDataDestination(t *testing.T)
 	}
 }
 
-func TestGentleAIUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
+func TestAxiomUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
 	t.Cleanup(func() { homebrewPackageInstalled = origHomebrewPackageInstalled })
 	homebrewPackageInstalled = func(string) bool { return false }
@@ -279,7 +279,7 @@ func TestGentleAIUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
 	detectOS = func() string { return "windows" }
 
 	goPath := t.TempDir()
-	destination := writeFakeBinary(t, filepath.Join(goPath, "bin"), "gentle-ai.exe")
+	destination := writeFakeBinary(t, filepath.Join(goPath, "bin"), "axiom.exe")
 	var goInstallCalls int
 	goEnvCalls := map[string]int{}
 	origExecCommand := execCommand
@@ -308,7 +308,7 @@ func TestGentleAIUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
 
 	homeDir := t.TempDir()
 	report := ExecuteWithOptions(context.Background(), []update.UpdateResult{{
-		Tool:          registryGentleAI(t),
+		Tool:          registrySelfTool(t),
 		LatestVersion: "2.2.0",
 		Status:        update.UpdateAvailable,
 	}}, system.PlatformProfile{OS: "windows", PackageManager: "winget", Supported: true, GoAvailable: true}, homeDir, false, ExecuteOptions{})
@@ -328,7 +328,7 @@ func TestGentleAIUpgradeWindowsAllowsResolvedGoDestination(t *testing.T) {
 	}
 }
 
-func TestGentleAIUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
+func TestAxiomUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 	tests := []struct {
 		name          string
 		goEnvFails    bool
@@ -336,7 +336,7 @@ func TestGentleAIUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 		wantHint      string
 	}{
 		{name: "Go destination", goEnvFails: true, wantHint: "could not determine the Go installation destination"},
-		{name: "active executable", lookPathFails: true, wantHint: "could not resolve the active gentle-ai executable"},
+		{name: "active executable", lookPathFails: true, wantHint: "could not resolve the active axiom executable"},
 	}
 
 	for _, tt := range tests {
@@ -378,12 +378,12 @@ func TestGentleAIUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 				if tt.lookPathFails {
 					return "", exec.ErrNotFound
 				}
-				return filepath.Join(t.TempDir(), "gentle-ai.exe"), nil
+				return filepath.Join(t.TempDir(), "axiom.exe"), nil
 			}
 
 			homeDir := t.TempDir()
 			report := ExecuteWithOptions(context.Background(), []update.UpdateResult{{
-				Tool:          registryGentleAI(t),
+				Tool:          registrySelfTool(t),
 				LatestVersion: "2.2.0",
 				Status:        update.UpdateAvailable,
 			}}, system.PlatformProfile{OS: "windows", PackageManager: "winget", Supported: true, GoAvailable: true}, homeDir, false, ExecuteOptions{})
@@ -403,7 +403,7 @@ func TestGentleAIUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 			if report.BackupID != "" || report.BackupWarning != "" {
 				t.Errorf("manual fallback created a backup result: %#v", report)
 			}
-			backupRoot := backup.LegacyBackupRootFor(homeDir)
+			backupRoot := backup.BackupRootFor(homeDir)
 			if _, err := os.Stat(backupRoot); !os.IsNotExist(err) {
 				t.Errorf("manual fallback created or pruned backup tree %s: %v", backupRoot, err)
 			}
@@ -416,11 +416,11 @@ func TestGentleAIUpgradeWindowsRefusesUnresolvedGoProvenance(t *testing.T) {
 	}
 }
 
-// TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall covers the remaining
+// TestAxiomWindowsWithoutGoNamesRunnableSourceInstall covers the remaining
 // honest refusal: with no Go on PATH the tool cannot self-upgrade, and the
 // message must name a runnable command instead of a releases page that
 // publishes no Windows assets.
-func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
+func TestAxiomWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 	origExec := execCommand
 	t.Cleanup(func() { execCommand = origExec })
 	origLookPathCommand := lookPathCommand
@@ -441,7 +441,7 @@ func TestGentleAIWindowsWithoutGoNamesRunnableSourceInstall(t *testing.T) {
 
 	r := update.UpdateResult{
 		Tool: update.ToolInfo{
-			Name:          "gentle-ai",
+			Name:          "axiom",
 			Owner:         "Gentleman-Programming",
 			Repo:          "gentle-ai",
 			InstallMethod: update.InstallBinary,

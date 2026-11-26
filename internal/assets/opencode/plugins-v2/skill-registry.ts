@@ -1,4 +1,4 @@
-// gentle-ai:managed skill-registry/v2
+// axiom:managed skill-registry/v2
 import { Plugin } from "@opencode/plugin"
 import { execFile } from "node:child_process"
 import { access } from "node:fs/promises"
@@ -24,7 +24,7 @@ function describeRefreshFailure(err: RefreshFailure, cwd: string): string {
 }
 
 export default Plugin.define({
-  id: "gentle-ai.skill-registry",
+  id: "axiom.skill-registry",
   async setup(ctx) {
     // The loaded location, never process.cwd or the containing project's root.
     const cwd = ctx.location.directory

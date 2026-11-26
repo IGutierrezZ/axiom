@@ -19,7 +19,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if mode := os.Getenv("GENTLE_AI_CODEGRAPH_TEST_HELPER"); mode != "" {
+	if mode := os.Getenv("AXIOM_CODEGRAPH_TEST_HELPER"); mode != "" {
 		runCodeGraphTestHelper(mode)
 		os.Exit(0)
 	}
@@ -61,7 +61,7 @@ func runCodeGraphTestHelper(mode string) {
 		if mode == "stall-initialize" || mode == "stall-tools-list" && strings.Contains(request, `"id":2`) {
 			time.Sleep(24 * time.Hour)
 		}
-		response := os.Getenv("GENTLE_AI_CODEGRAPH_TEST_RESPONSE")
+		response := os.Getenv("AXIOM_CODEGRAPH_TEST_RESPONSE")
 		if response == "" && strings.Contains(request, `"id":1`) {
 			response = `{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-03-26","capabilities":{},"serverInfo":{"name":"fake","version":"1"}}}`
 		} else if response == "" && strings.Contains(request, `"id":2`) {
@@ -247,7 +247,7 @@ func TestInstallWithHomeReportsWorkspaceChildAndOwnershipTarget(t *testing.T) {
 	if result.PiCodeGraph == nil || len(result.PiCodeGraph.Children) != 1 || result.PiCodeGraph.Children[0].Target != target {
 		t.Fatalf("workspace Pi result = %#v, want target %q", result.PiCodeGraph, target)
 	}
-	manifestData, err := os.ReadFile(filepath.Join(home, ".gentle-ai", "pi-codegraph.json"))
+	manifestData, err := os.ReadFile(filepath.Join(home, ".axiom", "pi-codegraph.json"))
 	var manifest piCodeGraphManifest
 	if err != nil || json.Unmarshal(manifestData, &manifest) != nil {
 		t.Fatalf("ownership manifest = %q, err=%v", manifestData, err)
@@ -1101,7 +1101,7 @@ func TestDetectStatusReportsPiRuntimeMissingWhenAppendSystemHasNoMarker(t *testi
 	if !pi.Detected || pi.Configured || pi.Status != AgentStatusMissing {
 		t.Fatalf("Pi status = %#v, want detected missing", pi)
 	}
-	if pi.Path != filepath.Join(home, ".gentle-ai", "pi-codegraph.json") {
+	if pi.Path != filepath.Join(home, ".axiom", "pi-codegraph.json") {
 		t.Fatalf("Pi path = %q, want ownership manifest path", pi.Path)
 	}
 }

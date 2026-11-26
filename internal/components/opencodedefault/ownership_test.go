@@ -106,3 +106,56 @@ func TestUninstallWithoutOwnershipHandlesDefaultAgent(t *testing.T) {
 		})
 	}
 }
+
+func TestOwnershipMarkerMigratesLegacyName(t *testing.T) {
+	dir := t.TempDir()
+	settings := filepath.Join(dir, "opencode.json")
+	legacy := filepath.Join(dir, ".gentle-ai-default-agent.json")
+	check(t, os.WriteFile(settings, []byte("{}\n"), 0o644))
+	check(t, os.WriteFile(legacy, []byte("viejo"), 0o644))
+
+	if err := migrateLegacyOwnership(settings); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(OwnershipPath(settings)); err != nil || string(got) != "viejo" {
+		t.Fatalf("el marcador no se movió a %s: %q, %v", OwnershipPath(settings), got, err)
+	}
+	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
+		t.Fatalf("el marcador heredado debía desaparecer: %v", err)
+	}
+	// Idempotente.
+	if err := migrateLegacyOwnership(settings); err != nil {
+		t.Fatal(err)
+	}
+
+	// Con el marcador nuevo presente, el heredado no se toca.
+	check(t, os.WriteFile(legacy, []byte("otro"), 0o644))
+	if err := migrateLegacyOwnership(settings); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(OwnershipPath(settings)); string(got) != "viejo" {
+		t.Fatalf("el marcador nuevo se pisó: %q", got)
+	}
+	if got, _ := os.ReadFile(legacy); string(got) != "otro" {
+		t.Fatalf("el marcador heredado debía quedar intacto: %q", got)
+	}
+}
+
+func TestReadOwnershipAcceptsLegacySchemaAndRewritesWithAxiomSchema(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".axiom-default-agent.json")
+	legacy := `{"schema":"` + legacySchema + `","version":1,"state":"managed","previous_state":"absent"}`
+	check(t, os.WriteFile(path, []byte(legacy), 0o644))
+
+	owned, err := readOwnership(path)
+	if err != nil || owned == nil {
+		t.Fatalf("el esquema heredado debía leerse: %v", err)
+	}
+	if got := newOwnership(fieldValue{}); got.Schema != schema || schema != "axiom.opencode-default-agent" {
+		t.Fatalf("las escrituras nuevas deben llevar el esquema axiom, got %q", got.Schema)
+	}
+	check(t, os.WriteFile(path, []byte(`{"schema":"otro.esquema","version":1,"state":"managed","previous_state":"absent"}`), 0o644))
+	if _, err := readOwnership(path); err == nil {
+		t.Fatal("un esquema desconocido debía rechazarse")
+	}
+}

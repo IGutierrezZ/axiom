@@ -156,7 +156,7 @@ func agentOverlay(id model.AgentID) []byte {
 		// Cursor manages permissions via cli-config.json, not settings.json.
 		return nil
 	case model.AgentCodex:
-		// Codex relies on its built-in default permissions. gentle-ai writes
+		// Codex relies on its built-in default permissions. axiom writes
 		// nothing to Codex's permissions config — not a profile, and not the
 		// legacy cleanup that used to strip one. Codex refuses to load a config
 		// that defines a [permissions.*] profile without default_permissions,

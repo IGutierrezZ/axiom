@@ -11,6 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyhome"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
@@ -23,6 +24,12 @@ type InjectionResult struct {
 // Pi resolves this file relative to the active agent configuration root, which
 // is the user's home for global install and the workspace for workspace install.
 func PiPersonaConfigPath(rootDir string) string {
+	return filepath.Join(rootDir, ".pi", "axiom", "persona.json")
+}
+
+// legacyPiPersonaConfigPath es la ruta heredada .pi/gentle-ai/persona.json. Solo
+// se usa para migrarla a PiPersonaConfigPath.
+func legacyPiPersonaConfigPath(rootDir string) string {
 	return filepath.Join(rootDir, ".pi", "gentle-ai", "persona.json")
 }
 
@@ -31,6 +38,9 @@ func PiPersonaConfigPath(rootDir string) string {
 func InjectPiPersona(rootDir string, persona model.PersonaID) (InjectionResult, error) {
 	if strings.TrimSpace(rootDir) == "" {
 		return InjectionResult{}, fmt.Errorf("Pi persona root must not be empty")
+	}
+	if _, err := legacyhome.MoveIfAbsent(legacyPiPersonaConfigPath(rootDir), PiPersonaConfigPath(rootDir)); err != nil {
+		return InjectionResult{}, fmt.Errorf("migrate legacy Pi persona config: %w", err)
 	}
 	if persona == model.PersonaCustom {
 		return InjectionResult{}, nil
@@ -69,12 +79,12 @@ var openCodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n
 
 // Inject performs a full persona injection: the marker-bound markdown block,
 // the OpenCode `gentleman` agent definition in settings JSON, AND
-// the Claude Code output-style overlay. Used by `gentle-ai install`.
+// the Claude Code output-style overlay. Used by `axiom install`.
 func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
 	return injectInternal(homeDir, adapter, persona, false)
 }
 
-// InjectForSync regenerates the persona assets that `gentle-ai sync` is
+// InjectForSync regenerates the persona assets that `axiom sync` is
 // allowed to touch. It writes:
 //   - The marker-bound persona block in the agent's prompt file (markdown).
 //   - The Gentleman output-style file + outputStyle settings overlay (Claude
@@ -540,7 +550,7 @@ var osReadFile = func(path string) ([]byte, error) {
 }
 
 // preserveManagedSections checks whether the existing file content has
-// gentle-ai managed sections (SDD orchestrator, engram protocol, etc.) and
+// axiom managed sections (SDD orchestrator, engram protocol, etc.) and
 // returns new content that preserves those sections while replacing only the
 // persona text before them. Returns ("", false) when no preservation is needed
 // (empty file, Gentleman persona, or no managed markers found).

@@ -129,7 +129,7 @@ Meta-commands (type directly — orchestrator handles them, will not appear in a
 
 `/sdd-new`, `/sdd-continue`, and `/sdd-ff` are meta-commands handled by YOU. Do NOT invoke them as skills. You orchestrate the phase sequence through dynamic subagents, pausing for user approval between phases when required.
 
-<!-- gentle-ai:sdd-session-preflight -->
+<!-- axiom:sdd-session-preflight -->
 ### SDD Session Preflight (HARD GATE)
 
 Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.
@@ -147,7 +147,7 @@ Delivery is never asked: it is always `single-pr`, and the person may ask for ch
 Canonical mappings:
 - Interactive -> `interactive`
 - Automatic -> `auto`
-<!-- /gentle-ai:sdd-session-preflight -->
+<!-- /axiom:sdd-session-preflight -->
 ### Native SDD Dispatcher Guard
 
 For inspection and before routing an SDD change, invoke the native dispatcher using only `axiom sdd status [change] --cwd <repo> --json --instructions`. Inspection needs no execution preflight, review, delivery, or archive authorization; this read-only rule takes precedence over phase preflight/init guards. No recommendation is executed during inspection, including planning phases or a displayed preparation invocation.
@@ -357,7 +357,7 @@ proposal -> specs --> tasks -> apply -> verify -> archive
 
 Each phase subagent returns: `status`, `executive_summary`, `artifacts`, `next_recommended`, `risks`, `skill_resolution`.
 
-<!-- gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
 ## Model Assignments
 
 Read this table at session start. Antigravity supports multiple models via Mission Control — if your current model matches a phase's recommended alias, proceed normally. If model switching is not available mid-session, use this table as a reasoning-depth guide: phases assigned to `opus` require deeper architectural thinking, while `haiku` phases are mechanical.
@@ -374,7 +374,7 @@ Read this table at session start. Antigravity supports multiple models via Missi
 | sdd-archive | haiku | Copy and close |
 | default | sonnet | SDD/JD phase fallback |
 
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ### Dynamic Subagent Launch Deduplication (MANDATORY)
 

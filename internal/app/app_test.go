@@ -34,7 +34,7 @@ import (
 // newest-first by CreatedAt timestamp, matching the spec "newest first" ordering.
 func TestListBackupsNewestFirst(t *testing.T) {
 	home := t.TempDir()
-	backupRoot := backup.LegacyBackupRootFor(home)
+	backupRoot := backup.BackupRootFor(home)
 
 	older := backup.Manifest{
 		ID:        "older",
@@ -82,7 +82,7 @@ func TestListBackupsNewestFirst(t *testing.T) {
 // with Source metadata intact, so display labels can use the source field.
 func TestListBackupsWithSourceMetadata(t *testing.T) {
 	home := t.TempDir()
-	backupRoot := backup.LegacyBackupRootFor(home)
+	backupRoot := backup.BackupRootFor(home)
 
 	m := backup.Manifest{
 		ID:          "test-with-source",
@@ -118,94 +118,7 @@ func TestListBackupsWithSourceMetadata(t *testing.T) {
 	}
 }
 
-func TestListBackupsKeepsDuplicateIDsRestorableBySelectedRoot(t *testing.T) {
-	home := t.TempDir()
-	canonicalRoot := backup.BackupRootFor(home)
-	legacyRoot := backup.LegacyBackupRootFor(home)
-	sourcePath := filepath.Join(home, "config.json")
-
-	createSnapshot := func(root, contents string) backup.Manifest {
-		t.Helper()
-		if err := os.WriteFile(sourcePath, []byte(contents), 0o644); err != nil {
-			t.Fatalf("WriteFile(%q): %v", sourcePath, err)
-		}
-		manifest, err := backup.NewSnapshotter().Create(filepath.Join(root, "shared-id"), []string{sourcePath})
-		if err != nil {
-			t.Fatalf("Snapshotter.Create(%q): %v", root, err)
-		}
-		return manifest
-	}
-
-	axiomSnapshot := createSnapshot(canonicalRoot, "Axiom snapshot\n")
-	legacySnapshot := createSnapshot(legacyRoot, "Gentle AI snapshot\n")
-	if axiomSnapshot.ID != legacySnapshot.ID {
-		t.Fatalf("test setup IDs differ: Axiom=%q legacy=%q", axiomSnapshot.ID, legacySnapshot.ID)
-	}
-	if err := os.WriteFile(sourcePath, []byte("current configuration\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(current): %v", err)
-	}
-
-	setupMockHome(t, home)
-	manifests := ListBackups()
-	if len(manifests) != 2 {
-		t.Fatalf("ListBackups() returned %d manifests, want both same-ID roots", len(manifests))
-	}
-	byOrigin := make(map[backup.BackupOrigin]backup.Manifest, len(manifests))
-	for _, manifest := range manifests {
-		if manifest.ID != axiomSnapshot.ID {
-			t.Errorf("listed ID = %q, want shared ID %q", manifest.ID, axiomSnapshot.ID)
-		}
-		byOrigin[manifest.Origin] = manifest
-	}
-	axiom, hasAxiom := byOrigin[backup.BackupOriginAxiom]
-	legacy, hasLegacy := byOrigin[backup.BackupOriginGentleAI]
-	if !hasAxiom || !hasLegacy {
-		t.Fatalf("ListBackups() origins = %v, want both Axiom and Gentle AI", byOrigin)
-	}
-	if axiom.RootDir == legacy.RootDir {
-		t.Fatalf("same-ID backups share restore path %q; expected root-specific identity", axiom.RootDir)
-	}
-
-	restoreThroughTUI := func(selected backup.Manifest, want string) {
-		t.Helper()
-		m := tui.NewModel(system.DetectionResult{}, "dev")
-		m.Backups = manifests
-		m.RestoreFn = tuiRestore
-		m.Screen = tui.ScreenBackups
-		for i, manifest := range m.Backups {
-			if manifest.Origin == selected.Origin {
-				m.Cursor = i // Explicitly choose this product-origin row.
-				break
-			}
-		}
-
-		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
-		confirm := updated.(tui.Model)
-		if confirm.SelectedBackup.RootDir != selected.RootDir || confirm.SelectedBackup.Origin != selected.Origin {
-			t.Fatalf("TUI selected root=%q origin=%q, want root=%q origin=%q", confirm.SelectedBackup.RootDir, confirm.SelectedBackup.Origin, selected.RootDir, selected.Origin)
-		}
-		updated, cmd := confirm.Update(tea.KeyMsg{Type: tea.KeyEnter})
-		if cmd == nil {
-			t.Fatal("confirming the selected backup returned no restore command")
-		}
-		updated, _ = updated.(tui.Model).Update(cmd())
-		if got := updated.(tui.Model).RestoreErr; got != nil {
-			t.Fatalf("restoring %s backup failed: %v", selected.Origin, got)
-		}
-		contents, err := os.ReadFile(sourcePath)
-		if err != nil {
-			t.Fatalf("ReadFile(restored config): %v", err)
-		}
-		if string(contents) != want {
-			t.Fatalf("restored %s snapshot = %q, want %q", selected.Origin, contents, want)
-		}
-	}
-
-	restoreThroughTUI(axiom, "Axiom snapshot\n")
-	restoreThroughTUI(legacy, "Gentle AI snapshot\n")
-}
-
-// TestRunArgsRestoreListIsDispatched verifies that `gentle-ai restore --list`
+// TestRunArgsRestoreListIsDispatched verifies that `axiom restore --list`
 // is correctly dispatched through RunArgs and produces a meaningful response
 // (either a backup list or a "no backups" message — never "unknown command").
 func TestRunArgsRestoreListIsDispatched(t *testing.T) {
@@ -233,7 +146,7 @@ func TestRunArgsRestoreListIsDispatched(t *testing.T) {
 // through app.RunArgs.
 func TestRunArgsRestoreByIDWithYes(t *testing.T) {
 	home := t.TempDir()
-	backupRoot := backup.LegacyBackupRootFor(home)
+	backupRoot := backup.BackupRootFor(home)
 
 	// Create a backup with a real file entry so restore can succeed.
 	sourceFile := filepath.Join(home, "config.md")
@@ -378,7 +291,7 @@ func TestRunArgsInstallHelpPrintsInstallSpecificHelp(t *testing.T) {
 	}
 
 	out := buf.String()
-	for _, want := range []string{"--channel", "beta", "nightly", "GENTLE_AI_CHANNEL"} {
+	for _, want := range []string{"--channel", "beta", "nightly", "AXIOM_CHANNEL"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("install help missing %q; output:\n%s", want, out)
 		}
@@ -482,7 +395,7 @@ func TestRunArgsSDDContinueIsDispatchedBeforePlatformValidation(t *testing.T) {
 func TestListBackupsFallsBackGracefullyForOldManifests(t *testing.T) {
 	_ = fmt.Sprintf // Ensure fmt is used.
 	home := t.TempDir()
-	backupRoot := backup.LegacyBackupRootFor(home)
+	backupRoot := backup.BackupRootFor(home)
 
 	// Write a manifest with no Source/Description.
 	m := backup.Manifest{
@@ -773,7 +686,7 @@ func TestTuiInstallOnThenSyncPreservesAndRefreshesOpenCodeActivation(t *testing.
 	if err != nil {
 		t.Fatalf("ReadFile(OpenCode settings): %v", err)
 	}
-	if !strings.Contains(string(settings), `\u003c!-- gentle-ai:opencode-background-subagents --\u003e`) {
+	if !strings.Contains(string(settings), `\u003c!-- axiom:opencode-background-subagents --\u003e`) {
 		t.Fatalf("TUI sync did not preserve OpenCode background policy in SDD settings")
 	}
 	persisted, err := state.Read(home)
@@ -870,7 +783,7 @@ func TestTuiSyncClaudeModelConfigWritesSelectedAssignments(t *testing.T) {
 		t.Fatalf("ReadFile(%s): %v", workflowPath, err)
 	}
 	for _, unwanted := range []string{
-		"<!-- gentle-ai:sdd-model-assignments -->",
+		"<!-- axiom:sdd-model-assignments -->",
 		"## Model Assignments",
 		"Every Claude Agent tool call MUST include `model`",
 	} {
@@ -1362,7 +1275,7 @@ func TestLoadPersistedAssignmentsWiresEffort(t *testing.T) {
 	}
 }
 
-// TestVersionBeforeSystemGuards verifies that `gentle-ai version` returns the
+// TestVersionBeforeSystemGuards verifies that `axiom version` returns the
 // version string without going through system detection or platform guards.
 func TestVersionBeforeSystemGuards(t *testing.T) {
 	var buf bytes.Buffer
@@ -1370,8 +1283,8 @@ func TestVersionBeforeSystemGuards(t *testing.T) {
 	if err != nil {
 		t.Fatalf("version should not fail: %v", err)
 	}
-	if !strings.Contains(buf.String(), "gentle-ai") && !strings.Contains(buf.String(), "axiom") {
-		t.Error("version output should contain 'axiom' or 'gentle-ai'")
+	if !strings.Contains(buf.String(), "axiom") && !strings.Contains(buf.String(), "axiom") {
+		t.Error("version output should contain 'axiom' or 'axiom'")
 	}
 }
 
@@ -1396,14 +1309,14 @@ func TestHelpCommand(t *testing.T) {
 }
 
 // TestUnknownCommandSuggestsHelp verifies that an unrecognised command returns
-// an error whose message suggests running 'axiom help' or 'gentle-ai help'.
+// an error whose message suggests running 'axiom help' or 'axiom help'.
 func TestUnknownCommandSuggestsHelp(t *testing.T) {
 	var buf bytes.Buffer
 	err := RunArgs([]string{"notacommand"}, &buf)
 	if err == nil {
 		t.Fatal("unknown command should return error")
 	}
-	if !strings.Contains(err.Error(), "axiom help") && !strings.Contains(err.Error(), "gentle-ai help") {
+	if !strings.Contains(err.Error(), "axiom help") {
 		t.Error("unknown command error should suggest 'axiom help'")
 	}
 }
@@ -1470,7 +1383,7 @@ func TestRunArgs_UpdateSkipsSelfUpdate(t *testing.T) {
 	updateCheckAll = func(context.Context, string, system.PlatformProfile) []update.UpdateResult {
 		return []update.UpdateResult{
 			{
-				Tool:             update.ToolInfo{Name: "gentle-ai"},
+				Tool:             update.ToolInfo{Name: "axiom"},
 				InstalledVersion: "1.0.0",
 				LatestVersion:    "1.0.0",
 				Status:           update.UpToDate,
@@ -1516,7 +1429,7 @@ func TestRunArgs_UpgradeSkipsSelfUpdate(t *testing.T) {
 	updateCheckFiltered = func(context.Context, string, system.PlatformProfile, []string) []update.UpdateResult {
 		return []update.UpdateResult{
 			{
-				Tool:             update.ToolInfo{Name: "gentle-ai", InstallMethod: update.InstallBinary},
+				Tool:             update.ToolInfo{Name: "axiom", InstallMethod: update.InstallBinary},
 				InstalledVersion: "1.0.0",
 				LatestVersion:    "1.0.0",
 				Status:           update.UpToDate,
@@ -1688,7 +1601,7 @@ func TestTUIExecuteReturnsStatePersistenceFailure(t *testing.T) {
 	if _, readErr := os.ReadFile(configPath); !os.IsNotExist(readErr) {
 		t.Fatalf("config after failed TUI install read error = %v, want absent", readErr)
 	}
-	if _, readErr := os.Stat(filepath.Join(home, ".gentle-ai", "bin", "opencode")); !os.IsNotExist(readErr) {
+	if _, readErr := os.Stat(filepath.Join(home, ".axiom", "bin", "opencode")); !os.IsNotExist(readErr) {
 		t.Fatalf("launcher after failed TUI install stat error = %v, want absent", readErr)
 	}
 	finalState, readErr := os.ReadFile(target)
@@ -1722,7 +1635,7 @@ func TestTUIExecuteRollsBackOnMalformedState(t *testing.T) {
 		t.Fatalf("tuiExecute() error = %v, want state read failure", result.Err)
 	}
 
-	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "bin", "opencode")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(home, ".axiom", "bin", "opencode")); !os.IsNotExist(err) {
 		t.Fatalf("launcher after failed TUI install stat error = %v, want absent", err)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".config", "opencode", "opencode.json")); !os.IsNotExist(err) {
@@ -2059,10 +1972,10 @@ func writeAppSDDStatusFile(t *testing.T, path string, content string) {
 	}
 }
 
-// TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult verifies that when the TUI
-// reports a successful gentle-ai upgrade, RunArgs calls restartAfterGentleAIUpgrade
+// TestRunArgs_TUIRestartsAfterAxiomUpgradeResult verifies that when the TUI
+// reports a successful axiom upgrade, RunArgs calls restartAfterSelfUpgrade
 // which (after task 4.6) prints the restart guidance message instead of re-execing.
-func TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult(t *testing.T) {
+func TestRunArgs_TUIRestartsAfterAxiomUpgradeResult(t *testing.T) {
 	assumeInteractiveTTY(t)
 	origDetect := detectSystem
 	origEnsure := ensureCurrentOSSupported
@@ -2081,7 +1994,7 @@ func TestRunArgs_TUIRestartsAfterGentleAIUpgradeResult(t *testing.T) {
 	}
 
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	runTUI = func(m tea.Model, _ ...tea.ProgramOption) (tea.Model, error) {
 		model := m.(tui.Model)

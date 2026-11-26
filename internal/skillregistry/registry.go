@@ -50,12 +50,12 @@ type cacheFile struct {
 // Keep these source roots in sync with the gentle-pi skill-registry extension.
 func UserSkillDirs(home string) []string {
 	return []string{
-		// Gentle AI/Pi and generic Agent Skills locations.
+		// Axiom/Pi and generic Agent Skills locations.
 		filepath.Join(home, ".pi", "agent", "skills"),
 		filepath.Join(home, ".config", "agents", "skills"),
 		filepath.Join(home, ".agents", "skills"),
 
-		// Agent-specific global skill locations supported by Gentle AI adapters.
+		// Agent-specific global skill locations supported by Axiom adapters.
 		filepath.Join(home, ".config", "opencode", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".gemini", "skills"),
@@ -102,7 +102,7 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".codex", "skills"),
 		filepath.Join(cwd, ".qwen", "skills"),
 
-		// Gentle AI/Pi and generic Agent Skills workspace locations.
+		// Axiom/Pi and generic Agent Skills workspace locations.
 		filepath.Join(cwd, ".pi", "skills"),
 		filepath.Join(cwd, ".agent", "skills"),
 		filepath.Join(cwd, ".agents", "skills"),
@@ -301,7 +301,7 @@ func runMirror(mirror MirrorFunc, cwd string, entries []SkillEntry) MirrorOutcom
 
 // List resolves the deduplicated, sorted set of skills that Regenerate would
 // index, without writing the registry, cache, or .gitignore. It is the
-// read-only inspection path behind `gentle-ai skill-registry list`.
+// read-only inspection path behind `axiom skill-registry list`.
 func List(cwd, home string) []SkillEntry {
 	cwd = cleanPathArg(cwd)
 	home = filepath.Clean(home)

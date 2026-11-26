@@ -51,7 +51,7 @@ func setOldModTime(t *testing.T, path string) time.Time {
 // REQ-25.14 y D-05 (fase 5): `ensure` guarda el plan en
 // `<common dir>/axiom/branch/v1/sdd/x.json` con rutas absolutas; una segunda ejecución con el
 // mismo estado no reescribe el fichero, y las dos describen el mismo estado final (también
-// `registry.present`). El registro no toca `gentle-ai/`.
+// `registry.present`). El registro no toca `axiom/`.
 func TestEnsureWritesTheRegistryAndRepeatingDoesNotRewriteIt(t *testing.T) {
 	t.Parallel()
 	repo := embeddedCoreProject(t)

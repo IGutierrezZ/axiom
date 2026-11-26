@@ -603,6 +603,14 @@ func TestInjectGeminiToolsFlagPresent(t *testing.T) {
 
 func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 	home := t.TempDir()
+	// Plugin escrito por una versión con el nombre anterior: se retira al inyectar.
+	legacyDir := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram")
+	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll(%q) error = %v", legacyDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(legacyDir, "plugin.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatalf("WriteFile legacy plugin error = %v", err)
+	}
 
 	result, err := Inject(home, antigravityAdapter())
 	if err != nil {
@@ -625,12 +633,12 @@ func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 		t.Fatalf("Antigravity should use Engram's default MCP invocation without tool-profile flags; got:\n%s", text)
 	}
 
-	pluginPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "plugin.json")
+	pluginPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "plugin.json")
 	if _, err := os.Stat(pluginPath); err != nil {
 		t.Fatalf("Antigravity Engram plugin manifest missing: %v", err)
 	}
 
-	pluginMCPPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "mcp_config.json")
+	pluginMCPPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "mcp_config.json")
 	pluginMCPContent, err := os.ReadFile(pluginMCPPath)
 	if err != nil {
 		t.Fatalf("ReadFile(%q) error = %v", pluginMCPPath, err)
@@ -640,7 +648,14 @@ func TestInjectAntigravityWritesMCPToCLIConfig(t *testing.T) {
 		t.Fatalf("Antigravity Engram plugin MCP config should expose default Engram MCP tools; got:\n%s", pluginMCPText)
 	}
 
-	hooksPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "gentle-ai-engram", "hooks.json")
+	if _, err := os.Stat(legacyDir); !os.IsNotExist(err) {
+		t.Fatalf("legacy Antigravity Engram plugin directory must be retired; stat error = %v", err)
+	}
+	if again, err := Inject(home, antigravityAdapter()); err != nil || again.Changed {
+		t.Fatalf("second Inject must be idempotent; changed = %v, error = %v", again.Changed, err)
+	}
+
+	hooksPath := filepath.Join(home, ".gemini", "antigravity-cli", "plugins", "axiom-engram", "hooks.json")
 	hooksContent, err := os.ReadFile(hooksPath)
 	if err != nil {
 		t.Fatalf("ReadFile(%q) error = %v", hooksPath, err)
@@ -866,7 +881,7 @@ func TestInjectClaudePreservesAbsoluteCommandFromEngramSetup(t *testing.T) {
 }
 
 // TestInjectClaudeSkipsMCPServersEngramWhenPluginEnabled reproduces issue
-// #4188: gentle-ai sync must not add mcpServers.engram to ~/.claude.json
+// #4188: axiom sync must not add mcpServers.engram to ~/.claude.json
 // when the Engram plugin is already enabled via
 // ~/.claude/settings.json's enabledPlugins["engram@engram"], because the
 // plugin already exposes the same 18 tools under a different prefix.
@@ -902,7 +917,7 @@ func TestInjectClaudeSkipsMCPServersEngramWhenPluginEnabled(t *testing.T) {
 // TestInjectClaudePreservesIdenticalManualRegistrationsWhenPluginEnabled
 // verifies that sync never infers ownership from an Engram registration's
 // shape. A user can author exactly the same registry and legacy entries that
-// gentle-ai would write, so plugin detection must only suppress new writes.
+// axiom would write, so plugin detection must only suppress new writes.
 func TestInjectClaudePreservesIdenticalManualRegistrationsWhenPluginEnabled(t *testing.T) {
 	home := t.TempDir()
 	mockEngramLookPath(t, "/opt/homebrew/bin/engram", "")
@@ -1213,7 +1228,7 @@ func TestInjectCodexIsIdempotent(t *testing.T) {
 // ─── Codex profile injection tests ───────────────────────────────────────────
 
 // TestInjectCodexWritesProfiles asserts that Inject for the Codex adapter
-// writes the three gentle-ai SDD profile files into ~/.codex/.
+// writes the three axiom SDD profile files into ~/.codex/.
 func TestInjectCodexWritesProfiles(t *testing.T) {
 	validCodexRuntime(t)
 	home := t.TempDir()

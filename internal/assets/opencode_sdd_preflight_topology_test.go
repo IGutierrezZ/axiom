@@ -92,7 +92,7 @@ const root=fs.mkdtempSync(path.join(os.tmpdir(),'axiom-sdd-topology-'));
 const project=(name,topology)=>{const dir=path.join(root,name);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'axiom.yaml'),'workspace:\n  name: fixture\n'+(topology?'  topology: '+topology+'\n':''));return dir};
 const mono=project('mono','monorepo-embedded'),multi=project('multi','multirepo'),unknown=project('unknown','federated'),bare=project('bare','');
 const PACE=['Interactive','Automatic'],ART=['OpenSpec','Engram','Both'],PR=['Ask me','Single PR','Auto'];
-const N='Axiom SDD preflight ',G='Gentle AI SDD preflight ';
+const N='Axiom SDD preflight ',G='Axiom SDD preflight ';
 const ask=(marker,labels,extra)=>({question:marker+' Which one?',options:labels.map(label=>({label})),...extra});
 const block=(pace,store,delivery)=>['## SDD Session Preflight','Parent-confirmed by the runtime; models and child agents cannot create or modify this block.','- Pace: '+pace,'- Artifact store: '+store,'- Delivery strategy: '+delivery].join('\n');
 const same=(got,want,why)=>{if(got!==want)throw Error(why+':\n'+got+'\n---\n'+want)};

@@ -15,7 +15,7 @@ func TestEffectiveMethodSelfToolRouting(t *testing.T) {
 	homebrewPackageInstalled = func(string) bool { return false }
 
 	forkTool := update.ToolInfo{
-		Name:         "gentle-ai",
+		Name:         "axiom",
 		Owner:        "IGutierrezZ",
 		Repo:         "axiom",
 		GoImportPath: "github.com/IGutierrezZ/axiom/cmd/axiom",
@@ -23,7 +23,7 @@ func TestEffectiveMethodSelfToolRouting(t *testing.T) {
 	}
 
 	upstreamTool := update.ToolInfo{
-		Name:         "gentle-ai",
+		Name:         "axiom",
 		Owner:        "Gentleman-Programming",
 		Repo:         "gentle-ai",
 		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
@@ -99,7 +99,7 @@ func TestSelfToolNeverRoutesToHomebrew(t *testing.T) {
 		return update.HomebrewFormula, nil
 	}
 
-	tool := update.ToolInfo{Name: "gentle-ai", Owner: "IGutierrezZ", Repo: "axiom", InstallMethod: update.InstallBinary}
+	tool := update.ToolInfo{Name: "axiom", Owner: "IGutierrezZ", Repo: "axiom", InstallMethod: update.InstallBinary}
 	profile := system.PlatformProfile{OS: "darwin", PackageManager: "brew"}
 
 	if got := effectiveMethod(tool, profile); got == update.InstallBrew {

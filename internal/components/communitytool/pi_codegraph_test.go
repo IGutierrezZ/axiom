@@ -28,7 +28,7 @@ func TestPiCodeGraphUnselectedIsNoOp(t *testing.T) {
 	if result.Changed || len(result.Children) != 0 {
 		t.Fatalf("result = %#v, want no-op", result)
 	}
-	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "pi-codegraph.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(home, ".axiom", "pi-codegraph.json")); !os.IsNotExist(err) {
 		t.Fatalf("manifest exists after unselected reconciliation: %v", err)
 	}
 }
@@ -514,7 +514,7 @@ func TestPiCodeGraphFailureRestoresNewMCPAndChild(t *testing.T) {
 	writePiFile(t, childPath, original)
 	previous := piCodeGraphAtomicWrite
 	piCodeGraphAtomicWrite = func(path string, data []byte, mode os.FileMode) (filemerge.WriteResult, error) {
-		if path == filepath.Join(home, ".gentle-ai", "pi-codegraph.json") {
+		if path == filepath.Join(home, ".axiom", "pi-codegraph.json") {
 			return filemerge.WriteResult{}, os.ErrPermission
 		}
 		return previous(path, data, mode)
@@ -538,7 +538,7 @@ func TestPiCodeGraphFailureRemovesNewPackageOverlayWithoutVerificationSuccess(t 
 	writePiFile(t, packageChild, "---\ntools: bash\n---\npackage instructions\n")
 	previous := piCodeGraphAtomicWrite
 	piCodeGraphAtomicWrite = func(path string, data []byte, mode os.FileMode) (filemerge.WriteResult, error) {
-		if path == filepath.Join(home, ".gentle-ai", "pi-codegraph.json") {
+		if path == filepath.Join(home, ".axiom", "pi-codegraph.json") {
 			return filemerge.WriteResult{}, os.ErrPermission
 		}
 		return previous(path, data, mode)
@@ -561,7 +561,7 @@ func TestPiCodeGraphPendingProbePreservesConfiguredFiles(t *testing.T) {
 	home := t.TempDir()
 	mcpPath := filepath.Join(home, ".pi", "agent", "mcp.json")
 	childPath := filepath.Join(home, ".pi", "agent", "subagents", "worker.md")
-	manifestPath := filepath.Join(home, ".gentle-ai", "pi-codegraph.json")
+	manifestPath := filepath.Join(home, ".axiom", "pi-codegraph.json")
 	writePiFile(t, childPath, "---\ntools: bash\n---\nwork\n")
 	writePiFile(t, filepath.Join(home, ".pi", "agent", "npm", "node_modules", "pi-mcp-adapter", "index.ts"), "export default {}\n")
 	installFakeCodeGraph(t)
@@ -612,7 +612,7 @@ func TestPiCodeGraphPendingProbeRejectsConflictingChildAndRollsBack(t *testing.T
 	if got := string(mustReadPiFile(t, childPath)); got != original {
 		t.Fatalf("child after rollback = %q, want %q", got, original)
 	}
-	if _, statErr := os.Stat(filepath.Join(home, ".gentle-ai", "pi-codegraph.json")); !os.IsNotExist(statErr) {
+	if _, statErr := os.Stat(filepath.Join(home, ".axiom", "pi-codegraph.json")); !os.IsNotExist(statErr) {
 		t.Fatalf("pending manifest persisted after child failure: %v", statErr)
 	}
 }
@@ -627,7 +627,7 @@ func TestPiCodeGraphUninstallRollsBackWhenManifestRemovalFails(t *testing.T) {
 	if _, err := ReconcilePiCodeGraph(PiCodeGraphOptions{HomeDir: home, Selected: true, EffectiveMCPProbe: piProbeForTest}); err != nil {
 		t.Fatal(err)
 	}
-	manifestPath := filepath.Join(home, ".gentle-ai", "pi-codegraph.json")
+	manifestPath := filepath.Join(home, ".axiom", "pi-codegraph.json")
 	previousRemove := piCodeGraphRemove
 	piCodeGraphRemove = func(path string) error {
 		if path == manifestPath {
@@ -670,7 +670,7 @@ func TestPiCodeGraphUninstallFailsClosedOnChildReadFailure(t *testing.T) {
 	if _, err := UninstallPiCodeGraph(home); err == nil {
 		t.Fatal("UninstallPiCodeGraph() error = nil, want child read failure")
 	}
-	if _, err := os.Stat(filepath.Join(home, ".gentle-ai", "pi-codegraph.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(home, ".axiom", "pi-codegraph.json")); err != nil {
 		t.Fatalf("manifest missing after failed cleanup: %v", err)
 	}
 }
@@ -679,7 +679,7 @@ func TestPiCodeGraphReconcileJoinsJournalRestoreFailure(t *testing.T) {
 	home := t.TempDir()
 	child := filepath.Join(home, ".pi", "agent", "subagents", "worker.md")
 	writePiFile(t, child, "---\ntools: bash\n---\nwork\n")
-	manifestPath := filepath.Join(home, ".gentle-ai", "pi-codegraph.json")
+	manifestPath := filepath.Join(home, ".axiom", "pi-codegraph.json")
 	previousWrite := piCodeGraphAtomicWrite
 	piCodeGraphAtomicWrite = func(path string, data []byte, mode os.FileMode) (filemerge.WriteResult, error) {
 		if path == manifestPath {
@@ -820,7 +820,7 @@ func TestPiCodeGraphProbeRejectsInvalidInitializeResponses(t *testing.T) {
 			agentDir := filepath.Join(home, "custom-agent")
 			writePiFile(t, filepath.Join(agentDir, "npm", "node_modules", "pi-mcp-adapter", "index.ts"), "export default {}\n")
 			if runtime.GOOS == "windows" {
-				t.Setenv("GENTLE_AI_CODEGRAPH_TEST_RESPONSE", response)
+				t.Setenv("AXIOM_CODEGRAPH_TEST_RESPONSE", response)
 				installFakeCodeGraphHelper(t, "invalid-response")
 			} else {
 				installFakeCodeGraphScript(t, `while IFS= read -r request; do printf '%s\n' '`+response+`'; done`)
@@ -870,7 +870,7 @@ func TestPiCodeGraphPreservesSensitiveFileModes(t *testing.T) {
 	for _, tt := range []struct {
 		path string
 		want os.FileMode
-	}{{mcpPath, 0o600}, {childPath, 0o640}, {filepath.Join(home, ".gentle-ai", "pi-codegraph.json"), 0o600}} {
+	}{{mcpPath, 0o600}, {childPath, 0o640}, {filepath.Join(home, ".axiom", "pi-codegraph.json"), 0o600}} {
 		info, err := os.Stat(tt.path)
 		if err != nil || info.Mode().Perm() != tt.want {
 			t.Fatalf("mode %q = %v, %v; want %v", tt.path, info.Mode(), err, tt.want)
@@ -888,7 +888,7 @@ func TestPiCodeGraphUninstallRejectsManifestPathEscapeAndMissingOwnedChildIsSucc
 	home := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "outside.md")
 	writePiFile(t, outside, "do not modify\n")
-	manifestPath := filepath.Join(home, ".gentle-ai", "pi-codegraph.json")
+	manifestPath := filepath.Join(home, ".axiom", "pi-codegraph.json")
 	writePiFile(t, manifestPath, `{"children":{"`+outside+`":{"after":"owned","afterHash":"deadbeef"}}}`)
 	if err := os.Chmod(manifestPath, 0o600); err != nil {
 		t.Fatal(err)
@@ -1024,7 +1024,7 @@ func installFakeCodeGraphHelper(t *testing.T, mode string) {
 	if err := os.WriteFile(filepath.Join(binDir, "codegraph.exe"), data, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv("GENTLE_AI_CODEGRAPH_TEST_HELPER", mode)
+	t.Setenv("AXIOM_CODEGRAPH_TEST_HELPER", mode)
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 

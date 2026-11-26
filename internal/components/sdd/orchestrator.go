@@ -19,7 +19,7 @@ const (
 	// dispatcher guard. Sections that genuinely differ per runtime stay in the
 	// runtime asset; only the ones measured as non-drifted moved here.
 	sharedOrchestratorSectionsAsset = "skills/_shared/sdd-orchestrator-sections.md"
-	sharedOrchestratorSectionOpen   = "{{GENTLE_AI_SDD_SECTION:"
+	sharedOrchestratorSectionOpen   = "{{AXIOM_SDD_SECTION:"
 	// stopExitsMarker stands for the single text of the three-exit stops. The
 	// shared gates section carries it and substituteSharedOrchestratorSections
 	// resolves it with agentguidance.StopExits (DD-12).
@@ -31,8 +31,12 @@ const (
 	delegationTriggersMarker = "{{AXIOM_DELEGATION_TRIGGERS}}"
 
 	openCodeBackgroundPolicyAsset  = "opencode/background-subagents.md"
-	openCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
-	openCodeBackgroundPolicyEnd    = "<!-- /gentle-ai:opencode-background-subagents -->"
+	openCodeBackgroundPolicyMarker = "<!-- axiom:opencode-background-subagents -->"
+	openCodeBackgroundPolicyEnd    = "<!-- /axiom:opencode-background-subagents -->"
+	// Marcadores que escribieron las versiones con el nombre anterior: solo se
+	// reconocen para sustituirlos por los actuales, nunca se escriben.
+	legacyOpenCodeBackgroundPolicyMarker = "<!-- gentle-ai:opencode-background-subagents -->"
+	legacyOpenCodeBackgroundPolicyEnd    = "<!-- /gentle-ai:opencode-background-subagents -->"
 )
 
 // OrchestratorRenderOptions carries already-resolved prompt policy selections.
@@ -61,8 +65,8 @@ func sharedOrchestratorSection(name string) string {
 	return strings.TrimSpace(source[start:end])
 }
 
-// sharedOrchestratorSectionPlaceholder matches one {{GENTLE_AI_SDD_SECTION:<name>}}.
-var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{GENTLE_AI_SDD_SECTION:([^}]*)\}\}`)
+// sharedOrchestratorSectionPlaceholder matches one {{AXIOM_SDD_SECTION:<name>}}.
+var sharedOrchestratorSectionPlaceholder = regexp.MustCompile(`\{\{AXIOM_SDD_SECTION:([^}]*)\}\}`)
 
 // substituteSharedOrchestratorSections resolves every shared-section
 // placeholder in one pass. An unresolvable placeholder panics rather than
@@ -253,6 +257,14 @@ func mustReadOpenCodeBackgroundPolicy() string {
 		panic(err.Error())
 	}
 	return content
+}
+
+// upgradeLegacyOpenCodeBackgroundPolicy reescribe los marcadores del nombre
+// anterior de un prompt preservado para que el resto del flujo vea solo los
+// actuales (sin duplicar el bloque).
+func upgradeLegacyOpenCodeBackgroundPolicy(content string) string {
+	content = strings.ReplaceAll(content, legacyOpenCodeBackgroundPolicyMarker, openCodeBackgroundPolicyMarker)
+	return strings.ReplaceAll(content, legacyOpenCodeBackgroundPolicyEnd, openCodeBackgroundPolicyEnd)
 }
 
 func appendOpenCodeBackgroundPolicy(content, policy string) string {

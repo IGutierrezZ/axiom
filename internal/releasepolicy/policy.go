@@ -358,7 +358,7 @@ func validateArtifacts(root string, payload []byte, markerTime time.Time) error 
 	snapshotVersion := ""
 	provenanceArchive := false
 	for _, item := range byType["Archive"] {
-		if item.Name == "gentle-ai-release-provenance-v1.tar.gz" {
+		if item.Name == "axiom-release-provenance-v1.tar.gz" {
 			if item.Path != "dist/"+item.Name || item.GOOS != "" || item.GOARCH != "" || item.Target != "" || extraString(item.Extra, "Format") != "tar.gz" || extraString(item.Extra, "ID") != "release-provenance" || !reflect.DeepEqual(extraStrings(item.Extra, "Binaries"), []string{}) || provenanceArchive {
 				return errors.New("resolved release provenance archive identity changed")
 			}
@@ -555,7 +555,7 @@ archives:
     meta: true
     formats:
       - tar.gz
-    name_template: "gentle-ai-release-provenance-v1"
+    name_template: "axiom-release-provenance-v1"
     files:
       - src: .goreleaser-provenance/manifest.json
         strip_parent: true
@@ -578,7 +578,7 @@ signs:
       - "-x"
       - "${signature}"
       - "-c"
-      - "signature from gentle-ai release"
+      - "signature from axiom release"
       - "-t"
       - "repo=IGutierrezZ/axiom;tag={{ .Tag }}"
     output: true
@@ -630,7 +630,7 @@ jobs:
         run: |
           set -euo pipefail
           run_id="${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_JOB}"
-          marker="$RUNNER_TEMP/gentle-ai-release-policy-snapshot-start"
+          marker="$RUNNER_TEMP/axiom-release-policy-snapshot-start"
           rm -f -- "$marker"
           umask 077
           printf '%s\n' "$run_id" >"$marker"
@@ -687,8 +687,8 @@ jobs:
           printf 'canonical=%s\n' "$canonical" >>"$GITHUB_OUTPUT"
       - name: Configure ephemeral signing paths
         run: |
-          printf 'MINISIGN_SECRET_KEY_FILE=%s/gentle-ai-release.key\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
-          printf 'MINISIGN_SIGNING_PUBLIC_KEY_FILE=%s/gentle-ai-release-signing.pub\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
+          printf 'MINISIGN_SECRET_KEY_FILE=%s/axiom-release.key\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
+          printf 'MINISIGN_SIGNING_PUBLIC_KEY_FILE=%s/axiom-release-signing.pub\n' "$RUNNER_TEMP" >>"$GITHUB_ENV"
       - name: Install Minisign
         run: |
           sudo apt-get update

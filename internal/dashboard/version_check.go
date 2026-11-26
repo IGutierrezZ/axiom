@@ -100,7 +100,7 @@ func checkLatestAxiomVersion(ctx context.Context, current string) VersionInfo {
 	}
 	// El registro de herramientas llama "axiom" a la herramienta propia; en las
 	// pruebas del paquete conserva su nombre original.
-	results := update.CheckFiltered(ctx, current, detection.System.Profile, []string{"axiom", "gentle-ai"})
+	results := update.CheckFiltered(ctx, current, detection.System.Profile, []string{update.SelfToolName})
 	for _, r := range results {
 		if !update.IsSelfTool(r.Tool) {
 			continue

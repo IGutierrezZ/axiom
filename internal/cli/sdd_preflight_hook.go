@@ -16,11 +16,8 @@ import (
 )
 
 const (
-	sddPreflightLegacyQuestionPrefix = "Gentle AI SDD preflight "
-	// sddPreflightAxiomQuestionPrefix is the Axiom-branded form of the
-	// preflight question prefix. Both prefixes stay accepted indefinitely:
-	// installed plugins and agent instructions already written on users'
-	// machines keep using the legacy prefix until the next `axiom sync`.
+	// sddPreflightAxiomQuestionPrefix is the preflight question prefix. The
+	// prefix of the previous product name is no longer accepted.
 	sddPreflightAxiomQuestionPrefix = "Axiom SDD preflight "
 	maxSDDPreflightHookPayloadBytes = 256 << 10
 	maxSDDPreflightTranscriptLine   = 8 << 20
@@ -386,7 +383,7 @@ func readSDDPreflightTranscriptLine(r *bufio.Reader) (line []byte, ok bool, done
 
 // sddPreflightQuestionPrefixes lists every accepted question prefix.
 func sddPreflightQuestionPrefixes() []string {
-	return []string{sddPreflightLegacyQuestionPrefix, sddPreflightAxiomQuestionPrefix}
+	return []string{sddPreflightAxiomQuestionPrefix}
 }
 
 // hasSDDPreflightQuestionPrefix reports whether the question starts with any

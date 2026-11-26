@@ -10,7 +10,7 @@ Selected research is optional. When the orchestrator decides to invoke it, it ru
 
 ### Requirement: Open Capability Admission for Optional Research (formerly: Closed Capability Admission)
 
-The selected-research lane is optional, not mandatory, following the absorption of upstream's replacement of closed admission (commit `ba3ed690`). The lane MUST continue to accept only `gentle-ai.sdd-research-capability/v1` and classes `documentation` and `open-web`; admission MUST continue to verify declaration and exact grant. Bash, generic MCP, and unnamed legacy tools MUST continue to be denied. The absence of a selected-research invocation for a given change MUST NOT by itself block the proposal or any other SDD artifact.
+The selected-research lane is optional, not mandatory, following the absorption of upstream's replacement of closed admission (commit `ba3ed690`). The lane MUST continue to accept only the classes `documentation` and `open-web`; admission MUST continue to verify declaration and exact grant. Bash, generic MCP, and unnamed legacy tools MUST continue to be denied. The absence of a selected-research invocation for a given change MUST NOT by itself block the proposal or any other SDD artifact.
 
 (Previously: the lane MUST accept only `gentle-ai.sdd-research-capability/v1` and classes `documentation` and `open-web` under a closed, mandatory admission model, with no clause about the absence of research.)
 
@@ -34,6 +34,7 @@ The selected-research lane is optional, not mandatory, following the absorption 
 - WHEN that change's proposal is drafted
 - THEN the absence of that research does not by itself block the proposal
 - AND any block declared in `sdd-propose` comes from a reason other than the absence of selected research
+(Previously: the lane named the schema `gentle-ai.sdd-research-capability/v1`, which no Axiom code or asset uses any more.)
 
 ### Requirement: Auditable Evidence Integrity
 

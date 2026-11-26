@@ -676,9 +676,9 @@ func TestSaveRefusesARecordThatLoadWouldRejectWithoutWritingAnything(t *testing.
 	}
 }
 
-// design D-07, «Coexistencia con gentle-ai/»: espacios de nombres separados. Guardar y
-// bloquear el registro nunca toca `<git common dir>/gentle-ai/`.
-func TestTheRegistryNeverTouchesTheGentleAIFolder(t *testing.T) {
+// design D-07, «Coexistencia con axiom/»: espacios de nombres separados. Guardar y
+// bloquear el registro nunca toca `<git common dir>/axiom/`.
+func TestTheRegistryNeverTouchesTheLegacyFolder(t *testing.T) {
 	root, commonDir := newRepository(t)
 	lineage := filepath.Join(commonDir, "gentle-ai", "review-transactions", "linaje-1", "estado.json")
 	writeFile(t, lineage, `{"linaje":"abierto"}`)

@@ -7,8 +7,18 @@ import (
 )
 
 // markerFormat is the HTML comment marker used to identify a custom-agent block.
-// Example: <!-- gentle-ai:custom-agent:my-skill -->
-const markerFormat = "<!-- gentle-ai:custom-agent:%s -->"
+// Example: <!-- axiom:custom-agent:my-skill -->
+const markerFormat = "<!-- axiom:custom-agent:%s -->"
+
+// El bloque se cierra con el mismo identificador precedido de "/".
+const endMarkerFormat = "<!-- /axiom:custom-agent:%s -->"
+
+// Marcadores que escribieron las versiones con el nombre anterior: solo se
+// reconocen para sustituir el bloque ya escrito por el actual, nunca se escriben.
+const (
+	legacyMarkerFormat    = "<!-- gentle-ai:custom-agent:%s -->"
+	legacyEndMarkerFormat = "<!-- /gentle-ai:custom-agent:%s -->"
+)
 
 // InjectSDDReference appends (or replaces) a custom-agent reference block in the
 // system prompt file at systemPromptPath.
@@ -31,10 +41,15 @@ func InjectSDDReference(agent *GeneratedAgent, systemPromptPath string) error {
 	marker := fmt.Sprintf(markerFormat, agent.Name)
 	block := buildSDDBlock(agent, marker)
 
-	if strings.Contains(content, marker) {
+	legacyMarker := fmt.Sprintf(legacyMarkerFormat, agent.Name)
+	switch {
+	case strings.Contains(content, marker):
 		// Replace the existing block.
-		content = replaceBlock(content, marker, block)
-	} else {
+		content = replaceBlock(content, marker, fmt.Sprintf(endMarkerFormat, agent.Name), block)
+	case strings.Contains(content, legacyMarker):
+		// Migrate a block written under the previous name: it is replaced, not duplicated.
+		content = replaceBlock(content, legacyMarker, fmt.Sprintf(legacyEndMarkerFormat, agent.Name), block)
+	default:
 		// Append the block.
 		if !strings.HasSuffix(content, "\n") {
 			content += "\n"
@@ -87,15 +102,13 @@ func buildSDDBlock(agent *GeneratedAgent, marker string) string {
 		body = fmt.Sprintf("## Custom Agent: %s\n\nTrigger: %s\n", agent.Title, agent.Trigger)
 	}
 
-	endMarker := fmt.Sprintf("<!-- /gentle-ai:custom-agent:%s -->", agent.Name)
+	endMarker := fmt.Sprintf(endMarkerFormat, agent.Name)
 	return marker + "\n" + body + endMarker
 }
 
 // replaceBlock replaces the content between the opening marker and its matching
 // closing marker with the new block string.
-func replaceBlock(content, marker, newBlock string) string {
-	endMarker := fmt.Sprintf("<!-- /gentle-ai:custom-agent:%s -->", extractName(marker))
-
+func replaceBlock(content, marker, endMarker, newBlock string) string {
 	start := strings.Index(content, marker)
 	if start == -1 {
 		return content + "\n" + newBlock
@@ -113,15 +126,4 @@ func replaceBlock(content, marker, newBlock string) string {
 
 	replaceEnd := start + end + len(endMarker)
 	return content[:start] + newBlock + content[replaceEnd:]
-}
-
-// extractName parses the agent name from a marker string.
-// Example: "<!-- gentle-ai:custom-agent:my-skill -->" → "my-skill"
-func extractName(marker string) string {
-	prefix := "<!-- gentle-ai:custom-agent:"
-	suffix := " -->"
-	if strings.HasPrefix(marker, prefix) && strings.HasSuffix(marker, suffix) {
-		return marker[len(prefix) : len(marker)-len(suffix)]
-	}
-	return ""
 }

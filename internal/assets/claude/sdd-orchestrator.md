@@ -4,56 +4,56 @@ Bind this to the Claude Code orchestrator rule only. Do NOT apply it to executor
 
 ## Agent Teams Orchestrator
 
-{{GENTLE_AI_SDD_SECTION:Agent Teams Orchestrator}}
+{{AXIOM_SDD_SECTION:Agent Teams Orchestrator}}
 
 ### Lossless Blocking Prompts (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Contract}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Contract}}
 - Native route: The classified native question UI is `AskUserQuestion`. Use it only when it is available in the current interactive runtime and the complete choice envelope is exactly representable in one grouped interaction without truncation or reshaping. When the closed domain of a single-select envelope is representable as the classified native question UI, use it; otherwise fall through to the Fallback clause below.
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Fallback}} Native-tool-only wording elsewhere never disables this fallback.
-{{GENTLE_AI_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Fallback}} Native-tool-only wording elsewhere never disables this fallback.
+{{AXIOM_SDD_SECTION:Lossless Blocking Prompts Answer Validation}}
 
 #### SDD Edit-Authority Consent Relay (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
+{{AXIOM_SDD_SECTION:SDD Edit-Authority Consent Relay (MANDATORY)}}
 
 
 ### Language Domain Contract
 
-{{GENTLE_AI_SDD_SECTION:Language Domain Contract}}
+{{AXIOM_SDD_SECTION:Language Domain Contract}}
 
 ### SDD Change Kickoff and Block Gates
 
-{{GENTLE_AI_SDD_SECTION:SDD Change Kickoff and Block Gates}}
+{{AXIOM_SDD_SECTION:SDD Change Kickoff and Block Gates}}
 
 ### SDD Independent Review
 
-{{GENTLE_AI_SDD_SECTION:SDD Independent Review}}
+{{AXIOM_SDD_SECTION:SDD Independent Review}}
 
 ### Delegation Rules
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules}}
+{{AXIOM_SDD_SECTION:Delegation Rules}}
 
 Use Claude Code's native Agent/Task mechanism for delegated-direct work; reserve `sdd-*` agents for a selected SDD route. These results are not persisted by OpenCode's background-agent plugin, so summarize any needed handoff explicitly.
 
-{{GENTLE_AI_SDD_SECTION:Delegation Rules Handoff}}
+{{AXIOM_SDD_SECTION:Delegation Rules Handoff}}
 
 #### Mandatory Delegation Triggers
 
-{{GENTLE_AI_SDD_SECTION:Mandatory Delegation Triggers}}
+{{AXIOM_SDD_SECTION:Mandatory Delegation Triggers}}
 
 #### Delegated Verification Gate (MANDATORY)
 
-{{GENTLE_AI_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
+{{AXIOM_SDD_SECTION:Delegated Verification Gate (MANDATORY)}}
 
 #### Cost and Context Balance
 
-{{GENTLE_AI_SDD_SECTION:Cost and Context Balance}}
+{{AXIOM_SDD_SECTION:Cost and Context Balance}}
 
-{{GENTLE_AI_RESEARCH_LIFECYCLE}}
+{{AXIOM_RESEARCH_LIFECYCLE}}
 
-<!-- gentle-ai:sdd-model-assignments -->
-<!-- /gentle-ai:sdd-model-assignments -->
+<!-- axiom:sdd-model-assignments -->
+<!-- /axiom:sdd-model-assignments -->
 
 ## SDD Workflow (lazy-loaded)
 

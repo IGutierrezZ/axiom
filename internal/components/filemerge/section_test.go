@@ -439,7 +439,7 @@ Senior Architect, 15+ years experience, GDE & MVP.
 
 `
 
-const gentleAiMarkerSection = `<!-- gentle-ai:persona -->
+const legacyMarkerSection = `<!-- gentle-ai:persona -->
 ## Personality
 
 Senior Architect, 15+ years experience, GDE & MVP.
@@ -455,8 +455,8 @@ func TestStripLegacyPersonaBlock_NoFingerprintReturnsSame(t *testing.T) {
 }
 
 func TestStripLegacyPersonaBlock_FingerprintInsideMarkerReturnsSame(t *testing.T) {
-	// Fingerprints only exist inside gentle-ai markers — should NOT be stripped.
-	input := "# My Config\n\n" + gentleAiMarkerSection
+	// Fingerprints only exist inside axiom markers — should NOT be stripped.
+	input := "# My Config\n\n" + legacyMarkerSection
 	result := StripLegacyPersonaBlock(input)
 	if result != input {
 		t.Fatalf("fingerprint inside marker: expected unchanged result:\ngot:  %q\nwant: %q", result, input)
@@ -473,7 +473,7 @@ func TestStripLegacyPersonaBlock_LegacyBlockOnlyReturnsEmpty(t *testing.T) {
 
 func TestStripLegacyPersonaBlock_LegacyBlockBeforeMarkersStripped(t *testing.T) {
 	// Stale free-text persona block sits before a properly-marked section.
-	input := legacyPersonaBlock + "\n" + gentleAiMarkerSection
+	input := legacyPersonaBlock + "\n" + legacyMarkerSection
 	result := StripLegacyPersonaBlock(input)
 
 	// The legacy block should be gone.
@@ -482,13 +482,13 @@ func TestStripLegacyPersonaBlock_LegacyBlockBeforeMarkersStripped(t *testing.T) 
 	}
 	// The marked section must survive.
 	if !strings.Contains(result, "<!-- gentle-ai:persona -->") {
-		t.Fatal("stripped result missing gentle-ai marker section")
+		t.Fatal("stripped result missing axiom marker section")
 	}
 }
 
 func TestStripLegacyPersonaBlock_MarkerSectionContentPreserved(t *testing.T) {
 	// Markers and their content must be fully preserved after stripping.
-	input := legacyPersonaBlock + "\n" + gentleAiMarkerSection + "\n# User Notes\n\nSome user text.\n"
+	input := legacyPersonaBlock + "\n" + legacyMarkerSection + "\n# User Notes\n\nSome user text.\n"
 	result := StripLegacyPersonaBlock(input)
 
 	if !strings.Contains(result, "<!-- gentle-ai:persona -->") {
@@ -505,7 +505,7 @@ func TestStripLegacyPersonaBlock_MarkerSectionContentPreserved(t *testing.T) {
 func TestStripLegacyPersonaBlock_OnlyTwoOfThreeFingerprints(t *testing.T) {
 	// File has "## Personality" and "Senior Architect" but NOT "## Rules" —
 	// only two of three fingerprints, so it should NOT be stripped.
-	input := "## Personality\n\nSenior Architect, 15+ years experience.\n\n" + gentleAiMarkerSection
+	input := "## Personality\n\nSenior Architect, 15+ years experience.\n\n" + legacyMarkerSection
 	result := StripLegacyPersonaBlock(input)
 	// With only 2/3 fingerprints, stripping should NOT occur.
 	if result != input {
@@ -516,7 +516,7 @@ func TestStripLegacyPersonaBlock_OnlyTwoOfThreeFingerprints(t *testing.T) {
 func TestStripLegacyPersonaBlock_MixedZone_OnlyOneFingerprint_PreMarker(t *testing.T) {
 	// Edge case: "## Rules" appears in user content before the first marker,
 	// but the other two fingerprints ("## Personality" and "Senior Architect")
-	// exist only inside a gentle-ai marker block.
+	// exist only inside a axiom marker block.
 	//
 	// Old behaviour (bug): one fingerprint in the pre-marker zone was enough to
 	// trigger stripping, destroying the user's "## Rules" section.
@@ -604,11 +604,11 @@ func TestStripLegacyPersonaBlock_UserContentBeforeAndAfterMarkersPreserved(t *te
 	// by looking for fingerprints before the first marker, user content that
 	// predates the legacy block would also be stripped.  This is an accepted
 	// tradeoff documented in the function comment.
-	input := legacyPersonaBlock + "\n" + gentleAiMarkerSection + "\n# Custom section\n\nUser stuff.\n"
+	input := legacyPersonaBlock + "\n" + legacyMarkerSection + "\n# Custom section\n\nUser stuff.\n"
 	result := StripLegacyPersonaBlock(input)
 
 	if !strings.Contains(result, "# Custom section") {
-		t.Fatal("content after gentle-ai markers must be preserved")
+		t.Fatal("content after axiom markers must be preserved")
 	}
 }
 

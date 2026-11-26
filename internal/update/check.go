@@ -11,14 +11,14 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
-// updateChannelEnv resolves the release channel from AXIOM_CHANNEL, falling
-// back to the legacy GENTLE_AI_CHANNEL. Tests may replace it.
+// updateChannelEnv resolves the release channel from AXIOM_CHANNEL. Tests may
+// replace it.
 var updateChannelEnv = func() string {
-	return system.Getenv(system.EnvChannelAxiom, system.EnvChannelGentleAI)
+	return system.Getenv(system.EnvChannelAxiom)
 }
 
 // CheckAll runs update checks for all registered tools concurrently.
-// currentVersion is the build-time version of gentle-ai (from app.Version).
+// currentVersion is the build-time version of axiom (from app.Version).
 // profile determines platform-specific update instructions.
 func CheckAll(ctx context.Context, currentVersion string, profile system.PlatformProfile) []UpdateResult {
 	return CheckFiltered(ctx, currentVersion, profile, nil)
@@ -141,7 +141,7 @@ func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion str
 			return result
 		}
 		if tool.DetectCmd == nil {
-			// gentle-ai with no build version (shouldn't happen, but handle gracefully).
+			// axiom with no build version (shouldn't happen, but handle gracefully).
 			result.Status = VersionUnknown
 		} else {
 			// Binary not found on PATH.
@@ -173,13 +173,13 @@ func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion str
 }
 
 func usesBetaMainHeadCheck(tool ToolInfo, currentVersion string) bool {
-	return isGentleAIRepo(tool) && (isBetaUpdateChannel() || isGoPseudoVersionWithCommit(currentVersion))
+	return isSelfToolRepo(tool) && (isBetaUpdateChannel() || isGoPseudoVersionWithCommit(currentVersion))
 }
 
-// isGentleAIRepo reports whether tool is the primary CLI product. It delegates
-// to the shared identity predicate so the rename to "axiom" can never disable
-// the beta main-head check (REQ-22.3, D-01).
-func isGentleAIRepo(tool ToolInfo) bool {
+// isSelfToolRepo reports whether tool is the primary CLI product. It delegates
+// to the shared identity predicate so the beta main-head check follows the
+// registry name (REQ-22.3, D-01).
+func isSelfToolRepo(tool ToolInfo) bool {
 	return IsSelfTool(tool)
 }
 

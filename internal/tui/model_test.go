@@ -1861,18 +1861,18 @@ func TestUpgradePhaseCompletedClearsUpdateResults(t *testing.T) {
 	}
 }
 
-func TestReportUpgradedGentleAI(t *testing.T) {
+func TestReportUpgradedAxiom(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
 		{ToolName: "engram", Status: upgrade.UpgradeSucceeded},
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded},
 	}}
-	if !reportUpgradedGentleAI(report) {
-		t.Fatal("reportUpgradedGentleAI() = false, want true")
+	if !reportUpgradedSelf(report) {
+		t.Fatal("reportUpgradedSelf() = false, want true")
 	}
 
 	report.Results[1].Status = upgrade.UpgradeFailed
-	if reportUpgradedGentleAI(report) {
-		t.Fatal("reportUpgradedGentleAI() = true for failed gentle-ai upgrade")
+	if reportUpgradedSelf(report) {
+		t.Fatal("reportUpgradedSelf() = true for failed axiom upgrade")
 	}
 }
 
@@ -2746,7 +2746,7 @@ func TestStartUninstall_FullRemoveHomebrewManagedBinaryAddsManualAction(t *testi
 		return componentuninstall.Result{}, nil
 	}
 
-	restoreExec := setOSExecutableForTest("/opt/homebrew/bin/gentle-ai", nil)
+	restoreExec := setOSExecutableForTest("/opt/homebrew/bin/axiom", nil)
 	defer restoreExec()
 
 	removeCalled := false
@@ -2780,7 +2780,7 @@ func TestStartUninstall_FullRemoveNonBrewRemovesBinary(t *testing.T) {
 		return componentuninstall.Result{}, nil
 	}
 
-	restoreExec := setOSExecutableForTest("/tmp/gentle-ai", nil)
+	restoreExec := setOSExecutableForTest("/tmp/axiom", nil)
 	defer restoreExec()
 
 	removedPath := ""
@@ -2794,8 +2794,8 @@ func TestStartUninstall_FullRemoveNonBrewRemovesBinary(t *testing.T) {
 	if msg.Err != nil {
 		t.Fatalf("UninstallDoneMsg.Err = %v, want nil", msg.Err)
 	}
-	if removedPath != "/tmp/gentle-ai" {
-		t.Fatalf("os.Remove path = %q, want %q", removedPath, "/tmp/gentle-ai")
+	if removedPath != "/tmp/axiom" {
+		t.Fatalf("os.Remove path = %q, want %q", removedPath, "/tmp/axiom")
 	}
 }
 
@@ -5810,24 +5810,24 @@ func TestCodexModelPickerCustomModeEscResetsCursor(t *testing.T) {
 	}
 }
 
-func TestGentleAIUpgradeVersionDetectsSucceededGentleAI(t *testing.T) {
+func TestSelfUpgradeVersionDetectsSucceededAxiom(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
 		{ToolName: "engram", Status: upgrade.UpgradeSucceeded, NewVersion: "1.0.0"},
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{UpgradeReport: &report}
-	got, ok := m.GentleAIUpgradeVersion()
+	got, ok := m.SelfUpgradeVersion()
 	if !ok {
-		t.Fatal("GentleAIUpgradeVersion() ok = false, want true")
+		t.Fatal("SelfUpgradeVersion() ok = false, want true")
 	}
 	if got != "1.40.0" {
-		t.Fatalf("GentleAIUpgradeVersion() = %q, want %q", got, "1.40.0")
+		t.Fatalf("SelfUpgradeVersion() = %q, want %q", got, "1.40.0")
 	}
 }
 
-func TestUpgradeResultEnterQuitsWhenGentleAIWasUpgraded(t *testing.T) {
+func TestUpgradeResultEnterQuitsWhenAxiomWasUpgraded(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{Screen: ScreenUpgrade, UpgradeReport: &report}
 	_, cmd := m.confirmSelection()
@@ -5839,9 +5839,9 @@ func TestUpgradeResultEnterQuitsWhenGentleAIWasUpgraded(t *testing.T) {
 	}
 }
 
-func TestUpgradeSyncResultEscQuitsWhenGentleAIWasUpgraded(t *testing.T) {
+func TestUpgradeSyncResultEscQuitsWhenAxiomWasUpgraded(t *testing.T) {
 	report := upgrade.UpgradeReport{Results: []upgrade.ToolUpgradeResult{
-		{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
+		{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "v1.40.0"},
 	}}
 	m := Model{Screen: ScreenUpgradeSync, UpgradeReport: &report, HasSyncRun: true}
 	_, cmd := m.handleKeyPress(tea.KeyMsg{Type: tea.KeyEsc})
@@ -5900,12 +5900,12 @@ func executeUpgradeSyncSequence(t *testing.T, m Model) []tea.Msg {
 	return msgs
 }
 
-// TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded verifies that when
-// the UpgradeFn reports gentle-ai as upgraded, the syncCmd branch of
+// TestStartUpgradeSync_SetsPendingSyncWhenAxiomUpgraded verifies that when
+// the UpgradeFn reports axiom as upgraded, the syncCmd branch of
 // startUpgradeSync writes PendingSync=true to state.json before returning
 // SyncDoneMsg. This is the TUI-path equivalent of the selfupdate.go path tested
 // in TestSelfUpdate_SetsPendingSyncOnSuccess.
-func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
+func TestStartUpgradeSync_SetsPendingSyncWhenAxiomUpgraded(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -5914,11 +5914,11 @@ func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
 	m.Screen = ScreenUpgradeSync
 	m.OperationRunning = true
 
-	// UpgradeFn reports gentle-ai as successfully upgraded.
+	// UpgradeFn reports axiom as successfully upgraded.
 	m.UpgradeFn = func(_ context.Context, _ []update.UpdateResult) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 			},
 		}
 	}
@@ -5949,14 +5949,14 @@ func TestStartUpgradeSync_SetsPendingSyncWhenGentleAIUpgraded(t *testing.T) {
 		t.Fatalf("state.Read(%q) error = %v (PendingSync was not written)", home, err)
 	}
 	if !s.PendingSync {
-		t.Errorf("PendingSync = false after gentle-ai self-upgrade in TUI flow, want true")
+		t.Errorf("PendingSync = false after axiom self-upgrade in TUI flow, want true")
 	}
 }
 
-// TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded verifies
-// that when gentle-ai was NOT upgraded (e.g. only engram was upgraded), the
+// TestStartUpgradeSync_DoesNotSetPendingSyncWhenAxiomNotUpgraded verifies
+// that when axiom was NOT upgraded (e.g. only engram was upgraded), the
 // syncCmd branch does NOT set PendingSync, and sync proceeds normally via SyncFn.
-func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testing.T) {
+func TestStartUpgradeSync_DoesNotSetPendingSyncWhenAxiomNotUpgraded(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -5965,7 +5965,7 @@ func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testin
 	m.Screen = ScreenUpgradeSync
 	m.OperationRunning = true
 
-	// UpgradeFn reports only engram upgraded, not gentle-ai.
+	// UpgradeFn reports only engram upgraded, not axiom.
 	m.UpgradeFn = func(_ context.Context, _ []update.UpdateResult) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
@@ -5984,10 +5984,10 @@ func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testin
 
 	// SyncFn must have been called (not the deferred-PendingSync path).
 	if !syncCalled {
-		t.Errorf("SyncFn was not called — expected normal sync when gentle-ai was not upgraded")
+		t.Errorf("SyncFn was not called — expected normal sync when axiom was not upgraded")
 	}
 
-	// PendingSync must NOT be set when gentle-ai was not upgraded.
+	// PendingSync must NOT be set when axiom was not upgraded.
 	// state.json may not exist at all if nothing wrote it; that is expected and
 	// means PendingSync was never set (correct). Any other read error is
 	// unexpected and should fail the test loudly.
@@ -5998,7 +5998,7 @@ func TestStartUpgradeSync_DoesNotSetPendingSyncWhenGentleAINotUpgraded(t *testin
 		}
 		// File absent → PendingSync was never set — correct.
 	} else if s.PendingSync {
-		t.Errorf("PendingSync = true after non-gentle-ai upgrade, want false")
+		t.Errorf("PendingSync = true after non-axiom upgrade, want false")
 	}
 
 	// Verify SyncDoneMsg arrived.
@@ -6026,7 +6026,7 @@ func TestStartUpgradeSync_NoClobberOnCorruptStateFile(t *testing.T) {
 	t.Setenv("USERPROFILE", home)
 
 	// Write a corrupt state file so state.Read returns a non-ErrNotExist error.
-	stateDir := filepath.Join(home, ".gentle-ai")
+	stateDir := filepath.Join(home, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
@@ -6040,11 +6040,11 @@ func TestStartUpgradeSync_NoClobberOnCorruptStateFile(t *testing.T) {
 	m.Screen = ScreenUpgradeSync
 	m.OperationRunning = true
 
-	// UpgradeFn reports gentle-ai as successfully upgraded.
+	// UpgradeFn reports axiom as successfully upgraded.
 	m.UpgradeFn = func(_ context.Context, _ []update.UpdateResult) upgrade.UpgradeReport {
 		return upgrade.UpgradeReport{
 			Results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.8.0"},
 			},
 		}
 	}
@@ -6558,7 +6558,7 @@ func TestAdvisoryMsg_SanitizesOnStore(t *testing.T) {
 // makeUpdateResult returns a minimal UpdateResult with the given status and release URL.
 func makeUpdateResult(status update.UpdateStatus, releaseURL string) update.UpdateResult {
 	return update.UpdateResult{
-		Tool:             update.ToolInfo{Name: "gentle-ai"},
+		Tool:             update.ToolInfo{Name: "axiom"},
 		Status:           status,
 		InstalledVersion: "1.0.0",
 		LatestVersion:    "2.0.0",

@@ -1779,7 +1779,7 @@ func (m Model) handleKeyPress(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if (m.Screen == ScreenInstalling && m.pipelineRunning) || m.Screen == ScreenCommunityToolInstalling {
 			return m, nil
 		}
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		var cmd tea.Cmd
@@ -2150,9 +2150,9 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		if m.OperationRunning {
 			return m, nil
 		}
-		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
+		// If axiom itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		// If showing results (UpgradeReport != nil or UpgradeErr != nil), return to welcome.
@@ -2194,9 +2194,9 @@ func (m Model) confirmSelection() (tea.Model, tea.Cmd) {
 		if m.OperationRunning {
 			return m, nil
 		}
-		// If gentle-ai itself was upgraded, leave the TUI so the app layer can restart
+		// If axiom itself was upgraded, leave the TUI so the app layer can restart
 		// or ask for restart using the platform-specific restart helper.
-		if _, ok := m.GentleAIUpgradeVersion(); ok {
+		if _, ok := m.SelfUpgradeVersion(); ok {
 			return m, tea.Quit
 		}
 		// If operations are done, return to welcome.
@@ -3449,7 +3449,7 @@ func (m Model) detectProjectEngramData() bool {
 // startUpgradeSync runs upgrade then sync sequentially via tea.Sequence.
 // Design decision: sync normally runs regardless of tool-level upgrade outcome.
 // Tool-level upgrade failures are per-tool (in UpgradeReport.Results), not fatal.
-// Exception: if gentle-ai itself was upgraded, sync is skipped so the old
+// Exception: if axiom itself was upgraded, sync is skipped so the old
 // running binary cannot rewrite configs after installing a newer binary.
 //
 // The first command runs the upgrade and sends UpgradePhaseCompletedMsg
@@ -3459,7 +3459,7 @@ func (m Model) startUpgradeSync() tea.Cmd {
 	upgradeFn := m.UpgradeFn
 	syncFn := m.SyncFn
 	updateResults := m.UpdateResults
-	gentleAIUpdated := false
+	selfUpdated := false
 
 	upgradeCmd := func() tea.Msg {
 		if upgradeFn == nil {
@@ -3467,13 +3467,13 @@ func (m Model) startUpgradeSync() tea.Cmd {
 		}
 		ctx := context.Background()
 		report := upgradeFn(ctx, updateResults)
-		gentleAIUpdated = reportUpgradedGentleAI(report)
+		selfUpdated = reportUpgradedSelf(report)
 		return UpgradePhaseCompletedMsg{Report: report}
 	}
 
 	syncCmd := func() tea.Msg {
-		if gentleAIUpdated {
-			// Deferred sync (task 4.8): gentle-ai was upgraded in this session.
+		if selfUpdated {
+			// Deferred sync (task 4.8): axiom was upgraded in this session.
 			// Set PendingSync=true so the new binary runs sync on next launch
 			// instead of silently skipping it. Non-fatal if state write fails.
 			//
@@ -3517,7 +3517,7 @@ func markPendingSyncUnderLock(h string) {
 	})
 }
 
-func reportUpgradedGentleAI(report upgrade.UpgradeReport) bool {
+func reportUpgradedSelf(report upgrade.UpgradeReport) bool {
 	for _, result := range report.Results {
 		if update.IsSelfToolName(result.ToolName) && result.Status == upgrade.UpgradeSucceeded {
 			return true
@@ -3526,9 +3526,9 @@ func reportUpgradedGentleAI(report upgrade.UpgradeReport) bool {
 	return false
 }
 
-// GentleAIUpgradeVersion returns the upgraded gentle-ai version when the current
+// SelfUpgradeVersion returns the upgraded axiom version when the current
 // TUI result requires restarting the app before continuing with config sync.
-func (m Model) GentleAIUpgradeVersion() (string, bool) {
+func (m Model) SelfUpgradeVersion() (string, bool) {
 	if m.UpgradeReport == nil {
 		return "", false
 	}
@@ -3968,7 +3968,7 @@ func (m *Model) setScreen(next Screen) {
 }
 
 // defaultBackupSelectionCursor selects the newest Axiom-owned snapshot while
-// leaving Gentle AI history available but never implicitly selected. When no
+// leaving non-Axiom-origin history available but never implicitly selected. When no
 // Axiom snapshot exists, focus the "Volver" row so the user must deliberately
 // choose a historical backup.
 func defaultBackupSelectionCursor(backups []backup.Manifest) int {
@@ -4666,7 +4666,7 @@ func (m *Model) buildDependencyPlan() {
 	m.DependencyPlan = resolved
 }
 
-// agentsToManage returns the canonical list of agents gentle-ai should manage.
+// agentsToManage returns the canonical list of agents axiom should manage.
 // A persisted selection is authoritative, including a deliberately configured
 // empty selection. Only state without an install selection falls back to detected
 // agents, then to the first-install catalog default.
@@ -5468,7 +5468,7 @@ func (m Model) startInstallation() (tea.Model, tea.Cmd) {
 		}
 
 		// Persist entry to registry.
-		registryPath := filepath.Join(homeDir(), ".config", "gentle-ai", "custom-agents.json")
+		registryPath := agentbuilder.RegistryPath(homeDir())
 		_ = os.MkdirAll(filepath.Dir(registryPath), 0755)
 		if reg, loadErr := agentbuilder.LoadRegistry(registryPath); loadErr == nil {
 			// Collect IDs of agents that were successfully installed.

@@ -132,7 +132,7 @@ func TestCheckOneTool_OK(t *testing.T) {
 }
 
 // TestCheckOneTool_ShadowedWindowsExt reproduces the Windows bug: binaries on
-// disk carry an executable extension (e.g. gentle-ai.exe / gentle-ai.cmd), so a
+// disk carry an executable extension (e.g. axiom.exe / axiom.cmd), so a
 // bare-name scan misses them and shadowing is reported as [ok]. With PATHEXT
 // extensions the duplicate copies are detected and a warning is produced.
 func TestCheckOneTool_ShadowedWindowsExt(t *testing.T) {
@@ -149,7 +149,7 @@ func TestCheckOneTool_ShadowedWindowsExt(t *testing.T) {
 
 	dir1 := t.TempDir()
 	dir2 := t.TempDir()
-	for _, p := range []string{filepath.Join(dir1, "gentle-ai.exe"), filepath.Join(dir2, "gentle-ai.cmd")} {
+	for _, p := range []string{filepath.Join(dir1, "axiom.exe"), filepath.Join(dir2, "axiom.cmd")} {
 		f, err := os.Create(p)
 		if err != nil {
 			t.Fatal(err)
@@ -157,9 +157,9 @@ func TestCheckOneTool_ShadowedWindowsExt(t *testing.T) {
 		_ = f.Close()
 	}
 
-	lookPathFn = func(string) (string, error) { return filepath.Join(dir1, "gentle-ai.exe"), nil }
+	lookPathFn = func(string) (string, error) { return filepath.Join(dir1, "axiom.exe"), nil }
 
-	got := checkOneTool("gentle-ai", []string{dir1, dir2})
+	got := checkOneTool("axiom", []string{dir1, dir2})
 
 	if got.Status != CheckStatusWarn {
 		t.Fatalf("expected warn for extensioned shadow, got %s: %s", got.Status, got.Detail)
@@ -791,7 +791,7 @@ func TestCheckEngramReachable_MissingRelativeWindowsExecutableWarns(t *testing.T
 }
 
 // TestCheckEngramReachable_StdioDefault_NoHTTPListener is matrix cell (a) of
-// #2078: a default install. gentle-ai only ever configures Engram as a stdio
+// #2078: a default install. axiom only ever configures Engram as a stdio
 // MCP server (engram mcp --tools=agent, written by
 // internal/components/engram/inject.go); it never configures an HTTP
 // transport. With the stdio transport healthy and no HTTP listener anywhere,
@@ -1002,17 +1002,16 @@ func TestCheckDiskSpace_DirectoryTargeting(t *testing.T) {
 		t.Fatalf("expected probe of %q, got %q", home, probedDir)
 	}
 
-	// 2. Only legacy ~/.gentle-ai exists -> probes ~/.gentle-ai
-	legacyDir := filepath.Join(home, ".gentle-ai")
-	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
+	// 2. A leftover ~/.gentle-ai is ignored: it only measures homeDir.
+	if err := os.MkdirAll(filepath.Join(home, ".gentle-ai"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	checkDiskSpace(home)
-	if probedDir != legacyDir {
-		t.Fatalf("expected probe of legacy %q, got %q", legacyDir, probedDir)
+	if probedDir != home {
+		t.Fatalf("expected probe of %q ignoring ~/.gentle-ai, got %q", home, probedDir)
 	}
 
-	// 3. Canonical ~/.axiom exists -> probes ~/.axiom (outranks legacy)
+	// 3. Canonical ~/.axiom exists -> probes ~/.axiom
 	axiomDir := filepath.Join(home, ".axiom")
 	if err := os.MkdirAll(axiomDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -1387,7 +1386,7 @@ func TestCheckToolBinaries_StateMissing_ChecksCoreOnly(t *testing.T) {
 
 // TestCheckOneTool_DirectoryWithToolName_NotCountedAsDuplicate verifies that
 // a directory whose name happens to match a tool (e.g. an existing
-// $HOME/gentle-ai/ on PATH) is not treated as a duplicate binary copy by
+// $HOME/axiom/ on PATH) is not treated as a duplicate binary copy by
 // the doctor (#709).
 func TestCheckOneTool_DirectoryWithToolName_NotCountedAsDuplicate(t *testing.T) {
 	orig := lookPathFn
@@ -1404,18 +1403,18 @@ func TestCheckOneTool_DirectoryWithToolName_NotCountedAsDuplicate(t *testing.T) 
 	dirWithFile := t.TempDir()
 	dirWithDir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dirWithFile, "gentle-ai"), []byte("fake"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(dirWithFile, "axiom"), []byte("fake"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Mkdir(filepath.Join(dirWithDir, "gentle-ai"), 0o755); err != nil {
+	if err := os.Mkdir(filepath.Join(dirWithDir, "axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
 	lookPathFn = func(string) (string, error) {
-		return filepath.Join(dirWithFile, "gentle-ai"), nil
+		return filepath.Join(dirWithFile, "axiom"), nil
 	}
 
-	got := checkOneTool("gentle-ai", []string{dirWithFile, dirWithDir})
+	got := checkOneTool("axiom", []string{dirWithFile, dirWithDir})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass when only one real binary exists; got %s: %s", got.Status, got.Detail)
@@ -1449,16 +1448,16 @@ func TestCheckOneTool_FileWithoutExecBit_NotCountedAsDuplicate(t *testing.T) {
 	dir2 := t.TempDir()
 
 	// One executable copy, one non-executable copy.
-	if err := os.WriteFile(filepath.Join(dir1, "gentle-ai"), []byte("#!/bin/sh\nexit 0"), 0o755); err != nil {
+	if err := os.WriteFile(filepath.Join(dir1, "axiom"), []byte("#!/bin/sh\nexit 0"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir2, "gentle-ai"), []byte("not executable"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir2, "axiom"), []byte("not executable"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	lookPathFn = func(string) (string, error) { return filepath.Join(dir1, "gentle-ai"), nil }
+	lookPathFn = func(string) (string, error) { return filepath.Join(dir1, "axiom"), nil }
 
-	got := checkOneTool("gentle-ai", []string{dir1, dir2})
+	got := checkOneTool("axiom", []string{dir1, dir2})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass when second copy lacks the execute bit; got %s: %s", got.Status, got.Detail)

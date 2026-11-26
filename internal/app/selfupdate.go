@@ -26,11 +26,10 @@ var selfUpdateNowFn = func() time.Time { return time.Now() }
 var selfUpdateHomeDirFn = os.UserHomeDir
 
 // Environment variable names for self-update control.
-// NOTE: GENTLE_AI_CONFIRM_UPDATE removed in slice 5 — prompt is now unconditional.
 const (
-	envNoSelfUpdate   = "GENTLE_AI_NO_SELF_UPDATE"
-	envSelfUpdateDone = "GENTLE_AI_SELF_UPDATE_DONE"
-	envYesUpdate      = "GENTLE_AI_YES"
+	envNoSelfUpdate   = "AXIOM_NO_SELF_UPDATE"
+	envSelfUpdateDone = "AXIOM_SELF_UPDATE_DONE"
+	envYesUpdate      = "AXIOM_YES"
 )
 
 // isTerminal reports whether fd belongs to a native or Cygwin/MSYS2 terminal.
@@ -42,7 +41,7 @@ func isTerminal(fd uintptr) bool {
 var isattyFn = isTerminal
 
 // selfUpdateYesFn returns true when the caller wants the upgrade to proceed
-// without an interactive prompt. Set GENTLE_AI_YES=1 for scripted upgrades.
+// without an interactive prompt. Set AXIOM_YES=1 for scripted upgrades.
 // Injectable for tests.
 var selfUpdateYesFn = func() bool {
 	return os.Getenv(envYesUpdate) == "1"
@@ -75,12 +74,12 @@ func defaultPromptForUpdate(stdout io.Writer, stdin io.Reader, currentVersion, l
 // selfUpdateTimeout is the maximum time allowed for the update check + upgrade.
 const selfUpdateTimeout = 7 * time.Second
 
-// selfUpdate checks for and applies a gentle-ai update before normal dispatch.
+// selfUpdate checks for and applies an axiom update before normal dispatch.
 // Returns nil on success or skip; errors are non-fatal (caller logs and continues).
 //
 // Guard evaluation order (per spec):
-//  1. GENTLE_AI_SELF_UPDATE_DONE=1 → skip (loop guard)
-//  2. GENTLE_AI_NO_SELF_UPDATE=1 → skip (opt-out)
+//  1. AXIOM_SELF_UPDATE_DONE=1 → skip (loop guard)
+//  2. AXIOM_NO_SELF_UPDATE=1 → skip (opt-out)
 //  3. version == "dev" → skip (dev build)
 //  4. Proceed with update check
 func selfUpdate(ctx context.Context, version string, profile system.PlatformProfile, stdout io.Writer) error {
@@ -109,33 +108,27 @@ func selfUpdate(ctx context.Context, version string, profile system.PlatformProf
 		homeDir = "" // fall back to always-check on home dir failure
 	}
 
-	// Check for updates (only gentle-ai), gated by the 6h cooldown.
+	// Check for updates (only the self-tool), gated by the 6h cooldown.
 	// When the cache is fresh (elapsed < UpdateCheckTTL), this returns nil
 	// and no network request is made. The underlying check is always
 	// updateCheckFiltered, kept as a package-level var for other tests.
 	results := update.CheckAllWithCooldown(ctx, version, profile, homeDir, update.UpdateCheckTTL,
 		selfUpdateNowFn,
 		func(c context.Context, ver string, prof system.PlatformProfile) []update.UpdateResult {
-			return updateCheckFiltered(c, ver, prof, []string{"gentle-ai"})
+			return updateCheckFiltered(c, ver, prof, []string{update.SelfToolName})
 		},
 	)
 
-	// Find the gentle-ai result.
-	var target *update.UpdateResult
-	for i := range results {
-		if results[i].Tool.Name == "gentle-ai" {
-			target = &results[i]
-			break
-		}
-	}
+	// Find the self-tool result.
+	target := update.SelectSelfToolResult(results)
 
 	// No result or not an available update — nothing to do.
 	if target == nil || target.Status != update.UpdateAvailable {
 		return nil
 	}
 
-	// Prompt the user before applying — unconditional (GENTLE_AI_CONFIRM_UPDATE removed).
-	// When --yes / GENTLE_AI_YES=1, substitute an auto-accept stub so scripted
+	// Prompt the user before applying — unconditional.
+	// When --yes / AXIOM_YES=1, substitute an auto-accept stub so scripted
 	// upgrades work without a TTY. When stdin is not a TTY, defaultPromptForUpdate
 	// auto-declines, making non-interactive runs (CI, pipes) safe by default.
 	activePrmptFn := promptFn
@@ -161,7 +154,7 @@ func selfUpdate(ctx context.Context, version string, profile system.PlatformProf
 	// Check if upgrade succeeded.
 	var succeeded bool
 	for _, r := range report.Results {
-		if r.ToolName == "gentle-ai" && r.Status == upgrade.UpgradeSucceeded {
+		if update.IsSelfToolName(r.ToolName) && r.Status == upgrade.UpgradeSucceeded {
 			succeeded = true
 			break
 		}
@@ -187,7 +180,7 @@ func selfUpdate(ctx context.Context, version string, profile system.PlatformProf
 		_ = markPendingSyncAfterSelfUpdate(homeDir)
 	}
 
-	return restartAfterGentleAIUpgrade(target.LatestVersion, stdout)
+	return restartAfterSelfUpgrade(target.LatestVersion, stdout)
 }
 
 // markPendingSyncAfterSelfUpdate sets PendingSync under the canonical
@@ -209,10 +202,10 @@ func markPendingSyncAfterSelfUpdate(homeDir string) error {
 	})
 }
 
-func gentleAIUpgradeSucceeded(report upgrade.UpgradeReport) (string, bool) {
+func selfUpgradeSucceeded(report upgrade.UpgradeReport) (string, bool) {
 	for _, r := range report.Results {
-		// Identity predicate (D-01/D-08): must survive the init() rename to
-		// "axiom", exactly like every other self-tool safeguard (REQ-22.3).
+		// Identity predicate (D-01/D-08), like every other self-tool safeguard
+		// (REQ-22.3).
 		if update.IsSelfToolName(r.ToolName) && r.Status == upgrade.UpgradeSucceeded {
 			return strings.TrimPrefix(r.NewVersion, "v"), true
 		}
@@ -220,7 +213,7 @@ func gentleAIUpgradeSucceeded(report upgrade.UpgradeReport) (string, bool) {
 	return "", false
 }
 
-func restartAfterGentleAIUpgrade(latestVersion string, stdout io.Writer) error {
+func restartAfterSelfUpgrade(latestVersion string, stdout io.Writer) error {
 	latestVersion = strings.TrimPrefix(latestVersion, "v")
 	// Converged behavior (task 4.6): always print the restart message on every OS
 	// and return. The new binary runs automatically on next launch, picking up
@@ -232,12 +225,12 @@ func restartAfterGentleAIUpgrade(latestVersion string, stdout io.Writer) error {
 }
 
 // printPostUpgradeDoctorAdvisory prints a non-blocking informational advisory
-// suggesting the user run 'gentle-ai doctor' to verify ecosystem health after
-// a successful gentle-ai upgrade. It is purely informational: it does not run
+// suggesting the user run 'axiom doctor' to verify ecosystem health after
+// a successful axiom upgrade. It is purely informational: it does not run
 // any checks, does not change exit status, and does not block the upgrade.
 //
 // The advisory is shown in two places:
-//  1. After a successful `gentle-ai upgrade` CLI invocation (printed by runUpgrade).
+//  1. After a successful `axiom upgrade` CLI invocation (printed by runUpgrade).
 //  2. On the next launch under the new binary when PendingSync=true is observed
 //     (covers the TUI self-update path, where the new binary was not yet running
 //     when the upgrade completed).

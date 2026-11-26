@@ -191,7 +191,7 @@ func TestBuildPlanSnapshotsPiManifestAndOwnedOverlay(t *testing.T) {
 }
 
 // TestExecutePlanRetiresStalePiSystemPromptBlocks covers issue #4057: a Pi
-// install made before SupportsSystemPrompt()==false for Pi left gentle-ai
+// install made before SupportsSystemPrompt()==false for Pi left axiom
 // managed blocks in ~/.pi/agent/APPEND_SYSTEM.md. Since adapter.SupportsSystemPrompt()
 // is false, componentOperations() never queues a rewrite op for that file, so
 // uninstall must retire the stale blocks directly.
@@ -369,9 +369,12 @@ func TestPartialUninstallPiReportsRetainedResourcesAndOptionalCleanup(t *testing
 		filepath.Join(homeDir, ".pi", "agent", "agents"),
 		filepath.Join(homeDir, ".pi", "agent", "chains"),
 		filepath.Join(homeDir, ".pi", "agent", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "agent", "axiom"),
 		filepath.Join(homeDir, ".pi", "agent", "subagents.json"),
 		filepath.Join(homeDir, ".pi", "gentle-ai"),
+		filepath.Join(homeDir, ".pi", "axiom"),
 		filepath.Join(workspaceDir, ".pi", "gentle-ai"),
+		filepath.Join(workspaceDir, ".pi", "axiom"),
 	}
 	for _, path := range retainedPaths {
 		if filepath.Ext(path) == ".json" {

@@ -95,7 +95,7 @@ func TestWriteStreamAtomicReportsTheDigestOfTheFileOnDisk(t *testing.T) {
 // TestWriteStreamAtomicPreservesRequestedMode covers the executable case the
 // binary installers rely on.
 func TestWriteStreamAtomicPreservesRequestedMode(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "gentle-ai")
+	path := filepath.Join(t.TempDir(), "axiom")
 
 	if _, err := WriteStreamAtomic(path, strings.NewReader("#!/bin/sh\n"), 0o755); err != nil {
 		t.Fatalf("WriteStreamAtomic: %v", err)
@@ -261,7 +261,7 @@ func assertNoStagedLeftovers(t *testing.T, dir string) {
 		t.Fatalf("read dir: %v", err)
 	}
 	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".gentle-ai-") {
+		if strings.HasPrefix(entry.Name(), ".axiom-") {
 			t.Errorf("staged temp file %q was left behind", entry.Name())
 		}
 	}

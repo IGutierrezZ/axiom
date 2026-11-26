@@ -45,7 +45,7 @@ var snapshotCreator = func(snapshotDir string, paths []string) (backup.Manifest,
 	return backup.NewSnapshotter().Create(snapshotDir, paths)
 }
 
-// AppVersion is the gentle-ai version written into backup manifests created by
+// AppVersion is the axiom version written into backup manifests created by
 // the upgrade executor. Set by app.go before calling Execute so that upgrade
 // backups record the version that created them.
 // Default "dev" matches the ldflags default in app.Version.
@@ -121,11 +121,11 @@ var backupExcludeSubdirs = map[string]bool{
 	"tmp":                         true, // Antigravity temporary runtime artifacts
 }
 
-// configPathsForBackup returns the explicit Gentle AI-managed file paths that
+// configPathsForBackup returns the explicit Axiom-managed file paths that
 // the backup snapshot must include before any upgrade execution.
 //
 // This is intentionally NOT a recursive backup of agent config directories.
-// Upgrade backups are rollback artifacts for files Gentle AI may create or
+// Upgrade backups are rollback artifacts for files Axiom may create or
 // modify, not general-purpose backups of conversations, sessions, caches,
 // sockets, package installs, or other runtime state.
 //
@@ -133,7 +133,7 @@ var backupExcludeSubdirs = map[string]bool{
 // deliberately configured empty selection. Filesystem detection is used only for
 // missing or incidental pre-install state; unreadable state contributes no agent
 // paths. This prevents snapshot bloat from agent config dirs that the user never
-// actually installed via gentle-ai (issue #354: snapshots could reach ~25 GiB
+// actually installed via axiom (issue #354: snapshots could reach ~25 GiB
 // from unmanaged config dirs).
 func configPathsForBackup(homeDir string, diagnostics ...io.Writer) []string {
 	dw := firstWriter(diagnostics...)
@@ -421,7 +421,7 @@ func writeBackupDiagnostic(w io.Writer, format string, args ...any) {
 //
 // The backup snapshot is created before any executable upgrade — this is the
 // architectural guarantee that config is safe even if an upgrade fails mid-way.
-// Windows gentle-ai provenance is preflighted first because its manual fallback
+// Windows axiom provenance is preflighted first because its manual fallback
 // must remain a true zero-mutation outcome.
 func Execute(ctx context.Context, results []update.UpdateResult, profile system.PlatformProfile, homeDir string, dryRun bool, progress ...io.Writer) UpgradeReport {
 	options := ExecuteOptions{}
@@ -659,14 +659,14 @@ func executeOne(ctx context.Context, r update.UpdateResult, profile system.Platf
 }
 
 // effectiveMethod resolves the actual upgrade strategy for a tool on a given platform.
-// Priority order: plugin → gentle-ai self-upgrade policy → brew-owned package →
+// Priority order: plugin → axiom self-upgrade policy → brew-owned package →
 // go-install → declared method.
 //
 //  1. OpenCode plugins are always handled by their own method — never overridden.
-//  2. gentle-ai (Axiom) never uses Homebrew: it has no formula of its own.
+//  2. axiom (Axiom) never uses Homebrew: it has no formula of its own.
 //     For every other tool, Homebrew is used only when it confirms it owns it.
-//  3. gentle-ai's own upgrade never falls through to the generic rules below; it
-//     is resolved entirely by gentleAISelfUpgradeMethod, which is what keeps
+//  3. axiom's own upgrade never falls through to the generic rules below; it
+//     is resolved entirely by selfUpgradeMethod, which is what keeps
 //     Linux and macOS on the signed release download.
 //  4. For every other tool: when Go is available on PATH and the tool declares a
 //     GoImportPath, go-install is preferred over a direct binary download.
@@ -678,7 +678,7 @@ func effectiveMethod(tool update.ToolInfo, profile system.PlatformProfile) updat
 	// Axiom has no Homebrew formula (a same-named one belongs to Gentleman-Programming),
 	// so the self tool is resolved before any Homebrew ownership check.
 	if update.IsSelfTool(tool) {
-		return gentleAISelfUpgradeMethod(tool, profile)
+		return selfUpgradeMethod(tool, profile)
 	}
 	if profile.PackageManager == "brew" && homebrewPackageInstalled(tool.Name) {
 		return update.InstallBrew
@@ -689,7 +689,7 @@ func effectiveMethod(tool update.ToolInfo, profile system.PlatformProfile) updat
 	return tool.InstallMethod
 }
 
-// gentleAISelfUpgradeMethod resolves how the self-tool upgrades itself, once
+// selfUpgradeMethod resolves how the self-tool upgrades itself, once
 // Homebrew ownership has already been ruled out.
 //
 // Trust anchors differ by platform (D-02):
@@ -700,7 +700,7 @@ func effectiveMethod(tool update.ToolInfo, profile system.PlatformProfile) updat
 //
 // This function is the ONLY place the self-tool's method is decided, which
 // keeps the routing structural rather than incidental.
-func gentleAISelfUpgradeMethod(tool update.ToolInfo, profile system.PlatformProfile) update.InstallMethod {
+func selfUpgradeMethod(tool update.ToolInfo, profile system.PlatformProfile) update.InstallMethod {
 	if profile.OS == "windows" {
 		if profile.GoAvailable && tool.GoInstallResolvable() {
 			return update.InstallGoInstall

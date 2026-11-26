@@ -66,7 +66,7 @@ func TestCheckAllWithCooldown_StaleCacheRefreshes(t *testing.T) {
 		t.Fatalf("state.Write() error = %v", err)
 	}
 
-	stubResults := []UpdateResult{{Tool: ToolInfo{Name: "gentle-ai"}, Status: UpToDate}}
+	stubResults := []UpdateResult{{Tool: ToolInfo{Name: "axiom"}, Status: UpToDate}}
 	checkCalled := 0
 	stubCheckAll := func(_ context.Context, _ string, _ system.PlatformProfile) []UpdateResult {
 		checkCalled++
@@ -139,7 +139,7 @@ func TestCheckAllWithCooldown_FailedCheckDoesNotAdvanceTimestamp(t *testing.T) {
 
 	// Return a failed-check result (all tools failed).
 	failedResults := []UpdateResult{
-		{Tool: ToolInfo{Name: "gentle-ai"}, Status: CheckFailed},
+		{Tool: ToolInfo{Name: "axiom"}, Status: CheckFailed},
 	}
 	stubCheckAll := func(_ context.Context, _ string, _ system.PlatformProfile) []UpdateResult {
 		return failedResults
@@ -174,14 +174,14 @@ func TestCheckAllWithCooldown_EmptyHomeDirAlwaysChecks(t *testing.T) {
 	// Ensure the CWD-relative state directory does not pre-exist from a
 	// previous (buggy) run, so we can detect a fresh write unambiguously.
 	cwd, _ := os.Getwd()
-	stateInCWD := filepath.Join(cwd, ".gentle-ai", "state.json")
+	stateInCWD := filepath.Join(cwd, ".axiom", "state.json")
 	_ = os.Remove(stateInCWD)
-	_ = os.Remove(filepath.Join(cwd, ".gentle-ai"))
+	_ = os.Remove(filepath.Join(cwd, ".axiom"))
 
 	checkCalled := 0
 	stubCheckAll := func(_ context.Context, _ string, _ system.PlatformProfile) []UpdateResult {
 		checkCalled++
-		return []UpdateResult{{Tool: ToolInfo{Name: "gentle-ai"}, Status: UpToDate}}
+		return []UpdateResult{{Tool: ToolInfo{Name: "axiom"}, Status: UpToDate}}
 	}
 
 	results := CheckAllWithCooldown(context.Background(), "1.0.0", profile, "", 6*time.Hour,
@@ -274,7 +274,7 @@ func TestCheckAllWithCooldown_NonMissingReadErrorSkipsWrite(t *testing.T) {
 
 	// Write a corrupt (non-parseable) state file so state.Read returns a
 	// non-missing error (file exists but JSON is invalid).
-	stateDir := filepath.Join(home, ".gentle-ai")
+	stateDir := filepath.Join(home, ".axiom")
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestCheckAllWithCooldown_NonMissingReadErrorSkipsWrite(t *testing.T) {
 
 	stubCheckAll := func(_ context.Context, _ string, _ system.PlatformProfile) []UpdateResult {
 		// Return a successful result — checkSucceeded will be true.
-		return []UpdateResult{{Tool: ToolInfo{Name: "gentle-ai"}, Status: UpToDate}}
+		return []UpdateResult{{Tool: ToolInfo{Name: "axiom"}, Status: UpToDate}}
 	}
 
 	// stale first read: corrupt file → read error → always-check (skip cooldown).

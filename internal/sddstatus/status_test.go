@@ -133,7 +133,7 @@ func TestResolveSelectionStates(t *testing.T) {
 
 // TestAmbiguousChangeSelectionNamesARunnableCommandPerChange pins the machine
 // surface, not the markdown one. #2117 step 5: the SDD task-failure envelope
-// hands the caller `gentle-ai sdd-status --cwd <cwd> --json` as its
+// hands the caller `axiom sdd-status --cwd <cwd> --json` as its
 // continuation. With more than one active change that lands here, and the
 // blocked reason used to be the entire guidance: it listed the change names and
 // named no command, so an automated consumer following our own continuation had

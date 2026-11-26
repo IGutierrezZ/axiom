@@ -14,10 +14,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
-// TestInitMutatesSelfToolEntryFieldByField pins the D-01 invariant: init() must
-// mutate update.Tools field by field — never replace the whole ToolInfo struct —
-// so that GoModulePath and any future registry fields survive the rename.
-func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
+// TestSelfToolRegistryEntry pins the shipped self-tool registry entry: the binary
+// no longer rewrites it at start-up, so the registry must already carry the real
+// coordinates and the module path that keeps the go install self-upgrade available.
+func TestSelfToolRegistryEntry(t *testing.T) {
 	var selfTool *update.ToolInfo
 	for i := range update.Tools {
 		if update.IsSelfToolName(update.Tools[i].Name) {
@@ -26,7 +26,7 @@ func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
 		}
 	}
 	if selfTool == nil {
-		t.Fatal("no self-tool entry found in update.Tools after init()")
+		t.Fatal("no self-tool entry found in update.Tools")
 	}
 
 	if selfTool.Name != "axiom" {
@@ -39,10 +39,8 @@ func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
 		t.Errorf("Repo = %q, want %q", selfTool.Repo, "axiom")
 	}
 	if selfTool.GoImportPath != "github.com/IGutierrezZ/axiom/v3/cmd/axiom" {
-		t.Errorf("GoImportPath = %q, want %q", selfTool.GoImportPath, "github.com/IGutierrezZ/axiom/v3/cmd/axiom")
+		t.Errorf("GoImportPath = %q", selfTool.GoImportPath)
 	}
-	// The import path must live inside the declared module so the go install
-	// self-upgrade stays available.
 	if !selfTool.GoInstallResolvable() {
 		t.Errorf("GoInstallResolvable() = false for GoImportPath %q and GoModulePath %q", selfTool.GoImportPath, selfTool.GoModulePath)
 	}
@@ -52,23 +50,14 @@ func TestInitMutatesSelfToolEntryFieldByField(t *testing.T) {
 	if selfTool.VersionPrefix != "v" {
 		t.Errorf("VersionPrefix = %q, want %q", selfTool.VersionPrefix, "v")
 	}
-
-	// Key assertion: GoModulePath must survive the rename. Full-struct
-	// replacement would zero this field (D-01).
+	if selfTool.InstallMethod != update.InstallBinary {
+		t.Errorf("InstallMethod = %q, want %q", selfTool.InstallMethod, update.InstallBinary)
+	}
 	if selfTool.GoModulePath != "github.com/IGutierrezZ/axiom/v3" {
-		t.Errorf("GoModulePath = %q, want %q (must be preserved by field-by-field mutation)",
-			selfTool.GoModulePath, "github.com/IGutierrezZ/axiom/v3")
+		t.Errorf("GoModulePath = %q", selfTool.GoModulePath)
 	}
-}
-
-// TestInitPreservesSelfToolNameRecognition verifies that IsSelfToolName still
-// recognizes both historical names after the mutation renames the entry.
-func TestInitPreservesSelfToolNameRecognition(t *testing.T) {
-	if !update.IsSelfToolName("axiom") {
-		t.Error(`IsSelfToolName("axiom") = false, want true`)
-	}
-	if !update.IsSelfToolName("gentle-ai") {
-		t.Error(`IsSelfToolName("gentle-ai") = false, want true`)
+	if update.IsSelfToolName("gentle-ai") {
+		t.Error(`IsSelfToolName("gentle-ai") = true, want false (retired name)`)
 	}
 }
 

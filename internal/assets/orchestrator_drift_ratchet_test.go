@@ -37,7 +37,7 @@ var orchestratorSectionDriftRatchet = []struct {
 	{"Lossless Blocking Prompts (MANDATORY)", 4},
 	{"Artifact Store Policy", 3},
 	// single-pr (C-02-c): retiring `Review Workload Guard` left the marker blocks that followed it
-	// (`gentle-ai:sdd-model-assignments`, `section:model-capable`) trailing `Result Contract`, which the
+	// (`axiom:sdd-model-assignments`, `section:model-capable`) trailing `Result Contract`, which the
 	// heading-based measure counts as a fourth body. No body was edited: it is a layout artifact of
 	// deleting the section, not drift between runtimes.
 	{"Result Contract", 4},

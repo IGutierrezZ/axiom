@@ -1,6 +1,6 @@
 /**
  * skill-registry
- * Refreshes Gentle AI's project skill registry when OpenCode starts.
+ * Refreshes Axiom's project skill registry when OpenCode starts.
  *
  * Codex and Claude Code use native startup hooks for the same command. OpenCode
  * loads plugins at startup, so this plugin provides the equivalent behavior

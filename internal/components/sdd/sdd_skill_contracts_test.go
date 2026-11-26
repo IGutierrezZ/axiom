@@ -41,7 +41,7 @@ func TestReviewFoundationSkillsCarryThreatAndWorkUnitEvidence(t *testing.T) {
 	}
 
 	statusContract := assets.MustRead("skills/_shared/sdd-status-contract.md")
-	for _, want := range []string{"gentle-ai.sdd-status/v2", "SDD status never reads review mode", "optional diagnostic", "not a verdict"} {
+	for _, want := range []string{"axiom.sdd-status/v2", "SDD status never reads review mode", "optional diagnostic", "not a verdict"} {
 		if !strings.Contains(statusContract, want) {
 			t.Errorf("status contract missing %q", want)
 		}

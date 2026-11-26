@@ -1,6 +1,7 @@
 package agentbuilder
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -191,5 +192,45 @@ func TestRegistry_VersionPreservedAcrossSaveLoad(t *testing.T) {
 	}
 	if loaded.Version != 42 {
 		t.Errorf("Version = %d, want 42", loaded.Version)
+	}
+}
+
+func TestRegistryPathMigratesLegacyRegistry(t *testing.T) {
+	home := t.TempDir()
+	legacy := filepath.Join(home, ".config", "gentle-ai", "custom-agents.json")
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte(`{"version":1,"agents":[{"name":"viejo"}]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	path := RegistryPath(home)
+	if want := filepath.Join(home, ".config", "axiom", "custom-agents.json"); path != want {
+		t.Fatalf("RegistryPath() = %q, want %q", path, want)
+	}
+	reg, err := LoadRegistry(path)
+	if err != nil || reg.FindByName("viejo") == nil {
+		t.Fatalf("el registro heredado no se migró: %+v, %v", reg, err)
+	}
+	if _, err := os.Stat(legacy); !os.IsNotExist(err) {
+		t.Fatalf("el registro heredado debía moverse: %v", err)
+	}
+
+	// Idempotente y sin pisar: si ambos existen, gana el nuevo.
+	if err := os.MkdirAll(filepath.Dir(legacy), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(legacy, []byte(`otro`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if RegistryPath(home) != path {
+		t.Fatal("la ruta cambió al repetir")
+	}
+	if reg, err := LoadRegistry(path); err != nil || reg.FindByName("viejo") == nil {
+		t.Fatalf("el registro nuevo se pisó: %+v, %v", reg, err)
+	}
+	if got, _ := os.ReadFile(legacy); string(got) != "otro" {
+		t.Fatalf("el heredado debía quedar intacto: %q", got)
 	}
 }

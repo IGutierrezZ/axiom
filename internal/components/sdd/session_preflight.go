@@ -8,12 +8,16 @@ import (
 )
 
 const (
-	sddSessionPreflightMarker       = "<!-- gentle-ai:sdd-session-preflight -->"
-	sddSessionPreflightEnd          = "<!-- /gentle-ai:sdd-session-preflight -->"
+	sddSessionPreflightMarker       = "<!-- axiom:sdd-session-preflight -->"
+	sddSessionPreflightEnd          = "<!-- /axiom:sdd-session-preflight -->"
 	sddSessionPreflightInit         = "### SDD Init Guard (MANDATORY)"
 	legacySDDSessionPreflightMarker = "<!-- gentle-ai:sdd-session-preflight-migration -->"
 	legacySDDSessionPreflightEnd    = "<!-- /gentle-ai:sdd-session-preflight-migration -->"
-	sddSessionPreflightBody         = "### SDD Session Preflight (HARD GATE)\n\n" +
+	// Bloque canónico que escribieron las versiones con el nombre anterior: solo
+	// se reconoce para sustituirlo por el canónico actual, nunca se escribe.
+	legacyNamedSDDSessionPreflightMarker = "<!-- gentle-ai:sdd-session-preflight -->"
+	legacyNamedSDDSessionPreflightEnd    = "<!-- /gentle-ai:sdd-session-preflight -->"
+	sddSessionPreflightBody              = "### SDD Session Preflight (HARD GATE)\n\n" +
 		"Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.\n\n" +
 		"The project topology decides which groups to ask. Before asking, read `workspace.topology` from the project's `axiom.yaml`; when it is missing or unreadable, ask the `monorepo-embedded` groups. `monorepo-embedded` asks Pace. `multirepo` asks nothing: its pace is always Interactive and is never asked. When the topology requires no group, ask nothing: the runtime derives the whole session preflight at SDD dispatch. Never ask the artifact store: it is always `hybrid`.\n\n" +
 		"Always collect this preflight with the `question` tool; never collect these answers as typed chat text and never fall back to a plain-chat prompt while the `question` tool exists. If the runtime rejects the grouped result, fix the reported problem and ask again with the `question` tool.\n" +
@@ -63,15 +67,21 @@ func sddSessionPreflightBlockWithTool(tool string) string {
 // in place and otherwise appends the canonical block without interpreting any
 // unmarked user-authored prompt text.
 func validatePreservedSDDSessionPreflight(rendered string) error {
-	canonicalStart, _, err := sddSessionPreflightMarkerRange(rendered)
-	if err != nil {
-		return err
+	pairs := 0
+	for _, markers := range [][2]string{
+		{sddSessionPreflightMarker, sddSessionPreflightEnd},
+		{legacySDDSessionPreflightMarker, legacySDDSessionPreflightEnd},
+		{legacyNamedSDDSessionPreflightMarker, legacyNamedSDDSessionPreflightEnd},
+	} {
+		start, _, err := sddSessionPreflightOwnedMarkerRange(rendered, markers[0], markers[1])
+		if err != nil {
+			return err
+		}
+		if start >= 0 {
+			pairs++
+		}
 	}
-	legacyStart, _, err := sddSessionPreflightOwnedMarkerRange(rendered, legacySDDSessionPreflightMarker, legacySDDSessionPreflightEnd)
-	if err != nil {
-		return err
-	}
-	if canonicalStart >= 0 && legacyStart >= 0 {
+	if pairs > 1 {
 		return fmt.Errorf("sdd session preflight cannot contain canonical and legacy marker pairs")
 	}
 	return nil
@@ -85,13 +95,18 @@ func migratePreservedSDDSessionPreflight(rendered string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	legacyStart, legacyEnd, err := sddSessionPreflightOwnedMarkerRange(rendered, legacySDDSessionPreflightMarker, legacySDDSessionPreflightEnd)
-	if err != nil {
-		return "", err
-	}
 	block := strings.ReplaceAll(sddSessionPreflightBlock(), "\n", newline)
-	if legacyStart >= 0 {
-		rendered = rendered[:legacyStart] + block + rendered[legacyEnd:]
+	for _, markers := range [][2]string{
+		{legacySDDSessionPreflightMarker, legacySDDSessionPreflightEnd},
+		{legacyNamedSDDSessionPreflightMarker, legacyNamedSDDSessionPreflightEnd},
+	} {
+		legacyStart, legacyEnd, err := sddSessionPreflightOwnedMarkerRange(rendered, markers[0], markers[1])
+		if err != nil {
+			return "", err
+		}
+		if legacyStart >= 0 {
+			rendered = rendered[:legacyStart] + block + rendered[legacyEnd:]
+		}
 	}
 	open, closeEnd, err := sddSessionPreflightMarkerRange(rendered)
 	if err != nil {

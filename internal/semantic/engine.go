@@ -82,7 +82,7 @@ func (e *Engine) AnalyzeDirectory(rootDir string, role string) (*ExtractionResul
 		// 1. Extraer dependencias de importación
 		for _, imp := range node.Imports {
 			importPath := strings.Trim(imp.Path.Value, `"`)
-			isInternal := strings.Contains(importPath, "axiom") || strings.Contains(importPath, "gentle-ai") || strings.HasPrefix(importPath, "./") || strings.HasPrefix(importPath, "../")
+			isInternal := strings.Contains(importPath, "axiom") || strings.HasPrefix(importPath, "./") || strings.HasPrefix(importPath, "../")
 			result.Dependencies = append(result.Dependencies, DependencyRelation{
 				SourcePackage: packageName,
 				TargetPackage: importPath,

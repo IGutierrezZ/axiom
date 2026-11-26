@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// codexModelCatalog is Gentle AI's curated selectable Codex model catalog for
+// codexModelCatalog is Axiom's curated selectable Codex model catalog for
 // per-phase custom assignments. It is a UI/configuration catalog, not a runtime
 // availability probe; the Codex CLI remains the source of truth at execution
 // time. Order is intentional: newest/most-capable first.
@@ -28,7 +28,7 @@ var codexModelCatalog = []string{
 	"gpt-5.2-codex",
 }
 
-// CodexAvailableModels returns Gentle AI's curated selectable Codex model
+// CodexAvailableModels returns Axiom's curated selectable Codex model
 // catalog for per-phase Custom picker assignments. The slice is a copy —
 // mutations do not affect the canonical catalog.
 func CodexAvailableModels() []string {
@@ -251,7 +251,7 @@ func RenderCodexODDAssignments(phaseModels map[string]string, efforts map[string
 }
 
 // CodexOrchestratorAssignment is the explicit top-level Codex session model
-// selected by a Gentle AI preset. It is separate from delegated SDD carriles.
+// selected by a Axiom preset. It is separate from delegated SDD carriles.
 type CodexOrchestratorAssignment struct {
 	Model  string
 	Effort CodexEffort
@@ -373,7 +373,7 @@ type CodexTierGroup struct {
 // fallback in RenderCodexPhaseEfforts and the nil-input fallback in
 // resolveProfileAssignments agree on the same canonical tier values:
 //
-// These efforts are Gentle AI workload policy, not Codex defaults.
+// These efforts are Axiom workload policy, not Codex defaults.
 //
 //	Carril      LowCost  Recommended  Powerful
 //	sdd-strong  medium   medium       xhigh

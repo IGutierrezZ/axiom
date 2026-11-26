@@ -4,7 +4,7 @@ import "github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 
 // OpenSpecComposeSchema names the sdd-archive canonical composition contract
 // exposed to the sdd-archive skill and its CLI wrapper.
-const OpenSpecComposeSchema = "gentle-ai.sdd-archive-compose/v1"
+const OpenSpecComposeSchema = "axiom.sdd-archive-compose/v1"
 
 // UnappliedDeltaError names exactly one delta requirement that
 // ComposeOpenSpecCanonicalSpec could not apply. Callers MUST refuse — never

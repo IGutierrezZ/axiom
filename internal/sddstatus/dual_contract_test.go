@@ -77,10 +77,10 @@ func TestProjectStatusV2SchemaDualSupport(t *testing.T) {
 		wantErr        bool
 	}{
 		{
-			name:           "schema legado gentle-ai aceptado",
-			schemaName:     LegacySchemaName,
-			wantSchemaName: LegacySchemaName,
-			wantErr:        false,
+			name:           "schema heredado gentle-ai rechazado",
+			schemaName:     "gentle-ai.sdd-status",
+			wantSchemaName: "",
+			wantErr:        true,
 		},
 		{
 			name:           "schema canonico axiom aceptado",
@@ -118,7 +118,7 @@ func TestSDDIntegrationConsentResultDualValidation(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "envelope legado gentle-ai valido",
+			name: "invocacion heredada gentle-ai rechazada",
 			envelope: SDDIntegrationConsentResult{
 				Schema:       SDDIntegrationConsentSchema,
 				Contract:     SDDIntegrationContractV1,
@@ -150,13 +150,13 @@ func TestSDDIntegrationConsentResultDualValidation(t *testing.T) {
 					Note:    "Ajustar tasks.md para permanecer dentro de los limites",
 				},
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name: "envelope canonico axiom valido",
 			envelope: SDDIntegrationConsentResult{
-				Schema:       AxiomSDDIntegrationConsentSchema,
-				Contract:     AxiomSDDIntegrationContractV1,
+				Schema:       SDDIntegrationConsentSchema,
+				Contract:     SDDIntegrationContractV1,
 				Operation:    sddConsentOperation,
 				Action:       sddConsentActionRequired,
 				Blocking:     true,
@@ -191,7 +191,7 @@ func TestSDDIntegrationConsentResultDualValidation(t *testing.T) {
 			name: "schema desconocido rechazado",
 			envelope: SDDIntegrationConsentResult{
 				Schema:       "desconocido.consent/v1",
-				Contract:     AxiomSDDIntegrationContractV1,
+				Contract:     SDDIntegrationContractV1,
 				Operation:    sddConsentOperation,
 				Action:       sddConsentActionRequired,
 				Blocking:     true,
@@ -219,7 +219,7 @@ func TestSDDGovernanceGateResultDualValidation(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "envelope gobernanza legado gentle-ai valido",
+			name: "envelope gobernanza canonico axiom valido",
 			envelope: SDDGovernanceGateResult{
 				Schema:    SDDGovernanceGateSchema,
 				Contract:  SDDGovernanceContractV1,
@@ -255,45 +255,9 @@ func TestSDDGovernanceGateResultDualValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "envelope gobernanza canonico axiom valido",
-			envelope: SDDGovernanceGateResult{
-				Schema:    AxiomSDDGovernanceGateSchema,
-				Contract:  AxiomSDDGovernanceContractV1,
-				Operation: gateOperation,
-				Action:    gateActionRequired,
-				Blocking:  true,
-				Change:    "mi-cambio",
-				Gate:      "integration",
-				Criteria:  []string{"¿Cubre intencion?"},
-				Headline:  "Revision de compuerta spec",
-				Reason:    "Validacion de arquitectura requerida",
-				Value:     "Compuerta bloqueante",
-				Evidence:  []string{"Documento spec.md completo"},
-				Choices: []consentenvelope.Choice{
-					{
-						Answer:     gateAnswerApproved,
-						Label:      "Aprobar",
-						Effect:     "Aprobar compuerta",
-						Invocation: "axiom sdd gate record --cwd /tmp/repo --change mi-cambio --gate integration --decision approved --reason ok",
-					},
-					{
-						Answer:     gateAnswerRejected,
-						Label:      "Rechazar",
-						Effect:     "Rechazar compuerta",
-						Invocation: "axiom sdd gate record --cwd /tmp/repo --change mi-cambio --gate integration --decision rejected --reason necesita_cambios",
-					},
-				},
-				OffPath: consentenvelope.OffPath{
-					Command: "axiom sdd status mi-cambio --cwd /tmp/repo",
-					Note:    "Inspeccionar estado",
-				},
-			},
-			wantErr: false,
-		},
-		{
 			name: "envelope gobernanza contrato no soportado",
 			envelope: SDDGovernanceGateResult{
-				Schema:    AxiomSDDGovernanceGateSchema,
+				Schema:    SDDGovernanceGateSchema,
 				Contract:  "contrato.invalido/v1",
 				Operation: gateOperation,
 				Action:    gateActionRequired,

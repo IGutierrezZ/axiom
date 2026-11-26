@@ -1,7 +1,7 @@
 # SDD Orchestrator — Shared Sections
 
 Canonical bodies for every block that two or more runtime orchestrators state byte for byte.
-Each runtime keeps its own heading line and carries `{{GENTLE_AI_SDD_SECTION:<name>}}` in place
+Each runtime keeps its own heading line and carries `{{AXIOM_SDD_SECTION:<name>}}` in place
 of the body; `composeOrchestratorPrompt` substitutes from here before any other step. A marker
 may sit on its own line or inline, followed by runtime-specific text on the same line.
 
@@ -222,7 +222,7 @@ For this agent (sub-agent delegation): **Automatic** means phases run back-to-ba
 
 Interactive approval is phase-scoped. Words like "continue", "dale", or "go on" approve only the immediate next phase, not the rest of the SDD pipeline. Do not treat a generated artifact as approved until the user has had a chance to review or explicitly delegate that review.
 
-{{GENTLE_AI_RESEARCH_LIFECYCLE}}
+{{AXIOM_RESEARCH_LIFECYCLE}}
 <!-- sdd-orchestrator-section:Execution Mode:end -->
 
 <!-- sdd-orchestrator-section:Automatic Mode Gatekeeper (MANDATORY):start -->

@@ -342,9 +342,6 @@ func TestBlockedEditAuthorityStatusCarriesConsentEnvelope(t *testing.T) {
 	// consents to binds exactly the identity a later status read projects.
 	marker, err := os.ReadFile(filepath.Join(changeRoot, ".axiom-instance"))
 	if err != nil {
-		marker, err = os.ReadFile(filepath.Join(changeRoot, ".gentle-ai-instance"))
-	}
-	if err != nil {
 		t.Fatalf("blocked status persisted no change-instance marker: %v", err)
 	}
 	token := strings.TrimSpace(string(marker))
@@ -464,7 +461,7 @@ func TestRecreatedChangeNameDoesNotInheritGrantedRoots(t *testing.T) {
 	}
 }
 
-func TestChangeInstanceMarkerLegacyFallback(t *testing.T) {
+func TestChangeInstanceMarkerMigratesLegacyName(t *testing.T) {
 	changeRoot := t.TempDir()
 	legacyMarkerPath := filepath.Join(changeRoot, ".gentle-ai-instance")
 	legacyToken := "sdd-0123456789abcdef0123456789abcdef"
@@ -479,17 +476,35 @@ func TestChangeInstanceMarkerLegacyFallback(t *testing.T) {
 	if got != legacyToken {
 		t.Fatalf("readChangeInstanceMarker() = %q, want %q", got, legacyToken)
 	}
+	if _, err := os.Stat(filepath.Join(changeRoot, ".axiom-instance")); err != nil {
+		t.Fatalf("el marcador heredado no se migró a .axiom-instance: %v", err)
+	}
+	if _, err := os.Stat(legacyMarkerPath); !os.IsNotExist(err) {
+		t.Fatal("el marcador heredado debía desaparecer tras migrar")
+	}
 
-	// ensureChangeInstanceMarker should return existing legacy marker without minting a new .axiom-instance
+	// Idempotente: repetir devuelve el mismo token sin minted nuevo.
 	ensured, err := ensureChangeInstanceMarker(changeRoot)
-	if err != nil {
-		t.Fatalf("ensureChangeInstanceMarker() error = %v", err)
+	if err != nil || ensured != legacyToken {
+		t.Fatalf("ensureChangeInstanceMarker() = %q, %v; want %q", ensured, err, legacyToken)
 	}
-	if ensured != legacyToken {
-		t.Fatalf("ensureChangeInstanceMarker() = %q, want %q", ensured, legacyToken)
-	}
+}
 
-	if _, err := os.Stat(filepath.Join(changeRoot, ".axiom-instance")); !os.IsNotExist(err) {
-		t.Fatal("ensureChangeInstanceMarker minted .axiom-instance when legacy marker existed")
+func TestChangeInstanceMarkerKeepsExistingNewMarker(t *testing.T) {
+	changeRoot := t.TempDir()
+	newToken := "sdd-fedcba9876543210fedcba9876543210"
+	if err := os.WriteFile(filepath.Join(changeRoot, ".axiom-instance"), []byte(newToken+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	legacyPath := filepath.Join(changeRoot, ".gentle-ai-instance")
+	if err := os.WriteFile(legacyPath, []byte("sdd-0123456789abcdef0123456789abcdef\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := readChangeInstanceMarker(changeRoot)
+	if err != nil || got != newToken {
+		t.Fatalf("readChangeInstanceMarker() = %q, %v; want %q", got, err, newToken)
+	}
+	if _, err := os.Stat(legacyPath); err != nil {
+		t.Fatal("el marcador heredado no debe tocarse si existe el nuevo")
 	}
 }

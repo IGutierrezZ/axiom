@@ -26,7 +26,7 @@ type LegacyPromptResult struct {
 // persona (persona), sdd-orchestrator and strict-tdd-mode (sdd), engram-protocol
 // (engram), codegraph-guidance (communitytool), agent-routing and the
 // remote-authorization boundary nested in it (agentguidance), and the retired
-// trigger-rules. Any other ID, even in an axiom or gentle-ai marker, is user
+// trigger-rules. Any other ID, even in an axiom or legacy gentle-ai marker, is user
 // content: a user can write a block with that syntax and any name.
 var managedPromptSectionIDs = map[string]struct{}{
 	filemerge.PersonaSectionID:              {},

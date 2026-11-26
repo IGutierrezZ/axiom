@@ -23,18 +23,16 @@ const (
 	ScopeWorkspace InstallScope = "workspace"
 
 	ScopeAxiomEnvVar = "AXIOM_INSTALL_SCOPE"
-	// ScopeGentleAIEnvVar is the documented fallback read when ScopeAxiomEnvVar is unset or empty.
-	ScopeGentleAIEnvVar = "GENTLE_AI_INSTALL_SCOPE"
-	scopeEnvVar         = ScopeAxiomEnvVar
+	scopeEnvVar      = ScopeAxiomEnvVar
 )
 
 // ResolveInstallScope resolves the install scope from the flag value and env var.
-// Priority: explicit flag > AXIOM_INSTALL_SCOPE > GENTLE_AI_INSTALL_SCOPE > default (workspace).
+// Priority: explicit flag > AXIOM_INSTALL_SCOPE > default (workspace).
 // An empty flagValue means the flag was not set.
 func ResolveInstallScope(flagValue string) (InstallScope, error) {
 	raw := strings.TrimSpace(flagValue)
 	if raw == "" {
-		raw = strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar, ScopeGentleAIEnvVar))
+		raw = strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar))
 	}
 	if raw == "" {
 		return ScopeWorkspace, nil

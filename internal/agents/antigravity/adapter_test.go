@@ -175,7 +175,7 @@ func TestConfigPathsCLIOnly(t *testing.T) {
 		t.Fatalf("SettingsPath() = %q, want %q", got, filepath.Join(cliDir, "settings.json"))
 	}
 	if got := a.MCPConfigPath(home, "ctx7"); got != filepath.Join(cliDir, "mcp_config.json") {
-		t.Fatalf("MCPConfigPath() = %q, want Gentle AI CLI path", got)
+		t.Fatalf("MCPConfigPath() = %q, want Axiom CLI path", got)
 	}
 }
 
@@ -194,7 +194,7 @@ func TestConfigPathsDesktopOnly(t *testing.T) {
 		t.Fatalf("SettingsPath() = %q, want %q", got, filepath.Join(desktopDir, "settings.json"))
 	}
 	if got := a.MCPConfigPath(home, "ctx7"); got != filepath.Join(desktopDir, "mcp_config.json") {
-		t.Fatalf("MCPConfigPath() = %q, want Gentle AI desktop path", got)
+		t.Fatalf("MCPConfigPath() = %q, want Axiom desktop path", got)
 	}
 }
 

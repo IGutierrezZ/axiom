@@ -630,8 +630,8 @@ func TestInjectClaudeCustomModelAssignmentsApplyToEveryDelegation(t *testing.T) 
 	}
 	prompt := string(promptContent)
 	for _, want := range []string{
-		"<!-- gentle-ai:sdd-model-assignments -->",
-		"<!-- /gentle-ai:sdd-model-assignments -->",
+		"<!-- axiom:sdd-model-assignments -->",
+		"<!-- /axiom:sdd-model-assignments -->",
 		"| sdd-design | sonnet | default | Architecture decisions |",
 		"| sdd-propose | fable | default | Architectural decisions |",
 		"| default | haiku | default | Generic and SDD/JD delegation fallback |",
@@ -649,7 +649,7 @@ func TestInjectClaudeCustomModelAssignmentsApplyToEveryDelegation(t *testing.T) 
 	}
 	lazy := string(lazyContent)
 	for _, forbidden := range []string{
-		"<!-- gentle-ai:sdd-model-assignments -->",
+		"<!-- axiom:sdd-model-assignments -->",
 		"## Model Assignments",
 		"Generic/non-SDD delegation MUST NOT use this table",
 		"omit `model` unless the user explicitly requested an override",
@@ -1410,8 +1410,8 @@ func TestInjectOpenCodeUpgradesPromptOwnedLensRouter(t *testing.T) {
 			t.Fatalf("opencode.json retained stale v1 lens-selection text %q", stale)
 		}
 	}
-	managedStart := strings.Index(prompt, "<!-- gentle-ai:delegation-hard-gates-migration -->")
-	managedEnd := strings.Index(prompt, "<!-- /gentle-ai:delegation-hard-gates-migration -->")
+	managedStart := strings.Index(prompt, "<!-- axiom:delegation-hard-gates-migration -->")
+	managedEnd := strings.Index(prompt, "<!-- /axiom:delegation-hard-gates-migration -->")
 	if managedStart < 0 || managedEnd < managedStart {
 		t.Fatal("opencode.json missing delegation hard-gates migration block")
 	}
@@ -1452,7 +1452,7 @@ The words TOTALMENTE obligatorio here belong to the user.`
 	if !strings.Contains(got, userTail) {
 		t.Fatalf("unmarked legacy migration changed or deleted user-owned tail:\n%s", got)
 	}
-	if strings.Count(got, "<!-- gentle-ai:delegation-hard-gates-migration -->") != 1 {
+	if strings.Count(got, "<!-- axiom:delegation-hard-gates-migration -->") != 1 {
 		t.Fatalf("unmarked legacy migration must append exactly one managed block:\n%s", got)
 	}
 	if second := ensurePreservedOpenCodeDelegationHardGates(got); second != got {
@@ -1518,7 +1518,7 @@ func TestEnsurePreservedOpenCodeDelegationHardGatesRewritesRetiredWorkRoutingAut
 	if !strings.HasPrefix(got, userHead+"\n\n") {
 		t.Fatalf("migration disturbed user-authored content outside the managed block:\n%s", got)
 	}
-	if count := strings.Count(got, "<!-- gentle-ai:delegation-hard-gates-migration -->"); count != 1 {
+	if count := strings.Count(got, "<!-- axiom:delegation-hard-gates-migration -->"); count != 1 {
 		t.Fatalf("managed block occurrences = %d, want 1:\n%s", count, got)
 	}
 	if second := ensurePreservedOpenCodeDelegationHardGates(got); second != got {
@@ -2665,12 +2665,12 @@ func TestInjectFileAppendCutsLegacyBlockAtEarliestMarkerOfEitherPrefix(t *testin
 		last  string
 	}{
 		{
-			name:  "axiom before gentle-ai",
+			name:  "axiom before axiom",
 			first: "<!-- axiom:persona -->\nAxiom persona body\n<!-- /axiom:persona -->\n",
 			last:  "<!-- gentle-ai:engram-protocol -->\nGentle engram body\n<!-- /gentle-ai:engram-protocol -->\n",
 		},
 		{
-			name:  "gentle-ai before axiom",
+			name:  "axiom before axiom",
 			first: "<!-- gentle-ai:persona -->\nGentle persona body\n<!-- /gentle-ai:persona -->\n",
 			last:  "<!-- axiom:engram-protocol -->\nAxiom engram body\n<!-- /axiom:engram-protocol -->\n",
 		},
@@ -8034,11 +8034,11 @@ func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
 			t.Errorf("%s no debe recibir %q", agent, branchGuardPluginName)
 		}
 	}
-	// Plugin nuevo: no existe ninguna revisión anterior que reconocer, pero la tabla debe tener su
-	// entrada (los lectores de la tabla indexan por plugin gestionado).
+	// La revisión que llevaba el id de plugin del nombre anterior se reconoce como histórica
+	// para sustituirla por la actual.
 	digests, ok := historicalOpenCodePluginDigests[branchGuardPluginName]
-	if !ok || len(digests) != 0 {
-		t.Fatalf("historicalOpenCodePluginDigests[%q] = %v, %t; want an entry with no historical digests", branchGuardPluginName, digests, ok)
+	if !ok || len(digests["v2"]) != 1 || len(digests) != 1 {
+		t.Fatalf("historicalOpenCodePluginDigests[%q] = %v, %t; want one historical v2 digest", branchGuardPluginName, digests, ok)
 	}
 }
 

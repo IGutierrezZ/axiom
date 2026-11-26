@@ -135,9 +135,9 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 	fs.BoolVar(&opts.StrictTDD, "strict-tdd", false, "enable strict TDD mode for SDD agents (RED → GREEN → REFACTOR)")
 	fs.BoolVar(&opts.IncludePermissions, "include-permissions", false, "include permissions component in sync")
 	fs.BoolVar(&opts.IncludeTheme, "include-theme", false, "include theme component in sync")
-	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS); eligible versions use a managed launcher")
-	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_PI_BACKGROUND_SUBAGENTS); the resolved policy is projected for gentle-pi")
-	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE (fallback: GENTLE_AI_INSTALL_SCOPE)")
+	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS; eligible versions use a managed launcher")
+	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS; the resolved policy is projected for gentle-pi")
+	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE")
 	fs.BoolVar(&opts.DryRun, "dry-run", false, "preview plan without executing")
 	registerListFlag(fs, "profile", &opts.rawProfiles)
 	registerListFlag(fs, "profile-phase", &opts.rawProfilePhases)
@@ -209,14 +209,14 @@ FLAGS
   --strict-tdd                       Enable strict TDD mode for SDD agents
   --include-permissions              Include permissions component
   --include-theme                    Include theme component
-  --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE, fallback: GENTLE_AI_INSTALL_SCOPE)
+  --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE)
   --profile <name:provider/model>    Sync a named SDD profile
   --profile-phase <name:phase:model> Sync a named SDD profile phase
   --opencode-background-subagents=auto|on|off
-                                     Resolve OpenCode capability and manage a launcher when eligible; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_OPENCODE_BACKGROUND_SUBAGENTS)
+                                     Resolve OpenCode capability and manage a launcher when eligible; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS
                                      auto inherits managed on/off, unsupported/unknown stays foreground, off removes only owned launchers
   --pi-background-subagents=auto|on|off
-                                     Project the resolved Pi background-subagent policy for gentle-pi; env: AXIOM_PI_BACKGROUND_SUBAGENTS (fallback: GENTLE_AI_PI_BACKGROUND_SUBAGENTS)
+                                     Project the resolved Pi background-subagent policy for gentle-pi; env: AXIOM_PI_BACKGROUND_SUBAGENTS
                                      auto inherits managed on/off and never enables by itself; only managed policy files are ever overwritten
   --dry-run                          Preview plan without executing
   --help, -h                         Show this help
@@ -2196,7 +2196,7 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 	overrides.apply(&selection)
 
 	// Restore Codex effort and carril model assignments from state so that
-	// `gentle-ai sync` preserves the user's per-phase effort and per-carril
+	// `axiom sync` preserves the user's per-phase effort and per-carril
 	// model choices instead of falling back to canonical defaults every time.
 	// This mirrors the TUI path (loadPersistedAssignments in app.go).
 	if len(selection.CodexModelAssignments) == 0 && len(persistedState.CodexModelAssignments) > 0 {
@@ -2355,7 +2355,7 @@ func restorePersistedCommunityTools(homeDir string, selection *model.Selection, 
 }
 
 func hasManagedPiCodeGraphManifest(homeDir string) bool {
-	path := filepath.Join(homeDir, ".gentle-ai", "pi-codegraph.json")
+	path := filepath.Join(system.AxiomDir(homeDir), "pi-codegraph.json")
 	info, err := os.Lstat(path)
 	if err != nil || !info.Mode().IsRegular() || runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 		return false

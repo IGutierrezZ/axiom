@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// RunSDDStatus is the CLI entry point for `gentle-ai sdd-status [change]`.
+// RunSDDStatus is the CLI entry point for `axiom sdd-status [change]`.
 func RunSDDStatus(args []string, stdout io.Writer) error {
 	parsed, err := sddstatus.ParseCommandArgs(args)
 	if err != nil {
@@ -42,7 +42,7 @@ func RunSDDStatus(args []string, stdout io.Writer) error {
 	return err
 }
 
-// RunSDDContinue is the CLI entry point for `gentle-ai sdd-continue [change]`.
+// RunSDDContinue is the CLI entry point for `axiom sdd-continue [change]`.
 func RunSDDContinue(args []string, stdout io.Writer) error {
 	parsed, err := sddstatus.ParseCommandArgs(args)
 	if err != nil {

@@ -98,9 +98,9 @@ func TestGoInstallMainUpgradeOnlyWhenResolvable(t *testing.T) {
 	})
 }
 
-// TestIsSelfBetaUpgradeDetectsBothNames verifies the beta channel predicate
-// works for axiom and gentle-ai (F6.2).
-func TestIsSelfBetaUpgradeDetectsBothNames(t *testing.T) {
+// TestIsSelfBetaUpgradeDetectsSelfTool verifies the beta channel predicate
+// works for axiom only (F6.2).
+func TestIsSelfBetaUpgradeDetectsSelfTool(t *testing.T) {
 	tests := []struct {
 		name     string
 		toolName string
@@ -108,7 +108,7 @@ func TestIsSelfBetaUpgradeDetectsBothNames(t *testing.T) {
 		want     bool
 	}{
 		{name: "axiom main@", toolName: "axiom", version: "main@abc123", want: true},
-		{name: "gentle-ai main@", toolName: "gentle-ai", version: "main@abc123", want: true},
+		{name: "retired gentle-ai main@", toolName: "gentle-ai", version: "main@abc123", want: false},
 		{name: "axiom stable", toolName: "axiom", version: "1.0.0", want: false},
 		{name: "engram main@", toolName: "engram", version: "main@abc123", want: false},
 	}

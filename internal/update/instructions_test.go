@@ -8,7 +8,7 @@ import (
 )
 
 // TestSelfHintDerivedFromToolInfo scans the real output of updateHint and
-// gentleAIHint for the fork registry entry (REQ-22.2 "La pista de actualizacion
+// selfToolHint for the fork registry entry (REQ-22.2 "La pista de actualizacion
 // nombra el fork, no upstream") and pins the upstream entry to its own ToolInfo.
 func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
@@ -54,13 +54,13 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 			tool:          upstreamSourceTool,
 			profile:       system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
 			brewInstalled: true,
-			want:          "gentle-ai upgrade (downloads pre-built binary)",
+			want:          "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "upstream macOS non-brew names the upstream binary",
 			tool:    upstreamSourceTool,
 			profile: system.PlatformProfile{OS: "darwin", PackageManager: "brew"},
-			want:    "gentle-ai upgrade (downloads pre-built binary)",
+			want:    "axiom upgrade (downloads pre-built binary)",
 		},
 		{
 			name:    "upstream linux derives install.sh URL from Owner/Repo",
@@ -86,14 +86,14 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 			if hint != tc.want {
 				t.Fatalf("updateHint(%q, %q) = %q, want %q", tc.tool.Name, tc.profile.OS, hint, tc.want)
 			}
-			self := gentleAIHint(tc.tool, tc.profile)
+			self := selfToolHint(tc.tool, tc.profile)
 			if self != tc.want {
-				t.Fatalf("gentleAIHint(%q, %q) = %q, want %q", tc.tool.Name, tc.profile.OS, self, tc.want)
+				t.Fatalf("selfToolHint(%q, %q) = %q, want %q", tc.tool.Name, tc.profile.OS, self, tc.want)
 			}
 
 			// The upstream prohibition is scoped to the fork entry: upstream's
 			// own module path is legal in its own instruction (REQ-22.2).
-			if tc.tool.Name == "axiom" {
+			if tc.tool.Owner == forkSourceTool.Owner {
 				if hint == "" {
 					t.Fatalf("updateHint(%q, %q) must not be empty for the fork entry", tc.tool.Name, tc.profile.OS)
 				}
@@ -129,13 +129,13 @@ func TestSelfHintScanAcrossPlatforms(t *testing.T) {
 		for _, profile := range profiles {
 			for name, produce := range map[string]func() string{
 				"updateHint":   func() string { return updateHint(tool, profile) },
-				"gentleAIHint": func() string { return gentleAIHint(tool, profile) },
+				"selfToolHint": func() string { return selfToolHint(tool, profile) },
 			} {
 				got := produce()
 				if got == "" {
 					t.Fatalf("%s(%q, %q) must not be empty", name, tool.Name, profile.OS)
 				}
-				if tool.Name != "axiom" {
+				if tool.Owner != forkSourceTool.Owner {
 					continue
 				}
 				for _, forbidden := range []string{"gentleman-programming/gentle-ai", "cmd/gentle-ai"} {

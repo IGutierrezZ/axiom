@@ -44,7 +44,6 @@ func TestBackupOriginForRoot(t *testing.T) {
 		want BackupOrigin
 	}{
 		{name: "canonical Axiom root", root: BackupRootFor(home), want: BackupOriginAxiom},
-		{name: "legacy Gentle AI root", root: LegacyBackupRootFor(home), want: BackupOriginGentleAI},
 		{name: "unrecognized root", root: filepath.Join(home, "backups"), want: BackupOriginUnknown},
 	}
 
@@ -205,7 +204,7 @@ func TestOldManifestRemainsReadable(t *testing.T) {
 
 // TestNewManifestOmitsEmptySourceFromJSON verifies that omitempty is respected:
 // when Source is not set, it should not appear in the serialized JSON, keeping
-// existing manifest files readable by older versions of gentle-ai.
+// existing manifest files readable by older versions of axiom.
 func TestNewManifestOmitsEmptySourceFromJSON(t *testing.T) {
 	m := Manifest{
 		ID:        "test",

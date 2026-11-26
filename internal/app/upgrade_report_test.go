@@ -76,7 +76,7 @@ func TestRunUpgradeReport_ClassifiesOutcomes(t *testing.T) {
 		{
 			name: "legacy self-tool name also sets restart required",
 			results: []upgrade.ToolUpgradeResult{
-				{ToolName: "gentle-ai", Status: upgrade.UpgradeSucceeded, NewVersion: "1.5.0"},
+				{ToolName: "axiom", Status: upgrade.UpgradeSucceeded, NewVersion: "1.5.0"},
 			},
 			wantStatus:     "succeeded",
 			wantRestart:    true,
@@ -167,7 +167,7 @@ func TestRunUpgradeReport_RestartRequiredOnlyForSelfToolSuccess(t *testing.T) {
 		wantRestart bool
 	}{
 		{name: "self-tool axiom succeeded", toolName: "axiom", status: upgrade.UpgradeSucceeded, wantRestart: true},
-		{name: "self-tool gentle-ai succeeded", toolName: "gentle-ai", status: upgrade.UpgradeSucceeded, wantRestart: true},
+		{name: "self-tool axiom succeeded", toolName: "axiom", status: upgrade.UpgradeSucceeded, wantRestart: true},
 		{name: "self-tool skipped", toolName: "axiom", status: upgrade.UpgradeSkipped, wantRestart: false},
 		{name: "self-tool failed", toolName: "axiom", status: upgrade.UpgradeFailed, wantRestart: false},
 		{name: "other tool succeeded", toolName: "engram", status: upgrade.UpgradeSucceeded, wantRestart: false},

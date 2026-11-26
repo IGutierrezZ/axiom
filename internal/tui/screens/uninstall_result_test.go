@@ -98,7 +98,7 @@ func TestRenderUninstallResultPiAdviceStatus(t *testing.T) {
 
 func TestRenderUninstallResultDistinguishesRetainedPiResourcesAndCommands(t *testing.T) {
 	out := RenderUninstallResult(componentuninstall.Result{
-		RetainedPiResources: []string{"/home/test/.pi/gentle-ai"},
+		RetainedPiResources: []string{"/home/test/.pi/axiom"},
 		OptionalPiPackageCleanupCommands: []string{
 			"pi remove npm:gentle-pi",
 			"pi remove npm:gentle-engram",
@@ -112,7 +112,7 @@ func TestRenderUninstallResultDistinguishesRetainedPiResourcesAndCommands(t *tes
 	for _, want := range []string{
 		"Pi resources retained for review",
 		"Retained Pi resources (not deleted)",
-		"/home/test/.pi/gentle-ai",
+		"/home/test/.pi/axiom",
 		"Optional Pi package cleanup",
 		"Review shared or user-modified packages/resources before removing them",
 		"pi remove npm:gentle-pi",

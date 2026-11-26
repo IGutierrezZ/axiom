@@ -48,7 +48,7 @@ async function main() {
   // never assigned to a group by position: it is left untouched.
   const argsA: any = {
     questions: [
-      { question: "Gentle AI SDD preflight 1/3: ¿Qué ritmo prefieres?", options: [{ label: "x" }], multiple: true },
+      { question: "Axiom SDD preflight 1/3: ¿Qué ritmo prefieres?", options: [{ label: "x" }], multiple: true },
       { question: "¿Qué artefactos usamos?", options: [{ label: "a" }, { label: "b" }, { label: "c" }] },
       { question: "Axiom SDD preflight pr-strategy: ¿Cómo entregamos el PR?", options: [] },
     ],
@@ -71,8 +71,8 @@ async function main() {
   // Scenario C: an empty answer array (a skipped tab) throws.
   const argsC: any = {
     questions: [
-      { question: "Gentle AI SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
-      { question: "Gentle AI SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
+      { question: "Axiom SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
+      { question: "Axiom SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
     ],
   }
   await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-c", callID: "call-c" }, { args: argsC })
@@ -90,8 +90,8 @@ async function main() {
   // before-hook, naming the missing required group.
   const argsD: any = {
     questions: [
-      { question: "Gentle AI SDD preflight 2/3: Artifacts", options: [{ label: "OpenSpec" }, { label: "Engram" }, { label: "Both" }] },
-      { question: "Gentle AI SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
+      { question: "Axiom SDD preflight 2/3: Artifacts", options: [{ label: "OpenSpec" }, { label: "Engram" }, { label: "Both" }] },
+      { question: "Axiom SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
     ],
   }
   try {
@@ -107,9 +107,9 @@ async function main() {
   // left untouched, localized labels and descriptions included.
   const argsE: any = {
     questions: [
-      { question: "Gentle AI SDD preflight 1/3: Pace", header: "Pace", options: [{ label: "automatic", description: "DESC-AUTO" }, { label: "Interactive", description: "DESC-INTERACTIVE" }] },
-      { question: "Gentle AI SDD preflight 2/3: Artifacts", header: "Artifacts", options: [{ label: "Ambos", description: "DESC-AMBOS" }, { label: "Engram", description: "DESC-ENGRAM" }, { label: "OpenSpec", description: "DESC-OPENSPEC" }] },
-      { question: "Gentle AI SDD preflight 3/3: PR strategy", header: "PR strategy", options: [{ label: "Pregúntame", description: "DESC-ASK" }, { label: "PR único", description: "DESC-SINGLE" }, { label: "Automático", description: "DESC-AUTO-PR" }] },
+      { question: "Axiom SDD preflight 1/3: Pace", header: "Pace", options: [{ label: "automatic", description: "DESC-AUTO" }, { label: "Interactive", description: "DESC-INTERACTIVE" }] },
+      { question: "Axiom SDD preflight 2/3: Artifacts", header: "Artifacts", options: [{ label: "Ambos", description: "DESC-AMBOS" }, { label: "Engram", description: "DESC-ENGRAM" }, { label: "OpenSpec", description: "DESC-OPENSPEC" }] },
+      { question: "Axiom SDD preflight 3/3: PR strategy", header: "PR strategy", options: [{ label: "Pregúntame", description: "DESC-ASK" }, { label: "PR único", description: "DESC-SINGLE" }, { label: "Automático", description: "DESC-AUTO-PR" }] },
     ],
   }
   await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-e", callID: "call-e" }, { args: argsE })
@@ -140,8 +140,8 @@ async function main() {
   // answered ("Auto" used to mean auto-chain).
   const argsG: any = {
     questions: [
-      { question: "Gentle AI SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
-      { question: "Gentle AI SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
+      { question: "Axiom SDD preflight 1/3: Pace", options: [{ label: "Interactive" }, { label: "Automatic" }] },
+      { question: "Axiom SDD preflight 3/3: PR strategy", options: [{ label: "Ask me" }, { label: "Single PR" }, { label: "Auto" }] },
     ],
   }
   await hooks["tool.execute.before"]({ tool: "question", sessionID: "root-g", callID: "call-g" }, { args: argsG })
@@ -337,7 +337,7 @@ func TestOpenCodePreflightQuestionCanonicalizationAndTolerantMatching(t *testing
 
 	// Scenario 6: a legacy answer to the retired PR strategy group is tolerated:
 	// its question is left untouched and the block says single-pr.
-	if retired := result.RetiredGroupQuestion; !strings.HasPrefix(retired.Question, "Gentle AI SDD preflight 3/3:") || retired.Header != "" || len(retired.Options) != 3 {
+	if retired := result.RetiredGroupQuestion; !strings.HasPrefix(retired.Question, "Axiom SDD preflight 3/3:") || retired.Header != "" || len(retired.Options) != 3 {
 		t.Errorf("the retired pr-strategy question was touched: %+v", retired)
 	}
 	for _, want := range []string{"Pace: interactive", "Delivery strategy: single-pr"} {

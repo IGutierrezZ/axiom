@@ -37,7 +37,6 @@ func TestTUIInstallDefaultsToWorkspaceScope(t *testing.T) {
 	home := t.TempDir()
 	project := t.TempDir()
 	t.Setenv(ScopeAxiomEnvVar, "")
-	t.Setenv(ScopeGentleAIEnvVar, "")
 	t.Chdir(project)
 
 	scope, workspaceDir := captureTUIInstallRuntime(t, home)

@@ -53,7 +53,7 @@ func sourceCloneBuildCommand(tool ToolInfo, target string) string {
 // updateHint returns a platform-specific instruction string for updating the given tool.
 func updateHint(tool ToolInfo, profile system.PlatformProfile) string {
 	if IsSelfTool(tool) {
-		return gentleAIHint(tool, profile)
+		return selfToolHint(tool, profile)
 	}
 	switch tool.Name {
 	case "engram":
@@ -80,12 +80,12 @@ func openCodeRegisteredNotMaterializedHint(tool ToolInfo) string {
 	return fmt.Sprintf("registered in ~/.config/opencode/tui.json; pending npm dependency materialization for %s. Run axiom upgrade to install/update ~/.config/opencode dependencies, then restart or reload OpenCode; if it stays pending, check OpenCode logs for package or peer dependency errors.", pkg)
 }
 
-// gentleAIHint is the stable-channel instruction only. When the checker
+// selfToolHint is the stable-channel instruction only. When the checker
 // resolves a main-head beta target, applyBetaMainHeadStatus overrides this
 // hint with SourceInstallCommand so the printed instruction installs
 // the advertised target instead of the latest stable release. Every value is
 // derived from tool; no upstream coordinate is hardcoded (D-04).
-func gentleAIHint(tool ToolInfo, profile system.PlatformProfile) string {
+func selfToolHint(tool ToolInfo, profile system.PlatformProfile) string {
 	switch profile.OS {
 	case "linux":
 		return "curl -fsSL https://raw.githubusercontent.com/" + tool.Owner + "/" + tool.Repo + "/main/scripts/install.sh | bash"

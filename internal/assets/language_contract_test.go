@@ -192,7 +192,7 @@ func TestSDDOrchestratorAssetsUseCanonicalResearchGate(t *testing.T) {
 			if path == "claude/sdd-orchestrator.md" {
 				content = MustRead("claude/sdd-orchestrator-workflow.md")
 			}
-			if strings.Count(content, "{{GENTLE_AI_RESEARCH_LIFECYCLE}}") != 1 {
+			if strings.Count(content, "{{AXIOM_RESEARCH_LIFECYCLE}}") != 1 {
 				t.Fatalf("%s must reference the canonical research lifecycle exactly once", path)
 			}
 			if strings.Contains(content, "proposal question round") {

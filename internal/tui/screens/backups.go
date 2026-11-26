@@ -28,7 +28,7 @@ func RenderBackups(backups []backup.Manifest, cursor int, scrollOffset int, pinE
 		return b.String()
 	}
 	if !hasAxiomBackup(backups) {
-		b.WriteString(styles.WarningStyle.Render("No hay respaldos de Axiom. Los respaldos históricos de Gentle AI no se seleccionan automáticamente; elige uno expresamente si quieres restaurarlo."))
+		b.WriteString(styles.WarningStyle.Render("No hay respaldos de Axiom. Los respaldos de origen no identificado no se seleccionan automáticamente; elige uno expresamente si quieres restaurarlo."))
 		b.WriteString("\n\n")
 	}
 
