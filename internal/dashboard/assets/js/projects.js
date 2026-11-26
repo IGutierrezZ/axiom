@@ -88,6 +88,8 @@ function initPopover() {
   pop.addEventListener('click', (event) => {
     const item = event.target.closest('[data-project-id]');
     if (item) switchProject(item.getAttribute('data-project-id'));
+    // El enlace a Ajustes navega por hash: el selector se cierra y el foco lo toma la vista.
+    if (event.target.closest('#link-project-settings')) closePopover();
   });
 
   // Teclado: Escape cierra y devuelve el foco; flechas recorren los elementos.

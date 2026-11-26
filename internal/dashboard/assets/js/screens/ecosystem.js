@@ -7,16 +7,15 @@
 // - Las operaciones deshabilitan sus botones mientras corren y dejan su resultado
 //   en «Última operación» (solo las hechas en esta sesión de la página).
 // - Restaurar un respaldo pide confirmación explícita antes de llamar a la API.
-// - Ramas y worktrees (INC-25): la topología muestra la política de ramas efectiva en
-//   solo lectura (se declara en axiom.yaml); las preferencias personales de worktree se
-//   editan en Ajustes del proyecto (#/ajustes), que las guarda en el Hub.
+// - Ramas y worktrees (INC-25, C-06-e): la política de ramas y las preferencias personales de
+//   worktree ya no se pintan aquí: se ven y se editan en Ajustes del proyecto (#/ajustes), a la
+//   que enlaza la tarjeta Topología.
 // - Agentes (C-06-g): cada agente del catálogo con tres marcas (admitido, detectado en
 //   el equipo e instalado en el proyecto) y un botón «Instalar» solo en los que se
 //   pueden instalar en el proyecto; los demás dicen por qué. Instalar pide confirmación
 //   (escribe en el repositorio y, según el agente, en la carpeta de usuario).
 
 import { api, escapeHtml } from '../core/api.js';
-import { branchPolicyRows, repoPolicyHtml } from '../core/branches.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
   OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
@@ -139,9 +138,9 @@ function topologyHtml(ws) {
       <dt>Topología</dt><dd class="mono">${escapeHtml(ws.topology || '—')}</dd>
       <dt>Repo de specs</dt><dd class="mono">${escapeHtml(ws.specs_repository || 'openspec/')}</dd>
       <dt>Estado</dt><dd>${status}</dd>
-      ${branchPolicyRows(ws)}
     </dl>${note}
-    <h3 class="eco-sub">Roles</h3>${list}${repoPolicyHtml(ws)}
+    <p class="eco-note">La política de ramas y los ajustes por repositorio se ven y se editan en <a class="link-btn" href="#/ajustes">Ajustes del proyecto</a>.</p>
+    <h3 class="eco-sub">Roles</h3>${list}
   </div>`;
 }
 
