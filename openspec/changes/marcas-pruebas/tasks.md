@@ -41,16 +41,16 @@ U1 -> (U2 ∥ U3) -> U4 -> (U5 ∥ U6); U7 depende solo de U2 y puede ir tras U2
 
 ## Phase 2: Lectura publicada y proyección en status (U2; depende de U1)
 
-- [ ] 2.1 RED: `internal/branch/engine/published_file_test.go` (`TestPublishedChangeFile`): con y sin referencia remota, con y sin fichero en ella; sin red ni escrituras.
-- [ ] 2.2 Añadir `PublishedChangeFile` en `internal/branch/publication.go` y crear `internal/branch/engine/published_file.go` (`Engine.PublishedChangeFile` reutilizando `resolvePublication` y `FileAt`).
+- [x] 2.1 RED: `internal/branch/engine/published_file_test.go` (`TestPublishedChangeFile`): con y sin referencia remota, con y sin fichero en ella; sin red ni escrituras.
+- [x] 2.2 Añadir `PublishedChangeFile` en `internal/branch/publication.go` y crear `internal/branch/engine/published_file.go` (`Engine.PublishedChangeFile` reutilizando `resolvePublication` y `FileAt`).
   Cubre: RF-KOF-22
   Comprobación: `go test ./internal/branch/engine -run TestPublishedChangeFile`
-- [ ] 2.3 RED: `internal/sddstatus/acceptance_marks_test.go` (`TestAcceptanceMarks`): proyección en multirepo; ausencia en monorepo, sin fichero y con función inactiva; `nextRecommended`, dependencias, `blockedReasons`, notas y digests idénticos con y sin fichero; `pending` y `pendingUnavailable`; DTO y status con el mismo resumen; criterio de hueco 7: el resumen solo se proyecta con entradas válidas (fichero vacío o solo con entradas inválidas no genera `summary`) y el `archive-report` no incluye sección sin marcas.
-- [ ] 2.4 Crear `internal/sddstatus/acceptance_marks.go` (`AcceptanceMarksFor`, `AcceptanceMarksResult`, `AcceptanceMarksProjection`); modificar `internal/sddstatus/acceptance_tests.go` (campo `Marks`, decoración solo con multirepo + activo + `pruebas.md` + fichero con entradas válidas; `pruebas-estado.yaml` fuera de `TasksGateArtifactPaths`). La ubicación del cambio se resuelve con `PlanningHome` in situ, nunca con `worktreePath` registrado.
+- [x] 2.3 RED: `internal/sddstatus/acceptance_marks_test.go` (`TestAcceptanceMarks`): proyección en multirepo; ausencia en monorepo, sin fichero y con función inactiva; `nextRecommended`, dependencias, `blockedReasons`, notas y digests idénticos con y sin fichero; `pending` y `pendingUnavailable`; DTO y status con el mismo resumen; criterio de hueco 7: el resumen solo se proyecta con entradas válidas (fichero vacío o solo con entradas inválidas no genera `summary`) y el `archive-report` no incluye sección sin marcas.
+- [x] 2.4 Crear `internal/sddstatus/acceptance_marks.go` (`AcceptanceMarksFor`, `AcceptanceMarksResult`, `AcceptanceMarksProjection`); modificar `internal/sddstatus/acceptance_tests.go` (campo `Marks`, decoración solo con multirepo + activo + `pruebas.md` + fichero con entradas válidas; `pruebas-estado.yaml` fuera de `TasksGateArtifactPaths`). La ubicación del cambio se resuelve con `PlanningHome` in situ, nunca con `worktreePath` registrado.
   Cubre: RF-KOF-22, prov:KOF:1
   Comprobación: `go test ./internal/sddstatus -run TestAcceptanceMarks`
-- [ ] 2.5 Documentar la clave `marks` en `internal/assets/skills/_shared/sdd-status-contract.md` (viñeta de `acceptanceTests`).
-- [ ] 2.6 Cierre U2: ejecutar las comprobaciones de 2.2 y 2.4 y commit `feat(status): proyectar el resumen de marcas de pruebas`.
+- [x] 2.5 Documentar la clave `marks` en `internal/assets/skills/_shared/sdd-status-contract.md` (viñeta de `acceptanceTests`).
+- [x] 2.6 Cierre U2: ejecutar las comprobaciones de 2.2 y 2.4 y commit `feat(status): proyectar el resumen de marcas de pruebas`.
 
 ## Phase 3: Publicación acotada y reproducción (U3; depende de U1)
 

@@ -1,6 +1,7 @@
 package sddstatus
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -72,6 +73,9 @@ type AcceptanceTestsProjection struct {
 	Warning string `json:"warning,omitempty"`
 	// Battery solo existe cuando el cambio seleccionado tiene pruebas.md.
 	Battery *AcceptanceTestsBattery `json:"battery,omitempty"`
+	// Marks es el resumen de las marcas de ejecución de `pruebas-estado.yaml` (C-06-d). Solo con
+	// multirepo, la función activa, `pruebas.md` y el fichero con entradas válidas (o ilegible).
+	Marks *AcceptanceMarksProjection `json:"marks,omitempty"`
 }
 
 // AcceptanceTestsBattery resume el resultado de acceptancetests.Check sobre pruebas.md.
@@ -216,6 +220,9 @@ func decorateAcceptanceTests(status *Status, location workspace.Location) {
 			battery.Findings = len(result.Report.Findings)
 		}
 		projection.Battery = battery
+		if selected {
+			projection.Marks = projectMarks(AcceptanceMarksFor(context.Background(), location, *status.ChangeRoot, *status.ChangeName, result))
+		}
 	} else if result.Error != "" {
 		projection.Error = strings.TrimSpace(projection.Error + " " + result.Error)
 	}

@@ -126,3 +126,14 @@ type PublicationState struct {
 	CodeCommits   []string // SHA cortos (7) de los commits sin subir que tocan código, del más antiguo al más reciente
 	RangeTooBig   bool     // Unpushed > PublicationMaxUnpushed
 }
+
+// PublishedChangeFile es la versión publicada de un fichero de la carpeta del cambio: su contenido
+// en la referencia de seguimiento `refs/remotes/origin/<Target.Branch>`, leída sin red. Sin esa
+// referencia, o sin el fichero en ella, la versión publicada es vacía (Exists falso).
+type PublishedChangeFile struct {
+	Target          PublicationTarget
+	RemoteRef       string // refs/remotes/origin/<Target.Branch>
+	RemoteRefExists bool
+	Exists          bool // el fichero existe en RemoteRef
+	Content         []byte
+}
