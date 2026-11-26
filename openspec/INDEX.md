@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 02:53:02 UTC
-> **Total Dominios:** 48 | **Total Requerimientos:** 494 | **Total Escenarios BDD:** 2188
+> **Última Sincronización:** 2026-11-26 03:57:35 UTC
+> **Total Dominios:** 48 | **Total Requerimientos:** 496 | **Total Escenarios BDD:** 2195
 
 ---
 
@@ -27,7 +27,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 12 | 36 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 14 | 43 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -1129,6 +1129,15 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 - **[REQ-46.6]** El Dashboard No Expone el Modo de Revisión de RDD
   - *Escenario BDD:* El endpoint de modo de revisión no existe
   - *Escenario BDD:* La interfaz no carga el selector
+- **[REQ-1.6]** Endpoint de Agentes del Proyecto Activo
+  - *Escenario BDD:* Las tres marcas de cada agente
+  - *Escenario BDD:* Un proyecto sin lista registrada no hereda la global
+  - *Escenario BDD:* Un agente sin modo workspace lleva el motivo
+- **[REQ-1.7]** Instalar un Agente en el Proyecto Activo desde el Dashboard
+  - *Escenario BDD:* Instalar un agente lo registra sin pisar los demás
+  - *Escenario BDD:* Un agente sin modo workspace se rechaza antes de escribir
+  - *Escenario BDD:* Sin proyecto activo no se instala
+  - *Escenario BDD:* La interfaz no ofrece el botón a un agente sin modo workspace
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 

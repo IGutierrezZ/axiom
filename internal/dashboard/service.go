@@ -43,7 +43,10 @@ type Service struct {
 	rootPath string
 	// modelsMu serializa los guardados de modelos por fase: cada uno lee el estado del
 	// proyecto, lo cambia y regenera ficheros.
-	modelsMu         sync.Mutex
+	modelsMu sync.Mutex
+	// agentsMu serializa las instalaciones de agentes desde el dashboard: cada una
+	// lee y reescribe el estado del proyecto y regenera su configuración.
+	agentsMu         sync.Mutex
 	hubManager       *hub.Manager
 	hubDetector      *hub.Detector
 	autoskillManager *autoskill.Manager

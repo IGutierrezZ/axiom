@@ -133,7 +133,7 @@ export function formatEcosystemUpgradeSequence(data) {
 
 // ---- Última operación ------------------------------------------------------------------
 
-export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración' };
+export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración', install: 'install' };
 
 // operationOutcome decide el estado visible de una operación terminada. Un upgrade que
 // dejó el binario reemplazado acabó bien, pero queda pendiente reiniciar axiom.

@@ -10,6 +10,10 @@
 // - Ramas y worktrees (INC-25): la topología muestra la política de ramas efectiva en
 //   solo lectura (se declara en axiom.yaml) y una tarjeta propia edita las preferencias
 //   personales de worktree del proyecto activo, que el servidor guarda en el Hub.
+// - Agentes (C-06-g): cada agente del catálogo con tres marcas (admitido, detectado en
+//   el equipo e instalado en el proyecto) y un botón «Instalar» solo en los que se
+//   pueden instalar en el proyecto; los demás dicen por qué. Instalar pide confirmación
+//   (escribe en el repositorio y, según el agente, en la carpeta de usuario).
 
 import { api, escapeHtml } from '../core/api.js';
 import { branchPolicyRows, effectivePrefsText, repoPolicyHtml } from '../core/branches.js';
@@ -170,6 +174,85 @@ async function loadModels() {
   }
 }
 
+// ---- Agentes del proyecto ----------------------------------------------------------------
+
+let agentsView = null;   // última respuesta de /api/agents, para la confirmación de instalar
+
+const AGENTS_INTRO = 'Admitido: Axiom lo soporta. Detectado: su configuración global existe en este equipo. En el proyecto: figura en .axiom/state.json del proyecto activo, que es lo que sincroniza axiom sync.';
+
+function agentMark(on) {
+  return on ? statusPill('ok', 'sí') : '<span class="dim">no</span>';
+}
+
+// agentAction decide qué ofrece cada fila: nada si ya está instalado, el motivo si no
+// se puede instalar en el proyecto y el botón en el resto.
+function agentAction(a, project) {
+  if (a.installed) return '<span class="dim">—</span>';
+  if (!a.supported || !a.workspace) {
+    return `<span class="eco-note">${escapeHtml(a.reason || 'No se puede instalar en el proyecto.')}</span>`;
+  }
+  if (!project) return '<span class="eco-note">Abre un proyecto de Axiom para instalarlo.</span>';
+  return `<button type="button" class="btn btn-sm" data-install-agent="${escapeHtml(a.id)}" data-eco-lock${busy ? ' disabled' : ''} aria-label="Instalar ${escapeHtml(a.name)} en el proyecto">${icon('download', 14)}Instalar</button>`;
+}
+
+function agentRows(list, project) {
+  return list.map(a => `<tr>
+      <th scope="row">${escapeHtml(a.name)} <code class="dim">${escapeHtml(a.id)}</code></th>
+      <td>${a.supported ? statusPill('ok', 'sí') : statusPill('neutral', 'no')}</td>
+      <td>${agentMark(a.detected)}</td>
+      <td>${agentMark(a.installed)}</td>
+      <td>${agentAction(a, project)}</td>
+    </tr>`).join('');
+}
+
+// agentsNotice explica lo que condiciona la lista: el estado ilegible, una carpeta que
+// no es un proyecto o un proyecto que aún no registra sus agentes.
+function agentsNotice(view) {
+  if (view.state_error) return `<p class="eco-note text-bad" role="alert">${escapeHtml(view.state_error)}</p>`;
+  if (!view.project) return '<p class="eco-note">La carpeta activa no es un proyecto de Axiom: abre o da de alta uno para instalar agentes en él.</p>';
+  if (!view.recorded) {
+    return '<p class="eco-note">El proyecto aún no registra sus agentes: axiom sync trabaja con los que detecta en tu carpeta de usuario sin guardarlos, y axiom doctor avisa en state:json. Instala aquí los que uses para registrarlos en el proyecto.</p>';
+  }
+  return '';
+}
+
+async function loadAgents() {
+  const body = $('#eco-agents-body');
+  try {
+    agentsView = (await api('/api/agents')) || {};
+    const list = Array.isArray(agentsView.agents) ? agentsView.agents : [];
+    const installed = list.filter(a => a.installed).length;
+    $('#eco-agents-count').textContent = agentsView.recorded ? `${plural(installed, 'instalado', 'instalados')} en el proyecto` : 'sin registrar en el proyecto';
+    const table = `<table class="data-table eco-agents"><thead><tr><th>Agente</th><th>Admitido</th><th>Detectado</th><th>En el proyecto</th><th>Acción</th></tr></thead><tbody>${agentRows(list, agentsView.project)}</tbody></table>`;
+    body.innerHTML = `<div class="eco-pad"><p class="eco-note">${escapeHtml(AGENTS_INTRO)}</p>${agentsNotice(agentsView)}</div>${tableWrap(table, 'Agentes del proyecto')}`;
+  } catch (err) {
+    console.error(err);
+    $('#eco-agents-count').textContent = '';
+    body.innerHTML = `<div class="eco-pad">${stateError(err.message, 'No se pudieron cargar los agentes')}</div>`;
+  }
+}
+
+// installMessage avisa, antes de ejecutar, de dónde escribe la instalación.
+function installMessage(a, root) {
+  return `Vas a instalar ${a.name} en el proyecto ${root || 'activo'}, igual que «axiom install --scope workspace --agent ${a.id}». Se escriben su configuración y sus reglas en el repositorio y se añade a .axiom/state.json del proyecto, sin quitar los agentes ya registrados. Según el agente, también se escribe en tu carpeta de usuario (la huella de máquina que declara axiom install). Revisa los cambios con git antes de confirmarlos.`;
+}
+
+async function installAgent(button) {
+  const id = button.getAttribute('data-install-agent');
+  const list = (agentsView && Array.isArray(agentsView.agents)) ? agentsView.agents : [];
+  const a = list.find(item => item.id === id) || { id, name: id };
+  const ok = await confirmDialog({ title: 'Instalar agente', message: installMessage(a, agentsView && agentsView.project_root), confirmLabel: `Instalar ${a.name}` });
+  if (!ok) return;
+  const outcome = await runOperation({
+    kind: 'install', button, busyLabel: 'Instalando…', progress: `Ejecutando axiom install --scope workspace --agent ${id}…`,
+    run: () => api('/api/agents/install', { body: { agent: id } }),
+    present: data => data.message || `${a.name} instalado en el proyecto.`,
+    presentError: err => [err.data && err.data.message, err.message].filter(Boolean).join('\n'),
+    refresh: () => Promise.all([loadAgents(), loadModels(), refreshAfterChange()])
+  });
+  if (outcome) toast(outcome.tone === 'bad' ? `No se pudo instalar ${a.name}` : `${a.name} instalado en el proyecto`, outcome.tone === 'bad' ? 'bad' : 'ok');
+}
+
 // ---- Respaldos ---------------------------------------------------------------------------
 
 function backupItem(b) {
@@ -264,7 +347,7 @@ async function saveWorktreePrefs() {
 
 export async function loadEcosystem() {
   // El Doctor lo refresca la caché (overview.js) junto con Actualizar.
-  await Promise.all([loadTopology(), loadModels(), loadBackups(), loadWorktreePrefs()]);
+  await Promise.all([loadTopology(), loadAgents(), loadModels(), loadBackups(), loadWorktreePrefs()]);
 }
 
 // ---- Última operación ----------------------------------------------------------------------
@@ -388,6 +471,10 @@ export function initEcosystem() {
     saveWorktreePrefs();
   });
   bindModelsEditor($('#eco-models-body'));
+  $('#eco-agents-body').addEventListener('click', event => {
+    const button = event.target.closest('[data-install-agent]');
+    if (button && !busy) installAgent(button);
+  });
   $('#eco-backups-body').addEventListener('click', event => {
     const button = event.target.closest('[data-restore]');
     if (button && !busy) restoreBackup(button);
