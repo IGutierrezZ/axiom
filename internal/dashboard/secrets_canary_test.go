@@ -26,6 +26,7 @@ var coveredRoutes = map[string]string{
 	"/api/health":        "/api/health",
 	"/api/projects":      "/api/projects",
 	"/api/workspace":     "/api/workspace",
+	"/api/settings":      "/api/settings",
 	"/api/increments":    "/api/increments",
 	"/api/increments/":   "/api/increments/x",
 	"/api/roles":         "/api/roles",

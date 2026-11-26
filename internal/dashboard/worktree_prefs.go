@@ -126,6 +126,10 @@ func (s *Server) handleActiveWorktreePrefs(w http.ResponseWriter, r *http.Reques
 	case http.MethodGet:
 		dto, err = s.service.GetActiveWorktreePrefs()
 	case http.MethodPut:
+		// Escribe el hub: solo la acepta el propio dashboard, antes de leer el cuerpo.
+		if s.rejectNonLocal(w, r) {
+			return
+		}
 		var req WorktreePrefsDTO
 		if decodeErr := json.NewDecoder(r.Body).Decode(&req); decodeErr != nil {
 			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})

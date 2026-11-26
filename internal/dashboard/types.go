@@ -23,6 +23,60 @@ type WorkspaceDTO struct {
 	Repositories []RepositoryPolicyDTO `json:"repositories"`
 }
 
+// SettingDTO es una clave del catálogo de ajustes del proyecto (RF-WEB-18) con su valor tal como
+// está escrito en axiom.yaml. Value es null cuando la clave no está declarada.
+type SettingDTO struct {
+	Key            string   `json:"key"`
+	Section        string   `json:"section"`
+	Label          string   `json:"label"`
+	Description    string   `json:"description"`
+	Effect         string   `json:"effect"`
+	Type           string   `json:"type"`
+	Allowed        []string `json:"allowed,omitempty"`
+	Topologies     []string `json:"topologies"`
+	Editable       bool     `json:"editable"`
+	ReadOnlyReason string   `json:"readOnlyReason,omitempty"`
+	Required       bool     `json:"required"`
+	Default        string   `json:"default,omitempty"`
+	Declared       bool     `json:"declared"`
+	Value          any      `json:"value"`
+}
+
+// SettingsDTO es la respuesta de `GET /api/settings`: el catálogo expandido para el axiom.yaml
+// del proyecto, con la revisión que debe devolver el siguiente PUT.
+type SettingsDTO struct {
+	ConfigPath         string       `json:"configPath"`
+	Revision           string       `json:"revision"`
+	Topology           string       `json:"topology"`
+	ISO                bool         `json:"iso"`
+	Writable           bool         `json:"writable"`
+	WriteBlockedReason string       `json:"writeBlockedReason,omitempty"`
+	DocumentErrors     []string     `json:"documentErrors"`
+	Entries            []SettingDTO `json:"entries"`
+}
+
+// SettingsPutRequest es el cuerpo de `PUT /api/settings`: un lote de cambios de claves del catálogo
+// sobre la revisión leída. Un valor null retira la clave.
+type SettingsPutRequest struct {
+	Revision string         `json:"revision"`
+	Changes  map[string]any `json:"changes"`
+}
+
+// SettingsPutResponse es la respuesta correcta de `PUT /api/settings`.
+type SettingsPutResponse struct {
+	Settings *SettingsDTO `json:"settings"`
+	Changed  bool         `json:"changed"`
+	Warnings []string     `json:"warnings"`
+}
+
+// settingsErrorBody es el cuerpo de error de /api/settings: código tipado, mensaje en castellano y,
+// con `validation_failed`, una violación por elemento.
+type settingsErrorBody struct {
+	Code       string   `json:"code,omitempty"`
+	Error      string   `json:"error"`
+	Violations []string `json:"violations,omitempty"`
+}
+
 // BranchPolicyDTO es la política de ramas efectiva del workspace.
 type BranchPolicyDTO struct {
 	IntegrationBranch string `json:"integrationBranch"`

@@ -84,6 +84,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
+	s.mux.HandleFunc("/api/settings", s.handleSettings)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)
@@ -431,8 +432,8 @@ func (s *Server) handleFSNativePicker(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleWorkspace responde `GET /api/workspace` con los metadatos del workspace y su política de
-// ramas (RF-WEB-01). Es solo lectura: cualquier otro método responde 405 y ninguna ruta del servidor
-// escribe axiom.yaml (RF-WEB-10).
+// ramas (RF-WEB-01). Es solo lectura: cualquier otro método responde 405. El único camino que
+// escribe axiom.yaml es `PUT /api/settings` (RF-WEB-10), mediante internal/settings.
 func (s *Server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
