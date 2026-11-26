@@ -1,0 +1,15 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:RID:1
+    definitive: RF-RID-16
+    capability: requirement-identifiers
+    requirement: Las Specs Propias de Axiom Usan el Patrón Declarado y no Citan Identificadores Heredados Fuera de los Residuos Declarados (RF-RID-16)
+  - provisional: prov:TRC:1
+    definitive: RF-TRC-16
+    capability: requirement-trace
+    requirement: Mapa Versionado de Identificadores Heredados como Fuente de Equivalencias de la Traza (RF-TRC-16)
+  - provisional: prov:TRC:2
+    definitive: RF-TRC-17
+    capability: requirement-trace
+    requirement: Mapa Ausente Degrada sin Alias y Mapa Inválido Falla con Error Tipado (RF-TRC-17)

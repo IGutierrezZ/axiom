@@ -6,7 +6,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Mapa Versionado de Identificadores Heredados como Fuente de Equivalencias de la Traza (prov:TRC:1)
+### Requirement: Mapa Versionado de Identificadores Heredados como Fuente de Equivalencias de la Traza (RF-TRC-16)
 
 El sistema MUST ofrecer un mapa versionado de los identificadores heredados `REQ-n.m` a los identificadores nuevos del proyecto, fuente de las equivalencias que la traza añade a través del punto de extensión de alias (RF-TRC-04). El mapa MUST ser un único fichero YAML en `openspec/id-map.yaml`, con esquema versionado declarado en su campo `schema` (`axiom.id-map/v1`); un cambio incompatible MUST subir la versión. Cada entrada MUST llevar la capacidad (carpeta de `openspec/specs/`), el ID antiguo o su ausencia (un requisito que no tenía ID lleva, en su lugar, el título del requisito) y el ID nuevo.
 
@@ -47,7 +47,7 @@ El mapa MUST ser de solo lectura para la consulta (RF-TRC-10).
 - **CUANDO** se carga el mapa
 - **ENTONCES** se rechaza con el error tipado de mapa inválido (RF-TRC-17)
 
-### Requirement: Mapa Ausente Degrada sin Alias y Mapa Inválido Falla con Error Tipado (prov:TRC:2)
+### Requirement: Mapa Ausente Degrada sin Alias y Mapa Inválido Falla con Error Tipado (RF-TRC-17)
 
 Si `openspec/id-map.yaml` no existe, la consulta MUST funcionar sin los alias del mapa: se comporta como la implementación por defecto del punto de extensión (RF-TRC-04) y no emite error ni advertencia por la ausencia. Si el fichero existe y no es legible, su esquema es desconocido o incumple un invariante (RF-TRC-16), el sistema MUST fallar con un error tipado que nombre el fichero, el motivo (código estable) y la continuación (corregir o restaurar el mapa), con código de salida distinto de 0, sin consultar git. El sistema NUNCA MUST degradar en silencio a «sin alias» ante un mapa que existe pero no es válido.
 

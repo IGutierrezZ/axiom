@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Las Specs Propias de Axiom Usan el Patrón Declarado y no Citan Identificadores Heredados Fuera de los Residuos Declarados (prov:RID:1)
+### Requirement: Las Specs Propias de Axiom Usan el Patrón Declarado y no Citan Identificadores Heredados Fuera de los Residuos Declarados (RF-RID-16)
 
 `axiom.yaml` del repositorio de Axiom DEBE declarar `sdd.id_pattern: RF-<DOM>-<NN>` (RF-RID-01). Bajo ese patrón, todo título `### Requirement:` de toda capacidad de `openspec/specs/` DEBE llevar un identificador válido; ninguno DEBE conservar un `REQ-n.m`, porque bajo un patrón distinto del por defecto un título con `REQ-n.m` queda sin identificador sin error alguno (sale del índice, del cálculo del siguiente libre y de la evidencia ISO). Las líneas `Cubre:` de los documentos vivos DEBEN citar identificadores válidos bajo ese patrón.
 
