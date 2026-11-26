@@ -49,6 +49,7 @@ Subcomandos:
   connect   Prueba la conexión con el tracker y guarda tu identidad en ~/.axiom (--plugin, --user)
   discover  Imprime el proceso del tracker: tipos, estados, campos, iteraciones y miembros (--plugin, --json)
   tasks     Crea (create) o vincula a mano (bind) la Task hija del work item de origen de cada rol (--change, --estimate, --replace)
+  summary   Escribe (push) el resumen de la spec y las etiquetas de requisito en el work item de origen del cambio (--change)
 
 Ejecuta ` + "`axiom integrations <subcomando> --help`" + ` para ver las banderas de cada subcomando.
 `
@@ -152,10 +153,12 @@ func RunIntegrations(args []string, stdin io.Reader, stdout, stderr io.Writer) i
 		return runIntegrationsConnect(rest, stdout, stderr)
 	case "discover":
 		return runIntegrationsDiscover(rest, stdout, stderr)
+	case "summary":
+		return runIntegrationsSummary(rest, stdout, stderr)
 	case "tasks":
 		return runIntegrationsTasks(rest, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit, secret, connect, discover y tasks.\n", subcommand)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para integrations; los disponibles son sync, emit, secret, connect, discover, tasks y summary.\n", subcommand)
 		fmt.Fprint(stdout, integrationsHelp)
 		return integrationsExitUsage
 	}

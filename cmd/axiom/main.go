@@ -107,6 +107,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   integrations connect   Prueba la conexión con el tracker y guarda tu identidad en ~/.axiom (--plugin, --user)
   integrations discover  Imprime el proceso del tracker: tipos, estados, campos, iteraciones y miembros (--plugin, --json)
   integrations tasks     Crea (create) o vincula a mano (bind) la Task hija del work item de origen de cada rol (--change, --estimate, --replace)
+  integrations summary   Escribe (push) el resumen de la spec y las etiquetas de requisito en el work item de origen del cambio (--change)
   project list        Lista los proyectos registrados en el Hub global (~/.axiom/workspaces.json)
   project switch       Conmuta el proyecto activo por defecto
   project add          Registra un proyecto existente en el Hub

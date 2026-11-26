@@ -594,12 +594,12 @@ func TestIntegrationsHelpListsExactlyTheSubcommands(t *testing.T) {
 				inList = false
 			}
 		}
-		if strings.Join(listed, ",") != "sync,emit,secret,connect,discover,tasks" {
-			t.Errorf("%v: la ayuda de la familia lista %v, quería exactamente sync, emit, secret, connect, discover y tasks", args, listed)
+		if strings.Join(listed, ",") != "sync,emit,secret,connect,discover,tasks,summary" {
+			t.Errorf("%v: la ayuda de la familia lista %v, quería exactamente sync, emit, secret, connect, discover, tasks y summary", args, listed)
 		}
 	}
 	code, _, errOut := runIntegrationsCLI(t, "", "inspect")
-	if code == 0 || !strings.Contains(errOut, "sync, emit, secret, connect, discover y tasks") {
+	if code == 0 || !strings.Contains(errOut, "sync, emit, secret, connect, discover, tasks y summary") {
 		t.Errorf("el mensaje de subcomando desconocido debe enumerar todos: %d %q", code, errOut)
 	}
 }
