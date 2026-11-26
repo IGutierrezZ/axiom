@@ -30,15 +30,6 @@ type AssignmentPresence struct {
 	Assignment model.ModelAssignment
 }
 
-// ResolveEffectiveConfig reads the layered local JSON/JSONC view. WritePath is
-// independently selected; Path is the highest-priority file, not a write target.
-// This does not emulate OpenCode's remote config, substitutions, plugins, or
-// OPENCODE_CONFIG overrides. Assignments are not a full runtime model resolution.
-func ResolveEffectiveConfig(projectDir string) (ConfigSnapshot, error) {
-	home, _ := os.UserHomeDir()
-	return ResolveRuntimeConfigForHome(home, projectDir)
-}
-
 // ResolveRuntimeConfigForHome overlays normal global, ancestor/project, then
 // additive OPENCODE_CONFIG_DIR files. Within each directory JSONC overrides JSON.
 func ResolveRuntimeConfigForHome(homeDir, projectDir string) (ConfigSnapshot, error) {

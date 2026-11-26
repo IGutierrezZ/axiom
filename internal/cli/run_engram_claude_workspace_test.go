@@ -55,7 +55,6 @@ func TestRunInstallEngramClaudeWorkspaceScopeWritesProjectMCPJSON(t *testing.T) 
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "engram",
-		"--preset", "custom",
 	}, system.DetectionResult{})
 	if err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
@@ -139,7 +138,6 @@ func TestRunSyncEngramClaudeWorkspaceMigratesLegacyFileToProjectMCPJSON(t *testi
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentEngram},
-		Persona:    model.PersonaNeutral,
 	}
 	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {
 		t.Fatalf("RunSyncWithSelectionScoped() error = %v", err)

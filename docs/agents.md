@@ -24,7 +24,7 @@ La columna «Config Path» es la ruta del ámbito global (`--scope global`). Con
 
 ### Agentes no disponibles de momento
 
-Qwen Code (`qwen-code`) **no está disponible de momento**: no se puede elegir al instalar. No aparecen en la pantalla de selección de agentes de la TUI, no entran en las selecciones por defecto ni en el descubrimiento por carpetas, y `axiom install --agent qwen-code` falla con un error (también si va junto a otros agentes). El motivo es que hoy no es utilizable con Axiom: en el ámbito workspace escribe en rutas que el agente no lee y su MCP solo es global. Su adaptador se conserva en el código para retomarlo más adelante.
+Qwen Code (`qwen-code`) **no está disponible de momento**: no se puede elegir al instalar. No entran en las selecciones por defecto ni en el descubrimiento por carpetas, y `axiom install --agent qwen-code` falla con un error (también si va junto a otros agentes). El motivo es que hoy no es utilizable con Axiom: en el ámbito workspace escribe en rutas que el agente no lee y su MCP solo es global. Su adaptador se conserva en el código para retomarlo más adelante.
 
 - Una instalación global existente que ya lo tiene en el estado se sigue sincronizando con `axiom sync`.
 - Con `--scope workspace` se omite con un aviso, igual que los agentes sin modo workspace.
@@ -37,7 +37,7 @@ La mayoría de los agentes recibe la política completa del orquestador SDD y la
 
 #### Modo workspace por agente
 
-El ámbito workspace es el predeterminado de la CLI y de la TUI. Axiom escribe en la raíz del proyecto (el `axiom.yaml` más cercano o, si no hay, la raíz del repositorio git) y no en tu carpeta de usuario; lo que sigue a nivel de máquina está declarado en [Uso](usage.md#cli-flags-install). Las instrucciones ODD/SDD son del equipo y van siempre en un fichero propio de Axiom, nunca en un fichero raíz compartido (`AGENTS.md`, `GEMINI.md`), y la regla general es que lo del proyecto prevalece sobre lo del usuario y ambos conviven (véanse los matices en «Precedencia»).
+El ámbito workspace es el predeterminado de la CLI. Axiom escribe en la raíz del proyecto (el `axiom.yaml` más cercano o, si no hay, la raíz del repositorio git) y no en tu carpeta de usuario; lo que sigue a nivel de máquina está declarado en [Uso](usage.md#cli-flags-install). Las instrucciones ODD/SDD son del equipo y van siempre en un fichero propio de Axiom, nunca en un fichero raíz compartido (`AGENTS.md`, `GEMINI.md`), y la regla general es que lo del proyecto prevalece sobre lo del usuario y ambos conviven (véanse los matices en «Precedencia»).
 
 | Agente | Instrucciones | Configuración, MCP y hooks | Skills |
 | --- | --- | --- | --- |
@@ -137,7 +137,7 @@ Antigravity is an agent-first platform with built-in sub-agents (Browser, Termin
 - Los launchers gestionados se encuentran bajo `~/.axiom/bin/` (o `<AXIOM_STATE_DIR>/bin/` si defines esa variable; al activarlos, Axiom retira el lanzador antiguo de `~/.gentle-ai/bin/`) y respetan `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=false`; reinicia OpenCode después de activarlos.
 - `serve`, `attach`, Desktop, and sessions not launched through the managed launcher use the safe foreground fallback
 - Background jobs are process-local and non-durable, have no filesystem isolation, and must not be used for dependent phases or parallel writers in one worktree
-- The TUI model picker asynchronously discovers the active project's effective providers and models through `opencode models --verbose`, including custom, authenticated, plugin, and dynamic providers
+- The model picker asynchronously discovers the active project's effective providers and models through `opencode models --verbose`, including custom, authenticated, plugin, and dynamic providers
 - Only models OpenCode reports with tool-call capability appear as selectable SDD-capable options
 - Antes de seleccionar modelos, conecta tus proveedores de IA y vuelve al selector; Axiom no actualiza el catálogo de OpenCode.
 - Axiom establece `share: disabled` como valor predeterminado de los agentes SDD de OpenCode por privacidad y conserva los valores gestionados por el usuario, como `manual` o `auto`.
@@ -161,6 +161,7 @@ Antigravity is an agent-first platform with built-in sub-agents (Browser, Termin
 
 - Uses the `runSubagent` tool with support for parallel execution
 - Skills at `~/.copilot/skills/`
+- **Skills con `COPILOT_HOME`**: siguen en `~/.copilot/skills/`, no en `$COPILOT_HOME/skills/`. VS Code documenta `COPILOT_HOME` solo para `mcp-config.json` ([referencia de MCP](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)). Para las skills de usuario del arnés de Copilot documenta `~/.copilot/skills/` ([Agent Skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)), y para los agentes de usuario, `~/.copilot/agents` ([referencia de agentes](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference)). En ninguno de los dos casos los condiciona a esa variable. Sin `COPILOT_HOME`, la carpeta es la misma que usa Copilot CLI. Con `COPILOT_HOME`, Copilot CLI escribe en `$COPILOT_HOME/skills/` y cada agente tiene su copia. No se ha probado con un VS Code real. Si tu VS Code muestra las skills de `$COPILOT_HOME/skills/` en **Chat: Open Customizations**, abre una incidencia.
 - System prompt at `Code/User/prompts/axiom.instructions.md`. `axiom sync` retira el antiguo `gentle-ai.instructions.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
 - **MCP con `--scope global`** (Context7 y Engram): `$COPILOT_HOME/mcp-config.json`, o `~/.copilot/mcp-config.json` si `COPILOT_HOME` no está definida, con la clave raíz `mcpServers`. Es el destino de usuario del arnés de Copilot, que lo lee directamente ([referencia de VS Code](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)). Es el mismo fichero que escribe Copilot CLI, y los dos agentes escriben la misma entrada (Context7 remoto por `http`, Engram con `type: "stdio"`, los dos con `tools: ["*"]`), así que con los dos instalados `axiom sync` no cambia nada. La orden de Engram que ya figure en el fichero se respeta. Si se desinstala uno de los dos, las entradas se quedan para el otro.
 - **`Code/User/mcp.json`** (perfil de usuario): es el formato `servers` del arnés Local, deprecado y que VS Code retira en febrero de 2027; el arnés de Copilot no lo lee directamente. `axiom sync --scope global` y la desinstalación global retiran de él solo las entradas de Engram y Context7 que escribió Axiom. Los servidores, las `inputs` y los comentarios del usuario se conservan, y el fichero se borra solo si se queda vacío.
@@ -179,11 +180,11 @@ Antigravity is an agent-first platform with built-in sub-agents (Browser, Termin
 
 ### GitHub Copilot CLI
 
-Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`github-copilot-cli`), distinto del de VS Code Copilot: solo comparten la carpeta de skills y `mcp-config.json`.
+Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`github-copilot-cli`), distinto del de VS Code Copilot: solo comparten la carpeta de skills (si `COPILOT_HOME` no está definida) y `mcp-config.json`.
 
 - **Raíz**: `$COPILOT_HOME` si está definida y es una ruta absoluta, o `~/.copilot`. `COPILOT_HOME` solo se respeta con el directorio personal real del usuario: una instalación aislada (otra raíz de instalación) se queda dentro de ella.
 - **Instrucciones**: `<raíz>/copilot-instructions.md` (persona, orquestador ODD/SDD y protocolo de memoria). El SDD es el mismo orquestador genérico de VS Code Copilot, con la elección de almacén de artefactos en la preflight de sesión.
-- **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado.
+- **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado. Con `COPILOT_HOME`, VS Code Copilot sigue en `~/.copilot/skills/`, que es lo único que documenta (véase [su sección](#vs-code-copilot)). Cada agente tiene entonces su carpeta y, al desinstalar, retira solo la suya.
 - **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` y entradas con `type` (`http` para Context7, `stdio` para Engram) y `tools: ["*"]`. Es el fichero de usuario del arnés de Copilot, que también lee VS Code Copilot: los dos agentes escriben la misma entrada, y desinstalar uno no retira las entradas mientras el otro siga instalado. `stdio` es el valor que documentan VS Code y `copilot mcp add`. `axiom sync` cambia a `stdio` el `local` que escribían las versiones anteriores. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
 - **Ajustes y permisos**: `<raíz>/settings.json`. Axiom no escribe permisos ni modos de autoaprobación: lo que decidas queda intacto.
 - **Agentes**: ninguno en `<raíz>/agents/`. Los agentes por fase viven solo en `.github/agents` del proyecto, que Copilot CLI también lee (véase [Agentes por fase de Copilot](#agentes-por-fase-de-copilot)).
@@ -310,4 +311,4 @@ For the full Pi command and package reference, see [Pi Agent](pi.md).
 - The resolved on/off policy is projected to `~/.pi/axiom/background-subagents.json` as `{"schema":"gentle-pi.background-subagents/v1","policy":"on"|"off"}` (the base directory honors `GENTLE_PI_CONFIG_HOME`); `off` rewrites the policy instead of deleting files, and a file at that path without the managed schema marker is never overwritten.
 - **`@juicesharp/rpiv-ask-user-question` package**: lets Pi child agents ask the active user session for clarification when they need human input.
 - **Pi companion packages**: `pi-web-access` and `pi-btw` add web access and companion workflow support. Todo tracking ships inside `gentle-pi` (Gentle Todo); an existing `@juicesharp/rpiv-todo` entry is dropped from `settings.json` on the next install or update, and Pi uninstalls it on its next package sync.
-- **Solo Pi**: cuando Pi es el único agente seleccionado, Axiom omite las preguntas de persona, componentes del ecosistema y TDD estricto, porque las gestiona `gentle-pi`.
+- **Solo Pi**: cuando Pi es el único agente seleccionado, Axiom omite la persona, los componentes del ecosistema y el TDD estricto, porque los gestiona `gentle-pi`.

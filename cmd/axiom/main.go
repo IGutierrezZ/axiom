@@ -89,7 +89,7 @@ func axiomHelpText() string {
 USO:
   axiom <comando> [subcomando] [argumentos]
   axiom [banderas]
-  axiom                Inicia la TUI interactiva si se ejecuta en un terminal interactivo (TTY)
+  axiom                Abre la interfaz web (dashboard), igual que "axiom ui", si se ejecuta en un terminal interactivo (TTY)
 
 COMANDOS DE GOBERNANZA Y WORKSPACE:
   init                 Inicializa un proyecto con axiom.yaml, andamiaje base y lo registra en el Hub
@@ -148,8 +148,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd integrate        Retirado: remite a "axiom archive context" (contexto técnico) y "axiom archive adopt" (migración)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
-COMANDOS DE GESTIÓN DE AGENTES Y TUI:
-  tui                  Abre la interfaz gráfica interactiva de terminal (TUI) de Axiom
+COMANDOS DE GESTIÓN DE AGENTES:
   setup                Configura y aprovisiona agentes para el workspace actual (--scope workspace)
   install              Instala agentes y configura el ecosistema en la máquina
   sync                 Sincroniza y re-aplica configuraciones, skills y reglas en los agentes
@@ -167,7 +166,6 @@ BANDERAS:
 
 Ejemplos:
   axiom
-  axiom tui
   axiom init --name "MiProyecto"
   axiom sdd status mi-cambio --json
   axiom sdd continue mi-cambio
@@ -233,7 +231,9 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
-		os.Exit(0)
+		// Sin argumentos se abre la UI web, igual que `axiom ui` sin opciones.
+		runUI(nil)
+		return
 	}
 
 	arg1 := os.Args[1]
@@ -245,13 +245,6 @@ func main() {
 
 	case "--help", "-h", "help":
 		printHelp()
-		os.Exit(0)
-
-	case "tui":
-		if err := app.RunArgs([]string{}, os.Stdout); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-			os.Exit(1)
-		}
 		os.Exit(0)
 
 	case "install", "setup", "sync", "upgrade", "update", "doctor", "restore", "uninstall":

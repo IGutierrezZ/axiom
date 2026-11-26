@@ -100,7 +100,7 @@ func TestInjectWorkspaceCodexWritesProjectConfig(t *testing.T) {
 func TestInjectWorkspaceCodexIsIdempotent(t *testing.T) {
 	validCodexRuntime(t)
 	root := t.TempDir()
-	opts := InjectOptions{CodexOrchestratorAssignment: model.CodexPresetOrchestratorAssignment(string(model.CodexPresetRecommended))}
+	opts := InjectOptions{CodexOrchestratorAssignment: &model.CodexOrchestratorAssignment{Model: "gpt-6-sol", Effort: model.CodexEffortMedium}}
 
 	if _, err := InjectWorkspaceWithOptions(root, boundCodex(root), opts); err != nil {
 		t.Fatal(err)

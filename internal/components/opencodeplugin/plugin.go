@@ -24,15 +24,6 @@ type Definition struct {
 	Description string
 }
 
-// UnsupportedLogoError reports the accepted V2 omission without installing or
-// relocating branding. Pipeline callers classify this as skipped, not success.
-type UnsupportedLogoError struct{}
-
-func (UnsupportedLogoError) Error() string {
-	return "OpenCode V2 logo skipped: no equivalent home_logo slot; existing branding and configuration preserved"
-}
-func (e UnsupportedLogoError) SkipReason() string { return e.Error() }
-
 type Result struct {
 	Changed bool
 	Files   []string
@@ -57,77 +48,6 @@ var definitions = []Definition{
 		Repo:        "sdd-engram-plugin",
 		Description: "OpenCode TUI for SDD profiles and Engram memories",
 	},
-}
-
-const gentleLogoPluginFile = "gentle-logo.tsx"
-
-const gentleLogoPluginSource = `// @ts-nocheck
-/** @jsxImportSource @opentui/solid */
-import type { TuiPlugin } from "@opencode-ai/plugin/tui"
-import { useTerminalDimensions } from "@opentui/solid"
-import { createMemo } from "solid-js"
-
-const id = "gentle-logo"
-
-const roseArt = [
-  "             ⣠⣾⣷⣶⣦⣤⣤⣄⣠⣄⣀  ⢀⣀⣀",
-  "          ⢀⣴⣿⣿⠿⣋⣭⣭⣯⣭⣍⣭⣿⣟⠛⠛⠿⠿⣿⣷⣄",
-  "      ⢀⣴⣾⡟⢻⣿⡟⠁⣼⣿⠏⣵⢻⣿⣻⣿⣿⢿⡻⣿⣿⣶⡌⢿⣿⣷⣦⣤⡄",
-  "   ⣤⣶⣾⣿⣿⠏ ⠈⢿⣄ ⢹⣏⠠⠟⣾⣿⣿⣿⣿⣿⠷⣏⣼⠟⢡⣿⡟⠋⢻⣿⣿⡄",
-  "   ⠈⣿⣿⣿⣿⡆   ⣽⢧⡘⠈⠳⣦⣍⠛⠛⢦⣉⣴⣛⣫⣭⣴⡟⠋  ⣾⣿⣿⡿",
-  "   ⢀⠹⣿⣿⣿⣷⣤⡄ ⠋ ⠙⢆ ⣠⠴⠟⠛⣛⣛⣛⠟⠋⠁⠺⡇ ⣀⣴⣿⣿⡟⠁",
-  "   ⠈⣀⠈⠛⠷⠿⣿⣿⣷⣤⣀ ⢠⠋   ⠈⠉⠉    ⣠⣴⣥⠾⠛⠉⣰⣿⣷",
-  "          ⠹⣯⣝⠛⠛⠷⢶⣤⣤⣀   ⢀⡠⠖⠋⠉⢉⣀⣀⣴⣾⣿⠿⠟⠃ ⠠⠦",
-  "⠁       ⠖  ⠘⠻⢿⣦⣄⡀  ⠉⠛⢦⠠⢊⠤⠴⢒⣛⣛⣩⣽⡿⠟⠁⢀⡀",
-  "⠲⠶⣦⠴⠶⠶⠶⠶⡶⠶⢶⣤⣄⡀⠨⠭⠽⠟⣓⢦⣀⠈⢇⡥⠖⠛⠋⠉⠉⠉    ⠈  ⢠⡤",
-  "  ⠈⢷ ⠐⠂⢤⣽⣄ ⠰⡎⠙⠳⣄⡀ ⠈⢣⠘⢦⠋⣀⡬⠟⠛⠛⠉⢀⣀⣀⣠⡤⠄⠃",
-  "   ⠈⢳⣀⡒⠉⠉⣉⠙⡲⣽⣄ ⣏⠳⡄ ⠘⡇ ⡾⠁ ⢀⡤⠖⣻⣿⡏⢡⡎ ⠰⠄",
-  "     ⠛⠻⢦⣄⣉⡁⣀⣀⣈⣙⣺⣌⡇⢠⢀⡇⡾  ⣴⣿⡷⠊ ⢲⣠⠟",
-  "          ⠈⠉    ⠈⠳⡄⣸⢱⠇⢀⣰⣯⣭⣥⠭⠾⠛⠃",
-  "                  ⡷⠡⡯⢖⠉   ⢠⠤",
-  "                ⡠⢊⡴⠤⠂⠃ ⠒",
-  "             ⢀⡴⢪⠔⣉⠔⠋",
-  "               ⠐⠈",
-]
-
-const compactArt = ["✦ Axiom ✦"]
-
-const Logo = () => {
-  const dim = useTerminalDimensions()
-  const lines = createMemo(() => {
-    const term = dim()
-    return term.height >= roseArt.length + 6 && term.width >= 64 ? roseArt : compactArt
-  })
-
-  return (
-    <box flexDirection="column" alignItems="center">
-      {lines().map((line) => (
-        <text fg="magenta">{line}</text>
-      ))}
-    </box>
-  )
-}
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    id,
-    order: 100,
-    slots: {
-      home_logo() {
-        return <Logo />
-      },
-    },
-  })
-}
-
-const plugin = { id: "gentle-logo", tui }
-export default plugin
-`
-
-func Definitions() []Definition {
-	out := make([]Definition, len(definitions))
-	copy(out, definitions)
-	return out
 }
 
 func DefinitionFor(id model.OpenCodeCommunityPluginID) (Definition, bool) {
@@ -156,13 +76,8 @@ func InstallPaths(homeDir string, selected []model.OpenCodeCommunityPluginID) ([
 	}
 
 	for _, id := range selected {
-		switch id {
-		case model.OpenCodePluginGentleLogo:
-			addPath(filepath.Join(opencodeDir, "tui-plugins", gentleLogoPluginFile))
-		default:
-			if _, ok := DefinitionFor(id); !ok {
-				return nil, fmt.Errorf("unknown OpenCode community plugin %q", id)
-			}
+		if _, ok := DefinitionFor(id); !ok {
+			return nil, fmt.Errorf("unknown OpenCode community plugin %q", id)
 		}
 		addPath(tuiPath)
 	}
@@ -176,14 +91,7 @@ func Install(homeDir string, id model.OpenCodeCommunityPluginID) (Result, error)
 		return Result{}, err
 	}
 	if major == opencode.RuntimeV2 {
-		if id == model.OpenCodePluginGentleLogo {
-			return Result{}, UnsupportedLogoError{}
-		}
 		return Result{}, fmt.Errorf("OpenCode community plugin V2 compatibility is unverified; existing configuration preserved")
-	}
-
-	if id == model.OpenCodePluginGentleLogo {
-		return installGentleLogo(homeDir)
 	}
 
 	def, ok := DefinitionFor(id)
@@ -203,26 +111,6 @@ func Install(homeDir string, id model.OpenCodeCommunityPluginID) (Result, error)
 	}
 
 	return Result{Changed: written, Files: []string{tuiPath}}, nil
-}
-
-func installGentleLogo(homeDir string) (Result, error) {
-	opencodeDir := filepath.Join(homeDir, ".config", "opencode")
-	pluginPath := filepath.Join(opencodeDir, "tui-plugins", gentleLogoPluginFile)
-	tuiPath := filepath.Join(opencodeDir, "tui.json")
-
-	pluginWrite, err := filemerge.WriteFileAtomic(pluginPath, []byte(gentleLogoPluginSource), 0o644)
-	if err != nil {
-		return Result{}, fmt.Errorf("write Gentle Logo TUI plugin: %w", err)
-	}
-	tuiChanged, err := ensureTUIPlugin(tuiPath, pluginPath)
-	if err != nil {
-		return Result{}, err
-	}
-
-	return Result{
-		Changed: pluginWrite.Changed || tuiChanged,
-		Files:   []string{pluginPath, tuiPath},
-	}, nil
 }
 
 func ensureTUIPlugin(path, pkg string) (bool, error) {

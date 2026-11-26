@@ -45,7 +45,6 @@ func TestSyncNeverWritesOutsideSelectedAgents(t *testing.T) {
 
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{string(model.AgentOpenCode)},
-		Persona:         string(model.PersonaNeutral),
 	}); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
@@ -61,7 +60,6 @@ func TestSyncNeverWritesOutsideSelectedAgents(t *testing.T) {
 	result, err := RunSyncWithSelection(home, model.Selection{
 		Agents:         []model.AgentID{model.AgentOpenCode},
 		CommunityTools: []model.CommunityToolID{model.CommunityToolCodeGraph},
-		Persona:        model.PersonaNeutral,
 	})
 	if err != nil {
 		t.Fatalf("RunSyncWithSelection() error = %v", err)

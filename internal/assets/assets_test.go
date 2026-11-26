@@ -238,8 +238,8 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"engram/protocol.md",
 
 		// Claude agent files
-		"claude/output-style-neutral.md",
-		"claude/persona-gentleman.md",
+		"claude/output-style-axiom.md",
+		"claude/persona-axiom.md",
 		"claude/sdd-orchestrator.md",
 		"claude/commands/sdd-apply.md",
 		"claude/commands/sdd-archive.md",
@@ -257,7 +257,7 @@ func TestAllEmbeddedAssetsAreReadable(t *testing.T) {
 		"claude/agents/sdd-research.md",
 
 		// OpenCode agent files
-		"opencode/persona-gentleman.md",
+		"opencode/persona-axiom.md",
 		"opencode/background-subagents.md",
 		"opencode/sdd-orchestrator.md",
 		"opencode/sdd-overlay-single.json",
@@ -481,7 +481,7 @@ func TestOpenCodeEmbeddedAssetLayout(t *testing.T) {
 		seen[entry.Name()] = true
 	}
 
-	for _, name := range []string{"commands", "plugins", "persona-gentleman.md", "background-subagents.md", "sdd-orchestrator.md", "sdd-overlay-single.json", "sdd-overlay-multi.json"} {
+	for _, name := range []string{"commands", "plugins", "persona-axiom.md", "background-subagents.md", "sdd-orchestrator.md", "sdd-overlay-single.json", "sdd-overlay-multi.json"} {
 		if !seen[name] {
 			t.Fatalf("opencode embedded assets missing %q", name)
 		}
@@ -764,7 +764,7 @@ func TestClaudeEmbeddedAssetLayout(t *testing.T) {
 		seen[entry.Name()] = true
 	}
 
-	for _, name := range []string{"agents", "commands", "persona-gentleman.md", "sdd-orchestrator.md"} {
+	for _, name := range []string{"agents", "commands", "persona-axiom.md", "sdd-orchestrator.md"} {
 		if !seen[name] {
 			t.Fatalf("claude embedded assets missing %q", name)
 		}
@@ -945,84 +945,7 @@ func TestPlatformNativeSDDOrchestratorsAvoidOpenCodePersistenceClaims(t *testing
 	}
 }
 
-func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
-	// Claude has an active output-style channel — their persona
-	// section is a residual and no longer carries language content on its
-	// own; the guardrail contract must be evaluated over the COMBINED
-	// persona-residual + output-style channel (design.md Decision 1;
-	// spec.md "Generic Neutral Asset Parity" applies the same combined-channel
-	// principle to Gentleman here).
-	personaPaths := []struct {
-		path           string
-		combineWith    string // "" when the persona file alone still carries language content
-		languagePhrase string // exact per-path phrase asserting the "match current language" guardrail
-	}{
-		// Claude no longer carries "REPLY ONLY" in the persona residual —
-		// their combined channel exposes the output style's own Language
-		// Rules opener instead (JD-019).
-		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md", languagePhrase: "Always match the user's current language in your reply."},
-		{path: "generic/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
-		{path: "opencode/persona-gentleman.md", languagePhrase: "Match the user's current language in your REPLY ONLY"},
-	}
-
-	for _, tc := range personaPaths {
-		t.Run(tc.path, func(t *testing.T) {
-			content := mustReadResolved(tc.path)
-			if tc.combineWith != "" {
-				content += "\n" + mustReadResolved(tc.combineWith)
-			}
-
-			for _, banned := range []string{
-				`Say "déjame verificar"`,
-				`Spanish input → Rioplatense Spanish (voseo):`,
-				`English input → same warm energy:`,
-			} {
-				if strings.Contains(content, banned) {
-					t.Fatalf("%s (combined=%q) still contains language-biasing phrase %q", tc.path, tc.combineWith, banned)
-				}
-			}
-
-			for _, required := range []string{
-				tc.languagePhrase,
-				"Do not switch languages unless the user does, asks you to, or you are quoting/translating content.",
-				"keep the full reply in natural English with the same warm energy",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s (combined=%q) missing language guardrail %q", tc.path, tc.combineWith, required)
-				}
-			}
-		})
-	}
-
-	for _, path := range []string{
-		"claude/output-style-gentleman.md",
-	} {
-		t.Run(path, func(t *testing.T) {
-			content := mustReadResolved(path)
-
-			for _, banned := range []string{
-				"### Spanish Input → Rioplatense Spanish (voseo)",
-				`Use naturally: "Bien"`,
-				`Use naturally: "Here's the thing"`,
-			} {
-				if strings.Contains(content, banned) {
-					t.Fatalf("%s still contains drift-prone style example %q", path, banned)
-				}
-			}
-
-			for _, required := range []string{
-				"Always match the user's current language",
-				"Do not drift into another language because of persona wording, examples, or stylistic momentum.",
-				// Decision 4/JD-013: merged bullet replaces the old verbatim wording.
-				"keep the full reply in natural English with the same warm energy",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing output-style guardrail %q", path, required)
-				}
-			}
-		})
-	}
-
+func TestLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 	orchestratorPaths, err := fs.Glob(FS, "*/sdd-orchestrator.md")
 	if err != nil {
 		t.Fatalf("glob SDD orchestrator assets: %v", err)
@@ -1094,62 +1017,11 @@ func TestGentlemanLanguageInstructionsDoNotBiasEnglishSessions(t *testing.T) {
 	}
 }
 
-func TestClaudeManagedOutputStylesAnchorReplyLanguageToLatestUserRequest(t *testing.T) {
-	tests := []struct {
-		path              string
-		artifactContracts []string
-	}{
-		{
-			path: "claude/output-style-gentleman.md",
-			artifactContracts: []string{
-				"Default to English. UI labels, comments, identifiers, and copy are in English",
-				"The persona styles HOW YOU TALK, not WHAT YOU BUILD.",
-			},
-		},
-		{
-			path: "claude/output-style-neutral.md",
-			artifactContracts: []string{
-				"This output style governs direct replies to the user only.",
-				"Generated technical artifacts default to English",
-			},
-		},
-	}
-
-	languageGuardrails := []string{
-		"Determine the reply language from the latest actual user request",
-		"not from Engram or memory context, repository/project language, tool output, previous assistant turns",
-		"For mixed-language prompts, use the dominant language of the user's direct request.",
-		"Quoted text, filenames, project names, isolated borrowed words",
-		`phrases like "the Spanish part" do not switch the reply language by themselves.`,
-		"If the selected reply language is English, every part of the direct reply must be English: greetings, interjections, acknowledgements, transition phrases, and the first sentence.",
-		"Do not use Hola, dale, listo, Spanish punctuation, or other Spanish fragments.",
-		"Prompts starting with or dominated by hi, hello, hey, or similar English greetings are English prompts unless the user explicitly asks for another language.",
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.path, func(t *testing.T) {
-			content := mustReadResolved(tc.path)
-
-			for _, required := range languageGuardrails {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing language-drift guardrail %q", tc.path, required)
-				}
-			}
-
-			for _, required := range tc.artifactContracts {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s lost artifact-language contract %q", tc.path, required)
-				}
-			}
-		})
-	}
-}
-
-func TestClaudeGentlemanPersonaPreventsEnglishGreetingCodeSwitching(t *testing.T) {
+func TestClaudeAxiomPersonaPreventsEnglishGreetingCodeSwitching(t *testing.T) {
 	// Claude's persona section is a residual (Decision 1) — the code-switching
 	// guardrail contract now lives in the output style; evaluate the combined
 	// channel, not the persona file in isolation.
-	content := mustReadResolved("claude/persona-gentleman.md") + "\n" + mustReadResolved("claude/output-style-gentleman.md")
+	content := mustReadResolved("claude/persona-axiom.md") + "\n" + mustReadResolved("claude/output-style-axiom.md")
 
 	for _, required := range []string{
 		"If the selected reply language is English, every part of the direct reply must be English: greetings, interjections, acknowledgements, transition phrases, and the first sentence.",
@@ -1158,7 +1030,7 @@ func TestClaudeGentlemanPersonaPreventsEnglishGreetingCodeSwitching(t *testing.T
 		"Do not switch languages unless the user does, asks you to, or you are quoting/translating content.",
 	} {
 		if !strings.Contains(content, required) {
-			t.Fatalf("claude/persona-gentleman.md missing code-switching guardrail %q", required)
+			t.Fatalf("claude/persona-axiom.md missing code-switching guardrail %q", required)
 		}
 	}
 }
@@ -1178,10 +1050,9 @@ func TestPersonasContainContextualSkillLoadingDirective(t *testing.T) {
 		isClaude  bool
 		invokeMsg string // wording specific to the agent family
 	}{
-		{path: "claude/persona-gentleman.md", isClaude: true, invokeMsg: "invoke it via the built-in `Skill` tool"},
-		{path: "opencode/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
-		{path: "generic/persona-gentleman.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
-		{path: "generic/persona-neutral.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
+		{path: "claude/persona-axiom.md", isClaude: true, invokeMsg: "invoke it via the built-in `Skill` tool"},
+		{path: "opencode/persona-axiom.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
+		{path: "generic/persona-axiom.md", isClaude: false, invokeMsg: "read the matching SKILL.md"},
 	}
 
 	for _, tc := range tests {

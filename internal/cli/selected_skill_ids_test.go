@@ -19,13 +19,12 @@ func TestSelectedSkillIDsDropsRetired(t *testing.T) {
 		}
 	})
 
-	t.Run("explicit list of only retired skills stays empty without preset fallback", func(t *testing.T) {
+	t.Run("explicit list of only retired skills stays empty without default fallback", func(t *testing.T) {
 		got := selectedSkillIDs(model.Selection{
-			Preset: model.PresetFullGentleman,
 			Skills: []model.SkillID{"branch-pr", "gentle-ai-bench"},
 		})
 		if len(got) != 0 {
-			t.Fatalf("selectedSkillIDs() = %v, want empty (no preset fallback)", got)
+			t.Fatalf("selectedSkillIDs() = %v, want empty (no default fallback)", got)
 		}
 	})
 
@@ -39,11 +38,10 @@ func TestSelectedSkillIDsDropsRetired(t *testing.T) {
 		}
 	})
 
-	t.Run("preset path is unaffected", func(t *testing.T) {
-		preset := model.PresetFullGentleman
-		got := selectedSkillIDs(model.Selection{Preset: preset})
-		if want := skills.SkillsForPreset(preset); !slices.Equal(got, want) {
-			t.Fatalf("selectedSkillIDs() = %v, want preset skills %v", got, want)
+	t.Run("no explicit skills falls back to the default set", func(t *testing.T) {
+		got := selectedSkillIDs(model.Selection{})
+		if want := skills.DefaultSkills(); !slices.Equal(got, want) {
+			t.Fatalf("selectedSkillIDs() = %v, want default skills %v", got, want)
 		}
 	})
 }

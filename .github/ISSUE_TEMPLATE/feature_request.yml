@@ -25,7 +25,7 @@ body:
       description: Which area of Axiom would this feature affect?
       options:
         - CLI (commands, flags)
-        - TUI (terminal UI)
+        - Web dashboard (axiom ui)
         - Installation Pipeline
         - Agent Detection
         - System Detection

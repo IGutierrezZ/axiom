@@ -41,37 +41,6 @@ func TestClaudeModelAliasString(t *testing.T) {
 	}
 }
 
-// TestClaudeModelPresetsContainOnlyValidAliases verifies that every preset
-// assigns a valid alias to all 15 phase keys, guarding against preset drift
-// when new aliases are introduced.
-func TestClaudeModelPresetsContainOnlyValidAliases(t *testing.T) {
-	presets := []struct {
-		name string
-		fn   func() map[string]model.ClaudeModelAlias
-	}{
-		{"Balanced", model.ClaudeModelPresetBalanced},
-		{"Performance", model.ClaudeModelPresetPerformance},
-		{"Economy", model.ClaudeModelPresetEconomy},
-		{"Diversity", model.ClaudeModelPresetDiversity},
-	}
-	for _, tc := range presets {
-		t.Run(tc.name, func(t *testing.T) {
-			m := tc.fn()
-			if len(m) != 15 {
-				t.Errorf("%s preset has %d keys, want 15", tc.name, len(m))
-			}
-			if _, ok := m["sdd-research"]; !ok {
-				t.Errorf("%s preset missing sdd-research", tc.name)
-			}
-			for k, v := range m {
-				if !v.Valid() {
-					t.Errorf("%s preset[%q] = %q is not a valid ClaudeModelAlias", tc.name, k, v)
-				}
-			}
-		})
-	}
-}
-
 func TestClaudeEffortsForModelOfficialMatrix(t *testing.T) {
 	tests := []struct {
 		name  string

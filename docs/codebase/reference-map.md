@@ -11,10 +11,10 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 | `README.md` | Product landing page, install paths, main docs table. |
 | `docs/CODEBASE-GUIDE.md` | Maintainer codebase guide index. |
 | `docs/architecture.md` | Short architecture and development reference. |
-| `docs/usage.md` | CLI, TUI, flags, and typical workflows. |
+| `docs/usage.md` | CLI, dashboard, flags, and typical workflows. |
 | `docs/engram.md` | Engram command and MCP tool reference. |
 | `docs/agents.md` | Supported agents, delegation model, and per-agent notes. |
-| `docs/components.md` | Components, skills, and presets. |
+| `docs/components.md` | Components and skills. |
 | `docs/opencode-profiles.md` | OpenCode SDD profile behavior. |
 | `docs/rollback.md` | Backup, restore, and managed uninstall recovery behavior. |
 | `docs/platforms.md` | Platform support and path notes. |
@@ -30,8 +30,6 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 | `internal/cli/run.go` | Install flow orchestration. |
 | `internal/cli/sync.go` | Managed config sync flow and SDD profile flags. |
 | `internal/cli/uninstall.go` | Non-interactive uninstall flow. |
-| `internal/tui/model.go` | Interactive state machine and async messages. |
-| `internal/tui/router.go` | TUI route relationships. |
 | `internal/model/types.go` | Shared IDs and strategy enums. |
 | `internal/catalog/agents.go` | Supported agent list. |
 | `internal/catalog/components.go` | Component catalog. |
@@ -40,7 +38,7 @@ This appendix maps main docs and source files to responsibilities. Use it to mak
 | `internal/components/engram/` | Engram install, setup, MCP injection, and verification wiring. |
 | `internal/components/sdd/` | SDD prompt/profile generation and injection. |
 | `internal/components/communitytool/` | Community tool installation orchestration plus managed guidance/config/MCP reconciliation, including CodeGraph. |
-| `internal/components/opencodeplugin/` | Optional OpenCode TUI plugin registration, including external package names and the managed Gentle Logo local plugin. |
+| `internal/components/opencodeplugin/` | Optional OpenCode TUI plugin registration for external package names. |
 | `internal/components/uninstall/` | Managed component cleanup services for uninstall flows. |
 | `internal/skillregistry/` | Skill registry scanning, cache behavior, and markdown generation. |
 | `internal/agents/` | Per-agent adapter strategies and paths. |

@@ -148,11 +148,12 @@ Cada entrada DEBE ser una ruta relativa que permanezca dentro del workspace. Las
 - **Y** `axiom skill index refresh` las ignora sin fallar
 ### Requirement: Saneamiento del Preset Predeterminado de Skills (REQ-46.9)
 
-El catálogo de skills distribuido en el preset básico de Axiom DEBE contener únicamente skills de producto para usuarios, segregando las skills de colaboración interna del repositorio (`contributorSkills`).
-(Trasladado desde REQ-18.5 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)
+El conjunto de skills que Axiom instala por defecto DEBE contener únicamente skills de producto para usuarios, segregando las skills de colaboración interna del repositorio (`contributorSkills`).
+(Previously: hablaba del «preset básico»; C-08-f sustituye los presets por un conjunto por defecto. Trasladado desde REQ-18.5 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)
 
-#### Scenario: Inspección del preset básico de skills
+#### Scenario: Inspección del conjunto de skills por defecto
 
 - **DADO** el catálogo de skills en `internal/components/skills`
-- **CUANDO** se consulta el listado del preset por defecto
+- **CUANDO** se consulta el conjunto de skills por defecto
 - **ENTONCES** contiene únicamente skills fundacionales de producto y excluye las de contribución interna
+

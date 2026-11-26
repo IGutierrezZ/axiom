@@ -230,7 +230,7 @@ func TestCLIIntegrationSubprocessAndFlatAliases(t *testing.T) {
 		if !strings.Contains(outStr, "sdd status") || !strings.Contains(outStr, "sdd continue") {
 			t.Fatalf("axiom --help no documenta los comandos sdd:\n%s", outStr)
 		}
-		expectedCmds := []string{"tui", "install", "sync", "upgrade", "doctor", "backup", "restore", "uninstall"}
+		expectedCmds := []string{"install", "sync", "upgrade", "doctor", "backup", "restore", "uninstall"}
 		for _, cmdName := range expectedCmds {
 			if !strings.Contains(outStr, cmdName) {
 				t.Fatalf("axiom --help no documenta el comando de ecosistema %q:\n%s", cmdName, outStr)

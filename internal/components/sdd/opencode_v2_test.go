@@ -13,49 +13,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-func TestOpenCodeV2ProfileAndMerge(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "opencode.jsonc")
-	raw := `{"agents":{"sdd-orchestrator-fast":{"system":"Keep","model":{"providerID":"native","model":"coder","variant":"high"}},"custom":{"system":"Unrelated"}},"agent":{"sdd-orchestrator-fast":{"model":"stale/model","variant":"low"}},"providers":{}}`
-	if err := os.WriteFile(path, []byte(raw), 0600); err != nil {
-		t.Fatal(err)
-	}
-	profiles, err := DetectProfiles(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(profiles) != 1 || profiles[0].OrchestratorModel.ProviderID != "native" || profiles[0].OrchestratorModel.Effort != "high" {
-		t.Fatalf("profiles = %+v", profiles)
-	}
-	_, err = mergeOpenCodeJSONFile(path, []byte(`{"agent":{"sdd-orchestrator-fast":{"model":"new/coder","variant":"low","prompt":"Updated"}}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	data, _ := os.ReadFile(path)
-	root, err := filemerge.UnmarshalJSONObject(data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	native, _ := root["agents"].(map[string]any)
-	entry, _ := native["sdd-orchestrator-fast"].(map[string]any)
-	if entry["model"] != "new/coder#low" || entry["system"] != "Updated" {
-		t.Fatalf("native overlay = %#v", entry)
-	}
-	if _, ok := native["custom"]; !ok {
-		t.Fatal("custom agent lost")
-	}
-	if err := RemoveProfileAgents(path, "fast"); err != nil {
-		t.Fatal(err)
-	}
-	data, _ = os.ReadFile(path)
-	root, _ = filemerge.UnmarshalJSONObject(data)
-	for _, key := range []string{"agent", "agents"} {
-		entries, _ := root[key].(map[string]any)
-		if _, ok := entries["sdd-orchestrator-fast"]; ok {
-			t.Fatalf("profile remains in %s", key)
-		}
-	}
-}
-
 func TestOpenCodeV2GeneratedPermissions(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "opencode.json")
 	if err := os.WriteFile(path, []byte(`{"agents":{"worker":{"system":"Native","permissions":[{"action":"edit","resource":"*","effect":"allow"}]}}}`), 0600); err != nil {

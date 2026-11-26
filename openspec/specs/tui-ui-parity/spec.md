@@ -1,4 +1,4 @@
-# Especificación Viva: Paridad Bidireccional entre TUI y Web UI
+# Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI)
 
 > **Dominio:** `tui-ui-parity`  
 > **Versión Canónica:** 1.0.0  
@@ -66,74 +66,3 @@ El servidor HTTP local DEBE exponer el endpoint `GET /api/ecosystem/models` para
 
 Permite a los desarrolladores operar la gobernanza Spec-Driven Development y la gestión multi-proyecto directamente desde la interfaz interactiva de terminal Bubbletea.
 
-### Requirement: Submenú Unificado de Proyectos y Gobernanza SDD en TUI (REQ-17.5)
-La pantalla de bienvenida de la TUI (`WelcomeOptions`) DEBE incorporar una opción de menú `📁 Proyectos y Gobernanza SDD ➔` que conduzca a un submenú o pantalla navegable dedicada a la gestión de proyectos y ciclo de vida de la plataforma, preservando la ergonomía visual en terminales compactos.
-
-#### Scenario: Navegación al submenú de gobernanza desde la bienvenida
-- **DADO** el menú principal de la TUI interactiva de Axiom
-- **CUANDO** el cursor selecciona la opción `📁 Proyectos y Gobernanza SDD ➔` y presiona Enter
-- **ENTONCES** la TUI conmuta a la pantalla o submenú de gobernanza
-- **Y** al presionar Esc o seleccionar "Volver al menú principal", regresa a `ScreenWelcome`
-
----
-
-### Requirement: Pantalla de Gestión Multi-Proyecto en TUI (REQ-17.6)
-La TUI DEBE implementar la pantalla `ScreenHubProjects` que lea los proyectos registrados en `~/.axiom/workspaces.json` mediante `internal/hub`. DEBE permitir:
-1. Visualizar la lista de proyectos registrados con su nombre, ruta y estado de salud.
-2. Conmutar el proyecto activo en caliente.
-3. Registrar un proyecto existente introduciendo su ruta (`axiom project add`).
-4. Inicializar el directorio actual si carece de `axiom.yaml` (`axiom init`) con detección de stack tecnológico.
-
-#### Scenario: Conmutación de proyecto activo en la TUI
-- **DADO** la pantalla `ScreenHubProjects` con 2 o más proyectos registrados
-- **CUANDO** el usuario navega a un proyecto y presiona Enter
-- **ENTONCES** el proyecto se marca como activo en el Hub
-- **Y** se actualiza el contexto del workspace en la sesión interactiva
-
----
-
-### Requirement: Pantalla de Ciclo de Vida de Incrementos SDD en TUI (REQ-17.7)
-La TUI DEBE implementar la pantalla `ScreenSDDIncrements` que liste los incrementos en `openspec/changes/` (activos) y `openspec/changes/archive/` (archivados), mostrando su fase actual (`explore`, `propose`, `spec`, `design`, `tasks`, `apply`, `verify`, `archive`). DEBE permitir:
-1. Crear un nuevo incremento de forma guiada (`axiom change create`) solicitando nombre e intención.
-2. Disparar el avance de fase (`sdd continue`) con atajo de teclado.
-3. Validar el reporte de verificación formal (`sdd verify-validate`).
-
-#### Scenario: Visualización y avance de fase de un incremento
-- **DADO** la pantalla `ScreenSDDIncrements` con un cambio activo en fase `proposal`
-- **CUANDO** el usuario selecciona el cambio y presiona `c` (continuar)
-- **ENTONCES** se ejecuta la transición del despachador SDD
-- **Y** la interfaz actualiza en vivo el estado de la siguiente fase recomendada
-
----
-
-### Requirement: Pantalla de Monitor Multi-Rol y Barrera Fan-In en TUI (REQ-17.8)
-La TUI DEBE implementar la pantalla `ScreenMultiRole` que permita seleccionar un cambio activo, inspeccionar los roles definidos en `design.md`, clasificar compuertas obligatorias (`blocking`) vs diferidas (`deferred`), verificar el avance porcentual de tareas por rol y evaluar la barrera de sincronización Fan-In, ofreciendo la opción de migrar tareas diferidas acumulativas a `openspec/changes/e2e-cumulative/tasks.md`.
-
-#### Scenario: Evaluación de barrera multi-rol desde la TUI
-- **DADO** un cambio activo con múltiples roles asignados
-- **CUANDO** el usuario accede a `ScreenMultiRole`
-- **ENTONCES** se evalúa la barrera de sincronización usando `internal/multirole`
-- **Y** se renderiza el veredicto de compuerta (abierta o bloqueada) con el desglose de tareas pendientes
-
----
-
-### Requirement: Pantalla de Visor de Handoffs Estructurados en TUI (REQ-17.9)
-La TUI DEBE implementar la pantalla `ScreenHandoffs` que presente el contenido parseado de `handoff.md` del cambio activo con sus metadatos de transición (fase origen ➔ fase destino, roles) y secciones canónicas en castellano.
-
-#### Scenario: Inspección de relevo formal en la TUI
-- **DADO** un cambio con artefacto `handoff.md` válido
-- **CUANDO** el usuario accede a `ScreenHandoffs`
-- **ENTONCES** la pantalla muestra el flujo de fases y el contenido de las secciones estructuradas
-
----
-
-### Requirement: Pantalla de Catálogo de Especificaciones Vivas en TUI (REQ-17.10)
-
-La TUI DEBE implementar la pantalla `ScreenLivingDoc` que liste las especificaciones vivas disponibles en `<planning home>/specs/` (`openspec/specs/`) con sus dominios y versiones, y permita disparar la sincronización del catálogo maestro `INDEX.md` con un atajo de teclado `s`.
-(Previously: con una baseline del proyecto declarada, la pantalla mostraba un aviso de baseline externa en lugar del catálogo y el atajo `s` mostraba el rechazo; la baseline ajena se retira)
-
-#### Scenario: Sincronización del catálogo maestro desde la TUI
-- **DADO** la pantalla `ScreenLivingDoc`
-- **CUANDO** el usuario presiona la tecla `s` (sincronizar)
-- **ENTONCES** se invoca `livingdoc.Service.Sync()`
-- **Y** se muestra un mensaje de confirmación con el total de dominios y requisitos actualizados

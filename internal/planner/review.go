@@ -24,8 +24,6 @@ func BuildReviewPayload(selection model.Selection, resolved ResolvedPlan) Review
 	return ReviewPayload{
 		Agents:            resolved.Agents,
 		UnsupportedAgents: resolved.UnsupportedAgents,
-		Persona:           selection.Persona,
-		Preset:            selection.Preset,
 		Components:        components,
 		AddedDependencies: resolved.AddedDependencies,
 		PlatformDecision:  resolved.PlatformDecision,

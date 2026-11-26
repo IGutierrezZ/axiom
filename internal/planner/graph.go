@@ -41,13 +41,10 @@ func MVPGraph() Graph {
 		// go-testing, judgment-day) install fine without it. The SDD-authored
 		// skills (sdd-*) are written by the SDD component itself — see
 		// internal/components/skills.IsSDDSkill and internal/components/sdd.
-		model.ComponentSkills:             nil,
-		model.ComponentContext7:           nil,
-		model.ComponentPersona:            nil,
-		model.ComponentPermission:         nil,
-		model.ComponentTheme:              nil,
-		model.ComponentClaudeTheme:        nil,
-		model.ComponentOpenCodeGentleLogo: nil,
+		model.ComponentSkills:     nil,
+		model.ComponentContext7:   nil,
+		model.ComponentPersona:    nil,
+		model.ComponentPermission: nil,
 	})
 }
 

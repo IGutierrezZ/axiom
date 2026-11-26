@@ -111,7 +111,7 @@ func TestPiBackgroundStateIsOptionalAndLossless(t *testing.T) {
 	home := t.TempDir()
 	want := state.InstallState{
 		InstalledAgents: []string{"pi"}, ManagedAssetDigest: "sha256:asset", SelectionConfigured: true,
-		Components: []model.ComponentID{model.ComponentEngram}, Persona: "neutral", PersonaPresent: true,
+		Components:         []model.ComponentID{model.ComponentEngram},
 		PiBackgroundIntent: model.PiBackgroundOn,
 	}
 	if err := state.Write(home, want); err != nil {

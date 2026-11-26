@@ -91,29 +91,6 @@ func statusIcon(status UpdateStatus) string {
 	}
 }
 
-// UpdateSummaryLine returns a short one-liner for TUI banners, e.g.
-// "engram 1.7.0 -> 1.8.1".
-// Returns empty string if no updates are available.
-func UpdateSummaryLine(results []UpdateResult) string {
-	var parts []string
-	for _, r := range results {
-		if r.Status == UpdateAvailable {
-			parts = append(parts, fmt.Sprintf("%s %s -> %s", r.Tool.Name, r.InstalledVersion, r.LatestVersion))
-		}
-	}
-	return strings.Join(parts, ", ")
-}
-
-// HasUpdates returns true if any result has UpdateAvailable status.
-func HasUpdates(results []UpdateResult) bool {
-	for _, r := range results {
-		if r.Status == UpdateAvailable {
-			return true
-		}
-	}
-	return false
-}
-
 // CheckFailures returns the names of tools whose remote update check failed.
 func CheckFailures(results []UpdateResult) []string {
 	failed := make([]string, 0)

@@ -554,10 +554,10 @@ print_next_steps() {
     if [ "${CHANNEL}" = "beta" ]; then
         echo -e "  ${CYAN}1.${NC} Run ${BOLD}AXIOM_CHANNEL=beta ${BINARY_NAME} install${NC} to keep using the beta channel"
     else
-        echo -e "  ${CYAN}1.${NC} Run ${BOLD}${BINARY_NAME}${NC} to start the TUI installer"
+        echo -e "  ${CYAN}1.${NC} Run ${BOLD}${BINARY_NAME} install --agent <agent>${NC} to configure your AI agent (add ${BOLD}--dry-run${NC} to preview)"
     fi
-    echo -e "  ${CYAN}2.${NC} Select your AI agent(s) and tools to configure"
-    echo -e "  ${CYAN}3.${NC} Follow the interactive prompts"
+    echo -e "  ${CYAN}2.${NC} Without --component, the default set is installed (Engram, SDD, skills, Context7, permissions and persona)"
+    echo -e "  ${CYAN}3.${NC} Run ${BOLD}${BINARY_NAME}${NC} to open the local dashboard"
     echo ""
     echo -e "${DIM}For help: ${BINARY_NAME} --help${NC}"
     echo -e "${DIM}Docs:     https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}${NC}"
