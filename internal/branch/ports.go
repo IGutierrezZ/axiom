@@ -1,6 +1,9 @@
 package branch
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Puertos del dominio (design §4.1). El motor los consume y los adaptadores los
 // implementan: `branch/gitcli` implementa Git sobre gitcommon.Run, `branch/registry`
@@ -37,7 +40,10 @@ type Git interface {
 	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]CommitPaths, error)            // log -z --no-renames --name-only
 	MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error)                          // diff-tree --cc: rutas que resolvió la fusión
 	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)        // reflog show, entrada más antigua
-	Fetch(ctx context.Context, dir, remote string) error                                                // la única operación remota
+	Fetch(ctx context.Context, dir, remote string) error                                                // operación remota: solo trae referencias
+	FetchWithin(ctx context.Context, dir, remote string, timeout time.Duration) error                   // Fetch con tiempo máximo propio (autofetch)
+	FastForward(ctx context.Context, dir, ref string) error                                             // merge --ff-only <ref>, sin crear fusiones
+	RemoteBranches(ctx context.Context, dir, prefix string) ([]string, error)                           // for-each-ref refs/remotes/origin/<prefix>/, sin red
 }
 
 // Registry es el registro local de los planes materializados, en el git common dir

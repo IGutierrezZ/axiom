@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
@@ -451,6 +452,60 @@ func (*Git) Fetch(ctx context.Context, dir, remote string) error {
 		return err
 	}
 	return runWrite(ctx, dir, "fetch", remote)
+}
+
+// FetchWithin es Fetch con un tiempo máximo propio (`git fetch <remote>`, sin `--prune` ni
+// refspec) sobre gitcommon.RunWithTimeout: el autofetch no puede esperar a una red caída más
+// allá de su cota (RF-BRA-10, RF-BRA-39, design D-02). Si el tiempo se agota, el error envuelve
+// gitcommon.ErrTimeout. Sigue siendo una operación remota que solo trae referencias.
+func (*Git) FetchWithin(ctx context.Context, dir, remote string, timeout time.Duration) error {
+	if err := plainArgument(remote); err != nil {
+		return err
+	}
+	args := []string{"fetch", remote}
+	result, err := gitcommon.RunWithTimeout(ctx, dir, timeout, args...)
+	if err != nil {
+		return err
+	}
+	if result.ExitCode != 0 {
+		return commandFailed(dir, result, args...)
+	}
+	return nil
+}
+
+// FastForward avanza la rama desplegada en dir hasta ref solo si es un fast-forward
+// (`git merge --ff-only <ref>`): nunca crea una fusión ni reescribe historia, y se niega ante
+// una divergencia (design D-02). dir es el checkout donde está desplegada la rama.
+func (*Git) FastForward(ctx context.Context, dir, ref string) error {
+	if err := plainArgument(ref); err != nil {
+		return err
+	}
+	return runWrite(ctx, dir, "merge", "--ff-only", ref)
+}
+
+// RemoteBranches lista, sin red, las referencias remotas locales de `origin` bajo prefix
+// (`git for-each-ref --format=%(refname) refs/remotes/origin/<prefix>/`), con su nombre
+// completo y ordenadas. Es una lectura de referencias ya traídas: `for-each-ref` no es un
+// subcomando remoto.
+func (*Git) RemoteBranches(ctx context.Context, dir, prefix string) ([]string, error) {
+	if err := plainArgument(prefix); err != nil {
+		return nil, err
+	}
+	args := []string{"for-each-ref", "--format=%(refname)", "refs/remotes/origin/" + strings.Trim(prefix, "/") + "/"}
+	result, err := gitcommon.Run(ctx, dir, args...)
+	if err != nil {
+		return nil, err
+	}
+	if result.ExitCode != 0 {
+		return nil, commandFailed(dir, result, args...)
+	}
+	var refs []string
+	for _, line := range strings.Split(string(result.Stdout), "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			refs = append(refs, line)
+		}
+	}
+	return refs, nil
 }
 
 // runWrite ejecuta una escritura de git y devuelve un error en castellano, con el comando,

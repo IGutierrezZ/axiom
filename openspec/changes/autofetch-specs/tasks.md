@@ -35,11 +35,12 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
   - Verificación: `go test ./internal/hub -run Autofetch`; `go test ./internal/branch/engine -run Prefs`.
   - Evidencia: `go test ./internal/hub -run Autofetch`: ok; `go test ./internal/branch/engine -run Prefs`: ok; `go vet ./internal/hub ./internal/branch/... ./internal/cli ./internal/dashboard`: sin salida; `gofmt -l internal/hub internal/branch`: vacío. Ruta: inline.
 
-- [ ] T2 Primitivas de git (~220 líneas)
+- [x] T2 Primitivas de git (~220 líneas)
   - Ficheros: `internal/branch/gitcli/ops.go` (`FetchWithin` sobre `gitcommon.RunWithTimeout` sin `--prune`, envolviendo `gitcommon.ErrTimeout`; `FastForward` = `merge --ff-only` con `plainArgument`/`runWrite`; `RemoteBranches` = `for-each-ref refs/remotes/origin/<prefix>/`, sin red), `internal/branch/ports.go` (`Git`), `internal/branch/engine/engine.go` (`gitReader`, `gitWriter`, campo `now`, comentarios de operaciones remotas), `internal/branch/gitcli/ops_write_test.go`.
   - Cubre: RF-BRA-01 (único punto de ejecución), base de RF-BRA-10 y RF-BRA-39.
   - Pruebas: argumentos exactos vía `gitcommon.Observe` (sin `--prune`, sin refspec); `ErrTimeout` con remoto lento/inexistente; `FastForward` rechaza la divergencia sin crear fusión; `RemoteBranches` no es subcomando remoto (sin red).
   - Verificación: `go test ./internal/branch/gitcli -run "FetchWithin|FastForward|RemoteBranches"`.
+  - Evidencia: `go test ./internal/branch/gitcli -run "FetchWithin|FastForward|RemoteBranches"`: ok; `go test ./internal/gitcommon -run TestArchitecture`: ok; `go test ./internal/sddpublish -run TestIsolation`: ok; `go test ./internal/branch/engine -run "Prefs|EnsureReports"`: ok; `go vet ./internal/branch/...`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline.
 
 ## Fase 2: Motor
 
