@@ -10,7 +10,7 @@ This page explains how axiom is meant to be used. Not the flags, not the archite
 
 ## After Installing -- You're Ready
 
-Once you run `axiom` and select your agent(s), components, and preset, the ecosystem is configured for normal use. You do not need to memorize SDD phases, hand-edit generated config files, or manually wire the agent workflow.
+Once you run `axiom install` and select your agent(s) and components (or accept the default set), the ecosystem is configured for normal use. You do not need to memorize SDD phases, hand-edit generated config files, or manually wire the agent workflow.
 
 Open your AI agent in a project and start working. For richer project context, the agent may run `/sdd-init` or refresh the skill registry automatically when SDD needs it. You can also run those manually, but they are not required for basic usage.
 
@@ -70,7 +70,7 @@ Single-mode is not a downgrade. It is the simpler default and works well. Multi-
 If you want OpenCode profiles:
 
 1. Connect your AI providers in OpenCode first
-2. Create a profile via Axiom TUI ("OpenCode SDD Profiles") or CLI (`--profile` flag)
+2. Create a profile via the CLI (`--profile` flag)
 3. The base/default SDD conductor is `axiom-orchestrator`
 4. Named profiles generate `sdd-orchestrator-{name}` + suffixed sub-agents, each assigned to your chosen model
 5. In OpenCode, press **Tab** to switch between `axiom-orchestrator` and custom profiles
@@ -161,7 +161,7 @@ The less you think about Axiom after installing, the better it's working.
 
 | Do                                                         | Don't                                                                             |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Run the installer, pick your agents and preset             | Manually edit the generated config files                                          |
+| Run the installer, pick your agents and components           | Manually edit the generated config files                                          |
 | Just start coding with your AI agent                       | Memorize SDD phases or commands                                                   |
 | Let the agent suggest SDD when a task is big enough        | Force SDD on every small task                                                     |
 | Trust that engram is saving context when installed and active | Dig into engram's storage (use `engram tui`) or commit memory exports to git      |

@@ -24,12 +24,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
@@ -48,7 +46,6 @@ type SyncFlags struct {
 	SDDProfileStrategy string
 	StrictTDD          bool
 	IncludePermissions bool
-	IncludeTheme       bool
 	DryRun             bool
 	Scope              string
 
@@ -69,7 +66,6 @@ type SyncFlags struct {
 	sddModeSet       bool
 	strictTDDSet     bool
 	permissionsSet   bool
-	themeSet         bool
 }
 
 // SyncResult holds the outcome of a sync execution.
@@ -134,7 +130,6 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 	fs.StringVar(&opts.SDDProfileStrategy, "sdd-profile-strategy", "", "OpenCode SDD profile sync strategy: generated-multi or external-single-active (default: auto-detect)")
 	fs.BoolVar(&opts.StrictTDD, "strict-tdd", false, "enable strict TDD mode for SDD agents (RED → GREEN → REFACTOR)")
 	fs.BoolVar(&opts.IncludePermissions, "include-permissions", false, "include permissions component in sync")
-	fs.BoolVar(&opts.IncludeTheme, "include-theme", false, "include theme component in sync")
 	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS; eligible versions use a managed launcher")
 	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS; the resolved policy is projected for gentle-pi")
 	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE")
@@ -166,8 +161,6 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 			opts.strictTDDSet = true
 		case "include-permissions":
 			opts.permissionsSet = true
-		case "include-theme":
-			opts.themeSet = true
 		case "opencode-background-subagents":
 			opts.OpenCodeBackgroundSubagentsSet = true
 		case "pi-background-subagents":
@@ -208,7 +201,6 @@ FLAGS
   --sdd-profile-strategy <strategy>  OpenCode SDD profile sync strategy
   --strict-tdd                       Enable strict TDD mode for SDD agents
   --include-permissions              Include permissions component
-  --include-theme                    Include theme component
   --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE)
   --profile <name:provider/model>    Sync a named SDD profile
   --profile-phase <name:phase:model> Sync a named SDD profile phase
@@ -380,11 +372,9 @@ func parseModelSpec(spec string) (model.ModelAssignment, error) {
 // This is the reusable managed-asset sync contract. A future `upgrade --sync`
 // flow can call this function to get the same managed-only selection semantics.
 func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selection {
-	// Order matters: Persona must run BEFORE SDD/Engram/MCP because those
-	// components inject content with substrings (e.g. "## Personality",
-	// "Senior Architect") that overlap with persona's legacy-block fingerprints.
-	// Running persona last would cause its StripLegacyPersonaBlock pass to
-	// detect the just-written managed sections as legacy and strip them.
+	// Order matters: Persona must run BEFORE SDD/Engram/MCP because, for the
+	// agents whose prompt is one whole file, persona writes the base and the
+	// other components append their sections to it.
 	components := []model.ComponentID{
 		model.ComponentPersona,
 		model.ComponentSDD,
@@ -396,7 +386,6 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 	if flags.IncludePermissions {
 		components = append(components, model.ComponentPermission)
 	}
-	// --include-theme remains parseable for compatibility but cannot install a theme.
 
 	sddMode := model.SDDModeID(flags.SDDMode)
 
@@ -413,12 +402,6 @@ func BuildSyncSelection(flags SyncFlags, agentIDs []model.AgentID) model.Selecti
 		StrictTDD:          flags.StrictTDD,
 		Skills:             skillIDs,
 		Profiles:           flags.Profiles,
-		// Preset is set to full-gentleman so selectedSkillIDs() returns the
-		// correct default skill set when no explicit skills are provided.
-		Preset: model.PresetFullGentleman,
-		// Persona is left as zero-value here. RunSync resolves it from state.json
-		// when present. A missing persona field resolves to neutral; invalid state
-		// is rejected so sync cannot silently reactivate regional persona behavior.
 	}
 }
 
@@ -471,11 +454,6 @@ func RestorePersistedSelection(selection *model.Selection, persisted state.Insta
 		selection.StrictTDD = explicit.StrictTDD
 	}
 	setSelectionComponent(selection, model.ComponentPermission, flags.permissionsSet, flags.IncludePermissions)
-	// Retire visual components persisted by older releases; sync must not
-	// reinstall theme assets after a user upgrades to a theme-free Axiom.
-	selection.Components = slices.DeleteFunc(selection.Components, func(component model.ComponentID) bool {
-		return component == model.ComponentTheme || component == model.ComponentClaudeTheme
-	})
 	// The persisted component list above may predate the caller ever choosing
 	// the SDD component (e.g. an install that ran before profiles existed).
 	// When the caller explicitly asked for profile or model assignment work,
@@ -621,9 +599,6 @@ func (r *syncRuntime) stagePlan() pipeline.StagePlan {
 	apply := []pipeline.Step{
 		rollbackRestoreStep{id: "apply:rollback-restore", state: r.state, homeDir: r.homeDir, workspaceDir: r.workspaceDir, openCodeConfigDir: openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.agentIDs)},
 	}
-	if r.scope != ScopeWorkspace {
-		apply = append(apply, managedVisualThemeCleanupStep{id: "sync:retire-managed-visual-themes", homeDir: r.homeDir, adapters: adapters, changedFiles: &r.changedFiles})
-	}
 	apply = append(apply, retiredSkillsCleanupStep{
 		id:           "sync:retire-installed-skills",
 		roots:        retiredSkillRoots(r.homeDir, r.workspaceDir, r.scope, adapters),
@@ -750,17 +725,6 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 			paths[path] = struct{}{}
 		}
 	}
-	if scope != ScopeWorkspace {
-		for _, adapter := range adapters {
-			owned, err := theme.ManagedVisualThemePaths(homeDir, adapter)
-			if err != nil {
-				return nil, err
-			}
-			for _, path := range owned {
-				paths[path] = struct{}{}
-			}
-		}
-	}
 	for _, component := range selection.Components {
 		for _, path := range syncComponentPathsWithWorkspaceScoped(homeDir, workspaceDir, scope, selection, adapters, component) {
 			paths[path] = struct{}{}
@@ -781,7 +745,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 			}
 		}
 		if component == model.ComponentPersona {
-			plan := persona.ResourcePlanFor(selection.Persona)
+			plan := persona.ResourcePlanFor()
 			for _, adapter := range adapters {
 				if adapter.Agent() == model.AgentPi {
 					for _, rootDir := range piPersonaConfigRoots(homeDir, workspaceDir, scope) {
@@ -972,9 +936,6 @@ func syncPersonaPathsWithWorkspace(homeDir, workspaceDir string, selection model
 }
 
 func syncPersonaPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, adapters []agents.Adapter) []string {
-	if selection.Persona == model.PersonaCustom {
-		return nil
-	}
 	paths := []string{}
 	for _, adapter := range adapters {
 		if adapter.Agent() == model.AgentPi {
@@ -989,7 +950,7 @@ func syncPersonaPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Ins
 		}
 		paths = append(paths, adapter.SystemPromptFile(targetDir))
 		if adapter.SupportsOutputStyles() {
-			if stylePaths := persona.ResourcePlanFor(selection.Persona).OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
+			if stylePaths := persona.ResourcePlanFor().OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
 				paths = append(paths, stylePaths.Write)
 				if p := adapter.SettingsPath(targetDir); p != "" {
 					paths = append(paths, p)
@@ -1018,28 +979,6 @@ type componentSyncStep struct {
 	changedFiles *[]string // accumulates absolute paths of files that actually changed
 
 	backgroundPolicy bool
-}
-
-type managedVisualThemeCleanupStep struct {
-	id           string
-	homeDir      string
-	adapters     []agents.Adapter
-	changedFiles *[]string
-}
-
-func (s managedVisualThemeCleanupStep) ID() string { return s.id }
-
-func (s managedVisualThemeCleanupStep) Run() error {
-	for _, adapter := range s.adapters {
-		result, err := theme.RetireManagedVisualThemes(s.homeDir, adapter)
-		if err != nil {
-			return fmt.Errorf("retire visual themes for %q: %w", adapter.Agent(), err)
-		}
-		if result.Changed && s.changedFiles != nil {
-			*s.changedFiles = append(*s.changedFiles, result.Files...)
-		}
-	}
-	return nil
 }
 
 // Seams over the retired-skill cleanup so tests can prove ownership against
@@ -1444,14 +1383,11 @@ func (s componentSyncStep) Run() error {
 	case model.ComponentPersona:
 		// Sync regenerates the persona block between
 		// <!-- gentle-ai:persona --> markers and (when supported) refreshes
-		// the Gentleman output-style overlay. We deliberately skip the
-		// OpenCode agent definition in opencode.json — that JSON
-		// merge conflicts with SDD's writes to the same settings file and
-		// remains an install-only concern.
+		// the Axiom output-style overlay.
 		for _, adapter := range adapters {
 			if adapter.Agent() == model.AgentPi {
 				for _, rootDir := range piPersonaConfigRoots(s.homeDir, s.workspaceDir, s.scope) {
-					res, err := persona.InjectPiPersona(rootDir, s.selection.Persona)
+					res, err := persona.InjectPiPersona(rootDir)
 					if err != nil {
 						return fmt.Errorf("sync persona for %q: %w", adapter.Agent(), err)
 					}
@@ -1460,31 +1396,12 @@ func (s componentSyncStep) Run() error {
 				continue
 			}
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-			res, err := persona.InjectForSync(targetDir, adapter, s.selection.Persona)
+			res, err := persona.InjectForSync(targetDir, adapter)
 			if err != nil {
 				return fmt.Errorf("sync persona for %q: %w", adapter.Agent(), err)
 			}
 			s.countChanged(boolToInt(res.Changed), res.Files...)
 		}
-		return nil
-
-	case model.ComponentTheme:
-		// Legacy component: never change user theme preferences.
-		return nil
-
-	case model.ComponentClaudeTheme:
-		// Legacy component: never reinstall visual theme assets.
-		return nil
-
-	case model.ComponentOpenCodeGentleLogo:
-		if !containsAgent(s.agents, model.AgentOpenCode) {
-			return nil
-		}
-		res, err := opencodeplugin.Install(s.homeDir, model.OpenCodePluginGentleLogo)
-		if err != nil {
-			return fmt.Errorf("sync OpenCode Gentle Logo plugin: %w", err)
-		}
-		s.countChanged(boolToInt(res.Changed), res.Files...)
 		return nil
 
 	default:
@@ -1698,132 +1615,18 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-// applyResolvedPersona fills selection.Persona when it was not explicitly set.
-// It accepts the already-loaded persisted persona string (from state.json)
-// so no disk I/O happens inside this function.
-//
-// Resolution order:
-//  1. Explicit: if selection.Persona is non-empty, it is left untouched.
-//  2. Persisted: the persisted string is normalized via normalizePersona.
-//  3. Fallback: PersonaNeutral for default-safe behavior when the persona field
-//     is empty or the state file is absent. Other read/validation errors are
-//     rejected by validatePersistedSyncState before this function is called.
-func applyResolvedPersona(selection *model.Selection, persisted string) {
-	if selection.Persona != "" {
-		return
-	}
-	if persisted != "" {
-		if id, _, err := normalizePersona(persisted); err == nil {
-			selection.Persona = id
-			return
-		}
-		// The sync entry points reject unknown persisted values before resolution.
-	}
-	// Default-safe fallback for state files written before persona persistence.
-	selection.Persona = model.PersonaNeutral
-}
-
-// migratePersistedPersonaAlias rewrites a persisted legacy
-// gentleman-neutral-artifacts persona to neutral, printing the remap notice
-// once. State that predates persona persistence, explicit gentleman state,
-// and unreadable state are untouched.
-//
-// El parámetro persisted es solo una instantánea orientativa: la reescritura
-// relee el estado más reciente dentro del cerrojo del almacén y vuelve a
-// comprobar el alias allí, de modo que el cambio de un escritor concurrente
-// entre la lectura orientativa y la escritura nunca se pisa.
-func migratePersistedPersonaAlias(store state.Store, persisted *state.InstallState, persistedErr error) error {
-	if persistedErr != nil || persisted == nil || persisted.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
-		return nil
-	}
-	remapped := false
-	if err := withStateStoreLock(store, func() error {
-		latest, readErr := store.Read()
-		if readErr != nil {
-			// La lectura orientativa tuvo éxito: si ahora falta el fichero, una
-			// eliminación concurrente lo quitó y no queda nada que migrar.
-			if errors.Is(readErr, os.ErrNotExist) {
-				return nil
-			}
-			return fmt.Errorf("read persisted installation state: %w", readErr)
-		}
-		if latest.Persona != string(model.PersonaGentlemanNeutralArtifacts) {
-			return nil
-		}
-		latest.Persona = string(model.PersonaNeutral)
-		if err := store.Write(latest); err != nil {
-			return fmt.Errorf("persist remapped persona: %w", err)
-		}
-		remapped = true
-		return nil
-	}); err != nil {
-		return err
-	}
-	// Notice only after the rewrite is durably persisted: a failed write must
-	// not tell the user the remap happened.
-	if remapped {
-		fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
-	}
-	return nil
-}
-
 // validatePersistedSyncState rejects state that cannot safely drive sync.
-// A missing state file is allowed for fresh homes; a decoded state without a
-// persona remains compatible with legacy installations.
+// A missing state file is allowed for fresh homes; any other read or decode
+// error stops sync before an asset is written.
 func validatePersistedSyncState(persisted state.InstallState, readErr error) error {
-	// guard:population persisted-sync-state-integrity fail-closed: legitimate persisted sync state is a missing file or decoded state with an empty or supported persona; read/decode errors, whitespace-only values, and unsupported persona values remain excluded
+	// guard:population persisted-sync-state-integrity fail-closed: legitimate persisted sync state is a missing file or a decoded state; read/decode errors remain excluded
 	if readErr != nil {
 		if os.IsNotExist(readErr) {
 			return nil
 		}
 		return fmt.Errorf("read persisted installation state: %w", readErr)
 	}
-
-	if persisted.Persona == "" {
-		if persisted.PersonaPresent {
-			return fmt.Errorf("validate persisted persona: explicitly empty persona is not valid") // refusal:by-design operator-knowledge: only the operator can choose the intended persona to replace malformed persisted state
-		}
-		return nil
-	}
-	if strings.TrimSpace(persisted.Persona) == "" {
-		return fmt.Errorf("validate persisted persona: whitespace-only persona is not valid") // refusal:by-design operator-knowledge: only the operator can choose the intended persona to replace malformed persisted state
-	}
-	if _, _, err := normalizePersona(persisted.Persona); err != nil {
-		return fmt.Errorf("validate persisted persona: %w", err)
-	}
 	return nil
-}
-
-// RunSyncWithSelection is the programmatic entry point for sync.
-// It skips flag parsing and agent discovery — the caller provides the homeDir
-// and a fully-built Selection (agents + components + options).
-// This is the function the TUI calls directly to avoid CLI flag parsing.
-func RunSyncWithSelection(homeDir string, selection model.Selection) (SyncResult, error) {
-	return RunSyncWithSelectionScoped(homeDir, "", ScopeGlobal, selection)
-}
-
-func RunSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope, selection model.Selection) (SyncResult, error) {
-	if workspaceDir == "" {
-		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
-	}
-	persistedState, persistedStateErr := StateStoreFor(scope, homeDir, workspaceDir).Read()
-	if persistedStateErr != nil && !os.IsNotExist(persistedStateErr) {
-		return SyncResult{Agents: selection.Agents, Selection: selection}, fmt.Errorf("read persisted installation state: %w", persistedStateErr)
-	}
-	background, err := resolveOpenCodeBackgroundCLI(false, "", persistedState)
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection}, err
-	}
-	background.activationPlan, err = prepareOpenCodeBackgroundActivation(homeDir, &background, containsAgent(selection.Agents, model.AgentOpenCode))
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection, Background: background}, fmt.Errorf("prepare OpenCode background activation: %w", err)
-	}
-	piBackground, err := resolvePiBackgroundCLI(false, "", persistedState)
-	if err != nil {
-		return SyncResult{Agents: selection.Agents, Selection: selection, Background: background}, err
-	}
-	preparePiBackgroundProjection(homeDir, &piBackground, containsAgent(selection.Agents, model.AgentPi))
-	return runSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection, background, piBackground)
 }
 
 func runSyncWithSelection(homeDir string, selection model.Selection, background OpenCodeBackgroundResolution, piBackground PiBackgroundResolution) (SyncResult, error) {
@@ -1844,8 +1647,7 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 		workspaceDir, _ = resolveWorkspaceDir(scope, homeDir)
 	}
 	stateStore := StateStoreFor(scope, homeDir, workspaceDir)
-	// The read error is captured, not discarded: the persona alias migration
-	// below must not rewrite state it could not read. Managed-asset provenance
+	// The read error is captured, not discarded. Managed-asset provenance
 	// re-reads under its own lock later (#2685), so this read stays advisory.
 	persistedState, persistedStateErr := stateStore.Read()
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
@@ -1853,28 +1655,8 @@ func runSyncWithSelectionScoped(homeDir, workspaceDir string, scope InstallScope
 	}
 	restorePersistedCommunityTools(homeDir, &selection, persistedState)
 
-	// Resolve persona from persisted state when the caller has not provided one.
-	// RunSync already resolves persona before delegating here, so on the CLI path
-	// selection.Persona is already set and applyResolvedPersona early-returns with
-	// no disk read. On the TUI path the Selection has an empty Persona field, so
-	// we read state once here and apply the persisted value (or neutral fallback).
-	if selection.Persona == "" {
-		var persistedPersona string
-		persistedPersona = persistedState.Persona
-		applyResolvedPersona(&selection, persistedPersona)
-	}
 	if len(selection.ModelAssignments) == 0 && len(persistedState.ModelAssignments) > 0 {
 		selection.ModelAssignments = restoreOpenCodeModelAssignmentsFromState(homeDir, workspaceDir, scope, persistedState, selection.SDDMode)
-	}
-
-	// Migrate a persisted legacy alias BEFORE any early return: a no-agent
-	// no-op sync and a failing pipeline must still leave state.json remapped,
-	// otherwise the one-time migration never fires for those users. State
-	// records intent — the next sync applies the neutral assets.
-	if scope != ScopeWorkspace {
-		if err := migratePersistedPersonaAlias(stateStore, &persistedState, persistedStateErr); err != nil {
-			return SyncResult{Agents: agentIDs, Selection: selection}, err
-		}
 	}
 
 	result := SyncResult{
@@ -2126,12 +1908,14 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 
 	selection := BuildSyncSelection(flags, agentIDs)
 
-	// Read state once for both model-assignment restoration and persona resolution.
-	// A missing state file is treated as a fresh home; other read/validation
-	// errors stop sync before any persona mutation or asset write.
+	// Read state once for model-assignment restoration. A missing state file is
+	// treated as a fresh home; other read/validation errors stop sync before any
+	// asset write.
 	persistedState, persistedStateErr := syncStateStore.Read()
 	noteIgnoredStateAgents(persistedState.IgnoredAgents)
 	noteIgnoredStateComponents(persistedState.IgnoredComponents)
+	noteIgnoredStatePersona(persistedState.IgnoredPersona)
+	noteIgnoredStatePreset(persistedState.IgnoredPreset)
 	if err := validatePersistedSyncState(persistedState, persistedStateErr); err != nil {
 		return SyncResult{Agents: agentIDs, Selection: selection}, err
 	}
@@ -2216,12 +2000,6 @@ func runSyncResolved(flags SyncFlags, scope InstallScope, homeDir, workspaceDir 
 		}
 		selection.CodexPhaseModelAssignments = m
 	}
-
-	// Resolve persona from the already-read state. This covers both the dry-run
-	// branch (which returns early) and the normal path (which delegates to
-	// RunSyncWithSelection — that function's early-return guard prevents a second
-	// disk read on the CLI path).
-	applyResolvedPersona(&selection, persistedState.Persona)
 
 	if flags.DryRun {
 		// Build the plan for inspection, skip execution.
@@ -2387,18 +2165,6 @@ func (r SyncResult) noteWarnings() []string {
 		}
 	}
 	return warnings
-}
-
-// Warnings lists every warning a completed sync raised, in the order the CLI
-// report prints them, without the "WARNING:" prefix. It is the single source of
-// truth shared by RenderSyncReport and the TUI, which shows them on its sync
-// result screen.
-func (r SyncResult) Warnings() []string {
-	var warnings []string
-	if !r.SkillRegistryRefreshed && r.SkillRegistryError != "" {
-		warnings = append(warnings, skillIndexRefreshWarning(r.SkillRegistryError))
-	}
-	return append(warnings, r.noteWarnings()...)
 }
 
 // RenderSyncReport renders a human-readable summary of a sync execution.

@@ -110,34 +110,6 @@ func RunUninstall(args []string, stdout io.Writer) (componentuninstall.Result, e
 	return runUninstallWithInput(args, stdout, os.Stdin)
 }
 
-// RunUninstallWithSelection desinstala los agentes y componentes elegidos en el
-// ámbito dado: con workspace, workspaceDir es la raíz del proyecto.
-func RunUninstallWithSelection(scope InstallScope, homeDir, workspaceDir string, agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error) {
-	agents := make([]string, 0, len(agentIDs))
-	for _, agentID := range agentIDs {
-		agents = append(agents, string(agentID))
-	}
-	components := make([]string, 0, len(componentIDs))
-	for _, componentID := range componentIDs {
-		components = append(components, string(componentID))
-	}
-	return componentuninstall.PartialUninstallScoped(homeDir, workspaceDir, AppVersion, uninstallOptions(scope, false, false), agents, components)
-}
-
-// RunUninstallWithSelectionAndProfiles es RunUninstallWithSelection con la
-// selección de perfiles de SDD y el ámbito de los datos de Engram.
-func RunUninstallWithSelectionAndProfiles(scope InstallScope, homeDir, workspaceDir string, agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (componentuninstall.Result, error) {
-	agents := make([]string, 0, len(agentIDs))
-	for _, agentID := range agentIDs {
-		agents = append(agents, string(agentID))
-	}
-	components := make([]string, 0, len(componentIDs))
-	for _, componentID := range componentIDs {
-		components = append(components, string(componentID))
-	}
-	return componentuninstall.PartialUninstallWithProfileSelectionScoped(homeDir, workspaceDir, AppVersion, uninstallOptions(scope, false, false), agents, components, profileNames, engramScope)
-}
-
 func RenderUninstallReport(result componentuninstall.Result) string {
 	var b strings.Builder
 

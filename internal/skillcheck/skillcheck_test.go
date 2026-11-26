@@ -159,14 +159,3 @@ func TestCheckDirLimpia(t *testing.T) {
 		t.Fatalf("Report = %+v", rep)
 	}
 }
-
-func TestFormatErrors(t *testing.T) {
-	got := FormatErrors([]Finding{
-		{Rule: "a", Severity: SeverityError, Message: "uno"},
-		{Rule: "b", Severity: SeverityWarning, Message: "dos"},
-		{Rule: "c", Severity: SeverityError, Message: "tres"},
-	})
-	if got != "a: uno\nc: tres" {
-		t.Errorf("FormatErrors = %q", got)
-	}
-}

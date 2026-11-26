@@ -105,7 +105,7 @@ body:
       label: 📋 Affected Area
       options:
         - CLI (commands, flags)
-        - TUI (terminal UI)
+        - Web dashboard (axiom ui)
         - Installation Pipeline
         - Agent Detection
         - System Detection

@@ -90,13 +90,7 @@ axiom doctor
 
 Si falla una comprobación de instalación o sincronización, revisa primero el resultado del diagnóstico y el informe de verificación. La guía de [copias de seguridad y restauración](rollback.md) explica cómo volver a una configuración respaldada sin confundir una copia de Axiom con una copia histórica de Gentle AI.
 
-Para abrir la interfaz de terminal de forma explícita:
-
-```sh
-axiom tui
-```
-
-El comando `axiom` también abre la TUI cuando se ejecuta en una terminal interactiva. `axiom ui` inicia el panel web local en `http://127.0.0.1:47700`; en Windows el instalador añade el acceso directo `Axiom` al menú Inicio y una tarea programada que arranca el servidor al iniciar sesión (véase [uso](usage.md#ui)).
+`axiom` abre el panel web local cuando se ejecuta en una terminal interactiva (sin terminal interactiva devuelve un error), igual que `axiom ui`. El panel se sirve en `http://127.0.0.1:47700`; en Windows el instalador añade el acceso directo `Axiom` al menú Inicio y una tarea programada que arranca el servidor al iniciar sesión (véase [uso](usage.md#ui)).
 
 ## Protecciones integradas
 

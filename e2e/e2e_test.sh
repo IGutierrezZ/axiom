@@ -85,8 +85,6 @@ test_dry_run_output_format() {
 
     assert_output_contains "$output" "dry-run" "Output contains 'dry-run' marker"
     assert_output_contains "$output" "Agents:" "Output contains 'Agents:' header"
-    assert_output_contains "$output" "Persona:" "Output contains 'Persona:' header"
-    assert_output_contains "$output" "Preset:" "Output contains 'Preset:' header"
     assert_output_contains "$output" "Components order:" "Output contains 'Components order:' header"
     assert_output_contains "$output" "Platform decision:" "Output contains 'Platform decision:' header"
 }
@@ -150,140 +148,20 @@ test_dry_run_agent_csv() {
     assert_output_contains "$output" "opencode" "CSV agents: shows opencode"
 }
 
-# --- Category 1d: Preset flags ---
+# --- Category 1d: Default component set (no --component) ---
 
-test_dry_run_preset_minimal() {
-    log_test "Dry-run with --preset minimal"
-
-    output=$($BINARY install --preset minimal --dry-run 2>&1) || true
-
-    assert_output_contains "$output" "Preset: minimal" "Shows minimal preset"
-}
-
-test_dry_run_preset_ecosystem() {
-    log_test "Dry-run with --preset ecosystem-only"
-
-    output=$($BINARY install --preset ecosystem-only --dry-run 2>&1) || true
-
-    assert_output_contains "$output" "Preset: ecosystem-only" "Shows ecosystem-only preset"
-}
-
-test_dry_run_preset_full() {
-    log_test "Dry-run with --preset full-gentleman"
-
-    output=$($BINARY install --preset full-gentleman --dry-run 2>&1) || true
-
-    assert_output_contains "$output" "Preset: full-gentleman" "Shows full-gentleman preset"
-}
-
-test_dry_run_preset_custom() {
-    log_test "Dry-run with --preset custom"
-
-    output=$($BINARY install --preset custom --dry-run 2>&1) || true
-
-    assert_output_contains "$output" "Preset: custom" "Shows custom preset"
-}
-
-# --- Category 1e: Preset component order validation ---
-
-test_preset_minimal_components() {
-    log_test "Preset minimal with persona=custom produces only engram component"
-
-    # Use persona=custom to test the preset alone, since persona is now
-    # driven by Selection.Persona (decoupled from preset).
-    output=$($BINARY install --preset minimal --persona custom --agent claude-code --dry-run 2>&1) || true
-
-    # The component list should contain engram
-    assert_output_contains "$output" "engram" "Minimal preset includes engram"
-    # Should NOT contain sdd, skills, persona, etc.
-    assert_output_not_contains "$output" "Components order:.*sdd" "Minimal preset excludes sdd"
-    assert_output_not_contains "$output" "Components order:.*persona" "Minimal + persona=custom excludes persona"
-}
-
-test_preset_minimal_with_default_persona_includes_persona() {
-    log_test "Preset minimal with default persona (gentleman) includes persona"
-
-    # Persona is now decoupled from preset — default Gentleman persona is
-    # installed regardless of which preset the user picks.
-    output=$($BINARY install --preset minimal --agent claude-code --dry-run 2>&1) || true
-
-    local components_line
-    components_line=$(echo "$output" | grep "Components order:")
-
-    assert_output_contains "$components_line" "engram" "Minimal includes engram"
-    assert_output_contains "$components_line" "persona" "Minimal + default Gentleman persona includes persona"
-}
-
-test_preset_ecosystem_components() {
-    log_test "Preset ecosystem-only with persona=custom produces 5 components"
-
-    # Use persona=custom to test the preset alone, since persona is now
-    # driven by Selection.Persona (decoupled from preset).
-    output=$($BINARY install --preset ecosystem-only --persona custom --agent claude-code --dry-run 2>&1) || true
-
-    # ecosystem-only (without persona) = engram, sdd, skills, context7
-    local components_line
-    components_line=$(echo "$output" | grep "Components order:")
-
-    assert_output_contains "$components_line" "engram" "Ecosystem includes engram"
-    assert_output_contains "$components_line" "sdd" "Ecosystem includes sdd"
-    assert_output_contains "$components_line" "skills" "Ecosystem includes skills"
-    assert_output_contains "$components_line" "context7" "Ecosystem includes context7"
-    assert_output_not_contains "$components_line" "persona" "Ecosystem + persona=custom excludes persona"
-    assert_output_not_contains "$components_line" "permissions" "Ecosystem excludes permissions"
-}
-
-test_preset_full_with_custom_persona_excludes_persona() {
-    log_test "Preset full-gentleman with persona=custom excludes persona"
-
-    # Persona is decoupled — picking persona=custom skips persona install
-    # even when the preset is full-gentleman.
-    output=$($BINARY install --preset full-gentleman --persona custom --agent claude-code --dry-run 2>&1) || true
-
-    local components_line
-    components_line=$(echo "$output" | grep "Components order:")
-
-    assert_output_contains "$components_line" "engram" "Full + persona=custom keeps engram"
-    assert_output_contains "$components_line" "permissions" "Full + persona=custom keeps permissions"
-    assert_output_not_contains "$components_line" "persona" "Full + persona=custom excludes persona"
-}
-
-test_preset_full_components() {
-    log_test "Preset full-gentleman includes core and optional Gentleman components"
-
-    output=$($BINARY install --preset full-gentleman --agent claude-code --dry-run 2>&1) || true
-
-    local components_line
-    components_line=$(echo "$output" | grep "Components order:")
-
-    assert_output_contains "$components_line" "engram" "Full includes engram"
-    assert_output_contains "$components_line" "sdd" "Full includes sdd"
-    assert_output_contains "$components_line" "skills" "Full includes skills"
-    assert_output_contains "$components_line" "context7" "Full includes context7"
-    assert_output_contains "$components_line" "persona" "Full includes persona"
-    assert_output_contains "$components_line" "permissions" "Full includes permissions"
-    assert_output_contains "$components_line" "claude-theme" "Full includes Claude Gentleman theme"
-    # INC-09 (visual decoupling) dropped opencode-gentle-logo from
-    # installSafePresetVisualComponents() so presets stop polluting OpenCode
-    # home slots; the component still exists and stays explicitly installable.
-    # This is a deliberate fork divergence — upstream still ships it in the
-    # preset — so absorbing upstream must revisit this line, not this script's
-    # other logo checks.
-    assert_output_not_contains "$components_line" "opencode-gentle-logo" "Full excludes OpenCode Gentle logo (INC-09)"
-}
-
-test_dry_run_full_preset_persona_before_sdd() {
+test_dry_run_default_persona_before_sdd() {
     log_test "Dry-run: persona appears before engram and sdd in component order"
 
-    output=$($BINARY install --preset full-gentleman --agent opencode --dry-run 2>&1) || true
+    output=$($BINARY install --agent opencode --dry-run 2>&1) || true
 
     local components_line
     components_line=$(echo "$output" | grep "Components order:")
 
     # Verify all are present
-    assert_output_contains "$components_line" "persona" "Full preset has persona"
-    assert_output_contains "$components_line" "engram" "Full preset has engram"
-    assert_output_contains "$components_line" "sdd" "Full preset has sdd"
+    assert_output_contains "$components_line" "persona" "Default set has persona"
+    assert_output_contains "$components_line" "engram" "Default set has engram"
+    assert_output_contains "$components_line" "sdd" "Default set has sdd"
 
     # Verify ordering: persona before engram, persona before sdd
     # Extract the order string and check persona comes first
@@ -308,62 +186,17 @@ test_dry_run_full_preset_persona_before_sdd() {
     fi
 }
 
-test_preset_no_legacy_theme_in_any_preset() {
-    log_test "Presets exclude the unsafe generic theme component"
+test_dry_run_explicit_components() {
+    log_test "Dry-run with explicit --component flags"
 
-    local full_order_str=""
-    for preset in minimal ecosystem-only full-gentleman; do
-        output=$($BINARY install --preset "$preset" --agent claude-code --dry-run 2>&1) || true
-        local components_line
-        components_line=$(echo "$output" | grep "Components order:")
-        local order_str
-        order_str=${components_line#*Components order:}
-        order_str=${order_str# }
-        if echo "$order_str" | tr ',' '\n' | grep -qx "theme"; then
-            log_fail "Preset '$preset' unexpectedly includes unsafe generic theme component"
-        else
-            log_pass "Preset '$preset' excludes unsafe generic theme component"
-        fi
-        if [ "$preset" = "full-gentleman" ]; then
-            full_order_str=$order_str
-        fi
-    done
-
-    # opencode-gentle-logo is deliberately absent since INC-09; see the
-    # exclusion note in test_dry_run_full_preset above.
-    for component in claude-theme; do
-        if echo "$full_order_str" | tr ',' '\n' | grep -qx "$component"; then
-            log_pass "Preset 'full-gentleman' includes safe visual component '$component'"
-        else
-            log_fail "Preset 'full-gentleman' must include safe visual component '$component'"
-        fi
-    done
-}
-
-test_preset_custom_no_components() {
-    log_test "Preset custom with no --component produces empty component list"
-
-    output=$($BINARY install --preset custom --agent claude-code --dry-run 2>&1) || true
-
-    # Custom preset without explicit components = empty
-    local components_line
-    components_line=$(echo "$output" | grep "Components order:")
-    assert_output_not_contains "$components_line" "engram" "Custom preset without components excludes engram"
-    assert_output_not_contains "$components_line" "sdd" "Custom preset without components excludes sdd"
-    assert_output_not_contains "$components_line" "skills" "Custom preset without components excludes skills"
-}
-
-test_preset_custom_explicit_components() {
-    log_test "Preset custom with explicit --component flags"
-
-    output=$($BINARY install --preset custom --agent claude-code --component engram --component sdd --component skills --dry-run 2>&1) || true
+    output=$($BINARY install --agent claude-code --component engram --component sdd --component skills --dry-run 2>&1) || true
 
     local components_line
     components_line=$(echo "$output" | grep "Components order:")
     assert_output_contains "$components_line" "engram" "Custom + explicit components includes engram"
     assert_output_contains "$components_line" "sdd" "Custom + explicit components includes sdd"
     assert_output_contains "$components_line" "skills" "Custom + explicit components includes skills"
-    assert_output_not_contains "$components_line" "persona" "Custom + explicit components excludes persona"
+    assert_output_not_contains "$components_line" "persona" "Explicit components exclude persona"
     assert_output_not_contains "$components_line" "context7" "Custom + explicit components excludes context7"
 }
 
@@ -405,12 +238,6 @@ test_dry_run_component_permissions() {
     assert_output_contains "$output" "permissions" "Shows permissions component"
 }
 
-test_dry_run_component_theme() {
-    log_test "Dry-run with --component theme"
-    output=$($BINARY install --agent opencode --component theme --dry-run 2>&1) || true
-    assert_output_contains "$output" "theme" "Shows theme component"
-}
-
 # --- Category 1f2: SDD mode flag ---
 
 test_dry_run_sdd_mode_multi() {
@@ -442,16 +269,6 @@ test_dry_run_sdd_mode_invalid_rejected() {
 
 # --- Category 1g: Invalid input rejection ---
 
-test_invalid_persona_rejected() {
-    log_test "Invalid persona is rejected"
-
-    if $BINARY install --persona nonexistent --dry-run 2>&1; then
-        log_fail "Invalid persona should have been rejected"
-    else
-        log_pass "Invalid persona correctly rejected"
-    fi
-}
-
 test_invalid_component_rejected() {
     log_test "Invalid component is rejected"
 
@@ -459,16 +276,6 @@ test_invalid_component_rejected() {
         log_fail "Invalid component should have been rejected"
     else
         log_pass "Invalid component correctly rejected"
-    fi
-}
-
-test_invalid_preset_rejected() {
-    log_test "Invalid preset is rejected"
-
-    if $BINARY install --preset nonexistent --dry-run 2>&1; then
-        log_fail "Invalid preset should have been rejected"
-    else
-        log_pass "Invalid preset correctly rejected"
     fi
 }
 
@@ -492,7 +299,7 @@ test_cc_engram_injection() {
     log_test "Claude Code: engram injection (MCP + CLAUDE.md)"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --component engram --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component engram 2>&1; then
         # User-scope MCP registry
         local registry="$HOME/.claude.json"
         assert_file_exists "$registry" "Claude user MCP registry"
@@ -515,7 +322,7 @@ test_cc_sdd_injection() {
     log_test "Claude Code: SDD injection (CLAUDE.md + native sub-agents)"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component sdd 2>&1; then
         assert_file_exists "$HOME/.claude/CLAUDE.md" "CLAUDE.md exists"
         assert_file_contains_marker "$HOME/.claude/CLAUDE.md" "sdd-orchestrator" "CLAUDE.md has SDD section marker"
         assert_file_contains "$HOME/.claude/CLAUDE.md" "sub-agent\|dependency\|orchestrator" "CLAUDE.md has real SDD content"
@@ -556,129 +363,18 @@ test_cc_sdd_injection() {
     fi
 }
 
-test_cc_persona_gentleman() {
-    log_test "Claude Code: persona injection (gentleman)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component persona --persona gentleman 2>&1; then
-        assert_file_exists "$HOME/.claude/CLAUDE.md" "CLAUDE.md exists"
-        assert_file_contains_marker "$HOME/.claude/CLAUDE.md" "persona" "CLAUDE.md has persona section marker"
-        # Claude has an active output-style channel — the CLAUDE.md persona
-        # section is now a residual (tooling directives + pointer only); tone
-        # content lives exclusively in the output style (design.md Decision 1).
-        assert_file_contains "$HOME/.claude/CLAUDE.md" "Persona Voice" "CLAUDE.md persona residual points to the output style"
-        assert_file_not_contains "$HOME/.claude/CLAUDE.md" "Senior Architect" "CLAUDE.md persona residual carries no tone content"
-        assert_file_size_min "$HOME/.claude/CLAUDE.md" 200 "Persona section is substantial"
-        # Output-style file — canonical tone channel
-        assert_file_exists "$HOME/.claude/output-styles/gentleman.md" "Output-style file exists"
-        assert_file_contains "$HOME/.claude/output-styles/gentleman.md" "name: Gentleman" "Output-style has YAML frontmatter"
-        assert_file_contains "$HOME/.claude/output-styles/gentleman.md" "keep-coding-instructions: true" "Output-style keeps coding instructions"
-        assert_file_contains "$HOME/.claude/output-styles/gentleman.md" "Senior Architect" "Output-style carries the Gentleman tone content"
-        # settings.json outputStyle key
-        assert_file_exists "$HOME/.claude/settings.json" "settings.json exists"
-        assert_file_contains "$HOME/.claude/settings.json" "outputStyle" "settings.json has outputStyle key"
-        assert_file_contains "$HOME/.claude/settings.json" "Gentleman" "settings.json outputStyle is Gentleman"
-    else
-        log_fail "persona (gentleman) install command failed"
-    fi
-}
-
-test_cc_persona_neutral() {
-    log_test "Claude Code: persona injection (neutral)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component persona --persona neutral 2>&1; then
-        assert_file_exists "$HOME/.claude/CLAUDE.md" "CLAUDE.md exists"
-        assert_file_contains_marker "$HOME/.claude/CLAUDE.md" "persona" "CLAUDE.md has persona section marker"
-        # Claude has an active output-style channel — the CLAUDE.md persona
-        # section is now a residual; the mentor identity lives in the output
-        # style (design.md Decision 1).
-        assert_file_contains "$HOME/.claude/CLAUDE.md" "Persona Voice" "CLAUDE.md persona residual points to the output style"
-        assert_file_not_contains "$HOME/.claude/CLAUDE.md" "Senior Architect" "CLAUDE.md persona residual carries no tone content"
-        assert_file_exists "$HOME/.claude/output-styles/neutral.md" "Neutral output-style file exists"
-        assert_file_contains "$HOME/.claude/output-styles/neutral.md" "Push back when user asks for code without context or understanding" "Neutral output-style carries the mentor tone content"
-        assert_file_not_contains "$HOME/.claude/output-styles/neutral.md" "Rioplatense\|voseo\|loco\|ponete las pilas" "Neutral output-style excludes regional language"
-    else
-        log_fail "persona (neutral) install command failed"
-    fi
-}
-
-test_cc_persona_custom_does_nothing() {
-    log_test "Claude Code: persona custom does nothing (user keeps own personality)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component persona --persona custom 2>&1; then
-        # CLAUDE.md may exist: routing guidance is scheduled per agent and
-        # deliberately outside the component loop, so every configured agent
-        # receives it. What `--persona custom` promises is that no personality
-        # is imposed, so assert that instead of the file's absence.
-        assert_file_not_contains "$HOME/.claude/CLAUDE.md" "Senior Architect\|Rioplatense\|voseo" "CLAUDE.md carries no tone content under custom"
-        # No output-style file either.
-        assert_file_not_exists "$HOME/.claude/output-styles/gentleman.md" "No output-style for custom"
-    else
-        log_fail "Custom persona install command failed"
-    fi
-}
-
-test_oc_persona_custom_does_nothing() {
-    log_test "OpenCode: persona custom does nothing (user keeps own personality)"
-    cleanup_test_env
-
-    if $BINARY install --agent opencode --component persona --persona custom 2>&1; then
-        # Custom persona should NOT create AGENTS.md (persona does nothing).
-        local agents_md="$HOME/.config/opencode/AGENTS.md"
-        assert_file_not_exists "$agents_md" "AGENTS.md not created by custom persona"
-    else
-        log_fail "OpenCode custom persona install command failed"
-    fi
-}
-
-test_cc_skills_minimal() {
-    log_test "Claude Code: skills injection (minimal preset = SDD skills only)"
-    cleanup_test_env
-
-    # #3554: skills no longer hard-depends on sdd, so the SDD orchestrator
-    # skills must be requested explicitly via --component skills,sdd. The SDD
-    # component writes all 12 (11 phases + judgment-day) regardless of preset.
-    if $BINARY install --agent claude-code --component skills,sdd --preset minimal --persona custom 2>&1; then
-        local skills_dir="$HOME/.claude/skills"
-        assert_dir_exists "$skills_dir" "Claude skills directory"
-
-        # 12 files: 11 SDD phases + judgment-day. _shared is support-only.
-        assert_file_count "$skills_dir" "SKILL.md" 12 "SDD selected: 12 skill files"
-
-        # Verify specific SDD skills exist
-        assert_file_exists "$skills_dir/sdd-init/SKILL.md" "sdd-init SKILL.md"
-        assert_file_exists "$skills_dir/sdd-apply/SKILL.md" "sdd-apply SKILL.md"
-        assert_file_exists "$skills_dir/sdd-verify/SKILL.md" "sdd-verify SKILL.md"
-        assert_file_exists "$skills_dir/sdd-archive/SKILL.md" "sdd-archive SKILL.md"
-
-        # Each skill should have substantial content
-        assert_file_size_min "$skills_dir/sdd-init/SKILL.md" 100 "sdd-init SKILL.md has real content"
-
-        # No framework skills in minimal
-        if [ -f "$skills_dir/typescript/SKILL.md" ]; then
-            log_fail "Minimal preset should NOT include typescript skill"
-        else
-            log_pass "Minimal preset correctly excludes framework skills"
-        fi
-    else
-        log_fail "skills (minimal) install command failed"
-    fi
-}
-
 test_cc_skills_full() {
-    log_test "Claude Code: skills injection (full-gentleman = 13 foundation skills)"
+    log_test "Claude Code: skills injection (default skills)"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --component skills --preset full-gentleman --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component skills 2>&1; then
         local skills_dir="$HOME/.claude/skills"
         assert_dir_exists "$skills_dir" "Claude skills directory"
 
-        # #3554: skills alone no longer pulls sdd. Full preset's skill catalog
+        # #3554: skills alone no longer pulls sdd. the skill catalog
         # is 13 foundation + judgment-day = 14 files; the 11 sdd-* phase
         # skills come only from the SDD component (not selected here).
-        assert_file_count "$skills_dir" "SKILL.md" 8 "Full preset (skills alone): 8 skill files"
+        assert_file_count "$skills_dir" "SKILL.md" 8 "Skills alone: 8 skill files"
         assert_file_not_exists "$skills_dir/sdd-init/SKILL.md" "sdd-init NOT installed by skills alone"
 
         # Verify foundation skills exist
@@ -696,44 +392,16 @@ test_cc_skills_full() {
     fi
 }
 
-test_cc_skills_ecosystem() {
-    log_test "Claude Code: skills injection (ecosystem-only = 13 foundation skills)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component skills --preset ecosystem-only --persona neutral 2>&1; then
-        local skills_dir="$HOME/.claude/skills"
-        assert_dir_exists "$skills_dir" "Claude skills directory"
-
-        # #3554: skills alone no longer pulls sdd. 13 foundation + judgment-day
-        # = 14 files; the 11 sdd-* phase skills need the SDD component too.
-        assert_file_count "$skills_dir" "SKILL.md" 8 "Ecosystem preset (skills alone): 8 skill files"
-        # SDD skills NOT present (skills has no hard dependency on sdd)
-        assert_file_not_exists "$skills_dir/sdd-init/SKILL.md" "sdd-init NOT installed by skills alone"
-        # Foundation skills present
-        assert_file_exists "$skills_dir/go-testing/SKILL.md" "Foundation skills present"
-        assert_file_exists "$skills_dir/skill-creator/SKILL.md" "skill-creator present"
-        assert_file_not_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation NOT in ecosystem default"
-        # Stack-specific skills NOT present
-        if [ -f "$skills_dir/react-19/SKILL.md" ]; then
-            log_fail "Ecosystem preset should NOT include react-19"
-        else
-            log_pass "Ecosystem preset correctly excludes stack-specific skills"
-        fi
-    else
-        log_fail "skills (ecosystem) install command failed"
-    fi
-}
-
 test_cc_custom_skills_with_flag() {
-    log_test "Claude Code: custom preset + explicit --skills flag installs specified skills"
+    log_test "Claude Code: explicit --skills flag installs specified skills"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --preset custom --component skills --skills go-testing,issue-creation --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component skills --skills go-testing,issue-creation 2>&1; then
         local skills_dir="$HOME/.claude/skills"
         assert_dir_exists "$skills_dir" "Claude skills directory"
 
         # The explicitly requested skills must be present. issue-creation is a
-        # contributor skill that no preset installs, but `--skills` resolution
+        # contributor skill that the default set installs, but `--skills` resolution
         # is exactly the escape hatch that still installs it.
         assert_file_exists "$skills_dir/go-testing/SKILL.md" "go-testing SKILL.md"
         assert_file_exists "$skills_dir/issue-creation/SKILL.md" "issue-creation SKILL.md"
@@ -749,30 +417,11 @@ test_cc_custom_skills_with_flag() {
     fi
 }
 
-test_cc_custom_no_skills_flag_installs_nothing() {
-    log_test "Claude Code: custom preset + skills component without --skills flag installs nothing"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --preset custom --component skills --persona neutral 2>&1; then
-        local skills_dir="$HOME/.claude/skills"
-        # #3554: skills has no hard dependency on sdd anymore. SkillsForPreset
-        # (custom) returns nil and no --skills flag was given, so the skills
-        # component is a true no-op: no directory, no files at all.
-        if [ -d "$skills_dir" ]; then
-            log_fail "Skills directory should NOT be created: skills alone has nothing to install"
-        else
-            log_pass "No skills directory created (skills alone, no --skills flag, no sdd dependency)"
-        fi
-    else
-        log_fail "custom + skills component (no flag) install command failed"
-    fi
-}
-
 test_cc_custom_sdd_plus_skills() {
-    log_test "Claude Code: custom preset + SDD + skills with explicit --skills flag"
+    log_test "Claude Code: SDD + skills with explicit --skills flag"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --preset custom --component engram --component sdd --component skills --skills go-testing,issue-creation --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component engram --component sdd --component skills --skills go-testing,issue-creation 2>&1; then
         local skills_dir="$HOME/.claude/skills"
         assert_dir_exists "$skills_dir" "Claude skills directory"
 
@@ -798,7 +447,7 @@ test_cc_context7_injection() {
     log_test "Claude Code: context7 injection (~/.claude.json user MCP registry)"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --component context7 --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component context7 2>&1; then
         # Claude Code only reads user-scope MCP servers from ~/.claude.json;
         # the settings.json mcpServers block earlier versions wrote is inert
         # and no longer written (issue #1868, PR #1909).
@@ -818,7 +467,7 @@ test_cc_permissions_injection() {
     log_test "Claude Code: permissions injection"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component permissions 2>&1; then
         local settings="$HOME/.claude/settings.json"
         assert_file_exists "$settings" "Claude settings.json"
         assert_file_contains "$settings" '"permissions"' "Has permissions key"
@@ -829,34 +478,13 @@ test_cc_permissions_injection() {
     fi
 }
 
-test_cc_theme_injection() {
-    log_test "Claude Code: theme injection"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component theme --persona neutral 2>&1; then
-        # REQ-09.2: the theme component is non-intrusive. It writes nothing at
-        # all, so a settings.json that did not exist before stays absent. The
-        # contract worth asserting is that the install succeeds and forces no
-        # theme, not that a file appears.
-        local settings="$HOME/.claude/settings.json"
-        assert_file_not_contains "$settings" '"theme"' "REQ-09.2: theme component does not write the theme key"
-        if [ -f "$settings" ]; then
-            assert_valid_json "$settings" "settings.json is valid JSON when present"
-        else
-            log_pass "REQ-09.2: theme component created no settings.json"
-        fi
-    else
-        log_fail "theme install command failed"
-    fi
-}
-
 # --- Category 3: OpenCode component injection ---
 
 test_oc_engram_injection() {
     log_test "OpenCode: engram injection (opencode.json)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component engram --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component engram 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         local agents_md="$HOME/.config/opencode/AGENTS.md"
         assert_file_exists "$settings" "OpenCode opencode.json"
@@ -879,7 +507,7 @@ test_oc_sdd_injection() {
     log_test "OpenCode: SDD injection (commands + skills)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local commands_dir="$HOME/.config/opencode/commands"
         local skill_dir="$HOME/.config/opencode/skills"
 
@@ -903,60 +531,15 @@ test_oc_sdd_injection() {
     fi
 }
 
-test_oc_persona_gentleman() {
-    log_test "OpenCode: persona injection (gentleman)"
-    cleanup_test_env
-
-    if $BINARY install --agent opencode --component persona --persona gentleman 2>&1; then
-        local agents_md="$HOME/.config/opencode/AGENTS.md"
-        assert_file_exists "$agents_md" "AGENTS.md exists"
-        assert_file_contains "$agents_md" "Senior Architect" "Gentleman persona has 'Senior Architect'"
-        assert_file_size_min "$agents_md" 200 "AGENTS.md has substantial content"
-    else
-        log_fail "OpenCode persona (gentleman) install command failed"
-    fi
-}
-
-test_oc_persona_neutral() {
-    log_test "OpenCode: persona injection (neutral)"
-    cleanup_test_env
-
-    if $BINARY install --agent opencode --component persona --persona neutral 2>&1; then
-        local agents_md="$HOME/.config/opencode/AGENTS.md"
-        assert_file_exists "$agents_md" "AGENTS.md exists"
-        assert_file_contains "$agents_md" "Senior Architect" "Neutral persona keeps the teacher identity"
-        assert_file_not_contains "$agents_md" "Rioplatense\|voseo\|loco\|ponete las pilas" "Neutral persona excludes regional language"
-    else
-        log_fail "OpenCode persona (neutral) install command failed"
-    fi
-}
-
-test_oc_skills_minimal() {
-    log_test "OpenCode: skills injection (minimal)"
-    cleanup_test_env
-
-    # #3554: skills no longer hard-depends on sdd; request sdd explicitly
-    # to still exercise the full 12-file SDD orchestrator skill set.
-    if $BINARY install --agent opencode --component skills,sdd --preset minimal --persona custom 2>&1; then
-        local skill_dir="$HOME/.config/opencode/skills"
-        assert_dir_exists "$skill_dir" "OpenCode skill directory"
-        assert_file_count "$skill_dir" "SKILL.md" 12 "SDD selected: 12 skill files"
-        assert_file_exists "$skill_dir/sdd-init/SKILL.md" "sdd-init SKILL.md"
-        assert_file_size_min "$skill_dir/sdd-init/SKILL.md" 100 "sdd-init skill has real content"
-    else
-        log_fail "OpenCode skills (minimal) install command failed"
-    fi
-}
-
 test_oc_skills_full() {
-    log_test "OpenCode: skills injection (full-gentleman = 13 foundation skills)"
+    log_test "OpenCode: skills injection (default skills)"
     cleanup_test_env
 
     # #3554: skills alone no longer pulls sdd. 13 foundation + judgment-day = 14.
-    if $BINARY install --agent opencode --component skills --preset full-gentleman --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component skills 2>&1; then
         local skill_dir="$HOME/.config/opencode/skills"
         assert_dir_exists "$skill_dir" "OpenCode skill directory"
-        assert_file_count "$skill_dir" "SKILL.md" 8 "Full preset (skills alone): 8 skill files"
+        assert_file_count "$skill_dir" "SKILL.md" 8 "Skills alone: 8 skill files"
         assert_file_not_exists "$skill_dir/sdd-init/SKILL.md" "sdd-init NOT installed by skills alone"
         assert_file_exists "$skill_dir/go-testing/SKILL.md" "go-testing skill"
         assert_file_exists "$skill_dir/skill-creator/SKILL.md" "skill-creator skill"
@@ -971,7 +554,7 @@ test_oc_context7_injection() {
     log_test "OpenCode: context7 injection (opencode.json MCP)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component context7 --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component context7 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_exists "$settings" "OpenCode opencode.json"
         assert_file_contains "$settings" '"mcp"' "Has mcp key"
@@ -989,7 +572,7 @@ test_qwen_engram_injection() {
     log_test "Qwen: engram injection (settings.json)"
     cleanup_test_env
 
-    if $BINARY install --agent qwen-code --component engram --persona neutral 2>&1; then
+    if $BINARY install --agent qwen-code --component engram 2>&1; then
         local settings="$HOME/.qwen/settings.json"
         assert_file_exists "$settings" "Qwen settings.json"
         assert_file_contains "$settings" '"mcp"' "Has mcp key"
@@ -1009,7 +592,7 @@ test_qwen_engram_idempotency() {
 
     # First run — the install's exit code is irrelevant here (e.g. transient
     # npm failure); we assert on the resulting file.
-    $BINARY install --agent qwen-code --component engram --persona neutral > /dev/null 2>&1 || true
+    $BINARY install --agent qwen-code --component engram > /dev/null 2>&1 || true
     if [ ! -f "$settings" ]; then
         log_fail "Qwen settings.json missing after first install"
         return
@@ -1018,7 +601,7 @@ test_qwen_engram_idempotency() {
     checksum1=$(md5sum "$settings" | cut -d' ' -f1)
 
     # Second run
-    $BINARY install --agent qwen-code --component engram --persona neutral > /dev/null 2>&1 || true
+    $BINARY install --agent qwen-code --component engram > /dev/null 2>&1 || true
     if [ ! -f "$settings" ]; then
         log_fail "Qwen settings.json missing after second install"
         return
@@ -1037,7 +620,7 @@ test_oc_permissions_injection() {
     log_test "OpenCode: permissions injection"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component permissions 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_exists "$settings" "OpenCode opencode.json"
         assert_file_contains "$settings" '"permission"' "Has permission key"
@@ -1049,33 +632,17 @@ test_oc_permissions_injection() {
     fi
 }
 
-test_oc_theme_injection() {
-    log_test "OpenCode: theme injection"
+# --- Category 4: All components coexisting ---
+
+test_all_components_claude_code() {
+    log_test "Default component set: Claude Code (all components coexist)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component theme --persona neutral 2>&1; then
-        local settings="$HOME/.config/opencode/opencode.json"
-        assert_file_exists "$settings" "OpenCode opencode.json"
-        assert_file_not_contains "$settings" '"theme"' "REQ-09.2: theme component does not write the theme key"
-        assert_file_not_contains "$settings" '"theme": "gentleman"' "REQ-09.2: no theme selection is forced"
-        assert_valid_json "$settings" "opencode.json is valid JSON"
-    else
-        log_fail "OpenCode theme install command failed"
-    fi
-}
-
-# --- Category 4: Full preset integration ---
-
-test_full_preset_claude_code() {
-    log_test "Full-gentleman preset: Claude Code (all components coexist)"
-    cleanup_test_env
-
-    # full-gentleman has: engram, sdd, skills, context7, persona, permissions
     # Engram needs binary install (go install) — may fail but injection components
     # that don't need binary install should be tested.
-    # We test injection-only components first, then try the full preset.
-    # If full preset fails due to binary install, we fall back to individual injection-only test.
-    if $BINARY install --agent claude-code --component sdd --component persona --component skills --component context7 --component permissions --component theme --preset full-gentleman --persona gentleman 2>&1; then
+    # We test injection-only components first, then try the whole set.
+    # If the whole set fails due to binary install, we fall back to individual injection-only test.
+    if $BINARY install --agent claude-code --component sdd --component persona --component skills --component context7 --component permissions 2>&1; then
         local claude_md="$HOME/.claude/CLAUDE.md"
         local settings="$HOME/.claude/settings.json"
 
@@ -1088,10 +655,9 @@ test_full_preset_claude_code() {
         assert_no_duplicate_section "$claude_md" "sdd-orchestrator" "No duplicate SDD section"
         assert_no_duplicate_section "$claude_md" "persona" "No duplicate persona section"
 
-        # settings.json should have permissions + theme
+        # settings.json should have permissions
         assert_file_exists "$settings" "settings.json exists"
         assert_file_contains "$settings" '"permissions"' "Has permissions"
-        assert_file_not_contains "$settings" '"theme"' "REQ-09.2: no theme key written"
         assert_valid_json "$settings" "settings.json is valid JSON"
 
         # MCP registration lives in the ~/.claude.json user registry, the only
@@ -1106,31 +672,29 @@ test_full_preset_claude_code() {
         # Skills
         assert_file_count_min "$HOME/.claude/skills" "SKILL.md" 11 "At least 11 skill files"
 
-        log_pass "Full preset: all Claude Code injection-only components coexist"
+        log_pass "Default set: all Claude Code injection-only components coexist"
     else
-        log_fail "Full preset (Claude Code) install command failed"
+        log_fail "Default set (Claude Code) install command failed"
     fi
 }
 
-test_full_preset_opencode() {
-    log_test "Full-gentleman preset: OpenCode (all components coexist)"
+test_all_components_opencode() {
+    log_test "Default component set: OpenCode (all components coexist)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component engram --component sdd --component persona --component skills --component context7 --component permissions --component theme --preset full-gentleman --persona gentleman 2>&1; then
+    if $BINARY install --agent opencode --component engram --component sdd --component persona --component skills --component context7 --component permissions 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         local agents_md="$HOME/.config/opencode/AGENTS.md"
 
         # opencode.json should have all overlays merged
         assert_file_exists "$settings" "OpenCode opencode.json"
         assert_file_contains "$settings" '"permission"' "Has permission config"
-        assert_file_not_contains "$settings" '"theme"' "REQ-09.2: no theme key written"
         assert_file_contains "$settings" '"mcp"' "Has MCP servers"
         assert_file_contains "$settings" '"context7"' "Has context7 MCP"
         assert_valid_json "$settings" "opencode.json is valid JSON"
 
         # AGENTS.md for persona + engram (SDD orchestrator is in opencode.json for OpenCode, NOT AGENTS.md)
         assert_file_exists "$agents_md" "AGENTS.md exists"
-        assert_file_contains "$agents_md" "Senior Architect" "Gentleman persona"
         assert_file_contains_marker "$agents_md" "engram-protocol" "AGENTS.md has engram protocol"
         assert_no_duplicate_section "$agents_md" "engram-protocol" "No duplicate engram section in AGENTS.md"
         # SDD orchestrator for OpenCode lives in opencode.json as an agent definition (not AGENTS.md)
@@ -1145,70 +709,17 @@ test_full_preset_opencode() {
         # Skills
         assert_file_count_min "$HOME/.config/opencode/skills" "SKILL.md" 11 "At least 11 skill files"
 
-        log_pass "Full preset: all OpenCode injection-only components coexist"
+        log_pass "Default set: all OpenCode injection-only components coexist"
     else
-        log_fail "Full preset (OpenCode) install command failed"
-    fi
-}
-
-test_minimal_preset_opencode_only_engram_no_persona() {
-    log_test "Minimal preset: OpenCode (engram only, no persona side effect)"
-    cleanup_test_env
-
-    if $BINARY install --agent opencode --preset minimal --persona custom 2>&1; then
-        local settings="$HOME/.config/opencode/opencode.json"
-        local agents_md="$HOME/.config/opencode/AGENTS.md"
-
-        assert_file_exists "$settings" "OpenCode opencode.json exists"
-        assert_file_contains "$settings" '"engram"' "OpenCode has engram MCP"
-
-        # Minimal preset should NOT silently install persona.
-        if [ -f "$agents_md" ]; then
-            assert_file_not_contains_marker "$agents_md" "persona" "No persona marker in minimal preset"
-            assert_file_not_contains "$agents_md" "Senior Architect" "No persona content in minimal preset"
-        else
-            log_pass "No AGENTS.md created by minimal preset (correct)"
-        fi
-    else
-        log_fail "Minimal preset (OpenCode) install command failed"
-    fi
-}
-
-test_minimal_preset_claude_only_engram() {
-    log_test "Minimal preset: Claude Code (only engram, nothing else)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --preset minimal --persona custom 2>&1; then
-        # Engram should be installed (MCP + CLAUDE.md)
-        assert_file_exists "$HOME/.claude/CLAUDE.md" "CLAUDE.md exists"
-        assert_file_contains_marker "$HOME/.claude/CLAUDE.md" "engram-protocol" "Engram protocol section"
-
-        # SDD should NOT be in CLAUDE.md
-        assert_file_not_contains_marker "$HOME/.claude/CLAUDE.md" "sdd-orchestrator" "No SDD in minimal"
-        # Persona should NOT be in CLAUDE.md
-        assert_file_not_contains_marker "$HOME/.claude/CLAUDE.md" "persona" "No persona in minimal"
-        # No permissions settings.json
-        if [ -f "$HOME/.claude/settings.json" ]; then
-            assert_file_not_contains "$HOME/.claude/settings.json" '"permissions"' "No permissions in minimal"
-        else
-            log_pass "No settings.json in minimal (correct)"
-        fi
-        # No skills directory (or empty)
-        if [ -d "$HOME/.claude/skills" ]; then
-            log_fail "Minimal preset should not create skills directory (skills component not in minimal preset)"
-        else
-            log_pass "No skills directory in minimal (correct)"
-        fi
-    else
-        log_fail "Minimal preset (Claude Code) install command failed"
+        log_fail "Default set (OpenCode) install command failed"
     fi
 }
 
 test_ecosystem_both_agents() {
-    log_test "Ecosystem preset: both agents"
+    log_test "Both agents with SDD, skills and context7"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --agent opencode --component sdd --component skills --component context7 --preset ecosystem-only --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --agent opencode --component sdd --component skills --component context7 2>&1; then
         # Claude Code
         assert_file_exists "$HOME/.claude/CLAUDE.md" "Claude CLAUDE.md"
         assert_file_contains_marker "$HOME/.claude/CLAUDE.md" "sdd-orchestrator" "Claude has SDD"
@@ -1221,9 +732,9 @@ test_ecosystem_both_agents() {
         assert_file_contains "$HOME/.config/opencode/opencode.json" '"context7"' "OpenCode context7"
         assert_valid_json "$HOME/.config/opencode/opencode.json" "OpenCode opencode.json valid JSON"
 
-        log_pass "Ecosystem preset: both agents have matching components"
+        log_pass "Both agents have matching components"
     else
-        log_fail "Ecosystem preset (both agents) install command failed"
+        log_fail "Both agents install command failed"
     fi
 }
 
@@ -1231,7 +742,7 @@ test_both_agents_permissions() {
     log_test "Both agents: permissions injection"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --agent claude-code --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --agent claude-code --component permissions 2>&1; then
         local oc_settings="$HOME/.config/opencode/opencode.json"
         local cc_settings="$HOME/.claude/settings.json"
 
@@ -1253,8 +764,8 @@ test_content_claude_md_sections_substantial() {
     cleanup_test_env
 
     # Install SDD + persona + engram (all inject into CLAUDE.md)
-    $BINARY install --agent claude-code --component sdd --component persona --persona gentleman 2>&1 || true
-    $BINARY install --agent claude-code --component engram --persona gentleman 2>&1 || true
+    $BINARY install --agent claude-code --component sdd --component persona 2>&1 || true
+    $BINARY install --agent claude-code --component engram 2>&1 || true
 
     local claude_md="$HOME/.claude/CLAUDE.md"
     if [ -f "$claude_md" ]; then
@@ -1268,7 +779,7 @@ test_content_skills_are_real() {
     log_test "Content validation: skill files contain real instructions"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component skills --preset full-gentleman --persona neutral 2>&1 || true
+    $BINARY install --agent claude-code --component skills 2>&1 || true
 
     local skills_dir="$HOME/.claude/skills"
     if [ -d "$skills_dir" ]; then
@@ -1295,8 +806,8 @@ test_content_mcp_json_valid() {
     log_test "Content validation: MCP JSON files are parseable"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component context7 --persona neutral 2>&1 || true
-    $BINARY install --agent claude-code --component engram --persona neutral 2>&1 || true
+    $BINARY install --agent claude-code --component context7 2>&1 || true
+    $BINARY install --agent claude-code --component engram 2>&1 || true
 
     # Claude Code reads user-scoped MCP servers from ~/.claude.json. The legacy
     # ~/.claude/mcp directory is intentionally no longer created.
@@ -1313,7 +824,7 @@ test_content_opencode_commands_valid_markdown() {
     log_test "Content validation: OpenCode commands are valid markdown with frontmatter"
     cleanup_test_env
 
-    $BINARY install --agent opencode --component sdd --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component sdd 2>&1 || true
 
     local commands_dir="$HOME/.config/opencode/commands"
     if [ -d "$commands_dir" ]; then
@@ -1341,11 +852,11 @@ test_idempotent_permissions_opencode() {
     log_test "Idempotency: permissions on OpenCode (run twice, same result)"
     cleanup_test_env
 
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
     local first_hash
     first_hash=$(md5sum "$HOME/.config/opencode/opencode.json" 2>/dev/null | cut -d' ' -f1)
 
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
     local second_hash
     second_hash=$(md5sum "$HOME/.config/opencode/opencode.json" 2>/dev/null | cut -d' ' -f1)
 
@@ -1360,8 +871,8 @@ test_idempotent_sdd_claude() {
     log_test "Idempotency: SDD on Claude Code (no duplicate sections)"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component sdd --persona neutral 2>&1 || true
-    $BINARY install --agent claude-code --component sdd --persona neutral 2>&1 || true
+    $BINARY install --agent claude-code --component sdd 2>&1 || true
+    $BINARY install --agent claude-code --component sdd 2>&1 || true
 
     local claude_md="$HOME/.claude/CLAUDE.md"
     if [ -f "$claude_md" ]; then
@@ -1375,8 +886,8 @@ test_idempotent_persona_claude() {
     log_test "Idempotency: persona on Claude Code (no duplicate sections)"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component persona --persona gentleman 2>&1 || true
-    $BINARY install --agent claude-code --component persona --persona gentleman 2>&1 || true
+    $BINARY install --agent claude-code --component persona 2>&1 || true
+    $BINARY install --agent claude-code --component persona 2>&1 || true
 
     local claude_md="$HOME/.claude/CLAUDE.md"
     if [ -f "$claude_md" ]; then
@@ -1390,8 +901,8 @@ test_idempotent_engram_claude() {
     log_test "Idempotency: engram on Claude Code (no duplicate sections)"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component engram --persona neutral 2>&1 || true
-    $BINARY install --agent claude-code --component engram --persona neutral 2>&1 || true
+    $BINARY install --agent claude-code --component engram 2>&1 || true
+    $BINARY install --agent claude-code --component engram 2>&1 || true
 
     local claude_md="$HOME/.claude/CLAUDE.md"
     if [ -f "$claude_md" ]; then
@@ -1413,7 +924,7 @@ test_gemini_engram_tools_flag() {
     log_test "Gemini: engram injection uses --tools=agent"
     cleanup_test_env
 
-    if $BINARY install --agent gemini-cli --component engram --persona neutral 2>&1; then
+    if $BINARY install --agent gemini-cli --component engram 2>&1; then
         local settings="$HOME/.gemini/settings.json"
         assert_file_exists "$settings" "Gemini settings.json"
         assert_file_contains "$settings" '"mcpServers"' "Has mcpServers key"
@@ -1431,7 +942,7 @@ test_codex_engram_injection() {
     log_test "Codex: engram injection writes config.toml + instruction files"
     cleanup_test_env
 
-    if $BINARY install --agent codex --component engram --persona neutral 2>&1; then
+    if $BINARY install --agent codex --component engram 2>&1; then
         local config_toml="$HOME/.codex/config.toml"
         local instructions="$HOME/.codex/engram-instructions.md"
         local compact="$HOME/.codex/engram-compact-prompt.md"
@@ -1457,8 +968,8 @@ test_codex_engram_idempotent() {
     log_test "Codex: engram injection is idempotent (no duplicate blocks)"
     cleanup_test_env
 
-    $BINARY install --agent codex --component engram --persona neutral 2>&1 || true
-    $BINARY install --agent codex --component engram --persona neutral 2>&1 || true
+    $BINARY install --agent codex --component engram 2>&1 || true
+    $BINARY install --agent codex --component engram 2>&1 || true
 
     local config_toml="$HOME/.codex/config.toml"
     if [ -f "$config_toml" ]; then
@@ -1478,12 +989,12 @@ test_idempotent_skills_claude() {
     log_test "Idempotency: skills injection produces same files"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component skills --preset minimal --persona custom 2>&1 || true
+    $BINARY install --agent claude-code --component skills 2>&1 || true
     # Capture file hashes
     local first_hashes
     first_hashes=$(find "$HOME/.claude/skills" -name "SKILL.md" -exec md5sum {} \; 2>/dev/null | sort)
 
-    $BINARY install --agent claude-code --component skills --preset minimal --persona custom 2>&1 || true
+    $BINARY install --agent claude-code --component skills 2>&1 || true
     local second_hashes
     second_hashes=$(find "$HOME/.claude/skills" -name "SKILL.md" -exec md5sum {} \; 2>/dev/null | sort)
 
@@ -1494,30 +1005,11 @@ test_idempotent_skills_claude() {
     fi
 }
 
-test_idempotent_theme_opencode() {
-    log_test "Idempotency: theme on OpenCode (run twice, same result)"
-    cleanup_test_env
-
-    $BINARY install --agent opencode --component theme --persona neutral 2>&1 || true
-    local first_hash
-    first_hash=$(md5sum "$HOME/.config/opencode/opencode.json" 2>/dev/null | cut -d' ' -f1)
-
-    $BINARY install --agent opencode --component theme --persona neutral 2>&1 || true
-    local second_hash
-    second_hash=$(md5sum "$HOME/.config/opencode/opencode.json" 2>/dev/null | cut -d' ' -f1)
-
-    if [ "$first_hash" = "$second_hash" ] && [ -n "$first_hash" ]; then
-        log_pass "Idempotent: same theme config after two runs"
-    else
-        log_fail "Theme config changed between runs ($first_hash vs $second_hash)"
-    fi
-}
-
 test_idempotent_full_claude() {
     log_test "Idempotency: full injection-only on Claude Code"
     cleanup_test_env
 
-    $BINARY install --agent claude-code --component sdd --component persona --component context7 --component permissions --component theme --preset full-gentleman --persona gentleman 2>&1 || true
+    $BINARY install --agent claude-code --component sdd --component persona --component context7 --component permissions 2>&1 || true
     local first_md_hash
     first_md_hash=$(md5sum "$HOME/.claude/CLAUDE.md" 2>/dev/null | cut -d' ' -f1)
     # Snapshot settings.json for semantic comparison (engram setup may reorder
@@ -1525,7 +1017,7 @@ test_idempotent_full_claude() {
     # serialization). Byte-exact hashing would false-fail on harmless reorder.
     cp "$HOME/.claude/settings.json" /tmp/gai_settings_run1.json 2>/dev/null || true
 
-    $BINARY install --agent claude-code --component sdd --component persona --component context7 --component permissions --component theme --preset full-gentleman --persona gentleman 2>&1 || true
+    $BINARY install --agent claude-code --component sdd --component persona --component context7 --component permissions 2>&1 || true
     local second_md_hash
     second_md_hash=$(md5sum "$HOME/.claude/CLAUDE.md" 2>/dev/null | cut -d' ' -f1)
 
@@ -1548,91 +1040,17 @@ test_idempotent_full_claude() {
 
 # --- Category 8: Edge cases ---
 
-test_edge_theme_not_in_presets() {
-    log_test "Edge case: --component theme (not in any preset)"
-    cleanup_test_env
-
-    if $BINARY install --agent claude-code --component theme --persona neutral 2>&1; then
-        # REQ-09.2: non-intrusive, so theme-only creates no settings.json.
-        assert_file_not_contains "$HOME/.claude/settings.json" '"theme"' "REQ-09.2: theme-only install writes no theme key"
-        # Routing and remote authorization are unconditional agent guidance,
-        # not optional components. Require exactly those managed sections;
-        # theme-only must not inject SDD, persona, or other components.
-        if [ -f "$HOME/.claude/CLAUDE.md" ]; then
-            local sections
-            # Compare bare section ids, not full markers. The set comparison
-            # stays exact — this is still "these two and no others".
-            sections=$(grep -Eo '<!-- axiom:[a-z0-9-]+ -->' "$HOME/.claude/CLAUDE.md" \
-                | sed -E 's/<!-- axiom:([a-z0-9-]+) -->/\1/' | sort -u | tr '\n' ' ')
-            if [ "$(printf '%s' "$sections" | xargs)" = "agent-routing remote-authorization" ]; then
-                log_pass "Theme-only: CLAUDE.md carries routing and remote authorization only"
-            else
-                log_fail "Theme-only install wrote component sections: $sections"
-            fi
-        else
-            log_fail "Theme-only: CLAUDE.md missing required routing and remote authorization"
-        fi
-    else
-        log_fail "Theme-only install command failed"
-    fi
-}
-
 test_edge_multiple_agents_same_component() {
     log_test "Edge case: multiple agents with same component"
     cleanup_test_env
 
-    if $BINARY install --agent claude-code --agent opencode --component context7 --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --agent opencode --component context7 2>&1; then
         # Both agents should have context7
         assert_file_contains "$HOME/.claude.json" '"context7"' "Claude context7"
         assert_file_contains "$HOME/.config/opencode/opencode.json" '"context7"' "OpenCode context7"
     else
         log_fail "Multiple agents + context7 install command failed"
     fi
-}
-
-test_edge_persona_switch() {
-    log_test "Edge case: switching persona from gentleman to neutral"
-    cleanup_test_env
-
-    # First install with gentleman. Claude has an active output-style channel,
-    # so the teacher identity ("Senior Architect") lives in the output style —
-    # the CLAUDE.md persona section is a residual pointer (design.md Decision 1).
-    $BINARY install --agent claude-code --component persona --persona gentleman 2>&1 || true
-    assert_file_contains "$HOME/.claude/CLAUDE.md" "Persona Voice" "First install: gentleman persona residual points to the output style"
-    assert_file_contains "$HOME/.claude/output-styles/gentleman.md" "Senior Architect" "First install: gentleman output-style has the teacher identity"
-
-    # Then install with neutral — should REPLACE persona section AND the
-    # selected output style. Neutral is a distinct professional voice (same
-    # mentor identity, no regional language, no "Senior Architect" bio), so
-    # the CLAUDE.md residual stays tone-free and the neutral output style is
-    # checked for its own mentor-teaching tone content instead.
-    $BINARY install --agent claude-code --component persona --persona neutral 2>&1 || true
-    assert_file_contains "$HOME/.claude/CLAUDE.md" "Persona Voice" "Second install: neutral persona residual still points to the output style"
-    assert_file_not_contains "$HOME/.claude/CLAUDE.md" "Senior Architect" "Second install: CLAUDE.md residual carries no tone content"
-    assert_file_contains "$HOME/.claude/output-styles/neutral.md" "Push back when user asks for code without context or understanding" "Second install: neutral output-style has the mentor identity"
-    assert_file_not_contains "$HOME/.claude/output-styles/neutral.md" "Rioplatense\|voseo\|ponete las pilas" "Second install: regional language removed from output style"
-    assert_no_duplicate_section "$HOME/.claude/CLAUDE.md" "persona" "No duplicate persona after switch"
-}
-
-test_edge_persona_switch_preserves_sections_opencode() {
-    log_test "Edge case: persona switch preserves managed sections (OpenCode)"
-    cleanup_test_env
-
-    # Step 1: Install full stack with gentleman
-    $BINARY install --agent opencode --component persona --component engram --component sdd --persona gentleman 2>&1 || true
-
-    local agents_md="$HOME/.config/opencode/AGENTS.md"
-    assert_file_exists "$agents_md" "AGENTS.md after full install"
-    assert_file_contains_marker "$agents_md" "engram-protocol" "Engram section present before switch"
-
-    # Step 2: Switch to neutral persona
-    $BINARY install --agent opencode --component persona --persona neutral 2>&1 || true
-
-    # Step 3: Verify sections survived
-    assert_file_contains "$agents_md" "Senior Architect" "Neutral persona present after switch"
-    assert_file_not_contains "$agents_md" "Rioplatense" "Regional language removed after switch"
-    assert_file_contains_marker "$agents_md" "engram-protocol" "Engram section survived persona switch"
-    assert_no_duplicate_section "$agents_md" "engram-protocol" "No duplicate engram after switch"
 }
 
 test_edge_json_merge_preserves_existing() {
@@ -1644,7 +1062,7 @@ test_edge_json_merge_preserves_existing() {
     echo '{"existingKey": "preserved"}' > "$HOME/.config/opencode/opencode.json"
 
     # Install permissions on top
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
 
     local settings="$HOME/.config/opencode/opencode.json"
     assert_file_contains "$settings" '"existingKey"' "Pre-existing key preserved"
@@ -1657,16 +1075,14 @@ test_edge_multiple_json_overlays() {
     log_test "Edge case: multiple JSON overlays merge correctly"
     cleanup_test_env
 
-    # Install permissions, then theme, then context7 — all into OpenCode opencode.json
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
-    $BINARY install --agent opencode --component theme --persona neutral 2>&1 || true
-    $BINARY install --agent opencode --component context7 --persona neutral 2>&1 || true
+    # Install permissions, then context7 — all into OpenCode opencode.json
+    $BINARY install --agent opencode --component permissions 2>&1 || true
+    $BINARY install --agent opencode --component context7 2>&1 || true
 
     local settings="$HOME/.config/opencode/opencode.json"
-    assert_file_contains "$settings" '"permission"' "Permission config present after 3 merges"
-    assert_file_not_contains "$settings" '"theme"' "REQ-09.2: no theme key after 3 merges"
-    assert_file_contains "$settings" '"mcp"' "MCP servers present after 3 merges"
-    assert_file_contains "$settings" '"context7"' "Context7 present after 3 merges"
+    assert_file_contains "$settings" '"permission"' "Permission config present after 2 merges"
+    assert_file_contains "$settings" '"mcp"' "MCP servers present after 2 merges"
+    assert_file_contains "$settings" '"context7"' "Context7 present after 2 merges"
     assert_valid_json "$settings" "Final merged JSON is valid"
 }
 
@@ -1679,7 +1095,7 @@ test_cursor_sdd_subagents() {
     # Cursor is a desktop app — create the config dir to signal it's "installed"
     mkdir -p "$HOME/.cursor"
 
-    if $BINARY install --agent cursor --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent cursor --component sdd 2>&1; then
         local agents_dir="$HOME/.cursor/agents"
 
         # Directory must exist
@@ -1722,7 +1138,7 @@ test_antigravity_sdd_skills_path() {
     # Antigravity is a desktop app — create the config dir to signal it's "installed"
     mkdir -p "$HOME/.gemini/antigravity"
 
-    if $BINARY install --agent antigravity --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent antigravity --component sdd 2>&1; then
         local skills_dir="$HOME/.gemini/antigravity-cli/skills"
         assert_dir_exists "$skills_dir" "Antigravity skills directory"
         assert_file_exists "$skills_dir/sdd-init/SKILL.md" "sdd-init skill"
@@ -1749,7 +1165,7 @@ test_codex_context7_in_toml() {
     log_test "Codex: context7 component writes [mcp_servers.context7] into config.toml (TOML strategy)"
     cleanup_test_env
 
-    $BINARY install --agent codex --component context7 --persona neutral 2>&1 || true
+    $BINARY install --agent codex --component context7 2>&1 || true
 
     local config_toml="$HOME/.codex/config.toml"
     assert_file_exists "$config_toml" "Codex config.toml created by context7"
@@ -1758,7 +1174,7 @@ test_codex_context7_in_toml() {
     assert_file_not_contains "$config_toml" "context7-mcp" "Codex context7 block does not use local npx package"
 
     # Idempotent: re-running must not duplicate the block.
-    $BINARY install --agent codex --component context7 --persona neutral 2>&1 || true
+    $BINARY install --agent codex --component context7 2>&1 || true
     local count
     # `grep -c` prints "0" AND exits 1 on zero matches, so `|| echo 0` would
     # yield the two-line string "0\n0" and break the numeric comparison below.
@@ -1777,7 +1193,7 @@ test_integrity_sdd_skills_nonempty() {
     log_test "Integrity: every SDD SKILL.md has real content (>100 bytes)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local skill_dir="$HOME/.config/opencode/skills"
         local all_ok=true
         local sdd_skills=(sdd-init sdd-explore sdd-research sdd-propose sdd-spec sdd-design sdd-tasks sdd-apply sdd-verify sdd-archive sdd-onboard)
@@ -1809,7 +1225,7 @@ test_integrity_sdd_orchestrator_in_opencode_json() {
     log_test "Integrity: opencode.json contains gentle-orchestrator agent after SDD install"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_exists "$settings" "opencode.json exists"
         assert_file_matches "$settings" '"(axiom|gentle)-orchestrator"' "Has the managed orchestrator agent"
@@ -1825,7 +1241,7 @@ test_integrity_all_sdd_commands_have_frontmatter() {
     log_test "Integrity: all 11 SDD command files have YAML frontmatter"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local commands_dir="$HOME/.config/opencode/commands"
         local all_ok=true
         local expected_commands=(sdd-init sdd-apply sdd-archive sdd-continue sdd-explore sdd-ff sdd-new sdd-onboard sdd-research sdd-status sdd-verify)
@@ -1859,11 +1275,11 @@ test_integrity_all_sdd_commands_have_frontmatter() {
     fi
 }
 
-test_integrity_full_preset_all_skills_nonempty() {
-    log_test "Integrity: full preset — every SKILL.md is non-empty"
+test_integrity_all_skills_nonempty() {
+    log_test "Integrity: every SKILL.md is non-empty"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --component skills --preset full-gentleman --persona gentleman 2>&1; then
+    if $BINARY install --agent opencode --component sdd --component skills 2>&1; then
         local skill_dir="$HOME/.config/opencode/skills"
         local all_ok=true
         local empty_count=0
@@ -1886,7 +1302,7 @@ test_integrity_full_preset_all_skills_nonempty() {
             log_fail "$empty_count skill file(s) are empty or corrupt"
         fi
     else
-        log_fail "Full preset install for integrity check failed"
+        log_fail "Skills install for integrity check failed"
     fi
 }
 
@@ -1894,7 +1310,7 @@ test_integrity_sdd_orchestrator_agent_structure() {
     log_test "Integrity: gentle-orchestrator agent has required fields in opencode.json"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona gentleman 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_matches "$settings" '"(axiom|gentle)-orchestrator"' "Has the managed orchestrator"
         assert_file_not_contains "$settings" '"sdd-orchestrator"' "Does not have legacy base sdd-orchestrator"
@@ -1910,7 +1326,7 @@ test_integrity_skills_plus_sdd_coexist() {
     log_test "Integrity: SDD + skills components write non-empty files that coexist"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --component skills --preset full-gentleman --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd --component skills 2>&1; then
         local skill_dir="$HOME/.config/opencode/skills"
 
         # SDD skills should exist
@@ -1939,7 +1355,7 @@ test_oc_sdd_multi_mode_injection() {
     log_test "OpenCode: SDD multi-mode injection (10 agents in opencode.json)"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral --sdd-mode multi 2>&1; then
+    if $BINARY install --agent opencode --component sdd --sdd-mode multi 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         local legacy_plugin="$HOME/.config/opencode/plugins/background-agents.ts"
         local model_variants_plugin="$HOME/.config/opencode/plugins/model-variants.ts"
@@ -1970,7 +1386,7 @@ test_oc_sdd_single_mode_no_models() {
     log_test "OpenCode: SDD single mode has all agents but no model overrides"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral --sdd-mode single 2>&1; then
+    if $BINARY install --agent opencode --component sdd --sdd-mode single 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_exists "$settings" "opencode.json exists"
         assert_valid_json "$settings" "opencode.json is valid JSON"
@@ -1989,7 +1405,7 @@ test_oc_sdd_default_mode_same_as_single() {
     log_test "OpenCode: SDD default (no --sdd-mode flag) matches single mode"
     cleanup_test_env
 
-    if $BINARY install --agent opencode --component sdd --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component sdd 2>&1; then
         local settings="$HOME/.config/opencode/opencode.json"
         assert_file_exists "$settings" "opencode.json exists"
         assert_file_matches "$settings" '"(axiom|gentle)-orchestrator"' "Has the managed orchestrator"
@@ -2012,7 +1428,7 @@ test_backup_created_on_install() {
     cleanup_test_env
     setup_fake_configs
 
-    if $BINARY install --agent opencode --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component permissions 2>&1; then
         local backup_count
         backup_count=$(find_backup_snapshots | wc -l | tr -d ' ')
         if [ "$backup_count" -gt 0 ]; then
@@ -2030,7 +1446,7 @@ test_backup_contains_original_files() {
     cleanup_test_env
     setup_fake_configs
 
-    if $BINARY install --agent opencode --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component permissions 2>&1; then
         local latest_backup
         latest_backup=$(find_backup_snapshots | tail -1)
         if [ -n "$latest_backup" ]; then
@@ -2054,7 +1470,7 @@ test_backup_manifest_exists() {
     cleanup_test_env
     setup_fake_configs
 
-    if $BINARY install --agent opencode --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent opencode --component permissions 2>&1; then
         local latest_backup
         latest_backup=$(find_backup_snapshots | tail -1)
         if [ -n "$latest_backup" ]; then
@@ -2075,11 +1491,11 @@ test_backup_idempotent_install() {
     log_test "Idempotent: running install twice produces same result (with backup)"
     cleanup_test_env
 
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
     local first_content
     first_content=$(cat "$HOME/.config/opencode/opencode.json" 2>/dev/null)
 
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
     local second_content
     second_content=$(cat "$HOME/.config/opencode/opencode.json" 2>/dev/null)
 
@@ -2095,9 +1511,9 @@ test_backup_multiple_snapshots() {
     cleanup_test_env
     setup_fake_configs
 
-    $BINARY install --agent opencode --component permissions --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component permissions 2>&1 || true
     sleep 0.1
-    $BINARY install --agent opencode --component theme --persona neutral 2>&1 || true
+    $BINARY install --agent opencode --component context7 2>&1 || true
 
     local backup_count
     backup_count=$(find_backup_snapshots | wc -l | tr -d ' ')
@@ -2113,7 +1529,7 @@ test_backup_claude_code_files() {
     cleanup_test_env
     setup_fake_configs
 
-    if $BINARY install --agent claude-code --component permissions --persona neutral 2>&1; then
+    if $BINARY install --agent claude-code --component permissions 2>&1; then
         local latest_backup
         latest_backup=$(find_backup_snapshots | tail -1)
         if [ -n "$latest_backup" ] && [ -f "$latest_backup/manifest.json" ]; then
@@ -2148,22 +1564,9 @@ test_dry_run_agent_opencode
 test_dry_run_agent_both
 test_dry_run_agent_csv
 
-# Category 1d: Preset flags
-test_dry_run_preset_minimal
-test_dry_run_preset_ecosystem
-test_dry_run_preset_full
-test_dry_run_preset_custom
-
-# Category 1e: Preset component order validation
-test_preset_minimal_components
-test_preset_minimal_with_default_persona_includes_persona
-test_preset_ecosystem_components
-test_preset_full_components
-test_preset_full_with_custom_persona_excludes_persona
-test_dry_run_full_preset_persona_before_sdd
-test_preset_no_legacy_theme_in_any_preset
-test_preset_custom_no_components
-test_preset_custom_explicit_components
+# Category 1d: Default component set
+test_dry_run_default_persona_before_sdd
+test_dry_run_explicit_components
 
 # Category 1f: Individual component flags (all 8)
 test_dry_run_component_engram
@@ -2172,7 +1575,6 @@ test_dry_run_component_skills
 test_dry_run_component_context7
 test_dry_run_component_persona
 test_dry_run_component_permissions
-test_dry_run_component_theme
 
 # Category 1f2: SDD mode flag
 test_dry_run_sdd_mode_multi
@@ -2180,9 +1582,7 @@ test_dry_run_sdd_mode_single
 test_dry_run_sdd_mode_invalid_rejected
 
 # Category 1g: Invalid inputs
-test_invalid_persona_rejected
 test_invalid_component_rejected
-test_invalid_preset_rejected
 test_unknown_command_rejected
 
 if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
@@ -2192,36 +1592,22 @@ if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
     # Category 2: Claude Code injection
     test_cc_engram_injection
     test_cc_sdd_injection
-    test_cc_persona_gentleman
-    test_cc_persona_neutral
-    test_cc_persona_custom_does_nothing
-    test_cc_skills_minimal
     test_cc_skills_full
-    test_cc_skills_ecosystem
     test_cc_custom_skills_with_flag
-    test_cc_custom_no_skills_flag_installs_nothing
     test_cc_custom_sdd_plus_skills
     test_cc_context7_injection
     test_cc_permissions_injection
-    test_cc_theme_injection
 
     # Category 3: OpenCode injection
     test_oc_engram_injection
     test_oc_sdd_injection
-    test_oc_persona_gentleman
-    test_oc_persona_neutral
-    test_oc_persona_custom_does_nothing
-    test_oc_skills_minimal
     test_oc_skills_full
     test_oc_context7_injection
     test_oc_permissions_injection
-    test_oc_theme_injection
 
-    # Category 4: Full preset integration
-    test_full_preset_claude_code
-    test_full_preset_opencode
-    test_minimal_preset_claude_only_engram
-    test_minimal_preset_opencode_only_engram_no_persona
+    # Category 4: All components coexisting
+    test_all_components_claude_code
+    test_all_components_opencode
     test_ecosystem_both_agents
     test_both_agents_permissions
 
@@ -2237,7 +1623,6 @@ if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
     test_idempotent_persona_claude
     test_idempotent_engram_claude
     test_idempotent_skills_claude
-    test_idempotent_theme_opencode
     test_idempotent_full_claude
 
     # Category 6b: Gemini/Codex engram parity
@@ -2246,10 +1631,7 @@ if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
     test_codex_engram_idempotent
 
     # Category 8: Edge cases
-    test_edge_theme_not_in_presets
     test_edge_multiple_agents_same_component
-    test_edge_persona_switch
-    test_edge_persona_switch_preserves_sections_opencode
     test_edge_json_merge_preserves_existing
     test_edge_multiple_json_overlays
 
@@ -2257,7 +1639,7 @@ if [ "${RUN_FULL_E2E:-0}" = "1" ]; then
     test_integrity_sdd_skills_nonempty
     test_integrity_sdd_orchestrator_in_opencode_json
     test_integrity_all_sdd_commands_have_frontmatter
-    test_integrity_full_preset_all_skills_nonempty
+    test_integrity_all_skills_nonempty
     test_integrity_sdd_orchestrator_agent_structure
     test_integrity_skills_plus_sdd_coexist
 

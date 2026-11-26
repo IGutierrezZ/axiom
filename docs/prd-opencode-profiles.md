@@ -7,6 +7,8 @@
 **Date**: 2026-04-03
 **Status**: Draft
 
+> **Documento histórico.** Las pantallas de la TUI que describe (creación, edición y borrado de perfiles) se retiraron con la TUI. Hoy los perfiles se crean y actualizan con `axiom sync --profile` y `--profile-phase` (véase [docs/usage.md](usage.md)). Véanse también las [notas de retirada](releases/notas-retirada-arranque.md).
+
 ---
 
 ## 1. Problem Statement

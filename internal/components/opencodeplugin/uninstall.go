@@ -20,7 +20,6 @@ type UninstallResult struct {
 	ChangedNodeModules bool
 	CacheEntryRemoved  string   // absolute path of removed cache entry, or "" if none
 	NodeModulesPath    string   // absolute path of node_modules/<pkg> removed, or ""
-	TSXPath            string   // absolute path of .tsx file removed (GentleLogo only), or ""
 	CleanupPending     []string // staged paths left after a post-commit cleanup failure
 	JournalManifest    []mutationjournal.OwnedFile
 }
@@ -29,8 +28,7 @@ var removeAll = os.RemoveAll
 
 // Uninstall removes a community plugin across up to 4 layers: tui.json,
 // package.json, node_modules/<pkg>, and the matching cache entry under
-// ~/.cache/opencode/packages/<pkg>@latest. Built-in GentleLogo swaps the NPM
-// layers for a single .tsx removal. Files use compare-and-swap journal writes;
+// ~/.cache/opencode/packages/<pkg>@latest. Files use compare-and-swap journal writes;
 // directories are renamed to reversible staging paths until the operation
 // commits. A post-commit staging cleanup failure is reported in CleanupPending.
 func Uninstall(homeDir string, id model.OpenCodeCommunityPluginID) (UninstallResult, error) {
@@ -40,22 +38,14 @@ func Uninstall(homeDir string, id model.OpenCodeCommunityPluginID) (UninstallRes
 		return result, fmt.Errorf("uninstall opencode plugin: homeDir must not be empty")
 	}
 
-	isGentleLogo := id == model.OpenCodePluginGentleLogo
 	def, known := DefinitionFor(id)
-	if !isGentleLogo && !known {
+	if !known {
 		return result, fmt.Errorf("uninstall opencode plugin: unknown id %q", id)
 	}
 
 	// targetInTUI is the literal string Install() registered inside tui.json's
-	// plugin[] list. For NPM plugins this is the NPM package name; for the
-	// built-in GentleLogo .tsx it is the absolute plugin path so it matches
-	// the value Install() wrote.
-	var targetInTUI string
-	if isGentleLogo {
-		targetInTUI = filepath.Join(homeDir, ".config", "opencode", "tui-plugins", gentleLogoPluginFile)
-	} else {
-		targetInTUI = def.PackageName
-	}
+	// plugin[] list: the NPM package name.
+	targetInTUI := def.PackageName
 
 	opencodeDir := filepath.Join(homeDir, ".config", "opencode")
 	tuiPath := filepath.Join(opencodeDir, "tui.json")
@@ -85,62 +75,40 @@ func Uninstall(homeDir string, id model.OpenCodeCommunityPluginID) (UninstallRes
 		result.JournalManifest = append(result.JournalManifest, journal.OwnedFile(tuiPath, string(tuiAfter), false, false))
 	}
 
-	// ── Layer 2: package.json (skipped for built-in GentleLogo) ───────────
-	if !isGentleLogo {
-		pjChanged, pjOwned, err := uninstallPackageJSON(journal, packagePath, def.PackageName)
-		if err != nil {
-			return rollback(fmt.Errorf("uninstall layer 2 (package.json): %w", err), "layer 2", result)
-		}
-		if pjChanged {
-			pjWritten = true
-			result.ChangedPackageJSON = true
-			result.JournalManifest = append(result.JournalManifest, pjOwned)
-		}
+	// ── Layer 2: package.json ───────────
+	pjChanged, pjOwned, err := uninstallPackageJSON(journal, packagePath, def.PackageName)
+	if err != nil {
+		return rollback(fmt.Errorf("uninstall layer 2 (package.json): %w", err), "layer 2", result)
+	}
+	if pjChanged {
+		pjWritten = true
+		result.ChangedPackageJSON = true
+		result.JournalManifest = append(result.JournalManifest, pjOwned)
 	}
 
-	// ── Layer 3: node_modules/<pkg>/ (skipped for built-in GentleLogo) ─────
-	if !isGentleLogo {
-		nodeModulesPath := filepath.Join(opencodeDir, "node_modules", def.PackageName)
-		removal, err := stageDirectoryRemoval(journal, nodeModulesPath)
-		if err != nil {
-			return rollback(fmt.Errorf("uninstall layer 3 (node_modules): %w", err), "layer 3", result)
-		}
-		if removal != nil {
-			staged = append(staged, *removal)
-			result.ChangedNodeModules = true
-			result.NodeModulesPath = nodeModulesPath
-			result.JournalManifest = append(result.JournalManifest, removalRecord())
-		}
+	// ── Layer 3: node_modules/<pkg>/ ─────
+	nodeModulesPath := filepath.Join(opencodeDir, "node_modules", def.PackageName)
+	removal, err := stageDirectoryRemoval(journal, nodeModulesPath)
+	if err != nil {
+		return rollback(fmt.Errorf("uninstall layer 3 (node_modules): %w", err), "layer 3", result)
+	}
+	if removal != nil {
+		staged = append(staged, *removal)
+		result.ChangedNodeModules = true
+		result.NodeModulesPath = nodeModulesPath
+		result.JournalManifest = append(result.JournalManifest, removalRecord())
 	}
 
-	// ── Layer 4: optional cache entries (skipped for built-in GentleLogo) ─
-	if !isGentleLogo {
-		cachePath := filepath.Join(homeDir, ".cache", "opencode", "packages", def.PackageName+"@latest")
-		removal, err := stageDirectoryRemoval(journal, cachePath)
-		if err != nil {
-			return rollback(fmt.Errorf("uninstall layer 4 (cache): %w", err), "layer 4", result)
-		}
-		if removal != nil {
-			staged = append(staged, *removal)
-			result.CacheEntryRemoved = cachePath
-			result.JournalManifest = append(result.JournalManifest, removalRecord())
-		}
+	// ── Layer 4: optional cache entries ─
+	cachePath := filepath.Join(homeDir, ".cache", "opencode", "packages", def.PackageName+"@latest")
+	removal, err = stageDirectoryRemoval(journal, cachePath)
+	if err != nil {
+		return rollback(fmt.Errorf("uninstall layer 4 (cache): %w", err), "layer 4", result)
 	}
-
-	// ── Layer TSX: built-in GentleLogo local plugin file ───────────────────
-	if isGentleLogo {
-		tsxPath := filepath.Join(homeDir, ".config", "opencode", "tui-plugins", gentleLogoPluginFile)
-		info, statErr := os.Lstat(tsxPath)
-		if statErr == nil && !info.IsDir() {
-			removed, err := journal.Remove(tsxPath)
-			if err != nil {
-				return rollback(fmt.Errorf("uninstall tsx: remove %s: %w", tsxPath, err), "layer tsx", result)
-			}
-			if removed {
-				result.TSXPath = tsxPath
-				result.JournalManifest = append(result.JournalManifest, removalRecord())
-			}
-		}
+	if removal != nil {
+		staged = append(staged, *removal)
+		result.CacheEntryRemoved = cachePath
+		result.JournalManifest = append(result.JournalManifest, removalRecord())
 	}
 
 	for _, removal := range staged {
@@ -273,7 +241,6 @@ func rollbackUninstall(journal *mutationjournal.Journal, staged []stagedRemoval,
 		final.ChangedNodeModules = false
 		final.NodeModulesPath = ""
 		final.CacheEntryRemoved = ""
-		final.TSXPath = ""
 		return final, err
 	}
 	return final, errors.Join(err, fmt.Errorf("restore after %s: %w", stage, errors.Join(restoreErrors...)))

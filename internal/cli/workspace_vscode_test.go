@@ -27,7 +27,6 @@ func vscodeSelection() model.Selection {
 		Agents:     []model.AgentID{model.AgentVSCodeCopilot},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentPersona, model.ComponentSDD, model.ComponentSkills, model.ComponentContext7},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 }
 

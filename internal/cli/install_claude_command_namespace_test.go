@@ -62,7 +62,6 @@ func TestRunSyncRetiresPrefixedClaudeCommands(t *testing.T) {
 		InstalledAgents:     []string{string(model.AgentClaudeCode)},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentSDD},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write() error = %v", err)
 	}

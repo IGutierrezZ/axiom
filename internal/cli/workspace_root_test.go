@@ -145,7 +145,6 @@ func TestRunInstallWorkspaceScopeWritesToTheProjectRoot(t *testing.T) {
 				"--scope", "workspace",
 				"--agent", "claude-code",
 				"--component", "engram",
-				"--preset", "custom",
 			}, system.DetectionResult{})
 			if err != nil {
 				t.Fatalf("RunInstall() error = %v", err)
@@ -183,7 +182,6 @@ func TestRunInstallWorkspaceScopeOutsideAnyProjectUsesTheCurrentDirectory(t *tes
 		"--scope", "workspace",
 		"--agent", "claude-code",
 		"--component", "engram",
-		"--preset", "custom",
 	}, system.DetectionResult{}); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
@@ -201,7 +199,6 @@ func writeWorkspaceRootSyncState(t *testing.T, home string) {
 		InstalledAgents:     []string{"claude-code"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write() error = %v", err)
 	}
@@ -266,7 +263,6 @@ func TestRunSyncWithSelectionScopedExplicitWorkspaceDirWins(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentEngram},
-		Persona:    model.PersonaNeutral,
 	}
 
 	result, err := RunSyncWithSelectionScoped(home, sub, ScopeWorkspace, selection)

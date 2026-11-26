@@ -33,7 +33,6 @@ func sharedSkillsSelection(agentIDs ...model.AgentID) model.Selection {
 		Agents:     agentIDs,
 		Components: []model.ComponentID{model.ComponentPersona, model.ComponentSDD, model.ComponentSkills},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 }
 

@@ -322,7 +322,7 @@ func TestEcosystemModelsPostOpenCodeSavesStateAndConfig(t *testing.T) {
 		return opencode.CommandOutput{Stdout: []byte("1.4.0")}, nil
 	}
 	t.Cleanup(func() { opencode.VersionRunnerOverride = previousRunner })
-	router, root, home := modelsProject(t, state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPersona, model.ComponentSDD}, Preset: model.PresetFullGentleman, SDDMode: model.SDDModeMulti})
+	router, root, home := modelsProject(t, state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPersona, model.ComponentSDD}, SDDMode: model.SDDModeMulti})
 	code, body := postModels(router, `{"adapter":"opencode","assignments":{"sdd-apply":{"model":"anthropic/claude-sonnet-4","effort":"low"}}}`)
 	if code != http.StatusOK {
 		t.Fatalf("POST = %d: %s", code, body)

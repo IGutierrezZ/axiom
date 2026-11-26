@@ -195,7 +195,7 @@ Breaking changes map to `type:breaking-change` label.
 ### Examples
 
 ```
-feat(tui): add progress bar to installation steps
+feat(cli): add progress bar to installation steps
 fix(agent): correct Claude Code detection on macOS
 docs: update contributing guide
 chore(deps): bump bubbletea to v0.26
@@ -231,7 +231,7 @@ go test ./...
 go run ./internal/gofmtcheck
 
 # Unit tests — specific package
-go test ./internal/tui/...
+go test ./internal/cli/...
 
 # Unit tests — verbose
 go test -v ./...

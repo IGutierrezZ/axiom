@@ -43,7 +43,7 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - `internal/update`: `TestCanonicalReleasePublicKeysControlRealLinkerBuild` and the release distribution policy tests (`newReleasePolicyFixture`, which runs `go run ./internal/releasepolicycmd`).
   - `internal/app`: `TestDocumentedInvocationsRunAsDocumented`.
   - `internal/assets`: `TestWindowsFullSuiteShardsCoverEveryTestName` (nested `go test -list`).
-- **In `ci.yml` the toolchain meta-tests run in their own job.** The workflow-level `TOOLCHAIN_META_TESTS` selector names them, together with `TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea` (`internal/app`, `go build`). The `Go Tests` jobs skip it (`-skip`) and the `Toolchain Meta Tests` job runs it (`-run`).
+- **In `ci.yml` the toolchain meta-tests run in their own job.** The workflow-level `TOOLCHAIN_META_TESTS` selector names them, together with `TestBuiltBinaryClosedStdinRefusesBeforeUI` (`internal/app`, `go build`). The `Go Tests` jobs skip it (`-skip`) and the `Toolchain Meta Tests` job runs it (`-run`).
   - That job runs on the nightly run, on `workflow_dispatch`, and on PRs that touch its inputs: the workflows, `.goreleaser.yaml`, `internal/update/`, `scripts/`, `cmd/axiom/`, the command documentation (`docs/**/*.md` except `docs/audits/`, `internal/assets/**/*.md`), `go.mod`, `go.sum`, and the meta-test files themselves.
   - `Unit Tests` accepts the job as skipped only when the change detection succeeded and found none of those inputs.
   - `internal/assets` fails if a selected name is declared outside the job's packages, or if a test in those packages launches the toolchain without being selected.

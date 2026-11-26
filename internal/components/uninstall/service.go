@@ -25,7 +25,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -149,9 +148,6 @@ var (
 		model.ComponentPermission,
 		model.ComponentSDD,
 		model.ComponentSkills,
-		model.ComponentTheme,
-		model.ComponentClaudeTheme,
-		model.ComponentOpenCodeGentleLogo,
 	}
 	fullAgentRemovalComponents = []model.ComponentID{
 		model.ComponentPersona,
@@ -160,9 +156,6 @@ var (
 		model.ComponentPermission,
 		model.ComponentSDD,
 		model.ComponentSkills,
-		model.ComponentTheme,
-		model.ComponentClaudeTheme,
-		model.ComponentOpenCodeGentleLogo,
 	}
 	configuredAgents = []string{
 		"gentle-orchestrator",
@@ -299,27 +292,6 @@ func PartialUninstallScoped(homeDir, workspaceDir, appVersion string, opts Optio
 	return svc.PartialUninstall(agentsTyped, componentsTyped)
 }
 
-// PartialUninstallWithProfileSelectionScoped es PartialUninstallScoped con la
-// selección de perfiles de SDD y el ámbito de los datos de Engram.
-func PartialUninstallWithProfileSelectionScoped(homeDir, workspaceDir, appVersion string, opts Options, agentIDs []string, componentIDs []string, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
-	svc, err := NewScopedService(homeDir, workspaceDir, appVersion, opts)
-	if err != nil {
-		return Result{}, err
-	}
-
-	agentsTyped := make([]model.AgentID, 0, len(agentIDs))
-	for _, agentID := range agentIDs {
-		agentsTyped = append(agentsTyped, model.AgentID(agentID))
-	}
-
-	componentsTyped := make([]model.ComponentID, 0, len(componentIDs))
-	for _, componentID := range componentIDs {
-		componentsTyped = append(componentsTyped, model.ComponentID(componentID))
-	}
-
-	return svc.PartialUninstallWithProfiles(agentsTyped, componentsTyped, profileNames, engramScope)
-}
-
 // CompleteUninstallScoped retira todo lo gestionado de todos los agentes del ámbito
 // de opts.
 func CompleteUninstallScoped(homeDir, workspaceDir, appVersion string, opts Options) (Result, error) {
@@ -338,18 +310,6 @@ func (s *Service) PartialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	return s.partialUninstall(agentIDs, componentIDs)
 }
 
-func (s *Service) PartialUninstallWithProfiles(agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (Result, error) {
-	s.SetProfileNamesToRemove(profileNames)
-	s.SetEngramUninstallScope(engramScope)
-	defer func() {
-		s.profileNamesToRemove = nil
-		s.profileSelectionScoped = false
-		s.engramUninstallScope = model.EngramUninstallScopeGlobal
-	}()
-
-	return s.partialUninstall(agentIDs, componentIDs)
-}
-
 // partialUninstall is the shared body of PartialUninstall and
 // PartialUninstallWithProfiles. It resolves the requested components and
 // executes the resulting plan.
@@ -364,7 +324,6 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	if len(components) == 0 {
 		components = slices.Clone(fullAgentRemovalComponents)
 	}
-	components = expandVisualPolishUninstallComponents(components)
 
 	s.keepEngramRegistration = !s.workspace && !slices.Contains(componentIDs, model.ComponentEngram)
 	defer func() { s.keepEngramRegistration = false }()
@@ -415,40 +374,6 @@ func keptEngramRegistrationNote(homeDir string, agentIDs []model.AgentID) string
 // to the "unreadable state" path.
 func isStateNotFound(err error) bool {
 	return errors.Is(err, fs.ErrNotExist)
-}
-
-func expandVisualPolishUninstallComponents(components []model.ComponentID) []model.ComponentID {
-	shouldExpand := false
-	visualPolish := model.VisualPolishComponents()
-	for _, component := range components {
-		if component != model.ComponentClaudeTheme && slices.Contains(visualPolish, component) {
-			shouldExpand = true
-		}
-	}
-	if !shouldExpand {
-		return components
-	}
-
-	expanded := slices.Clone(components)
-	for _, component := range model.VisualPolishComponents() {
-		if !slices.Contains(expanded, component) {
-			expanded = append(expanded, component)
-		}
-	}
-	return expanded
-}
-
-func (s *Service) SetProfileNamesToRemove(profileNames []string) {
-	s.profileNamesToRemove = dedupeSortedStrings(profileNames)
-	s.profileSelectionScoped = true
-}
-
-func (s *Service) SetEngramUninstallScope(scope model.EngramUninstallScope) {
-	if scope == model.EngramUninstallScopeProject {
-		s.engramUninstallScope = model.EngramUninstallScopeProject
-		return
-	}
-	s.engramUninstallScope = model.EngramUninstallScopeGlobal
 }
 
 func (s *Service) CompleteUninstall() (Result, error) {
@@ -924,13 +849,8 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			for _, style := range persona.ManagedOutputStyles() {
 				path := filepath.Join(styleDir, style.File)
 				targets = append(targets, path)
-				if style.File == "gentleman.md" && !s.workspace {
-					// Comportamiento de siempre en la carpeta de usuario.
-					ops = append(ops, removeFile(path))
-					continue
-				}
-				// Los estilos axiom.md y neutral.md, y todos en el proyecto, solo se
-				// retiran si su contenido sigue siendo el que Axiom incrusta.
+				// El estilo solo se retira si su contenido sigue siendo el que Axiom
+				// incrusta.
 				ops = append(ops, s.removeManagedOutputStyle(path, style.AssetPath))
 			}
 			ops = append(ops, removeDirIfEmpty(styleDir))
@@ -1005,36 +925,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
-	case model.ComponentTheme:
-		// Legacy component: Axiom does not own the user's theme setting.
-	case model.ComponentClaudeTheme:
-		if s.workspace {
-			// Los recursos visuales ya no se instalan y nunca se instalaron en el
-			// proyecto.
-			break
-		}
-		managedPaths, err := theme.ManagedVisualThemePaths(homeDir, adapter)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, path := range managedPaths {
-			targets = append(targets, path)
-			ops = append(ops, removeManagedVisualTheme(path, adapter))
-		}
-		// Legacy Gentleman-named assets have no verifiable byte identity here.
-		// Preserve them rather than deleting a possibly user-authored file.
-	case model.ComponentOpenCodeGentleLogo:
-		// El logo es un plugin de la TUI de OpenCode en la carpeta de usuario; el
-		// ámbito workspace no lo instala.
-		if adapter.Agent() != model.AgentOpenCode || s.workspace {
-			break
-		}
-		pluginPath := filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx")
-		targets = append(targets, pluginPath)
-		ops = append(ops, removeFile(pluginPath), removeDirIfEmpty(filepath.Dir(pluginPath)))
-		tuiPath := filepath.Join(homeDir, ".config", "opencode", "tui.json")
-		targets = append(targets, tuiPath)
-		ops = append(ops, rewriteOpenCodeTUIPlugins(tuiPath, "gentle-logo"))
 	case model.ComponentSkills:
 		if !adapter.SupportsSkills() {
 			break
@@ -1638,64 +1528,6 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 	return append(out, '\n'), true, nil
 }
 
-func rewriteOpenCodeTUIPlugins(path string, removePatterns ...string) operation {
-	return operation{
-		typeID: opRewriteFile,
-		path:   path,
-		apply: func(path string) (bool, bool, error) {
-			raw, err := readManagedFile(path)
-			if err != nil {
-				if os.IsNotExist(err) {
-					return false, false, nil
-				}
-				return false, false, fmt.Errorf("read tui.json %q: %w", path, err)
-			}
-			var root map[string]any
-			if err := json.Unmarshal(raw, &root); err != nil {
-				return false, false, nil
-			}
-			changed := false
-			for _, key := range []string{"plugin", "plugins"} {
-				pluginsRaw, ok := root[key].([]any)
-				if !ok {
-					continue
-				}
-				var kept []any
-				for _, item := range pluginsRaw {
-					s, ok := item.(string)
-					if !ok {
-						kept = append(kept, item)
-						continue
-					}
-					remove := false
-					for _, pat := range removePatterns {
-						if strings.Contains(s, pat) {
-							remove = true
-							break
-						}
-					}
-					if remove {
-						changed = true
-					} else {
-						kept = append(kept, item)
-					}
-				}
-				root[key] = kept
-			}
-			if !changed {
-				return false, false, nil
-			}
-			out, err := json.MarshalIndent(root, "", "  ")
-			if err != nil {
-				return false, false, err
-			}
-			out = append(out, '\n')
-			_, err = filemerge.WriteFileAtomic(path, out, 0o644)
-			return true, false, err
-		},
-	}
-}
-
 func rewriteTOMLFile(path string, mutate func(content string) (string, bool)) operation {
 	return operation{
 		typeID: opRewriteFile,
@@ -1852,26 +1684,6 @@ func removeFile(path string) operation {
 					return false, false, nil
 				}
 				return false, false, statErr
-			}
-			if err := removeFileIfExists(path); err != nil {
-				return false, false, err
-			}
-			return true, true, nil
-		},
-	}
-}
-
-func removeManagedVisualTheme(path string, adapter agents.Adapter) operation {
-	return operation{
-		typeID: opRemoveFile,
-		path:   path,
-		apply: func(path string) (bool, bool, error) {
-			managed, err := theme.IsManagedVisualThemeFile(path, adapter)
-			if err != nil {
-				return false, false, err
-			}
-			if !managed {
-				return false, false, nil
 			}
 			if err := removeFileIfExists(path); err != nil {
 				return false, false, err

@@ -2,7 +2,7 @@
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
 > **Última Sincronización:** 2026-11-26 01:01:29 UTC
-> **Total Dominios:** 53 | **Total Requerimientos:** 528 | **Total Escenarios BDD:** 2141
+> **Total Dominios:** 51 | **Total Requerimientos:** 528 | **Total Escenarios BDD:** 2141
 
 ---
 
@@ -16,21 +16,20 @@
 | `axiom-distribution-identity` | Especificación Viva: Identidad de Distribución de Axiom | 10 | 13 | [Ver Spec](specs/axiom-distribution-identity/spec.md) |
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 13 | 74 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 7 | 14 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
-| `axiom-tui-branding` | Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 4 | 9 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
-| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 9 | 10 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
+| `axiom-tui-branding` | Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 3 | 7 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
+| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 8 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 308 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 307 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
-| `installer-picker-navigation` | Installer Picker Navigation Specification | 3 | 9 | [Ver Spec](specs/installer-picker-navigation/spec.md) |
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `knowledge-query-engine` | Especificación de Requerimientos: Consulta Spec-First con Auto-Enriquecimiento de la Spec Viva (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-query-engine/spec.md) |
 | `knowledge-sweep-command` | Especificación de Requerimientos: Barrido Autónomo Knowledge y Siembra Inicial (INC-23) | 5 | 5 | [Ver Spec](specs/knowledge-sweep-command/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 12 | 37 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 12 | 36 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -41,7 +40,7 @@
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (REQ-30.9 a REQ-30.14) | 6 | 26 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
 | `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 68 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
-| `persona-behavior-contract` | persona-behavior-contract Specification | 15 | 28 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
+| `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 59 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 8 | 67 | [Ver Spec](specs/requirement-identifiers/spec.md) |
@@ -58,10 +57,9 @@
 | `semantic-code` | Especificación de Requerimientos: Conector Semántico de Código (CodeGraph y motor AST nativo) (INC-06) | 10 | 14 | [Ver Spec](specs/semantic-code/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 7 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
 | `structured-handoffs` | Especificación Viva: Handoffs Estructurados y Ciclo de Vida de Transición | 7 | 13 | [Ver Spec](specs/structured-handoffs/spec.md) |
-| `tui-spanish-localization` | Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom) | 4 | 9 | [Ver Spec](specs/tui-spanish-localization/spec.md) |
-| `tui-ui-parity` | Especificación Viva: Paridad Bidireccional entre TUI y Web UI | 10 | 11 | [Ver Spec](specs/tui-ui-parity/spec.md) |
+| `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
-| `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 4 | 6 | [Ver Spec](specs/visual-decoupling/spec.md) |
+| `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
 | `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 18 | 102 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
@@ -282,26 +280,23 @@ Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sin
   - *Escenario BDD:* La raíz declarada prevalece sobre la copia de un agente
   - *Escenario BDD:* Raíz declarada inválida
 - **[REQ-46.9]** Saneamiento del Preset Predeterminado de Skills
-  - *Escenario BDD:* Inspección del preset básico de skills
+  - *Escenario BDD:* Inspección del conjunto de skills por defecto
 
-### Dominio: `axiom-tui-branding` — Especificación de Requerimientos: Unificación de TUI Bubbletea, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14)
+### Dominio: `axiom-tui-branding` — Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14)
 
 <!-- Especificación Viva generada a partir de '2026-09-16-inc-14-axiom-tui-branding-and-cli-cutover' -->
 
 **Archivo:** [`specs/axiom-tui-branding/spec.md`](specs/axiom-tui-branding/spec.md)
 
-- **[REQ-14.1]** Logotipo ASCII y Lema de Axiom en TUI
-  - *Escenario BDD:* Renderizado del logotipo tipográfico de Axiom
-  - *Escenario BDD:* Lema institucional de Axiom en pantalla de bienvenida
 - **[REQ-14.2]** Lanzamiento de TUI interactiva por defecto y subcomando axiom tui
   - *Escenario BDD:* Ejecución de axiom sin argumentos en sesión interactiva TTY
   - *Escenario BDD:* Ejecución de axiom sin argumentos en entorno no interactivo (CI o tubería)
-  - *Escenario BDD:* Lanzamiento explícito mediante axiom tui
+  - *Escenario BDD:* El subcomando axiom tui ya no existe
 - **[REQ-14.3]** Subcomandos de gestión de herramientas y agentes en CLI axiom
   - *Escenario BDD:* Ayuda de install desde axiom
   - *Escenario BDD:* Sincronización de agentes mediante axiom sync
   - *Escenario BDD:* Diagnóstico del ecosistema mediante axiom doctor
-- **[REQ-axiom-tui-branding-4]** Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4) — RETIRADO
+- **[REQ-axiom-tui-branding-3]** Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4) — RETIRADO
   - *Escenario BDD:* Advertencia informativa de deprecación al invocar gentle-ai
 
 ### Dominio: `axiom-updater-resilience` — Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom
@@ -320,8 +315,6 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
   - *Escenario BDD:* Secuencia completada en el Dashboard
 - **[REQ-22.5]** No-regresión del verbo CLI axiom upgrade
   - *Escenario BDD:* Ejecución de axiom upgrade desde consola
-- **[REQ-22.6]** Paridad TUI: encadenamiento y protección de reinicio
-  - *Escenario BDD:* Vista de actualización en TUI
 - **[REQ-22.7]** Identidad visible del fork en vistas de actualización
   - *Escenario BDD:* Textos de interfaz limpios
 - **[REQ-22.8]** Versión de build visible y consistente
@@ -674,7 +667,6 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `axiom archive context prepare` solo escribe en la rama de archivado
   - *Escenario BDD:* El dashboard y `axiom change create` ejecutan `ensure` y después escriben
   - *Escenario BDD:* El escritor guardado invocado sin `ensure` en rama equivocada se niega
-  - *Escenario BDD:* La TUI solo lista
   - *Escenario BDD:* Un sumidero acumulativo está exento por nombre
 - **[REQ-25.20]** Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard
   - *Escenario BDD:* Un cambio fusionado y sin archivar figura como pendiente
@@ -892,25 +884,6 @@ Define observable behavior for how gentle-ai renders and injects the Engram save
   - *Escenario BDD:* Golden fixtures reflect new output
 - **[REQ-46.10]** Engram Protocol Handles Ambiguous Project
   - *Escenario BDD:* Project ambiguity in the Engram session handshake
-
-### Dominio: `installer-picker-navigation` — Installer Picker Navigation Specification
-
-Defines the navigation contract for the installer TUI's conditional picker chain, ensuring that forward and backward navigation (both via Esc and "← Back" row selection) are symmetric and ordered from a single declarative source of truth. No new or modified user-observable behavior; these requirements enforce the behavior-preservation invariants that MUST hold after the internal refactor from triplicated imperative logic to a computed flow slice.
-
-**Archivo:** [`specs/installer-picker-navigation/spec.md`](specs/installer-picker-navigation/spec.md)
-
-- **[REQ-installer-picker-navigation-1]** Declarative picker flow ordering
-  - *Escenario BDD:* All agents selected, full forward pass
-  - *Escenario BDD:* Eligible-only screens are visited
-  - *Escenario BDD:* ModelPicker is independent of private cache state
-  - *Escenario BDD:* PresetCustom ordering inversion
-- **[REQ-installer-picker-navigation-2]** Symmetric reverse navigation
-  - *Escenario BDD:* SDDMode back returns to Codex when Codex is in the flow
-  - *Escenario BDD:* Codex "← Back" row is not inert
-  - *Escenario BDD:* Full round-trip symmetry for any agent subset
-- **[REQ-installer-picker-navigation-3]** Cross-cutting guards remain outside the slice
-  - *Escenario BDD:* ModelConfigMode exit-ramp returns to config menu
-  - *Escenario BDD:* OpenCodePlugins guard precedes the dependency tree without SDD
 
 ### Dominio: `integration-plugins` — Especificación de integration-plugins
 
@@ -1180,7 +1153,6 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Un cambio fusionado y sin archivar se muestra como pendiente
   - *Escenario BDD:* Sin cambios pendientes no hay aviso de pendientes
   - *Escenario BDD:* Una escritura sobre un cambio en worktree se dirige al worktree
-  - *Escenario BDD:* La TUI lista el mismo conjunto
 - **[REQ-46.6]** El Dashboard No Expone el Modo de Revisión de RDD
   - *Escenario BDD:* El endpoint de modo de revisión no existe
   - *Escenario BDD:* La interfaz no carga el selector
@@ -1539,47 +1511,24 @@ Define the managed, provider-neutral instructions that project Gentle AI's
 
 **Archivo:** [`specs/persona-behavior-contract/spec.md`](specs/persona-behavior-contract/spec.md)
 
-- **[REQ-persona-behavior-contract-1]** Neutral Mentor Behavior Parity
-  - *Escenario BDD:* Neutral receives the same mentor contract without regional voice
-  - *Escenario BDD:* Gentleman keeps regional mentor behavior when explicitly selected
-- **[REQ-persona-behavior-contract-2]** Neutral Interaction Discipline
-  - *Escenario BDD:* Neutral defaults to brief replies
-  - *Escenario BDD:* Neutral asks one question and stops
-  - *Escenario BDD:* Neutral avoids unnecessary menus
-  - *Escenario BDD:* Neutral verifies before agreeing or correcting
-- **[REQ-persona-behavior-contract-3]** Artifact Language Independence
-  - *Escenario BDD:* Neutral keeps generated artifacts in English
-  - *Escenario BDD:* Gentleman voice does not leak into artifacts
-- **[REQ-persona-behavior-contract-4]** Claude Neutral Output Style Contract
-  - *Escenario BDD:* Claude neutral output-style is not default assistant behavior
-  - *Escenario BDD:* Claude explicit Gentleman output-style remains honored
-- **[REQ-persona-behavior-contract-5]** Generic Neutral Asset Parity
-  - *Escenario BDD:* Non-agent-specific consumers receive generic neutral parity
-  - *Escenario BDD:* Agent-specific neutral assets do not weaken generic behavior
-  - *Escenario BDD:* Output-style-capable adapters are evaluated on the combined channel
-- **[REQ-persona-behavior-contract-6]** Safe Persona Fallback Semantics
-  - *Escenario BDD:* Missing persisted persona does not reactivate Gentleman
-  - *Escenario BDD:* Invalid persisted persona does not reactivate Gentleman
-  - *Escenario BDD:* Unreadable persisted persona does not reactivate Gentleman
-- **[REQ-persona-behavior-contract-7]** Explicit Persona Selection Preservation
-  - *Escenario BDD:* Explicit Gentleman selection remains honored during sync
-  - *Escenario BDD:* Explicit neutral selection remains honored during sync
-  - *Escenario BDD:* Fallback does not override an explicit selection
-- **[REQ-persona-behavior-contract-8]** Canonical Tone Channel for Output-Style-Capable Adapters
+- **[REQ-persona-behavior-contract-1]** Artifact Language Independence
+  - *Escenario BDD:* Axiom keeps generated artifacts free of conversational voice
+- **[REQ-persona-behavior-contract-2]** Safe Persona Fallback Semantics
+  - *Escenario BDD:* Missing persisted persona applies Axiom
+  - *Escenario BDD:* Retired persisted persona applies Axiom with a warning
+- **[REQ-persona-behavior-contract-3]** Canonical Tone Channel for Output-Style-Capable Adapters
   - *Escenario BDD:* Claude residual section carries no tone content
-- **[REQ-persona-behavior-contract-9]** Persona Section Parity for Non-Output-Style Adapters
+- **[REQ-persona-behavior-contract-4]** Persona Section Parity for Non-Output-Style Adapters
   - *Escenario BDD:* Non-output-style adapter keeps full persona section
-- **[REQ-persona-behavior-contract-10]** Persona Drift Reconciliation
-  - *Escenario BDD:* Gentleman and Neutral reconciliation preserve rules from both copies
-- **[REQ-persona-behavior-contract-11]** Idempotent Convergence on Re-Injection
+- **[REQ-persona-behavior-contract-5]** Idempotent Convergence on Re-Injection
   - *Escenario BDD:* Existing full section converges to residual, then stays stable
-- **[REQ-persona-behavior-contract-12]** Legacy Fingerprint Continuity
+- **[REQ-persona-behavior-contract-6]** Legacy Fingerprint Continuity
   - *Escenario BDD:* Uninstall and auto-heal fingerprints still match after slimming
-- **[REQ-persona-behavior-contract-13]** Per-Adapter Test and Golden Coverage
+- **[REQ-persona-behavior-contract-7]** Per-Adapter Test and Golden Coverage
   - *Escenario BDD:* Claude goldens capture the residual section
   - *Escenario BDD:* Non-output-style adapter goldens remain unchanged
 - **[REQ-10.1 & REQ-10.2]** Axiom Persona Definition and Default Selection
-  - *Escenario BDD:* Axiom persona is default and uses Peninsular Spanish
+  - *Escenario BDD:* Axiom is the only persona and uses Peninsular Spanish
 - **[REQ-10.3 & REQ-10.4]** SDD Language Domain Contract for Axiom Projects
   - *Escenario BDD:* SDD technical artifacts generated in Spanish in Axiom projects
 
@@ -1647,7 +1596,7 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
   - *Escenario BDD:* Catálogo del workspace canónico
   - *Escenario BDD:* Raíz de especificaciones por defecto de knowledge
   - *Escenario BDD:* Ubicación divergente en un proyecto embebido
-  - *Escenario BDD:* Dashboard y TUI leen el mismo planning home
+  - *Escenario BDD:* El dashboard lee el planning home canónico
 - **[REQ-24.11]** Regla de Ejecutores para las Rutas `openspec/...`
   - *Escenario BDD:* Regla presente en la convención compartida
   - *Escenario BDD:* Comando existente lanzado desde un repositorio de código
@@ -2892,27 +2841,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Validación exitosa de handoff
   - *Escenario BDD:* Validación fallida de handoff incompleto
 
-### Dominio: `tui-spanish-localization` — Especificación Viva: Localización Integral al Castellano y Desacoplamiento de Avisos en la TUI (Axiom)
-
-Garantiza que la interfaz gráfica interactiva de terminal (TUI Bubbletea) de Axiom opere con identidad propia, limpia de avisos o dependencias de versiones externas, y que todos sus menús, submenús, diálogos, estados y atajos de navegación se presenten estrictamente en español (castellano peninsular).
-
-**Archivo:** [`specs/tui-spanish-localization/spec.md`](specs/tui-spanish-localization/spec.md)
-
-- **[REQ-16.1]** Desacoplamiento de Comunicados y Avisos Remotos Upstream
-  - *Escenario BDD:* Inicio limpio de la TUI sin avisos ajenos
-  - *Escenario BDD:* Consulta de avisos en repo de Axiom con fail-open
-- **[REQ-16.2]** Localización al Castellano del Menú de Bienvenida
-  - *Escenario BDD:* Visualización de opciones en español
-  - *Escenario BDD:* Microtextos de navegación y encabezados
-- **[REQ-16.3]** Localización de Submenús y Pantallas de Configuración
-  - *Escenario BDD:* Pantalla de Configuración de Modelos
-  - *Escenario BDD:* Pantalla de Gestión de Respaldos
-  - *Escenario BDD:* Pantallas de Desinstalación y Herramientas Comunitarias
-- **[REQ-16.4]** Determinismo en la Máquina de Estados y Navegación
-  - *Escenario BDD:* Navegación por cursor intacta
-  - *Escenario BDD:* Validez de la suite de pruebas
-
-### Dominio: `tui-ui-parity` — Especificación Viva: Paridad Bidireccional entre TUI y Web UI
+### Dominio: `tui-ui-parity` — Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI)
 
 Permite a los usuarios operar las tareas de mantenimiento, diagnóstico y configuración del ecosistema de desarrollo de Axiom directamente desde el Dashboard Web SPA (`axiom ui`).
 
@@ -2927,18 +2856,6 @@ Permite a los usuarios operar las tareas de mantenimiento, diagnóstico y config
   - *Escenario BDD:* Listado y creación de un respaldo desde el navegador
 - **[REQ-17.4]** Inspección y Configuración de Modelos de IA en Web UI
   - *Escenario BDD:* Consulta de modelos asignados en el Dashboard
-- **[REQ-17.5]** Submenú Unificado de Proyectos y Gobernanza SDD en TUI
-  - *Escenario BDD:* Navegación al submenú de gobernanza desde la bienvenida
-- **[REQ-17.6]** Pantalla de Gestión Multi-Proyecto en TUI
-  - *Escenario BDD:* Conmutación de proyecto activo en la TUI
-- **[REQ-17.7]** Pantalla de Ciclo de Vida de Incrementos SDD en TUI
-  - *Escenario BDD:* Visualización y avance de fase de un incremento
-- **[REQ-17.8]** Pantalla de Monitor Multi-Rol y Barrera Fan-In en TUI
-  - *Escenario BDD:* Evaluación de barrera multi-rol desde la TUI
-- **[REQ-17.9]** Pantalla de Visor de Handoffs Estructurados en TUI
-  - *Escenario BDD:* Inspección de relevo formal en la TUI
-- **[REQ-17.10]** Pantalla de Catálogo de Especificaciones Vivas en TUI
-  - *Escenario BDD:* Sincronización del catálogo maestro desde la TUI
 
 ### Dominio: `upstream-absorption-protocol` — Especificación Viva: Protocolo de Absorción por Tandas desde Upstream
 
@@ -2964,17 +2881,10 @@ Método normativo de absorción de commits de upstream por tandas temáticas: de
 
 ### Dominio: `visual-decoupling` — Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom)
 
-Definir de forma exhaustiva y verificable los requerimientos y escenarios de prueba para la desvinculación estética de Gentle AI, la supresión del logo en OpenCode, la no-intrusión en temas de usuario y la estandarización de nombres en adaptadores.
+Definir de forma exhaustiva y verificable los requerimientos y escenarios de prueba para la estandarización de nombres en adaptadores. Las capacidades de supresión del logo de OpenCode y de no-intrusión en temas se retiraron en C-08-f junto con el logo y los temas.
 
 **Archivo:** [`specs/visual-decoupling/spec.md`](specs/visual-decoupling/spec.md)
 
-- **[REQ-09.1]** Supresión de gentle-logo en presets de instalación
-  - *Escenario BDD:* Instalación estándar en OpenCode sin logo heredado
-  - *Escenario BDD:* Desinstalación o saneamiento de logo existente
-- **[REQ-09.2]** No forzado de temas en settings.json
-  - *Escenario BDD:* Preservación del tema existente del usuario
-- **[REQ-09.3]** Renombrado de archivos de temas opcionales
-  - *Escenario BDD:* Generación de temas opcionales Axiom
 - **[REQ-09.4]** Rutas de instrucciones con nomenclatura Axiom
   - *Escenario BDD:* Archivo de instrucciones en VS Code Copilot
   - *Escenario BDD:* Directorio de modelos en Pi

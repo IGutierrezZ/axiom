@@ -29,7 +29,7 @@ func TestInstallAndSyncKeepMachineStateUnderAxiomStateDir(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", stateDir)
 	t.Chdir(root)
 
-	installInProject(t, root, "--component", "engram", "--persona", "neutral")
+	installInProject(t, root, "--component", "engram")
 	if _, err := RunSync([]string{"--scope", "workspace", "--agents", "claude-code"}); err != nil {
 		t.Fatalf("RunSync() error = %v", err)
 	}

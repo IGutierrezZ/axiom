@@ -8,7 +8,7 @@ Axiom is an ecosystem configurator for AI coding agents. It owns the installer, 
 
 | It is | Evidence in this repo |
 |---|---|
-| Go CLI and Bubbletea TUI | `cmd/axiom/main.go`, `internal/app/`, `internal/tui/` |
+| Go CLI and web dashboard | `cmd/axiom/main.go`, `internal/app/`, `internal/dashboard/` |
 | Agent configuration orchestrator | `internal/agents/`, `internal/components/`, `internal/planner/`, `internal/pipeline/` |
 | Asset distributor | `internal/assets/`, `internal/components/sdd/`, `internal/components/skills/` |
 | External tool integrator | `internal/components/engram/`, `internal/components/mcp/` |
@@ -28,7 +28,7 @@ Axiom is an ecosystem configurator for AI coding agents. It owns the installer, 
 cmd/axiom/main.go
   -> internal/app          command dispatch, version wiring, help
   -> internal/cli          non-interactive install/sync/uninstall/restore flows
-  -> internal/tui          interactive Bubbletea screens and async messages
+  -> internal/dashboard    local web dashboard (axiom ui)
 
 install/sync path
   -> internal/system       platform and dependency detection
@@ -46,7 +46,7 @@ install/sync path
 - **Backups before mutation**: managed installs, syncs, and uninstalls must preserve a rollback path.
 - **Adapters own paths**: per-agent config roots and strategy decisions stay in `internal/agents/<agent>/`.
 - **Components own behavior**: Engram, SDD, skills, MCP, persona, permissions, and plugins stay in `internal/components/<component>/`.
-- **Planner owns ordering**: do not hand-sort component dependencies in CLI or TUI flows.
+- **Planner owns ordering**: do not hand-sort component dependencies in CLI flows.
 - **Sync stays idempotent**: running sync twice should not rewrite already-current managed assets.
 - **External internals stay external**: do not document or change Engram cloud/dashboard/store internals as if they live here.
 

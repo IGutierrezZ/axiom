@@ -1,6 +1,3 @@
-internal/agentbuilder/engine.go	MockEngine.Agent
-internal/agentbuilder/engine.go	MockEngine.Available
-internal/agentbuilder/engine.go	MockEngine.Generate
 internal/agents/codex/runtime_version.go	SetRuntimeVersionCommandForTest
 internal/agents/codex/runtime_version.go	SetRuntimeVersionProbeForTest
 internal/agents/discovery.go	ConfigRootsForBackup
@@ -43,7 +40,6 @@ internal/cli/run.go	componentPaths
 internal/cli/run.go	componentPathsWithWorkspace
 internal/cli/run.go	ensureGoAvailableAfterInstall
 internal/cli/run.go	windowsGoCandidates
-internal/cli/sync.go	RunSyncWithSelection
 internal/cli/sync.go	newSyncRuntime
 internal/cli/sync.go	runPostSyncVerification
 internal/cli/sync.go	runSyncWithSelection
@@ -72,8 +68,6 @@ internal/components/mcp/inject.go	context7Args
 internal/components/sdd/inject.go	injectClaudeModelAssignments
 internal/components/sdd/inject.go	resolveClaudeModelAlias
 internal/components/sdd/read_assignments.go	ReadCurrentProfiles
-internal/components/theme/inject.go	Inject
-internal/components/theme/inject.go	InjectVisualThemes
 internal/dashboard/server.go	Server.Port
 internal/dashboard/server.go	Server.Router
 internal/handoff/mirror.go	ToEngramPayload
@@ -108,19 +102,6 @@ internal/system/install_deps.go	installCommandsCurl
 internal/system/install_deps.go	installCommandsGit
 internal/system/install_deps.go	installCommandsGo
 internal/system/install_deps.go	installCommandsNode
-internal/tui/model.go	setOSExecutableForTest
-internal/tui/model.go	setOSGetwdForTest
-internal/tui/model.go	setOSRemoveForTest
-internal/tui/router.go	NextScreen
-internal/tui/screens/claude_model_picker.go	NewClaudeModelPickerStateFromAssignments
-internal/tui/screens/codex_model_picker.go	CodexPresetDescription
-internal/tui/screens/codex_model_picker.go	HandleCodexCustomNav
-internal/tui/screens/model_picker.go	ModelPickerRows
-internal/tui/screens/model_picker.go	SeparatorRowIdx
-internal/tui/screens/upgrade.go	RenderUpgrade
-internal/tui/screens/upgrade_sync.go	RenderUpgradeSync
-internal/tui/screens/welcome.go	RenderWelcome
-internal/tui/screens/welcome.go	RenderWelcomeWithWidth
 internal/update/homebrew.go	homebrewPackageInstalledWith
 internal/update/homebrew.go	pathWithinPrefix
 internal/update/render.go	HasCheckFailures

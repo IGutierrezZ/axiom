@@ -1,6 +1,6 @@
 // Package skillcheck es la única fuente de reglas para validar skills
 // (`SKILL.md`). La usan el test de assets embebidos, las puertas de entrada
-// (`axiom skill approve`, el minero, agentbuilder) y las comprobaciones bajo
+// (`axiom skill approve` y el minero) y las comprobaciones bajo
 // demanda (`axiom doctor`, `axiom skill check`).
 //
 // El paquete no depende de la CLI ni escribe nada: informa de hallazgos con
@@ -116,17 +116,6 @@ func filter(fs []Finding, s Severity) []Finding {
 		}
 	}
 	return out
-}
-
-// FormatErrors resume los errores en una línea por hallazgo (`regla: mensaje`).
-func FormatErrors(fs []Finding) string {
-	var lines []string
-	for _, f := range fs {
-		if f.Severity == SeverityError {
-			lines = append(lines, f.Rule+": "+f.Message)
-		}
-	}
-	return strings.Join(lines, "\n")
 }
 
 // IsReservedName replica las exclusiones silenciosas del registro de skills.

@@ -217,15 +217,13 @@ func removeManagedSections(content string) (rest string, sections int, problem s
 }
 
 // isKnownPersonaText reports whether text is, ignoring whitespace, one of the
-// persona assets the installer embeds for the agent. Text that merely contains
+// Axiom persona assets the installer embeds for the agent. Text that merely contains
 // persona wording is not enough: a user could have added their own rules to it.
 func isKnownPersonaText(adapter agents.Adapter, text string) bool {
-	for _, persona := range []model.PersonaID{model.PersonaAxiom, model.PersonaNeutral, model.PersonaGentleman} {
-		for _, residual := range []bool{false, true} {
-			known := normalizeWhitespace(personaContent(adapter.Agent(), persona, residual))
-			if known != "" && known == normalizeWhitespace(text) {
-				return true
-			}
+	for _, residual := range []bool{false, true} {
+		known := normalizeWhitespace(personaContent(adapter.Agent(), residual))
+		if known != "" && known == normalizeWhitespace(text) {
+			return true
 		}
 	}
 	return false

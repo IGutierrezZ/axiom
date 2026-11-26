@@ -26,7 +26,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
@@ -212,10 +211,6 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 		add(adapter.MCPConfigPath(homeDir, "engram"), adapter.MCPConfigPath(homeDir, "context7"))
 	}
 
-	if adapter.SupportsOutputStyles() {
-		add(filepath.Join(adapter.OutputStyleDir(homeDir), "gentleman.md"))
-	}
-
 	if adapter.SupportsSlashCommands() {
 		add(sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(homeDir))...)
 	}
@@ -233,29 +228,14 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 	switch adapter.Agent() {
 	case model.AgentClaudeCode:
 		add(claude.UserConfigPath(homeDir))
-		add(theme.VisualThemePaths(homeDir, adapter)...)
-		claudeThemesDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "themes")
-		add(
-			filepath.Join(claudeThemesDir, "gentleman.json"),
-			filepath.Join(claudeThemesDir, "gentleman-cute.json"),
-		)
 	case model.AgentOpenCode:
-		add(theme.VisualThemePaths(homeDir, adapter)...)
-		opencodeThemesDir := filepath.Join(filepath.Dir(adapter.SettingsPath(homeDir)), "themes")
-		add(
-			filepath.Join(opencodeThemesDir, "gentleman.json"),
-			filepath.Join(opencodeThemesDir, "gentleman-cute.json"),
-		)
 		// The SDD plugin writer resolves the config directory through the
 		// adapter and owns the plugin list; the snapshot must match it (#3219).
 		pluginsDir := filepath.Join(adapter.GlobalConfigDir(homeDir), "plugins")
 		for _, name := range append([]string{"background-agents.ts"}, sdd.ManagedOpenCodePluginNamesFor(adapter.Agent())...) {
 			add(filepath.Join(pluginsDir, name))
 		}
-		add(
-			filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-			filepath.Join(homeDir, ".config", "opencode", "tui.json"),
-		)
+		add(filepath.Join(homeDir, ".config", "opencode", "tui.json"))
 		for _, phase := range sdd.SharedPromptPhases() {
 			add(filepath.Join(sdd.SharedPromptDir(homeDir), phase+".md"))
 		}

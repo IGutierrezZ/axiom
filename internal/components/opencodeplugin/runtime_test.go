@@ -21,7 +21,7 @@ func TestV2TUIPreservesPlacement(t *testing.T) {
 	opencode.VersionRunnerOverride = func(context.Context, opencode.Command) (opencode.CommandOutput, error) {
 		return opencode.CommandOutput{Stdout: []byte("2.0.4")}, nil
 	}
-	for _, id := range []model.OpenCodeCommunityPluginID{model.OpenCodePluginGentleLogo, model.OpenCodePluginSubAgentStatusline, model.OpenCodePluginSDDEngramManage} {
+	for _, id := range []model.OpenCodeCommunityPluginID{model.OpenCodePluginSubAgentStatusline, model.OpenCodePluginSDDEngramManage} {
 		t.Run(string(id), func(t *testing.T) {
 			home := t.TempDir()
 			if _, err := Install(home, id); err == nil {
@@ -31,25 +31,5 @@ func TestV2TUIPreservesPlacement(t *testing.T) {
 				t.Fatal("TUI refusal wrote files")
 			}
 		})
-	}
-}
-
-func TestLogoUnknownRuntimeStillRefuses(t *testing.T) {
-	old := opencode.VersionRunnerOverride
-	t.Cleanup(func() { opencode.VersionRunnerOverride = old })
-	opencode.VersionRunnerOverride = func(context.Context, opencode.Command) (opencode.CommandOutput, error) {
-		return opencode.CommandOutput{Stdout: []byte("unknown")}, nil
-	}
-	home := t.TempDir()
-	_, err := Install(home, model.OpenCodePluginGentleLogo)
-	if err == nil {
-		t.Fatal("unknown runtime accepted")
-	}
-	if _, ok := err.(interface{ SkipReason() string }); ok {
-		t.Fatal("unknown runtime silently skipped")
-	}
-	entries, _ := os.ReadDir(home)
-	if len(entries) != 0 {
-		t.Fatal("unknown runtime wrote files")
 	}
 }

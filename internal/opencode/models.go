@@ -6,16 +6,6 @@ import (
 	"sort"
 )
 
-// DefaultSettingsPath returns the default path to the OpenCode settings file.
-func DefaultSettingsPath() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return DefaultSettingsPathForHome(home)
-
-}
-
 // DefaultSettingsPathForHome returns the XDG-compatible default OpenCode settings path.
 func DefaultSettingsPathForHome(homeDir string) string {
 	if homeDir == "" {
