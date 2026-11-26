@@ -127,7 +127,7 @@ func checkAddedWithoutID(feature string, items []classified, pattern reqid.Patte
 				Code:    "added_without_id",
 				Line:    item.cap.Line + r.Line,
 				Subject: r.Name,
-				Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(%s)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (%s)`, o un provisional `(prov:<serie>:<ordinal>)` cuyo número asigna la integración%s", r.Name, item.cap.Name, pattern.Compact(), r.Name, pattern.Compact(), patternHint(pattern)),
+				Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(%s)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (%s)`, o un provisional `(%s)` cuyo número asigna la integración%s", r.Name, item.cap.Name, pattern.Compact(), r.Name, pattern.Compact(), reqid.ProvisionalText("<serie>", "<ordinal>"), patternHint(pattern)),
 			}}}
 		}
 	}

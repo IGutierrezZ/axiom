@@ -238,28 +238,28 @@ Depende de: U2. Paquetes: `internal/sddstatus`, contrato compartido.
 
 Depende de: U5, U6, U7. Paquetes: skills, `agentguidance`, `workspace`, docs.
 
-- [ ] 8.1 RED: pins nuevos de REQ-47.10 en `internal/assets/sdd_iso_pins_test.go` y `internal/assets/assets_test.go`: `sdd-spec` describe el provisional (ADDED, `Cubre:`, forma con ángulos para textos validados); `sdd-iso-convention` cubre provisional en ADDED, `Cubre:` y matriz y nombra el verbo; `sdd-archive` invoca una sola vez `axiom sdd archive-integrate ... --json` tras `archive-check`, manda `--check` tras cada rebase de la rama de archivo y no conserva el bucle `archive-compose` por dominio ni el bloque `cp` de capacidad nueva.
+- [x] 8.1 RED: pins nuevos de REQ-47.10 en `internal/assets/sdd_iso_pins_test.go` y `internal/assets/assets_test.go`: `sdd-spec` describe el provisional (ADDED, `Cubre:`, forma con ángulos para textos validados); `sdd-iso-convention` cubre provisional en ADDED, `Cubre:` y matriz y nombra el verbo; `sdd-archive` invoca una sola vez `axiom sdd archive-integrate ... --json` tras `archive-check`, manda `--check` tras cada rebase de la rama de archivo y no conserva el bucle `archive-compose` por dominio ni el bloque `cp` de capacidad nueva.
   Cubre: REQ-47.10, REQ-47.8
   Verificación: `go test ./internal/assets -run 'SDDArchive|SDDSpec|ISO'`
-- [ ] 8.2 GREEN: modificar `internal/assets/skills/sdd-archive/SKILL.md` (paso único Go entre `archive-check` y `archive sync`, y con contexto mantenido entre `archive context prepare` y las ediciones; tabla de `assignments` en `archive-report.md`; instantánea y `mv` del paso 3 después), `internal/assets/skills/sdd-spec/SKILL.md` (provisional en la sección ADDED y línea ISO), `internal/assets/skills/sdd-spec/references/openspec-adoption.md` (paso 7, conservando la cadena fijada de `assets_test.go:3686`) y `internal/assets/skills/_shared/sdd-iso-convention.md`. Verificar sin cambiar `internal/assets/skills/sdd-archive/references/technical-context-integration.md` (su pin «Run the default Step 2 blocks…» sigue cierto).
+- [x] 8.2 GREEN: modificar `internal/assets/skills/sdd-archive/SKILL.md` (paso único Go entre `archive-check` y `archive sync`, y con contexto mantenido entre `archive context prepare` y las ediciones; tabla de `assignments` en `archive-report.md`; instantánea y `mv` del paso 3 después), `internal/assets/skills/sdd-spec/SKILL.md` (provisional en la sección ADDED y línea ISO), `internal/assets/skills/sdd-spec/references/openspec-adoption.md` (paso 7, conservando la cadena fijada de `assets_test.go:3686`) y `internal/assets/skills/_shared/sdd-iso-convention.md`. Verificar sin cambiar `internal/assets/skills/sdd-archive/references/technical-context-integration.md` (su pin «Run the default Step 2 blocks…» sigue cierto).
   Cubre: REQ-47.10, REQ-47.8, REQ-21.17
   Verificación: `go test ./internal/assets -run 'SDDArchive|SDDSpec|ISO'`
-- [ ] 8.3 Actualizar al flujo nuevo los pins existentes `TestSDDArchiveFollowsTheArchiveBranchFlow`, `TestSDDArchiveStoreSpecificFilesystemContract`, `TestSDDArchiveTechnicalContextBranch` y `TestSDDArchiveRequiresArchiveCheck` en `internal/assets/assets_test.go`.
+- [x] 8.3 Actualizar al flujo nuevo los pins existentes `TestSDDArchiveFollowsTheArchiveBranchFlow`, `TestSDDArchiveStoreSpecificFilesystemContract`, `TestSDDArchiveTechnicalContextBranch` y `TestSDDArchiveRequiresArchiveCheck` en `internal/assets/assets_test.go`.
   Cubre: REQ-47.10, REQ-21.17
   Verificación: `go test ./internal/assets -run 'TestSDDArchive'`
-- [ ] 8.4 RED: en `internal/components/agentguidance/routing_test.go`, el paso 7 (regla 3 de REQ-24.58) dice que el ADDED lleva un provisional y que `axiom archive integrate --odd <feature>` asigna el número y reescribe el documento, en un solo párrafo, y el comando aparece una sola vez (`:805`).
+- [x] 8.4 RED: en `internal/components/agentguidance/routing_test.go`, el paso 7 (regla 3 de REQ-24.58) dice que el ADDED lleva un provisional y que `axiom archive integrate --odd <feature>` asigna el número y reescribe el documento, en un solo párrafo, y el comando aparece una sola vez (`:805`).
   Cubre: REQ-24.58
   Verificación: `go test ./internal/components/agentguidance -run 'Routing'`
-- [ ] 8.5 GREEN: modificar `internal/components/agentguidance/routing.go` (paso 7, `:77`) con ese texto.
+- [x] 8.5 GREEN: modificar `internal/components/agentguidance/routing.go` (paso 7, `:77`) con ese texto.
   Cubre: REQ-24.58
   Verificación: `go test ./internal/components/agentguidance -run 'Routing'`
-- [ ] 8.6 Manual: modificar `docs/manual-de-inicio.md` en `:657` y `:662` (la integración ODD ya no «no modifica el documento ODD»: ADDED con provisional, reescritura del documento, `--check`) y en `:431` (verbo de archivado); conservar las cadenas fijadas por `internal/workspace/docs_pin_test.go` y añadir los pins nuevos que hagan falta.
+- [x] 8.6 Manual: modificar `docs/manual-de-inicio.md` en `:657` y `:662` (la integración ODD ya no «no modifica el documento ODD»: ADDED con provisional, reescritura del documento, `--check`) y en `:431` (verbo de archivado); conservar las cadenas fijadas por `internal/workspace/docs_pin_test.go` y añadir los pins nuevos que hagan falta.
   Cubre: REQ-47.10, REQ-30.2
   Verificación: `go test ./internal/workspace -run 'DocsPin'`
-- [ ] 8.7 Goldens: comprobar con los tests de goldens ya existentes que ninguno de los 63 contiene `Spec viva` ni `archive integrate --odd`; regenerar solo si una prueba de goldens falla. Anotar el resultado en el commit.
+- [x] 8.7 Goldens: comprobar con los tests de goldens ya existentes que ninguno de los 63 contiene `Spec viva` ni `archive integrate --odd`; regenerar solo si una prueba de goldens falla. Anotar el resultado en el commit.
   Cubre: REQ-47.10
   Verificación: `go test ./internal/components/agentguidance -run 'Golden'`
-- [ ] 8.8 Cierre de U8: `go vet` de los paquetes tocados y commit `docs(sdd): guías del provisional, paso de archivado Go y paso 7 ODD con pins`.
+- [x] 8.8 Cierre de U8: `go vet` de los paquetes tocados y commit `docs(sdd): guías del provisional, paso de archivado Go y paso 7 ODD con pins`.
   Cubre: REQ-47.10, REQ-24.58, REQ-47.8
   Verificación: `go test ./internal/assets -run 'SDDArchive|SDDSpec|ISO|StatusContract'` y `go test ./internal/components/agentguidance -run 'Routing'` y `go test ./internal/workspace -run 'DocsPin'`
 
@@ -267,13 +267,13 @@ Depende de: U5, U6, U7. Paquetes: skills, `agentguidance`, `workspace`, docs.
 
 Depende de: U1 a U8. Sin commit propio salvo corrección de lo que falle.
 
-- [ ] 9.1 Ejecutar, paquete a paquete y sin la batería completa: `go test ./internal/reqid/... ./internal/openspecdoc/... ./internal/isoevidence/... ./internal/livespec/... ./internal/kickoff/...` y `go vet` de los mismos; anotar cada resultado observado en `verify-report.md`.
+- [x] 9.1 Ejecutar, paquete a paquete y sin la batería completa: `go test ./internal/reqid/... ./internal/openspecdoc/... ./internal/isoevidence/... ./internal/livespec/... ./internal/kickoff/...` y `go vet` de los mismos; anotar cada resultado observado en `verify-report.md`.
   Cubre: REQ-47.1, REQ-47.2, REQ-47.3, REQ-47.4, REQ-47.5, REQ-47.6
   Verificación: `go test ./internal/reqid/... ./internal/openspecdoc/... ./internal/isoevidence/... ./internal/livespec/... ./internal/kickoff/...`
-- [ ] 9.2 Ejecutar los paquetes grandes solo con `-run`: `go test ./internal/cli -run 'ArchiveIntegrate|SDDArchive|SDDTrace'`, `go test ./internal/sddstatus -run 'Requirements|Gate|ISO'`, `go test ./internal/assets -run 'SDDArchive|SDDSpec|ISO|StatusContract'`, `go test ./internal/components/agentguidance -run 'Routing'`, `go test ./internal/workspace -run 'DocsPin'` y `go test ./cmd/axiom -run 'Help'`.
+- [x] 9.2 Ejecutar los paquetes grandes solo con `-run`: `go test ./internal/cli -run 'ArchiveIntegrate|SDDArchive|SDDTrace'`, `go test ./internal/sddstatus -run 'Requirements|Gate|ISO'`, `go test ./internal/assets -run 'SDDArchive|SDDSpec|ISO|StatusContract'`, `go test ./internal/components/agentguidance -run 'Routing'`, `go test ./internal/workspace -run 'DocsPin'` y `go test ./cmd/axiom -run 'Help'`.
   Cubre: REQ-47.7, REQ-47.8, REQ-47.9, REQ-47.10, REQ-21.17, REQ-30.2, REQ-30.3, REQ-30.4, REQ-30.22, REQ-29.3, REQ-29.4, REQ-24.58
   Verificación: los comandos citados en esta misma tarea
-- [ ] 9.3 Nota para el archive (no es edición de esta fase): corregir a mano el `## Purpose` obsoleto de `openspec/specs/requirement-identifiers/spec.md`, que dice que la capacidad no asigna provisionales; REQ-44.3 no se modifica. La suite completa (`go test ./...`) la pasa la CI, no se ejecuta en local.
+- [x] 9.3 Nota para el archive (no es edición de esta fase): corregir a mano el `## Purpose` obsoleto de `openspec/specs/requirement-identifiers/spec.md`, que dice que la capacidad no asigna provisionales; REQ-44.3 no se modifica. La suite completa (`go test ./...`) la pasa la CI, no se ejecuta en local.
   Cubre: REQ-47.1, REQ-47.2
   Verificación: lectura del `## Purpose` tras el archive; la CI ejecuta la batería entera
 

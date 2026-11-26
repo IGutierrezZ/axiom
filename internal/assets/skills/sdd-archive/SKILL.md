@@ -75,7 +75,7 @@ Before any spec sync or archive move, require structured status. Use refreshed n
 
 For a change with a sealed `kickoff.yaml`, archive additionally requires the "integration" block-review gate approved: evidence that the change actually merged or deployed toward a preproduction or production environment, never a substitute for or a shortcut past a favorable local `verify-report.md` (REQ-21.16). Native status reports this as `dependencies.archive`; when blocked, it names the missing gate and the exact command that satisfies it. Record that evidence with `axiom sdd gate record --cwd <repo> --change <name> --gate integration --decision approved --evidence-kind pr_merged|deployment|attestation [--commit <sha>] [--base-ref <ref>] [--evidence "<text>"]` before retrying archive: `pr_merged` is verified against the local commit graph, while `deployment` and `attestation` are honestly recorded as declared, not checked. Archiving with this precondition unmet is refused explicitly, and the change stays out of `openspec/changes/archive/` (REQ-21.17 introduces no new archive mechanism — only this precondition ahead of the existing one).
 
-**Archive check (mandatory, before composing or moving).** Run `axiom sdd archive-check --cwd <workspaceRoot> --change <name>` before `axiom archive context prepare`, before any `axiom sdd archive-compose` and before any move. On a non-zero exit, STOP and return `blocked`, quoting its typed reasons: compose nothing and move nothing. It exits `0` for a change that is not ISO and for an ISO change without findings, and it writes nothing. With `--json`, `domains[]` reports `alreadyComposed` per domain: when an earlier archive stopped after composing some domains, compose only the domains with `alreadyComposed: false` and then finish the move, because composing a domain again fails. The rules are in `../_shared/sdd-iso-convention.md`.
+**Archive check (mandatory, before composing or moving).** Run `axiom sdd archive-check --cwd <workspaceRoot> --change <name>` before `axiom archive context prepare`, before `axiom sdd archive-integrate` and before any move. On a non-zero exit, STOP and return `blocked`, quoting its typed reasons: integrate nothing and move nothing. It exits `0` for a change that is not ISO and for an ISO change without findings, and it writes nothing. With `--json`, `domains[]` reports `alreadyComposed` per domain, `assignments` the provisional identifiers already assigned by an interrupted archive and `pendingProvisionals` those still to assign; when an earlier archive stopped after integrating, run `axiom sdd archive-integrate` again and then finish the move, because the verb skips what is already integrated. The rules are in `../_shared/sdd-iso-convention.md`.
 
 Archive records actual progress and findings; ordinary repository policy decides delivery.
 
@@ -94,7 +94,7 @@ In a `monorepo-embedded` workspace the archive is a documentation-only change: i
 
 1. Once the pull request of the change is merged, run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --archive --json` and use the absolute path of its JSON as `--cwd`, as the repository of every `git -C` command, and as the root of every command below (`cd "<path>" && ...`, section G). If it refuses with `change_not_integrated`, the local integration reference does not hold the merged change yet: suggest `--fetch` only with the explicit authorization of the user, and never pass it on your own.
 2. On the archive branch, record the evidence of the merged pull request with `axiom sdd gate record --cwd <path> --change <c> --gate integration --decision approved --evidence-kind pr_merged` (add `--commit <sha>` with the merge commit when you have it). That evidence is the precondition of REQ-21.16.
-3. When the status projects `technicalContext.maintained`, run `axiom archive context prepare`; compose the delta specs (Step 2, with `axiom sdd archive-compose` when a main spec exists), make the context edits the plan names, and run `axiom archive context verify`; then do the move to `openspec/changes/archive/` of Step 3, in that order.
+3. Run the archive check, then, when the status projects `technicalContext.maintained`, run `axiom archive context prepare`; integrate the delta specs (Step 2, with `axiom sdd archive-integrate`), make the context edits the plan names, and run `axiom archive context verify`; then do the move to `openspec/changes/archive/` of Step 3, in that order. After every rebase of the archive branch, repeat the integration with `--check` as Step 2 describes.
 4. Commit the result on the archive branch. The person publishes it and opens a separate documentation pull request toward the integration branch (`git.integration_branch`); you never push and never open it.
 5. After that pull request is merged, the person removes the archive worktree and branch with `axiom branch done --cwd "<workspaceRoot>" --change <c>`; in promotion mode `branch`, `done` keeps the change branch (`merge_not_confirmed`) until it is merged into `git.main_branch` and removes only the archive branch.
 6. If the documentation pull request is rejected, discard the archive branch (with the user's confirmation, `axiom branch done --cwd "<workspaceRoot>" --change <c> --force`; the result reports the tip so the branch can be recovered): the change stays pending archive, and `axiom branch status` lists it again with the command that restarts this flow.
@@ -103,7 +103,7 @@ In a `multirepo` there is no archive branch: the archive runs in place in the sp
 
 ## Mechanical Copy Contract (MANDATORY)
 
-Archival is a mechanical filesystem operation. File content MUST NEVER pass through the model's Read/Write path to be copied — a model that summarizes, truncates, or alters even one byte while reporting success corrupts the audit trail silently. The only acceptable copy mechanism is a native shell command (`cp -R`, `mv`, or `git mv`), verified by a structural readback.
+Archival is a mechanical filesystem operation. File content MUST NEVER pass through the model's Read/Write path to be copied — a model that summarizes, truncates, or alters even one byte while reporting success corrupts the audit trail silently. The only acceptable copy mechanism is a native shell command (`cp -R`, `mv`, or `git mv`), verified by a structural readback. The living specs under `openspec/specs/` are the one exception: only `axiom sdd archive-integrate` writes them (Step 2), atomically and with its own `written[]` list as evidence, never the model.
 
 - Copy artifacts with the shell only: `cp -R`, `mv`, or `git mv`. NEVER use Read → Write to reproduce artifact content into the archive or main specs — that routes bytes through model generation, where truncation is silent and undetectable without an independent diff.
 - After every copy or move, run `diff -r` (source vs. destination) as a MANDATORY readback. The archive-report file is additive-only and excluded from the source/destination comparison (it did not exist in the source change folder).
@@ -140,105 +140,64 @@ STOP and report `blocked` when the status marks the archive as blocked (`depende
 
 **IF mode is `none`:** Skip — no artifacts to sync.
 
-**IF mode is `openspec` or `hybrid`:** For each delta spec in `openspec/changes/{change-name}/specs/`:
+**IF mode is `openspec` or `hybrid`:** integrate every delta spec of `openspec/changes/{change-name}/specs/` into `openspec/specs/` with the one native invocation below.
 
-#### If Main Spec Exists (`openspec/specs/{domain}/spec.md`)
+#### Integrate the Change Specs (one native invocation)
 
-**Mandatory Native Composition (#4119):** never Read the main spec and apply
-ADDED/MODIFIED/REMOVED/RENAMED sections yourself. A model-driven Read/Edit
-merge is exactly how archive previously dropped unrelated requirements or
-left a delta unapplied while still reporting success. Composition MUST run
-through the native `sdd-archive-compose` command, which matches requirements
-by identifier when the delta name carries a valid one for the project
-(`sdd.id_pattern` of `axiom.yaml`; a MODIFIED, REMOVED or RENAMED old name
-whose title changed but keeps its identifier still finds its requirement) and
-by name otherwise (e.g., "### Requirement: Session Expiration"), preserves every
-unrelated requirement byte-for-byte, and applies RENAMED before MODIFIED
-before REMOVED before ADDED so a rename is visible to a same-change MODIFIED:
+**Mandatory Native Integration (#4119):** never Read a main spec and apply
+ADDED/MODIFIED/REMOVED/RENAMED sections yourself, never copy a delta by hand and never
+compose capability by capability. A model-driven Read/Edit merge is exactly how archive
+previously dropped unrelated requirements or left a delta unapplied while still reporting
+success. The native verb integrates the whole change at once: it validates everything before
+writing, assigns the definitive number of every provisional identifier, composes each
+capability with the native engine (by identifier when the delta name carries a valid one for
+the project, `sdd.id_pattern` of `axiom.yaml`, and by exact title otherwise; every unrelated
+requirement stays byte-for-byte), copies a capability that has no main spec yet, rewrites the
+provisional identifiers in the deltas, the `Cubre:` lines of the tasks files and the
+`Requisito` column of the verification matrix, writes the trace `ids.yaml`, and writes all of
+it as one atomic set:
 
 ```bash
-axiom sdd archive-compose \
-  --canonical "openspec/specs/{domain}/spec.md" \
-  --delta "openspec/changes/{change-name}/specs/{domain}/spec.md" \
-  --output "openspec/specs/{domain}/spec.md.compose-tmp" \
-&& mv "openspec/specs/{domain}/spec.md.compose-tmp" "openspec/specs/{domain}/spec.md"
+axiom sdd archive-integrate --cwd "<workspaceRoot>" --change "{change-name}" --json
 ```
 
-- A nonzero exit means the command refused: it wrote nothing, and its stderr
-  names the exact section (ADDED/MODIFIED/REMOVED/RENAMED) and requirement it
-  could not apply (unknown requirement name, missing `(Reason: ...)` note,
-  duplicate ADDED name, or a malformed RENAMED heading). Treat this as a
-  blocking failure — STOP the phase and report `blocked` with that exact
-  message. Do NOT retry with a manual Read/Edit merge, and do NOT move the
-  change into the archive.
-- The `.compose-tmp` intermediate file plus `mv` keeps the write atomic: the
-  main spec is only ever replaced by a composition the command already
-  proved is complete, never by a partial write from a failed run.
-- Only a zero exit is composition evidence. Include the command invocation
-  in the phase result.
+- Run it once, from the archive branch, after `axiom sdd archive-check` and, with a
+  maintained technical context, between `axiom archive context prepare` and the context
+  edits. It replaces the former per-domain `archive-compose` loop and the full-spec copy
+  block: do not run either.
+- A nonzero exit means the verb refused: it wrote nothing and its JSON `error` names the
+  `code`, the capability, section, requirement or token involved, and the `continuation`.
+  Treat this as a blocking failure: STOP the phase and report `blocked` with that exact
+  message. Do NOT retry with a manual Read/Edit merge or with `archive-compose`, and do NOT
+  move the change into the archive.
+- Only a zero exit is integration evidence. Include the invocation and its JSON in the phase
+  result. `capabilities[].outcome` says what happened per capability (`created`, `composed`,
+  `resumed`, `already_integrated`); an earlier interrupted archive is resumed by running the
+  same command again, never by hand.
+- `assignments[]` lists each provisional with its definitive number and its state
+  (`assigned`, `kept`, `reassigned`); record it in the archive report. `duplicates[]` with
+  `blocking: false` are historical duplicates outside the change and are only reported.
+- `--check` runs the whole validation and writes nothing, so it is safe at any time. Run
+  `axiom sdd archive-integrate --cwd "<path>" --change "{change-name}" --check --json` after
+  every rebase of the archive branch: on an archived change it answers `duplicate_assigned_id`
+  when the base took a number that the trace assigned. In that case do not edit anything:
+  with the user's confirmation discard the archive branch (`axiom branch done --force`, see
+  Archive Branch Flow) and archive again from the integration branch, where the change folder
+  still holds the provisionals.
 
 ##### Poda Progresiva y Deprecación (ODD-4.1)
 
-Cuando un incremento reemplaza o vuelve obsoletos requisitos de la especificación viva canonical, se debe usar la bandera `--supersede` en `axiom sdd archive-compose` en lugar de purgarlos en silencio. Esto preserva el requisito marcándolo con `[SUPERSEDED / DEPRECADO]` y su `(Reason: ...)`, evitando la doble fuente de la verdad sin romper la auditoría histórica:
+Cuando un incremento reemplaza o vuelve obsoletos requisitos de la especificación viva canonical, se debe usar la bandera `--supersede` del verbo en lugar de purgarlos en silencio. Esto preserva el requisito marcándolo con `[SUPERSEDED / DEPRECADO]` y su `(Reason: ...)`, evitando la doble fuente de la verdad sin romper la auditoría histórica; vale para los REMOVED de todas las capacidades del cambio:
 
 ```bash
-axiom sdd archive-compose \
-  --canonical "openspec/specs/{domain}/spec.md" \
-  --delta "openspec/changes/{change-name}/specs/{domain}/spec.md" \
-  --supersede \
-  --output "openspec/specs/{domain}/spec.md.compose-tmp" \
-&& mv "openspec/specs/{domain}/spec.md.compose-tmp" "openspec/specs/{domain}/spec.md"
+axiom sdd archive-integrate --cwd "<workspaceRoot>" --change "{change-name}" --supersede --json
 ```
 
-Si además existen requisitos de especificaciones monolíticas previas que quedan superados fuera de la sección `REMOVED`, especifícalos con `--superseded-requirements "Nombre Req 1, Nombre Req 2"`.
-
-#### If Main Spec Does NOT Exist
-
-The delta spec IS a full spec (not a delta). Copy it mechanically with the shell — do NOT Read the file and Write its content back, which routes bytes through the model and can truncate silently:
-
-```bash
-# Mechanical copy (MANDATORY): never Read → Write artifact content
-target_dir="openspec/specs/{domain}"
-target_path="$target_dir/spec.md"
-mkdir -p "$target_dir"
-
-temp_path=
-cleanup_temp() {
-  if [ -n "$temp_path" ]; then
-    rm -f "$temp_path" || :
-  fi
-}
-trap cleanup_temp EXIT
-temp_path="$(mktemp "$target_dir/.spec.md.XXXXXX")"
-
-if cp "openspec/changes/{change-name}/specs/{domain}/spec.md" "$temp_path"; then
-  :
-else
-  copy_status=$?
-  exit "$copy_status"
-fi
-
-if diff -r "openspec/changes/{change-name}/specs/{domain}/spec.md" "$temp_path"; then
-  diff_status=0
-else
-  diff_status=$?
-fi
-if [ "$diff_status" -ne 0 ]; then
-  exit "$diff_status"
-fi
-
-if mv "$temp_path" "$target_path"; then
-  temp_path=
-else
-  move_status=$?
-  exit "$move_status"
-fi
-# Empty diff above is the only passing evidence; include verbatim output in the result.
-```
+Si además existen requisitos de especificaciones monolíticas previas que quedan superados fuera de la sección `REMOVED`, especifícalos con `--superseded-requirements "Nombre Req 1 (REQ-x.y), <capacidad>/Nombre Req 2 (REQ-x.z)"`. Cada nombre casa por su nombre completo, incluido el identificador entre paréntesis, y admite el prefijo `<capacidad>/`; sin prefijo debe casar en una sola capacidad (`superseded_requirement_ambiguous` pide el prefijo y `superseded_requirement_unknown` rechaza un nombre inexistente).
 
 #### Refresh the Master Catalog
 
-After every delta spec is in place (composed or copied above) and before Step 3, regenerate `openspec/INDEX.md` with the native producer (REQ-21.17 (4)). Run it once for the whole change:
+After every delta spec is in place (integrated above) and before Step 3, regenerate `openspec/INDEX.md` with the native producer (REQ-21.17 (4)). Run it once for the whole change:
 
 ```bash
 axiom archive sync --path "<workspaceRoot>"
@@ -348,7 +307,7 @@ Never automatically delete, overwrite, or merge the outer archive directory. If 
 
 ### Step 4: Verify Archive
 
-**IF mode is `openspec` or `hybrid`:** The Mechanical Copy Contract above is the verification: the verbatim `diff -r` output from Steps 2 and 3 MUST appear in the phase result, and an empty diff is the only passing evidence. In addition, confirm:
+**IF mode is `openspec` or `hybrid`:** The Mechanical Copy Contract above is the verification: the verbatim `diff -r` output from Step 3 MUST appear in the phase result, and an empty diff is the only passing evidence; for Step 2 the evidence is the zero exit and the JSON of `axiom sdd archive-integrate`. In addition, confirm:
 - [ ] Main specs updated correctly
 - [ ] Change folder moved to archive
 - [ ] Archive preserves all artifacts that existed; missing artifacts are reported
@@ -387,6 +346,12 @@ En proyectos gobernados por Axiom, el informe `archive-report.md` (o en Engram) 
 |---------|------------------|--------|-------------------------------|------------------|
 | {dominio} | {Requisito previo} | [SUPERSEDED] | {Explicación del reemplazo o deprecación} | `{dominio}/spec.md#{requisito}` |
 *(Si no se superó ningún requisito previo, indicar explícitamente: "Ninguno. Incremento puramente aditivo.")*
+
+## Identificadores Asignados
+| Capacidad | Requisito | Provisional | Definitivo | Estado |
+|-----------|-----------|-------------|------------|--------|
+| {capacidad} | {nombre del requisito} | {provisional} | {definitivo} | {assigned / kept / reassigned} |
+*(Se copia de `assignments[]` del JSON de `axiom sdd archive-integrate`. Si el cambio no usó identificadores provisionales, indicar explícitamente: "Ninguno. Sin identificadores provisionales.")*
 
 ## Artefactos Consolidados
 - `proposal.md`

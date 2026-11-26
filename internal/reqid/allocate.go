@@ -51,41 +51,6 @@ func (p Pattern) buildSeries(vals []string) Series {
 	return Series{prefix: text[:numAt], suffix: text[numAt:], key: strings.Join(key, "-")}
 }
 
-// SeriesOf reconstruye una serie a partir de su clave (`Series.Key()`: `30`, `USU`,
-// `USU-3`, o vacía en una serie única). Falso si la clave no casa con los marcadores del
-// patrón.
-func (p Pattern) SeriesOf(key string) (Series, bool) {
-	var kinds []segKind
-	for _, s := range p.get().segs {
-		if s.kind == segDomain || s.kind == segSeries {
-			kinds = append(kinds, s.kind)
-		}
-	}
-	var vals []string
-	if key != "" {
-		vals = strings.Split(key, "-")
-	}
-	if len(vals) != len(kinds) {
-		return Series{}, false
-	}
-	for i, k := range kinds {
-		switch k {
-		case segDomain:
-			if !componentDomain.MatchString(vals[i]) {
-				return Series{}, false
-			}
-		default:
-			if !componentSeries.MatchString(vals[i]) {
-				return Series{}, false
-			}
-			if _, err := strconv.Atoi(vals[i]); err != nil {
-				return Series{}, false
-			}
-		}
-	}
-	return p.buildSeries(vals), true
-}
-
 // Allocator asigna el siguiente número libre de una serie y la siguiente serie libre de
 // una etiqueta de serie nueva. Solo cuenta lo que se le dice que está ocupado y lo que él
 // mismo asigna; no lee ficheros.

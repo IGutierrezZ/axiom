@@ -20,6 +20,14 @@ const (
 // forma en código de producción (arch_test.go).
 const provisionalPrefix = "prov:"
 
+// ProvisionalText escribe un provisional con la clave y el ordinal dados, tal como se
+// teclean. Los mensajes, la ayuda y las continuaciones de los demás paquetes lo usan para
+// citar la forma (con marcadores como `<serie>`) sin repetir el literal fuera de este
+// paquete; no valida nada.
+func ProvisionalText(key, ordinal string) string {
+	return provisionalPrefix + key + ":" + ordinal
+}
+
 var (
 	// provisionalLax es la forma laxa de un token provisional.
 	provisionalLax = regexp.MustCompile(`prov:[A-Za-z0-9-]*:[0-9]+`)

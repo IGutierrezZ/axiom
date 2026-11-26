@@ -200,7 +200,7 @@ func renderSDDArchiveIntegrateHelp(stdout io.Writer) error {
 	lines := []string{
 		"Uso: axiom sdd archive-integrate --cwd <dir> --change <cambio> [--supersede] [--superseded-requirements \"<a>, <cap>/<b>\"] [--check] [--json]",
 		"  Paso nativo del archivado SDD que cubre el cambio entero, antes de la instantánea y del movimiento de la carpeta.",
-		"  Planifica en un plan único la asignación de los identificadores provisionales (`prov:<serie>:<ordinal>`) de todas las capacidades,",
+		"  Planifica en un plan único la asignación de los identificadores provisionales (`" + reqid.ProvisionalText("<serie>", "<ordinal>") + "`) de todas las capacidades,",
 		"  compone cada una sobre la spec viva (una capacidad nueva se copia con sus definitivos; una parcialmente integrada se reanuda con lo pendiente),",
 		"  reescribe las deltas, las líneas `Cubre:` de tasks*.md y la columna `Requisito` de la matriz de verify-report*.md, y escribe la traza ids.yaml.",
 		"  Todo o nada: valida y compone todo en memoria antes de escribir. Es idempotente: repetirla no cambia nada. Un cambio sin provisionales produce lo mismo que `archive-compose` por dominio.",
@@ -209,7 +209,7 @@ func renderSDDArchiveIntegrateHelp(stdout io.Writer) error {
 		"  --cwd <dir>                       Directorio desde el que resolver el workspaceRoot.",
 		"  --change <cambio>                 Cambio activo (obligatorio).",
 		"  --supersede                       Marca los REMOVED de todas las capacidades como [SUPERSEDED / DEPRECADO].",
-		"  --superseded-requirements <lista> Requisitos adicionales a superar, separados por comas; el título exacto de una sola capacidad o con el prefijo `<capacidad>/`.",
+		"  --superseded-requirements <lista> Requisitos adicionales a superar, separados por comas; el nombre completo, incluido el identificador entre paréntesis, de una sola capacidad o con el prefijo `<capacidad>/`.",
 		"  --check                           Solo lectura: las mismas comprobaciones y el mismo informe sin escribir (omite solo la guarda de rama). Sobre un cambio archivado comprueba que cada definitivo de su traza aparece una sola vez en su capacidad.",
 		"  --json                            Emite el informe " + livespec.ChangeReportSchema + " (capabilities, requirements, assignments, duplicates, written, nothingToIntegrate y error).",
 	}

@@ -794,7 +794,9 @@ func TestRenderRoutingClosesODDWithTheLivingSpecIntegration(t *testing.T) {
 				"`Motivo: <one line>`",
 				"ignored",
 				"`## Informe de bug`",
+				"every new requirement in an ADDED section carries a provisional identifier instead of a number picked by hand",
 				"`axiom archive integrate --odd <feature>`",
+				"it assigns the number of each provisional identifier and rewrites it in the ODD document",
 				"work-unit commit that closes the feature",
 				"`openspec/specs/`",
 			} {

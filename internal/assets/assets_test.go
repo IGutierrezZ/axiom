@@ -2494,21 +2494,10 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 
 	skill := mustReadResolved("skills/sdd-archive/SKILL.md")
 	for _, required := range []string{
-		"target_dir=\"openspec/specs/{domain}\"",
-		"target_path=\"$target_dir/spec.md\"",
-		"mkdir -p \"$target_dir\"",
-		"temp_path=\"$(mktemp \"$target_dir/.spec.md.XXXXXX\")\"",
-		"cleanup_temp()",
-		"rm -f \"$temp_path\" || :",
-		"trap cleanup_temp EXIT",
-		"if cp \"openspec/changes/{change-name}/specs/{domain}/spec.md\" \"$temp_path\"; then",
-		"copy_status=$?",
-		"if diff -r \"openspec/changes/{change-name}/specs/{domain}/spec.md\" \"$temp_path\"; then",
 		"diff_status=0",
 		"diff_status=$?",
 		"if [ \"$diff_status\" -ne 0 ]; then",
 		"exit \"$diff_status\"",
-		"if mv \"$temp_path\" \"$target_path\"; then",
 		"move_status=$?",
 		"exit \"$move_status\"",
 		"snapshot_root=\"$(mktemp -d \"${TMPDIR:-/tmp}/sdd-archive.XXXXXX\")\"",
@@ -2525,7 +2514,8 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 		"if [ -e \"$source\" ] || [ -L \"$source\" ]; then",
 		"if diff -r \"$snapshot_root/source\" \"$destination\"; then",
 		"only empty diff output passes",
-		"verbatim `diff -r` output from Steps 2 and 3 MUST appear in the phase result",
+		"verbatim `diff -r` output from Step 3 MUST appear in the phase result",
+		"for Step 2 the evidence is the zero exit and the JSON of `axiom sdd archive-integrate`",
 		"A failed or skipped `diff -r` FAILS the phase",
 		"The `snapshot_root` is removed safely by the EXIT trap",
 		"source %s and destination %s remain unchanged",
@@ -2552,25 +2542,11 @@ func TestSDDArchiveStoreSpecificFilesystemContract(t *testing.T) {
 		}
 	}
 
-	copyStart := strings.Index(skill, "#### If Main Spec Does NOT Exist")
-	if copyStart < 0 {
-		t.Fatal("full-spec copy block boundaries are missing")
+	// C-03-b (REQ-47.10): el bloque de copia `cp` de una capacidad nueva desaparece; la copia
+	// la hace el verbo nativo (`created`) y el paso 2 se cierra con el catálogo maestro.
+	if strings.Contains(skill, "mkdir -p \"$target_dir\"") || strings.Contains(skill, "#### If Main Spec Does NOT Exist") {
+		t.Fatal("the full-spec shell copy block must be replaced by the native integration verb")
 	}
-	copyEnd := strings.Index(skill[copyStart:], "### Step 3: Move to Archive")
-	if copyEnd < 0 {
-		t.Fatal("full-spec copy block end is missing")
-	}
-	copyBlock := skill[copyStart : copyStart+copyEnd]
-	assertOrdered("full-spec copy", copyBlock,
-		"temp_path=\"$(mktemp \"$target_dir/.spec.md.XXXXXX\")\"",
-		"if cp \"openspec/changes/{change-name}/specs/{domain}/spec.md\" \"$temp_path\"; then",
-		"else\n  copy_status=$?\n  exit \"$copy_status\"",
-		"if diff -r \"openspec/changes/{change-name}/specs/{domain}/spec.md\" \"$temp_path\"; then",
-		"else\n  diff_status=$?",
-		"if [ \"$diff_status\" -ne 0 ]; then\n  exit \"$diff_status\"",
-		"if mv \"$temp_path\" \"$target_path\"; then",
-		"else\n  move_status=$?\n  exit \"$move_status\"",
-	)
 
 	moveStart := strings.Index(skill, "### Step 3: Move to Archive")
 	if moveStart < 0 {
@@ -2670,12 +2646,13 @@ func TestSDDArchiveTechnicalContextBranch(t *testing.T) {
 	if engram := index("**IF mode is `engram`:** Skip filesystem sync"); branch >= engram {
 		t.Error("the technical context branch must precede the engram line of Step 2")
 	}
-	if exists := index("#### If Main Spec Exists"); branch >= exists {
-		t.Error("the technical context branch must precede the default composition blocks")
+	integrate := index("#### Integrate the Change Specs (one native invocation)")
+	if branch >= integrate {
+		t.Error("the technical context branch must precede the default integration block")
 	}
 	catalog := index("#### Refresh the Master Catalog")
-	if copyBlock := index("#### If Main Spec Does NOT Exist"); catalog <= copyBlock {
-		t.Error("the master catalog refresh must follow the full-spec copy block")
+	if catalog <= integrate {
+		t.Error("the master catalog refresh must follow the integration block")
 	}
 	if move := index("### Step 3: Move to Archive"); catalog >= move {
 		t.Error("the master catalog refresh must precede Step 3")
@@ -3531,9 +3508,10 @@ func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
 		"suggest `--fetch` only with the explicit authorization of the user",
 		"`axiom sdd gate record --cwd <path> --change <c> --gate integration --decision approved --evidence-kind pr_merged`",
 		"`axiom archive context prepare`",
-		"`axiom sdd archive-compose`",
+		"`axiom sdd archive-integrate`",
 		"`openspec/changes/archive/`",
 		"`axiom archive context verify`",
+		"repeat the integration with `--check`",
 		"a separate documentation pull request toward the integration branch (`git.integration_branch`)",
 		"`axiom branch done --cwd \"<workspaceRoot>\" --change <c>`",
 		"If the documentation pull request is rejected",
@@ -3552,7 +3530,7 @@ func TestSDDArchiveFollowsTheArchiveBranchFlow(t *testing.T) {
 	for _, step := range []string{
 		"--evidence-kind pr_merged`",
 		"`axiom archive context prepare`",
-		"`axiom sdd archive-compose`",
+		"`axiom sdd archive-integrate`",
 		"`axiom archive context verify`",
 		"`openspec/changes/archive/`",
 	} {

@@ -237,7 +237,7 @@ func PlanIDs(in IDPlanInput) (IDPlan, error) {
 				}
 				if title, ok := reqid.ProvisionalInTitle(r.Name); !ok || title != spans[0].Token {
 					return IDPlan{}, fail(CodeProvisionalMalformed, fmt.Sprintf("el provisional %s no está entre paréntesis al final del título", spans[0].Token),
-						"escríbelo como `### Requirement: Título (prov:<serie>:<ordinal>)`")
+						"escríbelo como `### Requirement: Título ("+reqid.ProvisionalText("<serie>", "<ordinal>")+")`")
 				}
 				if other, dup := seen[spans[0].Token]; dup {
 					return IDPlan{}, fail(CodeProvisionalDuplicate, fmt.Sprintf("el provisional %s ya lo declara un ADDED de la capacidad %s", spans[0].Token, other),
@@ -318,12 +318,12 @@ func checkToken(p reqid.Pattern, token, capability, file string, line int) error
 	if err == nil {
 		return nil
 	}
-	code, reason, continuation := reqid.CodeProvisionalMalformed, err.Error(), "escribe el provisional como `prov:<clave>:<ordinal>` con los componentes que pide el patrón del proyecto"
+	code, reason, continuation := reqid.CodeProvisionalMalformed, err.Error(), "escribe el provisional como `"+reqid.ProvisionalText("<clave>", "<ordinal>")+"` con los componentes que pide el patrón del proyecto"
 	var perr *reqid.ProvisionalError
 	if errors.As(err, &perr) {
 		code, reason = perr.Code, perr.Error()
 		if perr.Code == reqid.CodeProvisionalNewSeriesUnsupported {
-			continuation = "fija el dominio en el provisional (por ejemplo `prov:USU:1`): un dominio nuevo se escribe literal"
+			continuation = "fija el dominio en el provisional (por ejemplo `" + reqid.ProvisionalText("USU", "1") + "`): un dominio nuevo se escribe literal"
 		}
 	}
 	return &IDPlanError{Code: code, Capability: capability, Token: token, File: file, Line: line, Reason: reason, Continuation: continuation}
