@@ -3,6 +3,7 @@ package gitcli
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -114,4 +115,51 @@ func TestDirtyPathsUnder(t *testing.T) {
 			}
 		}
 	})
+}
+
+// MergeResolvedPaths devuelve solo lo que resolvió la fusión: nada en una fusión limpia y la ruta
+// del conflicto resuelto a mano en la otra; rechaza un SHA que parece una opción.
+func TestMergeResolvedPaths(t *testing.T) {
+	ctx := context.Background()
+	repo := newRepository(t)
+	git := New()
+	writeFile(t, filepath.Join(repo, "main.go"), "package main\n")
+	runGit(t, repo, "add", "-A")
+	runGit(t, repo, "commit", "-q", "-m", "base")
+	runGit(t, repo, "switch", "-q", "-c", "rama")
+	writeFile(t, filepath.Join(repo, "main.go"), "package main // rama\n")
+	writeFile(t, filepath.Join(repo, "otro.go"), "package main\n")
+	runGit(t, repo, "add", "-A")
+	runGit(t, repo, "commit", "-q", "-m", "rama")
+	runGit(t, repo, "switch", "-q", "main")
+	writeFile(t, filepath.Join(repo, "limpio.md"), "x\n")
+	runGit(t, repo, "add", "-A")
+	runGit(t, repo, "commit", "-q", "-m", "main sin choque")
+
+	runGit(t, repo, "switch", "-q", "-c", "limpia", "rama")
+	runGit(t, repo, "merge", "-q", "--no-ff", "-m", "fusión limpia", "main")
+	clean := runGit(t, repo, "rev-parse", "HEAD")
+	if paths, err := git.MergeResolvedPaths(ctx, repo, clean); err != nil || len(paths) != 0 {
+		t.Errorf("MergeResolvedPaths de una fusión limpia = %v, %v; se esperaba ninguna ruta", paths, err)
+	}
+
+	runGit(t, repo, "switch", "-q", "main")
+	writeFile(t, filepath.Join(repo, "main.go"), "package main // main\n")
+	runGit(t, repo, "add", "-A")
+	runGit(t, repo, "commit", "-q", "-m", "main con choque")
+	runGit(t, repo, "switch", "-q", "rama")
+	if output, err := exec.Command("git", "-C", repo, "merge", "-q", "--no-ff", "-m", "fusión con conflicto", "main").CombinedOutput(); err == nil {
+		t.Fatalf("se esperaba un conflicto en la fusión:\n%s", output)
+	}
+	writeFile(t, filepath.Join(repo, "main.go"), "package main // resuelto\n")
+	runGit(t, repo, "add", "main.go")
+	runGit(t, repo, "commit", "-q", "--no-edit")
+	resolved := runGit(t, repo, "rev-parse", "HEAD")
+	if paths, err := git.MergeResolvedPaths(ctx, repo, resolved); err != nil || !slices.Equal(paths, []string{"main.go"}) {
+		t.Errorf("MergeResolvedPaths de la fusión resuelta = %v, %v; se esperaba [main.go]", paths, err)
+	}
+
+	if _, err := git.MergeResolvedPaths(ctx, repo, "--cc"); err == nil {
+		t.Error("MergeResolvedPaths aceptó un SHA que parece una opción")
+	}
 }
