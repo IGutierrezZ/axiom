@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 11:06:21 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2381
+> **Última Sincronización:** 2026-11-26 11:27:55 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2382
 
 ---
 
@@ -42,7 +42,7 @@
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
-| `requirement-trace` | Especificación de requirement-trace | 17 | 50 | [Ver Spec](specs/requirement-trace/spec.md) |
+| `requirement-trace` | Especificación de requirement-trace | 17 | 51 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 30 | 144 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
@@ -1949,6 +1949,7 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* La coincidencia en archivados se acota por capacidad
   - *Escenario BDD:* Consultar por el ID nuevo trae los incrementos del ID antiguo
   - *Escenario BDD:* Un requisito sin ID antiguo se encuentra por su título en su capacidad
+  - *Escenario BDD:* Una cita heredada sin contexto de capacidad no cuenta y avisa
 - **[RF-TRC-05]** Incrementos SDD Archivados como Fuente
   - *Escenario BDD:* Roles por sección de la delta
   - *Escenario BDD:* Cubre con tareas
