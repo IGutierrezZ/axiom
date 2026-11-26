@@ -58,7 +58,7 @@ func (s *Server) matchExtras(req *Request) Handler {
 	if b, ok := s.blobs[req.Path]; ok {
 		return func(*Request) Response { return b.response() }
 	}
-	return nil
+	return s.extraGet(req)
 }
 
 func statesResponse(typ string, seed stateSeed) Response {

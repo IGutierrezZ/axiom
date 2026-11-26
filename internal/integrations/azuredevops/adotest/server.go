@@ -71,6 +71,8 @@ type Server struct {
 	items    *workItemStore
 	states   map[string]stateSeed
 	blobs    map[string]Blob
+	fields   map[string][]string // campos del proceso por tipo (en minúsculas), para SeedTypeFields
+	members  []Member            // miembros del equipo, para SeedMembers
 }
 
 // NewServer arranca el servidor y lo cierra con Cleanup. El tiempo virtual de las peticiones sale de

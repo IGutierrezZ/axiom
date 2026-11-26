@@ -163,8 +163,7 @@ func newPatchBody(rev int, ops []PatchOp) ([]byte, error) {
 // optimista: el cuerpo empieza siempre por test /rev con la revisión leída. Un rechazo de esa prueba
 // (412, o 400/409 con el error de test) es *RevConflictError: el cliente no lo reintenta, no relee
 // para reaplicar y el work item no se modifica. Un PATCH aplicado cuya respuesta se pierde y se
-// reintenta falla por /rev y se informa como conflicto con AfterRetry: nunca se aplica dos veces. El
-// manifiesto no declara capacidad de escritura: ningún evento invoca esta operación todavía.
+// reintenta falla por /rev y se informa como conflicto con AfterRetry: nunca se aplica dos veces.
 func (c *Client) UpdateWorkItem(ctx context.Context, id, rev int, ops []PatchOp) (WorkItem, error) {
 	if id <= 0 {
 		return WorkItem{}, invalidWorkItemID(id)
@@ -190,4 +189,153 @@ func (c *Client) UpdateWorkItem(ctx context.Context, id, rev int, ops []PatchOp)
 		return WorkItem{}, err
 	}
 	return item, nil
+}
+
+// Campos de un work item que escribe el adaptador del ciclo de vida.
+const (
+	fieldOriginalEstimate = "Microsoft.VSTS.Scheduling.OriginalEstimate"
+	fieldRemainingWork    = "Microsoft.VSTS.Scheduling.RemainingWork"
+	fieldCompletedWork    = "Microsoft.VSTS.Scheduling.CompletedWork"
+	fieldAreaPath         = "System.AreaPath"
+	fieldIterationPath    = "System.IterationPath"
+	fieldAssignedTo       = "System.AssignedTo"
+)
+
+// CreateWorkItem crea un work item del tipo itemType con POST .../_apis/wit/workitems/${tipo}. Las
+// operaciones son las de un JSON Patch de altas (campos y relaciones): no llevan test /rev, porque el
+// elemento aún no existe. La petición no se reintenta: un POST aplicado cuya respuesta se pierde
+// duplicaría el work item, así que un fallo de red se devuelve como *TransportError y quien llama
+// decide con una búsqueda posterior.
+func (c *Client) CreateWorkItem(ctx context.Context, itemType string, ops []PatchOp) (WorkItem, error) {
+	if strings.TrimSpace(itemType) == "" {
+		return WorkItem{}, fmt.Errorf("%w: falta el tipo del work item", ErrBadRequest)
+	}
+	if len(ops) == 0 {
+		return WorkItem{}, fmt.Errorf("%w: la creación no trae operaciones", ErrBadRequest)
+	}
+	body, err := json.Marshal(ops)
+	if err != nil {
+		return WorkItem{}, fmt.Errorf("serializar la creación del work item: %w", err)
+	}
+	var item WorkItem
+	err = c.do(ctx, request{
+		method:      "POST",
+		contentType: "application/json-patch+json",
+		segments:    []string{c.target.Project, "_apis", "wit", "workitems", "$" + itemType},
+		body:        body,
+		scope:       scopeWorkWrite,
+		operation:   fmt.Sprintf("crear un work item de tipo %s", itemType),
+		retryable:   false,
+	}, &item)
+	if err != nil {
+		return WorkItem{}, err
+	}
+	return item, nil
+}
+
+// wiqlResponse es la respuesta de una consulta WIQL plana.
+type wiqlResponse struct {
+	WorkItems []struct {
+		ID int `json:"id"`
+	} `json:"workItems"`
+}
+
+// QueryWIQL ejecuta una consulta WIQL en el proyecto con POST .../_apis/wit/wiql y devuelve los
+// identificadores en el orden de la respuesta. Es una lectura: se reintenta ante 429, 503 y fallos de
+// red.
+func (c *Client) QueryWIQL(ctx context.Context, query string) ([]int, error) {
+	body, err := json.Marshal(map[string]string{"query": query})
+	if err != nil {
+		return nil, fmt.Errorf("serializar la consulta WIQL: %w", err)
+	}
+	var resp wiqlResponse
+	if err := c.do(ctx, request{
+		method:      "POST",
+		contentType: "application/json",
+		segments:    []string{c.target.Project, "_apis", "wit", "wiql"},
+		body:        body,
+		scope:       scopeWorkWrite,
+		operation:   "consultar work items con WIQL",
+		retryable:   true,
+	}, &resp); err != nil {
+		return nil, err
+	}
+	ids := make([]int, 0, len(resp.WorkItems))
+	for _, w := range resp.WorkItems {
+		ids = append(ids, w.ID)
+	}
+	return ids, nil
+}
+
+// TypeState es un estado de un tipo de work item con su categoría (Proposed, InProgress, Resolved,
+// Completed o Removed).
+type TypeState struct{ Name, Category string }
+
+func typeKey(project, itemType string) string { return strings.ToLower(project + "\x00" + itemType) }
+
+// TypeStates devuelve los estados del tipo itemType con GET .../workitemtypes/{tipo}/states. El
+// resultado se guarda por proceso y organización: solo se cachean los éxitos.
+func (c *Client) TypeStates(ctx context.Context, itemType string) ([]TypeState, error) {
+	key := typeKey(c.target.Project, itemType)
+	c.state.mu.Lock()
+	cached, ok := c.state.typeStates[key]
+	c.state.mu.Unlock()
+	if ok {
+		return append([]TypeState(nil), cached...), nil
+	}
+	var resp processStatesResponse
+	if err := c.do(ctx, request{
+		method:    "GET",
+		segments:  []string{c.target.Project, "_apis", "wit", "workitemtypes", itemType, "states"},
+		scope:     scopeWorkWrite,
+		operation: fmt.Sprintf("leer los estados del tipo %s", itemType),
+		retryable: true,
+	}, &resp); err != nil {
+		return nil, err
+	}
+	states := make([]TypeState, 0, len(resp.Value))
+	for _, s := range resp.Value {
+		states = append(states, TypeState{Name: s.Name, Category: s.Category})
+	}
+	c.state.mu.Lock()
+	if c.state.typeStates == nil {
+		c.state.typeStates = map[string][]TypeState{}
+	}
+	c.state.typeStates[key] = states
+	c.state.mu.Unlock()
+	return append([]TypeState(nil), states...), nil
+}
+
+// TypeFields devuelve los nombres de referencia de los campos que el proceso define para itemType (en
+// minúsculas) con GET .../workitemtypes/{tipo}/fields. Se guarda por proceso: solo se cachean los
+// éxitos.
+func (c *Client) TypeFields(ctx context.Context, itemType string) (map[string]bool, error) {
+	key := typeKey(c.target.Project, itemType)
+	c.state.mu.Lock()
+	cached, ok := c.state.typeFields[key]
+	c.state.mu.Unlock()
+	if ok {
+		return cached, nil
+	}
+	var resp processFieldsResponse
+	if err := c.do(ctx, request{
+		method:    "GET",
+		segments:  []string{c.target.Project, "_apis", "wit", "workitemtypes", itemType, "fields"},
+		scope:     scopeWorkWrite,
+		operation: fmt.Sprintf("leer los campos del tipo %s", itemType),
+		retryable: true,
+	}, &resp); err != nil {
+		return nil, err
+	}
+	fields := make(map[string]bool, len(resp.Value))
+	for _, f := range resp.Value {
+		fields[strings.ToLower(f.ReferenceName)] = true
+	}
+	c.state.mu.Lock()
+	if c.state.typeFields == nil {
+		c.state.typeFields = map[string]map[string]bool{}
+	}
+	c.state.typeFields[key] = fields
+	c.state.mu.Unlock()
+	return fields, nil
 }

@@ -29,17 +29,37 @@ type workItemStore struct {
 	loseNext     bool
 	scramble     bool
 	afterRead    map[int][]map[string]any // ediciones ajenas que se aplican tras cada lectura
+
+	base            string // URL base del servidor, para las URL de las relaciones
+	loseCreate      bool   // el siguiente POST $Task se aplica pero la conexión se corta
+	rejectRelations bool   // un POST $Task con relaciones responde 400 sin crear
+	wiqlStatus      int    // si no es 0, la consulta WIQL responde siempre con este estado
+	created         int    // POST $Task que crearon un work item
 }
 
 var (
-	itemPath  = regexp.MustCompile(`/_apis/wit/workitems/(\d+)$`)
-	batchPath = regexp.MustCompile(`/_apis/wit/workitemsbatch$`)
+	itemPath   = regexp.MustCompile(`/_apis/wit/workitems/(\d+)$`)
+	batchPath  = regexp.MustCompile(`/_apis/wit/workitemsbatch$`)
+	createPath = regexp.MustCompile(`/_apis/wit/workitems/\$([^/]+)$`)
+	wiqlPath   = regexp.MustCompile(`/_apis/wit/wiql$`)
 )
+
+// writableFields son los campos que un PATCH puede escribir aunque el work item sembrado no los
+// traiga: el proceso los define para todo tipo con horas, estado, asignación y descripción.
+var writableFields = map[string]bool{
+	"System.Tags":        true,
+	"System.State":       true,
+	"System.AssignedTo":  true,
+	"System.Description": true,
+	"Microsoft.VSTS.Scheduling.OriginalEstimate": true,
+	"Microsoft.VSTS.Scheduling.RemainingWork":    true,
+	"Microsoft.VSTS.Scheduling.CompletedWork":    true,
+}
 
 // store devuelve el almacén de work items, creándolo la primera vez. Se llama con s.mu tomado.
 func (s *Server) store() *workItemStore {
 	if s.items == nil {
-		s.items = &workItemStore{items: map[int]*WorkItem{}, applied: map[int]int{}, rejectStatus: http.StatusPreconditionFailed}
+		s.items = &workItemStore{items: map[int]*WorkItem{}, applied: map[int]int{}, rejectStatus: http.StatusPreconditionFailed, base: s.URL()}
 	}
 	return s.items
 }
@@ -137,6 +157,11 @@ func (st *workItemStore) match(_ *Server, req *Request) Handler {
 		return st.patch
 	case req.Method == http.MethodPost && batchPath.MatchString(req.Path):
 		return st.batch
+	case req.Method == http.MethodPost && createPath.MatchString(req.Path):
+		typ := createPath.FindStringSubmatch(req.Path)[1]
+		return func(r *Request) Response { return st.create(typ, r) }
+	case req.Method == http.MethodPost && wiqlPath.MatchString(req.Path):
+		return st.wiql
 	}
 	return nil
 }
@@ -253,6 +278,7 @@ func (st *workItemStore) patch(req *Request) Response {
 		updated[k] = v
 	}
 	relations := append([]map[string]any(nil), it.Relations...)
+	var pendingLinks []map[string]any
 	for _, op := range ops {
 		switch {
 		case op.Op == "test" && op.Path == "/rev":
@@ -263,7 +289,7 @@ func (st *workItemStore) patch(req *Request) Response {
 		case (op.Op == "add" || op.Op == "replace") && strings.HasPrefix(op.Path, "/fields/"):
 			name := strings.TrimPrefix(op.Path, "/fields/")
 			// System.Tags existe en todo work item aunque la prueba no lo siembre.
-			if _, known := it.Fields[name]; !known && name != "System.Tags" {
+			if _, known := it.Fields[name]; !known && !writableFields[name] {
 				return Response{Status: http.StatusBadRequest, JSON: map[string]any{
 					"message": "TF51535: Cannot find field " + name + ".",
 					"typeKey": "RuleValidationException",
@@ -278,6 +304,7 @@ func (st *workItemStore) patch(req *Request) Response {
 				return Response{Status: http.StatusBadRequest, JSON: map[string]any{"message": "adotest: relación inválida en add /relations/-"}}
 			}
 			relations = append(relations, rel)
+			pendingLinks = append(pendingLinks, rel)
 		default:
 			return Response{Status: http.StatusBadRequest, JSON: map[string]any{"message": "adotest: operación no soportada " + op.Op + " " + op.Path}}
 		}
@@ -286,6 +313,9 @@ func (st *workItemStore) patch(req *Request) Response {
 	it.Relations = relations
 	it.Rev++
 	st.applied[id]++
+	for _, rel := range pendingLinks {
+		st.linkParent(req.Path, id, rel)
+	}
 	if st.loseNext {
 		st.loseNext = false
 		return Response{Drop: true}

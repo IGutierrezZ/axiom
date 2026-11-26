@@ -23,7 +23,10 @@ type Plugin struct {
 	sessions map[string]*orgState // clave: organización en minúsculas
 }
 
-var _ integrations.Plugin = (*Plugin)(nil)
+var (
+	_ integrations.Plugin      = (*Plugin)(nil)
+	_ integrations.TaskTracker = (*Plugin)(nil)
+)
 
 // New construye el plugin.
 func New(opts Options) *Plugin {

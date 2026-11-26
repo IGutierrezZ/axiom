@@ -234,10 +234,13 @@ func (e *StateUnknownError) Error() string {
 func (e *StateUnknownError) Is(target error) bool { return target == ErrStateUnknown }
 
 // RevConflictError indica que la Task cambió desde la lectura previa; Rev y Hours son los valores
-// releídos. errors.Is(err, ErrRevConflict).
+// releídos. AfterRetry es true cuando la petición se reenvió tras un fallo de red y la relectura no
+// verificó que se hubiera aplicado: el resultado es incierto, no un conflicto firme del primer intento.
+// errors.Is(err, ErrRevConflict).
 type RevConflictError struct {
-	Rev   int
-	Hours TaskHours
+	Rev        int
+	Hours      TaskHours
+	AfterRetry bool
 }
 
 func (e *RevConflictError) Error() string {
