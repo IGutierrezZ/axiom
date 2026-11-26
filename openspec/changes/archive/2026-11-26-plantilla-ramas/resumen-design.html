@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:ca98fddc44887be3a5895836f0a2efa1c79a973848497629d928722d6544be54">
+<title>Resumen del diseño: plantillas de nombre de rama (C-07-f)</title>
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0 auto; max-width: 920px; padding: 24px; color: #1f2933; line-height: 1.55; }
+  h1 { font-size: 1.6em; margin-bottom: 0.2em; }
+  h2 { font-size: 1.25em; margin-top: 1.8em; border-bottom: 2px solid #d9e2ec; padding-bottom: 4px; }
+  .aviso { background: #fff8e1; border-left: 4px solid #f0b429; padding: 10px 14px; margin: 16px 0; }
+  .bloque { border: 1px solid #d9e2ec; border-radius: 6px; padding: 12px 16px; margin: 12px 0; background: #fbfcfe; }
+  .ref { display: inline-block; font-family: ui-monospace, Consolas, monospace; font-size: 0.8em; background: #e3ecf7; color: #243b53; border-radius: 4px; padding: 1px 6px; margin-bottom: 6px; }
+  code { font-family: ui-monospace, Consolas, monospace; background: #f0f4f8; padding: 0 3px; border-radius: 3px; }
+  dt { font-weight: 600; margin-top: 8px; }
+  dd { margin-left: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Resumen del diseño: nombres de rama configurables</h1>
+<p>Cambio <code>plantilla-ramas</code> (C-07-f). Lectura para personas no técnicas.</p>
+
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<h2>Qué cambia</h2>
+
+<div class="bloque" data-axiom-ref="prov:BRA:1">
+  <span class="ref">prov:BRA:1</span>
+  <p>Hasta ahora Axiom ponía siempre el mismo tipo de nombre a las ramas, como <code>inc/mi-cambio</code>. Con este cambio, cada proyecto puede escribir una <strong>plantilla</strong> con huecos que Axiom rellena solo. Por ejemplo, <code>feature/TASK-{task_ref}</code> se convierte en <code>feature/TASK-1235</code>, el número de la tarea del gestor de trabajo.</p>
+  <p>Si nadie escribe una plantilla, todo sigue exactamente igual que antes.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-03">
+  <span class="ref">D-03</span>
+  <p>Toda plantilla debe incluir al menos un hueco que distinga un cambio de otro (el nombre del cambio, su versión corta o el número del trabajo o de la tarea). Así dos cambios distintos nunca acaban con la misma rama. La versión corta del nombre quita el código del trabajo del principio, por ejemplo <code>us-2525-login</code> queda en <code>login</code>, y nunca se queda vacía.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-04">
+  <span class="ref">D-04</span>
+  <p>La plantilla se puede declarar en tres niveles: para todo el proyecto, para un repositorio concreto o para un rol (por ejemplo, el equipo de back o el de front). Si hay varias, manda la más concreta: primero la del rol, después la del repositorio y por último la del proyecto.</p>
+</div>
+
+<h2>Para quién</h2>
+
+<div class="bloque" data-axiom-ref="prov:BRA:5">
+  <span class="ref">prov:BRA:5</span>
+  <p>Sirve a los equipos que ya tienen su propia forma de llamar a las ramas, ligada a su gestor de tareas. Como el número de la tarea de cada rol no existe hasta que se reparte el trabajo, la rama que lo necesita <strong>espera</strong> a que ese rol empiece. Mientras tanto, Axiom la muestra como «pendiente» y dice qué orden la crea.</p>
+</div>
+
+<h2>Flujo antes y después</h2>
+
+<div class="bloque" data-axiom-ref="D-07">
+  <span class="ref">D-07</span>
+  <p><strong>Antes:</strong> al preparar el cambio se creaban de golpe todas las ramas, con nombres fijos.</p>
+  <p><strong>Después:</strong> las ramas que no dependen de la tarea de un rol se crean en el mismo momento que antes. Las que dependen de ella se crean cuando ese rol entra a trabajar, y nunca antes. Si alguien da un nombre propio a la rama, ese nombre manda y la rama se crea en ese momento.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-08">
+  <span class="ref">D-08</span>
+  <svg viewBox="0 0 860 250" width="100%" role="img" aria-label="Flujo: preparar el cambio, sellar, rama pendiente, entrar el rol">
+    <rect x="10" y="30" width="190" height="70" rx="8" fill="#e3ecf7" stroke="#486581"/>
+    <text x="105" y="58" text-anchor="middle" font-size="14" fill="#102a43">Preparar el cambio</text>
+    <text x="105" y="80" text-anchor="middle" font-size="12" fill="#334e68">rama principal con nombre</text>
+    <rect x="240" y="30" width="190" height="70" rx="8" fill="#e3ecf7" stroke="#486581"/>
+    <text x="335" y="58" text-anchor="middle" font-size="14" fill="#102a43">Sellar el cambio</text>
+    <text x="335" y="80" text-anchor="middle" font-size="12" fill="#334e68">se guarda la plantilla</text>
+    <rect x="470" y="30" width="170" height="70" rx="8" fill="#fff8e1" stroke="#f0b429"/>
+    <text x="555" y="58" text-anchor="middle" font-size="14" fill="#102a43">Rama pendiente</text>
+    <text x="555" y="80" text-anchor="middle" font-size="12" fill="#334e68">espera al rol</text>
+    <rect x="680" y="30" width="170" height="70" rx="8" fill="#e6f6ec" stroke="#2f8132"/>
+    <text x="765" y="58" text-anchor="middle" font-size="14" fill="#102a43">Entra el rol</text>
+    <text x="765" y="80" text-anchor="middle" font-size="12" fill="#334e68">nace la rama</text>
+    <line x1="200" y1="65" x2="236" y2="65" stroke="#486581" stroke-width="2"/>
+    <polygon points="236,60 246,65 236,70" fill="#486581"/>
+    <line x1="430" y1="65" x2="466" y2="65" stroke="#486581" stroke-width="2"/>
+    <polygon points="466,60 476,65 466,70" fill="#486581"/>
+    <line x1="640" y1="65" x2="676" y2="65" stroke="#486581" stroke-width="2"/>
+    <polygon points="676,60 686,65 676,70" fill="#486581"/>
+    <rect x="470" y="150" width="380" height="70" rx="8" fill="#f0f4f8" stroke="#829ab1"/>
+    <text x="660" y="178" text-anchor="middle" font-size="13" fill="#102a43">Registro local: el nombre queda fijado</text>
+    <text x="660" y="200" text-anchor="middle" font-size="12" fill="#334e68">y no cambia aunque luego cambie la plantilla</text>
+    <line x1="765" y1="100" x2="765" y2="146" stroke="#829ab1" stroke-width="2" stroke-dasharray="5,4"/>
+  </svg>
+</div>
+
+<div class="bloque" data-axiom-ref="D-13">
+  <span class="ref">D-13</span>
+  <p>Los datos que rellenan la plantilla salen siempre de lo que ya está guardado: el número del trabajo enlazado y si es una mejora o una corrección. Esto vale también en el modo de trabajo ágil, sin sellado: allí el nombre queda fijado la primera vez que se prepara la rama.</p>
+</div>
+
+<h2>Cómo se protege lo que ya funciona</h2>
+
+<div class="bloque" data-axiom-ref="D-06">
+  <span class="ref">D-06</span>
+  <p>Al sellar el cambio se guardan la plantilla y los datos del trabajo conocidos en ese momento: siempre si es una mejora o una corrección, y el número del trabajo si ya se conoce. Así, cualquier persona del equipo, en su propio ordenador, obtiene el mismo nombre de rama. Si la plantilla no encaja, el sellado se detiene y no guarda nada.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-09">
+  <span class="ref">D-09</span>
+  <p>En cuanto se crea una rama con plantilla, su nombre queda fijado en un registro local, que es la referencia. Cambiar la plantilla más tarde no renombra ni duplica ramas ya creadas. Si ese registro se pierde, Axiom reconoce las ramas que ya existen; si no puede comprobarlo, se detiene en lugar de suponer.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-10">
+  <span class="ref">D-10</span>
+  <p>La protección que avisa cuando se trabaja en la rama equivocada usa los mismos nombres que la creación de ramas, así que nunca se contradicen, aunque falte el registro local. Si una rama aún espera a su rol, no lo trata como un error: dice qué rol falta y qué orden lo pone en marcha.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-14">
+  <span class="ref">D-14</span>
+  <p>El nombre de la rama de un cambio se calcula en un único sitio, que comparten la creación de ramas, el archivado, la protección y el aviso de novedades. La rama de archivado es siempre la del cambio con <code>-archive</code> al final.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-05">
+  <span class="ref">D-05</span>
+  <p>Si dos ramas de un mismo repositorio acabaran con el mismo nombre, o con el de la rama principal del proyecto, Axiom se detiene sin crear nada y dice cuáles chocan.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-11">
+  <span class="ref">D-11</span>
+  <p>Cuando falta un dato (por ejemplo, la tarea de un rol), cuando no se puede leer el fichero de enlaces con el gestor de trabajo o cuando una plantilla no tiene sentido en una rama compartida, Axiom se detiene sin crear nada. Muestra un mensaje con un código y la orden exacta que lo resuelve.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-15">
+  <span class="ref">D-15</span>
+  <p>La consulta del estado nunca cambia nada. Lista las ramas pendientes con su rol y la orden que las crea, y si a una le falta un dato lo indica en esa misma línea sin ocultar el resto.</p>
+</div>
+
+<div class="bloque" data-axiom-ref="D-12">
+  <span class="ref">D-12</span>
+  <p>Las tres plantillas también se pueden editar desde la pantalla de Ajustes. Lo que se guarda pasa la misma comprobación que al cargar la configuración, de modo que una plantilla incorrecta se rechaza antes de escribirse.</p>
+</div>
+
+<h2>Glosario</h2>
+<dl data-axiom-ref="D-03">
+  <dt>Rama</dt>
+  <dd>Línea de trabajo separada en el control de versiones, donde se prepara un cambio sin tocar lo que ya está aprobado.</dd>
+  <dt>Plantilla</dt>
+  <dd>Texto con huecos entre llaves, como <code>{task_ref}</code>, que Axiom rellena para formar el nombre de la rama.</dd>
+  <dt>Rol</dt>
+  <dd>Parte del equipo que trabaja en un repositorio concreto, por ejemplo front o back.</dd>
+  <dt>Sellar</dt>
+  <dd>Fijar la configuración de un cambio al empezarlo; después ya no se reescribe.</dd>
+  <dt>Rama pendiente</dt>
+  <dd>Rama que aún no existe porque espera a que su rol empiece a trabajar.</dd>
+  <dt>Archivado</dt>
+  <dd>Cierre del cambio, que se hace en una rama propia terminada en <code>-archive</code>.</dd>
+</dl>
+
+</body>
+</html>

@@ -109,6 +109,10 @@ func archivedEntry(change string) func(name string) bool {
 func newArchiveRecord(facts changeFacts, plan branch.ChangePlan, mode workMode) branch.Record {
 	archived := recordRepository(facts, plan.Repositories[0], mode)
 	prefix := facts.input.Exceptions.Prefix
+	if branch.ChangeBranchTemplated(facts.input) {
+		// Con plantilla, `--prefix` no cambia la derivación de la rama de archivado: no se guarda (D-14, S9).
+		prefix = ""
+	}
 	previous := facts.record
 	if previous == nil {
 		return branch.Record{

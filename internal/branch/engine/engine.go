@@ -206,6 +206,9 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 	}
 	code, skipped = chosen.code, append(skipped, chosen.skipped...)
 
+	// Los nombres congelados del registro entran al planificador por repositorio (D-09).
+	freezeFromRecord(record, &planning, code, chosen.included)
+
 	worktrees := map[string][]branch.WorktreeEntry{}
 	var existing []branch.WorktreeEntry
 	for _, facts := range slices.Concat([]branch.RepoFacts{planning}, code, chosen.included) {
@@ -218,7 +221,7 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 	}
 
 	prefs := e.workPrefs(location, planning)
-	return changeFacts{
+	facts := changeFacts{
 		record:    record,
 		worktrees: worktrees,
 		location:  location,
@@ -248,8 +251,12 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 			WorktreeRoot:      prefs.root,
 			ExistingWorktrees: existing,
 			PathRules:         branch.PathRules{GOOS: e.goos},
+			Sealing:           options.sealing,
 		},
-	}, nil
+	}
+	// Los valores de las variables de plantilla solo se leen si alguna plantilla interviene (D-13).
+	facts.input.TemplateValues = resolveTemplateValues(facts.input, location)
+	return facts, nil
 }
 
 // topologyOf es la topología del proyecto: sin axiom.yaml rige el monorepo embebido.

@@ -23,6 +23,10 @@ type Policy struct {
 	MainBranch string
 	// Promotion es `git.promotion`; vacía, rige el defecto del motor.
 	Promotion Promotion
+	// BranchTemplate es `git.branch_template` (C-07-f); vacía sin plantilla. RoleTemplates guarda
+	// `roles.<id>.branch_template` por rol en minúsculas; solo rigen en multirepo.
+	BranchTemplate string
+	RoleTemplates  map[string]string
 	// PerRepository guarda lo declarado por cada repositorio, con la clave normalizada
 	// (ruta relativa a la carpeta maestra, con «/»). Un campo vacío hereda el valor
 	// del workspace; la herencia la resuelve For.
@@ -37,6 +41,11 @@ type RepoPolicy struct {
 	IntegrationBranch, BranchPrefix, MainBranch string
 	Promotion                                   Promotion
 	PromotionSource                             string
+	// BranchTemplate es la plantilla efectiva de la rama del cambio del repositorio (la de su
+	// entrada de `repositories:` o, sin ella, la de `git:`) y BranchTemplateKey la clave de
+	// axiom.yaml de la que sale; ambas vacías sin plantilla.
+	BranchTemplate    string
+	BranchTemplateKey string
 }
 
 // ResolvePolicy resuelve la política a partir de la configuración cargada. Es total:
@@ -60,6 +69,16 @@ func ResolvePolicy(cfg *workspace.WorkspaceConfig) Policy {
 		}
 		policy.MainBranch = git.MainBranch
 		policy.Promotion = Promotion(git.Promotion)
+		policy.BranchTemplate = git.BranchTemplate
+	}
+	for role, config := range cfg.Roles {
+		if config.BranchTemplate == "" {
+			continue
+		}
+		if policy.RoleTemplates == nil {
+			policy.RoleTemplates = map[string]string{}
+		}
+		policy.RoleTemplates[strings.ToLower(role)] = config.BranchTemplate
 	}
 	for _, entry := range cfg.Repositories {
 		key := repoKey(entry.Path)
@@ -73,6 +92,7 @@ func ResolvePolicy(cfg *workspace.WorkspaceConfig) Policy {
 			IntegrationBranch: entry.IntegrationBranch,
 			BranchPrefix:      entry.BranchPrefix,
 			Promotion:         Promotion(entry.Promotion),
+			BranchTemplate:    entry.BranchTemplate,
 		}
 	}
 	return policy
@@ -99,6 +119,10 @@ func (p Policy) For(repoRelPath string) RepoPolicy {
 	if declared.BranchPrefix != "" {
 		effective.BranchPrefix = declared.BranchPrefix
 	}
+	if declared.BranchTemplate != "" {
+		effective.BranchTemplate = declared.BranchTemplate
+		effective.BranchTemplateKey = "repositories[" + repoKey(repoRelPath) + "].branch_template"
+	}
 	return effective
 }
 
@@ -110,6 +134,10 @@ func (p Policy) workspacePolicy() RepoPolicy {
 		BranchPrefix:      p.BranchPrefix,
 		MainBranch:        p.MainBranch,
 		Promotion:         p.Promotion,
+		BranchTemplate:    p.BranchTemplate,
+	}
+	if p.BranchTemplate != "" {
+		effective.BranchTemplateKey = "git.branch_template"
 	}
 	if p.Promotion != "" {
 		effective.PromotionSource = PromotionSourceGit
@@ -126,7 +154,7 @@ func repoKey(path string) string {
 
 // ConfigRefusal devuelve el rechazo `config_invalid` cuando la configuración del
 // proyecto impide planificar las ramas (RF-BRA-03): un axiom.yaml ilegible, o un
-// bloque `git:` o `repositories:` inválido. Es nil cuando no hay nada que rechazar,
+// bloque `git:` o `repositories:` inválido, o una plantilla de rama inválida. Es nil cuando no hay nada que rechazar,
 // también sin axiom.yaml, donde rigen los valores por defecto. Los errores de otras
 // declaraciones (baseline, technical_context) no son asunto de la política de ramas.
 //
@@ -134,7 +162,7 @@ func repoKey(path string) string {
 // inválido de la invocación (`invalid_name`): este último nace en el planificador.
 func ConfigRefusal(loc workspace.Location) *Refusal {
 	var causes []string
-	for _, err := range []error{loc.ConfigErr, loc.Declarations.GitErr, loc.Declarations.RepositoriesErr} {
+	for _, err := range []error{loc.ConfigErr, loc.Declarations.GitErr, loc.Declarations.RepositoriesErr, loc.Declarations.BranchTemplatesErr} {
 		if err != nil {
 			causes = append(causes, singleLine(err))
 		}

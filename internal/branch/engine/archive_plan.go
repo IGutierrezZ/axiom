@@ -64,13 +64,15 @@ func registeredChangeBranch(facts changeFacts) string {
 	if named := branch.SnapshotChangeBranch(facts.input, planning); named != "" {
 		return named
 	}
-	switch exceptions := facts.input.Exceptions; {
-	case exceptions.Branch != "":
-		return exceptions.Branch
-	case exceptions.Prefix != "":
-		return exceptions.Prefix + "/" + facts.input.Change
+	exceptions := facts.input.Exceptions
+	prefix := exceptions.Prefix
+	if exceptions.Branch == "" && branch.ChangeBranchTemplated(facts.input) {
+		// Con plantilla, el planificador renderiza la rama del cambio y `--prefix` no interviene
+		// (design D-14, S9): aquí no hay nombre que componer.
+		return ""
 	}
-	return ""
+	return branch.ResolveChangeBranch(facts.input.Change, prefix,
+		branch.NamedBranch("--branch", exceptions.Branch))
 }
 
 // recordedArchiveBranch devuelve la rama de archivado que el registro guarda para el repositorio

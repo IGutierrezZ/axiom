@@ -224,6 +224,12 @@ func (e *Engine) planWithPromotion(ctx context.Context, facts *changeFacts, req 
 	var pendingAsk *branch.RepoPlan
 	effective := false
 	for index, repo := range provisional.Repositories {
+		// Un repositorio cuyas ramas están todas pendientes no tiene base, destino ni etapa que
+		// resolver: la promoción (y su pregunta `ask`) se resuelve en el `ensure --role` que crea la
+		// rama (design D-07).
+		if len(repo.Branches) == 0 && len(repo.Pending) > 0 {
+			continue
+		}
 		planned := known[repo.GitRoot]
 		policy := branch.EffectivePolicy(facts.input.Policy, planned)
 		exempt := repo.Role == branch.RepoSpecsInPlace

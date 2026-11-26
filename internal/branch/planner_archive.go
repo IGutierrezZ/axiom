@@ -145,19 +145,34 @@ func CheckArchiveRequest(in PlanInput) *Refusal {
 // más `-archive` o, si no hay ninguna, la que compondría la política (`<prefijo>/<cambio>`). El
 // prefijo de la política solo se valida cuando se usa.
 func archiveBranchName(in PlanInput, repository string, effective RepoPolicy) (string, *Refusal) {
+	// Con plantilla en la rama del cambio, `--prefix` no cambia la derivación: la rama de archivado
+	// es la rama del cambio ya resuelta más `-archive` (design D-14, S9).
+	templated := archiveChangeTemplated(in, effective)
 	var archive string
 	switch {
-	case in.Exceptions.Prefix != "":
-		archive = in.Exceptions.Prefix + "/" + in.Change + archiveSuffix
+	case in.Exceptions.Prefix != "" && !templated:
+		archive = ArchiveBranchFor(ResolveChangeBranch(in.Change, in.Exceptions.Prefix))
 	case in.ArchiveBranch != "":
 		archive = in.ArchiveBranch
 	case in.ChangeBranch != "":
-		archive = in.ChangeBranch + archiveSuffix
+		archive = ArchiveBranchFor(in.ChangeBranch)
+	case templated:
+		input := in
+		input.Exceptions.Prefix = ""
+		naming := newRepoNaming(input, repoSelection{facts: in.PlanningRepo, planning: true}, effective, repository, effective.BranchPrefix)
+		change, refusal := naming.changeBranch()
+		switch {
+		case refusal != nil:
+			return "", refusal
+		case change.pending != nil && change.pending.Refusal != nil:
+			return "", change.pending.Refusal
+		}
+		archive = ArchiveBranchFor(change.name)
 	default:
 		if refusal := validatePolicyValue(in, repository, "branch_prefix", effective.BranchPrefix, gitref.ValidPrefix); refusal != nil {
 			return "", refusal
 		}
-		archive = effective.BranchPrefix + "/" + in.Change + archiveSuffix
+		archive = ArchiveBranchFor(ResolveChangeBranch(in.Change, effective.BranchPrefix))
 	}
 	if err := gitref.ValidRefName(archive); err != nil {
 		return "", invalidName("branch", "el nombre de la rama de archivado", archive, err,

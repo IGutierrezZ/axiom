@@ -45,6 +45,9 @@ func (e *Engine) Status(ctx context.Context, cwd, change string, lane branch.Lan
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
 	}
+	// `status` describe: una variable sin valor deja la rama pendiente con su rechazo en lugar de
+	// rechazar la orden entera (design D-15).
+	facts.input.Describe = true
 	plan, _, refusal := e.planWithPromotion(ctx, &facts, promotionRequest{args: branch.EnsureArgs{Operation: operation, Change: change, CWD: cwd, Lane: lane}})
 	if refusal != nil {
 		return branch.NewResult(operation).Refused(refusal)
@@ -250,6 +253,9 @@ func (e *Engine) describeRepository(ctx context.Context, operation, cwd string, 
 	}
 	if repo.TwoStage() && repo.Promotion == branch.PromotionAsk {
 		warnings = append(warnings, fmt.Sprintf("el modo de promoción de %s está pendiente: `axiom branch ensure` lo preguntará", repo.Name))
+	}
+	for _, pending := range repo.Pending {
+		repository.PendingBranches = append(repository.PendingBranches, branch.NewPendingBranchResult(pending, facts.input.Change, facts.input.Master))
 	}
 	if len(repo.Branches) == 0 {
 		return repository, warnings, nil

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -182,6 +183,9 @@ type RepositoryResult struct {
 	Detached          bool           `json:"detached,omitempty"`
 	Base              *BaseResult    `json:"base,omitempty"`
 	Branches          []BranchResult `json:"branches,omitempty"`
+	// PendingBranches son las ramas de plantilla que aún no tienen nombre (C-07-f, D-07 y D-15): no
+	// se han creado, registrado ni medido. Aditivo: sin plantilla no aparece.
+	PendingBranches []PendingBranchResult `json:"pendingBranches,omitempty"`
 
 	// Fetched dice si el fetch implícito del autofetch trajo `origin` en un repositorio sin base
 	// (el de specs in situ de un multirepo). Solo se informa con el fetch implícito.
@@ -194,6 +198,69 @@ type RepositoryResult struct {
 	PromotionLabel       string `json:"promotionLabel,omitempty"`
 	PromotionSource      string `json:"promotionSource,omitempty"`
 	PromotionSourceLabel string `json:"promotionSourceLabel,omitempty"`
+}
+
+// PendingBranchResult es una rama con plantilla que todavía no se puede nombrar. Template es la
+// plantilla efectiva; Name, el nombre candidato, solo cuando ya se puede renderizar (la Task del rol
+// existe) y vacío si aún no resuelve. Reason es `awaiting_role` (espera a `ensure --role`) o, si la
+// descripción de `status` no pudo resolver una variable, el código del rechazo, que acompañan Code,
+// Message y Continuation. Continuation es la orden que la crea.
+type PendingBranchResult struct {
+	Kind         BranchKind `json:"kind"`
+	KindLabel    string     `json:"kindLabel"`
+	Role         string     `json:"role,omitempty"`
+	Template     string     `json:"template"`
+	Name         string     `json:"name,omitempty"`
+	Reason       string     `json:"reason"`
+	ReasonLabel  string     `json:"reasonLabel"`
+	Code         Code       `json:"code,omitempty"`
+	Message      string     `json:"message,omitempty"`
+	Continuation string     `json:"continuation,omitempty"`
+}
+
+// NewPendingBranchResult describe una rama pendiente del plan. La orden que la crea es
+// `axiom branch ensure --change <cambio> --role <rol>`; una rama sin rol (una variable sin valor en
+// `status`) lleva la continuación de su rechazo.
+func NewPendingBranchResult(pending PendingBranch, change, master string) PendingBranchResult {
+	result := PendingBranchResult{
+		Kind:      pending.Kind,
+		KindLabel: Label(string(pending.Kind)),
+		Role:      pending.RoleID,
+		Template:  pending.Template,
+		Name:      pending.Candidate,
+		Reason:    PendingReasonAwaitingRole,
+	}
+	if refusal := pending.Refusal; refusal != nil {
+		result.Reason = string(refusal.Code)
+		result.Code, result.Message, result.Continuation = refusal.Code, refusal.Message, refusal.Continuation
+	} else if pending.RoleID != "" {
+		result.Continuation = fmt.Sprintf("axiom branch ensure --change %s --role %s --cwd %s", change, strings.ToLower(pending.RoleID), pathquote.Quote(master))
+	}
+	result.ReasonLabel = Label(result.Reason)
+	return result
+}
+
+// textLine es la línea de texto de una rama pendiente: su tipo y su rol, la plantilla, el nombre si
+// ya se conoce, por qué sigue pendiente y la orden que la crea.
+func (p PendingBranchResult) textLine() string {
+	subject := p.KindLabel
+	if p.Role != "" {
+		subject += " del rol " + p.Role
+	}
+	line := fmt.Sprintf("- Rama pendiente (%s): plantilla %s", subject, p.Template)
+	if p.Name != "" {
+		line += ", nombre " + p.Name
+	} else {
+		line += ", sin nombre todavía"
+	}
+	line += ", " + p.ReasonLabel
+	if p.Code != "" {
+		line += " [" + string(p.Code) + "]"
+	}
+	if p.Continuation != "" {
+		line += ". Continuación: " + p.Continuation
+	}
+	return line
 }
 
 // BaseResult es la base de un repositorio: la referencia, su commit y de dónde sale
@@ -533,6 +600,9 @@ func (r RepositoryResult) writeText(stdout io.Writer) {
 	}
 	for _, branch := range r.Branches {
 		fmt.Fprintf(stdout, "%s- %s (%s): %s\n", indent, branch.Name, branch.KindLabel, strings.Join(branch.textParts(), ", "))
+	}
+	for _, pending := range r.PendingBranches {
+		fmt.Fprintf(stdout, "%s%s\n", indent, pending.textLine())
 	}
 }
 

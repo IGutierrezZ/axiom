@@ -176,8 +176,10 @@ func TestEmitEnsureRoleStartOnlyForAReadyResult(t *testing.T) {
 	}
 }
 
-func TestEnsureRequestHasNoRoleField(t *testing.T) {
-	if _, has := reflect.TypeOf(engine.EnsureRequest{}).FieldByName("Role"); has {
-		t.Fatal("el motor de ensure no conoce el rol (decisión 1): EnsureRequest no puede tener un campo Role")
+// RF-BRA-33 modificado (C-07-f): el rol sí llega al motor, que lo usa para crear las ramas
+// pendientes de ese rol; sin plantilla no tiene ningún efecto en el plan.
+func TestEnsureRequestCarriesTheEnteringRole(t *testing.T) {
+	if _, has := reflect.TypeOf(engine.EnsureRequest{}).FieldByName("Role"); !has {
+		t.Fatal("EnsureRequest debe llevar el rol que entra (Role)")
 	}
 }

@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/nametemplate"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
@@ -120,10 +122,14 @@ func sameRepository(repo branch.RecordRepo, project AutofetchProject) bool {
 // local cuyo árbol contiene `<planRel>/changes/<c>/kickoff.yaml`, `<c>` es el cambio actual
 // (carril SDD). Se leen las primeras autofetchHandoffLimit referencias.
 func (e *Engine) handedOffChange(ctx context.Context, project AutofetchProject, result *branch.AutofetchResult) (currentChange, bool) {
-	prefix := policyOf(project).BranchPrefix
+	policy := policyOf(project)
+	prefix := policy.BranchPrefix
 	planRel, inside := relativeWithin(project.GitRoot, project.Location.PlanningHome)
 	if !inside {
 		return currentChange{}, false
+	}
+	if policy.BranchTemplate != "" {
+		return e.templatedHandedOffChange(ctx, project, policy, planRel, result)
 	}
 	refs, err := e.git.RemoteBranches(ctx, project.Checkout, prefix)
 	if err != nil {
@@ -139,7 +145,7 @@ func (e *Engine) handedOffChange(ctx context.Context, project AutofetchProject, 
 		if !ok || name == "" || strings.Contains(name, "/") || strings.HasSuffix(name, branch.ArchiveSuffix) {
 			continue
 		}
-		if local, err := e.git.BranchExists(ctx, project.Checkout, prefix+"/"+name); err != nil || local {
+		if local, err := e.git.BranchExists(ctx, project.Checkout, branch.ResolveChangeBranch(name, prefix)); err != nil || local {
 			continue
 		}
 		kickoff := path.Join(planRel, "changes", name, "kickoff.yaml")
@@ -152,15 +158,83 @@ func (e *Engine) handedOffChange(ctx context.Context, project AutofetchProject, 
 		return currentChange{}, false
 	}
 	name := candidates[0]
+	return handedOffOf(project, name, branch.ResolveChangeBranch(name, prefix)), true
+}
+
+func handedOffOf(project AutofetchProject, change, changeBranch string) currentChange {
 	return currentChange{
 		lane: branch.LaneSDD,
-		name: name,
+		name: change,
 		repositories: []branch.RecordRepo{{
 			Name:     path.Base(project.Checkout),
 			GitRoot:  project.Checkout,
-			Branches: []branch.RecordBranch{{Name: prefix + "/" + name, Kind: branch.KindChange}},
+			Branches: []branch.RecordBranch{{Name: changeBranch, Kind: branch.KindChange}},
 		}},
-	}, true
+	}
+}
+
+// templatedHandedOffChange es la regla 3 con plantilla (D-16): lista las referencias remotas bajo
+// el prefijo literal de la plantilla (con la cota autofetchHandoffLimit en total) y toma el cambio
+// cuya instantánea (`kickoff.yaml` de esa referencia) nombra esa misma rama como rama del cambio.
+// Solo lee referencias ya traídas: no crea ninguna rama local. Se detiene en el segundo candidato.
+// Sin prefijo literal la regla no se aplica y queda un aviso.
+func (e *Engine) templatedHandedOffChange(ctx context.Context, project AutofetchProject, policy branch.RepoPolicy, planRel string, result *branch.AutofetchResult) (currentChange, bool) {
+	parsed, err := nametemplate.Parse(policy.BranchTemplate)
+	if err != nil {
+		return currentChange{}, false
+	}
+	prefixes := nametemplate.LiteralPrefixes(parsed, policy.BranchPrefix)
+	if len(prefixes) == 0 {
+		result.Warnings = append(result.Warnings, fmt.Sprintf("la plantilla de rama %q no tiene prefijo literal: no se reconoce un cambio cedido sin registro", policy.BranchTemplate))
+		return currentChange{}, false
+	}
+	var refs []string
+	for _, prefix := range prefixes {
+		listed, err := e.git.RemoteBranches(ctx, project.Checkout, prefix)
+		if err != nil {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("no se pudieron listar las ramas remotas (%v): no se calcula la relevancia", err))
+			return currentChange{}, false
+		}
+		refs = append(refs, listed...)
+	}
+	slices.Sort(refs)
+	refs = slices.Compact(refs)
+	if len(refs) > autofetchHandoffLimit {
+		refs = refs[:autofetchHandoffLimit]
+	}
+	changesDir := path.Join(planRel, "changes")
+	var found []currentChange
+	for _, ref := range refs {
+		name, ok := strings.CutPrefix(ref, "refs/remotes/origin/")
+		if !ok || name == "" || strings.HasSuffix(name, branch.ArchiveSuffix) {
+			continue
+		}
+		if local, err := e.git.BranchExists(ctx, project.Checkout, name); err != nil || local {
+			continue
+		}
+		dirs, _, err := e.git.TreeDirs(ctx, project.Checkout, ref, changesDir)
+		if err != nil {
+			continue
+		}
+		for _, dir := range dirs {
+			content, exists, err := e.git.FileAt(ctx, project.Checkout, ref, path.Join(changesDir, dir, "kickoff.yaml"))
+			if err != nil || !exists {
+				continue
+			}
+			sealed, err := kickoff.ParseKickoff(content)
+			if err != nil || sealed.Git == nil || sealed.Git.ChangeBranch != name {
+				continue
+			}
+			found = append(found, handedOffOf(project, dir, name))
+			if len(found) > 1 {
+				return currentChange{}, false
+			}
+		}
+	}
+	if len(found) != 1 {
+		return currentChange{}, false
+	}
+	return found[0], true
 }
 
 // policyOf es la política de ramas del repositorio de specs del proyecto.

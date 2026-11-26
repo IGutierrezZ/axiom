@@ -473,3 +473,48 @@ func TestKickoffSealOfAMultirepoRequiresTheSpecsIntegrationBranchAndIgnoresTheCo
 		t.Errorf("el sellado debe escribir kickoff.yaml: %v", statErr)
 	}
 }
+
+// wantSealTemplateRefusal comprueba que el sellado propaga el rechazo tipado de la plantilla con su
+// continuación y sin escribir kickoff.yaml (design D-06, S5).
+func wantSealTemplateRefusal(t *testing.T, err error, code branch.Code, ws workspacetest.Workspace, change string) {
+	t.Helper()
+	var refusal *branch.RefusalError
+	if !errors.As(err, &refusal) || refusal.Code != code || refusal.Continuation == "" {
+		t.Fatalf("error = %v, se esperaba el rechazo tipado %s con continuación", err, code)
+	}
+	if _, statErr := os.Stat(filepath.Join(ws.Home, "changes", change, "kickoff.yaml")); !errors.Is(statErr, os.ErrNotExist) {
+		t.Errorf("el rechazo no debe escribir kickoff.yaml (%v)", statErr)
+	}
+}
+
+// S5 y prov:BRA:2: con `{ref}` y sin work item, el sellado se niega con `branch_template_unresolved`
+// y no escribe kickoff.yaml.
+func TestKickoffSealBranchTemplateUnresolvedWritesNothing(t *testing.T) {
+	captureSealWarnings(t)
+	config := "workspace:\n  name: ejemplo\n  topology: monorepo-embedded\n  specs_repository: \".\"\ngit:\n  integration_branch: main\n  branch_template: \"{ref}/{change}\"\nroles:\n  core:\n    name: core\n    repositories:\n      - path: \".\"\n"
+	ws := embeddedSealProject(t, config)
+	integrateGit(t, ws.Master, "switch", "-q", "-c", "feat/x")
+
+	_, err := runSeal(t, ws.Master, sealBaseArgs...)
+
+	wantSealTemplateRefusal(t, err, branch.CodeBranchTemplateUnresolved, ws, sealChange)
+}
+
+// S5 y R2: `{role}` en la plantilla de la rama de seguimiento de un repositorio compartido se
+// rechaza con `branch_template_not_applicable` (shared_branch) y sin kickoff.yaml.
+func TestKickoffSealBranchTemplateNotApplicableWritesNothing(t *testing.T) {
+	captureSealWarnings(t)
+	ws := multirepoSealProject(t)
+	config := "workspace:\n  name: ejemplo\n  topology: multirepo\n  specs_repository: repo-specs\nrepositories:\n  - path: repo-backend\n    branch_template: \"{role}/{change}\"\nroles:\n  backend:\n    name: Backend\n    repositories:\n      - path: repo-backend\n  frontend:\n    name: Frontend\n    repositories:\n      - path: repo-backend\n"
+	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), config)
+	change := planningHomeChange
+
+	var out bytes.Buffer
+	err := RunSDDKickoff(append([]string{"seal", "--cwd", ws.Master, "--change", change, "--role", "backend", "--role", "frontend"}, sealRolesArgs...), &out)
+
+	wantSealTemplateRefusal(t, err, branch.CodeBranchTemplateNotApplicable, ws, change)
+	var refusal *branch.RefusalError
+	if errors.As(err, &refusal) && refusal.Details["reason"] != branch.TemplateReasonSharedBranch {
+		t.Errorf("motivo = %q, se esperaba %s", refusal.Details["reason"], branch.TemplateReasonSharedBranch)
+	}
+}

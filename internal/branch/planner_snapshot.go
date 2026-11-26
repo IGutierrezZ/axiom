@@ -1,6 +1,10 @@
 package branch
 
-import "github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+import (
+	"strings"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
+)
 
 // La instantánea de política git del kickoff (RF-KOF-06, design D-12) fija los nombres de rama
 // con los que se selló el cambio: con ella el plan los conserva aunque la política de
@@ -53,4 +57,26 @@ func SnapshotChangeBranch(in PlanInput, facts RepoFacts) string {
 		return ""
 	}
 	return snapshotBranch(repo, KindChange, "")
+}
+
+// snapshotBranchTemplate devuelve la plantilla informativa con la que se nombró la rama de ese tipo
+// (y rol) en la instantánea, o la cadena vacía si no la lleva.
+func snapshotBranchTemplate(repo kickoff.GitSnapshotRepo, kind BranchKind, role string) string {
+	for _, named := range repo.Branches {
+		if named.Kind == string(kind) && named.Role == role {
+			return named.Template
+		}
+	}
+	return ""
+}
+
+// snapshotPending devuelve la entrada pendiente de la instantánea de ese tipo y, en las de rol, de
+// ese rol (sin distinguir mayúsculas). Las entradas pendientes no llevan nombre (design D-06).
+func snapshotPending(repo kickoff.GitSnapshotRepo, kind BranchKind, role string) (kickoff.GitSnapshotPendingBranch, bool) {
+	for _, pending := range repo.PendingBranches {
+		if pending.Kind == string(kind) && (kind == KindChange || strings.EqualFold(pending.Role, role)) {
+			return pending, true
+		}
+	}
+	return kickoff.GitSnapshotPendingBranch{}, false
 }

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:add2ca7420f8f78aee05298a3d18d853a340119af6595bdf361e5b68a6e35897">
+<title>Resumen de la spec: plantillas de nombre de rama</title>
+<style>
+body { font-family: sans-serif; max-width: 52rem; margin: 2rem auto; line-height: 1.5; color: #1a202c; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.5rem; }
+.aviso { background: #fffbea; padding: 0.75rem; }
+code { background: #edf2f7; padding: 0 0.25rem; }
+</style>
+</head>
+<body>
+<h1>Plantillas de nombre de rama</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<h2>Qué cambia</h2>
+<p>Hasta ahora Axiom ponía siempre el mismo nombre a las ramas de un cambio. Con este cambio, cada proyecto, repositorio y rol puede declarar cómo quiere que se llamen, usando datos del gestor de trabajo (el número del elemento de trabajo y el de la tarea del rol). Si nadie declara nada, todo se llama exactamente igual que antes.</p>
+
+<h2>Qué dice la spec</h2>
+
+<section data-axiom-ref="prov:BRA:1">
+<h2>prov:BRA:1 Motor y variables</h2>
+<p>Una plantilla es un texto con huecos entre llaves: prefijo, tipo (feature o fix), nombre del cambio, nombre corto, rol, número del elemento de trabajo y número de la tarea. Un valor que git no admite se rechaza; nunca se corrige en silencio.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:2">
+<h2>prov:BRA:2 De dónde sale cada dato</h2>
+<p>El número del elemento de trabajo sale de su vínculo o, si aún no existe, de lo guardado al iniciar el cambio. Si falta un dato, no se inventa: se rechaza con una explicación de cómo resolverlo.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:3">
+<h2>prov:BRA:3 Qué plantilla gana y cómo se decide el nombre</h2>
+<p>Manda la del rol, después la del repositorio y después la del proyecto. Una excepción explícita en la invocación, el nombre ya fijado al sellar o el ya guardado en local tienen preferencia sobre la plantilla. Sin plantillas, los nombres no cambian.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:4">
+<h2>prov:BRA:4 Rechazos claros</h2>
+<p>Se rechaza, sin crear nada y con la continuación indicada, cuando falta un dato, el nombre resultante no es válido, una rama compartida por varios roles usa datos propios de un rol, o se usan datos de rol en el carril ODD.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:5">
+<h2>prov:BRA:5 Ramas que esperan a su rol</h2>
+<p>Una rama cuyo nombre depende de la tarea del rol no se crea al arrancar el cambio: espera a que ese rol entre. Mientras tanto, la salida de <code>ensure</code> y de <code>status</code> la muestra como pendiente.</p>
+</section>
+
+<section data-axiom-ref="prov:KOF:1">
+<h2>prov:KOF:1 Lo que se congela al sellar</h2>
+<p>Al sellar el cambio se guardan la plantilla y los datos conocidos (tipo y número del elemento de trabajo), de modo que todas las personas del equipo obtienen el mismo nombre. Los cambios sellados antes no se migran.</p>
+</section>
+
+<section data-axiom-ref="prov:TOP:1">
+<h2>prov:TOP:1 Validación al cargar la configuración</h2>
+<p>Al leer <code>axiom.yaml</code> se comprueba que las variables existen, que las llaves están bien cerradas y que la rama que lleva las especificaciones no usa datos de rol. Los errores nombran la clave afectada.</p>
+</section>
+
+<section data-axiom-ref="RF-BRA-33">
+<h2>RF-BRA-33 Entrada del rol</h2>
+<p>Al entrar un rol, se crean las ramas que esperaban a ese rol y solo esas. Sin plantillas que dependan de la tarea, el comportamiento es idéntico al de antes.</p>
+</section>
+
+<section data-axiom-ref="RF-TOP-21">
+<h2>RF-TOP-21 Ajustes en el panel</h2>
+<p>Las tres claves de plantilla aparecen en el panel de ajustes (las de repositorio y rol, solo en proyectos con varios repositorios) y un valor inválido se rechaza al guardar.</p>
+</section>
+
+<h2>Precisiones tras la revisión de cobertura</h2>
+
+<section data-axiom-ref="prov:BRA:1">
+<h2>prov:BRA:1 Nombre corto</h2>
+<p>El nombre corto quita el prefijo con el número del elemento de trabajo sin distinguir mayúsculas y nunca queda vacío: si no hay nada que quitar o no quedaría nada, es el nombre del cambio.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:3">
+<h2>prov:BRA:3 Excepciones y choques de nombre</h2>
+<p>La opción <code>--branch</code> solo nombra la rama del cambio y gana a lo sellado; <code>--prefix</code> solo afecta a los nombres que usan el prefijo. Si dos ramas del mismo repositorio acaban con el mismo nombre, incluidas las ya registradas, se rechaza sin crear nada.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:4">
+<h2>prov:BRA:4 Más rechazos</h2>
+<p>La rama compartida por varios roles se rechaza también al sellar, en ODD y al validar la configuración. Un nombre igual a la rama de integración o a la principal también se rechaza. Chocar con la rama de otro cambio activo queda fuera, como limitación declarada.</p>
+</section>
+
+<section data-axiom-ref="prov:BRA:5">
+<h2>prov:BRA:5 Estado sin efectos</h2>
+<p>Consultar el estado nunca modifica nada y muestra cada rama pendiente con la orden que la crea. Si el segundo equipo clona el repositorio, obtiene el mismo nombre y adopta la rama ya publicada.</p>
+</section>
+
+<section data-axiom-ref="RF-BRA-15">
+<h2>RF-BRA-15 Registro perdido</h2>
+<p>Si se borra el registro local y la tarea del rol se vinculó a otra después de crear la rama, el nombre puede cambiar. Está declarado como limitación y hay salida: indicar el nombre con <code>--branch</code> o restaurar el vínculo.</p>
+</section>
+
+<section data-axiom-ref="RF-BRA-19">
+<h2>RF-BRA-19 Esperando al rol</h2>
+<p>Un repositorio cuyas ramas esperan todas a su rol no se considera en la rama equivocada: se indica qué rol falta y qué orden ejecutar.</p>
+</section>
+
+<section data-axiom-ref="prov:KOF:1">
+<h2>prov:KOF:1 Tipo siempre fijado</h2>
+<p>Con plantilla, el tipo (feature o fix) se fija siempre al sellar, y el número del elemento de trabajo solo si se conoce.</p>
+</section>
+
+<section data-axiom-ref="prov:TOP:1">
+<h2>prov:TOP:1 Plantillas con sentido</h2>
+<p>Una plantilla debe llevar algún dato propio del cambio para que dos cambios no compartan nombre. En proyectos con varios repositorios se valida también la plantilla del repositorio de especificaciones.</p>
+</section>
+
+<section data-axiom-ref="RF-TOP-21">
+<h2>RF-TOP-21 Panel de ajustes</h2>
+<p>El panel valida y guarda también las plantillas de repositorio y de rol, indicando a qué elemento afecta cada error.</p>
+</section>
+
+<h2>Antes y después</h2>
+<svg width="560" height="120" role="img" aria-label="Flujo: arrancar, sellar, entrar el rol">
+<rect x="5" y="10" width="150" height="45" fill="#bee3f8"/>
+<text x="15" y="30">Arrancar el cambio</text>
+<text x="15" y="46">ramas sin tarea</text>
+<rect x="205" y="10" width="150" height="45" fill="#c6f6d5"/>
+<text x="215" y="30">Sellar</text>
+<text x="215" y="46">se guarda la plantilla</text>
+<rect x="405" y="10" width="150" height="45" fill="#fefcbf"/>
+<text x="415" y="30">Entra el rol</text>
+<text x="415" y="46">nace su rama</text>
+<line x1="155" y1="32" x2="205" y2="32" stroke="#333"/>
+<line x1="355" y1="32" x2="405" y2="32" stroke="#333"/>
+<text x="5" y="100">Sin plantilla declarada, los nombres son los de siempre.</text>
+</svg>
+
+<h2>Glosario</h2>
+<dl>
+<dt>Plantilla</dt><dd>Texto que describe cómo se compone el nombre de una rama.</dd>
+<dt>Sellar</dt><dd>Fijar la configuración del cambio una única vez al empezar.</dd>
+<dt>Rama pendiente</dt><dd>Rama que aún no existe porque su nombre depende de un dato que llegará más tarde.</dd>
+</dl>
+</body>
+</html>

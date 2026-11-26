@@ -71,7 +71,7 @@ func recordRepository(facts changeFacts, repo branch.RepoPlan, mode workMode) br
 		Branches:  make([]branch.RecordBranch, 0, len(repo.Branches)),
 	}
 	for _, planned := range repo.Branches {
-		recorded := branch.RecordBranch{Name: planned.Name, Kind: planned.Kind, RoleID: planned.RoleID}
+		recorded := branch.RecordBranch{Name: planned.Name, Kind: planned.Kind, RoleID: planned.RoleID, Template: planned.Template}
 		if mode.mode == branch.ModeInPlace {
 			recorded.InPlace = deployed[planned.Name] != "" && pathidentity.SameDirectory(deployed[planned.Name], main)
 		} else {

@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 20:31:31 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 615 | **Total Escenarios BDD:** 2983
+> **Última Sincronización:** 2026-11-26 21:45:42 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 622 | **Total Escenarios BDD:** 3105
 
 ---
 
@@ -21,7 +21,7 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 27 | 140 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 41 | 362 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 46 | 442 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `change-start-from-work-item` | Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
@@ -49,7 +49,7 @@
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 14 | 101 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 25 | 158 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 26 | 173 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 33 | 120 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
@@ -59,7 +59,7 @@
 | `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 23 | 140 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 24 | 167 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -620,6 +620,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Un prefijo inválido de `axiom.yaml` se rechaza como configuración
   - *Escenario BDD:* La política hereda la rama principal y el modo de promoción
   - *Escenario BDD:* Sin `main_branch` la política no inventa una rama principal
+  - *Escenario BDD:* La plantilla de `git:` entra en la política y nombra la rama del cambio
+  - *Escenario BDD:* Una plantilla inválida de `axiom.yaml` se rechaza como configuración
 - **[RF-BRA-04]** Modelo de Ramas por Número de Roles que Tocan Cada Repositorio
   - *Escenario BDD:* Un rol, rama única
   - *Escenario BDD:* Dos roles sobre el mismo repositorio crean seguimiento y ramas de rol
@@ -628,6 +630,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Un rol sellado que no toca ningún repositorio declarado no crea ramas
   - *Escenario BDD:* Un rol llamado `archive` colisiona con la rama de archivado
   - *Escenario BDD:* La rama de archivado no pertenece al modelo de roles
+  - *Escenario BDD:* Con plantilla en un solo rol la rama del cambio sigue siendo única
+  - *Escenario BDD:* Dos roles con plantilla de rol propia
 - **[RF-BRA-05]** Papel del Repositorio según la Topología
   - *Escenario BDD:* El repositorio de specs de un multirepo no recibe ramas ni worktrees
   - *Escenario BDD:* Repositorio de specs fuera de su rama de integración
@@ -717,6 +721,13 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* ODD en multirepo trabaja in situ en el repositorio de specs
   - *Escenario BDD:* Un repositorio de código se incluye con `--repo`
   - *Escenario BDD:* ODD no crea `kickoff.yaml`
+  - *Escenario BDD:* ODD aplica la plantilla de `git:` y congela el nombre
+  - *Escenario BDD:* ODD en un repositorio de código usa la plantilla del repositorio
+  - *Escenario BDD:* ODD sin plantilla conserva el nombre actual
+  - *Escenario BDD:* ODD toma `{ref}` y `{kind}` del staging
+  - *Escenario BDD:* ODD con `{kind}` sin perfil conocido vale `feature`
+  - *Escenario BDD:* ODD con `{ref}` sin work item se rechaza
+  - *Escenario BDD:* ODD rechaza `{task_ref}`
 - **[RF-BRA-15]** Registro Local en el Git Common Dir
   - *Escenario BDD:* El registro se resuelve con el git common dir
   - *Escenario BDD:* El registro es visible desde un worktree enlazado
@@ -725,6 +736,11 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* El registro guarda el modo de promoción y su origen por repositorio
   - *Escenario BDD:* Un registro sin modo de promoción sigue siendo válido
   - *Escenario BDD:* `ensure` conserva el modo registrado al reescribir el registro
+  - *Escenario BDD:* El primer `ensure` que crea la rama congela su nombre
+  - *Escenario BDD:* Un cambio de la plantilla no renombra una rama ya creada
+  - *Escenario BDD:* Registro borrado con ramas de plantilla
+  - *Escenario BDD:* Task revinculada y registro borrado: limitación declarada
+  - *Escenario BDD:* La rama pendiente no figura en el registro
 - **[RF-BRA-16]** `status`: Estado de Ramas y Worktrees del Cambio
   - *Escenario BDD:* Estado de un cambio con rama y worktree
   - *Escenario BDD:* Atraso calculado solo con referencias locales
@@ -733,6 +749,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La rama de archivado figura en el plan
   - *Escenario BDD:* `status` sin `--change` lista registrados y pendientes
   - *Escenario BDD:* La base y el modo de un repositorio con dos etapas figuran en el estado
+  - *Escenario BDD:* `status` lista las ramas pendientes
+  - *Escenario BDD:* Sin ramas pendientes el JSON de `status` no cambia
 - **[RF-BRA-17]** `done`: Detección de Fusión por Capas
   - *Escenario BDD:* Fusión real detectada por ascendencia
   - *Escenario BDD:* Merge por squash detectado por la capa `equivalent_tree`
@@ -772,6 +790,11 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Un cambio preexistente sin instantánea queda exento
   - *Escenario BDD:* Los cambios activos en la rama de integración no alteran el veredicto
   - *Escenario BDD:* Fuera de un repositorio git no se bloquea
+  - *Escenario BDD:* Una rama nombrada por plantilla es correcta
+  - *Escenario BDD:* Una rama con `{task_ref}` se reconoce por el registro
+  - *Escenario BDD:* La rama de plantilla se reconoce sin registro
+  - *Escenario BDD:* Una rama pendiente es `not_applicable`
+  - *Escenario BDD:* Con un rol ya dentro el veredicto se calcula sobre las ramas creadas
 - **[RF-BRA-20]** Guarda A en Todo Escritor Go de la Carpeta del Cambio
   - *Escenario BDD:* Cada escritor se niega fuera de rama
   - *Escenario BDD:* Cada escritor escribe en la rama correcta
@@ -920,7 +943,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Incompatible con `--archive`
   - *Escenario BDD:* Fuera del carril `sdd`
   - *Escenario BDD:* Sin kickoff sellado
-  - *Escenario BDD:* El motor no conoce el rol
+  - *Escenario BDD:* El motor recibe el rol solo para las ramas pendientes
+  - *Escenario BDD:* Con `--role` el plan solo difiere en las ramas pendientes de ese rol
   - *Escenario BDD:* Rol sin Task vinculada con tracker activo
   - *Escenario BDD:* Con la Task vinculada la barrera se levanta
   - *Escenario BDD:* El rechazo de roster precede a la barrera
@@ -995,6 +1019,67 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* El dashboard no registra el inicio
   - *Escenario BDD:* Fallo al escribir el inicio
   - *Escenario BDD:* Sin plugin activo
+- **[RF-BRA-42]** Plantilla de Nombre de Rama: Motor y Variables
+  - *Escenario BDD:* Plantilla con prefijo, referencia y slug
+  - *Escenario BDD:* `{ref}` es el id del vínculo y no la referencia externa
+  - *Escenario BDD:* `{kind}` vale `feature` por defecto y `fix` con perfil bug
+  - *Escenario BDD:* `{slug}` coincide con `{change}` sin work item
+  - *Escenario BDD:* `{slug}` no distingue mayúsculas al quitar el prefijo
+  - *Escenario BDD:* `{slug}` nunca queda vacío
+  - *Escenario BDD:* `{slug}` sin prefijo que case vale `{change}`
+  - *Escenario BDD:* `{prefix}` admite barras
+  - *Escenario BDD:* `{task_ref}` y `{role}` en una rama de rol
+  - *Escenario BDD:* Un valor no seguro para git no se sanea
+  - *Escenario BDD:* El nombre resultante inválido se rechaza
+- **[RF-BRA-43]** Origen de los Valores de las Variables de la Plantilla
+  - *Escenario BDD:* `{ref}` del staging en el primer `ensure`, antes de la adopción
+  - *Escenario BDD:* `{ref}` del vínculo cuando existe
+  - *Escenario BDD:* `{kind}` del perfil bug
+  - *Escenario BDD:* `{ref}` sin work item ni staging se rechaza
+  - *Escenario BDD:* `integrations.yaml` ilegible con plugin activo falla cerrado
+  - *Escenario BDD:* `integrations.yaml` ilegible con `{slug}` o `{kind}` sin congelar falla cerrado
+  - *Escenario BDD:* `integrations.yaml` ilegible no impide usar valores congelados
+  - *Escenario BDD:* `{task_ref}` del rol sin Task se rechaza
+- **[RF-BRA-44]** Plantilla Efectiva por Rol, Repositorio y Proyecto, y Precedencia de Nombres
+  - *Escenario BDD:* Sin plantilla, nombres idénticos a los actuales
+  - *Escenario BDD:* El rol prevalece sobre el repositorio y este sobre el proyecto
+  - *Escenario BDD:* Cada repositorio de un multirepo puede nombrar su rama de forma distinta
+  - *Escenario BDD:* La rama de rol sin plantilla de rol deriva de la de seguimiento
+  - *Escenario BDD:* `--branch` prevalece sobre la plantilla
+  - *Escenario BDD:* `--prefix` alimenta `{prefix}`
+  - *Escenario BDD:* `--prefix` no tiene efecto si la plantilla no usa `{prefix}`
+  - *Escenario BDD:* `--branch` prevalece sobre el nombre de la instantánea
+  - *Escenario BDD:* `--branch` en un repositorio con ramas de rol nombra solo la de seguimiento
+  - *Escenario BDD:* `--branch` con `--role` da nombre a la rama pendiente y la crea
+  - *Escenario BDD:* Instantánea sin nombre y registro con nombre
+  - *Escenario BDD:* Con plantilla, `--prefix` no cambia la rama de archivado
+  - *Escenario BDD:* Los consumidores del archivado usan la rama del cambio resuelta
+  - *Escenario BDD:* Un nombre ya registrado de otro rol colisiona al entrar un rol
+  - *Escenario BDD:* El worktree conserva el nombre del cambio
+  - *Escenario BDD:* La rama de archivado deriva de la del cambio con plantilla
+  - *Escenario BDD:* Dos ramas del mismo repositorio con el mismo nombre se rechazan
+- **[RF-BRA-45]** Rechazos Tipados de la Resolución de Plantillas
+  - *Escenario BDD:* Variable sin valor con continuación
+  - *Escenario BDD:* Nombre renderizado inválido
+  - *Escenario BDD:* Rama de seguimiento con `{task_ref}`
+  - *Escenario BDD:* Rama de seguimiento con `{role}`
+  - *Escenario BDD:* Plantilla con `{role}` en el carril ODD
+  - *Escenario BDD:* El seal rechaza la rama compartida con `{role}` o `{task_ref}`
+  - *Escenario BDD:* La rama con `openspec/` rechaza `{role}` en `ensure`
+  - *Escenario BDD:* Un nombre igual a la rama de integración se rechaza
+  - *Escenario BDD:* Un nombre igual a `main_branch` se rechaza
+  - *Escenario BDD:* Cada rechazo lleva continuación
+- **[RF-BRA-46]** Diferido de las Ramas con `{task_ref}` a la Entrada del Rol
+  - *Escenario BDD:* La rama con `{task_ref}` nace al entrar el rol
+  - *Escenario BDD:* Antes de la entrada del rol la rama está pendiente
+  - *Escenario BDD:* La entrada de un rol no toca las ramas pendientes de otro
+  - *Escenario BDD:* Repetir `ensure --role` es idempotente
+  - *Escenario BDD:* La barrera `task_not_bound` precede a la creación
+  - *Escenario BDD:* Segundo clon con `ensure --role`, sin registro y con la rama ya publicada
+  - *Escenario BDD:* `status` no muta y lista la rama pendiente con su orden
+  - *Escenario BDD:* `status` con `integrations.yaml` ilegible informa el código sin fallar
+  - *Escenario BDD:* La promoción `ask` de una rama diferida se resuelve al crearla
+  - *Escenario BDD:* Sin `{task_ref}` nada se difiere
 
 ### Dominio: `change-start-from-work-item` — Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19)
 
@@ -3258,6 +3343,12 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Multirepo con el registro borrado tras responder después del sellado vuelve a preguntar
   - *Escenario BDD:* `ensure` respeta el modo de la instantánea y no la reescribe
   - *Escenario BDD:* La instantánea con modo de promoción sigue siendo inmutable
+  - *Escenario BDD:* La instantánea guarda la plantilla y omite el nombre de la rama con `{task_ref}`
+  - *Escenario BDD:* La rama con `openspec/` lleva su nombre resuelto aunque tenga plantilla
+  - *Escenario BDD:* Sin plantilla la instantánea no cambia
+  - *Escenario BDD:* Un seal con una variable sin valor se rechaza sin sellar
+  - *Escenario BDD:* Un seal con una rama compartida con `{role}` se rechaza sin sellar
+  - *Escenario BDD:* Cambiar la plantilla después del sellado no modifica la instantánea
 - **[RF-KOF-07]** Exención de Cambios Preexistentes sin Instantánea y de `seal --infer`
   - *Escenario BDD:* Cambio preexistente sin instantánea no se bloquea
   - *Escenario BDD:* `seal --infer` funciona desde cualquier rama y no escribe instantánea
@@ -3398,6 +3489,16 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Gana la última entrada vigente
   - *Escenario BDD:* Fichero ausente
   - *Escenario BDD:* Fichero inválido
+- **[RF-KOF-26]** La Instantánea Congela la Plantilla, el Tipo y la Referencia de Work Item
+  - *Escenario BDD:* El sellado congela `kind` y `ref` del staging
+  - *Escenario BDD:* Otro clon resuelve el mismo nombre sin staging
+  - *Escenario BDD:* Sin work item se congela `kind` pero no `ref`
+  - *Escenario BDD:* Sin plantilla no se escriben `kind` ni `ref`
+  - *Escenario BDD:* `{task_ref}` no se congela en el kickoff
+  - *Escenario BDD:* Un cambio sellado con plantilla pero sin `kind` ni `ref` conserva el comportamiento actual
+  - *Escenario BDD:* Un cambio sellado con plantilla y sin `kind` ignora el perfil bug del staging
+  - *Escenario BDD:* Un cambio sellado sin plantilla no se migra
+  - *Escenario BDD:* Un binario anterior ignora los campos nuevos
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -3862,6 +3963,8 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* El bloque `workflow` es opcional y se valida cuando está presente
   - *Escenario BDD:* El bloque `delivery` es opcional y se valida cuando está presente
   - *Escenario BDD:* El bloque `baseline` ya no es un bloque admitido
+  - *Escenario BDD:* Un rol admite `branch_template` y sigue ignorando otras claves
+  - *Escenario BDD:* Un rol sin `branch_template` no cambia
 - **[RF-TOP-04]** Topología Monorepo Embebido
   - *Escenario BDD:* Monorepo embebido con specs en raíz o subdirectorio válido
   - *Escenario BDD:* Monorepo con el rol único `fullstack` es conforme
@@ -3896,6 +3999,10 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Varios errores se acumulan
   - *Escenario BDD:* `promotion` sin `main_branch` solo avisa
   - *Escenario BDD:* `main_branch` igual a la integración solo avisa
+  - *Escenario BDD:* `branch_template` válido en `git:`
+  - *Escenario BDD:* Los ejemplos comentados de `axiom.example.yaml` validan al descomentarse
+  - *Escenario BDD:* Sin `branch_template` rige el nombre de siempre
+  - *Escenario BDD:* `branch_template` con una variable desconocida
 - **[RF-TOP-10]** Bloque `repositories:` de Primer Nivel con Ajustes por Repositorio
   - *Escenario BDD:* Entrada con rama de integración propia
   - *Escenario BDD:* Ruta inexistente o fuera de la carpeta maestra
@@ -3907,6 +4014,8 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* `promotion` con un valor fuera del vocabulario en una entrada
   - *Escenario BDD:* `main_branch` en una entrada es una clave desconocida
   - *Escenario BDD:* `promotion` en un repositorio sin dos etapas solo avisa
+  - *Escenario BDD:* Entrada con plantilla de rama propia
+  - *Escenario BDD:* `branch_template` inválido en una entrada
 - **[RF-TOP-11]** Bloque `workflow:` Opcional de `axiom.yaml` con el Carril del Proyecto
   - *Escenario BDD:* Sin bloque el carril efectivo es `sdd`
   - *Escenario BDD:* Bloque con `lane: odd`
@@ -3988,6 +4097,13 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Exclusiones del catálogo
   - *Escenario BDD:* Claves registradas de cambios anteriores
   - *Escenario BDD:* ISO no ofrece `odd`
+  - *Escenario BDD:* Las tres claves `branch_template` figuran en el catálogo
+  - *Escenario BDD:* Una plantilla inválida enviada como ajuste se rechaza
+  - *Escenario BDD:* Una plantilla inválida de repositorio o de rol se rechaza con la ruta del elemento
+  - *Escenario BDD:* Una plantilla válida de repositorio o de rol enviada como ajuste se escribe
+  - *Escenario BDD:* Una plantilla con `{role}` en la rama con `openspec/` se rechaza por la API
+  - *Escenario BDD:* Una plantilla de rol enviada en `monorepo-embedded` no está disponible
+  - *Escenario BDD:* Una plantilla válida enviada como ajuste se escribe
 - **[RF-TOP-22]** Escritor de Round-Trip de `axiom.yaml` que Conserva Comentarios y Orden y Revalida el Documento Completo
   - *Escenario BDD:* El round-trip conserva comentarios y orden (golden)
   - *Escenario BDD:* `null` borra la clave
@@ -4008,4 +4124,17 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Revisión obsoleta rechazada sin escribir
   - *Escenario BDD:* Cambio externo entre la validación y el reemplazo
   - *Escenario BDD:* Escritura sin revisión esperada
+- **[RF-TOP-24]** Validación de `branch_template` al Cargar `axiom.yaml`
+  - *Escenario BDD:* Plantilla válida en los tres niveles
+  - *Escenario BDD:* Variable desconocida
+  - *Escenario BDD:* Llaves mal formadas
+  - *Escenario BDD:* `{task_ref}` en la plantilla de la rama con `openspec/` en monorepo
+  - *Escenario BDD:* `{role}` en la plantilla del repositorio de specs de un multirepo
+  - *Escenario BDD:* `{task_ref}` en `git:` es válido si el repositorio de specs declara su propia plantilla
+  - *Escenario BDD:* `{task_ref}` en `git:` de un multirepo sin plantilla propia del repositorio de specs
+  - *Escenario BDD:* La plantilla del repositorio de specs se valida aunque trabaje in situ
+  - *Escenario BDD:* Una plantilla sin ninguna variable propia del cambio se rechaza
+  - *Escenario BDD:* Nombre renderizado inválido
+  - *Escenario BDD:* Varios errores de plantilla se acumulan
+  - *Escenario BDD:* `roles.<id>.branch_template` en monorepo solo avisa
 

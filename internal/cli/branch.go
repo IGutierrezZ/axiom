@@ -166,7 +166,10 @@ create o tasks bind) y, si integrations.yaml no se puede leer, con integrations_
 un ensure listo registra started_at en la Task del rol la primera vez (si falla, avisa con
 started_at_not_recorded) y emite el evento role.start a los plugins de integración configurados
 (axiom.yaml, bloque integrations:); si la entrega falla, ensure sale igual con su resultado de
-siempre y avisa por stderr. Sin --role nada cambia, y el JSON es idéntico con y sin la bandera.
+siempre y avisa por stderr. Con una plantilla de rama con {task_ref}, --role crea además las ramas
+pendientes de ese rol (con su base, destino y promoción resueltos entonces); sin ella, ensure no las
+crea y las lista como pendingBranches. Sin plantilla, nada cambia, y el JSON es idéntico con y sin la
+bandera.
 
 Guarda el plan en un registro local por cambio, dentro del git common dir del repositorio
 del proyecto (<git common dir>/axiom/branch/v1/<carril>/<cambio>.json), que solo se
@@ -321,7 +324,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	result := engine.Default().Ensure(context.Background(), engine.EnsureRequest{
 		CWD: dir, Change: *change, Lane: branch.Lane(*lane), Fetch: *fetch, Mode: branch.Mode(*mode),
 		Exceptions: branch.Exceptions{Prefix: *prefix, Branch: *branchName, Base: *base}, Repos: repos, Archive: *archive,
-		Promotions: promotions,
+		Promotions: promotions, Role: *role,
 	})
 	code := writeBranchResult(result, *asJSON, stdout, stderr)
 	if roleGiven {

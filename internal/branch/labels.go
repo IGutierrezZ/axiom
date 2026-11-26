@@ -53,6 +53,11 @@ var labels = map[string]string{
 	string(CodeTaskNotBound):             "rol sin Task vinculada",
 	string(CodeIntegrationsLinksInvalid): "vínculos de integraciones ilegibles",
 
+	// Plantilla de nombre de rama (design D-11) y motivo de la rama pendiente (D-10).
+	string(CodeBranchTemplateUnresolved):    "variable de plantilla sin valor",
+	string(CodeBranchTemplateNotApplicable): "plantilla no aplicable",
+	PendingReasonAwaitingRole:               "pendiente de la entrada del rol",
+
 	// Modo de trabajo materializado y su origen (RF-BRA-16, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",

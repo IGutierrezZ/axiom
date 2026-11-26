@@ -118,6 +118,12 @@ func (e *Engine) scopeRepository(ctx context.Context, operation, cwd string, fac
 	}
 
 	name := changeBranchName(repo)
+	if name == "" && len(repo.Pending) > 0 {
+		// La rama del cambio de plantilla aún no tiene nombre (espera a su rol): no hay rama que
+		// medir y un `fetch` no la traería. Sigue siendo `branch_missing`, sin código nuevo.
+		entry.SetUnverifiable(branch.ScopeReasonBranchMissing, fmt.Sprintf("la rama del cambio de %s aún no tiene nombre ni se ha creado: su plantilla espera la entrada de su rol (`axiom branch ensure --change %s --role <rol>`)", repo.Name, change), "", map[string]string{"reason": branch.PendingReasonAwaitingRole})
+		return entry, nil
+	}
 	tip, tipRef, found, err := e.scopeTip(ctx, repo.GitRoot, name)
 	if err != nil {
 		return entry, failed("resolver la rama del cambio", err)
