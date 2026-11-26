@@ -9,7 +9,7 @@ Que ni las instrucciones que genera Axiom ni las de este repositorio pidan bater
 
 ## Problema y porqué
 
-La regla de proporcionalidad pedía «all applicable full checks when a task closes», y el «Delegated Verification Gate» activaba el verificador independiente casi siempre por la regla «si no está claro, el tier más alto». Cada sesión pagaba baterías completas y verificadores que la CI de la PR ya cubre. Decisión del usuario (2026-11-26): aplicar la política de pruebas del análisis de agilidad.
+La regla de proporcionalidad pedía las comprobaciones completas al cerrar cada tarea, y el «Delegated Verification Gate» activaba el verificador independiente casi siempre por la regla «si no está claro, el tier más alto». Cada sesión pagaba baterías completas y verificadores que la CI de la PR ya cubre. Decisión del usuario (2026-11-26): aplicar la política de pruebas del análisis de agilidad.
 
 ## Decisiones
 
@@ -34,22 +34,23 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 
 ## Tareas
 
-- [ ] T1 · Regla de proporcionalidad en `delegation.go`, su test y goldens.
-- [ ] T2 · Tiers del «Delegated Verification Gate» en la plantilla compartida, su test y goldens.
-- [ ] T3 · `AGENTS.md` y `openspec/config.yaml` con la política de pruebas del repositorio.
+- [x] T1 · Regla de proporcionalidad en `delegation.go`, su test y goldens. Evidencia: `go test ./internal/components/agentguidance` ok; goldens con `go test ./internal/components -run TestGolden -update` (una línea por fichero, 10 ficheros). Commit `3f2e611a`.
+- [x] T2 · Tiers del «Delegated Verification Gate» en la plantilla compartida, su test y goldens. Evidencia: `go test ./internal/components/sdd -run 'TestDelegatedVerificationGate|TestSharedOrchestratorSections|TestEveryRuntimeRendersTheSharedSections|TestNoRawSharedSection|Delegation'`, `./internal/assets` y `./internal/components -run TestGolden` ok. Commit `4e9194ff`.
+- [x] T3 · `AGENTS.md` y `openspec/config.yaml` con la política de pruebas del repositorio. Evidencia: ninguna prueba fija su texto (búsqueda en `*_test.go`); revisión del diff.
 
 Ruta de todas las tareas: inline (unidades de menos de ~100 líneas; sin unidades independientes que justifiquen escritores en paralelo).
 
 ## Criterio de terminado
 
-- `rg 'all applicable full checks'` sin resultados fuera de `docs/plan/`.
+- La frase retirada de la regla de proporcionalidad no aparece fuera de `docs/plan/` (`rg` del criterio del plan).
 - Goldens regenerados y revisados.
 - Tests de `agentguidance`, `sdd` y de los paquetes de goldens en verde (con `-run`).
 
 ## Progreso
 
 - Worktree creado desde `origin/main` (`3193c716`).
+- T1 `3f2e611a`, T2 `4e9194ff`, T3 en el commit que cierra la feature.
 
 ## Siguiente paso
 
-T1.
+Abrir la PR (`type:feature`), CI en verde, merge commit y `done`. Tras el merge, `axiom sync` regenera el `.claude/CLAUDE.md` local con la regla nueva.
