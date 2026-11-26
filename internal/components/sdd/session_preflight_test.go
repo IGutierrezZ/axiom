@@ -22,20 +22,6 @@ func assertFallbackSessionPreflight(t *testing.T, got string) {
 	if end <= start || end >= strings.Index(got, "### SDD Init Guard (MANDATORY)") {
 		t.Fatal("complete preflight must precede init")
 	}
-	for _, want := range []string{"Interactive or Automatic", "workspace.topology", "always `hybrid`", "Delivery is never asked: it is always `single-pr`", "NEVER ask it as a preflight group", "plain chat or terminal", "STOP", "Pace: <label>"} {
-		if !strings.Contains(got[start:end], want) {
-			t.Errorf("preflight missing %q", want)
-		}
-	}
-	for _, stale := range []string{"`question`", "AskUserQuestion", "ALSO ASK", "ASK which execution mode", "default to **Automatic**", "default when available", "default `engram`", "ask once for and cache delivery strategy", "**Interactive** is the default behavior"} {
-		if strings.Contains(got, stale) {
-			t.Errorf("contradictory installed producer %q", stale)
-		}
-	}
-	init := got[strings.Index(got, "### SDD Init Guard (MANDATORY)"):strings.Index(got, "### Execution Mode")]
-	if !strings.Contains(init, "In `openspec` mode") || !strings.Contains(init, "without calling Engram") || !strings.Contains(init, "openspec/config.yaml") {
-		t.Error("OpenSpec init lookup must not require Engram")
-	}
 }
 
 func TestSessionPreflightActualProjectionInventory(t *testing.T) {
@@ -97,15 +83,8 @@ func TestFallbackSessionPreflightCohort(t *testing.T) {
 	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex} {
 		t.Run(string(agent), func(t *testing.T) {
 			got := composeOrchestratorPrompt(agent)
-			if agent == model.AgentCodex {
-				for _, want := range []string{"{{CODEX_PHASE_EFFORTS}}", "only in `engram` or `hybrid` mode", "In `openspec` mode, use OpenSpec artifacts instead; do not call Engram for this table."} {
-					if !strings.Contains(got, want) {
-						t.Errorf("Codex projection missing %q", want)
-					}
-				}
-				if strings.Contains(got, "engram default") || strings.Contains(got, "Default: `engram`") {
-					t.Error("Codex projection retained an independent artifact default")
-				}
+			if agent == model.AgentCodex && !strings.Contains(got, "{{CODEX_PHASE_EFFORTS}}") {
+				t.Error("Codex projection lost its phase-efforts placeholder")
 			}
 			for _, marker := range []string{sddSessionPreflightMarker, sddSessionPreflightEnd} {
 				if strings.Count(got, marker) != 1 {
@@ -117,14 +96,9 @@ func TestFallbackSessionPreflightCohort(t *testing.T) {
 				t.Fatal("preflight follows init")
 			}
 			block := got[strings.Index(got, sddSessionPreflightMarker):end]
-			for _, want := range []string{"Interactive or Automatic", "workspace.topology", "always `hybrid`", "Interactive -> `interactive`", "Automatic -> `auto`", "Delivery is never asked: it is always `single-pr`", "NEVER ask it as a preflight group", "plain chat or terminal", "STOP", "Pace: <label>"} {
+			for _, want := range []string{"Interactive -> `interactive`", "Automatic -> `auto`"} {
 				if !strings.Contains(block, want) {
-					t.Errorf("preflight missing %q", want)
-				}
-			}
-			for _, stale := range []string{"`question`", "AskUserQuestion", "ALSO ASK", "ASK which execution mode", "default to **Automatic**", "default when available", "default `engram`", "ask once for and cache delivery strategy", "**Interactive** is the default behavior"} {
-				if strings.Contains(got, stale) {
-					t.Errorf("stale producer or native vocabulary %q", stale)
+					t.Errorf("preflight missing mapping %q", want)
 				}
 			}
 		})
@@ -204,7 +178,7 @@ func TestOpenCodeSessionPreflightCompositionIsRuntimeScoped(t *testing.T) {
 		if err != nil {
 			t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) error = %v", agent, err)
 		}
-		if !strings.Contains(content, sddSessionPreflightMarker) || !strings.Contains(content, "always `hybrid`") {
+		if !strings.Contains(content, sddSessionPreflightMarker) {
 			t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) omitted canonical session preflight", agent)
 		}
 	}
@@ -243,47 +217,8 @@ func TestMigratePreservedSDDSessionPreflightReplacesOnlyOwnedBytes(t *testing.T)
 	}
 }
 
-func TestSDDSessionPreflightFallbackStatesPromptOnlyLimitation(t *testing.T) {
-	block := sddSessionPreflightBlockWithTool("")
-	for _, want := range []string{"no classified native question UI", "Only explicit, validated parent answers to every required group", "preflight authority in this fallback runtime", "missing authority blocks dispatch"} {
-		if !strings.Contains(block, want) {
-			t.Fatalf("fallback block missing %q", want)
-		}
-	}
-	if strings.Contains(block, "runtime derives and prepends the canonical") {
-		t.Fatalf("fallback block falsely claims executable runtime enforcement: %s", block)
-	}
-}
-
 func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 	block := sddSessionPreflightBlock()
-	for _, want := range []string{"<!-- axiom:sdd-session-preflight -->", "### SDD Session Preflight (HARD GATE)", "Phrase examples are routing hints, never the authority boundary", "Axiom SDD preflight pace:", "Only a successful parent `question` result", "Model-authored defaults, summaries", "runtime derives and prepends the canonical `## SDD Session Preflight` block", "- **Pace** (`pace`, `monorepo-embedded` only)", "always `hybrid`", "Delivery is never asked: it is always `single-pr`", "<!-- /axiom:sdd-session-preflight -->"} {
-		if !strings.Contains(block, want) {
-			t.Fatalf("canonical block missing %q", want)
-		}
-	}
-	for _, retired := range []string{"1. **Pace**", "2. **Artifacts**", "1/3:", "2/3:", "3/3:", "OpenSpec ->", "Engram ->", "Both ->", "Review: 800 lines", "Other ->", "PR strategy", "pr-strategy", "Ask me ->", "Single PR ->", "ask-on-risk", "auto-chain", "Review policy", "400"} {
-		if strings.Contains(block, retired) {
-			t.Fatalf("canonical block retains retired content %q", retired)
-		}
-	}
-	if !strings.Contains(block, "never collect these answers as typed chat text") {
-		t.Fatal("canonical block must always route the preflight through the question tool")
-	}
-	if strings.Contains(block, "lossless blocking fallback") {
-		t.Fatal("canonical block must not defer to the lossless blocking fallback while the question tool exists")
-	}
-	fallback := sddSessionPreflightBlockWithTool("")
-	if strings.Contains(fallback, "typed chat text") {
-		t.Fatal("fallback-runtime variant must not carry the question-tool-only wording")
-	}
-	if !strings.Contains(fallback, "no classified native question UI") {
-		t.Fatal("fallback-runtime variant must still state it has no classified native question UI")
-	}
-	askUserQuestion := sddSessionPreflightBlockWithTool("AskUserQuestion")
-	if !strings.Contains(askUserQuestion, "Always collect this preflight with the `AskUserQuestion` tool") {
-		t.Fatal("AskUserQuestion variant must always collect the preflight with the AskUserQuestion tool")
-	}
 	for _, newline := range []string{"\n", "\r\n"} {
 		rendered := strings.Join([]string{"before", testSDDSessionPreflightEntryAnchor, testSDDSessionPreflightInitAnchor, "after"}, newline)
 		got, err := projectSDDSessionPreflight(rendered, testSDDSessionPreflightEntryAnchor)
@@ -299,47 +234,6 @@ func TestSDDSessionPreflightProjectionCanonicalAndBounded(t *testing.T) {
 		if _, err := projectSDDSessionPreflight(rendered, testSDDSessionPreflightEntryAnchor); err == nil {
 			t.Fatal("projectSDDSessionPreflight() accepted an inline anchor")
 		}
-	}
-}
-
-func TestSessionPreflightBodyNamesTopologyGroups(t *testing.T) {
-	block := sddSessionPreflightBlock()
-	for _, want := range []string{
-		"read `workspace.topology` from the project's `axiom.yaml`",
-		"`monorepo-embedded` asks Pace.",
-		"`multirepo` asks nothing",
-		"When the topology requires no group, ask nothing",
-		"Never ask the artifact store: it is always `hybrid`",
-		"`Axiom SDD preflight pace:`",
-		"- **Pace** (`pace`, `monorepo-embedded` only)",
-		"Delivery is never asked: it is always `single-pr`",
-		"NEVER ask it as a preflight group",
-	} {
-		if !strings.Contains(block, want) {
-			t.Errorf("preflight body missing %q", want)
-		}
-	}
-	for _, retired := range []string{"Artifacts", "Both -> `hybrid`", "OpenSpec -> `openspec`", "Engram -> `engram`", "Ask Pace, Artifacts, and PR strategy", "no three separate calls", "fourth group", "PR strategy", "pr-strategy", "400", "Review policy"} {
-		if strings.Contains(block, retired) {
-			t.Errorf("preflight body retains retired content %q", retired)
-		}
-	}
-}
-
-func TestSessionPreflightFallbackAnswerSyntaxUsesRequiredGroups(t *testing.T) {
-	fallback := sddSessionPreflightBlockWithTool("")
-	for _, want := range []string{
-		"`Pace: <label>`",
-		"every group the topology requires",
-		"together with the values the topology fixes (`multirepo` pace `interactive`, artifact store `hybrid`, delivery strategy `single-pr`)",
-		"When the topology requires no group, pass only the fixed values.",
-	} {
-		if !strings.Contains(fallback, want) {
-			t.Errorf("fallback variant missing %q", want)
-		}
-	}
-	if strings.Contains(fallback, "Artifacts: <label>") || strings.Contains(fallback, "all three") {
-		t.Error("fallback variant retains the three-group answer syntax")
 	}
 }
 

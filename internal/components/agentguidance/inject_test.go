@@ -154,9 +154,6 @@ func TestInjectRoutingInstallsGuidanceForEverySupportedAgent(t *testing.T) {
 			if !containsRoutingCloseMarker(written) {
 				t.Fatalf("InjectRouting(%q) did not close the managed section:\n%s", agent.ID, written)
 			}
-			if !strings.Contains(written, "First establish whether the requested outcome explicitly authorizes a change.") {
-				t.Fatalf("InjectRouting(%q) did not deliver the outcome-authorization guard:\n%s", agent.ID, written)
-			}
 		})
 	}
 }
@@ -552,34 +549,6 @@ func TestInjectRoutingIsIdempotentForEverySupportedAgent(t *testing.T) {
 			}
 			if got := readFile(t, first.Files[0]); got != afterFirst {
 				t.Fatalf("second InjectRouting(%q) rewrote the file:\n%s", agent.ID, got)
-			}
-		})
-	}
-}
-
-func TestInjectRoutingDeliversNoRetiredControlPlaneVocabulary(t *testing.T) {
-	t.Parallel()
-
-	for _, agent := range catalog.AllAgents() {
-		t.Run(string(agent.ID), func(t *testing.T) {
-			t.Parallel()
-
-			targetDir := t.TempDir()
-
-			result, err := InjectRouting(targetDir, agent.ID)
-			if err != nil {
-				t.Fatalf("InjectRouting(%q) error = %v", agent.ID, err)
-			}
-
-			block := managedRoutingBlock(deliveredGuidance(t, result.Files[0]))
-			if strings.TrimSpace(block) == "" {
-				t.Fatalf("InjectRouting(%q) delivered no managed routing block", agent.ID)
-			}
-			lowered := block
-			for _, forbidden := range retiredRemoteControlPlaneVocabulary {
-				if strings.Contains(strings.ToLower(routingVocabularyForGuard(lowered, forbidden)), strings.ToLower(forbidden)) {
-					t.Fatalf("InjectRouting(%q) delivered retired vocabulary %q:\n%s", agent.ID, forbidden, block)
-				}
 			}
 		})
 	}

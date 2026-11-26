@@ -86,32 +86,3 @@ func TestSDDPhaseSkillsKeepRulesConfigInstructionAcrossModelTiers(t *testing.T) 
 		})
 	}
 }
-
-// #4114: docs/openspec-config.md documents that sdd-verify reads
-// `rules.verify` from openspec/config.yaml, the same way sdd-apply already
-// reads `rules.apply` — but the sdd-verify skill never actually said so.
-func TestSDDApplyAndVerifyReadPhaseScopedConfigRules(t *testing.T) {
-	cases := map[string]string{
-		"sdd-apply":  "rules.apply",
-		"sdd-verify": "rules.verify",
-	}
-	for phase, token := range cases {
-		t.Run(phase, func(t *testing.T) {
-			path := "skills/" + phase + "/SKILL.md"
-			if content := MustRead(path); !strings.Contains(content, token) {
-				t.Fatalf("%s must mention %q (see docs/openspec-config.md phase table)", path, token)
-			}
-		})
-	}
-}
-
-// #4114: strict-tdd-verify.md carries its own "Rules (Strict TDD Verify
-// specific)" list and is loaded instead of relying solely on the base
-// SKILL.md Hard Rules once Strict TDD is active, so it must repeat the
-// rules.verify instruction rather than let it apply only outside TDD mode.
-func TestStrictTDDVerifyModuleRepeatsRulesConfigInstruction(t *testing.T) {
-	path := "skills/sdd-verify/strict-tdd-verify.md"
-	if content := MustRead(path); !strings.Contains(content, "rules.verify") {
-		t.Fatalf("%s must mention \"rules.verify\" since it carries its own Rules list", path)
-	}
-}

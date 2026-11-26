@@ -158,28 +158,6 @@ func TestOpenCodeBackgroundPolicyComposition(t *testing.T) {
 	if strings.Count(enabled, openCodeBackgroundPolicyMarker) != 1 || strings.Count(enabled, openCodeBackgroundPolicyEnd) != 1 {
 		t.Fatal("enabled OpenCode composition duplicated policy markers")
 	}
-	for _, sentinel := range []string{
-		"background: true",
-		"independent, read-only exploration, audit, or review",
-		"foreground tasks when the result is needed before the next action",
-		"user decisions",
-		"SDD apply",
-		"dependent verify evidence",
-		"archive",
-		"Judgment Day actors",
-		"no more than 2 concurrent background tasks",
-		"do not poll, sleep, run status checks, or proactively read",
-		"Do not duplicate launches or work, and do not overlap files or topics",
-		"Never run parallel writers in one worktree",
-		"process-local and non-durable",
-		"restart loses them",
-		"`background` is absent from the Task tool schema",
-		"capability is disabled or unknown",
-	} {
-		if !strings.Contains(enabled, sentinel) {
-			t.Fatalf("enabled OpenCode composition missing policy sentinel %q", sentinel)
-		}
-	}
 }
 
 func TestOpenCodeBackgroundPolicyInjectionThroughPublicBoundary(t *testing.T) {

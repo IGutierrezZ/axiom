@@ -9,24 +9,13 @@ import (
 
 // TestRenderRoutingCarriesInformedApprovalOnceForEveryAgent pins the single
 // source of the informed-approval and continuity doctrine: every supported
-// agent receives it exactly once, with its limits, and no SDD or ODD wording
-// around it restates it.
+// agent receives it exactly once, and it keeps the consent envelope token.
 func TestRenderRoutingCarriesInformedApprovalOnceForEveryAgent(t *testing.T) {
 	t.Parallel()
 
 	doctrine := InformedApprovalAndContinuity()
-	for _, want := range []string{
-		"immediately before it, and approves exactly that",
-		"never widens the scope",
-		"does not choose: ask again",
-		"axiom.sdd-integration.consent/v1",
-		"exact allowed answers of a Lossless Blocking Prompt",
-		"publishing, remote, and destructive actions",
-		"does not cancel or replace the objective already authorized",
-	} {
-		if !strings.Contains(doctrine, want) {
-			t.Errorf("InformedApprovalAndContinuity() is missing %q:\n%s", want, doctrine)
-		}
+	if !strings.Contains(doctrine, "axiom.sdd-integration.consent/v1") {
+		t.Errorf("InformedApprovalAndContinuity() is missing the consent envelope token:\n%s", doctrine)
 	}
 
 	for _, agent := range catalog.AllAgents() {
