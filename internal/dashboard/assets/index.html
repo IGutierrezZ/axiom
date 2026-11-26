@@ -4,23 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Axiom — Dashboard de ingeniería SDD</title>
-  <!-- Anti-parpadeo: fija el tema antes de pintar. Lee axiom.theme (light|dark|system,
-       por defecto system) y resuelve system con matchMedia. Todo en try/catch. -->
-  <script>
-    (function () {
-      var pref = 'system';
-      try {
-        var stored = window.localStorage.getItem('axiom.theme');
-        if (stored === 'light' || stored === 'dark' || stored === 'system') pref = stored;
-      } catch (e) { /* sin almacenamiento: system */ }
-      var theme = pref;
-      if (pref === 'system') {
-        try { theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
-        catch (e) { theme = 'light'; }
-      }
-      document.documentElement.dataset.theme = theme;
-    })();
-  </script>
+  <!-- Anti-parpadeo: fija el tema antes de pintar (script externo por la CSP). -->
+  <script src="/js/theme-init.js"></script>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#0E0F12">
   <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -94,7 +79,7 @@
         <div class="sidebar-foot">
           <!-- Aviso de specs por detrás del remoto (ODD-5.4); oculto salvo que haya commits pendientes -->
           <div id="specs-sync-banner" class="sync-box" hidden role="status">
-            <i data-icon="download" style="color: var(--warn)"></i>
+            <i data-icon="download" class="icon-warn"></i>
             <span class="grow" id="specs-sync-text">Specs por detrás del remoto.</span>
             <button type="button" id="btn-specs-pull" class="link-btn" title="Hacer pull del repositorio de specs">Pull</button>
           </div>
@@ -617,15 +602,15 @@
       </div>
       <p class="field-hint">Preferencias personales: se guardan en tu Hub, no en <code>axiom.yaml</code>. Si dejas la raíz vacía se usa la ruta por defecto.</p>
       <!-- Solo en multirepo: monorepo-embedded solo admite el rol fullstack -->
-      <div class="form-stack" id="field-project-roles" hidden style="border-top: 1px solid var(--border); padding-top: 14px">
-        <div class="field-row" style="justify-content: space-between">
+      <div class="form-stack form-stack--divided" id="field-project-roles" hidden>
+        <div class="field-row field-row--between">
           <span class="field-label">Roles del proyecto (opcional)</span>
           <button type="button" id="btn-add-role-row" class="btn btn-sm"><i data-icon="plus" data-size="14"></i>Agregar rol</button>
         </div>
         <p class="field-hint">Si no configuras roles específicos, Axiom creará un único rol <strong>fullstack</strong> que gobernará todo el repositorio.</p>
         <div id="roles-builder-container" class="form-stack"></div>
       </div>
-      <div class="form-stack" style="border-top: 1px solid var(--border); padding-top: 14px">
+      <div class="form-stack form-stack--divided">
         <span class="field-label">Adaptadores (opcional)</span>
         <p class="field-hint">Se instalan en el proyecto, en modo workspace. Si no eliges ninguno, el proyecto queda sin adaptadores y puedes instalarlos después. Los que solo tienen configuración global aparecen deshabilitados.</p>
         <div id="adapters-container" class="form-stack"></div>

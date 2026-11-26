@@ -265,7 +265,7 @@ dialog :focus-visible { outline-offset: 1px; }
 .kpi-label { font-size: 12px; color: var(--text-3); font-weight: 500; }
 .kpi-value { font-size: 30px; font-weight: 650; letter-spacing: -.02em; line-height: 1.1; }
 .progress { height: 6px; border-radius: var(--radius-full); background: var(--hover); overflow: hidden; }
-.progress > span { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-full); }
+.progress > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: var(--radius-full); }
 .progress.is-done > span { background: var(--ok); }
 .alert {
   display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--radius-xl);
@@ -533,7 +533,7 @@ dialog.modal::backdrop { background: rgba(10, 10, 14, .55); }
 /* Tablero: las columnas vacías (salvo Verify) se pliegan a una franja estrecha con
    su etiqueta y su cuenta, así que las siete fases caben sin esconder Verify ni Archive. */
 .ix-board-wrap { overflow-x: auto; padding-bottom: 8px; max-width: 100%; border-radius: var(--radius-xl); }
-.ix-board { display: grid; grid-template-columns: var(--ix-cols); gap: 12px; align-items: start; min-width: 0; }
+.ix-board { display: grid; grid-template-columns: var(--ix-cols, repeat(auto-fit, minmax(9.25rem, 1fr))); gap: 12px; align-items: start; min-width: 0; }
 .ix-col {
   display: flex; flex-direction: column; gap: 8px; padding: 10px; min-width: 0; min-height: 12rem;
   border-radius: var(--radius-xl); background: var(--surface-2);
@@ -1056,3 +1056,10 @@ h5.md-h, h6.md-h { font-size: 13px; }
 #form-autofetch .field > label { flex-direction: row; align-items: center; gap: 8px; }
 
 a.popover-item { color: inherit; text-decoration: none; }
+
+/* Utilidades que sustituyen estilos en línea (CSP style-src 'self') */
+.icon-warn { color: var(--warn); }
+.form-stack--divided { border-top: 1px solid var(--border); padding-top: 14px; }
+.field-row--between { justify-content: space-between; }
+.popover-label--plain { text-transform: none; letter-spacing: 0; }
+.error-banner--inset { margin: 12px; }

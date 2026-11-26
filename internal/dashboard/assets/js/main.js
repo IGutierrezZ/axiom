@@ -8,6 +8,7 @@ import { startRouter } from './core/router.js';
 import { refreshOverview } from './core/overview.js';
 import { set, on } from './core/state.js';
 import { initTheme } from './core/theme.js';
+import { observeCssData } from './core/cssvars.js';
 import { initInstallButton, registerServiceWorker } from './core/pwa.js';
 import { initProjects, loadProjects } from './projects.js';
 import { initUpdate } from './update.js';
@@ -92,6 +93,7 @@ function showView(route, { initial }) {
 
 function boot() {
   initTheme();
+  observeCssData();
   hydrateIcons();
   initInstallButton();
   registerServiceWorker();

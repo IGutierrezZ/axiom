@@ -42,7 +42,7 @@ function renderProjectList() {
   const data = state.projects;
   const projects = (data && data.projects) || [];
   if (projects.length === 0) {
-    list.innerHTML = '<span class="popover-label" style="text-transform:none;letter-spacing:0">No hay proyectos registrados.</span>';
+    list.innerHTML = '<span class="popover-label popover-label--plain">No hay proyectos registrados.</span>';
     return;
   }
   list.innerHTML = projects.map(p => {
@@ -208,7 +208,7 @@ async function navigateToDirectory(targetPath) {
     hidePathInput();
     renderFolderPickerUI();
   } catch (err) {
-    fp.list.innerHTML = `<div class="error-banner" style="margin: 12px">Error: ${escapeHtml(err.message)}</div>`;
+    fp.list.innerHTML = `<div class="error-banner error-banner--inset">Error: ${escapeHtml(err.message)}</div>`;
   }
 }
 

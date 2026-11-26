@@ -11,6 +11,7 @@ import { api, apiWithHeaders, escapeHtml } from '../core/api.js';
 import { branchBadge, createWithDecision, parseNotes, pendingArchiveBadge } from '../core/branches.js';
 import { $, $all, openDialog, closeDialog, setBusy, chip, button, stateEmpty, stateError, tableWrap } from '../core/components.js';
 import { icon } from '../core/icons.js';
+import { applyCssData } from '../core/cssvars.js';
 import { PHASES, phaseIndex, typeInfo, typeChip, flagBadge, progressBar, miniStepper, formatDate, isArchived } from '../core/increment.js';
 import { hrefFor, navigate } from '../core/router.js';
 import { state, set } from '../core/state.js';
@@ -170,7 +171,7 @@ function boardHtml(items, archivedExtra) {
     return { collapsed, html: `<section class="ix-col${collapsed ? ' is-collapsed' : ''}" aria-labelledby="ix-h-${phase.id}">${head}${body}</section>` };
   });
   const template = cols.map(c => (c.collapsed ? '3.25rem' : 'minmax(9.25rem, 1fr)')).join(' ');
-  return `<div class="ix-board-wrap" role="region" aria-label="Tablero de incrementos por fase" tabindex="0"><div class="ix-board" style="--ix-cols:${template}">${cols.map(c => c.html).join('')}</div></div>`;
+  return `<div class="ix-board-wrap" role="region" aria-label="Tablero de incrementos por fase" tabindex="0"><div class="ix-board" data-ix-cols="${template}">${cols.map(c => c.html).join('')}</div></div>`;
 }
 
 function listHtml(items) {
@@ -269,6 +270,7 @@ function paint() {
     more = button({ label: `Ver los ${archivedAll.length} archivados`, iconName: 'archive', size: 'sm', variant: 'ghost', attrs: 'data-action="archived"' });
   }
   container.innerHTML = body + (more ? `<p class="ix-more">${more}</p>` : '');
+  applyCssData(container); // síncrono: evita el parpadeo hasta que actúe el observador
 
   const n = items.length;
   announce(`${n} ${n === 1 ? 'incremento' : 'incrementos'} en ${activeFilter().label}`);

@@ -5,6 +5,7 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 ## Tareas completadas
 
 - [x] 1.1 Barrera de red en `internal/dashboard/server.go` (D-02).
+- [x] 1.2 Retirar estilos y script de tema en línea (D-01).
 
 ## Evidencia de la unidad 1.1
 
@@ -28,3 +29,14 @@ Modo: estándar (sin strict_tdd), con RED→GREEN observado por la tarea. Entreg
 - `/api/explainer` conserva su CSP exacta (RF-WEB-15), sin `frame-ancestors` ni `X-Frame-Options`: ese documento se enmarca en un iframe del mismo origen. Riesgo residual: otro origen podría enmarcarlo, pero el contenido es un HTML de solo lectura bajo `default-src 'none'`, y la guarda de Host/Origin se aplica igualmente a esa ruta.
 - Hasta la tarea 1.2 la CSP `style-src 'self'` bloquea los estilos en línea de los assets actuales (la interfaz queda degradada visualmente entre 1.1 y 1.2).
 - Un `Host` o `Origin` ajeno en `GET /api/*` ahora responde 403 también a clientes que antes funcionaban con cualquier Host (p. ej. un proxy inverso); el dashboard está pensado solo para bucle local.
+
+## Evidencia de la unidad 1.2
+
+| Evidencia | Valor |
+|---|---|
+| Pruebas nuevas | `TestNoInlineStyleOrScriptInAssets`, `TestThemeInitScriptIsExternalAndFirst`, `TestCssVarsModuleBoundsItsInput`; `TestIndexHTMLShell` ajustada al script externo. |
+| GREEN | `go test ./internal/dashboard -run 'Assets|Inline|Theme|Workflow|Acceptance|Settings|Explainer|Security|PWA|Pwa|TestIndexHTMLShell|CssVars' -count=1`: ok; `go vet ./internal/dashboard` limpio. |
+| Grep | Sin `style=`, `setAttribute('style'` ni `<script>` con cuerpo en `internal/dashboard/assets`. |
+| Arnés | Sin ejecutor de JS: comprobación visual en navegador queda para `verify` (H-05). |
+
+Decisiones: `applyCssData` se llama también de forma síncrona tras pintar el tablero de incrementos (hueco 11); `--ix-cols` tiene valor por defecto `repeat(auto-fit, minmax(9.25rem, 1fr))` y `.progress > span` parte de `width: 0`. Las barras de progreso en otras pantallas dependen del observador (microtarea, previa al pintado). RED no observado antes del GREEN (las pruebas se escribieron tras el cambio de assets).
