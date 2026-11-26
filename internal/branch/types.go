@@ -229,6 +229,9 @@ type RecordBranch struct {
 	RoleID   string     `json:"role,omitempty"`
 	Worktree string     `json:"worktree,omitempty"`
 	InPlace  bool       `json:"inPlace,omitempty"`
+	// Template es la plantilla con la que se renderizó Name; solo las entradas con plantilla son
+	// nombres congelados (C-07-f, design D-09). Vacía sin plantilla: el registro no cambia.
+	Template string `json:"template,omitempty"`
 }
 
 // RevEntry es un commit de `git rev-list --parents`: su SHA y los de sus padres (ninguno en el

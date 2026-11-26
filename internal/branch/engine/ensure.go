@@ -135,6 +135,9 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	// preguntar por el modo de trabajo.
 	gather := func(lock func(commonDir string) *branch.Refusal) (changeFacts, *branch.Refusal) {
 		facts, refusal := e.gatherWith(ctx, command, r.CWD, r.Change, r.Lane, lock, options)
+		if refusal == nil && !r.Archive {
+			refusal = e.recoverPending(ctx, command, r.CWD, &facts)
+		}
 		if refusal == nil && r.Archive {
 			refusal = useArchivePlan(&facts, r)
 		}

@@ -28,6 +28,9 @@ type ExpectedNames struct {
 	Archive string
 	// Integration es la rama de integración del repositorio.
 	Integration string
+	// PendingRoles son los roles cuya rama con `{task_ref}` aún no tiene nombre porque su Task no
+	// existe (design D-10, G2): el repositorio espera su entrada.
+	PendingRoles []string
 }
 
 // VerdictInput es todo lo que Decide necesita.
@@ -63,7 +66,7 @@ type Verdict struct {
 	// Warning lo rellena el motor cuando no pudo comprobar la rama y no bloquea.
 	Warning string
 	// Continuation es la orden exacta de `axiom branch ensure` que pone el repositorio en la rama
-	// que corresponde; solo la lleva `wrong_branch`.
+	// que corresponde; la lleva `wrong_branch` y, con `--role`, el `not_applicable` de un repositorio que espera a su rol.
 	Continuation string
 	// Details amplía el veredicto con datos de máquina (`reason`, `roles`, `pendingRoles`) cuando
 	// una rama del cambio aún no existe porque espera la entrada de su rol; vacío en el resto.
@@ -92,15 +95,45 @@ func Decide(in VerdictInput) Verdict {
 		return verdict
 	}
 
+	// Un repositorio cuya rama del cambio espera a su rol no tiene todavía rama que comprobar
+	// (design D-10, G2): `not_applicable` con la continuación `--role`.
+	if in.Role != RepoSpecsInPlace && in.Expected.Change == "" && len(in.Expected.Roles) == 0 && len(in.Expected.PendingRoles) > 0 {
+		return awaitingRole(in, verdict)
+	}
+
 	archive := in.Context == ContextArchive && in.Lane != LaneODD && in.Role == RepoChangeBranch
 	verdict.Expected = correctBranches(in, archive)
 	if !in.Detached && slices.Contains(verdict.Expected, in.Current) {
 		verdict.Kind = VerdictCorrect
-		return verdict
+		return withPendingRoles(in, verdict)
 	}
 	verdict.Kind = VerdictWrongBranch
 	verdict.Detail = wrongBranchDetail(in, verdict.Expected, archive)
 	verdict.Continuation = verdictContinuation(in, archive)
+	return withPendingRoles(in, verdict)
+}
+
+// withPendingRoles informa, sin cambiar el tipo del veredicto, de los roles cuya rama aún no existe
+// cuando otro rol ya entró (design D-10).
+func withPendingRoles(in VerdictInput, verdict Verdict) Verdict {
+	if len(in.Expected.PendingRoles) > 0 {
+		verdict.Details = map[string]string{"pendingRoles": strings.Join(in.Expected.PendingRoles, ",")}
+	}
+	return verdict
+}
+
+// awaitingRole es el veredicto `not_applicable` de un repositorio que espera la entrada de un rol:
+// `Details` lleva `reason` = `awaiting_role` y los roles, y la continuación es el `ensure --role`
+// del rol (el literal si es uno solo, `<rol>` si son varios).
+func awaitingRole(in VerdictInput, verdict Verdict) Verdict {
+	roles := in.Expected.PendingRoles
+	verdict.Details = map[string]string{"reason": PendingReasonAwaitingRole, "roles": strings.Join(roles, ",")}
+	verdict.Detail = fmt.Sprintf("el repositorio %s espera la entrada de su rol (%s) para nombrar la rama del cambio %s: aún no hay rama que comprobar", in.Repo, strings.Join(roles, ", "), in.Change)
+	role := "<rol>"
+	if len(roles) == 1 {
+		role = pathquote.ShellWord(roles[0])
+	}
+	verdict.Continuation = verdictContinuation(in, false) + " --role " + role
 	return verdict
 }
 
@@ -116,6 +149,9 @@ func correctBranches(in VerdictInput, archive bool) []string {
 			return nil
 		}
 		return []string{names.Archive}
+	}
+	if names.Change == "" && len(names.PendingRoles) > 0 {
+		return slices.Clone(names.Roles)
 	}
 	return slices.Concat([]string{names.Change}, names.Roles)
 }

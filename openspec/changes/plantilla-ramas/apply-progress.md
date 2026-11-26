@@ -17,7 +17,7 @@
 
 ## Pendientes
 
-4.1 (incluye leer `Frozen` del registro en `gatherWith`, `registeredChangeBranch` con plantilla y `recoverPending` con `TemplateCandidateCollision`), 4.2, 5.1.
+4.2, 5.1.
 
 ## Desviaciones
 
@@ -27,3 +27,5 @@
 - 3.2: pruebas escritas junto con el código (sin RED separado). Firmas: `TemplateUnresolved(change, master, key, variable, role, lane)`, `TemplateNotApplicable(change, master, key, reason, lane)`, `TemplateInvalidName(change, master, key, field, value, cause)`, `TemplateCollision`/`TemplateCandidateCollision(change, master, repo, name, roles)`, `TemplateReservedName(change, master, repo, name, reserved)`, `IntegrationsLinksUnreadable(operation, change, master, cause)`; constantes `TemplateReason*`.
 - 2.1: la sección de usuario se añadió como `## Plantillas de nombre de rama (branch_template)` en `docs/usage.md` y la lista de claves editables ya cita las tres claves, aunque las filas del catálogo llegan en 2.2 (misma PR).
 - 3.3: la tarea se aplicó con TDD (RED por fallo de compilación). El tipo de `changestart.WorkItemFacts` se llama `WorkItemOrigin`. `PlanInput.Sealing` es el interruptor de «plan del sellado» (política aplica aunque haya kickoff sin instantánea). El planificador ya consume `RepoFacts.Frozen`, pero el motor aún no lo rellena (4.1). `EnteringRole` y `Describe` están en el planificador; el motor los cablea en 4.2. En ODD solo SDD escribe el vínculo `work_item`, así que `{ref}` sale del staging o del `work-item.json` adoptado.
+
+- [x] 4.1 Registro congelado, recuperación y guarda. `RecordBranch.Template`; `engine/frozen.go` (`freezeFromRecord` rellena `RepoFacts.Frozen` en `gatherWith`, `recoverPending` con `BranchExists` solo en `refs/heads`, propagación de errores, `TemplateCandidateCollision`); `branch/planner_guard.go` (`RenderGuardBranches`, `ChangeBranchTemplated`, `FrozenFrom`); `engine/verdict_names.go` (`expectedNames` con orden D-10, render sin registro, `PendingRoles`, archivado sin `ArchivePrefix` con plantilla); `Decide` con `awaiting_role` y `Details.pendingRoles`; `registeredChangeBranch` y `newArchiveRecord` con plantilla (S9). Commit `feat(branch): nombres congelados, recuperación y veredicto con plantilla`. Sin RED separado. Desviaciones: `recoverPending` va dentro del cierre `gather` de `Ensure` y planifica con `InPlace=true`; la guarda reutiliza `repoNaming` del planificador. Pendientes: 4.2 (aquí `EnteringRole` y `Describe` siguen sin cablear), 5.1.

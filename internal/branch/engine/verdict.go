@@ -139,7 +139,15 @@ func (e *Engine) VerdictFor(ctx context.Context, q VerdictQuery) (branch.Verdict
 	in.Repo = filepath.Base(root)
 	in.Current, in.Detached = current, detached
 	in.Master = master
-	in.Expected = expectedNames(q, loc, record, snapshot, root, repoCommon)
+	planningRel, planningInside := relativeWithin(loc.Master, planningRoot)
+	expected, refusal := expectedNames(q, loc, record, snapshot, guardRepository{
+		root: root, common: repoCommon, isPlanning: isPlanning,
+		planning: branch.RepoFacts{GitRoot: planningRoot, CommonDir: planningCommon, RelPath: relativeOrEmpty(planningRel, planningInside)},
+	})
+	if refusal != nil {
+		return branch.Verdict{}, &branch.RefusalError{Refusal: *refusal}
+	}
+	in.Expected = expected
 	return branch.Decide(in), nil
 }
 
@@ -224,80 +232,6 @@ func roleOf(loc workspace.Location, isPlanning bool) branch.RepoRole {
 	default:
 		return branch.RepoCode
 	}
-}
-
-// expectedNames compone los nombres esperados del repositorio cuya raíz es root y cuyo git
-// common dir es repoCommon (design D-10, «Nombres esperados»). Para la rama del cambio y las de
-// rol: (1) la instantánea del kickoff, si tiene entrada para el repositorio; (2) sin ella, el
-// registro (la rama registrada o las excepciones de RF-BRA-12); (3) la política del repositorio.
-// Para la de archivado: el registro si `ensure --archive` recibió `--prefix`; si no, la instantánea;
-// si no, `<rama del cambio>-archive`. El carril ODD no tiene rama de archivado.
-func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record, snapshot *kickoff.GitSnapshot, root, repoCommon string) branch.ExpectedNames {
-	policy := branch.ResolvePolicy(loc.Config)
-	effective := branch.RepoPolicy{IntegrationBranch: policy.IntegrationBranch, BranchPrefix: policy.BranchPrefix}
-	relative, inside := relativeWithin(loc.Master, root)
-	if inside {
-		effective = policy.For(relative)
-	}
-
-	recordedChange, recordedRoles, recordedArchive := recordedBranches(record, repoCommon)
-	var recordedException, recordedPrefix string
-	if record != nil {
-		recordedException, recordedPrefix = record.Exceptions.Branch, record.Exceptions.Prefix
-	}
-	if recordedPrefix == "" {
-		recordedPrefix = effective.BranchPrefix
-	}
-	// La instantánea manda sobre el registro y la política en la rama del cambio y en las de rol; un
-	// repositorio al que no da rama del cambio (uno fuera de la carpeta maestra, o un repositorio de
-	// código que no tocan los roles sellados) sigue con los nombres de abajo.
-	entry, fromSnapshot := snapshotEntry(snapshot, relative, inside)
-	snapshotChange := snapshotBranch(entry, "change")
-	fromSnapshot = fromSnapshot && snapshotChange != ""
-	changeBranch := branch.ResolveChangeBranch(q.Change, recordedPrefix,
-		branch.NamedBranch("instantánea", snapshotChange),
-		branch.NamedBranch("registro", recordedChange),
-		branch.NamedBranch("--branch registrada", recordedException))
-	names := branch.ExpectedNames{Change: changeBranch, Integration: effective.IntegrationBranch}
-
-	// Con dos o más roles que tocan el repositorio hay ramas de rol (RF-BRA-04); las registradas
-	// valen aunque el kickoff aún no las nombre.
-	roles := make(map[string]bool, len(recordedRoles))
-	switch {
-	case fromSnapshot:
-		for _, named := range entry.Branches {
-			if named.Kind == "role" {
-				roles[named.Name] = true
-			}
-		}
-	default:
-		for _, name := range recordedRoles {
-			roles[name] = true
-		}
-		if touching := rolesTouching(loc, root, q.SealRoles); len(touching) >= 2 {
-			for _, role := range touching {
-				roles[changeBranch+"-"+role] = true
-			}
-		}
-	}
-	for name := range roles {
-		names.Roles = append(names.Roles, name)
-	}
-	slices.Sort(names.Roles)
-
-	if q.Lane != branch.LaneODD {
-		switch snapshotArchive := snapshotBranch(entry, "archive"); {
-		case recordedArchive != "":
-			names.Archive = recordedArchive
-		case record != nil && record.ArchivePrefix != "":
-			names.Archive = branch.ArchiveBranchFor(branch.ResolveChangeBranch(q.Change, record.ArchivePrefix))
-		case fromSnapshot && snapshotArchive != "":
-			names.Archive = snapshotArchive
-		default:
-			names.Archive = branch.ArchiveBranchFor(changeBranch)
-		}
-	}
-	return names
 }
 
 // snapshotEntry devuelve la entrada de la instantánea del repositorio cuya ruta relativa a la

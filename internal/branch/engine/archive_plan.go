@@ -65,7 +65,13 @@ func registeredChangeBranch(facts changeFacts) string {
 		return named
 	}
 	exceptions := facts.input.Exceptions
-	return branch.ResolveChangeBranch(facts.input.Change, exceptions.Prefix,
+	prefix := exceptions.Prefix
+	if exceptions.Branch == "" && branch.ChangeBranchTemplated(facts.input) {
+		// Con plantilla, el planificador renderiza la rama del cambio y `--prefix` no interviene
+		// (design D-14, S9): aquí no hay nombre que componer.
+		return ""
+	}
+	return branch.ResolveChangeBranch(facts.input.Change, prefix,
 		branch.NamedBranch("--branch", exceptions.Branch))
 }
 

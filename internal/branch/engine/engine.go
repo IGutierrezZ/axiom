@@ -206,6 +206,9 @@ func (e *Engine) gatherWith(ctx context.Context, operation, cwd, change string, 
 	}
 	code, skipped = chosen.code, append(skipped, chosen.skipped...)
 
+	// Los nombres congelados del registro entran al planificador por repositorio (D-09).
+	freezeFromRecord(record, &planning, code, chosen.included)
+
 	worktrees := map[string][]branch.WorktreeEntry{}
 	var existing []branch.WorktreeEntry
 	for _, facts := range slices.Concat([]branch.RepoFacts{planning}, code, chosen.included) {
