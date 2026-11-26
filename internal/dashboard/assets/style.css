@@ -1063,3 +1063,13 @@ a.popover-item { color: inherit; text-decoration: none; }
 .field-row--between { justify-content: space-between; }
 .popover-label--plain { text-transform: none; letter-spacing: 0; }
 .error-banner--inset { margin: 12px; }
+
+/* Integraciones (#/integraciones) */
+.int-plugin { margin-bottom: 16px; }
+.int-secret-entry { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.int-secret-entry .form-input { flex: 1 1 260px; min-width: 0; }
+.int-source { margin: 4px 0 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.int-candidates, .int-identities, .int-states { margin: 6px 0; padding-left: 18px; }
+.int-scope { list-style: none; margin: 6px 0; padding-left: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.int-discovery { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.int-discovery summary { cursor: pointer; font-weight: 600; }

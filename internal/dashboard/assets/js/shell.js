@@ -15,6 +15,7 @@ const ROUTE_LABELS = {
   specs: 'Specs vivas',
   skills: 'Skills',
   ecosistema: 'Ecosistema',
+  integraciones: 'Integraciones',
   ajustes: 'Ajustes del proyecto'
 };
 

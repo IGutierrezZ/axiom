@@ -72,6 +72,7 @@
           <div class="nav-group">
             <span class="nav-label">Plataforma</span>
             <a class="nav-item" href="#/ecosistema" data-nav="ecosistema"><i data-icon="pulse" data-size="18"></i><span class="grow">Ecosistema</span><span id="badge-ecosistema" hidden></span></a>
+            <a class="nav-item" href="#/integraciones" data-nav="integraciones"><i data-icon="handoff" data-size="18"></i><span class="grow">Integraciones</span></a>
             <a class="nav-item" href="#/ajustes" data-nav="ajustes"><i data-icon="settings" data-size="18"></i><span class="grow">Ajustes</span></a>
           </div>
         </nav>
@@ -404,6 +405,22 @@
                 <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando la asignación de modelos…</span></div>
               </div>
             </section>
+          </div>
+        </section>
+
+        <!-- ===== Integraciones ===== -->
+        <section id="view-integraciones" class="view" hidden aria-labelledby="integraciones-title">
+          <div class="page-header">
+            <div>
+              <h1 id="integraciones-title" class="page-title" tabindex="-1">Integraciones</h1>
+              <p class="page-sub">Conecta Axiom con herramientas externas: la configuración vive en <code>axiom.yaml</code> y tus credenciales, en tu equipo.</p>
+            </div>
+            <span class="badge badge-mono" id="integrations-config-path">axiom.yaml</span>
+          </div>
+          <p class="alert alert-warn" role="note"><span class="grow">El PAT es tuyo: se guarda en el almacén de secretos de tu sistema, nunca en <code>axiom.yaml</code>, y no se vuelve a mostrar. Editar la configuración solo afecta a cambios nuevos.</span></p>
+          <p id="integrations-announce" class="sr-only" role="status" aria-live="polite"></p>
+          <div id="integrations-body">
+            <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Cargando las integraciones…</span></div>
           </div>
         </section>
 

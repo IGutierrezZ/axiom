@@ -79,3 +79,15 @@ Notas de cobertura resueltas: hueco 6 (sin pasarela `GET /api/integrations` se d
 Desviaciones: (1) códigos añadidos a la tabla de D-06: `value_too_large` (400), `port_unsupported` (422), `method_not_allowed` (405 tipado) y `settings_unreadable` (500). (2) Defensa en profundidad: los textos de error de la pasarela se redactan con los valores de secreto vigentes del plugin (`[redactado]`) aunque el plugin ya los sanee. (3) Plazos y cerrojo: `integrationBudget` (45 s) y un `TryLock` común a connect y discover en `Server`; el cerrojo de `start` llega en 6.1. (4) Los espacios laterales del PAT se recortan antes de guardar; los caracteres de control se rechazan sobre el valor recibido. (5) `Enabled` de un plugin = declarado y no `enabled: false` (igual que `workspace.Active`).
 
 Riesgos: la ruta de guardado del PAT usa `secrets.Default()` en cada llamada (sin caché); un keyring bloqueado queda acotado a 5 s por petición.
+
+## Evidencia de la unidad 4.1
+
+| Evidencia | Valor |
+|---|---|
+| RED | `integrations_assets_test.go` escrito antes de los assets: `go test ./internal/dashboard -run TestIntegrationsScreenAssets` fallaba (módulos 404, ruta, navegación y `index.html` sin la pantalla). |
+| GREEN | `go test ./internal/dashboard -run 'TestIntegrationsScreenAssets\|Assets\|Inline\|Theme\|Settings\|Router\|Shell\|TestJSModuleImportsResolve\|TestIndexHTMLShell' -count=1`: ok (incluye `TestNoInlineStyleOrScriptInAssets`). `go vet ./internal/dashboard`: limpio. |
+| Arnés | Sin ejecutor de JS en las pruebas (H-05): invariantes fijados por texto. Comprobación puntual con Node en un directorio temporal: `node --check` de los módulos nuevos y `safeExternalURL` (acepta `https://a.b/x`; rechaza `javascript:`, `//h`, credenciales). Comprobación visual en navegador queda para `verify`. |
+
+Decisiones: la pantalla reutiliza `controlHtml` y `collectChanges` con las entradas de cada plugin y guarda con un único `PUT /api/settings`; tras éxito recarga `GET /api/integrations`. Un 409 muestra `errorView` (con «Recargar»), que recarga con `keepTyped` y reaplica lo tecleado. El campo del PAT no lleva `data-key` (no entra en el lote), se vacía siempre tras guardar (también si falla) y el borrado pide `confirmDialog`. «Probar conexión» y «aviso de identidad» usan `candidates` (409/422) con radios y reenvían `user`. «Descubrir» deja un `<datalist>` solo en campos de texto libre sin `format` ni `enum` y marca «no encontrado en el tracker» los valores ausentes; las sugerencias se recuerdan solo en memoria. `safeExternalURL`/`externalLink` viven en `core/integrations.js`, listos para 5.1 (la pantalla de ajustes ya enlazaba a `#/integraciones`).
+
+Riesgos: la pantalla no se ha visto en un navegador real; `externalLink` aún no tiene consumidor hasta 5.1 (JS, no afecta al trinquete de Go); el icono de navegación reutiliza `handoff`.
