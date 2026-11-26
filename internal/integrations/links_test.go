@@ -253,3 +253,72 @@ func TestLinksInArchivedFolderAreReadOnly(t *testing.T) {
 		t.Fatal("integrations.yaml archivado no cambia")
 	}
 }
+
+func TestLinkWorkItemCreatesFile(t *testing.T) {
+	f := newWorkspace(t)
+	folder := f.Folder()
+	link := Link{Kind: "work_item", ID: "2525", URL: "https://tracker.example/2525"}
+
+	changed, err := LinkWorkItem(folder, "fake", link, fixedNow)
+	if err != nil || !changed {
+		t.Fatalf("LinkWorkItem: changed=%v err=%v", changed, err)
+	}
+	doc, err := readLinks(folder)
+	if err != nil || len(doc.Links) != 1 {
+		t.Fatalf("readLinks = %+v, %v", doc, err)
+	}
+	got := doc.Links[0]
+	if got.Plugin != "fake" || got.Kind != "work_item" || got.ID != "2525" || got.Source != "change.start" || !got.RecordedAt.Equal(fixedNow) {
+		t.Fatalf("vínculo = %+v", got)
+	}
+}
+
+func TestLinkWorkItemIdempotent(t *testing.T) {
+	f := newWorkspace(t)
+	folder := f.Folder()
+	link := Link{Kind: "work_item", ID: "2525"}
+	if _, err := LinkWorkItem(folder, "fake", link, fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	first := readTestFile(t, folder.path(LinksFile))
+	changed, err := LinkWorkItem(folder, "fake", link, fixedNow.Add(time.Hour))
+	if err != nil || changed {
+		t.Fatalf("repetir no cambia nada: changed=%v err=%v", changed, err)
+	}
+	if second := readTestFile(t, folder.path(LinksFile)); second != first {
+		t.Fatalf("el fichero debe quedar byte a byte igual:\n%s\n---\n%s", first, second)
+	}
+}
+
+func TestLinkWorkItemKeepsDeliveryLinks(t *testing.T) {
+	f := newWorkspace(t)
+	folder := f.Folder()
+	if _, err := mergeLinks(folder, "fake", "gate.spec.approved/x/dabc", fixedNow, sampleOutcome()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LinkWorkItem(folder, "fake", Link{Kind: "work_item", ID: "2525"}, fixedNow); err != nil {
+		t.Fatal(err)
+	}
+	links, err := WorkItemLinks(folder)
+	if err != nil || len(links) != 3 {
+		t.Fatalf("WorkItemLinks = %+v, %v; esperaba los 3 vínculos kind work_item", links, err)
+	}
+	doc, _ := readLinks(folder)
+	if len(doc.TimeEntries) != 1 {
+		t.Fatalf("las imputaciones deben conservarse: %+v", doc.TimeEntries)
+	}
+}
+
+func TestLinkWorkItemRejectsUserinfo(t *testing.T) {
+	f := newWorkspace(t)
+	_, err := LinkWorkItem(f.Folder(), "fake", Link{Kind: "work_item", ID: "1", URL: "https://usuario:clave@tracker.example/1"}, fixedNow)
+	if err == nil {
+		t.Fatal("una URL con userinfo debe rechazarse")
+	}
+	if strings.Contains(err.Error(), "clave@") || strings.Contains(err.Error(), "usuario:clave") {
+		t.Fatalf("el error no debe repetir las credenciales: %v", err)
+	}
+	if fileExists(f.Folder().path(LinksFile)) {
+		t.Fatal("nada se escribe si el vínculo es inválido")
+	}
+}

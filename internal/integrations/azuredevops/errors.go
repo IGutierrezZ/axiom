@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 )
 
 // Centinelas para errors.Is. Cada fallo del cliente es un error tipado; nunca se silencia.
@@ -268,3 +270,27 @@ func (r redactor) detailOf(text string) string {
 	runes := []rune(flat)
 	return string(runes[:maxErrorDetail]) + "…"
 }
+
+// ForeignURLError indica que una URL de recurso (adjunto o imagen) no recibe la credencial: queda
+// fuera del esquema, el host o la organización configurados, o lleva userinfo o segmentos «.» o «..».
+// Reason es un valor cerrado (scheme, userinfo, host, organization, path); el error nunca repite la
+// URL, que es texto del tracker. La decisión se toma sin red y sin resolver el PAT.
+type ForeignURLError struct{ Reason string }
+
+func (e *ForeignURLError) Error() string {
+	return fmt.Sprintf("la URL del recurso queda fuera del host y la organización configurados (motivo: %s)", e.Reason)
+}
+
+// TooLargeError indica que el cuerpo de una descarga supera el límite fijado. Se detecta leyendo con
+// un lector limitado, sin depender de Content-Length.
+type TooLargeError struct {
+	Operation string
+	Limit     int64
+}
+
+func (e *TooLargeError) Error() string {
+	return fmt.Sprintf("el cuerpo supera el límite de %d bytes al %s", e.Limit, e.Operation)
+}
+
+func (e *ForeignURLError) Is(target error) bool { return target == integrations.ErrResourceURLRejected }
+func (e *TooLargeError) Is(target error) bool   { return target == integrations.ErrAttachmentTooLarge }

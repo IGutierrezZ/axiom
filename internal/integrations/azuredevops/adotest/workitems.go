@@ -28,6 +28,7 @@ type workItemStore struct {
 	rejectStatus int
 	loseNext     bool
 	scramble     bool
+	afterRead    map[int][]map[string]any // ediciones ajenas que se aplican tras cada lectura
 }
 
 var (
@@ -79,6 +80,7 @@ func (s *Server) WorkItem(id int) (WorkItem, bool) {
 	for k, v := range it.Fields {
 		copied.Fields[k] = v
 	}
+	copied.Relations = append([]map[string]any(nil), it.Relations...)
 	return copied, true
 }
 
@@ -163,7 +165,20 @@ func (st *workItemStore) get(req *Request) Response {
 		return notFoundResponse(id)
 	}
 	expand := strings.EqualFold(req.Query.Get("$expand"), "relations")
-	return Response{JSON: render(it, expand)}
+	resp := Response{JSON: render(it, expand)}
+	if edits := st.afterRead[id]; len(edits) > 0 {
+		st.afterRead[id] = edits[1:]
+		updated := map[string]any{}
+		for k, v := range it.Fields {
+			updated[k] = v
+		}
+		for k, v := range edits[0] {
+			updated[k] = v
+		}
+		it.Fields = updated
+		it.Rev++
+	}
+	return resp
 }
 
 func (st *workItemStore) batch(req *Request) Response {
@@ -237,6 +252,7 @@ func (st *workItemStore) patch(req *Request) Response {
 	for k, v := range it.Fields {
 		updated[k] = v
 	}
+	relations := append([]map[string]any(nil), it.Relations...)
 	for _, op := range ops {
 		switch {
 		case op.Op == "test" && op.Path == "/rev":
@@ -246,7 +262,8 @@ func (st *workItemStore) patch(req *Request) Response {
 			}
 		case (op.Op == "add" || op.Op == "replace") && strings.HasPrefix(op.Path, "/fields/"):
 			name := strings.TrimPrefix(op.Path, "/fields/")
-			if _, known := it.Fields[name]; !known {
+			// System.Tags existe en todo work item aunque la prueba no lo siembre.
+			if _, known := it.Fields[name]; !known && name != "System.Tags" {
 				return Response{Status: http.StatusBadRequest, JSON: map[string]any{
 					"message": "TF51535: Cannot find field " + name + ".",
 					"typeKey": "RuleValidationException",
@@ -255,11 +272,18 @@ func (st *workItemStore) patch(req *Request) Response {
 			var value any
 			_ = json.Unmarshal(op.Value, &value)
 			updated[name] = value
+		case op.Op == "add" && op.Path == "/relations/-":
+			var rel map[string]any
+			if err := json.Unmarshal(op.Value, &rel); err != nil || rel["rel"] == nil || rel["url"] == nil {
+				return Response{Status: http.StatusBadRequest, JSON: map[string]any{"message": "adotest: relación inválida en add /relations/-"}}
+			}
+			relations = append(relations, rel)
 		default:
 			return Response{Status: http.StatusBadRequest, JSON: map[string]any{"message": "adotest: operación no soportada " + op.Op + " " + op.Path}}
 		}
 	}
 	it.Fields = updated
+	it.Relations = relations
 	it.Rev++
 	st.applied[id]++
 	if st.loseNext {
@@ -267,4 +291,19 @@ func (st *workItemStore) patch(req *Request) Response {
 		return Response{Drop: true}
 	}
 	return Response{JSON: render(it, false)}
+}
+
+// EditAfterNextRead simula que otra persona edita el work item id justo después de la próxima
+// lectura (GET) que se haga de él: aplica fields y sube la revisión. Cada llamada se consume en una
+// lectura distinta, en orden.
+func (s *Server) EditAfterNextRead(id int, fields map[string]any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st := s.store()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if st.afterRead == nil {
+		st.afterRead = map[int][]map[string]any{}
+	}
+	st.afterRead[id] = append(st.afterRead[id], fields)
 }

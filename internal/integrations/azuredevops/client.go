@@ -213,6 +213,19 @@ type request struct {
 	workItemID  int    // para NotFound y RevConflict
 	rev         int    // revisión enviada en test /rev
 	batchIDs    []int  // identificadores de un lote: un 404 nombra el que falta
+
+	// Modo binario (descarga de adjuntos): absoluteURL sustituye a segments (ya validada por
+	// validateResourceURL), bodyLimit acota el cuerpo de éxito sin depender de Content-Length y
+	// binary entrega los bytes y el Content-Type en lugar de decodificar JSON.
+	absoluteURL string
+	bodyLimit   int64
+	binary      bool
+}
+
+// binaryResult es el destino de una petición en modo binario.
+type binaryResult struct {
+	Data        []byte
+	ContentType string // normalizado; application/octet-stream si falta o no se puede analizar
 }
 
 // buildURL compone la URL: [organización, segmentos...] escapados uno a uno con url.PathEscape. Nunca
@@ -220,6 +233,9 @@ type request struct {
 // Un segmento vacío, «.» o «..» es un error de configuración: ninguna petición sale de
 // {endpoint}/{organización}/.
 func (c *Client) buildURL(req request) (string, error) {
+	if req.absoluteURL != "" {
+		return withAPIVersion(req.absoluteURL)
+	}
 	segments := append([]string{c.target.Organization}, req.segments...)
 	rawParts := make([]string, 0, len(segments))
 	escapedParts := make([]string, 0, len(segments))
@@ -243,6 +259,20 @@ func (c *Client) buildURL(req request) (string, error) {
 	}
 	query.Set("api-version", APIVersion)
 	u.RawQuery = query.Encode()
+	return u.String(), nil
+}
+
+// withAPIVersion añade api-version a una URL absoluta que no la lleva.
+func withAPIVersion(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", fmt.Errorf("%w: la URL del recurso no es válida", ErrConfig)
+	}
+	query := u.Query()
+	if query.Get("api-version") == "" {
+		query.Set("api-version", APIVersion)
+		u.RawQuery = query.Encode()
+	}
 	return u.String(), nil
 }
 
@@ -387,7 +417,11 @@ func (c *Client) attempt(ctx context.Context, req request, target, auth string, 
 		return attemptResult{err: errors.New("no se pudo construir la petición")}
 	}
 	httpReq.Header.Set("Authorization", auth)
-	httpReq.Header.Set("Accept", "application/json")
+	if req.binary {
+		httpReq.Header.Set("Accept", "*/*")
+	} else {
+		httpReq.Header.Set("Accept", "application/json")
+	}
 	httpReq.Header.Set("User-Agent", userAgent)
 	if req.contentType != "" {
 		httpReq.Header.Set("Content-Type", req.contentType)
@@ -407,6 +441,9 @@ func (c *Client) attempt(ctx context.Context, req request, target, auth string, 
 	limit := int64(maxErrorBodyBytes)
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		limit = maxResponseBytes
+		if req.bodyLimit > 0 {
+			limit = req.bodyLimit
+		}
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
@@ -530,6 +567,9 @@ func (c *Client) classify(req request, res attemptResult, attempts int, red reda
 		return nil
 
 	case status >= 200 && status < 300:
+		if req.binary {
+			return decodeBinary(req, res, out)
+		}
 		return decodeSuccess(req, res, out)
 
 	case status == http.StatusNotFound:
@@ -545,6 +585,27 @@ func (c *Client) classify(req request, res attemptResult, attempts int, red reda
 		return &RevConflictError{WorkItemID: req.workItemID, Rev: req.rev, AfterRetry: attempts > 1}
 	}
 	return &APIError{Status: status, Attempts: attempts, Operation: req.operation, Detail: red.detailOf(body.Message)}
+}
+
+// decodeBinary entrega los bytes de una respuesta 2xx en modo binario. Un cuerpo que supera el
+// límite es *TooLargeError, tenga o no Content-Length. El Content-Type se normaliza con
+// mime.ParseMediaType (sin parámetros, en minúsculas); si falta o no se puede analizar, es
+// application/octet-stream. Un text/html no se trata como página de inicio de sesión: lo decide quien
+// llama por el tipo de contenido.
+func decodeBinary(req request, res attemptResult, out any) error {
+	if res.truncated {
+		return &TooLargeError{Operation: req.operation, Limit: req.bodyLimit}
+	}
+	dst, ok := out.(*binaryResult)
+	if !ok {
+		return invalidResponse(req.operation, "destino binario no válido")
+	}
+	dst.Data = res.body
+	dst.ContentType = "application/octet-stream"
+	if mediaType, _, err := mime.ParseMediaType(res.contentType); err == nil && mediaType != "" {
+		dst.ContentType = mediaType
+	}
+	return nil
 }
 
 // decodeSuccess decodifica una respuesta 2xx. Criterio de la página de inicio de sesión: un 200 con
