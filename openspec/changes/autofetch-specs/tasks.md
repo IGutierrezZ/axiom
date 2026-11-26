@@ -90,7 +90,8 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
 
 ## Fase 4: Doctrina, documentación y guardas
 
-- [ ] T9 Doctrina y goldens (~170 líneas escritas + goldens; después de T7)
+- [x] T9 Doctrina y goldens (~170 líneas escritas + goldens; después de T7)
+  - Evidencia: frase canónica en routing.go, sdd-orchestrator-sections.md y sdd-apply/SKILL.md; párrafo previo a cada parada; 10 goldens regenerados; TestGolden, assets (Fetch|Orchestrator), agentguidance (Routing) y components/sdd en verde.
   - Ficheros: `internal/components/agentguidance/routing.go` (frase canónica), `internal/assets/skills/_shared/sdd-orchestrator-sections.md` (frase y párrafo «Before presenting each stop, run `axiom autofetch run --cwd <root> --json`…»), `internal/assets/skills/sdd-apply/SKILL.md`, `internal/assets/assets_test.go`, `internal/components/agentguidance/routing_test.go`, `testdata/golden/*.golden` (10).
   - Cubre: RF-BRA-40 (doctrina condiciona `--fetch`); hueco 6 (las líneas 108 y 288 y `stop-exits.md` no se tocan; una prueba fija que siguen intactas).
   - Pasos: editar textos → `go test ./internal/components -run TestGolden -update` → revisar el diff de los 10 goldens → `go test ./internal/components -run TestGolden`.

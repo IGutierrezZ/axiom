@@ -108,7 +108,7 @@ Before starting work, check for existing apply-progress:
 
 Branches and worktrees are prepared and removed by `axiom branch`; never create a branch or a worktree by hand and never ask the user a worktree questionnaire.
 
-1. Before the first work unit, run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --json` (`<c>` is the change name). It creates only what is missing and is idempotent: repeat it when you resume. A `decision_required` result is an environment preference of the user (worktree or in place): present it and repeat the command with `--mode <answer>`. Never pass `--fetch` without the explicit authorization of the user.
+1. Before the first work unit, run `axiom branch ensure --cwd "<workspaceRoot>" --change <c> --json` (`<c>` is the change name). It creates only what is missing and is idempotent: repeat it when you resume. A `decision_required` result is an environment preference of the user (worktree or in place): present it and repeat the command with `--mode <answer>`. Never pass `--fetch` without the explicit authorization of the user, unless the user enabled autofetch (`axiom autofetch enable`).
 2. Edit only under `repositories[].branches[].worktree` of the active role in that JSON. Use that absolute path as `--cwd`, as the repository of every `git -C` command, and as the root of every file path; never change the working directory of the session to reach it.
 3. With several roles, the role branches start from the tracking branch of the change: the person publishes the tracking branch before the first role pull request.
 4. In a `multirepo`, the specs repository is worked in place on the integration branch (`git.integration_branch`): `ensure` creates no branch or worktree in it.
