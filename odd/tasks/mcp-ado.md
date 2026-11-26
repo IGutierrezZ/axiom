@@ -70,8 +70,15 @@ Que el agente consulte Azure DevOps (contexto, duplicados, ayuda a la redacción
 |---|---|
 | T1 | `e3dfd9f0` |
 | T2 | `b7e14cc0` |
-| T3 | commit `docs(sdd)` que cierra la rama (sin `## Spec viva`: no hay `axiom archive integrate`) |
+| T3 | `f3a583f6` (sin `## Spec viva`: no hay `axiom archive integrate`) |
+
+## Cierre
+
+- PR #368 (`type:feature`) fusionada con merge commit `711807e6`; CI verde a la primera. Auto-fix denegado por el clasificador: CI vigilada con `gh pr checks --watch`.
+- `scripts/axiom-worktree.ps1 done mcp-ado -Lane odd` ejecutado.
+- Limitación conocida: desactivar el plugin no retira la entrada ya escrita (documentado en `docs/manual-de-inicio.md`).
+- Este registro de cierre va en una PR de docs aparte, porque el commit de T3 no podía llevar su propio sha.
 
 ## Siguiente paso
 
-Abrir la PR.
+Ninguno: feature cerrada.
