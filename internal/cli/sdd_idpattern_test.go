@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// REQ-44.9: con el patrón inaccesible `sdd archive-check` y `sdd trace` terminan con error y
+// RF-RID-08: con el patrón inaccesible `sdd archive-check` y `sdd trace` terminan con error y
 // la continuación `axiom workspace validate --path <proyecto>`.
 func TestSDDArchiveCheckInaccessiblePatternFailsClosedWithContinuation(t *testing.T) {
 	root, _ := archiveCheckWorkspace(t, archiveCheckChange{
@@ -45,7 +45,7 @@ func TestSDDTraceInaccessiblePatternFailsClosedWithContinuation(t *testing.T) {
 	}
 }
 
-// REQ-30.22 y REQ-29.9: `alreadyComposed` trata un REMOVED por identificador con el título
+// RF-ARC-11 y RF-ISO-09: `alreadyComposed` trata un REMOVED por identificador con el título
 // obsoleto como «no compuesto» mientras el requisito sigue en la canónica y como «compuesto»
 // cuando ya no se resuelve.
 func TestSDDArchiveCheckAlreadyComposedRemovedByID(t *testing.T) {
@@ -93,7 +93,7 @@ func TestSDDArchiveCheckAlreadyComposedRemovedByID(t *testing.T) {
 	}
 }
 
-// REQ-44.7 y REQ-29.9: con `RF-<DOM>-<NN>` `sdd trace` encadena RF-USU-01.
+// RF-RID-07 y RF-ISO-09: con `RF-<DOM>-<NN>` `sdd trace` encadena RF-USU-01.
 func TestReqidRFTraceChainsAnIdentifier(t *testing.T) {
 	repo := traceRepo(t)
 	writeSDDAxiomYAML(t, repo, "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n")

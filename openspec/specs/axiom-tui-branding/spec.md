@@ -16,8 +16,8 @@ Arranque de `axiom` sin argumentos. La TUI que daba nombre a la capacidad se ret
 
 Integración de la TUI y los comandos de ciclo de vida del ecosistema de agentes en la CLI soberana `axiom`.
 
-### Requirement: Lanzamiento de TUI interactiva por defecto y subcomando axiom tui (REQ-14.2)
-Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo (TTY) tanto en entrada estándar como en salida estándar, DEBE abrirse la UI web, con el mismo comportamiento que `axiom ui` (REQ-3.1 de `local-web-dashboard`). Si no hay TTY disponible, DEBE terminar con un error y código distinto de `0` que indica que, para uso no interactivo, se usen `--version`, `axiom update` o `--help`. La opción `--help` imprime la ayuda textual. El subcomando `axiom tui` deja de existir: no queda ninguna interfaz de terminal interactiva.
+### Requirement: Lanzamiento de TUI interactiva por defecto y subcomando axiom tui (RF-TUI-01)
+Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo (TTY) tanto en entrada estándar como en salida estándar, DEBE abrirse la UI web, con el mismo comportamiento que `axiom ui` (RF-WEB-08 de `local-web-dashboard`). Si no hay TTY disponible, DEBE terminar con un error y código distinto de `0` que indica que, para uso no interactivo, se usen `--version`, `axiom update` o `--help`. La opción `--help` imprime la ayuda textual. El subcomando `axiom tui` deja de existir: no queda ninguna interfaz de terminal interactiva.
 (Previously: sin argumentos y con TTY se iniciaba la TUI de Bubbletea; sin TTY se imprimía la ayuda con código `0`; el subcomando `axiom tui` lanzaba siempre la TUI.)
 
 #### Scenario: Ejecución de axiom sin argumentos en sesión interactiva TTY
@@ -36,7 +36,7 @@ Al invocar `axiom` sin argumentos, si la sesión cuenta con terminal interactivo
 - **CUANDO** el usuario ejecuta `axiom tui`
 - **ENTONCES** no se lanza ninguna interfaz de terminal
 
-### Requirement: Subcomandos de gestión de herramientas y agentes en CLI axiom (REQ-14.3)
+### Requirement: Subcomandos de gestión de herramientas y agentes en CLI axiom (RF-TUI-02)
 El binario `axiom` DEBE soportar nativamente los subcomandos de gestión de herramientas: `install`, `sync`, `upgrade`, `doctor`, `backup`, `restore` y `uninstall`, delegando la ejecución a los módulos correspondientes del runtime.
 
 #### Scenario: Ayuda de install desde axiom
@@ -60,9 +60,9 @@ El binario `axiom` DEBE soportar nativamente los subcomandos de gestión de herr
 
 Pasarela de compatibilidad y transición no disruptiva para usuarios y scripts existentes.
 
-### Requirement: Pasarela de compatibilidad y deprecación de gentle-ai (REQ-14.4) — RETIRADO
+### Requirement: Pasarela de compatibilidad y deprecación de gentle-ai (RF-TUI-03) — RETIRADO
 
-> **Retirado:** el binario `gentle-ai` y el paquete `cmd/gentle-ai` ya no se compilan ni se publican (ODD `seguimientos-restos-upstream`; véase REQ-20.11 de `axiom-distribution-identity`). Se conserva el identificador REQ-14.4 y el texto original solo por trazabilidad; el requisito no vincula.
+> **Retirado:** el binario `gentle-ai` y el paquete `cmd/gentle-ai` ya no se compilan ni se publican (ODD `seguimientos-restos-upstream`; véase RF-DIS-05 de `axiom-distribution-identity`). Se conserva el identificador RF-TUI-03 y el texto original solo por trazabilidad; el requisito no vincula.
 
 El binario `gentle-ai` DEBE actuar como un envoltorio ligero que emite una advertencia de deprecación en `stderr` recomendando migrar al comando `axiom`, mientras delega fielmente la ejecución con todos los argumentos al motor unificado.
 

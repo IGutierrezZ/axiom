@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia (REQ-44.4). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (REQ-47.1–47.6); no migra las specs de Axiom (C-03-e).
+Puerto único de identificadores de requisito (C-03-a): el proyecto declara en el bloque `sdd:` de `axiom.yaml` el patrón de sus identificadores (`RF-USU-01`, `REQ-30.4`...), y un único punto del producto decide qué es un identificador válido, cuál es su serie y su número, y cuál es el siguiente libre de una serie. Los consumidores de la forma del identificador (compositor de OpenSpec, evidencia ISO, spec viva, documentación viva y mensajes de la CLI) usan ese punto y ninguno conserva una expresión regular propia (RF-RID-04). Sin declaración rige un valor por defecto que admite exactamente los `REQ-<n>.<m>` vigentes, de modo que un proyecto que no declara nada no observa ningún cambio. Esta capacidad define la forma provisional de los identificadores, la asignación del siguiente libre al integrar y la traza de identificadores (RF-RID-09–RF-RID-14); no migra las specs de Axiom (C-03-e).
 
 ## Términos
 
 | Término | Significado |
 |---|---|
-| Patrón | Plantilla de segmentos declarada por el proyecto: literales y marcadores. Marcadores: `<DOM>` (código de dominio de la serie), `<n>` (número de la serie), `<m>` (número de secuencia sin relleno) y `<NN>`…`<NNNNNN>` (número de secuencia con relleno a 2..6 cifras). Su gramática es la de REQ-44.3. |
+| Patrón | Plantilla de segmentos declarada por el proyecto: literales y marcadores. Marcadores: `<DOM>` (código de dominio de la serie), `<n>` (número de la serie), `<m>` (número de secuencia sin relleno) y `<NN>`…`<NNNNNN>` (número de secuencia con relleno a 2..6 cifras). Su gramática es la de RF-RID-03. |
 | Identificador válido | Texto que casa por completo con el patrón efectivo del proyecto. |
 | Literal inicial | Primer literal del patrón, con la forma `[A-Z][A-Z0-9]*[-._]` (`REQ-`, `RF-`, `HU-`). Es el ancla de los candidatos. |
 | Candidato | Token que empieza, en límite de palabra, por el literal inicial del patrón y continúa con letras, cifras y los caracteres no alfanuméricos de los demás literales del patrón, terminando en una letra o una cifra. Sirve para distinguir «mal formado» de «sin identificador». |
@@ -21,11 +21,11 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
 
 ## Requirements
 
-### Requirement: Declaración del Patrón de Identificador en el Bloque `sdd:` con Decodificador Estricto y Lectura en Vivo (REQ-44.1)
+### Requirement: Declaración del Patrón de Identificador en el Bloque `sdd:` con Decodificador Estricto y Lectura en Vivo (RF-RID-01)
 
-`axiom.yaml` PUEDE declarar el patrón de los identificadores de requisito del proyecto en el bloque de primer nivel `sdd:`, con la clave escalar de texto `id_pattern` (`sdd.id_pattern`), junto a `iso` y sin alterarla. La declaración es válida en toda topología y no depende de `sdd.iso`: un proyecto que no declara ISO también puede declararla. El bloque `sdd:` sigue decodificándose de forma estricta por lista cerrada de claves (REQ-29.1 de `sdd-iso-evidence`): una clave desconocida, un valor de `id_pattern` que no sea un escalar de texto (lista, mapa, nulo o cadena vacía) y un patrón que no cumpla la gramática de REQ-44.3 DEBEN reportarse como error accionable, tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. El mensaje, en español, DEBE nombrar la clave y la línea, el valor recibido, el motivo de la regla incumplida, un ejemplo de patrón válido y la salida para volver al patrón por defecto (retirar la clave), con la forma `sdd.id_pattern (línea N): la plantilla "<valor>" no es válida: <motivo>; un ejemplo válido es "RF-<DOM>-<NN>"; para el patrón por defecto (REQ-<n>.<m>) retira la clave`. Un patrón inválido NUNCA DEBE degradarse en silencio al valor por defecto ni ignorarse: la declaración inválida falla cerrada, también al sellar (`axiom sdd kickoff seal`) y en `axiom sdd status`.
+`axiom.yaml` PUEDE declarar el patrón de los identificadores de requisito del proyecto en el bloque de primer nivel `sdd:`, con la clave escalar de texto `id_pattern` (`sdd.id_pattern`), junto a `iso` y sin alterarla. La declaración es válida en toda topología y no depende de `sdd.iso`: un proyecto que no declara ISO también puede declararla. El bloque `sdd:` sigue decodificándose de forma estricta por lista cerrada de claves (RF-ISO-01 de `sdd-iso-evidence`): una clave desconocida, un valor de `id_pattern` que no sea un escalar de texto (lista, mapa, nulo o cadena vacía) y un patrón que no cumpla la gramática de RF-RID-03 DEBEN reportarse como error accionable, tanto al cargar la configuración como en `axiom workspace validate`, con código de salida `1`. El mensaje, en español, DEBE nombrar la clave y la línea, el valor recibido, el motivo de la regla incumplida, un ejemplo de patrón válido y la salida para volver al patrón por defecto (retirar la clave), con la forma `sdd.id_pattern (línea N): la plantilla "<valor>" no es válida: <motivo>; un ejemplo válido es "RF-<DOM>-<NN>"; para el patrón por defecto (REQ-<n>.<m>) retira la clave`. Un patrón inválido NUNCA DEBE degradarse en silencio al valor por defecto ni ignorarse: la declaración inválida falla cerrada, también al sellar (`axiom sdd kickoff seal`) y en `axiom sdd status`.
 
-El patrón se lee **en vivo** de `axiom.yaml` en cada uso y NUNCA de `kickoff.yaml`: el esquema de `kickoff.yaml` no cambia y el sellado no copia el patrón. `sdd.iso` sigue congelándose en la instantánea del cambio (REQ-29.13 de `sdd-lane-kickoff`) porque decide el proceso del cambio; el patrón define el vocabulario de la spec viva compartida y debe coincidir con el de la canónica contra la que se archiva. Un cambio en curso cuyo proyecto cambia de patrón se revalida contra el patrón vigente. Un `axiom.yaml` sin la clave se valida exactamente como antes de este cambio. El patrón se toma del `axiom.yaml` del workspace del comando.
+El patrón se lee **en vivo** de `axiom.yaml` en cada uso y NUNCA de `kickoff.yaml`: el esquema de `kickoff.yaml` no cambia y el sellado no copia el patrón. `sdd.iso` sigue congelándose en la instantánea del cambio (RF-KOF-12 de `sdd-lane-kickoff`) porque decide el proceso del cambio; el patrón define el vocabulario de la spec viva compartida y debe coincidir con el de la canónica contra la que se archiva. Un cambio en curso cuyo proyecto cambia de patrón se revalida contra el patrón vigente. Un `axiom.yaml` sin la clave se valida exactamente como antes de este cambio. El patrón se toma del `axiom.yaml` del workspace del comando.
 
 #### Scenario: Un patrón válido se acepta
 
@@ -97,9 +97,9 @@ El patrón se lee **en vivo** de `axiom.yaml` en cada uso y NUNCA de `kickoff.ya
 
 ---
 
-### Requirement: Patrón por Defecto que Admite Exactamente los `REQ-<n>.<m>` Vigentes (REQ-44.2)
+### Requirement: Patrón por Defecto que Admite Exactamente los `REQ-<n>.<m>` Vigentes (RF-RID-02)
 
-Cuando el proyecto no declara patrón, el patrón efectivo DEBE ser el valor por defecto `REQ-<n>.<m>`, que admite exactamente los identificadores que admite hoy el producto (`REQ-` seguido de un entero decimal sin signo, un punto y otro entero decimal sin signo, sin exigir canonicidad: `REQ-30.01` sigue siendo válido) y no admite ningún otro. Su notación legible, usada en mensajes y continuaciones, DEBE ser exactamente `REQ-<n>.<m>`, su notación compacta `REQ-n.m` y su notación compacta de serie `REQ-n.*`. Sin declaración, todo mensaje, continuación y texto fijado hoy por las pruebas DEBE permanecer idéntico byte a byte, y ninguna entrada que hoy se acepta o se rechaza cambia de resultado, con una única excepción deliberada: el rechazo ante un bloque `sdd:` inválido de REQ-44.9, que alcanza a comandos que hoy no leen el bloque. Las rutas que no disponen de un workspace (por ejemplo, la composición con `--canonical` y `--delta` sin contexto de proyecto) DEBEN usar el valor por defecto.
+Cuando el proyecto no declara patrón, el patrón efectivo DEBE ser el valor por defecto `REQ-<n>.<m>`, que admite exactamente los identificadores que admite hoy el producto (`REQ-` seguido de un entero decimal sin signo, un punto y otro entero decimal sin signo, sin exigir canonicidad: `REQ-30.01` sigue siendo válido) y no admite ningún otro. Su notación legible, usada en mensajes y continuaciones, DEBE ser exactamente `REQ-<n>.<m>`, su notación compacta `REQ-n.m` y su notación compacta de serie `REQ-n.*`. Sin declaración, todo mensaje, continuación y texto fijado hoy por las pruebas DEBE permanecer idéntico byte a byte, y ninguna entrada que hoy se acepta o se rechaza cambia de resultado, con una única excepción deliberada: el rechazo ante un bloque `sdd:` inválido de RF-RID-08, que alcanza a comandos que hoy no leen el bloque. Las rutas que no disponen de un workspace (por ejemplo, la composición con `--canonical` y `--delta` sin contexto de proyecto) DEBEN usar el valor por defecto.
 
 #### Scenario: El defecto admite `REQ-n.m`
 
@@ -133,9 +133,9 @@ Cuando el proyecto no declara patrón, el patrón efectivo DEBE ser el valor por
 
 ---
 
-### Requirement: Gramática del Patrón, Serie, Número y Formato del Siguiente Identificador (REQ-44.3)
+### Requirement: Gramática del Patrón, Serie, Número y Formato del Siguiente Identificador (RF-RID-03)
 
-El patrón DEBE ser una plantilla de literales y marcadores que cumpla TODAS estas reglas; cada incumplimiento DEBE rechazarse como error de carga con su motivo (REQ-44.1):
+El patrón DEBE ser una plantilla de literales y marcadores que cumpla TODAS estas reglas; cada incumplimiento DEBE rechazarse como error de carga con su motivo (RF-RID-01):
 
 1. No vacía y de 64 caracteres como máximo.
 2. Empieza por un literal inicial de la forma `[A-Z][A-Z0-9]*[-._]` (una letra mayúscula, mayúsculas o cifras y un separador final).
@@ -144,7 +144,7 @@ El patrón DEBE ser una plantilla de literales y marcadores que cumpla TODAS est
 5. Dos marcadores nunca van seguidos, y un literal pegado a un marcador no empieza ni termina con un carácter del alfabeto de ese marcador (cifras para `<n>`, `<m>` y `<NN…>`; `[A-Z0-9]` para `<DOM>`), de modo que el reparto del identificador en segmentos es único.
 6. Un marcador desconocido, un `<` sin cerrar o un `>` suelto son errores que nombran el texto.
 
-Marcadores: `<DOM>` (serie, código de dominio) encaja con `[A-Z][A-Z0-9]*`; `<n>` (serie, número) con `[0-9]+`; `<m>` con `[0-9]+` y se formatea sin relleno; `<NN>`…`<NNNNNN>` (k = 2 a 6) encaja con la forma canónica de exactamente `k` cifras, o más de `k` cifras sin cero inicial, y se formatea rellenando con ceros hasta `k` cifras. Un identificador es válido cuando casa por completo con el patrón; el número se interpreta como entero y un número que no cabe en un entero NO es un identificador válido. Con `<NN…>` la forma es canónica, de modo que dos escrituras del mismo número no pueden ser ambas válidas; con `<n>` y `<m>` se conserva la permisividad vigente (`REQ-30.01`). Las minúsculas están excluidas de todo identificador válido de cualquier patrón declarable (regla 3): es la propiedad que garantiza REQ-44.6.
+Marcadores: `<DOM>` (serie, código de dominio) encaja con `[A-Z][A-Z0-9]*`; `<n>` (serie, número) con `[0-9]+`; `<m>` con `[0-9]+` y se formatea sin relleno; `<NN>`…`<NNNNNN>` (k = 2 a 6) encaja con la forma canónica de exactamente `k` cifras, o más de `k` cifras sin cero inicial, y se formatea rellenando con ceros hasta `k` cifras. Un identificador es válido cuando casa por completo con el patrón; el número se interpreta como entero y un número que no cabe en un entero NO es un identificador válido. Con `<NN…>` la forma es canónica, de modo que dos escrituras del mismo número no pueden ser ambas válidas; con `<n>` y `<m>` se conserva la permisividad vigente (`REQ-30.01`). Las minúsculas están excluidas de todo identificador válido de cualquier patrón declarable (regla 3): es la propiedad que garantiza RF-RID-06.
 
 La serie de un identificador es todo lo que no es el número de secuencia y su clave la unión de los valores de `<DOM>` y `<n>` con `-`; en un patrón sin `<DOM>` ni `<n>` la serie es única. El patrón DEBE ser invertible: dada una serie y un número, el sistema formatea el identificador rellenando con ceros hasta la anchura declarada y sin truncar nunca un número que la supere. El siguiente identificador libre de una serie es el de número igual al máximo de esa serie en todo el registro de identificadores consultado más uno, con el criterio que rige hoy para `REQ-<n>.<m>`, formateado con el relleno del patrón. Las notaciones de mensaje son tres: legible (la plantilla), compacta y compacta de serie. El patrón declarado es el único origen de estas reglas: ningún consumidor las redefine.
 
@@ -231,12 +231,12 @@ La serie de un identificador es todo lo que no es el número de secuencia y su c
 
 ---
 
-### Requirement: Un Único Punto de Parseo, Validación, Formato y Serie que Usan los Consumidores (REQ-44.4)
+### Requirement: Un Único Punto de Parseo, Validación, Formato y Serie que Usan los Consumidores (RF-RID-04)
 
 El parseo del identificador de un título de requisito, la detección de candidatos, la validación, la extracción de serie y número, el formato del siguiente identificador, las notaciones del patrón y el identificador sintético DEBEN residir en un único paquete hoja (`internal/reqid`, solo biblioteca estándar) que no depende de ningún otro paquete de Axiom. `openspecdoc` e `isoevidence` solo pueden importar ese paquete entre los internos. El identificador de un título es el último identificador válido entre paréntesis (`(ID)`); el campo `ID` precalculado de los requisitos de `openspecdoc` desaparece, de modo que ningún consumidor lee un identificador calculado con un patrón por defecto oculto.
 
 Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingdoc`, `internal/adoption/adoptcheck` y la CLI (`archive integrate`, `archive adopt`, `sdd archive-compose`, `sdd archive-check`, `sdd trace`) DEBEN obtener el patrón efectivo del workspace cuando lo tienen y recibirlo por parámetro u opción cuando no, con el valor por defecto si no se pasa. Ningún consumidor DEBE conservar una expresión regular, una constante ni un `Sprintf` propios del formato del identificador. NO existe ninguna excepción: `axiom archive adopt check` y los textos de `axiom archive adopt` leen `sdd.id_pattern` y miden con el patrón efectivo; un patrón declarado inaccesible o inválido da el mismo error accionable que en el resto de consumidores.
-(Previously: excepción deliberada y temporal (A-03-2, REQ-30.31) por la que `internal/adoption/adoptcheck` y `axiom archive adopt` seguían usando el patrón por defecto `REQ-<n>.<m>` hasta C-03-c, sin leer `sdd.id_pattern`.)
+(Previously: excepción deliberada y temporal (A-03-2, RF-ORQ-19) por la que `internal/adoption/adoptcheck` y `axiom archive adopt` seguían usando el patrón por defecto `REQ-<n>.<m>` hasta C-03-c, sin leer `sdd.id_pattern`.)
 
 **Criterio de terminado ejecutable** (decisión del 2026-11-23): `rg -n 'REQ-[^0-9]' --type go internal cmd -g '!*_test.go'` solo coincide en `internal/reqid` y en comentarios, y la prueba de arquitectura `TestNoRequirementIDFormatOutsideReqid` falla si un literal de texto de un `.go` de producción de `internal/` o `cmd/` contiene `REQ-` seguido de algo que no sea una cifra fuera de `internal/reqid` (los comentarios quedan fuera). Las citas de requisitos de Axiom con cifras (`REQ-21.18`) en mensajes y la plantilla de borrador de `internal/knowledge/sweep.go` quedan fuera de este criterio y para C-03-e.
 
@@ -276,7 +276,7 @@ Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingd
 
 - **DADO** un proyecto sin `sdd.id_pattern` y un cambio de adopción con identificadores `REQ-<n>.<m>`
 - **CUANDO** se ejecuta `axiom archive adopt check`
-- **ENTONCES** los identificadores se validan con el patrón por defecto `REQ-<n>.<m>` y los fallos de formato y unicidad se reportan con las reglas de REQ-30.11
+- **ENTONCES** los identificadores se validan con el patrón por defecto `REQ-<n>.<m>` y los fallos de formato y unicidad se reportan con las reglas de RF-ADP-03
 
 #### Scenario: `adoptcheck` y `archive adopt` leen el patrón declarado
 
@@ -290,9 +290,9 @@ Los consumidores `openspecdoc`, `isoevidence`, `sddstatus`, `livespec`, `livingd
 - **DADO** un proyecto con un `sdd.id_pattern` que no es un patrón válido
 - **CUANDO** se ejecuta `axiom archive adopt check`
 - **ENTONCES** falla con el mismo error accionable que el resto de verbos, nombrando el patrón
-### Requirement: Candidato frente a Válido con Errores Tipados y Continuaciones Conservadas (REQ-44.5)
+### Requirement: Candidato frente a Válido con Errores Tipados y Continuaciones Conservadas (RF-RID-05)
 
-El sistema DEBE distinguir entre un texto candidato y un identificador válido. El candidato empieza, en límite de palabra, por el literal inicial del patrón efectivo y sigue con letras, cifras y los caracteres no alfanuméricos de los literales posteriores del patrón, terminando en una letra o una cifra; para el patrón por defecto es exactamente `\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`. Un candidato que no casa por completo con el patrón efectivo DEBE reportarse como candidato mal formado, con un error tipado que nombre el texto encontrado, el patrón efectivo en su texto legible y la continuación (corregirlo según el patrón). La búsqueda devuelve los candidatos sin repetidos y en orden de aparición, separados en válidos y mal formados. Los demás casos (nombre sin identificador, nombre con más de un identificador distinto y repetición de un identificador entre requisitos) conservan su error tipado y su continuación, formulados con el patrón efectivo (REQ-29.3 de `sdd-iso-evidence`). La puntuación final que no forma parte del identificador (una coma, un punto o un paréntesis de cierre tras `REQ-30.1`) NO DEBE contarse como parte del candidato. Con el patrón por defecto, las clasificaciones, los textos y las continuaciones coinciden con los de antes de este cambio.
+El sistema DEBE distinguir entre un texto candidato y un identificador válido. El candidato empieza, en límite de palabra, por el literal inicial del patrón efectivo y sigue con letras, cifras y los caracteres no alfanuméricos de los literales posteriores del patrón, terminando en una letra o una cifra; para el patrón por defecto es exactamente `\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`. Un candidato que no casa por completo con el patrón efectivo DEBE reportarse como candidato mal formado, con un error tipado que nombre el texto encontrado, el patrón efectivo en su texto legible y la continuación (corregirlo según el patrón). La búsqueda devuelve los candidatos sin repetidos y en orden de aparición, separados en válidos y mal formados. Los demás casos (nombre sin identificador, nombre con más de un identificador distinto y repetición de un identificador entre requisitos) conservan su error tipado y su continuación, formulados con el patrón efectivo (RF-ISO-03 de `sdd-iso-evidence`). La puntuación final que no forma parte del identificador (una coma, un punto o un paréntesis de cierre tras `REQ-30.1`) NO DEBE contarse como parte del candidato. Con el patrón por defecto, las clasificaciones, los textos y las continuaciones coinciden con los de antes de este cambio.
 
 #### Scenario: Un candidato mal formado se distingue de la ausencia
 
@@ -360,9 +360,9 @@ El sistema DEBE distinguir entre un texto candidato y un identificador válido. 
 
 ---
 
-### Requirement: El Identificador Sintético de la Documentación Viva Nunca se Confunde con un Identificador Válido (REQ-44.6)
+### Requirement: El Identificador Sintético de la Documentación Viva Nunca se Confunde con un Identificador Válido (RF-RID-06)
 
-Cuando un requisito indexado por la documentación viva (`internal/livingdoc`) no lleva identificador válido en su encabezado, el índice DEBE asignarle un identificador sintético que NO sea un identificador válido de ningún patrón declarable (REQ-44.3). El sintético es `REQ-<capacidad>-<ordinal>` cuando el nombre de la capacidad contiene al menos una letra minúscula ASCII (todos los casos reales: los sintéticos de `openspec/INDEX.md` no cambian) y `req-<capacidad>-<ordinal>` en otro caso. Como todo identificador válido carece de minúsculas (REQ-44.3, regla 3) y todo sintético contiene al menos una, ambos espacios son disjuntos por construcción, sin depender del patrón del proyecto. La lectura del identificador del encabezado DEBE hacerse por el puerto con el patrón efectivo, y la lectura laxa del identificador final `(<literal inicial>…)` de un título no valida, como hoy. Un requisito con identificador válido conserva ese identificador en el índice. Con el patrón por defecto y las specs actuales, los identificadores del índice no cambian. `livingdoc` obtiene el patrón del workspace; sin workspace usa el defecto. Si el patrón no es accesible (`SDDErr` o `ParseErr`), `livingdoc`, que es informativo, usa el defecto y añade un aviso a los avisos del informe de sincronización en lugar de fallar.
+Cuando un requisito indexado por la documentación viva (`internal/livingdoc`) no lleva identificador válido en su encabezado, el índice DEBE asignarle un identificador sintético que NO sea un identificador válido de ningún patrón declarable (RF-RID-03). El sintético es `REQ-<capacidad>-<ordinal>` cuando el nombre de la capacidad contiene al menos una letra minúscula ASCII (todos los casos reales: los sintéticos de `openspec/INDEX.md` no cambian) y `req-<capacidad>-<ordinal>` en otro caso. Como todo identificador válido carece de minúsculas (RF-RID-03, regla 3) y todo sintético contiene al menos una, ambos espacios son disjuntos por construcción, sin depender del patrón del proyecto. La lectura del identificador del encabezado DEBE hacerse por el puerto con el patrón efectivo, y la lectura laxa del identificador final `(<literal inicial>…)` de un título no valida, como hoy. Un requisito con identificador válido conserva ese identificador en el índice. Con el patrón por defecto y las specs actuales, los identificadores del índice no cambian. `livingdoc` obtiene el patrón del workspace; sin workspace usa el defecto. Si el patrón no es accesible (`SDDErr` o `ParseErr`), `livingdoc`, que es informativo, usa el defecto y añade un aviso a los avisos del informe de sincronización en lugar de fallar.
 
 #### Scenario: Un encabezado con identificador válido lo conserva
 
@@ -424,9 +424,9 @@ Cuando un requisito indexado por la documentación viva (`internal/livingdoc`) n
 
 ---
 
-### Requirement: Un Proyecto con Patrón `RF-<DOM>-<NN>` Integra una Delta ODD y Archiva un Cambio SDD sin Errores (REQ-44.7)
+### Requirement: Un Proyecto con Patrón `RF-<DOM>-<NN>` Integra una Delta ODD y Archiva un Cambio SDD sin Errores (RF-RID-07)
 
-Un proyecto cuyo `axiom.yaml` declara el patrón `RF-<DOM>-<NN>` DEBE poder, sin ningún error atribuible al formato del identificador: (a) integrar una delta ODD con `axiom archive integrate --odd <feature>`, con la comprobación de colisión (REQ-30.4 de `odd-living-spec-integration`) formulada y calculada por la serie del patrón, y (b) archivar un cambio SDD cuya delta se compone con `axiom sdd archive-compose` (REQ-30.22 de `sdd-archive-lifecycle`), incluido el archivado interrumpido y reanudado y la reintegración idempotente. En un cambio ISO de ese proyecto, el identificador del nombre de los requisitos (REQ-29.3 de `sdd-iso-evidence`), el de `Cubre:` (REQ-29.4) y el de la consulta de un requisito existente (REQ-29.14 de `spec-baseline-integration`) DEBEN ser los del patrón declarado. Mientras las specs vivas conserven `REQ-<n>.<m>` (hasta C-03-e), esos requisitos no son identificadores válidos del proyecto: el sistema los trata como requisitos sin identificador y los empareja por título exacto. La verificación de este requisito se hace con `go test` sobre un proyecto temporal, sin compilar ni ejecutar un binario suelto.
+Un proyecto cuyo `axiom.yaml` declara el patrón `RF-<DOM>-<NN>` DEBE poder, sin ningún error atribuible al formato del identificador: (a) integrar una delta ODD con `axiom archive integrate --odd <feature>`, con la comprobación de colisión (RF-OLS-04 de `odd-living-spec-integration`) formulada y calculada por la serie del patrón, y (b) archivar un cambio SDD cuya delta se compone con `axiom sdd archive-compose` (RF-ARC-11 de `sdd-archive-lifecycle`), incluido el archivado interrumpido y reanudado y la reintegración idempotente. En un cambio ISO de ese proyecto, el identificador del nombre de los requisitos (RF-ISO-03 de `sdd-iso-evidence`), el de `Cubre:` (RF-ISO-04) y el de la consulta de un requisito existente (RF-BAS-01 de `spec-baseline-integration`) DEBEN ser los del patrón declarado. Mientras las specs vivas conserven `REQ-<n>.<m>` (hasta C-03-e), esos requisitos no son identificadores válidos del proyecto: el sistema los trata como requisitos sin identificador y los empareja por título exacto. La verificación de este requisito se hace con `go test` sobre un proyecto temporal, sin compilar ni ejecutar un binario suelto.
 
 #### Scenario: Integración ODD con el patrón declarado
 
@@ -483,9 +483,9 @@ Un proyecto cuyo `axiom.yaml` declara el patrón `RF-<DOM>-<NN>` DEBE poder, sin
 
 ---
 
-### Requirement: Un Patrón Inaccesible Falla Cerrado en los Consumidores que lo Necesitan (REQ-44.9)
+### Requirement: Un Patrón Inaccesible Falla Cerrado en los Consumidores que lo Necesitan (RF-RID-08)
 
-Cuando el bloque `sdd:` de `axiom.yaml` no se puede leer o es inválido (error de sintaxis de la configuración o error del bloque `sdd:`, también el de `iso`), el patrón de identificador es inaccesible y NINGÚN consumidor DEBE evaluar con un patrón que el proyecto no declaró. Fallo cerrado deliberado, sin escribir: `axiom archive integrate` y `axiom sdd archive-compose` se niegan, con la continuación `axiom workspace validate --path <proyecto>`; `axiom sdd trace` y `axiom sdd archive-check` terminan con error y la misma continuación. En un cambio ISO, la etapa `specs` lleva el hallazgo `iso_declaration_invalid` en lugar de las reglas de identificador, la etapa `tasks` no se evalúa y la proyección de la matriz se omite (REQ-29.3 y REQ-29.16). No se crea ningún código de motivo nuevo. `livingdoc`, que es informativo, es la excepción y solo avisa (REQ-44.6). `axiom sdd archive-compose` sin workspace (`--canonical` y `--delta` sin contexto de proyecto) no lee ninguna declaración y usa el patrón por defecto. Esta negativa es la única excepción deliberada a que ninguna entrada hoy aceptada cambie de resultado (REQ-44.2).
+Cuando el bloque `sdd:` de `axiom.yaml` no se puede leer o es inválido (error de sintaxis de la configuración o error del bloque `sdd:`, también el de `iso`), el patrón de identificador es inaccesible y NINGÚN consumidor DEBE evaluar con un patrón que el proyecto no declaró. Fallo cerrado deliberado, sin escribir: `axiom archive integrate` y `axiom sdd archive-compose` se niegan, con la continuación `axiom workspace validate --path <proyecto>`; `axiom sdd trace` y `axiom sdd archive-check` terminan con error y la misma continuación. En un cambio ISO, la etapa `specs` lleva el hallazgo `iso_declaration_invalid` en lugar de las reglas de identificador, la etapa `tasks` no se evalúa y la proyección de la matriz se omite (RF-ISO-03 y RF-CLI-11). No se crea ningún código de motivo nuevo. `livingdoc`, que es informativo, es la excepción y solo avisa (RF-RID-06). `axiom sdd archive-compose` sin workspace (`--canonical` y `--delta` sin contexto de proyecto) no lee ninguna declaración y usa el patrón por defecto. Esta negativa es la única excepción deliberada a que ninguna entrada hoy aceptada cambie de resultado (RF-RID-02).
 
 #### Scenario: `archive integrate` se niega con un bloque `sdd:` inválido
 
@@ -519,11 +519,11 @@ Cuando el bloque `sdd:` de `axiom.yaml` no se puede leer o es inválido (error d
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
 - **ENTONCES** la etapa `specs` proyecta el hallazgo `iso_declaration_invalid`, no el de identificador
 - **Y** la etapa `tasks` no se evalúa y no se proyecta `iso.matrix`
-### Requirement: Forma del Identificador Provisional, Inconfundible con un Identificador Válido, Única en el Cambio y Ausente de la Spec Viva (REQ-47.1)
+### Requirement: Forma del Identificador Provisional, Inconfundible con un Identificador Válido, Única en el Cambio y Ausente de la Spec Viva (RF-RID-09)
 
-Un requisito ADDED de un cambio SDD o de un documento ODD PUEDE llevar en su título un identificador provisional en lugar de un identificador definitivo. El identificador provisional DEBE cumplir TODOS estos invariantes, con independencia del patrón efectivo del proyecto (`sdd.id_pattern`, REQ-44.1):
+Un requisito ADDED de un cambio SDD o de un documento ODD PUEDE llevar en su título un identificador provisional en lugar de un identificador definitivo. El identificador provisional DEBE cumplir TODOS estos invariantes, con independencia del patrón efectivo del proyecto (`sdd.id_pattern`, RF-RID-01):
 
-1. Es inconfundible con un identificador válido bajo cualquier patrón declarable: NUNCA es un identificador válido (REQ-44.3), y las operaciones de búsqueda de identificadores en un texto (`InTitle`, `Scan`) NUNCA lo devuelven como un identificador válido. Se apoya en la propiedad de REQ-44.3 de que ningún identificador válido contiene minúsculas: el provisional contiene al menos una minúscula. NUNCA puede ser, además, un candidato mal formado del patrón (REQ-44.5): no es una errata de un identificador, es otra clase de token.
+1. Es inconfundible con un identificador válido bajo cualquier patrón declarable: NUNCA es un identificador válido (RF-RID-03), y las operaciones de búsqueda de identificadores en un texto (`InTitle`, `Scan`) NUNCA lo devuelven como un identificador válido. Se apoya en la propiedad de RF-RID-03 de que ningún identificador válido contiene minúsculas: el provisional contiene al menos una minúscula. NUNCA puede ser, además, un candidato mal formado del patrón (RF-RID-05): no es una errata de un identificador, es otra clase de token.
 2. Lleva fijada la serie cuando se conoce (por ejemplo, la serie `30` de `REQ-<n>.<m>` o el dominio `USU` de `RF-<DOM>-<NN>`) y, cuando la serie aún no existe, puede llevar en su lugar una etiqueta de serie nueva propia del cambio, de modo que varios ADDED compartan una serie que todavía no tiene número. La etiqueta de serie nueva solo es admisible con un patrón que tenga el marcador `<n>`; con un patrón con `<DOM>` el dominio DEBE ir fijado, porque no se puede inventar un código de dominio; con un patrón de serie única no hay serie que elegir.
 3. Es único dentro del cambio SDD (todas sus capacidades) o del documento ODD, y NO lo es entre cambios: dos cambios o documentos distintos pueden usar el mismo provisional sin colisión.
 4. NUNCA llega a `openspec/specs/`: ninguna composición ni integración que acabe en la spec viva puede dejar un provisional en ella.
@@ -588,27 +588,27 @@ El formato exacto del identificador provisional lo fija el diseño; esta spec so
 #### Scenario: Los lectores de deltas activas no toman el provisional como identificador
 
 - **DADO** un cambio activo cuya delta tiene un ADDED con un provisional, y otro cambio que integra un ADDED con un identificador definitivo de la misma serie
-- **CUANDO** se comprueban las colisiones de la integración (REQ-30.4 de `odd-living-spec-integration`), se indexa la documentación viva y se cuentan las tareas de un documento ODD en el panel
+- **CUANDO** se comprueban las colisiones de la integración (RF-OLS-04 de `odd-living-spec-integration`), se indexa la documentación viva y se cuentan las tareas de un documento ODD en el panel
 - **ENTONCES** el provisional no se registra como identificador ni colisiona con ningún definitivo
 - **Y** la lectura laxa del indexador de la documentación viva no lo toma como identificador
-- **Y** el recuento de tareas de un documento ODD no cambia por la sección del mapa de asignaciones (REQ-47.6)
+- **Y** el recuento de tareas de un documento ODD no cambia por la sección del mapa de asignaciones (RF-RID-14)
 
 ---
 
-### Requirement: Asignación del Siguiente Número Libre al Integrar, Incluida la Apertura de una Serie (REQ-47.2)
+### Requirement: Asignación del Siguiente Número Libre al Integrar, Incluida la Apertura de una Serie (RF-RID-10)
 
-Al integrar (archivado SDD, REQ-47.8, o `axiom archive integrate --odd`), el sistema DEBE sustituir cada provisional por un identificador definitivo válido según el patrón efectivo del proyecto. El número es el siguiente libre de la serie, calculado por el patrón (REQ-44.3) como el máximo de la serie entre los identificadores ocupados más uno, formateado con el relleno del patrón y sin truncar. Los identificadores ocupados son la unión de:
+Al integrar (archivado SDD, RF-ARC-15, o `axiom archive integrate --odd`), el sistema DEBE sustituir cada provisional por un identificador definitivo válido según el patrón efectivo del proyecto. El número es el siguiente libre de la serie, calculado por el patrón (RF-RID-03) como el máximo de la serie entre los identificadores ocupados más uno, formateado con el relleno del patrón y sin truncar. Los identificadores ocupados son la unión de:
 
 1. los de la spec viva de la rama (`openspec/specs/`), superados incluidos;
-2. los definitivos que declaran las deltas de los cambios activos (`openspec/changes/<cambio>/specs/`, sin `archive/` y sin el propio cambio), el mismo alcance que la comprobación de colisión de REQ-30.4 de `odd-living-spec-integration`;
+2. los definitivos que declaran las deltas de los cambios activos (`openspec/changes/<cambio>/specs/`, sin `archive/` y sin el propio cambio), el mismo alcance que la comprobación de colisión de RF-OLS-04 de `odd-living-spec-integration`;
 3. los ADDED con identificador definitivo del propio cambio SDD o del propio documento ODD;
-4. los definitivos que el mapa guardado del propio cambio ya asignó (REQ-47.6).
+4. los definitivos que el mapa guardado del propio cambio ya asignó (RF-RID-14).
 
 Así un número asignado nunca coincide con un definitivo del propio cambio ni con el de otro cambio activo. La asignación DEBE abrir una serie vacía: cuando la serie no tiene ningún identificador ocupado, el primer número es `1` (con el patrón por defecto, `REQ-<n>.1`; con `RF-<DOM>-<NN>`, `RF-<DOM>-01`).
 
 Cuando el provisional lleva una etiqueta de serie nueva (patrón con `<n>`), el sistema DEBE asignarle el siguiente número de serie libre, igual al máximo de los números de serie ocupados más uno, y todos los ADDED con la misma etiqueta reciben esa misma serie, con números de secuencia consecutivos desde `1`. Distintas etiquetas de serie nueva reciben series distintas, y una serie nueva nunca coincide con una serie que fija un definitivo o un provisional del propio cambio.
 
-La asignación DEBE ser determinista: las mismas entradas (las deltas del cambio o el documento ODD, la spec viva, las deltas de los cambios activos y el mapa guardado) producen siempre el mismo mapa de provisional a definitivo. Los números de una misma serie se asignan en el orden de aparición de los ADDED en el cambio, con un orden fijo y reproducible de las capacidades. Una entrada del mapa guardado conserva su definitivo aunque cambie ese orden (REQ-30.3 de `odd-living-spec-integration`). El rango de números NO DEBE reservar ni usar valores altos «de cortesía» que puedan confundirse con un identificador válido real (el provisional ya es inconfundible por REQ-47.1).
+La asignación DEBE ser determinista: las mismas entradas (las deltas del cambio o el documento ODD, la spec viva, las deltas de los cambios activos y el mapa guardado) producen siempre el mismo mapa de provisional a definitivo. Los números de una misma serie se asignan en el orden de aparición de los ADDED en el cambio, con un orden fijo y reproducible de las capacidades. Una entrada del mapa guardado conserva su definitivo aunque cambie ese orden (RF-OLS-03 de `odd-living-spec-integration`). El rango de números NO DEBE reservar ni usar valores altos «de cortesía» que puedan confundirse con un identificador válido real (el provisional ya es inconfundible por RF-RID-09).
 
 #### Scenario: Se asigna el siguiente libre de una serie existente
 
@@ -673,24 +673,24 @@ La asignación DEBE ser determinista: las mismas entradas (las deltas del cambio
 
 ---
 
-### Requirement: Plan Único de Asignación sobre Todas las Capacidades, Validado antes de Escribir (REQ-47.3)
+### Requirement: Plan Único de Asignación sobre Todas las Capacidades, Validado antes de Escribir (RF-RID-11)
 
 La asignación DEBE calcularse en un único plan para el cambio entero (todas las capacidades del cambio SDD, o todas las capacidades del documento ODD), antes de escribir ningún fichero, de modo que dos capacidades del mismo cambio nunca reciban el mismo número y el resultado no dependa de componer por dominio. El plan DEBE validar las reglas de la delta con identificadores mezclados y rechazar sin escribir, con un error tipado que nombre la capacidad, la sección, el requisito y el identificador:
 (Previously: la regla 6 validaba la delta entera y los ficheros de tareas y el documento ODD enteros)
 
-1. ADDED: admite un provisional o un identificador definitivo. Un ADDED con identificador definitivo DEBE seguir aceptándose con la comprobación de colisión vigente (REQ-30.4 de `odd-living-spec-integration`, REQ-29.3 de `sdd-iso-evidence`); el provisional NO es obligatorio.
-2. MODIFIED y el nombre antiguo de un RENAMED, pendientes de integrar, cuyo nombre lleva un identificador válido según el patrón: DEBEN citar un identificador definitivo que exista, sin superar, en la especificación canónica de su capacidad. Si no existe, el error tipado es el de identificador inexistente. Un nombre sin identificador (solo admisible fuera de ISO; en ISO lo bloquea REQ-29.3) se resuelve por el título exacto, como fija REQ-30.22 de `sdd-archive-lifecycle`, y si no casa se rechaza con el motivo de composición vigente, no con el de identificador inexistente. El nombre nuevo de un RENAMED conserva el identificador del antiguo.
-3. Lo ya integrado no está pendiente y no se rechaza (REQ-30.3 de `odd-living-spec-integration`): un REMOVED cuyo requisito ya no se resuelve en la canónica, un RENAMED cuyo nombre nuevo ya está y cuyo nombre antiguo ya no, y un MODIFIED cuyo requisito resuelto ya tiene el mismo cuerpo. `axiom sdd archive-compose`, que compone un único dominio sin clasificar lo ya integrado, sigue rechazando un REMOVED que no se resuelve con el error tipado de identificador inexistente (REQ-30.22).
+1. ADDED: admite un provisional o un identificador definitivo. Un ADDED con identificador definitivo DEBE seguir aceptándose con la comprobación de colisión vigente (RF-OLS-04 de `odd-living-spec-integration`, RF-ISO-03 de `sdd-iso-evidence`); el provisional NO es obligatorio.
+2. MODIFIED y el nombre antiguo de un RENAMED, pendientes de integrar, cuyo nombre lleva un identificador válido según el patrón: DEBEN citar un identificador definitivo que exista, sin superar, en la especificación canónica de su capacidad. Si no existe, el error tipado es el de identificador inexistente. Un nombre sin identificador (solo admisible fuera de ISO; en ISO lo bloquea RF-ISO-03) se resuelve por el título exacto, como fija RF-ARC-11 de `sdd-archive-lifecycle`, y si no casa se rechaza con el motivo de composición vigente, no con el de identificador inexistente. El nombre nuevo de un RENAMED conserva el identificador del antiguo.
+3. Lo ya integrado no está pendiente y no se rechaza (RF-OLS-03 de `odd-living-spec-integration`): un REMOVED cuyo requisito ya no se resuelve en la canónica, un RENAMED cuyo nombre nuevo ya está y cuyo nombre antiguo ya no, y un MODIFIED cuyo requisito resuelto ya tiene el mismo cuerpo. `axiom sdd archive-compose`, que compone un único dominio sin clasificar lo ya integrado, sigue rechazando un REMOVED que no se resuelve con el error tipado de identificador inexistente (RF-ARC-11).
 4. Una capacidad sin especificación canónica cuya delta trae MODIFIED, REMOVED o RENAMED es un error tipado de capacidad inexistente, que nombra la capacidad, la sección y el requisito.
 5. Un provisional en MODIFIED, REMOVED o RENAMED es un error tipado.
-6. Un provisional citado sin un ADDED que lo declare en el mismo cambio es un error tipado, en las posiciones de identificador que REQ-47.4 somete a validación (la delta fuera de código, las líneas `Cubre:` de los ficheros de tareas y del documento ODD, y la columna del requisito de la matriz de verificación).
-7. Un provisional declarado dos veces en el cambio es un error tipado (REQ-47.1).
-8. Un nombre de requisito con un provisional y cualquier otro identificador (otro provisional distinto o un identificador definitivo) es ambiguo y es un error tipado, también fuera de ISO. Un nombre con varios identificadores definitivos y ningún provisional conserva la regla vigente (REQ-30.22 toma el último; en ISO lo bloquea REQ-29.3).
-9. Un token con la forma de un provisional que no cumple su gramática o cuyos componentes no casan con el patrón (por ejemplo, una serie fijada que no es una serie válida del patrón), una etiqueta de serie nueva con un patrón sin `<n>` (REQ-47.1) o cualquier asignación que no pueda formar un identificador válido (por ejemplo, un número que desborda) es un error tipado.
-10. Un mapa guardado (REQ-47.6) ilegible, escrito con un patrón distinto del efectivo, o con una entrada que no casa con exactamente un ADDED de su capacidad, es un error tipado que nombra el fichero o la sección y la continuación (restaurar el mapa con git o rehacer la integración desde la base de la rama). El plan nunca lo ignora ni lo regenera en silencio.
-11. Con el patrón inaccesible (bloque `sdd:` inválido o configuración ilegible) el plan no se evalúa con un patrón no declarado: la orden se niega sin escribir con la continuación `axiom workspace validate` (REQ-44.9).
+6. Un provisional citado sin un ADDED que lo declare en el mismo cambio es un error tipado, en las posiciones de identificador que RF-RID-12 somete a validación (la delta fuera de código, las líneas `Cubre:` de los ficheros de tareas y del documento ODD, y la columna del requisito de la matriz de verificación).
+7. Un provisional declarado dos veces en el cambio es un error tipado (RF-RID-09).
+8. Un nombre de requisito con un provisional y cualquier otro identificador (otro provisional distinto o un identificador definitivo) es ambiguo y es un error tipado, también fuera de ISO. Un nombre con varios identificadores definitivos y ningún provisional conserva la regla vigente (RF-ARC-11 toma el último; en ISO lo bloquea RF-ISO-03).
+9. Un token con la forma de un provisional que no cumple su gramática o cuyos componentes no casan con el patrón (por ejemplo, una serie fijada que no es una serie válida del patrón), una etiqueta de serie nueva con un patrón sin `<n>` (RF-RID-09) o cualquier asignación que no pueda formar un identificador válido (por ejemplo, un número que desborda) es un error tipado.
+10. Un mapa guardado (RF-RID-14) ilegible, escrito con un patrón distinto del efectivo, o con una entrada que no casa con exactamente un ADDED de su capacidad, es un error tipado que nombra el fichero o la sección y la continuación (restaurar el mapa con git o rehacer la integración desde la base de la rama). El plan nunca lo ignora ni lo regenera en silencio.
+11. Con el patrón inaccesible (bloque `sdd:` inválido o configuración ilegible) el plan no se evalúa con un patrón no declarado: la orden se niega sin escribir con la continuación `axiom workspace validate` (RF-RID-08).
 
-El plan es una función de las deltas, de la spec viva, de las deltas de los cambios activos y del mapa guardado: no escribe nada y su resultado es el que consumen la integración, el archivado y las comprobaciones de solo lectura (REQ-47.7 y la opción de solo lectura de REQ-47.8), que DEBEN aplicar exactamente estas validaciones. Dos integraciones simultáneas en dos árboles de trabajo no se coordinan entre sí: su choque lo detecta REQ-47.5 tras el rebase.
+El plan es una función de las deltas, de la spec viva, de las deltas de los cambios activos y del mapa guardado: no escribe nada y su resultado es el que consumen la integración, el archivado y las comprobaciones de solo lectura (RF-OLS-10 y la opción de solo lectura de RF-ARC-15), que DEBEN aplicar exactamente estas validaciones. Dos integraciones simultáneas en dos árboles de trabajo no se coordinan entre sí: su choque lo detecta RF-RID-13 tras el rebase.
 
 #### Scenario: Dos capacidades del cambio no reciben el mismo número
 
@@ -749,7 +749,7 @@ El plan es una función de las deltas, de la spec viva, de las deltas de los cam
 
 #### Scenario: Un mapa guardado ilegible o de otro patrón se rechaza
 
-- **DADO** un cambio con provisionales cuyo mapa guardado (REQ-47.6) no se puede leer, o fue escrito con un patrón distinto del efectivo
+- **DADO** un cambio con provisionales cuyo mapa guardado (RF-RID-14) no se puede leer, o fue escrito con un patrón distinto del efectivo
 - **CUANDO** se planifica la asignación
 - **ENTONCES** se rechaza con un error tipado que nombra el mapa y la continuación
 - **Y** no se escribe nada ni se regenera el mapa
@@ -786,7 +786,7 @@ El plan es una función de las deltas, de la spec viva, de las deltas de los cam
 - **DADO** un cambio con un ADDED `(REQ-31.1)` y una spec viva sin `REQ-31.1`
 - **CUANDO** se planifica la asignación
 - **ENTONCES** el ADDED se acepta con su identificador, sin asignación
-- **Y** con `REQ-31.1` ya existente en la spec viva se rechaza con la colisión de REQ-30.4
+- **Y** con `REQ-31.1` ya existente en la spec viva se rechaza con la colisión de RF-OLS-04
 
 #### Scenario: El plan no escribe nada
 
@@ -794,7 +794,7 @@ El plan es una función de las deltas, de la spec viva, de las deltas de los cam
 - **CUANDO** se planifica la asignación
 - **ENTONCES** ningún fichero del árbol cambia
 
-### Requirement: Sustitución por Token Completo y Reescritura Atómica del Provisional en Todos sus Destinos (REQ-47.4)
+### Requirement: Sustitución por Token Completo y Reescritura Atómica del Provisional en Todos sus Destinos (RF-RID-12)
 
 La sustitución de un provisional por su identificador definitivo DEBE hacerse por token completo: coincidencia exacta y sensible a mayúsculas, sin estar precedida ni seguida de una letra, una cifra, `_` o `-`, de modo que un provisional que es prefijo de otro nunca lo corrompe ni toca un texto que solo se le parece. La sustitución DEBE aplicarse a todas las apariciones del token en estos destinos:
 (Previously: el resto del texto de los ficheros de tareas y del documento ODD se validaba, y un token dentro de código contaba como provisional)
@@ -803,9 +803,9 @@ La sustitución de un provisional por su identificador definitivo DEBE hacerse p
 2. Las líneas `Cubre:` de los ficheros de tareas del cambio (`tasks.md` y `tasks.<rol>.md`), conservando la posición del token en la línea y el resto del texto byte a byte.
 3. El documento ODD: la valla `openspec` de `## Spec viva` y sus líneas `Cubre:`, sin tocar el resto del documento.
 4. La delta del cambio, entera, antes de archivarla.
-5. La columna del requisito de las filas de la matriz de verificación (REQ-29.6 de `sdd-iso-evidence`) de los informes `verify-report*.md` del cambio, conservando el resto del informe byte a byte, de modo que un archivado reanudado no compare definitivos de la delta con provisionales de la matriz.
+5. La columna del requisito de las filas de la matriz de verificación (RF-ISO-06 de `sdd-iso-evidence`) de los informes `verify-report*.md` del cambio, conservando el resto del informe byte a byte, de modo que un archivado reanudado no compare definitivos de la delta con provisionales de la matriz.
 
-Alcance de la validación y de la reescritura fuera de esos destinos: solo se validan los provisionales en posición de identificador (REQ-47.3, reglas 6 y 9): los títulos, los cuerpos y el preámbulo de la delta, las líneas `Cubre:` de los ficheros de tareas y del documento ODD, la valla `openspec` de `## Spec viva` y la columna del requisito de la matriz. El resto del texto de los ficheros de tareas y del documento ODD, la sección del documento ODD que guarda el mapa, `proposal.md`, `design.md`, `explore.md` y los demás informes del cambio ni se validan ni se reescriben, de modo que pueden citar provisionales de ejemplo. Un token dentro de código (un bloque vallado o un tramo de código en línea) es un ejemplo de la forma, no un provisional: ni se valida ni impide la composición, y la spec viva puede conservarlo como ejemplo; si coincide con un provisional que declara un ADDED del cambio, se sustituye como cualquier otra aparición del token. «Declarado» significa declarado por un ADDED del cambio o por una entrada del mapa guardado. Fuera de código no existe un mecanismo de escape: un texto validado que necesita mostrar la forma del provisional en prosa usa un marcador que no es un token (por ejemplo, con la serie y el ordinal entre ángulos).
+Alcance de la validación y de la reescritura fuera de esos destinos: solo se validan los provisionales en posición de identificador (RF-RID-11, reglas 6 y 9): los títulos, los cuerpos y el preámbulo de la delta, las líneas `Cubre:` de los ficheros de tareas y del documento ODD, la valla `openspec` de `## Spec viva` y la columna del requisito de la matriz. El resto del texto de los ficheros de tareas y del documento ODD, la sección del documento ODD que guarda el mapa, `proposal.md`, `design.md`, `explore.md` y los demás informes del cambio ni se validan ni se reescriben, de modo que pueden citar provisionales de ejemplo. Un token dentro de código (un bloque vallado o un tramo de código en línea) es un ejemplo de la forma, no un provisional: ni se valida ni impide la composición, y la spec viva puede conservarlo como ejemplo; si coincide con un provisional que declara un ADDED del cambio, se sustituye como cualquier otra aparición del token. «Declarado» significa declarado por un ADDED del cambio o por una entrada del mapa guardado. Fuera de código no existe un mecanismo de escape: un texto validado que necesita mostrar la forma del provisional en prosa usa un marcador que no es un token (por ejemplo, con la serie y el ordinal entre ángulos).
 
 Todas las escrituras DEBEN formar un único conjunto atómico: o se aplican todas o ninguna, y un fallo en cualquier punto NO DEBE dejar la spec viva, las líneas `Cubre:`, el documento ODD, las deltas, los informes de verify o el mapa a medias; las escrituras se hacen con ficheros temporales y renombrado, con restauración ante un fallo, igual que la integración ODD vigente. Si la propia restauración falla, la orden DEBE terminar con código distinto de cero nombrando cada fichero que no pudo restaurar y la continuación (revisarlo con `git status` y recuperarlo con `git checkout -- <ruta>` antes de repetir). Un temporal huérfano de una ejecución interrumpida por el sistema se sustituye y se retira en la siguiente ejecución que escribe ese destino. Un cambio sin provisionales NO DEBE modificar ni un byte de sus tareas, de su delta, de sus informes ni de su documento ODD.
 
@@ -889,9 +889,9 @@ Todas las escrituras DEBEN formar un único conjunto atómico: o se aplican toda
 - **CUANDO** se ejecuta la integración o el archivado
 - **ENTONCES** finaliza con código distinto de cero nombrando el fichero que no pudo restaurar y la continuación con `git checkout -- <ruta>`
 
-### Requirement: Detección de Identificadores Duplicados entre Capacidades de la Spec Viva (REQ-47.5)
+### Requirement: Detección de Identificadores Duplicados entre Capacidades de la Spec Viva (RF-RID-13)
 
-La integración (archivado SDD y `axiom archive integrate --odd`) y la comprobación de solo lectura (REQ-47.7) DEBEN detectar un identificador definitivo usado por requisitos de capacidades distintas de la spec viva, de modo que una colisión entre ramas concurrentes que git no marca como conflicto (por ejemplo, la misma serie nueva abierta en dos capacidades distintas) no pase en silencio. La detección DEBE bloquear, sin escribir, cuando el duplicado afecta a un identificador que la propia integración escribe (asignado, reasignado o ADDED con identificador definitivo), con un error tipado que nombre el identificador, las dos capacidades y la continuación (reintegrar tras el rebase, REQ-30.3). Un duplicado previo que no involucra ningún identificador que escriba la integración NO DEBE bloquearla y se informa como dato, sin cambiar el código de salida.
+La integración (archivado SDD y `axiom archive integrate --odd`) y la comprobación de solo lectura (RF-OLS-10) DEBEN detectar un identificador definitivo usado por requisitos de capacidades distintas de la spec viva, de modo que una colisión entre ramas concurrentes que git no marca como conflicto (por ejemplo, la misma serie nueva abierta en dos capacidades distintas) no pase en silencio. La detección DEBE bloquear, sin escribir, cuando el duplicado afecta a un identificador que la propia integración escribe (asignado, reasignado o ADDED con identificador definitivo), con un error tipado que nombre el identificador, las dos capacidades y la continuación (reintegrar tras el rebase, RF-OLS-03). Un duplicado previo que no involucra ningún identificador que escriba la integración NO DEBE bloquearla y se informa como dato, sin cambiar el código de salida.
 
 Supuesto de esta spec: la comprobación se limita a los duplicados que la integración introduce o toca, para que un duplicado histórico no relacionado no impida integrar; el diseño puede ampliarlo a un informe completo mientras no bloquee por duplicados ajenos.
 
@@ -917,9 +917,9 @@ Supuesto de esta spec: la comprobación se limita a los duplicados que la integr
 
 ---
 
-### Requirement: Traza Legible del Mapa de Provisional a Definitivo tras Archivar (REQ-47.6)
+### Requirement: Traza Legible del Mapa de Provisional a Definitivo tras Archivar (RF-RID-14)
 
-Toda integración que asigne identificadores DEBE dejar el mapa de provisional a definitivo, con la capacidad de cada requisito, como traza legible: (a) en el cambio SDD archivado, dentro de `openspec/changes/archive/<fecha>-<cambio>/`; (b) en el documento ODD integrado; y (c) en el informe `axiom.odd-integration/v1` de la integración ODD y en el informe del paso de archivado SDD (REQ-47.8). El mapa DEBE incluir, por cada entrada, el provisional, el identificador definitivo y la capacidad, y DEBE poder leerse después de archivar sin reconstruirlo de otro modo. El mapa guardado es además el dato que usa la reintegración idempotente (REQ-30.3) y `axiom sdd archive-check` para reconocer una asignación ya hecha. Una integración sin provisionales NO DEBE escribir un mapa vacío. NO se reescriben las trazas de cambios archivados antes de este cambio. En el documento ODD el mapa ocupa una única sección propia, distinta de `## Spec viva` y de `## Impacto en la spec`, de modo que no altera la validación de esas secciones (REQ-30.1 y REQ-30.5 de `odd-living-spec-integration`) ni la lectura de sus vallas `openspec`; un documento con dos secciones del mapa se rechaza con un error tipado. Un mapa ilegible o incoherente se rige por la regla 10 de REQ-47.3.
+Toda integración que asigne identificadores DEBE dejar el mapa de provisional a definitivo, con la capacidad de cada requisito, como traza legible: (a) en el cambio SDD archivado, dentro de `openspec/changes/archive/<fecha>-<cambio>/`; (b) en el documento ODD integrado; y (c) en el informe `axiom.odd-integration/v1` de la integración ODD y en el informe del paso de archivado SDD (RF-ARC-15). El mapa DEBE incluir, por cada entrada, el provisional, el identificador definitivo y la capacidad, y DEBE poder leerse después de archivar sin reconstruirlo de otro modo. El mapa guardado es además el dato que usa la reintegración idempotente (RF-OLS-03) y `axiom sdd archive-check` para reconocer una asignación ya hecha. Una integración sin provisionales NO DEBE escribir un mapa vacío. NO se reescriben las trazas de cambios archivados antes de este cambio. En el documento ODD el mapa ocupa una única sección propia, distinta de `## Spec viva` y de `## Impacto en la spec`, de modo que no altera la validación de esas secciones (RF-OLS-01 y RF-OLS-05 de `odd-living-spec-integration`) ni la lectura de sus vallas `openspec`; un documento con dos secciones del mapa se rechaza con un error tipado. Un mapa ilegible o incoherente se rige por la regla 10 de RF-RID-11.
 
 #### Scenario: La traza de un cambio SDD es legible tras archivar
 
@@ -954,16 +954,16 @@ Toda integración que asigne identificadores DEBE dejar el mapa de provisional a
 
 ---
 
-### Requirement: Las Guías de las Fases Describen el Identificador Provisional y el Paso de Archivado (REQ-47.10)
+### Requirement: Las Guías de las Fases Describen el Identificador Provisional y el Paso de Archivado (RF-RID-15)
 
-Las guías que Axiom distribuye DEBEN describir el identificador provisional y su asignación de forma coherente con REQ-47.1 a REQ-47.8, y su contenido DEBE estar fijado por pruebas de texto:
+Las guías que Axiom distribuye DEBEN describir el identificador provisional y su asignación de forma coherente con RF-RID-09 a RF-ARC-15, y su contenido DEBE estar fijado por pruebas de texto:
 
 1. La guía de la fase `sdd-spec` DEBE indicar que un requisito ADDED lleva un identificador provisional con el formato literal que fija el diseño, que un identificador definitivo sigue admitiéndose con la comprobación de colisión, que el provisional solo es válido en ADDED, que el ordinal del provisional no es el número que se asignará, y que MODIFIED, REMOVED y el nombre antiguo de un RENAMED citan el identificador definitivo existente.
-2. La guía de la fase `sdd-archive` DEBE sustituir la composición por dominio y la copia de las capacidades nuevas por una única invocación del paso de archivado del cambio (REQ-47.8), ejecutada después de `axiom sdd archive-check` y antes de la instantánea y del movimiento de la carpeta; DEBE incluir en el informe de archivado la tabla del mapa de provisional a definitivo; y DEBE ordenar la comprobación de solo lectura del paso tras cada rebase de la rama de archivado y antes de pedir la fusión. NO DEBE conservar la copia de una capacidad nueva con la shell.
+2. La guía de la fase `sdd-archive` DEBE sustituir la composición por dominio y la copia de las capacidades nuevas por una única invocación del paso de archivado del cambio (RF-ARC-15), ejecutada después de `axiom sdd archive-check` y antes de la instantánea y del movimiento de la carpeta; DEBE incluir en el informe de archivado la tabla del mapa de provisional a definitivo; y DEBE ordenar la comprobación de solo lectura del paso tras cada rebase de la rama de archivado y antes de pedir la fusión. NO DEBE conservar la copia de una capacidad nueva con la shell.
 3. La convención ISO compartida (`_shared/sdd-iso-convention.md`) DEBE indicar que un ADDED puede llevar un provisional, que `Cubre:` y la matriz de verificación lo citan hasta archivar, y que el paso de archivado los reescribe al definitivo.
-4. El contrato de status (`_shared/sdd-status-contract.md`) se rige por REQ-47.9.
+4. El contrato de status (`_shared/sdd-status-contract.md`) se rige por RF-CLI-14.
 
-Las instrucciones de enrutamiento se rigen por REQ-24.58 de `organic-agent-trigger-rules`. Los renderizados de referencia (goldens) que contengan alguno de estos textos DEBEN regenerarse en el mismo cambio y seguir siendo deterministas.
+Las instrucciones de enrutamiento se rigen por RF-RUT-14 de `organic-agent-trigger-rules`. Los renderizados de referencia (goldens) que contengan alguno de estos textos DEBEN regenerarse en el mismo cambio y seguir siendo deterministas.
 
 #### Scenario: La guía de `sdd-spec` describe el provisional
 

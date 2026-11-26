@@ -19,9 +19,9 @@ import (
 )
 
 // DoneRequest es la petición de `done`. CWD debe ser un directorio absoluto. Force salta la
-// exigencia de fusión confirmada y, en `worktree`, la de árbol limpio (`--force`, REQ-25.17); nunca
+// exigencia de fusión confirmada y, en `worktree`, la de árbol limpio (`--force`, RF-BRA-18); nunca
 // salta la de árbol limpio en `in_place`. Fetch pide `git fetch origin` en cada repositorio del plan
-// antes de evaluar (`--fetch`, REQ-25.10): sin él, `done` no hace ninguna operación remota.
+// antes de evaluar (`--fetch`, RF-BRA-10): sin él, `done` no hace ninguna operación remota.
 type DoneRequest struct {
 	CWD    string
 	Change string
@@ -30,7 +30,7 @@ type DoneRequest struct {
 	Fetch  bool
 }
 
-// Done elimina las ramas de un cambio y sus worktrees una vez fusionadas (REQ-25.16, REQ-25.17,
+// Done elimina las ramas de un cambio y sus worktrees una vez fusionadas (RF-BRA-17, RF-BRA-18,
 // design D-09). Cada rama del plan (la de rol, la del cambio y la de archivado, en ese orden) se
 // procesa por separado, con el cambio bloqueado en exclusiva como en `ensure`:
 //
@@ -241,7 +241,7 @@ func doneBranches(repo branch.RepoPlan, record *branch.Record) []branch.BranchPl
 }
 
 // fetch trae `origin` en cada repositorio del plan con ramas, antes de evaluar ninguna (`--fetch`,
-// REQ-25.10). Un fallo es `fetch_failed` y no se ha eliminado nada.
+// RF-BRA-10). Un fallo es `fetch_failed` y no se ha eliminado nada.
 func (d *doneRun) fetch(repositories []doneRepository) *branch.Refusal {
 	for _, repository := range repositories {
 		if err := d.engine.writer.Fetch(d.ctx, repository.main, originRemote); err != nil {
@@ -271,7 +271,7 @@ func (d *doneRun) repository(repository doneRepository) (branch.RepositoryResult
 			removed = removed || outcome.Outcome == branch.OutcomeRemoved
 		}
 	}
-	// La rama actual, de ficheros, tras haber cambiado de rama en `in_place` (REQ-25.21).
+	// La rama actual, de ficheros, tras haber cambiado de rama en `in_place` (RF-BRA-22).
 	if name, detached, err := gitcommon.ReadHead(repository.main); err == nil {
 		described.CurrentBranch, described.Detached = name, detached
 		if detached {
@@ -395,7 +395,7 @@ func (d *doneRun) branch(repository doneRepository, planned branch.BranchPlan) (
 }
 
 // withoutLocalLocks separa de las rutas sucias de dir los cerrojos de la compuerta que deja
-// `gate record` (`kickoff.GatesLockFileName`, REQ-25.17): ficheros regulares vacíos, sin datos que
+// `gate record` (`kickoff.GatesLockFileName`, RF-BRA-18): ficheros regulares vacíos, sin datos que
 // perder. Uno que no esté vacío, o que no se pueda leer, sigue contando como sucio.
 func withoutLocalLocks(dir string, paths []string) (dirty, locks []string) {
 	for _, p := range paths {
@@ -478,7 +478,7 @@ func (d *doneRun) mergeEvidence(main string, planned branch.BranchPlan, repo bra
 
 // prMergedEvidence dice si el `gates.yaml` del cambio, activo o archivado (kickoff.ArchivedChangeRoot),
 // tiene un registro aprobado de la compuerta `integration` con evidencia `pr_merged` ya verificada
-// (REQ-25.16, capa 3). Se lee la primera vez que hace falta. Un `gates.yaml` que no se puede leer no
+// (RF-BRA-17, capa 3). Se lee la primera vez que hace falta. Un `gates.yaml` que no se puede leer no
 // es evidencia: se avisa y la capa no confirma.
 func (d *doneRun) prMergedEvidence() bool {
 	if d.prMerged != nil {

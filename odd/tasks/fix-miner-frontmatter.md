@@ -19,7 +19,7 @@ C-04-d (`skillcheck`, ola 5) validará las skills minadas con estas reglas; sin 
 
 ## Decisiones
 
-- **`trigger` y `origin` van bajo `metadata:`** (usuario, 2026-11-17, ante la contradicción entre REQ-3.2, que los pedía como claves de primer nivel, y la lista de claves permitidas del lint). El disparador también entra en la `description` como `Trigger: …`. REQ-3.2 se actualiza en este cambio con la `## Spec viva`.
+- **`trigger` y `origin` van bajo `metadata:`** (usuario, 2026-11-17, ante la contradicción entre RF-ASK-07, que los pedía como claves de primer nivel, y la lista de claves permitidas del lint). El disparador también entra en la `description` como `Trigger: …`. RF-ASK-07 se actualiza en este cambio con la `## Spec viva`.
 - Forma del frontmatter generado:
   ```yaml
   ---
@@ -38,7 +38,7 @@ C-04-d (`skillcheck`, ola 5) validará las skills minadas con estas reglas; sin 
 
 - `internal/autoskill/miner.go` y sus tests en `internal/autoskill/`.
 - Skills minadas ya versionadas: `skills/axiom-go-table-tests/SKILL.md`, `skills/axiom-idiomatic-error-wrapping/SKILL.md`, y sus filas de `AGENTS.md`.
-- Delta de REQ-3.2 en `## Spec viva` e integración en `openspec/specs/autoskills/spec.md` con `axiom archive integrate --odd fix-miner-frontmatter`.
+- Delta de RF-ASK-07 en `## Spec viva` e integración en `openspec/specs/autoskills/spec.md` con `axiom archive integrate --odd fix-miner-frontmatter`.
 
 Fuera de alcance: `skillcheck`, `internal/assets/skills_frontmatter_test.go`, el flujo de `approve`.
 
@@ -56,7 +56,7 @@ Desactivado: `axiom.yaml` no declara TDD y no hay elección del usuario. Comprob
 - [x] **T2 · Skills minadas versionadas** (ruta: en línea, mecánica)
   - Sustituir la cabecera rota de las dos skills de `skills/` por el frontmatter que genera ahora el minero (el cuerpo no cambia) y actualizar sus filas de `AGENTS.md`.
   - Comprobación: el `SKILL.md` versionado coincide con el `SkillMD` del minero (test o comparación).
-- [x] **T3 · Spec viva de REQ-3.2** (ruta: en línea)
+- [x] **T3 · Spec viva de RF-ASK-07** (ruta: en línea)
   - Delta MODIFIED en `## Spec viva` e integración con `axiom archive integrate --odd fix-miner-frontmatter`.
   - Comprobación: la integración termina sin rechazo y `openspec/specs/autoskills/spec.md` refleja el nuevo texto.
 
@@ -75,7 +75,7 @@ Una sola PR (`single-pr`); previsión, unas 150-250 líneas. Push, PR y fusión 
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Generación Canónica de Borradores de Skill Minada (REQ-3.2)
+### Requirement: Generación Canónica de Borradores de Skill Minada (RF-ASK-07)
 
 Cada patrón detectado por el minero DEBE formularse como un documento canónico `SKILL.md` que incluya:
 1. Un bloque de frontmatter al inicio del fichero, delimitado por `---`, con `name` igual al directorio de la skill, `description` entrecomillada en una sola línea que contenga `Trigger:`, y `metadata` con `origin: mined` y `trigger`. No DEBE llevar otras claves de primer nivel que las admitidas para las skills de Axiom.
@@ -114,7 +114,7 @@ Plan stop: approved 2026-11-17; implementation continues
 
 ## Seguimientos
 
-- `axiom archive integrate --odd` quitó la regla `---` que separaba REQ-3.2 de la sección 4 de `openspec/specs/autoskills/spec.md`: al componer un requisito MODIFIED, el separador final parece contarse como parte del bloque. No se corrige aquí (fuera de alcance).
+- `axiom archive integrate --odd` quitó la regla `---` que separaba RF-ASK-07 de la sección 4 de `openspec/specs/autoskills/spec.md`: al componer un requisito MODIFIED, el separador final parece contarse como parte del bloque. No se corrige aquí (fuera de alcance).
 - C-04-d debe unificar las reglas del frontmatter que ahora duplica `miner_frontmatter_test.go`.
 
 Espejo Engram: pendiente (el modo automático no pudo revisar `mem_save` porque un hook modifica la llamada; se resincroniza cuando sea posible).

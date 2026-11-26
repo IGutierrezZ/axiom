@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// REQ-29.16: `axiom sdd continue` refleja los mismos motivos tipados que
+// RF-CLI-11: `axiom sdd continue` refleja los mismos motivos tipados que
 // `axiom sdd status` y no autoriza la fase siguiente.
 func TestSDDContinueReflectsISOReasons(t *testing.T) {
 	root := t.TempDir()

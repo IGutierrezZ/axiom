@@ -18,7 +18,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Pruebas del registro local con escritura de `ensure` (REQ-25.14, design D-05 fases 5 y 6 y
+// Pruebas del registro local con escritura de `ensure` (RF-BRA-15, design D-05 fases 5 y 6 y
 // D-07): `ensure` guarda el plan materializado en el git common dir solo si cambian sus bytes,
 // lo reconstruye desde git cuando falta, y un bloqueo por cambio impide dos ejecuciones a la
 // vez. Con git real, entorno aislado y sin red.
@@ -48,7 +48,7 @@ func setOldModTime(t *testing.T, path string) time.Time {
 	return old
 }
 
-// REQ-25.14 y D-05 (fase 5): `ensure` guarda el plan en
+// RF-BRA-15 y D-05 (fase 5): `ensure` guarda el plan en
 // `<common dir>/axiom/branch/v1/sdd/x.json` con rutas absolutas; una segunda ejecución con el
 // mismo estado no reescribe el fichero, y las dos describen el mismo estado final (también
 // `registry.present`). El registro no toca `axiom/`.
@@ -120,7 +120,7 @@ func TestEnsureWritesTheRegistryAndRepeatingDoesNotRewriteIt(t *testing.T) {
 	}
 }
 
-// REQ-25.14, escenario «Borrar el registro no daña el repositorio»: con el registro borrado,
+// RF-BRA-15, escenario «Borrar el registro no daña el repositorio»: con el registro borrado,
 // `ensure` reutiliza las ramas y los worktrees sin tocarlos (ninguna escritura de git), el
 // resultado es el mismo y el registro se reconstruye con los mismos bytes y rutas.
 func TestEnsureRebuildsADeletedRegistryWithoutTouchingTheRepository(t *testing.T) {
@@ -160,7 +160,7 @@ func TestEnsureRebuildsADeletedRegistryWithoutTouchingTheRepository(t *testing.T
 	}
 }
 
-// REQ-25.14 y D-07 («Reconstrucción»): sin fichero, `ensure` lo reconstruye desde las ramas
+// RF-BRA-15 y D-07 («Reconstrucción»): sin fichero, `ensure` lo reconstruye desde las ramas
 // planificadas que existen y los worktrees que hay en las rutas planificadas, aunque los
 // crease otra herramienta, y sin lanzar ninguna escritura de git.
 func TestEnsureReconstructsTheRegistryFromBranchesAndWorktreesCreatedByOtherTools(t *testing.T) {
@@ -189,7 +189,7 @@ func TestEnsureReconstructsTheRegistryFromBranchesAndWorktreesCreatedByOtherTool
 	wantSameDirectory(t, "worktree reconstruido", registered.Worktree, planned)
 }
 
-// D-05 (fase 5) y REQ-25.7: el registro refleja el plan completo. Antes del sellado guarda
+// D-05 (fase 5) y RF-BRA-07: el registro refleja el plan completo. Antes del sellado guarda
 // la rama del cambio; con dos roles sellados, la siguiente ejecución lo reescribe con las
 // tres ramas, cada una con su tipo, su rol y su worktree.
 func TestEnsureUpdatesTheRegistryWhenSealingCompletesTheRoleBranches(t *testing.T) {
@@ -226,7 +226,7 @@ func TestEnsureUpdatesTheRegistryWhenSealingCompletesTheRoleBranches(t *testing.
 	}
 }
 
-// D-08 y REQ-25.14: un registro que ya existe fija el modo y su origen (prioridad: registro
+// D-08 y RF-BRA-15: un registro que ya existe fija el modo y su origen (prioridad: registro
 // > `--mode` > hub > defecto); `ensure` completa sus ramas y conserva el origen.
 func TestEnsureKeepsTheModeAndSourceOfAnExistingRegistry(t *testing.T) {
 	t.Parallel()
@@ -248,7 +248,7 @@ func TestEnsureKeepsTheModeAndSourceOfAnExistingRegistry(t *testing.T) {
 	}
 }
 
-// D-05 y REQ-25.14: un bloqueo exclusivo por cambio impide dos `ensure` a la vez. Con el
+// D-05 y RF-BRA-15: un bloqueo exclusivo por cambio impide dos `ensure` a la vez. Con el
 // bloqueo ocupado, `plan_conflict` con el mensaje fijado por el diseño, sin crear nada ni
 // escribir el registro; otro cambio no se bloquea; al liberarlo, `ensure` procede.
 func TestEnsureRefusesWhileAnotherRunHoldsTheLockOfTheChange(t *testing.T) {
@@ -305,7 +305,7 @@ func TestEnsureReleasesTheLockWhenItRefuses(t *testing.T) {
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// REQ-25.14 y D-07 («Fichero corrupto»): `config_invalid` nombrando el fichero y la
+// RF-BRA-15 y D-07 («Fichero corrupto»): `config_invalid` nombrando el fichero y la
 // continuación de borrarlo, sin crear nada; borrado, `ensure` lo reconstruye.
 func TestEnsureRefusesACorruptRegistryAndRebuildsItOnceDeleted(t *testing.T) {
 	t.Parallel()
@@ -357,7 +357,7 @@ func TestEnsureWritesTheRegistryOnlyAfterApplyingThePlan(t *testing.T) {
 	})
 }
 
-// REQ-25.14, escenario «El registro se resuelve con el git common dir»: con un directorio git
+// RF-BRA-15, escenario «El registro se resuelve con el git common dir»: con un directorio git
 // que no se llama `.git` (`--separate-git-dir`), el registro se crea bajo el directorio que
 // devuelve `git rev-parse --git-common-dir` y nunca bajo un `.git` supuesto.
 func TestEnsureResolvesTheRegistryWithTheGitCommonDirWhenItIsNotDotGit(t *testing.T) {

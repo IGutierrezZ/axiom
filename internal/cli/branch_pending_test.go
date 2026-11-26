@@ -13,7 +13,7 @@ import (
 )
 
 // Pruebas de `axiom branch status` sin `--change` y de los cambios pendientes de archivar
-// (REQ-25.15, REQ-25.20): el contrato visible de la CLI, con git real y sin red.
+// (RF-BRA-16, RF-BRA-21): el contrato visible de la CLI, con git real y sin red.
 
 type branchRegisteredBranchJSON struct {
 	Repository string `json:"repository"`
@@ -65,8 +65,8 @@ func pendingEntries(t *testing.T, result branchResultJSON) []branchPendingJSON {
 	return entries
 }
 
-// REQ-25.15, escenario «`status` sin `--change` lista registrados y pendientes», y
-// REQ-25.20, escenario «Un cambio fusionado y sin archivar figura como pendiente»: `x`
+// RF-BRA-16, escenario «`status` sin `--change` lista registrados y pendientes», y
+// RF-BRA-21, escenario «Un cambio fusionado y sin archivar figura como pendiente»: `x`
 // registrado y `y` fusionado y sin archivar; con la continuación para archivarlo y salida 0.
 func TestBranchStatusWithoutChangeListsRegisteredAndPendingAsJSON(t *testing.T) {
 	t.Parallel()
@@ -112,7 +112,7 @@ func TestBranchStatusWithoutChangeListsRegisteredAndPendingAsJSON(t *testing.T) 
 	}
 }
 
-// REQ-25.15 y REQ-25.20, escenario «`status --change` indica que el cambio solicitado
+// RF-BRA-16 y RF-BRA-21, escenario «`status --change` indica que el cambio solicitado
 // está pendiente»: `pendingArchive` es un booleano con `--change`, y el pendiente lleva la
 // orden para archivarlo; un cambio que no lo está, no.
 func TestBranchStatusWithChangeReportsPendingArchiveAsABoolean(t *testing.T) {
@@ -175,7 +175,7 @@ func TestBranchStatusWithoutChangeOfAProjectWithNothingToShow(t *testing.T) {
 }
 
 // Sin la rama de integración la lista de pendientes se omite con un aviso y la salida
-// sigue siendo 0 (REQ-25.20): el JSON no trae `pendingArchive`.
+// sigue siendo 0 (RF-BRA-21): el JSON no trae `pendingArchive`.
 func TestBranchStatusWithoutChangeOmitsThePendingListWithoutAnIntegrationBranch(t *testing.T) {
 	t.Parallel()
 	repo := newBranchRepository(t)
@@ -247,7 +247,7 @@ func TestBranchStatusWithoutChangeListsTheRegisteredChangesOfTheLane(t *testing.
 	}
 }
 
-// REQ-25.1 y REQ-25.20, escenario «La evaluación no usa la red»: con un remoto
+// RF-BRA-01 y RF-BRA-21, escenario «La evaluación no usa la red»: con un remoto
 // inalcanzable, `status` sin `--change` no lanza ninguna operación remota y solo la lista
 // cerrada de lecturas, que incluye `ls-tree` para los pendientes.
 func TestBranchStatusWithoutChangeLaunchesNoRemoteGitOperation(t *testing.T) {

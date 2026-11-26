@@ -112,7 +112,7 @@ func TestDocPathsLocalState(t *testing.T) {
 		"openspec/changes/x/gates.yaml":                     false,
 		"openspec/changes/x/specs/.hidden":                  false,
 		"openspec/changes/y/.gates.lock":                    false,
-		"openspec/changes/archive/2026-01-01-x/.gates.lock": true, // MODIFIED REQ-27.5: estado local del cambio archivado
+		"openspec/changes/archive/2026-01-01-x/.gates.lock": true, // MODIFIED RF-PUB-01: estado local del cambio archivado
 		".gates.lock": false,
 	}
 	for rel, want := range cases {
@@ -122,7 +122,7 @@ func TestDocPathsLocalState(t *testing.T) {
 	}
 }
 
-// MODIFIED REQ-27.5: un fichero con punto directamente en la raíz de la carpeta archivada del cambio
+// MODIFIED RF-PUB-01: un fichero con punto directamente en la raíz de la carpeta archivada del cambio
 // es estado local; el anidado, el de otro cambio y el de una carpeta que no es archivada, no.
 func TestLocalStateArchivedRoot(t *testing.T) {
 	set := mustNew(t, "openspec", "x", nil, nil)

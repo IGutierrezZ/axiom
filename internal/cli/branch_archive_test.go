@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch ensure --archive` (INC-25, S5, REQ-25.45, REQ-25.12): la ayuda, el uso de las
+// `axiom branch ensure --archive` (INC-25, S5, RF-BRA-13, RF-BRA-12): la ayuda, el uso de las
 // banderas, los rechazos tipados con código de salida 1 y la creación de la rama de archivado de
 // un cambio fusionado, con y sin `--fetch` contra un remoto desnudo local. El comportamiento del
 // motor se prueba en internal/branch/engine.
@@ -44,7 +44,7 @@ func TestBranchEnsureHelpDocumentsArchive(t *testing.T) {
 	}
 }
 
-// REQ-25.12: `--repo` no se admite con `--archive` (error de uso, código 2, que nombra las dos
+// RF-BRA-12: `--repo` no se admite con `--archive` (error de uso, código 2, que nombra las dos
 // banderas y la orden que sí vale); `--branch` y `--base` llegan al motor y son `plan_conflict`
 // (código 1); el carril ODD no tiene rama de archivado (código 1). Ningún caso crea nada.
 func TestBranchEnsureArchiveFlagsAreValidated(t *testing.T) {
@@ -97,7 +97,7 @@ func TestBranchEnsureArchiveFlagsAreValidated(t *testing.T) {
 	}
 }
 
-// REQ-25.45 (harness S5.6): tras fusionar `x` solo en el remoto desnudo, `ensure --archive` sin
+// RF-BRA-13 (harness S5.6): tras fusionar `x` solo en el remoto desnudo, `ensure --archive` sin
 // `--fetch` sale con 1 y `change_not_integrated`, nombra `origin/main` y sugiere `--fetch` con una
 // orden ejecutable, sin crear nada; con `--fetch` sale con 0, crea `feat/x-archive` desde el commit
 // traído con su worktree y `fetched` verdadero; repetirlo da el mismo JSON byte a byte, el mismo
@@ -184,8 +184,8 @@ func TestBranchEnsureArchiveRefusesWithoutFetchAndCreatesTheBranchWithIt(t *test
 		}
 	}
 
-	// `status` incluye la rama de archivado (REQ-25.15) y la continuación de los pendientes
-	// existe como orden de `ensure` (REQ-25.20).
+	// `status` incluye la rama de archivado (RF-BRA-16) y la continuación de los pendientes
+	// existe como orden de `ensure` (RF-BRA-21).
 	code, listed, _ := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", repo)
 	if code != 0 {
 		t.Fatalf("status: código %d\n%s", code, listed)

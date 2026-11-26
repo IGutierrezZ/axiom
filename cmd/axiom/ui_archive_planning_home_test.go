@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-24.10: `archive list` lee el catálogo de <planning home>/specs desde la
+// RF-PLH-10: `archive list` lee el catálogo de <planning home>/specs desde la
 // carpeta maestra y desde un repositorio de código, donde no hay openspec/ propio.
 func TestArchiveListReadsThePlanningHomeCatalog(t *testing.T) {
 	ws := workspacetest.Canonical(t)
@@ -36,7 +36,7 @@ func TestArchiveListReadsThePlanningHomeCatalog(t *testing.T) {
 	assertNoOpenSpecOutsideSpecsRepository(t, ws)
 }
 
-// REQ-24.10 y REQ-3.1: con la ubicación antigua divergente, `archive list` sigue
+// RF-PLH-10 y RF-LDO-06: con la ubicación antigua divergente, `archive list` sigue
 // leyendo solo el planning home e imprime el aviso (Q14), aunque el catálogo esté
 // vacío.
 func TestArchiveListPrintsTheLegacyLocationWarning(t *testing.T) {
@@ -61,7 +61,7 @@ func TestArchiveListPrintsTheLegacyLocationWarning(t *testing.T) {
 	}
 }
 
-// REQ-24.10: `runUI` reconoce el puntero al decidir si el directorio está
+// RF-PLH-10: `runUI` reconoce el puntero al decidir si el directorio está
 // configurado, para no sustituir la carpeta maestra del canónico por el
 // workspace activo del Hub.
 func TestHasWorkspaceConfigRecognisesThePointer(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// REQ-29.9: la traza de un cambio ISO recorrido de principio a fin sobre
+// RF-ISO-09: la traza de un cambio ISO recorrido de principio a fin sobre
 // repositorios git reales. Los nombres empiezan por TestSDDTrace.
 
 // traceIntegrate integra branch en main con la estrategia de fusión indicada, como
@@ -178,7 +178,7 @@ func treeSnapshotWithoutGit(t *testing.T, root string) map[string]string {
 	return snapshot
 }
 
-// REQ-29.9: la misma cadena requisito, `Cubre:`, fila, commit de código y commit
+// RF-ISO-09: la misma cadena requisito, `Cubre:`, fila, commit de código y commit
 // de archivado con los tres modos de fusión, sin escribir nada en el árbol.
 func TestSDDTraceSameChainWithSquashMergeAndRebase(t *testing.T) {
 	for _, mode := range []string{"squash", "merge", "rebase"} {
@@ -316,7 +316,7 @@ func TestSDDTraceIntegrationBranchFlag(t *testing.T) {
 	}
 }
 
-// REQ-29.3 y REQ-29.4 (C-03-b): la traza de un cambio ISO cuyo ADDED lleva un provisional
+// RF-ISO-03 y RF-ISO-04 (C-03-b): la traza de un cambio ISO cuyo ADDED lleva un provisional
 // es legible: la cadena lleva el provisional con su `Cubre:` y su fila de matriz, sin error.
 func TestSDDTraceWithProvisionalIDInTheDelta(t *testing.T) {
 	delta := strings.Replace(traceDelta, "REQ-30.1 Cobro con IVA", "Cobro con IVA (prov:30:1)", 1)

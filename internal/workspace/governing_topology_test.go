@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// REQ-28.22: la topología que gobierna un directorio sale de Locate; un
+// RF-PRE-14: la topología que gobierna un directorio sale de Locate; un
 // axiom.yaml directo no cargable conserva la resolución embebida, y sin
 // axiom.yaml no hay topología que aplicar.
 func TestLocationGoverningTopology(t *testing.T) {

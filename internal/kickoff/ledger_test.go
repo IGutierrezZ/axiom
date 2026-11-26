@@ -106,7 +106,7 @@ func TestAppendGateRejectsInvalidRecord(t *testing.T) {
 // legacyGateRecord es el registro de gates.yaml tal y como lo declaraba el
 // esquema anterior a la salida 2 (sin handed_off). Se congela aqui a proposito:
 // prueba que un binario anterior sigue leyendo un ledger con la clave nueva
-// (REQ-26.3) y que los registros sin marca no cambian ni un byte.
+// (RF-GAT-09) y que los registros sin marca no cambian ni un byte.
 type legacyGateRecord struct {
 	Gate            GateKey      `yaml:"gate"`
 	Decision        GateDecision `yaml:"decision"`
@@ -181,7 +181,7 @@ func TestGateRecordHandedOffIsWrittenAndReadBack(t *testing.T) {
 
 // TestLegacyBinaryReadsAGatesFileWithHandedOff reproduce la lectura de un
 // binario anterior: decodifica con el struct congelado, sin KnownFields, y la
-// puerta resulta approved aunque no vea la cesion (REQ-26.3).
+// puerta resulta approved aunque no vea la cesion (RF-GAT-09).
 func TestLegacyBinaryReadsAGatesFileWithHandedOff(t *testing.T) {
 	data := []byte("schema: axiom.sdd-gate-ledger/v1\n" +
 		"change: x\n" +
@@ -224,7 +224,7 @@ func TestLegacyBinaryReadsAGatesFileWithHandedOff(t *testing.T) {
 
 // TestHandedOffToIsPersistedWithTheMarkAndReadByTheFrozenSchema fija que la fase
 // cedida se escribe como handed_off_to junto a handed_off, vuelve en
-// GateState.HandedOffTo y que el struct congelado anterior la ignora (REQ-26.3).
+// GateState.HandedOffTo y que el struct congelado anterior la ignora (RF-GAT-09).
 func TestHandedOffToIsPersistedWithTheMarkAndReadByTheFrozenSchema(t *testing.T) {
 	changeRoot := t.TempDir()
 	if err := AppendGate(changeRoot, GateRecord{Gate: GateSpec, Decision: DecisionApproved, ArtifactDigest: "d1", HandedOff: true, HandedOffTo: "design", Actor: "maintainer"}); err != nil {

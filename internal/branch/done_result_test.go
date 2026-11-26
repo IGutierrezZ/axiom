@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// REQ-25.2 (G-4) y design §4.3: lo que `done` hizo con cada rama es un token estable en inglés con
+// RF-BRA-02 (G-4) y design §4.3: lo que `done` hizo con cada rama es un token estable en inglés con
 // su etiqueta en castellano, y el JSON de una rama que `status` describe no gana ningún campo de
 // `done`.
 func TestDoneOutcomeTokensHaveSpanishLabelsAndStayOutOfStatusBranches(t *testing.T) {

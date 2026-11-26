@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos de `axiom branch done` (REQ-25.16, REQ-25.17, design D-09). Cada uno se refiere a una
+// Rechazos de `axiom branch done` (RF-BRA-17, RF-BRA-18, design D-09). Cada uno se refiere a una
 // rama del plan (los de git y los de la fusión) o a toda la operación (el fetch), nombra una orden
 // ejecutable con las rutas citadas por pathquote.Quote (tasks.md, regla 11) y, cuando `--force`
 // podría resolverlo, lo dice. Nacen con su primer llamador: `Engine.Done`.
@@ -30,7 +30,7 @@ func DoneInvocation(change, cwd string, lane Lane, flags ...string) string {
 }
 
 // MergeNotConfirmed es el rechazo `merge_not_confirmed` de una rama cuya fusión ninguna capa
-// confirma (REQ-25.16): no se elimina ni su worktree ni su rama. targets son las referencias en
+// confirma (RF-BRA-17): no se elimina ni su worktree ni su rama. targets son las referencias en
 // las que se buscó (vacías si el destino no existe) y repo, el repositorio de la rama; la
 // continuación ofrece comprobar qué le falta a la rama y, si se quiere eliminar igualmente,
 // `--force`, que deja en el informe la punta de la rama para recuperarla. destination es la rama
@@ -52,7 +52,7 @@ func MergeNotConfirmed(change, cwd string, lane Lane, repo RepoPlan, planned Bra
 }
 
 // DoneDirtyWorktree es el rechazo `dirty_worktree` de una rama cuyo worktree (o, en `in_place`, el
-// propio repositorio) tiene cambios sin confirmar (REQ-25.17): no se elimina nada. dir es donde
+// propio repositorio) tiene cambios sin confirmar (RF-BRA-18): no se elimina nada. dir es donde
 // están los cambios y paths las rutas que devuelve git, con «/». En `in_place`, `--force` no salta
 // esta comprobación, de modo que la continuación solo ofrece confirmar o guardar los cambios.
 func DoneDirtyWorktree(change, cwd string, lane Lane, repoName, name, dir string, paths []string, inPlace bool) *Refusal {
@@ -89,7 +89,7 @@ func DoneCheckedOutInMainCheckout(change, cwd string, lane Lane, repo RepoPlan, 
 }
 
 // DoneGitFailed es el error `git_failed` de una operación de `done` sobre una rama: nombra la
-// operación (gitOperation, en castellano) y resume el error de git (REQ-25.2). fix es la acción
+// operación (gitOperation, en castellano) y resume el error de git (RF-BRA-02). fix es la acción
 // concreta que lo resuelve y la continuación la repite con la orden de `done`; la rama que
 // falló se conserva.
 func DoneGitFailed(change, cwd string, lane Lane, dir, gitOperation, fix string, err error) *Refusal {
@@ -98,7 +98,7 @@ func DoneGitFailed(change, cwd string, lane Lane, dir, gitOperation, fix string,
 	return refusal
 }
 
-// DoneFetchFailed es el rechazo `fetch_failed` de `done --fetch` (REQ-25.10): el `git fetch
+// DoneFetchFailed es el rechazo `fetch_failed` de `done --fetch` (RF-BRA-10): el `git fetch
 // <remote>` de un repositorio del plan falló antes de evaluar ninguna rama, de modo que no se ha
 // eliminado ninguna rama ni ningún worktree. La continuación ofrece repetir `--fetch` tras
 // revisar el remoto o seguir sin red con las referencias locales.

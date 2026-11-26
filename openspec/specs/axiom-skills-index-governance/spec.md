@@ -11,7 +11,7 @@
 
 Gobernanza del catálogo de habilidades (skills) de agentes en tres destinos sincronizados desde un único escaneo (`.atl/skill-registry.md`, sección gestionada `## Skills` en `AGENTS.md` y tópico persistente en Engram MCP), con una vista completa para el registro local y una vista versionada para los destinos compartidos, soporte de adopción atómica mediante marcadores canónicos y gancho no transaccional tras promociones en `autoskill`.
 
-### Requirement: Superficie CLI del índice de skills (REQ-22.10)
+### Requirement: Superficie CLI del índice de skills (RF-SKI-01)
 
 El sistema DEBE exponer el subcomando `axiom skill index <refresh|list>` dentro del grupo `axiom skill`, diferenciando claramente en ayuda y ejecución entre `skill list` (skills activas y buzón de autoskill) y `skill index list` (inventario unificado indexado).
 
@@ -22,7 +22,7 @@ El sistema DEBE exponer el subcomando `axiom skill index <refresh|list>` dentro 
 
 ---
 
-### Requirement: Regeneración unificada en tres destinos desde un único escaneo (REQ-22.11)
+### Requirement: Regeneración unificada en tres destinos desde un único escaneo (RF-SKI-02)
 
 La ejecución de `axiom skill index refresh` DEBE escanear las skills una sola vez, construir a partir de ese escaneo dos vistas y actualizar atómicamente:
 1. El registro local en disco `.atl/skill-registry.md` (ignorado por git), con la **vista completa**: todas las skills escaneadas, incluidas las de ámbito usuario (`$HOME`, con rutas absolutas) y las copias locales que generan los agentes.
@@ -84,7 +84,7 @@ Un fallo de conexión con Engram MCP NO DEBE impedir la actualización de los de
 
 ---
 
-### Requirement: Reemplazo atómico y marcado de ## Skills en AGENTS.md (REQ-22.12)
+### Requirement: Reemplazo atómico y marcado de ## Skills en AGENTS.md (RF-SKI-03)
 
 La sección `## Skills` de `AGENTS.md` DEBE delimitarse por los marcadores canónicos:
 ```markdown
@@ -106,7 +106,7 @@ El motor `filemerge.InjectMarkdownSection` DEBE operar de forma atómica sobre e
 
 ---
 
-### Requirement: Disparo automático del índice desde autoskill (REQ-22.13)
+### Requirement: Disparo automático del índice desde autoskill (RF-SKI-04)
 
 Cuando el gestor de autoskills apruebe una propuesta (`Manager.Approve`), el sistema DEBE disparar automáticamente la regeneración del índice unificado para que la nueva skill esté disponible de inmediato en todos los destinos. El gancho DEBE ser no transaccional: un eventual fallo de indexación DEBE emitirse como aviso y no debe revertir la promoción completada. Descartar una propuesta (`Reject`) NO DEBE disparar la regeneración.
 
@@ -118,7 +118,7 @@ Cuando el gestor de autoskills apruebe una propuesta (`Manager.Approve`), el sis
 
 ---
 
-### Requirement: Compatibilidad del verbo skill-registry (REQ-22.14)
+### Requirement: Compatibilidad del verbo skill-registry (RF-SKI-05)
 
 El verbo `axiom skill-registry <refresh|list>` DEBE conservarse plenamente operativo y con compatibilidad byte a byte en flags, salida primaria y formato JSON, delegando en el motor unificado de `skill index`.
 
@@ -129,9 +129,9 @@ El verbo `axiom skill-registry <refresh|list>` DEBE conservarse plenamente opera
 
 ---
 
-### Requirement: Raíces de skills declaradas en axiom.yaml (REQ-22.15)
+### Requirement: Raíces de skills declaradas en axiom.yaml (RF-SKI-06)
 
-El archivo `axiom.yaml` PUEDE declarar `workspace.skill_roots`: una lista de directorios versionados, relativos a la raíz del workspace, que contienen skills canónicas fuera de `skills/` (por ejemplo, `internal/assets/skills`). El escaneo de REQ-22.11 DEBE recorrerlos inmediatamente después de `skills/` y antes de los directorios propios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que, ante un nombre duplicado, prevalezca la copia declarada.
+El archivo `axiom.yaml` PUEDE declarar `workspace.skill_roots`: una lista de directorios versionados, relativos a la raíz del workspace, que contienen skills canónicas fuera de `skills/` (por ejemplo, `internal/assets/skills`). El escaneo de RF-SKI-02 DEBE recorrerlos inmediatamente después de `skills/` y antes de los directorios propios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que, ante un nombre duplicado, prevalezca la copia declarada.
 
 Cada entrada DEBE ser una ruta relativa que permanezca dentro del workspace. Las rutas absolutas (incluidas `/x`, `\x`, `C:\x`, `C:x` y UNC), las que salen del workspace (`..`, `../x`), la ruta `.` y la cadena vacía NO DEBEN escanearse, y `axiom workspace validate` DEBE reportar cada una como error. La ausencia de la clave NO DEBE alterar el comportamiento del escaneo.
 
@@ -146,7 +146,7 @@ Cada entrada DEBE ser una ruta relativa que permanezca dentro del workspace. Las
 - **CUANDO** se ejecuta `axiom workspace validate`
 - **ENTONCES** se reporta un error por cada una de las tres entradas y el espacio de trabajo no es conforme
 - **Y** `axiom skill index refresh` las ignora sin fallar
-### Requirement: Saneamiento del Preset Predeterminado de Skills (REQ-46.9)
+### Requirement: Saneamiento del Preset Predeterminado de Skills (RF-SKI-07)
 
 El conjunto de skills que Axiom instala por defecto DEBE contener únicamente skills de producto para usuarios, segregando las skills de colaboración interna del repositorio (`contributorSkills`).
 (Previously: hablaba del «preset básico»; C-08-f sustituye los presets por un conjunto por defecto. Trasladado desde REQ-18.5 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)

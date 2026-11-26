@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Raíces registradas y reubicación de la autoridad de edición (REQ-25.43, REQ-24.9, design D-14).
+// Raíces registradas y reubicación de la autoridad de edición (RF-CLI-06, RF-PLH-09, design D-14).
 //
 // `axiom branch ensure` deja en el registro local (el git common dir del planning home) los worktrees
 // del cambio. Este fichero los lee, solo con ficheros y sin procesos, y de ellos salen tres hechos:

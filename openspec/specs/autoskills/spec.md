@@ -10,7 +10,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El paquete `internal/autoskill` provee un cliente nativo en Go para interactuar con el registro oficial auditado de `midudev/autoskills` alojado en GitHub (`https://raw.githubusercontent.com/midudev/autoskills/main/packages/autoskills/skills-registry/`).
 
-### Requirement: Cliente HTTP Nativo y Parseo de Índice de Registro (REQ-1.1)
+### Requirement: Cliente HTTP Nativo y Parseo de Índice de Registro (RF-ASK-01)
 
 El cliente DEBE descargar y deserializar el archivo de manifiesto `index.json` del registro oficial de `midudev/autoskills`. El manifiesto contiene la lista de skills auditadas, sus rutas de origen, la lista de archivos asociados, sus hashes SHA-256 esperados y la metadata del informe de revisión de seguridad.
 
@@ -27,7 +27,7 @@ El cliente DEBE descargar y deserializar el archivo de manifiesto `index.json` d
 
 ---
 
-### Requirement: Verificación Criptográfica Estricta de Integridad SHA-256 (REQ-1.2)
+### Requirement: Verificación Criptográfica Estricta de Integridad SHA-256 (RF-ASK-02)
 
 Al descargar cualquier archivo perteneciente a una skill del registro (incluyendo `SKILL.md` y scripts o recursos complementarios), el cliente DEBE computar su suma de verificación **SHA-256** mediante `crypto/sha256` y compararla con el hash declarado en el manifiesto `index.json`. Si los hashes no coinciden, la descarga DEBE ser rechazada de forma inmediata y no debe depositarse en el buzón.
 
@@ -45,7 +45,7 @@ Al descargar cualquier archivo perteneciente a una skill del registro (incluyend
 
 ---
 
-### Requirement: Modo Offline y Caché Local (REQ-1.3)
+### Requirement: Modo Offline y Caché Local (RF-ASK-03)
 
 El sistema DEBE soportar la bandera `--offline` tanto en la CLI como en las llamadas al servicio, utilizando los archivos previamente descargados en `.axiom/cache/autoskills/` o definiciones preempaquetadas para operar sin realizar peticiones HTTP salientes.
 
@@ -61,7 +61,7 @@ El sistema DEBE soportar la bandera `--offline` tanto en la CLI como en las llam
 
 El motor de detección analiza el código fuente y las configuraciones de los repositorios configurados en `axiom.yaml` contra la matriz de tecnologías `SKILLS_MAP`.
 
-### Requirement: Detección de Stack Multi-Rol basada en `axiom.yaml` (REQ-2.1)
+### Requirement: Detección de Stack Multi-Rol basada en `axiom.yaml` (RF-ASK-04)
 
 El detector DEBE cargar la configuración del workspace desde `axiom.yaml`, iterar sobre todos los roles configurados y evaluar las tecnologías declaradas o presentes en las rutas de sus repositorios asociados.
 
@@ -73,7 +73,7 @@ El detector DEBE cargar la configuración del workspace desde `axiom.yaml`, iter
 
 ---
 
-### Requirement: Reglas de Detección basadas en `SKILLS_MAP` (REQ-2.2)
+### Requirement: Reglas de Detección basadas en `SKILLS_MAP` (RF-ASK-05)
 
 El detector DEBE evaluar las reglas de `SKILLS_MAP` considerando:
 1. Nombres de paquetes en listas de dependencias (`packages`).
@@ -92,7 +92,7 @@ El detector DEBE evaluar las reglas de `SKILLS_MAP` considerando:
 
 El analizador heurístico examina el código fuente local de los repositorios vinculados para extraer patrones arquitectónicos y convenciones internas propias del proyecto Axiom.
 
-### Requirement: Minería de Convenciones en Código Go (REQ-3.1)
+### Requirement: Minería de Convenciones en Código Go (RF-ASK-06)
 
 El minero DEBE inspeccionar archivos `.go` del repositorio e identificar patrones recurrentes, incluyendo:
 1. Estructura de pruebas tabulares (*table-driven tests* con `tests := []struct{...}`).
@@ -107,7 +107,7 @@ El minero DEBE inspeccionar archivos `.go` del repositorio e identificar patrone
 
 ---
 
-### Requirement: Generación Canónica de Borradores de Skill Minada (REQ-3.2)
+### Requirement: Generación Canónica de Borradores de Skill Minada (RF-ASK-07)
 
 Cada patrón detectado por el minero DEBE formularse como un documento canónico `SKILL.md` que incluya:
 1. Un bloque de frontmatter al inicio del fichero, delimitado por `---`, con `name` igual al directorio de la skill, `description` entrecomillada en una sola línea que contenga `Trigger:`, y `metadata` con `origin: mined` y `trigger`. No DEBE llevar otras claves de primer nivel que las admitidas para las skills de Axiom.
@@ -131,7 +131,7 @@ Cada patrón detectado por el minero DEBE formularse como un documento canónico
 
 El buzón transitorio implementa la compuerta de gobernanza *Human-in-the-Loop*. Ninguna skill se instala directamente en producción sin revisión y aprobación humana explícita.
 
-### Requirement: Depósito de Propuestas en Bandeja de Entrada Transitoria (REQ-4.1)
+### Requirement: Depósito de Propuestas en Bandeja de Entrada Transitoria (RF-ASK-08)
 
 Tanto las skills detectadas desde el registro de `midudev` como las minadas localmente DEBEN depositarse en la ruta transitoria `.axiom/skills/inbox/<nombre>/`, compuesta por:
 1. `SKILL.md`: El contenido completo de la directriz.
@@ -145,7 +145,7 @@ Tanto las skills detectadas desde el registro de `midudev` como las minadas loca
 
 ---
 
-### Requirement: Aprobación y Promoción Atómica a Producción (REQ-4.2)
+### Requirement: Aprobación y Promoción Atómica a Producción (RF-ASK-09)
 
 Al invocar la aprobación de una skill (`axiom skill approve <nombre>` o vía API REST), el sistema DEBE:
 1. Validar la existencia de la propuesta en `.axiom/skills/inbox/<nombre>/`.
@@ -166,7 +166,7 @@ Al invocar la aprobación de una skill (`axiom skill approve <nombre>` o vía AP
 
 ---
 
-### Requirement: Rechazo y Purga de Propuestas (REQ-4.3)
+### Requirement: Rechazo y Purga de Propuestas (RF-ASK-10)
 
 Al invocar el rechazo de una skill (`axiom skill reject <nombre>` o vía API REST), el sistema DEBE eliminar por completo el directorio `.axiom/skills/inbox/<nombre>/` sin alterar en modo alguno el directorio canónico `skills/`.
 
@@ -182,7 +182,7 @@ Al invocar el rechazo de una skill (`axiom skill reject <nombre>` o vía API RES
 
 El binario de línea de comandos `axiom` incorpora el grupo de comandos `axiom skill` para gestionar el ciclo de vida de las skills desde la terminal.
 
-### Requirement: Subcomandos de la CLI `axiom skill` (REQ-5.1)
+### Requirement: Subcomandos de la CLI `axiom skill` (RF-ASK-11)
 
 El comando `axiom skill` DEBE soportar los siguientes subcomandos:
 1. `axiom skill scan [--role <rol>] [--path <directorio>] [--offline]`: Ejecuta la detección contra `midudev/autoskills` y la minería heurística, poblando el buzón transitorio.
@@ -206,7 +206,7 @@ El comando `axiom skill` DEBE soportar los siguientes subcomandos:
 
 El servidor local y el frontend web de Axiom extienden sus funcionalidades para ofrecer gestión interactiva del buzón de skills en un solo clic.
 
-### Requirement: Endpoints REST del Buzón de Skills (REQ-6.1)
+### Requirement: Endpoints REST del Buzón de Skills (RF-ASK-12)
 
 El servidor en `internal/dashboard/server.go` DEBE exponer las siguientes rutas REST:
 1. `GET /api/skills/inbox`: Retorna la lista JSON de propuestas en el buzón con su metadata y contenido.
@@ -221,7 +221,7 @@ El servidor en `internal/dashboard/server.go` DEBE exponer las siguientes rutas 
 
 ---
 
-### Requirement: Interfaz Web SPA para el Buzón de Skills (REQ-6.2)
+### Requirement: Interfaz Web SPA para el Buzón de Skills (RF-ASK-13)
 
 La pestaña de "Skills" en el dashboard web DEBE incluir un panel interactivo del "Buzón de Autoskills (Gobernanza Human-in-the-Loop)", permitiendo a los desarrolladores visualizar la procedencia de cada skill (insignia `midudev auditado` o `minería local`), su hash SHA-256 verificado, inspeccionar el contenido markdown y pulsar los botones "Aprobar" o "Rechazar" con actualización reactiva inmediata de la vista.
 

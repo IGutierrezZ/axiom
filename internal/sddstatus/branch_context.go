@@ -12,7 +12,7 @@ import (
 )
 
 // wrongBranchPrefix es el token estable con el que empieza el motivo tipado de la guarda B
-// (REQ-25.42): el segundo motivo tipado junto a `blocked(edit_authority_missing)`.
+// (RF-CLI-05): el segundo motivo tipado junto a `blocked(edit_authority_missing)`.
 const wrongBranchPrefix = "blocked(wrong_branch)"
 
 // branchEngine es la variable de prueba del motor de ramas (design D-13): nula en producción, donde
@@ -45,7 +45,7 @@ type branchContext struct {
 	wrongBranch *branch.Verdict
 	// registeredRoots son las raíces que `axiom branch ensure` registró para el cambio (worktrees,
 	// incluido el de archivado, y la raíz del repositorio en `in_place`): entran en allowedEditRoots
-	// junto con las concesiones (REQ-25.43, design D-14). Sin registro, vacío.
+	// junto con las concesiones (RF-CLI-06, design D-14). Sin registro, vacío.
 	registeredRoots []string
 	// rebase reubica una ruta del checkout principal de un repositorio registrado en su worktree.
 	// Nunca es nula: sin registro es la identidad.
@@ -55,7 +55,7 @@ type branchContext struct {
 	notes []string
 }
 
-// resolveBranchContext es la guarda B (REQ-25.42, design D-13): consulta el veredicto único de S8
+// resolveBranchContext es la guarda B (RF-CLI-05, design D-13): consulta el veredicto único de S8
 // (`VerdictFor`) para el repositorio del planning home y, en la fase apply, para cada repositorio de
 // código que toca la unidad de trabajo actual. Solo lee ficheros y nunca falla: lo que no se puede
 // comprobar no bloquea y deja un aviso. Un repositorio de código no se evalúa fuera de apply porque el
@@ -118,7 +118,7 @@ func resolveBranchContext(q branchQuery) branchContext {
 }
 
 // touchedCodeRepositories son las raíces git de los repositorios de código del multirepo que tocan las
-// rutas de la unidad de trabajo actual de cada fuente de tareas (REQ-25.42: un repositorio de código
+// rutas de la unidad de trabajo actual de cada fuente de tareas (RF-CLI-05: un repositorio de código
 // solo se evalúa en apply). Reutiliza el detector de la autoridad de edición sin raíces permitidas, que
 // devuelve todo destino fuera del planning home, y se queda con las raíces de repositorios que
 // pertenecen al mismo workspace: un repositorio ajeno o anidado en un monorepo no tiene rama del cambio
@@ -166,7 +166,7 @@ func wrongBranchReason(verdict branch.Verdict) string {
 }
 
 // BlockedByWrongBranch dice si el status proyecta `blocked(wrong_branch)`. `sdd continue` lo consulta
-// para no preparar el marcador de instancia con la rama equivocada (REQ-25.42, design D-11).
+// para no preparar el marcador de instancia con la rama equivocada (RF-CLI-05, design D-11).
 func BlockedByWrongBranch(status Status) bool {
 	for _, reason := range status.BlockedReasons {
 		if strings.HasPrefix(reason, wrongBranchPrefix) {

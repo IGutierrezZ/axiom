@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas del plan de archivado (REQ-25.45, REQ-25.12, REQ-25.11, REQ-25.4, supuestos S-15
+// Pruebas del plan de archivado (RF-BRA-13, RF-BRA-12, RF-BRA-11, RF-BRA-04, supuestos S-15
 // y S-16): `Plan` con `Archive` es un plan aparte con solo la rama de archivado del
 // repositorio del planning home, sin tocar las ramas del cambio ni las de rol. Tablas sin git
 // ni disco, como las del resto del planificador.
@@ -37,7 +37,7 @@ func onlyArchiveBranch(t *testing.T, plan ChangePlan) (RepoPlan, BranchPlan) {
 	return repo, repo.Branches[0]
 }
 
-// REQ-25.45 y REQ-25.11 (escenario «Ruta de la rama de archivado»): sin `--prefix`, la rama
+// RF-BRA-13 y RF-BRA-11 (escenario «Ruta de la rama de archivado»): sin `--prefix`, la rama
 // de archivado es `<rama del cambio registrada>-archive`, sale de la integración, su PR
 // vuelve a la integración y su worktree está en `<raíz>/<cambio>-archive/<repo>`.
 func TestPlanArchiveBranchDerivesFromTheRegisteredChangeBranch(t *testing.T) {
@@ -76,7 +76,7 @@ func TestPlanArchiveBranchDerivesFromTheRegisteredChangeBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.12 (escenario «`--prefix` fija el prefijo de la rama de archivado»): con
+// RF-BRA-12 (escenario «`--prefix` fija el prefijo de la rama de archivado»): con
 // `--prefix p` la rama es `p/<cambio>-archive`, sin `plan_conflict` con el prefijo del cambio
 // ni con el registrado, que no cambian.
 func TestPlanArchivePrefixReplacesTheBranchPrefixWithoutConflictingWithTheChangeBranch(t *testing.T) {
@@ -102,7 +102,7 @@ func TestPlanArchivePrefixReplacesTheBranchPrefixWithoutConflictingWithTheChange
 	})
 }
 
-// REQ-25.3: sin rama registrada, el prefijo de la política (y el de un repositorio con
+// RF-BRA-03: sin rama registrada, el prefijo de la política (y el de un repositorio con
 // ajustes propios) compone el nombre.
 func TestPlanArchiveWithoutARegisteredBranchUsesTheConfiguredPolicy(t *testing.T) {
 	in := archiveInput("x")
@@ -132,7 +132,7 @@ func TestPlanArchiveWithoutARegisteredBranchUsesTheConfiguredPolicy(t *testing.T
 	})
 }
 
-// REQ-25.12, supuesto S-16 (escenario «`--branch` y `--base` no se admiten con `--archive`»):
+// RF-BRA-12, supuesto S-16 (escenario «`--branch` y `--base` no se admiten con `--archive`»):
 // con `--archive` solo se admite `--prefix`; las otras dos excepciones son `plan_conflict`
 // y el rechazo nombra la bandera y la orden que sí se admite.
 func TestPlanArchiveRejectsBranchAndBaseExceptionsWithPlanConflict(t *testing.T) {
@@ -177,7 +177,7 @@ func TestPlanArchiveRejectsBranchAndBaseExceptionsWithPlanConflict(t *testing.T)
 	}
 }
 
-// REQ-25.45 (escenarios «Multirepo no tiene rama de archivado» y «El carril ODD no tiene
+// RF-BRA-13 (escenarios «Multirepo no tiene rama de archivado» y «El carril ODD no tiene
 // rama de archivado»): `archive_branch_not_applicable`, con la orden que sí resuelve el
 // archivado de esa topología, sin plan.
 func TestPlanArchiveIsNotApplicableToMultirepoOrTheODDLane(t *testing.T) {
@@ -215,7 +215,7 @@ func TestPlanArchiveIsNotApplicableToMultirepoOrTheODDLane(t *testing.T) {
 	})
 }
 
-// REQ-25.4 (escenario «Un rol llamado `archive` colisiona con la rama de archivado») y
+// RF-BRA-04 (escenario «Un rol llamado `archive` colisiona con la rama de archivado») y
 // supuesto S-15: un rol `archive` junto a otro sobre el mismo repositorio es `invalid_name`
 // y el rechazo nombra la colisión con `<prefijo>/<cambio>-archive`, también al planificar el
 // archivado; un solo rol, que no genera rama de rol, no colisiona.
@@ -261,7 +261,7 @@ func TestPlanArchiveRejectsARoleNamedArchiveNamingTheCollision(t *testing.T) {
 	})
 }
 
-// REQ-25.4 y REQ-25.7: el plan de archivado no toca las ramas del cambio ni las de rol: las
+// RF-BRA-04 y RF-BRA-07: el plan de archivado no toca las ramas del cambio ni las de rol: las
 // del plan ordinario no cambian porque exista el de archivado, y planificar el archivado no
 // altera la entrada.
 func TestPlanArchiveLeavesTheChangeAndRoleBranchesUntouched(t *testing.T) {
@@ -291,7 +291,7 @@ func TestPlanArchiveLeavesTheChangeAndRoleBranchesUntouched(t *testing.T) {
 	}
 }
 
-// REQ-25.45 y REQ-25.8: en `in_place` no hay worktree que colocar; el plan lleva la rama con
+// RF-BRA-13 y RF-BRA-08: en `in_place` no hay worktree que colocar; el plan lleva la rama con
 // la ruta vacía.
 func TestPlanArchiveInPlaceHasNoWorktree(t *testing.T) {
 	in := archiveInput("x")
@@ -304,7 +304,7 @@ func TestPlanArchiveInPlaceHasNoWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.11: el workspaceRoot y el planning home del plan de archivado son los del worktree
+// RF-BRA-11: el workspaceRoot y el planning home del plan de archivado son los del worktree
 // de la rama de archivado, donde se ejecuta el archive.
 func TestPlanArchiveLocatesTheWorkspaceInsideTheArchiveWorktree(t *testing.T) {
 	plan := mustPlan(t, archiveInput("x"))
@@ -315,7 +315,7 @@ func TestPlanArchiveLocatesTheWorkspaceInsideTheArchiveWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.3, REQ-25.11: nombres inválidos, longitud de ruta y colocación se rechazan como en el
+// RF-BRA-03, RF-BRA-11: nombres inválidos, longitud de ruta y colocación se rechazan como en el
 // plan ordinario, antes de crear nada.
 func TestPlanArchiveValidatesNamesLengthAndPlacement(t *testing.T) {
 	t.Run("cambio inválido", func(t *testing.T) {
@@ -359,7 +359,7 @@ func TestPlanArchiveValidatesNamesLengthAndPlacement(t *testing.T) {
 	})
 }
 
-// REQ-25.12 y design D-25: una rama de archivado que el registro ya guarda no cambia de nombre.
+// RF-BRA-12 y design D-25: una rama de archivado que el registro ya guarda no cambia de nombre.
 // Sin `--prefix` el plan la conserva aunque la rama del cambio o la política hayan cambiado; con
 // un `--prefix` que da el mismo nombre es idempotente, y con uno que daría otro, `plan_conflict`
 // que nombra las dos ramas y vuelve a la registrada sin `--prefix`.
@@ -408,7 +408,7 @@ func TestPlanArchiveKeepsTheRegisteredArchiveBranchAndRejectsAPrefixThatWouldRen
 	})
 }
 
-// REQ-25.45 y REQ-25.10: `change_not_integrated` nombra la base evaluada y la carpeta que falta,
+// RF-BRA-13 y RF-BRA-10: `change_not_integrated` nombra la base evaluada y la carpeta que falta,
 // sugiere `--fetch` con una orden ejecutable que conserva el `--prefix`, y, con la base ya traída
 // con `--fetch`, dice que falta fusionar el PR; si la base contiene el cambio archivado (G-13)
 // nombra la entrada y dice que no hay nada que archivar.

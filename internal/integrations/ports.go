@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Puertos opcionales de un plugin (REQ-45.17). El puerto Plugin (Manifest, Deliver) no cambia: un
+// Puertos opcionales de un plugin (RF-INT-23). El puerto Plugin (Manifest, Deliver) no cambia: un
 // plugin implementa estos solo si los ofrece, y las funciones ResolveIdentity y Discover los detectan
 // por aserción de tipo.
 

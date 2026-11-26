@@ -1,7 +1,7 @@
 package branch
 
 // MergeEvidence es lo que el motor ha podido comprobar de una rama para confirmar que ya está
-// fusionada en su destino (REQ-25.16, design D-09). Cada campo es el resultado de una capa; el
+// fusionada en su destino (RF-BRA-17, design D-09). Cada campo es el resultado de una capa; el
 // motor solo rellena las que ha evaluado y deja en falso las demás.
 type MergeEvidence struct {
 	// Ancestry es la capa 1: la rama es ancestro del destino (`git merge-base --is-ancestor`).
@@ -19,11 +19,11 @@ type MergeEvidence struct {
 	PRMerged bool
 }
 
-// ConfirmMerge decide qué capa confirma la fusión de una rama del tipo dado (REQ-25.16, design
+// ConfirmMerge decide qué capa confirma la fusión de una rama del tipo dado (RF-BRA-17, design
 // D-09). Es pura y se detiene en la primera capa que confirma: ascendencia, árbol equivalente (solo
 // si git lo admite) y PR fusionado (nunca para la rama de archivado). Si ninguna confirma, la
 // fusión no está confirmada, salvo que force sea cierto: `--force` salta la exigencia de fusión
-// confirmada (REQ-25.17) y la confirmación es la capa `forced`. force nunca oculta una capa que sí
+// confirmada (RF-BRA-18) y la confirmación es la capa `forced`. force nunca oculta una capa que sí
 // confirma. Sin confirmación devuelve la capa vacía y false.
 func ConfirmMerge(kind BranchKind, evidence MergeEvidence, force bool) (layer MergeLayer, confirmed bool) {
 	switch {

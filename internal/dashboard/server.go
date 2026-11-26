@@ -213,7 +213,7 @@ func (s *Server) withHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		// La SPA lee los avisos de los listados (REQ-25.34) de esta cabecera.
+		// La SPA lee los avisos de los listados (RF-WEB-11) de esta cabecera.
 		w.Header().Set("Access-Control-Expose-Headers", notesHeaderName)
 
 		if r.Method == "OPTIONS" {
@@ -428,8 +428,8 @@ func (s *Server) handleFSNativePicker(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleWorkspace responde `GET /api/workspace` con los metadatos del workspace y su política de
-// ramas (REQ-1.1). Es solo lectura: cualquier otro método responde 405 y ninguna ruta del servidor
-// escribe axiom.yaml (REQ-25.33).
+// ramas (RF-WEB-01). Es solo lectura: cualquier otro método responde 405 y ninguna ruta del servidor
+// escribe axiom.yaml (RF-WEB-10).
 func (s *Server) handleWorkspace(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
@@ -477,7 +477,7 @@ func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 			s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
 		}
-		// REQ-25.34: los avisos informativos (cambios pendientes de archivar, worktrees desaparecidos,
+		// RF-WEB-11: los avisos informativos (cambios pendientes de archivar, worktrees desaparecidos,
 		// falta de la referencia de integración) viajan en la cabecera, no en el cuerpo, que sigue
 		// siendo un array. Sin avisos no hay cabecera.
 		if header := notesHeader(notes); header != "" {
@@ -492,7 +492,7 @@ func (s *Server) handleIncrements(w http.ResponseWriter, r *http.Request) {
 		}
 		res, err := s.service.CreateIncrement(req)
 		if err != nil {
-			// REQ-25.32: un rechazo tipado de `ensure` o de la guarda A es un 409 con su código y su
+			// RF-WEB-09: un rechazo tipado de `ensure` o de la guarda A es un 409 con su código y su
 			// continuación (o, en `decision_required`, con la decisión), no un 400 genérico.
 			var refusal *branch.RefusalError
 			if errors.As(err, &refusal) {
@@ -689,7 +689,7 @@ func (s *Server) handleSkillsApprove(w http.ResponseWriter, r *http.Request) {
 	}
 	message := fmt.Sprintf("Skill '%s' aprobada e instalada con éxito", req.Name)
 	if warning != "" {
-		// Warning, never an error: the promotion stands (REQ-22.13).
+		// Warning, never an error: the promotion stands (RF-SKI-04).
 		message += " (aviso: " + warning + ")"
 	}
 	s.respondJSON(w, http.StatusOK, map[string]string{
@@ -763,7 +763,7 @@ func (s *Server) handleArchiveSync(w http.ResponseWriter, r *http.Request) {
 	report, err := s.service.SyncLivingDocs(r.Context())
 	if err != nil {
 		// Con un `baseline:` residual el servicio rechaza sin escribir: 409 con el
-		// mensaje, que nombra el bloque retirado y la migración (REQ-30.21).
+		// mensaje, que nombra el bloque retirado y la migración (RF-TOP-12).
 		var retired *workspace.BaselineRetiredError
 		if errors.As(err, &retired) {
 			s.respondJSON(w, http.StatusConflict, map[string]string{
@@ -919,7 +919,7 @@ func (s *Server) handleEcosystemModels(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// decisionRequiredBody es el cuerpo del 409 de `decision_required` (REQ-25.32): el estado con su
+// decisionRequiredBody es el cuerpo del 409 de `decision_required` (RF-WEB-09): el estado con su
 // etiqueta, el código y la decisión que la interfaz presenta antes de repetir la creación con `mode`.
 type decisionRequiredBody struct {
 	Status      string           `json:"status"`
@@ -986,7 +986,7 @@ func (s *Server) respondJSON(w http.ResponseWriter, code int, data interface{}) 
 }
 
 // notesHeaderName es la cabecera de `GET /api/increments` con los avisos informativos de los
-// listados (REQ-25.34, design D-20): un array JSON de frases en castellano.
+// listados (RF-WEB-11, design D-20): un array JSON de frases en castellano.
 const notesHeaderName = "X-Axiom-Notes"
 
 // notesHeader codifica los avisos como un array JSON en ASCII: un valor de cabecera HTTP no debe

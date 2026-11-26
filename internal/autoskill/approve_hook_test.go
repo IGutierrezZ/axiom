@@ -24,7 +24,7 @@ func writeInboxSkill(t *testing.T, workspace, name string) {
 	}
 }
 
-// TestApproveRegeneratesIndexAfterPromotion covers REQ-22.13 «La promoción
+// TestApproveRegeneratesIndexAfterPromotion covers RF-SKI-04 «La promoción
 // deja la skill indexada sin pasos manuales» at the hook boundary: a completed
 // promotion runs the regenerator and reports no error.
 func TestApproveRegeneratesIndexAfterPromotion(t *testing.T) {
@@ -61,7 +61,7 @@ func TestApproveRegeneratesIndexAfterPromotion(t *testing.T) {
 	}
 }
 
-// TestApproveKeepsPromotionWhenRegenerationFails covers REQ-22.13 «La
+// TestApproveKeepsPromotionWhenRegenerationFails covers RF-SKI-04 «La
 // promoción no se revierte si falla la regeneración» (D-12).
 func TestApproveKeepsPromotionWhenRegenerationFails(t *testing.T) {
 	workspace := t.TempDir()
@@ -133,7 +133,7 @@ func TestApproveWithoutRegeneratorReportsTheFailure(t *testing.T) {
 	}
 }
 
-// TestRejectNeverRegenerates covers REQ-22.13 «Reject no dispara
+// TestRejectNeverRegenerates covers RF-SKI-04 «Reject no dispara
 // regeneración».
 func TestRejectNeverRegenerates(t *testing.T) {
 	workspace := t.TempDir()

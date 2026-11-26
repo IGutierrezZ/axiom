@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// El veredicto único de rama (REQ-25.18, design D-10) es una función pura: a partir del papel
+// El veredicto único de rama (RF-BRA-19, design D-10) es una función pura: a partir del papel
 // del repositorio, el contexto de la consulta, los nombres esperados y la rama en la que está
 // el repositorio responde «¿esta rama es la que corresponde a este cambio?» con `correct`,
 // `wrong_branch` o `not_applicable`. No lee el disco ni lanza nada: obtener la rama actual y
@@ -67,7 +67,7 @@ type Verdict struct {
 	Continuation string
 }
 
-// Decide calcula el veredicto de rama (REQ-25.18). Las reglas, por papel del repositorio:
+// Decide calcula el veredicto de rama (RF-BRA-19). Las reglas, por papel del repositorio:
 //
 //   - `change_branch`, contexto ordinario: la rama del cambio o cualquiera de rol; cualquier otra
 //     (la de integración, la de archivado, una ajena y un HEAD desacoplado) es `wrong_branch`;
@@ -163,7 +163,7 @@ type RefusalError struct{ Refusal }
 
 func (e *RefusalError) Error() string { return e.Message + ". " + e.Continuation }
 
-// WrongBranch es el rechazo `wrong_branch` de un veredicto desfavorable (REQ-25.19): nombra el
+// WrongBranch es el rechazo `wrong_branch` de un veredicto desfavorable (RF-BRA-20): nombra el
 // código tipado, el repositorio, la rama actual y la esperada, y repite la orden exacta de
 // `ensure` del veredicto. La escritura que se niega no ha tocado nada.
 func WrongBranch(verdict Verdict, change string) *Refusal {

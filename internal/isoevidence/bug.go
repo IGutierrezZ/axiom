@@ -2,7 +2,7 @@ package isoevidence
 
 import "strings"
 
-// Textos literales del perfil de bug (REQ-29.15). Son un contrato compartido
+// Textos literales del perfil de bug (RF-CLI-10). Son un contrato compartido
 // con otros carriles: no se traducen ni se reformulan.
 const (
 	bugReportHeading = "## Informe de bug"
@@ -11,7 +11,7 @@ const (
 	NoImpactMark = "Sin impacto en la spec"
 	// NoImpactReasonLabel es la etiqueta de la línea del motivo de un bug sin impacto. La
 	// comparten el carril SDD (esta función) y el ODD (livespec.impactReasonPrefix), con una
-	// prueba de paridad que contrasta los dos analizadores (REQ-44.8).
+	// prueba de paridad que contrasta los dos analizadores (RF-OLS-09).
 	NoImpactReasonLabel = "Motivo:"
 )
 

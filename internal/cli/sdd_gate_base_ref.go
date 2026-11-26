@@ -7,7 +7,7 @@ import (
 )
 
 // completeGateBaseRef fija la rama contra la que se comprueba la evidencia `pr_merged` cuando la
-// invocación no trae --base-ref (design D-22, REQ-25.23): la rama de integración resuelta del
+// invocación no trae --base-ref (design D-22, RF-BRA-24): la rama de integración resuelta del
 // repositorio del planning home, no un `main` fijo. `kickoff.ParseGateRecordArgs` no la conoce y
 // deja el campo vacío; solo `pr_merged` tiene comprobación de ancestro, así que el resto de
 // evidencias conserva el campo vacío como antes. Un --base-ref explícito no se toca.

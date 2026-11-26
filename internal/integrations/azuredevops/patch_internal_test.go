@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// newPatchBody es la única forma de construir el cuerpo de una modificación (REQ-45.7).
+// newPatchBody es la única forma de construir el cuerpo de una modificación (RF-ADO-07).
 func TestNewPatchBodyPrependsTestRev(t *testing.T) {
 	body, err := newPatchBody(7, []PatchOp{{Op: "replace", Path: "/fields/System.Title", Value: "nuevo"}})
 	if err != nil {

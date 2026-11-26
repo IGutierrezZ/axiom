@@ -8,7 +8,7 @@ Corregir el aviso W2 del verify de C-05-c (`publicacion-pendiente`): el status c
 
 ## Problema y porqué
 
-`Engine.PublicationState` (`internal/branch/engine/publication_state.go`) lee el rango sin subir con `CommitFiles` (`git log --name-only`), que no lista rutas en los commits de fusión. `publish`, en cambio, lee cada commit con `diff-tree --cc` (`internal/sddpublish/gitport.go`, `CommitPaths`), que en una fusión devuelve las rutas que la propia fusión resolvió. En una fusión con conflictos resueltos sobre código, el status dice `pending` (o nada) y `publish` se niega. REQ-27.18 ya exige la misma clasificación que `publish` («mismo rango que REQ-27.8»); el código no la cumplía y la design de C-05-c lo dejó como límite aceptado.
+`Engine.PublicationState` (`internal/branch/engine/publication_state.go`) lee el rango sin subir con `CommitFiles` (`git log --name-only`), que no lista rutas en los commits de fusión. `publish`, en cambio, lee cada commit con `diff-tree --cc` (`internal/sddpublish/gitport.go`, `CommitPaths`), que en una fusión devuelve las rutas que la propia fusión resolvió. En una fusión con conflictos resueltos sobre código, el status dice `pending` (o nada) y `publish` se niega. RF-PUB-11 ya exige la misma clasificación que `publish` («mismo rango que RF-PUB-04»); el código no la cumplía y la design de C-05-c lo dejó como límite aceptado.
 
 ## Alcance
 
@@ -21,7 +21,7 @@ Fuera de alcance: `axiom branch scope` y la verificación conjunta.
 ## Impacto en la spec
 
 Sin impacto en la spec
-Motivo: REQ-27.18 ya exige clasificar los commits sin subir con el mismo rango y la misma lista que `publish` (REQ-27.8); el arreglo hace que el código lo cumpla en las fusiones.
+Motivo: RF-PUB-11 ya exige clasificar los commits sin subir con el mismo rango y la misma lista que `publish` (RF-PUB-04); el arreglo hace que el código lo cumpla en las fusiones.
 
 ## Restricciones
 

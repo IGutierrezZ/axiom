@@ -4,7 +4,7 @@ import "testing"
 
 // TestGoInstallResolvable verifies that GoInstallResolvable reads ONLY the
 // declared module path and import path (D-01) and never derives the module
-// from Owner/Repo (REQ-22.2).
+// from Owner/Repo (RF-UPD-02).
 func TestGoInstallResolvable(t *testing.T) {
 	const (
 		upstreamModule = "github.com/IGutierrezZ/axiom/v3"

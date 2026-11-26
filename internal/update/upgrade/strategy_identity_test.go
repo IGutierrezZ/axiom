@@ -68,7 +68,7 @@ func TestStrategyMessagesNeverNameUpstream(t *testing.T) {
 
 // TestGoInstallMainUpgradeOnlyWhenResolvable verifies that goInstallMainUpgrade
 // composes `go install <GoImportPath>@main` ONLY when GoInstallResolvable()
-// (REQ-22.2).
+// (RF-UPD-02).
 func TestGoInstallMainUpgradeOnlyWhenResolvable(t *testing.T) {
 	origExec := execCommand
 	t.Cleanup(func() { execCommand = origExec })

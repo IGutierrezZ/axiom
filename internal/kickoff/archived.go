@@ -32,7 +32,7 @@ var archiveDatePrefixPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}-$`)
 //
 // Resolving the archive folder lets RefuseArchivedRoot reject an archived
 // change as archived instead of the verbs answering that it does not exist
-// (REQ-24.9).
+// (RF-PLH-09).
 func ArchivedChangeRoot(workspaceRoot, change string) (string, bool) {
 	if change == "" || change == "." || change == ".." || strings.ContainsAny(change, `/\`) {
 		return "", false
@@ -80,13 +80,13 @@ func RefuseArchivedRoot(workspaceRoot, changeRoot string) error {
 		return fmt.Errorf("la raiz del cambio %q queda fuera del workspace %q", changeRoot, workspaceRoot)
 	}
 	if rel == archivedChangesPrefix || strings.HasPrefix(rel, archivedChangesPrefix+"/") {
-		return fmt.Errorf("el cambio %q ya esta archivado; gestiona la correccion mediante un ticket de bug o un nuevo incremento en vez de reabrirlo (REQ-21.18)", rel)
+		return fmt.Errorf("el cambio %q ya esta archivado; gestiona la correccion mediante un ticket de bug o un nuevo incremento en vez de reabrirlo (RF-ARC-03)", rel)
 	}
 	return nil
 }
 
 // IntegrationsOutboxFile es el único fichero que Axiom puede escribir en una carpeta archivada
-// (MODIFIED REQ-21.18): la cola local de operaciones de integración. internal/integrations usa esta
+// (MODIFIED RF-ARC-03): la cola local de operaciones de integración. internal/integrations usa esta
 // constante; no hay un segundo literal.
 const IntegrationsOutboxFile = ".integrations-outbox.yaml"
 
@@ -105,7 +105,7 @@ var archivedFolderPattern = regexp.MustCompile(`^` + regexp.QuoteMeta(archivedCh
 // IntegrationsOutboxFile o un temporal ".integrations-outbox-*.yaml" de su escritura atómica.
 // Cualquier otro nombre (integrations.yaml, gates.yaml, otro fichero con punto) o ruta con
 // separador se rechaza; en una carpeta archivada con el mismo mensaje que RefuseArchivedRoot
-// (REQ-21.18). RefuseArchivedRoot no cambia y sigue siendo la guarda de todos los demás escritores.
+// (RF-ARC-03). RefuseArchivedRoot no cambia y sigue siendo la guarda de todos los demás escritores.
 func RefuseArchivedWriteExceptLocalState(workspaceRoot, changeRoot, name string) error {
 	rel, err := filepath.Rel(workspaceRoot, changeRoot)
 	if err != nil {

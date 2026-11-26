@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
-// TestRunSyncLeavesResidualReviewInstallUntouched pins REQ-46.4 end to end: an
+// TestRunSyncLeavesResidualReviewInstallUntouched pins RF-ORQ-26 end to end: an
 // installation an earlier release left with review agents, a review stop hook
 // next to the user's own hooks, an OpenCode config that still defines `review-*`
 // agents and the legacy review plugin syncs without error, leaves every one of

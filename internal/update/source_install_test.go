@@ -6,7 +6,7 @@ import (
 )
 
 // forkSourceTool mirrors the self-tool entry
-// (REQ-22.3): fork coordinates with the upstream module still declared in go.mod.
+// (RF-UPD-03): fork coordinates with the upstream module still declared in go.mod.
 var forkSourceTool = ToolInfo{
 	Name:         "axiom",
 	Owner:        "IGutierrezZ",
@@ -122,7 +122,7 @@ func TestSourceInstallCommand(t *testing.T) {
 	}
 }
 
-// TestSourceInstallCommandForkNeverNamesUpstream covers REQ-22.2 scenarios
+// TestSourceInstallCommandForkNeverNamesUpstream covers RF-UPD-02 scenarios
 // "La pista de actualizacion nombra el fork, no upstream" and "Discrepancia de
 // modulo detectada, sin `go install` abortado a mitad".
 func TestSourceInstallCommandForkNeverNamesUpstream(t *testing.T) {

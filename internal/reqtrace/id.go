@@ -13,6 +13,9 @@ const CodeIDInvalid = "id_invalid"
 type Query struct {
 	ID          string
 	Provisional bool
+	// Legacy es un ID heredado aceptado por el mapa versionado sin ser válido bajo el patrón
+	// del proyecto (RF-TRC-02).
+	Legacy bool
 }
 
 // IDError es el error tipado de un ID que no es válido ni provisional válido bajo el patrón.
@@ -31,14 +34,18 @@ func (e *IDError) Error() string {
 // Unwrap devuelve la causa de la lectura como provisional.
 func (e *IDError) Unwrap() error { return e.Cause }
 
-// ParseID valida raw contra el patrón del proyecto: un ID válido, un provisional válido o
-// *IDError. El ID se compara tal cual, sin normalizar mayúsculas, espacios ni ceros.
-func ParseID(raw string, p reqid.Pattern) (Query, error) {
+// ParseID valida raw contra el patrón del proyecto: un ID válido, un provisional válido, un ID
+// heredado que figura en el mapa (legacy puede ser nil) o *IDError. El ID se compara tal
+// cual, sin normalizar mayúsculas, espacios ni ceros.
+func ParseID(raw string, p reqid.Pattern, legacy LegacyResolver) (Query, error) {
 	if p.Valid(raw) {
 		return Query{ID: raw}, nil
 	}
 	prov, err := p.ParseProvisional(raw)
 	if err != nil {
+		if legacy != nil && legacy.Legacy(raw) {
+			return Query{ID: raw, Legacy: true}, nil
+		}
 		return Query{}, &IDError{ID: raw, Template: p.Template(), Code: CodeIDInvalid, Cause: err}
 	}
 	return Query{ID: prov.String(), Provisional: true}, nil

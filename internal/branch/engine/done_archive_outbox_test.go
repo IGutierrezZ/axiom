@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// REQ-43.31 (sin cambiar REQ-25.9 ni REQ-25.17): la cola de integraciones de la carpeta archivada es
+// RF-INT-22 (sin cambiar RF-BRA-09 ni RF-BRA-18): la cola de integraciones de la carpeta archivada es
 // un fichero sin seguimiento en el árbol de la rama de archivado, así que `done` se niega con
 // `dirty_worktree` nombrándola mientras esté pendiente y procede cuando se vacía (el fichero se
 // borra al quedar sin operaciones).
@@ -58,7 +58,7 @@ func TestDoneOnTheArchiveBranchRefusesWithAPendingIntegrationsQueueAndProceedsOn
 	}
 }
 
-// REQ-25.17: el cerrojo vacío que deja `gate record` (`.gates.lock`) es estado local sin datos; no
+// RF-BRA-18: el cerrojo vacío que deja `gate record` (`.gates.lock`) es estado local sin datos; no
 // cuenta como árbol sucio, así que `done` retira la rama de archivado aunque siga ahí. Cualquier
 // otro fichero sin confirmar sigue bloqueando, y el rechazo no nombra el cerrojo.
 func TestDoneOnTheArchiveBranchIgnoresTheLocalGatesLock(t *testing.T) {

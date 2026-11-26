@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// SDDConfig es el bloque `sdd:` de axiom.yaml (REQ-29.1 y REQ-44.1).
+// SDDConfig es el bloque `sdd:` de axiom.yaml (RF-ISO-01 y RF-RID-01).
 type SDDConfig struct {
 	ISO bool
 	// IDPattern es la plantilla de identificadores de requisito declarada en
@@ -26,7 +26,7 @@ var sddKeys = []string{"iso", "id_pattern"}
 const idPatternExample = "RF-<DOM>-<NN>"
 
 // ErrISOWorkflowContradiction identifica la declaración contradictoria de
-// REQ-29.1: `sdd.iso: true` junto a `workflow.lane: odd`. errors.Is lo reconoce
+// RF-ISO-01: `sdd.iso: true` junto a `workflow.lane: odd`. errors.Is lo reconoce
 // dentro de Declarations.SDDErr.
 var ErrISOWorkflowContradiction = errors.New("sdd.iso: true es incompatible con workflow.lane: odd")
 

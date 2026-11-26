@@ -15,7 +15,7 @@ const (
 // WorkspaceTechnicalContext es el contexto técnico declarado de un workspace,
 // proyectado sin seleccionar ningún cambio SDD. TechnicalContext es nil (null en
 // JSON, sin omitempty) sin declaración o con una declaración inválida; en ese
-// último caso Invalid lleva el motivo (REQ-30.30: falla cerrado, sin proyección
+// último caso Invalid lleva el motivo (RF-CTX-20: falla cerrado, sin proyección
 // parcial).
 type WorkspaceTechnicalContext struct {
 	SchemaName       string                      `json:"schemaName"`

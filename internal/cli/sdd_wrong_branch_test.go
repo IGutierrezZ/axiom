@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// Pruebas de `axiom sdd status` y `axiom sdd continue` con la guarda B (REQ-25.42, REQ-25.39, design
+// Pruebas de `axiom sdd status` y `axiom sdd continue` con la guarda B (RF-CLI-05, RF-ARC-07, design
 // D-11 y D-13). Entran por RunSDDStatus y RunSDDContinue, el punto de entrada de la CLI, con
 // repositorios montados solo con ficheros (`.git/HEAD`): la guarda lee ficheros y no lanza procesos.
 
@@ -95,7 +95,7 @@ func wrongBranchReason(status sddstatus.Status) string {
 	return ""
 }
 
-// REQ-25.42, arnés de S9-c2: `axiom sdd status x --json` desde main bloquea, desde la rama del
+// RF-CLI-05, arnés de S9-c2: `axiom sdd status x --json` desde main bloquea, desde la rama del
 // cambio no bloquea y, en la fase archive, solo la rama de archivado deja pasar.
 func TestSDDWrongBranchStatusHarness(t *testing.T) {
 	root, _ := wrongBranchProject(t, "main", "- [ ] 1.1 Trabajo de ejemplo\n", false)
@@ -133,7 +133,7 @@ func TestSDDWrongBranchStatusHarness(t *testing.T) {
 	}
 }
 
-// REQ-25.42 y D-11, escenario «`axiom sdd continue` refleja el bloqueo»: con blocked(wrong_branch) no
+// RF-CLI-05 y D-11, escenario «`axiom sdd continue` refleja el bloqueo»: con blocked(wrong_branch) no
 // prepara el marcador de instancia ni emite sobre de consentimiento y no autoriza ninguna fase; en la
 // rama del cambio el mismo plan sí prepara el marcador y pide la concesión (S-9).
 func TestSDDWrongBranchContinueReflectsTheBlockWithoutPreparingTheMarker(t *testing.T) {

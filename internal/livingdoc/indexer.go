@@ -146,7 +146,7 @@ func (idx *Indexer) ParseSpecContent(content, domain, filePath string, modTime t
 
 			if reqID == "" {
 				// Sin identificador, el sintético queda fuera del espacio válido de cualquier
-				// patrón (REQ-44.6).
+				// patrón (RF-RID-06).
 				reqID = reqid.Synthetic(domain, len(entry.Requirements)+1)
 			}
 

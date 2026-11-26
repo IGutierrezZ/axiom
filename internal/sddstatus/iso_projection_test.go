@@ -40,7 +40,7 @@ func isoOf(t *testing.T, status Status) *ISOProjection {
 	return &projection
 }
 
-// REQ-29.1 y REQ-29.2 (design D7, D8): la proyección `iso` solo aparece con un
+// RF-ISO-01 y RF-ISO-02 (design D7, D8): la proyección `iso` solo aparece con un
 // bloque `sdd:` o con un cambio ISO; un `sdd:` inválido se proyecta `invalid`
 // con su `reason` aunque no haya cambio; la instantánea manda sobre axiom.yaml.
 func TestISOProjection(t *testing.T) {
@@ -159,7 +159,7 @@ func TestISOProjectionV1AndV2Agree(t *testing.T) {
 	}
 }
 
-// REQ-29.2 y D8: una declaración inválida estrecha el archivado y solo pasa a
+// RF-ISO-02 y D8: una declaración inválida estrecha el archivado y solo pasa a
 // blockedReasons cuando la ruta sería archive; con trabajo pendiente la ruta no
 // cambia y el motivo queda en notes.
 func TestDecorateISO(t *testing.T) {

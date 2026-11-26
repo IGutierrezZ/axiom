@@ -885,7 +885,7 @@ func TestExecute_UpgradeBackupManifestHasUpgradeMetadata(t *testing.T) {
 
 	// Find the backup manifest on disk and verify its metadata. Execute's
 	// snapshot writer resolves the canonical root via backup.BackupRootFor
-	// (REQ-20.13/REQ-20.14); this must track that accessor rather than
+	// (RF-DIS-07/RF-DIS-08); this must track that accessor rather than
 	// re-type its literal, or it silently stops seeing what Execute wrote.
 	backupRoot := backup.BackupRootFor(homeDir)
 	entries, err := os.ReadDir(backupRoot)

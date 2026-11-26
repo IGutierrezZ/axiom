@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
-// REQ-21.15: solo los roles con política blocking bloquean la fase verify global;
+// RF-RCL-03: solo los roles con política blocking bloquean la fase verify global;
 // los deferred y optional se informan en notes con su política y el estado de su
 // compuerta, sin bloquear. Los nombres empiezan por TestRoleGatesDependency y
 // TestVerifyDependencyFromRoleGates para entrar en el mismo patrón de `-run`.
@@ -70,9 +70,9 @@ func TestRoleGatesDependencyBlockingApprovedAndDeferredPending(t *testing.T) {
 	}, "core:blocking", "e2e:deferred")
 
 	if status.Dependencies.Verify != DependencyReady {
-		t.Fatalf("Dependencies.Verify = %q, se esperaba ready: el rol deferred no bloquea (REQ-21.15)", status.Dependencies.Verify)
+		t.Fatalf("Dependencies.Verify = %q, se esperaba ready: el rol deferred no bloquea (RF-RCL-03)", status.Dependencies.Verify)
 	}
-	if reasons := strings.Join(status.BlockedReasons, "\n"); strings.Contains(reasons, "REQ-21.15") {
+	if reasons := strings.Join(status.BlockedReasons, "\n"); strings.Contains(reasons, "RF-RCL-03") {
 		t.Errorf("BlockedReasons = %v, no debe haber motivo de verify", status.BlockedReasons)
 	}
 	notes := strings.Join(status.Notes, "\n")

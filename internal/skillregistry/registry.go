@@ -137,14 +137,14 @@ func ProjectSkillDirs(cwd string) []string {
 }
 
 // Regenerate runs the single scan and writes the unified skills index to its
-// destinations (REQ-22.11, D-09), in this order:
+// destinations (RF-SKI-02, D-09), in this order:
 //
 //  1. .atl/skill-registry.md (fatal)
 //  2. .atl/.skill-registry.cache.json (fatal)
 //  3. the managed `## Skills` section of AGENTS.md (fatal when the file exists;
 //     omitted when it does not — spec §3.6)
 //  4. the Engram `skill-registry` topic through opts.Mirror (never fatal:
-//     `mirror failed` with exit 0 for the caller — REQ-22.11)
+//     `mirror failed` with exit 0 for the caller — RF-SKI-02)
 //
 // Destinations 1 and 2 see the full view (every scanned skill); destinations 3
 // and 4 see the versioned view: only skills inside cwd that git does not ignore
@@ -279,7 +279,7 @@ func Regenerate(cwd, home string, opts RegenerateOptions) (Result, error) {
 }
 
 // runMirror attempts the Engram mirror and reports it as data: a mirror
-// failure is never fatal (REQ-22.11). A nil MirrorFunc reports MirrorFailed
+// failure is never fatal (RF-SKI-02). A nil MirrorFunc reports MirrorFailed
 // with "mirror not configured" — the command must never claim `mirror ok` for
 // a write it never attempted (T-8).
 func runMirror(mirror MirrorFunc, cwd string, entries []SkillEntry) MirrorOutcome {

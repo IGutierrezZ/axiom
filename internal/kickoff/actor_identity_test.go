@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-// Pruebas de compatibilidad de la capacidad change-actor-identity (REQ-42.4, REQ-42.7,
-// REQ-42.8): el dominio no valida el valor del actor ni del sellador, así que los registros
+// Pruebas de compatibilidad de la capacidad change-actor-identity (RF-ACT-04, RF-ACT-07,
+// RF-ACT-08): el dominio no valida el valor del actor ni del sellador, así que los registros
 // anteriores y los nuevos con la identidad git conviven.
 
 func TestLegacyActorRecordsStillLoadAndValidate(t *testing.T) {

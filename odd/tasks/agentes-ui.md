@@ -59,7 +59,7 @@ Añade a `local-web-dashboard` la consulta de los agentes del proyecto y su inst
 ```openspec
 ## ADDED Requirements
 
-### Requirement: Endpoint de Agentes del Proyecto Activo (REQ-1.6)
+### Requirement: Endpoint de Agentes del Proyecto Activo (RF-WEB-13)
 
 El servidor DEBE responder a `GET /api/agents` con la lista de agentes del catálogo de Axiom, en el orden del catálogo, y para cada uno: su identificador y nombre, si Axiom lo admite (`supported`, agente seleccionable), si se detecta en el equipo (`detected`, su carpeta de configuración global existe), si está instalado en el proyecto activo (`installed`), si admite el ámbito workspace (`workspace`) y, cuando no se puede instalar en el proyecto, el motivo en castellano (`reason`). La respuesta DEBE indicar además la raíz del proyecto activo, si esa raíz es un proyecto de Axiom (`project`, tiene en sí misma un marcador de workspace) y si el estado del proyecto registra su lista de agentes (`recorded`). Un agente solo figura como instalado cuando el proyecto ha registrado su lista (`installed_agents` no nulo en `.axiom/state.json` del proyecto) y lo incluye: la lista del estado global no cuenta. La consulta es de solo lectura y NO DEBE ejecutar subprocesos ni escribir ficheros. Si el estado del proyecto no se puede leer, la respuesta DEBE ser `200` con el motivo en `state_error` y ningún agente marcado como instalado.
 
@@ -83,7 +83,7 @@ El servidor DEBE responder a `GET /api/agents` con la lista de agentes del catá
 - **CUANDO** se solicita `GET /api/agents`
 - **ENTONCES** `github-copilot-cli` figura con `workspace` falso y un `reason` no vacío
 
-### Requirement: Instalar un Agente en el Proyecto Activo desde el Dashboard (REQ-1.7)
+### Requirement: Instalar un Agente en el Proyecto Activo desde el Dashboard (RF-WEB-14)
 
 El servidor DEBE exponer `POST /api/agents/install` con un cuerpo `{"agent": "<id>"}` que instala ese único agente en el proyecto activo con el mismo núcleo que `axiom install --scope workspace --agent <id>`, sin depender del directorio actual del proceso. La instalación DEBE añadir el agente a `installed_agents` del estado del proyecto sin quitar los ya registrados. Antes de escribir nada, el servidor DEBE rechazar con `400` y el motivo un agente vacío, desconocido, no seleccionable o sin modo workspace, y con `409` una petición cuya raíz activa no es un proyecto de Axiom (sin marcador de workspace en ella). Un fallo de la instalación DEBE responder `500` con `success: false` y el error. Las instalaciones concurrentes DEBEN ejecutarse de una en una.
 
@@ -121,7 +121,7 @@ La pantalla Ecosistema DEBE mostrar un bloque «Agentes» con las tres marcas de
 - Commits: T1 `1ba891dd`, T2 `b32da66e`, T3 el commit de cierre de esta rama.
 - T1: `go vet ./internal/dashboard` limpio y `go test ./internal/dashboard -count=1` en verde (78 s) tras clasificar las rutas nuevas en el canario de secretos (`/api/agents` cubierta, `/api/agents/install` excluida por ser POST).
 - T2: `go test ./internal/dashboard -count=1` en verde (69 s) con la prueba nueva `TestEcosystemAgentsBlock`; `node --check` de `screens/ecosystem.js` y `core/ecosystem.js` limpio. No se ha visto en el navegador: arrancar el dashboard exige compilar `axiom`.
-- T3: `axiom archive integrate --odd agentes-ui` compuso `local-web-dashboard` (REQ-1.6 y REQ-1.7) y actualizó `openspec/INDEX.md` (48 dominios, 496 requisitos). El `axiom` del PATH (v3.9.0) no admite aún los identificadores provisionales (`prov:1:1` daba `added_without_id`), así que se fijaron a mano los siguientes libres de la serie 1 (el mayor era REQ-1.5). Documentación: `docs/usage.md` (sección «Agentes del proyecto desde el dashboard») y fila «Agentes» en `docs/redesign/README.md`.
+- T3: `axiom archive integrate --odd agentes-ui` compuso `local-web-dashboard` (RF-WEB-13 y RF-WEB-14) y actualizó `openspec/INDEX.md` (48 dominios, 496 requisitos). El `axiom` del PATH (v3.9.0) no admite aún los identificadores provisionales (`prov:1:1` daba `added_without_id`), así que se fijaron a mano los siguientes libres de la serie 1 (el mayor era RF-WEB-05). Documentación: `docs/usage.md` (sección «Agentes del proyecto desde el dashboard») y fila «Agentes» en `docs/redesign/README.md`.
 
 ## Siguiente paso
 

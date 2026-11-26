@@ -8,14 +8,14 @@
 
 Cerrar los dos seguimientos que la verificación global de inc-24 dejó abiertos (`openspec/changes/archive/2026-10-12-inc-24-spec-baseline-profile/verify-report.md` y `archive-report.md`):
 
-- **W1.** REQ-24.12 y REQ-21.16 están parciales solo en prueba: ninguna prueba monta el espacio canónico multirepo y comprueba que la evidencia `pr_merged` se verifica contra el repositorio de especificaciones.
+- **W1.** RF-PLH-12 y RF-ARC-01 están parciales solo en prueba: ninguna prueba monta el espacio canónico multirepo y comprueba que la evidencia `pr_merged` se verifica contra el repositorio de especificaciones.
 - **S4.** Las pruebas que cubren REQ-24.16 y REQ-24.44 no llevan la etiqueta `REQ-`, así que la trazabilidad por `rg` no las encuentra.
 
 ## Problema y porqué
 
 El comportamiento ya es correcto por construcción: `internal/cli/sdd_gate.go` toma `loc.WorkspaceRoot` y se lo pasa a `verifyGateEvidence` (`internal/cli/sdd_gate_evidence.go:42`), que comprueba la ascendencia con el grafo de ese repositorio (`kickoff.VerifyIntegrationEvidence`, `internal/kickoff/integration.go:44`). Falta la prueba que lo fije. Sin ella, una regresión en la resolución del `workspaceRoot` desde la carpeta maestra aceptaría o rechazaría la evidencia equivocada sin que nada falle.
 
-Escenario de la spec (`openspec/specs/planning-home-resolution/spec.md`, REQ-24.12, escenario «`pr_merged` se verifica contra el repositorio de especificaciones»):
+Escenario de la spec (`openspec/specs/planning-home-resolution/spec.md`, RF-PLH-12, escenario «`pr_merged` se verifica contra el repositorio de especificaciones»):
 
 - **DADO** el espacio canónico, un commit `S` fusionado en la rama principal de `repo-specs` y un commit `C` presente solo en `repo-backend`.
 - **CUANDO** se ejecuta `axiom sdd gate record --cwd <maestra> --change inc-99-ejemplo --gate integration --decision approved --evidence-kind pr_merged --commit S`.
@@ -50,7 +50,7 @@ Espacio canónico (fixture de la spec): `<maestra>` sin versionar, con `.axiom-w
   - Ruta: delegado (writer único). Disparador: preparar la escritura exige leer los helpers de `sdd_gate_test.go` (`newGovernanceGitWorkspace`, línea 280; casos `pr_merged` hacia las líneas 303-360) y la resolución de `workspace.Locate`.
   - Montar el espacio canónico de la spec con dos repositorios git reales: `repo-specs` con el cambio `inc-99-ejemplo` sellado y un commit `S` en su rama principal, y `repo-backend` con un commit `C`.
   - Desde `--cwd <maestra>`: con `--commit S` se acepta y `gates.yaml` anexa el registro; con `--commit C` se rechaza, `gates.yaml` no anexa nada y el mensaje nombra la causa.
-  - Etiquetar la prueba con `REQ-24.12` y `REQ-21.16`.
+  - Etiquetar la prueba con `RF-PLH-12` y `RF-ARC-01`.
   - Comprobación de mutación local (no se commitea) y registro de su resultado aquí.
   - Commit: `test(cli): evidencia pr_merged contra el repositorio de especificaciones en el espacio canónico`.
   - **Hecho (2026-10-12).** Ruta: delegado (writer único). Prueba nueva `TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace` en `internal/cli/sdd_gate_planning_home_test.go`. Reutiliza `workspacetest.Canonical`, `sealForGateTest` y `runGateTestGit`. Dos subtests sobre el mismo fixture: C se rechaza (el error nombra C, `ancestro` y `main`; `gates.yaml` sin cambios y 0 registros) y S se acepta (1 registro integration aprobado, `Verified=true`, `EvidenceRef=S`, `EvidenceBaseRef=main`).

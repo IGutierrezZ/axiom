@@ -5,7 +5,7 @@ import "fmt"
 // impactSubject es el sujeto que nombran los problemas de impacto: la sección del documento.
 const impactSubject = "## " + impactSectionHeading
 
-// CheckImpact aplica la obligación de impacto de los bugs ODD (REQ-30.5). Un documento
+// CheckImpact aplica la obligación de impacto de los bugs ODD (RF-OLS-05). Un documento
 // `Tipo: bug` DEBE aportar una `## Spec viva` con al menos una capacidad (se evalúa como
 // un cambio con delta y no necesita marcador) o el marcador válido de `## Impacto en la
 // spec`: la línea exacta `Sin impacto en la spec` y una línea `Motivo:` con texto. Un

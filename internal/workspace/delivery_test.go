@@ -22,7 +22,7 @@ func deliveryNode(t *testing.T, source string) *yaml.Node {
 	return node
 }
 
-// REQ-32.1: el entero es estricto y la lista de claves, cerrada.
+// RF-TOP-14: el entero es estricto y la lista de claves, cerrada.
 func TestDecodeDelivery(t *testing.T) {
 	valid := []struct {
 		name   string
@@ -74,7 +74,7 @@ func TestDecodeDelivery(t *testing.T) {
 	}
 }
 
-// REQ-32.1: carga por capas (parseLayered, ParseConfig, ReadDeclarations y
+// RF-TOP-14: carga por capas (parseLayered, ParseConfig, ReadDeclarations y
 // Locate) de un bloque `delivery:` válido, inválido y ausente.
 func TestDeliveryLoad(t *testing.T) {
 	t.Run("sin bloque nada cambia", func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestDeliveryLoad(t *testing.T) {
 	})
 }
 
-// REQ-32.1: workspace validate carga con LoadConfig y falla con un `delivery:`
+// RF-TOP-14: workspace validate carga con LoadConfig y falla con un `delivery:`
 // inválido; con un bloque válido carga sin error.
 func TestWorkspaceValidateDelivery(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")

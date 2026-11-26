@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 )
 
-// REQ-29.10, REQ-29.11 y REQ-29.3: `axiom sdd archive-check` aplica la regla del
+// RF-ARC-09, RF-ARC-10 y RF-ISO-03: `axiom sdd archive-check` aplica la regla del
 // archivado ISO sin escribir nada. Las pruebas se llaman TestSDDArchiveCheck*
 // para entrar en el mismo patrón de `-run`.
 
@@ -211,7 +211,7 @@ func TestSDDArchiveCheckNonISOReportsNothingElse(t *testing.T) {
 	}
 }
 
-// REQ-29.1: una declaración `sdd:` inválida en un cambio ISO falla cerrada.
+// RF-ISO-01: una declaración `sdd:` inválida en un cambio ISO falla cerrada.
 func TestSDDArchiveCheckInvalidDeclaration(t *testing.T) {
 	root, _ := archiveCheckWorkspace(t, archiveCheckChange{
 		name: "demo", proposal: "# P\n", deltas: map[string]string{"pagos": archiveCheckDeltaOK}, tasks: archiveCheckTasksDone,
@@ -264,7 +264,7 @@ func TestSDDArchiveCheckRejectsBadArguments(t *testing.T) {
 	}
 }
 
-// REQ-29.3 y D17: tras componer un dominio con el compositor real, archive-check
+// RF-ISO-03 y D17: tras componer un dominio con el compositor real, archive-check
 // informa alreadyComposed: true para él y false para el resto.
 func TestSDDArchiveCheckAlreadyComposed(t *testing.T) {
 	const canonicalPagos = "# pagos\n\n## Requirements\n\n" +

@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-// Pruebas de las operaciones de `done` (INC-25, S6.4, REQ-25.16, REQ-25.17): IsAncestor, la capa 1
+// Pruebas de las operaciones de `done` (INC-25, S6.4, RF-BRA-17, RF-BRA-18): IsAncestor, la capa 1
 // de la detección de fusión, y las dos escrituras del desmontaje, RemoveWorktree y DeleteBranch.
 // Ninguna es remota y las escrituras se lanzan siempre con cmd.Dir en el checkout principal.
 

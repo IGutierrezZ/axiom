@@ -10,9 +10,9 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El paquete `internal/dashboard` implementa el servidor HTTP ligero basado en `net/http` que agrega y expone el estado del espacio de trabajo y del ciclo SDD mediante una API REST en formato JSON.
 
-### Requirement: Endpoint REST de Información del Workspace (REQ-1.1)
+### Requirement: Endpoint REST de Información del Workspace (RF-WEB-01)
 
-El servidor DEBE responder a la ruta `GET /api/workspace` retornando una estructura JSON con los metadatos del espacio de trabajo declarados en `axiom.yaml`: nombre, topología (`monorepo-embedded`, `multirepo`), repositorio canónico de especificaciones, lista de roles con sus rutas y tecnologías, la política de ramas efectiva (`integration_branch` y `branch_prefix`, con los valores por defecto aplicados cuando `axiom.yaml` no declara `git:`), las entradas de `repositories:` y el estado general de validación de la topología. La respuesta es de solo lectura: ninguna ruta del servidor DEBE modificar `axiom.yaml` (REQ-25.33).
+El servidor DEBE responder a la ruta `GET /api/workspace` retornando una estructura JSON con los metadatos del espacio de trabajo declarados en `axiom.yaml`: nombre, topología (`monorepo-embedded`, `multirepo`), repositorio canónico de especificaciones, lista de roles con sus rutas y tecnologías, la política de ramas efectiva (`integration_branch` y `branch_prefix`, con los valores por defecto aplicados cuando `axiom.yaml` no declara `git:`), las entradas de `repositories:` y el estado general de validación de la topología. La respuesta es de solo lectura: ninguna ruta del servidor DEBE modificar `axiom.yaml` (RF-WEB-10).
 (Previously: la topología admitía también `monorepo-decoupled` y la respuesta no incluía la política de ramas ni `repositories:`)
 
 #### Scenario: Retorno exitoso de topología y roles
@@ -37,7 +37,7 @@ El servidor DEBE responder a la ruta `GET /api/workspace` retornando una estruct
 - **CUANDO** se invoca `GET /api/workspace`
 - **ENTONCES** el JSON incluye la entrada de `repo-backend` con su rama de integración `release`
 
-### Requirement: Endpoints REST de Consulta de Incrementos (REQ-1.2)
+### Requirement: Endpoints REST de Consulta de Incrementos (RF-WEB-02)
 
 El servidor DEBE responder a `GET /api/increments` listando todos los incrementos encontrados en el sistema de ficheros tanto en `openspec/changes/` (activos) como en `openspec/changes/archive/` (archivados), indicando su identificador, estado (`active` o `archived`), fase SDD deducida, y conteo de tareas completadas/totales.
 Asimismo, DEBE responder a `GET /api/increments/{name}` proveyendo el detalle de los artefactos del incremento especificado (`proposal`, `spec`, `design`, `tasks`, `verifyReport`, `archiveReport`).
@@ -60,7 +60,7 @@ Asimismo, DEBE responder a `GET /api/increments/{name}` proveyendo el detalle de
 
 ---
 
-### Requirement: Endpoint REST de Estado Multi-Rol y Barrera (REQ-1.3)
+### Requirement: Endpoint REST de Estado Multi-Rol y Barrera (RF-WEB-03)
 
 El servidor DEBE responder a `GET /api/roles?change={name}` analizando el desglose de roles del cambio solicitado mediante `internal/multirole`, retornando la lista de roles, sus políticas de compuerta (`blocking`, `deferred`, `optional`), el avance de sus tareas (`tasks.<rol>.md`), el estado de verificación (`verify-report.<rol>.md`) y el dictamen global de la barrera de sincronización (*Satisfied* o *Blocked*).
 
@@ -72,7 +72,7 @@ El servidor DEBE responder a `GET /api/roles?change={name}` analizando el desglo
 
 ---
 
-### Requirement: Endpoint REST de Consulta de Handoffs (REQ-1.4)
+### Requirement: Endpoint REST de Consulta de Handoffs (RF-WEB-04)
 
 El servidor DEBE responder a `GET /api/handoffs?change={name}` deserializando el archivo `handoff.md` del cambio solicitado mediante `internal/handoff`, proveyendo los metadatos de la transición (fases origen y destino, roles involucrados, timestamp, status) y el contenido de las cinco secciones canónicas.
 
@@ -88,7 +88,7 @@ El servidor DEBE responder a `GET /api/handoffs?change={name}` deserializando el
 
 ---
 
-### Requirement: Endpoint REST de Catálogo de Skills (REQ-1.5)
+### Requirement: Endpoint REST de Catálogo de Skills (RF-WEB-05)
 
 El servidor DEBE responder a `GET /api/skills` escaneando los directorios locales de skills (`skills/` e `internal/assets/skills/`) y retornando la lista de skills disponibles, sus nombres, rutas relativas y una descripción resumida extraída de sus respectivos encabezados `SKILL.md`.
 
@@ -103,7 +103,7 @@ El servidor DEBE responder a `GET /api/skills` escaneando los directorios locale
 
 El paquete `internal/dashboard` incorpora los ficheros estáticos de la interfaz web embebidos directamente en el binario compilado mediante `//go:embed assets/*`, garantizando portabilidad absoluta y cero dependencias de NodeJS o NPM.
 
-### Requirement: Servido de Assets Estáticos Embebidos (REQ-2.1)
+### Requirement: Servido de Assets Estáticos Embebidos (RF-WEB-06)
 
 El servidor HTTP DEBE servir los archivos estáticos HTML, CSS y JavaScript desde el sistema de archivos embebido de Go (`embed.FS`). La ruta raíz `/` DEBE entregar el archivo `index.html` con tipo de contenido `text/html; charset=utf-8`, y las rutas asociadas (`/style.css`, `/app.js`) DEBEN servirse con sus respectivos MIME types correctos.
 
@@ -120,7 +120,7 @@ El servidor HTTP DEBE servir los archivos estáticos HTML, CSS y JavaScript desd
 
 ---
 
-### Requirement: Estructura de Navegación y Vistas en la Web UI (REQ-2.2)
+### Requirement: Estructura de Navegación y Vistas en la Web UI (RF-WEB-07)
 
 La interfaz web en `index.html` y `app.js` DEBE estructurarse en una experiencia de usuario fluida y reactiva en español que incluya:
 1. Encabezado institucional con identidad de Axiom, nombre del workspace y badge de topología.
@@ -143,7 +143,7 @@ La interfaz web en `index.html` y `app.js` DEBE estructurarse en una experiencia
 
 El comando `axiom ui` en la CLI de Axiom permite a los desarrolladores iniciar el servidor local y abrir el panel de control de forma desatendida o personalizada.
 
-### Requirement: Subcomando axiom ui y Control del Servidor (REQ-3.1)
+### Requirement: Subcomando axiom ui y Control del Servidor (RF-WEB-08)
 
 El comando `axiom ui` DEBE iniciar el servidor HTTP en el puerto indicado por `--port` (por defecto `8080`). Si el puerto especificado o por defecto ya está ocupado, el comando DEBE buscar de forma incremental el siguiente puerto libre disponible e informar en consola. Salvo que se indique `--no-browser`, el comando DEBE lanzar automáticamente el navegador predeterminado del sistema operativo apuntando a la URL local. Además, DEBE escuchar señales de interrupción (`SIGINT` / `SIGTERM`) para realizar un cierre ordenado (*graceful shutdown*).
 
@@ -164,9 +164,9 @@ El comando `axiom ui` DEBE iniciar el servidor HTTP en el puerto indicado por `-
 - **DADO** el comando ejecutado con la bandera `axiom ui --no-browser`
 - **CUANDO** el servidor arranca
 - **ENTONCES** el servidor HTTP queda a la escucha normalmente pero NO se invoca el navegador del sistema
-### Requirement: Crear un Cambio desde el Dashboard Invoca `ensure` Antes de Escribir (REQ-25.32)
+### Requirement: Crear un Cambio desde el Dashboard Invoca `ensure` Antes de Escribir (RF-WEB-09)
 
-La creación de un incremento desde el dashboard y con `axiom change create` DEBE ejecutar `axiom branch ensure` para el cambio, con el mismo motor que la CLI, y después escribir con el escritor guardado (REQ-25.19 de `change-branch-lifecycle`), antes de crear la carpeta del cambio o escribir `proposal.md`, y DEBE escribir los ficheros en la ruta del planning home que devuelve `ensure` (en modo `worktree`, la del worktree del cambio y no la del checkout principal). El escritor guardado se niega fuera de rama aunque se invoque sin `ensure`. La TUI solo lista cambios (REQ-25.34): no ejecuta `ensure` ni crea incrementos. Si `ensure` devuelve `decision_required` (modo `ask`), el servidor DEBE devolver ese resultado tipado sin escribir nada; la interfaz DEBE presentar la elección (`worktree` o `in_place`) y repetir la creación con la respuesta, que se registra por cambio (REQ-25.8). Si `ensure` se rechaza por cualquier causa (`dirty_worktree`, `path_too_long`, `invalid_name`, `specs_repo_not_on_integration`, etc.), el servidor DEBE devolver el código tipado y la continuación, sin crear la carpeta del cambio.
+La creación de un incremento desde el dashboard y con `axiom change create` DEBE ejecutar `axiom branch ensure` para el cambio, con el mismo motor que la CLI, y después escribir con el escritor guardado (RF-BRA-20 de `change-branch-lifecycle`), antes de crear la carpeta del cambio o escribir `proposal.md`, y DEBE escribir los ficheros en la ruta del planning home que devuelve `ensure` (en modo `worktree`, la del worktree del cambio y no la del checkout principal). El escritor guardado se niega fuera de rama aunque se invoque sin `ensure`. La TUI solo lista cambios (RF-WEB-11): no ejecuta `ensure` ni crea incrementos. Si `ensure` devuelve `decision_required` (modo `ask`), el servidor DEBE devolver ese resultado tipado sin escribir nada; la interfaz DEBE presentar la elección (`worktree` o `in_place`) y repetir la creación con la respuesta, que se registra por cambio (RF-BRA-08). Si `ensure` se rechaza por cualquier causa (`dirty_worktree`, `path_too_long`, `invalid_name`, `specs_repo_not_on_integration`, etc.), el servidor DEBE devolver el código tipado y la continuación, sin crear la carpeta del cambio.
 
 #### Scenario: La creación prepara la rama y escribe en el worktree
 - **DADO** un proyecto en modo `worktree` y el checkout principal en `main`
@@ -200,9 +200,9 @@ La creación de un incremento desde el dashboard y con `axiom change create` DEB
 
 ---
 
-### Requirement: `git:` y `repositories:` en Solo Lectura; Solo se Editan las Preferencias Personales (REQ-25.33)
+### Requirement: `git:` y `repositories:` en Solo Lectura; Solo se Editan las Preferencias Personales (RF-WEB-10)
 
-En esta versión, el dashboard NO DEBE ofrecer ni exponer ningún medio de editar `axiom.yaml`: `git:` y `repositories:` se muestran en solo lectura, con la indicación de que se editan en `axiom.yaml`. Ninguna ruta HTTP del servidor DEBE escribir `axiom.yaml`. Las únicas preferencias editables desde el dashboard son las personales del hub (modo de trabajo y raíz de worktrees, REQ-25.29), mediante lectura y escritura sobre el proyecto activo con la validación de REQ-25.29. Editar las preferencias NO DEBE modificar ningún fichero del proyecto.
+En esta versión, el dashboard NO DEBE ofrecer ni exponer ningún medio de editar `axiom.yaml`: `git:` y `repositories:` se muestran en solo lectura, con la indicación de que se editan en `axiom.yaml`. Ninguna ruta HTTP del servidor DEBE escribir `axiom.yaml`. Las únicas preferencias editables desde el dashboard son las personales del hub (modo de trabajo y raíz de worktrees, RF-HUB-07), mediante lectura y escritura sobre el proyecto activo con la validación de RF-HUB-07. Editar las preferencias NO DEBE modificar ningún fichero del proyecto.
 
 #### Scenario: `git:` se muestra pero no se puede editar
 - **DADO** la SPA con un proyecto que declara `git.integration_branch: develop`
@@ -230,9 +230,9 @@ En esta versión, el dashboard NO DEBE ofrecer ni exponer ningún medio de edita
 
 ---
 
-### Requirement: Los Listados Agregan los Cambios de los Worktrees Registrados (REQ-25.34)
+### Requirement: Los Listados Agregan los Cambios de los Worktrees Registrados (RF-WEB-11)
 
-Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios activos del checkout principal, los cambios activos de los worktrees registrados en el registro local de `axiom branch` (REQ-25.14) para el proyecto activo en `GET /api/increments`, y DEBE resolver también esos cambios en `GET /api/increments/{name}`, `GET /api/roles?change={name}` y `GET /api/handoffs?change={name}`. Cada incremento listado desde un worktree DEBE indicar la ruta absoluta de su worktree y su rama. Si un mismo cambio activo figura en el checkout principal (por ejemplo, un sumidero acumulativo) y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado. El dashboard DEBE mostrar los cambios pendientes de archivar (REQ-25.20 de `change-branch-lifecycle`), es decir, los cambios activos presentes en la rama de integración que aún no se han archivado, con la continuación para archivarlos. El aviso de cambios pendientes de archivar DEBE viajar en la cabecera `X-Axiom-Notes` de la respuesta de `GET /api/increments`; los avisos de este requisito, incluido el de una entrada del registro cuyo worktree ya no existe en disco (que DEBE omitirse sin error), viajan en esa misma cabecera. Los cambios pendientes NO producen ningún error ni bloqueo. Las escrituras del dashboard sobre un cambio que vive en un worktree DEBEN dirigirse a ese worktree.
+Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios activos del checkout principal, los cambios activos de los worktrees registrados en el registro local de `axiom branch` (RF-BRA-15) para el proyecto activo en `GET /api/increments`, y DEBE resolver también esos cambios en `GET /api/increments/{name}`, `GET /api/roles?change={name}` y `GET /api/handoffs?change={name}`. Cada incremento listado desde un worktree DEBE indicar la ruta absoluta de su worktree y su rama. Si un mismo cambio activo figura en el checkout principal (por ejemplo, un sumidero acumulativo) y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado. El dashboard DEBE mostrar los cambios pendientes de archivar (RF-BRA-21 de `change-branch-lifecycle`), es decir, los cambios activos presentes en la rama de integración que aún no se han archivado, con la continuación para archivarlos. El aviso de cambios pendientes de archivar DEBE viajar en la cabecera `X-Axiom-Notes` de la respuesta de `GET /api/increments`; los avisos de este requisito, incluido el de una entrada del registro cuyo worktree ya no existe en disco (que DEBE omitirse sin error), viajan en esa misma cabecera. Los cambios pendientes NO producen ningún error ni bloqueo. Las escrituras del dashboard sobre un cambio que vive en un worktree DEBEN dirigirse a ese worktree.
 (Previously: el requisito se apoyaba en un invariante de la rama de integración, eliminado por D17, y los avisos viajaban en el cuerpo de la respuesta)
 (Previously: añadía que la pantalla de ciclo de vida de incrementos de la TUI listaba el mismo conjunto de cambios y solo listaba, con un escenario propio.)
 
@@ -279,7 +279,7 @@ Los cambios en curso viven en worktrees. El servidor DEBE agregar, a los cambios
 - **CUANDO** el cliente crea un handoff para `x` desde el dashboard
 - **ENTONCES** `handoff.md` se escribe en la carpeta del cambio del worktree
 
-### Requirement: El Dashboard No Expone el Modo de Revisión de RDD (REQ-46.6)
+### Requirement: El Dashboard No Expone el Modo de Revisión de RDD (RF-WEB-12)
 
 El servidor del Dashboard NO DEBE exponer el endpoint `/api/project/review-mode` ni ningún otro de modo de revisión, y la interfaz web NO DEBE incluir el selector `reviewmode.js`. Una petición a esa ruta DEBE responder como ruta inexistente (404). El resto de endpoints del Dashboard NO cambia.
 
@@ -294,7 +294,7 @@ El servidor del Dashboard NO DEBE exponer el endpoint `/api/project/review-mode`
 - **DADO** los recursos estáticos del Dashboard
 - **CUANDO** se listan
 - **ENTONCES** no existe `reviewmode.js` ni ninguna referencia a él en las páginas
-### Requirement: Endpoint de Agentes del Proyecto Activo (REQ-1.6)
+### Requirement: Endpoint de Agentes del Proyecto Activo (RF-WEB-13)
 
 El servidor DEBE responder a `GET /api/agents` con la lista de agentes del catálogo de Axiom, en el orden del catálogo, y para cada uno: su identificador y nombre, si Axiom lo admite (`supported`, agente seleccionable), si se detecta en el equipo (`detected`, su carpeta de configuración global existe), si está instalado en el proyecto activo (`installed`), si admite el ámbito workspace (`workspace`) y, cuando no se puede instalar en el proyecto, el motivo en castellano (`reason`). La respuesta DEBE indicar además la raíz del proyecto activo, si esa raíz es un proyecto de Axiom (`project`, tiene en sí misma un marcador de workspace) y si el estado del proyecto registra su lista de agentes (`recorded`). Un agente solo figura como instalado cuando el proyecto ha registrado su lista (`installed_agents` no nulo en `.axiom/state.json` del proyecto) y lo incluye: la lista del estado global no cuenta. La consulta es de solo lectura y NO DEBE ejecutar subprocesos ni escribir ficheros. Si el estado del proyecto no se puede leer, la respuesta DEBE ser `200` con el motivo en `state_error` y ningún agente marcado como instalado.
 
@@ -318,7 +318,7 @@ El servidor DEBE responder a `GET /api/agents` con la lista de agentes del catá
 - **CUANDO** se solicita `GET /api/agents`
 - **ENTONCES** `github-copilot-cli` figura con `workspace` falso y un `reason` no vacío
 
-### Requirement: Instalar un Agente en el Proyecto Activo desde el Dashboard (REQ-1.7)
+### Requirement: Instalar un Agente en el Proyecto Activo desde el Dashboard (RF-WEB-14)
 
 El servidor DEBE exponer `POST /api/agents/install` con un cuerpo `{"agent": "<id>"}` que instala ese único agente en el proyecto activo con el mismo núcleo que `axiom install --scope workspace --agent <id>`, sin depender del directorio actual del proceso. La instalación DEBE añadir el agente a `installed_agents` del estado del proyecto sin quitar los ya registrados. Antes de escribir nada, el servidor DEBE rechazar con `400` y el motivo un agente vacío, desconocido, no seleccionable o sin modo workspace, y con `409` una petición cuya raíz activa no es un proyecto de Axiom (sin marcador de workspace en ella). Un fallo de la instalación DEBE responder `500` con `success: false` y el error. Las instalaciones concurrentes DEBEN ejecutarse de una en una.
 

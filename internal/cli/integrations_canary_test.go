@@ -14,7 +14,7 @@ import (
 
 const canaryValue = "s3cr3t-CANARIO-9f8e7d"
 
-// Canario (REQ-43.16): un valor distintivo en el almacén en memoria y en la variable de entorno no
+// Canario (RF-INT-16): un valor distintivo en el almacén en memoria y en la variable de entorno no
 // aparece, tras ningún flujo, ni en axiom.yaml, ni en ningún fichero del espacio (carpeta del cambio,
 // ficheros con punto y cerrojo incluidos), ni en stdout, stderr o ninguna salida --json.
 func TestIntegrationsCanaryNeverAppearsInFilesOrOutputs(t *testing.T) {

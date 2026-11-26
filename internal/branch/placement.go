@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Colocación de los worktrees (REQ-25.11, design D-04): el planificador comprueba,
+// Colocación de los worktrees (RF-BRA-11, design D-04): el planificador comprueba,
 // antes de crear nada, que el nombre `<repo>` de cada worktree no se repite, que la
 // raíz de worktrees y las rutas planificadas no se solapan con árboles de trabajo
 // existentes y que ninguna ruta supera el límite de la plataforma. Son comparaciones
@@ -65,7 +65,7 @@ func within(parent, child string, foldCase bool) bool {
 }
 
 // checkRepositoryNames rechaza con `invalid_name` dos repositorios del plan que darían
-// el mismo `<repo>` a la ruta de su worktree (REQ-25.11, S-17), nombrando ambas rutas.
+// el mismo `<repo>` a la ruta de su worktree (RF-BRA-11, S-17), nombrando ambas rutas.
 // El repositorio de specs de un multirepo no tiene worktree y no entra en la
 // comprobación: su nombre no compone ninguna ruta.
 func checkRepositoryNames(in PlanInput, selections []repoSelection) *Refusal {

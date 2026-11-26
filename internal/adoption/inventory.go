@@ -1,5 +1,5 @@
 // Package adoption inventaría los orígenes de requisitos previos de un proyecto y
-// verifica el cambio SDD que los migra a OpenSpec (REQ-30.9 a REQ-30.14). Es de solo
+// verifica el cambio SDD que los migra a OpenSpec (RF-ADP-01 a RF-ADP-06). Es de solo
 // lectura salvo la escritura del inventario que hace la CLI con `--change`.
 package adoption
 
@@ -38,7 +38,7 @@ type Inventory struct {
 	Warnings          []string           `yaml:"warnings" json:"warnings"`
 	// ProposedIDPattern es el patrón de identificadores que el escaneo propone a partir de
 	// los identificadores propios de las unidades; nil si no hay ninguno. No entra en
-	// Summarize ni en la obsolescencia del inventario (REQ-30.9).
+	// Summarize ni en la obsolescencia del inventario (RF-ADP-01).
 	ProposedIDPattern *PatternProposal `yaml:"proposed_id_pattern,omitempty" json:"proposed_id_pattern,omitempty"`
 }
 

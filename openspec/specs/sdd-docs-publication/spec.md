@@ -9,16 +9,16 @@ Definir el verbo nativo `axiom sdd publish`, que confirma y sube, y solo eso, lo
 
 ## Términos
 
-- **Rama asignada:** la rama que `axiom branch ensure` y el planificador de ramas asignan al cambio en el repositorio que corresponda (REQ-25.4 de `change-branch-lifecycle`): rama del cambio, rama de rol o rama de archivado. En el repositorio de specs de un `multirepo`, su rama de integración (REQ-27.7).
-- **Rutas de documentación** (lista cerrada, REQ-27.5): las únicas rutas que `publish` puede confirmar.
+- **Rama asignada:** la rama que `axiom branch ensure` y el planificador de ramas asignan al cambio en el repositorio que corresponda (RF-BRA-04 de `change-branch-lifecycle`): rama del cambio, rama de rol o rama de archivado. En el repositorio de specs de un `multirepo`, su rama de integración (RF-PUB-03).
+- **Rutas de documentación** (lista cerrada, RF-PUB-01): las únicas rutas que `publish` puede confirmar.
 - **Commit sin subir:** commit de la rama actual que no está contenido en `refs/remotes/origin/<rama>` local o, si esa referencia no existe, en la base de integración local.
 - **Negativa informativa:** terminación de `publish` con código de salida distinto de cero y un código tipado, sin efectos remotos y sin anular ninguna decisión ya registrada.
 
 ## Requirements
 
-### Requirement: Verbo `axiom sdd publish --change <x>` y Lista Cerrada de Rutas de Documentación (REQ-27.5)
+### Requirement: Verbo `axiom sdd publish --change <x>` y Lista Cerrada de Rutas de Documentación (RF-PUB-01)
 
-La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`, como subcomando de `axiom sdd` y no de `axiom branch`. La orden DEBE operar únicamente sobre las **rutas de documentación**, una lista cerrada formada por: `openspec/changes/<x>/**`; la carpeta de `openspec/changes/archive/**` que corresponde al cambio; `openspec/specs/**`; `openspec/INDEX.md`; y las rutas de contexto técnico mantenido declaradas en `axiom.yaml` (`technical_context.maintained`). Las rutas de `technical_context.reference` y `odd/tasks/**` NO DEBEN pertenecer nunca a la lista. Tampoco pertenece a la lista el **estado local** del cambio: los ficheros cuyo nombre empieza por punto situados directamente en la raíz de `openspec/changes/<x>/` o en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<x>/`). `publish` NUNCA DEBE confirmarlos, ni con `--archive` ni en publicaciones posteriores. Los ficheros con punto de subcarpetas siguen siendo documentación. Toda ruta que no esté en la lista es **código** a efectos de esta capacidad. El indicador opcional `--archive` selecciona la rama de archivado del cambio como rama asignada que `publish` espera (REQ-27.7 y REQ-27.14): la publicación posterior al archivado DEBE invocarse como `axiom sdd publish --change <x> --archive`. Sin `--change`, o con un nombre de cambio inválido, la orden DEBE rechazarse sin efectos.
+La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`, como subcomando de `axiom sdd` y no de `axiom branch`. La orden DEBE operar únicamente sobre las **rutas de documentación**, una lista cerrada formada por: `openspec/changes/<x>/**`; la carpeta de `openspec/changes/archive/**` que corresponde al cambio; `openspec/specs/**`; `openspec/INDEX.md`; y las rutas de contexto técnico mantenido declaradas en `axiom.yaml` (`technical_context.maintained`). Las rutas de `technical_context.reference` y `odd/tasks/**` NO DEBEN pertenecer nunca a la lista. Tampoco pertenece a la lista el **estado local** del cambio: los ficheros cuyo nombre empieza por punto situados directamente en la raíz de `openspec/changes/<x>/` o en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<x>/`). `publish` NUNCA DEBE confirmarlos, ni con `--archive` ni en publicaciones posteriores. Los ficheros con punto de subcarpetas siguen siendo documentación. Toda ruta que no esté en la lista es **código** a efectos de esta capacidad. El indicador opcional `--archive` selecciona la rama de archivado del cambio como rama asignada que `publish` espera (RF-PUB-03 y RF-ARC-08): la publicación posterior al archivado DEBE invocarse como `axiom sdd publish --change <x> --archive`. Sin `--change`, o con un nombre de cambio inválido, la orden DEBE rechazarse sin efectos.
 (Previously: la lista incluía todo `openspec/changes/<x>/**` y la carpeta archivada del cambio sin excluir explícitamente el estado local con punto de sus raíces. La exclusión de la carpeta ordinaria solo existía en la implementación y la carpeta archivada no tenía ninguna.)
 
 #### Scenario: La orden existe en `sdd` y no en `branch`
@@ -67,9 +67,9 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 - **CUANDO** `publish --change x --archive` lo clasifica
 - **ENTONCES** es documentación del cambio
 
-### Requirement: `publish` Confirma Solo las Rutas de Documentación del Cambio (REQ-27.6)
+### Requirement: `publish` Confirma Solo las Rutas de Documentación del Cambio (RF-PUB-02)
 
-`publish` DEBE confirmar (commit) únicamente las rutas de documentación del cambio que tengan modificaciones, mediante una selección explícita de rutas con semántica «solo estas rutas» (`--only`): el commit NO DEBE contener ninguna ruta de código y NO DEBE alterar ni el árbol de trabajo ni el índice de las rutas que no confirma, incluidas las rutas de código ya preparadas por la persona. El commit DEBE incluir `gates.yaml` y `kickoff.yaml` del cambio cuando estén modificados. Si no hay modificaciones en rutas de documentación, `publish` NO DEBE crear un commit vacío y DEBE continuar con la comprobación y el push de los commits ya existentes (REQ-27.8 y REQ-27.7). `publish` NO DEBE usar `--no-verify`: los hooks de git del usuario se ejecutan.
+`publish` DEBE confirmar (commit) únicamente las rutas de documentación del cambio que tengan modificaciones, mediante una selección explícita de rutas con semántica «solo estas rutas» (`--only`): el commit NO DEBE contener ninguna ruta de código y NO DEBE alterar ni el árbol de trabajo ni el índice de las rutas que no confirma, incluidas las rutas de código ya preparadas por la persona. El commit DEBE incluir `gates.yaml` y `kickoff.yaml` del cambio cuando estén modificados. Si no hay modificaciones en rutas de documentación, `publish` NO DEBE crear un commit vacío y DEBE continuar con la comprobación y el push de los commits ya existentes (RF-PUB-04 y RF-PUB-03). `publish` NO DEBE usar `--no-verify`: los hooks de git del usuario se ejecutan.
 
 #### Scenario: El commit contiene solo documentación
 
@@ -96,7 +96,7 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 - **DADO** un cambio sin modificaciones en rutas de documentación y con un commit de documentación aún sin subir
 - **CUANDO** se ejecuta `publish --change x`
 - **ENTONCES** no se crea ningún commit nuevo
-- **Y** se sube el commit existente según REQ-27.7
+- **Y** se sube el commit existente según RF-PUB-03
 
 #### Scenario: Los hooks no se omiten
 
@@ -106,9 +106,9 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 
 ---
 
-### Requirement: Política de Rama y Remoto: Solo la Rama Asignada, a `origin`, sin Forzar (REQ-27.7)
+### Requirement: Política de Rama y Remoto: Solo la Rama Asignada, a `origin`, sin Forzar (RF-PUB-03)
 
-`publish` DEBE subir únicamente la rama asignada al cambio, con una referencia explícita `<rama>:<rama>` hacia el remoto `origin`, sin `--force`, sin `--force-with-lease` y sin `--no-verify`, y NO DEBE ejecutar `fetch`, `pull` ni `ls-remote`. `publish` DEBE negarse, sin confirmar ni subir, en cualquiera de estos casos: HEAD desacoplado; la rama actual distinta de la rama asignada que corresponde a la operación (`wrong_branch`, el mismo código y la misma guarda que REQ-25.19 de `change-branch-lifecycle`, que nombra la rama esperada y la orden correcta, con o sin `--archive`); la rama actual es la rama de integración de un repositorio de código (`monorepo-embedded` o repositorio de código de un `multirepo`); o el almacén de artefactos es `engram` o `none` (REQ-27.10). La única excepción a la negativa por rama de integración es el **repositorio de specs de un `multirepo`**, donde la rama asignada al cambio es su rama de integración (REQ-25.5) aunque esta se llame `main`: ahí `publish` sube esa rama. Tras un push correcto, `publish` DEBE devolver, también en `--json`, la rama, el remoto, el SHA subido y la lista de rutas confirmadas.
+`publish` DEBE subir únicamente la rama asignada al cambio, con una referencia explícita `<rama>:<rama>` hacia el remoto `origin`, sin `--force`, sin `--force-with-lease` y sin `--no-verify`, y NO DEBE ejecutar `fetch`, `pull` ni `ls-remote`. `publish` DEBE negarse, sin confirmar ni subir, en cualquiera de estos casos: HEAD desacoplado; la rama actual distinta de la rama asignada que corresponde a la operación (`wrong_branch`, el mismo código y la misma guarda que RF-BRA-20 de `change-branch-lifecycle`, que nombra la rama esperada y la orden correcta, con o sin `--archive`); la rama actual es la rama de integración de un repositorio de código (`monorepo-embedded` o repositorio de código de un `multirepo`); o el almacén de artefactos es `engram` o `none` (RF-PUB-06). La única excepción a la negativa por rama de integración es el **repositorio de specs de un `multirepo`**, donde la rama asignada al cambio es su rama de integración (RF-BRA-05) aunque esta se llame `main`: ahí `publish` sube esa rama. Tras un push correcto, `publish` DEBE devolver, también en `--json`, la rama, el remoto, el SHA subido y la lista de rutas confirmadas.
 
 #### Scenario: Sube la rama del cambio con referencia explícita
 
@@ -167,7 +167,7 @@ La CLI DEBE exponer `axiom sdd publish --change <nombre>` con `--cwd` y `--json`
 
 ---
 
-### Requirement: Negativa Informativa ante Commits de Código sin Subir (REQ-27.8)
+### Requirement: Negativa Informativa ante Commits de Código sin Subir (RF-PUB-04)
 
 Antes de subir, `publish` DEBE calcular los commits sin subir de la rama contra `refs/remotes/origin/<rama>` local o, si esa referencia no existe, contra la base de integración local (`origin/<integración>` si existe y si no, la rama de integración local), solo con lecturas locales. Si alguno de esos commits modifica una ruta que no pertenece a la lista de rutas de documentación, `publish` DEBE negarse sin subir y sin deshacer el commit de documentación que ya hubiera creado, con el código tipado `code_commits_unpublished`, nombrando los commits y las rutas de código, e incluir la orden de push exacta (`git push origin <rama>:<rama>`) para que la persona decida. La negativa es informativa: NO DEBE considerarse un fallo de la aprobación de una parada ni de ningún otro registro previo.
 
@@ -206,7 +206,7 @@ Antes de subir, `publish` DEBE calcular los commits sin subir de la rama contra 
 
 ---
 
-### Requirement: Negativas Tipadas sin Reintento y sin Estado a Medias (REQ-27.9)
+### Requirement: Negativas Tipadas sin Reintento y sin Estado a Medias (RF-PUB-05)
 
 `publish` DEBE distinguir con un código tipado estable en inglés, acompañado de una etiqueta legible en castellano y de la continuación para la persona, al menos estas negativas: push rechazado por no ser *fast-forward*; hook de git que rechaza el commit o el push; identidad de autor de git ausente; HEAD desacoplado; rama de integración no publicable; `wrong_branch`; `code_commits_unpublished`; almacén sin ficheros; y remoto `origin` inexistente (`remote_missing`) o inalcanzable. Ante cualquiera de ellas la orden DEBE terminar con código de salida distinto de cero y NO DEBE reintentar, ejecutar `fetch`, forzar el push ni omitir hooks. La comprobación del remoto `origin` DEBE preceder al commit: con `remote_missing` NO se crea ningún commit. Si el commit local de documentación ya se creó y el push falla (p. ej. *non-fast-forward* o hook de push), el commit DEBE conservarse y la salida DEBE informar de ello y de la orden de push para la persona. Una negativa NO DEBE modificar `gates.yaml`, `kickoff.yaml` ni ningún otro registro del cambio.
 
@@ -247,9 +247,9 @@ Antes de subir, `publish` DEBE calcular los commits sin subir de la rama contra 
 
 ---
 
-### Requirement: Disponibilidad según el Almacén de Artefactos (REQ-27.10)
+### Requirement: Disponibilidad según el Almacén de Artefactos (RF-PUB-06)
 
-`publish` solo es real cuando hay ficheros de documentación que subir: DEBE estar disponible únicamente con el almacén de artefactos `openspec` o `hybrid`. Con el almacén `engram` o `none` DEBE rechazarse con un código tipado que nombre el almacén, sin confirmar ni subir nada. Esta disponibilidad es la misma que la de la salida 2 de las paradas (REQ-26.6 de `sdd-block-review-gates`).
+`publish` solo es real cuando hay ficheros de documentación que subir: DEBE estar disponible únicamente con el almacén de artefactos `openspec` o `hybrid`. Con el almacén `engram` o `none` DEBE rechazarse con un código tipado que nombre el almacén, sin confirmar ni subir nada. Esta disponibilidad es la misma que la de la salida 2 de las paradas (RF-GAT-12 de `sdd-block-review-gates`).
 
 #### Scenario: Almacén engram rechaza la publicación
 
@@ -268,13 +268,13 @@ Antes de subir, `publish` DEBE calcular los commits sin subir de la rama contra 
 
 - **DADO** un cambio con el almacén `hybrid` y documentación modificada
 - **CUANDO** se ejecuta `publish --change x`
-- **ENTONCES** se confirma y se sube según REQ-27.6 y REQ-27.7
+- **ENTONCES** se confirma y se sube según RF-PUB-02 y RF-PUB-03
 
 ---
 
-### Requirement: Aislamiento de la Operación Remota (REQ-27.11)
+### Requirement: Aislamiento de la Operación Remota (RF-PUB-07)
 
-La capacidad de subir una rama a un remoto DEBE vivir en un puerto de publicación propio, separado del puerto `Git` y del puerto de escritura del motor de ramas, y solo `axiom sdd publish` DEBE poder alcanzarlo. `axiom branch ensure`, `status`, `done` y `guard`, `axiom archive` y `axiom sdd gate record` NO DEBEN alcanzar ese puerto ni ejecutar `git commit` ni `git push`. La ejecución de git del puerto de publicación DEBE pasar por el único punto de ejecución de git del producto. Una prueba de arquitectura o de dependencias DEBE fijar este aislamiento, y el invariante «ningún subcomando de `axiom branch` publica» (REQ-25.1 de `change-branch-lifecycle`) DEBE seguir verificado por el observador del único punto de ejecución.
+La capacidad de subir una rama a un remoto DEBE vivir en un puerto de publicación propio, separado del puerto `Git` y del puerto de escritura del motor de ramas, y solo `axiom sdd publish` DEBE poder alcanzarlo. `axiom branch ensure`, `status`, `done` y `guard`, `axiom archive` y `axiom sdd gate record` NO DEBEN alcanzar ese puerto ni ejecutar `git commit` ni `git push`. La ejecución de git del puerto de publicación DEBE pasar por el único punto de ejecución de git del producto. Una prueba de arquitectura o de dependencias DEBE fijar este aislamiento, y el invariante «ningún subcomando de `axiom branch` publica» (RF-BRA-01 de `change-branch-lifecycle`) DEBE seguir verificado por el observador del único punto de ejecución.
 
 #### Scenario: `ensure`, `done` y `status` no publican
 
@@ -297,9 +297,9 @@ La capacidad de subir una rama a un remoto DEBE vivir en un puerto de publicaci�
 
 ---
 
-### Requirement: Publicación Automática en el Estilo `continuous` Solo con Autorización Sellada (REQ-27.13)
+### Requirement: Publicación Automática en el Estilo `continuous` Solo con Autorización Sellada (RF-PUB-08)
 
-En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publicar los documentos con `axiom sdd publish`, sin preguntar, exactamente en cuatro momentos: una vez al terminar la fase `spec`, una vez al terminar la fase `design`, una vez al cerrar la fase `tasks` y una vez al archivar (REQ-27.14), y solo si `kickoff.yaml` registra la autorización de publicación del cambio (`docs_publication: auto`, REQ-27.4 de `sdd-lane-kickoff`). Un kickoff sellado con `docs_publication: auto` antes de que existieran los momentos de `spec` y `design` los hereda sin volver a preguntar ni a sellar: la autorización sigue siendo publicar solo documentos. Un kickoff sin ese campo (incluidos los sellados antes de este cambio) NO DEBE publicar nada de forma automática: el orquestador DEBE ofrecer `axiom sdd publish --change <x>` como siguiente paso y esperar la decisión de la persona. En el estilo `continuous` NO DEBE existir ninguna parada adicional por la publicación (REQ-21.7 de `sdd-block-review-gates`). Una negativa de `publish` en este flujo es informativa: el orquestador la presenta y no interrumpe el encadenado de fases.
+En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publicar los documentos con `axiom sdd publish`, sin preguntar, exactamente en cuatro momentos: una vez al terminar la fase `spec`, una vez al terminar la fase `design`, una vez al cerrar la fase `tasks` y una vez al archivar (RF-ARC-08), y solo si `kickoff.yaml` registra la autorización de publicación del cambio (`docs_publication: auto`, RF-KOF-10 de `sdd-lane-kickoff`). Un kickoff sellado con `docs_publication: auto` antes de que existieran los momentos de `spec` y `design` los hereda sin volver a preguntar ni a sellar: la autorización sigue siendo publicar solo documentos. Un kickoff sin ese campo (incluidos los sellados antes de este cambio) NO DEBE publicar nada de forma automática: el orquestador DEBE ofrecer `axiom sdd publish --change <x>` como siguiente paso y esperar la decisión de la persona. En el estilo `continuous` NO DEBE existir ninguna parada adicional por la publicación (RF-GAT-01 de `sdd-block-review-gates`). Una negativa de `publish` en este flujo es informativa: el orquestador la presenta y no interrumpe el encadenado de fases.
 (Previously: con la autorización sellada se publicaba solo en dos momentos, al cerrar `tasks` y al archivar)
 
 #### Scenario: Con autorización sellada se publica al cerrar `tasks`
@@ -313,7 +313,7 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 
 - **DADO** un cambio `continuous` con `docs_publication: auto` y el archivado completado
 - **CUANDO** el orquestador cierra el archivado
-- **ENTONCES** ejecuta `axiom sdd publish --change <x> --archive` sobre la rama de archivado (REQ-27.14)
+- **ENTONCES** ejecuta `axiom sdd publish --change <x> --archive` sobre la rama de archivado (RF-ARC-08)
 
 #### Scenario: Sin el campo no se publica de forma automática
 
@@ -355,11 +355,11 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 - **CUANDO** el orquestador cierra la fase `tasks`
 - **ENTONCES** no ejecuta `publish`
 
-### Requirement: `sdd publish --archive` Confirmado Emite `archive` (REQ-43.26)
+### Requirement: `sdd publish --archive` Confirmado Emite `archive` (RF-PUB-09)
 
-`axiom sdd publish --change <x> --archive` DEBE despachar el evento `archive` (REQ-43.6) cuando el resultado de la publicación NO es un rechazo, es decir, cuando el archivado queda confirmado. La operación DEBE encolarse de forma duradera en `.integrations-outbox.yaml` en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<x>/`, REQ-43.28), con la clave de idempotencia `archive/<cambio>/<carpeta archivada>` (REQ-43.7), e intentar la entrega inmediata acotada. Un resultado rechazado NO DEBE emitir. Sin `--archive`, NO DEBE emitir. La emisión NUNCA DEBE alterar el resultado, el código de salida ni la salida de `publish` (REQ-43.10), y NO DEBE impedir ni retrasar la publicación ya confirmada.
+`axiom sdd publish --change <x> --archive` DEBE despachar el evento `archive` (RF-INT-06) cuando el resultado de la publicación NO es un rechazo, es decir, cuando el archivado queda confirmado. La operación DEBE encolarse de forma duradera en `.integrations-outbox.yaml` en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<x>/`, RF-INT-19), con la clave de idempotencia `archive/<cambio>/<carpeta archivada>` (RF-INT-07), e intentar la entrega inmediata acotada. Un resultado rechazado NO DEBE emitir. Sin `--archive`, NO DEBE emitir. La emisión NUNCA DEBE alterar el resultado, el código de salida ni la salida de `publish` (RF-INT-10), y NO DEBE impedir ni retrasar la publicación ya confirmada.
 
-(Placement: after REQ-27.13)
+(Placement: after RF-PUB-08)
 
 #### Scenario: Archivado confirmado
 - **DADO** el doble configurado y una publicación de archivado confirmada
@@ -368,7 +368,7 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 - **Y** el resultado y el código de salida de `publish` son los de siempre
 
 #### Scenario: Publicación rechazada
-- **DADO** una publicación que termina con una negativa tipada (REQ-27.9)
+- **DADO** una publicación que termina con una negativa tipada (RF-PUB-05)
 - **CUANDO** se ejecuta `publish --archive`
 - **ENTONCES** el doble no recibe ningún evento y no se crea ninguna cola
 
@@ -388,11 +388,11 @@ En un cambio sellado con `execution_style: continuous`, el orquestador DEBE publ
 - **CUANDO** se repite `publish --change x --archive`
 - **ENTONCES** el commit, si lo hay, no incluye `.integrations-outbox.yaml`
 
-### Requirement: El Evento `archive` no Reescribe `integrations.yaml` (REQ-43.27)
+### Requirement: El Evento `archive` no Reescribe `integrations.yaml` (RF-PUB-10)
 
-El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta archivada ni ningún otro fichero versionado: `integrations.yaml` archivado solo se lee, para dar los vínculos al plugin. Los vínculos o imputaciones que devuelva el plugin al entregar `archive` se descartan con un aviso por stderr y NO se persisten en este cambio. La única escritura permitida es la cola local de la carpeta archivada (REQ-21.18 modificado), de modo que la carpeta archivada ya publicada no quede sucia en ficheros versionados. La regla se impone por mecanismo, no solo por política: la guarda de escritura bajo `archive/` rechaza cualquier nombre que no sea la cola y sus temporales.
+El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta archivada ni ningún otro fichero versionado: `integrations.yaml` archivado solo se lee, para dar los vínculos al plugin. Los vínculos o imputaciones que devuelva el plugin al entregar `archive` se descartan con un aviso por stderr y NO se persisten en este cambio. La única escritura permitida es la cola local de la carpeta archivada (RF-ARC-03 modificado), de modo que la carpeta archivada ya publicada no quede sucia en ficheros versionados. La regla se impone por mecanismo, no solo por política: la guarda de escritura bajo `archive/` rechaza cualquier nombre que no sea la cola y sus temporales.
 
-(Placement: after REQ-43.26)
+(Placement: after RF-PUB-09)
 
 #### Scenario: El plugin devuelve vínculos en `archive`
 - **DADO** un doble que devuelve un vínculo al recibir `archive`
@@ -403,23 +403,23 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 #### Scenario: Intento de escribir `integrations.yaml` archivado
 - **DADO** una carpeta archivada
 - **CUANDO** el marco de integraciones intenta escribir `integrations.yaml` en ella
-- **ENTONCES** la escritura se rechaza con el mensaje de REQ-21.18 y no se modifica ningún fichero
+- **ENTONCES** la escritura se rechaza con el mensaje de RF-ARC-03 y no se modifica ningún fichero
 
 #### Scenario: Entrega fallida de `archive`
 - **DADO** el doble configurado para fallar
 - **CUANDO** se confirma `publish --archive`
 - **ENTONCES** la operación queda pendiente solo en `.integrations-outbox.yaml` de la carpeta archivada, que no se versiona
-### Requirement: El Status Nativo Proyecta la Publicación Pendiente (REQ-27.18)
+### Requirement: El Status Nativo Proyecta la Publicación Pendiente (RF-PUB-11)
 
 `axiom sdd status --json` DEBE proyectar, para el cambio seleccionado, un campo opcional `publication` en la **raíz** del status (junto a `gateQuestion`, no dentro de `governance`), con `omitempty`: cuando no hay estado que proyectar, el JSON del status NO DEBE cambiar ni un byte y la clave `publication` NO DEBE aparecer. El cálculo DEBE ser de solo lectura y sin red: NO DEBE ejecutar `fetch`, `pull`, `ls-remote`, `commit`, `add` ni `push`, y solo DEBE usar referencias locales (`refs/remotes/origin/<rama>`, `refs/remotes/origin/<integración>` y, como último recurso, la rama de integración local). La proyección NO DEBE alterar `nextRecommended`, las dependencias ni los motivos de bloqueo del status.
 
 **Condición (a), según el caso.** No se lee nada de git si no se cumple (a):
 
-- **Cambio activo `checkpointed`:** existe al menos una compuerta aprobada cuya clave no es `integration`, y la fase que juzga la primera compuerta abierta (en el orden `spec`, `design`, `tasks`, `role-apply:<rol>`, `integration`) no ha empezado. Ha empezado cuando su artefacto existe, parcial o completo (`design`, `tasks`), o cuando hay alguna tarea completada o progreso de `apply` (`role-apply:<rol>`); `integration` no tiene fase propia. Así, iterar no publica nada (REQ-27.12): mientras se itera una fase, o mientras su compuerta espera decisión, la publicación pendiente espera a la aprobación siguiente.
-- **Cambio activo `continuous`:** el kickoff registra `docs_publication: auto`; al menos uno de los artefactos `spec`, `design` o `tasks` está completo y ninguno está a medio escribir (parcial); no hay tareas de `apply` completadas; y el informe de `verify` no está hecho. La condición del parcial excluye una fase en curso, y las dos últimas excluyen la ventana de `apply` y `verify` (REQ-27.13: no se publica tras `apply`).
-- **Cambio archivado:** solo si es `continuous` con `docs_publication: auto`; entonces la publicación se calcula sobre la rama de archivado y su `invocation` DEBE incluir `--archive` (REQ-27.14). Un cambio `checkpointed` archivado NO DEBE proyectar nada (el archivado se ofrece a la persona).
+- **Cambio activo `checkpointed`:** existe al menos una compuerta aprobada cuya clave no es `integration`, y la fase que juzga la primera compuerta abierta (en el orden `spec`, `design`, `tasks`, `role-apply:<rol>`, `integration`) no ha empezado. Ha empezado cuando su artefacto existe, parcial o completo (`design`, `tasks`), o cuando hay alguna tarea completada o progreso de `apply` (`role-apply:<rol>`); `integration` no tiene fase propia. Así, iterar no publica nada (RF-GAT-15): mientras se itera una fase, o mientras su compuerta espera decisión, la publicación pendiente espera a la aprobación siguiente.
+- **Cambio activo `continuous`:** el kickoff registra `docs_publication: auto`; al menos uno de los artefactos `spec`, `design` o `tasks` está completo y ninguno está a medio escribir (parcial); no hay tareas de `apply` completadas; y el informe de `verify` no está hecho. La condición del parcial excluye una fase en curso, y las dos últimas excluyen la ventana de `apply` y `verify` (RF-PUB-08: no se publica tras `apply`).
+- **Cambio archivado:** solo si es `continuous` con `docs_publication: auto`; entonces la publicación se calcula sobre la rama de archivado y su `invocation` DEBE incluir `--archive` (RF-ARC-08). Un cambio `checkpointed` archivado NO DEBE proyectar nada (el archivado se ofrece a la persona).
 
-**Condición (b).** Con (a) cumplida, `publication` se proyecta solo si hay algo que `publish` haría: documentación sin confirmar (rutas de la lista cerrada de REQ-27.5, con el estado local con punto excluido) o al menos un commit sin subir (mismo rango que REQ-27.8). La ausencia de `refs/remotes/origin/<rama>` (primera publicación) es solo un **motivo** (`remote_branch_missing`) y NO basta por sí sola: sin documentación sin confirmar y sin commits sin subir, `publish` respondería `up_to_date` y NO DEBE proyectarse nada.
+**Condición (b).** Con (a) cumplida, `publication` se proyecta solo si hay algo que `publish` haría: documentación sin confirmar (rutas de la lista cerrada de RF-PUB-01, con el estado local con punto excluido) o al menos un commit sin subir (mismo rango que RF-PUB-04). La ausencia de `refs/remotes/origin/<rama>` (primera publicación) es solo un **motivo** (`remote_branch_missing`) y NO basta por sí sola: sin documentación sin confirmar y sin commits sin subir, `publish` respondería `up_to_date` y NO DEBE proyectarse nada.
 
 **Estados.** El campo lleva `state` con uno de tres valores, `reasons` (cuando procede), `remote`, `branch`, `prTarget` (informativo, vacío en la integración in situ) y `archive` (en el momento de archivado). Se aplica la primera regla que se cumpla:
 
@@ -433,23 +433,23 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 | Solo commits de documentación sin subir | `pending` | `branch_ahead` y, si procede, `remote_branch_missing` | `invocation` |
 | Nada que confirmar ni subir | (campo ausente) | | |
 
-- `pending`: la `invocation` DEBE ser idéntica, byte a byte, a `gateQuestion.publication.invocation` (REQ-27.12) cuando ambas aparecen; en el momento de archivado es esa invocación más `--archive`.
-- `code_unpublished` (estado informativo, decisión de producto D1): `publish` se negaría siempre con `code_commits_unpublished` (REQ-27.8). Lleva `pushCommand` (`git -C <raíz> push origin <rama>:<rama>`, con las rutas citadas) solo para la persona y NO lleva `invocation`. Nadie DEBE ejecutarlo salvo la persona.
+- `pending`: la `invocation` DEBE ser idéntica, byte a byte, a `gateQuestion.publication.invocation` (RF-GAT-15) cuando ambas aparecen; en el momento de archivado es esa invocación más `--archive`.
+- `code_unpublished` (estado informativo, decisión de producto D1): `publish` se negaría siempre con `code_commits_unpublished` (RF-PUB-04). Lleva `pushCommand` (`git -C <raíz> push origin <rama>:<rama>`, con las rutas citadas) solo para la persona y NO lleva `invocation`. Nadie DEBE ejecutarlo salvo la persona.
 - `unavailable`: informativo; lleva el código y nunca hace fallar el status.
 - Con documentación sin confirmar y commits de código a la vez, el estado es `pending` (con el motivo `code_commits`) para que `publish` confirme en local; el status siguiente proyecta `code_unpublished`.
 
 **Exclusiones.** NO DEBE proyectarse `publication` cuando: no hay cambio seleccionado; el almacén de artefactos es `engram` o `none`; no se cumple (a) (sin aprobaciones, solo la compuerta `integration`, la fase de la primera compuerta abierta en curso, `continuous` sin `docs_publication: auto`, con un artefacto de planificación parcial o en la ventana de `apply`/`verify`); o el repositorio no tiene el remoto `origin` configurado (no hay publicación posible). La configuración de `origin` se lee con una consulta de solo lectura de la configuración; no se deduce de la ausencia de referencias remotas, porque un remoto añadido y aún no traído sí permite publicar.
 
-**Multirepo.** En el repositorio de specs de un `multirepo`, la rama de publicación es su rama de integración in situ (REQ-27.7) y el adelanto se mide contra `origin/<integración>`.
+**Multirepo.** En el repositorio de specs de un `multirepo`, la rama de publicación es su rama de integración in situ (RF-PUB-03) y el adelanto se mide contra `origin/<integración>`.
 
-**Una sola lista de rutas.** La clasificación de una ruta como documentación o código DEBE usar la misma lista cerrada de REQ-27.5 que `publish`, compuesta en un único punto y sin duplicarla. `kickoff.yaml` y `gates.yaml` son documentación; el estado local con punto de la raíz de la carpeta del cambio no lo es. Las carpetas sin seguimiento se evalúan fichero a fichero, no como una sola entrada de directorio. El comportamiento de `axiom sdd publish` NO DEBE cambiar.
+**Una sola lista de rutas.** La clasificación de una ruta como documentación o código DEBE usar la misma lista cerrada de RF-PUB-01 que `publish`, compuesta en un único punto y sin duplicarla. `kickoff.yaml` y `gates.yaml` son documentación; el estado local con punto de la raíz de la carpeta del cambio no lo es. Las carpetas sin seguimiento se evalúan fichero a fichero, no como una sola entrada de directorio. El comportamiento de `axiom sdd publish` NO DEBE cambiar.
 
 #### Scenario: Compuerta aprobada con documentación sin confirmar
 
 - **DADO** un cambio `checkpointed` con la compuerta `spec` aprobada, la fase `design` sin empezar y ficheros de `openspec/changes/<x>/` sin confirmar
 - **CUANDO** se ejecuta `axiom sdd status --change <x> --json`
 - **ENTONCES** `publication.state` es `pending` con el motivo `docs_uncommitted`
-- **Y** su `invocation` es idéntica a la `publication.invocation` de la pregunta de compuerta (REQ-27.12)
+- **Y** su `invocation` es idéntica a la `publication.invocation` de la pregunta de compuerta (RF-GAT-15)
 - **Y** la clave está en la raíz del status, no dentro de `governance`
 - **Y** `nextRecommended` y las dependencias no cambian
 
@@ -457,7 +457,7 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 - **DADO** un cambio `checkpointed` con la compuerta `spec` aprobada, la compuerta `design` pendiente o rechazada, `design.md` presente y documentación sin confirmar
 - **CUANDO** se consulta el status
-- **ENTONCES** no hay clave `publication`, porque iterar no publica nada (REQ-27.12)
+- **ENTONCES** no hay clave `publication`, porque iterar no publica nada (RF-GAT-15)
 - **Y** al aprobar `design`, con `tasks` sin empezar, se proyecta `pending`
 
 #### Scenario: Con apply en curso tras aprobar tasks no se proyecta
@@ -572,7 +572,7 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 - **DADO** un cambio `continuous` con `docs_publication: auto`, con `tasks` cerrada, al menos una tarea de `apply` completada o el informe de `verify` hecho, y documentación sin confirmar
 - **CUANDO** se consulta el status
-- **ENTONCES** no hay clave `publication` (REQ-27.13)
+- **ENTONCES** no hay clave `publication` (RF-PUB-08)
 
 #### Scenario: Archivado `continuous` con `auto` lleva `--archive`
 
@@ -610,9 +610,9 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 - **DADO** un cambio con documentación sin confirmar
 - **CUANDO** se comparan las rutas que el status considera documentación sin confirmar con las que `axiom sdd publish` confirma
-- **ENTONCES** son las mismas, porque ambos usan la misma lista cerrada de REQ-27.5
+- **ENTONCES** son las mismas, porque ambos usan la misma lista cerrada de RF-PUB-01
 - **Y** tras un `publish` correcto el status no proyecta nada
-- **Y** el comportamiento, las negativas y los resultados de `publish` son los que ya fijan REQ-27.5 a REQ-27.14
+- **Y** el comportamiento, las negativas y los resultados de `publish` son los que ya fijan RF-PUB-01 a RF-ARC-08
 
 #### Scenario: El cálculo no toca la red ni escribe
 
@@ -626,12 +626,12 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 - **DADO** una aprobación registrada con `axiom sdd gate record`
 - **CUANDO** el registro termina
-- **ENTONCES** devuelve la orden de publicación sin ejecutarla (REQ-26.5)
+- **ENTONCES** devuelve la orden de publicación sin ejecutarla (RF-GAT-11)
 - **Y** la publicación pendiente solo se proyecta después en el status
 
-### Requirement: El Orquestador Resuelve la Publicación Pendiente Antes de la Fase Siguiente (REQ-27.19)
+### Requirement: El Orquestador Resuelve la Publicación Pendiente Antes de la Fase Siguiente (RF-PUB-12)
 
-Cuando el status proyecta `publication` con `state: pending`, la doctrina del orquestador DEBE ordenar ejecutar su `invocation` exactamente una vez antes de lanzar la fase siguiente y exactamente una vez al reanudar el cambio; no se repite dentro de la misma transición ni de la misma reanudación. Su negativa es informativa: el orquestador la presenta, no anula ninguna aprobación registrada y no interrumpe el encadenado de fases ni la parada de la compuerta (REQ-27.12, REQ-27.13). Con `state: code_unpublished`, el orquestador DEBE presentar su `pushCommand` a la persona y NO DEBE ejecutarlo ni ejecutar `publish` por ese motivo. Con `state: unavailable`, DEBE presentar su código como información. El campo NUNCA DEBE cambiar `nextRecommended`. La doctrina NO DEBE hacer que `gate record` ejecute git (REQ-26.5, REQ-27.11). Esta regla completa el párrafo «When to publish» del orquestador sin cambiar REQ-27.12 ni REQ-27.13.
+Cuando el status proyecta `publication` con `state: pending`, la doctrina del orquestador DEBE ordenar ejecutar su `invocation` exactamente una vez antes de lanzar la fase siguiente y exactamente una vez al reanudar el cambio; no se repite dentro de la misma transición ni de la misma reanudación. Su negativa es informativa: el orquestador la presenta, no anula ninguna aprobación registrada y no interrumpe el encadenado de fases ni la parada de la compuerta (RF-GAT-15, RF-PUB-08). Con `state: code_unpublished`, el orquestador DEBE presentar su `pushCommand` a la persona y NO DEBE ejecutarlo ni ejecutar `publish` por ese motivo. Con `state: unavailable`, DEBE presentar su código como información. El campo NUNCA DEBE cambiar `nextRecommended`. La doctrina NO DEBE hacer que `gate record` ejecute git (RF-GAT-11, RF-PUB-07). Esta regla completa el párrafo «When to publish» del orquestador sin cambiar RF-GAT-15 ni RF-PUB-08.
 
 #### Scenario: Se ejecuta la invocación una vez antes de la fase siguiente
 

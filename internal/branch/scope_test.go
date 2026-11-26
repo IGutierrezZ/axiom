@@ -22,7 +22,7 @@ func unverifiableEntry(name, reason string) RepositoryScope {
 	return repo
 }
 
-// REQ-25.54: precedencia `unverifiable` > `pending_merge` > `nothing_to_verify` > `offerable`;
+// RF-BRA-38: precedencia `unverifiable` > `pending_merge` > `nothing_to_verify` > `offerable`;
 // `empty` y `exempt` no son pendientes y `pending` nunca es nulo.
 func TestSummarizeScopeOfferPrecedence(t *testing.T) {
 	tests := []struct {
@@ -77,7 +77,7 @@ func scopeJSON(t *testing.T, result ScopeResult) (string, map[string]any) {
 	return buffer.String(), decoded
 }
 
-// REQ-25.51: el contrato lleva su propio esquema, tokens con etiqueta y `pending` como lista aun
+// RF-BRA-35: el contrato lleva su propio esquema, tokens con etiqueta y `pending` como lista aun
 // vacía; dos escrituras del mismo resultado dan los mismos bytes.
 func TestScopeResultJSONIsStableAndLabelled(t *testing.T) {
 	repo := scopeEntry("api", ScopeOutcomeOK, yes())
@@ -152,7 +152,7 @@ func TestScopeResultRefusalCarriesTheTypedCodeAndExitsWithOne(t *testing.T) {
 	}
 }
 
-// REQ-25.2: una operación calculada sale con 0 aunque haya repositorios `unverifiable`.
+// RF-BRA-02: una operación calculada sale con 0 aunque haya repositorios `unverifiable`.
 func TestScopeResultExitsWithZeroWhenTheScopeWasComputedEvenWithUnverifiable(t *testing.T) {
 	result := NewScopeResult()
 	result.Repositories = []RepositoryScope{unverifiableEntry("web", ScopeReasonBranchMissing)}
@@ -213,7 +213,7 @@ func TestScopeRefLabelsItsSource(t *testing.T) {
 }
 
 // Cada token nuevo del contrato lleva su etiqueta legible en castellano en el mapa de etiquetas del
-// código, también el rechazo `scope_not_applicable` (C-02-b, REQ-25.2).
+// código, también el rechazo `scope_not_applicable` (C-02-b, RF-BRA-02).
 func TestScopeNotApplicableCodeHasASpanishLabel(t *testing.T) {
 	if got := Label(string(CodeScopeNotApplicable)); got != "alcance no aplicable" {
 		t.Errorf("Label(scope_not_applicable) = %q, se esperaba «alcance no aplicable»", got)

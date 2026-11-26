@@ -51,7 +51,7 @@ func isoRoutingSegment(t *testing.T, agent model.AgentID) string {
 	return step0[start:end]
 }
 
-// TestRoutingISOSendsAllWorkToSDD pins REQ-29.18: the ISO condition comes before
+// TestRoutingISOSendsAllWorkToSDD pins RF-RUT-19: the ISO condition comes before
 // the lane question, covers small work and the `ask` lane, and creates no ODD
 // feature document.
 func TestRoutingISOSendsAllWorkToSDD(t *testing.T) {

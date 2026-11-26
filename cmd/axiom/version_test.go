@@ -11,7 +11,7 @@ import (
 // TestVersionDefault verifies the contract of the package-level symbols: the
 // ldflags symbol is empty unless stamped, and Version holds the resolved value.
 // Under `go test` the main module version is "(devel)" or empty, so the result
-// must be the fallback constant (REQ-22.8, O-1).
+// must be the fallback constant (RF-UPD-07, O-1).
 func TestVersionDefault(t *testing.T) {
 	if fallbackVersion != "v3.5.1" {
 		t.Errorf("fallbackVersion = %q, want %q", fallbackVersion, "v3.5.1")

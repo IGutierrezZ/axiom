@@ -44,7 +44,7 @@ func capabilityFenceLines(doc FeatureDoc) map[int]bool {
 // docCitations son los provisionales que el documento cita en sus líneas `Cubre:` fuera de
 // vallas y fuera de la sección de traza, las mismas que reescribe la integración. Las vallas
 // de las capacidades las valida el plan por su cuenta; el resto del documento no se valida,
-// de modo que puede mostrar provisionales de ejemplo (REQ-47.4).
+// de modo que puede mostrar provisionales de ejemplo (RF-RID-12).
 func docCitations(doc FeatureDoc, file string) ([]Citation, error) {
 	lines, start, end, found, err := oddTraceSection(doc.text, file)
 	if err != nil {
@@ -81,7 +81,7 @@ func cubreCitations(file, text string) []Citation {
 // rewriteODDDoc devuelve el documento con los identificadores asignados: sustituye el mapa
 // en las vallas `openspec` de `## Spec viva` y en las líneas `Cubre:` fuera de vallas, y
 // escribe la sección de traza; el resto de los bytes no cambia. Sin asignaciones devuelve el
-// documento igual (REQ-30.2).
+// documento igual (RF-OLS-02).
 func rewriteODDDoc(doc FeatureDoc, plan IDPlan, pattern reqid.Pattern) (string, error) {
 	text := doc.text
 	if plan.Map.Count() > 0 {
@@ -101,7 +101,7 @@ func rewriteODDDoc(doc FeatureDoc, plan IDPlan, pattern reqid.Pattern) (string, 
 
 // dropTracedAdded quita de lo pendiente el ADDED que la traza reconoce como ya integrado
 // aunque su título haya cambiado: la entrada se conserva (`kept`) y la canónica ya tiene, con
-// su definitivo, un requisito de cuerpo igual (REQ-30.3).
+// su definitivo, un requisito de cuerpo igual (RF-OLS-03).
 func dropTracedAdded(item *classified, entries []PlannedEntry, pattern reqid.Pattern) {
 	var pending []openspecdoc.Requirement
 	for _, r := range item.pending.Added {

@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// REQ-30.27: el alta de proyecto devuelve el informe de adopción y la instrucción para lanzar
+// RF-HUB-11: el alta de proyecto devuelve el informe de adopción y la instrucción para lanzar
 // la adopción desde el agente; el dashboard no ejecuta nada ni crea el cambio de adopción.
 
 type projectInitAdoptionBody struct {

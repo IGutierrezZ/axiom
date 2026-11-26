@@ -16,7 +16,7 @@ import (
 // of each asset path; the plugins never lived under a different path. A plugin
 // that gains a new revision must add the digest of the one it replaces here.
 var historicalOpenCodePluginDigests = map[string]map[string][]string{
-	// Plugin nuevo (inc-25, REQ-25.22): no hay ninguna revisión anterior que reconocer. La entrada
+	// Plugin nuevo (inc-25, RF-BRA-23): no hay ninguna revisión anterior que reconocer. La entrada
 	// vacía existe porque la tabla se indexa por plugin gestionado; la primera revisión que lo
 	// sustituya deberá añadir aquí el resumen de esta.
 	"axiom-branch-guard.ts": {

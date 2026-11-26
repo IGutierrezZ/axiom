@@ -16,7 +16,7 @@ import (
 )
 
 // bugProfile es el resultado de leer el perfil de bug sin delta de proposal.md
-// (REQ-29.15, design D9). Es el adaptador entre el status y isoevidence: este
+// (RF-CLI-10, design D9). Es el adaptador entre el status y isoevidence: este
 // paquete lee el fichero y isoevidence solo analiza texto.
 type bugProfile struct {
 	// declaration es lo que declara proposal.md. Con Kind "none" el estado es
@@ -40,7 +40,7 @@ func (b bugProfile) satisfiesSpecs() bool {
 
 // evaluateBugProfile aplica D9: solo cuando el artefacto de specs está `missing`
 // (sin delta ni ficheros en specs/) se analiza proposal.md. Con delta (`done` o
-// `partial`) las secciones se ignoran sin aviso (regla 1 de REQ-29.15). Vale en
+// `partial`) las secciones se ignoran sin aviso (regla 1 de RF-CLI-10). Vale en
 // todo proyecto, sea o no ISO.
 func evaluateBugProfile(specs ArtifactState, proposalPaths []string) bugProfile {
 	if specs != ArtifactMissing {
@@ -60,7 +60,7 @@ func bugDeclaredWithoutDelta(specPaths, proposalPaths []string) bool {
 	return evaluateBugProfile(ArtifactMissing, proposalPaths).satisfiesSpecs()
 }
 
-// findingReasons compone una línea de blockedReasons por hallazgo (REQ-29.16).
+// findingReasons compone una línea de blockedReasons por hallazgo (RF-CLI-11).
 func findingReasons(findings []isoevidence.Finding) []string {
 	reasons := make([]string, 0, len(findings))
 	for _, finding := range findings {
@@ -85,7 +85,7 @@ type isoInputs struct {
 	tasksComplete bool
 	cubre         []isoevidence.CubreLine
 	// pattern es el patrón de identificadores del proyecto, leído en vivo de axiom.yaml
-	// (REQ-44.1, nunca de la instantánea del kickoff). patternErr no es nil cuando es
+	// (RF-RID-01, nunca de la instantánea del kickoff). patternErr no es nil cuando es
 	// inaccesible (bloque `sdd:` inválido o configuración ilegible): entonces el cambio no se
 	// evalúa con un patrón no declarado (D-07) y declaration lleva el motivo.
 	pattern     reqid.Pattern
@@ -166,7 +166,7 @@ func readBaselineRequirements(planningHome string) []isoevidence.Requirement {
 }
 
 // specsFindings es la etapa `specs` de un cambio con delta: identificadores
-// (REQ-29.3) y escenarios (REQ-29.10 y nombres repetidos de REQ-29.6). Un bug
+// (RF-ISO-03) y escenarios (RF-ARC-09 y nombres repetidos de RF-ISO-06). Un bug
 // sin delta no tiene requisitos propios que comprobar.
 func (in isoInputs) specsFindings() []isoevidence.Finding {
 	if !in.hasDelta {
@@ -182,8 +182,8 @@ func (in isoInputs) specsFindings() []isoevidence.Finding {
 	return append(findings, isoevidence.CheckScenarios(in.delta)...)
 }
 
-// tasksFindings es la etapa `tasks`: cobertura (REQ-29.4) con delta, y las
-// comprobaciones del bug sin delta (REQ-29.5 y REQ-29.19) cuando su declaración
+// tasksFindings es la etapa `tasks`: cobertura (RF-ISO-04) con delta, y las
+// comprobaciones del bug sin delta (RF-ISO-05 y RF-ISO-10) cuando su declaración
 // es completa. Solo se evalúa cuando existen todos los ficheros de tareas.
 func (in isoInputs) tasksFindings() []isoevidence.Finding {
 	if !in.tasksComplete || in.patternErr != nil {
@@ -216,9 +216,9 @@ type isoEvaluation struct {
 }
 
 // evaluateISOArchive aplica la regla del archivado ISO sobre los artefactos del
-// cambio: los escenarios de todas las deltas (REQ-29.10) y la matriz de verify,
-// válida y de éxito (REQ-29.11, REQ-29.6 a REQ-29.8 y REQ-29.19). No evalúa
-// REQ-29.3: la unicidad de un ADDED es de la etapa `specs`, y tras componer un
+// cambio: los escenarios de todas las deltas (RF-ARC-09) y la matriz de verify,
+// válida y de éxito (RF-ARC-10, RF-ISO-06 a RF-ISO-08 y RF-ISO-10). No evalúa
+// RF-ISO-03: la unicidad de un ADDED es de la etapa `specs`, y tras componer un
 // dominio dejaría de cumplirse (D17). master es la raíz del árbol contra la que
 // resuelven las referencias de prueba (D11); con una raíz que no se puede abrir
 // no hay árbol y las filas automáticas quedan inválidas, nunca aprobadas.
@@ -311,7 +311,7 @@ func (e *isoEvaluation) evaluateArchive(verifyPaths []string, master string) {
 }
 
 // matrixProjection es `iso.matrix`, que usa el orquestador para decidir si el
-// verify es limpio sin leer el informe (REQ-29.16).
+// verify es limpio sin leer el informe (RF-CLI-11).
 func (e *isoEvaluation) matrixProjection() *ISOMatrixProjection {
 	if e == nil || e.matrix == nil {
 		return nil
@@ -355,7 +355,7 @@ func (e *isoEvaluation) verifyRoute(next string, applyState ApplyState, governan
 
 // evaluateISOChange evalúa las etapas `specs` y `tasks` de un cambio ISO, leído
 // de su instantánea. Con otro cambio no se llama: fuera de ISO ninguna de estas
-// reglas proyecta ni bloqueo ni aviso (REQ-29.16).
+// reglas proyecta ni bloqueo ni aviso (RF-CLI-11).
 func evaluateISOChange(planningHome, changeRoot string, paths ArtifactPaths, artifacts map[string]ArtifactState, declarations workspace.Declarations, master string) *isoEvaluation {
 	inputs := loadISOInputs(planningHome, changeRoot, paths, artifacts, declarations, master)
 	return &isoEvaluation{inputs: inputs, specs: inputs.specsFindings(), tasks: inputs.tasksFindings()}
@@ -396,7 +396,7 @@ const (
 	isoValueInvalid = "invalid"
 )
 
-// ISOProjection es la proyección aditiva de REQ-29.2. Se omite cuando axiom.yaml
+// ISOProjection es la proyección aditiva de RF-ISO-02. Se omite cuando axiom.yaml
 // no tiene bloque `sdd:` y el cambio seleccionado no es ISO, de modo que un
 // consumidor anterior no observa ninguna diferencia.
 type ISOProjection struct {
@@ -522,7 +522,7 @@ func changeKickoff(status *Status) *kickoff.Kickoff {
 }
 
 // decorateISO proyecta la declaración ISO del proyecto y la instantánea del
-// cambio (REQ-29.1, REQ-29.2, REQ-29.13), y estrecha el archivado ante una
+// cambio (RF-ISO-01, RF-ISO-02, RF-KOF-12), y estrecha el archivado ante una
 // declaración inválida (D8) o un almacén sin ficheros (D21). Es aditivo: sin
 // bloque `sdd:` y con un cambio no ISO no escribe nada, y el status de un cambio
 // no ISO es idéntico al de antes.

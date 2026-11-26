@@ -596,7 +596,7 @@ func firstString(values []string) string {
 
 // IsSelfBetaUpgrade reports whether the update result targets the self-tool's
 // beta channel (a main-head build advertised as main@<sha>). It detects the
-// channel through the self-tool identity predicate (REQ-22.3).
+// channel through the self-tool identity predicate (RF-UPD-03).
 func IsSelfBetaUpgrade(r update.UpdateResult) bool {
 	return update.IsSelfTool(r.Tool) &&
 		strings.HasPrefix(strings.TrimSpace(r.LatestVersion), "main@")
@@ -604,7 +604,7 @@ func IsSelfBetaUpgrade(r update.UpdateResult) bool {
 
 // goInstallMainUpgrade installs the self-tool from HEAD on the beta channel.
 // It composes `go install <GoImportPath>@main` ONLY when GoInstallResolvable()
-// is true (REQ-22.2); otherwise it returns a manual fallback without emitting
+// is true (RF-UPD-02); otherwise it returns a manual fallback without emitting
 // any go install the toolchain cannot resolve.
 func goInstallMainUpgrade(tool update.ToolInfo) error {
 	if !tool.GoInstallResolvable() {

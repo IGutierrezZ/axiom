@@ -320,3 +320,29 @@ func TestComposeSupersedePruning(t *testing.T) {
 		t.Errorf("se esperaba que Widget Expiration estuviera marcado como SUPERSEDED / DEPRECADO:\n%s", composed)
 	}
 }
+
+func TestComposeIgnoresRequirementHeadingsInsideFencedDeltaBlocks(t *testing.T) {
+	delta := "## ADDED Requirements\n\n" +
+		"### Requirement: Widget Tagging\n\nThe system MUST support tagging.\n\n" +
+		"```markdown\n## MODIFIED Requirements\n\n### Requirement: Widget Expiration\n\nFenced replacement.\n```\n\n" +
+		"Closing text.\n"
+
+	composed, err := Compose(composeCanonicalFixture, delta, ComposeOptions{})
+	if err != nil {
+		t.Fatalf("Compose error = %v", err)
+	}
+	var names []string
+	for _, r := range ParseCanonical(composed) {
+		names = append(names, r.Name)
+	}
+	want := []string{"Unrelated Listing", "Widget Expiration", "Widget Tagging"}
+	if strings.Join(names, "|") != strings.Join(want, "|") {
+		t.Fatalf("requirements = %v, want %v (a fenced heading must not become a requirement):\n%s", names, want, composed)
+	}
+	if !strings.Contains(composed, "The system MUST expire widgets after 30 days.") {
+		t.Fatalf("a fenced MODIFIED section replaced a real requirement:\n%s", composed)
+	}
+	if !strings.Contains(composed, "Closing text.") || strings.Count(composed, "```")%2 != 0 {
+		t.Fatalf("the added block lost its fence tail or has an unterminated fence:\n%s", composed)
+	}
+}

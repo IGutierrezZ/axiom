@@ -14,7 +14,7 @@ import (
 )
 
 // El plugin de OpenCode (v1 y v2) lee en proceso la topología del proyecto para saber qué grupos del
-// pre-vuelo exige (REQ-28.21), porque lanzar un subproceso por cada llamada de herramienta sería un modo
+// pre-vuelo exige (RF-PRE-13), porque lanzar un subproceso por cada llamada de herramienta sería un modo
 // de fallo nuevo. Eso solo es seguro mientras el bloque de TypeScript y el criterio del binario no
 // discrepen: este test ejecuta el bloque real con Node sobre un conjunto de directorios y lo compara con
 // la topología que resuelve el hook de Go (workspace.Locate y Location.GoverningTopology, con

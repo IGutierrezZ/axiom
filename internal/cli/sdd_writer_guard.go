@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// La guarda A en los escritores CLI de la carpeta de un cambio (REQ-25.19, REQ-21.16, design D-11
+// La guarda A en los escritores CLI de la carpeta de un cambio (RF-BRA-20, RF-ARC-01, design D-11
 // y G-10, tabla de la §2.11). Cada escritor la llama una sola vez, antes de escribir, con el
 // contexto de la tabla:
 //
@@ -23,7 +23,7 @@ import (
 //
 // Ante `wrong_branch` el escritor se niega sin escribir nada y devuelve el *branch.RefusalError
 // de la guarda tal cual, con la orden exacta de `axiom branch ensure`. Un cambio exento
-// (REQ-25.37, REQ-25.18) y una ruta que no se puede comprobar no se bloquean: esta última avisa.
+// (RF-KOF-07, RF-BRA-19) y una ruta que no se puede comprobar no se bloquean: esta última avisa.
 
 // writerBranchWarnings recibe los avisos de la guarda de los escritores (ruta fuera de git,
 // `HEAD` ilegible): la guarda no bloquea lo que no puede comprobar, pero lo dice. Es una
@@ -53,7 +53,7 @@ func GuardChangeWriter(changeRoot, change, op string) error {
 }
 
 // guardComposeDelta aplica la guarda A, en el contexto `archive`, a la composición de un delta
-// que vive en `<planning home>/changes/<cambio>/specs/<dominio>/` (REQ-25.19). Un delta fuera de
+// que vive en `<planning home>/changes/<cambio>/specs/<dominio>/` (RF-BRA-20). Un delta fuera de
 // la carpeta de un cambio no escribe en ninguna: no hay nada que guardar.
 func guardComposeDelta(loc workspace.Location, deltaPath, domain string) error {
 	changeRoot, ok := changeRootOfDelta(loc, deltaPath, domain)

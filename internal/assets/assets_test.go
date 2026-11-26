@@ -13,7 +13,7 @@ import (
 // TestSDDOrchestratorAssetsCarryTheKickoffAndBlockGatesMarker is task 23.1:
 // each of the every SDD-orchestrator assets carries the shared-section
 // placeholder that resolves to INC-21's per-change kickoff and block-gates
-// doctrine (REQ-21.5, REQ-21.6, REQ-21.10). internal/components/sdd owns
+// doctrine (RF-PRE-01, RF-PRE-02, RF-GAT-04). internal/components/sdd owns
 // substitution and cannot be imported here without a cycle; its own
 // TestEveryRuntimeRendersTheSharedSections confirms the resolved body
 // actually reaches the rendered prompt once this marker exists.
@@ -236,7 +236,7 @@ func TestSDDTaskResultArtifactsPluginContract(t *testing.T) {
 }
 
 // TestOpenCodeBranchGuardPluginContract fija el contenido de axiom-branch-guard.ts en las dos
-// generaciones de plugins de OpenCode (REQ-25.22; design D-18; R10): el plugin solo transporta la
+// generaciones de plugins de OpenCode (RF-BRA-23; design D-18; R10): el plugin solo transporta la
 // carga a `axiom branch guard --agent opencode` y aplica la decisión que devuelve Go.
 func TestOpenCodeBranchGuardPluginContract(t *testing.T) {
 	for _, path := range []string{"opencode/plugins/axiom-branch-guard.ts", "opencode/plugins-v2/axiom-branch-guard.ts"} {
@@ -1121,7 +1121,7 @@ func TestSDDResearchAgentToolGrantIsExact(t *testing.T) {
 	}
 }
 
-// REQ-27.19 (C-05-c): la doctrina ordena ejecutar `publication.invocation` una sola vez antes de
+// RF-PUB-12 (C-05-c): la doctrina ordena ejecutar `publication.invocation` una sola vez antes de
 // lanzar la fase siguiente y otra al reanudar, presenta sin ejecutar la orden de push de
 // `code_unpublished`, trata `unavailable` como información y no deja que el campo cambie la ruta;
 // el contrato del status documenta el campo `publication`.

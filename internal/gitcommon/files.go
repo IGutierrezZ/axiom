@@ -1,12 +1,12 @@
 // Package gitcommon reúne lo que Axiom necesita saber de git sin duplicarlo en cada
 // paquete. Es una hoja: solo importa la biblioteca estándar. Tiene dos partes:
 //
-//   - exec.go es el único punto que ejecuta git (INC-25, REQ-25.1, G-7): Run, con
+//   - exec.go es el único punto que ejecuta git (INC-25, RF-BRA-01, G-7): Run, con
 //     el observador Observe, y las consultas TopLevel y CommonDir. Una prueba de
 //     arquitectura impide que `internal/branch/**` o este paquete lancen procesos o
 //     abran conexiones de red por otra vía.
 //   - files.go reúne las lecturas que trabajan solo sobre ficheros y no lanzan
-//     procesos (REQ-25.21): saber en qué repositorio git está una ruta, o en qué
+//     procesos (RF-BRA-22): saber en qué repositorio git está una ruta, o en qué
 //     rama está su HEAD, no puede depender de que haya un binario git ni de su
 //     entorno.
 package gitcommon
@@ -203,7 +203,7 @@ func MainWorktreeFromFiles(commonDir string) (string, bool) {
 }
 
 // ReadHead dice en qué está el HEAD del repositorio cuya raíz es gitRoot, leyendo
-// `<gitdir>/HEAD` sin lanzar procesos (REQ-25.21):
+// `<gitdir>/HEAD` sin lanzar procesos (RF-BRA-22):
 //
 //   - `ref: refs/heads/<x>` es la rama x (branch = x, detached = false);
 //   - un identificador de objeto (40 o 64 hexadecimales) es un HEAD desacoplado

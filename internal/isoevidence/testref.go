@@ -31,7 +31,7 @@ const (
 )
 
 // TreeResolver resuelve las referencias de prueba de la matriz contra el árbol
-// de trabajo (REQ-29.7). Solo lee: nunca ejecuta ni interpreta el contenido.
+// de trabajo (RF-ISO-07). Solo lee: nunca ejecuta ni interpreta el contenido.
 type TreeResolver interface {
 	// ResolvePathSymbol comprueba que relPath es un fichero del árbol y que
 	// symbol figura en él como identificador completo. Una ruta absoluta, con

@@ -11,7 +11,7 @@ import (
 )
 
 // ResultSchema es el contrato de salida común de la familia `axiom branch`
-// (design §4.3, REQ-25.2).
+// (design §4.3, RF-BRA-02).
 const ResultSchema = "axiom.branch-result/v1"
 
 // Códigos de salida de `axiom branch` (design D-02): 0 únicamente cuando la
@@ -27,7 +27,7 @@ const (
 // Result es el `axiom.branch-result/v1`. Las claves van en camelCase; cada valor
 // enumerado lleva su token estable en inglés y, en un campo hermano, su etiqueta en
 // castellano; `code` aparece solo cuando el estado no es «listo»; todas las rutas son
-// absolutas; la serialización es estable y no lleva marcas de tiempo (REQ-25.2).
+// absolutas; la serialización es estable y no lleva marcas de tiempo (RF-BRA-02).
 //
 // Se construye con NewResult, Refused y NotStarted, que mantienen el estado y su
 // etiqueta emparejados (SetMode hace lo propio con el modo). Los campos de cada
@@ -42,7 +42,7 @@ type Result struct {
 	Message      string            `json:"message,omitempty"`
 	Continuation string            `json:"continuation,omitempty"`
 	Details      map[string]string `json:"details,omitempty"`
-	// Decision es la pregunta tipada de un `decision_required` (REQ-25.8): quien invoca la
+	// Decision es la pregunta tipada de un `decision_required` (RF-BRA-08): quien invoca la
 	// presenta y repite la orden con la respuesta. Solo la lleva ese estado.
 	Decision *Decision `json:"decision,omitempty"`
 	Change   string    `json:"change,omitempty"`
@@ -54,7 +54,7 @@ type Result struct {
 	ModeSource      string                 `json:"modeSource,omitempty"`
 	ModeSourceLabel string                 `json:"modeSourceLabel,omitempty"`
 	Topology        workspace.TopologyType `json:"topology,omitempty"`
-	// WorktreeRoot es la raíz de worktrees del plan (REQ-25.11); solo la informa `ensure`,
+	// WorktreeRoot es la raíz de worktrees del plan (RF-BRA-11); solo la informa `ensure`,
 	// que es quien los crea.
 	WorktreeRoot  string             `json:"worktreeRoot,omitempty"`
 	WorkspaceRoot string             `json:"workspaceRoot,omitempty"`
@@ -65,7 +65,7 @@ type Result struct {
 	Skipped       []SkippedPath      `json:"skipped,omitempty"`
 	// Registered son los cambios con registro local que `status` sin `--change` lista
 	// (nil si no se listó; vacío pero no nil si se listó y no hay ninguno, que se imprime
-	// como `[]`). PendingArchive son los cambios pendientes de archivar (REQ-25.20): una
+	// como `[]`). PendingArchive son los cambios pendientes de archivar (RF-BRA-21): una
 	// lista sin `--change` y un booleano con él (nil si no se evaluó, con un aviso que lo
 	// explica); PendingArchiveContinuation es la orden para archivar el cambio pedido,
 	// solo cuando está pendiente.
@@ -76,7 +76,7 @@ type Result struct {
 }
 
 // PendingChange es un cambio pendiente de archivar: ya está en el árbol de la rama de
-// integración y aún no se ha archivado (REQ-25.20). Continuation es la orden que lo
+// integración y aún no se ha archivado (RF-BRA-21). Continuation es la orden que lo
 // archiva.
 type PendingChange struct {
 	Change       string `json:"change"`
@@ -110,7 +110,7 @@ func (p PendingArchive) MarshalJSON() ([]byte, error) {
 }
 
 // RegisteredChange es un cambio con registro local en la lista de `status` sin
-// `--change` (REQ-25.14, REQ-25.15): su carril, su modo de trabajo materializado y su
+// `--change` (RF-BRA-15, RF-BRA-16): su carril, su modo de trabajo materializado y su
 // origen, cada token con su etiqueta, y las ramas del registro con su worktree.
 type RegisteredChange struct {
 	Change          string             `json:"change"`
@@ -158,15 +158,15 @@ func NewRegisteredChange(record Record) RegisteredChange {
 	return registered
 }
 
-// RegistryResult informa del registro local del cambio (REQ-25.14): Present es falso
+// RegistryResult informa del registro local del cambio (RF-BRA-15): Present es falso
 // cuando el cambio no tiene registro, que no es un error (`ensure` lo reconstruye).
 type RegistryResult struct {
 	Present bool `json:"present"`
 }
 
 // RepositoryResult describe un repositorio del plan de un cambio en el resultado de
-// `status` (REQ-25.15). GitRoot y CommonDir son absolutas; IntegrationBranch es la de
-// la política resuelta para ese repositorio (REQ-25.3). CurrentBranch queda vacía con
+// `status` (RF-BRA-16). GitRoot y CommonDir son absolutas; IntegrationBranch es la de
+// la política resuelta para ese repositorio (RF-BRA-03). CurrentBranch queda vacía con
 // HEAD desacoplado o de forma desconocida (esta última se acompaña de un aviso en
 // Result.Warnings). Role lleva su etiqueta en RoleLabel; Roles son los roles del
 // cambio que tocan el repositorio.
@@ -183,7 +183,7 @@ type RepositoryResult struct {
 	Base              *BaseResult    `json:"base,omitempty"`
 	Branches          []BranchResult `json:"branches,omitempty"`
 
-	// La promoción de un repositorio de dos etapas (REQ-25.48): la rama principal, el modo y su
+	// La promoción de un repositorio de dos etapas (RF-BRA-30): la rama principal, el modo y su
 	// origen, cada token con su etiqueta. Solo aparecen con `main_branch` efectivo.
 	MainBranch           string `json:"mainBranch,omitempty"`
 	Promotion            string `json:"promotion,omitempty"`
@@ -203,7 +203,7 @@ type BaseResult struct {
 	Fetched bool   `json:"fetched"`
 }
 
-// BranchResult es una rama del plan y su estado en git (REQ-25.15). Name es la rama
+// BranchResult es una rama del plan y su estado en git (RF-BRA-16). Name es la rama
 // esperada; Worktree, la ruta absoluta del worktree donde está desplegada (vacía si no
 // lo está); Ahead y Behind, los commits que lleva de adelanto y de atraso respecto de
 // ComparedTo, calculados solo con referencias locales (nil cuando no se calcularon:
@@ -228,17 +228,17 @@ type BranchResult struct {
 
 	// PromotionStage es adónde va la siguiente PR de la rama del cambio de un repositorio de dos
 	// etapas en modo `branch` (`integration` o `main`), con su etiqueta; vacío en cualquier otro
-	// caso (REQ-25.48). Con `main`, PRTarget es la rama principal.
+	// caso (RF-BRA-30). Con `main`, PRTarget es la rama principal.
 	PromotionStage      string `json:"promotionStage,omitempty"`
 	PromotionStageLabel string `json:"promotionStageLabel,omitempty"`
 
-	// Lo que añade `ensure` (REQ-27.15), solo para las ramas que creó esa ejecución:
+	// Lo que añade `ensure` (RF-BRA-27), solo para las ramas que creó esa ejecución:
 	// CreatedFrom es el origen de la rama (CreatedFromBase, CreatedFromChangeBranch o
 	// CreatedFromRemote) y CreatedFromRef, la referencia de partida.
 	CreatedFrom    string `json:"createdFrom,omitempty"`
 	CreatedFromRef string `json:"createdFromRef,omitempty"`
 
-	// Lo que añade `done` por rama (design §4.3, REQ-25.16, REQ-25.17). Outcome es lo que hizo y
+	// Lo que añade `done` por rama (design §4.3, RF-BRA-17, RF-BRA-18). Outcome es lo que hizo y
 	// ConfirmedBy, la capa que confirmó su fusión (`forced` con `--force`; vacía si no se
 	// confirmó), cada token con su etiqueta. En `done`, Worktree es el que tenía la rama (retirado
 	// si Outcome es `removed`). Discarded son los ficheros con cambios sin confirmar que `--force`
@@ -356,7 +356,7 @@ func (r Result) Partial(refusal *Refusal) Result {
 }
 
 // NotStarted devuelve el resultado marcado como no iniciado: un cambio sin ramas
-// creadas no es un error (REQ-25.15) y la operación sale con ExitReady.
+// creadas no es un error (RF-BRA-16) y la operación sale con ExitReady.
 func (r Result) NotStarted() Result {
 	r.setStatus(StatusNotStarted)
 	return r
@@ -441,7 +441,7 @@ func (r Result) WriteText(stdout, stderr io.Writer) {
 
 // writeCreatedFromBase escribe, por cada rama de cambio o de archivado que `ensure` creó desde
 // la base sin `--fetch` en ese repositorio, la línea informativa de que otra persona pudo haberla
-// publicado sin que esté traída a local (REQ-27.15). REQ-25.7 prohíbe mover una rama existente:
+// publicado sin que esté traída a local (RF-BRA-27). RF-BRA-07 prohíbe mover una rama existente:
 // la reparación es manual. Solo es texto: el JSON no lleva avisos nuevos.
 func (r Result) writeCreatedFromBase(stdout io.Writer) {
 	for _, repository := range r.Repositories {
@@ -607,7 +607,7 @@ type Refusal struct {
 	Message      string
 	Continuation string
 	Details      map[string]string
-	// Decision solo la lleva `decision_required` (REQ-25.8).
+	// Decision solo la lleva `decision_required` (RF-BRA-08).
 	Decision *Decision
 }
 
@@ -648,7 +648,7 @@ func NotAGitRepository(operation, dir string) *Refusal {
 // GitFailed es el error `git_failed`: una invocación de git falló por una causa que
 // ningún otro código cubre. Nombra la operación que se intentaba (gitOperation, en
 // castellano) y resume el error de git, también en Details para quien lee el JSON
-// por máquina (REQ-25.2). operation es la de `axiom branch` que se repite en la
+// por máquina (RF-BRA-02). operation es la de `axiom branch` que se repite en la
 // continuación, y dir el directorio de partida.
 func GitFailed(operation, dir, gitOperation string, err error) *Refusal {
 	return &Refusal{

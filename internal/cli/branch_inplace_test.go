@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch ensure --mode in_place` (INC-25, S4.7, REQ-25.8, REQ-25.9): la ayuda, el
+// `axiom branch ensure --mode in_place` (INC-25, S4.7, RF-BRA-08, RF-BRA-09): la ayuda, el
 // rechazo `dirty_worktree` con código de salida 1 y el cambio de rama sin worktree, sobre
 // repositorios reales. El comportamiento del motor se prueba en internal/branch/engine.
 
@@ -29,7 +29,7 @@ func TestBranchEnsureHelpDocumentsInPlaceAndDirtyWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.9 (harness S4.8): con el árbol sucio, `--mode in_place` sale con 1 y `dirty_worktree`
+// RF-BRA-09 (harness S4.8): con el árbol sucio, `--mode in_place` sale con 1 y `dirty_worktree`
 // sin modificar nada (rama, índice y árbol, y sin rama ni registro); en texto, el código y la
 // continuación por stderr. Con el árbol limpio, sale con 0, hace `git switch` sin worktree,
 // registra el modo y repetir da el mismo JSON.

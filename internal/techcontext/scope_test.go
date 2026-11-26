@@ -46,7 +46,7 @@ func TestScopeAcceptsMaintainedDocuments(t *testing.T) {
 	scope, _ := scopeTree(t)
 	for _, document := range []string{
 		"context/ARQUITECTURA.md",            // existente
-		"context/PAGOS.md",                   // por crear (REQ-24.55)
+		"context/PAGOS.md",                   // por crear (RF-ARC-04)
 		"context/nuevo/dir/SERVICIO.md",      // por crear, con directorios intermedios
 		"../repo-backend/docs/API.md",        // repositorio hermano con `..`
 		"../repo-backend/docs/NUEVO.md",      // por crear en el repositorio hermano
@@ -172,7 +172,7 @@ func TestScopeOfReadsTheDeclaredPathsWithSlashes(t *testing.T) {
 	}
 }
 
-// Amenaza «selección de repositorio git» (REQ-30.15, REQ-30.29): las rutas
+// Amenaza «selección de repositorio git» (RF-CTX-13, RF-CTX-19): las rutas
 // declaradas, relativas, absolutas o hacia un repositorio hermano, se resuelven
 // contra workspaceRoot y nunca contra el directorio de trabajo del proceso.
 func TestClassifyResolvesDeclaredPathsAgainstTheWorkspaceRoot(t *testing.T) {

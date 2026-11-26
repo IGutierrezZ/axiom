@@ -14,8 +14,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de la guarda A en los escritores CLI de la carpeta del cambio (REQ-25.19, REQ-21.16,
-// REQ-25.39, design D-11 y G-10, tabla de la §2.11). Cada escritor tiene su negativa (fuera de
+// Pruebas de la guarda A en los escritores CLI de la carpeta del cambio (RF-BRA-20, RF-ARC-01,
+// RF-ARC-07, design D-11 y G-10, tabla de la §2.11). Cada escritor tiene su negativa (fuera de
 // rama, sin escribir nada y con la continuación de `ensure`), su caso en la rama correcta y,
 // cuando corresponde, su contexto `archive`. Con git real, entorno aislado y sin red; reutilizan
 // los ayudantes de sdd_kickoff_branch_test.go. El escritor de `axiom handoff create` vive en
@@ -24,7 +24,7 @@ import (
 const guardArchiveBranch = "feat/x-archive"
 
 // guardSealArgs sella los roles core y qa: con dos roles sobre el repositorio existen las ramas de
-// rol `feat/x-core` y `feat/x-qa` (REQ-25.4).
+// rol `feat/x-core` y `feat/x-qa` (RF-BRA-04).
 var guardSealArgs = []string{"--execution-style", "checkpointed", "--handoff-policy", "none", "--role", "core", "--role", "qa"}
 
 // captureWriterWarnings recoge los avisos de la guarda de los escritores.
@@ -61,7 +61,7 @@ func guardProjectSealedWith(t *testing.T, sealArgs []string) workspacetest.Works
 
 // retroSealForGuard escribe para el cambio un kickoff.yaml sin instantánea de política git, la forma
 // que dejaba `kickoff seal` antes de la instantánea (un cambio preexistente): queda exento de la
-// guarda A (REQ-25.37, R15). Los fixtures de otras pruebas que ejecutan un escritor guardado sobre un
+// guarda A (RF-KOF-07, R15). Los fixtures de otras pruebas que ejecutan un escritor guardado sobre un
 // cambio de un repositorio git que está en `master` o `main` lo usan: un cambio sin ningún
 // kickoff.yaml no está exento (supuesto S-7) y el escritor se negaría fuera de la rama del cambio.
 // Se sella con `continuous` y un solo rol (plan `tasks.md`), sin pasar por la guarda del seal.
@@ -122,7 +122,7 @@ func wantContinuation(t *testing.T, err error, want ...string) {
 	}
 }
 
-// REQ-25.19, escenario «Cada escritor se niega fuera de rama»: `gate record` desde `main` se
+// RF-BRA-20, escenario «Cada escritor se niega fuera de rama»: `gate record` desde `main` se
 // niega con `wrong_branch` y la continuación de `ensure`, sin tocar la carpeta del cambio.
 func TestGuardGateRecordRefusesOutsideTheChangeBranch(t *testing.T) {
 	ws := guardProject(t)
@@ -138,7 +138,7 @@ func TestGuardGateRecordRefusesOutsideTheChangeBranch(t *testing.T) {
 	}
 }
 
-// REQ-25.19, escenario «Cada escritor escribe en la rama correcta» (contexto `ordinary`): la
+// RF-BRA-20, escenario «Cada escritor escribe en la rama correcta» (contexto `ordinary`): la
 // rama del cambio y la de un rol sellado escriben la compuerta con normalidad.
 func TestGuardGateRecordWritesOnTheChangeAndRoleBranches(t *testing.T) {
 	ws := guardProject(t)
@@ -174,7 +174,7 @@ func TestGuardGateRecordIntegrationUsesTheArchiveContext(t *testing.T) {
 	}
 }
 
-// REQ-25.19: la guarda cubre la última compuerta de rol: fuera de rama no se escribe nada y en la
+// RF-BRA-20: la guarda cubre la última compuerta de rol: fuera de rama no se escribe nada y en la
 // rama del cambio se escribe la compuerta y se avisa; el `handoff.md` de integración ya no existe
 // (REQ-21.14 retirado), así que no se escribe en ningún caso.
 func TestGuardGateRecordOfTheLastRoleGuardsTheLedgerAndWritesNoHandoff(t *testing.T) {
@@ -231,7 +231,7 @@ func TestGuardGateShowIsNotGuarded(t *testing.T) {
 	}
 }
 
-// REQ-25.18, REQ-25.37: las exenciones. Un sumidero acumulativo por nombre y un cambio retro-sellado
+// RF-BRA-19, RF-KOF-07: las exenciones. Un sumidero acumulativo por nombre y un cambio retro-sellado
 // con `--infer` (kickoff.yaml sin instantánea) escriben desde `main`.
 func TestGuardGateRecordExemptChangesWriteFromMain(t *testing.T) {
 	t.Run("sumidero acumulativo", func(t *testing.T) {
@@ -257,7 +257,7 @@ func TestGuardGateRecordExemptChangesWriteFromMain(t *testing.T) {
 	})
 }
 
-// REQ-25.37 no añade más exenciones (supuesto S-7): un cambio sin ningún kickoff.yaml no está
+// RF-KOF-07 no añade más exenciones (supuesto S-7): un cambio sin ningún kickoff.yaml no está
 // exento y se rechaza fuera de la rama que le correspondería.
 func TestGuardGateRecordOfAChangeWithoutKickoffIsNotExempt(t *testing.T) {
 	captureWriterWarnings(t)
@@ -284,7 +284,7 @@ func TestGuardWarnsAndDoesNotBlockOutsideGit(t *testing.T) {
 	}
 }
 
-// REQ-30.25: `axiom sdd integrate` ya no existe: ningún subcomando escribe, y todos se
+// RF-ARC-14: `axiom sdd integrate` ya no existe: ningún subcomando escribe, y todos se
 // rechazan con el motivo tipado que remite a `axiom archive context` y `axiom archive adopt`,
 // desde cualquier rama (los escritores del contexto técnico, con su guarda A, son
 // `axiom archive context prepare` y `verify`).
@@ -339,7 +339,7 @@ func guardComposeFiles(t *testing.T, ws workspacetest.Workspace) (canonical, del
 	return canonical, delta
 }
 
-// REQ-25.19, escenario «`archive-compose` solo escribe en la rama de archivado»: con un delta bajo
+// RF-BRA-20, escenario «`archive-compose` solo escribe en la rama de archivado»: con un delta bajo
 // `changes/<c>/` y un fichero de salida, en `feat/x` se niega con la continuación `--archive` y en
 // `feat/x-archive` escribe. Cubre el modo `--canonical --delta`.
 func TestGuardArchiveComposeWithAChangeDeltaWritesOnlyOnTheArchiveBranch(t *testing.T) {
@@ -422,7 +422,7 @@ func guardContinueProject(t *testing.T) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-25.19, REQ-25.39, REQ-25.42: `sdd continue` guarda el marcador de instancia
+// RF-BRA-20, RF-ARC-07, RF-CLI-05: `sdd continue` guarda el marcador de instancia
 // (`.axiom-instance`), el único llamador de `PrepareChangeInstanceConsent`. Fuera de rama el status
 // ya proyecta blocked(wrong_branch) (S9-c2): continue no prepara el marcador y muestra el bloqueo en
 // lugar de rechazarse; en la rama del cambio lo escribe. La guarda A de continue solo cubre la

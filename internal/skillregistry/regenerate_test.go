@@ -14,7 +14,7 @@ func registryBytes(t *testing.T, path string) string {
 	return readFile(t, path)
 }
 
-// TestRegenerateOneScanFeedsThreeDestinations covers REQ-22.11 «Un escaneo
+// TestRegenerateOneScanFeedsThreeDestinations covers RF-SKI-02 «Un escaneo
 // alimenta los tres destinos»: registry, cache, AGENTS.md and the mirror port
 // all see the same skill set from one scan.
 func TestRegenerateOneScanFeedsThreeDestinations(t *testing.T) {
@@ -75,7 +75,7 @@ func TestRegenerateOneScanFeedsThreeDestinations(t *testing.T) {
 	}
 }
 
-// TestRegenerateCacheHitWritesNothing covers REQ-22.11 «Sin cambios, la huella
+// TestRegenerateCacheHitWritesNothing covers RF-SKI-02 «Sin cambios, la huella
 // evita trabajo»: zero writes and all three destinations byte-identical.
 func TestRegenerateCacheHitWritesNothing(t *testing.T) {
 	cwd := t.TempDir()
@@ -138,7 +138,7 @@ func TestRegenerateCacheHitWritesNothing(t *testing.T) {
 	}
 }
 
-// TestRegenerateExclusionsReachEveryDestination covers REQ-22.11 «Filtro de
+// TestRegenerateExclusionsReachEveryDestination covers RF-SKI-02 «Filtro de
 // exclusiones conservado»: the filter runs once in the scan and every
 // destination sees only the surviving skills.
 func TestRegenerateExclusionsReachEveryDestination(t *testing.T) {
@@ -196,7 +196,7 @@ func TestRegenerateAgentsAbsentIsOmitted(t *testing.T) {
 	}
 }
 
-// TestRegenerateMirrorFailureIsDataNotError covers REQ-22.11 «El espejo Engram
+// TestRegenerateMirrorFailureIsDataNotError covers RF-SKI-02 «El espejo Engram
 // falla sin arrastrar el índice local».
 func TestRegenerateMirrorFailureIsDataNotError(t *testing.T) {
 	cwd := t.TempDir()

@@ -18,9 +18,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Pruebas de `status` con git real sobre el registro local de solo lectura (REQ-25.14,
-// REQ-25.15), los multirepos (REQ-25.5, REQ-25.6) y la colocación de los worktrees
-// (REQ-25.11): lo que el planificador puro decide con tablas, aquí se comprueba con los
+// Pruebas de `status` con git real sobre el registro local de solo lectura (RF-BRA-15,
+// RF-BRA-16), los multirepos (RF-BRA-05, RF-BRA-06) y la colocación de los worktrees
+// (RF-BRA-11): lo que el planificador puro decide con tablas, aquí se comprueba con los
 // hechos que reúne el motor.
 
 // canonicalDirectory devuelve dir con la grafía que usa git (en Windows, los temporales
@@ -95,7 +95,7 @@ func newEngine(goos string) *Engine {
 	return &Engine{git: gitcli.New(), writer: gitcli.New(), registry: registry.New(), goos: goos}
 }
 
-// REQ-25.14 (escenario «Registro ausente informado por `status`»): un cambio sin
+// RF-BRA-15 (escenario «Registro ausente informado por `status`»): un cambio sin
 // registro no falla, `registry.present` es falso, el modo no se conoce y leerlo no crea
 // nada en el repositorio.
 func TestStatusReportsAnAbsentRegistryWithoutCreatingAnything(t *testing.T) {
@@ -116,7 +116,7 @@ func TestStatusReportsAnAbsentRegistryWithoutCreatingAnything(t *testing.T) {
 	}
 }
 
-// REQ-25.14 y REQ-25.15: con registro, `status` informa del modo materializado y su
+// RF-BRA-15 y RF-BRA-16: con registro, `status` informa del modo materializado y su
 // origen, y del worktree que el registro guarda para cada rama, aparte del que git conoce.
 func TestStatusReadsTheModeAndTheRegisteredWorktreesFromTheRegistry(t *testing.T) {
 	t.Parallel()
@@ -183,7 +183,7 @@ func TestStatusReadsTheModeAndTheRegisteredWorktreesFromTheRegistry(t *testing.T
 	})
 }
 
-// REQ-25.14, escenario «El registro es visible desde un worktree enlazado»: `status`
+// RF-BRA-15, escenario «El registro es visible desde un worktree enlazado»: `status`
 // ejecutado desde un worktree enlazado resuelve el registro con el git common dir, que es
 // el del checkout principal.
 func TestStatusSeesTheRegistryFromALinkedWorktree(t *testing.T) {
@@ -204,7 +204,7 @@ func TestStatusSeesTheRegistryFromALinkedWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.12 y REQ-25.14: las excepciones que el registro guarda (`--prefix`, `--branch`,
+// RF-BRA-12 y RF-BRA-15: las excepciones que el registro guarda (`--prefix`, `--branch`,
 // `--base`) fijan los nombres de rama y la base con los que `status` mide el cambio, de
 // modo que describe lo que `ensure` materializó.
 func TestStatusAppliesTheExceptionsOfTheRegistry(t *testing.T) {
@@ -278,7 +278,7 @@ func TestStatusAppliesTheExceptionsOfTheRegistry(t *testing.T) {
 	})
 }
 
-// REQ-25.14 y design D-07: un fichero corrupto es `config_invalid` con el fichero y la
+// RF-BRA-15 y design D-07: un fichero corrupto es `config_invalid` con el fichero y la
 // continuación de borrarlo y reconstruirlo con `ensure`.
 func TestStatusRefusesACorruptRegistryNamingTheFile(t *testing.T) {
 	t.Parallel()
@@ -374,7 +374,7 @@ func newMultirepo(t *testing.T, roles map[string][]string, codeRepositories ...s
 	return master, specs
 }
 
-// REQ-25.5 y REQ-25.4 (multirepo): el repositorio de specs se trabaja in situ, sin ramas
+// RF-BRA-05 y RF-BRA-04 (multirepo): el repositorio de specs se trabaja in situ, sin ramas
 // ni worktrees ni checkout; cada repositorio de código recibe la misma rama del cambio
 // desde su propia integración.
 func TestStatusMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
@@ -432,7 +432,7 @@ func TestStatusMultirepoWorksTheSpecsRepositoryInPlace(t *testing.T) {
 	})
 }
 
-// REQ-25.5 y design D-04: los perfiles `knowledge` y `spec-only` de `axiom init` generan
+// RF-BRA-05 y design D-04: los perfiles `knowledge` y `spec-only` de `axiom init` generan
 // un multirepo con el rol `knowledge` sobre `.`, el propio repositorio de specs: no hay
 // ramas ni worktrees que crear.
 func TestStatusOfTheKnowledgeAndSpecOnlyProfilesHasNoBranches(t *testing.T) {
@@ -453,7 +453,7 @@ func TestStatusOfTheKnowledgeAndSpecOnlyProfilesHasNoBranches(t *testing.T) {
 	wantSameDirectory(t, "workspaceRoot", result.WorkspaceRoot, repo)
 }
 
-// REQ-25.6 (escenarios «Una subcarpeta resuelve a la raíz git del repositorio que la
+// RF-BRA-06 (escenarios «Una subcarpeta resuelve a la raíz git del repositorio que la
 // contiene» y «Dos roles sobre rutas del mismo repositorio se deduplican»): las rutas
 // de los roles se resuelven con las consultas de git; el plan tiene un único repositorio
 // por raíz y los dos roles cuentan como roles del cambio sobre él.
@@ -487,7 +487,7 @@ func TestStatusResolvesDeclaredSubfoldersToTheirGitRootAndDeduplicates(t *testin
 	}
 }
 
-// REQ-25.4 y REQ-25.6: un repositorio de código compartido por dos roles se planifica
+// RF-BRA-04 y RF-BRA-06: un repositorio de código compartido por dos roles se planifica
 // una sola vez, con una rama de rol por cada uno.
 func TestStatusAnEmbeddedRepositorySharedByTwoRolesIsPlannedOnce(t *testing.T) {
 	t.Parallel()
@@ -515,7 +515,7 @@ func TestStatusAnEmbeddedRepositorySharedByTwoRolesIsPlannedOnce(t *testing.T) {
 	}
 }
 
-// REQ-25.11 y design D-04: `plan_conflict` cuando la raíz de worktrees (la carpeta
+// RF-BRA-11 y design D-04: `plan_conflict` cuando la raíz de worktrees (la carpeta
 // hermana `<carpeta maestra>-wt`) queda dentro del repositorio del plan, como ocurre
 // cuando la carpeta maestra es una subcarpeta del repositorio.
 func TestStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
@@ -539,7 +539,7 @@ func TestStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
 	}
 }
 
-// REQ-25.11 y design D-04: `plan_conflict` cuando una ruta planificada queda dentro de
+// RF-BRA-11 y design D-04: `plan_conflict` cuando una ruta planificada queda dentro de
 // un worktree existente distinto del suyo, por ejemplo uno antiguo de los scripts
 // locales en `<raíz>/<cambio>`; los worktrees de otros cambios no estorban.
 func TestStatusRefusesAPlannedPathInsideAnOldWorktree(t *testing.T) {
@@ -570,7 +570,7 @@ func TestStatusRefusesAPlannedPathInsideAnOldWorktree(t *testing.T) {
 	})
 }
 
-// REQ-25.11 y design D-04 (A-1): el motor entrega al planificador las reglas de rutas de
+// RF-BRA-11 y design D-04 (A-1): el motor entrega al planificador las reglas de rutas de
 // su sistema operativo. Con las de Windows, una ruta de worktree de más de 220 caracteres
 // da `path_too_long`, sea cual sea el sistema en que corra la prueba; con las de otro
 // sistema no hay límite propio. El carril ODD no lee el kickoff del cambio, de modo que la

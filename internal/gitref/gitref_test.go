@@ -38,7 +38,7 @@ func runRefNameCases(t *testing.T, validate func(string) error, cases []refNameC
 	}
 }
 
-// REQ-25.3 y REQ-25.26: ValidRefName aplica las reglas de `git check-ref-format`
+// RF-BRA-03 y RF-TOP-09: ValidRefName aplica las reglas de `git check-ref-format`
 // a un nombre de rama.
 func TestValidRefName(t *testing.T) {
 	runRefNameCases(t, ValidRefName, []refNameCase{
@@ -81,7 +81,7 @@ func TestValidRefName(t *testing.T) {
 	})
 }
 
-// REQ-25.26 (escenario «Valor inválido») y design §7.1: los casos del diseño
+// RF-TOP-09 (escenario «Valor inválido») y design §7.1: los casos del diseño
 // `"a b:c"` y `"mi prefijo//"`, más la regla propia del prefijo (sin `/` inicial
 // ni final) además de todas las de ValidRefName.
 func TestValidPrefix(t *testing.T) {
@@ -108,7 +108,7 @@ func TestValidPrefix(t *testing.T) {
 	})
 }
 
-// REQ-25.11, escenario «Nombre con carácter inválido en Windows», y design D-04:
+// RF-BRA-11, escenario «Nombre con carácter inválido en Windows», y design D-04:
 // un componente de cambio o de rol debe ser válido a la vez como rama git y como
 // nombre de directorio de Windows (`^[A-Za-z0-9][A-Za-z0-9._-]*$`, sin `..`, sin
 // terminar en `.` ni en `.lock`, sin nombres reservados de dispositivo).

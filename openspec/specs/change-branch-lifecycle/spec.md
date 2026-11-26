@@ -22,15 +22,15 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
 
 | Término | Definición |
 |---|---|
-| Rama de integración | Rama a la que se integra el trabajo. Valor de `git.integration_branch` (por defecto `main`), con posible valor propio por repositorio (REQ-25.3). |
-| Rama principal | Valor de `git.main_branch`, declarado solo en el bloque `git:` (sin valor por repositorio ni por defecto). Su ausencia, o un valor igual a la rama de integración, significa una sola etapa (REQ-25.3, REQ-25.46). |
-| Modo de promoción | Valor `branch`, `release` o `ask`: desde qué rama sale la rama del cambio y contra cuál se confirma su fusión en `done`. Se resuelve por repositorio y por cambio (REQ-25.46). |
-| Prefijo | Valor de `git.branch_prefix` (por defecto `feat`), con posible valor propio por repositorio (REQ-25.3). |
+| Rama de integración | Rama a la que se integra el trabajo. Valor de `git.integration_branch` (por defecto `main`), con posible valor propio por repositorio (RF-BRA-03). |
+| Rama principal | Valor de `git.main_branch`, declarado solo en el bloque `git:` (sin valor por repositorio ni por defecto). Su ausencia, o un valor igual a la rama de integración, significa una sola etapa (RF-BRA-03, RF-BRA-28). |
+| Modo de promoción | Valor `branch`, `release` o `ask`: desde qué rama sale la rama del cambio y contra cuál se confirma su fusión en `done`. Se resuelve por repositorio y por cambio (RF-BRA-28). |
+| Prefijo | Valor de `git.branch_prefix` (por defecto `feat`), con posible valor propio por repositorio (RF-BRA-03). |
 | Rama del cambio | `<prefijo>/<cambio>`. |
-| Rama de rol | `<prefijo>/<cambio>-<rol>`. Solo existe cuando dos o más roles del cambio tocan el mismo repositorio (REQ-25.4). |
+| Rama de rol | `<prefijo>/<cambio>-<rol>`. Solo existe cuando dos o más roles del cambio tocan el mismo repositorio (RF-BRA-04). |
 | Rama de seguimiento | La rama del cambio cuando existen ramas de rol sobre ese repositorio: los PR de rol se dirigen contra ella. |
-| Rama de archivado | `<prefijo>/<cambio>-archive`. Solo existe en los repositorios con rama de cambio (`monorepo-embedded`), la crea `axiom branch ensure --change <c> --archive` desde la rama de integración una vez fusionado el PR del cambio, y en ella se ejecuta `archive` (REQ-25.45). No existe en `multirepo`. |
-| Cambio pendiente de archivar | Cambio activo presente en el árbol de la rama de integración de un repositorio con rama de cambio, es decir, ya fusionado y aún sin archivar. Se excluyen por nombre los sumideros `e2e-cumulative` y `cumulative-<rol>` (REQ-25.20) y las fusiones intermedias, es decir, los cambios en fusión intermedia (REQ-26.11). |
+| Rama de archivado | `<prefijo>/<cambio>-archive`. Solo existe en los repositorios con rama de cambio (`monorepo-embedded`), la crea `axiom branch ensure --change <c> --archive` desde la rama de integración una vez fusionado el PR del cambio, y en ella se ejecuta `archive` (RF-BRA-13). No existe en `multirepo`. |
+| Cambio pendiente de archivar | Cambio activo presente en el árbol de la rama de integración de un repositorio con rama de cambio, es decir, ya fusionado y aún sin archivar. Se excluyen por nombre los sumideros `e2e-cumulative` y `cumulative-<rol>` (RF-BRA-21) y las fusiones intermedias, es decir, los cambios en fusión intermedia (RF-BRA-26). |
 | Raíz git | Directorio de nivel superior del repositorio git que contiene una ruta (`git rev-parse --show-toplevel`), con su git common dir (`git rev-parse --git-common-dir`). |
 | Repositorio con rama de cambio | En `monorepo-embedded`, cada repositorio git tocado por el cambio (incluido el del planning home). En `multirepo`, cada repositorio de código tocado por algún rol del cambio. |
 | Repositorio de specs en multirepo | En `multirepo`, el repositorio que contiene el planning home (`planning-home-resolution`). Se trabaja siempre in situ, en su rama de integración. |
@@ -38,25 +38,25 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
 | Roles del cambio sobre un repositorio | Intersección entre los roles sellados en el `kickoff.yaml` del cambio y los roles de `axiom.yaml` cuyo `repositories` resuelve a esa raíz git. El rol reservado `fullstack` cuenta como un único rol que toca todos los repositorios que declara algún rol de `axiom.yaml` y, en `monorepo-embedded`, el repositorio del planning home (supuesto S-3). |
 | Modo de trabajo | Preferencia personal por proyecto: `worktree` (por defecto), `in_place` o `ask`. Vive en el hub, no en `axiom.yaml`. |
 | Raíz de worktrees | Directorio personal donde se crean los worktrees. Por defecto `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`, fuera de cualquier repositorio. |
-| Registro compartido | Instantánea de política escrita una sola vez por `kickoff seal` en `kickoff.yaml` (REQ-25.36). |
-| Registro local | Estado local no versionado, en el git common dir del repositorio del planning home (REQ-25.14). |
+| Registro compartido | Instantánea de política escrita una sola vez por `kickoff seal` en `kickoff.yaml` (RF-KOF-06). |
+| Registro local | Estado local no versionado, en el git common dir del repositorio del planning home (RF-BRA-15). |
 | Instantánea | Entradas de política del registro compartido: integración, prefijo, base por repositorio y nombres de rama derivados. |
-| Veredicto de rama | Respuesta única a «¿esta rama es la que corresponde a este cambio en este repositorio según su papel?» (REQ-25.18). |
+| Veredicto de rama | Respuesta única a «¿esta rama es la que corresponde a este cambio en este repositorio según su papel?» (RF-BRA-19). |
 | Carril | `sdd` (por defecto) u `odd`. |
 
 ### Tokens y etiquetas del JSON
 
-Todo valor de estado o de clasificación del JSON es un **token estable en inglés** acompañado, en un campo aparte, de una **etiqueta legible en castellano**. Los tokens no se traducen ni cambian con el idioma; los mensajes y las etiquetas están en castellano (REQ-25.2).
+Todo valor de estado o de clasificación del JSON es un **token estable en inglés** acompañado, en un campo aparte, de una **etiqueta legible en castellano**. Los tokens no se traducen ni cambian con el idioma; los mensajes y las etiquetas están en castellano (RF-BRA-02).
 
 | Token | Etiqueta | Dónde |
 |---|---|---|
-| `not_started` | no iniciado | estado de un cambio sin ramas (REQ-25.15) |
-| `correct` | correcto | veredicto de rama (REQ-25.18) |
-| `not_applicable` | no aplicable | veredicto de rama (REQ-25.18) |
-| `ancestry` | ascendencia | capa 1 de la detección de fusión (REQ-25.16) |
-| `equivalent_tree` | árbol equivalente | capa 2 de la detección de fusión (REQ-25.16) |
-| `pr_merged` | PR fusionado | capa 3 de la detección de fusión (REQ-25.16) |
-| `forced` | forzado | confirmación con `--force` (REQ-25.17) |
+| `not_started` | no iniciado | estado de un cambio sin ramas (RF-BRA-16) |
+| `correct` | correcto | veredicto de rama (RF-BRA-19) |
+| `not_applicable` | no aplicable | veredicto de rama (RF-BRA-19) |
+| `ancestry` | ascendencia | capa 1 de la detección de fusión (RF-BRA-17) |
+| `equivalent_tree` | árbol equivalente | capa 2 de la detección de fusión (RF-BRA-17) |
+| `pr_merged` | PR fusionado | capa 3 de la detección de fusión (RF-BRA-17) |
+| `forced` | forzado | confirmación con `--force` (RF-BRA-18) |
 
 ### Códigos tipados
 
@@ -64,64 +64,64 @@ Los resultados que no son «listo» se identifican por un código estable, nunca
 
 | Código | Significado |
 |---|---|
-| `decision_required` | El modo de trabajo o el modo de promoción es `ask` y no hay respuesta registrada: no se ha creado nada (REQ-25.8, REQ-25.47). |
-| `dirty_worktree` | Cambios sin confirmar impiden la operación (REQ-25.9, REQ-25.17). |
-| `wrong_branch` | La rama actual no es la que corresponde (REQ-25.18). |
-| `specs_repo_not_on_integration` | En multirepo, el repositorio de specs no está en su rama de integración (REQ-25.5). |
-| `base_not_found` | No existe la rama de integración, ni en local ni como referencia remota local (REQ-25.10). |
-| `fetch_failed` | `--fetch` fue solicitado y falló (REQ-25.10). |
-| `path_too_long` | La ruta de un worktree supera el límite admitido (REQ-25.11). |
-| `invalid_name` | El nombre del cambio, el prefijo o la rama indicados en la invocación no son válidos (REQ-25.3, REQ-25.11). |
-| `config_invalid` | `axiom.yaml` o el hub personal no se pueden leer, o su política es inválida, y impiden planificar (REQ-25.3). |
-| `git_failed` | Una invocación de git falló por una causa que ningún otro código cubre; el JSON nombra la operación y resume el error (REQ-25.2). |
-| `plan_conflict` | Una invocación contradice el plan ya materializado del cambio: un modo de trabajo o de promoción distinto del materializado (REQ-25.8, REQ-25.12, REQ-25.45, REQ-25.47). |
-| `branch_checked_out_elsewhere` | La rama ya está desplegada en un worktree que el registro no conoce (REQ-25.7). |
-| `not_a_git_repository` | Una ruta declarada no pertenece a ningún repositorio git; se omite con aviso (REQ-25.6). |
-| `merge_not_confirmed` | Ninguna capa confirma la fusión de la rama (REQ-25.16). |
-| `change_not_integrated` | `ensure --archive`: la base local no contiene el cambio ya fusionado; sugiere `--fetch` (REQ-25.45). |
-| `archive_branch_not_applicable` | `ensure --archive` en una topología o carril sin rama de archivado (REQ-25.45). |
+| `decision_required` | El modo de trabajo o el modo de promoción es `ask` y no hay respuesta registrada: no se ha creado nada (RF-BRA-08, RF-BRA-29). |
+| `dirty_worktree` | Cambios sin confirmar impiden la operación (RF-BRA-09, RF-BRA-18). |
+| `wrong_branch` | La rama actual no es la que corresponde (RF-BRA-19). |
+| `specs_repo_not_on_integration` | En multirepo, el repositorio de specs no está en su rama de integración (RF-BRA-05). |
+| `base_not_found` | No existe la rama de integración, ni en local ni como referencia remota local (RF-BRA-10). |
+| `fetch_failed` | `--fetch` fue solicitado y falló (RF-BRA-10). |
+| `path_too_long` | La ruta de un worktree supera el límite admitido (RF-BRA-11). |
+| `invalid_name` | El nombre del cambio, el prefijo o la rama indicados en la invocación no son válidos (RF-BRA-03, RF-BRA-11). |
+| `config_invalid` | `axiom.yaml` o el hub personal no se pueden leer, o su política es inválida, y impiden planificar (RF-BRA-03). |
+| `git_failed` | Una invocación de git falló por una causa que ningún otro código cubre; el JSON nombra la operación y resume el error (RF-BRA-02). |
+| `plan_conflict` | Una invocación contradice el plan ya materializado del cambio: un modo de trabajo o de promoción distinto del materializado (RF-BRA-08, RF-BRA-12, RF-BRA-13, RF-BRA-29). |
+| `branch_checked_out_elsewhere` | La rama ya está desplegada en un worktree que el registro no conoce (RF-BRA-07). |
+| `not_a_git_repository` | Una ruta declarada no pertenece a ningún repositorio git; se omite con aviso (RF-BRA-06). |
+| `merge_not_confirmed` | Ninguna capa confirma la fusión de la rama (RF-BRA-17). |
+| `change_not_integrated` | `ensure --archive`: la base local no contiene el cambio ya fusionado; sugiere `--fetch` (RF-BRA-13). |
+| `archive_branch_not_applicable` | `ensure --archive` en una topología o carril sin rama de archivado (RF-BRA-13). |
 
 ## Requerimientos de un vistazo
 
 | ID | Requerimiento | Garantía principal |
 |---|---|---|
-| REQ-25.1 | Familia `axiom branch` | Cuatro verbos de primer nivel, neutrales respecto al carril; ni `push` ni PR; sin operaciones remotas verificables |
-| REQ-25.2 | Contrato de salida común | JSON con rutas absolutas, `--cwd`, tokens en inglés con etiqueta en castellano y código de salida «listo = 0» |
-| REQ-25.3 | Resolución de la política | Excepción por cambio > repositorio > `git:` > defecto |
-| REQ-25.4 | Modelo de ramas por número de roles | 1 rol: `<prefijo>/<cambio>`; 2 o más: seguimiento más ramas de rol; rama de archivado aparte |
-| REQ-25.5 | Papel del repositorio según topología | Repositorio de specs in situ en multirepo; código con rama de cambio |
-| REQ-25.6 | Raíz git de cada repositorio | Subcarpetas, `.`, repositorios compartidos y rutas no git |
-| REQ-25.7 | `ensure`: plan e idempotencia | Mismo plan, mismo resultado, sin duplicar |
-| REQ-25.8 | `ensure`: modo de trabajo | `worktree`, `in_place` y `ask` tipado; el checkout principal no se toca |
-| REQ-25.9 | `ensure` en `in_place` con árbol sucio | Rechazo sin modificar el repositorio |
-| REQ-25.10 | Base sin red | Sin `fetch` implícito; `base.source`, `sha` y `fetched` |
-| REQ-25.11 | Rutas de worktree y longitud | `<raíz>/<cambio>[-<rol>\|-archive]/<repo>`; rechazo por longitud (220 en Windows) |
-| REQ-25.12 | Excepciones por cambio | `--prefix`, `--branch`, `--base`; registradas y sin contradicción |
-| REQ-25.45 | Rama de archivado y `ensure --archive` | `<prefijo>/<cambio>-archive` desde la integración; `change_not_integrated` sin fetch implícito |
-| REQ-25.13 | Carril ODD | Misma política para `odd/tasks/` |
-| REQ-25.14 | Registro local | Rutas absolutas y respuesta a `ask` en el git common dir |
-| REQ-25.15 | `status` | Estado de ramas y worktrees del cambio, solo con referencias locales |
-| REQ-25.16 | `done`: detección de fusión por capas | `ancestry`, `equivalent_tree`, `pr_merged` |
-| REQ-25.17 | `done`: seguridad y eliminación de worktree y rama local | Elimina worktree y rama local tras fusión confirmada; rechazo con árbol sucio o fusión no confirmada salvo `--force`; nunca toca ramas remotas |
-| REQ-25.18 | Veredicto único de rama | Una sola consulta, por papel del repositorio y contexto (ordinario o de archivado) |
-| REQ-25.19 | Guarda A: escritores Go | Todo escritor de la carpeta del cambio se niega fuera de rama |
-| REQ-25.20 | Cambios pendientes de archivar | Visibles en `status` y en el dashboard, sin fusiones intermedias (REQ-26.11); sin código de fallo ni integración con la CI |
-| REQ-25.21 | `guard`: hook opcional | Bloquea documentos de Axiom y avisa sin bloquear en el resto; lee HEAD sin lanzar git; fail-open |
-| REQ-25.22 | Instalación del hook por `axiom sync` | Claude Code, Codex y OpenCode; sin hooks de git |
-| REQ-25.23 | Skills y doctrina delegan en el verbo | Retirada de ODD-5.x y del Paso 2c |
-| REQ-25.24 | Dogfooding en este repositorio | `git:` declarado (`integration_branch: main`, `branch_prefix: inc`) y documentación remitida a `axiom branch` |
+| RF-BRA-01 | Familia `axiom branch` | Cuatro verbos de primer nivel, neutrales respecto al carril; ni `push` ni PR; sin operaciones remotas verificables |
+| RF-BRA-02 | Contrato de salida común | JSON con rutas absolutas, `--cwd`, tokens en inglés con etiqueta en castellano y código de salida «listo = 0» |
+| RF-BRA-03 | Resolución de la política | Excepción por cambio > repositorio > `git:` > defecto |
+| RF-BRA-04 | Modelo de ramas por número de roles | 1 rol: `<prefijo>/<cambio>`; 2 o más: seguimiento más ramas de rol; rama de archivado aparte |
+| RF-BRA-05 | Papel del repositorio según topología | Repositorio de specs in situ en multirepo; código con rama de cambio |
+| RF-BRA-06 | Raíz git de cada repositorio | Subcarpetas, `.`, repositorios compartidos y rutas no git |
+| RF-BRA-07 | `ensure`: plan e idempotencia | Mismo plan, mismo resultado, sin duplicar |
+| RF-BRA-08 | `ensure`: modo de trabajo | `worktree`, `in_place` y `ask` tipado; el checkout principal no se toca |
+| RF-BRA-09 | `ensure` en `in_place` con árbol sucio | Rechazo sin modificar el repositorio |
+| RF-BRA-10 | Base sin red | Sin `fetch` implícito; `base.source`, `sha` y `fetched` |
+| RF-BRA-11 | Rutas de worktree y longitud | `<raíz>/<cambio>[-<rol>\|-archive]/<repo>`; rechazo por longitud (220 en Windows) |
+| RF-BRA-12 | Excepciones por cambio | `--prefix`, `--branch`, `--base`; registradas y sin contradicción |
+| RF-BRA-13 | Rama de archivado y `ensure --archive` | `<prefijo>/<cambio>-archive` desde la integración; `change_not_integrated` sin fetch implícito |
+| RF-BRA-14 | Carril ODD | Misma política para `odd/tasks/` |
+| RF-BRA-15 | Registro local | Rutas absolutas y respuesta a `ask` en el git common dir |
+| RF-BRA-16 | `status` | Estado de ramas y worktrees del cambio, solo con referencias locales |
+| RF-BRA-17 | `done`: detección de fusión por capas | `ancestry`, `equivalent_tree`, `pr_merged` |
+| RF-BRA-18 | `done`: seguridad y eliminación de worktree y rama local | Elimina worktree y rama local tras fusión confirmada; rechazo con árbol sucio o fusión no confirmada salvo `--force`; nunca toca ramas remotas |
+| RF-BRA-19 | Veredicto único de rama | Una sola consulta, por papel del repositorio y contexto (ordinario o de archivado) |
+| RF-BRA-20 | Guarda A: escritores Go | Todo escritor de la carpeta del cambio se niega fuera de rama |
+| RF-BRA-21 | Cambios pendientes de archivar | Visibles en `status` y en el dashboard, sin fusiones intermedias (RF-BRA-26); sin código de fallo ni integración con la CI |
+| RF-BRA-22 | `guard`: hook opcional | Bloquea documentos de Axiom y avisa sin bloquear en el resto; lee HEAD sin lanzar git; fail-open |
+| RF-BRA-23 | Instalación del hook por `axiom sync` | Claude Code, Codex y OpenCode; sin hooks de git |
+| RF-BRA-24 | Skills y doctrina delegan en el verbo | Retirada de ODD-5.x y del Paso 2c |
+| RF-BRA-25 | Dogfooding en este repositorio | `git:` declarado (`integration_branch: main`, `branch_prefix: inc`) y documentación remitida a `axiom branch` |
 
 ## No cubre esta capacidad
 
 - `push` ni creación de PR desde `axiom branch`: siguen siendo decisiones de la persona.
 - Hooks de git (`pre-commit`, `pre-push`, etc.) en cualquier repositorio, incluidos los de terceros.
-- Operaciones remotas por defecto: ninguna orden hace `fetch`, `pull`, `push` ni consulta remota sin una opción explícita (REQ-25.10).
-- Un comprobador para la CI ni un código de fallo por cambios activos en la rama de integración: con el archive en un PR documental aparte, es normal que la rama de integración contenga cambios activos de forma temporal (REQ-25.20).
-- Un escritor Go del documento ODD `odd/tasks/<feature>.md`: ODD sigue siendo doctrina de agente y queda cubierto solo por la doctrina y por la guarda D (REQ-25.13).
+- Operaciones remotas por defecto: ninguna orden hace `fetch`, `pull`, `push` ni consulta remota sin una opción explícita (RF-BRA-10).
+- Un comprobador para la CI ni un código de fallo por cambios activos en la rama de integración: con el archive en un PR documental aparte, es normal que la rama de integración contenga cambios activos de forma temporal (RF-BRA-21).
+- Un escritor Go del documento ODD `odd/tasks/<feature>.md`: ODD sigue siendo doctrina de agente y queda cubierto solo por la doctrina y por la guarda D (RF-BRA-14).
 - Edición de `axiom.yaml` desde el dashboard (`local-web-dashboard`).
-- Cobertura del hook en Pi: no hay canal demostrado y la capa D es de mejor esfuerzo (REQ-25.22).
-- La eliminación de ramas remotas: `done` elimina el worktree y la rama local de un cambio ya fusionado, pero nunca toca ramas remotas (REQ-25.17).
-- La migración de cambios preexistentes: se eximen, no se migran (REQ-25.37 de `sdd-lane-kickoff`).
+- Cobertura del hook en Pi: no hay canal demostrado y la capa D es de mejor esfuerzo (RF-BRA-23).
+- La eliminación de ramas remotas: `done` elimina el worktree y la rama local de un cambio ya fusionado, pero nunca toca ramas remotas (RF-BRA-18).
+- La migración de cambios preexistentes: se eximen, no se migran (RF-KOF-07 de `sdd-lane-kickoff`).
 
 ---
 
@@ -129,9 +129,9 @@ Los resultados que no son «listo» se identifican por un código estable, nunca
 
 El motor de ramas planifica de forma pura (topología, política, roles y preferencias personales producen un plan determinista) y ejecuta el plan con git de forma idempotente. Las guardas consultan el mismo veredicto.
 
-### Requirement: Familia de Comandos `axiom branch` (REQ-25.1)
+### Requirement: Familia de Comandos `axiom branch` (RF-BRA-01)
 
-La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente los subcomandos `ensure`, `status`, `scope`, `done` y `guard`. La familia DEBE ser neutral respecto al carril: `ensure`, `status` y `done` DEBEN aceptar `--change <nombre>` y `--lane sdd|odd` (por defecto `sdd`) y NO DEBEN depender de que exista un cambio SDD; `scope` DEBE aceptar `--change <nombre>` y solo opera sobre un cambio SDD con kickoff sellado (REQ-25.51). Ningún subcomando de `axiom branch` DEBE ejecutar `git push` ni `git commit`, crear un PR ni realizar operaciones remotas salvo la solicitada por `--fetch` (REQ-25.10), que `scope` no admite. La familia NO DEBE exponer subcomandos `pr`, `push` ni ningún comprobador para la CI. Toda ejecución de git del motor DEBE pasar por un único punto, de modo que la ausencia de operaciones remotas sea verificable con un observador instalado en ese punto y con una prueba de arquitectura que cubra el código de `internal/branch/**` y de `internal/gitcommon`. La operación de subir documentación del cambio es el verbo `axiom sdd publish`, que NO pertenece a esta familia, usa un puerto de publicación propio al que `axiom branch` no puede llegar y no altera este invariante (REQ-27.11 de `sdd-docs-publication`).
+La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente los subcomandos `ensure`, `status`, `scope`, `done` y `guard`. La familia DEBE ser neutral respecto al carril: `ensure`, `status` y `done` DEBEN aceptar `--change <nombre>` y `--lane sdd|odd` (por defecto `sdd`) y NO DEBEN depender de que exista un cambio SDD; `scope` DEBE aceptar `--change <nombre>` y solo opera sobre un cambio SDD con kickoff sellado (RF-BRA-35). Ningún subcomando de `axiom branch` DEBE ejecutar `git push` ni `git commit`, crear un PR ni realizar operaciones remotas salvo la solicitada por `--fetch` (RF-BRA-10), que `scope` no admite. La familia NO DEBE exponer subcomandos `pr`, `push` ni ningún comprobador para la CI. Toda ejecución de git del motor DEBE pasar por un único punto, de modo que la ausencia de operaciones remotas sea verificable con un observador instalado en ese punto y con una prueba de arquitectura que cubra el código de `internal/branch/**` y de `internal/gitcommon`. La operación de subir documentación del cambio es el verbo `axiom sdd publish`, que NO pertenece a esta familia, usa un puerto de publicación propio al que `axiom branch` no puede llegar y no altera este invariante (RF-PUB-07 de `sdd-docs-publication`).
 (Previously: «exactamente los subcomandos `ensure`, `status`, `done` y `guard`»; `scope` no existía y `--change` y `--lane` solo se enumeraban para `ensure`, `status` y `done`)
 
 #### Scenario: La ayuda lista los cinco verbos
@@ -173,9 +173,9 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 - **ENTONCES** `publish` figura solo en la ayuda de `axiom sdd`
 - **Y** el puerto de publicación no es importado por `internal/branch/**`
 
-### Requirement: Contrato de Salida Común con Rutas Absolutas (REQ-25.2)
+### Requirement: Contrato de Salida Común con Rutas Absolutas (RF-BRA-02)
 
-`ensure`, `status`, `scope` y `done` DEBEN admitir `--json` y `--cwd <ruta>`. La salida JSON DEBE incluir un estado tipado y, cuando no sea «listo», uno de los códigos tipados de esta capacidad. Todo valor de estado o de clasificación del JSON DEBE ser un token estable en inglés (`not_started`, `correct`, `not_applicable`, `ancestry`, `equivalent_tree`, `pr_merged`, `forced`, etc.) acompañado, en un campo aparte, de una etiqueta legible en castellano; los tokens NO DEBEN traducirse. Toda ruta de la salida (raíz git de cada repositorio, planning home, worktrees, raíz de worktrees) DEBE ser absoluta. El código de salida DEBE ser `0` únicamente cuando la operación ha dejado el estado pedido; todo rechazo, todo `decision_required` y todo error DEBEN terminar con código distinto de cero. Para `scope`, que es de solo lectura, «el estado pedido» es que el alcance se haya calculado: el código `0` se devuelve aunque haya repositorios `unverifiable`, que son información del resultado y no un fallo (REQ-25.51). Los mensajes legibles DEBEN estar en español y nombrar la continuación. Una configuración ilegible o inválida DEBE terminar con `config_invalid` y una invocación de git que falle por una causa no cubierta por otro código con `git_failed`, que DEBE nombrar la operación y resumir el error. Ninguna fase posterior a `ensure` DEBE depender del directorio de trabajo heredado: las órdenes posteriores reciben `--cwd` con una ruta tomada de este JSON.
+`ensure`, `status`, `scope` y `done` DEBEN admitir `--json` y `--cwd <ruta>`. La salida JSON DEBE incluir un estado tipado y, cuando no sea «listo», uno de los códigos tipados de esta capacidad. Todo valor de estado o de clasificación del JSON DEBE ser un token estable en inglés (`not_started`, `correct`, `not_applicable`, `ancestry`, `equivalent_tree`, `pr_merged`, `forced`, etc.) acompañado, en un campo aparte, de una etiqueta legible en castellano; los tokens NO DEBEN traducirse. Toda ruta de la salida (raíz git de cada repositorio, planning home, worktrees, raíz de worktrees) DEBE ser absoluta. El código de salida DEBE ser `0` únicamente cuando la operación ha dejado el estado pedido; todo rechazo, todo `decision_required` y todo error DEBEN terminar con código distinto de cero. Para `scope`, que es de solo lectura, «el estado pedido» es que el alcance se haya calculado: el código `0` se devuelve aunque haya repositorios `unverifiable`, que son información del resultado y no un fallo (RF-BRA-35). Los mensajes legibles DEBEN estar en español y nombrar la continuación. Una configuración ilegible o inválida DEBE terminar con `config_invalid` y una invocación de git que falle por una causa no cubierta por otro código con `git_failed`, que DEBE nombrar la operación y resumir el error. Ninguna fase posterior a `ensure` DEBE depender del directorio de trabajo heredado: las órdenes posteriores reciben `--cwd` con una ruta tomada de este JSON.
 (Previously: el contrato enumeraba `ensure`, `status` y `done`, y el código `0` no tenía una definición para un verbo de solo lectura; antes de eso incluía el comprobador de CI y los valores de estado no tenían un token estable con etiqueta separada)
 
 #### Scenario: Todas las rutas son absolutas
@@ -206,7 +206,7 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 - **DADO** una invocación de git que falla por una causa que ningún otro código cubre
 - **CUANDO** se ejecuta `axiom branch ensure --change x --json`
 - **ENTONCES** el código tipado es `git_failed` y el JSON nombra la operación y resume el error
-- **Y** una repetición de la orden, ya resuelta la causa, completa el plan sin duplicar nada (REQ-25.7)
+- **Y** una repetición de la orden, ya resuelta la causa, completa el plan sin duplicar nada (RF-BRA-07)
 
 #### Scenario: `--cwd` fija el directorio de partida
 - **DADO** un worktree de un cambio y un directorio de trabajo ajeno al proyecto
@@ -225,9 +225,9 @@ La CLI DEBE exponer la familia de primer nivel `axiom branch` con exactamente lo
 - **ENTONCES** el código de salida es `0`
 - **Y** el repositorio figura como `unverifiable` con su motivo
 
-### Requirement: Resolución de la Política de Ramas (REQ-25.3)
+### Requirement: Resolución de la Política de Ramas (RF-BRA-03)
 
-La política de cada repositorio DEBE resolverse con esta precedencia, de mayor a menor: (1) las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`, REQ-25.12); (2) la entrada del repositorio en `repositories:` de `axiom.yaml`, si existe; (3) el bloque `git:` de `axiom.yaml`; (4) los valores por defecto: rama de integración `main` y prefijo `feat`. Sin bloque `git:`, `integration_branch` DEBE valer `main` y `branch_prefix` DEBE valer `feat`; sin `repositories:`, ningún repositorio tiene ajustes propios y todos heredan los valores del workspace. La política incorpora además la rama principal (`git.main_branch`, solo en `git:` y sin valor por repositorio ni por defecto: su ausencia significa una sola etapa) y el modo de promoción por defecto (`promotion`, con herencia `repositories:` > `git:`; el valor vacío hereda); el modo efectivo de cada repositorio y cambio se resuelve en REQ-25.46. Los nombres de rama resultantes DEBEN ser nombres de referencia git válidos: un prefijo o nombre inválido indicado en la invocación (`--prefix`, `--branch`, `--change`) DEBE rechazarse con `invalid_name`, y un valor inválido o una configuración ilegible en `axiom.yaml` o en el hub personal con `config_invalid`, en ambos casos sin crear nada.
+La política de cada repositorio DEBE resolverse con esta precedencia, de mayor a menor: (1) las excepciones por cambio de `ensure` (`--prefix`, `--branch`, `--base`, RF-BRA-12); (2) la entrada del repositorio en `repositories:` de `axiom.yaml`, si existe; (3) el bloque `git:` de `axiom.yaml`; (4) los valores por defecto: rama de integración `main` y prefijo `feat`. Sin bloque `git:`, `integration_branch` DEBE valer `main` y `branch_prefix` DEBE valer `feat`; sin `repositories:`, ningún repositorio tiene ajustes propios y todos heredan los valores del workspace. La política incorpora además la rama principal (`git.main_branch`, solo en `git:` y sin valor por repositorio ni por defecto: su ausencia significa una sola etapa) y el modo de promoción por defecto (`promotion`, con herencia `repositories:` > `git:`; el valor vacío hereda); el modo efectivo de cada repositorio y cambio se resuelve en RF-BRA-28. Los nombres de rama resultantes DEBEN ser nombres de referencia git válidos: un prefijo o nombre inválido indicado en la invocación (`--prefix`, `--branch`, `--change`) DEBE rechazarse con `invalid_name`, y un valor inválido o una configuración ilegible en `axiom.yaml` o en el hub personal con `config_invalid`, en ambos casos sin crear nada.
 (Previously: la política no incluía la rama principal ni el modo de promoción)
 
 #### Scenario: Sin configuración se aplican los valores por defecto
@@ -275,15 +275,15 @@ La política de cada repositorio DEBE resolverse con esta precedencia, de mayor 
 
 ---
 
-### Requirement: Modelo de Ramas por Número de Roles que Tocan Cada Repositorio (REQ-25.4)
+### Requirement: Modelo de Ramas por Número de Roles que Tocan Cada Repositorio (RF-BRA-04)
 
 El modelo de ramas de cada repositorio con rama de cambio DEBE depender de cuántos roles del cambio lo tocan (roles sellados en el `kickoff.yaml` del cambio intersecados con los roles de `axiom.yaml` cuyos repositorios resuelven a esa raíz git):
 
 - **Un rol** (lo habitual, también `fullstack`): solo existe la rama `<prefijo>/<cambio>`; el rol trabaja en ella y su PR se dirige a la rama de integración.
-- **Dos o más roles** (solo posible en `multirepo`: en `monorepo-embedded` el único rol es `fullstack`, REQ-2.2 de `workspace-topology`, y por tanto nunca hay rama de rol): `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Hay un PR de cada rol contra la rama de seguimiento y un PR final a la rama de integración que lleva el cambio (código y artefactos), sin el archive. Se RECOMIENDA el merge commit, sin imponerlo.
-- **Rama de archivado** (solo en repositorios con rama de cambio): una vez fusionado en la rama de integración el PR del cambio, el archive se hace en `<prefijo>/<cambio>-archive`, que sale de la rama de integración (REQ-25.45) y se entrega en un PR documental aparte contra la rama de integración. NO existe en `multirepo`.
+- **Dos o más roles** (solo posible en `multirepo`: en `monorepo-embedded` el único rol es `fullstack`, RF-TOP-04 de `workspace-topology`, y por tanto nunca hay rama de rol): `<prefijo>/<cambio>` es la rama de seguimiento y cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. Hay un PR de cada rol contra la rama de seguimiento y un PR final a la rama de integración que lleva el cambio (código y artefactos), sin el archive. Se RECOMIENDA el merge commit, sin imponerlo.
+- **Rama de archivado** (solo en repositorios con rama de cambio): una vez fusionado en la rama de integración el PR del cambio, el archive se hace en `<prefijo>/<cambio>-archive`, que sale de la rama de integración (RF-BRA-13) y se entrega en un PR documental aparte contra la rama de integración. NO existe en `multirepo`.
 
-El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio puede tener rama de rol y otro no. Un rol cuyo nombre sea `archive` colisionaría con la rama de archivado y DEBE rechazarse con `invalid_name` al planificar las ramas de rol (supuesto S-15). `ensure` NO DEBE publicar la rama de seguimiento: DEBE avisar de que la persona la sube al remoto antes del primer PR de rol. La rama destino propuesta para cada PR (rol contra seguimiento, cambio contra integración, archivado contra integración) DEBE poder obtenerse del plan (`status`, REQ-25.15) para que `sdd-apply` la proponga en lugar de preguntarla.
+El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio puede tener rama de rol y otro no. Un rol cuyo nombre sea `archive` colisionaría con la rama de archivado y DEBE rechazarse con `invalid_name` al planificar las ramas de rol (supuesto S-15). `ensure` NO DEBE publicar la rama de seguimiento: DEBE avisar de que la persona la sube al remoto antes del primer PR de rol. La rama destino propuesta para cada PR (rol contra seguimiento, cambio contra integración, archivado contra integración) DEBE poder obtenerse del plan (`status`, RF-BRA-16) para que `sdd-apply` la proponga en lugar de preguntarla.
 (Previously: el PR final a la rama de integración llevaba el archive y no existía rama de archivado; los escenarios de ramas de rol, de la colisión con `archive` y del destino de los PR se ejecutaban sobre un monorepo con los roles `core` y `qa`, y ahora se ejecutan sobre `multirepo` o sobre el rol `fullstack`)
 
 #### Scenario: Un rol, rama única
@@ -334,13 +334,13 @@ El modelo DEBE evaluarse por repositorio: en un mismo cambio un repositorio pued
 
 ---
 
-### Requirement: Papel del Repositorio según la Topología (REQ-25.5)
+### Requirement: Papel del Repositorio según la Topología (RF-BRA-05)
 
 El tratamiento de cada repositorio DEBE depender de su papel:
 
-- **`monorepo-embedded`**: el repositorio del planning home es un repositorio con rama de cambio y recibe el modelo de REQ-25.4, con worktree según el modo de trabajo.
+- **`monorepo-embedded`**: el repositorio del planning home es un repositorio con rama de cambio y recibe el modelo de RF-BRA-04, con worktree según el modo de trabajo.
 - **`multirepo`, repositorio de specs**: se trabaja SIEMPRE in situ, en su rama de integración. `ensure` NO DEBE crear en él ramas del cambio, ramas de rol, ramas de archivado ni worktrees. `ensure` NO DEBE hacer checkout en él: si no está en su rama de integración, o está en una rama de rol del cambio, DEBE rechazar con `specs_repo_not_on_integration`, nombrando la rama actual y la continuación.
-- **`multirepo`, repositorios de código**: cada repositorio tocado por algún rol del cambio recibe el modelo de REQ-25.4 desde su propia rama de integración.
+- **`multirepo`, repositorios de código**: cada repositorio tocado por algún rol del cambio recibe el modelo de RF-BRA-04 desde su propia rama de integración.
 
 Git no admite dos worktrees sobre la misma rama, por lo que la integración del repositorio de specs solo puede trabajarse in situ.
 
@@ -368,7 +368,7 @@ Git no admite dos worktrees sobre la misma rama, por lo que la integración del 
 
 ---
 
-### Requirement: Raíz Git Real de Cada Repositorio (REQ-25.6)
+### Requirement: Raíz Git Real de Cada Repositorio (RF-BRA-06)
 
 El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>.repositories[].path` con las consultas de git (`rev-parse --show-toplevel` y `--git-common-dir`), nunca suponiendo un directorio `.git` literal. Una ruta que sea una subcarpeta de un repositorio, el propio `.`, o un repositorio compartido por varios roles DEBE resolverse a una única raíz git deduplicada, con un único conjunto de ramas y worktrees por raíz. Una ruta que no pertenezca a ningún repositorio git DEBE omitirse sin abortar el resto del plan: el JSON DEBE listarla como omitida con el código `not_a_git_repository` y un mensaje que nombre la ruta y el rol. Una ruta declarada que no exista DEBE reportarse con el mismo tratamiento de omisión y mensaje.
 
@@ -381,7 +381,7 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 - **DADO** dos roles con rutas `app/web` y `app/api`, ambas dentro del mismo repositorio
 - **CUANDO** se planifica el cambio
 - **ENTONCES** el plan contiene un único repositorio
-- **Y** los dos roles se cuentan como roles del cambio sobre ese repositorio (REQ-25.4)
+- **Y** los dos roles se cuentan como roles del cambio sobre ese repositorio (RF-BRA-04)
 
 #### Scenario: Ruta que no es un repositorio git se omite con mensaje
 - **DADO** un rol cuya ruta `docs/` existe pero no pertenece a ningún repositorio git
@@ -396,9 +396,9 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 
 ---
 
-### Requirement: `ensure` Planifica de Forma Determinista y es Idempotente (REQ-25.7)
+### Requirement: `ensure` Planifica de Forma Determinista y es Idempotente (RF-BRA-07)
 
-`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON, salvo `branches[].createdFrom` y `branches[].createdFromRef` (REQ-27.15), que se emiten solo en la ejecución que crea la rama y no en las siguientes. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si no existe en local pero existe su referencia remota local, DEBE adoptarla (REQ-27.15); si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de REQ-25.4 (en `multirepo` ese repositorio se trabaja in situ, REQ-25.5, y no se crea ninguna rama), y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (REQ-25.45) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
+`axiom branch ensure` DEBE producir un plan determinista a partir de la topología, `git:`, `repositories:`, los roles del kickoff y las preferencias personales, y ejecutarlo con git. Una segunda ejecución con los mismos argumentos y el mismo estado DEBE no cambiar nada (ni ramas, ni worktrees, ni registro) y devolver el mismo JSON, salvo `branches[].createdFrom` y `branches[].createdFromRef` (RF-BRA-27), que se emiten solo en la ejecución que crea la rama y no en las siguientes. El comando DEBE crear solo lo que falta: si la rama ya existe, DEBE reutilizarla sin moverla ni reiniciarla; si no existe en local pero existe su referencia remota local, DEBE adoptarla (RF-BRA-27); si ya existe su worktree registrado, DEBE devolver su ruta. Si la rama ya está desplegada en un worktree que el registro local no conoce, DEBE rechazar con `branch_checked_out_elsewhere` nombrando la ruta. Cuando todavía no hay kickoff sellado (el cambio se nombra antes del sellado), `ensure` DEBE planificar solo para el repositorio del planning home la rama `<prefijo>/<cambio>`, que es idéntica en ambos modelos de RF-BRA-04 (en `multirepo` ese repositorio se trabaja in situ, RF-BRA-05, y no se crea ninguna rama), y una ejecución posterior, ya con el kickoff sellado, DEBE completar de forma incremental las ramas de rol y los repositorios de código que correspondan sin alterar lo ya creado (supuesto S-1). `ensure --change <c> --archive` (RF-BRA-13) es un plan aparte con las mismas garantías de determinismo e idempotencia: no altera las ramas del cambio ya creadas.
 (Previously: los escenarios de ejecución previa y posterior al sellado y de `--archive` suponían un monorepo con los roles `core` y `qa` y la rama `feat/x-core`; ahora el de roles se ejecuta sobre `multirepo` y los de monorepo sobre el rol `fullstack`)
 
 
@@ -423,7 +423,7 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 #### Scenario: Ejecución previa al sellado y posterior al sellado
 - **DADO** un cambio nombrado sin `kickoff.yaml`, en un multirepo con los roles `core` y `qa` sobre el mismo repositorio de código `repo-backend`
 - **CUANDO** se ejecuta `ensure --change x` antes del sellado y de nuevo después de sellar los dos roles
-- **ENTONCES** la primera ejecución no crea ninguna rama, porque el repositorio de specs de un multirepo se trabaja in situ en su rama de integración (REQ-25.5)
+- **ENTONCES** la primera ejecución no crea ninguna rama, porque el repositorio de specs de un multirepo se trabaja in situ en su rama de integración (RF-BRA-05)
 - **Y** la segunda conserva lo ya creado y crea en `repo-backend` `feat/x`, `feat/x-core` y `feat/x-qa` (las de rol desde `feat/x`)
 
 #### Scenario: En monorepo la ejecución posterior al sellado no añade ramas
@@ -452,15 +452,15 @@ El motor DEBE obtener la raíz git de cada repositorio declarado en `roles.<rol>
 
 ---
 
-### Requirement: `ensure`: Modo de Trabajo `worktree`, `in_place` y `ask` (REQ-25.8)
+### Requirement: `ensure`: Modo de Trabajo `worktree`, `in_place` y `ask` (RF-BRA-08)
 
 `ensure` DEBE leer el modo de trabajo del hub personal (`~/.axiom/workspaces.json`) y NUNCA de `axiom.yaml`. Sin preferencias guardadas para el proyecto, estén o no registrado, el modo DEBE ser `worktree`.
 
-- `worktree`: DEBE crear la rama desde la base y un worktree en la raíz de worktrees (REQ-25.11). NUNCA DEBE modificar el HEAD, el índice ni el árbol de trabajo del checkout principal.
-- `in_place`: DEBE crear (o seleccionar) la rama y hacer checkout de ella en el propio repositorio, sujeto a REQ-25.9.
-- `ask`: DEBE devolver el resultado tipado `decision_required` sin crear nada, sin leer la entrada estándar y sin interactuar; quien invoca (skill o dashboard) presenta la pregunta y repite la orden con la respuesta (`--mode worktree|in_place`, supuesto S-2). La respuesta DEBE registrarse por cambio en el registro local (REQ-25.14) y las ejecuciones posteriores para ese mismo cambio, incluida la de `--archive`, DEBEN reutilizarla sin volver a preguntar. Una respuesta registrada NO modifica la preferencia personal del hub.
+- `worktree`: DEBE crear la rama desde la base y un worktree en la raíz de worktrees (RF-BRA-11). NUNCA DEBE modificar el HEAD, el índice ni el árbol de trabajo del checkout principal.
+- `in_place`: DEBE crear (o seleccionar) la rama y hacer checkout de ella en el propio repositorio, sujeto a RF-BRA-09.
+- `ask`: DEBE devolver el resultado tipado `decision_required` sin crear nada, sin leer la entrada estándar y sin interactuar; quien invoca (skill o dashboard) presenta la pregunta y repite la orden con la respuesta (`--mode worktree|in_place`, supuesto S-2). La respuesta DEBE registrarse por cambio en el registro local (RF-BRA-15) y las ejecuciones posteriores para ese mismo cambio, incluida la de `--archive`, DEBEN reutilizarla sin volver a preguntar. Una respuesta registrada NO modifica la preferencia personal del hub.
 
-Un `--mode` distinto del ya materializado para el cambio DEBE rechazarse con `plan_conflict`. `decision_required` y `plan_conflict` NO son exclusivos del modo de trabajo: el modo de promoción (REQ-25.46 y REQ-25.47) usa el mismo mecanismo y el mismo esquema de pregunta, con una pregunta distinta por repositorio, y cuando faltan ambas respuestas la del modo de trabajo se pregunta primero.
+Un `--mode` distinto del ya materializado para el cambio DEBE rechazarse con `plan_conflict`. `decision_required` y `plan_conflict` NO son exclusivos del modo de trabajo: el modo de promoción (RF-BRA-28 y RF-BRA-29) usa el mismo mecanismo y el mismo esquema de pregunta, con una pregunta distinta por repositorio, y cuando faltan ambas respuestas la del modo de trabajo se pregunta primero.
 (Previously: `decision_required` y `plan_conflict` se describían solo para el modo de trabajo)
 
 #### Scenario: Sin preferencias el modo es `worktree`
@@ -512,7 +512,7 @@ Un `--mode` distinto del ya materializado para el cambio DEBE rechazarse con `pl
 
 ---
 
-### Requirement: `ensure` en `in_place` Rechaza un Árbol Sucio (REQ-25.9)
+### Requirement: `ensure` en `in_place` Rechaza un Árbol Sucio (RF-BRA-09)
 
 En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el repositorio cuya rama va a cambiar tenga cambios sin confirmar (ficheros rastreados modificados o ficheros sin seguimiento no ignorados), sin modificar el repositorio y nombrando los ficheros afectados y la continuación (confirmar, guardar o usar el modo `worktree`). Si el repositorio ya está desplegado en la rama esperada, `ensure` DEBE ser un no-op aunque el árbol esté sucio, porque no cambia de rama.
 
@@ -534,9 +534,9 @@ En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el reposi
 
 ---
 
-### Requirement: Base sin Red y `--fetch` Explícito (REQ-25.10)
+### Requirement: Base sin Red y `--fetch` Explícito (RF-BRA-10)
 
-`ensure` NO DEBE realizar ninguna operación remota por defecto. La base de cada rama DEBE ser `origin/<base efectiva>` si esa referencia existe en local y, si no, la rama local de la base efectiva, donde la base efectiva es la rama de integración (en los repositorios de una sola etapa y en modo `release`) o la rama principal (en los repositorios con dos etapas en modo `branch`, REQ-25.47); si la propia rama del cambio no existe en local pero existe su referencia remota local, la rama se adopta desde ella (REQ-27.15). El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si la base procede de la referencia remota local o de la rama local; la rama del cambio adoptada desde el remoto se indica aparte, en `branches[].createdFrom: remote` y `createdFromRef`, REQ-27.15) y `fetched: false`. Solo con `--fetch` el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Si no existe la base efectiva ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (REQ-25.12). El `--fetch` sigue exigiendo la autorización de la persona.
+`ensure` NO DEBE realizar ninguna operación remota por defecto. La base de cada rama DEBE ser `origin/<base efectiva>` si esa referencia existe en local y, si no, la rama local de la base efectiva, donde la base efectiva es la rama de integración (en los repositorios de una sola etapa y en modo `release`) o la rama principal (en los repositorios con dos etapas en modo `branch`, RF-BRA-29); si la propia rama del cambio no existe en local pero existe su referencia remota local, la rama se adopta desde ella (RF-BRA-27). El JSON DEBE devolver, para cada repositorio, `base.ref`, `base.sha`, `base.source` (que indica si la base procede de la referencia remota local o de la rama local; la rama del cambio adoptada desde el remoto se indica aparte, en `branches[].createdFrom: remote` y `createdFromRef`, RF-BRA-27) y `fetched: false`. Solo con `--fetch` el comando PUEDE ejecutar un `fetch` previo, y entonces `fetched` DEBE ser `true`. Si `--fetch` falla, `ensure` DEBE terminar con `fetch_failed` sin crear nada (supuesto S-8). Si no existe la base efectiva ni local ni como referencia remota local, DEBE rechazar con `base_not_found`, nombrando la rama esperada. `--base <ref>` sustituye la base (RF-BRA-12). El `--fetch` sigue exigiendo la autorización de la persona.
 (Previously: la base era siempre la rama de integración; ahora es la base efectiva del modo de promoción, que sin `main_branch` es la rama de integración)
 
 #### Scenario: Sin `--fetch` no hay operaciones remotas
@@ -587,9 +587,9 @@ En modo `in_place`, `ensure` DEBE rechazar con `dirty_worktree` cuando el reposi
 
 ---
 
-### Requirement: Rutas de Worktree y Límite de Longitud (REQ-25.11)
+### Requirement: Rutas de Worktree y Límite de Longitud (RF-BRA-11)
 
-La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>|-archive]/<repo>`, donde el sufijo `-<rol>` solo aparece si existe rama de rol para ese repositorio (REQ-25.4), el sufijo `-archive` solo aparece en el worktree de la rama de archivado (REQ-25.45) y `<repo>` es el último segmento de la ruta (`path`) del repositorio, tal como la declara `repositories:` o el rol (supuesto S-4); para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git, y si dos repositorios del plan tuvieran el mismo último segmento, `ensure` DEBE rechazar con `invalid_name` nombrando ambos, antes de crear nada (supuesto S-17). La raíz de worktrees DEBE ser la preferencia personal del hub o, sin ella, `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`, fuera de cualquier repositorio. El planificador DEBE validar, antes de crear nada, que el nombre del cambio es válido a la vez como componente de rama git y como nombre de directorio en Windows, y que la longitud de cada ruta de worktree no supera el límite admitido: el de la plataforma menos un margen de 40 caracteres, es decir, 220 caracteres en Windows sin rutas largas habilitadas (260 menos 40). Si no se cumple, DEBE rechazar con `invalid_name` o `path_too_long`, nombrando la ruta, su longitud y el máximo, sin crear ramas ni worktrees.
+La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>|-archive]/<repo>`, donde el sufijo `-<rol>` solo aparece si existe rama de rol para ese repositorio (RF-BRA-04), el sufijo `-archive` solo aparece en el worktree de la rama de archivado (RF-BRA-13) y `<repo>` es el último segmento de la ruta (`path`) del repositorio, tal como la declara `repositories:` o el rol (supuesto S-4); para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git, y si dos repositorios del plan tuvieran el mismo último segmento, `ensure` DEBE rechazar con `invalid_name` nombrando ambos, antes de crear nada (supuesto S-17). La raíz de worktrees DEBE ser la preferencia personal del hub o, sin ella, `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`, fuera de cualquier repositorio. El planificador DEBE validar, antes de crear nada, que el nombre del cambio es válido a la vez como componente de rama git y como nombre de directorio en Windows, y que la longitud de cada ruta de worktree no supera el límite admitido: el de la plataforma menos un margen de 40 caracteres, es decir, 220 caracteres en Windows sin rutas largas habilitadas (260 menos 40). Si no se cumple, DEBE rechazar con `invalid_name` o `path_too_long`, nombrando la ruta, su longitud y el máximo, sin crear ramas ni worktrees.
 (Previously: `<repo>` era el nombre declarado en `repositories:` o el del directorio de la raíz git, la ruta no contemplaba la rama de archivado y el límite solo exigía «margen» sin cifra; el escenario del sufijo de rol se ejecutaba sobre un monorepo con los roles `core` y `qa` y ahora sobre `multirepo`)
 
 #### Scenario: Ruta sin sufijo de rol con una sola rama
@@ -644,9 +644,9 @@ La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>
 
 
 ---
-### Requirement: Excepciones por Cambio `--prefix`, `--branch` y `--base` (REQ-25.12)
+### Requirement: Excepciones por Cambio `--prefix`, `--branch` y `--base` (RF-BRA-12)
 
-`ensure` DEBE admitir `--prefix`, `--branch` y `--base` como excepciones por cambio a la política del proyecto. `--prefix` sustituye el prefijo; `--branch` sustituye el nombre completo de la rama del cambio (la rama de seguimiento si hay ramas de rol, y las ramas de rol derivan como `<--branch>-<rol>`) y se aplica a todos los repositorios del plan, que `--repo` PUEDE acotar; `--base` sustituye la base de todos los repositorios del plan. Las excepciones DEBEN registrarse en el registro local y, cuando el cambio se selle, reflejarse en la instantánea del `kickoff.yaml` (REQ-25.36) para que ejecuciones posteriores y las guardas usen los mismos nombres. Una invocación posterior cuyas excepciones contradigan las ya materializadas DEBE rechazarse con `plan_conflict`. Con `--archive` (REQ-25.45) solo se admite `--prefix`, que fija el prefijo de la rama de archivado sin contradecir el del cambio; `--branch` y `--base` se rechazan con `plan_conflict` (supuesto S-16). Sin `--prefix`, la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`.
+`ensure` DEBE admitir `--prefix`, `--branch` y `--base` como excepciones por cambio a la política del proyecto. `--prefix` sustituye el prefijo; `--branch` sustituye el nombre completo de la rama del cambio (la rama de seguimiento si hay ramas de rol, y las ramas de rol derivan como `<--branch>-<rol>`) y se aplica a todos los repositorios del plan, que `--repo` PUEDE acotar; `--base` sustituye la base de todos los repositorios del plan. Las excepciones DEBEN registrarse en el registro local y, cuando el cambio se selle, reflejarse en la instantánea del `kickoff.yaml` (RF-KOF-06) para que ejecuciones posteriores y las guardas usen los mismos nombres. Una invocación posterior cuyas excepciones contradigan las ya materializadas DEBE rechazarse con `plan_conflict`. Con `--archive` (RF-BRA-13) solo se admite `--prefix`, que fija el prefijo de la rama de archivado sin contradecir el del cambio; `--branch` y `--base` se rechazan con `plan_conflict` (supuesto S-16). Sin `--prefix`, la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`.
 (Previously: las excepciones no contemplaban la rama de archivado)
 
 #### Scenario: `--branch` fija el nombre de la rama del cambio
@@ -694,11 +694,11 @@ La ruta del worktree de cada rama DEBE ser `<raíz de worktrees>/<cambio>[-<rol>
 
 ---
 
-### Requirement: Rama de Archivado y `ensure --archive` (REQ-25.45)
+### Requirement: Rama de Archivado y `ensure --archive` (RF-BRA-13)
 
-En los repositorios con rama de cambio (`monorepo-embedded`), el archivado de un cambio DEBE hacerse en una rama propia, la rama de archivado `<prefijo>/<cambio>-archive`, y entregarse en un PR documental aparte, **después** de fusionar el PR del cambio (REQ-25.39). `axiom branch ensure --change <c> --archive` DEBE crearla en el repositorio del planning home, saliendo de la rama de integración con la base de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama de integración local), y aplicando el modo de trabajo personal de REQ-25.8 (en modo `worktree`, un worktree en `<raíz de worktrees>/<cambio>-archive/<repo>`; en `in_place`, el checkout de la rama en el propio repositorio, sujeto a REQ-25.9). `--archive` admite `--prefix` (REQ-25.12). La rama de archivado sale siempre de la rama de integración y espera solo a que el cambio esté fusionado en ella, en cualquier modo de promoción: NUNCA espera a la fusión en la rama principal ni usa la base efectiva de REQ-25.47.
+En los repositorios con rama de cambio (`monorepo-embedded`), el archivado de un cambio DEBE hacerse en una rama propia, la rama de archivado `<prefijo>/<cambio>-archive`, y entregarse en un PR documental aparte, **después** de fusionar el PR del cambio (RF-ARC-07). `axiom branch ensure --change <c> --archive` DEBE crearla en el repositorio del planning home, saliendo de la rama de integración con la base de RF-BRA-10 (`origin/<integración>` si existe en local y, si no, la rama de integración local), y aplicando el modo de trabajo personal de RF-BRA-08 (en modo `worktree`, un worktree en `<raíz de worktrees>/<cambio>-archive/<repo>`; en `in_place`, el checkout de la rama en el propio repositorio, sujeto a RF-BRA-09). `--archive` admite `--prefix` (RF-BRA-12). La rama de archivado sale siempre de la rama de integración y espera solo a que el cambio esté fusionado en ella, en cualquier modo de promoción: NUNCA espera a la fusión en la rama principal ni usa la base efectiva de RF-BRA-29.
 
-Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol no incluye la carpeta `changes/<cambio>/` del planning home, o si la incluye pero el cambio está en fusión intermedia (REQ-26.11), `ensure --archive` DEBE rechazar con `change_not_integrated`, sin crear nada, nombrando la base evaluada y sugiriendo `--fetch` cuando la carpeta falta; cuando el rechazo se debe a una fusión intermedia, el mensaje DEBE indicarlo y NO DEBE sugerir `--fetch` como remedio, porque la base ya contiene la versión integrada. NO hay `fetch` implícito: solo con `--fetch` explícito se actualiza la referencia remota local antes de evaluar (REQ-25.10). `ensure --archive` es idempotente: reutiliza la rama y el worktree existentes sin moverlos, y NO publica la rama. En `multirepo` NO existe rama de archivado: `--archive` DEBE rechazarse con `archive_branch_not_applicable` porque el archive se hace in situ en la rama de integración del repositorio de specs (REQ-25.5); tampoco existe en el carril ODD (`--lane odd`), que no tiene archive. `done` también cubre la rama de archivado (REQ-25.16 y REQ-25.17) y `status` la incluye en el plan (REQ-25.15).
+Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol no incluye la carpeta `changes/<cambio>/` del planning home, o si la incluye pero el cambio está en fusión intermedia (RF-BRA-26), `ensure --archive` DEBE rechazar con `change_not_integrated`, sin crear nada, nombrando la base evaluada y sugiriendo `--fetch` cuando la carpeta falta; cuando el rechazo se debe a una fusión intermedia, el mensaje DEBE indicarlo y NO DEBE sugerir `--fetch` como remedio, porque la base ya contiene la versión integrada. NO hay `fetch` implícito: solo con `--fetch` explícito se actualiza la referencia remota local antes de evaluar (RF-BRA-10). `ensure --archive` es idempotente: reutiliza la rama y el worktree existentes sin moverlos, y NO publica la rama. En `multirepo` NO existe rama de archivado: `--archive` DEBE rechazarse con `archive_branch_not_applicable` porque el archive se hace in situ en la rama de integración del repositorio de specs (RF-BRA-05); tampoco existe en el carril ODD (`--lane odd`), que no tiene archive. `done` también cubre la rama de archivado (RF-BRA-17 y RF-BRA-18) y `status` la incluye en el plan (RF-BRA-16).
 (Previously: no decía expresamente que, con un repositorio de dos etapas, la rama de archivado sale de la integración y solo espera a la fusión en ella)
 
 #### Scenario: Crea la rama de archivado desde la integración con el cambio fusionado
@@ -770,9 +770,9 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 
 ---
 
-### Requirement: Carril ODD con la Misma Política (REQ-25.13)
+### Requirement: Carril ODD con la Misma Política (RF-BRA-14)
 
-`ensure --lane odd --change <feature>` DEBE aplicar la misma política que SDD, con estas particularidades: el documento ODD es `<workspaceRoot>/odd/tasks/<feature>.md`, en el repositorio del planning home. En `monorepo-embedded`, la rama es `<prefijo>/<feature>` con worktree según el modo; en `multirepo`, el repositorio de specs se trabaja in situ en su rama de integración (REQ-25.5) y los repositorios de código se incluyen solo bajo demanda con `--repo <ruta>`, porque ODD no divide en roles y cada repositorio incluido recibe solo la rama `<prefijo>/<feature>`. En el carril ODD no existe `kickoff.yaml` ni instantánea ni rama de archivado: las únicas protecciones que se aplican son la propia política de `ensure` y la guarda D (REQ-25.21), que bloquea las escrituras del agente en `odd/tasks/` fuera de la rama que corresponde, porque no hay escritor Go del documento ODD.
+`ensure --lane odd --change <feature>` DEBE aplicar la misma política que SDD, con estas particularidades: el documento ODD es `<workspaceRoot>/odd/tasks/<feature>.md`, en el repositorio del planning home. En `monorepo-embedded`, la rama es `<prefijo>/<feature>` con worktree según el modo; en `multirepo`, el repositorio de specs se trabaja in situ en su rama de integración (RF-BRA-05) y los repositorios de código se incluyen solo bajo demanda con `--repo <ruta>`, porque ODD no divide en roles y cada repositorio incluido recibe solo la rama `<prefijo>/<feature>`. En el carril ODD no existe `kickoff.yaml` ni instantánea ni rama de archivado: las únicas protecciones que se aplican son la propia política de `ensure` y la guarda D (RF-BRA-22), que bloquea las escrituras del agente en `odd/tasks/` fuera de la rama que corresponde, porque no hay escritor Go del documento ODD.
 
 #### Scenario: ODD en monorepo prepara rama y worktree
 - **DADO** un monorepo `monorepo-embedded` en modo `worktree`
@@ -798,9 +798,9 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 
 ---
 
-### Requirement: Registro Local en el Git Common Dir (REQ-25.14)
+### Requirement: Registro Local en el Git Common Dir (RF-BRA-15)
 
-`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (REQ-25.8) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (REQ-25.46). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (REQ-25.46), mientras `status` DEBE informar que el cambio no tiene registro.
+`ensure` DEBE mantener un registro local por cambio, fuera de cualquier árbol versionado, en el git common dir del repositorio del planning home, obtenido con `git rev-parse --git-common-dir` (nunca asumiendo `.git`). El registro DEBE contener las rutas absolutas de todos los repositorios, ramas (incluida la de archivado) y worktrees del cambio, la respuesta a `ask` del modo de trabajo (RF-BRA-08) y, por cada repositorio con dos etapas, el modo de promoción resuelto y su origen (RF-BRA-28). Los campos del modo de promoción DEBEN ser opcionales: un registro sin ellos sigue siendo válido y un binario anterior los ignora. El registro es la fuente operativa del modo de promoción en todos los carriles. Debe ser accesible con el mismo contenido desde el checkout principal y desde cualquier worktree enlazado del mismo repositorio. Si el registro se borra, el repositorio NO DEBE verse afectado y `ensure` DEBE reconstruirlo de forma idempotente a partir del estado de git (ramas y worktrees existentes) y, para el modo de promoción, de la instantánea del `kickoff.yaml` si la hay (RF-BRA-28), mientras `status` DEBE informar que el cambio no tiene registro.
 (Previously: el registro no guardaba el modo de promoción ni su origen y la reconstrucción no consultaba la instantánea)
 (Previously: la cláusula sobre la coexistencia con el estado local de RDD (`<git common dir>/gentle-ai/`) y sus linajes; RDD se retira (C-01-e) y `ensure` ya no tiene nada que preservar de él.)
 
@@ -840,9 +840,9 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 - **CUANDO** se ejecuta `ensure --change x --archive` o de nuevo `ensure --change x`
 - **ENTONCES** el modo de `repo-backend` sigue siendo `branch` en el registro
 
-### Requirement: `status`: Estado de Ramas y Worktrees del Cambio (REQ-25.15)
+### Requirement: `status`: Estado de Ramas y Worktrees del Cambio (RF-BRA-16)
 
-`axiom branch status` DEBE informar, para cada repositorio del cambio, su papel (repositorio con rama de cambio, repositorio de specs in situ o repositorio de código), la rama esperada y la rama actual, la ruta absoluta del worktree si existe, si el árbol tiene cambios sin confirmar, el modo de trabajo materializado, la base, y el número de commits que la rama lleva de atraso o de adelanto respecto de su base calculado solo con referencias locales, y la rama destino propuesta para el PR (REQ-25.4). En un repositorio con dos etapas, la base es la base efectiva de su modo de promoción (REQ-25.47) y DEBE informar además de ese modo, de la rama principal y, en modo `branch` con la rama del cambio ya fusionada en la integración, de la siguiente PR con destino la rama principal (REQ-25.48). Cuando existe la rama de archivado, DEBE incluirla con los mismos datos. `--change` es opcional: sin él, `status` lista los cambios registrados y los cambios pendientes de archivar (REQ-25.20); con él, además informa de si el cambio solicitado está pendiente de archivar. NUNCA DEBE realizar operaciones remotas. DEBE poder ejecutarse desde el checkout principal, desde cualquier worktree del cambio y con `--cwd`. Un cambio sin ramas creadas DEBE informarse como no iniciado (`not_started`), no como error.
+`axiom branch status` DEBE informar, para cada repositorio del cambio, su papel (repositorio con rama de cambio, repositorio de specs in situ o repositorio de código), la rama esperada y la rama actual, la ruta absoluta del worktree si existe, si el árbol tiene cambios sin confirmar, el modo de trabajo materializado, la base, y el número de commits que la rama lleva de atraso o de adelanto respecto de su base calculado solo con referencias locales, y la rama destino propuesta para el PR (RF-BRA-04). En un repositorio con dos etapas, la base es la base efectiva de su modo de promoción (RF-BRA-29) y DEBE informar además de ese modo, de la rama principal y, en modo `branch` con la rama del cambio ya fusionada en la integración, de la siguiente PR con destino la rama principal (RF-BRA-30). Cuando existe la rama de archivado, DEBE incluirla con los mismos datos. `--change` es opcional: sin él, `status` lista los cambios registrados y los cambios pendientes de archivar (RF-BRA-21); con él, además informa de si el cambio solicitado está pendiente de archivar. NUNCA DEBE realizar operaciones remotas. DEBE poder ejecutarse desde el checkout principal, desde cualquier worktree del cambio y con `--cwd`. Un cambio sin ramas creadas DEBE informarse como no iniciado (`not_started`), no como error.
 (Previously: `status` no informaba del modo de promoción ni de la siguiente PR, y la base era siempre la de integración)
 
 #### Scenario: Estado de un cambio con rama y worktree
@@ -885,15 +885,15 @@ Si la base resuelta no contiene ya el cambio fusionado, es decir, si su árbol n
 
 ---
 
-### Requirement: `done`: Detección de Fusión por Capas (REQ-25.16)
+### Requirement: `done`: Detección de Fusión por Capas (RF-BRA-17)
 
-`axiom branch done` DEBE determinar, para cada rama del cambio, si ya está fusionada en su destino (la rama de rol en la de seguimiento; la rama del cambio en la de integración, o en la rama principal cuando el repositorio tiene dos etapas y modo `branch`, REQ-25.49; la rama de archivado en la de integración) con estas capas, de la primera a la última, deteniéndose en la primera que confirme:
+`axiom branch done` DEBE determinar, para cada rama del cambio, si ya está fusionada en su destino (la rama de rol en la de seguimiento; la rama del cambio en la de integración, o en la rama principal cuando el repositorio tiene dos etapas y modo `branch`, RF-BRA-31; la rama de archivado en la de integración) con estas capas, de la primera a la última, deteniéndose en la primera que confirme:
 
 1. **Ascendencia** (`ancestry`): la rama es ancestro del destino.
 2. **Árbol equivalente** (`equivalent_tree`): la fusión simulada de la rama en el destino (`git merge-tree --write-tree`) produce el árbol del destino. Detecta los merges por squash o rebase aunque el destino haya avanzado después. La capa DEBE omitirse sin error si la versión de git no admite la orden (Q1, a verificar en `sdd-design`).
-3. **Evidencia `pr_merged`** (`pr_merged`): el `gates.yaml` del cambio contiene una evidencia `pr_merged` ya verificada. Esta capa NO aplica a la rama de archivado: la evidencia del cambio acredita el PR del cambio y no el PR documental de archivado, de modo que la rama de archivado solo se confirma por las capas 1 y 2. Tampoco aplica cuando el destino es la rama principal en modo `branch`: la evidencia no identifica el destino del PR del cambio y por tanto no acredita la fusión en la rama principal (REQ-25.49).
+3. **Evidencia `pr_merged`** (`pr_merged`): el `gates.yaml` del cambio contiene una evidencia `pr_merged` ya verificada. Esta capa NO aplica a la rama de archivado: la evidencia del cambio acredita el PR del cambio y no el PR documental de archivado, de modo que la rama de archivado solo se confirma por las capas 1 y 2. Tampoco aplica cuando el destino es la rama principal en modo `branch`: la evidencia no identifica el destino del PR del cambio y por tanto no acredita la fusión en la rama principal (RF-BRA-31).
 
-Si ninguna capa confirma la fusión, la rama NO se considera fusionada y `done` DEBE exigir `--force` (REQ-25.17). El JSON DEBE indicar, por rama, qué capa la confirmó con los tokens `ancestry`, `equivalent_tree`, `pr_merged` o `forced`, cada uno con su etiqueta en castellano. La detección DEBE usar solo referencias locales; solo con `--fetch` PUEDE actualizarse el remoto antes de evaluar.
+Si ninguna capa confirma la fusión, la rama NO se considera fusionada y `done` DEBE exigir `--force` (RF-BRA-18). El JSON DEBE indicar, por rama, qué capa la confirmó con los tokens `ancestry`, `equivalent_tree`, `pr_merged` o `forced`, cada uno con su etiqueta en castellano. La detección DEBE usar solo referencias locales; solo con `--fetch` PUEDE actualizarse el remoto antes de evaluar.
 (Previously: el destino de la rama del cambio era siempre la rama de integración y la capa `pr_merged` se aplicaba a todas las ramas salvo la de archivado)
 
 #### Scenario: Fusión real detectada por ascendencia
@@ -951,9 +951,9 @@ Si ninguna capa confirma la fusión, la rama NO se considera fusionada y `done` 
 
 ---
 
-### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (REQ-25.17)
+### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (RF-BRA-18)
 
-Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, REQ-27.5) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
+Para cada rama cuya fusión esté confirmada por la detección por capas de RF-BRA-17, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, RF-BRA-31, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, RF-PUB-01) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (RF-BRA-01). Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
 
 En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkout a la rama de integración (también en modo de promoción `branch`) y, después, eliminar la rama local, y solo si el árbol está limpio. En `in_place`, `--force` solo salta la exigencia de fusión confirmada: NUNCA salta la de árbol limpio, de modo que con cambios sin confirmar `done` rechaza con `dirty_worktree` sin cambiar de rama ni eliminar nada.
 (Previously: el `.gates.lock` vacío que deja `gate record` contaba como cambio sin confirmar y `done` se negaba con `dirty_worktree` tras archivar)
@@ -967,7 +967,7 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **Y** la rama remota `origin/feat/x` permanece intacta y no consta ninguna operación remota
 
 #### Scenario: Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`
-- **DADO** `feat/x` integrada en `main` mediante un squash, confirmada por la capa `equivalent_tree` (REQ-25.16)
+- **DADO** `feat/x` integrada en `main` mediante un squash, confirmada por la capa `equivalent_tree` (RF-BRA-17)
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** se eliminan su worktree y la rama local aunque git no la considere fusionada
 
@@ -1044,17 +1044,17 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** el repositorio queda desplegado en la rama de integración y se elimina la rama local `feat/x`
 
-### Requirement: Veredicto Único de Rama, por Papel del Repositorio (REQ-25.18)
+### Requirement: Veredicto Único de Rama, por Papel del Repositorio (RF-BRA-19)
 
-Las guardas A (REQ-25.19), B (`blocked(wrong_branch)` de `axiom-sdd-cli-integration`) y D (`guard`, REQ-25.21) DEBEN consultar un único veredicto: «¿esta rama es la que corresponde a este cambio en este repositorio según su papel?». El veredicto DEBE ser uno de los tokens `correct`, `wrong_branch` o `not_applicable` (REQ-25.2). La consulta se hace en uno de dos contextos: el **ordinario** y el de **archivado** (la fase archive de `axiom sdd status` y el escritor de `axiom sdd archive-compose`). Las reglas son:
+Las guardas A (RF-BRA-20), B (`blocked(wrong_branch)` de `axiom-sdd-cli-integration`) y D (`guard`, RF-BRA-22) DEBEN consultar un único veredicto: «¿esta rama es la que corresponde a este cambio en este repositorio según su papel?». El veredicto DEBE ser uno de los tokens `correct`, `wrong_branch` o `not_applicable` (RF-BRA-02). La consulta se hace en uno de dos contextos: el **ordinario** y el de **archivado** (la fase archive de `axiom sdd status` y el escritor de `axiom sdd archive-compose`). Las reglas son:
 
 - **Repositorio con rama de cambio, contexto ordinario**: es correcta la rama del cambio o, si existen ramas de rol de ese cambio, cualquiera de ellas; cualquier otra rama (incluida la de integración, la de archivado y un HEAD desacoplado) es `wrong_branch`.
 - **Repositorio con rama de cambio, contexto de archivado**: es correcta únicamente la rama de archivado `<prefijo>/<cambio>-archive`; cualquier otra (la del cambio, la de integración, una de rol o una ajena) es `wrong_branch`, y su continuación DEBE ser `axiom branch ensure --cwd <ruta> --change <c> --archive`.
 - **Repositorio de specs en multirepo**: es correcta únicamente la rama de integración, también en el contexto de archivado (no hay rama de archivado); una rama de rol del cambio o cualquier otra es `wrong_branch`.
 - **Repositorio de código en multirepo**: el veredicto solo se evalúa cuando el consultante es apply (el estado de aplicación de `sdd status` o la guarda D sobre una ruta de ese repositorio); en otras fases es `not_applicable`.
-- **Exenciones**: es `not_applicable` para un cambio cuyo `kickoff.yaml` no contiene instantánea (REQ-25.37), para los sumideros `e2e-cumulative` y `cumulative-<rol>` por nombre, y cuando la ruta no pertenece a ningún repositorio git o git no está disponible (en esos casos la consulta NO DEBE bloquear y DEBE advertirlo).
+- **Exenciones**: es `not_applicable` para un cambio cuyo `kickoff.yaml` no contiene instantánea (RF-KOF-07), para los sumideros `e2e-cumulative` y `cumulative-<rol>` por nombre, y cuando la ruta no pertenece a ningún repositorio git o git no está disponible (en esos casos la consulta NO DEBE bloquear y DEBE advertirlo).
 
-Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuando existe (REQ-25.36) y, si el cambio aún no tiene kickoff (se está creando), de la política de `axiom.yaml` (REQ-25.3); el nombre de la rama de archivado se toma del registro local si `ensure --archive` recibió `--prefix` (REQ-25.12). Un `wrong_branch` DEBE incluir la rama actual, la esperada, el repositorio y la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane` o `--archive`. El veredicto NO consulta si la rama de integración contiene cambios activos: con el archive en un PR documental aparte es normal que los contenga temporalmente (REQ-25.20).
+Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuando existe (RF-KOF-06) y, si el cambio aún no tiene kickoff (se está creando), de la política de `axiom.yaml` (RF-BRA-03); el nombre de la rama de archivado se toma del registro local si `ensure --archive` recibió `--prefix` (RF-BRA-12). Un `wrong_branch` DEBE incluir la rama actual, la esperada, el repositorio y la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane` o `--archive`. El veredicto NO consulta si la rama de integración contiene cambios activos: con el archive en un PR documental aparte es normal que los contenga temporalmente (RF-BRA-21).
 (Previously: lo consultaban cuatro capas, incluida una de CI; el veredicto no distinguía el contexto de archivado y los valores eran etiquetas en castellano)
 
 #### Scenario: Rama del cambio en un monorepo es correcta
@@ -1123,9 +1123,9 @@ Los nombres esperados DEBEN obtenerse de la instantánea del `kickoff.yaml` cuan
 
 ---
 
-### Requirement: Guarda A en Todo Escritor Go de la Carpeta del Cambio (REQ-25.19)
+### Requirement: Guarda A en Todo Escritor Go de la Carpeta del Cambio (RF-BRA-20)
 
-Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de REQ-25.18 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom archive context prepare` y `axiom archive context verify` (plan y traza del contexto, que consultan el veredicto en el contexto de archivado), `axiom archive adopt scan --change` (inventario de adopción) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. Cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (REQ-25.18). Cada escritor DEBE tener una prueba propia de negativa.
+Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio DEBE consultar el veredicto de RF-BRA-19 antes de escribir y, ante `wrong_branch`, DEBE negarse sin escribir nada y devolver el error tipado con la continuación. Esto incluye como mínimo: la creación de un incremento (el escritor compartido por el dashboard y `axiom change create`), la migración al acumulativo, la creación de handoff (`axiom handoff create` y el servicio del dashboard), `kickoff seal`, el registro de compuertas (`gate record`), el marcador de instancia del consentimiento de autoridad de edición, `axiom archive context prepare` y `axiom archive context verify` (plan y traza del contexto, que consultan el veredicto en el contexto de archivado), `axiom archive adopt scan --change` (inventario de adopción) y `axiom sdd archive-compose` (que consulta el veredicto en el contexto de archivado). El dashboard y `axiom change create` DEBEN ejecutar `ensure` y después escribir con el escritor guardado; el escritor guardado DEBE negarse fuera de rama aunque se invoque sin haber ejecutado `ensure`. Cualquier escritura que alcance la carpeta de un cambio pasa por un escritor guardado. La guarda NO DEBE bloquear cambios exentos (RF-BRA-19). Cada escritor DEBE tener una prueba propia de negativa.
 (Previously: la lista incluía `axiom sdd integrate` (`integration.yaml`), retirado; ahora incluye `axiom archive context prepare|verify` y `axiom archive adopt scan --change`)
 (Previously: añadía que la TUI solo lista cambios y no ejecuta `ensure`, con un escenario propio.)
 
@@ -1169,10 +1169,10 @@ Todo escritor Go que cree o modifique ficheros dentro de la carpeta de un cambio
 - **CUANDO** se escribe en `openspec/changes/e2e-cumulative` o en `openspec/changes/cumulative-core`
 - **ENTONCES** la escritura procede
 
-### Requirement: Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard (REQ-25.20)
+### Requirement: Cambios Pendientes de Archivar Visibles en `status` y en el Dashboard (RF-BRA-21)
 
-Los cambios pendientes de archivar de un repositorio con rama de cambio, es decir, los cambios activos presentes en el árbol de la rama de integración (directorios bajo `changes/` del planning home distintos de `archive/` y de los sumideros `e2e-cumulative` y `cumulative-<rol>`, excluidos por nombre) que no están en fusión intermedia (REQ-26.11), DEBEN mostrarse en `axiom branch status` (REQ-25.15) y en el dashboard (REQ-25.34 de `local-web-dashboard`). Es información, no una comprobación: NO existe ningún código de fallo por su presencia, NO hay integración con la CI y NO DEBE bloquear ninguna orden ni guarda. La evaluación DEBE hacerse sobre la referencia de integración local de REQ-25.10 (`origin/<integración>` si existe en local y, si no, la rama local), sin cambiar de rama y sin operaciones remotas; si esa referencia no puede resolverse, la lista se omite con un aviso y sin error. Solo los directorios cuentan como cambios; los ficheros sueltos de `changes/` no lo son. En el repositorio de specs de un multirepo no aplica: allí los cambios activos viven en la rama de integración de forma normal. Cada cambio pendiente DEBE indicar la continuación para archivarlo (`axiom branch ensure --change <c> --archive`, REQ-25.45).
-(Previously: todo cambio activo presente en el árbol de la rama de integración contaba como pendiente de archivar; ahora se excluye el que está en fusión intermedia (REQ-26.11))
+Los cambios pendientes de archivar de un repositorio con rama de cambio, es decir, los cambios activos presentes en el árbol de la rama de integración (directorios bajo `changes/` del planning home distintos de `archive/` y de los sumideros `e2e-cumulative` y `cumulative-<rol>`, excluidos por nombre) que no están en fusión intermedia (RF-BRA-26), DEBEN mostrarse en `axiom branch status` (RF-BRA-16) y en el dashboard (RF-WEB-11 de `local-web-dashboard`). Es información, no una comprobación: NO existe ningún código de fallo por su presencia, NO hay integración con la CI y NO DEBE bloquear ninguna orden ni guarda. La evaluación DEBE hacerse sobre la referencia de integración local de RF-BRA-10 (`origin/<integración>` si existe en local y, si no, la rama local), sin cambiar de rama y sin operaciones remotas; si esa referencia no puede resolverse, la lista se omite con un aviso y sin error. Solo los directorios cuentan como cambios; los ficheros sueltos de `changes/` no lo son. En el repositorio de specs de un multirepo no aplica: allí los cambios activos viven en la rama de integración de forma normal. Cada cambio pendiente DEBE indicar la continuación para archivarlo (`axiom branch ensure --change <c> --archive`, RF-BRA-13).
+(Previously: todo cambio activo presente en el árbol de la rama de integración contaba como pendiente de archivar; ahora se excluye el que está en fusión intermedia (RF-BRA-26))
 
 #### Scenario: Un cambio fusionado y sin archivar figura como pendiente
 - **DADO** un repositorio con rama de cambio cuya referencia de integración local contiene `openspec/changes/inc-99-ejemplo/`
@@ -1221,19 +1221,19 @@ Los cambios pendientes de archivar de un repositorio con rama de cambio, es deci
 - **ENTONCES** el observador no registra ninguna operación remota
 
 #### Scenario: Una fusión intermedia no figura como pendiente
-- **DADO** la referencia de integración que contiene `openspec/changes/x/` en fusión intermedia (REQ-26.11) y `openspec/changes/y/` fusionado sin marca de cesión
+- **DADO** la referencia de integración que contiene `openspec/changes/x/` en fusión intermedia (RF-BRA-26) y `openspec/changes/y/` fusionado sin marca de cesión
 - **CUANDO** se ejecuta `axiom branch status --json`
 - **ENTONCES** la lista de pendientes de archivar contiene `y` y no contiene `x`
 - **Y** el código de salida es `0`
 
 ---
 
-### Requirement: `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto (REQ-25.21)
+### Requirement: `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto (RF-BRA-22)
 
 `axiom branch guard` DEBE ser el hook de la capa D que usan los runtimes con hooks. Recibe del runtime la herramienta y la ruta que va a escribir el agente, y su efecto depende de la ruta:
 
-1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de REQ-25.18 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18), y aunque git ignore el documento.
-2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (REQ-25.14) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso. Un fichero que git ignora en su checkout tampoco se avisa: es configuración o resultado local que no viaja con la rama. Un fichero versionado no cuenta como ignorado aunque coincida con un patrón de exclusión.
+1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de RF-BRA-19 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18), y aunque git ignore el documento.
+2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (RF-BRA-15) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso. Un fichero que git ignora en su checkout tampoco se avisa: es configuración o resultado local que no viaja con la rama. Un fichero versionado no cuenta como ignorado aunque coincida con un patrón de exclusión.
 3. En cualquier otro caso DEBE no hacer nada: sin cambio activo registrado en el repositorio, o fuera de un proyecto Axiom, termina sin bloquear, sin avisar y sin escribir.
 
 DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientras las lecturas de ficheros no pidan un aviso (bloqueo, documento de Axiom, sin cambio activo registrado, checkout en la rama de un cambio activo, fuera de un proyecto Axiom), NO DEBE lanzar ningún proceso. Solo cuando las lecturas piden un aviso, y antes de emitirlo, el hook PUEDE lanzar una única consulta local `git check-ignore`, sin red y dentro de su presupuesto de tiempo, para descartar un fichero ignorado; si esa consulta falla, git no está disponible o se agota su límite, el aviso se emite como si el fichero no estuviera ignorado. DEBE ser fail-open: ante cualquier error interno, configuración o registro ilegibles o expiración del presupuesto, NO DEBE bloquear ni avisar. Solo afecta a las escrituras del agente a través del runtime: NUNCA al editor humano ni a las órdenes de la CLI. Es la única capa, junto con la doctrina, que cubre el documento ODD. NO DEBE escribir ningún fichero. El canal no bloqueante por el que cada runtime entrega el aviso se decide en `sdd-design`.
@@ -1335,9 +1335,9 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientra
 - **CUANDO** una persona guarda un fichero desde su editor o ejecuta una orden de la CLI
 - **ENTONCES** el hook no se ejecuta, porque solo lo invoca el runtime en las escrituras del agente y no se instala ningún hook de git ni observador de ficheros
 
-### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (REQ-25.22)
+### Requirement: Instalación del Hook por `axiom sync` y Prohibición de Hooks de Git (RF-BRA-23)
 
-`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex, OpenCode y VS Code Copilot) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de REQ-25.21 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2). En VS Code Copilot el hook se instala solo con el ámbito `workspace`, en un fichero propio de Axiom (`.github/hooks/axiom-branch-guard.json`, con el formato del arnés de Copilot) que no altera los demás ficheros de `.github/hooks`. Como en `preToolUse` de ese arnés cualquier código de salida distinto de 0 deniega la escritura, la orden instalada DEBE terminar con código 0 aunque `axiom` falte o falle, y la decisión DEBE ir solo por la salida estándar.
+`axiom sync` DEBE instalar `axiom branch guard` como hook en los runtimes donde existan hooks demostrados (Claude Code, Codex, OpenCode y VS Code Copilot) de forma idempotente y determinista (misma entrada, mismo resultado), sin duplicar entradas en ejecuciones repetidas y sin alterar las entradas de hooks ajenas. Una ejecución posterior de `axiom sync` que ya no deba instalarlo DEBE retirarlo. NO DEBE instalar hooks de git (`pre-commit`, `pre-push`, ni otros) en ningún repositorio, propio o de terceros. NO DEBE instalarse en Pi, que no tiene canal demostrado. Con el ámbito de instalación `workspace` (el predeterminado) el hook queda en la configuración del proyecto; con `--scope global` queda en la de usuario, que corre en todo repositorio. En ambos casos la inercia de RF-BRA-22 fuera de proyectos Axiom y fuera de repositorios con un cambio activo registrado es condición de esta instalación: el hook no hace nada, no lanza procesos y no escribe en ellos. Un proyecto Axiom es el que tiene un `axiom.yaml` propio o el que se alcanza mediante un puntero `.axiom-workspace`, en el directorio o en un ancestro; un `openspec/` suelto no basta. El formato del hook de Codex se verifica en su documentación oficial al implementar (A-2). En VS Code Copilot el hook se instala solo con el ámbito `workspace`, en un fichero propio de Axiom (`.github/hooks/axiom-branch-guard.json`, con el formato del arnés de Copilot) que no altera los demás ficheros de `.github/hooks`. Como en `preToolUse` de ese arnés cualquier código de salida distinto de 0 deniega la escritura, la orden instalada DEBE terminar con código 0 aunque `axiom` falte o falle, y la decisión DEBE ir solo por la salida estándar.
 (Previously: los runtimes con hook eran Claude Code, Codex y OpenCode)
 (Previously: la inercia exigida era solo fuera de proyectos Axiom)
 (Previously: la inercia se justificaba solo por la configuración global de Claude Code y un `openspec/` suelto valía como marcador de proyecto Axiom)
@@ -1384,9 +1384,9 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientra
 - **CUANDO** se ejecuta `axiom sync --scope global`
 - **ENTONCES** no se escribe ningún fichero de hooks de VS Code Copilot
 
-### Requirement: Las Skills y la Doctrina Delegan en el Verbo (REQ-25.23)
+### Requirement: Las Skills y la Doctrina Delegan en el Verbo (RF-BRA-24)
 
-Las skills `sdd-apply`, `sdd-spec`, `sdd-design`, `sdd-propose`, `sdd-explore` y `sdd-archive`, la convención compartida `_shared` y los orquestadores por runtime DEBEN delegar en `axiom branch` la creación de ramas y worktrees. En concreto: (1) el Paso 2c de `sdd-apply` (cuestionario de worktree y `git worktree add` manual) y las reglas ODD-5.1, ODD-5.2, ODD-5.5 y ODD-5.6 («specs siempre en main», `git commit` y `git push` previos al handoff, `scripts/cleanup-worktree.sh`) DEBEN retirarse y sustituirse por la invocación de `axiom branch ensure`/`done`; (2) `sdd-spec` y `sdd-design` NO DEBEN prescribir trabajar en `main`/`master` ni prohibir ramas y worktrees; (3) `sdd-apply` DEBE proponer la rama destino del PR a partir del plan (REQ-25.4) en lugar de preguntarla; (4) las skills DEBEN usar las rutas absolutas del JSON de `ensure` con `--cwd`, `git -C` y rutas absolutas, nunca el directorio de trabajo heredado; (5) las rutas y literales de rama de integración de las skills DEBEN referirse a la rama de integración resuelta y no al literal `main`; (6) `sdd-archive` DEBE indicar que, en monorepo, el archive se hace en la rama de archivado creada con `axiom branch ensure --change <c> --archive` una vez fusionado el PR del cambio (REQ-25.39).
+Las skills `sdd-apply`, `sdd-spec`, `sdd-design`, `sdd-propose`, `sdd-explore` y `sdd-archive`, la convención compartida `_shared` y los orquestadores por runtime DEBEN delegar en `axiom branch` la creación de ramas y worktrees. En concreto: (1) el Paso 2c de `sdd-apply` (cuestionario de worktree y `git worktree add` manual) y las reglas ODD-5.1, ODD-5.2, ODD-5.5 y ODD-5.6 («specs siempre en main», `git commit` y `git push` previos al handoff, `scripts/cleanup-worktree.sh`) DEBEN retirarse y sustituirse por la invocación de `axiom branch ensure`/`done`; (2) `sdd-spec` y `sdd-design` NO DEBEN prescribir trabajar en `main`/`master` ni prohibir ramas y worktrees; (3) `sdd-apply` DEBE proponer la rama destino del PR a partir del plan (RF-BRA-04) en lugar de preguntarla; (4) las skills DEBEN usar las rutas absolutas del JSON de `ensure` con `--cwd`, `git -C` y rutas absolutas, nunca el directorio de trabajo heredado; (5) las rutas y literales de rama de integración de las skills DEBEN referirse a la rama de integración resuelta y no al literal `main`; (6) `sdd-archive` DEBE indicar que, en monorepo, el archive se hace en la rama de archivado creada con `axiom branch ensure --change <c> --archive` una vez fusionado el PR del cambio (RF-ARC-07).
 
 #### Scenario: Retirada del cuestionario de worktree y de ODD-5.x
 - **DADO** el texto de `sdd-apply/SKILL.md`
@@ -1414,7 +1414,7 @@ Las skills `sdd-apply`, `sdd-spec`, `sdd-design`, `sdd-propose`, `sdd-explore` y
 - **DADO** los textos de las skills SDD y los literales de rama de integración del motor (el valor por defecto de `pr_merged` de `kickoff` y el valor del dashboard)
 - **CUANDO** se inspeccionan
 - **ENTONCES** las skills se refieren a la rama de integración resuelta
-- **Y** el motor usa la rama de integración resuelta de la política en lugar de un literal `main`, que solo permanece como valor por defecto de la política (REQ-25.3)
+- **Y** el motor usa la rama de integración resuelta de la política en lugar de un literal `main`, que solo permanece como valor por defecto de la política (RF-BRA-03)
 
 #### Scenario: `sdd-archive` remite a la rama de archivado
 - **DADO** el texto de `sdd-archive/SKILL.md`
@@ -1423,9 +1423,9 @@ Las skills `sdd-apply`, `sdd-spec`, `sdd-design`, `sdd-propose`, `sdd-explore` y
 
 ---
 
-### Requirement: Dogfooding en este Repositorio (REQ-25.24)
+### Requirement: Dogfooding en este Repositorio (RF-BRA-25)
 
-El repositorio de Axiom DEBE declarar en su `axiom.yaml` el bloque `git:` con `integration_branch: main` y `branch_prefix: inc`, y DEBE superar `axiom workspace validate`. `CLAUDE.md`, `AGENTS.md` y `GEMINI.md` DEBEN remitir a `axiom branch` para crear ramas y worktrees y NO DEBEN decir que el worktree se decide en apply. El destino de `scripts/axiom-worktree.ps1` y `.sh` y de `scripts/claude-hooks/guard-primary-checkout.ps1` (envoltorio fino o retirada) se resuelve en `sdd-design` (Q6). Los scripts `scripts/axiom-worktree.ps1` y `.sh` NO DEBEN fijar `main` a mano en la subida de la rama principal local tras `done`: DEBEN tomar la rama de integración resuelta del `repositories[].integrationBranch` del `axiom branch status --json` y, si no hay un JSON legible, caer a `main`; con la configuración actual de este repositorio `new`, `pr` y `done` DEBEN seguir funcionando igual. El producto no añade ninguna exención para cambios preexistentes: un cambio activo ya fusionado, como `inc-23-knowledge-profile` mientras no se archive, aparece como cambio pendiente de archivar (REQ-25.20) sin bloquear nada.
+El repositorio de Axiom DEBE declarar en su `axiom.yaml` el bloque `git:` con `integration_branch: main` y `branch_prefix: inc`, y DEBE superar `axiom workspace validate`. `CLAUDE.md`, `AGENTS.md` y `GEMINI.md` DEBEN remitir a `axiom branch` para crear ramas y worktrees y NO DEBEN decir que el worktree se decide en apply. El destino de `scripts/axiom-worktree.ps1` y `.sh` y de `scripts/claude-hooks/guard-primary-checkout.ps1` (envoltorio fino o retirada) se resuelve en `sdd-design` (Q6). Los scripts `scripts/axiom-worktree.ps1` y `.sh` NO DEBEN fijar `main` a mano en la subida de la rama principal local tras `done`: DEBEN tomar la rama de integración resuelta del `repositories[].integrationBranch` del `axiom branch status --json` y, si no hay un JSON legible, caer a `main`; con la configuración actual de este repositorio `new`, `pr` y `done` DEBEN seguir funcionando igual. El producto no añade ninguna exención para cambios preexistentes: un cambio activo ya fusionado, como `inc-23-knowledge-profile` mientras no se archive, aparece como cambio pendiente de archivar (RF-BRA-21) sin bloquear nada.
 (Previously: los scripts de dogfooding fijaban `main` a mano tras `done`)
 
 #### Scenario: `axiom.yaml` de este repositorio declara `git:`
@@ -1459,13 +1459,13 @@ El repositorio de Axiom DEBE declarar en su `axiom.yaml` el bloque `git:` con `i
 - **DADO** este repositorio con `integration_branch: main` y sin `main_branch`
 - **CUANDO** se ejecutan `new`, `pr` y `done` de ambos scripts
 - **ENTONCES** su comportamiento y su salida no cambian
-### Requirement: Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar (REQ-26.11)
+### Requirement: Fusión Intermedia de un Cambio no es Integración ni Pendiente de Archivar (RF-BRA-26)
 
-Una **fusión intermedia** es el estado de un cambio cuya carpeta `changes/<cambio>/` está presente en el árbol de la rama de integración porque se fusionó una PR que llevaba una aprobación con cesión de una parada (REQ-26.5 de `sdd-block-review-gates`) y el trabajo del cambio aún no está completo. El criterio observable es: el registro de puertas integrado (`gates.yaml`) contiene al menos una compuerta aprobada con la marca de cesión y NO están aprobadas todas las compuertas `role-apply:<rol>` del roster sellado (supuesto A-7). Una rama del cambio **publicada** en `origin` (REQ-27.7 de `sdd-docs-publication`) que aún no se ha fusionado NO es una fusión intermedia ni una rama integrada: la evaluación sigue haciéndose únicamente sobre la referencia de integración local de REQ-25.10. Un cambio en fusión intermedia:
+Una **fusión intermedia** es el estado de un cambio cuya carpeta `changes/<cambio>/` está presente en el árbol de la rama de integración porque se fusionó una PR que llevaba una aprobación con cesión de una parada (RF-GAT-11 de `sdd-block-review-gates`) y el trabajo del cambio aún no está completo. El criterio observable es: el registro de puertas integrado (`gates.yaml`) contiene al menos una compuerta aprobada con la marca de cesión y NO están aprobadas todas las compuertas `role-apply:<rol>` del roster sellado (supuesto A-7). Una rama del cambio **publicada** en `origin` (RF-PUB-03 de `sdd-docs-publication`) que aún no se ha fusionado NO es una fusión intermedia ni una rama integrada: la evaluación sigue haciéndose únicamente sobre la referencia de integración local de RF-BRA-10. Un cambio en fusión intermedia:
 
-- NO DEBE figurar entre los cambios pendientes de archivar de `axiom branch status` ni del dashboard (REQ-25.20), ni ofrecer la continuación de archivado;
-- NO DEBE ser aceptado por `ensure --archive` como base que contiene el cambio fusionado (REQ-25.45), que rechaza con `change_not_integrated`;
-- NO DEBE bloquear ninguna orden ni guarda, y la evaluación sigue haciéndose sobre la referencia de integración local de REQ-25.10, sin cambiar de rama y sin operaciones remotas;
+- NO DEBE figurar entre los cambios pendientes de archivar de `axiom branch status` ni del dashboard (RF-BRA-21), ni ofrecer la continuación de archivado;
+- NO DEBE ser aceptado por `ensure --archive` como base que contiene el cambio fusionado (RF-BRA-13), que rechaza con `change_not_integrated`;
+- NO DEBE bloquear ninguna orden ni guarda, y la evaluación sigue haciéndose sobre la referencia de integración local de RF-BRA-10, sin cambiar de rama y sin operaciones remotas;
 - PUEDE mostrarse como «en curso (fusión intermedia)», sin código de fallo y sin continuación de archivado.
 
 Si el registro de puertas o el kickoff integrados no pueden leerse, el cambio DEBE tratarse como hasta ahora (supuesto A-8), sin error. Un cambio fusionado sin ninguna marca de cesión NO es una fusión intermedia.
@@ -1526,9 +1526,9 @@ Si el registro de puertas o el kickoff integrados no pueden leerse, el cambio DE
 - **CUANDO** se ejecuta `axiom branch status --json`
 - **ENTONCES** `x` no se clasifica como fusión intermedia ni como pendiente de archivar
 - **Y** el código de salida es `0` y no se ejecuta ninguna operación remota
-### Requirement: `ensure` Adopta la Rama Publicada si Existe como Referencia Remota Local (REQ-27.15)
+### Requirement: `ensure` Adopta la Rama Publicada si Existe como Referencia Remota Local (RF-BRA-27)
 
-Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO existe como rama local y SÍ existe la referencia local `refs/remotes/origin/<rama>`, `axiom branch ensure` DEBE crear la rama local desde esa referencia, con `origin/<rama>` como rama de seguimiento (upstream), en lugar de crearla desde la base de integración, y DEBE materializar su worktree o hacer su checkout según el modo de trabajo (REQ-25.8). El JSON DEBE indicarlo en la entrada de esa rama de `branches[]` con `createdFrom: remote` y `createdFromRef: refs/remotes/origin/<rama>` (tokens estables en inglés, con su etiqueta legible en castellano); `base.ref`, `base.sha` y `base.source` NO cambian de semántica y siguen describiendo la base de integración. La adopción solo usa lecturas locales: NO DEBE ejecutar `fetch`, `pull` ni `ls-remote` por defecto; solo con `--fetch` explícito y autorizado (REQ-25.10) se ejecuta el `fetch` previo, y entonces la adopción usa la referencia ya actualizada. Si la rama local ya existe, se reutiliza sin moverla (REQ-25.7), aunque exista la referencia remota. Si no existe la referencia remota, `ensure` DEBE comportarse como hasta ahora (crear desde la base) y el resultado DEBE sugerir `--fetch` (con la salvedad de que requiere autorización de la persona). La adopción NO DEBE alterar el kickoff sellado ni modificar la referencia remota. En `monorepo-embedded`, una cesión publicada (REQ-26.5 de `sdd-block-review-gates`) ya NO exige una PR fusionada para que otra persona continúe: basta `git fetch` (o `ensure --fetch`) y `ensure`.
+Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO existe como rama local y SÍ existe la referencia local `refs/remotes/origin/<rama>`, `axiom branch ensure` DEBE crear la rama local desde esa referencia, con `origin/<rama>` como rama de seguimiento (upstream), en lugar de crearla desde la base de integración, y DEBE materializar su worktree o hacer su checkout según el modo de trabajo (RF-BRA-08). El JSON DEBE indicarlo en la entrada de esa rama de `branches[]` con `createdFrom: remote` y `createdFromRef: refs/remotes/origin/<rama>` (tokens estables en inglés, con su etiqueta legible en castellano); `base.ref`, `base.sha` y `base.source` NO cambian de semántica y siguen describiendo la base de integración. La adopción solo usa lecturas locales: NO DEBE ejecutar `fetch`, `pull` ni `ls-remote` por defecto; solo con `--fetch` explícito y autorizado (RF-BRA-10) se ejecuta el `fetch` previo, y entonces la adopción usa la referencia ya actualizada. Si la rama local ya existe, se reutiliza sin moverla (RF-BRA-07), aunque exista la referencia remota. Si no existe la referencia remota, `ensure` DEBE comportarse como hasta ahora (crear desde la base) y el resultado DEBE sugerir `--fetch` (con la salvedad de que requiere autorización de la persona). La adopción NO DEBE alterar el kickoff sellado ni modificar la referencia remota. En `monorepo-embedded`, una cesión publicada (RF-GAT-11 de `sdd-block-review-gates`) ya NO exige una PR fusionada para que otra persona continúe: basta `git fetch` (o `ensure --fetch`) y `ensure`.
 
 #### Scenario: Adopta la rama publicada sin rama local
 
@@ -1601,20 +1601,20 @@ Si la rama de un cambio (rama del cambio, rama de rol o rama de archivado) NO ex
 - **ENTONCES** obtiene la rama `inc/x` con los documentos aprobados
 - **Y** `axiom sdd status` proyecta la fase siguiente cedida
 
-### Requirement: Modo de Promoción por Repositorio y por Cambio (REQ-25.46)
+### Requirement: Modo de Promoción por Repositorio y por Cambio (RF-BRA-28)
 
 Cuando un repositorio tiene dos etapas (`git.main_branch` declarada y distinta de la rama de integración resuelta de ese repositorio), cada repositorio con rama de cambio DEBE seguir, para cada cambio, uno de dos modos de promoción:
 
-- **`branch`**: la rama del cambio sale de la rama principal, entra en la rama de integración sin borrarse y después pasa a la rama principal, momento en que `done` la borra (REQ-25.49).
+- **`branch`**: la rama del cambio sale de la rama principal, entra en la rama de integración sin borrarse y después pasa a la rama principal, momento en que `done` la borra (RF-BRA-31).
 - **`release`**: la rama del cambio sale de la rama de integración, entra en ella y `done` la borra. El paso de la integración a la rama principal es la release, ajena al cambio.
 
-El modo DEBE resolverse por repositorio, con esta precedencia de mayor a menor: (1) el modo registrado en el registro local del cambio (REQ-25.14); (2) el modo copiado en la instantánea del `kickoff.yaml` (REQ-25.36 de `sdd-lane-kickoff`); (3) la respuesta de la invocación, `--promotion` (REQ-25.47); (4) `promotion` de la entrada del repositorio en `repositories:`; (5) `promotion` del bloque `git:`; (6) el defecto `branch`. El valor `ask` en (4) o en (5) significa que la persona decide al crear la rama: si ningún origen de mayor precedencia fija el modo, `ensure` DEBE devolver `decision_required` (REQ-25.47).
+El modo DEBE resolverse por repositorio, con esta precedencia de mayor a menor: (1) el modo registrado en el registro local del cambio (RF-BRA-15); (2) el modo copiado en la instantánea del `kickoff.yaml` (RF-KOF-06 de `sdd-lane-kickoff`); (3) la respuesta de la invocación, `--promotion` (RF-BRA-29); (4) `promotion` de la entrada del repositorio en `repositories:`; (5) `promotion` del bloque `git:`; (6) el defecto `branch`. El valor `ask` en (4) o en (5) significa que la persona decide al crear la rama: si ningún origen de mayor precedencia fija el modo, `ensure` DEBE devolver `decision_required` (RF-BRA-29).
 
-Un repositorio sin dos etapas, es decir, sin `git.main_branch` o con `git.main_branch` igual a su rama de integración, NO tiene modo de promoción: `promotion` NO tiene efecto, no se pregunta, no se registra ni se copia, y el repositorio se comporta como hasta ahora. El repositorio de specs de un `multirepo` NO tiene modo de promoción porque no recibe ramas de cambio (REQ-25.5).
+Un repositorio sin dos etapas, es decir, sin `git.main_branch` o con `git.main_branch` igual a su rama de integración, NO tiene modo de promoción: `promotion` NO tiene efecto, no se pregunta, no se registra ni se copia, y el repositorio se comporta como hasta ahora. El repositorio de specs de un `multirepo` NO tiene modo de promoción porque no recibe ramas de cambio (RF-BRA-05).
 
 `ensure` DEBE persistir, en el registro local, el modo resuelto de cada repositorio con dos etapas y su origen (el token que indica de qué eslabón de la precedencia procede: respuesta de la persona, indicador de la invocación, ajuste del repositorio, ajuste de `git:`, defecto, instantánea o `legacy`). El registro DEBE ser la fuente operativa del modo en todos los carriles, incluido ODD, que no tiene instantánea. Si el registro no tiene el modo y la instantánea sí, `ensure` DEBE respetar el de la instantánea y registrarlo. El modo registrado NO DEBE perderse en una ejecución posterior de `ensure` ni de `--archive`.
 
-El modo NO DEBE aplicarse con carácter retroactivo (origen `legacy`): (a) un registro que contiene la rama del cambio del repositorio y no contiene modo, o (b) una instantánea sellada sin `main_branch` (REQ-25.36 de `sdd-lane-kickoff`) cuya rama del cambio ya existe en local, DEBEN resolverse como `release` con el origen `legacy`, es decir, como de una sola etapa a efectos de `done` (el destino es la rama de integración); `ensure` DEBE registrarlo y NO DEBE moverse ninguna rama. Un repositorio cuya rama del cambio aún no existe toma el modo que asigne la política vigente.
+El modo NO DEBE aplicarse con carácter retroactivo (origen `legacy`): (a) un registro que contiene la rama del cambio del repositorio y no contiene modo, o (b) una instantánea sellada sin `main_branch` (RF-KOF-06 de `sdd-lane-kickoff`) cuya rama del cambio ya existe en local, DEBEN resolverse como `release` con el origen `legacy`, es decir, como de una sola etapa a efectos de `done` (el destino es la rama de integración); `ensure` DEBE registrarlo y NO DEBE moverse ninguna rama. Un repositorio cuya rama del cambio aún no existe toma el modo que asigne la política vigente.
 
 #### Scenario: Sin `main_branch` nada cambia
 - **DADO** un `axiom.yaml` con `git.integration_branch: develop`, sin `git.main_branch` y con `git.promotion: ask`
@@ -1666,7 +1666,7 @@ El modo NO DEBE aplicarse con carácter retroactivo (origen `legacy`): (a) un re
 - **DADO** un cambio con el modo `release` registrado y la política posterior cambiada a `git.promotion: branch`
 - **CUANDO** se ejecuta de nuevo `ensure --change x`
 - **ENTONCES** el modo sigue siendo `release`
-- **Y** el JSON es idéntico al de la ejecución anterior (REQ-25.7)
+- **Y** el JSON es idéntico al de la ejecución anterior (RF-BRA-07)
 
 #### Scenario: Con el registro borrado se respeta la instantánea
 - **DADO** un cambio sellado con la instantánea con el modo `branch` y su registro local borrado
@@ -1683,7 +1683,7 @@ El modo NO DEBE aplicarse con carácter retroactivo (origen `legacy`): (a) un re
 #### Scenario: Un registro con la rama y sin modo se resuelve como `release` legacy
 - **DADO** un cambio registrado antes de esta capacidad, con la rama del cambio en el registro y sin modo de promoción, y un `axiom.yaml` que ahora declara `git.main_branch: master` y `git.integration_branch: develop`
 - **CUANDO** se ejecuta `ensure --change x`
-- **ENTONCES** la rama existente se reutiliza sin moverla (REQ-25.7)
+- **ENTONCES** la rama existente se reutiliza sin moverla (RF-BRA-07)
 - **Y** el modo resuelto es `release` con el origen `legacy` y se registra
 - **Y** a efectos de `done` el destino es la rama de integración
 
@@ -1712,13 +1712,13 @@ El modo NO DEBE aplicarse con carácter retroactivo (origen `legacy`): (a) un re
 
 ---
 
-### Requirement: `ensure`: Base Efectiva, `ask` y `--promotion` (REQ-25.47)
+### Requirement: `ensure`: Base Efectiva, `ask` y `--promotion` (RF-BRA-29)
 
-La base de la rama del cambio de cada repositorio con dos etapas DEBE ser la **base efectiva** del modo resuelto: la rama principal en `branch` y la rama de integración en `release`. La resolución de la base sigue REQ-25.10 (`origin/<base efectiva>` si existe en local y, si no, la rama local), y un `--base` explícito (REQ-25.12) la sustituye. Si no existe la base efectiva, ni local ni como referencia remota local, `ensure` DEBE rechazar con `base_not_found` nombrando esa rama. Un repositorio sin dos etapas conserva como base la rama de integración. La rama de archivado (REQ-25.45) y las ramas de rol (REQ-25.4) NO cambian de base: la de archivado sale de la rama de integración y las de rol, de su rama de seguimiento.
+La base de la rama del cambio de cada repositorio con dos etapas DEBE ser la **base efectiva** del modo resuelto: la rama principal en `branch` y la rama de integración en `release`. La resolución de la base sigue RF-BRA-10 (`origin/<base efectiva>` si existe en local y, si no, la rama local), y un `--base` explícito (RF-BRA-12) la sustituye. Si no existe la base efectiva, ni local ni como referencia remota local, `ensure` DEBE rechazar con `base_not_found` nombrando esa rama. Un repositorio sin dos etapas conserva como base la rama de integración. La rama de archivado (RF-BRA-13) y las ramas de rol (RF-BRA-04) NO cambian de base: la de archivado sale de la rama de integración y las de rol, de su rama de seguimiento.
 
 `ensure` DEBE aceptar el indicador `--promotion <modo>` y `--promotion <repositorio>=<modo>`, este último repetible, donde `<modo>` es `branch` o `release`. La forma sin repositorio se aplica a todos los repositorios del plan con dos etapas; la forma con repositorio, solo al nombrado. `ask` NO es una respuesta válida de `--promotion`. Un indicador presente pero vacío o un `<modo>` inválido DEBEN rechazarse como uso inválido de la orden sin crear nada. Un `--promotion <repositorio>=<modo>` cuyo `<repositorio>` no nombre ningún repositorio del plan DEBE rechazarse con el código tipado `invalid_name`, sin crear nada, nombrando el repositorio pedido y la lista de nombres válidos del plan. Un `--promotion` que alcance un repositorio sin dos etapas NO tiene efecto y DEBE avisar sin bloquear. Dos indicadores con valores distintos para el mismo repositorio DEBEN rechazarse como uso inválido.
 
-Cuando el modo de un repositorio con dos etapas resuelva a `ask` sin respuesta, `ensure` DEBE devolver el resultado tipado `decision_required`, sin crear nada ni interactuar, con el mismo esquema y mecanismo que el de REQ-25.8: una pregunta, las respuestas `branch` y `release`, cada una con su etiqueta y su efecto en castellano y la invocación exacta que repite la orden con la respuesta. La pregunta DEBE ser de **un repositorio por llamada**, en el orden del plan, nombrando el repositorio en el detalle del resultado; con varios repositorios pendientes las preguntas son secuenciales. Cada invocación propuesta DEBE conservar las respuestas ya dadas en la orden (`--mode`, `--prefix`, `--branch`, `--base`, `--repo` y los `--promotion` previos). Cuando también falta el modo de trabajo (REQ-25.8), esa pregunta va primero y las de promoción después. La respuesta DEBE registrarse por cambio y repositorio en el registro local (REQ-25.14) y las ejecuciones posteriores del cambio, incluida la de `--archive`, DEBEN reutilizarla sin volver a preguntar.
+Cuando el modo de un repositorio con dos etapas resuelva a `ask` sin respuesta, `ensure` DEBE devolver el resultado tipado `decision_required`, sin crear nada ni interactuar, con el mismo esquema y mecanismo que el de RF-BRA-08: una pregunta, las respuestas `branch` y `release`, cada una con su etiqueta y su efecto en castellano y la invocación exacta que repite la orden con la respuesta. La pregunta DEBE ser de **un repositorio por llamada**, en el orden del plan, nombrando el repositorio en el detalle del resultado; con varios repositorios pendientes las preguntas son secuenciales. Cada invocación propuesta DEBE conservar las respuestas ya dadas en la orden (`--mode`, `--prefix`, `--branch`, `--base`, `--repo` y los `--promotion` previos). Cuando también falta el modo de trabajo (RF-BRA-08), esa pregunta va primero y las de promoción después. La respuesta DEBE registrarse por cambio y repositorio en el registro local (RF-BRA-15) y las ejecuciones posteriores del cambio, incluida la de `--archive`, DEBEN reutilizarla sin volver a preguntar.
 
 Un modo pedido (por `--promotion`) distinto del registrado, o distinto del copiado en la instantánea cuando no hay registro, DEBE rechazarse con `plan_conflict`, sin crear nada y sin rebasar ni mover la rama: la rama ya sale de una base concreta. Un modo pedido igual al registrado es un no-op. Con la rama ya creada y sin registro ni instantánea, el modo pedido se acepta como declaración, se registra y NO mueve la rama.
 
@@ -1780,7 +1780,7 @@ Un modo pedido (por `--promotion`) distinto del registrado, o distinto del copia
 #### Scenario: El mismo modo que el registrado es un no-op
 - **DADO** un cambio con la rama creada y el modo `branch` registrado
 - **CUANDO** se ejecuta `ensure --change x --promotion branch`
-- **ENTONCES** el resultado es idéntico al de la ejecución anterior (REQ-25.7)
+- **ENTONCES** el resultado es idéntico al de la ejecución anterior (RF-BRA-07)
 
 #### Scenario: Un modo distinto del de la instantánea se rechaza
 - **DADO** un cambio sin modo registrado, con la instantánea con el modo `branch`
@@ -1829,9 +1829,9 @@ Un modo pedido (por `--promotion`) distinto del registrado, o distinto del copia
 
 ---
 
-### Requirement: `status`: Siguiente PR hacia la Rama Principal en Modo `branch` (REQ-25.48)
+### Requirement: `status`: Siguiente PR hacia la Rama Principal en Modo `branch` (RF-BRA-30)
 
-En un repositorio con dos etapas y modo `branch`, `axiom branch status` DEBE informar de la **siguiente PR** de la rama del cambio. Mientras la rama del cambio no esté fusionada en la rama de integración, el destino propuesto del PR (`prTarget`) DEBE ser la rama de integración. Cuando git, solo con referencias locales y sin ninguna operación remota, confirme que la rama del cambio está fusionada en la rama de integración, por ascendencia o por árbol equivalente (REQ-25.16, capas 1 y 2), `status` DEBE presentar la siguiente PR con la rama del cambio como cabeza y la rama principal como base, y el destino propuesto pasa a ser la rama principal. Si la comprobación no concluye (por ejemplo, la versión de git no admite la capa de árbol equivalente y la rama no es ascendiente), `status` NO DEBE fingir certeza: DEBE mantener la rama de integración como destino y avisar de que no pudo confirmar la fusión.
+En un repositorio con dos etapas y modo `branch`, `axiom branch status` DEBE informar de la **siguiente PR** de la rama del cambio. Mientras la rama del cambio no esté fusionada en la rama de integración, el destino propuesto del PR (`prTarget`) DEBE ser la rama de integración. Cuando git, solo con referencias locales y sin ninguna operación remota, confirme que la rama del cambio está fusionada en la rama de integración, por ascendencia o por árbol equivalente (RF-BRA-17, capas 1 y 2), `status` DEBE presentar la siguiente PR con la rama del cambio como cabeza y la rama principal como base, y el destino propuesto pasa a ser la rama principal. Si la comprobación no concluye (por ejemplo, la versión de git no admite la capa de árbol equivalente y la rama no es ascendiente), `status` NO DEBE fingir certeza: DEBE mantener la rama de integración como destino y avisar de que no pudo confirmar la fusión.
 
 Con modo `release` o con una sola etapa, el destino propuesto es siempre la rama de integración y no hay siguiente PR. `status` DEBE exponer, además, de forma aditiva por repositorio, el modo de promoción resuelto y la rama principal; los campos nuevos NO DEBEN alterar los ya existentes. Si el modo del repositorio es `ask` sin respuesta (sin registro ni instantánea), `status` NO DEBE calcular la etapa: DEBE avisar de que el modo está pendiente de decisión y de que `ensure` lo preguntará, sin fallar y sin inventar un modo.
 
@@ -1880,13 +1880,13 @@ Con modo `release` o con una sola etapa, el destino propuesto es siempre la rama
 
 ---
 
-### Requirement: `done`: Destino de la Confirmación de Fusión según el Modo de Promoción (REQ-25.49)
+### Requirement: `done`: Destino de la Confirmación de Fusión según el Modo de Promoción (RF-BRA-31)
 
-`done` DEBE confirmar la fusión de la rama del cambio contra el destino que corresponde a su modo: en un repositorio con dos etapas y modo `branch`, la **rama principal**; en modo `release` o con una sola etapa, la **rama de integración**, como hasta ahora. Las ramas de rol se siguen confirmando contra su rama de seguimiento y la rama de archivado contra la rama de integración, en cualquier modo (REQ-25.45).
+`done` DEBE confirmar la fusión de la rama del cambio contra el destino que corresponde a su modo: en un repositorio con dos etapas y modo `branch`, la **rama principal**; en modo `release` o con una sola etapa, la **rama de integración**, como hasta ahora. Las ramas de rol se siguen confirmando contra su rama de seguimiento y la rama de archivado contra la rama de integración, en cualquier modo (RF-BRA-13).
 
-En modo `branch`, la confirmación contra la rama principal DEBE usar solo las capas de ascendencia (`ancestry`) y de árbol equivalente (`equivalent_tree`) de REQ-25.16, o `--force`. La evidencia `pr_merged` NO acredita la fusión en la rama principal, porque el `gates.yaml` identifica el PR del cambio y no su destino: en modo `branch`, la capa `pr_merged` NO se usa. En la rama de integración y en modo `release`, las capas siguen como en REQ-25.16.
+En modo `branch`, la confirmación contra la rama principal DEBE usar solo las capas de ascendencia (`ancestry`) y de árbol equivalente (`equivalent_tree`) de RF-BRA-17, o `--force`. La evidencia `pr_merged` NO acredita la fusión en la rama principal, porque el `gates.yaml` identifica el PR del cambio y no su destino: en modo `branch`, la capa `pr_merged` NO se usa. En la rama de integración y en modo `release`, las capas siguen como en RF-BRA-17.
 
-El rechazo `merge_not_confirmed` DEBE nombrar el destino real contra el que se evaluó. En modo `branch`, una rama fusionada solo en la rama de integración NO DEBE borrarse. La tolerancia a squash se mantiene: una rama integrada con squash en la rama principal se confirma por `equivalent_tree` o, si esa capa no concluye, con `--force`. Con el modo `ask` pendiente (sin registro ni instantánea), `done` DEBE confirmar contra la rama principal, el destino más exigente, porque borrar una rama es irreversible; `--force` sigue siendo la salida. El repositorio de specs de un `multirepo` se omite porque no tiene ramas de cambio (REQ-25.5). El resto del comportamiento de `done` (REQ-25.17) no cambia.
+El rechazo `merge_not_confirmed` DEBE nombrar el destino real contra el que se evaluó. En modo `branch`, una rama fusionada solo en la rama de integración NO DEBE borrarse. La tolerancia a squash se mantiene: una rama integrada con squash en la rama principal se confirma por `equivalent_tree` o, si esa capa no concluye, con `--force`. Con el modo `ask` pendiente (sin registro ni instantánea), `done` DEBE confirmar contra la rama principal, el destino más exigente, porque borrar una rama es irreversible; `--force` sigue siendo la salida. El repositorio de specs de un `multirepo` se omite porque no tiene ramas de cambio (RF-BRA-05). El resto del comportamiento de `done` (RF-BRA-18) no cambia.
 
 #### Scenario: En modo `branch` una rama fusionada solo en la integración no se borra
 - **DADO** un repositorio con `main_branch: master`, `integration_branch: develop`, modo `branch` y `feat/x` fusionada en `develop` pero no en `master`
@@ -1947,13 +1947,13 @@ El rechazo `merge_not_confirmed` DEBE nombrar el destino real contra el que se e
 
 ---
 
-### Requirement: Contratos de Integración y Publicación que No Cambian con el Modo (REQ-25.50)
+### Requirement: Contratos de Integración y Publicación que No Cambian con el Modo (RF-BRA-32)
 
 El modo de promoción NO DEBE alterar la semántica de la rama de integración ni los destinos de otros verbos, que siguen refiriéndose a la **primera etapa**:
 
-- `IntegrationBranch` conserva su significado: la rama a la que se dirige el PR de la rama del cambio mientras no esté fusionada en ella (REQ-25.3).
-- El destino de publicación de `axiom sdd publish` (`PublicationTarget`) y el del relevo (`HandOff`) siguen siendo los del plan estático, es decir, la rama de integración, y NO adoptan la siguiente PR de `status` (REQ-25.48).
-- La rama de archivado (REQ-25.45) sale de la rama de integración y `ensure --archive` solo espera a que el cambio esté fusionado en ella, nunca en la rama principal.
+- `IntegrationBranch` conserva su significado: la rama a la que se dirige el PR de la rama del cambio mientras no esté fusionada en ella (RF-BRA-03).
+- El destino de publicación de `axiom sdd publish` (`PublicationTarget`) y el del relevo (`HandOff`) siguen siendo los del plan estático, es decir, la rama de integración, y NO adoptan la siguiente PR de `status` (RF-BRA-30).
+- La rama de archivado (RF-BRA-13) sale de la rama de integración y `ensure --archive` solo espera a que el cambio esté fusionado en ella, nunca en la rama principal.
 - Los repositorios de specs de `multirepo` y las ramas de rol no cambian.
 
 #### Scenario: `IntegrationBranch` no cambia de significado
@@ -1976,11 +1976,11 @@ El modo de promoción NO DEBE alterar la semántica de la rama de integración n
 - **CUANDO** se ejecuta `ensure --change x --archive`
 - **ENTONCES** se rechaza con `change_not_integrated` nombrando `develop`
 
-### Requirement: `ensure --role` Validado contra el Roster Sellado (REQ-43.24)
+### Requirement: `ensure --role` Validado contra el Roster Sellado (RF-BRA-33)
 
 `axiom branch ensure` DEBE aceptar la bandera opcional `--role <id>`. Solo es válida en el carril `sdd`, es incompatible con `--archive` y DEBE referirse a un rol presente en el kickoff sellado del cambio. En caso contrario DEBE rechazar con un error tipado y código distinto de cero ANTES de mutar nada (ni ramas, ni worktrees, ni registro), con los códigos `plan_conflict` (con `--archive`), `role_not_applicable` (fuera del carril `sdd`), `kickoff_not_sealed` (sin kickoff sellado) y `role_not_in_roster` (rol fuera del roster, con el detalle de los roles sellados); un `--role` en blanco es error de uso (salida 2). Sin `--role`, el comportamiento y el JSON de `ensure` NO DEBEN cambiar. Con `--role`, el plan, las ramas creadas y el JSON del motor NO DEBEN diferir de los de la misma invocación sin la bandera.
 
-(Placement: after REQ-27.15)
+(Placement: after RF-BRA-27)
 
 #### Scenario: Rol sellado
 - **DADO** un kickoff sellado con el rol `backend`
@@ -2011,11 +2011,11 @@ El modo de promoción NO DEBE alterar la semántica de la rama de integración n
 - **CUANDO** se comprueba `EnsureRequest`
 - **ENTONCES** no contiene ningún campo de rol
 
-### Requirement: `ensure --role` Listo Emite `role.start` Idempotente (REQ-43.25)
+### Requirement: `ensure --role` Listo Emite `role.start` Idempotente (RF-BRA-34)
 
-Tras un `ensure --role <id>` con estado `ready`, el adaptador CLI DEBE despachar el evento `role.start` (REQ-43.6) con la clave de idempotencia exacta `role.start/<cambio>/<rol>` (REQ-43.7). NO DEBE emitir con un estado distinto de `ready`, sin `--role`, ni desde el dashboard (que llama al motor directamente). Un `ensure --role` repetido NO DEBE duplicar la operación mientras está pendiente (deduplicación por plugin y clave); tras una entrega con éxito la operación sale de la cola, así que la repetición vuelve a despachar la misma clave y la idempotencia recae en el plugin (REQ-43.7). La emisión nunca hace fallar el verbo (REQ-43.10).
+Tras un `ensure --role <id>` con estado `ready`, el adaptador CLI DEBE despachar el evento `role.start` (RF-INT-06) con la clave de idempotencia exacta `role.start/<cambio>/<rol>` (RF-INT-07). NO DEBE emitir con un estado distinto de `ready`, sin `--role`, ni desde el dashboard (que llama al motor directamente). Un `ensure --role` repetido NO DEBE duplicar la operación mientras está pendiente (deduplicación por plugin y clave); tras una entrega con éxito la operación sale de la cola, así que la repetición vuelve a despachar la misma clave y la idempotencia recae en el plugin (RF-INT-07). La emisión nunca hace fallar el verbo (RF-INT-10).
 
-(Placement: after REQ-43.24)
+(Placement: after RF-BRA-33)
 
 #### Scenario: Primera entrada al rol
 - **DADO** el doble configurado y el rol `backend` sellado
@@ -2026,7 +2026,7 @@ Tras un `ensure --role <id>` con estado `ready`, el adaptador CLI DEBE despachar
 - **DADO** `role.start/x/backend` ya entregado
 - **CUANDO** se repite `ensure --change x --role backend`
 - **ENTONCES** `ensure` no cambia nada (idempotente)
-- **Y** el evento se vuelve a despachar con la misma clave `role.start/x/backend`, y el plugin, que es idempotente por clave (entrega al menos una vez, REQ-43.7), no duplica el efecto
+- **Y** el evento se vuelve a despachar con la misma clave `role.start/x/backend`, y el plugin, que es idempotente por clave (entrega al menos una vez, RF-INT-07), no duplica el efecto
 
 #### Scenario: Operación pendiente no se duplica
 - **DADO** `role.start/x/backend` pendiente en la outbox por un fallo
@@ -2047,13 +2047,13 @@ Tras un `ensure --role <id>` con estado `ready`, el adaptador CLI DEBE despachar
 - **DADO** el doble configurado
 - **CUANDO** el dashboard da de alta un incremento llamando al motor
 - **ENTONCES** el doble no recibe ningún evento
-### Requirement: `axiom branch scope`: Alcance del Cambio por Repositorio, de Solo Lectura y con Contrato Versionado (REQ-25.51)
+### Requirement: `axiom branch scope`: Alcance del Cambio por Repositorio, de Solo Lectura y con Contrato Versionado (RF-BRA-35)
 
-`axiom branch scope --change <cambio> --json` DEBE calcular, para cada repositorio de código de la instantánea sellada del cambio, qué aporta el cambio en ese repositorio, usando **una única rama por repositorio**: la rama del cambio que registra `axiom branch ensure`. DEBE emitir un contrato JSON versionado propio (campo `schema` con su versión; distinto del de `axiom branch status`). Cada entrada de repositorio DEBE informar de: identificador del repositorio; rama del cambio; base del modo de promoción (REQ-25.46: `main_branch` en modo `branch`, `integration_branch` en modo `release`) y rama de integración; punto de partida; rango de commits y lista de commits propios; lista de ficheros cambiados por esos commits, **sin** los de `openspec/changes/<cambio>/`; si la rama del cambio está fusionada en la rama de integración (sí o no); y un resultado tipado (REQ-25.53). El contrato DEBE incluir además un resumen a nivel de cambio con la oferta de verificación conjunta (REQ-25.54).
+`axiom branch scope --change <cambio> --json` DEBE calcular, para cada repositorio de código de la instantánea sellada del cambio, qué aporta el cambio en ese repositorio, usando **una única rama por repositorio**: la rama del cambio que registra `axiom branch ensure`. DEBE emitir un contrato JSON versionado propio (campo `schema` con su versión; distinto del de `axiom branch status`). Cada entrada de repositorio DEBE informar de: identificador del repositorio; rama del cambio; base del modo de promoción (RF-BRA-28: `main_branch` en modo `branch`, `integration_branch` en modo `release`) y rama de integración; punto de partida; rango de commits y lista de commits propios; lista de ficheros cambiados por esos commits, **sin** los de `openspec/changes/<cambio>/`; si la rama del cambio está fusionada en la rama de integración (sí o no); y un resultado tipado (RF-BRA-37). El contrato DEBE incluir además un resumen a nivel de cambio con la oferta de verificación conjunta (RF-BRA-38).
 
 La orden DEBE ser de solo lectura: NO DEBE ejecutar `fetch` ni ningún acceso a red, NO DEBE crear ni borrar ramas ni worktrees, NO DEBE modificar referencias, índice ni árbol de trabajo, y NO DEBE escribir en `kickoff.yaml`, `gates.yaml` ni en los documentos del cambio. Solo inspecciona commits: el árbol de trabajo, el índice y los ficheros sin seguimiento NO DEBEN entrar nunca en el resultado. El repositorio de especificaciones in situ de `multirepo` DEBE aparecer con resultado `exempt` y sin cálculo.
 
-**Rechazos y salida.** La orden DEBE rechazar con un error tipado y salida `1`, antes de calcular nada y sin mutar el repositorio: cambio del carril `odd` o kickoff sin instantánea de repositorios, con `scope_not_applicable`; cambio inexistente o sin `kickoff.yaml`, con `kickoff_not_sealed`; configuración, kickoff o instantánea ilegibles, con `config_invalid`; y un fallo de git que ningún otro código cubra, con `git_failed`, que no se degrada a un resultado por repositorio. Un uso incorrecto (falta `--change`, nombre inválido, bandera desconocida o `--fetch`) DEBE terminar con código `2`. El código de salida DEBE ser `0` cuando el alcance se calculó, aunque algún repositorio sea `unverifiable` (REQ-25.2).
+**Rechazos y salida.** La orden DEBE rechazar con un error tipado y salida `1`, antes de calcular nada y sin mutar el repositorio: cambio del carril `odd` o kickoff sin instantánea de repositorios, con `scope_not_applicable`; cambio inexistente o sin `kickoff.yaml`, con `kickoff_not_sealed`; configuración, kickoff o instantánea ilegibles, con `config_invalid`; y un fallo de git que ningún otro código cubra, con `git_failed`, que no se degrada a un resultado por repositorio. Un uso incorrecto (falta `--change`, nombre inválido, bandera desconocida o `--fetch`) DEBE terminar con código `2`. El código de salida DEBE ser `0` cuando el alcance se calculó, aunque algún repositorio sea `unverifiable` (RF-BRA-02).
 
 **Topologías.** En `monorepo-embedded` la única entrada de código es el repositorio del propio proyecto, con `openspec/changes/<cambio>/` excluida de la lista de ficheros. Un cambio cuya instantánea solo contiene el repositorio de specs in situ DEBE producir un resultado calculado con todas sus entradas `exempt` y la oferta `nothing_to_verify`, sin rechazo.
 
@@ -2088,7 +2088,7 @@ La orden DEBE ser de solo lectura: NO DEBE ejecutar `fetch` ni ningún acceso a 
 - **ENTONCES** la orden se rechaza con `scope_not_applicable` y salida distinta de cero
 - **Y** no se ha modificado ninguna referencia ni fichero
 
-### Requirement: `scope`: Punto de Partida Estable en Modo `release` y Exclusión de Commits Ajenos (REQ-25.52)
+### Requirement: `scope`: Punto de Partida Estable en Modo `release` y Exclusión de Commits Ajenos (RF-BRA-36)
 
 El punto de partida del alcance DEBE ser el punto de bifurcación de la rama del cambio respecto de la base de su modo, y DEBE ser **estable** antes y después de que la rama se fusione en la rama de integración: un commit ajeno que llegue a la integración después de la bifurcación NUNCA DEBE entrar en el alcance.
 
@@ -2121,7 +2121,7 @@ El alcance DEBE contener solo los commits que aporta el cambio. Los commits ajen
 - **ENTONCES** la entrada declara el aviso `foreign_commits_possible`
 - **Y** el alcance no presenta esos commits como propios en silencio
 
-### Requirement: `scope`: Resultado Tipado por Repositorio y Motivos de `unverifiable` (REQ-25.53)
+### Requirement: `scope`: Resultado Tipado por Repositorio y Motivos de `unverifiable` (RF-BRA-37)
 
 Cada entrada de repositorio DEBE llevar exactamente un resultado del dominio cerrado `ok`, `empty`, `unverifiable` o `exempt`, y NUNCA DEBE omitirse un repositorio de la instantánea sin una entrada que lo declare.
 
@@ -2130,8 +2130,8 @@ Cada entrada de repositorio DEBE llevar exactamente un resultado del dominio cer
 - `unverifiable`: el alcance no puede calcularse con certeza. El motivo DEBE pertenecer a este dominio cerrado, y no puede haber otro:
   - `branch_missing`: la rama del cambio no existe en local ni como `origin/<rama>` ya descargada. El mensaje DEBE decir «la rama ya no está o falta un fetch autorizado». La orden NO DEBE ejecutar `fetch`.
   - `base_missing`: la base del modo o la rama de integración no existen en local ni como referencia remota ya descargada.
-  - `fork_point_undetermined`: no puede fijarse el punto de partida (REQ-25.52).
-- `exempt`: el repositorio de especificaciones in situ (REQ-25.51).
+  - `fork_point_undetermined`: no puede fijarse el punto de partida (RF-BRA-36).
+- `exempt`: el repositorio de especificaciones in situ (RF-BRA-35).
 
 Cuando la rama solo existe como `origin/<rama>` ya descargada, la entrada DEBE declarar que usó esa referencia. Un repositorio `unverifiable` NO DEBE impedir el cálculo del resto. Una rama borrada tras fusionarse es un límite documentado de esta capacidad: se declara `unverifiable` con `branch_missing` y la doctrina recomienda no borrar las ramas del cambio hasta haber hecho la verificación conjunta.
 
@@ -2165,9 +2165,9 @@ Cuando la rama solo existe como `origin/<rama>` ya descargada, la entrada DEBE d
 - **ENTONCES** el JSON contiene cuatro entradas, cada una con su resultado tipado
 - **Y** el código de salida es `0`
 
-### Requirement: `scope`: Fusión en la Integración y Resumen con la Oferta (REQ-25.54)
+### Requirement: `scope`: Fusión en la Integración y Resumen con la Oferta (RF-BRA-38)
 
-El indicador de fusión de cada repositorio DEBE comprobar que la rama del cambio está fusionada en la **rama de integración** (también en modo `branch`, donde la siguiente PR hacia la rama principal no cuenta; REQ-25.50), usando solo las capas de ascendencia (`ancestry`) y de árbol equivalente (`equivalent_tree`) de REQ-25.16, sin red y sin la capa `pr_merged`. El resultado de cada repositorio DEBE declarar si está fusionado (sí o no).
+El indicador de fusión de cada repositorio DEBE comprobar que la rama del cambio está fusionada en la **rama de integración** (también en modo `branch`, donde la siguiente PR hacia la rama principal no cuenta; RF-BRA-32), usando solo las capas de ascendencia (`ancestry`) y de árbol equivalente (`equivalent_tree`) de RF-BRA-17, sin red y sin la capa `pr_merged`. El resultado de cada repositorio DEBE declarar si está fusionado (sí o no).
 
 El resumen del cambio DEBE incluir un campo `offer` con exactamente uno de los valores `unverifiable`, `pending_merge`, `nothing_to_verify` u `offerable`, con esta precedencia cuando coincidan varios: `unverifiable` (algún repositorio es `unverifiable`) > `pending_merge` (algún repositorio de código `ok` no está fusionado en la integración) > `nothing_to_verify` (ningún repositorio es `ok`: todos `empty` o `exempt`) > `offerable` (todos los repositorios `ok` están fusionados). El resumen DEBE listar los repositorios que motivan un valor distinto de `offerable` con su rama y su motivo. Los repositorios `empty` y `exempt` no son pendientes. El resumen es información de solo lectura: ningún otro verbo DEBE depender de él.
 
@@ -2204,34 +2204,34 @@ Los supuestos son decisiones mínimas tomadas para que los requerimientos sean c
 
 | ID | Supuesto | Estado | Dónde afecta |
 |---|---|---|---|
-| S-1 | La propuesta no indica cómo conocer los roles cuando `ensure` se ejecuta al nombrar el cambio, antes de `kickoff seal`. `ensure` es incremental: antes del sellado planifica solo `<prefijo>/<cambio>` en el repositorio del planning home (idéntica en ambos modelos) y tras el sellado completa ramas de rol y repositorios de código. | Confirmado | REQ-25.7 |
-| S-2 | La respuesta a `decision_required` de `ask` se da con la opción `--mode worktree\|in_place` de `ensure`. | Confirmado | REQ-25.8 |
-| S-3 | `fullstack` no existe en `axiom.yaml`. Cuenta como un único rol que toca todos los repositorios declarados por algún rol y, en monorepo, el del planning home. | Confirmado | Términos, REQ-25.4 |
-| S-4 | `<repo>` es el último segmento de la ruta (`path`) del repositorio (G-5), y `<workspace>-wt` usa el nombre de la carpeta maestra. | Confirmado (actualizado por G-5) | REQ-25.11 |
+| S-1 | La propuesta no indica cómo conocer los roles cuando `ensure` se ejecuta al nombrar el cambio, antes de `kickoff seal`. `ensure` es incremental: antes del sellado planifica solo `<prefijo>/<cambio>` en el repositorio del planning home (idéntica en ambos modelos) y tras el sellado completa ramas de rol y repositorios de código. | Confirmado | RF-BRA-07 |
+| S-2 | La respuesta a `decision_required` de `ask` se da con la opción `--mode worktree\|in_place` de `ensure`. | Confirmado | RF-BRA-08 |
+| S-3 | `fullstack` no existe en `axiom.yaml`. Cuenta como un único rol que toca todos los repositorios declarados por algún rol y, en monorepo, el del planning home. | Confirmado | Términos, RF-BRA-04 |
+| S-4 | `<repo>` es el último segmento de la ruta (`path`) del repositorio (G-5), y `<workspace>-wt` usa el nombre de la carpeta maestra. | Confirmado (actualizado por G-5) | RF-BRA-11 |
 | S-5 | Retirado por D17: existía para fijar el mecanismo con el que el comprobador de CI evaluaba un árbol desacoplado, y el comprobador se ha eliminado. | Sin objeto (D17) | — |
-| S-6 | Resuelto según D3: `done` elimina el worktree y la rama local una vez confirmada la fusión por capas (REQ-25.16); se niega si la rama no está fusionada o si el árbol está sucio, salvo `--force`; en `in_place` devuelve el checkout a la rama de integración y elimina la rama local solo con el árbol limpio (`--force` no salta esa exigencia); nunca toca ramas remotas; procesa cada rama por separado, incluida la de archivado, sin selector de rol en esta versión. | Confirmado (corregido, D3) | REQ-25.17 |
-| S-7 | Si el cambio ya tiene `kickoff.yaml` pero sin instantánea queda exento; si aún no tiene `kickoff.yaml` se aplica la política de `axiom.yaml`. | Confirmado | REQ-25.18 |
-| S-8 | `--fetch` fallido termina con `fetch_failed` sin crear nada. | Confirmado | REQ-25.10 |
+| S-6 | Resuelto según D3: `done` elimina el worktree y la rama local una vez confirmada la fusión por capas (RF-BRA-17); se niega si la rama no está fusionada o si el árbol está sucio, salvo `--force`; en `in_place` devuelve el checkout a la rama de integración y elimina la rama local solo con el árbol limpio (`--force` no salta esa exigencia); nunca toca ramas remotas; procesa cada rama por separado, incluida la de archivado, sin selector de rol en esta versión. | Confirmado (corregido, D3) | RF-BRA-18 |
+| S-7 | Si el cambio ya tiene `kickoff.yaml` pero sin instantánea queda exento; si aún no tiene `kickoff.yaml` se aplica la política de `axiom.yaml`. | Confirmado | RF-BRA-19 |
+| S-8 | `--fetch` fallido termina con `fetch_failed` sin crear nada. | Confirmado | RF-BRA-10 |
 | S-9 | `blocked(wrong_branch)` se evalúa antes de `blocked(edit_authority_missing)`. | Confirmado | `axiom-sdd-cli-integration` |
-| S-10 | La pregunta de `ask` del carril ODD es una preferencia de entorno personal, no una pregunta de gobernanza, y no contraviene REQ-21.2. | Confirmado | `sdd-lane-kickoff` |
+| S-10 | La pregunta de `ask` del carril ODD es una preferencia de entorno personal, no una pregunta de gobernanza, y no contraviene RF-KOF-02. | Confirmado | `sdd-lane-kickoff` |
 | S-11 | Si el directorio de partida es un worktree enlazado sin marcador ascendente, el planning home se resuelve desde el checkout principal del mismo clon. | Confirmado | `planning-home-resolution` |
-| S-12 | Resuelto por D16 (sustituye a la decisión anterior): en monorepo el archive se hace en un PR documental aparte, en la rama de archivado `<prefijo>/<cambio>-archive` (D18), una vez fusionado el PR del cambio. REQ-21.16 vuelve a su forma original con dos cambios (rama de integración configurada y sin `monorepo-decoupled`) y la precondición incluye la evidencia `pr_merged` del PR del cambio. Archivar en otra rama se rechaza con `blocked(wrong_branch)` y la continuación `ensure --archive`. `multirepo` no cambia. | Confirmado (D16) | `sdd-archive-lifecycle` |
+| S-12 | Resuelto por D16 (sustituye a la decisión anterior): en monorepo el archive se hace en un PR documental aparte, en la rama de archivado `<prefijo>/<cambio>-archive` (D18), una vez fusionado el PR del cambio. RF-ARC-01 vuelve a su forma original con dos cambios (rama de integración configurada y sin `monorepo-decoupled`) y la precondición incluye la evidencia `pr_merged` del PR del cambio. Archivar en otra rama se rechaza con `blocked(wrong_branch)` y la continuación `ensure --archive`. `multirepo` no cambia. | Confirmado (D16) | `sdd-archive-lifecycle` |
 | S-13 | `repositories:` identifica cada entrada por `path` y admite `integration_branch` y `branch_prefix` como ajustes propios por repositorio. | Confirmado (incluye `branch_prefix` por repositorio) | `workspace-topology` |
 | S-14 | La TUI se cubre como escenario de paridad en `local-web-dashboard`; `tui-ui-parity` no figura en las capacidades modificadas de la propuesta. | Confirmado | `local-web-dashboard` |
-| S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | REQ-25.4 |
-| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (REQ-26.11). | Propuesto en la reapertura (2026-10-17); enmendado por REQ-25.45 y REQ-26.11 (paradas-tres-salidas) | REQ-25.12, REQ-25.45 |
-| S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | REQ-25.11 |
-| S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | REQ-25.21 |
-| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | REQ-26.11 |
-| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | REQ-26.11 |
+| S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | RF-BRA-04 |
+| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (RF-BRA-26). | Propuesto en la reapertura (2026-10-17); enmendado por RF-BRA-13 y RF-BRA-26 (paradas-tres-salidas) | RF-BRA-12, RF-BRA-13 |
+| S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | RF-BRA-11 |
+| S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | RF-BRA-22 |
+| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | RF-BRA-26 |
+| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | RF-BRA-26 |
 
 ### Dependencias de diseño
 
 | ID | Dependencia | Dónde afecta |
 |---|---|---|
-| Q1 | Versión mínima de git para `git merge-tree --write-tree` (2.38). | REQ-25.16 (design) |
-| Q2 | Coexistencia del registro local con `<git common dir>/gentle-ai/`. | REQ-25.14 (design) |
-| Q6 | Destino de los scripts locales y de `guard-primary-checkout.ps1`. | REQ-25.24 (design) |
+| Q1 | Versión mínima de git para `git merge-tree --write-tree` (2.38). | RF-BRA-17 (design) |
+| Q2 | Coexistencia del registro local con `<git common dir>/gentle-ai/`. | RF-BRA-15 (design) |
+| Q6 | Destino de los scripts locales y de `guard-primary-checkout.ps1`. | RF-BRA-25 (design) |
 
 
 ## Supuestos confirmados en la compuerta de spec (2026-10-15)
@@ -2242,31 +2242,31 @@ Los supuestos son decisiones mínimas tomadas para que los requerimientos sean c
 
 | ID | Supuesto | Estado | Dónde afecta |
 |---|---|---|---|
-| S-1 | La propuesta no indica cómo conocer los roles cuando `ensure` se ejecuta al nombrar el cambio, antes de `kickoff seal`. `ensure` es incremental: antes del sellado planifica solo `<prefijo>/<cambio>` en el repositorio del planning home (idéntica en ambos modelos) y tras el sellado completa ramas de rol y repositorios de código. | Confirmado | REQ-25.7 |
-| S-2 | La respuesta a `decision_required` de `ask` se da con la opción `--mode worktree\|in_place` de `ensure`. | Confirmado | REQ-25.8 |
-| S-3 | `fullstack` no existe en `axiom.yaml`. Cuenta como un único rol que toca todos los repositorios declarados por algún rol y, en monorepo, el del planning home. | Confirmado | Términos, REQ-25.4 |
-| S-4 | `<repo>` es el último segmento de la ruta (`path`) del repositorio (G-5), y `<workspace>-wt` usa el nombre de la carpeta maestra. | Confirmado (actualizado por G-5) | REQ-25.11 |
+| S-1 | La propuesta no indica cómo conocer los roles cuando `ensure` se ejecuta al nombrar el cambio, antes de `kickoff seal`. `ensure` es incremental: antes del sellado planifica solo `<prefijo>/<cambio>` en el repositorio del planning home (idéntica en ambos modelos) y tras el sellado completa ramas de rol y repositorios de código. | Confirmado | RF-BRA-07 |
+| S-2 | La respuesta a `decision_required` de `ask` se da con la opción `--mode worktree\|in_place` de `ensure`. | Confirmado | RF-BRA-08 |
+| S-3 | `fullstack` no existe en `axiom.yaml`. Cuenta como un único rol que toca todos los repositorios declarados por algún rol y, en monorepo, el del planning home. | Confirmado | Términos, RF-BRA-04 |
+| S-4 | `<repo>` es el último segmento de la ruta (`path`) del repositorio (G-5), y `<workspace>-wt` usa el nombre de la carpeta maestra. | Confirmado (actualizado por G-5) | RF-BRA-11 |
 | S-5 | Retirado por D17: existía para fijar el mecanismo con el que el comprobador de CI evaluaba un árbol desacoplado, y el comprobador se ha eliminado. | Sin objeto (D17) | — |
-| S-6 | Resuelto según D3: `done` elimina el worktree y la rama local una vez confirmada la fusión por capas (REQ-25.16); se niega si la rama no está fusionada o si el árbol está sucio, salvo `--force`; en `in_place` devuelve el checkout a la rama de integración y elimina la rama local solo con el árbol limpio (`--force` no salta esa exigencia); nunca toca ramas remotas; procesa cada rama por separado, incluida la de archivado, sin selector de rol en esta versión. | Confirmado (corregido, D3) | REQ-25.17 |
-| S-7 | Si el cambio ya tiene `kickoff.yaml` pero sin instantánea queda exento; si aún no tiene `kickoff.yaml` se aplica la política de `axiom.yaml`. | Confirmado | REQ-25.18 |
-| S-8 | `--fetch` fallido termina con `fetch_failed` sin crear nada. | Confirmado | REQ-25.10 |
+| S-6 | Resuelto según D3: `done` elimina el worktree y la rama local una vez confirmada la fusión por capas (RF-BRA-17); se niega si la rama no está fusionada o si el árbol está sucio, salvo `--force`; en `in_place` devuelve el checkout a la rama de integración y elimina la rama local solo con el árbol limpio (`--force` no salta esa exigencia); nunca toca ramas remotas; procesa cada rama por separado, incluida la de archivado, sin selector de rol en esta versión. | Confirmado (corregido, D3) | RF-BRA-18 |
+| S-7 | Si el cambio ya tiene `kickoff.yaml` pero sin instantánea queda exento; si aún no tiene `kickoff.yaml` se aplica la política de `axiom.yaml`. | Confirmado | RF-BRA-19 |
+| S-8 | `--fetch` fallido termina con `fetch_failed` sin crear nada. | Confirmado | RF-BRA-10 |
 | S-9 | `blocked(wrong_branch)` se evalúa antes de `blocked(edit_authority_missing)`. | Confirmado | `axiom-sdd-cli-integration` |
-| S-10 | La pregunta de `ask` del carril ODD es una preferencia de entorno personal, no una pregunta de gobernanza, y no contraviene REQ-21.2. | Confirmado | `sdd-lane-kickoff` |
+| S-10 | La pregunta de `ask` del carril ODD es una preferencia de entorno personal, no una pregunta de gobernanza, y no contraviene RF-KOF-02. | Confirmado | `sdd-lane-kickoff` |
 | S-11 | Si el directorio de partida es un worktree enlazado sin marcador ascendente, el planning home se resuelve desde el checkout principal del mismo clon. | Confirmado | `planning-home-resolution` |
-| S-12 | Resuelto por D16 (sustituye a la decisión anterior): en monorepo el archive se hace en un PR documental aparte, en la rama de archivado `<prefijo>/<cambio>-archive` (D18), una vez fusionado el PR del cambio. REQ-21.16 vuelve a su forma original con dos cambios (rama de integración configurada y sin `monorepo-decoupled`) y la precondición incluye la evidencia `pr_merged` del PR del cambio. Archivar en otra rama se rechaza con `blocked(wrong_branch)` y la continuación `ensure --archive`. `multirepo` no cambia. | Confirmado (D16) | `sdd-archive-lifecycle` |
+| S-12 | Resuelto por D16 (sustituye a la decisión anterior): en monorepo el archive se hace en un PR documental aparte, en la rama de archivado `<prefijo>/<cambio>-archive` (D18), una vez fusionado el PR del cambio. RF-ARC-01 vuelve a su forma original con dos cambios (rama de integración configurada y sin `monorepo-decoupled`) y la precondición incluye la evidencia `pr_merged` del PR del cambio. Archivar en otra rama se rechaza con `blocked(wrong_branch)` y la continuación `ensure --archive`. `multirepo` no cambia. | Confirmado (D16) | `sdd-archive-lifecycle` |
 | S-13 | `repositories:` identifica cada entrada por `path` y admite `integration_branch` y `branch_prefix` como ajustes propios por repositorio. | Confirmado (incluye `branch_prefix` por repositorio) | `workspace-topology` |
 | S-14 | La TUI se cubre como escenario de paridad en `local-web-dashboard`; `tui-ui-parity` no figura en las capacidades modificadas de la propuesta. | Confirmado | `local-web-dashboard` |
-| S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | REQ-25.4 |
-| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (REQ-26.11). | Propuesto en la reapertura (2026-10-17); enmendado por REQ-25.45 y REQ-26.11 (paradas-tres-salidas) | REQ-25.12, REQ-25.45 |
-| S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | REQ-25.11 |
-| S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | REQ-25.21 |
-| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | REQ-26.11 |
-| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | REQ-26.11 |
+| S-15 | Un rol llamado `archive` colisionaría con la rama de archivado `<prefijo>/<cambio>-archive` y se rechaza con `invalid_name` al planificar las ramas de rol. | Propuesto en la reapertura (2026-10-17) | RF-BRA-04 |
+| S-16 | Con `--archive` solo se admite `--prefix`; `--branch` y `--base` se rechazan con `plan_conflict`; sin `--prefix` la rama de archivado deriva de la rama del cambio registrada como `<rama del cambio>-archive`. Una base «contiene el cambio fusionado» cuando su árbol incluye `changes/<cambio>/` del planning home y el cambio no está en fusión intermedia (RF-BRA-26). | Propuesto en la reapertura (2026-10-17); enmendado por RF-BRA-13 y RF-BRA-26 (paradas-tres-salidas) | RF-BRA-12, RF-BRA-13 |
+| S-17 | Para el repositorio cuya ruta es `.`, `<repo>` es el nombre del directorio de su raíz git; dos repositorios del plan con el mismo último segmento se rechazan con `invalid_name`. | Propuesto en la reapertura (2026-10-17) | RF-BRA-11 |
+| S-18 | D19: el bloqueo de documentos de Axiom (carpeta del cambio y `odd/tasks/`) rige en todo proyecto Axiom aunque no haya cambio registrado, para cubrir el carril ODD antes de `ensure`; el aviso en otros ficheros solo rige en repositorios con un cambio activo registrado; el repositorio de specs de un multirepo queda exento del aviso pero no del bloqueo de documentos. | Propuesto en la reapertura (2026-10-17) | RF-BRA-22 |
+| A-7 | Un cambio con todos los `role-apply` aprobados deja de ser fusión intermedia aunque la última puerta lleve marca de cesión (la fase `verify` cedida no hace intermedia la fusión del trabajo ya implementado). | Confirmado (paradas-tres-salidas) | RF-BRA-26 |
+| A-8 | Un cambio fusionado sin ninguna marca de cesión en su registro de puertas (incluidos los cambios preexistentes y los sellados en modalidad continua) se comporta exactamente como hasta ahora. | Confirmado (paradas-tres-salidas) | RF-BRA-26 |
 
 ### Dependencias de diseño
 
 | ID | Dependencia | Dónde afecta |
 |---|---|---|
-| Q1 | Versión mínima de git para `git merge-tree --write-tree` (2.38). | REQ-25.16 (design) |
-| Q2 | Coexistencia del registro local con `<git common dir>/gentle-ai/`. | REQ-25.14 (design) |
-| Q6 | Destino de los scripts locales y de `guard-primary-checkout.ps1`. | REQ-25.24 (design) |
+| Q1 | Versión mínima de git para `git merge-tree --write-tree` (2.38). | RF-BRA-17 (design) |
+| Q2 | Coexistencia del registro local con `<git common dir>/gentle-ai/`. | RF-BRA-15 (design) |
+| Q6 | Destino de los scripts locales y de `guard-primary-checkout.ps1`. | RF-BRA-25 (design) |

@@ -43,7 +43,7 @@ El sistema MUST dar de baja cobros.
 - THEN desaparece
 `
 
-// REQ-30.22: un MODIFIED con el título cambiado y el mismo ID reemplaza el
+// RF-ARC-11: un MODIFIED con el título cambiado y el mismo ID reemplaza el
 // requisito, el segmento toma el nombre de la delta y la siguiente operación de la
 // misma delta lo ve.
 func TestComposeModifiedByIDWithChangedTitle(t *testing.T) {
@@ -92,7 +92,7 @@ El sistema MUST cobrar con tarjeta, bizum o transferencia.
 	}
 }
 
-// REQ-30.22: REMOVED por ID con el título obsoleto, con y sin SupersedeRemoved; la
+// RF-ARC-11: REMOVED por ID con el título obsoleto, con y sin SupersedeRemoved; la
 // anotación usa el nombre del segmento de la canónica.
 func TestComposeRemovedByIDWithObsoleteTitle(t *testing.T) {
 	delta := `## REMOVED Requirements
@@ -118,7 +118,7 @@ func TestComposeRemovedByIDWithObsoleteTitle(t *testing.T) {
 	}
 }
 
-// REQ-30.22: el nombre antiguo de un RENAMED se resuelve por ID y sigue exigiendo
+// RF-ARC-11: el nombre antiguo de un RENAMED se resuelve por ID y sigue exigiendo
 // `Antiguo → Nuevo` y la nota (Reason).
 func TestComposeRenamedOldNameByID(t *testing.T) {
 	delta := `## RENAMED Requirements
@@ -146,7 +146,7 @@ func TestComposeRenamedOldNameByID(t *testing.T) {
 	}
 }
 
-// REQ-30.22: ADDED, la colisión del nombre nuevo de un RENAMED y ExplicitSuperseded
+// RF-ARC-11: ADDED, la colisión del nombre nuevo de un RENAMED y ExplicitSuperseded
 // siguen emparejando por título exacto.
 func TestComposeAddedAndRenameCollisionStayByTitle(t *testing.T) {
 	var unapplied *UnappliedDeltaError
@@ -181,7 +181,7 @@ Texto A.
 Texto B.
 `
 
-// REQ-30.22: un ID repetido en la canónica se acepta si el título exacto desempata y
+// RF-ARC-11: un ID repetido en la canónica se acepta si el título exacto desempata y
 // se rechaza, nombrando el identificador y los títulos afectados, si no.
 func TestComposeRepeatedIDInCanonical(t *testing.T) {
 	exact := "## MODIFIED Requirements\n\n### Requirement: Cobro B (REQ-1.2)\n\nTexto B nuevo.\n"
@@ -203,7 +203,7 @@ func TestComposeRepeatedIDInCanonical(t *testing.T) {
 	}
 }
 
-// REQ-30.22: los títulos sin ID siguen por título exacto, y con otro patrón la
+// RF-ARC-11: los títulos sin ID siguen por título exacto, y con otro patrón la
 // resolución por ID usa ese patrón.
 func TestComposeWithoutIDsAndWithAnotherPattern(t *testing.T) {
 	canonical := "# C\n\n## Requirements\n\n### Requirement: Sin identificador\n\nTexto.\n"

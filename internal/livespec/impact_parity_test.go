@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/isoevidence"
 )
 
-// REQ-44.8: el marcador «Sin impacto en la spec» y su `Motivo:` los lee igual el carril ISO
+// RF-OLS-09: el marcador «Sin impacto en la spec» y su `Motivo:` los lee igual el carril ISO
 // (isoevidence.ParseBugDeclaration) y el ODD (livespec.ParseFeatureDoc), con una única
 // constante compartida para la etiqueta del motivo.
 func TestImpactParityWithISO(t *testing.T) {

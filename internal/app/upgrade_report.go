@@ -172,7 +172,7 @@ func runUpgradeReport(ctx context.Context, args upgradeArgs, detection system.De
 
 // classifyUpgradeRun derives the structured report from executor results. The
 // restart flag and the manual hint come from the shared identity predicate, so
-// a rename of the self-tool can never disable them (REQ-22.3, D-08).
+// a rename of the self-tool can never disable them (RF-UPD-03, D-08).
 func classifyUpgradeRun(report upgrade.UpgradeReport) UpgradeRunReport {
 	structured := UpgradeRunReport{
 		SelfToolName: selfToolRegistryName(),

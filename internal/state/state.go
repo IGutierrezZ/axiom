@@ -20,12 +20,12 @@ const stateFile = "state.json"
 // DefaultUpstreamVersion is the frozen upstream ceiling this fork is reconciled
 // against: upstream tag v3.4.0 / commit 82a6de96, decision D4 of INC-20
 // (docs/upstream-absorption-ledger.md). Audit-only metadata: no update, upgrade
-// or sync path may read it to trigger anything (REQ-22.9).
+// or sync path may read it to trigger anything (RF-UPD-08).
 const DefaultUpstreamVersion = "3.4.0"
 
 // NewInstallState returns the state for a freshly established ecosystem. It is
 // the only place the initial upstream_version is set: writes stay lossless and
-// never invent a field the caller did not set (REQ-22.9 records the "valor
+// never invent a field the caller did not set (RF-UPD-08 records the "valor
 // inicial"; it does not authorize mutating every later write).
 func NewInstallState() InstallState {
 	return InstallState{UpstreamVersion: DefaultUpstreamVersion}
@@ -199,7 +199,7 @@ type InstallState struct {
 	// the incoming value is empty and never overwrite a value already present,
 	// so every state document written by this version carries the key
 	// (decision D-14 of INC-22). Audit-only metadata: no update, upgrade or
-	// sync path may read it to trigger anything (REQ-22.9).
+	// sync path may read it to trigger anything (RF-UPD-08).
 	UpstreamVersion string `json:"upstream_version,omitempty"`
 }
 

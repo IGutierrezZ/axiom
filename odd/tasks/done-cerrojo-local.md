@@ -11,7 +11,7 @@ Que `axiom branch done` no se niegue con `dirty_worktree` por el `.gates.lock` v
 
 ## Problema
 
-`gate record` toma un cerrojo consultivo en `<carpeta del cambio>/.gates.lock` (`internal/kickoff/ledger.go:96`) y el fichero persiste: es un cerrojo de fichero y borrarlo tras liberarlo abriría carreras entre procesos. Es estado local con punto y nunca se publica (REQ-27.5), pero `done` cuenta todo fichero sin seguimiento como árbol sucio (`internal/branch/engine/done.go:338`). Tras registrar la compuerta `integration` en la rama de archivado (paso obligatorio del archivado en `monorepo-embedded`), `done` se niega siempre: ocurrió al cerrar C-07-b y hubo que borrar el fichero a mano.
+`gate record` toma un cerrojo consultivo en `<carpeta del cambio>/.gates.lock` (`internal/kickoff/ledger.go:96`) y el fichero persiste: es un cerrojo de fichero y borrarlo tras liberarlo abriría carreras entre procesos. Es estado local con punto y nunca se publica (RF-PUB-01), pero `done` cuenta todo fichero sin seguimiento como árbol sucio (`internal/branch/engine/done.go:338`). Tras registrar la compuerta `integration` en la rama de archivado (paso obligatorio del archivado en `monorepo-embedded`), `done` se niega siempre: ocurrió al cerrar C-07-b y hubo que borrar el fichero a mano.
 
 ## Por qué
 
@@ -19,7 +19,7 @@ El archivado documentado (skill `sdd-archive`, sección `monorepo-embedded`) ter
 
 ## Decisiones
 
-- `done` excluye del árbol sucio los ficheros `.gates.lock` sin datos. Con solo cerrojos, el worktree se retira con `git worktree remove --force`. El resto de la regla de árbol limpio no cambia: la cola `.integrations-outbox.yaml` pendiente sigue bloqueando (REQ-43.31) y cualquier otro fichero sin confirmar también.
+- `done` excluye del árbol sucio los ficheros `.gates.lock` sin datos. Con solo cerrojos, el worktree se retira con `git worktree remove --force`. El resto de la regla de árbol limpio no cambia: la cola `.integrations-outbox.yaml` pendiente sigue bloqueando (RF-INT-22) y cualquier otro fichero sin confirmar también.
 - El nombre sale de `kickoff.GatesLockFileName` (exportado), sin duplicar la constante.
 - En `in_place`, el cerrojo no bloquea el cambio de rama: un fichero sin seguimiento sobrevive al checkout y no se borra.
 - No se cambia `gate record`: borrar el cerrojo tras liberarlo rompería la exclusión entre procesos.
@@ -28,7 +28,7 @@ El archivado documentado (skill `sdd-archive`, sección `monorepo-embedded`) ter
 
 - `internal/branch/engine/done.go` y su test.
 - `internal/kickoff/ledger.go` (exportar la constante).
-- Delta MODIFIED de REQ-25.17 en `## Spec viva` e integración con `axiom archive integrate --odd done-cerrojo-local`.
+- Delta MODIFIED de RF-BRA-18 en `## Spec viva` e integración con `axiom archive integrate --odd done-cerrojo-local`.
 
 ## Modo TDD
 
@@ -40,7 +40,7 @@ Desactivado: `axiom.yaml` no declara TDD. Aun así, se observa el test en rojo a
   - Test en `internal/branch/engine`: rama de archivado fusionada con solo `.gates.lock` sin seguimiento en la carpeta archivada → `done` la elimina. Con `.gates.lock` y otro fichero sin confirmar → `dirty_worktree` que nombra el otro fichero.
   - Arreglo en `done.go` y exportación de `GatesLockFileName`.
   - Comprobación: `go test ./internal/branch/... ./internal/kickoff/...`.
-- [x] **T2 · Spec viva de REQ-25.17** (ruta: en línea)
+- [x] **T2 · Spec viva de RF-BRA-18** (ruta: en línea)
   - Delta MODIFIED en `## Spec viva` e integración con `axiom archive integrate --odd done-cerrojo-local`.
   - Comprobación: la integración termina sin rechazo y `openspec/specs/change-branch-lifecycle/spec.md` refleja el texto.
 
@@ -54,7 +54,7 @@ Una sola PR (`single-pr`); previsión de unas 150 líneas. Push, PR y fusión lo
 
 ## Progreso
 
-- T1: test `TestDoneOnTheArchiveBranchIgnoresTheLocalGatesLock` en rojo antes del arreglo (el rechazo nombraba `.gates.lock` y `done` se negaba con solo el cerrojo); en verde después, junto con todos los `TestDone` de `internal/branch/engine` (incluido el de la cola pendiente, REQ-43.31).
+- T1: test `TestDoneOnTheArchiveBranchIgnoresTheLocalGatesLock` en rojo antes del arreglo (el rechazo nombraba `.gates.lock` y `done` se negaba con solo el cerrojo); en verde después, junto con todos los `TestDone` de `internal/branch/engine` (incluido el de la cola pendiente, RF-INT-22).
 - T2: `axiom archive integrate --odd done-cerrojo-local` compuso `change-branch-lifecycle` sin rechazo y regeneró `openspec/INDEX.md`.
 
 ## Spec viva
@@ -64,9 +64,9 @@ Una sola PR (`single-pr`); previsión de unas 150 líneas. Push, PR y fusión lo
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (REQ-25.17)
+### Requirement: `done`: Seguridad y Eliminación de Worktree y Rama Local (RF-BRA-18)
 
-Para cada rama cuya fusión esté confirmada por la detección por capas de REQ-25.16, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, REQ-25.49, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, REQ-27.5) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (REQ-25.1). Si queda abierto un linaje RDD asociado al worktree, `done` DEBE emitir un aviso que nombre el linaje y la acción (`axiom review abandon`), sin impedir la operación. Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
+Para cada rama cuya fusión esté confirmada por la detección por capas de RF-BRA-17, `done` DEBE eliminar su worktree (`git worktree remove`), después eliminar la rama local (también cuando git no la considere fusionada, como ocurre tras un squash, porque la fusión ya está confirmada por las capas) y actualizar el registro local. Si la eliminación del worktree falla, NO DEBE eliminarse la rama. `done` DEBE rechazar la operación sobre una rama cuya fusión no esté confirmada contra el destino que corresponde a su modo (`merge_not_confirmed`, RF-BRA-31, nombrando ese destino) y sobre un worktree con cambios sin confirmar (`dirty_worktree`), salvo `--force`. El cerrojo de la compuerta que deja `axiom sdd gate record` en la carpeta del cambio o en la archivada (`.gates.lock`, un fichero vacío y sin seguimiento, RF-PUB-01) NO DEBE contar como cambio sin confirmar ni aparecer en el rechazo; si es lo único sin confirmar, `done` DEBE retirar el worktree descartándolo. Un `.gates.lock` con contenido sí cuenta como cambio sin confirmar. Con `--force`, DEBE saltarse la exigencia de fusión confirmada y la de árbol limpio, y DEBE informar en el JSON de los cambios sin confirmar descartados y, si la rama no estaba fusionada, de la punta (SHA) que tenía la rama eliminada para poder recuperarla. `done` NUNCA DEBE tocar ramas remotas ni ejecutar operaciones remotas (RF-BRA-01). Si queda abierto un linaje RDD asociado al worktree, `done` DEBE emitir un aviso que nombre el linaje y la acción (`axiom review abandon`), sin impedir la operación. Cada rama del cambio, incluida la de archivado, DEBE procesarse por separado, sin selector de rol en esta versión: las confirmadas se eliminan y las no confirmadas se conservan y se reportan, y el código de salida DEBE ser distinto de cero si alguna rama no pudo procesarse.
 
 En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkout a la rama de integración (también en modo de promoción `branch`) y, después, eliminar la rama local, y solo si el árbol está limpio. En `in_place`, `--force` solo salta la exigencia de fusión confirmada: NUNCA salta la de árbol limpio, de modo que con cambios sin confirmar `done` rechaza con `dirty_worktree` sin cambiar de rama ni eliminar nada.
 (Previously: el `.gates.lock` vacío que deja `gate record` contaba como cambio sin confirmar y `done` se negaba con `dirty_worktree` tras archivar)
@@ -79,7 +79,7 @@ En modo `in_place` no hay worktree que eliminar: `done` DEBE devolver el checkou
 - **Y** la rama remota `origin/feat/x` permanece intacta y no consta ninguna operación remota
 
 #### Scenario: Una rama integrada con squash se elimina tras confirmarse por `equivalent_tree`
-- **DADO** `feat/x` integrada en `main` mediante un squash, confirmada por la capa `equivalent_tree` (REQ-25.16)
+- **DADO** `feat/x` integrada en `main` mediante un squash, confirmada por la capa `equivalent_tree` (RF-BRA-17)
 - **CUANDO** se ejecuta `axiom branch done --change x`
 - **ENTONCES** se eliminan su worktree y la rama local aunque git no la considere fusionada
 

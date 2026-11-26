@@ -61,7 +61,7 @@ func TestSelfToolRegistryEntry(t *testing.T) {
 	}
 }
 
-// Preferencias personales de worktree al registrar (INC-25, REQ-25.30, S7): `init` y
+// Preferencias personales de worktree al registrar (INC-25, RF-HUB-08, S7): `init` y
 // `project add` las aceptan por opción, las preguntan solo con terminal interactiva y
 // validan antes de registrar o crear nada.
 
@@ -133,7 +133,7 @@ func mustLookup(t *testing.T, manager *hub.Manager, project string) (hub.Worktre
 	return prefs, stored
 }
 
-// REQ-25.30, escenario «Registro con las opciones de preferencia».
+// RF-HUB-08, escenario «Registro con las opciones de preferencia».
 func TestProjectAddAcceptsTheWorktreeOptions(t *testing.T) {
 	manager, project := prefsHub(t)
 	registrationConsole(t, false, nil)
@@ -155,7 +155,7 @@ func TestProjectAddAcceptsTheWorktreeOptions(t *testing.T) {
 	}
 }
 
-// REQ-25.30, escenario «Registro interactivo pregunta con valores por defecto»: pregunta el
+// RF-HUB-08, escenario «Registro interactivo pregunta con valores por defecto»: pregunta el
 // modo (con worktree preseleccionado) y la raíz (con su valor por defecto), y aceptarlos con
 // Enter deja el proyecto registrado sin preferencias.
 func TestProjectAddAsksInteractivelyAndAcceptingTheDefaultsStoresNothing(t *testing.T) {
@@ -185,7 +185,7 @@ func TestProjectAddAsksInteractivelyAndAcceptingTheDefaultsStoresNothing(t *test
 	}
 }
 
-// REQ-25.30: un valor distinto del de por defecto sí se guarda; escribir el valor por
+// RF-HUB-08: un valor distinto del de por defecto sí se guarda; escribir el valor por
 // defecto equivale a Enter.
 func TestProjectAddStoresWhatTheUserTypesAndOnlyThat(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "wt-personal")
@@ -222,7 +222,7 @@ func TestProjectAddStoresWhatTheUserTypesAndOnlyThat(t *testing.T) {
 	}
 }
 
-// REQ-25.30, escenarios «Registro sin terminal no pregunta» y «Registro con las opciones»:
+// RF-HUB-08, escenarios «Registro sin terminal no pregunta» y «Registro con las opciones»:
 // ni se escribe una pregunta ni se lee la entrada.
 func TestInitAndProjectAddDoNotAskWithoutATerminalOrWithOptions(t *testing.T) {
 	t.Run("project add sin terminal", func(t *testing.T) {
@@ -284,7 +284,7 @@ func TestInitAndProjectAddDoNotAskWithoutATerminalOrWithOptions(t *testing.T) {
 	})
 }
 
-// REQ-25.30: `init` acepta las mismas opciones y la misma pregunta, antes de escribir nada.
+// RF-HUB-08: `init` acepta las mismas opciones y la misma pregunta, antes de escribir nada.
 func TestInitAcceptsTheWorktreeOptionsAndAsksInteractively(t *testing.T) {
 	t.Run("opciones", func(t *testing.T) {
 		manager, project := prefsHub(t)
@@ -335,7 +335,7 @@ func TestInitAcceptsTheWorktreeOptionsAndAsksInteractively(t *testing.T) {
 	})
 }
 
-// REQ-25.30: un valor inválido en una opción falla con salida 1 y `[ERROR]`, sin registrar
+// RF-HUB-08: un valor inválido en una opción falla con salida 1 y `[ERROR]`, sin registrar
 // el proyecto ni crear nada.
 func TestInitAndProjectAddRejectAnInvalidWorktreeOptionWithoutSideEffects(t *testing.T) {
 	tests := []struct {
@@ -386,7 +386,7 @@ func TestInitAndProjectAddRejectAnInvalidWorktreeOptionWithoutSideEffects(t *tes
 	}
 }
 
-// REQ-25.29: registrar de nuevo con solo uno de los valores conserva el otro que ya estaba
+// RF-HUB-07: registrar de nuevo con solo uno de los valores conserva el otro que ya estaba
 // guardado.
 func TestProjectAddAgainWithOneOptionKeepsTheOtherStoredValue(t *testing.T) {
 	manager, project := prefsHub(t)

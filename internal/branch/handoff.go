@@ -8,16 +8,16 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Entrega de la salida 2 de una parada («aprobar, publicar y parar», REQ-26.4, REQ-26.5, REQ-27.12,
+// Entrega de la salida 2 de una parada («aprobar, publicar y parar», RF-GAT-10, RF-GAT-11, RF-GAT-15,
 // DD-12). El dominio solo calcula y describe: nunca ejecuta `commit`, `push` ni abre una PR (el
-// puerto Git no tiene método que publique, REQ-25.1). Los documentos del cambio los sube
+// puerto Git no tiene método que publique, RF-BRA-01). Los documentos del cambio los sube
 // `axiom sdd publish` con la invocación que lleva el plan; lo que sigue siendo de la persona es el
 // push del código de los repositorios del rol, con una orden exacta, un solo comando sin `&&` ni
 // órdenes de plataforma (`gh`, `glab`), con `git -C <raíz git absoluta>` y las rutas citadas por
 // pathquote.Quote, para que la persona la copie tal cual en Windows y en POSIX.
 
 // HandOffRequest es lo que `engine.HandOff` necesita de la orden `gate record --hand-off`. La
-// cesión no inspecciona el trabajo del rol ni lo que está confirmado (REQ-26.4): el código sin subir
+// cesión no inspecciona el trabajo del rol ni lo que está confirmado (RF-GAT-10): el código sin subir
 // lo informa después `axiom sdd publish`.
 type HandOffRequest struct {
 	CWD        string // workspaceRoot resuelto por la CLI, nunca el directorio del proceso
@@ -65,7 +65,7 @@ type HandOffPlan struct {
 const PublishRemote = "origin"
 
 // PublishInvocation es la orden exacta, atada a la rama con `--branch`, que publica los documentos
-// del cambio (REQ-27.7). La comparten la pregunta de la puerta, `gate record` y la cesión, de modo
+// del cambio (RF-PUB-03). La comparten la pregunta de la puerta, `gate record` y la cesión, de modo
 // que la rama que se nombra es exactamente la que se sube.
 func PublishInvocation(workspaceRoot, change, branchName string) string {
 	return fmt.Sprintf("axiom sdd publish --cwd %s --change %s --branch %s",
@@ -73,7 +73,7 @@ func PublishInvocation(workspaceRoot, change, branchName string) string {
 }
 
 // HandOffResume son las órdenes que ejecuta quien recoja el cambio: traer lo publicado y dejar que
-// `ensure` adopte la rama (REQ-27.15). No llevan `-C`, porque la ruta de quien siga no se conoce.
+// `ensure` adopte la rama (RF-BRA-27). No llevan `-C`, porque la ruta de quien siga no se conoce.
 func HandOffResume(change string) []string {
 	return []string{"git fetch origin", fmt.Sprintf("axiom branch ensure --change %s --json", pathquote.ShellWord(change))}
 }

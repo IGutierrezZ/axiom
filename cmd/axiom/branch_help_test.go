@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
-// REQ-25.1: la ayuda global lista los cinco verbos, `axiom branch ensure`, `status`, `scope`, `done` y
+// RF-BRA-01: la ayuda global lista los cinco verbos, `axiom branch ensure`, `status`, `scope`, `done` y
 // `guard`, y ninguno más; ni `push`, ni `pr`, ni el retirado `check`.
 func TestBranchVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	help := axiomHelpText()
@@ -30,7 +30,7 @@ func TestBranchVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	}
 }
 
-// REQ-43.24: la ayuda de `axiom branch ensure` documenta `--role`.
+// RF-BRA-33: la ayuda de `axiom branch ensure` documenta `--role`.
 func TestBranchEnsureHelpDocumentsTheRoleFlag(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	if code := cli.RunBranch([]string{"ensure", "--help"}, &stdout, &stderr); code != 0 {

@@ -175,7 +175,7 @@ func RoleGateStatus(role multirole.RoleAssignment, gates []GateState) string {
 }
 
 // LastBlockingRoleClosed reports whether every role of roster with policy
-// "blocking" has its role-apply gate approved in gates (REQ-21.13, REQ-21.15):
+// "blocking" has its role-apply gate approved in gates (RF-RCL-01, RF-RCL-03):
 // the condition that opens the global verify phase. Roles with policy deferred
 // or optional never take part, whatever the status of their gates. With every
 // role blocking, or with the single fullstack role, it requires every role-apply
@@ -208,8 +208,8 @@ type PendingRole struct {
 }
 
 // PendingNonBlockingRoles lists, in roster order, the roles with policy
-// deferred or optional whose role-apply gate is not approved (REQ-21.13,
-// REQ-21.15). They neither block verify nor repeat the last-role notice; they
+// deferred or optional whose role-apply gate is not approved (RF-RCL-01,
+// RF-RCL-03). They neither block verify nor repeat the last-role notice; they
 // are only reported.
 func PendingNonBlockingRoles(roster []multirole.RoleAssignment, gates []GateState) []PendingRole {
 	var pending []PendingRole
@@ -239,12 +239,12 @@ func PendingNonBlockingRoles(roster []multirole.RoleAssignment, gates []GateStat
 //     still matches the artifact it judged. Once the digest differs,
 //     remediation happened: the gate returns to pending with
 //     Reopened=true, and its prior reason is cleared (design.md S5.3:
-//     Reason is empty in pending) — this is REQ-21.12 satisfied without a
+//     Reason is empty in pending) — this is RF-GAT-06 satisfied without a
 //     manual "reopen" verb.
 //   - No record at all yet: freshly pending.
 //
-// closing is the FIRST approved record, the one that closes the gate (REQ-26.7,
-// REQ-33.4): its HandedOff, HandedOffTo (the phase persisted when it was written,
+// closing is the FIRST approved record, the one that closes the gate (RF-GAT-13,
+// RF-GAT-22): its HandedOff, HandedOffTo (the phase persisted when it was written,
 // empty in a ledger written before the field existed) and CommitReview are what the
 // gate projects; a later approved record neither adds nor removes them, and a later
 // rejection leaves the gate approved with them intact. It is the zero record while

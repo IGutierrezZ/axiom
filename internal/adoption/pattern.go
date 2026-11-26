@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// Códigos estables de los conflictos de la propuesta de patrón (REQ-30.9).
+// Códigos estables de los conflictos de la propuesta de patrón (RF-ADP-01).
 const (
 	// Conflictos de esquema: impiden proponer plantilla.
 	ConflictMixedPrefixes   = "mixed_prefixes"

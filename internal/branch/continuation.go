@@ -41,7 +41,7 @@ func validateConfigContinuation(master string) string {
 }
 
 // archiveContinuation es la orden que archiva un cambio ya fusionado y aún pendiente
-// (REQ-25.20): `ensure --archive`, que crea su rama de archivado (REQ-25.45). El nombre del
+// (RF-BRA-21): `ensure --archive`, que crea su rama de archivado (RF-BRA-13). El nombre del
 // cambio va citado como una palabra del intérprete (`pathquote.ShellWord`: lo deja tal cual si
 // es seguro), no como una ruta.
 func archiveContinuation(change string) string {

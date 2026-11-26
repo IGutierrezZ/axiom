@@ -10,13 +10,13 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Preferencias personales de worktree de un proyecto (INC-25, REQ-25.29, design D-08): el
+// Preferencias personales de worktree de un proyecto (INC-25, RF-HUB-07, design D-08): el
 // modo de trabajo y la raíz de worktrees. Viven en la entrada del proyecto de
 // `~/.axiom/workspaces.json` y nunca en `axiom.yaml`. Este fichero trae la validación, la
 // lectura (`LookupWorktreePrefs`) y la escritura (`SetWorktreePrefs`); el registro con
 // preferencias (`RegisterWithWorktreePrefs`) está en manager.go.
 
-// Los modos de trabajo que admite la preferencia (REQ-25.8): un worktree por rama, la propia
+// Los modos de trabajo que admite la preferencia (RF-BRA-08): un worktree por rama, la propia
 // carpeta del proyecto, o preguntar en cada cambio.
 const (
 	WorktreeModeWorktree = "worktree"
@@ -50,12 +50,12 @@ func ValidateWorktreePrefs(prefs WorktreePrefs) error {
 // projectPath: las guardadas en su entrada del hub y, para lo que no tiene, los valores por
 // defecto (modo `worktree` y la raíz `<padre de la carpeta maestra>/<nombre>-wt`). Un proyecto
 // que no está registrado, o un hub que todavía no existe, recibe los valores por defecto sin
-// error (REQ-25.29).
+// error (RF-HUB-07).
 //
 // El proyecto se busca por identidad de directorio (pathidentity.SameDirectory), no por
 // texto. stored dice si el hub guarda el modo del proyecto: el origen de ese modo es entonces
 // el hub y, si no, el valor por defecto. Un hub que no se puede leer o un valor guardado
-// inválido (REQ-25.29) es un error que nombra el fichero; no modifica nada.
+// inválido (RF-HUB-07) es un error que nombra el fichero; no modifica nada.
 func (m *Manager) LookupWorktreePrefs(projectPath string) (WorktreePrefs, bool, error) {
 	cfg, err := m.Load()
 	if err != nil {
@@ -85,7 +85,7 @@ func (m *Manager) LookupWorktreePrefs(projectPath string) (WorktreePrefs, bool, 
 // SetWorktreePrefs guarda las preferencias de worktree del proyecto registrado que idOrPath
 // nombra, por id o por ruta (sameProject), y devuelve su entrada actualizada. Sustituye ambos
 // campos: un campo vacío es «sin preferencia» y se retira del JSON. Valida antes de leer el
-// hub, de modo que un valor inválido no lo modifica (REQ-25.29); un proyecto que no está
+// hub, de modo que un valor inválido no lo modifica (RF-HUB-07); un proyecto que no está
 // registrado es un error que lo dice y tampoco lo modifica.
 func (m *Manager) SetWorktreePrefs(idOrPath string, p WorktreePrefs) (*WorkspaceRecord, error) {
 	if err := ValidateWorktreePrefs(p); err != nil {

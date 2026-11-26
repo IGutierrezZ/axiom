@@ -574,7 +574,7 @@ func TestIntegrationsPluginWithoutPortsFailsWithTheTypedErrorAndNoEffects(t *tes
 	assertEmptyChangeRoot(t, changeRoot)
 }
 
-// ---- ayuda (REQ-43.18)
+// ---- ayuda (RF-INT-18)
 
 func TestIntegrationsHelpListsExactlyTheFiveSubcommands(t *testing.T) {
 	for _, args := range [][]string{{"--help"}, {"help"}, {"inspect"}} {

@@ -17,7 +17,7 @@ type WorkspaceRecord struct {
 	IsConfigured bool      `json:"is_configured"`
 	Tech         []string  `json:"tech,omitempty"`
 	// WorktreeMode y WorktreeRoot son las preferencias personales de worktree del proyecto
-	// (REQ-25.29, prefs.go): opcionales, no cambian el esquema `"1.0"` y un binario anterior
+	// (RF-HUB-07, prefs.go): opcionales, no cambian el esquema `"1.0"` y un binario anterior
 	// los ignora.
 	WorktreeMode string `json:"worktree_mode,omitempty"`
 	WorktreeRoot string `json:"worktree_root,omitempty"`
@@ -70,7 +70,7 @@ type TechDetection struct {
 	ConfiguredRoles  []RoleInput         `json:"configured_roles,omitempty"`
 	AdoptedSkills    []AdoptedSkillInfo  `json:"adopted_skills,omitempty"`
 	// Adoption es el informe de orígenes de migración y candidatos a technical_context del
-	// directorio (REQ-30.26): el inventario de `axiom archive adopt scan`, sin escribir nada.
+	// directorio (RF-HUB-10): el inventario de `axiom archive adopt scan`, sin escribir nada.
 	Adoption *adoption.Summary `json:"adoption,omitempty"`
 }
 
@@ -88,7 +88,7 @@ type InitOptions struct {
 	// alta es la de siempre: axiom.yaml en la carpeta maestra y specs en openspec/.
 	SpecsRepository string
 	// WorktreePrefs son las preferencias personales de worktree que se guardan en la entrada
-	// del hub al registrar el proyecto (REQ-25.30); vacías, no se guarda ninguna.
+	// del hub al registrar el proyecto (RF-HUB-08); vacías, no se guarda ninguna.
 	WorktreePrefs WorktreePrefs
 }
 
@@ -107,7 +107,7 @@ type InitResult struct {
 	// porque el axiom.yaml existente no se pudo leer.
 	SpecsSkipped bool
 	// Adoption es el informe de orígenes de migración y candidatos a technical_context del
-	// repositorio de especificaciones recién dado de alta (REQ-30.27); nil si no hay ninguno.
+	// repositorio de especificaciones recién dado de alta (RF-HUB-11); nil si no hay ninguno.
 	Adoption *adoption.Summary `json:"adoption,omitempty"`
 	// AdoptionInstruction es la orden y la frase para lanzar la adopción desde el agente; vacía
 	// si el informe no lista ningún origen de requisitos. El alta no ejecuta nada.

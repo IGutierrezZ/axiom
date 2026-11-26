@@ -15,7 +15,7 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
 |---|---|
 | Directorio de partida | Directorio desde el que se inicia la resolución: `--cwd`, `--path` (verbos `handoff` y `role`) o el directorio de trabajo. |
 | Carpeta maestra | Directorio que contiene `.axiom-workspace` o, sin puntero, el `axiom.yaml` del proyecto. Las rutas de `axiom.yaml` (`specs_repository`, repositorios de roles) son relativas a ella. |
-| Repositorio de especificaciones | `<maestra>/<specs_repository>` en `multirepo`; en `monorepo-embedded`, la propia carpeta maestra. Su raíz, que es `workspaceRoot` y la que debe existir (REQ-24.7), es ese directorio o, si el último segmento de `specs_repository` es `openspec`, su padre. |
+| Repositorio de especificaciones | `<maestra>/<specs_repository>` en `multirepo`; en `monorepo-embedded`, la propia carpeta maestra. Su raíz, que es `workspaceRoot` y la que debe existir (RF-PLH-07), es ese directorio o, si el último segmento de `specs_repository` es `openspec`, su padre. |
 | Planning home | Directorio `openspec` que contiene `changes/` (y `specs/` en la baseline por defecto). |
 | `workspaceRoot` | Directorio padre del planning home. Es el valor de `actionContext.workspaceRoot` en el status y la base contra la que se resuelven las rutas `openspec/...`. |
 | Origen | Cómo se halló el workspace: `puntero`, `configuración`, `openspec` o `directorio de partida`. |
@@ -26,23 +26,23 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
 
 | ID | Requerimiento | Garantía principal |
 |---|---|---|
-| REQ-24.1 | Primitivo único y de solo lectura | Una sola resolución, sin efectos en disco y con rechazos accionables |
-| REQ-24.2 | Descubrimiento ascendente por proximidad | Gana el marcador más cercano al directorio de partida |
-| REQ-24.3 | Enraizado por topología | `multirepo` re-enraíza en el repositorio de especificaciones |
-| REQ-24.4 | Invariancia de `monorepo-embedded` | Resultado idéntico al actual: `<raíz>/openspec` |
-| REQ-24.5 | Deducción de la carpeta maestra | Desde el repositorio de especificaciones se deduce la maestra; en `monorepo-embedded` es siempre el directorio del `axiom.yaml` |
-| REQ-24.6 | Rechazo de la ambigüedad maestra con `openspec/` y puntero | Rechazo con continuación y sin escribir; `axiom init` no la produce |
-| REQ-24.7 | Configuración no resoluble o no cargable | Con puntero, un destino roto o ilegible rechaza (planning home desconocido); sin puntero se conserva lo embebido con aviso |
-| REQ-24.8 | Consumo idéntico por los verbos SDD | Mismo planning home desde cualquier punto de partida |
-| REQ-24.9 | Semántica en el status y autoridad de edición | `workspaceRoot` y `planningHome` coherentes; repos de código por autorización |
-| REQ-24.10 | Consumidores de catálogo | Una sola convención para livingdoc, knowledge y dashboard |
-| REQ-24.11 | Regla de ejecutores | Las rutas `openspec/...` se resuelven contra `workspaceRoot` |
-| REQ-24.12 | Documentación y evidencia `pr_merged` | Receta canónica documentada y `pr_merged` contra el repo de specs |
+| RF-PLH-01 | Primitivo único y de solo lectura | Una sola resolución, sin efectos en disco y con rechazos accionables |
+| RF-PLH-02 | Descubrimiento ascendente por proximidad | Gana el marcador más cercano al directorio de partida |
+| RF-PLH-03 | Enraizado por topología | `multirepo` re-enraíza en el repositorio de especificaciones |
+| RF-PLH-04 | Invariancia de `monorepo-embedded` | Resultado idéntico al actual: `<raíz>/openspec` |
+| RF-PLH-05 | Deducción de la carpeta maestra | Desde el repositorio de especificaciones se deduce la maestra; en `monorepo-embedded` es siempre el directorio del `axiom.yaml` |
+| RF-PLH-06 | Rechazo de la ambigüedad maestra con `openspec/` y puntero | Rechazo con continuación y sin escribir; `axiom init` no la produce |
+| RF-PLH-07 | Configuración no resoluble o no cargable | Con puntero, un destino roto o ilegible rechaza (planning home desconocido); sin puntero se conserva lo embebido con aviso |
+| RF-PLH-08 | Consumo idéntico por los verbos SDD | Mismo planning home desde cualquier punto de partida |
+| RF-PLH-09 | Semántica en el status y autoridad de edición | `workspaceRoot` y `planningHome` coherentes; repos de código por autorización |
+| RF-PLH-10 | Consumidores de catálogo | Una sola convención para livingdoc, knowledge y dashboard |
+| RF-PLH-11 | Regla de ejecutores | Las rutas `openspec/...` se resuelven contra `workspaceRoot` |
+| RF-PLH-12 | Documentación y evidencia `pr_merged` | Receta canónica documentada y `pr_merged` contra el repo de specs |
 
 ## No cubre esta capacidad
 
-- Generar la topología canónica (`axiom adopt`): el puntero y el repositorio de especificaciones se montan a mano y se documentan (REQ-24.12).
-- Dar semántica a `workspace.root`: el primitivo no lo lee (REQ-24.5).
+- Generar la topología canónica (`axiom adopt`): el puntero y el repositorio de especificaciones se montan a mano y se documentan (RF-PLH-12).
+- Dar semántica a `workspace.root`: el primitivo no lo lee (RF-PLH-05).
 - Un flag `--repo` para la evidencia `pr_merged`: queda para un cambio posterior.
 - El descubrimiento de skills en `<specs_repository>/skills` y en los repositorios de roles.
 
@@ -52,7 +52,7 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
 
 El primitivo de resolución determina carpeta maestra, `workspaceRoot`, planning home y origen a partir de un directorio de partida. Todos los verbos del flujo SDD y todos los consumidores de catálogo lo usan, de modo que un mismo workspace se resuelve igual desde cualquier punto.
 
-### Requirement: Primitivo Único y de Solo Lectura de Resolución del Planning Home (REQ-24.1)
+### Requirement: Primitivo Único y de Solo Lectura de Resolución del Planning Home (RF-PLH-01)
 
 El sistema DEBE ofrecer un único primitivo de resolución que, dado un directorio de partida, devuelva la carpeta maestra, `workspaceRoot`, el planning home y el origen de la resolución. El primitivo DEBE ser determinista y de solo lectura: NO DEBE crear ni modificar ficheros ni directorios (tampoco `openspec/`). Toda resolución que no pueda completarse DEBE rechazarse nombrando la causa y una continuación accionable, sin escribir nada. Todos los consumidores de esta capacidad DEBEN obtener esos valores del primitivo y NO DEBEN mantener una convención propia.
 
@@ -75,7 +75,7 @@ El sistema DEBE ofrecer un único primitivo de resolución que, dado un director
 
 ---
 
-### Requirement: Descubrimiento Ascendente por Proximidad (REQ-24.2)
+### Requirement: Descubrimiento Ascendente por Proximidad (RF-PLH-02)
 
 Partiendo del directorio de partida, el primitivo DEBE evaluar primero ese directorio y después sus ancestros, y detenerse en el primero que contenga `.axiom-workspace`, un fichero `axiom.yaml` o un directorio `openspec`: gana el más cercano. Si un mismo directorio contiene varios marcadores, el origen se asigna por precedencia: `.axiom-workspace` (`puntero`), `axiom.yaml` (`configuración`) y `openspec` (`openspec`). El descubrimiento automático de `axiom.yaml` en los subdirectorios `repo-specs`, `specs`, `openspec`, `.openspec` y `especificacion` NO DEBE actuar como marcador ni mover el planning home. Si no existe ningún marcador hasta la raíz del sistema de ficheros, `workspaceRoot` DEBE ser el directorio de partida y el origen `directorio de partida`. Un directorio de partida inexistente, que no sea un directorio o que sea la raíz del sistema de ficheros DEBE rechazarse indicando que el directorio de partida (`--cwd` o `--path`) es incorrecto.
 
@@ -121,11 +121,11 @@ Partiendo del directorio de partida, el primitivo DEBE evaluar primero ese direc
 
 ---
 
-### Requirement: Enraizado por Topología en Multirepo (REQ-24.3)
+### Requirement: Enraizado por Topología en Multirepo (RF-PLH-03)
 
-Una vez hallada la carpeta maestra (REQ-24.5) y cargado `axiom.yaml`, `workspaceRoot` y el planning home DEBEN derivarse según la topología:
+Una vez hallada la carpeta maestra (RF-PLH-05) y cargado `axiom.yaml`, `workspaceRoot` y el planning home DEBEN derivarse según la topología:
 
-- `monorepo-embedded`: `workspaceRoot` es la carpeta maestra y el planning home es `<workspaceRoot>/openspec` (REQ-24.4).
+- `monorepo-embedded`: `workspaceRoot` es la carpeta maestra y el planning home es `<workspaceRoot>/openspec` (RF-PLH-04).
 - `multirepo`: el repositorio de especificaciones es `<maestra>/<specs_repository>`. Si el último segmento de `specs_repository` es `openspec`, el planning home es ese directorio y `workspaceRoot` su padre. En otro caso, el planning home es `<repositorio de especificaciones>/openspec` y `workspaceRoot` es el repositorio de especificaciones.
 
 En todos los casos `openspec/` DEBE permanecer literal bajo `workspaceRoot`, de modo que las rutas `openspec/changes/...` siguen siendo válidas respecto a `workspaceRoot`.
@@ -154,11 +154,11 @@ En todos los casos `openspec/` DEBE permanecer literal bajo `workspaceRoot`, de 
 #### Scenario: La topología retirada no se resuelve
 - **DADO** una carpeta maestra con `axiom.yaml` (`monorepo-decoupled`, `specs_repository: especificacion`)
 - **CUANDO** se resuelve desde la carpeta maestra con un puntero
-- **ENTONCES** la resolución se rechaza conforme a REQ-25.25 de `workspace-topology`, nombrando `multirepo`
+- **ENTONCES** la resolución se rechaza conforme a RF-TOP-08 de `workspace-topology`, nombrando `multirepo`
 
 ---
 
-### Requirement: Invariancia del Layout Monorepo Embebido (REQ-24.4)
+### Requirement: Invariancia del Layout Monorepo Embebido (RF-PLH-04)
 
 En `monorepo-embedded`, y en un proyecto descubierto por `openspec` o por `directorio de partida` (sin `axiom.yaml`), el planning home DEBE ser exactamente `<raíz>/openspec`, con independencia del valor de `specs_repository` (`""`, `.`, `openspec`, `specs` u otro). Cuando el directorio de partida es la raíz del proyecto, `workspaceRoot` DEBE ser ese mismo directorio. La introducción del primitivo NO DEBE exigir modificar ninguna aserción de ruta de las pruebas existentes de `sddstatus`, `cli`, `kickoff` y `livingdoc`.
 
@@ -184,9 +184,9 @@ En `monorepo-embedded`, y en un proyecto descubierto por `openspec` o por `direc
 
 ---
 
-### Requirement: Deducción de la Carpeta Maestra desde el Repositorio de Especificaciones (REQ-24.5)
+### Requirement: Deducción de la Carpeta Maestra desde el Repositorio de Especificaciones (RF-PLH-05)
 
-Cuando el marcador hallado es un `axiom.yaml` sin puntero en el directorio `D`, la carpeta maestra DEBE determinarse según la topología. En `monorepo-embedded` es siempre `D`: la deducción por sufijo no se aplica, porque en un proyecto embebido cuyo directorio se llame igual que `specs_repository` (por ejemplo `W/specs` con `specs_repository: specs`) movería `workspaceRoot` al directorio padre y rompería la invariancia exacta de REQ-24.4. En `multirepo` se determina por este orden: (1) si `specs_repository` es vacío o `.`, `D`; (2) si `D` contiene un directorio con la ruta `specs_repository`, `D`; (3) si la ruta de `D` termina con los segmentos de `specs_repository`, `D` sin ese sufijo; (4) en otro caso, `D`. La comparación de segmentos DEBE tratar `/` y `\` como equivalentes. Cuando el marcador es un puntero, la carpeta maestra es el directorio que lo contiene. El campo `workspace.root` NO DEBE intervenir en la resolución.
+Cuando el marcador hallado es un `axiom.yaml` sin puntero en el directorio `D`, la carpeta maestra DEBE determinarse según la topología. En `monorepo-embedded` es siempre `D`: la deducción por sufijo no se aplica, porque en un proyecto embebido cuyo directorio se llame igual que `specs_repository` (por ejemplo `W/specs` con `specs_repository: specs`) movería `workspaceRoot` al directorio padre y rompería la invariancia exacta de RF-PLH-04. En `multirepo` se determina por este orden: (1) si `specs_repository` es vacío o `.`, `D`; (2) si `D` contiene un directorio con la ruta `specs_repository`, `D`; (3) si la ruta de `D` termina con los segmentos de `specs_repository`, `D` sin ese sufijo; (4) en otro caso, `D`. La comparación de segmentos DEBE tratar `/` y `\` como equivalentes. Cuando el marcador es un puntero, la carpeta maestra es el directorio que lo contiene. El campo `workspace.root` NO DEBE intervenir en la resolución.
 (Previously: la deducción por orden se aplicaba a `monorepo-decoupled` y `multirepo`)
 
 #### Scenario: Desde el repositorio de especificaciones se deduce la carpeta maestra
@@ -224,9 +224,9 @@ Cuando el marcador hallado es un `axiom.yaml` sin puntero en el directorio `D`, 
 
 ---
 
-### Requirement: Rechazo de la Ambigüedad de Carpeta Maestra con `openspec/` Propio y Puntero (REQ-24.6)
+### Requirement: Rechazo de la Ambigüedad de Carpeta Maestra con `openspec/` Propio y Puntero (RF-PLH-06)
 
-Cuando la carpeta maestra contiene un puntero `.axiom-workspace` y además un directorio `openspec` propio (aunque esté vacío), y el planning home que resulta de la configuración apuntada es distinto de `<maestra>/openspec`, el primitivo DEBE rechazar la resolución. El rechazo DEBE nombrar ambos directorios y la continuación (consolidar los cambios de `<maestra>/openspec` en el planning home resuelto y retirar el directorio sobrante, o retirar el puntero), NO DEBE escribir ni mover nada y DEBE aplicarse a todos los verbos que consumen el primitivo, también cuando la resolución parte de un subdirectorio. Ningún creador DEBE producir esta ambigüedad: `axiom init` se rechaza en una carpeta maestra con puntero hacia otro planning home, sin escribir nada (REQ-2.2 de la capacidad `multi-project-hub`).
+Cuando la carpeta maestra contiene un puntero `.axiom-workspace` y además un directorio `openspec` propio (aunque esté vacío), y el planning home que resulta de la configuración apuntada es distinto de `<maestra>/openspec`, el primitivo DEBE rechazar la resolución. El rechazo DEBE nombrar ambos directorios y la continuación (consolidar los cambios de `<maestra>/openspec` en el planning home resuelto y retirar el directorio sobrante, o retirar el puntero), NO DEBE escribir ni mover nada y DEBE aplicarse a todos los verbos que consumen el primitivo, también cuando la resolución parte de un subdirectorio. Ningún creador DEBE producir esta ambigüedad: `axiom init` se rechaza en una carpeta maestra con puntero hacia otro planning home, sin escribir nada (RF-HUB-04 de la capacidad `multi-project-hub`).
 
 #### Scenario: Ambigüedad rechazada con continuación
 - **DADO** el workspace canónico más un directorio `<maestra>/openspec/changes/cambio-antiguo`
@@ -252,14 +252,14 @@ Cuando la carpeta maestra contiene un puntero `.axiom-workspace` y además un di
 
 ---
 
-### Requirement: Configuración No Resoluble o No Cargable (REQ-24.7)
+### Requirement: Configuración No Resoluble o No Cargable (RF-PLH-07)
 
 El primitivo DEBE distinguir cuatro casos:
 
 1. Un puntero cuyo destino no existe, o que no define `config` ni `specs`, DEBE rechazarse nombrando el puntero, el destino y la acción para corregirlo o retirarlo.
-2. Un puntero cuyo destino existe pero cuyo `axiom.yaml` no puede leerse como YAML o no supera la validación de la configuración base (nombre, topología y roles) DEBE rechazarse nombrando la causa y `axiom workspace validate` como continuación: la configuración base determina el repositorio de especificaciones, de modo que el planning home es desconocido y no hay resolución ni status que devolver. Un destino legible cuya configuración base es válida y cuyo único defecto es un bloque `baseline:` residual o un bloque `technical_context:` inválido NO DEBE rechazarse: el planning home es determinable y se aplican REQ-30.21 de `workspace-topology` y REQ-30.30 de `project-technical-context`.
-3. Un `axiom.yaml` directo (sin puntero) que no puede cargarse NO DEBE rechazarse: el primitivo DEBE conservar la resolución embebida (`workspaceRoot` es el directorio que lo contiene y el planning home es `<raíz>/openspec`) y comunicar un aviso no bloqueante que nombre la causa y `axiom workspace validate`. Que esa configuración impida leer el contexto técnico (fichero ilegible o bloque inválido) deja el status operativo y bloquea solo el archivado (REQ-30.30 de `project-technical-context`).
-4. En `multirepo`, una raíz del repositorio de especificaciones (`workspaceRoot`) inexistente DEBE rechazarse nombrando la ruta esperada y la acción para crearla o corregir `specs_repository`. Esa raíz es `<maestra>/<specs_repository>` o, si el último segmento de `specs_repository` es `openspec`, su directorio padre. El planning home (`openspec/`) NO tiene que existir para resolver: el primitivo no lo exige ni lo crea (REQ-24.1).
+2. Un puntero cuyo destino existe pero cuyo `axiom.yaml` no puede leerse como YAML o no supera la validación de la configuración base (nombre, topología y roles) DEBE rechazarse nombrando la causa y `axiom workspace validate` como continuación: la configuración base determina el repositorio de especificaciones, de modo que el planning home es desconocido y no hay resolución ni status que devolver. Un destino legible cuya configuración base es válida y cuyo único defecto es un bloque `baseline:` residual o un bloque `technical_context:` inválido NO DEBE rechazarse: el planning home es determinable y se aplican RF-TOP-12 de `workspace-topology` y RF-CTX-20 de `project-technical-context`.
+3. Un `axiom.yaml` directo (sin puntero) que no puede cargarse NO DEBE rechazarse: el primitivo DEBE conservar la resolución embebida (`workspaceRoot` es el directorio que lo contiene y el planning home es `<raíz>/openspec`) y comunicar un aviso no bloqueante que nombre la causa y `axiom workspace validate`. Que esa configuración impida leer el contexto técnico (fichero ilegible o bloque inválido) deja el status operativo y bloquea solo el archivado (RF-CTX-20 de `project-technical-context`).
+4. En `multirepo`, una raíz del repositorio de especificaciones (`workspaceRoot`) inexistente DEBE rechazarse nombrando la ruta esperada y la acción para crearla o corregir `specs_repository`. Esa raíz es `<maestra>/<specs_repository>` o, si el último segmento de `specs_repository` es `openspec`, su directorio padre. El planning home (`openspec/`) NO tiene que existir para resolver: el primitivo no lo exige ni lo crea (RF-PLH-01).
 (Previously: los casos 2 y 3 hablaban de un bloque `baseline:` inválido y de impedir declarar una baseline, y remitían a REQ-24.18; la baseline ajena se retira)
 
 #### Scenario: Puntero sin `config` ni `specs`
@@ -282,13 +282,13 @@ El primitivo DEBE distinguir cuatro casos:
 - **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con configuración base válida y con un bloque `baseline:`
 - **CUANDO** se ejecuta `axiom sdd status --json` desde la carpeta del puntero
 - **ENTONCES** la resolución se completa sin rechazo y el status devuelve el planning home que determina el puntero
-- **Y** el status señala la causa tipada de REQ-30.21 y marca el archivado como bloqueado
+- **Y** el status señala la causa tipada de RF-TOP-12 y marca el archivado como bloqueado
 
 #### Scenario: Puntero hacia una configuración legible con un `technical_context:` inválido
 - **DADO** un `.axiom-workspace` cuyo destino es un `axiom.yaml` con configuración base válida y con `technical_context.maintained.paths: []`
 - **CUANDO** se ejecuta `axiom sdd status --json` desde la carpeta del puntero
 - **ENTONCES** la resolución se completa sin rechazo y el status devuelve el planning home que determina el puntero
-- **Y** el status señala la causa y marca el archivado como bloqueado (REQ-30.30 de `project-technical-context`)
+- **Y** el status señala la causa y marca el archivado como bloqueado (RF-CTX-20 de `project-technical-context`)
 
 #### Scenario: `axiom.yaml` directo no cargable conserva la resolución embebida
 - **DADO** un proyecto con `openspec/` y un `axiom.yaml` sin la sección `roles`
@@ -306,9 +306,9 @@ El primitivo DEBE distinguir cuatro casos:
 - **CUANDO** se resuelve desde `M`
 - **ENTONCES** no se rechaza: `workspaceRoot` es `M` y el planning home es `M/openspec`
 - **Y** `M/openspec` no se crea
-### Requirement: Consumo Idéntico por los Verbos del Flujo SDD (REQ-24.8)
+### Requirement: Consumo Idéntico por los Verbos del Flujo SDD (RF-PLH-08)
 
-Los siguientes verbos DEBEN obtener carpeta maestra, `workspaceRoot`, planning home y configuración del primitivo de REQ-24.1: `axiom sdd status`, `axiom sdd continue`, `axiom sdd kickoff seal|show`, `axiom sdd gate record|show`, `axiom sdd-attempt grant`, `axiom sdd archive-compose` (cuando recibe `--cwd`), `axiom handoff show|create|validate` y `axiom role list|status|barrier`. Desde un mismo workspace DEBEN resolver el mismo planning home con independencia del directorio de partida. La configuración de `axiom.yaml` que estos verbos consultan (roles, topología) DEBE cargarse a través del resultado de la resolución y NO comprobando la existencia de `<raíz>/axiom.yaml`, de modo que un puntero sin `axiom.yaml` en la carpeta maestra se honre.
+Los siguientes verbos DEBEN obtener carpeta maestra, `workspaceRoot`, planning home y configuración del primitivo de RF-PLH-01: `axiom sdd status`, `axiom sdd continue`, `axiom sdd kickoff seal|show`, `axiom sdd gate record|show`, `axiom sdd-attempt grant`, `axiom sdd archive-compose` (cuando recibe `--cwd`), `axiom handoff show|create|validate` y `axiom role list|status|barrier`. Desde un mismo workspace DEBEN resolver el mismo planning home con independencia del directorio de partida. La configuración de `axiom.yaml` que estos verbos consultan (roles, topología) DEBE cargarse a través del resultado de la resolución y NO comprobando la existencia de `<raíz>/axiom.yaml`, de modo que un puntero sin `axiom.yaml` en la carpeta maestra se honre.
 
 #### Scenario: Mismo planning home desde tres puntos de partida
 - **DADO** el workspace canónico
@@ -333,9 +333,9 @@ Los siguientes verbos DEBEN obtener carpeta maestra, `workspaceRoot`, planning h
 
 ---
 
-### Requirement: Semántica de `workspaceRoot`, `planningHome` y Autoridad de Edición en el Status (REQ-24.9)
+### Requirement: Semántica de `workspaceRoot`, `planningHome` y Autoridad de Edición en el Status (RF-PLH-09)
 
-El status v2 DEBE reportar `actionContext.workspaceRoot` igual al `workspaceRoot` resuelto, `planningHome.path` igual a la ruta absoluta del directorio `openspec` resuelto, `planningHome.mode` igual a `repo-local`, y `changeRoot` y `artifactPaths` bajo `planningHome.path`. `actionContext.allowedEditRoots` DEBE partir de `workspaceRoot` y DEBE incluir además las raíces de los worktrees y repositorios que `axiom branch ensure` registró para el cambio (capacidad `axiom-sdd-cli-integration`, REQ-25.43); los repositorios de código hermanos que no estén registrados por `ensure` NO DEBEN autorizarse implícitamente y siguen el flujo de autorización por cambio existente (`axiom sdd-attempt grant`). Las autorizaciones por cambio, el registro de ejecución y el rechazo de cambios archivados DEBEN operar respecto a `workspaceRoot` y al repositorio git que lo contiene.
+El status v2 DEBE reportar `actionContext.workspaceRoot` igual al `workspaceRoot` resuelto, `planningHome.path` igual a la ruta absoluta del directorio `openspec` resuelto, `planningHome.mode` igual a `repo-local`, y `changeRoot` y `artifactPaths` bajo `planningHome.path`. `actionContext.allowedEditRoots` DEBE partir de `workspaceRoot` y DEBE incluir además las raíces de los worktrees y repositorios que `axiom branch ensure` registró para el cambio (capacidad `axiom-sdd-cli-integration`, RF-CLI-06); los repositorios de código hermanos que no estén registrados por `ensure` NO DEBEN autorizarse implícitamente y siguen el flujo de autorización por cambio existente (`axiom sdd-attempt grant`). Las autorizaciones por cambio, el registro de ejecución y el rechazo de cambios archivados DEBEN operar respecto a `workspaceRoot` y al repositorio git que lo contiene.
 (Previously: `allowedEditRoots` partía solo de `workspaceRoot` y las concesiones por cambio, sin raíces registradas por `ensure`)
 
 #### Scenario: Valores del status en el workspace canónico
@@ -360,9 +360,9 @@ El status v2 DEBE reportar `actionContext.workspaceRoot` igual al `workspaceRoot
 - **CUANDO** se ejecuta `axiom sdd gate record --cwd <maestra> --change inc-98-previo --gate spec --decision approved`
 - **ENTONCES** la operación se rechaza por tratarse de un cambio archivado
 
-### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (REQ-24.10)
+### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (RF-PLH-10)
 
-El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de RF-PLH-01 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
 (Previously: los consumidores de catálogo incluían `knowledge` (raíz de especificaciones por defecto de `axiom knowledge sweep`), que C-08-l retira, y antes la TUI.)
 
 #### Scenario: Catálogo del workspace canónico
@@ -381,7 +381,7 @@ El servicio de documentación viva (livingdoc, incluido el sintetizador de arran
 - **CUANDO** se consultan `GET /api/increments` y `GET /api/archive/specs`
 - **ENTONCES** ambas respuestas proceden de `<maestra>/repo-specs/openspec`
 
-### Requirement: Regla de Ejecutores para las Rutas `openspec/...` (REQ-24.11)
+### Requirement: Regla de Ejecutores para las Rutas `openspec/...` (RF-PLH-11)
 
 La convención compartida de las skills SDD (`_shared/sdd-phase-common.md`) DEBE indicar que las rutas `openspec/...` que citan las skills se resuelven contra `actionContext.workspaceRoot` del status y no contra el directorio de trabajo, y que los bloques de shell que operan sobre ellas DEBEN situarse primero en `workspaceRoot`. Los comandos de orquestador existentes que derivan `--cwd` del repositorio git contenedor DEBEN seguir resolviendo el mismo planning home sin cambios.
 
@@ -398,7 +398,7 @@ La convención compartida de las skills SDD (`_shared/sdd-phase-common.md`) DEBE
 
 ---
 
-### Requirement: Documentación de la Receta Canónica y de la Evidencia `pr_merged` (REQ-24.12)
+### Requirement: Documentación de la Receta Canónica y de la Evidencia `pr_merged` (RF-PLH-12)
 
 `docs/manual-de-inicio.md` DEBE documentar la receta multirepo canónica: carpeta maestra no versionada con `.axiom-workspace` que apunta a `<specs_repository>/axiom.yaml`, repositorio de especificaciones y repositorios de código hermanos, indicando que se monta a mano. DEBE documentar además que `axiom sdd gate record --evidence-kind pr_merged` se verifica contra el grafo git del repositorio de especificaciones (`workspaceRoot`) y que la integración de los repositorios de código se acredita con las evidencias `deployment` o `attestation`.
 
@@ -417,15 +417,15 @@ La convención compartida de las skills SDD (`_shared/sdd-phase-common.md`) DEBE
 - **DADO** el texto de `docs/manual-de-inicio.md`
 - **CUANDO** se inspecciona (pin de texto)
 - **ENTONCES** indica que la integración de un repositorio de código se acredita con `deployment` o `attestation`
-### Requirement: Resolución desde un Worktree Enlazado, también Fuera de la Carpeta Maestra (REQ-25.28)
+### Requirement: Resolución desde un Worktree Enlazado, también Fuera de la Carpeta Maestra (RF-PLH-13)
 
-Cuando el directorio de partida está dentro de un worktree enlazado de git (por ejemplo, el creado por `axiom branch ensure` en la raíz de worktrees, fuera de la carpeta maestra), el primitivo DEBE resolver así, sin escribir nada (REQ-24.1):
+Cuando el directorio de partida está dentro de un worktree enlazado de git (por ejemplo, el creado por `axiom branch ensure` en la raíz de worktrees, fuera de la carpeta maestra), el primitivo DEBE resolver así, sin escribir nada (RF-PLH-01):
 
-1. Si el worktree contiene su propio marcador (`.axiom-workspace`, `axiom.yaml` o `openspec`) en el directorio de partida o en un ancestro **dentro del propio worktree**, se aplica REQ-24.2 sin cambios: gana el marcador más cercano. En `monorepo-embedded` esto hace que `workspaceRoot` y el planning home sean los del propio worktree, donde viven los artefactos del cambio de su rama.
-2. Si la ascensión no halla ningún marcador y el directorio de partida está dentro de un worktree enlazado, el primitivo DEBE resolver como lo haría desde el checkout principal del mismo clon (el worktree principal que lista git), de modo que un worktree de un repositorio de código de un `multirepo` resuelva el mismo planning home que su checkout principal (supuesto S-11). Si tampoco desde el checkout principal se halla marcador, se mantiene la resolución por `directorio de partida` de REQ-24.2.
+1. Si el worktree contiene su propio marcador (`.axiom-workspace`, `axiom.yaml` o `openspec`) en el directorio de partida o en un ancestro **dentro del propio worktree**, se aplica RF-PLH-02 sin cambios: gana el marcador más cercano. En `monorepo-embedded` esto hace que `workspaceRoot` y el planning home sean los del propio worktree, donde viven los artefactos del cambio de su rama.
+2. Si la ascensión no halla ningún marcador y el directorio de partida está dentro de un worktree enlazado, el primitivo DEBE resolver como lo haría desde el checkout principal del mismo clon (el worktree principal que lista git), de modo que un worktree de un repositorio de código de un `multirepo` resuelva el mismo planning home que su checkout principal (supuesto S-11). Si tampoco desde el checkout principal se halla marcador, se mantiene la resolución por `directorio de partida` de RF-PLH-02.
 3. La ubicación del worktree fuera de la carpeta maestra NO DEBE usarse para deducir la carpeta maestra.
 
-`axiom workspace validate` ejecutado desde un worktree enlazado DEBE evaluar las rutas de los repositorios de los roles respecto de la carpeta maestra resuelta conforme a esta regla y NO DEBE reportar como inexistentes los repositorios solo porque el worktree esté fuera de la carpeta maestra. Todas las órdenes posteriores a `ensure` reciben `--cwd` con una ruta absoluta del JSON de `ensure` (REQ-25.2), y las rutas `openspec/...` se resuelven contra `actionContext.workspaceRoot` (REQ-24.11).
+`axiom workspace validate` ejecutado desde un worktree enlazado DEBE evaluar las rutas de los repositorios de los roles respecto de la carpeta maestra resuelta conforme a esta regla y NO DEBE reportar como inexistentes los repositorios solo porque el worktree esté fuera de la carpeta maestra. Todas las órdenes posteriores a `ensure` reciben `--cwd` con una ruta absoluta del JSON de `ensure` (RF-BRA-02), y las rutas `openspec/...` se resuelven contra `actionContext.workspaceRoot` (RF-PLH-11).
 
 #### Scenario: Un worktree de un monorepo embebido resuelve su propio planning home
 - **DADO** un monorepo `monorepo-embedded` con un worktree de la rama `feat/x` en `<raíz de worktrees>/x/<repo>`, con su `axiom.yaml` y su `openspec/`

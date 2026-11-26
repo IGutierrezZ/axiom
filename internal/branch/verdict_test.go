@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Pruebas del veredicto único de rama (REQ-25.18, design D-10): `Decide` es puro y se
+// Pruebas del veredicto único de rama (RF-BRA-19, design D-10): `Decide` es puro y se
 // prueba con tablas, sin git ni disco. Cubre los escenarios de la spec: el papel del
 // repositorio, el contexto ordinario y el de archivado, los cuatro consultantes y las
 // exenciones.
@@ -49,7 +49,7 @@ func wantVerdict(t *testing.T, got Verdict, kind VerdictKind) {
 	}
 }
 
-// REQ-25.18, escenario «Rama del cambio en un monorepo es correcta».
+// RF-BRA-19, escenario «Rama del cambio en un monorepo es correcta».
 func TestDecideTheChangeBranchIsCorrectInAMonorepo(t *testing.T) {
 	verdict := Decide(monorepoInput("feat/x"))
 	wantVerdict(t, verdict, VerdictCorrect)
@@ -58,7 +58,7 @@ func TestDecideTheChangeBranchIsCorrectInAMonorepo(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenario «La rama de integración es incorrecta para un cambio en monorepo»:
+// RF-BRA-19, escenario «La rama de integración es incorrecta para un cambio en monorepo»:
 // nombra la rama actual y la esperada y da la orden exacta de `ensure`.
 func TestDecideTheIntegrationBranchIsWrongInAMonorepo(t *testing.T) {
 	verdict := Decide(monorepoInput("main"))
@@ -77,7 +77,7 @@ func TestDecideTheIntegrationBranchIsWrongInAMonorepo(t *testing.T) {
 }
 
 // multirepoCodeInput es la consulta de `apply` sobre un repositorio de código de un multirepo
-// (único lugar donde existen ramas de rol: en un monorepo el único rol es `fullstack`, REQ-2.2
+// (único lugar donde existen ramas de rol: en un monorepo el único rol es `fullstack`, RF-TOP-04
 // de `workspace-topology`), parado en current.
 func multirepoCodeInput(current string) VerdictInput {
 	in := monorepoInput(current)
@@ -85,7 +85,7 @@ func multirepoCodeInput(current string) VerdictInput {
 	return in
 }
 
-// REQ-25.18, escenario «Una rama de rol es correcta cuando hay ramas de rol» (repositorio de
+// RF-BRA-19, escenario «Una rama de rol es correcta cuando hay ramas de rol» (repositorio de
 // código de un multirepo): también lo es la de seguimiento, la del cambio.
 func TestDecideARoleBranchIsCorrectWhenThereAreRoleBranches(t *testing.T) {
 	for _, current := range []string{"feat/x-qa", "feat/x-core", "feat/x"} {
@@ -98,7 +98,7 @@ func TestDecideARoleBranchIsCorrectWhenThereAreRoleBranches(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenario «La rama de archivado es incorrecta en el contexto ordinario».
+// RF-BRA-19, escenario «La rama de archivado es incorrecta en el contexto ordinario».
 func TestDecideTheArchiveBranchIsWrongInTheOrdinaryContext(t *testing.T) {
 	verdict := Decide(monorepoInput("feat/x-archive"))
 	wantVerdict(t, verdict, VerdictWrongBranch)
@@ -110,7 +110,7 @@ func TestDecideTheArchiveBranchIsWrongInTheOrdinaryContext(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenarios «En el contexto de archivado solo la rama de archivado es correcta»
+// RF-BRA-19, escenarios «En el contexto de archivado solo la rama de archivado es correcta»
 // y «...la rama del cambio, la de integración y las ajenas son incorrectas» (monorepo con el
 // rol `fullstack`: no hay ramas de rol).
 func TestDecideInTheArchiveContextOnlyTheArchiveBranchIsCorrect(t *testing.T) {
@@ -135,7 +135,7 @@ func TestDecideInTheArchiveContextOnlyTheArchiveBranchIsCorrect(t *testing.T) {
 	}
 }
 
-// REQ-25.18, escenario «Un HEAD desacoplado es incorrecto»: en los dos contextos, aunque la
+// RF-BRA-19, escenario «Un HEAD desacoplado es incorrecto»: en los dos contextos, aunque la
 // rama actual que se pase coincida con una esperada.
 func TestDecideADetachedHeadIsWrong(t *testing.T) {
 	for _, context := range []Context{ContextOrdinary, ContextArchive} {
@@ -152,7 +152,7 @@ func TestDecideADetachedHeadIsWrong(t *testing.T) {
 	wantVerdict(t, Decide(in), VerdictWrongBranch)
 }
 
-// REQ-25.18, escenario «El repositorio de specs de un multirepo exige su rama de
+// RF-BRA-19, escenario «El repositorio de specs de un multirepo exige su rama de
 // integración»: también en el contexto de archivado, donde no hay rama de archivado, y una
 // rama de rol o la del cambio son incorrectas.
 func TestDecideTheSpecsRepositoryOfAMultirepoRequiresItsIntegrationBranch(t *testing.T) {
@@ -179,7 +179,7 @@ func TestDecideTheSpecsRepositoryOfAMultirepoRequiresItsIntegrationBranch(t *tes
 	wantVerdict(t, Decide(detached), VerdictWrongBranch)
 }
 
-// REQ-25.18, escenario «El repositorio de código de un multirepo solo se evalúa en apply»:
+// RF-BRA-19, escenario «El repositorio de código de un multirepo solo se evalúa en apply»:
 // con cualquier otro consultante es `not_applicable`.
 func TestDecideACodeRepositoryOnlyAnswersToTheApplyConsultant(t *testing.T) {
 	code := func(current string, consultant Consultant) VerdictInput {
@@ -205,7 +205,7 @@ func TestDecideACodeRepositoryOnlyAnswersToTheApplyConsultant(t *testing.T) {
 	wantVerdict(t, Decide(archive), VerdictCorrect)
 }
 
-// REQ-25.18: los cuatro consultantes dan la misma respuesta para un repositorio con rama de
+// RF-BRA-19: los cuatro consultantes dan la misma respuesta para un repositorio con rama de
 // cambio; solo el de código distingue a `apply`.
 func TestDecideAnswersTheSameToEveryConsultantInARepositoryWithAChangeBranch(t *testing.T) {
 	for _, consultant := range []Consultant{ConsultantWrite, ConsultantStatus, ConsultantApply, ConsultantGuard} {
@@ -219,7 +219,7 @@ func TestDecideAnswersTheSameToEveryConsultantInARepositoryWithAChangeBranch(t *
 	}
 }
 
-// REQ-25.18 y REQ-25.37: un cambio sin instantánea, los sumideros acumulativos y una ruta
+// RF-BRA-19 y RF-KOF-07: un cambio sin instantánea, los sumideros acumulativos y una ruta
 // fuera de git quedan exentos: `not_applicable`, con el motivo, sin continuación y aunque la
 // rama sea la equivocada.
 func TestDecideAnExemptChangeIsNotApplicableWhateverTheBranch(t *testing.T) {
@@ -291,7 +291,7 @@ func TestDecideDoesNotAliasOrMutateItsInput(t *testing.T) {
 	}
 }
 
-// REQ-25.19: el rechazo `wrong_branch` lleva el código tipado, la rama actual, la esperada,
+// RF-BRA-20: el rechazo `wrong_branch` lleva el código tipado, la rama actual, la esperada,
 // el repositorio y la continuación exacta, y se detecta con errors.As.
 func TestWrongBranchRefusalNamesTheTypedCodeAndTheContinuation(t *testing.T) {
 	verdict := Decide(monorepoInput("main"))

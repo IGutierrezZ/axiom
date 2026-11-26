@@ -88,7 +88,7 @@ func ValidRefName(name string) error {
 // ValidBranchComponent comprueba un componente de cambio o de rol, que forma parte
 // de un nombre de rama (`<prefijo>/<cambio>-<rol>`) y también de un nombre de
 // directorio de worktree (`<raíz>/<cambio>-<rol>/<repo>`), por lo que debe ser
-// válido a la vez para git y para el sistema de ficheros de Windows (REQ-25.11):
+// válido a la vez para git y para el sistema de ficheros de Windows (RF-BRA-11):
 //
 //   - cumple `^[A-Za-z0-9][A-Za-z0-9._-]*$`: solo letras ASCII, dígitos, `.`, `_`
 //     y `-`, y empieza por una letra o un dígito (sin `/`, `\`, `:`, `?`, `*`,

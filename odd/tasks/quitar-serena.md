@@ -155,7 +155,7 @@ La interfaz SPA embebida (`assets/index.html`, `app.js`, `style.css`) DEBE inclu
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Configuración Automática de Servidores MCP en .mcp.json (REQ-23.4)
+### Requirement: Configuración Automática de Servidores MCP en .mcp.json (RF-KNW-04)
 
 El inicializador DEBE generar o actualizar el archivo `.mcp.json` en la raíz del workspace, registrando de forma predeterminada los servidores MCP:
 - `engram`: memoria persistente de proyecto y sesiones.

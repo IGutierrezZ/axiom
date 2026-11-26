@@ -420,7 +420,7 @@ func syntheticLinkedWorktree(t *testing.T, base, name string) (linked, main stri
 	return linked, main
 }
 
-// REQ-25.31: un worktree enlazado se reconoce por la evidencia de git (`.git` fichero cuyo git
+// RF-HUB-09: un worktree enlazado se reconoce por la evidencia de git (`.git` fichero cuyo git
 // dir contiene `commondir`), nunca por el nombre de un segmento de su ruta.
 func TestIsGitWorktree(t *testing.T) {
 	tempDir := t.TempDir()
@@ -517,7 +517,7 @@ func newGitRepository(t *testing.T, dir string) string {
 	return dir
 }
 
-// REQ-25.31, escenario 1: un checkout principal bajo una ruta con un segmento `axiom-wt` o
+// RF-HUB-09, escenario 1: un checkout principal bajo una ruta con un segmento `axiom-wt` o
 // terminado en `-wt` se registra: el nombre de la ruta no es evidencia de worktree.
 func TestRegisterAcceptsAMainCheckoutUnderAWtSegment(t *testing.T) {
 	requireGit(t)
@@ -554,7 +554,7 @@ func quotedMainCheckout(t *testing.T, err error) string {
 	return match[1]
 }
 
-// REQ-25.31, escenario 2: un worktree enlazado real no se registra y el rechazo nombra su
+// RF-HUB-09, escenario 2: un worktree enlazado real no se registra y el rechazo nombra su
 // checkout principal citado, de modo que `axiom project add <checkout principal>` se pueda copiar.
 func TestRegisterRefusesALinkedWorktreeAndNamesTheMainCheckout(t *testing.T) {
 	requireGit(t)
@@ -627,7 +627,7 @@ func TestRegisterRefusalWithoutAResolvableMainCheckout(t *testing.T) {
 	}
 }
 
-// REQ-25.31, escenario 3: un submódulo (`.git` fichero sin `commondir`) no se trata como
+// RF-HUB-09, escenario 3: un submódulo (`.git` fichero sin `commondir`) no se trata como
 // worktree enlazado y se registra como cualquier checkout.
 func TestRegisterAcceptsASubmodule(t *testing.T) {
 	base := t.TempDir()
@@ -647,7 +647,7 @@ func TestRegisterAcceptsASubmodule(t *testing.T) {
 	}
 }
 
-// REQ-25.31, escenario 4: crear worktrees enlazados de un proyecto registrado no altera su
+// RF-HUB-09, escenario 4: crear worktrees enlazados de un proyecto registrado no altera su
 // registro, no añade proyectos y `Prune` no los toca.
 func TestLinkedWorktreesDoNotAlterTheRegisteredProject(t *testing.T) {
 	requireGit(t)
@@ -695,7 +695,7 @@ func TestLinkedWorktreesDoNotAlterTheRegisteredProject(t *testing.T) {
 	assertOnlyTheProject("tras Prune")
 }
 
-// Escritura de las preferencias personales de worktree (INC-25, REQ-25.29, S7): persisten en
+// Escritura de las preferencias personales de worktree (INC-25, RF-HUB-07, S7): persisten en
 // la entrada del proyecto sin cambiar el esquema y se validan antes de tocar el hub.
 
 func readHubBytes(t *testing.T, config string) []byte {
@@ -707,7 +707,7 @@ func readHubBytes(t *testing.T, config string) []byte {
 	return raw
 }
 
-// REQ-25.29, escenario «Persistencia de las preferencias»: el modo y la raíz quedan en la
+// RF-HUB-07, escenario «Persistencia de las preferencias»: el modo y la raíz quedan en la
 // entrada del proyecto y se recuperan; la búsqueda admite el id y la ruta.
 func TestSetWorktreePrefsPersistsAndIsReadBack(t *testing.T) {
 	manager, project, config := newPrefsHub(t)
@@ -753,7 +753,7 @@ func TestSetWorktreePrefsPersistsAndIsReadBack(t *testing.T) {
 	})
 }
 
-// REQ-25.29, escenarios «Modo inválido rechazado» y «Raíz relativa rechazada»: el rechazo
+// RF-HUB-07, escenarios «Modo inválido rechazado» y «Raíz relativa rechazada»: el rechazo
 // está en castellano y el fichero no cambia ni un byte.
 func TestSetWorktreePrefsRejectsInvalidValuesWithoutChangingTheHub(t *testing.T) {
 	tests := []struct {
@@ -801,7 +801,7 @@ func TestSetWorktreePrefsOfAnUnregisteredProjectSaysSo(t *testing.T) {
 	}
 }
 
-// REQ-25.29, escenario «Re-registrar conserva las preferencias»: Register no cambia su
+// RF-HUB-07, escenario «Re-registrar conserva las preferencias»: Register no cambia su
 // firma ni toca lo guardado.
 func TestRegisterAgainKeepsTheWorktreePrefs(t *testing.T) {
 	manager, project, _ := newPrefsHub(t)
@@ -822,7 +822,7 @@ func TestRegisterAgainKeepsTheWorktreePrefs(t *testing.T) {
 	}
 }
 
-// REQ-25.29, escenario «Desregistrar elimina las preferencias».
+// RF-HUB-07, escenario «Desregistrar elimina las preferencias».
 func TestUnregisterRemovesTheWorktreePrefsWithTheEntry(t *testing.T) {
 	manager, project, config := newPrefsHub(t)
 	root := filepath.Join(t.TempDir(), "wt")
@@ -843,7 +843,7 @@ func TestUnregisterRemovesTheWorktreePrefsWithTheEntry(t *testing.T) {
 	}
 }
 
-// REQ-25.29, escenario «Un binario anterior ignora las preferencias»: el JSON con los campos
+// RF-HUB-07, escenario «Un binario anterior ignora las preferencias»: el JSON con los campos
 // nuevos carga en un tipo sin ellos, con el esquema `"1.0"` y el resto de campos intactos.
 func TestAnOlderBinaryIgnoresTheWorktreePrefs(t *testing.T) {
 	manager, project, config := newPrefsHub(t)
@@ -886,7 +886,7 @@ func TestAnOlderBinaryIgnoresTheWorktreePrefs(t *testing.T) {
 	}
 }
 
-// REQ-25.30: el registro con preferencias valida antes de registrar, aplica solo lo que no
+// RF-HUB-08: el registro con preferencias valida antes de registrar, aplica solo lo que no
 // está vacío (re-registrar con el modo conserva la raíz guardada) y sin preferencias no
 // escribe nada más que el registro.
 func TestRegisterWithWorktreePrefs(t *testing.T) {
@@ -945,7 +945,7 @@ func TestRegisterWithWorktreePrefs(t *testing.T) {
 	})
 }
 
-// REQ-25.30: Init valida las preferencias antes de escribir ni registrar nada y, con ellas
+// RF-HUB-08: Init valida las preferencias antes de escribir ni registrar nada y, con ellas
 // válidas, las guarda en la entrada del hub.
 func TestInitAppliesAndValidatesTheWorktreePrefs(t *testing.T) {
 	config := filepath.Join(t.TempDir(), "workspaces.json")

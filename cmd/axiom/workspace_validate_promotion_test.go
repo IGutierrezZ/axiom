@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// REQ-25.26: `promotion` sin `main_branch` no tiene efecto; `workspace validate` lo
+// RF-TOP-09: `promotion` sin `main_branch` no tiene efecto; `workspace validate` lo
 // avisa sin invalidar la configuración (código 0 y COMPLIANT).
 func TestWorkspaceValidateWarnsAboutPromotionWithoutMainBranch(t *testing.T) {
 	master := validateWorkspace(t, "git:\n  promotion: branch\n", "artifact_store: hybrid\n")

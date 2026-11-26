@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// `ensure` y la promoción de ramas (C-02-a, REQ-25.46, REQ-25.47, REQ-25.14, REQ-25.10, design D4,
+// `ensure` y la promoción de ramas (C-02-a, RF-BRA-28, RF-BRA-29, RF-BRA-15, RF-BRA-10, design D4,
 // D5 y D10): con `git.main_branch` distinta de la integración la rama del cambio sale de la
 // principal (`branch`) o de la integración (`release`); `ask` pregunta por repositorio sin crear
 // nada; el modo se registra con su origen y no cambia. Con git real y sin red. Usan `in_place`,
@@ -65,7 +65,7 @@ func wantWarning(t *testing.T, result branch.Result, fragment string) {
 	t.Errorf("avisos %q; se esperaba uno con %q", result.Warnings, fragment)
 }
 
-// REQ-25.46 y REQ-25.10: sin nada declarado rige el defecto `branch` (origen `default`): la rama
+// RF-BRA-28 y RF-BRA-10: sin nada declarado rige el defecto `branch` (origen `default`): la rama
 // del cambio sale de la rama principal, su PR sigue yendo a la integración y la base del
 // resultado es la principal. El registro guarda el modo y su origen. Sin red.
 func TestEnsurePromotionBranchIsTheDefaultAndCreatesTheChangeFromTheMainBranch(t *testing.T) {
@@ -94,7 +94,7 @@ func TestEnsurePromotionBranchIsTheDefaultAndCreatesTheChangeFromTheMainBranch(t
 	}
 }
 
-// REQ-25.46 (precedencia de política): `git.promotion` y `repositories[].promotion` fijan el modo
+// RF-BRA-28 (precedencia de política): `git.promotion` y `repositories[].promotion` fijan el modo
 // con su origen; `release` crea desde la integración. La referencia remota ya traída prevalece
 // sobre la rama local de la base.
 func TestEnsurePromotionPolicyFixesTheModeAndTheBase(t *testing.T) {
@@ -144,7 +144,7 @@ func TestEnsurePromotionPolicyFixesTheModeAndTheBase(t *testing.T) {
 	})
 }
 
-// REQ-25.47: `--promotion` fija el modo con origen `flag`; con la política en `ask` es la
+// RF-BRA-29: `--promotion` fija el modo con origen `flag`; con la política en `ask` es la
 // respuesta y el origen es `answer`.
 func TestEnsurePromotionFlagFixesTheModeWithItsSource(t *testing.T) {
 	t.Run("con la política fija es flag", func(t *testing.T) {
@@ -174,7 +174,7 @@ func TestEnsurePromotionFlagFixesTheModeWithItsSource(t *testing.T) {
 	})
 }
 
-// REQ-25.47 (escenario `ask`): sin respuesta, `decision_required` sin crear nada ni escribir el
+// RF-BRA-29 (escenario `ask`): sin respuesta, `decision_required` sin crear nada ni escribir el
 // registro; al repetir con la invocación propuesta la rama sale de la base correcta y el registro
 // guarda `answer`; un `--promotion` distinto del registrado es `plan_conflict` sin tocar nada.
 func TestEnsurePromotionAskAsksOnceRecordsTheAnswerAndRefusesAChangeOfMode(t *testing.T) {
@@ -246,7 +246,7 @@ func TestEnsurePromotionAskAsksOnceRecordsTheAnswerAndRefusesAChangeOfMode(t *te
 	})
 }
 
-// REQ-25.14: sin `main_branch` ni el registro ni el resultado ni el plan cambian un byte, y un
+// RF-BRA-15: sin `main_branch` ni el registro ni el resultado ni el plan cambian un byte, y un
 // `--promotion` sin efecto solo avisa.
 func TestEnsureWithoutMainBranchKeepsTheRegistryAndTheResultUntouched(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -276,7 +276,7 @@ func TestEnsureWithoutMainBranchKeepsTheRegistryAndTheResultUntouched(t *testing
 	})
 }
 
-// REQ-25.10 y matriz de amenazas («Base de creación»): en modo `branch` sin la rama principal,
+// RF-BRA-10 y matriz de amenazas («Base de creación»): en modo `branch` sin la rama principal,
 // `base_not_found` nombra `git.main_branch` y no deja ni rama ni registro; `--base` manda sobre la
 // rama principal.
 func TestEnsurePromotionBranchWithoutTheMainBranchIsBaseNotFoundAndBaseWins(t *testing.T) {
@@ -308,7 +308,7 @@ func TestEnsurePromotionBranchWithoutTheMainBranchIsBaseNotFoundAndBaseWins(t *t
 	})
 }
 
-// REQ-25.47: un `--promotion <repo>=…` cuyo repositorio no es del plan es `invalid_name` con los
+// RF-BRA-29: un `--promotion <repo>=…` cuyo repositorio no es del plan es `invalid_name` con los
 // nombres válidos y sin efectos.
 func TestEnsurePromotionWithAnUnknownRepositoryIsInvalidName(t *testing.T) {
 	t.Parallel()
@@ -327,7 +327,7 @@ func TestEnsurePromotionWithAnUnknownRepositoryIsInvalidName(t *testing.T) {
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// REQ-25.47: un modo pedido que no es una respuesta (`ask`) es `config_invalid` por defensa: la
+// RF-BRA-29: un modo pedido que no es una respuesta (`ask`) es `config_invalid` por defensa: la
 // CLI ya lo rechaza como error de uso.
 func TestEnsurePromotionRevalidatesTheRequestedMode(t *testing.T) {
 	t.Parallel()
@@ -339,7 +339,7 @@ func TestEnsurePromotionRevalidatesTheRequestedMode(t *testing.T) {
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// REQ-25.47 (multirepo): el repositorio de specs está exento; con dos repositorios de código en
+// RF-BRA-29 (multirepo): el repositorio de specs está exento; con dos repositorios de código en
 // `ask`, dos llamadas secuenciales preguntan de uno en uno con `Details.name` y la segunda
 // invocación conserva la primera respuesta; las respuestas se registran por repositorio.
 func TestEnsurePromotionMultirepoAsksOneRepositoryPerCallAndKeepsThePreviousAnswers(t *testing.T) {

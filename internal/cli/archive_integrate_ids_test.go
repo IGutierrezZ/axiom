@@ -11,7 +11,7 @@ import (
 )
 
 // Las pruebas de `axiom archive integrate --odd` con identificadores provisionales y de su
-// opción `--check` (REQ-30.2, REQ-30.3, REQ-47.6, REQ-47.7). Todos los textos son inventados.
+// opción `--check` (REQ-30.2, REQ-30.3, RF-RID-14, RF-OLS-10). Todos los textos son inventados.
 
 const oddProvDelta = `## ADDED Requirements
 

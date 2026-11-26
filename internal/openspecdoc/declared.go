@@ -19,7 +19,7 @@ func ParseChangeSpec(text string) (d Delta, fullSpec bool) {
 }
 
 // DeclaredRequirement es un requisito que la delta de un cambio crea o toca, tal como lo
-// proyecta `axiom sdd status --json` (REQ-47.9): `Requirement` es el nombre exacto de la
+// proyecta `axiom sdd status --json` (RF-CLI-14): `Requirement` es el nombre exacto de la
 // delta (el antiguo, en un RENAMED); `ID` solo si ese nombre lleva un identificador válido
 // o un provisional.
 type DeclaredRequirement struct {

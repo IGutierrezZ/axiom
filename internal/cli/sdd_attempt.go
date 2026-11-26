@@ -66,7 +66,7 @@ func runSDDAttempt(ctx context.Context, args []string, stdout io.Writer) error {
 	// The grant belongs to the specs repository that owns the planning home,
 	// whatever directory --cwd names: a code repository of a canonical
 	// workspace resolves to the same workspaceRoot as the master folder
-	// (REQ-24.8, REQ-24.9).
+	// (RF-PLH-08, RF-PLH-09).
 	loc, err := workspace.Locate(*cwd)
 	if err != nil {
 		return fmt.Errorf("resolve sdd-attempt grant workspace: %w", err)

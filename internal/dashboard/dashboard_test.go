@@ -643,7 +643,7 @@ func TestInteractiveSDDOrchestrationEndpoints(t *testing.T) {
 
 	// Inicializar estructura básica de openspec
 	_ = os.MkdirAll(filepath.Join(tempDir, "openspec", "changes"), 0755)
-	// REQ-25.32 (INC-25 S8-c4): crear un incremento ejecuta `ensure`. El flujo siguiente continúa
+	// RF-WEB-09 (INC-25 S8-c4): crear un incremento ejecuta `ensure`. El flujo siguiente continúa
 	// sobre el cambio recién creado desde la ruta registrada, así que el proyecto usa `in_place`
 	// (el cambio queda en el propio checkout); el modo `worktree` lo cubre service_branch_test.go.
 	gitProject(t, tempDir, hub.WorktreeModeInPlace)
@@ -896,7 +896,7 @@ func TestEcosystemEndpoints(t *testing.T) {
 }
 
 // TestEcosystemUpgradePresentsBothPhases verifica la presentación web de la
-// cadena upgrade->sync (REQ-22.4): el resultado de "Actualizar Herramientas"
+// cadena upgrade->sync (RF-UPD-04): el resultado de "Actualizar Herramientas"
 // presenta el estado de phases.upgrade y phases.sync, el motivo de omisión de
 // sync (restart-required / upgrade-failed) y la instrucción de reinicio cuando
 // el binario en ejecución fue reemplazado.
@@ -1098,7 +1098,7 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 	}
 
 	// 1. Crear un worktree enlazado simulado con axiom.yaml y .git: la evidencia es un
-	// `.git` fichero cuyo git dir contiene `commondir` (REQ-25.31), no la ruta.
+	// `.git` fichero cuyo git dir contiene `commondir` (RF-HUB-09), no la ruta.
 	wtDir := filepath.Join(tempDir, "axiom-wt", "my-feature")
 	_ = os.MkdirAll(wtDir, 0755)
 	_ = os.WriteFile(filepath.Join(wtDir, "axiom.yaml"), []byte("workspace:\n  name: Feature\n"), 0644)
@@ -1133,7 +1133,7 @@ func TestDashboardWorktreeExclusion(t *testing.T) {
 	}
 }
 
-// D-22 (REQ-25.23, escenario 5): cuando git no puede decir la rama actual (un repositorio recién
+// D-22 (RF-BRA-24, escenario 5): cuando git no puede decir la rama actual (un repositorio recién
 // iniciado, sin ningún commit), GetSpecsSyncStatus informa la rama de integración resuelta del
 // proyecto y no un `main` fijo.
 func TestSpecsSyncStatusFallsBackToTheResolvedIntegration(t *testing.T) {

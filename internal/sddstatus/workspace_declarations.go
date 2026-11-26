@@ -17,7 +17,7 @@ import (
 // del workspace (workspace.Locate) tiene que comunicar: los avisos de Location
 // (un axiom.yaml directo que no se pudo cargar y un planning home divergente de
 // <maestra>/openspec) y las declaraciones válidas de axiom.yaml, `technical_context:`, como campo
-// aditivo y opcional (D-05, REQ-24.19, REQ-24.28), más el carril efectivo `workflow` (REQ-27.2), que se proyecta
+// aditivo y opcional (D-05, REQ-24.19, RF-CTX-03), más el carril efectivo `workflow` (RF-CLI-08), que se proyecta
 // siempre. Es un decorador que actúa fuera de baseStatus, de modo que la
 // firma que usa status_v2_clean_break_test no cambia.
 //
@@ -78,7 +78,7 @@ func projectTechnicalContext(location workspace.Location) *TechnicalContextProje
 	}
 }
 
-// projectWorkflow devuelve el carril efectivo del proyecto (REQ-27.2). Siempre
+// projectWorkflow devuelve el carril efectivo del proyecto (RF-CLI-08). Siempre
 // responde, con o sin cambio seleccionado, y falla cerrado hacia preguntar: sin
 // axiom.yaml o con uno que no se puede leer proyecta ask. Las reglas se evalúan en
 // este orden:
@@ -86,7 +86,7 @@ func projectTechnicalContext(location workspace.Location) *TechnicalContextProje
 //  1. sin axiom.yaml: ask / no_workspace;
 //  2. axiom.yaml ilegible, base que no carga o bloque `workflow:` inválido (aunque
 //     el bloque fuera válido y la base no), o `sdd.iso: true` contradictorio con
-//     `workflow.lane: odd` (REQ-29.1): ask / invalid;
+//     `workflow.lane: odd` (RF-ISO-01): ask / invalid;
 //  3. bloque con `lane` declarado: el declarado / declared;
 //  4. el resto: sdd / default.
 //
@@ -113,8 +113,8 @@ func absoluteDeclaredPath(workspaceRoot, declared string) string {
 }
 
 // contextImpactFile es el delta de contexto de un cambio con contexto técnico
-// mantenido (REQ-24.31). Solo se comprueba su existencia: no se proyecta en el
-// status ni altera los localizadores de artefactos (REQ-24.28).
+// mantenido (RF-CTX-06). Solo se comprueba su existencia: no se proyecta en el
+// status ni altera los localizadores de artefactos (RF-CTX-03).
 const contextImpactFile = "context-impact.md"
 
 // blockArchiveOnDeclarations aplica las causas de D-05 a un status con cambio
@@ -206,7 +206,7 @@ func effectiveArtifactStore(status *Status, location workspace.Location) Artifac
 func invalidDeclarationErrors(declarations workspace.Declarations) []string {
 	var lines []string
 	// La baseline retirada es un puntero: se añade aparte para que un nil tipado no
-	// se convierta en un error no nulo (REQ-30.21).
+	// se convierta en un error no nulo (RF-TOP-12).
 	candidates := []error{declarations.ParseErr}
 	if declarations.BaselineRetiredErr != nil {
 		candidates = append(candidates, declarations.BaselineRetiredErr)

@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Las pruebas del plan de integración del cambio SDD entero (REQ-47.8, REQ-30.22, REQ-21.17).
+// Las pruebas del plan de integración del cambio SDD entero (RF-ARC-15, RF-ARC-11, RF-ARC-02).
 // Todos los textos son inventados.
 
 const changeName = "mi-cambio"

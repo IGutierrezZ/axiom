@@ -10,7 +10,7 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
 
 El paquete `internal/hub` provee persistencia, auditoría y gestión de múltiples workspaces en la máquina del desarrollador.
 
-### Requirement: Registro Global Centralizado de Workspaces (REQ-1.1)
+### Requirement: Registro Global Centralizado de Workspaces (RF-HUB-01)
 
 El sistema DEBE persistir la lista de proyectos conocidos en un archivo JSON ubicado en el perfil de usuario: `$HOME/.axiom/workspaces.json` (o `%USERPROFILE%\.axiom\workspaces.json` en Windows). El archivo DEBE almacenar:
 - Versión del esquema (`"1.0"`).
@@ -43,7 +43,7 @@ El sistema DEBE persistir la lista de proyectos conocidos en un archivo JSON ubi
 
 ---
 
-### Requirement: Conmutación y Resolución de Proyecto Activo (REQ-1.2)
+### Requirement: Conmutación y Resolución de Proyecto Activo (RF-HUB-02)
 
 El gestor DEBE permitir consultar y establecer cuál es el proyecto activo del desarrollador. Si el proyecto marcado como activo ya no existe físicamente en el disco, el gestor DEBE realizar un fallback inteligente hacia el directorio actual si contiene `axiom.yaml`, o hacia el primer proyecto válido del catálogo.
 
@@ -64,9 +64,9 @@ El gestor DEBE permitir consultar y establecer cuál es el proyecto activo del d
 
 El gestor provee inicialización asistida y automática de proyectos (`axiom init`), permitiendo adoptar proyectos existentes o inicializar nuevos sin fricción.
 
-### Requirement: Detección Heurística de Tecnologías (REQ-2.1)
+### Requirement: Detección Heurística de Tecnologías (RF-HUB-03)
 
-El inicializador DEBE inspeccionar los archivos del repositorio para deducir la tecnología principal y configurar adecuadamente las herramientas y, solo en `multirepo`, los roles en `axiom.yaml` (en `monorepo-embedded` el único rol que se escribe es `fullstack`, REQ-2.2):
+El inicializador DEBE inspeccionar los archivos del repositorio para deducir la tecnología principal y configurar adecuadamente las herramientas y, solo en `multirepo`, los roles en `axiom.yaml` (en `monorepo-embedded` el único rol que se escribe es `fullstack`, RF-HUB-04):
 - Si detecta `go.mod` ➔ Tecnología: `go` / `go-test`.
 - Si detecta `package.json` ➔ Tecnología: `nodejs` / `typescript` (o `react`/`vue`/`svelte` si están en dependencias).
 - Si detecta `*.csproj` o `*.sln` ➔ Tecnología: `dotnet` / `csharp`.
@@ -85,19 +85,19 @@ El inicializador DEBE inspeccionar los archivos del repositorio para deducir la 
 - **ENTONCES** retorna `csharp` y `dotnet` en la configuración inicial
 
 
-### Requirement: Generación de Andamiaje `axiom.yaml` y Registro Automático (REQ-2.2)
+### Requirement: Generación de Andamiaje `axiom.yaml` y Registro Automático (RF-HUB-04)
 
 Al ejecutar `axiom init` sobre un directorio:
 1. Si NO existe `axiom.yaml`, genera un archivo canónico con el nombre del proyecto, topología seleccionada (`monorepo-embedded` por defecto), repositorio de especificaciones (`openspec`), roles y gobernanza en español. Los roles dependen de la topología: en `monorepo-embedded` el alta escribe SOLO el rol `fullstack`, aunque el detector haya deducido otros roles o el formulario los haya enviado; en `multirepo` se aplican los roles detectados (`core`, `web`, `qa`) o los del formulario. El perfil `knowledge` (o `spec-only`) fuerza `multirepo` con un único rol `knowledge`.
 2. Crea las carpetas base necesarias: `.axiom/inbox/skills/`, `openspec/specs/` y `openspec/changes/`.
 3. Registra automáticamente el proyecto en `~/.axiom/workspaces.json` y lo marca como proyecto activo.
-4. Si YA existe `axiom.yaml`, no lo sobreescribe; valida su estructura (incluido el bloque opcional `technical_context`; un bloque `baseline:` residual se rechaza con el error tipado de REQ-30.21) y lo registra en el Hub global si no estaba registrado.
+4. Si YA existe `axiom.yaml`, no lo sobreescribe; valida su estructura (incluido el bloque opcional `technical_context`; un bloque `baseline:` residual se rechaza con el error tipado de RF-TOP-12) y lo registra en el Hub global si no estaba registrado.
 
-Antes de escribir nada, `axiom init` DEBE rechazarse cuando el propio directorio contiene un puntero `.axiom-workspace` cuyo planning home, resuelto con el primitivo de la capacidad `planning-home-resolution` (REQ-24.1), es distinto de `<directorio>/openspec`: crear ese directorio produciría un segundo planning home y la ambigüedad de REQ-24.6 en todos los verbos. La comparación es entre rutas y NO exige que `<directorio>/openspec` exista, porque `init` es quien lo crea; la existencia del repositorio de especificaciones que exige REQ-24.7 (caso 4) es una condición del primitivo y no de esta comparación. El rechazo DEBE aplicarse con cualquier perfil, finalizar con código de salida distinto de cero, no escribir ni registrar nada y nombrar el puntero, el planning home resuelto y la continuación: inicializar el `workspaceRoot` resuelto con `axiom init --path <workspaceRoot>` o montar la topología a mano según la receta documentada (REQ-24.12).
+Antes de escribir nada, `axiom init` DEBE rechazarse cuando el propio directorio contiene un puntero `.axiom-workspace` cuyo planning home, resuelto con el primitivo de la capacidad `planning-home-resolution` (RF-PLH-01), es distinto de `<directorio>/openspec`: crear ese directorio produciría un segundo planning home y la ambigüedad de RF-PLH-06 en todos los verbos. La comparación es entre rutas y NO exige que `<directorio>/openspec` exista, porque `init` es quien lo crea; la existencia del repositorio de especificaciones que exige RF-PLH-07 (caso 4) es una condición del primitivo y no de esta comparación. El rechazo DEBE aplicarse con cualquier perfil, finalizar con código de salida distinto de cero, no escribir ni registrar nada y nombrar el puntero, el planning home resuelto y la continuación: inicializar el `workspaceRoot` resuelto con `axiom init --path <workspaceRoot>` o montar la topología a mano según la receta documentada (RF-PLH-12).
 
-Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un puntero roto o un `axiom.yaml` apuntado ilegible, REQ-24.7), el primitivo rechaza la resolución y `axiom init` DEBE rechazarse con ese mismo error, que nombra la causa y la continuación, con código de salida distinto de cero y sin escribir ni registrar nada.
+Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un puntero roto o un `axiom.yaml` apuntado ilegible, RF-PLH-07), el primitivo rechaza la resolución y `axiom init` DEBE rechazarse con ese mismo error, que nombra la causa y la continuación, con código de salida distinto de cero y sin escribir ni registrar nada.
 
-`axiom init` NO DEBE rechazarse cuando el puntero resuelve a `<directorio>/openspec` (exista ya ese directorio o no), cuando el propio directorio no contiene puntero (aunque lo contenga un directorio ancestro: el marcador más cercano gana, REQ-24.2) ni cuando no hay ningún marcador: en esos casos se comporta como describen los puntos 1 a 4.
+`axiom init` NO DEBE rechazarse cuando el puntero resuelve a `<directorio>/openspec` (exista ya ese directorio o no), cuando el propio directorio no contiene puntero (aunque lo contenga un directorio ancestro: el marcador más cercano gana, RF-PLH-02) ni cuando no hay ningún marcador: en esos casos se comporta como describen los puntos 1 a 4.
 
 (Previously: el punto 2 omitía `openspec/specs/` e `openspec/INDEX.md` cuando `axiom.yaml` declaraba una baseline del proyecto y el punto 4 validaba también el bloque `baseline`; la baseline ajena se retira y `openspec/specs/` se crea siempre; el andamiaje escribía los roles detectados `core` y `qa` en cualquier topología, y ahora en `monorepo-embedded` escribe solo `fullstack`)
 
@@ -111,7 +111,7 @@ Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un pun
 #### Scenario: Inicialización sobre un `axiom.yaml` con `baseline:` residual
 - **DADO** un directorio con un `axiom.yaml` que declara `baseline:` con al menos un documento
 - **CUANDO** se ejecuta `axiom init`
-- **ENTONCES** el comando se rechaza con el error tipado de REQ-30.21 y la continuación `axiom archive adopt`
+- **ENTONCES** el comando se rechaza con el error tipado de RF-TOP-12 y la continuación `axiom archive adopt`
 - **Y** el `axiom.yaml` existente no se sobreescribe ni se registra el proyecto
 
 #### Scenario: Inicialización rechazada en una carpeta maestra con puntero hacia otro planning home
@@ -165,10 +165,10 @@ Cuando el puntero del propio directorio no puede resolverse (por ejemplo, un pun
 
 El Dashboard Web (`axiom ui`) opera como un Centro de Control Multi-Proyecto con conmutación en tiempo real.
 
-### Requirement: Endpoints REST de Gestión Multi-Proyecto (REQ-3.1)
+### Requirement: Endpoints REST de Gestión Multi-Proyecto (RF-HUB-05)
 
 El servidor HTTP del dashboard DEBE exponer endpoints bajo `/api/projects`:
-- `GET /api/projects`: Retorna el listado de todos los proyectos registrados, indicando cuál es el activo, sus rutas, si tienen `axiom.yaml` válido y sus preferencias personales de worktree (REQ-25.29).
+- `GET /api/projects`: Retorna el listado de todos los proyectos registrados, indicando cuál es el activo, sus rutas, si tienen `axiom.yaml` válido y sus preferencias personales de worktree (RF-HUB-07).
 - `POST /api/projects/switch`: Recibe `{"id": "..."}` o `{"path": "..."}` y conmuta el workspace activo del servicio en caliente sin requerir reinicio del servidor.
 - `POST /api/projects/add`: Recibe `{"path": "...", "name": "..."}` y, opcionalmente, las preferencias personales de worktree, para incorporar una carpeta existente al registro.
 - `POST /api/projects/init`: Recibe parámetros de inicialización y, opcionalmente, las preferencias personales de worktree, y ejecuta `axiom init` sobre la ruta actual o indicada.
@@ -192,7 +192,7 @@ El servidor HTTP del dashboard DEBE exponer endpoints bajo `/api/projects`:
 
 ---
 
-### Requirement: Componente UI Selector de Proyectos y Pantalla de Bienvenida (REQ-3.2)
+### Requirement: Componente UI Selector de Proyectos y Pantalla de Bienvenida (RF-HUB-06)
 
 La interfaz web (SPA) DEBE incorporar:
 1. **Selector Desplegable en el Navbar:** Muestra el nombre del proyecto activo actual con un icono de switch. Al desplegarlo, lista los proyectos disponibles con acceso rápido para alternar entre ellos y un botón "+ Añadir Proyecto".
@@ -215,9 +215,9 @@ La interfaz web (SPA) DEBE incorporar:
 - **ENTONCES** el formulario incluye el selector de modo con `worktree` preseleccionado y el campo de raíz de worktrees con su valor por defecto visible
 - **Y** al confirmar, la petición a `/api/projects/add` incluye las preferencias elegidas
 
-### Requirement: Preferencias Personales de Worktree por Proyecto en el Hub (REQ-25.29)
+### Requirement: Preferencias Personales de Worktree por Proyecto en el Hub (RF-HUB-07)
 
-Además de los campos de REQ-1.1, cada proyecto registrado en `~/.axiom/workspaces.json` PUEDE almacenar dos preferencias personales opcionales: el **modo de trabajo** (`worktree`, `in_place` o `ask`) y la **raíz de worktrees** (ruta absoluta). Las preferencias son personales y NO DEBEN escribirse nunca en `axiom.yaml` ni en ningún fichero versionado. Sin preferencias guardadas para un proyecto, estén o no registrado, el modo efectivo DEBE ser `worktree` y la raíz efectiva DEBE ser `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`. Un modo distinto de los tres valores, o una raíz que no sea una ruta absoluta, DEBEN rechazarse con un mensaje en español, sin modificar el registro. Registrar de nuevo un proyecto ya registrado (REQ-1.1, registro idempotente) NO DEBE borrar ni restablecer sus preferencias; desregistrarlo SÍ DEBE eliminarlas junto con su entrada. Las preferencias NO DEBEN cambiar la versión del esquema (`"1.0"`): un binario anterior las ignora.
+Además de los campos de RF-HUB-01, cada proyecto registrado en `~/.axiom/workspaces.json` PUEDE almacenar dos preferencias personales opcionales: el **modo de trabajo** (`worktree`, `in_place` o `ask`) y la **raíz de worktrees** (ruta absoluta). Las preferencias son personales y NO DEBEN escribirse nunca en `axiom.yaml` ni en ningún fichero versionado. Sin preferencias guardadas para un proyecto, estén o no registrado, el modo efectivo DEBE ser `worktree` y la raíz efectiva DEBE ser `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`. Un modo distinto de los tres valores, o una raíz que no sea una ruta absoluta, DEBEN rechazarse con un mensaje en español, sin modificar el registro. Registrar de nuevo un proyecto ya registrado (RF-HUB-01, registro idempotente) NO DEBE borrar ni restablecer sus preferencias; desregistrarlo SÍ DEBE eliminarlas junto con su entrada. Las preferencias NO DEBEN cambiar la versión del esquema (`"1.0"`): un binario anterior las ignora.
 
 #### Scenario: Sin preferencias el modo efectivo es `worktree`
 - **DADO** un proyecto registrado sin preferencias guardadas
@@ -264,9 +264,9 @@ Además de los campos de REQ-1.1, cada proyecto registrado en `~/.axiom/workspac
 
 ---
 
-### Requirement: Las Preferencias se Piden al Registrar y se Pueden Editar (REQ-25.30)
+### Requirement: Las Preferencias se Piden al Registrar y se Pueden Editar (RF-HUB-08)
 
-Al registrar un proyecto (`axiom init`, `axiom project add` y el registro del dashboard), el sistema DEBE pedir las preferencias personales de REQ-25.29 ofreciendo los valores por defecto. En la CLI, cuando hay una terminal interactiva, DEBE preguntar con el valor por defecto preseleccionado; sin terminal interactiva, o con las opciones de línea de comandos que fije `sdd-design` (una por preferencia), NO DEBE preguntar y DEBE usar el valor indicado o el valor por defecto, para no romper la automatización. Las preferencias DEBEN poder editarse después desde el dashboard (capacidad `local-web-dashboard`, REQ-25.33). El registro NO DEBE fallar por no indicar preferencias.
+Al registrar un proyecto (`axiom init`, `axiom project add` y el registro del dashboard), el sistema DEBE pedir las preferencias personales de RF-HUB-07 ofreciendo los valores por defecto. En la CLI, cuando hay una terminal interactiva, DEBE preguntar con el valor por defecto preseleccionado; sin terminal interactiva, o con las opciones de línea de comandos que fije `sdd-design` (una por preferencia), NO DEBE preguntar y DEBE usar el valor indicado o el valor por defecto, para no romper la automatización. Las preferencias DEBEN poder editarse después desde el dashboard (capacidad `local-web-dashboard`, RF-WEB-10). El registro NO DEBE fallar por no indicar preferencias.
 
 #### Scenario: Registro interactivo pregunta con valores por defecto
 - **DADO** una terminal interactiva y un proyecto sin registrar
@@ -287,7 +287,7 @@ Al registrar un proyecto (`axiom init`, `axiom project add` y el registro del da
 
 ---
 
-### Requirement: Los Worktrees de los Cambios no Vuelven Irregistrable el Proyecto (REQ-25.31)
+### Requirement: Los Worktrees de los Cambios no Vuelven Irregistrable el Proyecto (RF-HUB-09)
 
 Un proyecto cuyo checkout principal no es un worktree enlazado DEBE poder registrarse y seguir registrado con independencia de que existan worktrees de sus cambios en la raíz de worktrees por defecto o en cualquier otra. Un worktree enlazado DEBE identificarse por evidencia de git (su `.git` es un fichero que apunta a un git dir de worktree), y NO por un segmento del nombre de la ruta. Los worktrees que crea `axiom branch ensure` NO DEBEN registrarse como proyectos propios: pertenecen al proyecto del que proceden y no aparecen como entradas separadas en `GET /api/projects` ni en `axiom project list`. Registrar la ruta de un worktree enlazado como proyecto SIGUE rechazándose, con un mensaje que nombre el checkout principal.
 
@@ -311,9 +311,9 @@ Un proyecto cuyo checkout principal no es un worktree enlazado DEBE poder regist
 - **DADO** un proyecto con dos worktrees de cambios
 - **CUANDO** se ejecuta `axiom project list`
 - **ENTONCES** la salida no lista los worktrees como proyectos
-### Requirement: El Detector del Hub Propone Orígenes de Migración y Candidatos a Contexto Técnico (REQ-30.26)
+### Requirement: El Detector del Hub Propone Orígenes de Migración y Candidatos a Contexto Técnico (RF-HUB-10)
 
-El detector del hub DEBE reconocer, además de `openspec/` y `.openspec/`, los orígenes candidatos de requisitos previos de un directorio y los candidatos a `technical_context` reutilizando el inventario de `axiom archive adopt scan` (REQ-30.9 de `openspec-adoption`), sin escribir ningún fichero ni modificar `axiom.yaml`. El resultado DEBE exponerse al alta de proyecto como un informe con los orígenes, el recuento de unidades y los candidatos a `maintained` y a `reference`. Un directorio sin orígenes candidatos DEBE producir un informe vacío sin error.
+El detector del hub DEBE reconocer, además de `openspec/` y `.openspec/`, los orígenes candidatos de requisitos previos de un directorio y los candidatos a `technical_context` reutilizando el inventario de `axiom archive adopt scan` (RF-ADP-01 de `openspec-adoption`), sin escribir ningún fichero ni modificar `axiom.yaml`. El resultado DEBE exponerse al alta de proyecto como un informe con los orígenes, el recuento de unidades y los candidatos a `maintained` y a `reference`. Un directorio sin orígenes candidatos DEBE producir un informe vacío sin error.
 
 #### Scenario: El detector propone orígenes
 - **DADO** un directorio con `docs/requisitos.md` y sin `openspec/specs/`
@@ -334,9 +334,9 @@ El detector del hub DEBE reconocer, además de `openspec/` y `.openspec/`, los o
 
 ---
 
-### Requirement: El Alta de Proyecto Muestra el Informe de Adopción y la Instrucción (REQ-30.27)
+### Requirement: El Alta de Proyecto Muestra el Informe de Adopción y la Instrucción (RF-HUB-11)
 
-Tras el alta de un proyecto (`/api/projects/init`), el dashboard DEBE mostrar el informe de orígenes de migración y de candidatos a `technical_context` (REQ-30.26) junto con la instrucción para lanzar la adopción desde el agente (`axiom archive adopt scan --change <cambio>` y el cambio de adopción). El dashboard NO DEBE ejecutar modelos ni crear el cambio de adopción: solo muestra el informe y la instrucción. Con un informe vacío NO DEBE mostrar la instrucción de adopción.
+Tras el alta de un proyecto (`/api/projects/init`), el dashboard DEBE mostrar el informe de orígenes de migración y de candidatos a `technical_context` (RF-HUB-10) junto con la instrucción para lanzar la adopción desde el agente (`axiom archive adopt scan --change <cambio>` y el cambio de adopción). El dashboard NO DEBE ejecutar modelos ni crear el cambio de adopción: solo muestra el informe y la instrucción. Con un informe vacío NO DEBE mostrar la instrucción de adopción.
 
 #### Scenario: Informe e instrucción tras el alta
 - **DADO** un alta de proyecto cuyo directorio contiene un origen candidato
@@ -349,7 +349,7 @@ Tras el alta de un proyecto (`/api/projects/init`), el dashboard DEBE mostrar el
 - **CUANDO** el alta termina con éxito
 - **ENTONCES** el dashboard no muestra la instrucción de adopción
 
-### Requirement: El Formulario de Alta del Dashboard Solo Ofrece Roles en `multirepo` (REQ-3.3)
+### Requirement: El Formulario de Alta del Dashboard Solo Ofrece Roles en `multirepo` (RF-HUB-12)
 
 El formulario de alta de proyecto del dashboard DEBE ofrecer el constructor de roles únicamente cuando la topología seleccionada es `multirepo`. Con `monorepo-embedded` NO DEBE mostrar el constructor de roles y el rol enviado DEBE ser siempre `fullstack`. Al cambiar la topología del formulario, el constructor DEBE mostrarse u ocultarse en consecuencia y la validación del formulario NO DEBE exigir roles especializados en monorepo.
 

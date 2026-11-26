@@ -95,7 +95,7 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 
 	default:
 		// La carga ya rechaza estos valores; una configuración construida a mano
-		// con la topología retirada o desconocida tampoco se da por válida (REQ-25.25).
+		// con la topología retirada o desconocida tampoco se da por válida (RF-TOP-08).
 		report.Valid = false
 		report.Errors = append(report.Errors, topologyError(cfg.Workspace.Topology).Error())
 	}
@@ -120,7 +120,7 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 	}
 
 	// 3b. En monorepo-embedded el único rol admitido es fullstack: los roles
-	// especializados pertenecen a multirepo (REQ-2.2). Es solo una regla de
+	// especializados pertenecen a multirepo (RF-TOP-04). Es solo una regla de
 	// validación; la carga no la aplica, de modo que un axiom.yaml existente sigue
 	// resolviéndose y los kickoff.yaml ya sellados se siguen leyendo igual.
 	if cfg.Workspace.Topology == TopologyMonorepoEmbedded {
@@ -290,8 +290,8 @@ func sameLocation(a, b string) bool {
 }
 
 // storeErrors reporta que openspec/config.yaml declara `engram` o `none`, con
-// independencia del contexto técnico (REQ-2.6), y además un error por cada
-// declaración que exige un almacén de ficheros (REQ-24.62, REQ-30.19). Sin
+// independencia del contexto técnico (RF-TOP-13), y además un error por cada
+// declaración que exige un almacén de ficheros (REQ-24.62, RF-CTX-17). Sin
 // `artifact_store` declarado, o con `openspec` o `hybrid`, no reporta nada: el
 // status cubre el valor por defecto y esta regla no cambia su resolución.
 func storeErrors(cfg *WorkspaceConfig, workspaceRoot string) []string {
@@ -307,9 +307,9 @@ func storeErrors(cfg *WorkspaceConfig, workspaceRoot string) []string {
 	return errs
 }
 
-// legacyStoreError es el error incondicional de REQ-2.6: en Axiom el almacén de
+// legacyStoreError es el error incondicional de RF-TOP-13: en Axiom el almacén de
 // una sesión SDD es siempre hybrid. Con contexto mantenido nombra también la
-// declaración afectada (REQ-30.19).
+// declaración afectada (RF-CTX-17).
 func legacyStoreError(store string, maintained bool) string {
 	msg := fmt.Sprintf("openspec/config.yaml declara artifact_store '%s', que Axiom ya no admite: el almacén de los cambios es siempre 'hybrid', y con '%s' no hay paradas de tres salidas, publicación de compuertas ni relevo (--hand-off). Para migrar, quita la clave artifact_store o declara 'artifact_store: hybrid'", store, store)
 	if maintained {

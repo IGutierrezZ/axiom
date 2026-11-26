@@ -15,7 +15,7 @@ import (
 	"testing"
 )
 
-// Inventario de escritores de la carpeta de un cambio (INC-25, REQ-25.19, design D-11 y D-23).
+// Inventario de escritores de la carpeta de un cambio (INC-25, RF-BRA-20, design D-11 y D-23).
 //
 // La guarda A (RequireChangeBranch) solo protege lo que la llama. Esta prueba fija, con go/parser
 // sobre el código de producción, que toda función que escribe en la carpeta de un cambio figura en

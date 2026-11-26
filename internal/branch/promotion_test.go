@@ -41,7 +41,7 @@ func TestKnownPromotionSource(t *testing.T) {
 	}
 }
 
-// REQ-25.47 (D10): los cinco errores de uso de `--promotion` y las peticiones válidas.
+// RF-BRA-29 (D10): los cinco errores de uso de `--promotion` y las peticiones válidas.
 func TestParsePromotionRequests(t *testing.T) {
 	valid := []struct {
 		name   string
@@ -90,7 +90,7 @@ func TestParsePromotionRequests(t *testing.T) {
 	}
 }
 
-// REQ-25.46 (D4): una fila por regla de la precedencia.
+// RF-BRA-28 (D4): una fila por regla de la precedencia.
 func TestResolvePromotion(t *testing.T) {
 	twoStage := func(f PromotionFacts) PromotionFacts { f.TwoStage = true; return f }
 	tests := []struct {
@@ -173,7 +173,7 @@ func twoStageRepo(promotion Promotion) RepoPlan {
 	return repo
 }
 
-// REQ-25.49 (D7): destino de la confirmación y aplicabilidad de la capa 3.
+// RF-BRA-31 (D7): destino de la confirmación y aplicabilidad de la capa 3.
 func TestMergeDestination(t *testing.T) {
 	change := BranchPlan{Name: "feat/x", Kind: KindChange, PRTarget: "develop"}
 	role := BranchPlan{Name: "feat/x-core", Kind: KindRole, From: "feat/x", PRTarget: "feat/x"}
@@ -205,7 +205,7 @@ func TestMergeDestination(t *testing.T) {
 	}
 }
 
-// REQ-25.48 (D8): las reglas de la etapa de `status`.
+// RF-BRA-30 (D8): las reglas de la etapa de `status`.
 func TestPromotionStage(t *testing.T) {
 	repo := twoStageRepo(PromotionBranch)
 	zero, three := 0, 3

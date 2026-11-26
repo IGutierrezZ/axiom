@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Pruebas de S9-c4 (REQ-25.44, design D-16): `status` y `continue` resuelven los cambios que viven en
+// Pruebas de S9-c4 (RF-CLI-07, design D-16): `status` y `continue` resuelven los cambios que viven en
 // los worktrees que `axiom branch ensure` registró. El checkout principal y los worktrees se montan solo
 // con ficheros (un `.git` por repositorio y un `commondir` por worktree enlazado) y los registros se
 // escriben con registry.Store, de modo que ninguna prueba necesita git.
@@ -115,7 +115,7 @@ func notesAbout(status Status, fragment string) []string {
 	return matching
 }
 
-// REQ-25.44, escenario «Status desde el checkout principal resuelve el worktree»: con nombre, el
+// RF-CLI-07, escenario «Status desde el checkout principal resuelve el worktree»: con nombre, el
 // cambio que solo vive en su worktree registrado se resuelve en él.
 func TestResolveFromTheMainCheckoutResolvesTheRegisteredWorktree(t *testing.T) {
 	t.Parallel()
@@ -137,7 +137,7 @@ func TestResolveFromTheMainCheckoutResolvesTheRegisteredWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.44, escenario «Sin nombre de cambio se consideran los worktrees registrados».
+// RF-CLI-07, escenario «Sin nombre de cambio se consideran los worktrees registrados».
 func TestResolveWithoutANameConsidersTheRegisteredWorktrees(t *testing.T) {
 	t.Parallel()
 	main := mainCheckout(t)
@@ -190,7 +190,7 @@ func TestResolveWithoutANameIsAmbiguousBetweenTwoRegisteredWorktrees(t *testing.
 	}
 }
 
-// REQ-25.44, escenario «El worktree prevalece sobre el checkout principal».
+// RF-CLI-07, escenario «El worktree prevalece sobre el checkout principal».
 func TestResolveTheWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 	t.Parallel()
 	main := mainCheckout(t)
@@ -208,7 +208,7 @@ func TestResolveTheWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 	wantResolvedIn(t, resolveFrom(t, main, ""), worktree, "x")
 }
 
-// REQ-25.44, escenario «El worktree de la rama de archivado prevalece sobre el de la rama del cambio».
+// RF-CLI-07, escenario «El worktree de la rama de archivado prevalece sobre el de la rama del cambio».
 func TestResolveTheArchiveWorktreePrevailsOverTheChangeWorktree(t *testing.T) {
 	t.Parallel()
 	main := mainCheckout(t)
@@ -240,7 +240,7 @@ func TestResolveSkipsWorktreesWithoutTheChangeFolder(t *testing.T) {
 	wantResolvedIn(t, resolveFrom(t, main, "x"), main, "x")
 }
 
-// REQ-25.44, escenario «Un worktree desaparecido se omite con aviso»: el status se devuelve sin ese
+// RF-CLI-07, escenario «Un worktree desaparecido se omite con aviso»: el status se devuelve sin ese
 // cambio y con un aviso que nombra la ruta ausente y la continuación.
 func TestResolveOmitsAMissingWorktreeWithANote(t *testing.T) {
 	t.Parallel()
@@ -261,7 +261,7 @@ func TestResolveOmitsAMissingWorktreeWithANote(t *testing.T) {
 	}
 }
 
-// REQ-25.44: con `--cwd` dentro de un worktree, el cambio se resuelve en su propio árbol, aunque otro
+// RF-CLI-07: con `--cwd` dentro de un worktree, el cambio se resuelve en su propio árbol, aunque otro
 // worktree registrado (el de archivado) tuviera precedencia desde el checkout principal.
 func TestResolveInsideAWorktreeKeepsItsOwnTree(t *testing.T) {
 	t.Parallel()

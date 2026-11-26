@@ -39,7 +39,7 @@ func wantRepoPolicy(t *testing.T, what string, got RepoPolicy, integration, pref
 	}
 }
 
-// REQ-25.3, escenario «Sin configuración se aplican los valores por defecto».
+// RF-BRA-03, escenario «Sin configuración se aplican los valores por defecto».
 func TestPolicyWithoutConfigurationAppliesTheDefaults(t *testing.T) {
 	tests := map[string]Policy{
 		"sin configuración":                  ResolvePolicy(nil),
@@ -57,7 +57,7 @@ func TestPolicyWithoutConfigurationAppliesTheDefaults(t *testing.T) {
 	}
 }
 
-// REQ-25.3, escenario «El bloque `git:` sustituye los valores por defecto», y la
+// RF-BRA-03, escenario «El bloque `git:` sustituye los valores por defecto», y la
 // decisión de tratar `cfg.Git == nil` (configuración a mano o `git:` inválido) con
 // los defectos en lugar de fallar.
 func TestPolicyGitBlockReplacesTheDefaults(t *testing.T) {
@@ -78,7 +78,7 @@ func TestPolicyGitBlockReplacesTheDefaults(t *testing.T) {
 	}
 }
 
-// REQ-25.3, escenario «Un repositorio con ajustes propios prevalece sobre `git:`».
+// RF-BRA-03, escenario «Un repositorio con ajustes propios prevalece sobre `git:`».
 func TestPolicyRepositoryEntryOverridesTheGitBlockOnlyForThatRepository(t *testing.T) {
 	policy := loadPolicy(t, `git:
   integration_branch: main
@@ -156,7 +156,7 @@ func configLocation(gitErr, repositoriesErr, configErr error) workspace.Location
 	}
 }
 
-// REQ-25.3: un valor inválido o una configuración ilegible en `axiom.yaml` se
+// RF-BRA-03: un valor inválido o una configuración ilegible en `axiom.yaml` se
 // rechaza con `config_invalid` (nunca con `invalid_name`, que es de la invocación) y
 // la continuación ejecutable cita la carpeta maestra.
 func TestPolicyConfigRefusalIsConfigInvalidAndNamesTheCause(t *testing.T) {

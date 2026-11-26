@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 )
 
-// gateHandOffFlag is the flag only the hand_off choice may carry (REQ-26.2):
+// gateHandOffFlag is the flag only the hand_off choice may carry (RF-GAT-08):
 // approving and continuing, approving and handing off, and iterating are the
 // same `axiom sdd gate record` verb, told apart by --decision and --hand-off.
 const gateHandOffFlag = " --hand-off"
@@ -29,7 +29,7 @@ func gateQuestionStore(workspaceRoot string, resolved ArtifactStore) ArtifactSto
 }
 
 // handOffUnavailableFor names the store that rules the hand-off exit out
-// (REQ-26.6): a store that keeps no files has nothing to commit, push or merge.
+// (RF-GAT-12): a store that keeps no files has nothing to commit, push or merge.
 // The empty string means the exit is available.
 func handOffUnavailableFor(store ArtifactStore) string {
 	switch store {
@@ -40,7 +40,7 @@ func handOffUnavailableFor(store ArtifactStore) string {
 }
 
 // expectedGateAnswers derives, from the gate key and from HandOffUnavailable,
-// the exact answer list the question must carry (REQ-26.2, REQ-26.6):
+// the exact answer list the question must carry (RF-GAT-08, RF-GAT-12):
 //   - integration keeps its two-way [approved, rejected] choice;
 //   - every other gate offers [rejected, hand_off, approved], or
 //     [rejected, approved] when a file-less store marks the exit unavailable.
@@ -84,12 +84,12 @@ func validateGateChoiceInvocations(choices []consentenvelope.Choice) error {
 }
 
 // publicationKeepsApprovalNote is the closing sentence every publishing effect and the value carry
-// (REQ-27.12): a refused publication never undoes the recorded approval, and Axiom publishes
+// (RF-GAT-15): a refused publication never undoes the recorded approval, and Axiom publishes
 // documents only.
 const publicationKeepsApprovalNote = "A refused publication keeps the approval. Code pushes, pull requests and merges remain yours."
 
 // resolveGatePublication asks the branch engine, with reads only, where approving a planning gate
-// publishes the change documents (REQ-27.7, REQ-27.12). It returns the publication when the target
+// publishes the change documents (RF-PUB-03, RF-GAT-15). It returns the publication when the target
 // resolves, the refusal code when it does not (for example wrong_branch), and neither when no
 // engine is wired (tests that disable the branch guard): the question then names no remote or
 // branch and its choices stay the gate record ones.
@@ -175,8 +175,8 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string, publicat
 		approved.Label = "Approve and continue"
 		approved.Effect = fmt.Sprintf("Records an approved decision for gate %q and unblocks the next phase or role in this session.", gateKey)
 		if slices.Contains(answers, gateAnswerHandOff) {
-			// A store that keeps files publishes on approval (REQ-27.12); one that keeps none publishes
-			// nothing, so exit 3 keeps its plain wording and exit 2 is not offered (REQ-26.6).
+			// A store that keeps files publishes on approval (RF-GAT-15); one that keeps none publishes
+			// nothing, so exit 3 keeps its plain wording and exit 2 is not offered (RF-GAT-12).
 			approved.Label = "Approve, publish and continue"
 			approved.Effect = fmt.Sprintf("Records an approved decision for gate %q, publishes the change documents to %s with `axiom sdd publish`, and starts the next phase in this session. %s", gateKey, destination, publicationKeepsApprovalNote)
 		}
@@ -201,7 +201,7 @@ func gateQuestionChoices(cwd, change, gateKey string, answers []string, publicat
 }
 
 // governanceRoleAssignments is the roster of the sealed kickoff in the shape
-// kickoff.HandedOffTo and the blocking-role rules (REQ-21.15) read: the role
+// kickoff.HandedOffTo and the blocking-role rules (RF-RCL-03) read: the role
 // names of the Governance roster, each with the gate policy the sealed kickoff
 // gives it. A role the kickoff does not list keeps an empty policy, which is the
 // default (blocking).
@@ -217,7 +217,7 @@ func governanceRoleAssignments(governance *Governance) []multirole.RoleAssignmen
 	return roster
 }
 
-// governanceHandedOffTo names what an approved gate handed over (REQ-26.7). It
+// governanceHandedOffTo names what an approved gate handed over (RF-GAT-13). It
 // answers "" for a gate that carries no hand-off mark, so a change that only
 // ever used exits 1 and 3 projects exactly what it projected before. The phase
 // the record persisted wins; only a record written before that field existed
@@ -233,7 +233,7 @@ func governanceHandedOffTo(governance *Governance, gate kickoff.GateState) strin
 }
 
 // handedOffNotes reports, as informational notes, every gate approved with exit
-// 2 (REQ-26.7). The hand-off never blocks and never changes the route: a gate
+// 2 (RF-GAT-13). The hand-off never blocks and never changes the route: a gate
 // approved with the mark is approved like any other, so these notes are the
 // only text that tells whoever picks the change up that the previous phase was
 // not reviewed by them.
@@ -254,7 +254,7 @@ func handedOffNotes(governance *Governance) []string {
 	return notes
 }
 
-// verifyDependencyFromRoleGates is DD-10's rule: REQ-21.15 forbids starting the
+// verifyDependencyFromRoleGates is DD-10's rule: RF-RCL-03 forbids starting the
 // global "verify" phase while a role of a multi-role roster with policy
 // blocking has no approved role-apply gate. A role with policy deferred or
 // optional never blocks it, whatever the state of its gate; nonBlockingRoleNotes
@@ -267,7 +267,7 @@ func handedOffNotes(governance *Governance) []string {
 // change in spec, design or tasks, whose verify is already blocked for its own
 // cause. A single-role roster, a continuous seal and an unsealed change keep
 // baseline untouched, and handoff_policy has no effect on any of them
-// (REQ-26.9).
+// (RF-PRE-03).
 //
 // It returns the adjusted state and a non-empty genuine reason exactly when it
 // blocks verify; an unchanged baseline always pairs with an empty reason.
@@ -296,13 +296,13 @@ func verifyDependencyFromRoleGates(governance *Governance, baseline DependencySt
 		return baseline, ""
 	}
 	return DependencyBlocked, fmt.Sprintf(
-		"La fase verify global no puede iniciarse: faltan roles sin la compuerta role-apply aprobada (%s) (REQ-21.15).",
+		"La fase verify global no puede iniciarse: faltan roles sin la compuerta role-apply aprobada (%s) (RF-RCL-03).",
 		strings.Join(open, ", "))
 }
 
 // nonBlockingRoleNotes reports, as informational notes, every role with policy
 // deferred or optional whose role-apply gate is not approved: the role, its
-// policy and the state of its gate. They never block verify (REQ-21.15); the
+// policy and the state of its gate. They never block verify (RF-RCL-03); the
 // notes only make visible that the global verification runs with that work
 // still open. A change with only blocking roles projects no note.
 func nonBlockingRoleNotes(governance *Governance) []string {
@@ -316,7 +316,7 @@ func nonBlockingRoleNotes(governance *Governance) []string {
 			state = "rechazado"
 		}
 		notes = append(notes, fmt.Sprintf(
-			"El rol %q (política %s) tiene su compuerta role-apply %s: no bloquea la fase verify global (REQ-21.15).",
+			"El rol %q (política %s) tiene su compuerta role-apply %s: no bloquea la fase verify global (RF-RCL-03).",
 			pending.Role, pending.Policy, state))
 	}
 	return notes

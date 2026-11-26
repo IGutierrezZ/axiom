@@ -10,9 +10,9 @@ Definir de forma ejecutable, determinista y verificable los requerimientos funci
 
 El paquete `internal/livingdoc` provee capacidades de inspección, parseo y catalogación continua de todas las especificaciones vivas consolidadas en el workspace (`openspec/specs/`).
 
-### Requirement: Escaneo y Extracción de Especificaciones Vivas (REQ-1.1)
+### Requirement: Escaneo y Extracción de Especificaciones Vivas (RF-LDO-01)
 
-El indexador DEBE recorrer recursivamente el directorio `<planning home>/specs/` (`openspec/specs/`; el planning home lo resuelve el primitivo de la capacidad `planning-home-resolution`, REQ-24.1 y REQ-24.10), localizando todos los archivos `spec.md`. Para cada archivo DEBE extraer:
+El indexador DEBE recorrer recursivamente el directorio `<planning home>/specs/` (`openspec/specs/`; el planning home lo resuelve el primitivo de la capacidad `planning-home-resolution`, RF-PLH-01 y RF-PLH-10), localizando todos los archivos `spec.md`. Para cada archivo DEBE extraer:
 - Identificador de dominio (nombre de la subcarpeta).
 - Título principal de la especificación (encabezado `# `).
 - Propósito o descripción introductoria.
@@ -46,7 +46,7 @@ Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""
 
 ---
 
-### Requirement: Generación Determinista de `openspec/INDEX.md` (REQ-1.2)
+### Requirement: Generación Determinista de `openspec/INDEX.md` (RF-LDO-02)
 
 El motor DEBE ser capaz de compilar y escribir un documento canónico `INDEX.md` en el planning home (`<planning home>/INDEX.md`, es decir, `openspec/INDEX.md`) que resuma el estado consolidado de la arquitectura y contratos vivos del sistema. El índice DEBE incluir:
 1. Encabezado maestro y fecha/hora de la última sincronización.
@@ -63,7 +63,7 @@ El motor DEBE ser capaz de compilar y escribir un documento canónico `INDEX.md`
 
 ---
 
-### Requirement: Detección de Inconsistencias o Requerimientos Huérfanos (REQ-1.3)
+### Requirement: Detección de Inconsistencias o Requerimientos Huérfanos (RF-LDO-03)
 
 Al indexar, el motor DEBE advertir si alguna especificación carece de título, contiene requerimientos sin escenarios BDD asociados o tiene identificadores de requerimiento duplicados.
 
@@ -78,7 +78,7 @@ Al indexar, el motor DEBE advertir si alguna especificación carece de título, 
 
 El motor de adopción orgánica permite introducir SDD en proyectos existentes sin documentación previa (*Zero-Doc Cold Start*).
 
-### Requirement: Síntesis de Especificación Viva a partir de un Cambio Archivado (REQ-2.1)
+### Requirement: Síntesis de Especificación Viva a partir de un Cambio Archivado (RF-LDO-04)
 
 Cuando un incremento concluye en un proyecto donde el dominio correspondiente aún no cuenta con especificación viva en `<planning home>/specs/<dominio>/` (`openspec/specs/<dominio>/`), el sintetizador DEBE tomar los artefactos del incremento (`spec.md`, `proposal.md`, `verify-report.md`) y generar de forma determinista la especificación viva inicial en `<planning home>/specs/<dominio>/spec.md`.
 (Previously: con una baseline del proyecto declarada, el sintetizador rechazaba la operación; la baseline ajena se retira)
@@ -92,7 +92,7 @@ Cuando un incremento concluye en un proyecto donde el dominio correspondiente a�
 
 ---
 
-### Requirement: Preservación de Especificaciones Existentes (REQ-2.2)
+### Requirement: Preservación de Especificaciones Existentes (RF-LDO-05)
 
 El sintetizador de adopción orgánica NO DEBE sobreescribir una especificación viva previamente consolidada si ya existe en `openspec/specs/<dominio>/spec.md`, devolviendo un error controlado salvo que se solicite explícitamente su actualización.
 
@@ -107,7 +107,7 @@ El sintetizador de adopción orgánica NO DEBE sobreescribir una especificación
 
 La CLI de Axiom en `cmd/axiom/main.go` expone el grupo de comandos `axiom archive`.
 
-### Requirement: Comando `axiom archive sync` (REQ-3.1)
+### Requirement: Comando `axiom archive sync` (RF-LDO-06)
 
 El comando `axiom archive sync [--path <dir>]` (donde `--path` es el directorio de partida de la resolución del planning home) DEBE:
 1. Re-escanear todas las especificaciones vivas en `<planning home>/specs/` (`openspec/specs/`).
@@ -129,7 +129,7 @@ El comando `axiom archive sync [--path <dir>]` (donde `--path` es el directorio 
 
 ---
 
-### Requirement: Comando `axiom archive list` (REQ-3.2)
+### Requirement: Comando `axiom archive list` (RF-LDO-07)
 
 El comando `axiom archive list [--path <dir>]` DEBE presentar una tabla formateada con las especificaciones vivas activas, sus títulos, cantidad de requerimientos y escenarios BDD.
 
@@ -140,7 +140,7 @@ El comando `axiom archive list [--path <dir>]` DEBE presentar una tabla formatea
 
 ---
 
-### Requirement: Comando `axiom archive show` (REQ-3.3)
+### Requirement: Comando `axiom archive show` (RF-LDO-08)
 
 El comando `axiom archive show <dominio> [--path <dir>]` DEBE mostrar en consola el detalle completo de la especificación viva para el dominio solicitado, incluyendo su propósito, lista de requerimientos y escenarios.
 
@@ -151,7 +151,7 @@ El comando `axiom archive show <dominio> [--path <dir>]` DEBE mostrar en consola
 
 ---
 
-### Requirement: Comando `axiom archive coldstart` (REQ-3.4)
+### Requirement: Comando `axiom archive coldstart` (RF-LDO-09)
 
 El comando `axiom archive coldstart --change <nombre> [--domain <dominio>] [--path <dir>]` DEBE promover un cambio verificado a especificación viva cuando no existía previamente, en el planning home resuelto.
 (Previously: con una baseline del proyecto declarada, el comando rechazaba la operación; la baseline ajena se retira)
@@ -168,7 +168,7 @@ El comando `axiom archive coldstart --change <nombre> [--domain <dominio>] [--pa
 
 El Dashboard Web local (`internal/dashboard/`) expone la documentación viva a través de su API REST JSON y la renderiza en una nueva vista de la interfaz SPA.
 
-### Requirement: Endpoints REST para Especificaciones Vivas (REQ-4.1)
+### Requirement: Endpoints REST para Especificaciones Vivas (RF-LDO-10)
 
 El servidor web DEBE exponer las siguientes rutas REST:
 - `GET /api/archive/specs`: Retorna el catálogo completo `LivingCatalog` serializado en JSON.
@@ -185,7 +185,7 @@ El servidor web DEBE exponer las siguientes rutas REST:
 
 ---
 
-### Requirement: Interfaz Web SPA con Explorador de Documentación Viva (REQ-4.2)
+### Requirement: Interfaz Web SPA con Explorador de Documentación Viva (RF-LDO-11)
 
 La interfaz SPA embebida (`assets/index.html`, `app.js`, `style.css`) DEBE incluir una nueva pestaña de navegación **"Especificaciones Vivas"** que permita:
 1. Visualizar tarjetas de resumen con el total de especificaciones vivas, requerimientos y escenarios BDD consolidados en el sistema.

@@ -199,7 +199,7 @@ func TestColdStartSynthesis(t *testing.T) {
 	}
 }
 
-// REQ-21.18 (MODIFIED): la cola de integraciones de la raíz de una carpeta archivada es estado
+// RF-ARC-03 (MODIFIED): la cola de integraciones de la raíz de una carpeta archivada es estado
 // local: no se confunde con la spec del incremento ni cambia el resultado de ColdStart.
 func TestColdStartIgnoresTheArchivedIntegrationsOutbox(t *testing.T) {
 	workspaceRoot := t.TempDir()

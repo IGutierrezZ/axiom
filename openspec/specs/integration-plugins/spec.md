@@ -6,9 +6,9 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
 
 ## Requirements
 
-### Requirement: Catálogo Cerrado de Eventos y Puerto `Plugin` (REQ-43.1)
+### Requirement: Catálogo Cerrado de Eventos y Puerto `Plugin` (RF-INT-01)
 
-El paquete `internal/integrations` DEBE definir el puerto `Plugin` y el tipo `Event`. El catálogo de eventos DEBE ser cerrado y contener exactamente `change.start`, `gate.spec.approved`, `gate.design.approved`, `role.start`, `role.apply.approved` y `archive`. `change.start` pertenece al catálogo, pero ningún verbo de este cambio lo emite (lo dispara C-07-d). Todo `Event` DEBE llevar el nombre del evento, el cambio, la clave de idempotencia (REQ-43.7) y, cuando proceda, el rol y el actor. Un nombre de evento fuera del catálogo NO DEBE poder construirse ni despacharse: se rechaza con error tipado.
+El paquete `internal/integrations` DEBE definir el puerto `Plugin` y el tipo `Event`. El catálogo de eventos DEBE ser cerrado y contener exactamente `change.start`, `gate.spec.approved`, `gate.design.approved`, `role.start`, `role.apply.approved` y `archive`. `change.start` pertenece al catálogo, pero ningún verbo de este cambio lo emite (lo dispara C-07-d). Todo `Event` DEBE llevar el nombre del evento, el cambio, la clave de idempotencia (RF-INT-07) y, cuando proceda, el rol y el actor. Un nombre de evento fuera del catálogo NO DEBE poder construirse ni despacharse: se rechaza con error tipado.
 
 #### Scenario: El catálogo contiene exactamente los seis eventos
 - **DADO** el paquete `internal/integrations`
@@ -21,7 +21,7 @@ El paquete `internal/integrations` DEBE definir el puerto `Plugin` y el tipo `Ev
 - **ENTONCES** el despacho se rechaza con un error tipado que nombra los eventos admitidos
 - **Y** no se crea ningún fichero ni se invoca al plugin
 
-### Requirement: Catálogo Cerrado de Capacidades (REQ-43.2)
+### Requirement: Catálogo Cerrado de Capacidades (RF-INT-02)
 
 El catálogo de capacidades DEBE ser cerrado y contener exactamente `items.read`, `items.transition`, `items.create`, `relations`, `assignment`, `estimation`, `time`, `tags`, `attachments`, `vcs_links` y `discovery`. El manifiesto de un plugin SOLO PUEDE declarar capacidades de ese catálogo.
 
@@ -35,9 +35,9 @@ El catálogo de capacidades DEBE ser cerrado y contener exactamente `items.read`
 - **CUANDO** se registra el plugin
 - **ENTONCES** el registro se rechaza con un error tipado que nombra `sprints` y las capacidades admitidas
 
-### Requirement: Manifiesto Serializable, Versionado y en un Paquete Hoja (REQ-43.3)
+### Requirement: Manifiesto Serializable, Versionado y en un Paquete Hoja (RF-INT-03)
 
-Cada plugin DEBE exponer un manifiesto serializable en JSON con esquema versionado (`axiom.integration-manifest/v1`; el nombre definitivo lo fija el diseño). El manifiesto DEBE declarar: identificador, capacidades, eventos que escucha, esquema de configuración, nombres de los secretos que necesita y cómo se resuelve la identidad (`identity`). El manifiesto vive en `internal/integrations/manifest`, un paquete hoja que NO DEBE importar `workspace` (ni, de forma transitiva, `internal/integrations`). La validación DEBE rechazar: capacidades o eventos fuera de los catálogos cerrados, un identificador que no cumple `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` o supera 32 caracteres, y toda clave de configuración que parezca un secreto. El rechazo es **por nombre de clave**: el campo de configuración no tiene ningún atributo de secreto; se rechazan las claves cuyo segmento (separado por `_`) sea `token`, `secret`, `secrets`, `password`, `passwd`, `pwd`, `pat`, `credential`, `credentials` o `apikey`, las que contengan el par `api_key`, las que coincidan con un nombre de la lista de secretos y la clave reservada `enabled`. Los secretos se declaran solo por nombre en la lista de secretos. También DEBE rechazarse un catálogo con identificadores repetidos o con dos pares (plugin, secreto) que den la misma variable de entorno (REQ-43.13).
+Cada plugin DEBE exponer un manifiesto serializable en JSON con esquema versionado (`axiom.integration-manifest/v1`; el nombre definitivo lo fija el diseño). El manifiesto DEBE declarar: identificador, capacidades, eventos que escucha, esquema de configuración, nombres de los secretos que necesita y cómo se resuelve la identidad (`identity`). El manifiesto vive en `internal/integrations/manifest`, un paquete hoja que NO DEBE importar `workspace` (ni, de forma transitiva, `internal/integrations`). La validación DEBE rechazar: capacidades o eventos fuera de los catálogos cerrados, un identificador que no cumple `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` o supera 32 caracteres, y toda clave de configuración que parezca un secreto. El rechazo es **por nombre de clave**: el campo de configuración no tiene ningún atributo de secreto; se rechazan las claves cuyo segmento (separado por `_`) sea `token`, `secret`, `secrets`, `password`, `passwd`, `pwd`, `pat`, `credential`, `credentials` o `apikey`, las que contengan el par `api_key`, las que coincidan con un nombre de la lista de secretos y la clave reservada `enabled`. Los secretos se declaran solo por nombre en la lista de secretos. También DEBE rechazarse un catálogo con identificadores repetidos o con dos pares (plugin, secreto) que den la misma variable de entorno (RF-INT-13).
 
 #### Scenario: Ida y vuelta JSON estable
 - **DADO** un manifiesto válido
@@ -74,7 +74,7 @@ Cada plugin DEBE exponer un manifiesto serializable en JSON con esquema versiona
 - **CUANDO** se comprueban sus importaciones, directas y transitivas
 - **ENTONCES** no incluyen `internal/workspace` ni `internal/integrations`
 
-### Requirement: Registro Cerrado en Compilación (REQ-43.4)
+### Requirement: Registro Cerrado en Compilación (RF-INT-04)
 
 `NewRegistry(plugins...)` DEBE construir un registro de plugins y rechazar con error tipado un identificador duplicado, un manifiesto inválido, un plugin cuyo identificador no está en el catálogo de manifiestos y un plugin cuyo manifiesto difiere de la entrada del catálogo (el código del plugin y el manifiesto publicado no pueden divergir). `DefaultRegistry()` DEBE devolver un registro que contiene exactamente el plugin `azure-devops` (el primer adaptador real, C-07-c), y el catálogo de manifiestos por defecto DEBE contener exactamente `azure-devops`. El catálogo de manifiestos que usa `workspace` para validar `integrations.<plugin>` DEBE derivarse de la misma lista cerrada y DEBE ofrecer una costura de paquete que permita a las pruebas registrar un plugin de prueba. La lista de plugins compilados DEBE ensamblarse sin que `internal/integrations` importe el paquete del adaptador (sin ciclo de importaciones), y una prueba de importaciones DEBE protegerlo. No existe carga dinámica de código.
 (Previously: `DefaultRegistry()` devolvía un registro vacío y el catálogo por defecto no admitía ningún identificador; el primer adaptador real era futuro)
@@ -110,7 +110,7 @@ Cada plugin DEBE exponer un manifiesto serializable en JSON con esquema versiona
 - **CUANDO** se comprueban las importaciones de `internal/integrations`, directas y transitivas
 - **ENTONCES** no incluyen `internal/integrations/azuredevops`
 
-### Requirement: Coste Cero sin Integración Configurada (REQ-43.5)
+### Requirement: Coste Cero sin Integración Configurada (RF-INT-05)
 
 Cuando `axiom.yaml` no declara el bloque `integrations`, lo declara vacío (`integrations: {}`), o ningún plugin activo (`enabled` distinto de `false`) escucha el evento, el despachador DEBE volver sin leer ni escribir ningún fichero (ni `integrations.yaml`, ni `.integrations-outbox.yaml`, ni el cerrojo asociado, ni el directorio `integrations` del git common dir), sin resolver la identidad git para el evento, sin construir el evento, sin tocar el almacén de secretos y sin invocar a ningún plugin, y NO DEBE emitir ningún aviso. La salida (stdout, stderr y código) de los verbos que despachan eventos DEBE ser idéntica a la de antes de este cambio y los goldens existentes NO DEBEN cambiar.
 
@@ -135,16 +135,16 @@ Cuando `axiom.yaml` no declara el bloque `integrations`, lo declara vacío (`int
 - **CUANDO** se ejecutan los verbos que despachan eventos
 - **ENTONCES** el almacén no se invoca
 
-### Requirement: Despacho Duradero con Intento Inmediato Acotado (REQ-43.6)
+### Requirement: Despacho Duradero con Intento Inmediato Acotado (RF-INT-06)
 
-Con al menos un plugin configurado cuyo manifiesto escucha el evento, el despachador DEBE, en este orden: (1) encolar la operación de forma duradera en `.integrations-outbox.yaml` con su clave de idempotencia, (2) intentar la entrega inmediata al plugin con un tiempo máximo acotado (el valor lo fija el diseño), (3) si la entrega tiene éxito, persistir en `integrations.yaml` los vínculos que devuelva el plugin (salvo para `archive`, que nunca los persiste, REQ-43.30) y retirar la operación de la outbox, y (4) si la entrega falla, agota el tiempo o devuelve un error, dejar la operación pendiente con el número de intentos y el último error (sin secretos) para `axiom integrations sync`. Un plugin cuyo manifiesto no escucha el evento NO DEBE recibirlo ni generar operación. El plugin pide el secreto al almacén en el momento de entregar, y solo los de su manifiesto; el despachador NO DEBE leer secretos ni incluirlos en la operación. Un error que el plugin marca como permanente, o alcanzar el máximo de intentos, abandona la operación (REQ-43.8); cualquier otro error, incluido un pánico del plugin, es transitorio y no hace fallar el proceso. El plazo del intento inmediato se comparte entre los plugins del evento y un plugin que no respeta el plazo no bloquea el verbo más allá de él.
+Con al menos un plugin configurado cuyo manifiesto escucha el evento, el despachador DEBE, en este orden: (1) encolar la operación de forma duradera en `.integrations-outbox.yaml` con su clave de idempotencia, (2) intentar la entrega inmediata al plugin con un tiempo máximo acotado (el valor lo fija el diseño), (3) si la entrega tiene éxito, persistir en `integrations.yaml` los vínculos que devuelva el plugin (salvo para `archive`, que nunca los persiste, RF-INT-21) y retirar la operación de la outbox, y (4) si la entrega falla, agota el tiempo o devuelve un error, dejar la operación pendiente con el número de intentos y el último error (sin secretos) para `axiom integrations sync`. Un plugin cuyo manifiesto no escucha el evento NO DEBE recibirlo ni generar operación. El plugin pide el secreto al almacén en el momento de entregar, y solo los de su manifiesto; el despachador NO DEBE leer secretos ni incluirlos en la operación. Un error que el plugin marca como permanente, o alcanzar el máximo de intentos, abandona la operación (RF-INT-08); cualquier otro error, incluido un pánico del plugin, es transitorio y no hace fallar el proceso. El plazo del intento inmediato se comparte entre los plugins del evento y un plugin que no respeta el plazo no bloquea el verbo más allá de él.
 
 #### Scenario: Entrega inmediata con éxito
 - **DADO** el doble en memoria configurado, que devuelve el vínculo `{item: "42"}` para el evento
 - **CUANDO** se despacha `gate.spec.approved` del cambio `x`
 - **ENTONCES** el doble recibe el evento exactamente una vez
 - **Y** `integrations.yaml` de `x` contiene el vínculo devuelto
-- **Y** no queda ninguna operación pendiente (la outbox se borra al quedar vacía, REQ-43.8)
+- **Y** no queda ninguna operación pendiente (la outbox se borra al quedar vacía, RF-INT-08)
 
 #### Scenario: Entrega fallida deja la operación pendiente
 - **DADO** el doble configurado para fallar
@@ -173,7 +173,7 @@ Con al menos un plugin configurado cuyo manifiesto escucha el evento, el despach
 - **ENTONCES** el despacho vuelve tras el tiempo acotado
 - **Y** la operación queda pendiente con el error de tiempo agotado
 
-### Requirement: Clave de Idempotencia Estable por Operación (REQ-43.7)
+### Requirement: Clave de Idempotencia Estable por Operación (RF-INT-07)
 
 Cada operación DEBE llevar una clave de idempotencia estable, incluida en el `Event` entregado al plugin. Para `gate.spec.approved`, `gate.design.approved`, `role.apply.approved` y `archive` la clave DEBE tener el formato `<evento>/<cambio>[/<rol>]/<huella>`, donde la huella se deriva de la aprobación registrada en el ledger (digest u ordinal; la define el diseño) de modo que reaprobar un artefacto cambiado produce una clave nueva y reintentar la misma aprobación no. Para `role.start` la clave DEBE ser exactamente `role.start/<cambio>/<rol>`. Para `archive` la clave DEBE ser `archive/<cambio>/<carpeta archivada>`, donde la carpeta archivada es `<fecha>-<cambio>`. La operación encolada se identifica por el par (plugin, clave): encolar una operación cuyo par ya está pendiente en la outbox NO DEBE crear una operación duplicada. La entrega es **al menos una vez** con clave estable: tras una entrega con éxito la operación sale de la cola y no queda registro local de claves entregadas, de modo que una caída entre la entrega y el retiro, o una repetición del verbo tras la entrega, PUEDE reentregar la misma clave. El contrato del puerto exige por ello que el plugin sea idempotente por clave.
 
@@ -202,9 +202,9 @@ Cada operación DEBE llevar una clave de idempotencia estable, incluida en el `E
 - **CUANDO** se ejecuta `integrations sync`
 - **ENTONCES** el plugin recibe de nuevo la misma clave y la operación se retira al entregarse
 
-### Requirement: Outbox Local Persistente con Reintento (REQ-43.8)
+### Requirement: Outbox Local Persistente con Reintento (RF-INT-08)
 
-Las operaciones pendientes DEBEN persistirse en `.integrations-outbox.yaml` en la raíz de la carpeta del cambio, con esquema versionado (`axiom.integrations-outbox/v1`). El fichero es estado local: su nombre empieza por punto, `docpaths.LocalState` lo excluye de la publicación y `axiom sdd publish` NUNCA lo confirma. Cada operación DEBE registrar el evento, la clave, los intentos y el último error, y NUNCA un secreto. La escritura DEBE hacerse con cerrojo, fichero temporal en la misma carpeta y reemplazo atómico, bajo la guarda de contexto que corresponda, de modo que una escritura interrumpida no deje el fichero a medias. El cerrojo NO DEBE vivir en la carpeta del cambio sino en el directorio común de git (compartido por todos los worktrees), para que una cola vacía deje el árbol limpio. El fichero DEBE borrarse cuando quede sin operaciones. Política de reintento: el intento inmediato tiene un plazo total de 10 s por despacho, `sync` 30 s por operación y las operaciones pasan a `abandoned` tras 10 intentos o con un error permanente. Este requisito NO modifica REQ-25.9 ni REQ-25.17: mientras la outbox tenga operaciones pendientes o abandonadas, que `done` o `ensure` en `in_place` la traten como árbol sucio es aceptable y protege la cola.
+Las operaciones pendientes DEBEN persistirse en `.integrations-outbox.yaml` en la raíz de la carpeta del cambio, con esquema versionado (`axiom.integrations-outbox/v1`). El fichero es estado local: su nombre empieza por punto, `docpaths.LocalState` lo excluye de la publicación y `axiom sdd publish` NUNCA lo confirma. Cada operación DEBE registrar el evento, la clave, los intentos y el último error, y NUNCA un secreto. La escritura DEBE hacerse con cerrojo, fichero temporal en la misma carpeta y reemplazo atómico, bajo la guarda de contexto que corresponda, de modo que una escritura interrumpida no deje el fichero a medias. El cerrojo NO DEBE vivir en la carpeta del cambio sino en el directorio común de git (compartido por todos los worktrees), para que una cola vacía deje el árbol limpio. El fichero DEBE borrarse cuando quede sin operaciones. Política de reintento: el intento inmediato tiene un plazo total de 10 s por despacho, `sync` 30 s por operación y las operaciones pasan a `abandoned` tras 10 intentos o con un error permanente. Este requisito NO modifica RF-BRA-09 ni RF-BRA-18: mientras la outbox tenga operaciones pendientes o abandonadas, que `done` o `ensure` en `in_place` la traten como árbol sucio es aceptable y protege la cola.
 
 #### Scenario: El fichero se borra al vaciarse
 - **DADO** una outbox con una sola operación pendiente
@@ -236,9 +236,9 @@ Las operaciones pendientes DEBEN persistirse en `.integrations-outbox.yaml` en l
 - **CUANDO** se ejecuta `git status` en la carpeta del cambio
 - **ENTONCES** no aparece ningún fichero de cerrojo ni de cola sin seguimiento
 
-### Requirement: `integrations.yaml` Versionado con Vínculos e Imputaciones (REQ-43.9)
+### Requirement: `integrations.yaml` Versionado con Vínculos e Imputaciones (RF-INT-09)
 
-La carpeta del cambio PUEDE contener `integrations.yaml`, con esquema versionado (`axiom.integrations/v1`), versionado y publicado por `axiom sdd publish` como cualquier documento de la raíz del cambio. SOLO DEBE contener vínculos (cambio, rol u hito con elemento externo) e imputaciones; NUNCA operaciones pendientes, intentos, errores ni secretos. Un vínculo se identifica por (plugin, tipo, id, rol) y una imputación por (plugin, origen, elemento): repetir la fusión no cambia el fichero. Un enlace cuya URL lleve credenciales (`userinfo`) o no sea http(s) DEBE rechazarse como error permanente de la operación, para que ninguna credencial llegue a disco versionado. La escritura DEBE seguir el mismo patrón que REQ-43.8. El fichero DEBE crearse únicamente cuando un plugin devuelve vínculos o imputaciones; sin ellos NO DEBE existir.
+La carpeta del cambio PUEDE contener `integrations.yaml`, con esquema versionado (`axiom.integrations/v1`), versionado y publicado por `axiom sdd publish` como cualquier documento de la raíz del cambio. SOLO DEBE contener vínculos (cambio, rol u hito con elemento externo) e imputaciones; NUNCA operaciones pendientes, intentos, errores ni secretos. Un vínculo se identifica por (plugin, tipo, id, rol) y una imputación por (plugin, origen, elemento): repetir la fusión no cambia el fichero. Un enlace cuya URL lleve credenciales (`userinfo`) o no sea http(s) DEBE rechazarse como error permanente de la operación, para que ninguna credencial llegue a disco versionado. La escritura DEBE seguir el mismo patrón que RF-INT-08. El fichero DEBE crearse únicamente cuando un plugin devuelve vínculos o imputaciones; sin ellos NO DEBE existir.
 
 #### Scenario: Los vínculos devueltos se persisten
 - **DADO** un plugin que devuelve el vínculo `{role: backend, item: "42"}`
@@ -265,9 +265,9 @@ La carpeta del cambio PUEDE contener `integrations.yaml`, con esquema versionado
 - **CUANDO** se inspecciona `integrations.yaml`
 - **ENTONCES** no contiene claves de intentos, errores ni operaciones
 
-### Requirement: La Emisión Nunca Hace Fallar el Verbo de Origen (REQ-43.10)
+### Requirement: La Emisión Nunca Hace Fallar el Verbo de Origen (RF-INT-10)
 
-Cuando un verbo determinista despacha un evento (REQ-43.22, REQ-43.25 y REQ-43.26), cualquier fallo de la integración (entrega, escritura de la outbox o de `integrations.yaml`, secreto no disponible) DEBE avisarse por stderr mediante un `io.Writer` sustituible, SIN cambiar el código de salida ni el contenido de stdout del verbo. Antes de despachar, el adaptador DEBE comprobar explícitamente `Declarations.IntegrationsErr` (porque `Locate` no rechaza declaraciones inválidas): si hay error, DEBE avisar por stderr y NO despachar.
+Cuando un verbo determinista despacha un evento (RF-GAT-17, RF-BRA-34 y RF-PUB-09), cualquier fallo de la integración (entrega, escritura de la outbox o de `integrations.yaml`, secreto no disponible) DEBE avisarse por stderr mediante un `io.Writer` sustituible, SIN cambiar el código de salida ni el contenido de stdout del verbo. Antes de despachar, el adaptador DEBE comprobar explícitamente `Declarations.IntegrationsErr` (porque `Locate` no rechaza declaraciones inválidas): si hay error, DEBE avisar por stderr y NO despachar.
 
 #### Scenario: Fallo del plugin no rompe el verbo
 - **DADO** el doble configurado para fallar
@@ -288,9 +288,9 @@ Cuando un verbo determinista despacha un evento (REQ-43.22, REQ-43.25 y REQ-43.2
 - **CUANDO** se despacha un evento
 - **ENTONCES** el verbo de origen termina con éxito y stderr avisa del fallo
 
-### Requirement: `axiom integrations sync` Drena la Outbox (REQ-43.11)
+### Requirement: `axiom integrations sync` Drena la Outbox (RF-INT-11)
 
-`axiom integrations sync [--change <nombre>]` (con `--cwd`) DEBE reintentar, en orden de encolado, todas las operaciones pendientes de la outbox y retirar las entregadas, persistiendo los vínculos devueltos en la carpeta ordinaria (REQ-43.9). DEBE cubrir también las carpetas archivadas (REQ-43.29). Con `--change` trata la carpeta ordinaria y la carpeta archivada más reciente del cambio, si existen; sin `--change` recorre las carpetas ordinarias y las archivadas que tengan cola. `--retry-abandoned` reactiva las operaciones abandonadas (con los intentos a 0) y `--discard <clave>` (repetible) retira una operación concreta. DEBE terminar con código 0 solo si no queda ninguna operación pendiente o abandonada, y con código distinto de cero (y un resumen por stderr, sin secretos) si queda alguna. Sin ninguna cola existente (con o sin plugin configurado), DEBE terminar con código 0 sin crear ningún fichero. Con una cola existente cuyo plugin ya no está configurado o activo, DEBE dejar esas operaciones pendientes con el motivo `plugin_not_configured`, sin contar un intento, y terminar con código 1. Un bloque `integrations` inválido DEBE ser un error (código 1), no un aviso, porque `sync` es un verbo explícito de integración. Un fallo en una operación NO DEBE impedir reintentar las siguientes. La salida JSON es `axiom.integrations-sync/v1` con, por cambio, las operaciones entregadas, pendientes, abandonadas y descartadas (cada una con clave, plugin, intentos, último error saneado y motivo) y el total restante.
+`axiom integrations sync [--change <nombre>]` (con `--cwd`) DEBE reintentar, en orden de encolado, todas las operaciones pendientes de la outbox y retirar las entregadas, persistiendo los vínculos devueltos en la carpeta ordinaria (RF-INT-09). DEBE cubrir también las carpetas archivadas (RF-INT-20). Con `--change` trata la carpeta ordinaria y la carpeta archivada más reciente del cambio, si existen; sin `--change` recorre las carpetas ordinarias y las archivadas que tengan cola. `--retry-abandoned` reactiva las operaciones abandonadas (con los intentos a 0) y `--discard <clave>` (repetible) retira una operación concreta. DEBE terminar con código 0 solo si no queda ninguna operación pendiente o abandonada, y con código distinto de cero (y un resumen por stderr, sin secretos) si queda alguna. Sin ninguna cola existente (con o sin plugin configurado), DEBE terminar con código 0 sin crear ningún fichero. Con una cola existente cuyo plugin ya no está configurado o activo, DEBE dejar esas operaciones pendientes con el motivo `plugin_not_configured`, sin contar un intento, y terminar con código 1. Un bloque `integrations` inválido DEBE ser un error (código 1), no un aviso, porque `sync` es un verbo explícito de integración. Un fallo en una operación NO DEBE impedir reintentar las siguientes. La salida JSON es `axiom.integrations-sync/v1` con, por cambio, las operaciones entregadas, pendientes, abandonadas y descartadas (cada una con clave, plugin, intentos, último error saneado y motivo) y el total restante.
 
 #### Scenario: Reintento con éxito
 - **DADO** dos operaciones pendientes y el doble ya sin fallar
@@ -326,9 +326,9 @@ Cuando un verbo determinista despacha un evento (REQ-43.22, REQ-43.25 y REQ-43.2
 - **CUANDO** se ejecuta `sync`
 - **ENTONCES** termina con error y código 1 sin entregar nada
 
-### Requirement: `axiom integrations emit` Dispara un Evento del Catálogo (REQ-43.12)
+### Requirement: `axiom integrations emit` Dispara un Evento del Catálogo (RF-INT-12)
 
-`axiom integrations emit --change <nombre> --event <evento>` (con `--cwd`; `--role <id>` para los eventos de rol) DEBE despachar un evento del catálogo con las reglas de REQ-43.5 a REQ-43.8, como respaldo explícito de los verbos deterministas. DEBE rechazar con error tipado y código distinto de cero: `change.start` (lo dispara C-07-d), un evento fuera del catálogo, un evento de rol sin `--role` o con un rol ausente del kickoff sellado, y un cambio inexistente. `emit` NO DEBE fabricar aprobaciones: los eventos de compuerta (`gate.spec.approved`, `gate.design.approved`, `role.apply.approved`) exigen que la última decisión de esa compuerta en `gates.yaml` sea `approved`, y toman de ese registro el digest, la huella y, si no se da `--actor`, el actor. `role.apply.approved` y `role.start` exigen `--role` del roster sellado. `emit` termina con código 0 si se entregó todo o si ningún plugin activo escucha el evento (con un mensaje que lo dice), y con código 1 si algo queda pendiente o abandonado; un bloque `integrations` inválido es un error (código 1). La salida JSON es `axiom.integrations-emit/v1` con la clave, las operaciones entregadas, pendientes y abandonadas y un indicador de que no había nada que hacer. `emit --event archive` DEBE exigir que exista la carpeta archivada del cambio y operar sobre ella (REQ-43.29). A diferencia de REQ-43.10, un fallo de entrega en `emit` deja la operación pendiente y el verbo termina con código distinto de cero (la persona lo invoca expresamente).
+`axiom integrations emit --change <nombre> --event <evento>` (con `--cwd`; `--role <id>` para los eventos de rol) DEBE despachar un evento del catálogo con las reglas de RF-INT-05 a RF-INT-08, como respaldo explícito de los verbos deterministas. DEBE rechazar con error tipado y código distinto de cero: `change.start` (lo dispara C-07-d), un evento fuera del catálogo, un evento de rol sin `--role` o con un rol ausente del kickoff sellado, y un cambio inexistente. `emit` NO DEBE fabricar aprobaciones: los eventos de compuerta (`gate.spec.approved`, `gate.design.approved`, `role.apply.approved`) exigen que la última decisión de esa compuerta en `gates.yaml` sea `approved`, y toman de ese registro el digest, la huella y, si no se da `--actor`, el actor. `role.apply.approved` y `role.start` exigen `--role` del roster sellado. `emit` termina con código 0 si se entregó todo o si ningún plugin activo escucha el evento (con un mensaje que lo dice), y con código 1 si algo queda pendiente o abandonado; un bloque `integrations` inválido es un error (código 1). La salida JSON es `axiom.integrations-emit/v1` con la clave, las operaciones entregadas, pendientes y abandonadas y un indicador de que no había nada que hacer. `emit --event archive` DEBE exigir que exista la carpeta archivada del cambio y operar sobre ella (RF-INT-20). A diferencia de RF-INT-10, un fallo de entrega en `emit` deja la operación pendiente y el verbo termina con código distinto de cero (la persona lo invoca expresamente).
 
 #### Scenario: Emisión manual con éxito
 - **DADO** el doble configurado
@@ -371,9 +371,9 @@ Cuando un verbo determinista despacha un evento (REQ-43.22, REQ-43.25 y REQ-43.2
 - **ENTONCES** la operación queda pendiente en la outbox
 - **Y** el verbo termina con código distinto de cero
 
-### Requirement: Almacén de Secretos sin Caída Silenciosa a Texto Plano (REQ-43.13)
+### Requirement: Almacén de Secretos sin Caída Silenciosa a Texto Plano (RF-INT-13)
 
-El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` con un adaptador de entorno, un adaptador de keyring del sistema (`github.com/zalando/go-keyring`: Windows Credential Manager y llavero de macOS) y una cadena de resolución entorno → keyring. El adaptador de keyring se compila SOLO para Windows y macOS (`//go:build windows || darwin`): en Linux y en cualquier otro sistema no hay Secret Service y el único almacén es la variable de entorno. El adaptador de entorno lee `AXIOM_INTEGRATION_<PLUGIN>_<CLAVE>`, con el identificador del plugin en mayúsculas y `-` sustituido por `_` y el nombre del secreto en mayúsculas (`azure-devops` y `pat` dan `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`); una variable vacía cuenta como no definida y el catálogo rechaza dos pares que den la misma variable. El keyring usa el servicio `axiom` y la cuenta `<plugin>/<secreto>`. Un secreto ausente DEBE dar un error tipado que nombre `axiom integrations secret set` y la variable. NUNCA DEBE existir un almacén en texto plano ni una caída a él: si el keyring no está disponible y el entorno no aporta valor, DEBE devolverse un error tipado que nombre la variable de entorno alternativa. Los errores NUNCA DEBEN envolver el valor del secreto. Los secretos solo DEBEN declararse por nombre en el manifiesto (REQ-43.3).
+El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` con un adaptador de entorno, un adaptador de keyring del sistema (`github.com/zalando/go-keyring`: Windows Credential Manager y llavero de macOS) y una cadena de resolución entorno → keyring. El adaptador de keyring se compila SOLO para Windows y macOS (`//go:build windows || darwin`): en Linux y en cualquier otro sistema no hay Secret Service y el único almacén es la variable de entorno. El adaptador de entorno lee `AXIOM_INTEGRATION_<PLUGIN>_<CLAVE>`, con el identificador del plugin en mayúsculas y `-` sustituido por `_` y el nombre del secreto en mayúsculas (`azure-devops` y `pat` dan `AXIOM_INTEGRATION_AZURE_DEVOPS_PAT`); una variable vacía cuenta como no definida y el catálogo rechaza dos pares que den la misma variable. El keyring usa el servicio `axiom` y la cuenta `<plugin>/<secreto>`. Un secreto ausente DEBE dar un error tipado que nombre `axiom integrations secret set` y la variable. NUNCA DEBE existir un almacén en texto plano ni una caída a él: si el keyring no está disponible y el entorno no aporta valor, DEBE devolverse un error tipado que nombre la variable de entorno alternativa. Los errores NUNCA DEBEN envolver el valor del secreto. Los secretos solo DEBEN declararse por nombre en el manifiesto (RF-INT-03).
 
 #### Scenario: El entorno prevalece
 - **DADO** la variable de entorno definida y un valor distinto en el keyring
@@ -401,7 +401,7 @@ El paquete `internal/integrations/secrets` DEBE definir el puerto `SecretStore` 
 - **CUANDO** se resuelve
 - **ENTONCES** se devuelve un error tipado de secreto ausente que no incluye ningún valor
 
-### Requirement: Tipo `Secret` Redactado (REQ-43.14)
+### Requirement: Tipo `Secret` Redactado (RF-INT-14)
 
 El tipo `Secret` DEBE redactar su valor en `String`, `GoString`, `MarshalJSON` y `MarshalYAML` (y en cualquier formateo con `fmt`, incluidos `%v`, `%+v` y `%#v`). El valor solo DEBE obtenerse mediante un método explícito que usa el plugin en el momento de entregar.
 
@@ -415,7 +415,7 @@ El tipo `Secret` DEBE redactar su valor en `String`, `GoString`, `MarshalJSON` y
 - **CUANDO** el error llega a la outbox y a stderr
 - **ENTONCES** no contiene el valor del secreto
 
-### Requirement: `axiom integrations secret set|status|delete` (REQ-43.15)
+### Requirement: `axiom integrations secret set|status|delete` (RF-INT-15)
 
 `axiom integrations secret set|status|delete --plugin <id> --name <secreto>` DEBE gestionar los secretos en el keyring del sistema (Windows y macOS). En Linux y en cualquier otro sistema `set` y `delete` DEBEN negarse con un error tipado que explique que el único almacén es la variable de entorno `AXIOM_INTEGRATION_<PLUGIN>_<SECRETO>` y NUNCA escribir el valor en un fichero; `status` informa `env` o `missing`. `set` DEBE leer el valor únicamente por stdin (máximo 4 KiB, quitando un único salto de línea final y rechazando el valor vacío) y NUNCA aceptarlo como argumento ni como bandera; si stdin es un terminal DEBE negarse y sugerir canalizar el valor, porque no hay prompt sin eco en este cambio. `status` (con `--name` opcional) DEBE informar, por cada secreto del manifiesto, de su `source`, con exactamente uno de los valores `env`, `keyring`, `missing` o `keyring_unavailable`, y NUNCA el valor ni su longitud, tampoco con `--json` (`axiom.integrations-secret-status/v1`). `delete` elimina el secreto del keyring, es idempotente (sin secreto informa y sale con 0) y recuerda que una variable de entorno no se borra desde Axiom. Un `--plugin` o `--name` que el manifiesto no declare DEBE rechazarse con error tipado. Ninguna salida, error ni registro DEBE contener el valor.
 
@@ -466,7 +466,7 @@ El tipo `Secret` DEBE redactar su valor en `String`, `GoString`, `MarshalJSON` y
 - **CUANDO** se ejecuta `secret set --plugin <doble> --name otro`
 - **ENTONCES** se rechaza con error tipado que lista los secretos declarados por el manifiesto
 
-### Requirement: Ningún Secreto Llega a Disco Versionado, a la Salida ni a un GET (REQ-43.16)
+### Requirement: Ningún Secreto Llega a Disco Versionado, a la Salida ni a un GET (RF-INT-16)
 
 Un valor de secreto NO DEBE aparecer, tras ningún flujo del marco, en `axiom.yaml`, en ningún fichero de la carpeta del cambio (incluidos `integrations.yaml` y `.integrations-outbox.yaml`), en stdout ni en stderr de ningún verbo, ni en la respuesta de ningún endpoint GET del dashboard. Una prueba canario DEBE verificarlo: con un valor distintivo en el almacén simulado, ejecuta los flujos de despacho, fallo, reintento, `secret set|status|delete` y consulta los GET del dashboard, y comprueba la ausencia del valor en todos esos destinos.
 
@@ -480,7 +480,7 @@ Un valor de secreto NO DEBE aparecer, tras ningún flujo del marco, en `axiom.ya
 - **CUANDO** se consultan los endpoints GET del dashboard
 - **ENTONCES** ninguna respuesta contiene el valor
 
-### Requirement: Doble de Prueba en Memoria y Criterio de Terminado (REQ-43.17)
+### Requirement: Doble de Prueba en Memoria y Criterio de Terminado (RF-INT-17)
 
 El paquete `internal/integrations/integrationstest` DEBE ofrecer un plugin en memoria que registra los eventos recibidos (con su clave), devuelve vínculos configurables y puede fallar a voluntad (siempre, N veces o por evento). Debe poder inyectarse en el catálogo de manifiestos y en el registro mediante las costuras de prueba. Una prueba de extremo a extremo DEBE demostrar el criterio de terminado del backlog: un plugin de prueba registrado y configurado en `axiom.yaml` recibe los eventos de `gate record` (spec, design y role-apply), de `branch ensure --role`, de `sdd publish --archive` y de `integrations emit`; persiste vínculos en `integrations.yaml`; y reintenta desde la outbox con `sync`.
 
@@ -488,18 +488,18 @@ El paquete `internal/integrations/integrationstest` DEBE ofrecer un plugin en me
 - **DADO** un workspace con `integrations.<doble>` configurado y el doble registrado
 - **CUANDO** se ejecutan `gate record --decision approved` para `spec`, `design` y `role-apply:<rol>`, `branch ensure --role <rol>`, `sdd publish --archive` y `integrations emit`
 - **ENTONCES** el doble ha recibido, con su clave de idempotencia, `gate.spec.approved`, `gate.design.approved`, `role.apply.approved`, `role.start`, `archive` y el evento emitido
-- **Y** `integrations.yaml` contiene los vínculos que devolvió (salvo los de `archive`, REQ-43.30)
+- **Y** `integrations.yaml` contiene los vínculos que devolvió (salvo los de `archive`, RF-INT-21)
 
 #### Scenario: Reintento tras fallo
 - **DADO** el doble configurado para fallar una vez
 - **CUANDO** falla la entrega de un evento y después se ejecuta `integrations sync`
 - **ENTONCES** la operación se entrega en el reintento, se retira de la outbox y `sync` termina con código 0
 
-### Requirement: Alta del Verbo `integrations` en la CLI y la Ayuda (REQ-43.18)
+### Requirement: Alta del Verbo `integrations` en la CLI y la Ayuda (RF-INT-18)
 
 La CLI DEBE exponer la familia de primer nivel `axiom integrations` con exactamente los subcomandos `sync`, `emit`, `secret` (este con `set`, `status` y `delete`), `connect` y `discover`. La ayuda global y la ayuda de cada subcomando DEBEN describirlos y las pruebas de ayuda DEBEN cubrirlos. Todo subcomando acepta `--cwd`; los que operan sobre un cambio, `--change`.
 
-(Previously: la familia tenía exactamente los subcomandos `sync`, `emit` y `secret`; `connect` y `discover` los añaden REQ-45.12 y REQ-45.13)
+(Previously: la familia tenía exactamente los subcomandos `sync`, `emit` y `secret`; `connect` y `discover` los añaden RF-ADO-12 y RF-ADO-13)
 
 #### Scenario: Ayuda global
 - **CUANDO** se ejecuta `axiom --help`
@@ -508,9 +508,9 @@ La CLI DEBE exponer la familia de primer nivel `axiom integrations` con exactame
 #### Scenario: Subcomando desconocido
 - **CUANDO** se ejecuta `axiom integrations inspect`
 - **ENTONCES** termina con código distinto de cero y muestra la ayuda de la familia, que lista `sync`, `emit`, `secret`, `connect` y `discover`
-### Requirement: `archive` se Encola de Forma Duradera en la Carpeta Archivada (REQ-43.28)
+### Requirement: `archive` se Encola de Forma Duradera en la Carpeta Archivada (RF-INT-19)
 
-El evento `archive` DEBE seguir el mismo despacho duradero que el resto de eventos (REQ-43.6), pero la operación DEBE encolarse en `.integrations-outbox.yaml` en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<cambio>/`), porque `sdd publish --archive` se ejecuta después de mover el incremento. La cola archivada es estado local (REQ-27.5 modificado): NO se versiona ni se publica. La escritura de la cola archivada y de sus temporales DEBE pasar por una guarda que autorice, bajo `openspec/changes/archive/`, solo el nombre de la cola y sus temporales en la raíz exacta de una carpeta archivada (REQ-21.18 modificado). Sin repositorio git, el despacho de `archive` NO DEBE encolar: avisa por stderr e indica la orden `axiom integrations emit --event archive`.
+El evento `archive` DEBE seguir el mismo despacho duradero que el resto de eventos (RF-INT-06), pero la operación DEBE encolarse en `.integrations-outbox.yaml` en la raíz de la carpeta archivada del cambio (`openspec/changes/archive/<fecha>-<cambio>/`), porque `sdd publish --archive` se ejecuta después de mover el incremento. La cola archivada es estado local (RF-PUB-01 modificado): NO se versiona ni se publica. La escritura de la cola archivada y de sus temporales DEBE pasar por una guarda que autorice, bajo `openspec/changes/archive/`, solo el nombre de la cola y sus temporales en la raíz exacta de una carpeta archivada (RF-ARC-03 modificado). Sin repositorio git, el despacho de `archive` NO DEBE encolar: avisa por stderr e indica la orden `axiom integrations emit --event archive`.
 
 #### Scenario: La operación se encola en la carpeta archivada
 - **DADO** el doble configurado para fallar y un cambio `x` archivado en `openspec/changes/archive/2026-11-19-x/`
@@ -526,16 +526,16 @@ El evento `archive` DEBE seguir el mismo despacho duradero que el resto de event
 #### Scenario: Otro nombre bajo `archive/` se rechaza
 - **DADO** una carpeta archivada
 - **CUANDO** el marco intenta escribir en ella `gates.yaml`, `.otro` o un fichero anidado
-- **ENTONCES** la escritura se rechaza con el mensaje de REQ-21.18 y no se modifica nada
+- **ENTONCES** la escritura se rechaza con el mensaje de RF-ARC-03 y no se modifica nada
 
 #### Scenario: Sin git no se encola
 - **DADO** un workspace que no está en un repositorio git y un cambio archivado
 - **CUANDO** se despacha `archive`
 - **ENTONCES** no se crea ninguna cola y stderr avisa e indica `axiom integrations emit --event archive`
 
-### Requirement: `sync` y `emit --event archive` Cubren las Carpetas Archivadas (REQ-43.29)
+### Requirement: `sync` y `emit --event archive` Cubren las Carpetas Archivadas (RF-INT-20)
 
-`axiom integrations sync` DEBE tratar también las colas de las carpetas archivadas, con la misma política de reintento que las ordinarias (REQ-43.8), aplicando a cada carpeta la guarda de su contexto (ordinario o archivado). `axiom integrations emit --change <x> --event archive` DEBE exigir que exista la carpeta archivada del cambio, rechazar con error tipado y sin crear ficheros si no existe, y encolar y entregar sobre ella como REQ-43.28. Con `--change` y una carpeta ordinaria y una archivada, `sync` DEBE tratar ambas; en la carpeta archivada, `sync` NO DEBE fusionar vínculos (REQ-43.30).
+`axiom integrations sync` DEBE tratar también las colas de las carpetas archivadas, con la misma política de reintento que las ordinarias (RF-INT-08), aplicando a cada carpeta la guarda de su contexto (ordinario o archivado). `axiom integrations emit --change <x> --event archive` DEBE exigir que exista la carpeta archivada del cambio, rechazar con error tipado y sin crear ficheros si no existe, y encolar y entregar sobre ella como RF-INT-19. Con `--change` y una carpeta ordinaria y una archivada, `sync` DEBE tratar ambas; en la carpeta archivada, `sync` NO DEBE fusionar vínculos (RF-INT-21).
 
 #### Scenario: `sync` reintenta la cola archivada
 - **DADO** una operación `archive` pendiente en la carpeta archivada de `x`
@@ -558,9 +558,9 @@ El evento `archive` DEBE seguir el mismo despacho duradero que el resto de event
 - **CUANDO** se ejecuta `emit --change x --event archive`
 - **ENTONCES** el doble recibe `archive/x/<carpeta archivada>`
 
-### Requirement: El Evento `archive` Nunca Fusiona Vínculos en `integrations.yaml` (REQ-43.30)
+### Requirement: El Evento `archive` Nunca Fusiona Vínculos en `integrations.yaml` (RF-INT-21)
 
-Ni el despacho inmediato ni `sync` ni `emit` DEBEN persistir en `integrations.yaml` los vínculos o imputaciones que el plugin devuelva al entregar `archive`: se descartan con un aviso por stderr. `integrations.yaml` de la carpeta archivada solo se lee, para dar los vínculos existentes al plugin (`Delivery.Links`). Para los demás eventos, REQ-43.9 no cambia.
+Ni el despacho inmediato ni `sync` ni `emit` DEBEN persistir en `integrations.yaml` los vínculos o imputaciones que el plugin devuelva al entregar `archive`: se descartan con un aviso por stderr. `integrations.yaml` de la carpeta archivada solo se lee, para dar los vínculos existentes al plugin (`Delivery.Links`). Para los demás eventos, RF-INT-09 no cambia.
 
 #### Scenario: Vínculos devueltos por `archive` se descartan
 - **DADO** un doble que devuelve un vínculo al entregar `archive`
@@ -573,9 +573,9 @@ Ni el despacho inmediato ni `sync` ni `emit` DEBEN persistir en `integrations.ya
 - **CUANDO** se entrega `archive`
 - **ENTONCES** el plugin recibe ese vínculo en `Delivery.Links`
 
-### Requirement: `done` en la Rama de Archivado se Niega con Cola Pendiente (REQ-43.31)
+### Requirement: `done` en la Rama de Archivado se Niega con Cola Pendiente (RF-INT-22)
 
-Mientras la cola de la carpeta archivada tenga operaciones pendientes o abandonadas, `axiom branch done` sobre la rama de archivado DEBE negarse por la regla de árbol sucio vigente (REQ-25.17), que NO cambia: la cola protege las operaciones evitando que se elimine el worktree con trabajo sin entregar. Con la cola vacía (y por tanto borrada) `done` NO DEBE negarse por ella.
+Mientras la cola de la carpeta archivada tenga operaciones pendientes o abandonadas, `axiom branch done` sobre la rama de archivado DEBE negarse por la regla de árbol sucio vigente (RF-BRA-18), que NO cambia: la cola protege las operaciones evitando que se elimine el worktree con trabajo sin entregar. Con la cola vacía (y por tanto borrada) `done` NO DEBE negarse por ella.
 
 #### Scenario: `done` se niega con cola archivada pendiente
 - **DADO** una cola `archive` pendiente en la carpeta archivada del worktree de archivado
@@ -586,7 +586,7 @@ Mientras la cola de la carpeta archivada tenga operaciones pendientes o abandona
 - **DADO** la misma cola, entregada con `axiom integrations sync`
 - **CUANDO** se ejecuta `axiom branch done`
 - **ENTONCES** no se rechaza por la cola
-### Requirement: Puertos Opcionales de Identidad y Descubrimiento (REQ-45.17)
+### Requirement: Puertos Opcionales de Identidad y Descubrimiento (RF-INT-23)
 
 El paquete `internal/integrations` DEBE definir dos puertos opcionales que un plugin implementa solo si los ofrece: la resolución de la identidad de la persona y el descubrimiento del proceso del tracker. Se DEBEN detectar por aserción de tipo sobre el `Plugin` registrado. El puerto `Plugin` (`Manifest`, `Deliver`) NO DEBE cambiar. Los verbos genéricos `axiom integrations connect` y `axiom integrations discover` DEBEN despachar por estos puertos. Cuando el plugin indicado con `--plugin` no ofrece el puerto correspondiente, el verbo DEBE terminar con un error tipado que nombra el plugin y el puerto que falta, sin efectos secundarios.
 

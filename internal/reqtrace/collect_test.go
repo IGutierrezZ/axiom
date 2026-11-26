@@ -44,7 +44,7 @@ func collectFixture() (Input, *fakeHistory) {
 
 func query(t *testing.T, raw string) Query {
 	t.Helper()
-	q, err := ParseID(raw, reqid.Default())
+	q, err := ParseID(raw, reqid.Default(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

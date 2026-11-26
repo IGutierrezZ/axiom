@@ -14,22 +14,22 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 ## REMOVED Requirements
 
-### Requirement: Mapeo Determinista de Documento ODD a Propuesta SDD (REQ-19.9)
+### Requirement: Mapeo Determinista de Documento ODD a Propuesta SDD (RF-OPR-01)
 
 (Motivo: el mapeo determinista de secciones del documento vivo hacia `proposal.md` lo implementaba `internal/odd/promote.go`, retirado por la Decisión D1.)
-(Migración: la promoción de un documento vivo ODD a una propuesta SDD pasa a ser un acto de agente: el agente redacta `proposal.md` informado por el documento vivo, sin un mapeo Go determinista. El endpoint `POST /api/increments` con `proposal_body` (capacidad `dashboard-sdd-orchestration`, REQ-15.1) sigue disponible como vía de siembra de la propuesta ya redactada, sin cambios por este incremento.)
+(Migración: la promoción de un documento vivo ODD a una propuesta SDD pasa a ser un acto de agente: el agente redacta `proposal.md` informado por el documento vivo, sin un mapeo Go determinista. El endpoint `POST /api/increments` con `proposal_body` (capacidad `dashboard-sdd-orchestration`, RF-DSO-01) sigue disponible como vía de siembra de la propuesta ya redactada, sin cambios por este incremento.)
 
-### Requirement: Validación de Nombre y Colisión al Promover (REQ-19.10)
+### Requirement: Validación de Nombre y Colisión al Promover (RF-OPR-02)
 
 (Motivo: la validación de nombre y las guardas de colisión específicas de la promoción ODD→SDD las implementaba `internal/odd/promote.go`, retirado por la Decisión D1.)
 (Migración: la validación de nombre y colisión ordinaria de `axiom change create` y del endpoint `POST /api/increments` sigue aplicándose sobre la propuesta resultante, sin cambios por este incremento.)
 
-### Requirement: Prohibición de Fabricar Contenido de Especificación al Promover (REQ-19.11)
+### Requirement: Prohibición de Fabricar Contenido de Especificación al Promover (RF-OPR-03)
 
 (Motivo: el marcador explícito de la sección `## Capacidades` para `sdd-spec` lo generaba `internal/odd/promote.go`, retirado por la Decisión D1.)
 (Migración: ninguna. Queda a criterio del agente que redacta la propuesta no fabricar contenido de la sección `## Capacidades`.)
 
-### Requirement: Estado del Documento ODD tras la Promoción (REQ-19.12)
+### Requirement: Estado del Documento ODD tras la Promoción (RF-OPR-04)
 
 (Motivo: el marcado del documento vivo como `promovido` y el rechazo de una segunda promoción los implementaba `internal/odd/promote.go`, retirado por la Decisión D1.)
 (Migración: ninguna. El seguimiento de qué documento vivo ya se promovió pasa a ser una convención de agente sin verificación Go.)

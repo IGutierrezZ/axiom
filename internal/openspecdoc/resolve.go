@@ -16,7 +16,7 @@ const (
 const SupersededSuffix = reqid.SupersededSuffix
 
 // Resolve devuelve el índice, en names (la canónica en orden), del requisito al que se
-// refiere el nombre de una delta (REQ-30.22): por identificador cuando el nombre lleva
+// refiere el nombre de una delta (RF-ARC-11): por identificador cuando el nombre lleva
 // uno válido para p, con vuelta al título exacto ante varios con el mismo identificador,
 // y por título exacto en el resto. Lo usan el compositor, la clasificación idempotente
 // de livespec y la comprobación previa al archivado, para que los tres coincidan. No

@@ -38,7 +38,7 @@ const (
 	// "granted"/"declined" pair.
 	gateAnswerApproved = "approved"
 	gateAnswerRejected = "rejected"
-	// gateAnswerHandOff is the third exit of a planning gate (REQ-26.1): approve,
+	// gateAnswerHandOff is the third exit of a planning gate (RF-GAT-07): approve,
 	// push and stop. It is a token of this question only, never a decision the
 	// ledger records: the record is `approved` plus --hand-off.
 	gateAnswerHandOff = "hand_off"
@@ -99,10 +99,10 @@ type SDDGovernanceGateResult struct {
 	// gateRecordInvocationPrefix verb.
 	Choices []consentenvelope.Choice `json:"choices"`
 	// HandOffUnavailable names the declared artifact store (engram or none)
-	// that rules the hand-off exit out (REQ-26.6). Empty means the exit is
+	// that rules the hand-off exit out (RF-GAT-12). Empty means the exit is
 	// available, or the gate is integration, which never offers it.
 	HandOffUnavailable string `json:"handOffUnavailable,omitempty"`
-	// Publication is where approving this gate publishes the change documents (REQ-27.12): the
+	// Publication is where approving this gate publishes the change documents (RF-GAT-15): the
 	// remote and the branch the choices name, and the exact `axiom sdd publish` invocation bound to
 	// that branch. It is present on a planning gate whose store keeps files when the publication
 	// target resolves; it is a calculation, never an execution.
@@ -116,7 +116,7 @@ type SDDGovernanceGateResult struct {
 	OffPath consentenvelope.OffPath `json:"off_path"`
 }
 
-// GatePublication is the publication data of a planning gate question (REQ-27.12, DD-11). Remote
+// GatePublication is the publication data of a planning gate question (RF-GAT-15, DD-11). Remote
 // is always "origin"; PRTarget is informative (the pull request stays a human decision) and empty
 // in the in-place integration of a multirepo specs repository.
 type GatePublication struct {
@@ -277,7 +277,7 @@ func gateEvidence(state kickoff.GateState, artifactPaths ArtifactPaths) []string
 // deciding (gateStatusInvocationPrefix) -- the same shape
 // newEditAuthorityConsent already established for its own sibling schema.
 // A planning gate offers three exits, or two plus HandOffUnavailable when
-// the artifact store keeps no files (store, REQ-26.6); integration keeps its
+// the artifact store keeps no files (store, RF-GAT-12); integration keeps its
 // two. Unlike that sibling, Criteria depends on gateCriteria recognising the
 // gate key, so this constructor validates its own output and returns an error
 // rather than ever handing a malformed envelope to a caller: there is no
@@ -344,7 +344,7 @@ func newGovernanceGateQuestion(change, workspaceRoot string, gate kickoff.GateSt
 //
 // D-05 is narrowed here. It originally extended the continuous-mode
 // absence to the whole block so continuous output stayed byte-identical to
-// pre-INC-21, but REQ-21.7 only forbids GATES under execution_style:
+// pre-INC-21, but RF-GAT-01 only forbids GATES under execution_style:
 // continuous. A multi-role multirepo change sealed as continuous still needs
 // its role roster projected, so a continuous seal now carries Kickoff and
 // Roster with an empty Gates slice. Everything that consumes the gates
@@ -374,7 +374,7 @@ const governanceRosterSourceKickoff = "kickoff"
 // governanceGated reports whether block-review gates apply to this
 // governance view: it is non-nil AND its seal is not continuous. It is the
 // single explicit execution-style check every gate consumer shares (D-05
-// narrowed, REQ-21.7), so a continuous change that merely projects its roster
+// narrowed, RF-GAT-01), so a continuous change that merely projects its roster
 // can never stop at, route to, or be blocked by a gate or by the handoff and
 // integration preconditions that only exist because gates do.
 func governanceGated(governance *Governance) bool {
@@ -552,7 +552,7 @@ func setGovernanceArtifactDigest(key string, paths []string, artifacts map[strin
 	return nil
 }
 
-// archiveDependencyFromGovernance is D-13's rule: REQ-21.16 forbids
+// archiveDependencyFromGovernance is D-13's rule: RF-ARC-01 forbids
 // archiving a change before its "integration" gate is approved, no matter
 // how favorable verify-report.md already is. It only ever NARROWS
 // baseline, from ready to blocked, and only when governanceGated holds (a
@@ -573,7 +573,7 @@ func archiveDependencyFromGovernance(governance *Governance, changeName string, 
 		}
 	}
 	return DependencyBlocked, fmt.Sprintf(
-		"El cambio %q no puede archivarse todavia: la compuerta \"integration\" no esta aprobada; ejecuta `axiom sdd gate record --gate integration --decision approved --evidence-kind pr_merged --commit <sha>` (o --evidence-kind deployment|attestation) para registrar la evidencia de integracion o despliegue (REQ-21.16).",
+		"El cambio %q no puede archivarse todavia: la compuerta \"integration\" no esta aprobada; ejecuta `axiom sdd gate record --gate integration --decision approved --evidence-kind pr_merged --commit <sha>` (o --evidence-kind deployment|attestation) para registrar la evidencia de integracion o despliegue (RF-ARC-01).",
 		changeName,
 	)
 }
@@ -581,7 +581,7 @@ func archiveDependencyFromGovernance(governance *Governance, changeName string, 
 // lastRoleClosedForGovernance reuses kickoff.LastBlockingRoleClosed against the
 // governance snapshot's own roster (with the gate policy of each role) and
 // already-evaluated gate states, rather than re-deriving "every blocking
-// role-apply gate approved" a second way (REQ-21.15).
+// role-apply gate approved" a second way (RF-RCL-03).
 func lastRoleClosedForGovernance(governance *Governance) bool {
 	return kickoff.LastBlockingRoleClosed(governanceRoleAssignments(governance), governance.Gates)
 }

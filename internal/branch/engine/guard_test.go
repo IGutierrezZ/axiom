@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas de la guarda D con git real, entorno aislado y sin red (REQ-25.21, G-11, S-18,
+// Pruebas de la guarda D con git real, entorno aislado y sin red (RF-BRA-22, G-11, S-18,
 // design D-18): bloquea las escrituras del agente en los documentos de Axiom cuando el veredicto
 // es `wrong_branch` en los dos contextos y no hace nada en cualquier otro caso. El bloqueo decide
 // solo con lecturas de ficheros: ninguna de estas pruebas observa un proceso de git durante la
@@ -43,7 +43,7 @@ func wantNothing(t *testing.T, decision GuardDecision) {
 	}
 }
 
-// REQ-25.21, escenario «Bloquea un documento de Axiom en rama equivocada» y supuesto S-18: el
+// RF-BRA-22, escenario «Bloquea un documento de Axiom en rama equivocada» y supuesto S-18: el
 // bloqueo rige aunque no haya un cambio registrado ni kickoff (los nombres salen de la política),
 // con el motivo, la rama actual y la esperada, y la continuación exacta de `ensure`. No lanza un
 // solo proceso.
@@ -67,7 +67,7 @@ func TestGuardBlocksAnAxiomDocumentOnTheWrongBranchEvenWithoutARegisteredChange(
 	}
 }
 
-// REQ-25.21 (escenario «Permite un documento de Axiom en la rama correcta») y G-11: la rama del
+// RF-BRA-22 (escenario «Permite un documento de Axiom en la rama correcta») y G-11: la rama del
 // cambio y la de archivado son correctas (unión de los dos contextos); cualquier otra, no.
 func TestGuardAllowsTheChangeBranchAndTheArchiveBranchButNotAnyOther(t *testing.T) {
 	t.Parallel()
@@ -111,7 +111,7 @@ func TestGuardBlocksADetachedHead(t *testing.T) {
 	}
 }
 
-// REQ-25.21 escenario 1 (con instantánea) y REQ-25.36: los nombres de la instantánea mandan sobre
+// RF-BRA-22 escenario 1 (con instantánea) y RF-KOF-06: los nombres de la instantánea mandan sobre
 // la política, así que con el prefijo `inc` la rama `feat/x` es la equivocada y `inc/x` la correcta.
 func TestGuardUsesTheSnapshotNamesOfTheKickoff(t *testing.T) {
 	t.Parallel()
@@ -132,7 +132,7 @@ func TestGuardUsesTheSnapshotNamesOfTheKickoff(t *testing.T) {
 	wantNothing(t, guardOf(t, preWrite(document)))
 }
 
-// REQ-25.37 (R15): un kickoff sin instantánea deja el cambio exento; los sumideros acumulativos
+// RF-KOF-07 (R15): un kickoff sin instantánea deja el cambio exento; los sumideros acumulativos
 // por nombre también.
 func TestGuardExemptsAChangeWithoutSnapshotAndTheCumulativeSinks(t *testing.T) {
 	t.Parallel()
@@ -145,7 +145,7 @@ func TestGuardExemptsAChangeWithoutSnapshotAndTheCumulativeSinks(t *testing.T) {
 	}
 }
 
-// REQ-25.21: el documento ODD `odd/tasks/<f>.md` está cubierto, con los nombres de la política, y
+// RF-BRA-22: el documento ODD `odd/tasks/<f>.md` está cubierto, con los nombres de la política, y
 // su continuación repite el carril; no ofrece la de archivado, que el carril ODD no tiene.
 func TestGuardCoversTheODDDocument(t *testing.T) {
 	t.Parallel()
@@ -168,7 +168,7 @@ func TestGuardCoversTheODDDocument(t *testing.T) {
 	wantNothing(t, guardOf(t, preWrite(filepath.Join(repo, "odd", "tasks", "README.sh"))))
 }
 
-// REQ-25.21, escenario «Un documento de Axiom ignorado por git se sigue bloqueando»: el bloqueo no
+// RF-BRA-22, escenario «Un documento de Axiom ignorado por git se sigue bloqueando»: el bloqueo no
 // consulta git, así que un `.gitignore` que excluye la carpeta del cambio u `odd/tasks/` no lo
 // desactiva, y no se lanza ningún proceso. Con `post` el documento tampoco avisa: su
 // responsabilidad es la del bloqueo y nunca llega a la consulta `git check-ignore` del aviso.
@@ -187,7 +187,7 @@ func TestGuardBlocksAnAxiomDocumentEvenIfGitIgnoresIt(t *testing.T) {
 	}
 }
 
-// REQ-25.21, escenario «Inerte fuera de un proyecto Axiom»: con `OriginStart` no hace nada y no
+// RF-BRA-22, escenario «Inerte fuera de un proyecto Axiom»: con `OriginStart` no hace nada y no
 // escribe ningún fichero, ni siquiera dentro de un repositorio git.
 func TestGuardIsInertOutsideAnAxiomProject(t *testing.T) {
 	t.Parallel()
@@ -212,7 +212,7 @@ func TestGuardIsInertOutsideAnAxiomProject(t *testing.T) {
 // El hook está instalado en toda la máquina: un repositorio ajeno que usa la disposición
 // `openspec/changes/<x>/` sin `axiom.yaml` no es un proyecto Axiom, así que ni el bloqueo (evento
 // `pre`) ni el aviso (evento `post`) hacen nada, aunque `Locate` sí reconozca ese `openspec/` como
-// marcador (REQ-24.2) y el repositorio esté en `main`. Con el `axiom.yaml` añadido, el mismo
+// marcador (RF-PLH-02) y el repositorio esté en `main`. Con el `axiom.yaml` añadido, el mismo
 // repositorio vuelve a bloquear: lo único que cambia es el criterio de proyecto.
 func TestGuardIsInertInAForeignRepositoryWithABareOpenSpec(t *testing.T) {
 	t.Parallel()
@@ -261,7 +261,7 @@ func listDirectory(t *testing.T, dir string) []string {
 	return names
 }
 
-// REQ-25.21, escenario «Fail-open ante un error interno»: configuración, kickoff o registro
+// RF-BRA-22, escenario «Fail-open ante un error interno»: configuración, kickoff o registro
 // ilegibles, y un HEAD que no se puede leer, no bloquean.
 func TestGuardFailsOpenOnInternalErrors(t *testing.T) {
 	t.Parallel()
@@ -345,7 +345,7 @@ func TestGuardBlocksWhenAnyOfSeveralPathsIsAnAxiomDocument(t *testing.T) {
 	wantNothing(t, guardOf(t, preWrite(filepath.Join(repo, "internal", "a.go"), documentOf(repo))))
 }
 
-// REQ-25.21 + Locate: la clasificación léxica solo reconoce los segmentos; que el documento sea del
+// RF-BRA-22 + Locate: la clasificación léxica solo reconoce los segmentos; que el documento sea del
 // proyecto lo confirma `Locate`. Una carpeta `openspec/changes/x/` de un fixture dentro del
 // proyecto no es un documento de Axiom de este proyecto.
 func TestGuardConfirmsTheContainmentUnderThePlanningHome(t *testing.T) {
@@ -357,7 +357,7 @@ func TestGuardConfirmsTheContainmentUnderThePlanningHome(t *testing.T) {
 	wantBlocked(t, guardOf(t, preWrite(documentOf(repo))))
 }
 
-// REQ-25.5 y G-11 en un multirepo: el repositorio de specs se trabaja in situ en su integración,
+// RF-BRA-05 y G-11 en un multirepo: el repositorio de specs se trabaja in situ en su integración,
 // de modo que su documento de Axiom bloquea en cualquier otra rama, con la continuación apuntando
 // a la carpeta maestra; el repositorio de código no interviene.
 func TestGuardBlocksTheSpecsRepositoryOfAMultirepoOutsideItsIntegrationBranch(t *testing.T) {

@@ -21,7 +21,7 @@ import (
 const dashboardCanary = "s3cr3t-CANARIO-9f8e7d"
 
 // Rutas de solo lectura que el canario recorre. Cada una se pide con GET y su cuerpo no puede
-// contener el valor de ningún secreto de integración (REQ-43.16).
+// contener el valor de ningún secreto de integración (RF-INT-16).
 var coveredRoutes = map[string]string{
 	"/api/health":        "/api/health",
 	"/api/projects":      "/api/projects",

@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Las pruebas del informe de adopción del alta de proyecto (REQ-30.27): el alta devuelve el
+// Las pruebas del informe de adopción del alta de proyecto (RF-HUB-11): el alta devuelve el
 // informe y la instrucción para lanzar la adopción desde el agente, sin ejecutar nada ni crear
 // el cambio de adopción.
 

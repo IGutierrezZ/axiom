@@ -108,7 +108,7 @@ func TestValidateTopology(t *testing.T) {
 		fs.addDir(filepath.Join(baseDir, "monorepo-app"))
 
 		// Un valor retirado solo llega aquí en una configuración construida a mano:
-		// la carga ya lo rechaza (REQ-25.25), pero Validate tampoco lo acepta.
+		// la carga ya lo rechaza (RF-TOP-08), pero Validate tampoco lo acepta.
 		cfg := &WorkspaceConfig{
 			Workspace: WorkspaceSection{
 				Name:            "RetiredProject",
@@ -373,7 +373,7 @@ func TestValidateDeclarationPathsWithoutDeclarations(t *testing.T) {
 	}
 }
 
-// REQ-24.27: una ruta de contexto inexistente solo avisa.
+// RF-CTX-02: una ruta de contexto inexistente solo avisa.
 func TestValidateDeclarationPathsContextPaths(t *testing.T) {
 	const block = "technical_context:\n  maintained:\n    entry: context/TECHNICAL_CONTEXT.md\n    paths: [context/]\n  reference:\n    paths: [00_Glosario.md]\n"
 
@@ -414,7 +414,7 @@ func TestValidateDeclarationPathsContextPaths(t *testing.T) {
 	})
 }
 
-// REQ-24.27: un enlace simbólico que sale del límite declarado es un error.
+// RF-CTX-02: un enlace simbólico que sale del límite declarado es un error.
 func TestValidateDeclarationPathsSymlinks(t *testing.T) {
 	t.Run("ruta de contexto que resuelve fuera de la carpeta maestra", func(t *testing.T) {
 		outside := t.TempDir()
@@ -546,7 +546,7 @@ func TestValidateDeclarationPathsArtifactStore(t *testing.T) {
 	})
 }
 
-// REQ-2.2: en monorepo-embedded el único rol admitido es fullstack.
+// RF-TOP-04: en monorepo-embedded el único rol admitido es fullstack.
 func TestValidateMonorepoRejectsSpecializedRoles(t *testing.T) {
 	baseDir := filepath.Clean("/workspace")
 	build := func(roles ...string) *WorkspaceConfig {
@@ -634,7 +634,7 @@ func TestLocateLoadsMonorepoRolesAndLegacyStore(t *testing.T) {
 	}
 }
 
-// REQ-2.6 y REQ-30.19: engram y none se reportan con independencia del contexto
+// RF-TOP-13 y RF-CTX-17: engram y none se reportan con independencia del contexto
 // técnico mantenido; openspec, hybrid y la ausencia de declaración no.
 func TestValidateDeclarationPathsRejectsLegacyArtifactStore(t *testing.T) {
 	setup := func(t *testing.T, content string) string {

@@ -103,7 +103,7 @@ func TestDeclarationsStatusWithoutDeclarationHasNoNewKeys(t *testing.T) {
 	})
 }
 
-// REQ-24.28: proyección del contexto técnico con rutas absolutas.
+// RF-CTX-03: proyección del contexto técnico con rutas absolutas.
 func TestDeclarationsStatusProjectsTechnicalContextWithAbsolutePaths(t *testing.T) {
 	t.Parallel()
 	ws := embeddedWithDeclaration(t, declBothModes)

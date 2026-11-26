@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Pruebas de `Engine.HandOff` (REQ-26.4, REQ-26.5, REQ-27.12 y DD-12): con git real, entorno
+// Pruebas de `Engine.HandOff` (RF-GAT-10, RF-GAT-11, RF-GAT-15 y DD-12): con git real, entorno
 // aislado y sin red. Cubren que la cesión no comprueba lo confirmado, el destino de la publicación
 // por topología, las entregas de código y que el cálculo es de solo lectura.
 
@@ -50,7 +50,7 @@ func handOff(t *testing.T, request branch.HandOffRequest) (branch.HandOffPlan, *
 	return Default().HandOff(context.Background(), request)
 }
 
-// REQ-26.4 y DD-12: la cesión no inspecciona lo confirmado. Una carpeta del cambio sucia, un fichero
+// RF-GAT-10 y DD-12: la cesión no inspecciona lo confirmado. Una carpeta del cambio sucia, un fichero
 // preparado, una carpeta entera sin seguimiento y el trabajo del rol sin confirmar ya no la rechazan:
 // lo informa después `axiom sdd publish`.
 func TestHandOffDoesNotCheckWhatIsCommitted(t *testing.T) {
@@ -179,7 +179,7 @@ func TestHandOffNeverRunsRemoteOperationsOrCommit(t *testing.T) {
 	}
 }
 
-// REQ-26.5, segundo escenario: el repositorio de specs de un multirepo se trabaja in situ; el
+// RF-GAT-11, segundo escenario: el repositorio de specs de un multirepo se trabaja in situ; el
 // destino de la publicación es la rama de integración, sin rama de cambio, sin `prTarget` ni PR.
 func TestHandOffOfTheSpecsRepositoryOfAMultirepoIsInPlaceWithoutAPRTarget(t *testing.T) {
 	master, specs := newMultirepo(t, map[string][]string{"backend": {"repo-backend"}}, "repo-backend")

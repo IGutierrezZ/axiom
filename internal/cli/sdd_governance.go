@@ -15,7 +15,7 @@ import (
 // empty) and returns the resolved Location together with the absolute path to
 // an EXISTING change directory named change. Every governance verb therefore
 // reads and writes the same planning home whatever directory it starts from
-// (REQ-24.8): the master folder, the specs repository, or a code repository.
+// (RF-PLH-08): the master folder, the specs repository, or a code repository.
 //
 // It checks first openspec/changes/<change> under loc.WorkspaceRoot and then
 // the archived change, which kickoff.ArchivedChangeRoot finds either under its
@@ -24,7 +24,7 @@ import (
 // what lets a bare, separator-free --change value (already required by
 // kickoff.validateChangeName's containment rule) still resolve to an archived
 // change, so RefuseArchivedRoot below can reject it by D-14 instead of this
-// function reporting a misleading "does not exist" (REQ-24.9, scenario 3).
+// function reporting a misleading "does not exist" (RF-PLH-09, scenario 3).
 //
 // It never creates a directory: `axiom sdd kickoff`/`axiom sdd gate` write
 // inside a change that already exists (task 8.2). It also refuses a change

@@ -15,11 +15,11 @@ import (
 )
 
 // branchGoneMessage es la frase que la spec fija para una rama que no está en local ni descargada
-// (REQ-25.53).
+// (RF-BRA-37).
 const branchGoneMessage = "la rama ya no está o falta un fetch autorizado"
 
 // Scope calcula, solo con lecturas de git local, qué aporta el cambio en cada repositorio de su
-// instantánea de política (REQ-25.51 a REQ-25.54, `axiom.branch-scope/v1`): por repositorio, la rama
+// instantánea de política (RF-BRA-35 a RF-BRA-38, `axiom.branch-scope/v1`): por repositorio, la rama
 // del cambio, la base y la integración, el punto de partida, los commits propios y los ficheros que
 // tocan, si la rama está fusionada en la integración y un resultado tipado; y, para todo el cambio,
 // el resumen con la oferta de verificación conjunta.
@@ -66,7 +66,7 @@ func (e *Engine) Scope(ctx context.Context, cwd, change string) branch.ScopeResu
 		}
 		result.Repositories = append(result.Repositories, entry)
 	}
-	// Ningún repositorio de la instantánea se omite (REQ-25.53): uno declarado que no existe en esta
+	// Ningún repositorio de la instantánea se omite (RF-BRA-37): uno declarado que no existe en esta
 	// máquina es `unverifiable` con la ruta que falta (P1).
 	for _, skipped := range plan.Skipped {
 		result.Repositories = append(result.Repositories, scopeAbsentRepository(skipped))
@@ -274,7 +274,7 @@ func (e *Engine) scopeCommits(ctx context.Context, operation, cwd string, facts 
 	files, own, relevant := ownFiles(commits, prefix)
 	entry.Start = branch.NewScopeStart(start, startSource)
 	if !relevant {
-		// Sin commits propios, o todos tocan solo la carpeta del cambio (REQ-25.53).
+		// Sin commits propios, o todos tocan solo la carpeta del cambio (RF-BRA-37).
 		entry.SetOutcome(branch.ScopeOutcomeEmpty)
 		return nil
 	}
@@ -420,7 +420,7 @@ func (e *Engine) scopeIntegration(ctx context.Context, repo branch.RepoPlan) (sc
 
 // branchCreation lee el commit en que se creó la rama local del cambio (D6). Solo una rama local
 // tiene reflog propio: una rama que solo existe como `origin/<rama>` ya descargada no lo tiene, y
-// una creación que no es de `git branch` (adopción de `origin/<rama>`, REQ-27.15) no vale.
+// una creación que no es de `git branch` (adopción de `origin/<rama>`, RF-BRA-27) no vale.
 func (e *Engine) branchCreation(ctx context.Context, dir string, tip scopeReference) (sha string, ok bool, err error) {
 	if tip.source != branch.ScopeSourceLocal {
 		return "", false, nil

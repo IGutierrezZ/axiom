@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch ensure --mode` y `decision_required` (INC-25, S4.4, REQ-25.8): la bandera, su
+// `axiom branch ensure --mode` y `decision_required` (INC-25, S4.4, RF-BRA-08): la bandera, su
 // validación, la ayuda y el contrato de salida de `ask` sobre repositorios reales. El
 // comportamiento del motor se prueba en internal/branch/engine.
 
@@ -91,7 +91,7 @@ func TestBranchEnsureHelpDocumentsTheModeFlagAndTheAskDecision(t *testing.T) {
 	}
 }
 
-// REQ-25.8, escenario «Modo `ask` devuelve `decision_required` sin crear nada»: con el hub en
+// RF-BRA-08, escenario «Modo `ask` devuelve `decision_required` sin crear nada»: con el hub en
 // `ask` y sin respuesta, salida 1, resultado tipado con la decisión, sin rama, worktree ni
 // registro; en texto, el código y las dos órdenes por stderr.
 func TestBranchEnsureAskModeReturnsDecisionRequiredWithExitCode1(t *testing.T) {
@@ -134,7 +134,7 @@ func TestBranchEnsureAskModeReturnsDecisionRequiredWithExitCode1(t *testing.T) {
 	}
 }
 
-// REQ-25.8, escenario «La respuesta a `ask` se registra por cambio» (harness S4.5): con
+// RF-BRA-08, escenario «La respuesta a `ask` se registra por cambio» (harness S4.5): con
 // `--mode worktree` se crea y se registra con origen `answer`; después, sin `--mode`, el mismo
 // cambio no vuelve a preguntar; la preferencia personal del hub no cambia.
 func TestBranchEnsureAskAnswerWithTheModeFlagIsRecordedAndReused(t *testing.T) {

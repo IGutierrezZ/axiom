@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// `ensure --archive` (REQ-25.45, design D-25): crea, desde la rama de integración y con el cambio
+// `ensure --archive` (RF-BRA-13, design D-25): crea, desde la rama de integración y con el cambio
 // ya fusionado, la rama de archivado `<prefijo>/<cambio>-archive` del repositorio del planning
 // home y, según el modo de trabajo del cambio, su worktree o su checkout. Es un plan aparte con
 // las mismas garantías que el del cambio (design D-05): comprobación sin efectos antes de mutar
@@ -25,8 +25,8 @@ import (
 //   - nombre y colisión con el rol `archive` (S-15): el planificador (branch.Plan con Archive);
 //   - base: la de integración de D-06, con `--fetch` opcional, como la del cambio;
 //   - comprobación de integración (`change_not_integrated`): checkIntegrated;
-//   - modo: el registrado del cambio, también la respuesta a `ask` (REQ-25.8), y, sin registro, el
-//     personal; `in_place` hace `git switch` y rechaza el árbol sucio (REQ-25.9);
+//   - modo: el registrado del cambio, también la respuesta a `ask` (RF-BRA-08), y, sin registro, el
+//     personal; `in_place` hace `git switch` y rechaza el árbol sucio (RF-BRA-09);
 //   - registro de la rama con `kind: archive` y del prefijo de archivado: newArchiveRecord.
 
 // archiveCommand es la orden de `axiom branch` que repiten las continuaciones del archivado.
@@ -47,7 +47,7 @@ func useArchivePlan(facts *changeFacts, r EnsureRequest) *branch.Refusal {
 // checkIntegrated es la comprobación de integración de D-25 (paso 5): la base evaluada debe
 // contener la carpeta `changes/<cambio>/` del planning home, que se lee del árbol del commit de la
 // base con `git ls-tree`, sin cambiar de rama ni usar la red. Si la contiene como fusión intermedia
-// de planificación (REQ-26.11), es `change_not_integrated` con el detalle `intermediate`, sin
+// de planificación (RF-BRA-26), es `change_not_integrated` con el detalle `intermediate`, sin
 // sugerir `--fetch`. Si no la contiene, es
 // `change_not_integrated`, sin crear nada, nombrando la base y sugiriendo `--fetch`; si en su
 // lugar contiene `changes/archive/<fecha>-<cambio>/`, el cambio ya está archivado y el mensaje
@@ -71,7 +71,7 @@ func (e *Engine) checkIntegrated(ctx context.Context, command, cwd string, repo 
 	}
 	if integrated {
 		// Una fusión intermedia de planificación deja la carpeta en la base sin que el cambio esté
-		// terminado: no se archiva (REQ-26.11). Lo que no se pueda leer cuenta como un cambio normal.
+		// terminado: no se archiva (RF-BRA-26). Lo que no se pueda leer cuenta como un cambio normal.
 		if intermediate, _ := e.intermediateMerge(ctx, repo.GitRoot, base.sha, changesPath, change); intermediate {
 			return branch.ChangeIntermediateMerge(change, facts.input.Master, facts.input.Exceptions.Prefix, repo, base.ref, changePath+"/")
 		}

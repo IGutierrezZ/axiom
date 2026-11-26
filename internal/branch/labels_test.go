@@ -2,7 +2,7 @@ package branch
 
 import "testing"
 
-// REQ-25.2 (G-4): todo valor de estado o de clasificación del JSON es un token
+// RF-BRA-02 (G-4): todo valor de estado o de clasificación del JSON es un token
 // estable en inglés con su etiqueta en castellano en un campo aparte.
 func TestLabelPairsEveryStableTokenWithItsSpanishLabel(t *testing.T) {
 	tests := []struct {
@@ -54,7 +54,7 @@ func TestEveryStatusVerdictAndMergeLayerTokenHasALabel(t *testing.T) {
 }
 
 // El papel de cada repositorio y el tipo de cada rama son valores de clasificación del
-// `status` (REQ-25.15): cada token lleva su etiqueta en castellano, con los términos
+// `status` (RF-BRA-16): cada token lleva su etiqueta en castellano, con los términos
 // de la spec.
 func TestEveryRepositoryRoleAndBranchKindTokenHasASpanishLabel(t *testing.T) {
 	tests := map[string]string{
@@ -75,7 +75,7 @@ func TestEveryRepositoryRoleAndBranchKindTokenHasASpanishLabel(t *testing.T) {
 }
 
 // El modo de trabajo materializado y su origen son valores de clasificación del
-// `status` (REQ-25.15): cada token lleva su etiqueta en castellano.
+// `status` (RF-BRA-16): cada token lleva su etiqueta en castellano.
 func TestEveryModeAndModeSourceTokenHasASpanishLabel(t *testing.T) {
 	tests := map[string]string{
 		string(ModeWorktree): "un worktree por rama",

@@ -18,7 +18,7 @@ func readSealedKickoff(t *testing.T, changeRoot string) string {
 	return string(data)
 }
 
-// REQ-29.13: la instantánea `sdd:` sobrevive a sellar y releer; con iso falso o
+// RF-KOF-12: la instantánea `sdd:` sobrevive a sellar y releer; con iso falso o
 // sin bloque, omitempty no escribe ni `sdd:` ni `iso`.
 func TestSDDSnapshot(t *testing.T) {
 	t.Run("iso true se escribe y se relee", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestSDDSnapshot(t *testing.T) {
 	})
 }
 
-// REQ-29.13: IsISO es verdadero solo con bloque e iso verdadero.
+// RF-KOF-12: IsISO es verdadero solo con bloque e iso verdadero.
 func TestIsISO(t *testing.T) {
 	tests := []struct {
 		name string

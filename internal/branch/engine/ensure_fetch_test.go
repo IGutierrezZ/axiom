@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Pruebas de `ensure --fetch` (REQ-25.10, supuesto S-8, design D-06 y matriz de amenazas
+// Pruebas de `ensure --fetch` (RF-BRA-10, supuesto S-8, design D-06 y matriz de amenazas
 // «Estado del push»): `git fetch origin` es la única operación remota, se lanza solo con
 // `--fetch`, una vez por repositorio con ramas del plan, durante la comprobación y antes de
 // resolver la base; un fallo no deja ninguna rama, worktree ni registro. Los remotos son
@@ -56,7 +56,7 @@ func indexOfInvocation(seen [][]string, match func(invocation []string) bool) in
 	return -1
 }
 
-// REQ-25.10, escenarios «`--fetch` es explícito» y «La base es la referencia remota local»:
+// RF-BRA-10, escenarios «`--fetch` es explícito» y «La base es la referencia remota local»:
 // con `--fetch`, un único `git fetch origin` desde el checkout principal, antes de resolver la
 // base y de cualquier escritura; contra un remoto que avanzó, la base alcanza el commit nuevo,
 // la rama nace de él y `base.fetched` es `true`. Sin `--fetch`, la base sigue siendo la
@@ -199,7 +199,7 @@ func TestEnsureFetchRunsOneFetchPerCodeRepositoryOfAMultirepo(t *testing.T) {
 	}
 }
 
-// REQ-25.10, escenario «`--fetch` fallido no deja efectos», y supuesto S-8: si el fetch falla
+// RF-BRA-10, escenario «`--fetch` fallido no deja efectos», y supuesto S-8: si el fetch falla
 // termina con `fetch_failed`, nombrando el repositorio y el remoto, sin crear rama, worktree,
 // raíz de worktrees ni registro; también cuando el fallo es del segundo repositorio, porque el
 // fetch es parte de la comprobación sin efectos de todo el plan.
@@ -271,7 +271,7 @@ func wantFetchFailed(t *testing.T, result branch.Result, repo string) {
 	}
 }
 
-// Matriz de amenazas «Estado del push» y REQ-25.1: el puerto de git no tiene ningún método
+// Matriz de amenazas «Estado del push» y RF-BRA-01: el puerto de git no tiene ningún método
 // que publique (`push`) y `Fetch` es la única operación remota; ni el adaptador real ni las
 // interfaces locales del motor añaden ninguna.
 func TestTheGitPortHasNoPushMethodAndFetchIsTheOnlyRemoteOperation(t *testing.T) {

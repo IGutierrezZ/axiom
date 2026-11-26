@@ -13,7 +13,7 @@ import (
 func oddCandidates(t *testing.T, files fs.FS, raw string) ([]candidate, []Warning, equivalence) {
 	t.Helper()
 	p := reqid.Default()
-	q, err := ParseID(raw, p)
+	q, err := ParseID(raw, p, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

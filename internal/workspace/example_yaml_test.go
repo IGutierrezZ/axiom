@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// REQ-30.32 (parte documental): la plantilla axiom.example.yaml documenta el bloque
+// RF-CTX-21 (parte documental): la plantilla axiom.example.yaml documenta el bloque
 // `technical_context:` con sus dos modos y, una vez descomentado, es válido. No
 // documenta `baseline:`, que se retira en favor de la spec viva de OpenSpec.
 func TestExampleYAMLDocumentsTechnicalContext(t *testing.T) {
@@ -23,7 +23,7 @@ func TestExampleYAMLDocumentsTechnicalContext(t *testing.T) {
 	}
 }
 
-// REQ-29.1 y REQ-30.28 (R7): la plantilla axiom.example.yaml documenta el bloque
+// RF-ISO-01 y RF-ORQ-18 (R7): la plantilla axiom.example.yaml documenta el bloque
 // `sdd:` y, una vez descomentado, es válido y declara ISO.
 func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
 	var block []string
@@ -49,14 +49,14 @@ func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
 	if declarations.SDD == nil || !declarations.SDD.ISO {
 		t.Errorf("la plantilla debe documentar `sdd.iso: true`: %+v", declarations.SDD)
 	}
-	// REQ-44.1: la plantilla comentada también documenta `sdd.id_pattern`.
+	// RF-RID-01: la plantilla comentada también documenta `sdd.id_pattern`.
 	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
 		t.Errorf("la plantilla debe documentar `id_pattern: \"RF-<DOM>-<NN>\"`: %q, %v", p.Template(), err)
 	}
 
 }
 
-// REQ-32.1 y REQ-32.2: la plantilla axiom.example.yaml documenta el bloque
+// RF-TOP-14 y RF-TOP-15: la plantilla axiom.example.yaml documenta el bloque
 // `delivery:` y, una vez descomentado, es válido y declara el umbral del aviso.
 func TestExampleYAMLDocumentsTheDeliveryBlock(t *testing.T) {
 	var block []string

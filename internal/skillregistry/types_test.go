@@ -8,7 +8,7 @@ import (
 )
 
 // TestDestinationAndMirrorStatusLiterals pins the exact CLI literals
-// (REQ-22.10, REQ-22.11): the engine and the presentation must never invent a
+// (RF-SKI-01, RF-SKI-02): the engine and the presentation must never invent a
 // spelling of their own.
 func TestDestinationAndMirrorStatusLiterals(t *testing.T) {
 	tests := []struct {

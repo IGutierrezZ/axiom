@@ -2,7 +2,7 @@ package branch
 
 import "github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 
-// La instantánea de política git del kickoff (REQ-25.36, design D-12) fija los nombres de rama
+// La instantánea de política git del kickoff (RF-KOF-06, design D-12) fija los nombres de rama
 // con los que se selló el cambio: con ella el plan los conserva aunque la política de
 // `axiom.yaml` cambie después (decisión T2 y D-10: instantánea, registro y política, en ese
 // orden). Sin instantánea, o sin entrada para el repositorio, rigen la política y las

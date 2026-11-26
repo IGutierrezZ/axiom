@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Validación de nombres (REQ-25.3, REQ-25.11, design D-04). Los rechazos distinguen
+// Validación de nombres (RF-BRA-03, RF-BRA-11, design D-04). Los rechazos distinguen
 // el origen del valor: lo que viene de la invocación (`--change`, `--prefix`,
 // `--branch`) o del kickoff (roles) es `invalid_name`; lo que viene de la política de
 // axiom.yaml o del hub es `config_invalid` (la carga ya lo rechaza, y esta es la red
@@ -16,7 +16,7 @@ import (
 // crear nada.
 
 // archiveRole es el nombre de rol que colisionaría con la rama de archivado
-// `<prefijo>/<cambio>-archive` (REQ-25.4, supuesto S-15).
+// `<prefijo>/<cambio>-archive` (RF-BRA-04, supuesto S-15).
 const archiveRole = "archive"
 
 // ValidateChangeName rechaza con `invalid_name` un nombre de cambio que no es un

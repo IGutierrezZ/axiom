@@ -10,7 +10,7 @@ import (
 
 // InferKickoff computes the conservative retro-seal default for a
 // pre-existing change that has artifacts but no sealed kickoff.yaml
-// (REQ-21.4, design.md S8.1 — the corrected rule that supersedes the
+// (RF-KOF-04, design.md S8.1 — the corrected rule that supersedes the
 // original spec.md:102 wording; see O-1). It is pure with respect to
 // writes: it never seals anything. The caller passes the returned value to
 // Seal once it has filled in Change.
@@ -20,7 +20,7 @@ import (
 //  1. design.md exists and multirole.DetectRoles resolves roles without
 //     error: freeze EXACTLY those roles, with execution_style: continuous,
 //     execution_style_source: inferred, sealed_by: inferred. It infers no
-//     handoff policy: handoff_policy is deprecated (REQ-26.9) and is written
+//     handoff policy: handoff_policy is deprecated (RF-PRE-03) and is written
 //     as none only as a compatibility value for older binaries. This NEVER introduces the "fullstack" identity — doing so
 //     would silently change which tasks.<role>.md file the existing
 //     multirole barrier consults for that change.
@@ -33,7 +33,7 @@ import (
 //     would mask a real configuration error behind an inference.
 //
 // The retro-seal is deliberately exempt from the continuous-roster rule that
-// explicit sealing enforces (P2, REQ-21.4): it keeps sealing continuous with
+// explicit sealing enforces (P2, RF-KOF-04): it keeps sealing continuous with
 // the roles a change already declares, marked sealed_by: inferred, and
 // ValidateForSeal accepts that marker.
 //
@@ -73,7 +73,7 @@ func InferKickoff(designPath string, wsConfig *workspace.WorkspaceConfig) (Kicko
 // explicit `axiom sdd kickoff seal` applies via SealArgs.ToKickoff (args.go)
 // — so the retro-seal never invents a naming convention the barrier does
 // not already use, and never redirects it to a plain tasks.md it did not
-// ask for (REQ-21.4, third scenario).
+// ask for (RF-KOF-04, third scenario).
 func inferredKickoff(roles []multirole.RoleAssignment) Kickoff {
 	kickoffRoles := make([]KickoffRole, 0, len(roles))
 	for _, r := range roles {
@@ -92,7 +92,7 @@ func inferredKickoff(roles []multirole.RoleAssignment) Kickoff {
 			FlowMode:             FlowSDD,
 			ExecutionStyle:       ExecutionContinuous,
 			ExecutionStyleSource: "inferred",
-			HandoffPolicy:        HandoffNone, // compatibility value (REQ-26.9)
+			HandoffPolicy:        HandoffNone, // compatibility value (RF-PRE-03)
 			Roles:                kickoffRoles,
 		},
 		Lifecycle: Lifecycle{DeploymentTarget: "local", PostArchivePolicy: "bug_only"},

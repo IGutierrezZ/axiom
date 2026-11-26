@@ -38,7 +38,7 @@ func deltaOf(reqs ...[2]string) string {
 	return b.String()
 }
 
-// REQ-30.11 f: el `Origen:` debe coincidir con el ID propio de su unidad.
+// RF-ADP-03 f: el `Origen:` debe coincidir con el ID propio de su unidad.
 func TestCheck_OriginID_OrigenContraLaUnidad(t *testing.T) {
 	f := newCheckFixture(t)
 	f.delta(t, strings.Replace(validDelta, originRF001, "Origen: docs/requisitos.md#rf-001-alta-de-usuario (RF-002)", 1))
@@ -115,7 +115,7 @@ func TestCheck_OriginID_SinInventarioSoloOriginalID(t *testing.T) {
 	requireFailure(t, report, RuleInventoryMissing)
 }
 
-// REQ-30.10 y REQ-30.11: un `Origen:` con varios IDs o con texto que no es un ID se rechaza.
+// RF-ADP-02 y RF-ADP-03: un `Origen:` con varios IDs o con texto que no es un ID se rechaza.
 func TestCheck_OriginID_OrigenConVariosIDsOTextoNoID(t *testing.T) {
 	for _, text := range []string{"RF-001, RF-002", "n/d"} {
 		t.Run(text, func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestCheck_OriginID_OrigenSinParentesisUsaLaUnidad(t *testing.T) {
 	requireFailure(t, f.check(t), RuleOriginID, "RF-009", "RF-001")
 }
 
-// REQ-30.10 y REQ-30.11: fusión y división.
+// RF-ADP-02 y RF-ADP-03: fusión y división.
 func TestCheck_OriginID_FusionDeUnidades(t *testing.T) {
 	f := newCheckFixture(t)
 	f.delta(t, deltaOf([2]string{"Alta y baja (RF-001)", "Origen: docs/requisitos.md#rf-001-alta-de-usuario\nOrigen: docs/requisitos.md#rf-002-baja-de-usuario"}))
@@ -153,7 +153,7 @@ func TestCheck_OriginID_DivisionConElMismoID(t *testing.T) {
 	requireFailure(t, f.check(t), RuleUniqueness, "RF-001", "provisional")
 }
 
-// REQ-30.9 y REQ-30.11: `pattern_undeclared`.
+// RF-ADP-01 y RF-ADP-03: `pattern_undeclared`.
 func TestCheck_PatternUndeclared_SinPatronDeclarado(t *testing.T) {
 	f := newCheckFixture(t)
 	withoutDeclaredPattern(f)
@@ -240,7 +240,7 @@ func TestCheck_PatternUndeclared_UnIDNoApareceEnDosMotivos(t *testing.T) {
 	}
 }
 
-// REQ-30.11: `foreign_id_conflict`.
+// RF-ADP-03: `foreign_id_conflict`.
 func TestCheck_ForeignIDConflict_UnidadConVariosIDs(t *testing.T) {
 	f := newCheckFixture(t)
 	f.useDoc(t, "# Requisitos\n\n## RF-001 y RF-002 Alta\n\nA.\n", "- docs/requisitos.md#requisitos: es el título")

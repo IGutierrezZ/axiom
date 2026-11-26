@@ -10,7 +10,7 @@ import (
 )
 
 // WriteTarget es lo que un escritor Go de la carpeta de un cambio declara a la guarda A
-// (REQ-25.19, design D-11): la carpeta del cambio, el cambio y el carril, el contexto en el que
+// (RF-BRA-20, design D-11): la carpeta del cambio, el cambio y el carril, el contexto en el que
 // consulta (cada escritor fija el suyo: `archive` para `integrate` y `archive-compose`,
 // `ordinary` para el resto), la operación, solo para los mensajes, y, en `kickoff seal`, los roles
 // que se van a sellar.
@@ -22,7 +22,7 @@ type WriteTarget struct {
 	SealRoles          []string
 }
 
-// RequireChangeBranch es la guarda A (REQ-25.19, design D-11): un escritor Go de la carpeta de un
+// RequireChangeBranch es la guarda A (RF-BRA-20, design D-11): un escritor Go de la carpeta de un
 // cambio la llama antes de escribir. Consulta VerdictFor con el consultante `write` y el contexto
 // del escritor:
 //

@@ -1,9 +1,9 @@
 // Package sddpublish es la publicación ligera de la documentación de un cambio SDD:
-// `axiom sdd publish` (REQ-27.5 a REQ-27.11, DD-08 a DD-10). Es el único código del
+// `axiom sdd publish` (RF-PUB-01 a RF-PUB-07, DD-08 a DD-10). Es el único código del
 // producto que ejecuta `git commit` y `git push`, siempre a través de
 // internal/gitcommon/exec.go, y solo lo alcanza `internal/cli/sdd_publish.go`: una
-// prueba de arquitectura lo fija (DD-14, REQ-27.11). El puerto de escritura de
-// `axiom branch` sigue sin ningún método que publique (REQ-25.1).
+// prueba de arquitectura lo fija (DD-14, RF-PUB-07). El puerto de escritura de
+// `axiom branch` sigue sin ningún método que publique (RF-BRA-01).
 //
 // Qué se publica. Solo la lista cerrada de rutas de documentación de internal/docpaths,
 // confirmada con `git add --all` y `git commit --only` sobre esas raíces, de modo que el
@@ -20,7 +20,7 @@ import (
 
 // Git son las operaciones de git de la publicación. dir es siempre la raíz git del destino
 // (PublicationTarget.GitRoot), nunca el directorio del proceso. Es el único puerto del
-// producto con Commit y Push (REQ-27.11). Las rutas son relativas a la raíz git, con «/»,
+// producto con Commit y Push (RF-PUB-07). Las rutas son relativas a la raíz git, con «/»,
 // y el adaptador las cita como literales; las referencias y las ramas se validan antes de
 // pasarlas a git.
 type Git interface {

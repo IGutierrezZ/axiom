@@ -17,7 +17,7 @@ func rfPattern(t testing.TB) reqid.Pattern {
 	return p
 }
 
-// REQ-29.3 y REQ-44.5: con RF-<DOM>-<NN> el análisis del nombre lo hace el patrón del proyecto.
+// RF-ISO-03 y RF-RID-05: con RF-<DOM>-<NN> el análisis del nombre lo hace el patrón del proyecto.
 func TestRequirementIDsWithDeclaredPattern(t *testing.T) {
 	cases := []struct {
 		name          string
@@ -45,7 +45,7 @@ func TestRequirementIDsWithDeclaredPattern(t *testing.T) {
 	}
 }
 
-// REQ-29.3: los motivos nombran el patrón efectivo; con el defecto son idénticos a los de antes.
+// RF-ISO-03: los motivos nombran el patrón efectivo; con el defecto son idénticos a los de antes.
 func TestCheckRequirementIDsWithDeclaredPattern(t *testing.T) {
 	p := rfPattern(t)
 	cases := []struct {
@@ -94,7 +94,7 @@ func TestCheckRequirementIDsWithDeclaredPattern(t *testing.T) {
 	}
 }
 
-// REQ-29.3 y REQ-30.22: un MODIFIED o REMOVED con el título cambiado y el mismo
+// RF-ISO-03 y RF-ARC-11: un MODIFIED o REMOVED con el título cambiado y el mismo
 // identificador pasa igual que con el título exacto, en CheckRequirementIDs, en el índice
 // de la baseline y en la tolerancia D17; ADDED sigue por título.
 func TestRequirementIDsByIDWithChangedTitle(t *testing.T) {
@@ -140,7 +140,7 @@ func TestRequirementIDsByIDWithChangedTitle(t *testing.T) {
 	}
 }
 
-// REQ-29.14: con un ID repetido en la baseline el índice conserva a todos y la consulta del
+// RF-BAS-01: con un ID repetido en la baseline el índice conserva a todos y la consulta del
 // bug lo trata como ambiguo; el título cambiado de un MODIFIED no lo altera.
 func TestBaselineRepeatedIDStaysAmbiguous(t *testing.T) {
 	p := rfPattern(t)
@@ -157,7 +157,7 @@ func TestBaselineRepeatedIDStaysAmbiguous(t *testing.T) {
 	assertFindings(t, got, CodeBugRequirement, StageTasks, [][]string{{"RF-USU-01", "ambiguo"}})
 }
 
-// REQ-29.4 y REQ-29.14: cobertura y consulta del bug con RF-<DOM>-<NN>.
+// RF-ISO-04 y RF-BAS-01: cobertura y consulta del bug con RF-<DOM>-<NN>.
 func TestCoverageAndBugQueryWithDeclaredPattern(t *testing.T) {
 	p := rfPattern(t)
 	deltas := []Requirement{
@@ -206,7 +206,7 @@ func TestCoverageAndBugQueryWithDeclaredPattern(t *testing.T) {
 	})
 }
 
-// REQ-29.3 y REQ-29.4: con el defecto los textos de continuación no cambian ni un byte.
+// RF-ISO-03 y RF-ISO-04: con el defecto los textos de continuación no cambian ni un byte.
 func TestDefaultPatternKeepsContinuationTexts(t *testing.T) {
 	p := reqid.Default()
 	got := CheckRequirementIDs([]Requirement{delta(SectionAdded, "pagos", "Cobro")}, nil, p)

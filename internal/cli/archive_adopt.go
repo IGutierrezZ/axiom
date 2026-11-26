@@ -18,14 +18,14 @@ import (
 )
 
 // RunArchiveAdopt es el punto de entrada de la CLI de `axiom archive adopt <scan|check>`
-// (REQ-30.9 a REQ-30.14). Es un adaptador fino: resuelve el workspaceRoot con
-// workspace.Locate (en multirepo, el repositorio de specs, REQ-30.14) y entrega todo a
+// (RF-ADP-01 a RF-ADP-06). Es un adaptador fino: resuelve el workspaceRoot con
+// workspace.Locate (en multirepo, el repositorio de specs, RF-ADP-06) y entrega todo a
 // el paquete adoption, que es dueño de cada decisión.
 //
 // `scan` inventaría los orígenes de requisitos previos y solo escribe con `--change`, y
 // entonces únicamente <cambio>/adoption-inventory.yaml, tras consultar la guarda A en el
-// contexto ordinario (REQ-25.19). `check` verifica el cambio de adopción sin escribir ni
-// registrar ninguna decisión de compuerta (REQ-30.13).
+// contexto ordinario (RF-BRA-20). `check` verifica el cambio de adopción sin escribir ni
+// registrar ninguna decisión de compuerta (RF-ADP-05).
 func RunArchiveAdopt(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
 		return renderArchiveAdoptHelp(stdout)
@@ -131,7 +131,7 @@ type adoptScanReport struct {
 	Written string `json:"written,omitempty"`
 	// DeclaredIDPattern es el `sdd.id_pattern` de axiom.yaml frente a la propuesta; solo se
 	// informa si el proyecto lo declara. DeclaredIDPatternError dice por qué no se puede leer.
-	// Ninguno de los dos entra en el inventario escrito (REQ-30.9).
+	// Ninguno de los dos entra en el inventario escrito (RF-ADP-01).
 	DeclaredIDPattern      *adoptDeclaredPattern `json:"declared_id_pattern,omitempty"`
 	DeclaredIDPatternError string                `json:"declared_id_pattern_error,omitempty"`
 }

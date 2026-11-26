@@ -10,7 +10,7 @@ import (
 
 var integrationsVerbs = []string{"sync", "emit", "secret", "connect", "discover"}
 
-// REQ-43.18: la ayuda global lista los cinco verbos de integraciones, con el texto del diseño y sus
+// RF-INT-18: la ayuda global lista los cinco verbos de integraciones, con el texto del diseño y sus
 // descripciones alineadas en la misma columna.
 func TestIntegrationsVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	help := axiomHelpText()

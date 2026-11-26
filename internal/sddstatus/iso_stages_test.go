@@ -84,7 +84,7 @@ func wantTokens(t *testing.T, status Status, want ...string) {
 	}
 }
 
-// REQ-29.3, REQ-29.10 y REQ-29.6 (design D6): los hallazgos de la etapa `specs`
+// REQ-29.3, RF-ARC-09 y RF-ISO-06 (design D6): los hallazgos de la etapa `specs`
 // van a blockedReasons, estrechan `specs` y `coreReady`, y devuelven la ruta a
 // `spec`; fuera de ISO no aparece ningún token iso_*.
 func TestISOSpecsStage(t *testing.T) {
@@ -206,7 +206,7 @@ func TestISOInterruptedArchive(t *testing.T) {
 	}
 }
 
-// REQ-29.4, REQ-29.5, REQ-29.19 y REQ-29.16: los hallazgos de la etapa `tasks`
+// RF-ISO-04, RF-ISO-05, RF-ISO-10 y RF-CLI-11: los hallazgos de la etapa `tasks`
 // (cobertura, bug con requisito existente y bug sin impacto) van a
 // blockedReasons, estrechan `tasks` y devuelven la ruta a `tasks`, un motivo por
 // hallazgo.
@@ -375,7 +375,7 @@ func isoBranchMonorepo(t *testing.T, head string) string {
 	return ws.Master
 }
 
-// REQ-29.16: los motivos ISO se añaden después de los existentes y respetan la
+// RF-CLI-11: los motivos ISO se añaden después de los existentes y respetan la
 // precedencia; con la rama equivocada `wrong_branch` va el primero y el motivo ISO
 // se proyecta además.
 func TestISOReasonsOrdering(t *testing.T) {

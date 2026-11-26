@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// El plan de archivado (REQ-25.45, design D-25): `ensure --change <c> --archive` planifica
+// El plan de archivado (RF-BRA-13, design D-25): `ensure --change <c> --archive` planifica
 // aparte la rama de archivado `<prefijo>/<cambio>-archive` del repositorio del planning home.
 // No es una rama de rol ni sustituye a la del cambio: el plan ordinario no la incluye y este no
 // incluye ninguna otra, de modo que archivar nunca mueve ni crea las ramas del cambio ni las
@@ -121,7 +121,7 @@ func planArchive(in PlanInput) (ChangePlan, *Refusal) {
 // CheckArchiveRequest comprueba, sin leer nada, lo que decide si la petición de archivado tiene
 // sentido (design D-25, pasos 1 y 2): la aplicabilidad, primero (`archive_branch_not_applicable`
 // en el carril ODD, que no tiene archive, y en `multirepo`, donde el archive se hace in situ en
-// la rama de integración del repositorio de specs, REQ-25.5), y las banderas después: con
+// la rama de integración del repositorio de specs, RF-BRA-05), y las banderas después: con
 // `--archive` solo se admite `--prefix`, y `--branch` o `--base` son `plan_conflict` (S-16).
 // El motor lo llama antes de resolver el modo de trabajo, de modo que una petición que no se
 // puede atender no pregunta por el modo; el planificador lo repite.

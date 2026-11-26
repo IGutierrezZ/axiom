@@ -322,10 +322,10 @@ func TestApprovalOrdinalCountsApprovalsOfTheSameGate(t *testing.T) {
 	}
 }
 
-// adoBlock es un bloque integrations.azure-devops válido (REQ-45.2).
+// adoBlock es un bloque integrations.azure-devops válido (RF-ADO-02).
 const adoBlock = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Fabrikam Team\n"
 
-// REQ-45.14: con el plugin azure-devops configurado y activo, `gate record` produce la misma salida
+// RF-ADO-14: con el plugin azure-devops configurado y activo, `gate record` produce la misma salida
 // y el mismo código que sin el bloque, y no crea integrations.yaml ni la cola: el manifiesto solo
 // escucha change.start, que ningún verbo emite.
 func TestGateRecordIsIdenticalWithAndWithoutAzureDevOpsBlock(t *testing.T) {

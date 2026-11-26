@@ -76,7 +76,7 @@ func TestStatusRenderersEmbedOnlyStatusV2Projection(t *testing.T) {
 }
 
 // --- INC-21 Phase 14 (P3d): v2 projection and "await-gate" routing
-// (design.md S4.3, S5.4, D-09; spec.md REQ-21.7 to REQ-21.10's BDD
+// (design.md S4.3, S5.4, D-09; spec.md REQ-21.7 to RF-GAT-04's BDD
 // scenarios that produce an observable route). Every fixture here builds
 // through the public Resolve pipeline rather than hand-assembling a
 // Status, so these tests exercise the real translation Phase 13 wired,
@@ -214,7 +214,7 @@ func sealKickoffWithHandoffPolicy(t *testing.T, changeRoot, changeName string, p
 }
 
 // TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute covers
-// REQ-26.9 at the v2 boundary: an empty handoff_policy is omitted from the
+// RF-PRE-03 at the v2 boundary: an empty handoff_policy is omitted from the
 // JSON, an old value is echoed only as data, and none of the values changes
 // the route or the gate question.
 func TestProjectStatusV2HandoffPolicyIsDeprecatedAndNeverAltersTheRoute(t *testing.T) {
@@ -316,7 +316,7 @@ func TestProjectStatusV2GovernanceSurfacesRejectedGateReason(t *testing.T) {
 }
 
 // TestProjectStatusV2GovernanceApprovedGatesDoNotOverrideRouting is
-// REQ-21.8/21.9/21.10's "approved habilita la siguiente fase" pattern: once
+// RF-GAT-02/RF-GAT-03/RF-GAT-04's "approved habilita la siguiente fase" pattern: once
 // spec, design, and tasks are all approved and no role-apply gate has
 // opened yet, ordinary routing resumes exactly as it would without
 // governance -- an approved gate must never block or reroute.
@@ -532,7 +532,7 @@ func TestProjectStatusV2GateQuestionAbsentWithoutSealOmitsJSONKey(t *testing.T) 
 	}
 }
 
-// TestProjectStatusV2ProjectsDocsPublication cubre REQ-27.4 y REQ-27.13: `docsPublication: auto`
+// TestProjectStatusV2ProjectsDocsPublication cubre RF-KOF-10 y RF-PUB-08: `docsPublication: auto`
 // aparece en `governance.kickoff` (v2) y en la reflexión de v1 cuando el kickoff lo lleva, y está
 // ausente cuando no.
 func TestProjectStatusV2ProjectsDocsPublication(t *testing.T) {

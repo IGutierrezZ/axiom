@@ -436,7 +436,7 @@ func TestAheadBehindCountsCommitsInBothDirections(t *testing.T) {
 	}
 }
 
-// REQ-25.1 y G-7: las lecturas lanzan solo la lista cerrada de subcomandos de lectura,
+// RF-BRA-01 y G-7: las lecturas lanzan solo la lista cerrada de subcomandos de lectura,
 // con un remoto configurado, y ninguna es una operación remota.
 func TestReadsLaunchOnlyTheClosedListOfReadSubcommands(t *testing.T) {
 	ctx := context.Background()
@@ -650,7 +650,7 @@ func TestTreeDirsKeepsUnusualNamesIntact(t *testing.T) {
 	})
 }
 
-// REQ-26.11 y DD-09: `FileAt` lee un fichero del árbol de una referencia (`git ls-tree` y
+// RF-BRA-26 y DD-09: `FileAt` lee un fichero del árbol de una referencia (`git ls-tree` y
 // `git cat-file blob`), sin leer el árbol de trabajo y sin red; lo que no es un fichero
 // regular de la referencia (ausente, carpeta, submódulo, enlace simbólico) no es un error.
 func TestFileAtReadsARegularFileFromTheTreeOfARevision(t *testing.T) {

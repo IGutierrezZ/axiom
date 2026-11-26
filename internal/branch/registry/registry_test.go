@@ -185,7 +185,7 @@ func load(t *testing.T, commonDir string, lane branch.Lane, change string) (*bra
 	return New().Load(commonDir, lane, change)
 }
 
-// REQ-25.14 y design D-07: sin fichero, el registro no existe y no es un error
+// RF-BRA-15 y design D-07: sin fichero, el registro no existe y no es un error
 // (`status` informa `registry.present: false`); leerlo no crea nada.
 func TestLoadOfAnAbsentRecordReturnsNilWithoutCreatingAnything(t *testing.T) {
 	_, commonDir := newRepository(t)
@@ -208,7 +208,7 @@ func TestLoadOfAnAbsentRecordReturnsNilWithoutCreatingAnything(t *testing.T) {
 	})
 }
 
-// REQ-25.14: `Load` lee `<common dir>/axiom/branch/v1/<carril>/<cambio>.json`; cada
+// RF-BRA-15: `Load` lee `<common dir>/axiom/branch/v1/<carril>/<cambio>.json`; cada
 // carril tiene sus propios registros, aunque el cambio se llame igual.
 func TestLoadReadsTheRecordOfTheChangeAndLane(t *testing.T) {
 	root, commonDir := newRepository(t)
@@ -255,7 +255,7 @@ func TestLoadReadsTheRecordOfTheChangeAndLane(t *testing.T) {
 	})
 }
 
-// REQ-25.14, escenario «El registro es visible desde un worktree enlazado»: el git
+// RF-BRA-15, escenario «El registro es visible desde un worktree enlazado»: el git
 // common dir es el mismo desde el checkout principal y desde cualquier worktree
 // enlazado, de modo que el registro escrito desde uno se lee desde el otro.
 func TestTheRecordIsVisibleFromALinkedWorktree(t *testing.T) {
@@ -279,7 +279,7 @@ func TestTheRecordIsVisibleFromALinkedWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.14 y design D-07: un fichero corrupto es `config_invalid` para quien lo
+// RF-BRA-15 y design D-07: un fichero corrupto es `config_invalid` para quien lo
 // consume: el error nombra el fichero y la causa. El registro es estado local
 // derivado: `ensure` lo reconstruye, así que nada lo interpreta con indulgencia.
 func TestLoadRejectsACorruptRecordNamingTheFile(t *testing.T) {
@@ -404,7 +404,7 @@ func changesOf(records []branch.Record) []string {
 	return changes
 }
 
-// REQ-25.15 (escenario «`status` sin `--change` lista registrados y pendientes») y
+// RF-BRA-16 (escenario «`status` sin `--change` lista registrados y pendientes») y
 // design D-07: `List` devuelve los registros del carril en un orden estable (por cambio,
 // no por nombre de fichero: `a-b.json` precede a `a.json`), sin mezclar carriles, y sin
 // crear nada.
@@ -555,7 +555,7 @@ func TestListNeverLeavesTheRegistryFolder(t *testing.T) {
 	}
 }
 
-// REQ-25.14 y design D-07: `Save` escribe el registro con una serialización estable (JSON
+// RF-BRA-15 y design D-07: `Save` escribe el registro con una serialización estable (JSON
 // con sangrado de dos espacios y `\n`, sin `\r` ni marcas de tiempo), en la ruta que fija el
 // diseño, sin dejar ficheros temporales, y lo que escribe lo lee `Load` igual.
 func TestSaveWritesTheStableSerializationWithNewlines(t *testing.T) {
@@ -676,7 +676,7 @@ func TestSaveRefusesARecordThatLoadWouldRejectWithoutWritingAnything(t *testing.
 	}
 }
 
-// REQ-25.14 y design D-05: el bloqueo es exclusivo por cambio y carril, no es reentrante
+// RF-BRA-15 y design D-05: el bloqueo es exclusivo por cambio y carril, no es reentrante
 // (un segundo `ensure` del mismo cambio lo encuentra ocupado), no bloquea otros cambios ni
 // el otro carril, se libera al terminar y liberarlo dos veces es inocuo.
 func TestLockIsExclusivePerChangeAndLane(t *testing.T) {
@@ -751,7 +751,7 @@ func TestLockRefusesAKeyThatCannotNameARecordWithoutCreatingAnything(t *testing.
 	}
 }
 
-// REQ-25.14, REQ-25.45 y design §4.4: el registro guarda la rama de archivado con `kind:
+// RF-BRA-15, RF-BRA-13 y design §4.4: el registro guarda la rama de archivado con `kind:
 // archive` y el prefijo de archivado, y los lee tal cual; repetir el guardado no reescribe el
 // fichero.
 func TestSaveAndLoadKeepTheArchiveBranchAndItsPrefix(t *testing.T) {

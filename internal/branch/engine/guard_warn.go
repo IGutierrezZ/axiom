@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// El aviso de la guarda D (REQ-25.21 punto 2 y sus escenarios, design D-18 paso 4): con el evento
+// El aviso de la guarda D (RF-BRA-22 punto 2 y sus escenarios, design D-18 paso 4): con el evento
 // `post` y un fichero que no es un documento de Axiom, avisa sin bloquear —la escritura ya
 // ocurrió— cuando el checkout que lo contiene no está en la rama de ninguno de los cambios activos
 // registrados por `ensure` en ese repositorio y git no ignora el fichero. Decide con lecturas de

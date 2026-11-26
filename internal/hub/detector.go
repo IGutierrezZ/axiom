@@ -151,7 +151,7 @@ func (d *Detector) Detect(dirPath string) (*TechDetection, error) {
 	// 7. Detección de agentes, prompts y skills preexistentes (.agents/skills, .github/copilot, etc.)
 	detectExistingAgents(absPath, result)
 
-	// 8. Orígenes de migración y candidatos a contexto técnico (REQ-30.26): el inventario
+	// 8. Orígenes de migración y candidatos a contexto técnico (RF-HUB-10): el inventario
 	// de `axiom archive adopt scan`, de solo lectura. Un fallo del escaneo no impide la
 	// detección: el informe queda ausente.
 	if inv, scanErr := adoption.Scan(absPath); scanErr == nil {
@@ -415,7 +415,7 @@ func dirExists(path string) bool {
 }
 
 // IsGitWorktree dice si path está en un worktree enlazado de git: su raíz git tiene un `.git`
-// fichero cuyo git dir contiene `commondir` (REQ-25.31). La evidencia es la de git y no el
+// fichero cuyo git dir contiene `commondir` (RF-HUB-09). La evidencia es la de git y no el
 // nombre de la ruta: un checkout principal bajo `axiom-wt` o `proyecto-wt` no es un worktree y
 // un submódulo (`.git` fichero sin `commondir`) tampoco. La ruta vacía no es un worktree.
 func IsGitWorktree(path string) bool {

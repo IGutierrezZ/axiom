@@ -6,7 +6,7 @@ Define observable behavior for how gentle-ai renders and injects the Engram save
 
 ## Requirements
 
-### Requirement: Single canonical Codex protocol asset
+### Requirement: Single canonical Codex protocol asset (RF-ENG-01)
 
 The system MUST render the Codex AGENTS.md protocol section, the `model_instructions_file`, and the compact prompt from one canonical source asset rather than three independently maintained files. Codex-only content (the PASSIVE CAPTURE section) MUST be preserved in the rendered `model_instructions_file` output. No normative rule present in today's rendered Codex outputs MUST be lost after consolidation.
 
@@ -29,7 +29,7 @@ The system MUST render the Codex AGENTS.md protocol section, the `model_instruct
 - THEN every normative rule (MUST/SHALL/SHOULD statement) present before consolidation MUST still be present after
 (Previously: the scenarios named the product `gentle-ai`.)
 
-### Requirement: Conditional per-adapter section slimming
+### Requirement: Conditional per-adapter section slimming (RF-ENG-02)
 
 The system MUST slim an adapter's system-prompt Engram protocol section ONLY when a redundant channel delivering equivalent protocol content is verified for that adapter's runtime. The set of adapters with a verified redundant channel is owned by design. For any adapter where no redundant channel is verified, the system MUST inject the full section unchanged. When a section is slimmed, the slim variant MUST include a pointer directing the model to where the full protocol content lives.
 
@@ -47,7 +47,7 @@ The system MUST slim an adapter's system-prompt Engram protocol section ONLY whe
 - THEN it MUST inject the full section, unchanged from today's content
 (Previously: the scenarios named the product `gentle-ai`.)
 
-### Requirement: Version-gated protocol-verbosity forwarding to engram setup
+### Requirement: Version-gated protocol-verbosity forwarding to engram setup (RF-ENG-03)
 
 When invoking `engram setup`, the system MUST detect whether the installed engram binary supports a protocol-verbosity option. When supported, it MUST pass the configured verbosity value. When not supported, it MUST invoke setup exactly as today, without any unknown flag, and MUST continue using full-text injection. Setup invocation MUST NOT fail as a result of this detection or forwarding.
 
@@ -71,7 +71,7 @@ When invoking `engram setup`, the system MUST detect whether the installed engra
 - THEN the setup invocation MUST NOT fail as a result of that detection or forwarding logic
 (Previously: the scenarios named the product `gentle-ai`.)
 
-### Requirement: Idempotent injection and clean uninstall across upgrades
+### Requirement: Idempotent injection and clean uninstall across upgrades (RF-ENG-04)
 
 Re-running injection over a previously-injected section (full or slim) MUST converge to the currently-targeted state using the existing marker-based mechanism, without duplicating or corrupting content. The uninstaller MUST remove any file introduced or renamed by this change, leaving no orphaned assets after an upgrade or uninstall.
 
@@ -91,7 +91,7 @@ Re-running injection over a previously-injected section (full or slim) MUST conv
 
 ---
 
-### Requirement: Test and golden fixture coverage per adapter
+### Requirement: Test and golden fixture coverage per adapter (RF-ENG-05)
 
 Behavior for canonical rendering, per-adapter slim/full selection, and verbosity forwarding MUST be asserted by table-driven tests covering each affected adapter, and MUST be backed by updated golden fixtures reflecting the new rendered output.
 
@@ -106,7 +106,7 @@ Behavior for canonical rendering, per-adapter slim/full selection, and verbosity
 - GIVEN a golden fixture exists for an adapter's rendered protocol content
 - WHEN that adapter's rendering logic changes under this capability
 - THEN the corresponding golden fixture MUST be updated to match and MUST pass in CI
-### Requirement: Engram Protocol Handles Ambiguous Project (REQ-46.10)
+### Requirement: Engram Protocol Handles Ambiguous Project (RF-ENG-06)
 
 The Engram MCP integration protocol and guidelines MUST document and provide for the orderly handling of the `ambiguous_project` state in the initial handshake.
 (Moved from REQ-18.6 of `rdd-decoupling-v3-stability`, retired with RDD (C-01-e).)

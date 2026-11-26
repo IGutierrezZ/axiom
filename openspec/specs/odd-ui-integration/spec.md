@@ -14,17 +14,17 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 ## REMOVED Requirements
 
-### Requirement: Exposición del Estado ODD en el Dashboard Web (REQ-19.13)
+### Requirement: Exposición del Estado ODD en el Dashboard Web (RF-OUI-01)
 
 (Motivo: `internal/dashboard/odd_service.go`, que exponía el estado ODD vía API REST local, se retira por la Decisión D1.)
 (Migración: ninguna. El Dashboard Web deja de mostrar el estado de los documentos vivos ODD.)
 
-### Requirement: Exposición del Estado ODD en la TUI (REQ-19.14)
+### Requirement: Exposición del Estado ODD en la TUI (RF-OUI-02)
 
 (Motivo: `internal/tui/screens/odd_features.go` se retira por la Decisión D1.)
 (Migración: ninguna. El progreso ODD deja de ser visible desde la TUI; solo es legible leyendo directamente el contenido Markdown del documento vivo.)
 
-### Requirement: Conmutación Visible entre Carril ODD y Carril SDD (REQ-19.15)
+### Requirement: Conmutación Visible entre Carril ODD y Carril SDD (RF-OUI-03)
 
 (Motivo: la acción de conmutación de carril y el salto directo desde un documento promovido hacia su cambio SDD dependían de `internal/dashboard/odd_service.go` y de la entrada de ODD en `internal/tui/screens/governance.go`, retirados por la Decisión D1.)
 (Migración: ninguna. No existe una conmutación de carril visible equivalente en el Dashboard Web ni en la TUI tras esta retirada; el carril SDD sigue siendo accesible por sus propias pantallas y endpoints, sin cambios por este incremento.)

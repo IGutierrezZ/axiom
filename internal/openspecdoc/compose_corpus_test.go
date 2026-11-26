@@ -9,17 +9,40 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// REQ-30.22 y REQ-44.4: no regresión sobre el corpus de las specs vivas. Para cada
+// RF-ARC-11 y RF-RID-04: no regresión sobre el corpus de las specs vivas. Para cada
 // requisito de cada spec de openspec/specs/ (lectura, nunca escritura):
 //   - Resolve lo encuentra a sí mismo con el patrón por defecto, y
 //   - un MODIFIED identidad (la delta repite el bloque tal cual) compone la spec
 //     byte a byte.
 func TestComposeCorpusIdentityModified(t *testing.T) {
+	composeCorpusIdentity(t, reqid.Default(), nil)
+}
+
+// TestComposeCorpusIdentityModifiedRF repite el corpus con el patrón propio de Axiom
+// (RF-<DOM>-<NN>, C-03-e): todo requisito de la spec viva lleva su ID nuevo en el título y
+// ningún título conserva un `REQ-n.m` (D11).
+func TestComposeCorpusIdentityModifiedRF(t *testing.T) {
+	p, err := reqid.Parse("RF-<DOM>-<NN>")
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := reqid.Default()
+	composeCorpusIdentity(t, p, func(domain, name string) {
+		if p.InTitle(name) == "" {
+			t.Errorf("%s: el título %q no lleva un ID RF-<DOM>-<NN>", domain, name)
+		}
+		if legacy.InTitle(name) != "" {
+			t.Errorf("%s: el título %q conserva un ID heredado REQ-n.m", domain, name)
+		}
+	})
+}
+
+func composeCorpusIdentity(t *testing.T, p reqid.Pattern, perRequirement func(domain, name string)) {
+	t.Helper()
 	files, err := filepath.Glob(filepath.Join("..", "..", "openspec", "specs", "*", "spec.md"))
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no hay specs vivas: %v %v", files, err)
 	}
-	p := reqid.Default()
 	checked := 0
 	for _, file := range files {
 		data, err := os.ReadFile(file)
@@ -40,6 +63,9 @@ func TestComposeCorpusIdentityModified(t *testing.T) {
 			if !s.IsRequirement {
 				continue
 			}
+			if perRequirement != nil {
+				perRequirement(domain, s.Name)
+			}
 			idx, match := Resolve(names, s.Name, p)
 			if match == MatchNone {
 				t.Errorf("%s: Resolve no encuentra %q", domain, s.Name)
@@ -48,8 +74,8 @@ func TestComposeCorpusIdentityModified(t *testing.T) {
 			}
 			k++
 
-			// El bloque debe sobrevivir al análisis de deltas (que no distingue vallas).
-			block := parseDeltaRequirementBlocks(s.Text)
+			// El bloque debe sobrevivir al análisis de deltas (que ignora lo que hay dentro de vallas).
+			block := parseDeltaRequirementBlocks(s.Text, fencedRanges(s.Text), 0)
 			if len(block) != 1 || block[0].Text != s.Text {
 				continue
 			}

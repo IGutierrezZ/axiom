@@ -12,7 +12,7 @@ import (
 )
 
 // characterizationProject es el proyecto de estas pruebas: desde INC-25 S8-c4 `CreateIncrement`
-// ejecuta `ensure` antes de escribir (REQ-25.32), de modo que el proyecto es un repositorio git en
+// ejecuta `ensure` antes de escribir (RF-WEB-09), de modo que el proyecto es un repositorio git en
 // `main` con las preferencias de worktree del hub. `proposal.md` se lee de `res.Path`, que ahora
 // cuelga del worktree del cambio.
 func characterizationProject(t *testing.T) string {
@@ -97,7 +97,7 @@ Implementación e integración de la funcionalidad mi-cambio bajo la metodologí
 `
 
 // TestCreateIncrement_PlantillaVigenteSinCuerpoSembrado es la puerta de control
-// de severidad alta del riesgo R3 (REQ-15.1): caracteriza, byte a byte, el
+// de severidad alta del riesgo R3 (RF-DSO-01): caracteriza, byte a byte, el
 // comportamiento vigente de CreateIncrement cuando no se aporta ProposalBody.
 // Debe permanecer en VERDE, sin tocar sus literales esperados, durante y
 // después de la extensión de la tarea 4.5. Comparación siempre por igualdad de
@@ -184,7 +184,7 @@ func TestCreateIncrement_ProposalBodySembrado(t *testing.T) {
 }
 
 // TestCreateIncrement_HTTPProposalBodyRegression (tareas 4.6/4.7) es la
-// regresión de extremo a extremo de REQ-15.1 sobre el endpoint ya existente
+// regresión de extremo a extremo de RF-DSO-01 sobre el endpoint ya existente
 // POST /api/increments: sin proposal_body debe seguir produciendo la plantilla
 // vigente; con proposal_body debe producir exactamente esos bytes. Reutiliza
 // los mismos literales que las pruebas unitarias anteriores (sin duplicarlos).

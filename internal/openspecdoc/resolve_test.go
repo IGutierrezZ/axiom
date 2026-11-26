@@ -15,7 +15,7 @@ func mustPattern(t testing.TB, template string) reqid.Pattern {
 	return p
 }
 
-// REQ-30.22: Resolve empareja el nombre de una delta con la canónica por
+// RF-ARC-11: Resolve empareja el nombre de una delta con la canónica por
 // identificador, con vuelta al título exacto.
 func TestResolve(t *testing.T) {
 	sup := SupersededSuffix

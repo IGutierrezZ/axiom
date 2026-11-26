@@ -14,7 +14,7 @@ func rewriteMatrixRow(requirement, scenario string) string {
 	return "| " + requirement + " | " + scenario + " | unitario | `internal/x/y_test.go` | `go test` | 0 | ana | 2026-11-26 | prueba de prov:30:1 | pass | abc1234 |\n"
 }
 
-// REQ-47.4 destino 5: RewriteMatrix solo toca la columna Requisito de las filas de la matriz.
+// RF-RID-12 destino 5: RewriteMatrix solo toca la columna Requisito de las filas de la matriz.
 func TestRewriteMatrix(t *testing.T) {
 	m := reqid.NewIDMap([]reqid.Assignment{{Provisional: "prov:30:1", Definitive: "REQ-31.2"}})
 	report := "# Informe\n\nMenciona prov:30:1 en el texto.\n\n" +
@@ -76,7 +76,7 @@ func TestRewriteMatrixEscapedPipeInEarlierCell(t *testing.T) {
 	}
 }
 
-// REQ-29.3, REQ-47.4: la fila que cita el provisional cuenta como la del escenario afectado
+// RF-ISO-03, RF-RID-12: la fila que cita el provisional cuenta como la del escenario afectado
 // hasta archivar, y la fila reescrita sigue contando con el definitivo.
 func TestMatrixCitesProvisionalUntilArchiveThenRewritten(t *testing.T) {
 	p := reqid.Default()

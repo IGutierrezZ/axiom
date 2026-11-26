@@ -113,7 +113,7 @@ func Seal(changeRoot string, k Kickoff) (Kickoff, bool, error) {
 
 // PrepareChangeRoot crea changeRoot y sus padres ausentes, uno a uno, y devuelve una
 // función que borra, en orden inverso, solo los directorios que creó y solo si están
-// vacíos (REQ-29.12). Si changeRoot ya existe no crea nada y la retirada no hace nada.
+// vacíos (RF-KOF-11). Si changeRoot ya existe no crea nada y la retirada no hace nada.
 // La retirada nunca borra ficheros: un directorio que ya no está vacío se respeta.
 //
 // Cada nivel se crea con os.Mkdir, no con os.MkdirAll, para saber con exactitud cuáles

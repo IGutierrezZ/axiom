@@ -12,8 +12,8 @@ import (
 // si hay documentación sin confirmar y cuántos commits faltan por subir, y cuáles tocan código. Es
 // lo que haría `axiom sdd publish` sin ejecutarlo: parte del mismo destino (`PublicationTarget`), la
 // misma lista cerrada de rutas (`PublicationTarget.DocPaths`) y las mismas exclusiones del rango
-// (REQ-27.8). No toma el cerrojo, no escribe, no hace `fetch`, `pull`, `ls-remote`, `commit`, `add`
-// ni `push`: el puerto de git no tiene ningún método que publique (REQ-25.1).
+// (RF-PUB-04). No toma el cerrojo, no escribe, no hace `fetch`, `pull`, `ls-remote`, `commit`, `add`
+// ni `push`: el puerto de git no tiene ningún método que publique (RF-BRA-01).
 //
 // `CommitFiles` no lista rutas en un commit de fusión; para esos commits se leen las que resolvió la
 // propia fusión (`MergeResolvedPaths`, `--cc`), como hace `publish`. Una fusión limpia no aporta

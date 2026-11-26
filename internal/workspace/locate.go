@@ -57,7 +57,7 @@ type Location struct {
 // GoverningTopology devuelve la topología que gobierna el directorio resuelto.
 // Con una configuración cargada es la suya; con un axiom.yaml directo que no se
 // pudo cargar (topología ausente, desconocida o retirada) se conserva la
-// resolución embebida, igual que hace Locate (REQ-24.7, caso 3), y la topología
+// resolución embebida, igual que hace Locate (RF-PLH-07, caso 3), y la topología
 // es monorepo-embedded, que además es el conjunto de reglas más amplio. Sin
 // axiom.yaml (origen openspec o start) no hay topología que aplicar y devuelve
 // ("", false). Un puntero roto no llega aquí: Locate ya falla.
@@ -109,8 +109,8 @@ func (e *LocateError) Unwrap() error { return e.Err }
 
 // Locate resuelve, desde start, la carpeta maestra, workspaceRoot, el planning
 // home y el origen. Es determinista y de solo lectura: nunca crea ni modifica
-// nada, tampoco openspec/ (REQ-24.1). Evalúa start y después sus ancestros y se
-// detiene en el primer marcador (REQ-24.2).
+// nada, tampoco openspec/ (RF-PLH-01). Evalúa start y después sus ancestros y se
+// detiene en el primer marcador (RF-PLH-02).
 func Locate(start string) (Location, error) {
 	return locate(start, true)
 }
@@ -127,7 +127,7 @@ func locate(start string, ascend bool) (Location, error) {
 	if err != nil {
 		return Location{}, err
 	}
-	// REQ-25.28 y D-15: dentro de un worktree enlazado la ascensión se acota a su
+	// RF-PLH-13 y D-15: dentro de un worktree enlazado la ascensión se acota a su
 	// raíz, de modo que un marcador del directorio que lo contiene no cuenta. Solo
 	// con ascensión: LocateAt evalúa únicamente el directorio dado.
 	bound := ""
@@ -232,7 +232,7 @@ func coversCeiling(dir string) bool {
 
 // markerAt devuelve el marcador de dir por precedencia: puntero, configuración
 // y openspec. El fallback de subdirectorios de ResolveConfigFile nunca actúa
-// como marcador (REQ-24.2).
+// como marcador (RF-PLH-02).
 func markerAt(dir string) (Origin, bool) {
 	switch {
 	case fileExists(filepath.Join(dir, WorkspacePointerFilename)):
@@ -345,7 +345,7 @@ func locateFromConfig(start, dir string) (Location, error) {
 		declarations.ParseErr = err
 	}
 	if err != nil {
-		// Caso 3 de REQ-24.7: un axiom.yaml directo que no se puede cargar no
+		// Caso 3 de RF-PLH-07: un axiom.yaml directo que no se puede cargar no
 		// se rechaza; se conserva la resolución embebida y se avisa. Las
 		// declaraciones se evalúan igualmente, de modo que el status pueda
 		// bloquear el archivado por su causa.
@@ -418,7 +418,7 @@ func completeRoots(loc *Location) error {
 }
 
 // LegacySpecsDivergence devuelve el aviso Q14 de los consumidores de catálogo
-// (REQ-24.10, D-07). Se emite solo en monorepo-embedded, con specs_repository
+// (RF-PLH-10, D-07). Se emite solo en monorepo-embedded, con specs_repository
 // fuera de {"", ".", "openspec"}, cuando existe <raíz>/<specs_repository>/specs y
 // no es el mismo directorio que <planning home>/specs. Los consumidores leen
 // únicamente el planning home; el aviso evita que la ubicación antigua quede
@@ -443,7 +443,7 @@ func (l Location) LegacySpecsDivergence() (string, bool) {
 }
 
 // separatesSpecs informa de si la topología guarda las especificaciones en un
-// repositorio distinto de la carpeta maestra: solo multirepo (REQ-24.3).
+// repositorio distinto de la carpeta maestra: solo multirepo (RF-PLH-03).
 func separatesSpecs(cfg *WorkspaceConfig) bool {
 	if cfg == nil {
 		return false
@@ -451,7 +451,7 @@ func separatesSpecs(cfg *WorkspaceConfig) bool {
 	return cfg.Workspace.Topology == TopologyMultirepo
 }
 
-// Roots aplica el enraizado por topología (REQ-24.3, REQ-24.4). En
+// Roots aplica el enraizado por topología (RF-PLH-03, RF-PLH-04). En
 // monorepo-embedded, o sin configuración, workspaceRoot es la carpeta maestra.
 // En multirepo es el repositorio de especificaciones o, si el último segmento de
 // specs_repository es openspec, su padre. openspec/ permanece siempre literal
@@ -492,7 +492,7 @@ func specsSegments(specsRepository string) []string {
 }
 
 // deduceMaster determina la carpeta maestra de un axiom.yaml directo hallado en
-// dir (REQ-24.5). En monorepo-embedded es siempre dir. En multirepo:
+// dir (RF-PLH-05). En monorepo-embedded es siempre dir. En multirepo:
 // (1) specs_repository vacío o "." → dir; (2) dir contiene un directorio con esa
 // ruta → dir; (3) la ruta de dir termina con los segmentos de specs_repository →
 // dir sin ese sufijo; (4) en otro caso, dir.

@@ -11,7 +11,7 @@ import (
 )
 
 // Arnés en proceso de S6.10 de `axiom branch done` (INC-25,
-// S6-c2, REQ-25.16). El arnés llama a `RunBranch`, el mismo punto de entrada que
+// S6-c2, RF-BRA-17). El arnés llama a `RunBranch`, el mismo punto de entrada que
 // `case "branch"` de cmd/axiom/main.go, sobre un repositorio temporal, sin compilar ningún ejecutable.
 
 var branchGitVersion = regexp.MustCompile(`(\d+)\.(\d+)`)

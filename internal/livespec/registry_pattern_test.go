@@ -42,7 +42,7 @@ func specWith(capability string, reqs ...string) string {
 	return out
 }
 
-// REQ-30.4 y REQ-44.3: el siguiente libre usa la serie y el relleno del patrón.
+// REQ-30.4 y RF-RID-03: el siguiente libre usa la serie y el relleno del patrón.
 func TestRegistryNextFreeWithDeclaredPattern(t *testing.T) {
 	_, reg := patternFixture(t, "RF-<DOM>-<NN>", map[string]string{
 		"specs/usuarios/spec.md": specWith("usuarios", "Alta (RF-USU-01)", "Baja (RF-USU-05)"),
@@ -135,7 +135,7 @@ func TestPlanIntegrationRejectsTheDefaultFormatWithDeclaredPattern(t *testing.T)
 	}
 }
 
-// REQ-30.4 y REQ-30.22: con el defecto el motivo es idéntico al de antes.
+// REQ-30.4 y RF-ARC-11: con el defecto el motivo es idéntico al de antes.
 func TestPlanIntegrationAddedWithoutIDMessageIsUnchangedWithTheDefault(t *testing.T) {
 	loc, reg := planFixture(t, nil)
 	delta := "## ADDED Requirements\n\n### Requirement: Alta\n\nEl sistema DEBE dar de alta.\n"
@@ -166,7 +166,7 @@ func writePlan(t *testing.T, plan Integration) {
 	}
 }
 
-// REQ-30.22 y REQ-30.2: classify empareja MODIFIED y REMOVED por identificador y la segunda
+// RF-ARC-11 y REQ-30.2: classify empareja MODIFIED y REMOVED por identificador y la segunda
 // ejecución es idempotente (`already`).
 func TestPlanIntegrationClassifiesByIDAndIsIdempotent(t *testing.T) {
 	for _, tc := range []struct {
@@ -211,7 +211,7 @@ func TestPlanIntegrationClassifiesByIDAndIsIdempotent(t *testing.T) {
 	}
 }
 
-// El identificador de un requisito se deriva del título con el patrón (REQ-44.4): sin
+// El identificador de un requisito se deriva del título con el patrón (RF-RID-04): sin
 // openspecdoc.Requirement.ID, la composición y la clasificación coinciden.
 func TestClassifyAndComposeAgreeOnResolution(t *testing.T) {
 	names := []string{"Alta (RF-USU-01)", "Baja (RF-USU-02)"}
@@ -221,7 +221,7 @@ func TestClassifyAndComposeAgreeOnResolution(t *testing.T) {
 	}
 }
 
-// REQ-30.11 y REQ-44.4: LookupIdentity compara por serie y número, no por cadena.
+// RF-ADP-03 y RF-RID-04: LookupIdentity compara por serie y número, no por cadena.
 func TestRegistryLookupIdentityMatchesByKeyNotByString(t *testing.T) {
 	_, reg := patternFixture(t, "RF-<m>", map[string]string{
 		"specs/b/spec.md":                   specWith("b", "Uno (RF-001)"),

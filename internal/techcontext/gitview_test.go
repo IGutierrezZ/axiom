@@ -77,7 +77,7 @@ func changedRelative(t testing.TB, repo, base string) []string {
 	return relative(t, repo, paths)
 }
 
-// Amenaza «estado de commit» (REQ-30.6, D7): ChangedSince une los cuatro estados
+// Amenaza «estado de commit» (RF-OLS-06, D7): ChangedSince une los cuatro estados
 // en los que una edición puede estar, y una prueba fija cada uno.
 func TestGitViewReportsEachCommitState(t *testing.T) {
 	t.Parallel()

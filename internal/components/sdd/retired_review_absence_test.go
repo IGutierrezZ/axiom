@@ -44,7 +44,7 @@ func walkInstalledFiles(t *testing.T, root string) map[string]string {
 	return files
 }
 
-// TestInjectLeavesResidualRDDFilesUntouched pins REQ-46.4: what an earlier
+// TestInjectLeavesResidualRDDFilesUntouched pins RF-ORQ-26: what an earlier
 // release installed (review agents, the stop hook, the OpenCode review agents
 // and the legacy review plugin) is neither modified nor removed, and the
 // injection ends without error while keeping the user's own hooks.

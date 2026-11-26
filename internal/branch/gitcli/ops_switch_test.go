@@ -9,7 +9,7 @@ import (
 )
 
 // Pruebas de Switch (INC-25, S4.7): el cambio de rama de `ensure` en modo `in_place`
-// (REQ-25.8, REQ-25.9). Se lanza con cmd.Dir en el propio repositorio y solo cambia de rama:
+// (RF-BRA-08, RF-BRA-09). Se lanza con cmd.Dir en el propio repositorio y solo cambia de rama:
 // nunca crea la rama, ni la adivina desde una remota, ni toca nada si git se niega.
 
 // Switch despliega en el repositorio una rama local existente y no lanza ninguna operación

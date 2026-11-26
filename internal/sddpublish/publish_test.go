@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
-// Matriz de pruebas de `Publisher.Run` (DD-09, REQ-27.5 a REQ-27.10, REQ-27.14) con git real, un
+// Matriz de pruebas de `Publisher.Run` (DD-09, RF-PUB-01 a RF-PUB-06, RF-ARC-08) con git real, un
 // remoto desnudo temporal local y el motor de ramas real, sin red. Cubre las filas aplicables de la
 // matriz de amenazas de design §7: rutas que parecen documentación, selección del repositorio,
 // estado del commit y estado del push.
@@ -200,7 +200,7 @@ func TestPublishExcludesLocalStateFiles(t *testing.T) {
 	}
 }
 
-// REQ-27.14: el archivado publica la carpeta archivada, los borrados de `changes/<x>/`, las specs y el
+// RF-ARC-08: el archivado publica la carpeta archivada, los borrados de `changes/<x>/`, las specs y el
 // índice, con el mensaje de archivado y solo con `--archive` en la rama de archivado.
 func TestPublishCommitsArchiveDeletions(t *testing.T) {
 	t.Parallel()
@@ -434,7 +434,7 @@ func TestPublishMultirepoSpecsPushesIntegration(t *testing.T) {
 	}
 }
 
-// REQ-27.7 regla 4: `--branch` atado a otra rama es `wrong_branch` y no escribe nada.
+// RF-PUB-03 regla 4: `--branch` atado a otra rama es `wrong_branch` y no escribe nada.
 func TestPublishBranchFlagMismatchIsWrongBranch(t *testing.T) {
 	t.Parallel()
 	repo, bare := newMonorepo(t)
@@ -589,7 +589,7 @@ func TestPublishRunsInTargetRootFromLinkedWorktree(t *testing.T) {
 	}
 }
 
-// REQ-27.10: con un almacén sin ficheros no hay documentos que publicar.
+// RF-PUB-06: con un almacén sin ficheros no hay documentos que publicar.
 func TestPublishRefusesStoresWithoutFiles(t *testing.T) {
 	t.Parallel()
 	for _, store := range []string{"engram", "none"} {
@@ -829,7 +829,7 @@ func TestPublishDeclaredMaintainedPathsAreDocumentation(t *testing.T) {
 
 // archiveBranchWithOutbox deja el cambio x movido a su carpeta archivada, en la rama de archivado, con
 // la cola de integraciones y un temporal de su escritura atómica sin seguimiento en la raíz de esa
-// carpeta (MODIFIED REQ-27.5).
+// carpeta (MODIFIED RF-PUB-01).
 func archiveBranchWithOutbox(t *testing.T) (repo, archived string) {
 	t.Helper()
 	repo, _ = newMonorepo(t)
@@ -848,7 +848,7 @@ func archiveBranchWithOutbox(t *testing.T) (repo, archived string) {
 	return repo, archived
 }
 
-// MODIFIED REQ-27.5: `publish --archive` no confirma la cola archivada, también cuando la carpeta
+// MODIFIED RF-PUB-01: `publish --archive` no confirma la cola archivada, también cuando la carpeta
 // archivada sí tiene documentación sucia que confirmar, y una publicación repetida con la cola
 // pendiente no la confirma tampoco.
 func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
@@ -894,7 +894,7 @@ func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
 	}
 }
 
-// REQ-43.9: `integrations.yaml` (sin punto) es documentación del cambio y `publish` la confirma como
+// RF-INT-09: `integrations.yaml` (sin punto) es documentación del cambio y `publish` la confirma como
 // cualquier otro documento; fija la regla de clasificación que ya cumple `docpaths`.
 func TestPublishCommitsIntegrationsLinks(t *testing.T) {
 	t.Parallel()
@@ -910,7 +910,7 @@ func TestPublishCommitsIntegrationsLinks(t *testing.T) {
 	}
 }
 
-// REQ-43.8: la cola de integraciones y los temporales de su escritura atómica (y los de
+// RF-INT-08: la cola de integraciones y los temporales de su escritura atómica (y los de
 // `integrations.yaml`) son estado local con punto en la raíz de la carpeta del cambio: nunca se
 // confirman, aunque haya documentación sucia en la misma carpeta.
 func TestPublishExcludesIntegrationsOutbox(t *testing.T) {

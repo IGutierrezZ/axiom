@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 )
 
-// Aislamiento dinámico de la operación remota (DD-14, REQ-27.11, REQ-25.1): sobre un proyecto con un
+// Aislamiento dinámico de la operación remota (DD-14, RF-PUB-07, RF-BRA-01): sobre un proyecto con un
 // remoto desnudo, ni `axiom branch` ni `axiom sdd gate record` ni `axiom sdd status` ejecutan `push`,
 // `commit` ni `fetch` (sin `--fetch`). La publicación solo existe en `axiom sdd publish`, que es el
 // único verbo que alcanza el puerto de escritura de git (la prueba estática está en
@@ -44,7 +44,7 @@ func TestPublishIsolationNoVerbButPublishPushesCommitsOrFetches(t *testing.T) {
 		}
 	}
 
-	// Con todas las compuertas aprobadas salvo integration y su ledger sin confirmar, el status proyecta la publicación pendiente (REQ-27.18) solo con lecturas: lo que el bucle de
+	// Con todas las compuertas aprobadas salvo integration y su ledger sin confirmar, el status proyecta la publicación pendiente (RF-PUB-11) solo con lecturas: lo que el bucle de
 	// abajo comprueba es que no hubo `push`, `commit` ni `fetch`.
 	var projected bytes.Buffer
 	if err := RunSDDStatus([]string{"x", "--cwd", ws.Master, "--json"}, &projected); err != nil {

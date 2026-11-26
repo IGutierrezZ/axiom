@@ -15,7 +15,7 @@ Decisión del usuario: «No quiero telemetría, ni GGA». La telemetría no env�
 
 - **P20 (usuario: «Sí, borrarlas ya»).** Sin lápidas: ni no-ops en `uninstall` ni comandos tumba. `install`, `sync`, `uninstall`, `doctor` y `upgrade` dejan de conocer GGA y la telemetría. Lo que Axiom escribió en equipos con instalaciones antiguas lo limpia la persona a mano: lista en `docs/releases/notas-retirada-gga-telemetria.md`.
 - **Lector tolerante.** Un estado con `gga` en `components` sigue cargando: el componente se ignora con un aviso en `sync` y la siguiente escritura del estado ya no lo incluye (mismo patrón que los agentes retirados en C-08-d).
-- **Spec viva.** Se retira la capacidad `gga` entera. La spec `axiom-distribution-identity` (REQ-20.12, ya marcado RETIRADO) no se toca.
+- **Spec viva.** Se retira la capacidad `gga` entera. La spec `axiom-distribution-identity` (RF-DIS-06, ya marcado RETIRADO) no se toca.
 - **Históricos.** No se tocan `docs/archive`, `openspec/changes/archive`, `docs/audits`, `docs/plan`, `docs/releases` existentes, `docs/upstream-absorption-ledger.md`, `CONTRIBUTORS.md` ni los `odd/tasks/` cerrados.
 - **CI.** No se tocan `ci.yml` ni `windows-full-suite.yml` (C-08-i va en paralelo).
 

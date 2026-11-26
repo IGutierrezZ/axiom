@@ -9,14 +9,14 @@ import (
 )
 
 // intermediateMerge dice si la carpeta de un cambio presente en el árbol de la rama de
-// integración es una fusión intermedia de planificación y no un cambio terminado (REQ-26.11,
+// integración es una fusión intermedia de planificación y no un cambio terminado (RF-BRA-26,
 // design DD-09): una PR de la salida 2 de una parada publicó parte del cambio, y fusionarla no
 // significa que el cambio esté integrado ni listo para archivar.
 //
 // Solo lee lo que la propia salida 2 deja integrado, `gates.yaml` y `kickoff.yaml`, del árbol
-// del commit sha ya resuelto de root, sin cambiar de rama y sin red (REQ-25.10). Es información:
+// del commit sha ya resuelto de root, sin cambiar de rama y sin red (RF-BRA-10). Es información:
 // ante cualquier cosa que no se pueda leer o entender devuelve false, es decir, el cambio se
-// trata como hasta ahora (REQ-26.11, supuesto A-8). Solo un fallo de git, que no es un problema
+// trata como hasta ahora (RF-BRA-26, supuesto A-8). Solo un fallo de git, que no es un problema
 // del contenido, añade un aviso (frase en castellano) para que no pase inadvertido.
 //
 //  1. `gates.yaml` ausente o ilegible: false.

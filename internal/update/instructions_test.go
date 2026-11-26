@@ -8,7 +8,7 @@ import (
 )
 
 // TestSelfHintDerivedFromToolInfo scans the real output of updateHint and
-// selfToolHint for the fork registry entry (REQ-22.2 "La pista de actualizacion
+// selfToolHint for the fork registry entry (RF-UPD-02 "La pista de actualizacion
 // nombra el fork, no upstream") and pins the upstream entry to its own ToolInfo.
 func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 	origHomebrewPackageInstalled := homebrewPackageInstalled
@@ -92,7 +92,7 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 			}
 
 			// The upstream prohibition is scoped to the fork entry: upstream's
-			// own module path is legal in its own instruction (REQ-22.2).
+			// own module path is legal in its own instruction (RF-UPD-02).
 			if tc.tool.Owner == forkSourceTool.Owner {
 				if hint == "" {
 					t.Fatalf("updateHint(%q, %q) must not be empty for the fork entry", tc.tool.Name, tc.profile.OS)
@@ -110,7 +110,7 @@ func TestSelfHintDerivedFromToolInfo(t *testing.T) {
 	}
 }
 
-// TestSelfHintScanAcrossPlatforms is the REQ-22.2 output scan: every fork
+// TestSelfHintScanAcrossPlatforms is the RF-UPD-02 output scan: every fork
 // instruction across platforms must name the tool's own identity and never
 // upstream coordinates. Both fixtures run so the upstream entry keeps producing
 // a non-empty instruction from its own ToolInfo.

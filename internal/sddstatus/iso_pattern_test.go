@@ -21,7 +21,7 @@ func isoProjectWith(t *testing.T, sddBlock string) workspacetest.Workspace {
 	return ws
 }
 
-// REQ-29.3, REQ-29.4 y REQ-44.5: con `sdd.id_pattern: "RF-<DOM>-<NN>"` un cambio ISO
+// REQ-29.3, RF-ISO-04 y RF-RID-05: con `sdd.id_pattern: "RF-<DOM>-<NN>"` un cambio ISO
 // con identificadores del patrón no tiene motivos de identificador ni de cobertura.
 func TestISOWithDeclaredPatternHasNoIdentifierOrCoverageReasons(t *testing.T) {
 	t.Parallel()
@@ -48,7 +48,7 @@ func TestISOWithDeclaredPatternNamesThePatternInReasons(t *testing.T) {
 	}
 }
 
-// REQ-44.1 (lectura en vivo, D-04): un cambio ya sellado cuyo axiom.yaml cambia de patrón se
+// RF-RID-01 (lectura en vivo, D-04): un cambio ya sellado cuyo axiom.yaml cambia de patrón se
 // evalúa con el patrón nuevo y el motivo lo nombra.
 func TestISOEvaluatesWithTheLivePattern(t *testing.T) {
 	t.Parallel()
@@ -64,7 +64,7 @@ func TestISOEvaluatesWithTheLivePattern(t *testing.T) {
 	}
 }
 
-// REQ-29.16 y REQ-44.9 (D-07): con el patrón inaccesible la etapa `specs` lleva
+// RF-CLI-11 y RF-RID-08 (D-07): con el patrón inaccesible la etapa `specs` lleva
 // `iso_declaration_invalid` en lugar de las reglas de identificador, `tasks` no se evalúa y
 // no hay `iso.matrix`.
 func TestISOWithInaccessiblePattern(t *testing.T) {

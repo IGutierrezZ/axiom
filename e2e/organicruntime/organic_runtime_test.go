@@ -558,7 +558,7 @@ func (harness *organicHarness) seedOrganicSDDChange(change string) {
 	})
 	// The change sits at its archive decision in a repository that stays off any archive branch, and a
 	// change with no kickoff.yaml is not exempt from the status branch guard (S-7): the retro-sealed
-	// kickoff without a git snapshot exempts it (REQ-25.37).
+	// kickoff without a git snapshot exempts it (RF-KOF-07).
 	retroSealConsentChange(harness.t, harness.repo.worktree, change)
 	harness.git("add", "--", "openspec")
 	harness.git("commit", "-q", "-m", "test: seed the SDD change")

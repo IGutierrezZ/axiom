@@ -8,7 +8,7 @@ import (
 )
 
 // Pruebas de la capacidad de `git merge-tree --write-tree` y de la capa del árbol equivalente (Q1,
-// design D-09, REQ-25.16): la versión se lee una vez por proceso, la capa se habilita desde la 2.38
+// design D-09, RF-BRA-17): la versión se lee una vez por proceso, la capa se habilita desde la 2.38
 // y, si la versión no se puede leer, se intenta la orden y la salida 129 es «no admitida».
 
 func TestCapabilityParsesTheVersionOfGit(t *testing.T) {

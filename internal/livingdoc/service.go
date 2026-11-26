@@ -15,7 +15,7 @@ import (
 // Service provee la interfaz unificada para operaciones de documentación viva.
 //
 // El servicio no guarda rutas: conserva solo el directorio de partida y resuelve
-// el planning home con workspace.Locate en cada llamada pública (REQ-24.10,
+// el planning home con workspace.Locate en cada llamada pública (RF-PLH-10,
 // D-07). El dashboard y la TUI viven mucho tiempo, y una raíz cacheada en el
 // constructor quedaría obsoleta si el proyecto cambia entre dos llamadas.
 type Service struct {
@@ -52,9 +52,9 @@ func (s *Service) resolve() (workspace.Location, error) {
 }
 
 // indexerFor devuelve el indexador del servicio con el patrón de identificadores del
-// workspace de loc (REQ-44.1). livingdoc es informativo y nunca falla por el patrón: si no es
+// workspace de loc (RF-RID-01). livingdoc es informativo y nunca falla por el patrón: si no es
 // accesible (bloque `sdd:` inválido o configuración ilegible) indexa con el patrón por
-// defecto y devuelve un aviso que nombra el error y la continuación (REQ-44.9).
+// defecto y devuelve un aviso que nombra el error y la continuación (RF-RID-08).
 func (s *Service) indexerFor(loc workspace.Location) (*Indexer, string) {
 	pattern, err := loc.Declarations.IDPattern()
 	if err != nil {
@@ -89,7 +89,7 @@ func projectNameOf(loc workspace.Location) string {
 }
 
 // Operaciones que escriben <planning home>/specs o <planning home>/INDEX.md, tal
-// como las nombra el rechazo de la guarda (REQ-30.21).
+// como las nombra el rechazo de la guarda (RF-TOP-12).
 const (
 	opSync      = "la sincronización del catálogo de especificaciones vivas (`axiom archive sync`)"
 	opColdStart = "la adopción orgánica (`axiom archive coldstart`)"
@@ -99,7 +99,7 @@ const (
 // Lee solo <planning home>/specs; si existe la ubicación antigua divergente
 // (Q14), la nombra en Warnings.
 //
-// Un `baseline:` residual (REQ-30.21) no oculta el catálogo: se lee `<planning
+// Un `baseline:` residual (RF-TOP-12) no oculta el catálogo: se lee `<planning
 // home>/specs` como siempre, porque leer no escribe, y se avisa de la causa y de
 // la migración.
 func (s *Service) GetCatalog(ctx context.Context) (*LivingCatalog, error) {
@@ -147,7 +147,7 @@ func (s *Service) GetSpecDetail(domain string) (*LivingSpecEntry, string, error)
 
 // Sync ejecuta el re-escaneo y regenera el archivo INDEX.md del planning home.
 // Con un `baseline:` residual se rechaza sin escribir nada con un
-// *workspace.BaselineRetiredError (REQ-30.21).
+// *workspace.BaselineRetiredError (RF-TOP-12).
 func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 	loc, err := s.resolve()
 	if err != nil {
@@ -172,7 +172,7 @@ func (s *Service) Sync(ctx context.Context) (*SyncReport, error) {
 
 // ColdStart ejecuta la adopción orgánica para un cambio y sincroniza el catálogo.
 // Con un `baseline:` residual se rechaza antes de escribir nada con un
-// *workspace.BaselineRetiredError (REQ-30.21).
+// *workspace.BaselineRetiredError (RF-TOP-12).
 func (s *Service) ColdStart(changeName, domain string) (*LivingSpecEntry, error) {
 	loc, err := s.resolve()
 	if err != nil {

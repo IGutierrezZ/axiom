@@ -7,7 +7,7 @@
 
 Definir cómo integra archive un cambio en la baseline declarada del proyecto: la composición determinista sobre documentos direccionables por requisito (patrón de encabezado, identidad por ID, plantilla de render, duplicados, frontera de bloque, fidelidad de bytes), la integración de documentos de prosa mediante edición dirigida con verificación nativa y traza por entrada, las precondiciones de la integración y la lectura de la baseline por las fases de planificación.
 
-El mecanismo de edición dirigida con verificación nativa y traza (REQ-24.50 a REQ-24.52) se especifica aquí una sola vez; la integración del delta de contexto técnico lo reutiliza (`sdd-archive-lifecycle`, REQ-24.55).
+El mecanismo de edición dirigida con verificación nativa y traza (REQ-24.50 a REQ-24.52) se especifica aquí una sola vez; la integración del delta de contexto técnico lo reutiliza (`sdd-archive-lifecycle`, RF-ARC-04).
 
 **Resultado esperado:** archive integra el cambio en los documentos declarados sin alterar un solo byte ajeno a los bloques editados, rechaza toda operación ambigua antes de escribir y deja una traza verificable por entrada.
 
@@ -23,7 +23,7 @@ El mecanismo de edición dirigida con verificación nativa y traza (REQ-24.50 a 
 | Texto integrado | Texto que archive escribe en los documentos del proyecto a partir del cambio: encabezados y cuerpos de los bloques de requisito, la nota de motivo que `--supersede` integra en un bloque conservado, las secciones del cambio en documentos de prosa y el texto de las entradas del delta de contexto. No incluye el texto preexistente de los documentos ni los ficheros del propio cambio. |
 | Entrada | Cada requisito de la delta spec de un dominio de prosa o cada entrada del delta de contexto. |
 | Traza de integración | Registro por entrada de lo que archive integró, en la carpeta del cambio y en el informe de archive. |
-| Comprobación previa | Operación de solo lectura (`axiom sdd integrate check`) que aplica a las delta specs del cambio las validaciones de contenido que archive aplica antes de escribir (REQ-24.46), sin escribir nada y sin las precondiciones de git (REQ-24.49) ni la autorización de rutas externas (REQ-24.37). |
+| Comprobación previa | Operación de solo lectura (`axiom sdd integrate check`) que aplica a las delta specs del cambio las validaciones de contenido que archive aplica antes de escribir (REQ-24.46), sin escribir nada y sin las precondiciones de git (REQ-24.49) ni la autorización de rutas externas (RF-CTX-12). |
 
 ## Ejemplo de traza (no normativo)
 
@@ -71,9 +71,9 @@ El mecanismo de edición dirigida con verificación nativa y traza (REQ-24.50 a 
 
 La composición generaliza la nativa de OpenSpec sin sustituirla: con perfil de requisito aplica identidad por ID y plantilla de render; sin perfil, conserva el comportamiento actual byte a byte. Los documentos de prosa se integran con edición dirigida y verificación nativa.
 
-### Requirement: Consulta de un Requisito Existente en la Baseline para el Bug sin Delta (REQ-29.14)
+### Requirement: Consulta de un Requisito Existente en la Baseline para el Bug sin Delta (RF-BAS-01)
 
-El motor DEBE poder resolver si un identificador de requisito existe en la baseline (`openspec/specs/`, la spec viva del proyecto) y, si existe, devolver sus escenarios. La resolución se hace por el identificador válido, según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`), que contiene el nombre del requisito (REQ-29.3 de `sdd-iso-evidence`), y un requisito cuyo nombre no contiene ese identificador no puede citarse (supuesto visible). La consulta es de solo lectura y NO DEBE modificar ningún documento. La usa el bug con requisito existente (REQ-29.5 de `sdd-iso-evidence`) para comprobar, en un cambio ISO, que el `Cubre:` apunta a un requisito existente y para conocer los escenarios que la matriz de verify debe cubrir (REQ-29.6). Un identificador que no existe se informa como tal, sin error de ejecución, y un requisito existente sin escenarios se informa como existente con una lista de escenarios vacía.
+El motor DEBE poder resolver si un identificador de requisito existe en la baseline (`openspec/specs/`, la spec viva del proyecto) y, si existe, devolver sus escenarios. La resolución se hace por el identificador válido, según el patrón declarado del proyecto (RF-RID-01 de `requirement-identifiers`), que contiene el nombre del requisito (RF-ISO-03 de `sdd-iso-evidence`), y un requisito cuyo nombre no contiene ese identificador no puede citarse (supuesto visible). La consulta es de solo lectura y NO DEBE modificar ningún documento. La usa el bug con requisito existente (RF-ISO-05 de `sdd-iso-evidence`) para comprobar, en un cambio ISO, que el `Cubre:` apunta a un requisito existente y para conocer los escenarios que la matriz de verify debe cubrir (RF-ISO-06). Un identificador que no existe se informa como tal, sin error de ejecución, y un requisito existente sin escenarios se informa como existente con una lista de escenarios vacía.
 (Previously: la resolución se hacía por la forma literal `REQ-<n>.<m>`; ahora es por el identificador válido según el patrón declarado del proyecto, que con el patrón por defecto coincide con `REQ-<n>.<m>`.)
 
 #### Scenario: Un identificador existente se resuelve con sus escenarios

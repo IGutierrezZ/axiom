@@ -22,7 +22,7 @@ import (
 var pushTimeout = 120 * time.Second
 
 // GitCLI es el adaptador del puerto Git sobre gitcommon.Run y gitcommon.RunWithTimeout, el
-// único punto que ejecuta git en el producto (REQ-27.11). No tiene estado: cada método ejecuta
+// único punto que ejecuta git en el producto (RF-PUB-07). No tiene estado: cada método ejecuta
 // git desde el directorio que recibe, que es siempre la raíz git del destino.
 type GitCLI struct{}
 

@@ -21,8 +21,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Las pruebas de `axiom archive context <check|prepare|verify|show>` (REQ-30.15 a
-// REQ-30.20, REQ-30.29, REQ-30.30). Todos los textos son inventados.
+// Las pruebas de `axiom archive context <check|prepare|verify|show>` (RF-CTX-13 a
+// RF-CTX-18, RF-CTX-19, RF-CTX-20). Todos los textos son inventados.
 
 const contextCLIChange = "inc-99-ejemplo"
 
@@ -45,7 +45,7 @@ technical_context:
       - referencia/
 `
 
-// contextCLIBaseline es un bloque `baseline:` residual (REQ-30.21): `archive
+// contextCLIBaseline es un bloque `baseline:` residual (RF-TOP-12): `archive
 // context` se niega ante él con el error tipado de su retirada.
 const contextCLIBaseline = `baseline:
   documents:
@@ -488,7 +488,7 @@ func TestArchiveContextShowWithoutATraceNamesPrepare(t *testing.T) {
 	}
 }
 
-// REQ-30.21: con un `baseline:` residual, `archive context` se niega sin escribir
+// RF-TOP-12: con un `baseline:` residual, `archive context` se niega sin escribir
 // con el error tipado de la retirada y la migración `axiom archive adopt`.
 func TestArchiveContextRefusesWhenABaselineIsRetired(t *testing.T) {
 	t.Parallel()
@@ -513,7 +513,7 @@ func TestArchiveContextRefusesWhenABaselineIsRetired(t *testing.T) {
 	}
 }
 
-// REQ-25.19 (guarda A): `prepare` y `verify` escriben `integration.yaml` y se
+// RF-BRA-20 (guarda A): `prepare` y `verify` escriben `integration.yaml` y se
 // consultan en el contexto `archive`: fuera de la rama de archivado se niegan con
 // `wrong_branch`, sin escribir, y con la continuación de `ensure`.
 func TestArchiveContextWritersRefuseOutsideTheArchiveBranch(t *testing.T) {

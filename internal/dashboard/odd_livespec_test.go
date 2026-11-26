@@ -7,7 +7,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/livespec"
 )
 
-// REQ-30.1: la sección `## Spec viva` NO DEBE alterar el listado ni el recuento de
+// RF-OLS-01: la sección `## Spec viva` NO DEBE alterar el listado ni el recuento de
 // casillas del documento ODD. El listado cuenta las casillas también dentro de vallas, y
 // por eso ParseFeatureDoc rechaza una casilla dentro de la delta.
 
@@ -61,7 +61,7 @@ func TestParseODDDocCountsCheckboxesInsideFencesSoTheDeltaMayNotHaveThem(t *test
 	}
 }
 
-// REQ-47.6 / D11: la sección `## Identificadores asignados` no tiene casillas ni altera el
+// RF-RID-14 / D11: la sección `## Identificadores asignados` no tiene casillas ni altera el
 // listado, y el documento sigue siendo válido para la spec viva.
 func TestParseODDDocIgnoresTheLiveSpecIDTraceSection(t *testing.T) {
 	t.Parallel()

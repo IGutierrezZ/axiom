@@ -10,7 +10,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El paquete `internal/multirole` provee la detección de roles en el diseño, la gobernanza de políticas de compuerta y la gestión del ciclo de tareas desacoplado.
 
-### Requirement: Declaración y Detección de Roles con Políticas de Compuerta en Design (REQ-1.1)
+### Requirement: Declaración y Detección de Roles con Políticas de Compuerta en Design (RF-FAN-01)
 
 El motor DEBE ser capaz de parsear el documento `design.md` del cambio activo y extraer la lista de roles asignados a la implementación, identificando:
 - Identificador del rol (`role`).
@@ -40,7 +40,7 @@ Si `design.md` no contiene una declaración explícita de roles, el motor DEBE o
 
 ---
 
-### Requirement: Desglose Desacoplado de Tareas por Rol (REQ-1.2)
+### Requirement: Desglose Desacoplado de Tareas por Rol (RF-FAN-02)
 
 El motor DEBE soportar la lectura y cómputo de progreso de tareas atomizadas por rol en archivos independientes con nomenclatura `tasks.<rol>.md` (ej. `tasks.backend.md`, `tasks.frontend.md`, `tasks.e2e.md`).
 
@@ -51,7 +51,7 @@ El motor DEBE soportar la lectura y cómputo de progreso de tareas atomizadas po
 
 ---
 
-### Requirement: Informes de Verificación Aislados por Rol (REQ-1.3)
+### Requirement: Informes de Verificación Aislados por Rol (RF-FAN-03)
 
 Cada rol participante DEBE emitir su informe de verificación independiente bajo la nomenclatura `verify-report.<rol>.md` (ej. `verify-report.backend.md`, `verify-report.frontend.md`).
 
@@ -66,7 +66,7 @@ Cada rol participante DEBE emitir su informe de verificación independiente bajo
 
 El evaluador de barrera garantiza la coherencia arquitectónica y funcional antes de autorizar el cierre del cambio en la fase `Archive` y la apertura de PRs.
 
-### Requirement: Evaluación de la Barrera de Sincronización con Gate Policy (REQ-2.1)
+### Requirement: Evaluación de la Barrera de Sincronización con Gate Policy (RF-FAN-04)
 
 El motor DEBE evaluar la barrera de sincronización (*Fan-In*) examinando el estado de todos los roles participantes declarados en el diseño:
 1. Para que la barrera sea superada (`Satisfied = true`), TODOS los roles con `gate_policy: blocking` DEBEN tener sus tareas al 100% completadas y su informe de verificación con veredicto `pass`.
@@ -94,7 +94,7 @@ El motor DEBE evaluar la barrera de sincronización (*Fan-In*) examinando el est
 
 ---
 
-### Requirement: Trazabilidad y Migración de Tareas Diferidas (REQ-2.2)
+### Requirement: Trazabilidad y Migración de Tareas Diferidas (RF-FAN-05)
 
 El motor DEBE ser capaz de extraer las tareas no concluidas de roles con política `deferred` al momento de archivar y formatearlas para su migración al incremento acumulativo continuo (`openspec/changes/e2e-cumulative/tasks.md`), preservando el vínculo de trazabilidad con el incremento de origen (`[Ref: <cambio>]`).
 
@@ -110,7 +110,7 @@ El motor DEBE ser capaz de extraer las tareas no concluidas de roles con políti
 
 La interfaz CLI de Axiom proporciona los comandos para inspeccionar, operar y consultar la ejecución de los roles concurrentes.
 
-### Requirement: Subcomando axiom role list (REQ-3.1)
+### Requirement: Subcomando axiom role list (RF-FAN-06)
 
 El comando `axiom role list [--change <nombre>]` DEBE listar en terminal los roles asignados a la implementación del cambio, indicando su política de compuerta (`gate_policy`) y sus repositorios asignados.
 
@@ -121,7 +121,7 @@ El comando `axiom role list [--change <nombre>]` DEBE listar en terminal los rol
 
 ---
 
-### Requirement: Subcomando axiom role status (REQ-3.2)
+### Requirement: Subcomando axiom role status (RF-FAN-07)
 
 El comando `axiom role status [--change <nombre>]` DEBE mostrar el resumen del avance de cada rol (`Tareas completadas / totales`, estado de `Apply` y veredicto de `Verify`).
 
@@ -132,7 +132,7 @@ El comando `axiom role status [--change <nombre>]` DEBE mostrar el resumen del a
 
 ---
 
-### Requirement: Subcomando axiom role barrier (REQ-3.3)
+### Requirement: Subcomando axiom role barrier (RF-FAN-08)
 
 El comando `axiom role barrier [--change <nombre>] [--migrate-deferred]` DEBE evaluar la barrera de sincronización en terminal y retornar el código de salida correspondiente (`0` si está superada, `1` si hay bloqueos en roles `blocking`), reportando advertencias para tareas diferidas.
 

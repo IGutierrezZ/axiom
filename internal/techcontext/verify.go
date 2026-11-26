@@ -54,7 +54,7 @@ type VerifyReport struct {
 }
 
 // Verify es la verificación nativa de la integración del contexto técnico
-// (REQ-24.51, REQ-24.57): determinista, sin modelo y con git de solo lectura.
+// (REQ-24.51, RF-ARC-06): determinista, sin modelo y con git de solo lectura.
 // Comprueba, contra el plan que fijó `prepare`:
 //
 //   - trace: `integration.yaml` existe, se decodifica de forma estricta, es un plan
@@ -435,7 +435,7 @@ func anyUnder(declared []string, target string) bool {
 // ficheros, pathidentity.Contains para directorios), nunca comparando cadenas. Un
 // fichero borrado fuera de la carpeta del cambio es siempre una violación, porque
 // archive nunca borra documentos. Hay errores explícitos para las rutas de
-// referencia y las rutas mantenidas con «Sin impacto» (REQ-24.57).
+// referencia y las rutas mantenidas con «Sin impacto» (RF-ARC-06).
 func (v *verifier) checkScope() {
 	sets := v.scopeSets()
 	verify := v.verifyCommand()
@@ -458,10 +458,10 @@ func (v *verifier) outOfScope(c *changedFile, file, verify string) string {
 	resolution := fmt.Sprintf("revierte o retira ese cambio y vuelve a ejecutar `%s`", verify)
 	switch v.scope.Classify(c.abs) {
 	case Reference:
-		return fmt.Sprintf("%s está bajo una ruta de referencia (modo reference): las rutas de referencia nunca se modifican (REQ-24.30). Continuación: %s", file, resolution)
+		return fmt.Sprintf("%s está bajo una ruta de referencia (modo reference): las rutas de referencia nunca se modifican (RF-CTX-05). Continuación: %s", file, resolution)
 	case Maintained:
 		if v.trace.Context.Decision == ContextNoImpact {
-			return fmt.Sprintf("%s está bajo una ruta mantenida y el delta de contexto declara «Sin impacto» (%s): la edición contradice la decisión registrada (REQ-24.57). Continuación: %s, o cambia la decisión en %s y vuelve a preparar con `%s`", file, v.trace.Context.Reason, resolution, DeltaFileName, v.prepare)
+			return fmt.Sprintf("%s está bajo una ruta mantenida y el delta de contexto declara «Sin impacto» (%s): la edición contradice la decisión registrada (RF-ARC-06). Continuación: %s, o cambia la decisión en %s y vuelve a preparar con `%s`", file, v.trace.Context.Reason, resolution, DeltaFileName, v.prepare)
 		}
 	}
 	return fmt.Sprintf("%s no pertenece al conjunto permitido de la integración (los documentos nombrados en el delta de contexto, la carpeta del cambio y las specs de los dominios del cambio e INDEX.md). Continuación: %s", file, resolution)

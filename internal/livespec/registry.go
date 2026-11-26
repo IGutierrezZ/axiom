@@ -42,7 +42,7 @@ func (r IDRef) Where() string {
 
 // RegistryOptions acota el registro: ExcludeChange deja fuera la delta de un cambio (el
 // propio de `adopt check`) y SpecsOnly indexa solo openspec/specs/. Pattern es el patrón de
-// identificadores del proyecto (REQ-44.1); el valor cero es el patrón por defecto.
+// identificadores del proyecto (RF-RID-01); el valor cero es el patrón por defecto.
 type RegistryOptions struct {
 	ExcludeChange string
 	SpecsOnly     bool

@@ -19,7 +19,7 @@ func gateAnswers(result SDDGovernanceGateResult) []string {
 	return answers
 }
 
-// REQ-26.1 / REQ-26.2: a planning gate offers iterate, approve-push-and-stop
+// RF-GAT-07 / RF-GAT-08: a planning gate offers iterate, approve-push-and-stop
 // and approve-and-continue, in that order, as one verb with shared selectors.
 func TestGateQuestionOffersThreeExitsInOrder(t *testing.T) {
 	t.Parallel()
@@ -56,7 +56,7 @@ func TestGateQuestionOffersThreeExitsInOrder(t *testing.T) {
 	}
 }
 
-// REQ-26.6: a store without files keeps iterate and continue and says why the
+// RF-GAT-12: a store without files keeps iterate and continue and says why the
 // third exit is missing.
 func TestGateQuestionWithoutFilesDeclaresHandOffUnavailable(t *testing.T) {
 	t.Parallel()
@@ -82,7 +82,7 @@ func TestGateQuestionWithoutFilesDeclaresHandOffUnavailable(t *testing.T) {
 	}
 }
 
-// REQ-26.2: integration keeps its two-way choice whatever the store.
+// RF-GAT-08: integration keeps its two-way choice whatever the store.
 func TestGateQuestionIntegrationKeepsItsTwoChoices(t *testing.T) {
 	t.Parallel()
 	for _, store := range []ArtifactStore{ArtifactStoreOpenSpec, ArtifactStoreHybrid, ArtifactStoreNone} {
@@ -159,7 +159,7 @@ func TestGateQuestionValidateAcceptsTwoExitsWithHandOffUnavailable(t *testing.T)
 	}
 }
 
-// REQ-26.2 (second scenario) and design R-4: widening the shared validator
+// RF-GAT-08 (second scenario) and design R-4: widening the shared validator
 // must never let the edit-authority envelope grow a third choice.
 func TestEditAuthorityConsentStillRejectsThreeChoices(t *testing.T) {
 	t.Parallel()
@@ -221,7 +221,7 @@ func TestResolveGateQuestionCarriesTheThreeExits(t *testing.T) {
 	}
 }
 
-// --- REQ-26.7: the hand-off is visible in `status` and never changes the route.
+// --- RF-GAT-13: the hand-off is visible in `status` and never changes the route.
 
 func approveSpecGate(t *testing.T, changeRoot string, handedOff ...bool) {
 	t.Helper()
@@ -314,7 +314,7 @@ func TestStatusProjectsNoHandOffForExits1And3(t *testing.T) {
 	}
 }
 
-// REQ-26.7 (last scenario): the mark is the one of the FIRST approved record.
+// RF-GAT-13 (last scenario): the mark is the one of the FIRST approved record.
 func TestStatusHandOffMarkIsTheOneOfTheRecordThatClosedTheGate(t *testing.T) {
 	t.Parallel()
 	_, withMarkFirst := handedOffFixture(t, true, false)

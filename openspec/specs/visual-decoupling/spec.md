@@ -10,7 +10,7 @@ Definir de forma exhaustiva y verificable los requerimientos y escenarios de pru
 
 Alineación de nombres de archivos de configuración e instrucciones hacia el estándar de Axiom.
 
-### Requirement: Rutas de instrucciones con nomenclatura Axiom (REQ-09.4)
+### Requirement: Rutas de instrucciones con nomenclatura Axiom (RF-VIS-01)
 Los adaptadores de agentes DEBEN utilizar rutas y nombres de archivos que contengan el prefijo o identificador `axiom` en lugar de `gentle-ai`.
 (Previously: también fijaba la ruta del steering de Kiro IDE, `~/.kiro/steering/axiom.md`, agente retirado por C-08-d.)
 

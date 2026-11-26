@@ -27,7 +27,7 @@ func wantValidateContinuation(t *testing.T, err error, wants ...string) {
 	}
 }
 
-// REQ-44.9: con el patrón inaccesible `archive integrate` se niega sin escribir y con la
+// RF-RID-08: con el patrón inaccesible `archive integrate` se niega sin escribir y con la
 // continuación `axiom workspace validate --path <proyecto>`; un `sdd.iso` roto también.
 func TestArchiveIntegrateRefusesAnInaccessiblePattern(t *testing.T) {
 	for name, block := range map[string]string{
@@ -49,7 +49,7 @@ func TestArchiveIntegrateRefusesAnInaccessiblePattern(t *testing.T) {
 	}
 }
 
-// REQ-44.7 y REQ-30.4: un proyecto con `RF-<DOM>-<NN>` integra un ADDED con su identificador y
+// RF-RID-07 y RF-OLS-04: un proyecto con `RF-<DOM>-<NN>` integra un ADDED con su identificador y
 // rechaza uno con el formato por defecto.
 func TestArchiveIntegrateUsesTheDeclaredPattern(t *testing.T) {
 	f := newODDFixture(t, true)
@@ -74,7 +74,7 @@ func TestArchiveIntegrateUsesTheDeclaredPattern(t *testing.T) {
 	}
 }
 
-// REQ-44.9: `sdd-archive-compose` se niega sin escribir con el patrón inaccesible.
+// RF-RID-08: `sdd-archive-compose` se niega sin escribir con el patrón inaccesible.
 func TestSDDArchiveComposeRefusesAnInaccessiblePatternWithoutWriting(t *testing.T) {
 	root := t.TempDir()
 	writeSDDAxiomYAML(t, root, "sdd:\n  id_pattern: \"<m><m>\"\n")
@@ -95,7 +95,7 @@ func TestSDDArchiveComposeRefusesAnInaccessiblePatternWithoutWriting(t *testing.
 	}
 }
 
-// REQ-30.22 y REQ-44.2: con workspace, el compositor usa el patrón del workspace de `--cwd` o
+// RF-ARC-11 y RF-RID-02: con workspace, el compositor usa el patrón del workspace de `--cwd` o
 // del que contiene la delta; sin workspace usa el defecto.
 func TestSDDArchiveComposeUsesTheWorkspacePattern(t *testing.T) {
 	root := t.TempDir()
@@ -131,7 +131,7 @@ func TestSDDArchiveComposeUsesTheWorkspacePattern(t *testing.T) {
 	}
 }
 
-// REQ-30.9, REQ-30.11 y REQ-44.4: la ayuda de `archive adopt` describe el patrón declarado, la
+// RF-ADP-01, RF-ADP-03 y RF-RID-04: la ayuda de `archive adopt` describe el patrón declarado, la
 // conservación del ID del cliente y la propuesta del escaneo, sin literal de forma fijo.
 func TestArchiveAdoptHelpDescribesTheDeclaredPattern(t *testing.T) {
 	var out bytes.Buffer

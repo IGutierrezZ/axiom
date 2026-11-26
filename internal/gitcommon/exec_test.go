@@ -250,7 +250,7 @@ func TestRunBoundsTheRunningTimeAndTheOutput(t *testing.T) {
 	})
 }
 
-// REQ-25.1, G-7: el observador recibe cada invocación, con el directorio y los
+// RF-BRA-01, G-7: el observador recibe cada invocación, con el directorio y los
 // argumentos, y es nulo en producción.
 func TestObserveReceivesEveryInvocation(t *testing.T) {
 	requireGit(t)
@@ -325,7 +325,7 @@ func TestObserveCannotChangeTheArguments(t *testing.T) {
 	}
 }
 
-// REQ-25.6 y REQ-25.14: la raíz de trabajo y el git common dir salen de git, en un
+// RF-BRA-06 y RF-BRA-15: la raíz de trabajo y el git common dir salen de git, en un
 // clon normal y en un worktree enlazado.
 func TestTopLevelAndCommonDirInAnOrdinaryCloneAndALinkedWorktree(t *testing.T) {
 	requireGit(t)
@@ -365,7 +365,7 @@ func TestTopLevelAndCommonDirInAnOrdinaryCloneAndALinkedWorktree(t *testing.T) {
 }
 
 // El git common dir no se supone `.git`: con un git dir enlazado (`.git` fichero
-// hacia otro directorio) es el que git devuelve (REQ-25.14).
+// hacia otro directorio) es el que git devuelve (RF-BRA-15).
 func TestCommonDirDoesNotAssumeDotGit(t *testing.T) {
 	requireGit(t)
 	ctx := context.Background()

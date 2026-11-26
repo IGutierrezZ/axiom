@@ -53,7 +53,7 @@ func validGovernanceGateResult() SDDGovernanceGateResult {
 }
 
 // validIntegrationGateResult is the well-formed envelope for the integration
-// gate, which keeps its two-way [approved, rejected] choice (REQ-26.2).
+// gate, which keeps its two-way [approved, rejected] choice (RF-GAT-08).
 func validIntegrationGateResult() SDDGovernanceGateResult {
 	result := validGovernanceGateResult()
 	result.Gate = string(kickoff.GateIntegration)
@@ -106,7 +106,7 @@ func TestSDDGovernanceGateResultValidateRejectsUnknownSchema(t *testing.T) {
 }
 
 // TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedRejected
-// is task 12.1's second required case, extended by REQ-26.2: a planning gate
+// is task 12.1's second required case, extended by RF-GAT-08: a planning gate
 // carries exactly "rejected", "hand_off", "approved", in that order.
 func TestSDDGovernanceGateResultValidateRejectsChoiceSetsOtherThanApprovedRejected(t *testing.T) {
 	t.Parallel()
@@ -472,7 +472,7 @@ func gateStateOf(t *testing.T, status Status, key kickoff.GateKey) kickoff.GateS
 	return kickoff.GateState{}
 }
 
-// REQ-29.15 y D20: la compuerta `spec` de un bug sin delta juzga proposal.md: se
+// RF-CLI-10 y D20: la compuerta `spec` de un bug sin delta juzga proposal.md: se
 // abre, un rechazo guarda la huella de proposal.md y se reabre al cambiar ese
 // fichero. Con delta, la compuerta juzga las specs como hasta ahora.
 func TestGovernanceSpecGateBugWithoutDelta(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// Destino de la publicación de los documentos de un cambio (REQ-27.7, DD-07). El dominio solo
+// Destino de la publicación de los documentos de un cambio (RF-PUB-03, DD-07). El dominio solo
 // calcula y describe: `Engine.PublicationTarget` es una lectura (sin cerrojo, sin registro y sin
 // `fetch`) y nunca ejecuta `commit` ni `push`; quien publica es `axiom sdd publish`, en su propio
-// paquete (REQ-27.11, REQ-25.1).
+// paquete (RF-PUB-07, RF-BRA-01).
 
 // PublicationRequest es lo que `Engine.PublicationTarget` necesita de la puerta o de `publish`.
 type PublicationRequest struct {
@@ -85,7 +85,7 @@ func PublicationWrongBranch(change, master string, repo RepoPlan, current string
 	}
 }
 
-// DocPaths compone la lista cerrada de documentación del cambio (REQ-27.5) en el repositorio del
+// DocPaths compone la lista cerrada de documentación del cambio (RF-PUB-01) en el repositorio del
 // destino: desempaqueta `technical_context` de las declaraciones de axiom.yaml, cuyas rutas son
 // relativas al workspaceRoot, y delega en `docpaths.FromWorkspace`. Es el único punto de
 // composición, compartido por `axiom sdd publish` y por el estado de publicación del status.
@@ -114,7 +114,7 @@ const PublicationMaxUnpushed = 500
 
 // PublicationState son los hechos, de solo lectura y sin red, que dicen si hay algo que
 // `axiom sdd publish` haría ahora: documentación sin confirmar o commits sin subir. Lo calcula
-// `Engine.PublicationState` con las mismas reglas que `publish` (REQ-27.5 y REQ-27.8): la lista
+// `Engine.PublicationState` con las mismas reglas que `publish` (RF-PUB-01 y RF-PUB-04): la lista
 // cerrada de rutas y el mismo rango de exclusiones. No decide qué hacer con ellos: eso es del status.
 type PublicationState struct {
 	Target        PublicationTarget
@@ -122,7 +122,7 @@ type PublicationState struct {
 	RangeUnknown  bool     // ni origin/<integración> ni la rama de integración local
 	RemoteBranch  bool     // existe refs/remotes/origin/<Branch>
 	DirtyDocs     []string // documentación sin confirmar, sin estado local, ordenada
-	Unpushed      int      // commits de HEAD fuera de las exclusiones de REQ-27.8
+	Unpushed      int      // commits de HEAD fuera de las exclusiones de RF-PUB-04
 	CodeCommits   []string // SHA cortos (7) de los commits sin subir que tocan código, del más antiguo al más reciente
 	RangeTooBig   bool     // Unpushed > PublicationMaxUnpushed
 }

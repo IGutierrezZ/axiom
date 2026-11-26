@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// `axiom branch scope` (C-02-b, REQ-25.51 a REQ-25.54): el alcance del cambio por repositorio, solo
+// `axiom branch scope` (C-02-b, RF-BRA-35 a RF-BRA-38): el alcance del cambio por repositorio, solo
 // con lecturas de git local. Con git real, entorno aislado y sin red.
 
 func scopeOf(t *testing.T, cwd, change string) branch.ScopeResult {
@@ -103,7 +103,7 @@ func wantNoRemoteOrWrite(t *testing.T, seen [][]string) {
 	}
 }
 
-// REQ-25.51 y D3: sin kickoff ni documento ODD el cambio no está sellado.
+// RF-BRA-35 y D3: sin kickoff ni documento ODD el cambio no está sellado.
 func TestScopeRefusesAChangeWithoutKickoff(t *testing.T) {
 	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
@@ -116,7 +116,7 @@ func TestScopeRefusesAChangeWithoutKickoff(t *testing.T) {
 	}
 }
 
-// REQ-25.51: un cambio del carril ODD (con su documento y sin kickoff) y un kickoff sin bloque
+// RF-BRA-35: un cambio del carril ODD (con su documento y sin kickoff) y un kickoff sin bloque
 // `git:` no son aplicables.
 func TestScopeIsNotApplicableToAnOddChangeNorToAKickoffWithoutASnapshot(t *testing.T) {
 	t.Parallel()
@@ -141,7 +141,7 @@ func TestScopeIsNotApplicableToAnOddChangeNorToAKickoffWithoutASnapshot(t *testi
 	})
 }
 
-// REQ-25.2: un kickoff ilegible es `config_invalid`, no «sin sellar».
+// RF-BRA-02: un kickoff ilegible es `config_invalid`, no «sin sellar».
 func TestScopeRefusesAnUnreadableKickoffWithConfigInvalid(t *testing.T) {
 	t.Parallel()
 	repo := newProject(t, configWithRoles(map[string][]string{"fullstack": {"."}}, ""))
@@ -150,7 +150,7 @@ func TestScopeRefusesAnUnreadableKickoffWithConfigInvalid(t *testing.T) {
 	wantScopeRefusal(t, scopeOf(t, repo, "x"), branch.CodeConfigInvalid)
 }
 
-// REQ-25.51: un nombre de cambio inválido y un directorio inexistente se rechazan antes de leer.
+// RF-BRA-35: un nombre de cambio inválido y un directorio inexistente se rechazan antes de leer.
 func TestScopeRefusesAnInvalidChangeNameAndAMissingDirectory(t *testing.T) {
 	t.Parallel()
 	repo := scopeProject(t, "")
@@ -159,7 +159,7 @@ func TestScopeRefusesAnInvalidChangeNameAndAMissingDirectory(t *testing.T) {
 	wantScopeRefusal(t, scopeOf(t, filepath.Join(repo, "no-existe"), "x"), branch.CodeNotAGitRepository)
 }
 
-// REQ-25.51: el repositorio de specs in situ de un multirepo es `exempt`, sin ninguna lectura del
+// RF-BRA-35: el repositorio de specs in situ de un multirepo es `exempt`, sin ninguna lectura del
 // alcance; con solo ese repositorio en la instantánea, la oferta es `nothing_to_verify` y la salida, 0.
 func TestScopeExemptsTheSpecsRepositoryAndOffersNothingToVerifyWhenItIsTheOnlyOne(t *testing.T) {
 	master, specs := newMultirepo(t, map[string][]string{"docs": {"repo-specs"}})
@@ -184,7 +184,7 @@ func TestScopeExemptsTheSpecsRepositoryAndOffersNothingToVerifyWhenItIsTheOnlyOn
 	wantNoRemoteOrWrite(t, *seen)
 }
 
-// REQ-25.53, escenario «Rama borrada o ausente»: sin la rama en local ni como `origin/<rama>`, la
+// RF-BRA-37, escenario «Rama borrada o ausente»: sin la rama en local ni como `origin/<rama>`, la
 // entrada es `unverifiable` con `branch_missing`, el mensaje de la spec y la continuación `fetch`
 // citada, que nunca se ejecuta; el resto de repositorios se calcula.
 func TestScopeDeclaresABranchThatIsGoneUnverifiableWithoutFetching(t *testing.T) {
@@ -223,7 +223,7 @@ func TestScopeDeclaresABranchThatIsGoneUnverifiableWithoutFetching(t *testing.T)
 	wantNoRemoteOrWrite(t, *seen)
 }
 
-// REQ-25.53, escenario «Rama solo como referencia remota ya descargada»: se usa `origin/<rama>` y
+// RF-BRA-37, escenario «Rama solo como referencia remota ya descargada»: se usa `origin/<rama>` y
 // la entrada lo declara.
 func TestScopeUsesTheDownloadedRemoteTrackingBranchAndSaysSo(t *testing.T) {
 	t.Parallel()
@@ -246,7 +246,7 @@ func TestScopeUsesTheDownloadedRemoteTrackingBranchAndSaysSo(t *testing.T) {
 	}
 }
 
-// REQ-25.53, escenario «Base o integración ausentes»: la entrada es `unverifiable` con
+// RF-BRA-37, escenario «Base o integración ausentes»: la entrada es `unverifiable` con
 // `base_missing`, `details.missingRef` y la continuación `fetch`, sin ejecutarlo.
 func TestScopeDeclaresAMissingBaseOrIntegrationUnverifiable(t *testing.T) {
 	t.Run("integración ausente", func(t *testing.T) {
@@ -284,7 +284,7 @@ func TestScopeDeclaresAMissingBaseOrIntegrationUnverifiable(t *testing.T) {
 	})
 }
 
-// P1 (REQ-25.53): un repositorio declarado que no existe en esta máquina no se omite: es
+// P1 (RF-BRA-37): un repositorio declarado que no existe en esta máquina no se omite: es
 // `unverifiable` con `branch_missing`, `details.path` y la ruta en el mensaje.
 func TestScopeDeclaresARepositoryThatIsNotOnThisMachineUnverifiable(t *testing.T) {
 	t.Parallel()
@@ -313,7 +313,7 @@ func TestScopeDeclaresARepositoryThatIsNotOnThisMachineUnverifiable(t *testing.T
 	}
 }
 
-// REQ-25.2: una `--cwd` relativa se resuelve a absoluta y toda ruta del resultado lo es.
+// RF-BRA-02: una `--cwd` relativa se resuelve a absoluta y toda ruta del resultado lo es.
 func TestScopeResolvesARelativeCwdToAbsolutePaths(t *testing.T) {
 	repo := scopeProject(t, "")
 	runGit(t, repo, "branch", "feat/x", "main")
@@ -397,7 +397,7 @@ func releaseWithForeignCommit(t *testing.T) (repo, fork string, own []string, fo
 	return repo, fork, own, foreign
 }
 
-// REQ-25.52, escenario «Commit ajeno en develop, modo release, rama sin fusionar», y REQ-25.51,
+// RF-BRA-36, escenario «Commit ajeno en develop, modo release, rama sin fusionar», y RF-BRA-35,
 // escenario «La orden no cambia nada»: el rango y los ficheros son solo los de la rama, sin `F`, sin
 // `otro.go` y sin la carpeta del cambio; scope no lanza nada remoto ni cambia referencias, índice ni
 // worktrees, con cambios con y sin stage y un fichero sin seguimiento que no entran en `files`.
@@ -435,7 +435,7 @@ func TestScopeReleaseBeforeTheMergeListsOnlyTheOwnCommitsAndChangesNothing(t *te
 	}
 }
 
-// REQ-25.52, escenario «Modo release, rama ya fusionada, mismo alcance» y REQ-25.54: tras fusionar
+// RF-BRA-36, escenario «Modo release, rama ya fusionada, mismo alcance» y RF-BRA-38: tras fusionar
 // con un commit de fusión (o con un squash) el alcance es el mismo, sin `F`, y la rama figura
 // fusionada.
 func TestScopeReleaseAfterTheMergeKeepsTheSameScope(t *testing.T) {
@@ -479,7 +479,7 @@ func TestScopeReleaseAfterTheMergeKeepsTheSameScope(t *testing.T) {
 	}
 }
 
-// REQ-25.52: los commits ajenos que llegan a la rama por una fusión de la integración se excluyen
+// RF-BRA-36: los commits ajenos que llegan a la rama por una fusión de la integración se excluyen
 // del rango, de los commits y de los ficheros, y se listan como excluidos.
 func TestScopeReleaseExcludesTheForeignCommitsMergedIntoTheBranch(t *testing.T) {
 	repo, _, own, foreign := releaseWithForeignCommit(t)
@@ -508,7 +508,7 @@ func TestScopeReleaseExcludesTheForeignCommitsMergedIntoTheBranch(t *testing.T) 
 	}
 }
 
-// REQ-25.52: si el punto de bifurcación no puede determinarse (historias sin relación), la entrada
+// RF-BRA-36: si el punto de bifurcación no puede determinarse (historias sin relación), la entrada
 // es `unverifiable` con `fork_point_undetermined` y no presenta un rango vacío como válido.
 func TestScopeReleaseWithUnrelatedHistoriesIsForkPointUndetermined(t *testing.T) {
 	repo := scopeProject(t, "")
@@ -527,7 +527,7 @@ func TestScopeReleaseWithUnrelatedHistoriesIsForkPointUndetermined(t *testing.T)
 	}
 }
 
-// REQ-25.53: un commit propio vacío (o de fusión, sin ficheros) cuenta como commit propio: la entrada
+// RF-BRA-37: un commit propio vacío (o de fusión, sin ficheros) cuenta como commit propio: la entrada
 // se decide por los commits, no por la lista de ficheros. Solo es `empty` cuando todos los commits
 // propios tocan únicamente la carpeta del cambio.
 func TestScopeReleaseDecidesTheOutcomeByOwnCommitsAndNotByFiles(t *testing.T) {
@@ -581,7 +581,7 @@ func twoStageScope(t *testing.T) (repo string, own []string, foreign string) {
 	return repo, own, foreign
 }
 
-// REQ-25.52 y REQ-25.54, modo `branch`: la rama fusionada en `develop` se mide frente a `master`
+// RF-BRA-36 y RF-BRA-38, modo `branch`: la rama fusionada en `develop` se mide frente a `master`
 // (solo sus commits propios) y figura fusionada en la integración, no en la rama principal.
 func TestScopeBranchMergedIntoTheIntegrationHasOnlyTheOwnCommits(t *testing.T) {
 	repo, own, foreign := twoStageScope(t)
@@ -606,7 +606,7 @@ func TestScopeBranchMergedIntoTheIntegrationHasOnlyTheOwnCommits(t *testing.T) {
 	}
 }
 
-// REQ-25.52, modo `branch`: con `develop` fusionada dentro de la rama, los commits de `develop` se
+// RF-BRA-36, modo `branch`: con `develop` fusionada dentro de la rama, los commits de `develop` se
 // excluyen del alcance y se listan como excluidos.
 func TestScopeBranchExcludesTheIntegrationCommitsMergedIntoTheBranch(t *testing.T) {
 	repo, own, foreign := twoStageScope(t)
@@ -631,7 +631,7 @@ func TestScopeBranchExcludesTheIntegrationCommitsMergedIntoTheBranch(t *testing.
 	}
 }
 
-// REQ-25.52, escenario «Commits ajenos no distinguibles se avisan»: si `develop` entra en la rama por
+// RF-BRA-36, escenario «Commits ajenos no distinguibles se avisan»: si `develop` entra en la rama por
 // avance rápido, sus commits no se distinguen de los propios: el alcance es el rango disponible y la
 // entrada lleva `foreign_commits_possible`.
 func TestScopeBranchWarnsWhenTheIntegrationEntersTheBranchByFastForward(t *testing.T) {
@@ -654,7 +654,7 @@ func TestScopeBranchWarnsWhenTheIntegrationEntersTheBranchByFastForward(t *testi
 	}
 }
 
-// REQ-25.52: la rama que entra en `develop` por avance rápido no tiene ajenos que no se distingan:
+// RF-BRA-36: la rama que entra en `develop` por avance rápido no tiene ajenos que no se distingan:
 // `develop` apunta a la punta de la rama y no hay aviso.
 func TestScopeBranchFastForwardedIntoTheIntegrationDoesNotWarn(t *testing.T) {
 	repo, _, _ := twoStageProject(t, "")
@@ -677,7 +677,7 @@ func TestScopeBranchFastForwardedIntoTheIntegrationDoesNotWarn(t *testing.T) {
 	}
 }
 
-// REQ-25.53, escenario «Rama sin commits propios», modo `branch`: una rama recién creada desde
+// RF-BRA-37, escenario «Rama sin commits propios», modo `branch`: una rama recién creada desde
 // `master` es `empty`.
 func TestScopeBranchWithoutOwnCommitsIsEmpty(t *testing.T) {
 	repo, _, _ := twoStageProject(t, "")
@@ -711,7 +711,7 @@ func fastForwarded(t *testing.T) (repo, fork string, own []string) {
 	return repo, fork, own
 }
 
-// REQ-25.52, escenario «Modo release, rama ya fusionada, mismo alcance» con avance rápido: la rama
+// RF-BRA-36, escenario «Modo release, rama ya fusionada, mismo alcance» con avance rápido: la rama
 // local fusionada por avance rápido se resuelve con el reflog de su creación, que es el punto de
 // partida estable.
 func TestScopeFastForwardOfALocalBranchStartsAtItsCreationInTheReflog(t *testing.T) {
@@ -732,7 +732,7 @@ func TestScopeFastForwardOfALocalBranchStartsAtItsCreationInTheReflog(t *testing
 	wantNoRemoteOrWrite(t, *seen)
 }
 
-// REQ-25.53: una rama local recién creada, sin commits, es `empty` y no `fork_point_undetermined`: el
+// RF-BRA-37: una rama local recién creada, sin commits, es `empty` y no `fork_point_undetermined`: el
 // reflog dice que la rama se creó en su propia punta.
 func TestScopeFastForwardOfANewlyCreatedBranchIsEmpty(t *testing.T) {
 	t.Parallel()
@@ -751,8 +751,8 @@ func TestScopeFastForwardOfANewlyCreatedBranchIsEmpty(t *testing.T) {
 	}
 }
 
-// REQ-25.52, escenario «Modo release, punto de bifurcación no determinable»: sin reflog de creación
-// válido (rama solo remota, o adoptada de `origin/<rama>`, REQ-27.15) y fusionada por avance rápido,
+// RF-BRA-36, escenario «Modo release, punto de bifurcación no determinable»: sin reflog de creación
+// válido (rama solo remota, o adoptada de `origin/<rama>`, RF-BRA-27) y fusionada por avance rápido,
 // la entrada es `unverifiable` con `fork_point_undetermined` y no presenta un rango vacío.
 func TestScopeFastForwardWithoutAValidCreationIsForkPointUndetermined(t *testing.T) {
 	t.Run("rama solo remota", func(t *testing.T) {
@@ -790,7 +790,7 @@ func TestScopeFastForwardWithoutAValidCreationIsForkPointUndetermined(t *testing
 	})
 }
 
-// E4 (REQ-25.51, REQ-25.53, REQ-25.54) en un multirepo con `api`, `web` y el repositorio de specs in
+// E4 (RF-BRA-35, RF-BRA-37, RF-BRA-38) en un multirepo con `api`, `web` y el repositorio de specs in
 // situ: `api` fusionada es `ok`; `web` sin rama es `branch_missing` sin ejecutar `fetch`; specs es
 // `exempt`; y la oferta es `unverifiable`.
 func TestScopeMultirepoCombinesMergedMissingAndExemptRepositories(t *testing.T) {

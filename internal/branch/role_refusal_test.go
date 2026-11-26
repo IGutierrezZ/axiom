@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// REQ-43.24: cada rechazo de `--role` lleva su código tipado, nombra lo que pasó y no sugiere
+// RF-BRA-33: cada rechazo de `--role` lleva su código tipado, nombra lo que pasó y no sugiere
 // nada que cree ramas.
 func TestRoleRefusals(t *testing.T) {
 	tests := []struct {

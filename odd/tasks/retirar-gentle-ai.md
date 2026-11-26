@@ -184,10 +184,10 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
   - `## Spec viva` con el delta de las specs que fijan nombres o compatibilidad gentle-ai.
   - `axiom archive integrate --odd retirar-gentle-ai` en el commit que cierra.
   - Evidencia (commit «docs: documentación y specs vivas sin los nombres gentle-ai»; ruta delegada, motivo: protección de contexto del orquestador; escritor único):
-    - `axiom archive integrate --odd retirar-gentle-ai`: «Impacto en la spec: delta»; compuestas `axiom-distribution-identity`, `axiom-user-state-and-env`, `engram-protocol-injection`, `sdd-preflight-configuration` y `sdd-research`; escrito `openspec/specs/*` de esas cinco e `openspec/INDEX.md` (534 requisitos, 2153 escenarios). REQ-12.3 se retira y lo sustituye REQ-12.4 (el compositor aplica MODIFIED antes que RENAMED); REQ-20.17 nuevo (procedencia, firma y CI de release).
+    - `axiom archive integrate --odd retirar-gentle-ai`: «Impacto en la spec: delta»; compuestas `axiom-distribution-identity`, `axiom-user-state-and-env`, `engram-protocol-injection`, `sdd-preflight-configuration` y `sdd-research`; escrito `openspec/specs/*` de esas cinco e `openspec/INDEX.md` (534 requisitos, 2153 escenarios). REQ-12.3 se retira y lo sustituye RF-UST-05 (el compositor aplica MODIFIED antes que RENAMED); RF-DIS-10 nuevo (procedencia, firma y CI de release).
     - `go build ./...`: correcto. `go test -count=1 ./internal/livespec ./internal/openspecdoc ./internal/reqid`: ok.
     - Docs: `README.md`, `PRD-AGENT-BUILDER.md`, `docs/{agents,components,docker-e2e-testing,opencode-profiles,pi,platforms,prd-opencode-profiles,release-signing,rollback,testing-agents-deterministically,usage}.md` y `docs/assets/diagrams/deterministic.svg`.
-    - Restos justificados: atribución y fork (`README`, `AGENTS`, `GEMINI`, `openspec/config.yaml`, `docs/architecture`, `docs/consulting`, `TRADEMARKS`, `CONTRIBUTORS`); `PRD.md` (PRD original del upstream, histórico); backlog (`docs/plan/backlog-2026-11`, análisis histórico del upstream); `docs/telemetry.md` (fichero del upstream que Axiom no lee); rutas del paquete externo gentle-pi (`.pi/gentle-ai/models.json`, `support/`, `GENTLE_PI_CONFIG_HOME`); migración vigente (`~/.gentle-ai` en `usage`, `rollback`, `agents`, retirada de `gentle-ai.mdc`/`.md`/`.instructions.md`); guarda de `ci.yml`; `discord-notifications.yml` (desactivado, heredado); specs de historia o negativas (`axiom-tui-branding`, `visual-decoupling`, `tui-spanish-localization`, REQ-20.11, REQ-46.2, REQ-46.4, REQ-11.4, REQ-13.4, REQ-22.3, `change-branch-lifecycle`, `organic-agent-trigger-rules`, y el Propósito de `engram-protocol-injection`, que un delta no puede cambiar).
+    - Restos justificados: atribución y fork (`README`, `AGENTS`, `GEMINI`, `openspec/config.yaml`, `docs/architecture`, `docs/consulting`, `TRADEMARKS`, `CONTRIBUTORS`); `PRD.md` (PRD original del upstream, histórico); backlog (`docs/plan/backlog-2026-11`, análisis histórico del upstream); `docs/telemetry.md` (fichero del upstream que Axiom no lee); rutas del paquete externo gentle-pi (`.pi/gentle-ai/models.json`, `support/`, `GENTLE_PI_CONFIG_HOME`); migración vigente (`~/.gentle-ai` en `usage`, `rollback`, `agents`, retirada de `gentle-ai.mdc`/`.md`/`.instructions.md`); guarda de `ci.yml`; `discord-notifications.yml` (desactivado, heredado); specs de historia o negativas (`axiom-tui-branding`, `visual-decoupling`, `tui-spanish-localization`, RF-DIS-05, RF-DIS-09, RF-ORQ-26, RF-MRK-04, RF-CLI-04, RF-UPD-03, `change-branch-lifecycle`, `organic-agent-trigger-rules`, y el Propósito de `engram-protocol-injection`, que un delta no puede cambiar).
 
 ## Spec viva
 
@@ -196,7 +196,7 @@ Ruta común: un escritor delegado por tarea, de uno en uno, para proteger el con
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Taxonomía de interoperabilidad vs. identidad (REQ-20.7)
+### Requirement: Taxonomía de interoperabilidad vs. identidad (RF-DIS-01)
 
 El sistema DEBE clasificar cada superficie de nombre publicado en exactamente una de dos categorías: interoperabilidad (contrato de cable consumido por otro software, cuyo renombrado rompe a consumidores) o identidad (superficie leída por una persona, renombrable sin romper ningún contrato). El namespace de protocolo bajo `contracts/**` y los marcadores de contenido gestionado que un componente Go analiza de forma literal DEBEN clasificarse como interoperabilidad. El instalador, el tap de Homebrew, las compuertas de release, el nombre de binario citado en la documentación y los nombres de servicio de despliegue DEBEN clasificarse como identidad.
 (Previously: el escenario usaba el esquema `contracts/review-integration/v2/schemas/status.schema.json`, que se retira con RDD (C-01-e); se sustituye por el esquema de consentimiento de `contracts/sdd-integration`, que permanece.)
@@ -208,7 +208,7 @@ El sistema DEBE clasificar cada superficie de nombre publicado en exactamente un
 - **Y** ninguna tanda de identidad la modifica
 (Previously: el escenario citaba el `$id` `https://gentle-ai.dev/contracts/sdd-integration/v1/schemas/consent.schema.json`, retirado al pasar el contrato de consentimiento a la identidad `axiom`.)
 
-### Requirement: Namespace de protocolo en contracts/** sin cambios (REQ-20.10)
+### Requirement: Namespace de protocolo en contracts/** sin cambios (RF-DIS-04)
 El sistema NO DEBE modificar el namespace de protocolo bajo `contracts/**` fuera de un cambio de contrato deliberado: los valores `$id` (el del consentimiento es `urn:axiom:contracts:sdd-integration:v1:consent`), los prefijos de contrato (`axiom.sdd-integration/v1`, `axiom.sdd-integration.consent/v1` y equivalentes) y los esquemas asociados DEBEN permanecer byte a byte idénticos a la versión publicada con la identidad `axiom`, cuyo digest fija `internal/consentenvelope/consent_contract_test.go`. Ningún nombre `gentle-ai` DEBE aparecer en un `$id` ni en un prefijo de contrato.
 
 #### Scenario: contracts/** permanece sin cambios
@@ -219,7 +219,7 @@ El sistema NO DEBE modificar el namespace de protocolo bajo `contracts/**` fuera
 - **Y** los agentes y demás consumidores continúan interoperando con el formato publicado
 (Previously: el `$id` y los prefijos de ejemplo eran los del namespace `gentle-ai` y el escenario exigía identidad byte a byte sin referencia al digest del contrato.)
 
-### Requirement: Binario gentle-ai retirado y shim de crosslane conservado (REQ-20.11)
+### Requirement: Binario gentle-ai retirado y shim de crosslane conservado (RF-DIS-05)
 
 El sistema NO DEBE compilar ni publicar el binario `gentle-ai`: el paquete `cmd/gentle-ai` y el build `gentle-ai-deprecated` de `.goreleaser.yaml` se retiraron por decisión de producto (ODD `seguimientos-restos-upstream`). El shim ejecutable `gentle-ai` de `scripts/crosslane` ya no existe en el repositorio.
 
@@ -230,7 +230,7 @@ El sistema NO DEBE compilar ni publicar el binario `gentle-ai`: el paquete `cmd/
 - **Y** ningún build, archivo ni compuerta de release referencia `cmd/gentle-ai` ni un binario `gentle-ai`
 (Previously: el requisito obligaba a conservar el shim `gentle-ai` de `scripts/crosslane/battery.go` y `host.go`; esos ficheros ya no existen y ningún artefacto del producto usa el nombre `gentle-ai`.)
 
-### Requirement: Raíz de respaldos resuelta exclusivamente a través de internal/backup (REQ-20.13)
+### Requirement: Raíz de respaldos resuelta exclusivamente a través de internal/backup (RF-DIS-07)
 
 Todo escritor de producción que cree o localice el directorio raíz de respaldos DEBE resolverlo invocando la función de resolución canónica exportada de `internal/backup` (`backup.BackupRootFor(homeDir)`), y NO DEBE construir esa ruta mediante un literal `filepath.Join` propio. Los respaldos que sobrevivan bajo `~/.gentle-ai/backups` DEBEN moverse una sola vez, en el arranque, a la raíz de respaldos de Axiom sin pisar los existentes y reescribiendo `root_dir` y `snapshot_path` de su manifiesto; `ListBackups` NO DEBE leer ninguna segunda raíz.
 
@@ -242,7 +242,7 @@ Todo escritor de producción que cree o localice el directorio raíz de respaldo
 
 ## ADDED Requirements
 
-### Requirement: Procedencia, firma y CI de release con identidad axiom (REQ-20.17)
+### Requirement: Procedencia, firma y CI de release con identidad axiom (RF-DIS-10)
 
 El archivo de procedencia de release DEBE llamarse `axiom-release-provenance-v1.tar.gz` y sus esquemas DEBEN ser `axiom.release-provenance/v1` y `axiom.release-provenance/local-build`. Las claves de firma del runner DEBEN llamarse `axiom-release.key` y `axiom-release.pub`, el ejecutable de CI en Windows `axiom.exe` y las imágenes de los e2e `axiom-e2e-*`. `.goreleaser.yaml`, `internal/releasepolicy`, `internal/releaseprovenance` y los scripts de verificación y promoción NO DEBEN esperar ni producir ningún nombre `gentle-ai`. `scripts/promote-stable-preflight.sh` DEBE consultar la existencia de la release estable en el repositorio propio (`$GITHUB_REPOSITORY`).
 
@@ -263,7 +263,7 @@ El archivo de procedencia de release DEBE llamarse `axiom-release-provenance-v1.
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Migración defensiva desde ~/.gentle-ai (REQ-12.2)
+### Requirement: Migración defensiva desde ~/.gentle-ai (RF-UST-02)
 Al arrancar, el sistema DEBE mover una sola vez el estado heredado de `~/.gentle-ai/` a `~/.axiom/`: `state.json`, `pi-codegraph.json` y `backups/` (cada respaldo por su id, sin pisar los existentes). Solo mueve lo que no existe ya en el destino, es idempotente, descarta la caché heredada, no toca `bin/` y retira `~/.gentle-ai` únicamente si queda vacío. Tras migrar, ninguna ruta de lectura DEBE consultar `~/.gentle-ai/`.
 
 #### Scenario: Migración automática en el primer arranque
@@ -282,11 +282,11 @@ Al arrancar, el sistema DEBE mover una sola vez el estado heredado de `~/.gentle
 ## REMOVED Requirements
 
 ### Requirement: Precedencia de variables AXIOM_* sobre GENTLE_AI_* (REQ-12.3)
-(Reason: las variables `GENTLE_AI_*` ya no se leen como respaldo; lo sustituye REQ-12.4.)
+(Reason: las variables `GENTLE_AI_*` ya no se leen como respaldo; lo sustituye RF-UST-05.)
 
 ## ADDED Requirements
 
-### Requirement: Variables de entorno exclusivamente AXIOM_* (REQ-12.4)
+### Requirement: Variables de entorno exclusivamente AXIOM_* (RF-UST-05)
 El sistema DEBE leer la configuración del entorno únicamente de variables con prefijo `AXIOM_*`. Las variables `GENTLE_AI_*` NO DEBEN leerse como alternativa ni tener efecto alguno.
 
 #### Scenario: Variable AXIOM_* toma el valor
@@ -305,7 +305,7 @@ El sistema DEBE leer la configuración del entorno únicamente de variables con 
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Single canonical Codex protocol asset
+### Requirement: Single canonical Codex protocol asset (RF-ENG-01)
 
 The system MUST render the Codex AGENTS.md protocol section, the `model_instructions_file`, and the compact prompt from one canonical source asset rather than three independently maintained files. Codex-only content (the PASSIVE CAPTURE section) MUST be preserved in the rendered `model_instructions_file` output. No normative rule present in today's rendered Codex outputs MUST be lost after consolidation.
 
@@ -328,7 +328,7 @@ The system MUST render the Codex AGENTS.md protocol section, the `model_instruct
 - THEN every normative rule (MUST/SHALL/SHOULD statement) present before consolidation MUST still be present after
 (Previously: the scenarios named the product `gentle-ai`.)
 
-### Requirement: Conditional per-adapter section slimming
+### Requirement: Conditional per-adapter section slimming (RF-ENG-02)
 
 The system MUST slim an adapter's system-prompt Engram protocol section ONLY when a redundant channel delivering equivalent protocol content is verified for that adapter's runtime. The set of adapters with a verified redundant channel is owned by design. For any adapter where no redundant channel is verified, the system MUST inject the full section unchanged. When a section is slimmed, the slim variant MUST include a pointer directing the model to where the full protocol content lives.
 
@@ -346,7 +346,7 @@ The system MUST slim an adapter's system-prompt Engram protocol section ONLY whe
 - THEN it MUST inject the full section, unchanged from today's content
 (Previously: the scenarios named the product `gentle-ai`.)
 
-### Requirement: Version-gated protocol-verbosity forwarding to engram setup
+### Requirement: Version-gated protocol-verbosity forwarding to engram setup (RF-ENG-03)
 
 When invoking `engram setup`, the system MUST detect whether the installed engram binary supports a protocol-verbosity option. When supported, it MUST pass the configured verbosity value. When not supported, it MUST invoke setup exactly as today, without any unknown flag, and MUST continue using full-text injection. Setup invocation MUST NOT fail as a result of this detection or forwarding.
 
@@ -376,7 +376,7 @@ When invoking `engram setup`, the system MUST detect whether the installed engra
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados (REQ-28.16)
+### Requirement: Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados (RF-PRE-08)
 
 El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de grupo>:`, con el id estable en minúsculas (`pace` para el único grupo requerido vigente) y el prefijo `Axiom SDD preflight`; el prefijo anterior `Gentle AI SDD preflight` ya no se acepta. Durante la transición, hasta que la persona ejecute `axiom sync`, el hook del runtime DEBE seguir aceptando los marcadores numerados heredados (`N/3`), con el mapeo posicional heredado 1 → `pace`, 2 → `artifacts` y 3 → `pr-strategy`; un cuestionario heredado puede mezclarse con marcadores nominales siempre que cada grupo requerido tenga exactamente un marcador. Las respuestas de los grupos heredados `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) DEBEN aceptarse e ignorarse: nunca determinan el almacén ni la estrategia de entrega del bloque derivado, y no se valida su contenido. Un grupo requerido con más de un marcador, o con ninguno, DEBE denegarse con una causa que nombre el grupo.
 (Previously: `pr-strategy` era un grupo requerido y solo `artifacts` era heredado; ahora ambos son heredados, tolerados e ignorados)
@@ -424,7 +424,7 @@ El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de g
 
 #### Scenario: La interacción de la preferencia de revisión no se confunde con un grupo
 
-- **DADO** una llamada de la interacción de la preferencia de revisión independiente (REQ-28.14)
+- **DADO** una llamada de la interacción de la preferencia de revisión independiente (RF-PRE-06)
 - **CUANDO** el hook busca marcadores de grupo
 - **ENTONCES** no encuentra ninguno y la ignora
 (Previously: se aceptaban el prefijo `Axiom SDD preflight` y el heredado `Gentle AI SDD preflight`.)
@@ -435,7 +435,7 @@ El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de g
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Open Capability Admission for Optional Research (formerly: Closed Capability Admission)
+### Requirement: Open Capability Admission for Optional Research (formerly: Closed Capability Admission) (RF-RES-01)
 
 The selected-research lane is optional, not mandatory, following the absorption of upstream's replacement of closed admission (commit `ba3ed690`). The lane MUST continue to accept only the classes `documentation` and `open-web`; admission MUST continue to verify declaration and exact grant. Bash, generic MCP, and unnamed legacy tools MUST continue to be denied. The absence of a selected-research invocation for a given change MUST NOT by itself block the proposal or any other SDD artifact.
 

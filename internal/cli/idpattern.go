@@ -10,9 +10,9 @@ import (
 )
 
 // projectIDPattern es el patrón de identificadores de requisito del proyecto que contiene
-// loc, leído en vivo de su axiom.yaml (REQ-44.1). Sin declaración devuelve el defecto. Si
+// loc, leído en vivo de su axiom.yaml (RF-RID-01). Sin declaración devuelve el defecto. Si
 // axiom.yaml no se puede leer o su bloque `sdd:` es inválido, el patrón es inaccesible y el
-// verbo `command` se niega con la continuación de `axiom workspace validate` (REQ-44.9):
+// verbo `command` se niega con la continuación de `axiom workspace validate` (RF-RID-08):
 // ninguno cae en silencio al defecto.
 func projectIDPattern(command string, loc workspace.Location) (reqid.Pattern, error) {
 	pattern, err := loc.Declarations.IDPattern()

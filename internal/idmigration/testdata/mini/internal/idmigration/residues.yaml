@@ -1,0 +1,7 @@
+schema: axiom.id-residues/v1
+entries:
+  - paths: ["docs/guide.md"]
+    scope: all
+    category: default-pattern-example
+    tokens: [REQ-30.4]
+    reason: "Ejemplo del patrón por defecto dirigido a otros proyectos."

@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// REQ-25.26: `main_branch` y `promotion` se declaran en `git:` y se conservan tal
+// RF-TOP-09: `main_branch` y `promotion` se declaran en `git:` y se conservan tal
 // como se escribieron; sin ellas, la política resuelta las deja vacías (el defecto
 // `branch` lo aplica el motor, que así conserva el origen).
 func TestGitPromotionKeysAreDeclaredWithoutDefaults(t *testing.T) {
@@ -55,7 +55,7 @@ func TestResolveGitLeavesPromotionKeysWithoutDefault(t *testing.T) {
 	}
 }
 
-// REQ-25.26 (escenario «Valor inválido»): `promotion` solo admite tres valores,
+// RF-TOP-09 (escenario «Valor inválido»): `promotion` solo admite tres valores,
 // distingue mayúsculas y su error enumera los tres.
 func TestGitPromotionInvalidValuesAreRejected(t *testing.T) {
 	tests := []struct {
@@ -93,7 +93,7 @@ func TestGitUnknownKeyErrorNamesTheFourKeys(t *testing.T) {
 		"worktree_mode", "integration_branch, branch_prefix, main_branch, promotion")
 }
 
-// REQ-25.27: una entrada de `repositories:` admite `promotion` (vacío hereda) pero
+// RF-TOP-10: una entrada de `repositories:` admite `promotion` (vacío hereda) pero
 // no `main_branch`, que solo existe en `git:`.
 func TestRepositoriesEntriesCarryTheirOwnPromotion(t *testing.T) {
 	block := "repositories:\n  - path: a\n    promotion: ask\n  - path: b\n    promotion: release\n    branch_prefix: ui\n  - path: c\n"

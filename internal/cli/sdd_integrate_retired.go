@@ -7,7 +7,7 @@ import (
 )
 
 // SDDIntegrateRetiredError es la negativa tipada de `axiom sdd integrate`, retirado
-// con la baseline ajena (REQ-30.25). Nombra los verbos que lo sustituyen y no
+// con la baseline ajena (RF-ARC-14). Nombra los verbos que lo sustituyen y no
 // escribe nada: el contexto técnico se integra con `axiom archive context` y una
 // baseline residual se migra con `axiom archive adopt`.
 type SDDIntegrateRetiredError struct {
@@ -29,7 +29,7 @@ func (e *SDDIntegrateRetiredError) Error() string {
 // código 0).
 func RunSDDIntegrate(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
-		_, _ = fmt.Fprintln(stdout, "axiom sdd integrate está retirado (REQ-30.25): se retiró con la baseline ajena.")
+		_, _ = fmt.Fprintln(stdout, "axiom sdd integrate está retirado (RF-ARC-14): se retiró con la baseline ajena.")
 		_, _ = fmt.Fprintln(stdout, "  Contexto técnico: axiom archive context check|prepare|verify|show --path <ruta> --change <cambio>")
 		_, _ = fmt.Fprintln(stdout, "  Migración de requisitos o de un `baseline:` residual: axiom archive adopt scan --path <ruta> --change <cambio>")
 		return nil

@@ -43,7 +43,7 @@ func ParseCubre(file, text string) []CubreLine {
 }
 
 // BaselineIndex indexa los requisitos de la baseline por su identificador
-// `REQ-<n>.<m>` (REQ-29.14). Un requisito sin identificador en el nombre no
+// `REQ-<n>.<m>` (RF-BAS-01). Un requisito sin identificador en el nombre no
 // entra: no puede citarse.
 type BaselineIndex map[string][]Requirement
 
@@ -106,11 +106,11 @@ func deltaIDs(delta []Requirement, p reqid.Pattern) (order []string, byID map[st
 	return order, byID
 }
 
-// CheckCoverage aplica REQ-29.4: cada requisito de la delta aparece en algún
+// CheckCoverage aplica RF-ISO-04: cada requisito de la delta aparece en algún
 // `Cubre:`, y todo identificador citado existe en la delta o en la baseline
 // (también uno mal formado se reporta como desconocido, una vez por
 // identificador). Con delta vacía solo se comprueban los desconocidos, que es
-// lo que necesita el bug con requisito existente (REQ-29.5).
+// lo que necesita el bug con requisito existente (RF-ISO-05).
 func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine, p reqid.Pattern) []Finding {
 	var findings []Finding
 	order, byID := deltaIDs(delta, p)
@@ -161,7 +161,7 @@ func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine, 
 	return findings
 }
 
-// CheckExistingRequirementBug aplica REQ-29.5 a un bug con requisito existente:
+// CheckExistingRequirementBug aplica RF-ISO-05 a un bug con requisito existente:
 // debe citar al menos un requisito, el requisito citado no puede ser ambiguo en
 // la baseline y debe tener escenarios. Un identificador que no existe no se
 // reporta aquí: lo reporta CheckCoverage como `iso_cubre_unknown`.
@@ -203,7 +203,7 @@ func CheckExistingRequirementBug(index BaselineIndex, cubre []CubreLine, p reqid
 	return findings
 }
 
-// CheckNoImpactBug aplica REQ-29.19: un bug sin impacto en la spec no puede
+// CheckNoImpactBug aplica RF-ISO-10: un bug sin impacto en la spec no puede
 // tener `Cubre:`. Produce un hallazgo por cada identificador citado, y uno por
 // la línea si no lleva ninguno.
 func CheckNoImpactBug(cubre []CubreLine) []Finding {
@@ -287,7 +287,7 @@ func AffectedFromBaseline(index BaselineIndex, ids []string) []ScenarioKey {
 
 // RewriteCubre sustituye, en las líneas `Cubre:` de un fichero de tareas (fuera de vallas),
 // los identificadores del mapa por su sustituto, sin tocar ningún otro byte: ni el resto del
-// fichero, ni la posición del token en la línea, ni los finales de línea (REQ-47.4).
+// fichero, ni la posición del token en la línea, ni los finales de línea (RF-RID-12).
 func RewriteCubre(text string, m reqid.IDMap) string {
 	if m.Count() == 0 {
 		return text

@@ -15,7 +15,7 @@ import (
 )
 
 // allCodes son los dieciséis códigos tipados de la spec (design §2.2) y `scope_not_applicable`
-// (REQ-25.51).
+// (RF-BRA-35).
 var allCodes = []Code{
 	CodeDecisionRequired, CodeDirtyWorktree, CodeWrongBranch, CodeSpecsRepoNotOnIntegration,
 	CodeBaseNotFound, CodeFetchFailed, CodePathTooLong, CodeInvalidName, CodeConfigInvalid,
@@ -56,7 +56,7 @@ func TestNewResultIsReadyAndNamesItsSchemaAndOperation(t *testing.T) {
 	}
 }
 
-// REQ-25.2: `code` aparece cuando el estado es `refused`, `decision_required`,
+// RF-BRA-02: `code` aparece cuando el estado es `refused`, `decision_required`,
 // `partial` o `error`, y es uno de los dieciséis códigos. Cada estado lleva su token
 // con su etiqueta.
 func TestRefusedMapsEveryCodeToItsStatusTokenAndLabel(t *testing.T) {
@@ -85,7 +85,7 @@ func TestRefusedMapsEveryCodeToItsStatusTokenAndLabel(t *testing.T) {
 	}
 }
 
-// REQ-25.2: «0 únicamente cuando la operación ha dejado el estado pedido»: `ready` y
+// RF-BRA-02: «0 únicamente cuando la operación ha dejado el estado pedido»: `ready` y
 // `not_started` salen con 0; todo rechazo, `decision_required`, `partial` y `error`
 // con 1. El 2 es de los errores de uso, que no producen un resultado.
 func TestResultExitCodeIsZeroOnlyWhenTheRequestedStateWasReached(t *testing.T) {
@@ -112,7 +112,7 @@ func TestResultExitCodeIsZeroOnlyWhenTheRequestedStateWasReached(t *testing.T) {
 	}
 }
 
-// REQ-25.2: serialización estable sin marcas de tiempo. Las claves de `details` salen
+// RF-BRA-02: serialización estable sin marcas de tiempo. Las claves de `details` salen
 // ordenadas y dos escrituras del mismo resultado dan los mismos bytes.
 func TestResultSerialisationIsStableAndCarriesNoTimestamps(t *testing.T) {
 	result := NewResult("status").Refused(&Refusal{
@@ -140,7 +140,7 @@ func TestResultSerialisationIsStableAndCarriesNoTimestamps(t *testing.T) {
 	}
 }
 
-// REQ-25.2: claves en camelCase, también en los objetos anidados.
+// RF-BRA-02: claves en camelCase, también en los objetos anidados.
 func TestResultKeysAreCamelCase(t *testing.T) {
 	result := NewResult("status").Refused(&Refusal{Code: CodeGitFailed, Message: "m", Continuation: "axiom branch status --help", Details: map[string]string{"operation": "o"}})
 	result.Repositories = []RepositoryResult{{GitRoot: "C:\\repo", CommonDir: "C:\\repo\\.git", IntegrationBranch: "main", CurrentBranch: "main", Detached: true}}
@@ -247,7 +247,7 @@ func TestResultWriteTextPrintsRefusalsToStderrWithTheContinuation(t *testing.T) 
 	}
 }
 
-// REQ-25.2: `git_failed` nombra la operación y resume el error.
+// RF-BRA-02: `git_failed` nombra la operación y resume el error.
 func TestResultGitFailedNamesTheOperationAndSummarisesTheError(t *testing.T) {
 	refusal := GitFailed("status", `C:\repo`, "localizar la raíz del repositorio", errors.New("git rev-parse terminó con el código 128: fatal: dubious ownership"))
 
@@ -312,7 +312,7 @@ func statusPlan() RepoPlan {
 	}
 }
 
-// REQ-25.15 y REQ-25.2 (G-4): el resultado de `status` lleva el papel de cada
+// RF-BRA-16 y RF-BRA-02 (G-4): el resultado de `status` lleva el papel de cada
 // repositorio y el tipo de cada rama como token con su etiqueta en un campo hermano.
 func TestNewRepositoryResultPairsRoleAndKindWithTheirLabels(t *testing.T) {
 	repository := NewRepositoryResult(statusPlan())
@@ -341,7 +341,7 @@ func TestNewRepositoryResultPairsRoleAndKindWithTheirLabels(t *testing.T) {
 	}
 }
 
-// REQ-25.15: el estado de una rama distingue «cero commits» de «no se calculó»:
+// RF-BRA-16: el estado de una rama distingue «cero commits» de «no se calculó»:
 // adelanto y atraso salen como `0` cuando se calcularon y no salen cuando no.
 func TestBranchResultDistinguishesZeroFromNotComputed(t *testing.T) {
 	zero, two := 0, 2
@@ -367,7 +367,7 @@ func TestBranchResultDistinguishesZeroFromNotComputed(t *testing.T) {
 	}
 }
 
-// REQ-25.15 (escenario «Cambio no iniciado»): `not_started` es un resultado alcanzado
+// RF-BRA-16 (escenario «Cambio no iniciado»): `not_started` es un resultado alcanzado
 // (código de salida 0), con su etiqueta, y conserva el resto del resultado.
 func TestNotStartedKeepsTheResultAndExitsWithZero(t *testing.T) {
 	result := NewResult("status")
@@ -385,7 +385,7 @@ func TestNotStartedKeepsTheResultAndExitsWithZero(t *testing.T) {
 	}
 }
 
-// REQ-25.2: el resultado de `status` lleva el cambio, el carril, la topología y las
+// RF-BRA-02: el resultado de `status` lleva el cambio, el carril, la topología y las
 // rutas del plan; las claves salen en camelCase y sin marcas de tiempo.
 func TestStatusResultSerialisesTheChangeAndItsPlan(t *testing.T) {
 	result := NewResult("status")
@@ -473,7 +473,7 @@ func TestWriteTextPrintsTheStatusOfAChange(t *testing.T) {
 	}
 }
 
-// REQ-25.15 y REQ-25.14: el resultado de `status` informa del modo de trabajo
+// RF-BRA-16 y RF-BRA-15: el resultado de `status` informa del modo de trabajo
 // materializado y de su origen, cada uno con su etiqueta, y de si el cambio tiene
 // registro local (`registry.present`, siempre impreso: `false` también es información).
 func TestStatusResultCarriesTheModeAndTheRegistry(t *testing.T) {

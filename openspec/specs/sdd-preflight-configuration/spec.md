@@ -12,14 +12,14 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 El cuestionario de pre-vuelo sella, antes de crear la propuesta, la modalidad de avance del cambio SDD, su política de relevos y la asignación de roles.
 
-### Requirement: Bloqueo de Avance sin Modalidad Sellada (REQ-21.5)
+### Requirement: Bloqueo de Avance sin Modalidad Sellada (RF-PRE-01)
 
 Al entrar en el carril SDD, el orquestador DEBE bloquear la creación de `proposal.md` hasta que se defina la modalidad de avance (`continuo` o `con paradas y reviews por bloque`), y su origen depende de la topología (`workspace.topology` de `axiom.yaml`):
 
 - En `monorepo-embedded` la modalidad DEBE definirse explícitamente: el pre-vuelo pregunta el ritmo de la sesión y el sellado exige `--execution-style` o `--from-session-pace`.
-- En `multirepo` la modalidad NO se pregunta: la topología la fija y el cambio se sella siempre `checkpointed`. El sellado sin `--execution-style` ni `--from-session-pace` deriva `checkpointed` sin error, y `continuous` se rechaza (REQ-28.19).
+- En `multirepo` la modalidad NO se pregunta: la topología la fija y el cambio se sella siempre `checkpointed`. El sellado sin `--execution-style` ni `--from-session-pace` deriva `checkpointed` sin error, y `continuous` se rechaza (RF-PRE-11).
 
-El orquestador DEBE persistir la modalidad de forma sellada para el cambio activo y NO DEBE volver a preguntarla mientras el cambio permanezca activo, salvo lo indicado en REQ-21.4. El orquestador NO DEBE preguntar ni exigir ninguna política de relevos: la entrega del trabajo a otra persona se decide en cada parada con las tres salidas (REQ-26.1 de `sdd-block-review-gates`), no en el pre-vuelo.
+El orquestador DEBE persistir la modalidad de forma sellada para el cambio activo y NO DEBE volver a preguntarla mientras el cambio permanezca activo, salvo lo indicado en RF-KOF-04. El orquestador NO DEBE preguntar ni exigir ninguna política de relevos: la entrega del trabajo a otra persona se decide en cada parada con las tres salidas (RF-GAT-07 de `sdd-block-review-gates`), no en el pre-vuelo.
 (Previously: la modalidad debía definirse explícitamente en cualquier topología; en `multirepo` ahora la fija la topología y no se pregunta)
 
 #### Scenario: Modalidad de avance sellada antes de crear la propuesta en monorepo
@@ -60,11 +60,11 @@ El orquestador DEBE persistir la modalidad de forma sellada para el cambio activ
 
 ---
 
-### Requirement: Asignación Obligatoria del Rol `fullstack` sin Subdivisión Especializada (REQ-21.6)
+### Requirement: Asignación Obligatoria del Rol `fullstack` sin Subdivisión Especializada (RF-PRE-02)
 
 Si, al concluir el cuestionario de pre-vuelo, ni el usuario ni el diseño previsto subdividen el trabajo en roles especializados (por ejemplo `core`, `web`, `qa`), el orquestador DEBE asignar obligatoriamente el rol único `fullstack`, con política de compuerta `blocking`, fichero de tareas `tasks.md` y fichero de verificación `verify-report.md`. El orquestador NO DEBE dejar un cambio SDD sin al menos un rol informado en su configuración de kickoff.
 
-Los roles especializados solo existen en `multirepo`. En `monorepo-embedded` el rol de un cambio es siempre `fullstack`: el orquestador NO DEBE proponer ni declarar roles especializados y el sellado rechaza cualquier rol distinto (REQ-28.19). Por tanto, en un monorepo no hay `tasks.<rol>.md` por rol, ni parada `role-apply` por rol, ni ramas por rol.
+Los roles especializados solo existen en `multirepo`. En `monorepo-embedded` el rol de un cambio es siempre `fullstack`: el orquestador NO DEBE proponer ni declarar roles especializados y el sellado rechaza cualquier rol distinto (RF-PRE-11). Por tanto, en un monorepo no hay `tasks.<rol>.md` por rol, ni parada `role-apply` por rol, ni ramas por rol.
 (Previously: los roles especializados se admitían en cualquier topología; ahora solo en `multirepo`, y en `monorepo-embedded` el rol es siempre `fullstack`)
 
 #### Scenario: Sin roles declarados, se asigna fullstack por defecto
@@ -97,7 +97,7 @@ Los roles especializados solo existen en `multirepo`. En `monorepo-embedded` el 
 
 ---
 
-### Requirement: `handoff_policy` Deprecado: se Acepta, se Ignora y se Fija a `none` (REQ-26.9)
+### Requirement: `handoff_policy` Deprecado: se Acepta, se Ignora y se Fija a `none` (RF-PRE-03)
 
 El campo `handoff_policy` de `kickoff.yaml` y el flag `--handoff-policy` de `axiom sdd kickoff seal` quedan deprecados y SIN efecto:
 
@@ -175,12 +175,12 @@ Supuesto A-6 (a confirmar en design): un valor fuera de `none|per_checkpoint` se
 - **ENTONCES** ninguno prescribe `--handoff-policy` como argumento de `kickoff seal`
 - **Y** el mensaje de error que guía a sellar el kickoff no lo incluye
 
-### Requirement: `continuous` Solo se Sella con el Rol `fullstack` (REQ-28.12)
+### Requirement: `continuous` Solo se Sella con el Rol `fullstack` (RF-PRE-04)
 
-`axiom sdd kickoff seal` con `--execution-style continuous` DEBE rechazarse salvo que el roster sea exactamente `[fullstack]`: un único rol cuya identidad es `fullstack`. La regla compara la **identidad** de los roles y NO su política de compuerta: `continuous` no tiene compuertas, así que `fullstack:blocking`, `fullstack:deferred` y `fullstack:optional` se aceptan por igual. Un roster con roles repetidos (por ejemplo, `fullstack` dos veces) NO es exactamente `[fullstack]` y se rechaza con el mismo mensaje. Un único rol especializado (por ejemplo, solo `backend`) y cualquier roster con varios roles, incluso si uno es `fullstack`, también se rechazan. El rechazo DEBE ocurrir antes de escribir nada, NO DEBE crear ni modificar `kickoff.yaml`, y su mensaje DEBE nombrar las dos salidas: sellar con `--execution-style checkpointed`, o quitar los roles especializados para sellar con el rol único `fullstack`. La regla es una validación de **sellado**: NO DEBE aplicarse al leer ni al validar un `kickoff.yaml` ya existente. Un `kickoff.yaml` existente (sellado o archivado) con `continuous` y un roster distinto de `[fullstack]` DEBE seguir leyéndose sin error y conservar su comportamiento. El retro-sello `seal --infer` (`sealed_by: inferred`) queda exento (REQ-21.4 de `sdd-lane-kickoff`). El estilo `checkpointed` admite cualquier roster válido, incluido `[fullstack]`.
+`axiom sdd kickoff seal` con `--execution-style continuous` DEBE rechazarse salvo que el roster sea exactamente `[fullstack]`: un único rol cuya identidad es `fullstack`. La regla compara la **identidad** de los roles y NO su política de compuerta: `continuous` no tiene compuertas, así que `fullstack:blocking`, `fullstack:deferred` y `fullstack:optional` se aceptan por igual. Un roster con roles repetidos (por ejemplo, `fullstack` dos veces) NO es exactamente `[fullstack]` y se rechaza con el mismo mensaje. Un único rol especializado (por ejemplo, solo `backend`) y cualquier roster con varios roles, incluso si uno es `fullstack`, también se rechazan. El rechazo DEBE ocurrir antes de escribir nada, NO DEBE crear ni modificar `kickoff.yaml`, y su mensaje DEBE nombrar las dos salidas: sellar con `--execution-style checkpointed`, o quitar los roles especializados para sellar con el rol único `fullstack`. La regla es una validación de **sellado**: NO DEBE aplicarse al leer ni al validar un `kickoff.yaml` ya existente. Un `kickoff.yaml` existente (sellado o archivado) con `continuous` y un roster distinto de `[fullstack]` DEBE seguir leyéndose sin error y conservar su comportamiento. El retro-sello `seal --infer` (`sealed_by: inferred`) queda exento (RF-KOF-04 de `sdd-lane-kickoff`). El estilo `checkpointed` admite cualquier roster válido, incluido `[fullstack]`.
 
-La regla es independiente de la topología y se conserva como red de seguridad de REQ-28.19. En un proyecto con `axiom.yaml` la comprobación por topología se evalúa antes (orden en el sellado: topología, modalidad obligatoria y esta regla) y su mensaje, que nombra la topología, gana: en `multirepo`, `continuous` se rechaza siempre; en `monorepo-embedded` (también cuando la topología no está declarada, es desconocida o el `axiom.yaml` no se puede cargar, REQ-28.22), un roster distinto de `[fullstack]` se rechaza siempre. Por tanto esta regla es inalcanzable por la vía normal; solo se ejercita sin `axiom.yaml` (donde no se aplica ninguna regla de topología) y en las pruebas de la regla de roster. NO se relaja: sigue siendo condición necesaria de `continuous` en cualquier caso.
-(Previously: la regla era la única que rechazaba `continuous` con un roster distinto de `[fullstack]`; ahora REQ-28.19 la precede por topología y ella queda como red de seguridad)
+La regla es independiente de la topología y se conserva como red de seguridad de RF-PRE-11. En un proyecto con `axiom.yaml` la comprobación por topología se evalúa antes (orden en el sellado: topología, modalidad obligatoria y esta regla) y su mensaje, que nombra la topología, gana: en `multirepo`, `continuous` se rechaza siempre; en `monorepo-embedded` (también cuando la topología no está declarada, es desconocida o el `axiom.yaml` no se puede cargar, RF-PRE-14), un roster distinto de `[fullstack]` se rechaza siempre. Por tanto esta regla es inalcanzable por la vía normal; solo se ejercita sin `axiom.yaml` (donde no se aplica ninguna regla de topología) y en las pruebas de la regla de roster. NO se relaja: sigue siendo condición necesaria de `continuous` en cualquier caso.
+(Previously: la regla era la única que rechazaba `continuous` con un roster distinto de `[fullstack]`; ahora RF-PRE-11 la precede por topología y ella queda como red de seguridad)
 
 #### Scenario: `continuous` con el rol fullstack sella
 
@@ -228,20 +228,20 @@ La regla es independiente de la topología y se conserva como red de seguridad d
 
 - **DADO** un cambio sin roles declarados por el usuario ni por el diseño previsto
 - **CUANDO** se sella con `--execution-style continuous`
-- **ENTONCES** se asigna el rol `fullstack` conforme a REQ-21.6 y el sellado se completa
+- **ENTONCES** se asigna el rol `fullstack` conforme a RF-PRE-02 y el sellado se completa
 
 #### Scenario: `checkpointed` admite varios roles y también fullstack
 
 - **DADO** un proyecto `multirepo` y el sellado `checkpointed` con `core` y `web`, y otro con solo `fullstack`
 - **CUANDO** se ejecutan
 - **ENTONCES** ambos se completan
-- **Y** esta regla no limita a `checkpointed`: la limitación de roles de un `monorepo-embedded` es la de REQ-28.19
+- **Y** esta regla no limita a `checkpointed`: la limitación de roles de un `monorepo-embedded` es la de RF-PRE-11
 
 #### Scenario: Con topología declarada el rechazo por topología precede y nombra la topología
 
 - **DADO** un proyecto `monorepo-embedded` y un cambio sin `kickoff.yaml`
 - **CUANDO** se ejecuta el sellado `continuous` con los roles `core` y `web`
-- **ENTONCES** se rechaza con el mensaje de REQ-28.19, que nombra la topología `monorepo-embedded`
+- **ENTONCES** se rechaza con el mensaje de RF-PRE-11, que nombra la topología `monorepo-embedded`
 - **Y** no se escribe `kickoff.yaml`
 
 #### Scenario: Un kickoff existente que incumple la regla se sigue leyendo
@@ -261,12 +261,12 @@ La regla es independiente de la topología y se conserva como red de seguridad d
 
 ---
 
-### Requirement: `--from-session-pace auto` con Roles Distintos de `fullstack` se Rechaza sin Derivar `checkpointed` (REQ-28.13)
+### Requirement: `--from-session-pace auto` con Roles Distintos de `fullstack` se Rechaza sin Derivar `checkpointed` (RF-PRE-05)
 
-`axiom sdd kickoff seal` con `--from-session-pace auto` deriva hoy `continuous`. Cuando el roster no es exactamente `[fullstack]` (REQ-28.12: se compara la identidad de los roles, no su política de compuerta), DEBE rechazarse con el mismo mensaje y las mismas salidas de REQ-28.12, sin escribir `kickoff.yaml`. NO DEBE derivar `checkpointed` en silencio, porque la modalidad de avance no puede asumirse (REQ-21.5). Con el rol único `fullstack`, o sin roles declarados (se asigna `fullstack`), el comportamiento NO cambia: deriva `continuous`. `--from-session-pace interactive` NO cambia.
+`axiom sdd kickoff seal` con `--from-session-pace auto` deriva hoy `continuous`. Cuando el roster no es exactamente `[fullstack]` (RF-PRE-04: se compara la identidad de los roles, no su política de compuerta), DEBE rechazarse con el mismo mensaje y las mismas salidas de RF-PRE-04, sin escribir `kickoff.yaml`. NO DEBE derivar `checkpointed` en silencio, porque la modalidad de avance no puede asumirse (RF-PRE-01). Con el rol único `fullstack`, o sin roles declarados (se asigna `fullstack`), el comportamiento NO cambia: deriva `continuous`. `--from-session-pace interactive` NO cambia.
 
-La regla es independiente de la topología y se conserva como red de seguridad de REQ-28.19, con la misma precedencia que REQ-28.12: con `axiom.yaml`, el rechazo por topología se evalúa primero y gana (en `multirepo`, `--from-session-pace auto` se rechaza siempre y el ritmo derivado es `interactive`; en `monorepo-embedded`, los roles distintos de `fullstack` se rechazan siempre) y nombra la topología. Esta regla es inalcanzable por la vía normal: solo se ejercita sin `axiom.yaml` y en las pruebas de la regla de roster.
-(Previously: la regla era la única que rechazaba `--from-session-pace auto` con roles distintos de `fullstack`; ahora REQ-28.19 la precede por topología)
+La regla es independiente de la topología y se conserva como red de seguridad de RF-PRE-11, con la misma precedencia que RF-PRE-04: con `axiom.yaml`, el rechazo por topología se evalúa primero y gana (en `multirepo`, `--from-session-pace auto` se rechaza siempre y el ritmo derivado es `interactive`; en `monorepo-embedded`, los roles distintos de `fullstack` se rechazan siempre) y nombra la topología. Esta regla es inalcanzable por la vía normal: solo se ejercita sin `axiom.yaml` y en las pruebas de la regla de roster.
+(Previously: la regla era la única que rechazaba `--from-session-pace auto` con roles distintos de `fullstack`; ahora RF-PRE-11 la precede por topología)
 
 #### Scenario: Ritmo automático con fullstack deriva continuous
 
@@ -278,7 +278,7 @@ La regla es independiente de la topología y se conserva como red de seguridad d
 
 - **DADO** una sesión con ritmo `auto` y un cambio con los roles `core` y `web`
 - **CUANDO** se ejecuta `seal --from-session-pace auto`
-- **ENTONCES** se rechaza con el mensaje de REQ-28.12
+- **ENTONCES** se rechaza con el mensaje de RF-PRE-04
 - **Y** no se escribe `kickoff.yaml` ni se deriva `checkpointed`
 
 #### Scenario: Ritmo automático con un único rol especializado se rechaza
@@ -295,7 +295,7 @@ La regla es independiente de la topología y se conserva como red de seguridad d
 
 #### Scenario: Tras el rechazo el usuario puede elegir y repetir
 
-- **DADO** un sellado rechazado por REQ-28.13
+- **DADO** un sellado rechazado por RF-PRE-05
 - **CUANDO** el usuario elige `checkpointed` y se repite el sellado con los mismos roles
 - **ENTONCES** el sellado se completa
 - **Y** el orquestador no vuelve a preguntar nada ajeno a esa elección
@@ -303,13 +303,13 @@ La regla es independiente de la topología y se conserva como red de seguridad d
 
 ---
 
-### Requirement: La Preferencia de Revisión Independiente se Recoge en una Interacción Propia Tras el Pre-Vuelo, sin Reutilizar sus Marcadores ni sus Grupos (REQ-28.14)
+### Requirement: La Preferencia de Revisión Independiente se Recoge en una Interacción Propia Tras el Pre-Vuelo, sin Reutilizar sus Marcadores ni sus Grupos (RF-PRE-06)
 
-Tras validar los grupos requeridos del pre-vuelo según la topología (REQ-28.15), o tras suprimirse el cuestionario por no requerir ninguno (REQ-28.18), y antes del primer lanzamiento de fase de la sesión, el orquestador DEBE presentar **una única interacción propia** con dos preguntas de selección única: (1) revisión tras el apply de cada rol, con las opciones de token canónico `verify`, `verify-judgment` y `none`; (2) revisión de cobertura tras spec y design, con las opciones `yes` y `no`. Las preguntas tienen los tokens canónicos `after_apply` y `coverage`. Las etiquetas visibles PUEDEN traducirse al idioma de la conversación junto con las descripciones; los tokens canónicos no se traducen y son los que el orquestador cachea. Cada opción DEBE llevar una descripción que declare su efecto y su coste; la de `verify-judgment` DEBE declarar que en modalidad `continuous` incluye las correcciones acotadas del juicio dentro de las raíces de edición autorizadas.
+Tras validar los grupos requeridos del pre-vuelo según la topología (RF-PRE-07), o tras suprimirse el cuestionario por no requerir ninguno (RF-PRE-10), y antes del primer lanzamiento de fase de la sesión, el orquestador DEBE presentar **una única interacción propia** con dos preguntas de selección única: (1) revisión tras el apply de cada rol, con las opciones de token canónico `verify`, `verify-judgment` y `none`; (2) revisión de cobertura tras spec y design, con las opciones `yes` y `no`. Las preguntas tienen los tokens canónicos `after_apply` y `coverage`. Las etiquetas visibles PUEDEN traducirse al idioma de la conversación junto con las descripciones; los tokens canónicos no se traducen y son los que el orquestador cachea. Cada opción DEBE llevar una descripción que declare su efecto y su coste; la de `verify-judgment` DEBE declarar que en modalidad `continuous` incluye las correcciones acotadas del juicio dentro de las raíces de edición autorizadas.
 
-La preferencia NO DEBE presentarse como un grupo más del pre-vuelo ni reutilizar sus marcadores: el texto de la interacción NO DEBE contener el prefijo `Axiom SDD preflight`, ningún marcador nominal del pre-vuelo (`pace`, `pr-strategy`) ni un marcador numerado heredado (`N/3`, `4/…`). Los marcadores nominales del pre-vuelo (REQ-28.16), sus etiquetas y mapeos canónicos, y la corroboración que hace el hook del runtime no cambian por esta interacción; una respuesta con exactamente una opción por cada grupo requerido sigue estableciendo la autoridad del pre-vuelo. La preferencia NO establece autoridad de despacho: solo decide si el orquestador lanza diagnósticos informativos. Ninguna de las dos preguntas ofrece un presupuesto de líneas ni una estrategia de entrega.
+La preferencia NO DEBE presentarse como un grupo más del pre-vuelo ni reutilizar sus marcadores: el texto de la interacción NO DEBE contener el prefijo `Axiom SDD preflight`, ningún marcador nominal del pre-vuelo (`pace`, `pr-strategy`) ni un marcador numerado heredado (`N/3`, `4/…`). Los marcadores nominales del pre-vuelo (RF-PRE-08), sus etiquetas y mapeos canónicos, y la corroboración que hace el hook del runtime no cambian por esta interacción; una respuesta con exactamente una opción por cada grupo requerido sigue estableciendo la autoridad del pre-vuelo. La preferencia NO establece autoridad de despacho: solo decide si el orquestador lanza diagnósticos informativos. Ninguna de las dos preguntas ofrece un presupuesto de líneas ni una estrategia de entrega.
 
-En runtimes con interfaz nativa de preguntas se usa esa interfaz; en los demás, el orquestador DEBE presentar el contenido completo en texto (ambas preguntas, todas sus opciones y descripciones) con la sintaxis de respuesta `After apply: <label>; Coverage: <label>`, y detenerse hasta recibir una respuesta válida. La respuesta se acepta solo si cada parte coincide con exactamente una opción presentada de su propia pregunta (insensible a mayúsculas y tras recortar espacios). Una respuesta ausente, ambigua o fuera del dominio NO DEBE sustituirse por un valor por defecto: se vuelve a presentar la interacción completa. La preferencia se cachea en la sesión, sin campo nuevo en `kickoff.yaml` ni en `gates.yaml` y sin observación de memoria persistente (REQ-28.2).
+En runtimes con interfaz nativa de preguntas se usa esa interfaz; en los demás, el orquestador DEBE presentar el contenido completo en texto (ambas preguntas, todas sus opciones y descripciones) con la sintaxis de respuesta `After apply: <label>; Coverage: <label>`, y detenerse hasta recibir una respuesta válida. La respuesta se acepta solo si cada parte coincide con exactamente una opción presentada de su propia pregunta (insensible a mayúsculas y tras recortar espacios). Una respuesta ausente, ambigua o fuera del dominio NO DEBE sustituirse por un valor por defecto: se vuelve a presentar la interacción completa. La preferencia se cachea en la sesión, sin campo nuevo en `kickoff.yaml` ni en `gates.yaml` y sin observación de memoria persistente (RF-REV-02).
 (Previously: el texto declaraba que la política de revisión de 400 líneas «sigue sin preguntarse» y que el pre-vuelo «sigue declarando la política fija», y cacheaba la preferencia «como la estrategia de entrega»; ahora el pre-vuelo no declara ninguna política de revisión ni número, y la entrega es `single-pr` sin pregunta)
 
 #### Scenario: La interacción presenta dos preguntas con sus opciones y descripciones
@@ -343,7 +343,7 @@ En runtimes con interfaz nativa de preguntas se usa esa interfaz; en los demás,
 
 #### Scenario: Se presenta después del pre-vuelo y antes de la primera fase
 
-- **DADO** un pre-vuelo validado en una sesión nueva, o suprimido por no requerir ningún grupo (REQ-28.18)
+- **DADO** un pre-vuelo validado en una sesión nueva, o suprimido por no requerir ningún grupo (RF-PRE-10)
 - **CUANDO** el orquestador va a lanzar la primera fase de la sesión
 - **ENTONCES** ya ha recogido la preferencia en su interacción propia
 - **Y** no ha incluido su pregunta dentro de la llamada agrupada del pre-vuelo
@@ -379,7 +379,7 @@ En runtimes con interfaz nativa de preguntas se usa esa interfaz; en los demás,
 - **DADO** una preferencia respondida
 - **CUANDO** se sella el kickoff del cambio
 - **ENTONCES** `kickoff.yaml` no contiene la preferencia
-- **Y** el orquestador la aplica durante la sesión según REQ-28.2
+- **Y** el orquestador la aplica durante la sesión según RF-REV-02
 
 #### Scenario: La interacción no ofrece presupuesto de líneas ni estrategia de entrega
 
@@ -393,21 +393,21 @@ En runtimes con interfaz nativa de preguntas se usa esa interfaz; en los demás,
 - **DADO** un cambio con kickoff ya sellado reanudado en una sesión nueva
 - **CUANDO** el orquestador ejecuta el pre-vuelo de esa sesión
 - **ENTONCES** recoge la preferencia una vez en su interacción propia, porque es de sesión y no del cambio
-- **Y** no repite el cuestionario de sellado del kickoff (REQ-21.4)
+- **Y** no repite el cuestionario de sellado del kickoff (RF-KOF-04)
 
-#### Scenario: Una sesión sin la preferencia deja su ausencia tratada por REQ-28.2
+#### Scenario: Una sesión sin la preferencia deja su ausencia tratada por RF-REV-02
 
 - **DADO** una sesión cuyo pre-vuelo se estableció sin la preferencia (orquestador anterior a este cambio)
 - **CUANDO** concluye un `apply`
-- **ENTONCES** se aplica el tratamiento de preferencia ausente de REQ-28.2
+- **ENTONCES** se aplica el tratamiento de preferencia ausente de RF-REV-02
 
 ---
 
-### Requirement: Los Grupos del Pre-Vuelo Dependen de la Topología y los Valores No Preguntados se Derivan (REQ-28.15)
+### Requirement: Los Grupos del Pre-Vuelo Dependen de la Topología y los Valores No Preguntados se Derivan (RF-PRE-07)
 
-El cuestionario de pre-vuelo SDD DEBE preguntar solo los grupos que la topología del proyecto (`workspace.topology` de `axiom.yaml`) requiere. El conjunto de grupos requeridos es variable por topología y PUEDE ser vacío (REQ-28.18): este requisito fija la tabla vigente, pero el contrato NO DEBE suponer un número fijo de grupos, de modo que otro cambio pueda añadir o retirar un grupo sin alterar el tratamiento de los demás. El identificador estable de grupo requerido es `pace` (ritmo: `Interactive` → `interactive`, `Automatic` → `auto`); `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) solo existen como grupos heredados (REQ-28.16). Tabla vigente:
+El cuestionario de pre-vuelo SDD DEBE preguntar solo los grupos que la topología del proyecto (`workspace.topology` de `axiom.yaml`) requiere. El conjunto de grupos requeridos es variable por topología y PUEDE ser vacío (RF-PRE-10): este requisito fija la tabla vigente, pero el contrato NO DEBE suponer un número fijo de grupos, de modo que otro cambio pueda añadir o retirar un grupo sin alterar el tratamiento de los demás. El identificador estable de grupo requerido es `pace` (ritmo: `Interactive` → `interactive`, `Automatic` → `auto`); `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) solo existen como grupos heredados (RF-PRE-08). Tabla vigente:
 
-- `multirepo`: ningún grupo. El ritmo NO se pregunta: se deriva `interactive` (REQ-21.5).
+- `multirepo`: ningún grupo. El ritmo NO se pregunta: se deriva `interactive` (RF-PRE-01).
 - `monorepo-embedded`: solo `pace`.
 
 Ni el almacén de artefactos ni la estrategia de entrega se preguntan en ninguna topología: la política de sesión de almacén es siempre `hybrid` y la entrega es siempre `single-pr` (decisión P10). El bloque derivado que el runtime antepone al prompt de cada fase DEBE tener siempre las mismas **cinco** líneas (cabecera, confirmación del padre, `Pace`, `Artifact store` y `Delivery strategy`) y el valor de cada una DEBE ser el respondido para un grupo requerido o el derivado para uno no requerido: `Pace` es `interactive` en `multirepo`, `Artifact store` es siempre `hybrid` y `Delivery strategy` es siempre `single-pr`. El bloque NO DEBE contener ninguna línea de política de revisión. El texto del cuestionario que se proyecta a los orquestadores es global (el mismo para todo proyecto): DEBE ordenar al agente leer `workspace.topology` de `axiom.yaml` antes de preguntar y presentar únicamente los grupos requeridos por esa topología, en una sola llamada, sin ofrecer estrategia de PR.
@@ -476,7 +476,7 @@ Ni el almacén de artefactos ni la estrategia de entrega se preguntan en ninguna
 
 ---
 
-### Requirement: Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados (REQ-28.16)
+### Requirement: Cada Pregunta del Pre-Vuelo Lleva un Marcador por Nombre de Grupo y se Toleran los Marcadores Numerados Heredados (RF-PRE-08)
 
 El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de grupo>:`, con el id estable en minúsculas (`pace` para el único grupo requerido vigente) y el prefijo `Axiom SDD preflight`; el prefijo anterior `Gentle AI SDD preflight` ya no se acepta. Durante la transición, hasta que la persona ejecute `axiom sync`, el hook del runtime DEBE seguir aceptando los marcadores numerados heredados (`N/3`), con el mapeo posicional heredado 1 → `pace`, 2 → `artifacts` y 3 → `pr-strategy`; un cuestionario heredado puede mezclarse con marcadores nominales siempre que cada grupo requerido tenga exactamente un marcador. Las respuestas de los grupos heredados `artifacts` (almacén) y `pr-strategy` (estrategia de PR: `Ask me`, `Single PR`, `Auto`) DEBEN aceptarse e ignorarse: nunca determinan el almacén ni la estrategia de entrega del bloque derivado, y no se valida su contenido. Un grupo requerido con más de un marcador, o con ninguno, DEBE denegarse con una causa que nombre el grupo.
 (Previously: `pr-strategy` era un grupo requerido y solo `artifacts` era heredado; ahora ambos son heredados, tolerados e ignorados)
@@ -524,14 +524,14 @@ El marcador de cada pregunta del pre-vuelo DEBE ser nominal: `<prefijo> <id de g
 
 #### Scenario: La interacción de la preferencia de revisión no se confunde con un grupo
 
-- **DADO** una llamada de la interacción de la preferencia de revisión independiente (REQ-28.14)
+- **DADO** una llamada de la interacción de la preferencia de revisión independiente (RF-PRE-06)
 - **CUANDO** el hook busca marcadores de grupo
 - **ENTONCES** no encuentra ninguno y la ignora
 (Previously: se aceptaban el prefijo `Axiom SDD preflight` y el heredado `Gentle AI SDD preflight`.)
 
-### Requirement: El Hook Valida el Significado del Pre-Vuelo según la Topología, no su Presentación (REQ-28.17)
+### Requirement: El Hook Valida el Significado del Pre-Vuelo según la Topología, no su Presentación (RF-PRE-09)
 
-El hook de despacho del runtime DEBE leer la topología con el workspace del directorio de trabajo del payload, calcular los grupos requeridos (REQ-28.15) y exigir exactamente una respuesta válida para cada uno: enlazada por etiqueta de opción y no por posición, dentro del dominio cerrado del grupo y con selección única. DEBE tolerar e ignorar los grupos que la topología no requiere y los heredados (`artifacts` y `pr-strategy`, y por ejemplo un ritmo respondido en `multirepo`), el orden de las preguntas y las diferencias de presentación. Cuando falte o sea inválida la respuesta de un grupo requerido, DEBE denegar el despacho con una causa que nombre el grupo. Mientras haya al menos un grupo requerido se conservan todas las protecciones de autoridad: un agente hijo NO despacha, el texto del modelo NO crea autoridad, el payload queda enlazado a la transcripción, solo una respuesta corroborada con su `tool_result` cuenta y, si hay varias, gana la última válida. Fuera de un proyecto Axiom (sin `axiom.yaml`) el hook NO interviene.
+El hook de despacho del runtime DEBE leer la topología con el workspace del directorio de trabajo del payload, calcular los grupos requeridos (RF-PRE-07) y exigir exactamente una respuesta válida para cada uno: enlazada por etiqueta de opción y no por posición, dentro del dominio cerrado del grupo y con selección única. DEBE tolerar e ignorar los grupos que la topología no requiere y los heredados (`artifacts` y `pr-strategy`, y por ejemplo un ritmo respondido en `multirepo`), el orden de las preguntas y las diferencias de presentación. Cuando falte o sea inválida la respuesta de un grupo requerido, DEBE denegar el despacho con una causa que nombre el grupo. Mientras haya al menos un grupo requerido se conservan todas las protecciones de autoridad: un agente hijo NO despacha, el texto del modelo NO crea autoridad, el payload queda enlazado a la transcripción, solo una respuesta corroborada con su `tool_result` cuenta y, si hay varias, gana la última válida. Fuera de un proyecto Axiom (sin `axiom.yaml`) el hook NO interviene.
 (Previously: el grupo `pr-strategy` era requerido en toda topología; ahora se tolera e ignora como heredado)
 
 #### Scenario: Un grupo heredado o extra se ignora
@@ -592,9 +592,9 @@ El hook de despacho del runtime DEBE leer la topología con el workspace del dir
 
 ---
 
-### Requirement: Sin Grupos Requeridos el Cuestionario se Suprime y el Bloque es Enteramente Derivado (REQ-28.18)
+### Requirement: Sin Grupos Requeridos el Cuestionario se Suprime y el Bloque es Enteramente Derivado (RF-PRE-10)
 
-Si la topología no requiere ningún grupo (conjunto vacío, REQ-28.15), el hook DEBE suprimir el cuestionario: DEBE permitir el despacho y anteponer el bloque enteramente derivado (`Pace` y `Artifact store` derivados por topología y `Delivery strategy` con su valor derivado `single-pr`, sin preguntar, decisión P10), sin exigir interacción de preguntas ni autoridad de transcripción, y el texto del orquestador NO DEBE lanzar la herramienta de preguntas. `multirepo` entra siempre por esta ruta. Una respuesta de grupos heredados que llegue en una transcripción se ignora y no altera el bloque. Con al menos un grupo requerido NO DEBE aplicarse ninguna relajación (REQ-28.17). Un prompt que ya traiga el bloque sigue sin duplicarse.
+Si la topología no requiere ningún grupo (conjunto vacío, RF-PRE-07), el hook DEBE suprimir el cuestionario: DEBE permitir el despacho y anteponer el bloque enteramente derivado (`Pace` y `Artifact store` derivados por topología y `Delivery strategy` con su valor derivado `single-pr`, sin preguntar, decisión P10), sin exigir interacción de preguntas ni autoridad de transcripción, y el texto del orquestador NO DEBE lanzar la herramienta de preguntas. `multirepo` entra siempre por esta ruta. Una respuesta de grupos heredados que llegue en una transcripción se ignora y no altera el bloque. Con al menos un grupo requerido NO DEBE aplicarse ninguna relajación (RF-PRE-09). Un prompt que ya traiga el bloque sigue sin duplicarse.
 (Previously: la ruta sin grupos solo se alcanzaba con una topología de conjunto vacío; `multirepo` exigía el grupo `pr-strategy`)
 
 #### Scenario: Cero grupos requeridos permite el despacho con el bloque derivado
@@ -631,14 +631,14 @@ Si la topología no requiere ningún grupo (conjunto vacío, REQ-28.15), el hook
 
 ---
 
-### Requirement: El Sellado del Kickoff Aplica la Topología al Estilo de Ejecución y a los Roles (REQ-28.19)
+### Requirement: El Sellado del Kickoff Aplica la Topología al Estilo de Ejecución y a los Roles (RF-PRE-11)
 
 `axiom sdd kickoff seal` DEBE comprobar la topología del workspace resuelto antes de escribir nada, y la comprobación NO DEBE crear ni modificar `kickoff.yaml` cuando rechaza:
 
 - `multirepo`: DEBE rechazar `--execution-style continuous` y `--from-session-pace auto` con un mensaje que nombre la topología `multirepo` y la salida (sellar `checkpointed`). Sin `--execution-style` ni `--from-session-pace`, DEBE derivar `checkpointed` sin error. `--execution-style checkpointed` y `--from-session-pace interactive` se aceptan.
-- `monorepo-embedded`: DEBE rechazar cualquier `--role` distinto de `fullstack` con un mensaje que nombre la topología `monorepo-embedded` y la salida (quitar el rol, o declarar `multirepo`). Sin `--role`, DEBE sellar el rol único `fullstack`. La modalidad sigue exigiéndose explícita (REQ-21.5) y `continuous` con `fullstack` se acepta (REQ-28.12).
+- `monorepo-embedded`: DEBE rechazar cualquier `--role` distinto de `fullstack` con un mensaje que nombre la topología `monorepo-embedded` y la salida (quitar el rol, o declarar `multirepo`). Sin `--role`, DEBE sellar el rol único `fullstack`. La modalidad sigue exigiéndose explícita (RF-PRE-01) y `continuous` con `fullstack` se acepta (RF-PRE-04).
 
-El retro-sellado `seal --infer` queda exento de esta comprobación (REQ-21.4 de `sdd-lane-kickoff`), y un `kickoff.yaml` ya existente (sellado o archivado) NO DEBE revalidarse ni reescribirse por ella. El orden de evaluación del sellado es: (1) la regla de topología, que gana y cuyo mensaje nombra la topología; (2) la modalidad obligatoria (REQ-21.5), que solo se exige donde la topología no la deriva; (3) la regla de REQ-28.12 y REQ-28.13, que se conserva como red de seguridad. El análisis de los argumentos del sellado es una función pura que no consulta la topología: la comprobación se hace después de resolver el workspace.
+El retro-sellado `seal --infer` queda exento de esta comprobación (RF-KOF-04 de `sdd-lane-kickoff`), y un `kickoff.yaml` ya existente (sellado o archivado) NO DEBE revalidarse ni reescribirse por ella. El orden de evaluación del sellado es: (1) la regla de topología, que gana y cuyo mensaje nombra la topología; (2) la modalidad obligatoria (RF-PRE-01), que solo se exige donde la topología no la deriva; (3) la regla de RF-PRE-04 y RF-PRE-05, que se conserva como red de seguridad. El análisis de los argumentos del sellado es una función pura que no consulta la topología: la comprobación se hace después de resolver el workspace.
 
 #### Scenario: En multirepo `continuous` se rechaza nombrando la topología
 
@@ -707,7 +707,7 @@ El retro-sellado `seal --infer` queda exento de esta comprobación (REQ-21.4 de 
 
 ---
 
-### Requirement: La Doctrina del Orquestador Fija el Almacén `hybrid` y Hace que la Topología Decida el Ritmo (REQ-28.20)
+### Requirement: La Doctrina del Orquestador Fija el Almacén `hybrid` y Hace que la Topología Decida el Ritmo (RF-PRE-12)
 
 La doctrina de los orquestadores SDD de todos los runtimes (incluidas las reescrituras que hace el instalador para los runtimes de reserva) y el contrato de persistencia compartido DEBEN declarar el almacén de artefactos `hybrid` como fijo: NO DEBEN indicar al orquestador que pregunte el almacén, ni que elija `engram` o `none` según la disponibilidad de Engram. Del mismo modo DEBEN declarar la estrategia de entrega `single-pr` como fija en el pre-vuelo: NO DEBEN indicar al orquestador que pregunte la estrategia de PR. La sección «Execution Mode» NO DEBE decir que por defecto el ritmo es automático: DEBE indicar que lo decide la topología (en `multirepo`, con paradas y reviews por bloque; en `monorepo-embedded`, el ritmo elegido en el pre-vuelo). El texto DEBE ser idéntico en todos los runtimes que lo proyectan. Las fases SDD siguen usando el almacén que devuelve `axiom sdd status` (autoridad nativa del binario): el valor por defecto de `status` sin `artifact_store` declarado sigue siendo `openspec` y NO cambia.
 (Previously: solo fijaba el almacén `hybrid` y el ritmo por topología; la estrategia de PR se preguntaba)
@@ -747,9 +747,9 @@ La doctrina de los orquestadores SDD de todos los runtimes (incluidas las reescr
 
 ---
 
-### Requirement: El Plugin de OpenCode Aplica el Mismo Contrato de Grupos que el Hook (REQ-28.21)
+### Requirement: El Plugin de OpenCode Aplica el Mismo Contrato de Grupos que el Hook (RF-PRE-13)
 
-El plugin de OpenCode que corrobora el pre-vuelo (en sus dos copias) DEBE aplicar el mismo contrato que el hook: DEBE leer la topología del proyecto (`workspace.topology` de `axiom.yaml`, con el mismo tratamiento de REQ-28.22) y exigir los mismos grupos requeridos; marcadores nominales y numerados heredados, número variable de grupos, enlace de cada respuesta por etiqueta de opción (no por posición, y sin asignar preguntas sin marcador a un grupo), tolerancia de los grupos heredados `artifacts` y `pr-strategy` (aceptados e ignorados) y bloque derivado con las mismas cinco líneas, `Artifact store: hybrid` y `Delivery strategy: single-pr`, sin línea de política de revisión. Con cero grupos requeridos (siempre en `multirepo`) antepone el bloque derivado sin exigir pregunta (REQ-28.18). La lectura de la topología del plugin DEBE coincidir con la del binario para los mismos `axiom.yaml` (prueba de paridad). Cuando un plugin reciba una nueva revisión, el digest de la revisión que sustituye DEBE quedar registrado para que la actualización reconozca el plugin anterior.
+El plugin de OpenCode que corrobora el pre-vuelo (en sus dos copias) DEBE aplicar el mismo contrato que el hook: DEBE leer la topología del proyecto (`workspace.topology` de `axiom.yaml`, con el mismo tratamiento de RF-PRE-14) y exigir los mismos grupos requeridos; marcadores nominales y numerados heredados, número variable de grupos, enlace de cada respuesta por etiqueta de opción (no por posición, y sin asignar preguntas sin marcador a un grupo), tolerancia de los grupos heredados `artifacts` y `pr-strategy` (aceptados e ignorados) y bloque derivado con las mismas cinco líneas, `Artifact store: hybrid` y `Delivery strategy: single-pr`, sin línea de política de revisión. Con cero grupos requeridos (siempre en `multirepo`) antepone el bloque derivado sin exigir pregunta (RF-PRE-10). La lectura de la topología del plugin DEBE coincidir con la del binario para los mismos `axiom.yaml` (prueba de paridad). Cuando un plugin reciba una nueva revisión, el digest de la revisión que sustituye DEBE quedar registrado para que la actualización reconozca el plugin anterior.
 (Previously: el contrato exigía los grupos de la topología con `pr-strategy` requerido y un bloque con la política de revisión; ahora solo `pace` es requerido y el bloque tiene cinco líneas)
 
 #### Scenario: El plugin acepta el marcador nominal y el heredado
@@ -803,9 +803,9 @@ El plugin de OpenCode que corrobora el pre-vuelo (en sus dos copias) DEBE aplica
 
 ---
 
-### Requirement: Topología Efectiva: una Topología No Gobernable se Trata como `monorepo-embedded` y sin `axiom.yaml` no se Aplica Ninguna Regla (REQ-28.22)
+### Requirement: Topología Efectiva: una Topología No Gobernable se Trata como `monorepo-embedded` y sin `axiom.yaml` no se Aplica Ninguna Regla (RF-PRE-14)
 
-El hook de despacho, el plugin de OpenCode y el sellado del kickoff DEBEN usar la misma topología efectiva, la que resuelve el workspace del proyecto. Dentro de un proyecto Axiom (con `axiom.yaml`), si la topología no está declarada, es desconocida o el `axiom.yaml` no se puede cargar, la topología efectiva es `monorepo-embedded` (el conjunto de preguntas más amplio: se pregunta de más, nunca de menos). Sin `axiom.yaml` NO se aplica ninguna regla de topología: el hook y el plugin no intervienen y el sellado se comporta como antes de este cambio (modalidad obligatoria y regla de REQ-28.12 y REQ-28.13). El bloque derivado conserva siempre sus cinco líneas (cabecera, confirmación del padre, `Pace`, `Artifact store` y `Delivery strategy`).
+El hook de despacho, el plugin de OpenCode y el sellado del kickoff DEBEN usar la misma topología efectiva, la que resuelve el workspace del proyecto. Dentro de un proyecto Axiom (con `axiom.yaml`), si la topología no está declarada, es desconocida o el `axiom.yaml` no se puede cargar, la topología efectiva es `monorepo-embedded` (el conjunto de preguntas más amplio: se pregunta de más, nunca de menos). Sin `axiom.yaml` NO se aplica ninguna regla de topología: el hook y el plugin no intervienen y el sellado se comporta como antes de este cambio (modalidad obligatoria y regla de RF-PRE-04 y RF-PRE-05). El bloque derivado conserva siempre sus cinco líneas (cabecera, confirmación del padre, `Pace`, `Artifact store` y `Delivery strategy`).
 (Previously: el bloque derivado conservaba seis líneas, con la política de revisión)
 
 #### Scenario: Topología desconocida en el hook se trata como monorepo
@@ -836,21 +836,21 @@ El hook de despacho, el plugin de OpenCode y el sellado del kickoff DEBEN usar l
 
 - **DADO** un workspace sin `axiom.yaml` y un sellado sin `--execution-style` ni `--from-session-pace`
 - **CUANDO** se ejecuta `axiom sdd kickoff seal`
-- **ENTONCES** se rechaza por falta de modalidad (REQ-21.5)
+- **ENTONCES** se rechaza por falta de modalidad (RF-PRE-01)
 
 #### Scenario: Sin `axiom.yaml` sigue rigiendo la regla de roster
 
 - **DADO** un workspace sin `axiom.yaml`
 - **CUANDO** se ejecuta el sellado `continuous` con los roles `core` y `web`
-- **ENTONCES** se rechaza con el mensaje de REQ-28.12 y no se escribe `kickoff.yaml`
+- **ENTONCES** se rechaza con el mensaje de RF-PRE-04 y no se escribe `kickoff.yaml`
 
 #### Scenario: Con `monorepo-embedded` y `continuous` con rol especializado gana la topología
 
 - **DADO** un proyecto `monorepo-embedded`
 - **CUANDO** se ejecuta el sellado `continuous` con `--role core`
-- **ENTONCES** el mensaje nombra la topología y no es el de REQ-28.12
+- **ENTONCES** el mensaje nombra la topología y no es el de RF-PRE-04
 
-### Requirement: El Pre-Vuelo y su Bloque Derivado no Contienen Ningún Umbral Numérico de Entrega (REQ-28.23)
+### Requirement: El Pre-Vuelo y su Bloque Derivado no Contienen Ningún Umbral Numérico de Entrega (RF-PRE-15)
 
 El texto del cuestionario de pre-vuelo proyectado a los orquestadores, el bloque derivado que el hook y el plugin de OpenCode (en sus dos copias) anteponen al prompt de cada fase y los comandos `sdd-*` de OpenCode que describen el contenido exigido del pre-vuelo NO DEBEN contener ningún número de líneas como umbral, presupuesto o política de revisión de la entrega, ni la expresión «chained PR strategy and review budget». La entrega del pre-vuelo es siempre `single-pr`: `chained` solo se activa cuando la persona lo pide durante la sesión, fuera del pre-vuelo, y no altera la línea `Delivery strategy` del bloque (la precedencia de un `delivery_strategy: chained` reenviado por el orquestador se fija en `sdd-orchestrator-assets`). Quedan fuera de este requisito, por no ser umbrales de entrega, los literales de migración de prompts antiguos de OpenCode de `internal/components/sdd/inject.go`, el umbral de barrido de los agentes `jd-judge-a` y `jd-judge-b` de judgment-day.
 (Previously: la lista de exclusiones citaba también las lentes `review-*` de RDD y el umbral de riesgo del paquete de revisión de RDD; RDD se retira (C-01-e, P20).)

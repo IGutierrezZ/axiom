@@ -1,4 +1,4 @@
-# Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (REQ-42.1 a REQ-42.9)
+# Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09)
 
 > **Cambio:** `identidad-git-actor` (C-07-a, archivado el 2026-11-18) · **Tipo:** capacidad nueva
 > **Idioma:** castellano de España; identificadores, códigos y tokens en inglés.
@@ -9,11 +9,11 @@ Fijar quién queda registrado en los ficheros versionados que dicen quién hizo 
 
 ## 42. Capacidad: `change-actor-identity`
 
-> Ninguna otra capacidad cambia: `sealed_by: inferred` de `sdd-lane-kickoff` y `sdd-preflight-configuration` se conserva tal cual (REQ-42.4). Todas las pruebas de estos requisitos aíslan git (`GIT_CONFIG_GLOBAL` apuntando a un fichero temporal y `GIT_CONFIG_NOSYSTEM=1`) y crean, cuando lo necesitan, un repositorio temporal con `git init` y `git config`: ningún requisito depende de la configuración git de la máquina.
+> Ninguna otra capacidad cambia: `sealed_by: inferred` de `sdd-lane-kickoff` y `sdd-preflight-configuration` se conserva tal cual (RF-ACT-04). Todas las pruebas de estos requisitos aíslan git (`GIT_CONFIG_GLOBAL` apuntando a un fichero temporal y `GIT_CONFIG_NOSYSTEM=1`) y crean, cuando lo necesitan, un repositorio temporal con `git init` y `git config`: ningún requisito depende de la configuración git de la máquina.
 
-### Requirement: Identidad Git como Actor por Defecto de `gate record` (REQ-42.1)
+### Requirement: Identidad Git como Actor por Defecto de `gate record` (RF-ACT-01)
 
-`axiom sdd gate record`, cuando se invoca sin `--actor` y existe identidad git completa (`user.name` y `user.email` no vacíos tras el saneado de REQ-42.7), DEBE registrar en el campo `actor` de `gates.yaml` la identidad con el formato `Nombre <email>`. El campo conserva su tipo `string`. El texto de ayuda de `--actor` DEBE indicar que, si se omite, se usa la identidad de git.
+`axiom sdd gate record`, cuando se invoca sin `--actor` y existe identidad git completa (`user.name` y `user.email` no vacíos tras el saneado de RF-ACT-07), DEBE registrar en el campo `actor` de `gates.yaml` la identidad con el formato `Nombre <email>`. El campo conserva su tipo `string`. El texto de ayuda de `--actor` DEBE indicar que, si se omite, se usa la identidad de git.
 
 #### Scenario: Identidad completa registrada como actor
 - **DADO** un workspace cuya configuración git define `user.name = Ana Pérez` y `user.email = ana@example.com`
@@ -27,9 +27,9 @@ Fijar quién queda registrado en los ficheros versionados que dicen quién hizo 
 - **CUANDO** se muestra su ayuda
 - **ENTONCES** el texto de `--actor` menciona la identidad de git como valor por defecto
 
-### Requirement: `--actor` Explícito Prevalece sin Consultar Git (REQ-42.2)
+### Requirement: `--actor` Explícito Prevalece sin Consultar Git (RF-ACT-02)
 
-Cuando `gate record` recibe `--actor` con un valor no vacío, el sistema DEBE registrar ese valor tal cual en `actor`, NO DEBE consultar la configuración de git y NO DEBE emitir el aviso de REQ-42.5, tenga o no el workspace identidad git.
+Cuando `gate record` recibe `--actor` con un valor no vacío, el sistema DEBE registrar ese valor tal cual en `actor`, NO DEBE consultar la configuración de git y NO DEBE emitir el aviso de RF-ACT-05, tenga o no el workspace identidad git.
 
 #### Scenario: Actor explícito con identidad git presente
 - **DADO** un workspace con identidad git completa
@@ -44,7 +44,7 @@ Cuando `gate record` recibe `--actor` con un valor no vacío, el sistema DEBE re
 - **Y** no se emite aviso
 - **Y** la resolución de identidad no se invoca (comprobable con un resolvedor sustituible que falla la prueba si se llama)
 
-### Requirement: Sellador del Kickoff con la Identidad Git (REQ-42.3)
+### Requirement: Sellador del Kickoff con la Identidad Git (RF-ACT-03)
 
 `axiom sdd kickoff seal`, sin `--infer` y con identidad git completa, DEBE registrar en `sealed_by` de `kickoff.yaml` la misma identidad con formato `Nombre <email>`. `seal` NO DEBE admitir `--actor` ni `--sealed-by`. El tipo de `Kickoff.SealedBy` no cambia.
 
@@ -64,9 +64,9 @@ Cuando `gate record` recibe `--actor` con un valor no vacío, el sistema DEBE re
 - **CUANDO** se invoca con `--actor x` o `--sealed-by x`
 - **ENTONCES** el verbo lo rechaza como opción desconocida y no escribe `kickoff.yaml`
 
-### Requirement: El Retro-sellado Conserva `inferred` (REQ-42.4)
+### Requirement: El Retro-sellado Conserva `inferred` (RF-ACT-04)
 
-`axiom sdd kickoff seal --infer` DEBE seguir escribiendo `sealed_by: inferred`, con independencia de la identidad git, y NO DEBE consultar git ni emitir el aviso de REQ-42.5. La exención de `inferred` en la validación de sellado (`ValidateForSeal`) NO DEBE cambiar.
+`axiom sdd kickoff seal --infer` DEBE seguir escribiendo `sealed_by: inferred`, con independencia de la identidad git, y NO DEBE consultar git ni emitir el aviso de RF-ACT-05. La exención de `inferred` en la validación de sellado (`ValidateForSeal`) NO DEBE cambiar.
 
 #### Scenario: `--infer` con identidad git completa
 - **DADO** un cambio con artefactos y sin `kickoff.yaml`, en un workspace con identidad git completa
@@ -85,7 +85,7 @@ Cuando `gate record` recibe `--actor` con un valor no vacío, el sistema DEBE re
 - **CUANDO** se valida con `ValidateForSeal`
 - **ENTONCES** el resultado es el mismo que antes
 
-### Requirement: Reserva `cli` con Aviso por stderr sin Bloqueo (REQ-42.5)
+### Requirement: Reserva `cli` con Aviso por stderr sin Bloqueo (RF-ACT-05)
 
 Cuando se necesita una identidad por defecto (`gate record` sin `--actor`, `kickoff seal` sin `--infer`) y no existe identidad git completa, es decir, falta `user.name`, falta `user.email` o faltan ambos, el sistema DEBE registrar el literal `cli`, DEBE emitir un único aviso por stderr con el prefijo `Aviso: ` que indique qué clave falta y cómo resolverlo (configurar git o, en `gate record`, indicar `--actor`) y NO DEBE bloquear: el comando termina con su código de salida de éxito y con su salida estándar normal. El aviso DEBE escribirse en un `io.Writer` propio, sustituible en pruebas, distinto de los avisos de rama de `seal` y de los escritores; NO DEBE aparecer en la salida estándar ni en el JSON.
 
@@ -125,9 +125,9 @@ Cuando se necesita una identidad por defecto (`gate record` sin `--actor`, `kick
 - **CUANDO** se ejecuta tras este cambio
 - **ENTONCES** `sealBranchWarnings` sigue vacío, porque el aviso de identidad usa su propio writer
 
-### Requirement: Resolución Solo desde la Configuración de Git en la Raíz del Workspace (REQ-42.6)
+### Requirement: Resolución Solo desde la Configuración de Git en la Raíz del Workspace (RF-ACT-06)
 
-La identidad DEBE resolverse leyendo únicamente `user.name` y `user.email` de la configuración de git (local, global y condicional `includeIf` según el directorio), ejecutada desde la raíz del workspace donde se escribe el artefacto (`loc.WorkspaceRoot`; en `multirepo`, el repositorio de specs). NO DEBE leer variables de entorno `GIT_AUTHOR_*` ni `GIT_COMMITTER_*` ni usar `git var`. La resolución NUNCA DEBE fallar: git ausente, directorio que no es repositorio, clave vacía o error de ejecución se tratan como «sin identidad» y activan REQ-42.5.
+La identidad DEBE resolverse leyendo únicamente `user.name` y `user.email` de la configuración de git (local, global y condicional `includeIf` según el directorio), ejecutada desde la raíz del workspace donde se escribe el artefacto (`loc.WorkspaceRoot`; en `multirepo`, el repositorio de specs). NO DEBE leer variables de entorno `GIT_AUTHOR_*` ni `GIT_COMMITTER_*` ni usar `git var`. La resolución NUNCA DEBE fallar: git ausente, directorio que no es repositorio, clave vacía o error de ejecución se tratan como «sin identidad» y activan RF-ACT-05.
 
 #### Scenario: Configuración local del repositorio
 - **DADO** un repositorio temporal con `user.name` y `user.email` locales y una configuración global aislada y vacía
@@ -160,9 +160,9 @@ La identidad DEBE resolverse leyendo únicamente `user.name` y `user.email` de l
 - **CUANDO** se ejecuta `gate record` sin `--actor`
 - **ENTONCES** el actor registrado es la identidad del repositorio de specs
 
-### Requirement: Saneado y Formato de la Identidad (REQ-42.7)
+### Requirement: Saneado y Formato de la Identidad (RF-ACT-07)
 
-La identidad DEBE formatearse como `Nombre <email>`. Antes de formatear, cada parte (`user.name`, `user.email`) DEBE sanearse en este orden: recorte de espacios en blanco en los extremos; rechazo de los caracteres de control (incluidos CR y LF) y del UTF-8 no válido, que dejan la parte como ausente; retirada de los caracteres `<` y `>`; nuevo recorte; y limitación a 120 caracteres (runes). Una parte que queda vacía tras el saneado cuenta como ausente. El actor resultante, por tanto, nunca supera 256 caracteres. El saneado y el formateo DEBEN ser funciones puras comprobables sin git. El valor de `--actor` explícito NO se sanea (REQ-42.2).
+La identidad DEBE formatearse como `Nombre <email>`. Antes de formatear, cada parte (`user.name`, `user.email`) DEBE sanearse en este orden: recorte de espacios en blanco en los extremos; rechazo de los caracteres de control (incluidos CR y LF) y del UTF-8 no válido, que dejan la parte como ausente; retirada de los caracteres `<` y `>`; nuevo recorte; y limitación a 120 caracteres (runes). Una parte que queda vacía tras el saneado cuenta como ausente. El actor resultante, por tanto, nunca supera 256 caracteres. El saneado y el formateo DEBEN ser funciones puras comprobables sin git. El valor de `--actor` explícito NO se sanea (RF-ACT-02).
 
 #### Scenario: Recorte de espacios
 - **DADO** `user.name = "  Ana Pérez  "` y `user.email = "  ana@example.com "`
@@ -172,13 +172,13 @@ La identidad DEBE formatearse como `Nombre <email>`. Antes de formatear, cada pa
 #### Scenario: Caracteres de control
 - **DADO** un `user.name` que contiene un salto de línea o un retorno de carro
 - **CUANDO** se sanea
-- **ENTONCES** la parte queda ausente y la identidad es incompleta (REQ-42.5)
+- **ENTONCES** la parte queda ausente y la identidad es incompleta (RF-ACT-05)
 - **Y** el actor registrado nunca contiene CR, LF ni otro carácter de control
 
 #### Scenario: UTF-8 no válido
 - **DADO** un `user.name` cuyos bytes no son UTF-8 válido
 - **CUANDO** se sanea
-- **ENTONCES** la parte queda ausente y la identidad es incompleta (REQ-42.5)
+- **ENTONCES** la parte queda ausente y la identidad es incompleta (RF-ACT-05)
 - **Y** ningún artefacto registra un valor binario (`!!binary`)
 
 #### Scenario: Retirada de `<` y `>`
@@ -198,7 +198,7 @@ La identidad DEBE formatearse como `Nombre <email>`. Antes de formatear, cada pa
 - **CUANDO** se registra una compuerta y se vuelve a leer `gates.yaml`, y se sella y se vuelve a leer `kickoff.yaml`
 - **ENTONCES** el `actor` y el `sealed_by` leídos son idénticos a la identidad formateada, sin pérdida ni truncado
 
-### Requirement: Registros Anteriores Siguen Siendo Válidos sin Migración (REQ-42.8)
+### Requirement: Registros Anteriores Siguen Siendo Válidos sin Migración (RF-ACT-08)
 
 Los `gates.yaml` y `kickoff.yaml` existentes, con `actor` o `sealed_by` iguales a `cli`, `maintainer`, `release-manager`, `inferred` u otro literal, DEBEN seguir leyéndose y validándose igual, sin migración y sin reescritura. La validación NO DEBE comparar ni restringir el valor del actor. Los comentarios de tipo de `GateRecord.Actor` y `Kickoff.SealedBy` DEBEN documentar el nuevo valor por defecto y la reserva `cli`.
 
@@ -217,7 +217,7 @@ Los `gates.yaml` y `kickoff.yaml` existentes, con `actor` o `sealed_by` iguales 
 - **CUANDO** se valida el registro
 - **ENTONCES** la validación pasa
 
-### Requirement: La Forma de la Salida JSON No Cambia (REQ-42.9)
+### Requirement: La Forma de la Salida JSON No Cambia (RF-ACT-09)
 
 Los comandos `gate record --json` y `kickoff seal --json` NO DEBEN añadir, quitar ni renombrar campos en su JSON como consecuencia de este cambio. En particular, NO DEBE aparecer un campo `actor` ni `warnings` nuevos en la salida de `gate record` ni de `seal`; el aviso de identidad viaja solo por stderr.
 

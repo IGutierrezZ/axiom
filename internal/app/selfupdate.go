@@ -205,7 +205,7 @@ func markPendingSyncAfterSelfUpdate(homeDir string) error {
 func selfUpgradeSucceeded(report upgrade.UpgradeReport) (string, bool) {
 	for _, r := range report.Results {
 		// Identity predicate (D-01/D-08), like every other self-tool safeguard
-		// (REQ-22.3).
+		// (RF-UPD-03).
 		if update.IsSelfToolName(r.ToolName) && r.Status == upgrade.UpgradeSucceeded {
 			return strings.TrimPrefix(r.NewVersion, "v"), true
 		}

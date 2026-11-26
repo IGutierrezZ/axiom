@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 )
 
-// Paridad entre `publish` y el estado de publicación del status (REQ-27.18): los dos componen la
+// Paridad entre `publish` y el estado de publicación del status (RF-PUB-11): los dos componen la
 // misma lista cerrada y miden el mismo rango, de modo que lo que el status anuncia como pendiente es
 // exactamente lo que `publish` haría. El motor se importa solo desde la prueba: en producción solo
 // `internal/cli/sdd_publish.go` importa este paquete.

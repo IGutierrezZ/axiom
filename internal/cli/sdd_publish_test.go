@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 )
 
-// Pruebas de `axiom sdd publish` (DD-10, REQ-27.5, REQ-27.2b, REQ-27.7, REQ-27.9) en proceso, con git
+// Pruebas de `axiom sdd publish` (DD-10, RF-PUB-01, RF-CLI-09, RF-PUB-03, RF-PUB-05) en proceso, con git
 // real, un remoto desnudo temporal local y sin red. Usan el punto de entrada RunSDDPublish.
 
 // newPublishProject crea un monorepo embebido con el cambio x confirmado en main, `origin` apuntando a
@@ -258,7 +258,7 @@ func TestPublishRelativeCwdResolvesToWorkspace(t *testing.T) {
 	}
 }
 
-// REQ-27.14: tras archivar, la rama de archivado solo se publica con `--archive`, y sin él la negativa
+// RF-ARC-08: tras archivar, la rama de archivado solo se publica con `--archive`, y sin él la negativa
 // nombra el flag que falta.
 func TestSDDPublishArchiveBranchRequiresTheArchiveFlag(t *testing.T) {
 	t.Parallel()

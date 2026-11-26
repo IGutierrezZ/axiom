@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// G1 de ids-provisionales (REQ-47.8, REQ-21.17): el paso de archivado `axiom sdd
+// G1 de ids-provisionales (RF-ARC-15, RF-ARC-02): el paso de archivado `axiom sdd
 // archive-integrate` reescribe tasks.md, las deltas y verify-report.md; con las puertas ya
 // aprobadas, esa reescritura no las devuelve a `pending` ni cambia el siguiente paso.
 

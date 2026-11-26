@@ -3,7 +3,7 @@ package update
 import "testing"
 
 // TestIsSelfToolName verifies the closed-set self-tool identity predicate
-// (D-01, REQ-22.3). Matching is case- and edge-whitespace-insensitive so the
+// (D-01, RF-UPD-03). Matching is case- and edge-whitespace-insensitive so the
 // lookup can never be bypassed by a spelling variant.
 func TestIsSelfToolName(t *testing.T) {
 	tests := []struct {

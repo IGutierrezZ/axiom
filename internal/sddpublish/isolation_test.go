@@ -14,7 +14,7 @@ import (
 	"testing"
 )
 
-// Aislamiento de la operación remota (DD-14, REQ-27.11, REQ-25.1): el único código del producto que
+// Aislamiento de la operación remota (DD-14, RF-PUB-07, RF-BRA-01): el único código del producto que
 // ejecuta `git commit` y `git push` vive en este paquete, solo lo alcanza `internal/cli/sdd_publish.go`
 // y ningún método de `internal/branch/**` publica. Son comprobaciones estáticas sobre los ficheros de
 // producción de `internal/` y `cmd/`, con `go/parser`.
@@ -129,7 +129,7 @@ func importViolations(label string, source []byte) ([]string, error) {
 }
 
 // runCalls son las funciones por las que `internal/branch/**` ejecuta git: ninguna puede recibir los
-// literales "push" ni "commit" (REQ-25.1).
+// literales "push" ni "commit" (RF-BRA-01).
 var runCalls = map[string]bool{"Run": true, "RunWithTimeout": true, "runWrite": true, "runRead": true}
 
 // publishingLiterals son los subcomandos que solo ejecuta este paquete.
@@ -198,7 +198,7 @@ func publishingCallViolations(label string, source []byte) (violations []string,
 	return violations, calls, nil
 }
 
-// REQ-27.11: el único paquete que importa `internal/sddpublish` es `internal/cli`, y dentro de él el
+// RF-PUB-07: el único paquete que importa `internal/sddpublish` es `internal/cli`, y dentro de él el
 // único fichero que lo usa es `sdd_publish.go`; ni `internal/branch/**` ni `internal/docpaths` lo
 // importan.
 func TestIsolationOnlyTheCLIVerbImportsSddpublish(t *testing.T) {
@@ -236,7 +236,7 @@ func TestIsolationOnlyTheCLIVerbImportsSddpublish(t *testing.T) {
 	}
 }
 
-// REQ-25.1 y REQ-27.11: ninguna ejecución de git de `internal/branch/**` lleva "push" ni "commit"; el
+// RF-BRA-01 y RF-PUB-07: ninguna ejecución de git de `internal/branch/**` lleva "push" ni "commit"; el
 // puerto de publicación sí los lleva, y por eso la comprobación no es vacua.
 func TestIsolationBranchPackageNeverPassesPushOrCommitToGit(t *testing.T) {
 	t.Parallel()

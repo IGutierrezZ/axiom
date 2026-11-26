@@ -170,7 +170,7 @@ func (r Result) ExitCode() int {
 }
 
 // ResumeSteps son las órdenes de quien continúa un cambio publicado: traer la rama (decisión de la
-// persona) y dejar que `ensure` la adopte (REQ-27.15). No llevan `-C`: la ruta de quien siga no se
+// persona) y dejar que `ensure` la adopte (RF-BRA-27). No llevan `-C`: la ruta de quien siga no se
 // conoce.
 func ResumeSteps(change string) []string {
 	return []string{"git fetch origin", fmt.Sprintf("axiom branch ensure --change %s --json", change)}

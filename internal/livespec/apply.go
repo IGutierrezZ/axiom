@@ -54,7 +54,7 @@ type writeOptions struct {
 	Extra func() (written []string, undo func() (failed []string), err error)
 }
 
-// writeSet escribe todos los ficheros o ninguno (REQ-47.4): primero un temporal por fichero
+// writeSet escribe todos los ficheros o ninguno (RF-RID-12): primero un temporal por fichero
 // junto a su destino y, solo si todos se escriben, los renombra; ante cualquier fallo
 // restaura lo ya renombrado y quita lo creado. Si la restauración falla conserva el
 // rollbackError, que nombra cada ruta no restaurada. Sin ficheros no toca el disco.
@@ -127,7 +127,7 @@ func writeSet(files []fileWrite, opts writeOptions) ([]string, error) {
 	return written, nil
 }
 
-// Apply escribe todas las especificaciones del plan o ninguna (REQ-30.2) con writeSet. Con
+// Apply escribe todas las especificaciones del plan o ninguna (RF-OLS-02) con writeSet. Con
 // una integración sin cambios no toca el disco. Si el proyecto ya tiene openspec/INDEX.md
 // lo regenera con livingdoc.Service.Sync y, si eso falla, también lo deshace. Devuelve las
 // rutas absolutas escritas, con el índice al final si cambió.
@@ -139,7 +139,7 @@ func (i Integration) Apply() ([]string, error) {
 		}
 	}
 	if i.docText != "" {
-		// El documento ODD reescrito va en el mismo conjunto atómico, el último (REQ-30.2).
+		// El documento ODD reescrito va en el mismo conjunto atómico, el último (RF-OLS-02).
 		files = append(files, fileWrite{Path: i.docPath, Content: []byte(i.docText), Name: "documento ODD " + i.Feature})
 	}
 	return writeSet(files, writeOptions{

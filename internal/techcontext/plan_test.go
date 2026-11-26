@@ -34,7 +34,7 @@ func TestCheckReportsTheContextEntries(t *testing.T) {
 	}
 }
 
-// REQ-30.15 y REQ-30.29: `check` no escribe nada, tampoco en la carpeta del cambio.
+// RF-CTX-13 y RF-CTX-19: `check` no escribe nada, tampoco en la carpeta del cambio.
 func TestCheckDoesNotWrite(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t, false)
@@ -103,7 +103,7 @@ func TestCheckRejections(t *testing.T) {
 		{
 			name:   "formato inválido",
 			delta:  "## Entrada: context/ARQUITECTURA.md\n\n- Ancla: Componentes\n- Acción: borrar\n- Motivo: x\n",
-			errors: []string{DeltaFileName, "REQ-24.31", "add, modify o remove", "Continuación"},
+			errors: []string{DeltaFileName, "RF-CTX-06", "add, modify o remove", "Continuación"},
 		},
 		{
 			name:   "ruta de referencia",
@@ -144,7 +144,7 @@ func TestCheckRejections(t *testing.T) {
 	}
 }
 
-// REQ-30.19: con contexto mantenido, un almacén de artefactos sin ficheros no tiene
+// RF-CTX-17: con contexto mantenido, un almacén de artefactos sin ficheros no tiene
 // delta ni traza que integrar.
 func TestCheckRequiresAFileArtifactStoreWithMaintainedContext(t *testing.T) {
 	t.Parallel()
@@ -169,7 +169,7 @@ func TestCheckRequiresAFileArtifactStoreWithMaintainedContext(t *testing.T) {
 	})
 }
 
-// REQ-30.30: una declaración `technical_context:` inválida falla cerrada.
+// RF-CTX-20: una declaración `technical_context:` inválida falla cerrada.
 func TestCheckFailsClosedOnAnInvalidTechnicalContext(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t, false)
@@ -289,7 +289,7 @@ func TestPrepareRequiresEditAuthorizationForSiblingRepositories(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mustErrors(t, report, "C2", "allowedEditRoots", "axiom sdd-attempt grant", "REQ-24.37")
+	mustErrors(t, report, "C2", "allowedEditRoots", "axiom sdd-attempt grant", "RF-CTX-12")
 }
 
 func TestPrepareIsIdempotentAndRejectsChangedInputs(t *testing.T) {

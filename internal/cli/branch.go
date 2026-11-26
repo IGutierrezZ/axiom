@@ -17,12 +17,12 @@ import (
 // `axiom branch` (INC-25, D-02): la familia de verbos que planifica, crea y consulta las
 // ramas y worktrees de un cambio. Trae `status`, `ensure`, `scope`, `done` y `guard` sobre el motor
 // internal/branch/engine (planificador puro, operaciones de git y resultado
-// `axiom.branch-result/v1`, o `axiom.branch-scope/v1` en `scope`); la ayuda lista los cinco verbos de REQ-25.1. `guard` es el hook de
+// `axiom.branch-result/v1`, o `axiom.branch-scope/v1` en `scope`); la ayuda lista los cinco verbos de RF-BRA-01. `guard` es el hook de
 // los runtimes con hooks (branch_guard.go). Ningún verbo ejecuta `push` ni
 // abre un PR, y ninguno hace operaciones remotas salvo `ensure --fetch` y `done --fetch`, que
-// ejecutan `git fetch origin` (REQ-25.1, REQ-25.10). `ensure --archive` crea la rama de archivado de un
-// cambio ya fusionado (REQ-25.45) y `done` elimina las ramas y los worktrees de un cambio fusionado
-// (REQ-25.16, REQ-25.17; branch_done.go).
+// ejecutan `git fetch origin` (RF-BRA-01, RF-BRA-10). `ensure --archive` crea la rama de archivado de un
+// cambio ya fusionado (RF-BRA-13) y `done` elimina las ramas y los worktrees de un cambio fusionado
+// (RF-BRA-17, RF-BRA-18; branch_done.go).
 
 const branchHelp = `Uso: axiom branch <subcomando> [argumentos]
 
@@ -285,7 +285,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 		return branch.ExitUsage
 	}
 	// Con --archive el plan es el de la rama de archivado, que solo planifica el repositorio del
-	// proyecto: no hay repositorios que incluir ni que acotar (REQ-25.12).
+	// proyecto: no hay repositorios que incluir ni que acotar (RF-BRA-12).
 	if *archive && len(repos) > 0 {
 		fmt.Fprintln(stderr, "Error: --repo no se admite con --archive: la rama de archivado solo se crea en el repositorio del proyecto y solo admite --prefix, --mode, --fetch, --cwd y --json. Repite `axiom branch ensure --change <nombre> --archive` sin --repo o ejecuta `axiom branch ensure --help`.")
 		return branch.ExitUsage
@@ -309,7 +309,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	roleGiven := strings.TrimSpace(*role) != ""
 	if roleGiven {
 		*role = canonicalEnsureRole(*role)
-		// Rechazo tipado y sin efectos, antes de llamar al motor (REQ-43.24, D-13).
+		// Rechazo tipado y sin efectos, antes de llamar al motor (RF-BRA-33, D-13).
 		if refusal := validateEnsureRole(dir, *change, branch.Lane(*lane), *archive, *role); refusal != nil {
 			return writeBranchResult(branch.NewResult("ensure").Refused(refusal), *asJSON, stdout, stderr)
 		}

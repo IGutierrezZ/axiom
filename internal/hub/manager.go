@@ -210,7 +210,7 @@ func (m *Manager) Register(path, name, topology string) (*WorkspaceRecord, error
 }
 
 // RegisterWithWorktreePrefs registra el proyecto como Register y aplica las preferencias de
-// worktree que no están vacías (REQ-25.30). Valida primero: un valor inválido no registra ni
+// worktree que no están vacías (RF-HUB-08). Valida primero: un valor inválido no registra ni
 // toca el hub. Es una fusión, no una sustitución: re-registrar con solo el modo conserva la
 // raíz ya guardada y viceversa. Sin preferencias no escribe nada más que el registro.
 func (m *Manager) RegisterWithWorktreePrefs(path, name, topology string, p WorktreePrefs) (*WorkspaceRecord, error) {

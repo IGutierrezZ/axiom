@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Las pruebas de `axiom sdd archive-integrate` (REQ-47.8, REQ-21.17, REQ-47.3). Los nombres
+// Las pruebas de `axiom sdd archive-integrate` (RF-ARC-15, RF-ARC-02, RF-RID-11). Los nombres
 // empiezan por SDDArchiveIntegrate. Todos los textos son inventados.
 
 const (

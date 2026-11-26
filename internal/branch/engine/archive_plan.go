@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// El plan de archivado en el motor (REQ-25.45, design D-25): cómo se compone la entrada de
+// El plan de archivado en el motor (RF-BRA-13, design D-25): cómo se compone la entrada de
 // `branch.Plan` para la rama de archivado a partir de los hechos del cambio y qué muestra
 // `status` de ella. `ensure --archive` (archive.go) y `status` comparten esta composición, de
 // modo que ambos nombran la misma rama.
@@ -60,7 +60,7 @@ func registeredChangeBranch(facts changeFacts) string {
 			}
 		}
 	}
-	// Tras el registro, la instantánea del kickoff (REQ-25.36): la rama con la que se selló.
+	// Tras el registro, la instantánea del kickoff (RF-KOF-06): la rama con la que se selló.
 	if named := branch.SnapshotChangeBranch(facts.input, planning); named != "" {
 		return named
 	}
@@ -93,7 +93,7 @@ func recordedArchiveBranch(record *branch.Record, planning branch.RepoFacts) (br
 }
 
 // withArchiveBranch añade al plan ordinario de un cambio su rama de archivado cuando existe
-// (REQ-25.15, REQ-25.4: la rama de archivado no pertenece al modelo de roles y su PR va a la
+// (RF-BRA-16, RF-BRA-04: la rama de archivado no pertenece al modelo de roles y su PR va a la
 // integración): existe en git o consta en el registro. Sin ella, el plan queda como está. Solo
 // el carril SDD de un monorepo tiene rama de archivado: en cualquier otro caso, y si el plan de
 // archivado se rechaza (una ruta ocupada o demasiado larga, por ejemplo), `status` no la

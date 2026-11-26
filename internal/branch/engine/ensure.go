@@ -16,12 +16,12 @@ import (
 
 // EnsureRequest es la petición de `ensure`. CWD debe ser un directorio absoluto. Fetch pide
 // `git fetch origin` en cada repositorio del plan antes de resolver la base (`--fetch`,
-// REQ-25.10): sin él, `ensure` no hace ninguna operación remota. Mode es `--mode`: la
+// RF-BRA-10): sin él, `ensure` no hace ninguna operación remota. Mode es `--mode`: la
 // respuesta a `ask` o un modo explícito (`worktree` o `in_place`); vacío si no se indicó
-// (REQ-25.8). Exceptions son `--prefix`, `--branch` y `--base`, que se registran por cambio
-// (REQ-25.12); Repos, los `--repo` (REQ-25.12, REQ-25.13): en el carril ODD incluyen
+// (RF-BRA-08). Exceptions son `--prefix`, `--branch` y `--base`, que se registran por cambio
+// (RF-BRA-12); Repos, los `--repo` (RF-BRA-12, RF-BRA-14): en el carril ODD incluyen
 // repositorios y en el SDD acotan los del plan. Archive pide el plan de archivado en lugar del
-// del cambio (`--archive`, REQ-25.45, design D-25): solo crea la rama de archivado del repositorio
+// del cambio (`--archive`, RF-BRA-13, design D-25): solo crea la rama de archivado del repositorio
 // del planning home, con Exceptions.Prefix como único prefijo admitido, y rechaza el cambio que
 // aún no está fusionado en la base (`change_not_integrated`).
 type EnsureRequest struct {
@@ -33,14 +33,14 @@ type EnsureRequest struct {
 	Exceptions branch.Exceptions
 	Repos      []string
 	Archive    bool
-	// Promotions son los `--promotion` (`<modo>` o `<repo>=<modo>`, REQ-25.47): la respuesta a la
+	// Promotions son los `--promotion` (`<modo>` o `<repo>=<modo>`, RF-BRA-29): la respuesta a la
 	// pregunta de promoción de un repositorio de dos etapas o su modo explícito. Vacío si no se
 	// dieron.
 	Promotions []branch.PromotionRequest
 }
 
 // Ensure crea lo que falta de las ramas del cambio y las despliega según el modo de trabajo
-// (REQ-25.7, REQ-25.8, design D-05): en `worktree`, un worktree por rama; en `in_place`, la
+// (RF-BRA-07, RF-BRA-08, design D-05): en `worktree`, un worktree por rama; en `in_place`, la
 // rama de seguimiento en el propio repositorio con `git switch`. La base se resuelve sin red
 // (D-06):
 //
@@ -54,7 +54,7 @@ type EnsureRequest struct {
 //     resolver la base; que la base existe, que ninguna rama está desplegada en un
 //     worktree desconocido y que las rutas planificadas están libres; en `in_place`, que
 //     el repositorio tiene el árbol limpio si va a cambiar de rama (`dirty_worktree`, sin
-//     modificar nada: ya en la rama esperada es un no-op, REQ-25.9);
+//     modificar nada: ya en la rama esperada es un no-op, RF-BRA-09);
 //  3. aplica solo lo que falta (apply): crea las ramas que no existen, desde la base o,
 //     las de rol, desde la de seguimiento, y los worktrees que no existen (en `in_place`,
 //     el `git switch` a la rama de seguimiento), siempre con cmd.Dir en el checkout
@@ -69,12 +69,12 @@ type EnsureRequest struct {
 // pendiente; un fallo de la comprobación (incluido `fetch_failed`) no deja ni ramas, ni
 // worktrees, ni registro. La única operación remota es `git fetch origin` con `--fetch`.
 //
-// Las excepciones por cambio (`--prefix`, `--branch`, `--base`, REQ-25.12) se validan antes de
+// Las excepciones por cambio (`--prefix`, `--branch`, `--base`, RF-BRA-12) se validan antes de
 // bloquear nada (`invalid_name`), se contrastan con las del registro (una contradicción de lo
 // materializado es `plan_conflict`, la repetición idéntica es idempotente) y se registran. En un
 // multirepo, el repositorio de specs se trabaja in situ: nunca recibe ramas, worktrees ni
-// checkout, y fuera de su integración se rechaza (`specs_repo_not_on_integration`, REQ-25.5). El
-// carril ODD (REQ-25.13) no tiene roles ni kickoff y `--repo` incluye repositorios de código.
+// checkout, y fuera de su integración se rechaza (`specs_repo_not_on_integration`, RF-BRA-05). El
+// carril ODD (RF-BRA-14) no tiene roles ni kickoff y `--repo` incluye repositorios de código.
 //
 // Con Archive (`--archive`, design D-25) la misma secuencia planifica y crea solo la rama de
 // archivado (archive.go): aplica el modo registrado del cambio, comprueba además que la base ya
@@ -230,7 +230,7 @@ type ensureStep struct {
 	// createFrom es el punto de partida de la rama, o vacío si la rama ya existe.
 	createFrom string
 	// adopt dice que createFrom es la referencia remota local `refs/remotes/origin/<rama>` de una
-	// rama ya publicada (REQ-27.15): se crea con seguimiento, sin red. createdFrom y createdRef
+	// rama ya publicada (RF-BRA-27): se crea con seguimiento, sin red. createdFrom y createdRef
 	// son lo que `ensure` informa de la rama que crea (BranchResult.CreatedFrom y CreatedFromRef).
 	adopt       bool
 	createdFrom string
@@ -259,7 +259,7 @@ type repositorySteps struct {
 // (por raíz git) en los que se ejecutó `git fetch origin`. Con fetch, cada repositorio con
 // ramas se trae justo antes de resolver su base. Los repositorios sin ramas (el de specs de
 // un multirepo, que se trabaja in situ) no tienen nada que traer ni que crear, pero sí que
-// estar en su rama de integración (checkSpecsRepository, REQ-25.5).
+// estar en su rama de integración (checkSpecsRepository, RF-BRA-05).
 func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts, fetch bool) ([]repositorySteps, map[string]bool, *branch.Refusal) {
 	var pending []repositorySteps
 	fetched := map[string]bool{}
@@ -379,7 +379,7 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 	return pending, nil
 }
 
-// checkInPlaceRepository es checkRepository en modo `in_place` (REQ-25.8, REQ-25.9): las
+// checkInPlaceRepository es checkRepository en modo `in_place` (RF-BRA-08, RF-BRA-09): las
 // ramas del plan se crean igual (la del cambio desde la base, las de rol desde ella), pero
 // solo la de seguimiento, la primera, se despliega, y en el propio repositorio, que es su
 // checkout principal (limitación documentada, R26: las ramas de rol no se despliegan). Si ya
@@ -512,7 +512,7 @@ func occupied(path string) string {
 }
 
 // startPoint fija de dónde sale una rama del plan que aún no existe en local (DD-13,
-// REQ-27.15). Si `refs/remotes/origin/<rama>` ya está traída a local, la rama (de cambio, de
+// RF-BRA-27). Si `refs/remotes/origin/<rama>` ya está traída a local, la rama (de cambio, de
 // rol o de archivado) la adopta con seguimiento; si no, la regla de siempre: la del cambio y la
 // de archivado salen de la base, y las de rol, de la de seguimiento, que el plan crea antes (va
 // la primera de la lista). Solo lee referencias locales: nunca hay red.

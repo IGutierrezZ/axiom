@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/identitystore"
 )
 
-// adoCanary es el PAT ficticio y reconocible de REQ-45.15. Nunca es una credencial real.
+// adoCanary es el PAT ficticio y reconocible de RF-ADO-15. Nunca es una credencial real.
 const adoCanary = "ado-canario-PAT-9f8e7d6c5b4a"
 
 // canaryForms son las formas en que el PAT puede delatarse: el valor, su base64 de ":"+PAT (la
@@ -124,7 +124,7 @@ func assertNoCanary(t *testing.T, label string, items []string) {
 	}
 }
 
-// REQ-45.15: el PAT canario y su forma base64 no aparecen en stdout, stderr, errores, fichero de
+// RF-ADO-15: el PAT canario y su forma base64 no aparecen en stdout, stderr, errores, fichero de
 // identidad, axiom.yaml ni salida de discover, ni en ningún fichero bajo el workspace y el directorio
 // de estado, en el camino feliz ni en los de error 401, 403, 429 (presupuesto agotado) y 500, ni
 // cuando el servidor devuelve la cabecera Authorization en el cuerpo del error.

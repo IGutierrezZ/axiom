@@ -14,7 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
 )
 
-// `axiom branch scope` (C-02-b, REQ-25.1, REQ-25.2, REQ-25.51 a REQ-25.54, design D1 y D3): calcula,
+// `axiom branch scope` (C-02-b, RF-BRA-01, RF-BRA-02, RF-BRA-35 a RF-BRA-38, design D1 y D3): calcula,
 // solo con lecturas y sin red, el alcance conjunto de un cambio (los commits propios de su rama por
 // repositorio de código) y la oferta de verificación conjunta. El cálculo vive en el motor
 // (internal/branch/engine); aquí solo están las banderas, la ayuda y la salida.

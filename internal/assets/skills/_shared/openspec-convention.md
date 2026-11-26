@@ -11,8 +11,8 @@ openspec/
 └── changes/                 <- Active changes
     ├── archive/             <- Completed changes (YYYY-MM-DD-{change-name}/)
     └── {change-name}/       <- Active change folder
-        ├── kickoff.yaml     <- sealed by `axiom sdd kickoff seal` (INC-21, REQ-21.5/21.6); write-once
-        ├── gates.yaml       <- append-only block-review-gate ledger, written by `axiom sdd gate record` (INC-21, REQ-21.8-21.12)
+        ├── kickoff.yaml     <- sealed by `axiom sdd kickoff seal` (INC-21, RF-PRE-01/RF-PRE-02); write-once
+        ├── gates.yaml       <- append-only block-review-gate ledger, written by `axiom sdd gate record` (INC-21, RF-GAT-02–RF-GAT-06)
         ├── state.yaml       <- optional recovery hint; may contain dependsOn
         ├── exploration.md   <- (optional) from sdd-explore
         ├── research.md      <- (optional) source-backed research notes
@@ -21,7 +21,7 @@ openspec/
         │   └── {domain}/
         │       └── spec.md  <- Delta spec
         ├── design.md        <- from sdd-design
-        ├── tasks.md         <- from sdd-tasks (updated by sdd-apply); or tasks.<role>.md per role when kickoff.yaml seals more than one role (REQ-21.10)
+        ├── tasks.md         <- from sdd-tasks (updated by sdd-apply); or tasks.<role>.md per role when kickoff.yaml seals more than one role (RF-GAT-04)
         ├── verify-report.md <- from sdd-verify; or verify-report.<role>.md per role (a per-role verify; `fullstack` keeps verify-report.md)
         ├── review-ledger.md <- optional judgment ledger of the single role; review-ledger.<role>.md per role (written by the orchestrator)
         ├── coverage-review.spec.md <- optional coverage review after spec (informational; never digested by a gate)

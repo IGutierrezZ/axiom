@@ -328,7 +328,7 @@ func validate(record branch.Record, lane branch.Lane, change string) error {
 			return fmt.Errorf("exceptions.branch %q no es válido: %w", name, err)
 		}
 	}
-	// El prefijo de la rama de archivado (`ensure --archive --prefix`, REQ-25.12) es un prefijo
+	// El prefijo de la rama de archivado (`ensure --archive --prefix`, RF-BRA-12) es un prefijo
 	// de rama como el de las excepciones.
 	if prefix := record.ArchivePrefix; prefix != "" {
 		if err := gitref.ValidPrefix(prefix); err != nil {
@@ -346,7 +346,7 @@ func knownModeSource(source string) bool {
 	return false
 }
 
-// absolute exige que una ruta del registro sea absoluta (REQ-25.2, REQ-25.14).
+// absolute exige que una ruta del registro sea absoluta (RF-BRA-02, RF-BRA-15).
 func absolute(field, path string) error {
 	if !filepath.IsAbs(path) {
 		return fmt.Errorf("%s %q no es una ruta absoluta", field, path)

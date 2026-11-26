@@ -12,7 +12,7 @@ import (
 )
 
 // Las pruebas del plan único de asignación de identificadores (D3, D5, D7; REQ-47.2 a
-// REQ-47.5). Todos los textos son inventados.
+// RF-RID-13). Todos los textos son inventados.
 
 const pagosCanon = "# Especificación: pagos\n\n## Requirements\n\n### Requirement: Cobro (REQ-30.1)\n\nEl sistema DEBE cobrar.\n\n### Requirement: Reembolso (REQ-30.2)\n\nEl sistema DEBE reembolsar.\n"
 
@@ -393,7 +393,7 @@ func TestPlanIDsDefinitiveAddedCollisionsCompareByIdentityWithFreeWidth(t *testi
 
 func TestPlanIDsMissingTitlelessMODIFIEDStaysPendingForTheComposition(t *testing.T) {
 	// Un MODIFIED sin ID que no casa no lo rechaza el plan: sigue pendiente y lo rechaza la
-	// composición con el motivo vigente (REQ-47.3 regla 2).
+	// composición con el motivo vigente (RF-RID-11 regla 2).
 	in := idInput(t, reqid.Default(), map[string]string{"specs/pagos/spec.md": pagosCanon},
 		source("pagos", "## MODIFIED Requirements\n\n"+block("Sin coincidencia", "Cuerpo.")))
 	if _, err := PlanIDs(in); err != nil {

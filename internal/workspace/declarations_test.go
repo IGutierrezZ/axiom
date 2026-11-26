@@ -91,7 +91,7 @@ func proseDoc(domain, path string) string {
 	return "    - domain: " + domain + "\n      path: " + path + "\n"
 }
 
-// REQ-30.21: la baseline retirada y un technical_context inválido se reportan
+// RF-TOP-12: la baseline retirada y un technical_context inválido se reportan
 // cada uno por su canal.
 func TestDeclarationsErrorsAccumulate(t *testing.T) {
 	_, baseErr, declarations := parseDeclarations(t, baselineDoc(proseDoc("a", "../uno.md"))+"technical_context:\n  maintained:\n    paths: []\n")

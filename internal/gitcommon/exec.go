@@ -97,7 +97,7 @@ type Result struct {
 }
 
 // Run ejecuta git con cmd.Dir = dir y es el único `exec.Command` permitido en
-// `internal/branch/**` y en este paquete (REQ-25.1, G-7: una prueba de arquitectura
+// `internal/branch/**` y en este paquete (RF-BRA-01, G-7: una prueba de arquitectura
 // lo fija). dir debe ser un directorio absoluto y existente: git nunca se ejecuta
 // desde el directorio del proceso. Aplica tiempo máximo y límite de salida, retira
 // las variables que redirigen el repositorio (gitEnvironment) y avisa al
@@ -119,7 +119,7 @@ var ErrTimeout = errors.New("git superó el tiempo máximo")
 // garantías (directorio absoluto, entorno sin variables que redirigen el repositorio,
 // límites de salida y observador), con el límite fijado por quien llama. Existe para
 // las operaciones de red de la publicación, que necesitan más margen que una lectura
-// local (REQ-27.9, REQ-27.11), y sigue siendo el único punto de ejecución de git del
+// local (RF-PUB-05, RF-PUB-07), y sigue siendo el único punto de ejecución de git del
 // producto. Un tiempo agotado devuelve un error que envuelve ErrTimeout.
 func RunWithTimeout(ctx context.Context, dir string, timeout time.Duration, args ...string) (Result, error) {
 	if len(args) == 0 {
@@ -176,14 +176,14 @@ func RunWithTimeout(ctx context.Context, dir string, timeout time.Duration, args
 }
 
 // TopLevel devuelve la raíz absoluta del árbol de trabajo que contiene dir
-// (`git rev-parse --show-toplevel`, REQ-25.6): en un worktree enlazado es la raíz de
+// (`git rev-parse --show-toplevel`, RF-BRA-06): en un worktree enlazado es la raíz de
 // ese worktree. Fuera de un repositorio devuelve ErrNotGitRepository.
 func TopLevel(ctx context.Context, dir string) (string, error) {
 	return pathFromGit(ctx, dir, "rev-parse", "--show-toplevel")
 }
 
 // CommonDir devuelve el git common dir absoluto del repositorio que contiene dir
-// (`git rev-parse --path-format=absolute --git-common-dir`, REQ-25.14): el mismo
+// (`git rev-parse --path-format=absolute --git-common-dir`, RF-BRA-15): el mismo
 // directorio desde el checkout principal y desde cualquier worktree enlazado, sin
 // suponer que se llama `.git`. Fuera de un repositorio devuelve ErrNotGitRepository.
 func CommonDir(ctx context.Context, dir string) (string, error) {

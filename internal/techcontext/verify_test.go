@@ -156,7 +156,7 @@ func TestVerifyTrace(t *testing.T) {
 	})
 }
 
-// REQ-30.19 y REQ-30.30: la verificación falla cerrada ante una declaración
+// RF-CTX-17 y RF-CTX-20: la verificación falla cerrada ante una declaración
 // inválida o un almacén sin ficheros.
 func TestVerifyFailsClosedOnTheDeclarationAndTheArtifactStore(t *testing.T) {
 	t.Parallel()
@@ -254,7 +254,7 @@ func TestVerifyScope(t *testing.T) {
 		f := preparedFixture(t)
 		f.applyEdits(t)
 		writeTestFile(t, filepath.Join(f.specs, "referencia", "legado", "VIEJO.md"), "# Viejo editado\n")
-		mustViolate(t, f.verify(t), ViolationScope, "referencia/legado/VIEJO.md", "ruta de referencia", "REQ-24.30")
+		mustViolate(t, f.verify(t), ViolationScope, "referencia/legado/VIEJO.md", "ruta de referencia", "RF-CTX-05")
 	})
 	t.Run("fichero ajeno", func(t *testing.T) {
 		f := preparedFixture(t)
@@ -293,7 +293,7 @@ func TestVerifyScope(t *testing.T) {
 			t.Fatalf("Prepare: %v %v", err, report.Errors)
 		}
 		writeTestFile(t, filepath.Join(f.specs, "context", "ARQUITECTURA.md"), editedContext)
-		mustViolate(t, f.verify(t), ViolationScope, "context/ARQUITECTURA.md", "Sin impacto", "REQ-24.57")
+		mustViolate(t, f.verify(t), ViolationScope, "context/ARQUITECTURA.md", "Sin impacto", "RF-ARC-06")
 	})
 	t.Run("la suciedad previa que no cambia no es del archivado", func(t *testing.T) {
 		f := newFixture(t, true)

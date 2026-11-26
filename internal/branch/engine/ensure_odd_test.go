@@ -10,7 +10,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// Carril ODD de `ensure` (REQ-25.13, design D-04): la misma política que SDD sin roles, sin
+// Carril ODD de `ensure` (RF-BRA-14, design D-04): la misma política que SDD sin roles, sin
 // kickoff y sin archivado. En un monorepo prepara `<prefijo>/<feature>` y su worktree; en un
 // multirepo trabaja in situ en el repositorio de specs y solo incluye los repositorios de código
 // que se piden con `--repo`, cada uno con solo la rama de la feature. Con git real, entorno
@@ -40,7 +40,7 @@ func wantNoOpenSpecChanges(t *testing.T, root string) {
 	}
 }
 
-// REQ-25.13, escenarios «ODD en monorepo prepara rama y worktree» y «ODD no crea
+// RF-BRA-14, escenarios «ODD en monorepo prepara rama y worktree» y «ODD no crea
 // `kickoff.yaml`»: `feat/mi-feature` con su worktree, y el JSON indica
 // `<worktree>/odd/tasks/mi-feature.md`; no se crea ningún fichero bajo `openspec/changes/` ni en
 // el checkout ni en el worktree, y el registro es el del carril odd.
@@ -73,7 +73,7 @@ func TestEnsureOddLaneInAMonorepoPreparesTheBranchAndItsWorktree(t *testing.T) {
 	wantNoRegistryFile(t, repo, "mi-feature")
 }
 
-// REQ-25.13, escenario «ODD en multirepo trabaja in situ en el repositorio de specs»: no se crea
+// RF-BRA-14, escenario «ODD en multirepo trabaja in situ en el repositorio de specs»: no se crea
 // rama ni worktree en el repositorio de specs, los repositorios de código no entran al plan sin
 // `--repo` aunque haya roles declarados y el documento ODD está en el repositorio de specs.
 func TestEnsureOddLaneInAMultirepoWorksInPlaceInTheSpecsRepository(t *testing.T) {
@@ -101,7 +101,7 @@ func TestEnsureOddLaneInAMultirepoWorksInPlaceInTheSpecsRepository(t *testing.T)
 	wantNoOpenSpecChanges(t, specs)
 }
 
-// REQ-25.13, escenario «Un repositorio de código se incluye con `--repo`»: el repositorio indicado
+// RF-BRA-14, escenario «Un repositorio de código se incluye con `--repo`»: el repositorio indicado
 // recibe solo `<prefijo>/<feature>`, sin ramas de rol aunque varios roles lo declaren; el que no
 // se indica no entra; repetir sin `--repo` recompone el mismo estado desde el registro (mismo
 // JSON, ninguna escritura); y una ruta que no existe se omite con `not_a_git_repository`.
@@ -157,7 +157,7 @@ func TestEnsureOddLaneRepoFlagIncludesCodeRepositoriesWithOnlyTheFeatureBranch(t
 	})
 }
 
-// REQ-25.13 y REQ-25.8: en un monorepo, `--repo` incluye otro repositorio con su propio worktree
+// RF-BRA-14 y RF-BRA-08: en un monorepo, `--repo` incluye otro repositorio con su propio worktree
 // y solo la rama de la feature; el repositorio del planning home no se repite si se indica a sí
 // mismo (`.`).
 func TestEnsureOddLaneRepoFlagInAMonorepoIncludesTheOtherRepositoryOnce(t *testing.T) {

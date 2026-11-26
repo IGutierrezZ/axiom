@@ -36,7 +36,7 @@ const (
 	specSectionHeading   = "Spec viva"
 	impactSectionHeading = "Impacto en la spec"
 	// impactMarkerLine es la misma línea que fija el perfil de bug del carril SDD
-	// (REQ-29.15): un único contrato para los dos carriles.
+	// (RF-CLI-10): un único contrato para los dos carriles.
 	impactMarkerLine   = isoevidence.NoImpactMark
 	impactReasonPrefix = isoevidence.NoImpactReasonLabel
 	capabilityPrefix   = "### Capacidad:"
@@ -61,7 +61,7 @@ type FeatureDoc struct {
 	SpecSection bool
 
 	// text es el documento tal como se leyó, para reescribirlo al asignar identificadores
-	// (REQ-30.2); un FeatureDoc que no sale de ParseFeatureDoc no lo tiene y no se reescribe.
+	// (RF-OLS-02); un FeatureDoc que no sale de ParseFeatureDoc no lo tiene y no se reescribe.
 	text string
 }
 
@@ -183,7 +183,7 @@ func splitSections(lines []docLine) (header []docLine, sections []docSection) {
 	return header, sections
 }
 
-// ParseFeatureDoc analiza el documento ODD odd/tasks/<feature>.md (REQ-30.1, REQ-30.5):
+// ParseFeatureDoc analiza el documento ODD odd/tasks/<feature>.md (RF-OLS-01, RF-OLS-05):
 // el tipo de la cabecera, la sección `## Spec viva` con una delta por capacidad y la
 // sección `## Impacto en la spec`. Devuelve un *DocError con todos los defectos del
 // documento. No decide si un bug sin delta ni marcador se rechaza (eso es CheckImpact)

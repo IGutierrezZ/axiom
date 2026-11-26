@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// REQ-30.15: la ayuda del grupo `archive` lista `context` junto a los verbos
+// RF-CTX-13: la ayuda del grupo `archive` lista `context` junto a los verbos
 // históricos, y la ayuda global lo anuncia.
 func TestArchiveHelpListsTheContextVerb(t *testing.T) {
 	for _, flag := range []string{"--help", "-h", "help"} {
@@ -51,7 +51,7 @@ func TestArchiveUnknownSubcommandNamesTheValidOnes(t *testing.T) {
 	}
 }
 
-// REQ-30.2: `axiom archive integrate` está en la ayuda del grupo y de la ayuda global, y se
+// RF-OLS-02: `axiom archive integrate` está en la ayuda del grupo y de la ayuda global, y se
 // despacha a la CLI.
 func TestArchiveHelpListsTheIntegrateVerb(t *testing.T) {
 	var stdout, stderr bytes.Buffer
@@ -81,7 +81,7 @@ func TestArchiveIntegrateIsDispatchedToTheCLI(t *testing.T) {
 	}
 }
 
-// REQ-30.9 y REQ-30.15: la ayuda del grupo `archive` lista `integrate`, `adopt` y `context`, la
+// RF-ADP-01 y RF-CTX-13: la ayuda del grupo `archive` lista `integrate`, `adopt` y `context`, la
 // ayuda global anuncia `archive adopt` y el verbo se despacha a la CLI.
 func TestArchiveHelpListsTheAdoptVerb(t *testing.T) {
 	var stdout, stderr bytes.Buffer

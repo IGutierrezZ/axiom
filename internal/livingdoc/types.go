@@ -34,7 +34,7 @@ type LivingCatalog struct {
 	// cabecera de INDEX.md.
 	ProjectName string `json:"project_name,omitempty"`
 	// Warnings reúne los avisos de lectura del catálogo, entre ellos el de la
-	// ubicación antigua divergente (Q14, REQ-24.10).
+	// ubicación antigua divergente (Q14, RF-PLH-10).
 	Warnings []string `json:"warnings,omitempty"`
 }
 

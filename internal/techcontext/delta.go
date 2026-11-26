@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// Action es la acción de una entrada del delta de contexto (REQ-24.31).
+// Action es la acción de una entrada del delta de contexto (RF-CTX-06).
 type Action string
 
 const (
@@ -32,7 +32,7 @@ type Entry struct {
 }
 
 // Delta es el contenido de `context-impact.md`: o bien entradas, o bien
-// la declaración explícita «Sin impacto» con su motivo, nunca ambas (REQ-24.31).
+// la declaración explícita «Sin impacto» con su motivo, nunca ambas (RF-CTX-06).
 type Delta struct {
 	NoImpact bool
 	Reason   string // motivo de «Sin impacto»

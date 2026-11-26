@@ -7276,7 +7276,7 @@ func openCodeValidatorBashRules(t *testing.T, content []byte) map[string]any {
 }
 
 // ---------------------------------------------------------------------------
-// Instalación del hook de `axiom branch guard` por `axiom sync` (REQ-25.22, design D-18)
+// Instalación del hook de `axiom branch guard` por `axiom sync` (RF-BRA-23, design D-18)
 // ---------------------------------------------------------------------------
 
 // Las órdenes y los matchers se fijan aquí como literales a propósito: el hook de Codex es «no
@@ -7481,7 +7481,7 @@ func TestEnsureCodexBranchGuardHookRejectsUnexpectedHookSchema(t *testing.T) {
 	}
 }
 
-// REQ-25.22: la instalación de Claude Code y de Codex entra por installSkillRegistryAutomation sin
+// RF-BRA-23: la instalación de Claude Code y de Codex entra por installSkillRegistryAutomation sin
 // alterar las demás rutas; Pi no recibe ninguna entrada y ningún repositorio recibe hooks de git.
 func TestInstallSkillRegistryAutomationBranchGuardReachesClaudeAndCodexOnly(t *testing.T) {
 	home := t.TempDir()
@@ -7592,13 +7592,13 @@ func TestInjectBranchGuardTwoSyncsLeaveIdenticalBytes(t *testing.T) {
 	}
 }
 
-// --- Plugin axiom-branch-guard.ts de OpenCode (S11-c4; REQ-25.22; R10) ---
+// --- Plugin axiom-branch-guard.ts de OpenCode (S11-c4; RF-BRA-23; R10) ---
 
 const branchGuardPluginName = "axiom-branch-guard.ts"
 
 // El plugin figura en la lista gestionada de OpenCode (la que usan Inject, la sincronización, el
 // desinstalador y la restauración transaccional) y en la tabla de resúmenes, y no llega a otros
-// agentes sin el hook (REQ-25.22: solo Claude Code, Codex y OpenCode).
+// agentes sin el hook (RF-BRA-23: solo Claude Code, Codex y OpenCode).
 func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
 	if !slices.Contains(ManagedOpenCodePluginNames(), branchGuardPluginName) {
 		t.Fatalf("ManagedOpenCodePluginNames() no contiene %q: %v", branchGuardPluginName, ManagedOpenCodePluginNames())
@@ -7720,7 +7720,7 @@ func TestRefreshInstalledOpenCodePluginsKeepsBranchGuardPluginInSync(t *testing.
 	}
 }
 
-// REQ-30.31, escenario «Paridad entre runtimes»: la referencia de adopción de sdd-spec se instala
+// RF-ORQ-19, escenario «Paridad entre runtimes»: la referencia de adopción de sdd-spec se instala
 // con el mismo contenido normativo en cada runtime, byte a byte igual al activo embebido.
 func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.T) {
 	mockNoPackageManager(t)

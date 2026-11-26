@@ -18,7 +18,7 @@ import (
 )
 
 // Listados que agregan los cambios de los worktrees registrados y marcan los pendientes de archivar
-// (INC-25 S10-c3; REQ-25.34 y REQ-25.20, design D-16, D-17 y D-20). Pruebas con git real, entorno
+// (INC-25 S10-c3; RF-WEB-11 y RF-BRA-21, design D-16, D-17 y D-20). Pruebas con git real, entorno
 // aislado y sin red: el cambio se crea con `ensure` en modo `worktree`, de modo que el registro local
 // y el worktree son los que produce el motor; solo el worktree de la rama de archivado, que exige un
 // cambio fusionado, se registra a mano en ese mismo registro.
@@ -105,7 +105,7 @@ func worktreeChange(t *testing.T, svc *Service, ws workspacetest.Workspace, name
 	return worktreeOfBranch(t, ws.Master, "feat/"+name)
 }
 
-// REQ-25.34 escenarios «Un cambio de un worktree figura en el listado» y «El detalle de un cambio en
+// RF-WEB-11 escenarios «Un cambio de un worktree figura en el listado» y «El detalle de un cambio en
 // worktree se resuelve»: el checkout principal no tiene el cambio, el listado lo da como activo con la
 // ruta de su worktree y su rama, y el detalle, los roles y el relevo se leen del worktree.
 func TestIncrementsListsAChangeThatLivesOnlyInItsWorktree(t *testing.T) {
@@ -159,7 +159,7 @@ func TestIncrementsListsAChangeThatLivesOnlyInItsWorktree(t *testing.T) {
 	}
 }
 
-// REQ-25.34 escenario «El worktree prevalece sobre el checkout principal»: el cambio figura una sola
+// RF-WEB-11 escenario «El worktree prevalece sobre el checkout principal»: el cambio figura una sola
 // vez y con los datos del worktree.
 func TestIncrementsWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)
@@ -188,7 +188,7 @@ func TestIncrementsWorktreePrevailsOverTheMainCheckout(t *testing.T) {
 	}
 }
 
-// REQ-25.34 escenario «El worktree de la rama de archivado prevalece sobre el de la rama del cambio».
+// RF-WEB-11 escenario «El worktree de la rama de archivado prevalece sobre el de la rama del cambio».
 func TestIncrementsArchiveWorktreePrevailsOverTheChangeWorktree(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)
 	svc := NewService(ws.Master)
@@ -235,7 +235,7 @@ func registerArchiveWorktree(t *testing.T, ws workspacetest.Workspace, change, d
 	t.Fatalf("el registro no tiene el cambio %s: %+v", change, records)
 }
 
-// REQ-25.34 escenario «Un worktree desaparecido se omite con aviso»: 200 sin ese cambio y un aviso en
+// RF-WEB-11 escenario «Un worktree desaparecido se omite con aviso»: 200 sin ese cambio y un aviso en
 // `X-Axiom-Notes` que nombra la ruta ausente. La cabecera viaja en ASCII (los acentos, escapados).
 func TestIncrementsOmitsAMissingWorktreeWithANote(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)
@@ -266,7 +266,7 @@ func TestIncrementsOmitsAMissingWorktreeWithANote(t *testing.T) {
 	}
 }
 
-// REQ-25.34 y REQ-25.20 escenario «Un cambio fusionado y sin archivar se muestra como pendiente»: el
+// RF-WEB-11 y RF-BRA-21 escenario «Un cambio fusionado y sin archivar se muestra como pendiente»: el
 // listado marca `y` y la cabecera lo nombra con su continuación; la respuesta sigue siendo 200 y un
 // cambio que vive solo en su worktree no se marca.
 func TestIncrementsMarksAMergedUnarchivedChangeAsPendingAndNotesIt(t *testing.T) {
@@ -296,7 +296,7 @@ func TestIncrementsMarksAMergedUnarchivedChangeAsPendingAndNotesIt(t *testing.T)
 	}
 }
 
-// REQ-25.34 escenario «Sin cambios pendientes no hay aviso de pendientes»: `changes/` solo tiene
+// RF-WEB-11 escenario «Sin cambios pendientes no hay aviso de pendientes»: `changes/` solo tiene
 // `archive/` y los sumideros exentos, y la cabecera ni siquiera viaja.
 func TestIncrementsWithoutPendingChangesHaveNoNote(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
@@ -316,7 +316,7 @@ func TestIncrementsWithoutPendingChangesHaveNoNote(t *testing.T) {
 	}
 }
 
-// REQ-25.34 y D-17: sin la referencia de integración la lista de pendientes se omite con un aviso y sin
+// RF-WEB-11 y D-17: sin la referencia de integración la lista de pendientes se omite con un aviso y sin
 // error; la respuesta sigue siendo 200.
 func TestIncrementsNoteTheMissingIntegrationReference(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
@@ -343,7 +343,7 @@ git:
 	}
 }
 
-// REQ-25.34 escenario «Una escritura sobre un cambio en worktree se dirige al worktree»: el relevo de
+// RF-WEB-11 escenario «Una escritura sobre un cambio en worktree se dirige al worktree»: el relevo de
 // `x` se escribe en la carpeta del cambio del worktree y el checkout principal no recibe nada.
 func TestHandoffForAChangeInAWorktreeIsWrittenThere(t *testing.T) {
 	ws := embeddedProject(t, hub.WorktreeModeWorktree)

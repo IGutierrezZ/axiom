@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
-// REQ-25.24 (escenario «Un cambio preexistente ya fusionado figura como pendiente de
+// RF-BRA-25 (escenario «Un cambio preexistente ya fusionado figura como pendiente de
 // archivar»): `axiom branch status --json` sobre este repositorio lista como
 // pendientes de archivar los cambios que ya están en el árbol de la rama de
 // integración y siguen sin archivar, sin bloquear nada (salida 0). Es una lectura:

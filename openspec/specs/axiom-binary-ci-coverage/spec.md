@@ -11,7 +11,7 @@
 
 El pipeline de CI DEBE construir y ejercitar el binario canónico `cmd/axiom`, incluida su superficie exclusiva, asegurando que los comandos propios del fork no regresionen ni dependan exclusivamente del shim de compatibilidad.
 
-### Requirement: Construcción y ejercicio bloqueante de la superficie exclusiva de axiom (REQ-20.15)
+### Requirement: Construcción y ejercicio bloqueante de la superficie exclusiva de axiom (RF-CIB-01)
 
 El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloqueante su superficie exclusiva: `init`, `change`, `project`, `workspace`, `handoff`, `role`, `skill`, `archive`, y el arranque/ayuda de `ui`.
 (Previously: la superficie incluía `semantic`, que C-08-l retira.)
@@ -22,7 +22,7 @@ El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloque
 - **ENTONCES** ejercita los comandos de la superficie exclusiva de Axiom con salida esperada y stderr limpio de avisos de deprecación
 - **Y** un fallo en cualquiera de ellos bloquea la fusión
 
-### Requirement: Ventana informativa acotada y registrada para superficie roja (REQ-20.16)
+### Requirement: Ventana informativa acotada y registrada para superficie roja (RF-CIB-02)
 
 Si el paso de cobertura de `cmd/axiom` destapa fallos preexistentes fuera de la superficie que bloquea el contrato de nombre, el sistema DEBE mantener esa parte como informativa únicamente durante una ventana acotada con fecha de apertura e incremento sucesor nombrado.
 

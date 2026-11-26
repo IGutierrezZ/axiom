@@ -19,7 +19,7 @@ import (
 )
 
 // RunArchiveContext es el punto de entrada de la CLI de
-// `axiom archive context <check|prepare|verify|show>` (REQ-30.15 a REQ-30.20). Es un
+// `axiom archive context <check|prepare|verify|show>` (RF-CTX-13 a RF-CTX-18). Es un
 // adaptador fino: resuelve el workspace con workspace.Locate, toma del status SDD la
 // carpeta del cambio, las raíces de edición autorizadas y el almacén de artefactos
 // efectivo, y entrega todo a techcontext.Check, Prepare, Verify y ReadTrace, que son
@@ -144,7 +144,7 @@ func sameContextPath(a, b string) bool {
 var resolveContextStatus = sddstatus.Resolve
 
 // locateContext resuelve el espacio con workspace.Locate. Con un `baseline:`
-// residual se niega con el error tipado de su retirada (REQ-30.21).
+// residual se niega con el error tipado de su retirada (RF-TOP-12).
 func locateContext(verb, path, change string) (workspace.Location, error) {
 	start := path
 	if strings.TrimSpace(start) == "" {

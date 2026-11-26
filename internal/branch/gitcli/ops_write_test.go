@@ -9,10 +9,10 @@ import (
 
 // Pruebas de las escrituras de `ensure` (INC-25, S3.4): CreateBranch y AddWorktree. Son
 // las dos únicas escrituras de esta rebanada y se lanzan siempre con cmd.Dir en el
-// checkout principal que recibe quien llama (REQ-25.8, matriz de amenazas «Selección de
+// checkout principal que recibe quien llama (RF-BRA-08, matriz de amenazas «Selección de
 // repositorio git»).
 
-// remoteOperationFor dice si una invocación de git es de las remotas (REQ-25.1).
+// remoteOperationFor dice si una invocación de git es de las remotas (RF-BRA-01).
 func remoteOperationFor(args []string) bool {
 	for _, arg := range args {
 		switch arg {
@@ -57,7 +57,7 @@ func TestCreateBranchCreatesTheBranchAtTheStartPointWithoutTracking(t *testing.T
 }
 
 // Una rama que ya existe no se mueve ni se reinicia: CreateBranch falla y la deja donde
-// estaba (REQ-25.7).
+// estaba (RF-BRA-07).
 func TestCreateBranchNeverMovesAnExistingBranch(t *testing.T) {
 	ctx := context.Background()
 	repo := newRepository(t)
@@ -160,7 +160,7 @@ func TestWritesRejectArgumentsThatLookLikeOptions(t *testing.T) {
 	}
 }
 
-// REQ-25.1 y G-7: las escrituras lanzan solo `git branch` y `git worktree add`, y
+// RF-BRA-01 y G-7: las escrituras lanzan solo `git branch` y `git worktree add`, y
 // ninguna es una operación remota ni publica nada.
 func TestWritesLaunchOnlyBranchAndWorktreeAdd(t *testing.T) {
 	ctx := context.Background()
@@ -264,7 +264,7 @@ func TestFetchRejectsARemoteThatLooksLikeAnOption(t *testing.T) {
 }
 
 // CreateTrackingBranch adopta la referencia remota local del mismo nombre con su upstream
-// configurado y sin lanzar ninguna operación remota (REQ-27.15, DD-13).
+// configurado y sin lanzar ninguna operación remota (RF-BRA-27, DD-13).
 func TestCreateTrackingBranchAdoptsTheRemoteReferenceWithUpstream(t *testing.T) {
 	ctx := context.Background()
 	repo := newRepository(t)

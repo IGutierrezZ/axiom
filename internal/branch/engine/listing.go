@@ -16,7 +16,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// RegisteredChange es un cambio SDD que vive en un worktree registrado del planning home (REQ-25.44,
+// RegisteredChange es un cambio SDD que vive en un worktree registrado del planning home (RF-CLI-07,
 // design D-16): la rama del cambio o la de archivado desplegada en un worktree por `axiom branch ensure`.
 type RegisteredChange struct {
 	// Name es el nombre del cambio.
@@ -35,7 +35,7 @@ type RegisteredChange struct {
 }
 
 // RegisteredChanges lista los cambios SDD que viven en worktrees registrados del planning home de loc
-// (REQ-25.44, design D-16). Lee el registro local del git common dir del repositorio del planning home y
+// (RF-CLI-07, design D-16). Lee el registro local del git common dir del repositorio del planning home y
 // solo ficheros: nunca lanza procesos de git. Por cada rama de cambio o de archivado con worktree devuelve
 // una entrada; una rama de rol, una rama sin worktree (también en `in_place`) o un repositorio que no es el
 // del planning home no cuentan. El resultado sale por nombre y, dentro de cada cambio, con la rama de
@@ -105,7 +105,7 @@ func (e *Engine) RegisteredChanges(ctx context.Context, loc workspace.Location) 
 }
 
 // RegisteredChangesByName devuelve, por nombre, el cambio de worktree registrado que prevalece
-// (REQ-25.34, design D-16): el del worktree de archivado antes que el del worktree del cambio. Solo
+// (RF-WEB-11, design D-16): el del worktree de archivado antes que el del worktree del cambio. Solo
 // cuentan las entradas cuyo worktree tiene la carpeta del cambio. Es la agregación que comparten el
 // dashboard y la TUI, de modo que listan el mismo conjunto; los avisos son los de RegisteredChanges.
 func (e *Engine) RegisteredChangesByName(ctx context.Context, loc workspace.Location) (map[string]RegisteredChange, []string) {
@@ -125,7 +125,7 @@ func (e *Engine) RegisteredChangesByName(ctx context.Context, loc workspace.Loca
 }
 
 // kindPrecedence ordena las ramas de un mismo cambio: la de archivado, que ya está fusionada y solo falta
-// archivarla, antes que la del cambio (REQ-25.44, REQ-25.45).
+// archivarla, antes que la del cambio (RF-CLI-07, RF-BRA-13).
 func kindPrecedence(kind branch.BranchKind) int {
 	if kind == branch.KindArchive {
 		return 0

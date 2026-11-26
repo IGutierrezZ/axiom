@@ -15,7 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
 
-// Preferencias personales de worktree al registrar un proyecto (INC-25, REQ-25.30): `init` y
+// Preferencias personales de worktree al registrar un proyecto (INC-25, RF-HUB-08): `init` y
 // `project add` las toman de `--worktree-mode` y `--worktree-root` o, con una terminal
 // interactiva y sin opciones, las preguntan ofreciendo los valores por defecto.
 

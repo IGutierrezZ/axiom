@@ -21,7 +21,7 @@ import (
 
 // DefaultWorktreeRoot es la raíz de worktrees por defecto cuando el hub no declara
 // una: `<padre de la carpeta maestra>/<nombre de la carpeta maestra>-wt`, fuera de
-// cualquier repositorio del proyecto (REQ-25.11, design D-04 y D-08). master debe ser
+// cualquier repositorio del proyecto (RF-BRA-11, design D-04 y D-08). master debe ser
 // la carpeta maestra del checkout principal.
 func DefaultWorktreeRoot(master string) string {
 	master = filepath.Clean(master)
@@ -48,7 +48,7 @@ type RepoFacts struct {
 }
 
 // SkippedPath es una ruta declarada por un rol que se omite del plan sin abortarlo:
-// no existe o no pertenece a ningún repositorio git (REQ-25.6).
+// no existe o no pertenece a ningún repositorio git (RF-BRA-06).
 type SkippedPath struct {
 	Path    string `json:"path"` // absoluta
 	Role    string `json:"role"`
@@ -57,7 +57,7 @@ type SkippedPath struct {
 }
 
 // PlanInput es todo lo que el planificador necesita. Las excepciones por cambio
-// (`--prefix`, `--branch`, `--base`) van encima de la política (REQ-25.3).
+// (`--prefix`, `--branch`, `--base`) van encima de la política (RF-BRA-03).
 type PlanInput struct {
 	// Operation es la orden de `axiom branch` que repiten las continuaciones de los
 	// rechazos; Master, la carpeta maestra que estas citan con `--cwd`.
@@ -73,7 +73,7 @@ type PlanInput struct {
 	PlanningRepo  RepoFacts
 	CodeRepos     []RepoFacts
 	// IncludedRepos son los repositorios que el carril ODD incluye bajo demanda con `--repo`
-	// (REQ-25.13): ODD no tiene roles y cada uno recibe solo la rama de la feature. Fuera del
+	// (RF-BRA-14): ODD no tiene roles y cada uno recibe solo la rama de la feature. Fuera del
 	// carril ODD no cuentan.
 	IncludedRepos []RepoFacts
 	Skipped       []SkippedPath
@@ -81,14 +81,14 @@ type PlanInput struct {
 	// Antes del sellado el plan solo contiene la rama del cambio en el planning home.
 	HasKickoff  bool
 	SealedRoles []string
-	// Snapshot es la instantánea de política git del kickoff del cambio (REQ-25.36, decisión T2),
+	// Snapshot es la instantánea de política git del kickoff del cambio (RF-KOF-06, decisión T2),
 	// o nil si no la tiene (un cambio preexistente o retro-sellado, o aún sin sellar): con ella
 	// sus nombres de rama prevalecen sobre la política (planner_snapshot.go).
 	Snapshot     *kickoff.GitSnapshot
 	Policy       Policy
 	Exceptions   Exceptions
 	WorktreeRoot string
-	// InPlace dice que el modo efectivo es `in_place` (REQ-25.8): las ramas se crean igual,
+	// InPlace dice que el modo efectivo es `in_place` (RF-BRA-08): las ramas se crean igual,
 	// pero se despliegan en el propio repositorio, de modo que el plan no lleva ruta de
 	// worktree y ni la raíz de worktrees ni su longitud pueden impedirlo.
 	InPlace bool
@@ -96,7 +96,7 @@ type PlanInput struct {
 	// incluido el checkout principal de cada uno.
 	ExistingWorktrees []WorktreeEntry
 	PathRules         PathRules
-	// Archive pide el plan de archivado de `ensure --archive` (REQ-25.45, design D-25): un plan
+	// Archive pide el plan de archivado de `ensure --archive` (RF-BRA-13, design D-25): un plan
 	// aparte, con solo la rama de archivado del repositorio del planning home, que no toca las
 	// ramas del cambio ni las de rol. Con él, Exceptions son las de la invocación y no las del
 	// cambio: Prefix es el prefijo de la rama de archivado (el del registro, si la invocación
@@ -137,7 +137,7 @@ type ChangePlan struct {
 
 // RepoPlan es el plan de un repositorio.
 type RepoPlan struct {
-	Name      string // `<repo>` en la ruta del worktree (REQ-25.11, S-17)
+	Name      string // `<repo>` en la ruta del worktree (RF-BRA-11, S-17)
 	GitRoot   string
 	CommonDir string
 	RelPath   string
@@ -191,14 +191,14 @@ type BranchPlan struct {
 	PRTarget string
 }
 
-// Plan calcula el plan de un cambio en monorepo embebido o en multirepo (REQ-25.4,
-// REQ-25.5, REQ-25.11, REQ-25.13). Es determinista: la misma entrada da el mismo plan
+// Plan calcula el plan de un cambio en monorepo embebido o en multirepo (RF-BRA-04,
+// RF-BRA-05, RF-BRA-11, RF-BRA-14). Es determinista: la misma entrada da el mismo plan
 // sea cual sea el orden de los roles y de los repositorios que se le entregan, y no
 // altera su entrada. Devuelve un rechazo, sin plan, ante un nombre inválido o repetido
 // (`invalid_name`), un valor inválido de la política (`config_invalid`), worktrees que
 // se solaparían con otro árbol de trabajo (`plan_conflict`) o una ruta demasiado larga
 // para Windows (`path_too_long`). Con PlanInput.Archive calcula, aparte, el plan de la rama de
-// archivado (planArchive, REQ-25.45).
+// archivado (planArchive, RF-BRA-13).
 func Plan(in PlanInput) (ChangePlan, *Refusal) {
 	if in.Archive {
 		return planArchive(in)
@@ -341,7 +341,7 @@ func declaresRole(declared []string, role string) bool {
 
 // untouchedRoleWarnings avisa de cada rol sellado que no toca ningún repositorio
 // declarado: un rol desconocido para axiom.yaml, o que no declara repositorios,
-// no aporta ramas (REQ-25.4). Un rol cuyas rutas se omitieron ya figura en `skipped`.
+// no aporta ramas (RF-BRA-04). Un rol cuyas rutas se omitieron ya figura en `skipped`.
 func untouchedRoleWarnings(in PlanInput, sealed []string) []string {
 	var warnings []string
 	for _, role := range sealed {
@@ -374,10 +374,10 @@ func sortedSkipped(skipped []SkippedPath) []SkippedPath {
 	return sorted
 }
 
-// planRepository planifica las ramas de un repositorio (REQ-25.4): con un rol (o con
+// planRepository planifica las ramas de un repositorio (RF-BRA-04): con un rol (o con
 // ninguno), solo `<prefijo>/<cambio>`; con dos o más, esa es la rama de seguimiento y
 // cada rol saca `<prefijo>/<cambio>-<rol>` desde ella. El repositorio de specs de un
-// multirepo se trabaja in situ y no recibe ramas (REQ-25.5).
+// multirepo se trabaja in situ y no recibe ramas (RF-BRA-05).
 func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) {
 	facts := selection.facts
 	name := repoName(facts)
@@ -474,7 +474,7 @@ func plannedWorktree(in PlanInput, folder, repo string) string {
 	return filepath.Join(in.WorktreeRoot, folder, repo)
 }
 
-// repositoryRole es el papel de un repositorio según la topología (REQ-25.5): en
+// repositoryRole es el papel de un repositorio según la topología (RF-BRA-05): en
 // monorepo embebido todos reciben el modelo de ramas del cambio; en multirepo, el
 // repositorio de specs se trabaja in situ y los demás son de código.
 func repositoryRole(topology workspace.TopologyType, planning bool) RepoRole {
@@ -488,13 +488,13 @@ func repositoryRole(topology workspace.TopologyType, planning bool) RepoRole {
 	}
 }
 
-// EffectivePolicy es la política efectiva del repositorio de facts (REQ-25.3): la que el motor
+// EffectivePolicy es la política efectiva del repositorio de facts (RF-BRA-03): la que el motor
 // necesita para conocer lo declarado de su promoción y de qué capa sale.
 func EffectivePolicy(policy Policy, facts RepoFacts) RepoPolicy {
 	return repoPolicy(policy, facts)
 }
 
-// repoPolicy es la política efectiva de un repositorio (REQ-25.3): la entrada de
+// repoPolicy es la política efectiva de un repositorio (RF-BRA-03): la entrada de
 // `repositories:` o, sin ella, la del workspace. Un repositorio fuera de la carpeta
 // maestra solo hereda la del workspace.
 func repoPolicy(policy Policy, facts RepoFacts) RepoPolicy {
@@ -504,7 +504,7 @@ func repoPolicy(policy Policy, facts RepoFacts) RepoPolicy {
 	return policy.For(facts.RelPath)
 }
 
-// repoName es el `<repo>` de la ruta del worktree (REQ-25.11, S-17): el último
+// repoName es el `<repo>` de la ruta del worktree (RF-BRA-11, S-17): el último
 // segmento de la ruta declarada y, para `.`, el nombre del directorio de la raíz git.
 func repoName(facts RepoFacts) string {
 	declared := path.Clean(strings.ReplaceAll(strings.TrimSpace(facts.DeclaredPath), `\`, "/"))

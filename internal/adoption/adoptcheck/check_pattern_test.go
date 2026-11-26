@@ -25,7 +25,7 @@ func withoutDeclaredPattern(f *checkFixture) {
 	f.pattern = reqid.Default()
 }
 
-// REQ-30.11 y REQ-44.4: con `sdd.id_pattern` declarado, `adopt check` mide con él.
+// RF-ADP-03 y RF-RID-04: con `sdd.id_pattern` declarado, `adopt check` mide con él.
 func TestCheck_ConUnPatronDeclaradoMideConEl(t *testing.T) {
 	f := newCheckFixture(t)
 	report := f.check(t)

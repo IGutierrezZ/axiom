@@ -4,7 +4,7 @@
 // título, detección laxa de candidatos, serie, número, formato del siguiente
 // identificador, notaciones para mensajes y el identificador sintético de livingdoc.
 //
-// Es un paquete hoja: solo usa la biblioteca estándar (REQ-44.4).
+// Es un paquete hoja: solo usa la biblioteca estándar (RF-RID-04).
 package reqid
 
 import (
@@ -109,7 +109,7 @@ func (p Pattern) Scan(text string) (valid, malformed []string) {
 	seenValid := map[string]bool{}
 	seenMalformed := map[string]bool{}
 	// Los tokens provisionales son otra clase de token: se enmascaran para que ni su clave
-	// (`prov:RF-3:1` con `RF-<DOM>-<n>.<m>`) ni nada de su forma sea un candidato (REQ-47.1).
+	// (`prov:RF-3:1` con `RF-<DOM>-<n>.<m>`) ni nada de su forma sea un candidato (RF-RID-09).
 	for _, token := range p.get().candidate.FindAllString(maskProvisionals(text), -1) {
 		if p.Valid(token) {
 			if !seenValid[token] {

@@ -3,14 +3,14 @@
 // con los que el motor lee y escribe git, el registro local y las preferencias
 // personales.
 //
-// No ejecuta nada: toda invocación de git pasa por gitcommon.Run (REQ-25.1) y una
+// No ejecuta nada: toda invocación de git pasa por gitcommon.Run (RF-BRA-01) y una
 // prueba de arquitectura (internal/gitcommon/architecture_test.go) fija que ningún
 // fichero de este árbol lanza procesos ni abre la red. Los textos para el usuario y
 // las etiquetas están en castellano; los identificadores y los tokens estables del
-// JSON, en inglés, cada token con su campo hermano `<campo>Label` (REQ-25.2, G-4).
+// JSON, en inglés, cada token con su campo hermano `<campo>Label` (RF-BRA-02, G-4).
 package branch
 
-// Lane es el carril del cambio: `sdd` (por defecto) u `odd` (REQ-25.13).
+// Lane es el carril del cambio: `sdd` (por defecto) u `odd` (RF-BRA-14).
 type Lane string
 
 const (
@@ -19,7 +19,7 @@ const (
 )
 
 // Mode es el modo de trabajo, una preferencia personal que vive en el hub
-// (REQ-25.8): un worktree por rama, la propia carpeta del proyecto, o preguntar.
+// (RF-BRA-08): un worktree por rama, la propia carpeta del proyecto, o preguntar.
 type Mode string
 
 const (
@@ -28,7 +28,7 @@ const (
 	ModeAsk      Mode = "ask"
 )
 
-// Los orígenes del modo de trabajo materializado de un cambio (REQ-25.8, design §4.4):
+// Los orígenes del modo de trabajo materializado de un cambio (RF-BRA-08, design §4.4):
 // la respuesta a `ask`, la bandera `--mode`, la preferencia personal del hub o el valor
 // por defecto. El registro local los guarda y `status` los informa con su etiqueta.
 const (
@@ -38,7 +38,7 @@ const (
 	ModeSourceDefault = "default"
 )
 
-// RepoRole es el papel de un repositorio según la topología (REQ-25.5).
+// RepoRole es el papel de un repositorio según la topología (RF-BRA-05).
 type RepoRole string
 
 const (
@@ -48,7 +48,7 @@ const (
 )
 
 // BranchKind distingue la rama del cambio, las ramas de rol y la de archivado
-// (REQ-25.4, REQ-25.45).
+// (RF-BRA-04, RF-BRA-13).
 type BranchKind string
 
 const (
@@ -65,7 +65,7 @@ const (
 	ContextArchive  Context = "archive"
 )
 
-// Consultant es quien consulta el veredicto de rama (REQ-25.18).
+// Consultant es quien consulta el veredicto de rama (RF-BRA-19).
 type Consultant string
 
 const (
@@ -75,7 +75,7 @@ const (
 	ConsultantGuard  Consultant = "guard"
 )
 
-// VerdictKind es la respuesta a «¿esta rama es la que corresponde?» (REQ-25.18).
+// VerdictKind es la respuesta a «¿esta rama es la que corresponde?» (RF-BRA-19).
 type VerdictKind string
 
 const (
@@ -85,7 +85,7 @@ const (
 )
 
 // MergeLayer es la capa de la detección de fusión de `done` que confirmó la
-// integración de una rama (REQ-25.16, REQ-25.17).
+// integración de una rama (RF-BRA-17, RF-BRA-18).
 type MergeLayer string
 
 const (
@@ -95,7 +95,7 @@ const (
 	LayerForced         MergeLayer = "forced"
 )
 
-// DoneOutcome es lo que `done` hizo con una rama del plan (design §4.3, REQ-25.17): la eliminó
+// DoneOutcome es lo que `done` hizo con una rama del plan (design §4.3, RF-BRA-18): la eliminó
 // con su worktree, la conservó porque no se pudo procesar (cada motivo lleva su código tipado) o
 // ya no existía.
 type DoneOutcome string
@@ -141,24 +141,24 @@ const (
 	CodeChangeNotIntegrated        Code = "change_not_integrated"
 	CodeArchiveBranchNotApplicable Code = "archive_branch_not_applicable"
 	// CodeDetachedHead e CodeIntegrationBranch son los rechazos de la publicación de documentos
-	// (REQ-27.7): el repositorio no está en ninguna rama, o está en la de integración de un
+	// (RF-PUB-03): el repositorio no está en ninguna rama, o está en la de integración de un
 	// repositorio donde no se publica. Los devuelve `Engine.PublicationTarget`.
 	CodeDetachedHead      Code = "detached_head"
 	CodeIntegrationBranch Code = "integration_branch"
 
-	// Rechazos de `ensure --role` (REQ-43.24): el rol no se puede aplicar o no consta en el roster
+	// Rechazos de `ensure --role` (RF-BRA-33): el rol no se puede aplicar o no consta en el roster
 	// sellado del cambio.
 	CodeRoleNotApplicable Code = "role_not_applicable"
 	CodeKickoffNotSealed  Code = "kickoff_not_sealed"
 	CodeRoleNotInRoster   Code = "role_not_in_roster"
 
 	// CodeScopeNotApplicable es el rechazo de `axiom branch scope` ante un cambio del carril `odd` o
-	// con un kickoff sin instantánea de repositorios (REQ-25.51).
+	// con un kickoff sin instantánea de repositorios (RF-BRA-35).
 	CodeScopeNotApplicable Code = "scope_not_applicable"
 )
 
 // Exceptions son las excepciones por cambio de `ensure` (`--prefix`, `--branch`,
-// `--base`, REQ-25.12). Se registran en el registro local (Record).
+// `--base`, RF-BRA-12). Se registran en el registro local (Record).
 type Exceptions struct {
 	Prefix string `json:"prefix"`
 	Branch string `json:"branch"`
@@ -177,7 +177,7 @@ type WorktreeEntry struct {
 const RegistrySchema = "axiom.branch-registry/v1"
 
 // Record es el plan materializado de un cambio, tal como lo guarda el registro
-// local en el git common dir del repositorio del planning home (REQ-25.14, design
+// local en el git common dir del repositorio del planning home (RF-BRA-15, design
 // §4.4). Es estado local no versionado: borrarlo no daña el repositorio y `ensure`
 // lo reconstruye.
 type Record struct {

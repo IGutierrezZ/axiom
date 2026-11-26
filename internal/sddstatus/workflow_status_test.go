@@ -30,7 +30,7 @@ func workflowOf(t *testing.T, status Status) WorkflowProjection {
 	return fromV1
 }
 
-// REQ-27.2: las cuatro filas de la tabla, con y sin cambio seleccionado, en v1 y v2.
+// RF-CLI-08: las cuatro filas de la tabla, con y sin cambio seleccionado, en v1 y v2.
 func TestWorkflowStatusProjectsLaneAndSource(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -75,7 +75,7 @@ func TestWorkflowStatusProjectsLaneAndSource(t *testing.T) {
 	}
 }
 
-// REQ-27.2: el campo es informativo; no añade notas ni bloqueos ni cambia la ruta
+// RF-CLI-08: el campo es informativo; no añade notas ni bloqueos ni cambia la ruta
 // recomendada ni las dependencias respecto de un axiom.yaml sin el bloque.
 func TestWorkflowStatusDoesNotChangeTheRouteOrAddNotes(t *testing.T) {
 	t.Parallel()
@@ -107,7 +107,7 @@ func TestWorkflowStatusDoesNotChangeTheRouteOrAddNotes(t *testing.T) {
 	}
 }
 
-// REQ-27.2: un proyecto solo de openspec/ proyecta ask/no_workspace sin alterar el
+// RF-CLI-08: un proyecto solo de openspec/ proyecta ask/no_workspace sin alterar el
 // resto del status; y la raíz explícita lo proyecta igual que el directorio.
 func TestWorkflowStatusWithoutAxiomYAMLAndWithExplicitRoot(t *testing.T) {
 	t.Parallel()

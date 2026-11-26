@@ -16,14 +16,14 @@ import (
 
 const (
 	// DefaultIntegrationBranch es la rama de integración cuando axiom.yaml no
-	// declara `git.integration_branch` (REQ-25.26).
+	// declara `git.integration_branch` (RF-TOP-09).
 	DefaultIntegrationBranch = "main"
 	// DefaultBranchPrefix es el prefijo de las ramas de cambio cuando axiom.yaml no
-	// declara `git.branch_prefix` (REQ-25.26).
+	// declara `git.branch_prefix` (RF-TOP-09).
 	DefaultBranchPrefix = "feat"
 )
 
-// Valores de `promotion` (REQ-25.26, REQ-25.27). Son los mismos literales que
+// Valores de `promotion` (RF-TOP-09, RF-TOP-10). Son los mismos literales que
 // branch.Promotion: branch importa workspace y no al revés, así que se repiten.
 const (
 	PromotionBranch  = "branch"
@@ -31,7 +31,7 @@ const (
 	PromotionAsk     = "ask"
 )
 
-// GitConfig es el bloque `git:` de axiom.yaml (REQ-25.26): la política de ramas
+// GitConfig es el bloque `git:` de axiom.yaml (RF-TOP-09): la política de ramas
 // del proyecto. Es política versionada y compartida por el equipo; el modo de
 // trabajo y la raíz de los worktrees son preferencias personales y no se
 // declaran aquí.
@@ -49,7 +49,7 @@ type GitConfig struct {
 }
 
 // RepositoryPolicy es una entrada del bloque `repositories:` de axiom.yaml
-// (REQ-25.27): los ajustes de rama de un repositorio, que sustituyen a los del
+// (RF-TOP-10): los ajustes de rama de un repositorio, que sustituyen a los del
 // bloque `git:` solo en lo que la entrada declara.
 //
 // Path es la ruta tal como se escribió, relativa a la carpeta maestra. Los otros
@@ -118,7 +118,7 @@ func decodeGit(node *yaml.Node) (*GitConfig, error) {
 }
 
 // decodeRepositories decodifica y valida el bloque `repositories:` con el mismo
-// patrón que decodeGit (REQ-25.27): una lista de mapeos, cada uno recorrido contra
+// patrón que decodeGit (RF-TOP-10): una lista de mapeos, cada uno recorrido contra
 // la lista cerrada de claves `path`, `integration_branch`, `branch_prefix` y `promotion`, con
 // los errores acumulados. Cada error nombra la entrada (`repositories[0]`), la
 // clave y, si procede, el valor y la regla incumplida.
@@ -214,7 +214,7 @@ func validPromotion(raw string) error {
 }
 
 // PromotionWarnings devuelve los avisos de `workspace validate` sobre la
-// promoción de ramas (REQ-25.26, REQ-25.27). Nunca invalidan la configuración:
+// promoción de ramas (RF-TOP-09, RF-TOP-10). Nunca invalidan la configuración:
 // una promoción sin una segunda rama a la que promover simplemente no tiene
 // efecto. Avisa en dos casos:
 //   - `git.promotion` declarado sin `main_branch`, o con `main_branch` igual a la
@@ -334,7 +334,7 @@ func gitValue(label string, node *yaml.Node, validate func(string) error) (strin
 
 // ValidateRepositoryPolicies comprueba las entradas de `repositories:` de cfg
 // contra el sistema de ficheros real y devuelve los errores y las advertencias para
-// que quien llama los fusione en el informe de Validate (REQ-25.27, D-03.4). master
+// que quien llama los fusione en el informe de Validate (RF-TOP-10, D-03.4). master
 // es la carpeta maestra, la ruta que recibe `workspace validate` y contra la que
 // son relativas las entradas.
 //

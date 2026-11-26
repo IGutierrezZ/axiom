@@ -50,7 +50,7 @@ func readGatesYAMLOrNil(t *testing.T, changeRoot string) []byte {
 	return data
 }
 
-// REQ-24.12 y REQ-21.16: en el espacio canónico, la evidencia pr_merged de la
+// RF-PLH-12 y RF-ARC-01: en el espacio canónico, la evidencia pr_merged de la
 // compuerta integration se verifica contra el repositorio de especificaciones y
 // no contra los repositorios de código, aunque el verbo se lance desde la
 // carpeta maestra. S está fusionado en la rama principal de repo-specs; C solo
@@ -133,7 +133,7 @@ func TestSDDGateRecordPRMergedVerifiesAgainstSpecsRepositoryInCanonicalWorkspace
 	})
 }
 
-// D-22 (REQ-25.23, escenario 5): sin --base-ref, la evidencia pr_merged se comprueba contra la
+// D-22 (RF-BRA-24, escenario 5): sin --base-ref, la evidencia pr_merged se comprueba contra la
 // rama de integración resuelta del repositorio del planning home (`git.integration_branch`), no
 // contra un `main` fijo. El repositorio solo tiene la rama `develop`: con el literal `main` la
 // comprobación de ancestro fallaría porque esa referencia no existe.

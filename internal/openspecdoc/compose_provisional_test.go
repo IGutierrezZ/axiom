@@ -8,7 +8,7 @@ import (
 
 const addedBody = "\nEl sistema MUST algo.\n\n#### Scenario: S\n\n- GIVEN a\n- WHEN b\n- THEN c\n"
 
-// REQ-47.3: un MODIFIED, un REMOVED o el nombre antiguo de un RENAMED con un ID válido
+// RF-RID-11: un MODIFIED, un REMOVED o el nombre antiguo de un RENAMED con un ID válido
 // que la canónica no lleva se rechazan con el error tipado, que sigue siendo un
 // *UnappliedDeltaError para quien ya lo trata con errors.As.
 func TestComposeUnknownRequirementID(t *testing.T) {
@@ -40,7 +40,7 @@ func TestComposeUnknownRequirementID(t *testing.T) {
 	}
 }
 
-// REQ-47.3 regla 2: sin ID, un MODIFIED se resuelve por título y conserva el rechazo
+// RF-RID-11 regla 2: sin ID, un MODIFIED se resuelve por título y conserva el rechazo
 // vigente (un *UnappliedDeltaError simple) cuando no casa.
 func TestComposeModifiedWithoutIDKeepsTheCurrentRejection(t *testing.T) {
 	delta := "## MODIFIED Requirements\n\n### Requirement: Cobro fantasma\n" + addedBody
@@ -59,7 +59,7 @@ func TestComposeModifiedWithoutIDKeepsTheCurrentRejection(t *testing.T) {
 	}
 }
 
-// REQ-30.22: Compose rechaza un provisional en el nombre y en el cuerpo de un requisito
+// RF-ARC-11: Compose rechaza un provisional en el nombre y en el cuerpo de un requisito
 // de cualquier sección, antes de aplicar nada.
 func TestComposeRejectsProvisionals(t *testing.T) {
 	cases := []struct {

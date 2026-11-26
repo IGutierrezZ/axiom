@@ -53,11 +53,11 @@ var backupRootLiteralDirectories = map[string]bool{
 
 // backupRootLiteralStateSubdirectory is the state subdirectory literal that,
 // combined with one of backupRootLiteralDirectories, spells out the backup
-// root. It is the concrete instance REQ-20.13/REQ-20.14 name.
+// root. It is the concrete instance RF-DIS-07/RF-DIS-08 name.
 const backupRootLiteralStateSubdirectory = "backups"
 
 // backupRootLiteralFragments are the two full path fragments that spell out
-// a backup root end to end within a single string literal token. REQ-20.14's
+// a backup root end to end within a single string literal token. RF-DIS-08's
 // 2026-09-19 amendment widened the guard beyond filepath.Join: string
 // concatenation (internal/cli/restore.go built its root as
 // homeDir+"/.gentle-ai/backups"), an fmt.Sprintf format string, and a fully
@@ -96,7 +96,7 @@ const backupRootOwningPackageDir = "internal/backup"
 //
 // Phase F0.b (this phase) removed that skip as its first RED step, then
 // extended detection to the string-concatenation form before migrating
-// anything (REQ-20.14 amendment, 2026-09-19): internal/cli/restore.go built
+// anything (RF-DIS-08 amendment, 2026-09-19): internal/cli/restore.go built
 // the legacy root by concatenating homeDir with a literal
 // "/.gentle-ai/backups" suffix, a form the filepath.Join-only detector could
 // not see. That extension raised the observed violation count from eight

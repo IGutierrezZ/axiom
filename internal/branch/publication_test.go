@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// DocPaths compone la lista cerrada de REQ-27.5 en un único punto: debe dar el mismo conjunto que
+// DocPaths compone la lista cerrada de RF-PUB-01 en un único punto: debe dar el mismo conjunto que
 // `docpaths.FromWorkspace` con las rutas de `technical_context`, en monorepo y en multirepo.
 func TestPublicationTargetDocPathsComposesTheClosedList(t *testing.T) {
 	declarations := workspace.Declarations{TechnicalContext: &workspace.TechnicalContextConfig{

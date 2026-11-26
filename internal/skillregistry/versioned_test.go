@@ -389,7 +389,7 @@ func TestRegenerateGitignoreEditInvalidatesCache(t *testing.T) {
 	}
 }
 
-// TestRegenerateVersionedViewIsIdempotent covers REQ-22.12 for the new view: a
+// TestRegenerateVersionedViewIsIdempotent covers RF-SKI-03 for the new view: a
 // forced regeneration over unchanged inputs rewrites AGENTS.md byte for byte.
 func TestRegenerateVersionedViewIsIdempotent(t *testing.T) {
 	cwd := newGitRepo(t)

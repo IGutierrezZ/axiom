@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 )
 
-// REQ-29.9: `axiom sdd trace` deriva la traza del cambio con git y es de solo
+// RF-ISO-09: `axiom sdd trace` deriva la traza del cambio con git y es de solo
 // lectura. Los nombres de las pruebas empiezan por TestSDDTrace para entrar en el
 // mismo patrón de `-run`.
 
@@ -55,7 +55,7 @@ func observeGit(t *testing.T) *[][]string {
 	return &calls
 }
 
-// REQ-29.9 y design §8 (selección del repositorio git): los datos no seguros se
+// RF-ISO-09 y design §8 (selección del repositorio git): los datos no seguros se
 // rechazan antes de llamar a git, y git se ejecuta siempre en el repositorio de
 // `--cwd`, nunca en el del proceso.
 func TestSDDTraceRejectsUnsafeInput(t *testing.T) {

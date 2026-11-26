@@ -49,7 +49,7 @@ type ChangeIntegration struct {
 // NothingToIntegrate dice si el paso no cambia ningún fichero.
 func (c ChangeIntegration) NothingToIntegrate() bool { return len(c.files) == 0 }
 
-// Apply escribe todos los ficheros del plan o ninguno (REQ-47.4) con writeSet. Devuelve las
+// Apply escribe todos los ficheros del plan o ninguno (RF-RID-12) con writeSet. Devuelve las
 // rutas absolutas escritas. Un plan sin cambios no toca el disco.
 func (c ChangeIntegration) Apply() ([]string, error) {
 	return writeSet(c.files, writeOptions{Retry: "axiom sdd archive-integrate --change " + c.Change})
@@ -66,7 +66,7 @@ const (
 // PlanChange calcula en memoria la integración de todas las capacidades de un cambio SDD
 // (D3, D4): el plan único de asignación (PlanIDs) con la validación previa de todo el
 // cambio, la composición de cada capacidad con la delta entera, la reanudación con solo lo
-// pendiente o la copia de una capacidad nueva, los duplicados entre capacidades (REQ-47.5) y
+// pendiente o la copia de una capacidad nueva, los duplicados entre capacidades (RF-RID-13) y
 // las reescrituras de las deltas, de las líneas `Cubre:` de las tareas, de la matriz de los
 // informes de verify y de la traza `ids.yaml`, solo con el mapa no vacío. reg es el registro
 // sin el propio cambio. El primer error rechaza todo el plan.
@@ -203,7 +203,7 @@ type changeArtifact struct {
 // verify (`verify-report.md`, `verify-report.<rol>.md`) del cambio, y devuelve las citas que
 // el plan valida (D6): los provisionales de las líneas `Cubre:` de un fichero de tareas y
 // los de la columna `Requisito` de la matriz de cada informe de verify. El resto de esos
-// ficheros no se valida (REQ-47.4).
+// ficheros no se valida (RF-RID-12).
 func changeArtifacts(changeRoot string, relative func(string) string) ([]changeArtifact, []Citation, error) {
 	entries, err := os.ReadDir(changeRoot)
 	if err != nil {
@@ -313,8 +313,8 @@ func skippedOf(all, pending openspecdoc.Delta) []SkippedRequirement {
 }
 
 // CheckArchivedTrace comprueba, sobre un cambio ya archivado, que cada definitivo de su traza
-// aparece una sola vez en la spec viva y en su capacidad (D4, REQ-47.5). El cambio archivado
-// es inmutable (REQ-21.18): el duplicado se resuelve rehaciendo el archivado.
+// aparece una sola vez en la spec viva y en su capacidad (D4, RF-RID-13). El cambio archivado
+// es inmutable (RF-ARC-03): el duplicado se resuelve rehaciendo el archivado.
 func CheckArchivedTrace(reg *Registry, trace Trace) error {
 	if err := trace.validate(reg.Pattern(), traceFileName); err != nil {
 		return err

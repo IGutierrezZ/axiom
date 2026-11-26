@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// `axiom branch ensure --role <rol>` (REQ-43.24, D-13): el adaptador valida el rol ANTES de llamar
+// `axiom branch ensure --role <rol>` (RF-BRA-33, D-13): el adaptador valida el rol ANTES de llamar
 // al motor, con rechazos tipados y sin efectos, y tras un `ensure` listo emite role.start a las
 // integraciones. El motor de ensure no conoce el rol.
 

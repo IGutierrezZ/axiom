@@ -21,7 +21,7 @@ func wantWorkflow(t *testing.T, cfg *WorkspaceConfig, lane WorkflowLane) {
 	}
 }
 
-// REQ-27.1: odd, sdd y ask son los únicos valores válidos y se proyectan tal cual.
+// RF-TOP-11: odd, sdd y ask son los únicos valores válidos y se proyectan tal cual.
 func TestWorkflowValidLanesAreDeclared(t *testing.T) {
 	for _, lane := range []WorkflowLane{WorkflowLaneODD, WorkflowLaneSDD, WorkflowLaneAsk} {
 		t.Run(string(lane), func(t *testing.T) {
@@ -37,7 +37,7 @@ func TestWorkflowValidLanesAreDeclared(t *testing.T) {
 	}
 }
 
-// REQ-27.1: sin bloque, o con el bloque sin `lane`, el carril efectivo es sdd.
+// RF-TOP-11: sin bloque, o con el bloque sin `lane`, el carril efectivo es sdd.
 func TestWorkflowAbsentBlockOrLaneResolvesToSDD(t *testing.T) {
 	if got := resolveWorkflow(nil); got == nil || got.Lane != WorkflowLaneSDD {
 		t.Fatalf("resolveWorkflow(nil) = %+v, se esperaba sdd", got)
@@ -75,7 +75,7 @@ func TestWorkflowBlockWithoutLaneIsValid(t *testing.T) {
 	wantWorkflow(t, cfg, WorkflowLaneSDD)
 }
 
-// REQ-27.1: valores inválidos (mayúsculas, sinónimos, nulo, lista, mapeo) se
+// RF-TOP-11: valores inválidos (mayúsculas, sinónimos, nulo, lista, mapeo) se
 // rechazan con un error que nombra `workflow.lane`.
 func TestWorkflowInvalidValuesAreLoadErrorsNamingTheKey(t *testing.T) {
 	tests := []struct {
@@ -146,7 +146,7 @@ func TestWorkflowErrorsShareTheLoadWithTheOtherBlocks(t *testing.T) {
 	wantGit(t, cfg, "main", "inc")
 }
 
-// REQ-27.1 y REQ-24.17: un binario anterior que no conoce `workflow:` carga el
+// RF-TOP-11 y REQ-24.17: un binario anterior que no conoce `workflow:` carga el
 // mismo axiom.yaml ignorando la clave, aunque el bloque sea inválido.
 func TestWorkflowBlockIsToleratedByThePreviousBinary(t *testing.T) {
 	for name, block := range map[string]string{
@@ -168,7 +168,7 @@ func TestWorkflowBlockIsToleratedByThePreviousBinary(t *testing.T) {
 	}
 }
 
-// S8 y REQ-27.1: el axiom.yaml de este repositorio declara el carril `ask` y la
+// S8 y RF-TOP-11: el axiom.yaml de este repositorio declara el carril `ask` y la
 // plantilla carga sin error con su bloque comentado.
 func TestRepositoryAxiomYAMLDeclaresTheAskLane(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "axiom.yaml"))
@@ -195,7 +195,7 @@ func TestRepositoryAxiomYAMLDeclaresTheAskLane(t *testing.T) {
 	wantWorkflow(t, exCfg, WorkflowLaneSDD)
 }
 
-// REQ-27.1: `Locate` nunca se rechaza por un `workflow:` inválido; el motivo queda
+// RF-TOP-11: `Locate` nunca se rechaza por un `workflow:` inválido; el motivo queda
 // en Declarations.WorkflowErr y Config no lo proyecta.
 func TestLocateIsNeverRejectedByAnInvalidWorkflowBlock(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")

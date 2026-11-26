@@ -32,7 +32,7 @@ var Tools = []ToolInfo{
 		GoImportPath: "github.com/IGutierrezZ/axiom/v3/cmd/axiom",
 		// GoModulePath is the `module` directive go.mod actually declares
 		// (go.mod:1). It is deliberately NOT derived from Owner/Repo: only the
-		// declared module decides whether `go install` is resolvable (REQ-22.2).
+		// declared module decides whether `go install` is resolvable (RF-UPD-02).
 		GoModulePath: "github.com/IGutierrezZ/axiom/v3",
 	},
 	{

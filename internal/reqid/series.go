@@ -3,7 +3,7 @@ package reqid
 import "strings"
 
 // Series es una serie de identificadores: el ID sin su número. Es comparable y sirve
-// de clave de mapa. `REQ-30.4` pertenece a la serie `REQ-30.*`; `RF-USU-01`, a `RF-USU-*`.
+// de clave de mapa. `RF-OLS-04` pertenece a la serie `REQ-30.*`; `RF-USU-01`, a `RF-USU-*`.
 type Series struct{ prefix, suffix, key string }
 
 // Key devuelve los valores de `<DOM>` y `<n>` unidos por `-` (`30`, `USU`); vacía en

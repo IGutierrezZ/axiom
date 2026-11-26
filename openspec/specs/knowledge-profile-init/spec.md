@@ -9,7 +9,7 @@
 
 Permite inicializar un espacio de trabajo ligero de Axiom enfocado en documentación viva, indexación semántica y catalogación, prescindiendo del arnés de ejecución de código.
 
-### Requirement: Flag de Perfil Knowledge y Alias en CLI Init (REQ-23.1)
+### Requirement: Flag de Perfil Knowledge y Alias en CLI Init (RF-KNW-01)
 
 El comando `axiom init` DEBE admitir la bandera `--profile=knowledge` y su alias idéntico `--spec-only`. Si no se especifica perfil, se mantiene el comportamiento predeterminado de Axiom (`full`).
 
@@ -26,7 +26,7 @@ El comando `axiom init` DEBE admitir la bandera `--profile=knowledge` y su alias
 
 ---
 
-### Requirement: Configuración Canónica de axiom.yaml en Topología Multirepo (REQ-23.2)
+### Requirement: Configuración Canónica de axiom.yaml en Topología Multirepo (RF-KNW-02)
 
 Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 - `workspace.topology: "multirepo"`.
@@ -43,7 +43,7 @@ Bajo el perfil `knowledge`, el archivo `axiom.yaml` DEBE generarse con:
 - **Y** la sección `governance` declara `language: "es"` y `shared_memory: "engram"`
 - **Y** los roles definidos tienen política `gate_policy: "advisory"`
 
-### Requirement: Andamiaje Estándar OpenSpec (REQ-23.3)
+### Requirement: Andamiaje Estándar OpenSpec (RF-KNW-03)
 
 El inicializador DEBE crear la estructura canónica de documentación viva dentro del repositorio de especificaciones:
 - `openspec/specs/` para las especificaciones vivas organizadas por dominio.
@@ -58,7 +58,7 @@ El inicializador DEBE crear la estructura canónica de documentación viva dentr
 
 ---
 
-### Requirement: Configuración Automática de Servidores MCP en .mcp.json (REQ-23.4)
+### Requirement: Configuración Automática de Servidores MCP en .mcp.json (RF-KNW-04)
 
 El inicializador DEBE generar o actualizar el archivo `.mcp.json` en la raíz del workspace, registrando de forma predeterminada los servidores MCP:
 - `engram`: memoria persistente de proyecto y sesiones.
@@ -82,7 +82,7 @@ Si `.mcp.json` ya contenía otros servidores, el inicializador DEBE fusionar las
 - **ENTONCES** `.mcp.json` ya no contiene `serena`
 - **Y** una entrada `serena` con otro comando, argumentos o claves se conserva intacta
 
-### Requirement: Oclusión Estricta de Ejecutores de Código y Suites de Testeo (REQ-23.5)
+### Requirement: Oclusión Estricta de Ejecutores de Código y Suites de Testeo (RF-KNW-05)
 
 El perfil `knowledge` NO DEBE crear arneses de ejecución de código (`sdd-apply`), ni carpetas de sincronización pesadas de agentes ejecutores (`.axiom/inbox/skills/` con skills de compilación/testeo), ni scripts de pipelines de CI locales para suites de prueba.
 
@@ -93,7 +93,7 @@ El perfil `knowledge` NO DEBE crear arneses de ejecución de código (`sdd-apply
 
 ---
 
-### Requirement: Creación de Borradores de Cambio para Traspaso Futuro (REQ-23.6)
+### Requirement: Creación de Borradores de Cambio para Traspaso Futuro (RF-KNW-06)
 
 El comando `axiom change create <slug>` DEBE operar con normalidad dentro del perfil `knowledge`, sembrando `proposal.md` y `spec.md` en `openspec/changes/<slug>/` para que agentes externos o sesiones posteriores de desarrollo en Axiom puedan adoptar el cambio e implementarlo.
 

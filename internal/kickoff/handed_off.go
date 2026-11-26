@@ -21,7 +21,7 @@ func (l GateLedger) Approval(gate GateKey) (GateRecord, bool) {
 }
 
 // HandedOffTo names the phase, or role phase, that exit 2 of a stop hands to
-// somebody else once gate is approved (REQ-26.7):
+// somebody else once gate is approved (RF-GAT-13):
 //
 //   - a fixed gate hands over what it blocks: design, tasks or apply;
 //   - a role-apply:<role> gate hands over verify when it closes the last blocking role
@@ -87,13 +87,13 @@ func HandedOffTo(gate GateState, roster []multirole.RoleAssignment, states []Gat
 }
 
 // IntermediateMerge reports whether a change whose planning files are already
-// in the integration branch is NOT finished (REQ-26.11, DD-09): some approval
+// in the integration branch is NOT finished (RF-BRA-26, DD-09): some approval
 // was recorded with the hand-off mark, so a merge of that pull request only
 // publishes an intermediate stop, and not every role of the roster has its
 // role-apply gate approved yet.
 //
 // It only reads what the hand-off itself leaves integrated (gates.yaml and
-// kickoff.yaml), and only the roles with policy blocking count (REQ-21.15). A roster
+// kickoff.yaml), and only the roles with policy blocking count (RF-RCL-03). A roster
 // with no blocking role satisfies the second condition, in the
 // same spirit as LastBlockingRoleClosed, which never closes over an empty set.
 func IntermediateMerge(k Kickoff, l GateLedger) bool {
@@ -107,7 +107,7 @@ func IntermediateMerge(k Kickoff, l GateLedger) bool {
 	if !handedOff {
 		return false
 	}
-	// Solo los roles blocking deciden (REQ-21.15, H4): un rol deferred u optional
+	// Solo los roles blocking deciden (RF-RCL-03, H4): un rol deferred u optional
 	// que nunca se aprueba no puede hacer que el archivado se rechace como una
 	// fusión intermedia.
 	blocking := 0

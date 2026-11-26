@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
-// La guarda D (REQ-25.21, design D-18): `axiom branch guard` es el hook que instala `axiom sync`
+// La guarda D (RF-BRA-22, design D-18): `axiom branch guard` es el hook que instala `axiom sync`
 // en los runtimes con hooks. Aquí vive la decisión; la carga de cada runtime, el presupuesto de
 // tiempo y el protocolo de salida están en guard_hook.go y la clasificación léxica de las rutas,
 // en guard_classify.go.

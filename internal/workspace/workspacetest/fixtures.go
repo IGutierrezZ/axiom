@@ -107,7 +107,7 @@ func WithGit() Variant {
 }
 
 // WithMasterOpenSpec crea un openspec/ propio en la carpeta maestra: con el
-// puntero, la ambigüedad de REQ-24.6.
+// puntero, la ambigüedad de RF-PLH-06.
 func WithMasterOpenSpec() Variant {
 	return func(t testing.TB, ws *Workspace) {
 		t.Helper()
@@ -116,7 +116,7 @@ func WithMasterOpenSpec() Variant {
 }
 
 // WithBackendOpenSpec crea un openspec/ propio en repo-backend: el marcador más
-// cercano desde repo-backend/src (REQ-24.2).
+// cercano desde repo-backend/src (RF-PLH-02).
 func WithBackendOpenSpec() Variant {
 	return func(t testing.TB, ws *Workspace) {
 		t.Helper()

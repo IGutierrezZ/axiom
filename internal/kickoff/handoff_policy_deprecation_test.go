@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// REQ-26.9: handoff_policy is deprecated. The flag is accepted, validated and
+// RF-PRE-03: handoff_policy is deprecated. The flag is accepted, validated and
 // ignored; a freshly sealed kickoff always carries the compatibility value
 // "none" so that older binaries (which reject a kickoff without the key) keep
 // reading it.

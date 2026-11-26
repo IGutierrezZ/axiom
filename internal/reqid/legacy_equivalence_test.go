@@ -11,7 +11,7 @@ import (
 )
 
 // Las expresiones heredadas se copian aquí: son la referencia con la que el
-// defecto debe coincidir byte a byte (REQ-44.2).
+// defecto debe coincidir byte a byte (RF-RID-02).
 var (
 	legacyCandidate = regexp.MustCompile(`\bREQ-[0-9A-Za-z.]*[0-9A-Za-z]`)
 	legacyValid     = regexp.MustCompile(`^REQ-\d+\.\d+$`)
@@ -85,21 +85,59 @@ func TestLegacyEquivalence(t *testing.T) {
 	for _, e := range edges {
 		checkLegacy(t, e)
 	}
+	// Tras C-03-e la spec viva usa RF-<DOM>-<NN>; el corpus de la gramática heredada son los
+	// títulos `REQ-n.m` de las deltas archivadas, que la historia no reescribe (D11).
+	files, err := filepath.Glob(filepath.Join("..", "..", "openspec", "changes", "archive", "*", "specs", "*", "spec.md"))
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no hay specs archivadas: %v %v", files, err)
+	}
+	titles := 0
+	for _, f := range files {
+		for _, title := range requirementTitles(t, f) {
+			checkLegacy(t, title)
+			titles++
+		}
+	}
+	if titles == 0 {
+		t.Fatal("ningún título de requisito en openspec/changes/archive")
+	}
+}
+
+func requirementTitles(t *testing.T, file string) []string {
+	t.Helper()
+	data, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var titles []string
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(line, "### Requirement:") {
+			titles = append(titles, strings.TrimSpace(strings.TrimPrefix(line, "### Requirement:")))
+		}
+	}
+	return titles
+}
+
+// TestRFCorpusTitlesHaveIDs: todo requisito de la spec viva lleva un ID RF-<DOM>-<NN> en el
+// título y ninguno conserva un REQ-n.m (C-03-e, D11).
+func TestRFCorpusTitlesHaveIDs(t *testing.T) {
+	rf, err := reqid.Parse("RF-<DOM>-<NN>")
+	if err != nil {
+		t.Fatal(err)
+	}
 	files, err := filepath.Glob(filepath.Join("..", "..", "openspec", "specs", "*", "spec.md"))
 	if err != nil || len(files) == 0 {
 		t.Fatalf("no hay specs vivas: %v %v", files, err)
 	}
 	titles := 0
 	for _, f := range files {
-		data, err := os.ReadFile(f)
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, line := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(line, "### Requirement:") {
-				title := strings.TrimSpace(strings.TrimPrefix(line, "### Requirement:"))
-				checkLegacy(t, title)
-				titles++
+		for _, title := range requirementTitles(t, f) {
+			titles++
+			if rf.InTitle(title) == "" {
+				t.Errorf("%s: el título %q no lleva un ID RF-<DOM>-<NN>", f, title)
+			}
+			if reqid.Default().InTitle(title) != "" {
+				t.Errorf("%s: el título %q conserva un ID heredado REQ-n.m", f, title)
 			}
 		}
 	}

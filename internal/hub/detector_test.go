@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Las pruebas del informe de adopción del detector (REQ-30.26): reutiliza el inventario de
+// Las pruebas del informe de adopción del detector (RF-HUB-10): reutiliza el inventario de
 // `axiom archive adopt scan`, sin escribir ni modificar axiom.yaml.
 
 const adoptionRequisitos = "# Requisitos\n\nIntroducción.\n\n## RF-001 Alta de usuario\n\nEl sistema permite el alta.\n\n## RF-002 Baja de usuario\n\nEl sistema permite la baja.\n"

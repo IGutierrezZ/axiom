@@ -19,7 +19,7 @@ Un aviso que salta en un caso correcto es ruido y acostumbra a ignorar la guarda
 
 ## Decisiones
 
-- **Opción B: `git check-ignore` solo antes de avisar** (orquestador de la sesión de origen, 2026-11-25; la persona usuaria revisará la PR). La spec viva (REQ-25.21, escenario «El hook no lanza git ni ningún otro proceso») prohibía lanzar procesos en cualquier escritura. Se descartó la opción A, un comparador de gitignore en Go que solo leyera ficheros: suponía más de 250 líneas, duplicaba la semántica de git (exclusiones por directorio, `info/exclude`, `core.excludesFile`, `**`, negaciones, padres excluidos, `core.ignoreCase`, índice) y corría el riesgo de divergir. Con B, el camino sin aviso (casi todas las escrituras) sigue sin procesos.
+- **Opción B: `git check-ignore` solo antes de avisar** (orquestador de la sesión de origen, 2026-11-25; la persona usuaria revisará la PR). La spec viva (RF-BRA-22, escenario «El hook no lanza git ni ningún otro proceso») prohibía lanzar procesos en cualquier escritura. Se descartó la opción A, un comparador de gitignore en Go que solo leyera ficheros: suponía más de 250 líneas, duplicaba la semántica de git (exclusiones por directorio, `info/exclude`, `core.excludesFile`, `**`, negaciones, padres excluidos, `core.ignoreCase`, índice) y corría el riesgo de divergir. Con B, el camino sin aviso (casi todas las escrituras) sigue sin procesos.
 - **Consulta**: `git -C <raíz del checkout> check-ignore -q -- <ruta relativa>`, mediante `gitcommon.RunWithTimeout` (el único punto de ejecución de git permitido en `internal/branch/**`). Es una sola invocación, local y sin red, y se lanza únicamente cuando `warnFile` ya ha decidido avisar. No usa `--no-index`, así que un fichero versionado que coincida con un patrón no cuenta como ignorado y se sigue avisando.
 - **Límite de tiempo**: la consulta usa como máximo la mitad del presupuesto que le queda a la guarda (1 s en total). Si git tarda, la consulta se corta y el aviso aún cabe en el presupuesto.
 - **Fallo en abierto, hacia el comportamiento de antes**: si git no está, falla (código distinto de 0 y 1) o agota su límite, el fichero se trata como no ignorado y el aviso se emite como hasta ahora. La guarda nunca bloquea por esta consulta.
@@ -30,9 +30,9 @@ Un aviso que salta en un caso correcto es ruido y acostumbra a ignorar la guarda
 
 - `internal/branch/engine/guard_warn.go` y sus pruebas (`guard_warn_test.go`, comentarios de `guard_test.go` y `guard_hook_test.go`).
 - Comentario de paquete de `internal/branch/engine/guard.go` y ayuda de `internal/cli/branch_guard.go`.
-- Delta de REQ-25.21 en `## Spec viva` e integración en `openspec/specs/change-branch-lifecycle/spec.md` con `axiom archive integrate --odd guard-ignorados`.
+- Delta de RF-BRA-22 en `## Spec viva` e integración en `openspec/specs/change-branch-lifecycle/spec.md` con `axiom archive integrate --odd guard-ignorados`.
 
-Fuera de alcance: el bloqueo de documentos (`pre`), los plugins de OpenCode y la instalación del hook (REQ-25.22).
+Fuera de alcance: el bloqueo de documentos (`pre`), los plugins de OpenCode y la instalación del hook (RF-BRA-23).
 
 ## Modo TDD
 
@@ -49,7 +49,7 @@ Desactivado: `axiom.yaml` no declara TDD y nadie lo ha pedido. Se ejecutan las c
     - un documento de Axiom ignorado por git se sigue bloqueando en `pre` sin lanzar procesos;
     - `TestGuardWarnLaunchesNoProcess`: cero procesos en los caminos silenciosos y exactamente una invocación `check-ignore` en el aviso.
   - Comentarios de paquete y ayuda de la CLI al día.
-  - Delta MODIFIED de REQ-25.21 en `## Spec viva` e integración con `axiom archive integrate --odd guard-ignorados`.
+  - Delta MODIFIED de RF-BRA-22 en `## Spec viva` e integración con `axiom archive integrate --odd guard-ignorados`.
   - Comprobación: `go test -count=1 ./internal/branch/engine/` y `go test -count=1 -run BranchGuard ./internal/cli/`; `gofmt -l` y `go vet` del paquete.
 
 ## Criterio de terminado
@@ -68,12 +68,12 @@ Una sola PR (`single-pr`), con una previsión de unas 200-300 líneas. Push, PR 
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto (REQ-25.21)
+### Requirement: `guard`: Hook Opcional que Bloquea los Documentos de Axiom y Avisa en el Resto (RF-BRA-22)
 
 `axiom branch guard` DEBE ser el hook de la capa D que usan los runtimes con hooks. Recibe del runtime la herramienta y la ruta que va a escribir el agente, y su efecto depende de la ruta:
 
-1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de REQ-25.18 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18), y aunque git ignore el documento.
-2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (REQ-25.14) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso. Un fichero que git ignora en su checkout tampoco se avisa: es configuración o resultado local que no viaja con la rama. Un fichero versionado no cuenta como ignorado aunque coincida con un patrón de exclusión.
+1. **Documentos de Axiom** (la carpeta de un cambio u `odd/tasks/`): DEBE **bloquear** (con el mecanismo de bloqueo del runtime) cuando el veredicto de RF-BRA-19 sea `wrong_branch`, con un mensaje que incluya la continuación de `ensure`. Rige en cualquier proyecto Axiom, con independencia de que haya un cambio registrado (supuesto S-18), y aunque git ignore el documento.
+2. **Cualquier otro fichero** de un repositorio con un cambio activo registrado por `ensure` en el registro local (RF-BRA-15) y no cerrado por `done`: DEBE **avisar sin bloquear** cuando la rama del checkout que contiene el fichero no es la que corresponde al cambio. El aviso DEBE incluir la ruta del worktree correcto o, en `in_place`, la rama esperada; con varios cambios activos registrados en el repositorio, nombra los de todos. El repositorio de specs de un `multirepo` queda exento de este aviso. Un fichero que git ignora en su checkout tampoco se avisa: es configuración o resultado local que no viaja con la rama. Un fichero versionado no cuenta como ignorado aunque coincida con un patrón de exclusión.
 3. En cualquier otro caso DEBE no hacer nada: sin cambio activo registrado en el repositorio, o fuera de un proyecto Axiom, termina sin bloquear, sin avisar y sin escribir.
 
 DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientras las lecturas de ficheros no pidan un aviso (bloqueo, documento de Axiom, sin cambio activo registrado, checkout en la rama de un cambio activo, fuera de un proyecto Axiom), NO DEBE lanzar ningún proceso. Solo cuando las lecturas piden un aviso, y antes de emitirlo, el hook PUEDE lanzar una única consulta local `git check-ignore`, sin red y dentro de su presupuesto de tiempo, para descartar un fichero ignorado; si esa consulta falla, git no está disponible o se agota su límite, el aviso se emite como si el fichero no estuviera ignorado. DEBE ser fail-open: ante cualquier error interno, configuración o registro ilegibles o expiración del presupuesto, NO DEBE bloquear ni avisar. Solo afecta a las escrituras del agente a través del runtime: NUNCA al editor humano ni a las órdenes de la CLI. Es la única capa, junto con la doctrina, que cubre el documento ODD. NO DEBE escribir ningún fichero. El canal no bloqueante por el que cada runtime entrega el aviso se decide en `sdd-design`.
@@ -197,5 +197,5 @@ DEBE leer la rama actual leyendo `HEAD` del repositorio, sin lanzar git. Mientra
 
 ## Seguimientos
 
-- `axiom archive integrate --odd` volvió a quitar la regla `---` que separa el requisito MODIFIED (REQ-25.21) del siguiente (REQ-25.22) en `openspec/specs/change-branch-lifecycle/spec.md`. Es el mismo fallo que anotó `fix-miner-frontmatter` y no se corrige aquí: solo la integración puede escribir en la spec.
+- `axiom archive integrate --odd` volvió a quitar la regla `---` que separa el requisito MODIFIED (RF-BRA-22) del siguiente (RF-BRA-23) en `openspec/specs/change-branch-lifecycle/spec.md`. Es el mismo fallo que anotó `fix-miner-frontmatter` y no se corrige aquí: solo la integración puede escribir en la spec.
 - La ayuda de `axiom branch guard` dice «Código 2 … si bloquea; 0 en otro caso», pero con `claude-code` y `codex` un aviso también sale con código 2 (`writeGuardDecision`). Es anterior a este cambio y queda fuera de alcance.

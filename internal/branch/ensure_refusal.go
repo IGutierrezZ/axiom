@@ -18,7 +18,7 @@ func repeatContinuation(operation, change, master string) string {
 	return fmt.Sprintf("axiom branch %s --change %s --cwd %s", operation, change, pathquote.Quote(master))
 }
 
-// BaseNotFound es el rechazo `base_not_found` (REQ-25.10): el repositorio no tiene la
+// BaseNotFound es el rechazo `base_not_found` (RF-BRA-10): el repositorio no tiene la
 // referencia de la que saldrían las ramas del cambio. Con `--base` fijada, nombra esa
 // referencia; si no, la rama de integración que resuelve la política, que no existe ni
 // en local ni como referencia remota local. Un repositorio sin commits cae aquí. En un
@@ -48,7 +48,7 @@ func BaseNotFound(operation, change, master string, repo RepoPlan) *Refusal {
 	}
 }
 
-// BranchCheckedOutElsewhere es el rechazo `branch_checked_out_elsewhere` (REQ-25.7): la
+// BranchCheckedOutElsewhere es el rechazo `branch_checked_out_elsewhere` (RF-BRA-07): la
 // rama planificada ya está desplegada en un worktree que el plan y el registro local no
 // conocen. Nombra la ruta de ese worktree. inMainCheckout dice si es el propio checkout
 // principal, que no se retira: se cambia de rama; mainCheckout es el checkout principal
@@ -92,7 +92,7 @@ func RegistryWriteFailed(operation, change, master, path string, err error) *Ref
 	}
 }
 
-// FetchFailed es el rechazo `fetch_failed` de `--fetch` (REQ-25.10, supuesto S-8): el
+// FetchFailed es el rechazo `fetch_failed` de `--fetch` (RF-BRA-10, supuesto S-8): el
 // `git fetch <remote>` de un repositorio del plan falló. Se lanza durante la comprobación
 // sin efectos, de modo que no se ha creado ninguna rama, worktree ni registro. Nombra el
 // repositorio y el remoto, resume el error de git y ofrece las dos salidas: reintentar con
@@ -121,7 +121,7 @@ func PlannedPathConflict(operation, change, master, name, worktree, message, fix
 	}
 }
 
-// El modo de trabajo de `ensure` (REQ-25.8, design D-08): la decisión de `ask` y los rechazos
+// El modo de trabajo de `ensure` (RF-BRA-08, design D-08): la decisión de `ask` y los rechazos
 // del modo. La continuación de todos ellos es una orden `axiom branch ensure --mode ...` con
 // el cambio, el carril y la carpeta de partida.
 
@@ -132,7 +132,7 @@ func modeInvocation(operation, change, cwd string, lane Lane, mode Mode) string 
 }
 
 // DecisionRequired es el resultado `decision_required` de un proyecto en modo `ask` cuyo
-// cambio no tiene respuesta registrada (REQ-25.8): no se ha creado nada, ni siquiera el
+// cambio no tiene respuesta registrada (RF-BRA-08): no se ha creado nada, ni siquiera el
 // registro, y `ensure` no espera entrada. La decisión lleva las dos respuestas posibles, cada
 // una con la orden que la da; quien invoca (una skill, el dashboard) presenta la pregunta y
 // repite `ensure` con `--mode`. args conserva en las invocaciones las excepciones, los `--repo` y
@@ -168,7 +168,7 @@ func DecisionRequired(args EnsureArgs) *Refusal {
 }
 
 // ModeConflict es el rechazo `plan_conflict` de un `--mode` distinto del modo con el que el
-// cambio ya está materializado (REQ-25.8): un cambio no cambia de modo. No se ha tocado nada;
+// cambio ya está materializado (RF-BRA-08): un cambio no cambia de modo. No se ha tocado nada;
 // la continuación repite `ensure` con el modo materializado.
 func ModeConflict(operation, change, cwd string, lane Lane, materialized, requested Mode) *Refusal {
 	return &Refusal{
@@ -196,7 +196,7 @@ func InvalidMode(operation, change, cwd string, lane Lane, mode Mode) *Refusal {
 // antes de resumir el resto: la lista completa va en Details.
 const maxDirtyPathsListed = 10
 
-// DirtyWorktree es el rechazo `dirty_worktree` de `ensure` en modo `in_place` (REQ-25.9, matriz
+// DirtyWorktree es el rechazo `dirty_worktree` de `ensure` en modo `in_place` (RF-BRA-09, matriz
 // de amenazas «Estado del commit»): el repositorio tiene cambios sin confirmar (ficheros
 // rastreados modificados, con o sin stage, o ficheros sin seguimiento no ignorados) y cambiar
 // de rama los pondría en riesgo. Se decide en la comprobación sin efectos, de modo que no se ha

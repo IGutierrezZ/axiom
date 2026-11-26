@@ -23,7 +23,7 @@ func sddNode(t *testing.T, source string) *yaml.Node {
 	return node
 }
 
-// REQ-29.1: el booleano es estricto y la lista de claves, cerrada.
+// RF-ISO-01: el booleano es estricto y la lista de claves, cerrada.
 func TestDecodeSDD(t *testing.T) {
 	valid := []struct {
 		name   string
@@ -70,7 +70,7 @@ func TestDecodeSDD(t *testing.T) {
 	}
 }
 
-// REQ-29.1: solo iso true con lane odd es contradictorio.
+// RF-ISO-01: solo iso true con lane odd es contradictorio.
 func TestCheckISOWorkflow(t *testing.T) {
 	lanes := []*WorkflowConfig{nil, {}, {Lane: WorkflowLaneODD}, {Lane: WorkflowLaneSDD}, {Lane: WorkflowLaneAsk}}
 	isos := []*SDDConfig{nil, {ISO: false}, {ISO: true}}
@@ -93,7 +93,7 @@ func TestCheckISOWorkflow(t *testing.T) {
 	}
 }
 
-// REQ-29.1 y REQ-29.2: carga por capas (parseLayered, ParseConfig, ReadDeclarations
+// RF-ISO-01 y RF-ISO-02: carga por capas (parseLayered, ParseConfig, ReadDeclarations
 // y Locate) de un bloque `sdd:` válido, inválido y contradictorio.
 func TestSDDLoad(t *testing.T) {
 	t.Run("sin bloque nada cambia", func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestSDDLoad(t *testing.T) {
 	})
 }
 
-// REQ-29.1: workspace validate carga con LoadConfig y falla (salida 1) con un
+// RF-ISO-01: workspace validate carga con LoadConfig y falla (salida 1) con un
 // `sdd:` inválido o contradictorio; con un bloque válido carga sin error.
 func TestWorkspaceValidateSDD(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
@@ -197,7 +197,7 @@ func TestWorkspaceValidateSDD(t *testing.T) {
 	}
 }
 
-// REQ-44.1: `sdd.id_pattern` es un texto no vacío que compila como plantilla.
+// RF-RID-01: `sdd.id_pattern` es un texto no vacío que compila como plantilla.
 func TestDecodeSDDIDPattern(t *testing.T) {
 	t.Run("ausente deja el patrón sin declarar", func(t *testing.T) {
 		got, err := decodeSDD(sddNode(t, "sdd:\n  iso: true\n"))
@@ -248,7 +248,7 @@ func TestDecodeSDDIDPattern(t *testing.T) {
 	}
 }
 
-// REQ-44.1 y REQ-44.9: IDPattern() lee en vivo la declaración y nunca cae en
+// RF-RID-01 y RF-RID-08: IDPattern() lee en vivo la declaración y nunca cae en
 // silencio al defecto cuando el bloque o el fichero no se pueden leer.
 func TestDeclarationsIDPattern(t *testing.T) {
 	template := func(t *testing.T, blocks string) string {
@@ -285,7 +285,7 @@ func TestDeclarationsIDPattern(t *testing.T) {
 	}
 }
 
-// REQ-44.1: workspace validate (LoadConfig) falla con un patrón inválido.
+// RF-RID-01: workspace validate (LoadConfig) falla con un patrón inválido.
 func TestWorkspaceValidateIDPattern(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
 	configPath := filepath.Join(ws.Master, "axiom.yaml")

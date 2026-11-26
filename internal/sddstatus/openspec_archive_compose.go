@@ -9,7 +9,7 @@ const OpenSpecComposeSchema = "axiom.sdd-archive-compose/v1"
 // UnappliedDeltaError names exactly one delta requirement that
 // ComposeOpenSpecCanonicalSpec could not apply. Callers MUST refuse — never
 // report success on a partial composition (#4119). El análisis y la composición
-// viven en internal/openspecdoc (REQ-30.22 a REQ-30.24); este es un alias de tipo.
+// viven en internal/openspecdoc (RF-ARC-11 a RF-ARC-13); este es un alias de tipo.
 type UnappliedDeltaError = openspecdoc.UnappliedDeltaError
 
 // ComposeOptions configura el comportamiento opcional de poda progresiva y archivado (ODD-4.1).

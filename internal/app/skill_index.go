@@ -33,8 +33,8 @@ func init() {
 }
 
 // skillIndexSurface labels parser and usage errors so one parser serves both
-// `axiom skill index` (REQ-22.10) and the legacy `axiom skill-registry` verb
-// (REQ-22.14) without either surface changing its messages (D-13).
+// `axiom skill index` (RF-SKI-01) and the legacy `axiom skill-registry` verb
+// (RF-SKI-05) without either surface changing its messages (D-13).
 type skillIndexSurface struct {
 	// label frames unknown-subcommand and unknown-flag errors.
 	label string
@@ -80,7 +80,7 @@ type skillIndexListArgs struct {
 }
 
 // RunSkillIndex is the `axiom skill index` entry point for the CLI dispatcher
-// (REQ-22.10). It returns the process exit code defined in spec §1.1.
+// (RF-SKI-01). It returns the process exit code defined in spec §1.1.
 func RunSkillIndex(args []string, stdout, stderr io.Writer) int {
 	return runSkillIndex(skillIndexSurfaceIndex, args, stdout, stderr)
 }
@@ -106,7 +106,7 @@ func runSkillIndex(surface skillIndexSurface, args []string, stdout, stderr io.W
 // runSkillIndexRefresh reports the primary line plus one line per secondary
 // destination (spec §1.1). A mirror failure is reported as `mirror failed` with
 // a warning and exit 0: it never fails a correct primary registration
-// (REQ-22.11).
+// (RF-SKI-02).
 func runSkillIndexRefresh(surface skillIndexSurface, args []string, stdout, stderr io.Writer) int {
 	parsed, err := parseSkillIndexRefreshFlags(surface, args)
 	if err != nil {
@@ -133,7 +133,7 @@ func runSkillIndexRefresh(surface skillIndexSurface, args []string, stdout, stde
 }
 
 // runSkillIndexList prints the read-only index view. No destination, cache,
-// .gitignore or memory is written (REQ-22.10).
+// .gitignore or memory is written (RF-SKI-01).
 func runSkillIndexList(surface skillIndexSurface, args []string, stdout, stderr io.Writer) int {
 	if err := writeSkillIndexList(surface, args, stdout); err != nil {
 		fmt.Fprintf(stderr, "Error: %v\n", err)
@@ -143,7 +143,7 @@ func runSkillIndexList(surface skillIndexSurface, args []string, stdout, stderr 
 }
 
 // RegenerateSkillsIndex is the production IndexRegenerator injected into
-// autoskill.Manager (REQ-22.13, D-12): it refreshes the unified skills index
+// autoskill.Manager (RF-SKI-04, D-12): it refreshes the unified skills index
 // with Force: false and the real Engram mirror. A mirror failure travels the
 // returned error because the hook has no richer report channel; callers must
 // report it as a warning and never revert the promotion.
@@ -168,7 +168,7 @@ func RegenerateSkillsIndex(cwd, home string) error {
 
 // parseSkillIndexRefreshFlags parses the shared refresh flag set of either
 // surface; surface labels the error messages so `skill-registry` keeps its
-// bytes (D-13, REQ-22.14).
+// bytes (D-13, RF-SKI-05).
 func parseSkillIndexRefreshFlags(surface skillIndexSurface, args []string) (skillIndexRefreshArgs, error) {
 	parsed := skillIndexRefreshArgs{ensureGitignore: true}
 	for i := 0; i < len(args); i++ {

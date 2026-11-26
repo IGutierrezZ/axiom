@@ -7,7 +7,7 @@ import (
 )
 
 // Las pruebas de la obligación de impacto de los bugs ODD (REQ-30.5). El contrato del
-// marcador es el de REQ-29.15: la línea exacta `Sin impacto en la spec` más una línea
+// marcador es el de RF-CLI-10: la línea exacta `Sin impacto en la spec` más una línea
 // `Motivo:` con texto. Todos los textos son inventados.
 
 const (

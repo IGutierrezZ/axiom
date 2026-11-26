@@ -13,7 +13,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Modo de trabajo efectivo de `ensure` (REQ-25.8, REQ-25.29, design D-05 y D-08): la prioridad
+// Modo de trabajo efectivo de `ensure` (RF-BRA-08, RF-HUB-07, design D-05 y D-08): la prioridad
 // registro > `--mode` > hub > defecto, `ask` como `decision_required` sin efectos, la raíz de
 // worktrees del hub y la identidad del proyecto. Con git real, entorno aislado y sin red; las
 // preferencias del hub se inyectan con un doble salvo en las pruebas que ejercitan el hub
@@ -64,7 +64,7 @@ func wantMode(t *testing.T, result branch.Result, mode branch.Mode, source strin
 	}
 }
 
-// REQ-25.8 y D-08: prioridad registro > `--mode` > hub > defecto, y el origen que se registra
+// RF-BRA-08 y D-08: prioridad registro > `--mode` > hub > defecto, y el origen que se registra
 // por cambio (`hub`, `flag`, `answer`). El origen `answer` es la respuesta a `ask`; `flag`, un
 // `--mode` con un hub que no pregunta.
 func TestEnsureModePriorityIsRegistryThenFlagThenHubThenDefault(t *testing.T) {
@@ -144,7 +144,7 @@ func TestEnsureModePriorityIsRegistryThenFlagThenHubThenDefault(t *testing.T) {
 	})
 }
 
-// REQ-25.8, escenario «Modo `ask` devuelve `decision_required` sin crear nada»: estado
+// RF-BRA-08, escenario «Modo `ask` devuelve `decision_required` sin crear nada»: estado
 // tipado, código de salida distinto de cero, ni rama, ni worktree, ni registro, y ninguna
 // operación de escritura ni de red (tampoco con `--fetch`: la decisión va antes que el fetch).
 func TestEnsureAskReturnsDecisionRequiredWithoutCreatingAnything(t *testing.T) {
@@ -216,7 +216,7 @@ func TestEnsureAskReturnsDecisionRequiredWithoutCreatingAnything(t *testing.T) {
 	})
 }
 
-// REQ-25.8, escenario «La respuesta a `ask` se registra por cambio»: tras `--mode worktree`, el
+// RF-BRA-08, escenario «La respuesta a `ask` se registra por cambio»: tras `--mode worktree`, el
 // mismo cambio reutiliza el modo sin preguntar (y sin lanzar ninguna escritura), otro cambio
 // sin respuesta vuelve a preguntar y la preferencia del hub no se toca.
 func TestEnsureAskAnswerIsRecordedPerChangeAndReused(t *testing.T) {
@@ -265,7 +265,7 @@ func TestEnsureUsesTheWorktreeRootOfThePrefs(t *testing.T) {
 	wantSameDirectory(t, "worktree de feat/x", feature.Worktree, filepath.Join(root, "x", filepath.Base(repo)))
 }
 
-// design D-08 y REQ-25.8: una petición con un modo que no es una respuesta (`ask`, o un
+// design D-08 y RF-BRA-08: una petición con un modo que no es una respuesta (`ask`, o un
 // valor desconocido) es `config_invalid` y no toca nada.
 func TestEnsureRejectsAModeThatIsNotAnAnswer(t *testing.T) {
 	t.Parallel()
@@ -317,7 +317,7 @@ func setHubPrefs(t *testing.T, manager *hub.Manager, project, mode string) {
 	}
 }
 
-// REQ-25.29 y design D-08, con el hub real: un `workspaces.json` sin leer da el modo y la raíz
+// RF-HUB-07 y design D-08, con el hub real: un `workspaces.json` sin leer da el modo y la raíz
 // por defecto con un aviso, y repetir da el mismo resultado byte a byte.
 func TestEnsureFallsBackToTheDefaultModeWithAWarningWhenTheHubCannotBeRead(t *testing.T) {
 	repo := embeddedCoreProject(t)
@@ -347,7 +347,7 @@ func TestEnsureFallsBackToTheDefaultModeWithAWarningWhenTheHubCannotBeRead(t *te
 	}
 }
 
-// REQ-25.29 y design D-08, con el hub real: la identidad del proyecto es la carpeta maestra
+// RF-HUB-07 y design D-08, con el hub real: la identidad del proyecto es la carpeta maestra
 // del checkout principal, también cuando `ensure` se ejecuta desde un worktree enlazado, y
 // la raíz de worktrees por defecto sale de ella, no del worktree.
 func TestEnsureReadsTheHubPrefsOfTheMainCheckoutFromALinkedWorktree(t *testing.T) {

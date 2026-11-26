@@ -13,7 +13,7 @@ import (
 )
 
 // Listados que agregan los cambios de los worktrees registrados y los pendientes de archivar (INC-25,
-// REQ-25.34 y REQ-25.20, design D-16, D-17 y D-20). El dashboard no reimplementa ni la lectura del
+// RF-WEB-11 y RF-BRA-21, design D-16, D-17 y D-20). El dashboard no reimplementa ni la lectura del
 // registro local ni la precedencia ni la evaluación de pendientes: las toma de engine.RegisteredChanges
 // y engine.PendingArchive, los mismos que usan `axiom sdd status` y `axiom branch status`.
 
@@ -27,7 +27,7 @@ type incrementLocation struct {
 }
 
 // registeredIncrements devuelve, por nombre, el cambio activo que gana la precedencia entre los de los
-// worktrees registrados (REQ-25.34, D-16): el del worktree de archivado antes que el del worktree del
+// worktrees registrados (RF-WEB-11, D-16): el del worktree de archivado antes que el del worktree del
 // cambio. Solo cuentan los worktrees que tienen la carpeta del cambio. Los avisos son los del motor
 // (worktree desaparecido, registro ilegible). La agregación es la del motor, la misma que usa la TUI.
 func registeredIncrements(loc workspace.Location) (map[string]engine.RegisteredChange, []string) {
@@ -76,7 +76,7 @@ func (s *Service) locateIncrement(name string) (incrementLocation, error) {
 	return incrementLocation{}, fmt.Errorf("incremento '%s' no encontrado", name)
 }
 
-// pendingArchiveNote es el aviso de los cambios pendientes de archivar (REQ-25.20): nombra cada uno con
+// pendingArchiveNote es el aviso de los cambios pendientes de archivar (RF-BRA-21): nombra cada uno con
 // la orden que lo archiva. Es informativo, no un error.
 func pendingArchiveNote(pending []branch.PendingChange) string {
 	items := make([]string, 0, len(pending))

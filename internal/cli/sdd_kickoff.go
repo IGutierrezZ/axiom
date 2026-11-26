@@ -38,7 +38,7 @@ func renderSDDKickoffHelp(stdout io.Writer) error {
 	_, _ = fmt.Fprintln(stdout, "  seal --cwd <ruta> --change <nombre> [--execution-style continuous|checkpointed | --from-session-pace interactive|auto] [--docs-publication auto (solo con continuous)] [--role <id>[:blocking|deferred|optional] ...] [--deployment-target local|staging|production] [--json]")
 	_, _ = fmt.Fprintln(stdout, "    continuous solo con el rol fullstack: con roles especializados se sella --execution-style checkpointed")
 	_, _ = fmt.Fprintln(stdout, "    la topología de axiom.yaml manda: en multirepo se sella siempre checkpointed (el estilo se deriva si se omite y continuous se rechaza); en monorepo-embedded solo se admite el rol fullstack; sin axiom.yaml el estilo es obligatorio")
-	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, REQ-21.4)")
+	_, _ = fmt.Fprintln(stdout, "  seal --infer --cwd <ruta> --change <nombre> [--json]   (retro-sellado conservador, RF-KOF-04)")
 	_, _ = fmt.Fprintln(stdout, "  show --cwd <ruta> --change <nombre> [--json]")
 	return nil
 }
@@ -75,7 +75,7 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		}
 		sealing = inferred
 	} else {
-		// La topología que gobierna el cambio fija el estilo y los roles (REQ-28.19). Se aplica antes
+		// La topología que gobierna el cambio fija el estilo y los roles (RF-PRE-11). Se aplica antes
 		// de ensamblar el documento, de leer `sdd:` y de la guarda de rama: un rechazo por topología
 		// no emite avisos de rama ni escribe nada, y su mensaje gana a la regla de continuous.
 		topology, _ := loc.GoverningTopology()
@@ -84,18 +84,18 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 		}
 		sealing = parsed.ToKickoff(parsed.Change)
 		// Una declaración `sdd:` inválida, o contradictoria con `workflow.lane`, se
-		// rechaza antes de tocar nada (REQ-29.1, REQ-29.12).
+		// rechaza antes de tocar nada (RF-ISO-01, RF-KOF-11).
 		if err := loc.Declarations.SDDErr; err != nil {
 			return fmt.Errorf("no se sella el cambio %q: la declaración `sdd:` de axiom.yaml no es válida: %w", parsed.Change, err)
 		}
-		// Guarda A (REQ-25.38) e instantánea de política git (REQ-25.36): sin --infer.
+		// Guarda A (RF-KOF-08) e instantánea de política git (RF-KOF-06): sin --infer.
 		if err := applySealBranchPolicy(loc, changeRoot, &sealing); err != nil {
 			return err
 		}
 		// El sellador es la identidad git de la raíz del workspace (no de la carpeta del
 		// cambio, que puede no existir aún); `--infer` conserva `inferred` y no lanza git.
 		sealing.SealedBy, sealWarning = defaultActor(loc.WorkspaceRoot, sealActorTarget)
-		// Instantánea de `sdd:` (REQ-29.13): solo un proyecto ISO la lleva, y nunca el
+		// Instantánea de `sdd:` (RF-KOF-12): solo un proyecto ISO la lleva, y nunca el
 		// retrosellado.
 		if sdd := loc.Declarations.SDD; sdd != nil && sdd.ISO {
 			sealing.SDD = &kickoff.SDDSnapshot{ISO: true}
@@ -110,7 +110,7 @@ func runSDDKickoffSeal(args []string, stdout io.Writer) error {
 	}
 
 	// La carpeta se crea después de todas las validaciones y justo antes de sellar;
-	// si el sellado falla, se retira lo que se creó (REQ-29.12).
+	// si el sellado falla, se retira lo que se creó (RF-KOF-11).
 	rollback, err := kickoff.PrepareChangeRoot(changeRoot)
 	if err != nil {
 		return err
@@ -132,7 +132,7 @@ var sealKickoffFile = kickoff.Seal
 
 // resolveSealChangeRoot resuelve la carpeta de un cambio para `seal`, que a
 // diferencia de gate y show puede sellar un cambio cuya carpeta aún no existe
-// (REQ-29.12). Valida el nombre con gitref.ValidBranchComponent antes de construir
+// (RF-KOF-11). Valida el nombre con gitref.ValidBranchComponent antes de construir
 // ninguna ruta, reserva `archive` (colisionaría con changes/archive/), conserva la
 // negativa de un cambio archivado y devuelve la ruta y si la carpeta ya existía,
 // sin crearla.
@@ -245,11 +245,11 @@ type kickoffJSON struct {
 	SealedBy         string            `json:"sealedBy"`
 	FlowMode         string            `json:"flowMode"`
 	ExecutionStyle   string            `json:"executionStyle"`
-	HandoffPolicy    string            `json:"handoffPolicy,omitempty"` // deprecated (REQ-26.9): only what the file carries
+	HandoffPolicy    string            `json:"handoffPolicy,omitempty"` // deprecated (RF-PRE-03): only what the file carries
 	Roles            []kickoffRoleJSON `json:"roles"`
 	DeploymentTarget string            `json:"deploymentTarget"`
 	DocsPublication  string            `json:"docsPublication,omitempty"`
-	ISO              bool              `json:"iso,omitempty"` // REQ-29.13: solo un cambio sellado como ISO
+	ISO              bool              `json:"iso,omitempty"` // RF-KOF-12: solo un cambio sellado como ISO
 }
 
 func toKickoffJSON(k kickoff.Kickoff) kickoffJSON {

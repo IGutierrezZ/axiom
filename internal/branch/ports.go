@@ -6,7 +6,7 @@ import "context"
 // implementan: `branch/gitcli` implementa Git sobre gitcommon.Run, `branch/registry`
 // implementa Registry, el hub aporta Prefs y la CLI aporta LineageProbe. Separarlos
 // permite probar el motor con dobles y fija que ningún método publica: el puerto Git
-// no tiene `push`, y Fetch es la única operación remota (REQ-25.1, REQ-25.10).
+// no tiene `push`, y Fetch es la única operación remota (RF-BRA-01, RF-BRA-10).
 
 // Git son las operaciones de git que necesita el motor. dir es siempre el checkout
 // principal del repositorio (nunca el directorio del proceso) y toda creación o
@@ -41,7 +41,7 @@ type Git interface {
 }
 
 // Registry es el registro local de los planes materializados, en el git common dir
-// del repositorio del planning home (REQ-25.14).
+// del repositorio del planning home (RF-BRA-15).
 type Registry interface {
 	Lock(ctx context.Context, commonDir string, lane Lane, change string) (unlock func(), err error)
 	Load(commonDir string, lane Lane, change string) (*Record, error) // nil, nil cuando no existe
@@ -50,7 +50,7 @@ type Registry interface {
 	List(commonDir string, lane Lane) ([]Record, error) // los del carril, ordenados por cambio
 }
 
-// Prefs son las preferencias personales de worktree del hub (REQ-25.8).
+// Prefs son las preferencias personales de worktree del hub (RF-BRA-08).
 type Prefs interface {
 	WorktreePrefs(projectMaster string) (mode Mode, root string, source string, warning string)
 }

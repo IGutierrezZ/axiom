@@ -10,7 +10,7 @@ import (
 )
 
 // Rechazos y validación de las excepciones por cambio y del repositorio de specs de un multirepo
-// (REQ-25.3, REQ-25.5, REQ-25.12, design D-04 y D-05): el conflicto de excepciones, el
+// (RF-BRA-03, RF-BRA-05, RF-BRA-12, design D-04 y D-05): el conflicto de excepciones, el
 // repositorio de specs fuera de su integración y los nombres inválidos de la invocación, cada uno
 // con la continuación como orden ejecutable. Pruebas puras, sin git.
 
@@ -129,7 +129,7 @@ func TestValidateExceptionsRejectsInvalidInvocationNamesAsInvalidName(t *testing
 	})
 }
 
-// REQ-25.13: el carril ODD no divide en roles pero incluye los repositorios que se piden con
+// RF-BRA-14: el carril ODD no divide en roles pero incluye los repositorios que se piden con
 // `--repo`: cada uno recibe solo la rama de la feature, con su propia integración y su worktree.
 // Los repositorios que declaran los roles del kickoff no entran.
 func TestPlanOddLaneIncludesTheRequestedRepositoriesWithOnlyTheFeatureBranch(t *testing.T) {

@@ -88,4 +88,4 @@ changelog:
 #
 # El primer release publica binarios firmados y nada mas. El tap propio se anade
 # cuando se decida donde vive, junto con las tareas 4.2 a 4.5 (instalador y
-# compuertas), que REQ-20.8 mantiene diferidas hasta que exista ese release.
+# compuertas), que RF-DIS-02 mantiene diferidas hasta que exista ese release.

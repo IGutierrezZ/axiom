@@ -10,13 +10,13 @@ delivery, or lifecycle transitions.
 
 ## Requirements
 
-### Requirement: Canonical provider-owned routing facts
+### Requirement: Canonical provider-owned routing facts (RF-RUT-01)
 
 Managed routing instructions MUST render from the canonical typed capability
 manifest. They MUST NOT maintain an independent prompt event catalog, risk
 router, or implementation-route selector. The SDD selection policy fact of the
 manifest MUST state that SDD is selected only by an explicit request, by a
-lane declared by the project, or by an accepted proposal (REQ-27.16).
+lane declared by the project, or by an accepted proposal (RF-RUT-17).
 
 #### Scenario: Adapter routing is rendered
 
@@ -31,7 +31,7 @@ lane declared by the project, or by an accepted proposal (REQ-27.16).
 - WHEN the SDD selection policy fact is read
 - THEN it names explicit request, project-declared lane, and accepted proposal as the only ways to select SDD
 
-### Requirement: Direct-inline boundary
+### Requirement: Direct-inline boundary (RF-RUT-02)
 
 The routing projection MUST allow inline decision or verification when
 understanding requires one to three files. It MAY keep one mechanical file
@@ -52,7 +52,7 @@ and has no unresolved design decision.
 - WHEN implementation topology is considered
 - THEN the understanding step is not kept inline
 
-### Requirement: Delegated-direct boundary
+### Requirement: Delegated-direct boundary (RF-RUT-03)
 
 The routing projection MUST delegate narrow exploration when understanding
 requires four or more files. It MUST delegate one writer for two or more
@@ -73,7 +73,7 @@ write or broad research when the adapter supports delegation.
 - THEN one delegated writer owns the implementation
 - AND the file count alone does not select SDD
 
-### Requirement: Delegation applies per action
+### Requirement: Delegation applies per action (RF-RUT-04)
 
 Implementation route and action-level delegation MUST remain independent.
 Tests, builds, installs, and owner-selected checking actors MAY use fresh
@@ -87,13 +87,13 @@ workers without changing a direct implementation route or creating an SDD run.
 - AND the implementation route remains `direct_inline`
 - AND no synthetic SDD state is created
 
-### Requirement: SDD remains optional
+### Requirement: SDD remains optional (RF-RUT-05)
 
 The routing projection MUST propose SDD only when work is genuinely substantial
 or ambiguous and durable proposal, specification, design, or task artifacts
 would materially reduce uncertainty. SDD MUST be selected only after an
 explicit request, an accepted proposal, or a lane declared by the project
-(`workflow.lane: sdd`, REQ-27.3 of `sdd-lane-kickoff`), which counts as an
+(`workflow.lane: sdd`, RF-KOF-09 of `sdd-lane-kickoff`), which counts as an
 explicit request. Risk alone MUST NOT force SDD.
 
 #### Scenario: User accepts an SDD proposal
@@ -126,7 +126,7 @@ explicit request. Risk alone MUST NOT force SDD.
 - WHEN the orchestrator routes substantial work
 - THEN routing toward `optional-SDD` remains unactivated
 
-### Requirement: Capability manifests describe facts, not outcomes
+### Requirement: Capability manifests describe facts, not outcomes (RF-RUT-06)
 
 Each provider-registered adapter MUST expose its own canonical typed capability
 manifest. A manifest MUST describe static adapter features and routing facts
@@ -147,7 +147,7 @@ decision, or assert PASS. Unsupported adapter identities MUST be rejected.
 - THEN the request is rejected
 - AND no generic capability claim is invented
 
-### Requirement: Contract exposure fails closed
+### Requirement: Contract exposure fails closed (RF-RUT-07)
 
 Typed work-routing capability MUST distinguish dormant from advertised
 exposure. A dormant, disabled, unknown, or read-only capability MUST NOT be
@@ -160,7 +160,7 @@ presented as writable runtime authority.
 - THEN no productive transition is advertised
 - AND the orchestrator cannot infer a transition from the static routing facts
 
-### Requirement: Runtime transitions are provider-issued
+### Requirement: Runtime transitions are provider-issued (RF-RUT-08)
 
 When a managed WorkRun and advertised capability exist, instructions MUST
 request the exact typed work-status contract and apply only its zero-or-one
@@ -184,7 +184,7 @@ PASS from prose or process exit, or retry stale or mismatched authorization.
 - THEN it reports the typed stop
 - AND it does not fall back to prompt-owned lifecycle authority
 
-### Requirement: Public progress remains outcome-first
+### Requirement: Public progress remains outcome-first (RF-RUT-09)
 
 Managed routing instructions MUST present only **Working**, **Checking**,
 **Ready**, and **Needs your decision** as normal progress states. Hashes, internal identifiers, and recovery operations MUST remain internal unless
@@ -198,7 +198,7 @@ maintainer diagnostics are explicitly requested.
 - THEN the visible state is **Checking**
 - AND prompt-level review ceremonies are not exposed as extra workflow states
 
-### Requirement: No prompt-owned lifecycle router
+### Requirement: No prompt-owned lifecycle router (RF-RUT-10)
 
 Managed routing instructions MUST NOT bind pre-commit, pre-push, pre-PR,
 release, SDD-phase, CI, or schedule events to review actions. They MUST NOT
@@ -213,7 +213,7 @@ That decision remains with its typed owner context.
 - THEN it contains no event-to-review binding table
 - AND later gates consume owner-issued evidence and authorization
 
-### Requirement: Deterministic text-only installation
+### Requirement: Deterministic text-only installation (RF-RUT-11)
 
 Routing rendering MUST remain deterministic, marker-free text generation.
 Installation MAY update managed configuration files, but MUST NOT create Git
@@ -226,7 +226,7 @@ hooks, evaluate events in a daemon, invoke an agent, or start runtime work.
 - THEN repeated rendering produces identical text
 - AND no review, verification, or delivery effect launches
 
-### Requirement: User-owned model configuration
+### Requirement: User-owned model configuration (RF-RUT-12)
 
 Routing policy MUST keep model, provider, profile, and effort as user-owned
 choices. Those choices MUST NOT change the canonical routing thresholds or
@@ -239,7 +239,7 @@ become inputs to typed safety decisions.
 - THEN canonical direct, delegated-direct, and optional-SDD facts are unchanged
 - AND no safety outcome is inferred from the runtime preference
 
-### Requirement: Organic Driven Development is the orchestrator's mandatory default protocol
+### Requirement: Organic Driven Development is the orchestrator's mandatory default protocol (RF-RUT-13)
 
 Managed routing instructions MUST project the Organic Driven Development (ODD)
 protocol as the orchestrator's default workflow for every request, executed
@@ -272,14 +272,14 @@ this same capability already governs.
 - AND work continues under the ODD projection or another direct
   implementation route
 
-### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (REQ-24.58)
+### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (RF-RUT-14)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en sus pasos de exploración y de cierre, estas reglas mínimas, en un texto idéntico para todos los proyectos y adaptadores:
 
 1. Lectura del contexto técnico: el paso de exploración DEBE indicar que, si el proyecto declara un contexto técnico mantenido, se obtienen los localizadores con `axiom workspace context --cwd <repo> --json`, se abre primero `technicalContext.maintained.entry` y se consultan los demás `technicalContext.maintained.paths` solo bajo demanda. Sin contexto técnico mantenido declarado, el paso NO DEBE exigir ninguna lectura adicional. La regla NO DEBE depender de `axiom sdd status --json` ni de un cambio SDD.
 2. Contexto técnico: el cierre DEBE indicar que, si el proyecto declara un contexto técnico mantenido y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo, con los localizadores leídos en la exploración (la salida de `axiom workspace context --cwd <repo> --json`). La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido y NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`).
-3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`; que todo requisito ADDED lleva un identificador provisional (o, si el autor lo prefiere, un identificador definitivo, que se sigue admitiendo con la comprobación de colisión) y que `axiom archive integrate --odd <feature>` asigna el número definitivo y reescribe el documento; que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`); y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (REQ-27.17). La integración en `openspec/specs/` y la reescritura de los identificadores del propio documento ODD son las únicas escrituras permitidas fuera del código.
-4. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (REQ-30.7 de `odd-living-spec-integration`).
+3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`; que todo requisito ADDED lleva un identificador provisional (o, si el autor lo prefiere, un identificador definitivo, que se sigue admitiendo con la comprobación de colisión) y que `axiom archive integrate --odd <feature>` asigna el número definitivo y reescribe el documento; que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`); y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (RF-RUT-18). La integración en `openspec/specs/` y la reescritura de los identificadores del propio documento ODD son las únicas escrituras permitidas fuera del código.
+4. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (RF-OLS-07 de `odd-living-spec-integration`).
 
 Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Estas reglas son la extensión de `project-technical-context` y de `odd-living-spec-integration` al carril ODD, que no tiene archive.
 (Previously: la regla 3 decía que la delta se escribe en `## Spec viva` y que el ADDED lleva el identificador elegido por el autor, y que la integración en `openspec/specs/` era la única escritura permitida fuera del documento ODD y del código; ahora el ADDED lleva un provisional que la integración asigna y reescribe en el documento, y esa reescritura del documento también está permitida.)
@@ -339,7 +339,7 @@ Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SD
 - **CUANDO** se renderizan repetidamente las instrucciones de enrutamiento gestionadas
 - **ENTONCES** el texto es idéntico en cada renderizado y entre proyectos
 - **Y** los pasos del protocolo ODD distintos de la exploración y el cierre, y el carril SDD, no mencionan el contexto técnico
-### Requirement: El Protocolo ODD Prepara la Rama con `axiom branch ensure` (REQ-25.40)
+### Requirement: El Protocolo ODD Prepara la Rama con `axiom branch ensure` (RF-RUT-15)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN sustituir la regla «branch first when on the default branch» por la ejecución de `axiom branch ensure --lane odd --change <feature>` antes de la primera escritura del documento vivo `odd/tasks/<feature>.md` y de cualquier escritura de código, y DEBEN indicar que las órdenes posteriores usan como `--cwd` las rutas absolutas que devuelve su JSON. El cierre de cada tarea mantiene el commit por unidad de trabajo, ahora en la rama que `ensure` preparó. La regla NO DEBE alterar los demás pasos del protocolo ODD ni el carril SDD, NO DEBE exigir interacción con el usuario salvo el resultado `decision_required` del modo `ask`, y la proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Esta regla no activa SDD ni crea artefactos SDD.
 
@@ -369,7 +369,7 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEB
 - **CUANDO** se inspecciona (pin de texto) la regla
 - **ENTONCES** la única interacción que prevé es presentar el resultado `decision_required` y repetir `ensure` con la respuesta
 
-### Requirement: Prohibición de `EnterWorktree` y `ExitWorktree` en los Assets del Producto (REQ-25.41)
+### Requirement: Prohibición de `EnterWorktree` y `ExitWorktree` en los Assets del Producto (RF-RUT-16)
 
 La doctrina de enrutamiento generada (punto único de generación) DEBE prohibir expresamente el uso de las primitivas `EnterWorktree` y `ExitWorktree` y DEBE prescribir el mecanismo común para todos los runtimes: el JSON de `axiom branch ensure` con rutas absolutas, y el uso de `--cwd`, `git -C` y rutas absolutas en lugar de cambiar el directorio de trabajo. Esa línea de prohibición es la **única** aparición permitida de los dos nombres en los assets del producto: ningún otro asset (skills, orquestadores por runtime, comandos, guías) DEBE contenerlos ni prescribir cualquier primitiva propia de un runtime para crear o cambiar de worktree. El texto generado DEBE ser idéntico para todos los adaptadores, de modo que el comportamiento no dependa de primitivas propias de uno de ellos.
 
@@ -392,9 +392,9 @@ La doctrina de enrutamiento generada (punto único de generación) DEBE prohibir
 - **DADO** los goldens de doctrina y de assets regenerados
 - **CUANDO** se ejecuta la batería de pruebas
 - **ENTONCES** una modificación de la línea de prohibición falla por diferencia con el golden
-### Requirement: El Paso 0 de la Doctrina Proyecta el Carril del Proyecto (REQ-27.16)
+### Requirement: El Paso 0 de la Doctrina Proyecta el Carril del Proyecto (RF-RUT-17)
 
-Las instrucciones de enrutamiento gestionadas DEBEN proyectar un paso 0 que instruya al orquestador a leer el campo `workflow` de `axiom sdd status` (REQ-27.2 de `axiom-sdd-cli-integration`) antes de decidir el carril de un trabajo sustancial, y que defina: con `sdd`, entrada directa al pre-vuelo de SDD sin preguntar el carril; con `odd`, trabajo en ODD sin preguntar el carril; con `ask`, la pregunta bloqueante actual (REQ-21.1 de `sdd-lane-kickoff`); y con `no_workspace`, `invalid` o sin proyección disponible, el comportamiento de `ask`. El texto es el mismo para todos los proyectos y adaptadores: NO DEBE contener el valor del carril de ningún proyecto, porque la doctrina no recibe datos del proyecto. El valor de la política de selección de SDD del manifiesto canónico de capacidades DEBE describir que SDD se selecciona por petición explícita, por carril declarado en el proyecto o por propuesta aceptada, y la proyección DEBE fallar cerrado (`ErrUnknownRoutingPolicy`) ante cualquier otro valor de la política. El riesgo, el tamaño o el número de ficheros NO DEBEN forzar SDD. La proyección DEBE seguir siendo determinista.
+Las instrucciones de enrutamiento gestionadas DEBEN proyectar un paso 0 que instruya al orquestador a leer el campo `workflow` de `axiom sdd status` (RF-CLI-08 de `axiom-sdd-cli-integration`) antes de decidir el carril de un trabajo sustancial, y que defina: con `sdd`, entrada directa al pre-vuelo de SDD sin preguntar el carril; con `odd`, trabajo en ODD sin preguntar el carril; con `ask`, la pregunta bloqueante actual (RF-KOF-01 de `sdd-lane-kickoff`); y con `no_workspace`, `invalid` o sin proyección disponible, el comportamiento de `ask`. El texto es el mismo para todos los proyectos y adaptadores: NO DEBE contener el valor del carril de ningún proyecto, porque la doctrina no recibe datos del proyecto. El valor de la política de selección de SDD del manifiesto canónico de capacidades DEBE describir que SDD se selecciona por petición explícita, por carril declarado en el proyecto o por propuesta aceptada, y la proyección DEBE fallar cerrado (`ErrUnknownRoutingPolicy`) ante cualquier otro valor de la política. El riesgo, el tamaño o el número de ficheros NO DEBEN forzar SDD. La proyección DEBE seguir siendo determinista.
 
 #### Scenario: El paso 0 instruye a leer la proyección
 
@@ -433,9 +433,9 @@ Las instrucciones de enrutamiento gestionadas DEBEN proyectar un paso 0 que inst
 
 ---
 
-### Requirement: La Doctrina ODD Generada no Contiene Ninguna Parada (REQ-27.17)
+### Requirement: La Doctrina ODD Generada no Contiene Ninguna Parada (RF-RUT-18)
 
-Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD NO DEBEN contener ninguna parada: ni tras crear el documento de feature, ni la viñeta `Plan stop:`, ni el párrafo de reanudación con cesión del plan, ni la sección de salidas de las paradas (`Stops and exits`). El texto de las tres salidas (fuente única `stop-exits.md`) DEBE ser exclusivo de las paradas de SDD (REQ-26.8 de `sdd-block-review-gates`) y NO DEBE mencionar ODD. El orquestador NO DEBE detenerse en ODD tras crear `odd/tasks/<feature>.md`: tras registrar el documento y su espejo continúa con la implementación tarea a tarea. La regla de reanudación DEBE conservarse: parte del fichero `odd/tasks/<feature>.md` y tolera la ausencia del espejo de Engram. El paso 0 DEBE seguir sin formular ninguna pregunta de gobernanza una vez elegido el carril ODD. La proyección DEBE seguir siendo determinista.
+Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD NO DEBEN contener ninguna parada: ni tras crear el documento de feature, ni la viñeta `Plan stop:`, ni el párrafo de reanudación con cesión del plan, ni la sección de salidas de las paradas (`Stops and exits`). El texto de las tres salidas (fuente única `stop-exits.md`) DEBE ser exclusivo de las paradas de SDD (RF-GAT-14 de `sdd-block-review-gates`) y NO DEBE mencionar ODD. El orquestador NO DEBE detenerse en ODD tras crear `odd/tasks/<feature>.md`: tras registrar el documento y su espejo continúa con la implementación tarea a tarea. La regla de reanudación DEBE conservarse: parte del fichero `odd/tasks/<feature>.md` y tolera la ausencia del espejo de Engram. El paso 0 DEBE seguir sin formular ninguna pregunta de gobernanza una vez elegido el carril ODD. La proyección DEBE seguir siendo determinista.
 
 #### Scenario: Ningún texto ODD generado contiene una parada
 
@@ -470,9 +470,9 @@ Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD NO 
 - **CUANDO** se renderizan repetidamente las instrucciones de enrutamiento gestionadas
 - **ENTONCES** el texto es idéntico en cada renderizado
 
-### Requirement: La Doctrina ODD Remite Todo el Trabajo de un Proyecto ISO al SDD (REQ-29.18)
+### Requirement: La Doctrina ODD Remite Todo el Trabajo de un Proyecto ISO al SDD (RF-RUT-19)
 
-La doctrina ODD generada (el paso 0, que lee `workflow` de `axiom sdd status`, o el cierre del protocolo) DEBE expresar que, cuando `axiom sdd status` proyecta que el proyecto declara ISO (REQ-29.2 de `sdd-iso-evidence`; todavía no hay cambio sellado, así que se lee la declaración vigente del proyecto), todo el trabajo se tramita por el carril SDD, sin preguntar el carril, también cuando el carril efectivo sea `ask`, y sin crear el documento `odd/tasks/<feature>.md`; y que un bug se tramita siempre por el SDD con el perfil de bug (REQ-29.15 de `axiom-sdd-cli-integration`), que tiene tres rutas: sin delta y con `Cubre:` a un requisito existente, cuando restaura un requisito que ya existe; sin delta y con la sección `## Impacto en la spec` (línea `Sin impacto en la spec` y línea `Motivo:`), cuando no toca ningún requisito; y con delta, como cambio normal, cuando el requisito estaba mal especificado o faltaba. En las dos primeras el bug lleva además la sección `## Informe de bug` en `proposal.md`. La integración de ODD en la spec viva (el verbo de integración de ODD y la revisión de impacto en ODD) la diseña P6 y queda fuera de este requisito: la doctrina no afirma ni niega ninguna regla sobre el mecanismo con el que ODD la integra. El texto DEBE ser idéntico para todos los proyectos y adaptadores (REQ-27.16): no contiene el valor del carril ni la condición ISO de ningún proyecto, solo la instrucción condicionada a lo que proyecta el status. NO DEBE contener ninguna parada ni el texto de las tres salidas (REQ-27.17), y el resto del protocolo ODD (preparación de la rama con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`) NO cambia para los proyectos que no declaran ISO. La combinación de `sdd.iso: true` con `workflow.lane: odd` no llega a la doctrina: `axiom.yaml` la rechaza como declaración contradictoria (REQ-29.1 de `sdd-iso-evidence`), así que la doctrina no necesita arbitrar entre ambos valores.
+La doctrina ODD generada (el paso 0, que lee `workflow` de `axiom sdd status`, o el cierre del protocolo) DEBE expresar que, cuando `axiom sdd status` proyecta que el proyecto declara ISO (RF-ISO-02 de `sdd-iso-evidence`; todavía no hay cambio sellado, así que se lee la declaración vigente del proyecto), todo el trabajo se tramita por el carril SDD, sin preguntar el carril, también cuando el carril efectivo sea `ask`, y sin crear el documento `odd/tasks/<feature>.md`; y que un bug se tramita siempre por el SDD con el perfil de bug (RF-CLI-10 de `axiom-sdd-cli-integration`), que tiene tres rutas: sin delta y con `Cubre:` a un requisito existente, cuando restaura un requisito que ya existe; sin delta y con la sección `## Impacto en la spec` (línea `Sin impacto en la spec` y línea `Motivo:`), cuando no toca ningún requisito; y con delta, como cambio normal, cuando el requisito estaba mal especificado o faltaba. En las dos primeras el bug lleva además la sección `## Informe de bug` en `proposal.md`. La integración de ODD en la spec viva (el verbo de integración de ODD y la revisión de impacto en ODD) la diseña P6 y queda fuera de este requisito: la doctrina no afirma ni niega ninguna regla sobre el mecanismo con el que ODD la integra. El texto DEBE ser idéntico para todos los proyectos y adaptadores (RF-RUT-17): no contiene el valor del carril ni la condición ISO de ningún proyecto, solo la instrucción condicionada a lo que proyecta el status. NO DEBE contener ninguna parada ni el texto de las tres salidas (RF-RUT-18), y el resto del protocolo ODD (preparación de la rama con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`) NO cambia para los proyectos que no declaran ISO. La combinación de `sdd.iso: true` con `workflow.lane: odd` no llega a la doctrina: `axiom.yaml` la rechaza como declaración contradictoria (RF-ISO-01 de `sdd-iso-evidence`), así que la doctrina no necesita arbitrar entre ambos valores.
 
 (Previously: este requisito solo remitía los bugs de un proyecto ISO al SDD con el perfil de bug, y dejaba el trabajo que no era un bug en el carril que eligiera `workflow`; se apoyaba en el supuesto visible de que el perfil de bug prevalecía sobre `workflow.lane: odd`. Ese supuesto desaparece porque la combinación se rechaza al validar.)
 
@@ -499,7 +499,7 @@ La doctrina ODD generada (el paso 0, que lee `workflow` de `axiom sdd status`, o
 
 - **DADO** las mismas instrucciones renderizadas
 - **CUANDO** se inspeccionan (pin de texto)
-- **ENTONCES** contienen la sección `## Impacto en la spec` y la línea literal `Sin impacto en la spec` exactamente como las fija REQ-29.15, y la sección `## Informe de bug` con `Observado:` y `Esperado:`
+- **ENTONCES** contienen la sección `## Impacto en la spec` y la línea literal `Sin impacto en la spec` exactamente como las fija RF-CLI-10, y la sección `## Informe de bug` con `Observado:` y `Esperado:`
 
 #### Scenario: La doctrina no fija regla sobre la integración de ODD en la spec viva
 
@@ -518,7 +518,7 @@ La doctrina ODD generada (el paso 0, que lee `workflow` de `axiom sdd status`, o
 
 - **DADO** las mismas instrucciones renderizadas
 - **CUANDO** se inspeccionan (pin de texto)
-- **ENTONCES** no contienen ninguna regla de precedencia entre `sdd.iso` y `workflow.lane: odd`, porque esa combinación la rechaza la validación (REQ-29.1 de `sdd-iso-evidence`)
+- **ENTONCES** no contienen ninguna regla de precedencia entre `sdd.iso` y `workflow.lane: odd`, porque esa combinación la rechaza la validación (RF-ISO-01 de `sdd-iso-evidence`)
 
 #### Scenario: La adición no reintroduce ninguna parada
 
@@ -526,16 +526,16 @@ La doctrina ODD generada (el paso 0, que lee `workflow` de `axiom sdd status`, o
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** no contienen `Plan stop`, `Stops and exits` ni el texto de las tres salidas
 - **Y** la preparación de la rama, el commit por unidad de trabajo y la reanudación sin espejo de Engram se expresan igual que antes
-### Requirement: La Doctrina ODD de Entrega es `single-pr` por Defecto, la Cadena Solo a Petición y la Heurística por Tarea no Lleva Ningún Número (REQ-32.4)
+### Requirement: La Doctrina ODD de Entrega es `single-pr` por Defecto, la Cadena Solo a Petición y la Heurística por Tarea no Lleva Ningún Número (RF-RUT-20)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN declarar la doctrina de entrega del trabajo organic en estos términos, en el mismo texto para todos los proyectos y adaptadores:
 
 1. **Una PR por defecto.** La entrega es `single-pr`: una sola PR con un commit convencional por tarea (unidad de trabajo). La estrategia NO se pregunta.
 2. **Cadena solo a petición.** Las PRs encadenadas (`chained`, con `stacked-to-main` o `feature-branch-chain`) solo se usan cuando la persona las pide; si las pide sin indicar la estrategia de cadena, el orquestador formula una única pregunta por ella. Las skills se resuelven por su nombre de registro: `work-unit-commits` siempre y `chained-pr` solo al encadenar.
 3. **La unidad de revisión es la tarea, no un conteo de líneas.** La heurística por tarea DEBE describir la tarea como el comportamiento coherente más pequeño con sus tests y su documentación, DEBE prohibir borrar espacios, líneas en blanco, comentarios o tests para ahorrar líneas y partir artificialmente, y NO DEBE contener ningún número de líneas ni referencia a «size gates» de PR.
-4. **Aviso opcional de cambio grande.** Solo si `axiom.yaml` declara `delivery.split_hint_lines` (REQ-32.1 de `workspace-topology`) y la previsión de líneas del documento de la feature la supera, el orquestador avisa una vez de que el cambio es grande y de que la persona puede pedir PRs encadenadas, y continúa sin esperar respuesta (REQ-32.2 de `workspace-topology`). Sin la clave no hay aviso ni ningún número en el texto.
+4. **Aviso opcional de cambio grande.** Solo si `axiom.yaml` declara `delivery.split_hint_lines` (RF-TOP-14 de `workspace-topology`) y la previsión de líneas del documento de la feature la supera, el orquestador avisa una vez de que el cambio es grande y de que la persona puede pedir PRs encadenadas, y continúa sin esperar respuesta (RF-TOP-15 de `workspace-topology`). Sin la clave no hay aviso ni ningún número en el texto.
 
-La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `exception-ok` como estrategias ofrecidas, ni la elección de una estrategia de cadena condicionada a un umbral numérico. Los valores heredados que se lean de un documento existente se tratan con los alias de lectura de REQ-32.3 de `sdd-orchestrator-assets`. El resto del protocolo ODD (rama preparada con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`, TDD configurado) NO cambia. La proyección DEBE seguir siendo determinista. Quedan fuera de este requisito, por no ser umbrales de entrega, el umbral de barrido de judgment-day.
+La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `exception-ok` como estrategias ofrecidas, ni la elección de una estrategia de cadena condicionada a un umbral numérico. Los valores heredados que se lean de un documento existente se tratan con los alias de lectura de RF-ORQ-20 de `sdd-orchestrator-assets`. El resto del protocolo ODD (rama preparada con `axiom branch ensure`, commit por unidad de trabajo, reanudación desde `odd/tasks/<feature>.md`, TDD configurado) NO cambia. La proyección DEBE seguir siendo determinista. Quedan fuera de este requisito, por no ser umbrales de entrega, el umbral de barrido de judgment-day.
 (Previously: la lista de exclusiones citaba también el umbral de riesgo del paquete de revisión de RDD y las lentes `review-*` y `rdd-defect-workflow` de RDD; RDD se retira (C-01-e, P20).)
 
 #### Scenario: La doctrina ODD declara `single-pr` por defecto sin preguntar
@@ -585,10 +585,10 @@ La doctrina NO DEBE contener los valores `ask-on-risk`, `auto-chain` ni `excepti
 
 - **DADO** la doctrina ODD generada
 - **CUANDO** se compara con la anterior en lo que no es entrega
-- **ENTONCES** conserva la preparación de rama con `axiom branch ensure`, el commit por unidad de trabajo, la reanudación desde `odd/tasks/<feature>.md` y la ausencia de paradas (REQ-27.17)
-### Requirement: La Doctrina ODD Avisa por Commit en el Modo 1 Fijo, sin Preguntas ni Paradas (REQ-33.12)
+- **ENTONCES** conserva la preparación de rama con `axiom branch ensure`, el commit por unidad de trabajo, la reanudación desde `odd/tasks/<feature>.md` y la ausencia de paradas (RF-RUT-18)
+### Requirement: La Doctrina ODD Avisa por Commit en el Modo 1 Fijo, sin Preguntas ni Paradas (RF-RUT-21)
 
-La doctrina ODD generada (paso 6 del protocolo) DEBE indicar que, al cerrar cada tarea con su commit de unidad de trabajo, el orquestador avisa en el chat con el sha, la tarea y la orden `git show <sha>`, y continúa sin esperar. ODD DEBE funcionar siempre en el comportamiento `notify`: la doctrina ODD NO DEBE preguntar el modo de revisión por commit, NO DEBE ofrecerlo ni aceptarlo a petición en el chat, y NO DEBE contener ninguno de los tokens `stop` o `stop-before-commit` como modo ni vocabulario de paradas, de modo que los pines de REQ-27.17 sigan en verde. La doctrina ODD DEBE incluir además las reglas comunes de REQ-33.9: pedir la PR da por validados todos los commits pendientes y nada la bloquea; solo se registran, en `odd/tasks/<feature>.md`, los commits sobre los que la persona pidió cambios; los cambios sobre un commit ya superado usan `git commit --fixup=<sha>` con autosquash no interactivo diferido antes de abrir la PR si la rama no está publicada, o un commit correctivo nuevo si ya lo está, sin reescribir nunca historia publicada; y se recomienda fusionar sin squash. La doctrina ODD NO DEBE mencionar RDD ni recibos.
+La doctrina ODD generada (paso 6 del protocolo) DEBE indicar que, al cerrar cada tarea con su commit de unidad de trabajo, el orquestador avisa en el chat con el sha, la tarea y la orden `git show <sha>`, y continúa sin esperar. ODD DEBE funcionar siempre en el comportamiento `notify`: la doctrina ODD NO DEBE preguntar el modo de revisión por commit, NO DEBE ofrecerlo ni aceptarlo a petición en el chat, y NO DEBE contener ninguno de los tokens `stop` o `stop-before-commit` como modo ni vocabulario de paradas, de modo que los pines de RF-RUT-18 sigan en verde. La doctrina ODD DEBE incluir además las reglas comunes de RF-ORQ-22: pedir la PR da por validados todos los commits pendientes y nada la bloquea; solo se registran, en `odd/tasks/<feature>.md`, los commits sobre los que la persona pidió cambios; los cambios sobre un commit ya superado usan `git commit --fixup=<sha>` con autosquash no interactivo diferido antes de abrir la PR si la rama no está publicada, o un commit correctivo nuevo si ya lo está, sin reescribir nunca historia publicada; y se recomienda fusionar sin squash. La doctrina ODD NO DEBE mencionar RDD ni recibos.
 
 #### Scenario: El paso 6 contiene el aviso por commit
 
@@ -601,7 +601,7 @@ La doctrina ODD generada (paso 6 del protocolo) DEBE indicar que, al cerrar cada
 - **DADO** la doctrina ODD generada
 - **CUANDO** se busca `stop-before-commit`, una pregunta del modo o las tres salidas
 - **ENTONCES** no aparece ninguno
-- **Y** las pruebas de REQ-27.17 (`routing_test.go`, `routing_stops_test.go`) siguen en verde sin cambios
+- **Y** las pruebas de RF-RUT-18 (`routing_test.go`, `routing_stops_test.go`) siguen en verde sin cambios
 
 #### Scenario: Una petición de parada en el chat no cambia el modo
 

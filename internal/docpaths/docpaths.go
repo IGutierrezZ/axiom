@@ -1,5 +1,5 @@
 // Package docpaths fija la lista cerrada de rutas que `axiom sdd publish` considera
-// documentación de un cambio (S6, REQ-27.5, DD-06). Es un paquete hoja y puro: no
+// documentación de un cambio (S6, RF-PUB-01, DD-06). Es un paquete hoja y puro: no
 // ejecuta git ni toca el sistema de ficheros, de modo que la política de rutas se
 // prueba en tabla.
 //
@@ -176,7 +176,7 @@ func (s Set) Candidates() []string {
 // empieza por punto y que está directamente en la raíz de la carpeta del cambio o de su carpeta
 // archivada (`.gates.lock`, `.axiom-instance`, `.integrations-outbox.yaml`, temporales de
 // escritura atómica). Un fichero con punto anidado, o en la carpeta archivada de otro cambio, sigue
-// siendo documentación (MODIFIED REQ-27.5).
+// siendo documentación (MODIFIED RF-PUB-01).
 func (s Set) LocalState(rel string) bool {
 	if s.changeDir == "" || !valid(rel) {
 		return false

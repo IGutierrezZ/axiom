@@ -7,11 +7,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos del plan de archivado (REQ-25.45, REQ-25.12, design D-25). Cada uno nombra una orden
+// Rechazos del plan de archivado (RF-BRA-13, RF-BRA-12, design D-25). Cada uno nombra una orden
 // ejecutable con las rutas citadas por pathquote.Quote (tasks.md, regla 11).
 
 // ArchiveBranchNotApplicable es el rechazo `archive_branch_not_applicable` de `ensure
-// --archive` en un carril o una topología sin rama de archivado (REQ-25.45): el carril ODD, que
+// --archive` en un carril o una topología sin rama de archivado (RF-BRA-13): el carril ODD, que
 // no tiene archive, y `multirepo`, donde el archive se hace in situ en la rama de integración
 // del repositorio de specs. reason explica cuál de los dos es. No se ha creado nada; la
 // continuación es la orden que sí describe el estado del cambio en esa topología o carril.
@@ -31,7 +31,7 @@ func ArchiveBranchNotApplicable(in PlanInput, reason string) *Refusal {
 }
 
 // ArchiveOptionsConflict es el rechazo `plan_conflict` de `--branch` o `--base` con `--archive`
-// (REQ-25.12, supuesto S-16): con `--archive` solo se admite `--prefix`, porque la rama de
+// (RF-BRA-12, supuesto S-16): con `--archive` solo se admite `--prefix`, porque la rama de
 // archivado sale siempre de la rama de integración y su nombre deriva de la rama del cambio
 // registrada o del prefijo. Nombra las banderas que sobran; no se ha tocado nada y la
 // continuación repite `ensure --archive` con el `--prefix` pedido, si lo hay.
@@ -52,13 +52,13 @@ func ArchiveOptionsConflict(in PlanInput) *Refusal {
 	}
 }
 
-// ChangeNotIntegrated es el rechazo `change_not_integrated` de `ensure --archive` (REQ-25.45,
+// ChangeNotIntegrated es el rechazo `change_not_integrated` de `ensure --archive` (RF-BRA-13,
 // design D-25 paso 5): el árbol de la base evaluada no contiene la carpeta `changes/<cambio>/`
 // del planning home, de modo que el PR del cambio no consta fusionado en las referencias
 // locales y no se crea ninguna rama ni worktree. Nombra la base evaluada (`base`, como
 // `origin/main` o `main`) y la carpeta que falta (`changePath`, relativa a la raíz del
 // repositorio, con «/»). `fetched` dice si la invocación ya traía el remoto: sin `--fetch` la
-// continuación lo sugiere (no hay fetch implícito, REQ-25.10); con él, la base sigue sin el
+// continuación lo sugiere (no hay fetch implícito, RF-BRA-10); con él, la base sigue sin el
 // cambio y lo que falta es fusionar su PR. `archivedEntry` es, si la base ya contiene el cambio
 // archivado (G-13), la entrada `changes/archive/<fecha>-<cambio>/` que lo prueba: el mensaje la
 // nombra y dice que no hay nada que archivar. prefix es el `--prefix` de la invocación, que la
@@ -92,7 +92,7 @@ func ChangeNotIntegrated(change, master, prefix string, repo RepoPlan, base, cha
 
 // ChangeIntermediateMerge es el rechazo `change_not_integrated` de `ensure --archive` sobre un
 // cambio que ya está en el árbol de la base, pero como fusión intermedia de planificación
-// (REQ-26.11, REQ-25.45): la PR de una salida 2 de una parada publicó parte del cambio, con la
+// (RF-BRA-26, RF-BRA-13): la PR de una salida 2 de una parada publicó parte del cambio, con la
 // marca de cesión en su `gates.yaml` y algún rol sin su `role-apply` aprobado, así que la carpeta
 // existe y el cambio no está terminado. Lo dice el mensaje y el detalle `intermediate: "true"`.
 // No se ha creado ninguna rama ni worktree. A diferencia de ChangeNotIntegrated, no sugiere
@@ -115,7 +115,7 @@ func ChangeIntermediateMerge(change, master, prefix string, repo RepoPlan, base,
 }
 
 // ArchiveBranchConflict es el rechazo `plan_conflict` de un `--prefix` que daría a la rama de
-// archivado un nombre distinto del de la que el registro ya guarda para el cambio (REQ-25.12):
+// archivado un nombre distinto del de la que el registro ya guarda para el cambio (RF-BRA-12):
 // una rama de archivado no cambia de nombre y la repetición idéntica es idempotente. No se ha
 // tocado nada; la continuación repite `ensure --archive` sin `--prefix`, que vuelve a la rama
 // registrada, y explica cómo retirarla para elegir otro nombre. command es la orden que repite

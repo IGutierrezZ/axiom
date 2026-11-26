@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// Marcas del bloque que lee la topología del proyecto (REQ-28.21, REQ-28.22; D7). El bloque replica en
+// Marcas del bloque que lee la topología del proyecto (RF-PRE-13, RF-PRE-14; D7). El bloque replica en
 // TypeScript workspace.Locate y Location.GoverningTopology; internal/sddtaskresult lo compara con el
 // binario y este fichero comprueba que las dos generaciones del plugin llevan el mismo texto.
 const (
@@ -84,7 +84,7 @@ const mk=async(directory)=>{const hooks={};const ctx={location:{directory,worksp
   cleanup};};
 `
 
-// sddTopologyScenarios ejercita el contrato de grupos por topología (REQ-28.15 a REQ-28.18, REQ-28.21)
+// sddTopologyScenarios ejercita el contrato de grupos por topología (RF-PRE-07 a RF-PRE-10, RF-PRE-13)
 // con el mismo guion sobre las dos generaciones del plugin, a través del adaptador de cada una.
 const sddTopologyScenarios = `
 const fs=await import('node:fs'),os=await import('node:os'),path=await import('node:path');
@@ -174,7 +174,7 @@ await alone(mono,async(s)=>{await reject(()=>s.dispatch('root'),'missing preflig
 `
 
 // Con cero grupos requeridos (multirepo) el plugin antepone el bloque derivado de cinco líneas sin exigir
-// pregunta y conserva las denegaciones de sesión hija y de bloque escrito por el modelo (REQ-28.17, REQ-28.18, REQ-28.21).
+// pregunta y conserva las denegaciones de sesión hija y de bloque escrito por el modelo (RF-PRE-09, RF-PRE-10, RF-PRE-13).
 const sddTopologyZeroGroupsAssertions = `
 await alone(multi,async(s)=>{
  same(await s.dispatch('root'),block('interactive','hybrid','single-pr')+'\n\nImplement','zero groups derive the block');

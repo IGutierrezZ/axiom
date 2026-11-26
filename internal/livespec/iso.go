@@ -7,7 +7,7 @@ import (
 )
 
 // ISOProjectError es el rechazo de la integración ODD en un proyecto que declara
-// ISO (`sdd.iso: true`, REQ-30.7): el carril ODD no deja `Cubre:` ni matriz de
+// ISO (`sdd.iso: true`, RF-OLS-07): el carril ODD no deja `Cubre:` ni matriz de
 // verify, así que la spec viva de un proyecto ISO se compone por el carril SDD. Es
 // distinguible con errors.As.
 type ISOProjectError struct {
@@ -23,7 +23,7 @@ func (e *ISOProjectError) Error() string {
 }
 
 // RefuseISOProject devuelve un *ISOProjectError si el proyecto declara ISO y nil si
-// no: en un proyecto no ISO la integración ODD no se ve afectada (REQ-30.7). Se
+// no: en un proyecto no ISO la integración ODD no se ve afectada (RF-OLS-07). Se
 // evalúa antes de leer el documento ODD y sin tocar el disco.
 func RefuseISOProject(iso bool, configPath, workspaceRoot, feature string) error {
 	if !iso {

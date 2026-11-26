@@ -118,7 +118,7 @@ export function validateProjectForm({ path, cards, topology, specsRepository }) 
     else specs = String(specsRepository).trim();
   }
   // monorepo-embedded solo admite el rol fullstack: no se envían roles y el
-  // servidor escribe el fullstack canónico (REQ-3.3). Las tarjetas no se ven.
+  // servidor escribe el fullstack canónico (RF-HUB-12). Las tarjetas no se ven.
   if (topology === 'monorepo-embedded') {
     return { roles: [], specsRepository: specs, violations };
   }
@@ -157,7 +157,7 @@ export function adapterWarning(response) {
 
 const MODE_LABELS = { maintained: 'mantenida', reference: 'de referencia' };
 
-// adoptionPanel convierte el informe de adopción de la respuesta del alta (REQ-30.27) en el
+// adoptionPanel convierte el informe de adopción de la respuesta del alta (RF-HUB-11) en el
 // modelo del panel, o null si no hay nada que mostrar. La instrucción solo se ofrece si el
 // informe lista algún origen de requisitos: sin orígenes no hay nada que migrar. El dashboard
 // solo muestra el informe y la instrucción; no ejecuta nada.

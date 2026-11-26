@@ -11,7 +11,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 )
 
-// REQ-25.14 y REQ-25.46: el modo de promoción y su origen hacen ida y vuelta por el registro.
+// RF-BRA-15 y RF-BRA-28: el modo de promoción y su origen hacen ida y vuelta por el registro.
 func TestSaveAndLoadKeepThePromotionAndItsSource(t *testing.T) {
 	root, commonDir := newRepository(t)
 	record := validRecord(root, commonDir)

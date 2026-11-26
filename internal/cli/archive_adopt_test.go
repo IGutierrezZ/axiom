@@ -18,7 +18,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
 
-// Las pruebas de `axiom archive adopt <scan|check>` (REQ-30.9 a REQ-30.14). Todos los
+// Las pruebas de `axiom archive adopt <scan|check>` (RF-ADP-01 a RF-ADP-06). Todos los
 // textos son inventados.
 
 const (
@@ -189,7 +189,7 @@ func TestArchiveAdoptScanWithChangeWritesOnlyTheInventory(t *testing.T) {
 	}
 }
 
-// REQ-25.19: `adopt scan --change` es un escritor guardado.
+// RF-BRA-20: `adopt scan --change` es un escritor guardado.
 func TestArchiveAdoptScanChangeRefusesOutsideTheChangeBranch(t *testing.T) {
 	ws := guardProject(t)
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
@@ -404,7 +404,7 @@ func declareAdoptPattern(t *testing.T, ws workspacetest.Workspace, block string)
 	workspacetest.WriteFile(t, path, string(data)+block)
 }
 
-// REQ-30.11 y REQ-44.4: `check` mide con el patrón declarado y no escribe nada, axiom.yaml incluido.
+// RF-ADP-03 y RF-RID-04: `check` mide con el patrón declarado y no escribe nada, axiom.yaml incluido.
 func TestArchiveAdoptCheckMeasuresWithTheDeclaredPattern(t *testing.T) {
 	f := newAdoptCheckFixture(t)
 	declareAdoptPattern(t, f.ws, "sdd:\n  id_pattern: \"RF-<NNN>\"\n")
@@ -450,7 +450,7 @@ func TestArchiveAdoptCheckWithoutDeclarationReportsTheDefaultPattern(t *testing.
 	}
 }
 
-// REQ-44.9: con el patrón inválido, `check` se niega con el mismo error y la misma
+// RF-RID-08: con el patrón inválido, `check` se niega con el mismo error y la misma
 // continuación que el resto de verbos, sin escribir.
 func TestArchiveAdoptCheckRefusesAnInvalidDeclaredPattern(t *testing.T) {
 	f := newAdoptCheckFixture(t)
@@ -463,7 +463,7 @@ func TestArchiveAdoptCheckRefusesAnInvalidDeclaredPattern(t *testing.T) {
 	}
 }
 
-// REQ-30.9: el escaneo propone el patrón de identificadores del cliente (texto y JSON).
+// RF-ADP-01: el escaneo propone el patrón de identificadores del cliente (texto y JSON).
 func TestArchiveAdoptScanProposesTheIDPattern(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)
@@ -591,7 +591,7 @@ func TestArchiveAdoptScanReportsAnInvalidDeclaredPatternWithoutRefusing(t *testi
 	}
 }
 
-// REQ-30.9: `scan --change` no toca axiom.yaml y no hay opción para escribir el patrón.
+// RF-ADP-01: `scan --change` no toca axiom.yaml y no hay opción para escribir el patrón.
 func TestArchiveAdoptScanChangeLeavesAxiomYamlUntouched(t *testing.T) {
 	ws := workspacetest.Embedded(t, ".")
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "docs", "requisitos.md"), adoptCLIRequisitos)

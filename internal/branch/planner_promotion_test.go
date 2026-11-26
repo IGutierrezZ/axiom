@@ -23,7 +23,7 @@ func multirepoTwoStageInput(t *testing.T) PlanInput {
 	return in
 }
 
-// REQ-25.46 (D6): la base efectiva depende del modo; IntegrationBranch y PRTarget no cambian.
+// RF-BRA-28 (D6): la base efectiva depende del modo; IntegrationBranch y PRTarget no cambian.
 func TestPlanBaseBranchFollowsThePromotionMode(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -95,7 +95,7 @@ func TestPlanWithMainBranchEqualToIntegrationIsSingleStage(t *testing.T) {
 	}
 }
 
-// REQ-25.50: el repositorio de specs de un multirepo y las ramas de rol no cambian.
+// RF-BRA-32: el repositorio de specs de un multirepo y las ramas de rol no cambian.
 func TestPlanPromotionLeavesSpecsRepositoryAndRoleBranchesUntouched(t *testing.T) {
 	in := multirepoTwoStageInput(t)
 	in.CodeRepos = []RepoFacts{codeFacts("repo-backend", "backend", "api"), codeFacts("repo-frontend", "frontend")}

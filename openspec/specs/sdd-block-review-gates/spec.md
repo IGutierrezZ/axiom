@@ -12,9 +12,9 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
 
 Cuando el cambio se sella en modalidad "con paradas", el orquestador se detiene al concluir cada bloque del ciclo de vida SDD y exige una aprobación explícita antes de abrir la siguiente fase.
 
-### Requirement: Aplicabilidad de las Compuertas Condicionada a la Modalidad Sellada (REQ-21.7)
+### Requirement: Aplicabilidad de las Compuertas Condicionada a la Modalidad Sellada (RF-GAT-01)
 
-Las compuertas descritas en REQ-21.8 a REQ-21.11 DEBEN aplicarse única y exclusivamente cuando la modalidad de avance sellada en el pre-vuelo (REQ-21.5) es "con paradas". Cuando la modalidad sellada es "continua", el orquestador NO DEBE detenerse entre fases ni presentar ninguna de esas compuertas, y DEBE encadenar las fases automáticamente en cuanto cada una cumpla sus propios criterios de completitud.
+Las compuertas descritas en RF-GAT-02 a RF-GAT-05 DEBEN aplicarse única y exclusivamente cuando la modalidad de avance sellada en el pre-vuelo (RF-PRE-01) es "con paradas". Cuando la modalidad sellada es "continua", el orquestador NO DEBE detenerse entre fases ni presentar ninguna de esas compuertas, y DEBE encadenar las fases automáticamente en cuanto cada una cumpla sus propios criterios de completitud.
 
 #### Scenario: Modalidad con paradas detiene el flujo entre spec y design
 
@@ -30,9 +30,9 @@ Las compuertas descritas en REQ-21.8 a REQ-21.11 DEBEN aplicarse única y exclus
 
 ---
 
-### Requirement: Compuerta de `spec` (REQ-21.8)
+### Requirement: Compuerta de `spec` (RF-GAT-02)
 
-En modalidad "con paradas", al completarse la fase `spec` el orquestador DEBE detenerse y presentar al usuario el spec producido, evaluando explícitamente si cubre la intención original de la petición y si existen huecos o dudas abiertas, y DEBE ofrecer las tres salidas de REQ-26.1. El orquestador NO DEBE iniciar la fase `design` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3 de REQ-26.1). Con la salida 2 la fase `design` queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión (REQ-26.3).
+En modalidad "con paradas", al completarse la fase `spec` el orquestador DEBE detenerse y presentar al usuario el spec producido, evaluando explícitamente si cubre la intención original de la petición y si existen huecos o dudas abiertas, y DEBE ofrecer las tres salidas de RF-GAT-07. El orquestador NO DEBE iniciar la fase `design` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3 de RF-GAT-07). Con la salida 2 la fase `design` queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión (RF-GAT-09).
 (Previously: la compuerta solo admitía aprobación o rechazo y no preveía ceder la fase siguiente)
 
 #### Scenario: Spec completo aprobado con la salida 3 habilita design
@@ -47,8 +47,8 @@ En modalidad "con paradas", al completarse la fase `spec` el orquestador DEBE de
 - **DADO** un spec recién producido que cubre la intención original sin huecos detectados
 - **CUANDO** se presenta la compuerta de `spec`
 - **Y** el usuario elige aprobar, subir y parar (salida 2)
-- **ENTONCES** la compuerta de `spec` queda `approved` con la marca de cesión (REQ-26.3)
-- **Y** el orquestador no inicia `design` en esa sesión y devuelve al usuario el destino de la PR y la orden (REQ-26.5)
+- **ENTONCES** la compuerta de `spec` queda `approved` con la marca de cesión (RF-GAT-09)
+- **Y** el orquestador no inicia `design` en esa sesión y devuelve al usuario el destino de la PR y la orden (RF-GAT-11)
 
 #### Scenario: Huecos detectados se enumeran explícitamente en la compuerta
 
@@ -59,9 +59,9 @@ En modalidad "con paradas", al completarse la fase `spec` el orquestador DEBE de
 
 ---
 
-### Requirement: Compuerta de `design` (REQ-21.9)
+### Requirement: Compuerta de `design` (RF-GAT-03)
 
-En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE detenerse y evaluar explícitamente si el diseño satisface todos los requerimientos del spec y si respeta las directrices de arquitectura, las tecnologías declaradas en `axiom.yaml` y los patrones existentes del repositorio, y DEBE ofrecer las tres salidas de REQ-26.1. El orquestador NO DEBE iniciar la fase `tasks` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3); con la salida 2 la fase `tasks` queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto con el impacto previsto y evaluar si es coherente con el diseño; si el delta falta, DEBE señalar esa ausencia explícitamente como parte de la presentación (REQ-24.36).
+En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE detenerse y evaluar explícitamente si el diseño satisface todos los requerimientos del spec y si respeta las directrices de arquitectura, las tecnologías declaradas en `axiom.yaml` y los patrones existentes del repositorio, y DEBE ofrecer las tres salidas de RF-GAT-07. El orquestador NO DEBE iniciar la fase `tasks` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3); con la salida 2 la fase `tasks` queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto con el impacto previsto y evaluar si es coherente con el diseño; si el delta falta, DEBE señalar esa ausencia explícitamente como parte de la presentación (RF-CTX-11).
 (Previously: la compuerta solo admitía aprobación o rechazo y no preveía ceder la fase siguiente; la parte del delta de contexto no cambia)
 
 #### Scenario: Diseño conforme aprobado con la salida 3 habilita tasks
@@ -112,9 +112,9 @@ En modalidad "con paradas", al completarse la fase `design` el orquestador DEBE 
 
 ---
 
-### Requirement: Compuerta de `tasks` (REQ-21.10)
+### Requirement: Compuerta de `tasks` (RF-GAT-04)
 
-En modalidad "con paradas", al completarse la fase `tasks` el orquestador DEBE presentar el documento `tasks.md` (o cada `tasks.<rol>.md` cuando existan varios roles) y DEBE detenerse antes de iniciar cualquier fase `apply`, evaluando si la repartición de responsabilidades entre roles es coherente y si el plan de trabajo es suficientemente granular y verificable, y DEBE ofrecer las tres salidas de REQ-26.1. El orquestador NO DEBE iniciar ninguna fase `apply` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3); con la salida 2 la fase `apply` de los roles queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión.
+En modalidad "con paradas", al completarse la fase `tasks` el orquestador DEBE presentar el documento `tasks.md` (o cada `tasks.<rol>.md` cuando existan varios roles) y DEBE detenerse antes de iniciar cualquier fase `apply`, evaluando si la repartición de responsabilidades entre roles es coherente y si el plan de trabajo es suficientemente granular y verificable, y DEBE ofrecer las tres salidas de RF-GAT-07. El orquestador NO DEBE iniciar ninguna fase `apply` mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3); con la salida 2 la fase `apply` de los roles queda cedida a otra persona y el orquestador NO DEBE iniciarla en esa sesión.
 (Previously: la compuerta solo admitía aprobación o rechazo y no preveía ceder la fase siguiente)
 
 #### Scenario: Tasks de un único rol aprobadas con la salida 3 habilitan apply
@@ -140,9 +140,9 @@ En modalidad "con paradas", al completarse la fase `tasks` el orquestador DEBE p
 
 ---
 
-### Requirement: Compuerta de `apply` por Rol (REQ-21.11)
+### Requirement: Compuerta de `apply` por Rol (RF-GAT-05)
 
-En modalidad "con paradas", al finalizar la implementación de cada rol activo (incluido el rol único `fullstack`), el orquestador DEBE detenerse y evaluar: conformidad con el diseño asignado a ese rol, cumplimiento de las funcionalidades de la `spec` asignadas a ese rol, y estándares de calidad (compilación limpia, pruebas unitarias ejecutadas, cobertura y estilo), y DEBE ofrecer las tres salidas de REQ-26.1. El orquestador NO DEBE marcar el rol como concluido, ni permitir que otro rol pendiente inicie su propia fase `apply`, mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3). Con la salida 2 el rol queda concluido y lo que sigue (la fase `apply` de otro rol pendiente o, si era el último, la fase `verify`) queda cedido a otra persona: el orquestador NO DEBE iniciarlo en esa sesión. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto actualizado y evaluar que el impacto final refleja lo implementado por ese rol.
+En modalidad "con paradas", al finalizar la implementación de cada rol activo (incluido el rol único `fullstack`), el orquestador DEBE detenerse y evaluar: conformidad con el diseño asignado a ese rol, cumplimiento de las funcionalidades de la `spec` asignadas a ese rol, y estándares de calidad (compilación limpia, pruebas unitarias ejecutadas, cobertura y estilo), y DEBE ofrecer las tres salidas de RF-GAT-07. El orquestador NO DEBE marcar el rol como concluido, ni permitir que otro rol pendiente inicie su propia fase `apply`, mientras esta compuerta no reciba una salida de aprobación (salida 2 o salida 3). Con la salida 2 el rol queda concluido y lo que sigue (la fase `apply` de otro rol pendiente o, si era el último, la fase `verify`) queda cedido a otra persona: el orquestador NO DEBE iniciarlo en esa sesión. Con `technical_context.maintained` declarado, la compuerta DEBE además presentar el delta de contexto actualizado y evaluar que el impacto final refleja lo implementado por ese rol.
 (Previously: la compuerta solo admitía aprobación o rechazo y no preveía ceder lo que sigue al rol)
 
 #### Scenario: Rol concluido y aprobado con la salida 3 habilita el siguiente rol pendiente
@@ -170,7 +170,7 @@ En modalidad "con paradas", al finalizar la implementación de cada rol activo (
 - **DADO** un rol cuya implementación no supera sus pruebas unitarias o no cumple la funcionalidad de spec asignada
 - **CUANDO** se presenta la compuerta de `apply` de ese rol
 - **ENTONCES** el orquestador la rechaza en el criterio de calidad correspondiente (salida 1) y no marca el rol como concluido
-- **Y** ese rol no puede disparar el aviso de último rol (REQ-21.13) hasta que su compuerta se apruebe
+- **Y** ese rol no puede disparar el aviso de último rol (RF-RCL-01) hasta que su compuerta se apruebe
 
 #### Scenario: El impacto final en el contexto mantenido se presenta en la compuerta
 
@@ -184,7 +184,7 @@ En modalidad "con paradas", al finalizar la implementación de cada rol activo (
 - **DADO** un rol cuya implementación cambia algo documentado en el contexto mantenido mientras el delta declara «Sin impacto»
 - **CUANDO** se presenta la compuerta de `apply` de ese rol
 - **ENTONCES** el orquestador señala la discrepancia como parte de la presentación
-- **Y** el usuario puede elegir iterar (salida 1) para que se remedie el delta antes de reintentar el avance (REQ-21.12)
+- **Y** el usuario puede elegir iterar (salida 1) para que se remedie el delta antes de reintentar el avance (RF-GAT-06)
 
 #### Scenario: Las plantillas del orquestador prescriben la presentación del delta en la compuerta de apply
 
@@ -194,9 +194,9 @@ En modalidad "con paradas", al finalizar la implementación de cada rol activo (
 
 ---
 
-### Requirement: Rechazo de una Compuerta Bloquea el Avance y Exige Remediación (REQ-21.12)
+### Requirement: Rechazo de una Compuerta Bloquea el Avance y Exige Remediación (RF-GAT-06)
 
-Si el usuario elige iterar (salida 1 de REQ-26.1), es decir, rechaza o solicita cambios en cualquiera de las compuertas descritas en REQ-21.8 a REQ-21.11, el orquestador NO DEBE avanzar a la siguiente fase o rol, DEBE registrar el motivo del rechazo (obligatorio) como decisión `rejected`, y DEBE mantener el artefacto de la fase o rol actual abierto a remediación. Tras la remediación, el orquestador DEBE volver a presentar la misma compuerta, con sus tres salidas, antes de reintentar el avance. No hay límite de iteraciones. La reapertura por digest del artefacto tras un rechazo no cambia.
+Si el usuario elige iterar (salida 1 de RF-GAT-07), es decir, rechaza o solicita cambios en cualquiera de las compuertas descritas en RF-GAT-02 a RF-GAT-05, el orquestador NO DEBE avanzar a la siguiente fase o rol, DEBE registrar el motivo del rechazo (obligatorio) como decisión `rejected`, y DEBE mantener el artefacto de la fase o rol actual abierto a remediación. Tras la remediación, el orquestador DEBE volver a presentar la misma compuerta, con sus tres salidas, antes de reintentar el avance. No hay límite de iteraciones. La reapertura por digest del artefacto tras un rechazo no cambia.
 (Previously: el rechazo era la única alternativa a la aprobación y no se nombraba como una de las tres salidas)
 
 #### Scenario: Rechazo de la compuerta de spec exige remediación antes de reintentar
@@ -211,7 +211,7 @@ Si el usuario elige iterar (salida 1 de REQ-26.1), es decir, rechaza o solicita 
 - **DADO** que el usuario rechaza la compuerta de `apply` de un rol por incumplimiento de un requerimiento de spec
 - **CUANDO** el orquestador registra el rechazo
 - **ENTONCES** ese rol permanece abierto a remediación y no se marca como concluido
-- **Y** no se dispara el aviso de último rol (REQ-21.13) para ese rol hasta que su compuerta de `apply` se apruebe explícitamente
+- **Y** no se dispara el aviso de último rol (RF-RCL-01) para ese rol hasta que su compuerta de `apply` se apruebe explícitamente
 
 #### Scenario: Iterar exige un motivo
 
@@ -226,15 +226,15 @@ Si el usuario elige iterar (salida 1 de REQ-26.1), es decir, rechaza o solicita 
 - **ENTONCES** vuelve a `pending` marcada como reabierta
 - **Y** `axiom sdd status` vuelve a proyectar la pregunta tipada con sus tres opciones
 
-### Requirement: Tres Salidas en Cada Parada de Planificación y de `role-apply` (REQ-26.1)
+### Requirement: Tres Salidas en Cada Parada de Planificación y de `role-apply` (RF-GAT-07)
 
 En modalidad "con paradas" (`execution_style: checkpointed`), cada parada de las compuertas `spec`, `design`, `tasks` y `role-apply:<rol>` DEBE ofrecer exactamente tres salidas, siempre en este orden y con la misma semántica:
 
-1. **Iterar:** seguir trabajando sobre el artefacto actual. Se registra como decisión `rejected` con motivo (REQ-21.12).
-2. **Aprobar, subir y parar:** se registra `approved` con la marca de cesión de la fase siguiente a otra persona, se suben los documentos del cambio con `axiom sdd publish` (REQ-27.12) y la sesión se detiene (REQ-26.3 a REQ-26.5).
-3. **Aprobar y seguir:** se registra `approved` sin marca, se suben los documentos del cambio con `axiom sdd publish` (REQ-27.12) y el orquestador continúa él mismo con la fase siguiente.
+1. **Iterar:** seguir trabajando sobre el artefacto actual. Se registra como decisión `rejected` con motivo (RF-GAT-06).
+2. **Aprobar, subir y parar:** se registra `approved` con la marca de cesión de la fase siguiente a otra persona, se suben los documentos del cambio con `axiom sdd publish` (RF-GAT-15) y la sesión se detiene (RF-GAT-09 a RF-GAT-11).
+3. **Aprobar y seguir:** se registra `approved` sin marca, se suben los documentos del cambio con `axiom sdd publish` (RF-GAT-15) y el orquestador continúa él mismo con la fase siguiente.
 
-La puerta `integration` NO es una parada de planificación: DEBE conservar sus dos salidas (aprobar con la evidencia de fusión exigida, o rechazar). En modalidad "continua" NO DEBE existir ninguna parada ni, por tanto, ninguna de las tres salidas (REQ-21.7). Las tres salidas son exclusivas de las paradas de SDD: el carril ODD no tiene paradas (REQ-27.17 de `organic-agent-trigger-rules`).
+La puerta `integration` NO es una parada de planificación: DEBE conservar sus dos salidas (aprobar con la evidencia de fusión exigida, o rechazar). En modalidad "continua" NO DEBE existir ninguna parada ni, por tanto, ninguna de las tres salidas (RF-GAT-01). Las tres salidas son exclusivas de las paradas de SDD: el carril ODD no tiene paradas (RF-RUT-18 de `organic-agent-trigger-rules`).
 
 #### Scenario: Cada puerta de planificación ofrece las tres salidas
 
@@ -270,7 +270,7 @@ La puerta `integration` NO es una parada de planificación: DEBE conservar sus d
 - **CUANDO** el usuario elige aprobar y seguir (salida 3)
 - **ENTONCES** `gates.yaml` contiene un registro `approved` sin marca de cesión, idéntico al que se escribía antes de este cambio
 - **Y** `axiom sdd status` no muestra ninguna cesión para esa puerta
-- **Y** el orquestador publica los documentos según REQ-27.12
+- **Y** el orquestador publica los documentos según RF-GAT-15
 
 #### Scenario: Las tres salidas no existen en ODD
 
@@ -280,9 +280,9 @@ La puerta `integration` NO es una parada de planificación: DEBE conservar sus d
 
 ---
 
-### Requirement: Pregunta Tipada de la Puerta con Tres Opciones sobre `axiom sdd gate record` (REQ-26.2)
+### Requirement: Pregunta Tipada de la Puerta con Tres Opciones sobre `axiom sdd gate record` (RF-GAT-08)
 
-Cuando `axiom sdd status` proyecta una compuerta pendiente de `spec`, `design`, `tasks` o `role-apply:<rol>` en un cambio `checkpointed`, la pregunta tipada (`gateQuestion`) DEBE tener exactamente tres opciones, en el orden de REQ-26.1. Las tres invocaciones DEBEN comenzar por `axiom sdd gate record` y compartir `--cwd`, `--change` y `--gate`: la salida 1 con `--decision rejected` y motivo; la salida 2 con `--decision approved` más el indicador de la salida 2 (nombre fijado en design); la salida 3 con `--decision approved` sin ese indicador. Cada opción DEBE tener un token de respuesta propio y distinto: los de las salidas 1 y 3 siguen siendo `rejected` y `approved`; el de la salida 2 lo fija design. La validación de esta pregunta DEBE rechazar un número de opciones que no sea tres (salvo el caso de REQ-26.6), opciones cuya invocación no comience por `axiom sdd gate record`, y dos opciones con el mismo token o la misma invocación. El sobre de autoridad de edición (`axiom.sdd-integration.consent/v1`) DEBE seguir exigiendo exactamente dos opciones y rechazando cualquier otro número. La pregunta DEBE relatarse de forma completa y sin alterar el orden, las etiquetas ni los efectos de las opciones (contrato de *Lossless Blocking Prompt*), con el dominio de respuesta formado por los tres tokens.
+Cuando `axiom sdd status` proyecta una compuerta pendiente de `spec`, `design`, `tasks` o `role-apply:<rol>` en un cambio `checkpointed`, la pregunta tipada (`gateQuestion`) DEBE tener exactamente tres opciones, en el orden de RF-GAT-07. Las tres invocaciones DEBEN comenzar por `axiom sdd gate record` y compartir `--cwd`, `--change` y `--gate`: la salida 1 con `--decision rejected` y motivo; la salida 2 con `--decision approved` más el indicador de la salida 2 (nombre fijado en design); la salida 3 con `--decision approved` sin ese indicador. Cada opción DEBE tener un token de respuesta propio y distinto: los de las salidas 1 y 3 siguen siendo `rejected` y `approved`; el de la salida 2 lo fija design. La validación de esta pregunta DEBE rechazar un número de opciones que no sea tres (salvo el caso de RF-GAT-12), opciones cuya invocación no comience por `axiom sdd gate record`, y dos opciones con el mismo token o la misma invocación. El sobre de autoridad de edición (`axiom.sdd-integration.consent/v1`) DEBE seguir exigiendo exactamente dos opciones y rechazando cualquier otro número. La pregunta DEBE relatarse de forma completa y sin alterar el orden, las etiquetas ni los efectos de las opciones (contrato de *Lossless Blocking Prompt*), con el dominio de respuesta formado por los tres tokens.
 
 #### Scenario: La pregunta tiene tres opciones sobre el mismo verbo
 
@@ -294,7 +294,7 @@ Cuando `axiom sdd status` proyecta una compuerta pendiente de `spec`, `design`, 
 
 #### Scenario: Una pregunta de compuerta con dos opciones o con una opción de otro verbo se rechaza
 
-- **DADO** una pregunta de compuerta con exactamente dos opciones en un caso distinto de REQ-26.6, o con una opción cuya invocación no comienza por `axiom sdd gate record`
+- **DADO** una pregunta de compuerta con exactamente dos opciones en un caso distinto de RF-GAT-12, o con una opción cuya invocación no comienza por `axiom sdd gate record`
 - **CUANDO** se valida
 - **ENTONCES** la validación la rechaza
 
@@ -320,7 +320,7 @@ Cuando `axiom sdd status` proyecta una compuerta pendiente de `spec`, `design`, 
 
 ---
 
-### Requirement: La Salida 2 Registra `approved` con la Marca de Cesión, Compatible con Binarios Anteriores (REQ-26.3)
+### Requirement: La Salida 2 Registra `approved` con la Marca de Cesión, Compatible con Binarios Anteriores (RF-GAT-09)
 
 La salida 2 DEBE registrarse con `axiom sdd gate record --decision approved` y el indicador de la salida 2, y DEBE añadir a `gates.yaml` un registro `approved` con un campo opcional que marca la fase siguiente como cedida a otra persona (nombre del campo fijado en design). El campo DEBE escribirse únicamente con la salida 2: los registros de las salidas 1 y 3 NO DEBEN contenerlo. El vocabulario de decisiones del registro sigue siendo `approved|rejected`: NO se añade ninguna decisión nueva. Un binario anterior a este cambio DEBE poder leer un `gates.yaml` con el campo y tratar la puerta como `approved` normal, sin error. La aprobación sigue siendo terminal: un registro posterior no reabre la puerta. El primer registro `approved` es el que cierra la puerta; un registro de salida 2 sobre una puerta que ya está `approved` DEBE rechazarse sin escribir, porque la cesión no sería visible. El motivo (`--reason`) es opcional en la salida 2. La marca de cesión indica que la fase siguiente la hace otra persona; NO implica que exista una PR fusionada ni exige ninguna operación de git previa.
 
@@ -372,9 +372,9 @@ La salida 2 DEBE registrarse con `axiom sdd gate record --decision approved` y e
 
 ---
 
-### Requirement: La Salida 2 No Exige Artefactos Confirmados y Conserva la Guarda de Rama (REQ-26.4)
+### Requirement: La Salida 2 No Exige Artefactos Confirmados y Conserva la Guarda de Rama (RF-GAT-10)
 
-`axiom sdd gate record` con el indicador de la salida 2 NO DEBE exigir que los artefactos que juzga la puerta ni `gates.yaml` estén confirmados (commit) antes de registrar: la confirmación de los documentos la hace `axiom sdd publish` después de registrar (REQ-27.12). La guarda de rama vigente (`wrong_branch`) DEBE aplicarse antes de cualquier escritura y NO se debilita: fuera de la rama que corresponde la orden se rechaza con `wrong_branch` nombrando la rama esperada y sin escribir en `gates.yaml`. La salida 2 NO DEBE comprobar el trabajo de implementación de un rol: ese trabajo sin subir lo detecta `publish` (REQ-27.8 de `sdd-docs-publication`). Los antiguos rechazos por artefactos sin confirmar (`uncommitted_artifacts`) dejan de existir en `gate record`.
+`axiom sdd gate record` con el indicador de la salida 2 NO DEBE exigir que los artefactos que juzga la puerta ni `gates.yaml` estén confirmados (commit) antes de registrar: la confirmación de los documentos la hace `axiom sdd publish` después de registrar (RF-GAT-15). La guarda de rama vigente (`wrong_branch`) DEBE aplicarse antes de cualquier escritura y NO se debilita: fuera de la rama que corresponde la orden se rechaza con `wrong_branch` nombrando la rama esperada y sin escribir en `gates.yaml`. La salida 2 NO DEBE comprobar el trabajo de implementación de un rol: ese trabajo sin subir lo detecta `publish` (RF-PUB-04 de `sdd-docs-publication`). Los antiguos rechazos por artefactos sin confirmar (`uncommitted_artifacts`) dejan de existir en `gate record`.
 
 #### Scenario: Artefactos sin confirmar no impiden registrar
 
@@ -405,12 +405,12 @@ La salida 2 DEBE registrarse con `axiom sdd gate record --decision approved` y e
 
 ---
 
-### Requirement: La Salida 2 No Ejecuta Git en `gate record` y Entrega el Destino de la Publicación (REQ-26.5)
+### Requirement: La Salida 2 No Ejecuta Git en `gate record` y Entrega el Destino de la Publicación (RF-GAT-11)
 
-`axiom sdd gate record` NO DEBE ejecutar `git commit`, `push`, `fetch`, `pull`, `ls-remote` ni ninguna otra operación de git que modifique el repositorio o acceda al remoto, ni abrir la PR: la confirmación y la subida de los documentos las hace `axiom sdd publish` (REQ-27.12), y la PR y el merge siguen siendo de la persona. Tras registrar la salida 2, la orden DEBE devolver, en su salida de texto y en `--json` y en campos separados: la rama del cambio, el remoto de destino de la publicación (`origin`), el `prTarget` que reporta `axiom branch status --json` para esa rama y la orden de publicación `axiom sdd publish --change <x>`. El orquestador DEBE ejecutar esa publicación tras registrar la decisión (REQ-27.12) y DEBE detenerse después de la salida 2 sin iniciar la fase siguiente. La salida DEBE indicar que otra persona continúa tras `git fetch` (o `axiom branch ensure --fetch` con su autorización) y `axiom branch ensure`, que adopta la rama publicada (REQ-27.15), y que NO hace falta una PR fusionada. Según la topología (`workspace-topology`):
+`axiom sdd gate record` NO DEBE ejecutar `git commit`, `push`, `fetch`, `pull`, `ls-remote` ni ninguna otra operación de git que modifique el repositorio o acceda al remoto, ni abrir la PR: la confirmación y la subida de los documentos las hace `axiom sdd publish` (RF-GAT-15), y la PR y el merge siguen siendo de la persona. Tras registrar la salida 2, la orden DEBE devolver, en su salida de texto y en `--json` y en campos separados: la rama del cambio, el remoto de destino de la publicación (`origin`), el `prTarget` que reporta `axiom branch status --json` para esa rama y la orden de publicación `axiom sdd publish --change <x>`. El orquestador DEBE ejecutar esa publicación tras registrar la decisión (RF-GAT-15) y DEBE detenerse después de la salida 2 sin iniciar la fase siguiente. La salida DEBE indicar que otra persona continúa tras `git fetch` (o `axiom branch ensure --fetch` con su autorización) y `axiom branch ensure`, que adopta la rama publicada (RF-BRA-27), y que NO hace falta una PR fusionada. Según la topología (`workspace-topology`):
 
 - **`monorepo-embedded`:** la publicación sube la rama del cambio a `origin`; la PR hacia `prTarget` y su merge son decisión de la persona y no condicionan la continuación.
-- **`multirepo`, repositorio de specs:** se trabaja in situ en la rama de integración, sin rama de cambio ni PR; la publicación sube esa rama de integración (REQ-27.7 de `sdd-docs-publication`).
+- **`multirepo`, repositorio de specs:** se trabaja in situ en la rama de integración, sin rama de cambio ni PR; la publicación sube esa rama de integración (RF-PUB-03 de `sdd-docs-publication`).
 
 #### Scenario: Monorepo devuelve rama, remoto y orden de publicación
 
@@ -447,9 +447,9 @@ La salida 2 DEBE registrarse con `axiom sdd gate record --decision approved` y e
 
 ---
 
-### Requirement: Disponibilidad de la Salida 2 según el Almacén, el Estilo y la Puerta (REQ-26.6)
+### Requirement: Disponibilidad de la Salida 2 según el Almacén, el Estilo y la Puerta (RF-GAT-12)
 
-La salida 2 solo es real cuando hay ficheros que subir: DEBE estar disponible únicamente con el almacén de artefactos `openspec` o `hybrid`, en un cambio `checkpointed` y en las compuertas `spec`, `design`, `tasks` y `role-apply:<rol>`. Con el almacén `engram` o `none`, `axiom sdd gate record` con el indicador de la salida 2 DEBE rechazarse con un error que nombre el almacén y ofrezca como continuación las salidas 1 o 3, sin escribir en `gates.yaml`; y la pregunta tipada de la compuerta NO DEBE ofrecer la salida 2: presenta solo las salidas 1 y 3 y declara en su texto que la salida 2 no está disponible por el almacén declarado (supuesto A-3). Con esos almacenes la salida 3 aprueba sin publicar (REQ-27.12), porque `axiom sdd publish` tampoco está disponible (REQ-27.10 de `sdd-docs-publication`). El estilo continuo y la puerta `integration` rechazan la salida 2 según REQ-26.1.
+La salida 2 solo es real cuando hay ficheros que subir: DEBE estar disponible únicamente con el almacén de artefactos `openspec` o `hybrid`, en un cambio `checkpointed` y en las compuertas `spec`, `design`, `tasks` y `role-apply:<rol>`. Con el almacén `engram` o `none`, `axiom sdd gate record` con el indicador de la salida 2 DEBE rechazarse con un error que nombre el almacén y ofrezca como continuación las salidas 1 o 3, sin escribir en `gates.yaml`; y la pregunta tipada de la compuerta NO DEBE ofrecer la salida 2: presenta solo las salidas 1 y 3 y declara en su texto que la salida 2 no está disponible por el almacén declarado (supuesto A-3). Con esos almacenes la salida 3 aprueba sin publicar (RF-GAT-15), porque `axiom sdd publish` tampoco está disponible (RF-PUB-06 de `sdd-docs-publication`). El estilo continuo y la puerta `integration` rechazan la salida 2 según RF-GAT-07.
 
 #### Scenario: Almacén engram rechaza la salida 2
 
@@ -486,7 +486,7 @@ La salida 2 solo es real cuando hay ficheros que subir: DEBE estar disponible ú
 
 ---
 
-### Requirement: La Cesión es Visible en `axiom sdd status` y Quien la Recoge Empieza la Fase Siguiente (REQ-26.7)
+### Requirement: La Cesión es Visible en `axiom sdd status` y Quien la Recoge Empieza la Fase Siguiente (RF-GAT-13)
 
 `axiom sdd status` DEBE mostrar, en el JSON de `governance` y en el texto, que una compuerta `approved` lleva la marca de cesión y que la fase siguiente (o, en `role-apply:<rol>`, el siguiente rol o `verify`) queda cedida a otra persona (forma exacta en design). La marca se toma del registro `approved` que cierra la puerta. La cesión es información: la ruta proyectada hacia la fase siguiente DEBE ser la misma que tras una aprobación normal, y quien recoge el cambio empieza esa fase siguiente sin revisar de nuevo la fase anterior. La cesión NO DEBE bloquear ninguna fase ni ninguna orden. Un cambio sin marca de cesión DEBE proyectarse exactamente como antes de este cambio.
 
@@ -528,9 +528,9 @@ La salida 2 solo es real cuando hay ficheros que subir: DEBE estar disponible ú
 - **ENTONCES** la cesión mostrada es la del primer registro `approved`, el que cerró la puerta
 ---
 
-### Requirement: Texto Único de las Tres Salidas Proyectado a Todos los Runtimes (REQ-26.8)
+### Requirement: Texto Único de las Tres Salidas Proyectado a Todos los Runtimes (RF-GAT-14)
 
-El texto que describe las tres salidas (iterar, aprobar-subir-y-parar, aprobar-y-seguir) y la regla de parar DEBE definirse en una sola fuente (`stop-exits.md`) y proyectarse sin diferencias a los orquestadores SDD de todos los runtimes, de modo que un pin de texto lo encuentre idéntico en cada uno. El texto es exclusivo de SDD: NO DEBE mencionar ODD ni proyectarse a la doctrina ODD generada (REQ-27.17 de `organic-agent-trigger-rules`). Ningún asset del producto (skills, orquestadores por runtime, comandos, guías) DEBE ofrecer «generar un relevo formal `handoff.md` o continuar» como pregunta de transición tras `spec` o `design`, ni nombrar `--handoff-policy` como argumento obligatorio de `kickoff seal` (REQ-26.9 de `sdd-preflight-configuration`). El texto DEBE indicar que `axiom sdd gate record` es el único modo de registrar la decisión, que toda aprobación (salidas 2 y 3) se completa con `axiom sdd publish`, que esa operación sube solo los documentos del cambio a la rama del cambio en `origin` (en el repositorio de specs de un multirepo, a su rama de integración), que el push de código, la PR y el merge los hace la persona, y que con almacén `engram` o `none` la salida 2 no está disponible.
+El texto que describe las tres salidas (iterar, aprobar-subir-y-parar, aprobar-y-seguir) y la regla de parar DEBE definirse en una sola fuente (`stop-exits.md`) y proyectarse sin diferencias a los orquestadores SDD de todos los runtimes, de modo que un pin de texto lo encuentre idéntico en cada uno. El texto es exclusivo de SDD: NO DEBE mencionar ODD ni proyectarse a la doctrina ODD generada (RF-RUT-18 de `organic-agent-trigger-rules`). Ningún asset del producto (skills, orquestadores por runtime, comandos, guías) DEBE ofrecer «generar un relevo formal `handoff.md` o continuar» como pregunta de transición tras `spec` o `design`, ni nombrar `--handoff-policy` como argumento obligatorio de `kickoff seal` (RF-PRE-03 de `sdd-preflight-configuration`). El texto DEBE indicar que `axiom sdd gate record` es el único modo de registrar la decisión, que toda aprobación (salidas 2 y 3) se completa con `axiom sdd publish`, que esa operación sube solo los documentos del cambio a la rama del cambio en `origin` (en el repositorio de specs de un multirepo, a su rama de integración), que el push de código, la PR y el merge los hace la persona, y que con almacén `engram` o `none` la salida 2 no está disponible.
 
 #### Scenario: El texto de las tres salidas es idéntico en todos los runtimes
 
@@ -559,9 +559,9 @@ El texto que describe las tres salidas (iterar, aprobar-subir-y-parar, aprobar-y
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** `stop-exits.md` no menciona ODD
 - **Y** la doctrina ODD generada no contiene el texto de las tres salidas
-### Requirement: Aprobar una Parada Publica los Documentos y la Pregunta lo Declara (REQ-27.12)
+### Requirement: Aprobar una Parada Publica los Documentos y la Pregunta lo Declara (RF-GAT-15)
 
-En modalidad `checkpointed`, y solo con el almacén `openspec` o `hybrid`, toda aprobación de una parada de las compuertas `spec`, `design`, `tasks` y `role-apply:<rol>` (salida 2, «aprobar, subir y parar», y salida 3, «aprobar y seguir») DEBE ir seguida de `axiom sdd publish --change <x>` (capacidad `sdd-docs-publication`): el orquestador DEBE encadenar `axiom sdd gate record` y `publish`, en ese orden, y `gate record` NO DEBE ejecutar git (REQ-26.5). Las opciones de aprobación de la pregunta tipada (`gateQuestion`, REQ-26.2) DEBEN nombrar la operación, el remoto y la rama, p. ej. «aprobar y subir los documentos a `origin/<rama>` con las credenciales de git configuradas»; la aprobación de la parada constituye la autorización explícita del destino, la operación y la credencial de esa subida de documentación, y de ninguna otra: el push de código sigue siendo de la persona. La salida 1 (iterar) NO publica. Con la salida 2 el orquestador DEBE publicar y, después, detenerse sin iniciar la fase siguiente; con la salida 3 DEBE publicar y continuar. Una negativa de `publish` (REQ-27.8 y REQ-27.9 de `sdd-docs-publication`) NO anula la decisión ya registrada en `gates.yaml`: el orquestador DEBE presentarla como informativa, con su código tipado y su continuación, y (con la salida 3) continuar. Con el almacén `engram` o `none` la aprobación no publica (REQ-26.6). La puerta `integration` y el estilo `continuous` quedan fuera de esta regla (REQ-26.1, REQ-27.13).
+En modalidad `checkpointed`, y solo con el almacén `openspec` o `hybrid`, toda aprobación de una parada de las compuertas `spec`, `design`, `tasks` y `role-apply:<rol>` (salida 2, «aprobar, subir y parar», y salida 3, «aprobar y seguir») DEBE ir seguida de `axiom sdd publish --change <x>` (capacidad `sdd-docs-publication`): el orquestador DEBE encadenar `axiom sdd gate record` y `publish`, en ese orden, y `gate record` NO DEBE ejecutar git (RF-GAT-11). Las opciones de aprobación de la pregunta tipada (`gateQuestion`, RF-GAT-08) DEBEN nombrar la operación, el remoto y la rama, p. ej. «aprobar y subir los documentos a `origin/<rama>` con las credenciales de git configuradas»; la aprobación de la parada constituye la autorización explícita del destino, la operación y la credencial de esa subida de documentación, y de ninguna otra: el push de código sigue siendo de la persona. La salida 1 (iterar) NO publica. Con la salida 2 el orquestador DEBE publicar y, después, detenerse sin iniciar la fase siguiente; con la salida 3 DEBE publicar y continuar. Una negativa de `publish` (RF-PUB-04 y RF-PUB-05 de `sdd-docs-publication`) NO anula la decisión ya registrada en `gates.yaml`: el orquestador DEBE presentarla como informativa, con su código tipado y su continuación, y (con la salida 3) continuar. Con el almacén `engram` o `none` la aprobación no publica (RF-GAT-12). La puerta `integration` y el estilo `continuous` quedan fuera de esta regla (RF-GAT-07, RF-PUB-08).
 
 #### Scenario: La salida 3 registra, publica y continúa
 
@@ -626,10 +626,10 @@ En modalidad `checkpointed`, y solo con el almacén `openspec` o `hybrid`, toda 
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** todos prescriben ejecutar `axiom sdd gate record` seguido de `axiom sdd publish` tras una aprobación y tratar la negativa de `publish` como informativa
 
-### Requirement: Las Paradas Presentan los Resultados de la Revisión Independiente cuando Existen (REQ-28.10)
+### Requirement: Las Paradas Presentan los Resultados de la Revisión Independiente cuando Existen (RF-GAT-16)
 
-En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto al artefacto que juzga y sin cambiar su semántica ni sus tres salidas (REQ-26.1), los resultados de revisión independiente que existan en ese momento: en `spec`, el informe de cobertura del spec; en `design`, el informe de cobertura de spec y design; en `role-apply:<rol>`, el informe vigente del verify de ese rol (con su sección «Cumplimiento técnico») y, si hubo juicio, su veredicto y los arreglos aplicados (REQ-28.8 de `sdd-independent-review`). La presentación DEBE enumerar los hallazgos abiertos y DEBE indicar explícitamente cuándo una revisión no se ha ejecutado, no ha respondido o no ha sido limpia; NO DEBE presentar como limpio un resultado ausente. Los resultados son informativos: NO DEBEN condicionar la aprobación, NO DEBEN registrarse en `gates.yaml`, ni su existencia o contenido DEBE cambiar el digest que juzga la puerta ni reabrirla. Cuando no existe ninguna revisión para esa puerta, la presentación NO cambia respecto a REQ-21.8, REQ-21.9 y REQ-21.11. Esta capacidad NO cambia REQ-21.7: en `continuous` no existen paradas, y los resultados se resumen al final del cambio según `sdd-independent-review`.
-(Previously: el último escenario remitía a REQ-28.11 de `sdd-independent-review` («Frontera con RDD»), requisito que se retira con RDD (C-01-e); la ausencia de ese vocabulario pasa a REQ-46.3 de `sdd-orchestrator-assets`.)
+En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto al artefacto que juzga y sin cambiar su semántica ni sus tres salidas (RF-GAT-07), los resultados de revisión independiente que existan en ese momento: en `spec`, el informe de cobertura del spec; en `design`, el informe de cobertura de spec y design; en `role-apply:<rol>`, el informe vigente del verify de ese rol (con su sección «Cumplimiento técnico») y, si hubo juicio, su veredicto y los arreglos aplicados (RF-REV-08 de `sdd-independent-review`). La presentación DEBE enumerar los hallazgos abiertos y DEBE indicar explícitamente cuándo una revisión no se ha ejecutado, no ha respondido o no ha sido limpia; NO DEBE presentar como limpio un resultado ausente. Los resultados son informativos: NO DEBEN condicionar la aprobación, NO DEBEN registrarse en `gates.yaml`, ni su existencia o contenido DEBE cambiar el digest que juzga la puerta ni reabrirla. Cuando no existe ninguna revisión para esa puerta, la presentación NO cambia respecto a RF-GAT-02, RF-GAT-03 y RF-GAT-05. Esta capacidad NO cambia RF-GAT-01: en `continuous` no existen paradas, y los resultados se resumen al final del cambio según `sdd-independent-review`.
+(Previously: el último escenario remitía a REQ-28.11 de `sdd-independent-review` («Frontera con RDD»), requisito que se retira con RDD (C-01-e); la ausencia de ese vocabulario pasa a RF-ORQ-25 de `sdd-orchestrator-assets`.)
 
 #### Scenario: La parada de spec presenta el informe de cobertura
 
@@ -642,7 +642,7 @@ En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto a
 
 - **DADO** un informe de cobertura posterior a `design`
 - **CUANDO** se presenta la compuerta de `design`
-- **ENTONCES** la presentación incluye sus hallazgos junto a la evaluación de conformidad de REQ-21.9
+- **ENTONCES** la presentación incluye sus hallazgos junto a la evaluación de conformidad de RF-GAT-03
 - **Y** con `technical_context.maintained` declarado, sigue presentando el delta de contexto
 
 #### Scenario: La parada role-apply presenta el verify vigente y el juicio
@@ -650,7 +650,7 @@ En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto a
 - **DADO** un rol con verify limpio y un juicio `APPROVED` con un arreglo aplicado
 - **CUANDO** se presenta la compuerta `role-apply:<rol>`
 - **ENTONCES** la presentación incluye el informe vigente del verify, el veredicto del juicio y el arreglo aplicado
-- **Y** la evaluación de conformidad con el diseño y la spec de REQ-21.11 se mantiene
+- **Y** la evaluación de conformidad con el diseño y la spec de RF-GAT-05 se mantiene
 
 #### Scenario: Una revisión no ejecutada se declara y no se presenta como limpia
 
@@ -684,12 +684,12 @@ En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto a
 - **DADO** los textos de las plantillas de orquestador que describen las compuertas `spec`, `design` y `role-apply`
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** indican presentar los resultados de revisión independiente cuando existen y declarar los ausentes
-- **Y** no contienen `axiom review` ni vocabulario de revisión por recibos (REQ-46.3 de `sdd-orchestrator-assets`)
-### Requirement: Aprobar `spec`, `design` o `role-apply` Emite su Evento de Integración (REQ-43.22)
+- **Y** no contienen `axiom review` ni vocabulario de revisión por recibos (RF-ORQ-25 de `sdd-orchestrator-assets`)
+### Requirement: Aprobar `spec`, `design` o `role-apply` Emite su Evento de Integración (RF-GAT-17)
 
-`axiom sdd gate record` con `--decision approved` DEBE despachar un evento de integración (REQ-43.6) DESPUÉS de persistir la decisión en `gates.yaml` y antes de cualquier código que pueda devolver error: `spec` emite `gate.spec.approved`, `design` emite `gate.design.approved` y `role-apply:<rol>` emite `role.apply.approved` con el rol extraído del sufijo. El evento DEBE llevar el cambio, el actor registrado (REQ-42.1) y la clave de idempotencia de REQ-43.7. La emisión NUNCA DEBE hacer fallar el verbo ni cambiar su código de salida ni su salida (REQ-43.10). Una decisión `rejected` NO DEBE emitir nada.
+`axiom sdd gate record` con `--decision approved` DEBE despachar un evento de integración (RF-INT-06) DESPUÉS de persistir la decisión en `gates.yaml` y antes de cualquier código que pueda devolver error: `spec` emite `gate.spec.approved`, `design` emite `gate.design.approved` y `role-apply:<rol>` emite `role.apply.approved` con el rol extraído del sufijo. El evento DEBE llevar el cambio, el actor registrado (RF-ACT-01) y la clave de idempotencia de RF-INT-07. La emisión NUNCA DEBE hacer fallar el verbo ni cambiar su código de salida ni su salida (RF-INT-10). Una decisión `rejected` NO DEBE emitir nada.
 
-(Placement: after REQ-28.10)
+(Placement: after RF-GAT-16)
 
 #### Scenario: Aprobar `spec`
 - **DADO** el doble configurado y un cambio con kickoff sellado
@@ -723,11 +723,11 @@ En modalidad `checkpointed`, la parada de cada compuerta DEBE presentar, junto a
 - **CUANDO** se aprueba `spec` de nuevo
 - **ENTONCES** el doble recibe un evento con una clave de idempotencia distinta de la primera
 
-### Requirement: `tasks` e `integration` no Emiten y el Contrato `gate-record/v1` no Cambia (REQ-43.23)
+### Requirement: `tasks` e `integration` no Emiten y el Contrato `gate-record/v1` no Cambia (RF-GAT-18)
 
 La aprobación de las compuertas `tasks` e `integration` NO DEBE despachar ningún evento. El contrato `axiom.sdd-gate-record/v1` (campos de la salida JSON y de texto) NO DEBE cambiar por la integración: los avisos van únicamente a stderr.
 
-(Placement: after REQ-43.22)
+(Placement: after RF-GAT-17)
 
 #### Scenario: `tasks` no emite
 - **DADO** el doble configurado
@@ -744,7 +744,7 @@ La aprobación de las compuertas `tasks` e `integration` NO DEBE despachar ning�
 - **CUANDO** se ejecuta con `--json`
 - **ENTONCES** el JSON de stdout es idéntico, con el mismo `schema` `axiom.sdd-gate-record/v1`
 
-### Requirement: Vocabulario Cerrado del Modo de Revisión por Commit (REQ-33.1)
+### Requirement: Vocabulario Cerrado del Modo de Revisión por Commit (RF-GAT-19)
 
 El modo de revisión por commit DEBE ser un vocabulario cerrado de tres tokens canónicos, que no se traducen: `notify` (modo 1: avisar tras cada tarea y continuar con commit automático; es el modo por defecto), `stop` (modo 2: parar tras cada tarea con commit automático) y `stop-before-commit` (modo 3: parar tras cada tarea sin hacer el commit hasta que la persona apruebe). Cualquier otro valor, incluida la cadena vacía y las variantes de mayúsculas, DEBE rechazarse. La ausencia del modo equivale a `notify`.
 
@@ -761,7 +761,7 @@ El modo de revisión por commit DEBE ser un vocabulario cerrado de tres tokens c
 - **ENTONCES** la orden se rechaza indicando el vocabulario válido
 - **Y** no se escribe en `gates.yaml`
 
-### Requirement: `gate record` Persiste el Modo Solo en la Aprobación de la Puerta `tasks` de un Cambio `checkpointed` (REQ-33.2)
+### Requirement: `gate record` Persiste el Modo Solo en la Aprobación de la Puerta `tasks` de un Cambio `checkpointed` (RF-GAT-20)
 
 `axiom sdd gate record` DEBE aceptar la bandera `--commit-review <modo>` únicamente con `--gate tasks` y `--decision approved` (con o sin `--hand-off`), en un cambio cuyo estilo sellado es `checkpointed`. Cuando se acepta, el registro `approved` DEBE persistir el modo en un campo opcional `commit_review` del registro de `gates.yaml`, escrito en la misma llamada que aprueba. El campo NO DEBE escribirse cuando la bandera está ausente. La orden DEBE rechazarse sin escribir en `gates.yaml` cuando la bandera se combina con otra puerta (`spec`, `design`, `role-apply:<rol>`, `integration`), con `--decision rejected`, con un cambio `continuous`, o con una puerta `tasks` que ya está `approved` (el primer registro `approved` cierra la puerta). La salida JSON de la orden DEBE incluir el modo cuando se persiste. El kickoff sellado y el digest de las puertas NO DEBEN cambiar.
 
@@ -818,7 +818,7 @@ El modo de revisión por commit DEBE ser un vocabulario cerrado de tres tokens c
 - **ENTONCES** `kickoff.yaml` no se modifica
 - **Y** el digest de la puerta es idéntico al que habría con la aprobación sin modo
 
-### Requirement: Compatibilidad Hacia Atrás del Campo `commit_review` (REQ-33.3)
+### Requirement: Compatibilidad Hacia Atrás del Campo `commit_review` (RF-GAT-21)
 
 El campo `commit_review` DEBE ser opcional en la lectura y en la escritura. Un `gates.yaml` anterior a este cambio, sin el campo, DEBE leerse sin error y su modo efectivo DEBE ser `notify`. Un binario anterior a este cambio DEBE poder leer un `gates.yaml` con el campo y tratar la puerta como `approved` normal, sin error. Un `commit_review` presente en un registro con un valor fuera del vocabulario DEBE rechazarse al leer el esquema vigente, como cualquier valor inválido del registro. El vocabulario de decisiones del registro sigue siendo `approved|rejected`.
 
@@ -841,7 +841,7 @@ El campo `commit_review` DEBE ser opcional en la lectura y en la escritura. Un `
 - **CUANDO** se lee con el esquema vigente
 - **ENTONCES** se rechaza como un valor inválido del registro
 
-### Requirement: `axiom sdd status` Proyecta el Modo de Revisión por Commit (REQ-33.4)
+### Requirement: `axiom sdd status` Proyecta el Modo de Revisión por Commit (RF-GAT-22)
 
 `axiom sdd status` DEBE proyectar en la vista de la puerta `tasks` el modo del registro `approved` que la cierra, en un campo `commitReview` junto al resto de los campos de la puerta, cuando el cambio es `checkpointed` y la puerta está `approved`; con un registro sin el campo DEBE proyectar `notify`. Mientras la puerta no esté `approved`, en las demás puertas y en un cambio `continuous` el campo NO DEBE aparecer, y quien consume el estado DEBE tratar su ausencia como `notify`. El modo DEBE sobrevivir a la salida 2 (`--hand-off`): quien recoge `apply` lo lee de `status`. La proyección es informativa: NO DEBE bloquear ni cambiar `nextRecommended` ni las dependencias. El orquestador DEBE pasar el modo proyectado a `sdd-apply`.
 
@@ -875,9 +875,9 @@ El campo `commit_review` DEBE ser opcional en la lectura y en la escritura. Un `
 - **CUANDO** se compara `nextRecommended` y las dependencias de ambos estados
 - **ENTONCES** son idénticos
 
-### Requirement: El Modo se Pregunta en una Interacción Propia de la Puerta `tasks` y Solo en `checkpointed` (REQ-33.5)
+### Requirement: El Modo se Pregunta en una Interacción Propia de la Puerta `tasks` y Solo en `checkpointed` (RF-GAT-23)
 
-En un cambio `checkpointed`, cuando la persona elige en la puerta `tasks` una salida de aprobación (la 2 o la 3), la doctrina DEBE indicar al orquestador que formule el modo de revisión por commit en una interacción propia, separada de la pregunta tipada de la puerta y sujeta al contrato de bloqueo sin pérdida, con exactamente los tres tokens de REQ-33.1 (con descripción de su efecto traducida a la lengua de la conversación; los tokens no se traducen) y `notify` como valor por defecto declarado. Después DEBE registrar la aprobación una sola vez, con el modo, en la misma llamada de `gate record` que aprueba. Con la salida 1 (iterar) NO DEBE preguntarse el modo. En un cambio `continuous` NO DEBE preguntarse ni escribirse el modo. En ODD NO DEBE preguntarse. La pregunta tipada de la puerta DEBE seguir con exactamente tres opciones y el mismo texto (REQ-26.2) y NO DEBE incluir ninguna opción del modo. Cómo se compone la invocación de la salida elegida con `--commit-review` es decisión de design; el comportamiento observable es que el resto de los tokens de la invocación no se altera.
+En un cambio `checkpointed`, cuando la persona elige en la puerta `tasks` una salida de aprobación (la 2 o la 3), la doctrina DEBE indicar al orquestador que formule el modo de revisión por commit en una interacción propia, separada de la pregunta tipada de la puerta y sujeta al contrato de bloqueo sin pérdida, con exactamente los tres tokens de RF-GAT-19 (con descripción de su efecto traducida a la lengua de la conversación; los tokens no se traducen) y `notify` como valor por defecto declarado. Después DEBE registrar la aprobación una sola vez, con el modo, en la misma llamada de `gate record` que aprueba. Con la salida 1 (iterar) NO DEBE preguntarse el modo. En un cambio `continuous` NO DEBE preguntarse ni escribirse el modo. En ODD NO DEBE preguntarse. La pregunta tipada de la puerta DEBE seguir con exactamente tres opciones y el mismo texto (RF-GAT-08) y NO DEBE incluir ninguna opción del modo. Cómo se compone la invocación de la salida elegida con `--commit-review` es decisión de design; el comportamiento observable es que el resto de los tokens de la invocación no se altera.
 
 #### Scenario: La salida de aprobación dispara la pregunta del modo
 
@@ -902,7 +902,7 @@ En un cambio `checkpointed`, cuando la persona elige en la puerta `tasks` una sa
 
 - **DADO** la proyección de la pregunta tipada de la puerta `tasks`
 - **CUANDO** se inspeccionan sus opciones
-- **ENTONCES** son exactamente tres, las mismas de REQ-26.2, y ninguna menciona el modo de revisión por commit
+- **ENTONCES** son exactamente tres, las mismas de RF-GAT-08, y ninguna menciona el modo de revisión por commit
 
 #### Scenario: El texto de la doctrina fija la interacción
 
@@ -910,9 +910,9 @@ En un cambio `checkpointed`, cuando la persona elige en la puerta `tasks` una sa
 - **CUANDO** se lee la regla de la puerta `tasks`
 - **ENTONCES** declara que el modo se pregunta tras una salida de aprobación, en interacción propia, una sola vez y con la misma llamada de registro, y que no se pregunta en `continuous` ni con la salida 1
 
-### Requirement: El Modo es Inmutable tras la Aprobación de `tasks` (REQ-33.6)
+### Requirement: El Modo es Inmutable tras la Aprobación de `tasks` (RF-GAT-24)
 
-Una vez aprobada la puerta `tasks`, el modo NO DEBE poder cambiarse por `gate record`: la aprobación es terminal (REQ-26.3) y un registro posterior se rechaza o no cambia la puerta. Cambiar el modo en medio de `apply` queda fuera de este requisito.
+Una vez aprobada la puerta `tasks`, el modo NO DEBE poder cambiarse por `gate record`: la aprobación es terminal (RF-GAT-09) y un registro posterior se rechaza o no cambia la puerta. Cambiar el modo en medio de `apply` queda fuera de este requisito.
 
 #### Scenario: Un rechazo posterior no cambia el modo
 
@@ -920,7 +920,7 @@ Una vez aprobada la puerta `tasks`, el modo NO DEBE poder cambiarse por `gate re
 - **CUANDO** se registra después `--decision rejected`
 - **ENTONCES** la puerta sigue `approved` y `status` sigue proyectando `commitReview: "stop"`
 
-### Requirement: La Ayuda de `gate record` Documenta la Bandera (REQ-33.7)
+### Requirement: La Ayuda de `gate record` Documenta la Bandera (RF-GAT-25)
 
 La ayuda de `axiom sdd gate record` DEBE describir `--commit-review`, su vocabulario, que solo se admite con `--gate tasks --decision approved` en un cambio `checkpointed` y que su ausencia equivale a `notify`.
 
@@ -929,15 +929,15 @@ La ayuda de `axiom sdd gate record` DEBE describir `--commit-review`, su vocabul
 - **DADO** el comando `axiom sdd gate record --help`
 - **CUANDO** se lee su salida
 - **ENTONCES** contiene `--commit-review`, los tres tokens y la restricción a la puerta `tasks`
-### Requirement: La Presentación de `integration` Declara el Estado de la Verificación Conjunta como Información (REQ-43.32)
+### Requirement: La Presentación de `integration` Declara el Estado de la Verificación Conjunta como Información (RF-GAT-26)
 
-En un cambio `checkpointed`, la presentación de la compuerta `integration` DEBE declarar siempre exactamente uno de estos tres estados informativos de la verificación conjunta (REQ-28.41 de `sdd-independent-review`), consultando `axiom branch scope`:
+En un cambio `checkpointed`, la presentación de la compuerta `integration` DEBE declarar siempre exactamente uno de estos tres estados informativos de la verificación conjunta (RF-REV-10 de `sdd-independent-review`), consultando `axiom branch scope`:
 
 1. **Hecha (fecha de la última ronda):** `verify-report.md` contiene al menos una ronda de la sección «Verificación conjunta»; la declaración indica la fecha de la última ronda. No se calcula vigencia: se muestra la fecha y decide la persona.
 2. **Ofrecida:** no hay ninguna ronda y el resumen de `axiom branch scope` indica `offer: offerable`; el orquestador la ofrece y espera la decisión sin lanzarla.
 3. **No verificable (motivo):** no hay ninguna ronda y la oferta no es `offerable`. El motivo es el de cada repositorio `unverifiable` (`branch_missing`, `base_missing` o `fork_point_undetermined`), «ramas pendientes de fusionar» cuando `offer` es `pending_merge`, o «sin commits propios que verificar» cuando es `nothing_to_verify`. Cuando la propia consulta falla (salida distinta de cero, rechazo tipado, salida ilegible), el estado es «no verificable» con el código del rechazo o «consulta no disponible».
 
-La declaración es información: NO DEBE bloquear ni retrasar la presentación de `integration` (que se emite igualmente), NO DEBE alterar sus dos salidas, la evidencia de fusión que exige, `nextRecommended` ni las dependencias, y NO DEBE persistirse en `kickoff.yaml`, `gates.yaml` ni `axiom sdd status`. Aprobar `integration` sin verificación conjunta sigue siendo válido. Una petición explícita de la persona se atiende siempre (REQ-28.41). En un cambio `continuous` no existe la compuerta y esta declaración no se presenta.
+La declaración es información: NO DEBE bloquear ni retrasar la presentación de `integration` (que se emite igualmente), NO DEBE alterar sus dos salidas, la evidencia de fusión que exige, `nextRecommended` ni las dependencias, y NO DEBE persistirse en `kickoff.yaml`, `gates.yaml` ni `axiom sdd status`. Aprobar `integration` sin verificación conjunta sigue siendo válido. Una petición explícita de la persona se atiende siempre (RF-REV-10). En un cambio `continuous` no existe la compuerta y esta declaración no se presenta.
 
 #### Scenario: Estado hecha con la fecha de la última ronda
 - **DADO** un `verify-report.md` con dos rondas de «Verificación conjunta», la última fechada el 2026-11-24

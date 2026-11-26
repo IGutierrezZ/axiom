@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// TechnicalContextConfig es el bloque `technical_context:` de axiom.yaml (REQ-24.26).
+// TechnicalContextConfig es el bloque `technical_context:` de axiom.yaml (RF-CTX-01).
 type TechnicalContextConfig struct {
 	Maintained *ContextMode `yaml:"maintained,omitempty"`
 	Reference  *ContextMode `yaml:"reference,omitempty"`
@@ -32,28 +32,28 @@ type ContextMode struct {
 // de las declaraciones.
 type Declarations struct {
 	ParseErr            error                 // no nulo solo si existe axiom.yaml y no se puede leer como YAML
-	BaselineRetiredErr  *BaselineRetiredError // no nulo si axiom.yaml aún declara `baseline:`, retirado (REQ-30.21)
+	BaselineRetiredErr  *BaselineRetiredError // no nulo si axiom.yaml aún declara `baseline:`, retirado (RF-TOP-12)
 	TechnicalContext    *TechnicalContextConfig
 	TechnicalContextErr error
-	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (REQ-25.26)
+	Git                 *GitConfig // lo declarado en `git:`, sin defectos; nil sin bloque o con bloque inválido (RF-TOP-09)
 	GitErr              error
-	Workflow            *WorkflowConfig // lo declarado en `workflow:`, sin defectos; nil sin bloque o con bloque inválido (REQ-27.1)
+	Workflow            *WorkflowConfig // lo declarado en `workflow:`, sin defectos; nil sin bloque o con bloque inválido (RF-TOP-11)
 	WorkflowErr         error
-	SDD                 *SDDConfig // lo declarado en `sdd:`, sin defectos; nil sin bloque, con bloque inválido o con la contradicción con `workflow.lane` (REQ-29.1)
+	SDD                 *SDDConfig // lo declarado en `sdd:`, sin defectos; nil sin bloque, con bloque inválido o con la contradicción con `workflow.lane` (RF-ISO-01)
 	SDDErr              error
 	Delivery            *DeliveryConfig // lo declarado en `delivery:`, sin defectos; nil sin bloque o con bloque inválido
 	DeliveryErr         error
-	Integrations        *IntegrationsConfig // lo declarado en `integrations:`; nil sin bloque o con bloque inválido (REQ-43.19)
+	Integrations        *IntegrationsConfig // lo declarado en `integrations:`; nil sin bloque o con bloque inválido (RF-TOP-16)
 	IntegrationsErr     error
-	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (REQ-25.27)
+	Repositories        []RepositoryPolicy // lo declarado en `repositories:`; nil sin bloque, sin entradas o con bloque inválido (RF-TOP-10)
 	RepositoriesErr     error
 }
 
 // IDPattern devuelve la plantilla de identificadores de requisito del proyecto
-// (REQ-44.1). Sin bloque `sdd:` o sin la clave `id_pattern` devuelve el defecto,
+// (RF-RID-01). Sin bloque `sdd:` o sin la clave `id_pattern` devuelve el defecto,
 // `REQ-<n>.<m>`; con un `axiom.yaml` ilegible o un bloque `sdd:` inválido devuelve un
 // error que envuelve ParseErr o SDDErr (%w): ningún consumidor cae en silencio al
-// defecto con una declaración que no pudo leer (REQ-44.9).
+// defecto con una declaración que no pudo leer (RF-RID-08).
 func (d Declarations) IDPattern() (reqid.Pattern, error) {
 	if d.ParseErr != nil {
 		return reqid.Pattern{}, fmt.Errorf("no se puede leer axiom.yaml para conocer sdd.id_pattern: %w", d.ParseErr)
@@ -93,7 +93,7 @@ func readDeclarationBlocks(document *yaml.Node, displacement string) Declaration
 	var declarations Declarations
 	if line, ok := mappingKeyLine(root, "baseline"); ok {
 		// Un `baseline:` residual nunca se ignora ni se decodifica: es la causa
-		// tipada de REQ-30.21, con la guía de migración.
+		// tipada de RF-TOP-12, con la guía de migración.
 		declarations.BaselineRetiredErr = &BaselineRetiredError{Line: line}
 	}
 	if node, ok := mappingValue(root, "technical_context"); ok {
@@ -178,7 +178,7 @@ type contextPath struct {
 	clean string
 }
 
-// validateContextMode comprueba `paths` y `entry` de un modo (REQ-24.26 y 24.27).
+// validateContextMode comprueba `paths` y `entry` de un modo (RF-CTX-01 y RF-CTX-02).
 func validateContextMode(label string, mode ContextMode, displacement string) ([]contextPath, []error) {
 	var errs []error
 	var paths []contextPath

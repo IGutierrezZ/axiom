@@ -39,7 +39,7 @@ func TestAxiomWindowsUpgradeFailsClosedToSourceInstall(t *testing.T) {
 			name:          "stable release",
 			latestVersion: "2.2.0",
 			wantTarget:    "v2.2.0",
-			// No declared GoModulePath: REQ-22.2 forbids emitting a go install
+			// No declared GoModulePath: RF-UPD-02 forbids emitting a go install
 			// the toolchain cannot resolve, so the manual way degrades to
 			// clone-and-build (D-04) and must stay off any releases page.
 			wantInstall: "git clone https://github.com/Gentleman-Programming/gentle-ai && cd gentle-ai && go build -o axiom ./cmd/axiom",

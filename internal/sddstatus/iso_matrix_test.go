@@ -42,7 +42,7 @@ func archiveTokens(findings []isoevidence.Finding) []string {
 	return tokens
 }
 
-// REQ-29.10, REQ-29.11, REQ-29.6 a REQ-29.8 y REQ-29.19: la regla del archivado
+// RF-ARC-09, RF-ARC-10, RF-ISO-06 a RF-ISO-08 y RF-ISO-10: la regla del archivado
 // ISO, compartida por el status, archive-check y archive-compose.
 func TestISOArchiveRefusal(t *testing.T) {
 	t.Parallel()
@@ -168,7 +168,7 @@ func sealRewrite(t *testing.T, changeRoot, name string) {
 	sealISOChange(t, changeRoot, name, nil)
 }
 
-// REQ-29.11 y D12: con tareas pendientes el archivado explícito de trabajo
+// RF-ARC-10 y D12: con tareas pendientes el archivado explícito de trabajo
 // incompleto sigue exigiendo la matriz: `archive` queda bloqueado, el motivo va
 // solo a notes y la ruta sigue siendo apply.
 func TestISOArchiveWithPendingTasks(t *testing.T) {
@@ -212,7 +212,7 @@ func sealISOCheckpointed(t *testing.T, changeRoot, name string) {
 	}
 }
 
-// REQ-29.11 y D19: con apply terminado y la matriz ausente o inválida la ruta es
+// RF-ARC-10 y D19: con apply terminado y la matriz ausente o inválida la ruta es
 // `verify`; con filas `fail`, resolve-blockers; con una matriz de éxito, archive.
 // `iso.matrix` lo proyecta en cada caso.
 func TestISOVerifyRoute(t *testing.T) {
@@ -355,7 +355,7 @@ func TestISOVerifyRouteGatePrecedence(t *testing.T) {
 	})
 }
 
-// REQ-29.16 y REQ-29.2: iso.matrix se proyecta igual en v1 y v2, y solo en un
+// RF-CLI-11 y RF-ISO-02: iso.matrix se proyecta igual en v1 y v2, y solo en un
 // cambio ISO con apply terminado.
 func TestISOMatrixProjection(t *testing.T) {
 	t.Parallel()

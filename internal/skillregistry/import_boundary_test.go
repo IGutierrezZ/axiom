@@ -20,7 +20,7 @@ import (
 //  2. internal/skillregistry must not import internal/components/engram: the
 //     Engram mirror enters through the MirrorFunc port only (D-11).
 //  3. No production file may compose an install instruction that names the
-//     upstream module or upstream binary (REQ-22.2 at the structural level).
+//     upstream module or upstream binary (RF-UPD-02 at the structural level).
 
 // inc22ProductionFiles are the production files this increment creates, per
 // design.md §4. A listed file that does not exist yet is skipped: the guard is
@@ -148,7 +148,7 @@ func TestImportBoundaryGuardHoldsForInc22Files(t *testing.T) {
 
 // TestImportBoundaryForbidsUpstreamInstallLiterals scans every production file
 // for install-instruction string literals that name the upstream module or the
-// upstream GitHub repository (REQ-22.2 structural form). Module declarations
+// upstream GitHub repository (RF-UPD-02 structural form). Module declarations
 // and telemetry repository defaults are not install instructions and are not
 // flagged: the rule is about composed install commands.
 func TestImportBoundaryForbidsUpstreamInstallLiterals(t *testing.T) {

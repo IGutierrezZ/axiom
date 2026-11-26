@@ -12,8 +12,8 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 )
 
-// Pruebas de `--commit-review` en `axiom sdd gate record` (REQ-33.1, REQ-33.2, REQ-33.6,
-// REQ-33.7). La separación de la bandera es una prueba de tabla pura; el resto va sobre el punto de
+// Pruebas de `--commit-review` en `axiom sdd gate record` (RF-GAT-19, RF-GAT-20, RF-GAT-24,
+// RF-GAT-25). La separación de la bandera es una prueba de tabla pura; el resto va sobre el punto de
 // entrada en proceso `RunSDDGate`, con git real y sin compilar ningún binario.
 
 func TestSplitCommitReviewFlag(t *testing.T) {
@@ -66,7 +66,7 @@ func TestSplitCommitReviewFlag(t *testing.T) {
 	}
 }
 
-// REQ-33.1 y REQ-33.2: cada token se acepta y se conserva tal cual en gates.yaml.
+// RF-GAT-19 y RF-GAT-20: cada token se acepta y se conserva tal cual en gates.yaml.
 func TestGateRecordCommitReviewWritesEveryToken(t *testing.T) {
 	for _, mode := range kickoff.CommitReviewModes() {
 		t.Run(string(mode), func(t *testing.T) {
@@ -96,7 +96,7 @@ func TestGateRecordCommitReviewWritesEveryToken(t *testing.T) {
 	}
 }
 
-// REQ-33.2: el modo viaja con la cesión en un único registro.
+// RF-GAT-20: el modo viaja con la cesión en un único registro.
 func TestGateRecordCommitReviewTravelsWithTheHandOffInOneRecord(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -120,7 +120,7 @@ func TestGateRecordCommitReviewTravelsWithTheHandOffInOneRecord(t *testing.T) {
 	}
 }
 
-// REQ-33.2: la bandera en cualquier posición equivale a la bandera al final.
+// RF-GAT-20: la bandera en cualquier posición equivale a la bandera al final.
 func TestGateRecordCommitReviewFlagPositionDoesNotMatter(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -133,7 +133,7 @@ func TestGateRecordCommitReviewFlagPositionDoesNotMatter(t *testing.T) {
 	}
 }
 
-// REQ-33.2: sin la bandera no se escribe el campo, ni siquiera con la cesión.
+// RF-GAT-20: sin la bandera no se escribe el campo, ni siquiera con la cesión.
 func TestGateRecordWithoutCommitReviewNeverWritesTheField(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -153,7 +153,7 @@ func TestGateRecordWithoutCommitReviewNeverWritesTheField(t *testing.T) {
 	}
 }
 
-// REQ-33.2 y REQ-33.6: cada rechazo ocurre sin escribir nada (gates.yaml, digest y kickoff.yaml
+// RF-GAT-20 y RF-GAT-24: cada rechazo ocurre sin escribir nada (gates.yaml, digest y kickoff.yaml
 // idénticos byte a byte) y nombra la orden que sigue valiendo.
 func TestGateRecordCommitReviewRefusals(t *testing.T) {
 	t.Run("otra puerta solo admite tasks", func(t *testing.T) {
@@ -244,7 +244,7 @@ func TestGateRecordCommitReviewRefusals(t *testing.T) {
 	})
 }
 
-// REQ-33.2: el kickoff y el digest de la puerta no cambian con el modo.
+// RF-GAT-20: el kickoff y el digest de la puerta no cambian con el modo.
 func TestGateRecordCommitReviewKeepsTheKickoffAndTheDigest(t *testing.T) {
 	record := func(t *testing.T, extra ...string) (kickoff.GateRecord, string) {
 		t.Helper()
@@ -280,7 +280,7 @@ func TestGateRecordCommitReviewKeepsTheKickoffAndTheDigest(t *testing.T) {
 	}
 }
 
-// REQ-33.2: el `--json` lleva el modo cuando se persiste y no lo lleva en caso contrario.
+// RF-GAT-20: el `--json` lleva el modo cuando se persiste y no lo lleva en caso contrario.
 func TestGateRecordCommitReviewJSON(t *testing.T) {
 	ws := handOffProject(t, guardSealArgs)
 
@@ -315,7 +315,7 @@ func TestGateRecordCommitReviewJSON(t *testing.T) {
 	})
 }
 
-// REQ-33.7: la ayuda describe la bandera, su vocabulario y su restricción.
+// RF-GAT-25: la ayuda describe la bandera, su vocabulario y su restricción.
 func TestGateRecordHelpDocumentsCommitReview(t *testing.T) {
 	var out bytes.Buffer
 	if err := RunSDDGate([]string{"record", "--help"}, &out); err != nil {

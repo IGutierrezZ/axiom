@@ -1,0 +1,1542 @@
+# Mapa de identificadores heredados de Axiom (C-03-e). Lo genera internal/idmigration; no se edita a mano.
+schema: axiom.id-map/v1
+entries:
+  - capability: antigravity-support
+    title: Unified public agent ID
+    new: RF-AGV-01
+  - capability: antigravity-support
+    title: Antigravity writes to the supported config surface
+    new: RF-AGV-02
+  - capability: antigravity-support
+    title: Antigravity uses dynamic subagents
+    new: RF-AGV-03
+  - capability: antigravity-support
+    title: Antigravity shares the Gemini global prompt surface
+    new: RF-AGV-04
+  - capability: autoskills
+    old: [REQ-1.1]
+    new: RF-ASK-01
+  - capability: autoskills
+    old: [REQ-1.2]
+    new: RF-ASK-02
+  - capability: autoskills
+    old: [REQ-1.3]
+    new: RF-ASK-03
+  - capability: autoskills
+    old: [REQ-2.1]
+    new: RF-ASK-04
+  - capability: autoskills
+    old: [REQ-2.2]
+    new: RF-ASK-05
+  - capability: autoskills
+    old: [REQ-3.1]
+    new: RF-ASK-06
+  - capability: autoskills
+    old: [REQ-3.2]
+    new: RF-ASK-07
+  - capability: autoskills
+    old: [REQ-4.1]
+    new: RF-ASK-08
+  - capability: autoskills
+    old: [REQ-4.2]
+    new: RF-ASK-09
+  - capability: autoskills
+    old: [REQ-4.3]
+    new: RF-ASK-10
+  - capability: autoskills
+    old: [REQ-5.1]
+    new: RF-ASK-11
+  - capability: autoskills
+    old: [REQ-6.1]
+    new: RF-ASK-12
+  - capability: autoskills
+    old: [REQ-6.2]
+    new: RF-ASK-13
+  - capability: axiom-binary-ci-coverage
+    old: [REQ-20.15]
+    new: RF-CIB-01
+  - capability: axiom-binary-ci-coverage
+    old: [REQ-20.16]
+    new: RF-CIB-02
+  - capability: axiom-distribution-identity
+    old: [REQ-20.7]
+    new: RF-DIS-01
+  - capability: axiom-distribution-identity
+    old: [REQ-20.8]
+    new: RF-DIS-02
+  - capability: axiom-distribution-identity
+    old: [REQ-20.9]
+    new: RF-DIS-03
+  - capability: axiom-distribution-identity
+    old: [REQ-20.10]
+    new: RF-DIS-04
+  - capability: axiom-distribution-identity
+    old: [REQ-20.11]
+    new: RF-DIS-05
+  - capability: axiom-distribution-identity
+    old: [REQ-20.12]
+    new: RF-DIS-06
+  - capability: axiom-distribution-identity
+    old: [REQ-20.13]
+    new: RF-DIS-07
+  - capability: axiom-distribution-identity
+    old: [REQ-20.14]
+    new: RF-DIS-08
+  - capability: axiom-distribution-identity
+    old: [REQ-46.2]
+    new: RF-DIS-09
+  - capability: axiom-distribution-identity
+    old: [REQ-20.17]
+    new: RF-DIS-10
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-13.1]
+    new: RF-CLI-01
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-13.2]
+    new: RF-CLI-02
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-13.3]
+    new: RF-CLI-03
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-13.4]
+    new: RF-CLI-04
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-25.42]
+    new: RF-CLI-05
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-25.43]
+    new: RF-CLI-06
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-25.44]
+    new: RF-CLI-07
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-27.2]
+    new: RF-CLI-08
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-27.2b]
+    new: RF-CLI-09
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-29.15]
+    new: RF-CLI-10
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-29.16]
+    new: RF-CLI-11
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-46.1]
+    new: RF-CLI-12
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-46.7]
+    new: RF-CLI-13
+  - capability: axiom-sdd-cli-integration
+    old: [REQ-47.9]
+    new: RF-CLI-14
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.10]
+    new: RF-SKI-01
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.11]
+    new: RF-SKI-02
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.12]
+    new: RF-SKI-03
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.13]
+    new: RF-SKI-04
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.14]
+    new: RF-SKI-05
+  - capability: axiom-skills-index-governance
+    old: [REQ-22.15]
+    new: RF-SKI-06
+  - capability: axiom-skills-index-governance
+    old: [REQ-46.9]
+    new: RF-SKI-07
+  - capability: axiom-tui-branding
+    old: [REQ-14.2]
+    new: RF-TUI-01
+  - capability: axiom-tui-branding
+    old: [REQ-14.3]
+    new: RF-TUI-02
+  - capability: axiom-tui-branding
+    old: [REQ-14.4]
+    new: RF-TUI-03
+  - capability: axiom-updater-resilience
+    old: [REQ-22.1]
+    new: RF-UPD-01
+  - capability: axiom-updater-resilience
+    old: [REQ-22.2]
+    new: RF-UPD-02
+  - capability: axiom-updater-resilience
+    old: [REQ-22.3]
+    new: RF-UPD-03
+  - capability: axiom-updater-resilience
+    old: [REQ-22.4]
+    new: RF-UPD-04
+  - capability: axiom-updater-resilience
+    old: [REQ-22.5]
+    new: RF-UPD-05
+  - capability: axiom-updater-resilience
+    old: [REQ-22.7]
+    new: RF-UPD-06
+  - capability: axiom-updater-resilience
+    old: [REQ-22.8]
+    new: RF-UPD-07
+  - capability: axiom-updater-resilience
+    old: [REQ-22.9]
+    new: RF-UPD-08
+  - capability: axiom-user-state-and-env
+    old: [REQ-12.1]
+    new: RF-UST-01
+  - capability: axiom-user-state-and-env
+    old: [REQ-12.2]
+    new: RF-UST-02
+  - capability: axiom-user-state-and-env
+    old: [REQ-46.5]
+    new: RF-UST-03
+  - capability: axiom-user-state-and-env
+    old: [REQ-46.8]
+    new: RF-UST-04
+  - capability: axiom-user-state-and-env
+    old: [REQ-12.4]
+    new: RF-UST-05
+  - capability: azure-devops-adapter
+    old: [REQ-45.1]
+    new: RF-ADO-01
+  - capability: azure-devops-adapter
+    old: [REQ-45.2]
+    new: RF-ADO-02
+  - capability: azure-devops-adapter
+    old: [REQ-45.3]
+    new: RF-ADO-03
+  - capability: azure-devops-adapter
+    old: [REQ-45.4]
+    new: RF-ADO-04
+  - capability: azure-devops-adapter
+    old: [REQ-45.5]
+    new: RF-ADO-05
+  - capability: azure-devops-adapter
+    old: [REQ-45.6]
+    new: RF-ADO-06
+  - capability: azure-devops-adapter
+    old: [REQ-45.7]
+    new: RF-ADO-07
+  - capability: azure-devops-adapter
+    old: [REQ-45.8]
+    new: RF-ADO-08
+  - capability: azure-devops-adapter
+    old: [REQ-45.9]
+    new: RF-ADO-09
+  - capability: azure-devops-adapter
+    old: [REQ-45.10]
+    new: RF-ADO-10
+  - capability: azure-devops-adapter
+    old: [REQ-45.11]
+    new: RF-ADO-11
+  - capability: azure-devops-adapter
+    old: [REQ-45.12]
+    new: RF-ADO-12
+  - capability: azure-devops-adapter
+    old: [REQ-45.13]
+    new: RF-ADO-13
+  - capability: azure-devops-adapter
+    old: [REQ-45.14]
+    new: RF-ADO-14
+  - capability: azure-devops-adapter
+    old: [REQ-45.15]
+    new: RF-ADO-15
+  - capability: azure-devops-adapter
+    old: [REQ-45.16]
+    new: RF-ADO-16
+  - capability: change-actor-identity
+    old: [REQ-42.1]
+    new: RF-ACT-01
+  - capability: change-actor-identity
+    old: [REQ-42.2]
+    new: RF-ACT-02
+  - capability: change-actor-identity
+    old: [REQ-42.3]
+    new: RF-ACT-03
+  - capability: change-actor-identity
+    old: [REQ-42.4]
+    new: RF-ACT-04
+  - capability: change-actor-identity
+    old: [REQ-42.5]
+    new: RF-ACT-05
+  - capability: change-actor-identity
+    old: [REQ-42.6]
+    new: RF-ACT-06
+  - capability: change-actor-identity
+    old: [REQ-42.7]
+    new: RF-ACT-07
+  - capability: change-actor-identity
+    old: [REQ-42.8]
+    new: RF-ACT-08
+  - capability: change-actor-identity
+    old: [REQ-42.9]
+    new: RF-ACT-09
+  - capability: change-branch-lifecycle
+    old: [REQ-25.1]
+    new: RF-BRA-01
+  - capability: change-branch-lifecycle
+    old: [REQ-25.2]
+    new: RF-BRA-02
+  - capability: change-branch-lifecycle
+    old: [REQ-25.3]
+    new: RF-BRA-03
+  - capability: change-branch-lifecycle
+    old: [REQ-25.4]
+    new: RF-BRA-04
+  - capability: change-branch-lifecycle
+    old: [REQ-25.5]
+    new: RF-BRA-05
+  - capability: change-branch-lifecycle
+    old: [REQ-25.6]
+    new: RF-BRA-06
+  - capability: change-branch-lifecycle
+    old: [REQ-25.7]
+    new: RF-BRA-07
+  - capability: change-branch-lifecycle
+    old: [REQ-25.8]
+    new: RF-BRA-08
+  - capability: change-branch-lifecycle
+    old: [REQ-25.9]
+    new: RF-BRA-09
+  - capability: change-branch-lifecycle
+    old: [REQ-25.10]
+    new: RF-BRA-10
+  - capability: change-branch-lifecycle
+    old: [REQ-25.11]
+    new: RF-BRA-11
+  - capability: change-branch-lifecycle
+    old: [REQ-25.12]
+    new: RF-BRA-12
+  - capability: change-branch-lifecycle
+    old: [REQ-25.45]
+    new: RF-BRA-13
+  - capability: change-branch-lifecycle
+    old: [REQ-25.13]
+    new: RF-BRA-14
+  - capability: change-branch-lifecycle
+    old: [REQ-25.14]
+    new: RF-BRA-15
+  - capability: change-branch-lifecycle
+    old: [REQ-25.15]
+    new: RF-BRA-16
+  - capability: change-branch-lifecycle
+    old: [REQ-25.16]
+    new: RF-BRA-17
+  - capability: change-branch-lifecycle
+    old: [REQ-25.17]
+    new: RF-BRA-18
+  - capability: change-branch-lifecycle
+    old: [REQ-25.18]
+    new: RF-BRA-19
+  - capability: change-branch-lifecycle
+    old: [REQ-25.19]
+    new: RF-BRA-20
+  - capability: change-branch-lifecycle
+    old: [REQ-25.20]
+    new: RF-BRA-21
+  - capability: change-branch-lifecycle
+    old: [REQ-25.21]
+    new: RF-BRA-22
+  - capability: change-branch-lifecycle
+    old: [REQ-25.22]
+    new: RF-BRA-23
+  - capability: change-branch-lifecycle
+    old: [REQ-25.23]
+    new: RF-BRA-24
+  - capability: change-branch-lifecycle
+    old: [REQ-25.24]
+    new: RF-BRA-25
+  - capability: change-branch-lifecycle
+    old: [REQ-26.11]
+    new: RF-BRA-26
+  - capability: change-branch-lifecycle
+    old: [REQ-27.15]
+    new: RF-BRA-27
+  - capability: change-branch-lifecycle
+    old: [REQ-25.46]
+    new: RF-BRA-28
+  - capability: change-branch-lifecycle
+    old: [REQ-25.47]
+    new: RF-BRA-29
+  - capability: change-branch-lifecycle
+    old: [REQ-25.48]
+    new: RF-BRA-30
+  - capability: change-branch-lifecycle
+    old: [REQ-25.49]
+    new: RF-BRA-31
+  - capability: change-branch-lifecycle
+    old: [REQ-25.50]
+    new: RF-BRA-32
+  - capability: change-branch-lifecycle
+    old: [REQ-43.24]
+    new: RF-BRA-33
+  - capability: change-branch-lifecycle
+    old: [REQ-43.25]
+    new: RF-BRA-34
+  - capability: change-branch-lifecycle
+    old: [REQ-25.51]
+    new: RF-BRA-35
+  - capability: change-branch-lifecycle
+    old: [REQ-25.52]
+    new: RF-BRA-36
+  - capability: change-branch-lifecycle
+    old: [REQ-25.53]
+    new: RF-BRA-37
+  - capability: change-branch-lifecycle
+    old: [REQ-25.54]
+    new: RF-BRA-38
+  - capability: dashboard-sdd-orchestration
+    old: [REQ-15.1]
+    new: RF-DSO-01
+  - capability: dashboard-sdd-orchestration
+    old: [REQ-15.3]
+    new: RF-DSO-02
+  - capability: dashboard-sdd-orchestration
+    old: [REQ-15.4]
+    new: RF-DSO-03
+  - capability: dashboard-sdd-orchestration
+    old: [REQ-15.5]
+    new: RF-DSO-04
+  - capability: engram-protocol-injection
+    title: Single canonical Codex protocol asset
+    new: RF-ENG-01
+  - capability: engram-protocol-injection
+    title: Conditional per-adapter section slimming
+    new: RF-ENG-02
+  - capability: engram-protocol-injection
+    title: Version-gated protocol-verbosity forwarding to engram setup
+    new: RF-ENG-03
+  - capability: engram-protocol-injection
+    title: Idempotent injection and clean uninstall across upgrades
+    new: RF-ENG-04
+  - capability: engram-protocol-injection
+    title: Test and golden fixture coverage per adapter
+    new: RF-ENG-05
+  - capability: engram-protocol-injection
+    old: [REQ-46.10]
+    new: RF-ENG-06
+  - capability: integration-plugins
+    old: [REQ-43.1]
+    new: RF-INT-01
+  - capability: integration-plugins
+    old: [REQ-43.2]
+    new: RF-INT-02
+  - capability: integration-plugins
+    old: [REQ-43.3]
+    new: RF-INT-03
+  - capability: integration-plugins
+    old: [REQ-43.4]
+    new: RF-INT-04
+  - capability: integration-plugins
+    old: [REQ-43.5]
+    new: RF-INT-05
+  - capability: integration-plugins
+    old: [REQ-43.6]
+    new: RF-INT-06
+  - capability: integration-plugins
+    old: [REQ-43.7]
+    new: RF-INT-07
+  - capability: integration-plugins
+    old: [REQ-43.8]
+    new: RF-INT-08
+  - capability: integration-plugins
+    old: [REQ-43.9]
+    new: RF-INT-09
+  - capability: integration-plugins
+    old: [REQ-43.10]
+    new: RF-INT-10
+  - capability: integration-plugins
+    old: [REQ-43.11]
+    new: RF-INT-11
+  - capability: integration-plugins
+    old: [REQ-43.12]
+    new: RF-INT-12
+  - capability: integration-plugins
+    old: [REQ-43.13]
+    new: RF-INT-13
+  - capability: integration-plugins
+    old: [REQ-43.14]
+    new: RF-INT-14
+  - capability: integration-plugins
+    old: [REQ-43.15]
+    new: RF-INT-15
+  - capability: integration-plugins
+    old: [REQ-43.16]
+    new: RF-INT-16
+  - capability: integration-plugins
+    old: [REQ-43.17]
+    new: RF-INT-17
+  - capability: integration-plugins
+    old: [REQ-43.18]
+    new: RF-INT-18
+  - capability: integration-plugins
+    old: [REQ-43.28]
+    new: RF-INT-19
+  - capability: integration-plugins
+    old: [REQ-43.29]
+    new: RF-INT-20
+  - capability: integration-plugins
+    old: [REQ-43.30]
+    new: RF-INT-21
+  - capability: integration-plugins
+    old: [REQ-43.31]
+    new: RF-INT-22
+  - capability: integration-plugins
+    old: [REQ-45.17]
+    new: RF-INT-23
+  - capability: knowledge-profile-init
+    old: [REQ-23.1]
+    new: RF-KNW-01
+  - capability: knowledge-profile-init
+    old: [REQ-23.2]
+    new: RF-KNW-02
+  - capability: knowledge-profile-init
+    old: [REQ-23.3]
+    new: RF-KNW-03
+  - capability: knowledge-profile-init
+    old: [REQ-23.4]
+    new: RF-KNW-04
+  - capability: knowledge-profile-init
+    old: [REQ-23.5]
+    new: RF-KNW-05
+  - capability: knowledge-profile-init
+    old: [REQ-23.6]
+    new: RF-KNW-06
+  - capability: living-documentation
+    old: [REQ-1.1]
+    new: RF-LDO-01
+  - capability: living-documentation
+    old: [REQ-1.2]
+    new: RF-LDO-02
+  - capability: living-documentation
+    old: [REQ-1.3]
+    new: RF-LDO-03
+  - capability: living-documentation
+    old: [REQ-2.1]
+    new: RF-LDO-04
+  - capability: living-documentation
+    old: [REQ-2.2]
+    new: RF-LDO-05
+  - capability: living-documentation
+    old: [REQ-3.1]
+    new: RF-LDO-06
+  - capability: living-documentation
+    old: [REQ-3.2]
+    new: RF-LDO-07
+  - capability: living-documentation
+    old: [REQ-3.3]
+    new: RF-LDO-08
+  - capability: living-documentation
+    old: [REQ-3.4]
+    new: RF-LDO-09
+  - capability: living-documentation
+    old: [REQ-4.1]
+    new: RF-LDO-10
+  - capability: living-documentation
+    old: [REQ-4.2]
+    new: RF-LDO-11
+  - capability: local-web-dashboard
+    old: [REQ-1.1]
+    new: RF-WEB-01
+  - capability: local-web-dashboard
+    old: [REQ-1.2]
+    new: RF-WEB-02
+  - capability: local-web-dashboard
+    old: [REQ-1.3]
+    new: RF-WEB-03
+  - capability: local-web-dashboard
+    old: [REQ-1.4]
+    new: RF-WEB-04
+  - capability: local-web-dashboard
+    old: [REQ-1.5]
+    new: RF-WEB-05
+  - capability: local-web-dashboard
+    old: [REQ-2.1]
+    new: RF-WEB-06
+  - capability: local-web-dashboard
+    old: [REQ-2.2]
+    new: RF-WEB-07
+  - capability: local-web-dashboard
+    old: [REQ-3.1]
+    new: RF-WEB-08
+  - capability: local-web-dashboard
+    old: [REQ-25.32]
+    new: RF-WEB-09
+  - capability: local-web-dashboard
+    old: [REQ-25.33]
+    new: RF-WEB-10
+  - capability: local-web-dashboard
+    old: [REQ-25.34]
+    new: RF-WEB-11
+  - capability: local-web-dashboard
+    old: [REQ-46.6]
+    new: RF-WEB-12
+  - capability: local-web-dashboard
+    old: [REQ-1.6]
+    new: RF-WEB-13
+  - capability: local-web-dashboard
+    old: [REQ-1.7]
+    new: RF-WEB-14
+  - capability: multi-project-hub
+    old: [REQ-1.1]
+    new: RF-HUB-01
+  - capability: multi-project-hub
+    old: [REQ-1.2]
+    new: RF-HUB-02
+  - capability: multi-project-hub
+    old: [REQ-2.1]
+    new: RF-HUB-03
+  - capability: multi-project-hub
+    old: [REQ-2.2]
+    new: RF-HUB-04
+  - capability: multi-project-hub
+    old: [REQ-3.1]
+    new: RF-HUB-05
+  - capability: multi-project-hub
+    old: [REQ-3.2]
+    new: RF-HUB-06
+  - capability: multi-project-hub
+    old: [REQ-25.29]
+    new: RF-HUB-07
+  - capability: multi-project-hub
+    old: [REQ-25.30]
+    new: RF-HUB-08
+  - capability: multi-project-hub
+    old: [REQ-25.31]
+    new: RF-HUB-09
+  - capability: multi-project-hub
+    old: [REQ-30.26]
+    new: RF-HUB-10
+  - capability: multi-project-hub
+    old: [REQ-30.27]
+    new: RF-HUB-11
+  - capability: multi-project-hub
+    old: [REQ-3.3]
+    new: RF-HUB-12
+  - capability: multi-role-fan-out
+    old: [REQ-1.1]
+    new: RF-FAN-01
+  - capability: multi-role-fan-out
+    old: [REQ-1.2]
+    new: RF-FAN-02
+  - capability: multi-role-fan-out
+    old: [REQ-1.3]
+    new: RF-FAN-03
+  - capability: multi-role-fan-out
+    old: [REQ-2.1]
+    new: RF-FAN-04
+  - capability: multi-role-fan-out
+    old: [REQ-2.2]
+    new: RF-FAN-05
+  - capability: multi-role-fan-out
+    old: [REQ-3.1]
+    new: RF-FAN-06
+  - capability: multi-role-fan-out
+    old: [REQ-3.2]
+    new: RF-FAN-07
+  - capability: multi-role-fan-out
+    old: [REQ-3.3]
+    new: RF-FAN-08
+  - capability: odd-cli-commands
+    old: [REQ-19.5]
+    new: RF-OCL-01
+  - capability: odd-cli-commands
+    old: [REQ-19.6]
+    new: RF-OCL-02
+  - capability: odd-cli-commands
+    old: [REQ-19.7]
+    new: RF-OCL-03
+  - capability: odd-cli-commands
+    old: [REQ-19.8]
+    new: RF-OCL-04
+  - capability: odd-living-document
+    old: [REQ-19.1]
+    new: RF-ODO-01
+  - capability: odd-living-document
+    old: [REQ-19.2]
+    new: RF-ODO-02
+  - capability: odd-living-document
+    old: [REQ-19.3]
+    new: RF-ODO-03
+  - capability: odd-living-document
+    old: [REQ-19.4]
+    new: RF-ODO-04
+  - capability: odd-living-spec-integration
+    old: [REQ-30.1]
+    new: RF-OLS-01
+  - capability: odd-living-spec-integration
+    old: [REQ-30.2]
+    new: RF-OLS-02
+  - capability: odd-living-spec-integration
+    old: [REQ-30.3]
+    new: RF-OLS-03
+  - capability: odd-living-spec-integration
+    old: [REQ-30.4]
+    new: RF-OLS-04
+  - capability: odd-living-spec-integration
+    old: [REQ-30.5]
+    new: RF-OLS-05
+  - capability: odd-living-spec-integration
+    old: [REQ-30.6]
+    new: RF-OLS-06
+  - capability: odd-living-spec-integration
+    old: [REQ-30.7]
+    new: RF-OLS-07
+  - capability: odd-living-spec-integration
+    old: [REQ-30.8]
+    new: RF-OLS-08
+  - capability: odd-living-spec-integration
+    old: [REQ-44.8]
+    new: RF-OLS-09
+  - capability: odd-living-spec-integration
+    old: [REQ-47.7]
+    new: RF-OLS-10
+  - capability: odd-sdd-promotion
+    old: [REQ-19.9]
+    new: RF-OPR-01
+  - capability: odd-sdd-promotion
+    old: [REQ-19.10]
+    new: RF-OPR-02
+  - capability: odd-sdd-promotion
+    old: [REQ-19.11]
+    new: RF-OPR-03
+  - capability: odd-sdd-promotion
+    old: [REQ-19.12]
+    new: RF-OPR-04
+  - capability: odd-ui-integration
+    old: [REQ-19.13]
+    new: RF-OUI-01
+  - capability: odd-ui-integration
+    old: [REQ-19.14]
+    new: RF-OUI-02
+  - capability: odd-ui-integration
+    old: [REQ-19.15]
+    new: RF-OUI-03
+  - capability: openspec-adoption
+    old: [REQ-30.9]
+    new: RF-ADP-01
+  - capability: openspec-adoption
+    old: [REQ-30.10]
+    new: RF-ADP-02
+  - capability: openspec-adoption
+    old: [REQ-30.11]
+    new: RF-ADP-03
+  - capability: openspec-adoption
+    old: [REQ-30.12]
+    new: RF-ADP-04
+  - capability: openspec-adoption
+    old: [REQ-30.13]
+    new: RF-ADP-05
+  - capability: openspec-adoption
+    old: [REQ-30.14]
+    new: RF-ADP-06
+  - capability: orchestrator-commands-markers
+    old: [REQ-11.1]
+    new: RF-MRK-01
+  - capability: orchestrator-commands-markers
+    old: [REQ-11.2]
+    new: RF-MRK-02
+  - capability: orchestrator-commands-markers
+    old: [REQ-11.3]
+    new: RF-MRK-03
+  - capability: orchestrator-commands-markers
+    old: [REQ-11.4]
+    new: RF-MRK-04
+  - capability: organic-agent-trigger-rules
+    title: Canonical provider-owned routing facts
+    new: RF-RUT-01
+  - capability: organic-agent-trigger-rules
+    title: Direct-inline boundary
+    new: RF-RUT-02
+  - capability: organic-agent-trigger-rules
+    title: Delegated-direct boundary
+    new: RF-RUT-03
+  - capability: organic-agent-trigger-rules
+    title: Delegation applies per action
+    new: RF-RUT-04
+  - capability: organic-agent-trigger-rules
+    title: SDD remains optional
+    new: RF-RUT-05
+  - capability: organic-agent-trigger-rules
+    title: Capability manifests describe facts, not outcomes
+    new: RF-RUT-06
+  - capability: organic-agent-trigger-rules
+    title: Contract exposure fails closed
+    new: RF-RUT-07
+  - capability: organic-agent-trigger-rules
+    title: Runtime transitions are provider-issued
+    new: RF-RUT-08
+  - capability: organic-agent-trigger-rules
+    title: Public progress remains outcome-first
+    new: RF-RUT-09
+  - capability: organic-agent-trigger-rules
+    title: No prompt-owned lifecycle router
+    new: RF-RUT-10
+  - capability: organic-agent-trigger-rules
+    title: Deterministic text-only installation
+    new: RF-RUT-11
+  - capability: organic-agent-trigger-rules
+    title: User-owned model configuration
+    new: RF-RUT-12
+  - capability: organic-agent-trigger-rules
+    title: Organic Driven Development is the orchestrator's mandatory default protocol
+    new: RF-RUT-13
+  - capability: organic-agent-trigger-rules
+    old: [REQ-24.58]
+    new: RF-RUT-14
+  - capability: organic-agent-trigger-rules
+    old: [REQ-25.40]
+    new: RF-RUT-15
+  - capability: organic-agent-trigger-rules
+    old: [REQ-25.41]
+    new: RF-RUT-16
+  - capability: organic-agent-trigger-rules
+    old: [REQ-27.16]
+    new: RF-RUT-17
+  - capability: organic-agent-trigger-rules
+    old: [REQ-27.17]
+    new: RF-RUT-18
+  - capability: organic-agent-trigger-rules
+    old: [REQ-29.18]
+    new: RF-RUT-19
+  - capability: organic-agent-trigger-rules
+    old: [REQ-32.4]
+    new: RF-RUT-20
+  - capability: organic-agent-trigger-rules
+    old: [REQ-33.12]
+    new: RF-RUT-21
+  - capability: persona-behavior-contract
+    title: Artifact Language Independence
+    new: RF-PER-01
+  - capability: persona-behavior-contract
+    title: Safe Persona Fallback Semantics
+    new: RF-PER-02
+  - capability: persona-behavior-contract
+    title: Canonical Tone Channel for Output-Style-Capable Adapters
+    new: RF-PER-03
+  - capability: persona-behavior-contract
+    title: Persona Section Parity for Non-Output-Style Adapters
+    new: RF-PER-04
+  - capability: persona-behavior-contract
+    title: Idempotent Convergence on Re-Injection
+    new: RF-PER-05
+  - capability: persona-behavior-contract
+    title: Legacy Fingerprint Continuity
+    new: RF-PER-06
+  - capability: persona-behavior-contract
+    title: Per-Adapter Test and Golden Coverage
+    new: RF-PER-07
+  - capability: persona-behavior-contract
+    old: [REQ-10.1, REQ-10.2]
+    new: RF-PER-08
+  - capability: persona-behavior-contract
+    old: [REQ-10.3, REQ-10.4]
+    new: RF-PER-09
+  - capability: planning-home-resolution
+    old: [REQ-24.1]
+    new: RF-PLH-01
+  - capability: planning-home-resolution
+    old: [REQ-24.2]
+    new: RF-PLH-02
+  - capability: planning-home-resolution
+    old: [REQ-24.3]
+    new: RF-PLH-03
+  - capability: planning-home-resolution
+    old: [REQ-24.4]
+    new: RF-PLH-04
+  - capability: planning-home-resolution
+    old: [REQ-24.5]
+    new: RF-PLH-05
+  - capability: planning-home-resolution
+    old: [REQ-24.6]
+    new: RF-PLH-06
+  - capability: planning-home-resolution
+    old: [REQ-24.7]
+    new: RF-PLH-07
+  - capability: planning-home-resolution
+    old: [REQ-24.8]
+    new: RF-PLH-08
+  - capability: planning-home-resolution
+    old: [REQ-24.9]
+    new: RF-PLH-09
+  - capability: planning-home-resolution
+    old: [REQ-24.10]
+    new: RF-PLH-10
+  - capability: planning-home-resolution
+    old: [REQ-24.11]
+    new: RF-PLH-11
+  - capability: planning-home-resolution
+    old: [REQ-24.12]
+    new: RF-PLH-12
+  - capability: planning-home-resolution
+    old: [REQ-25.28]
+    new: RF-PLH-13
+  - capability: project-technical-context
+    old: [REQ-24.26]
+    new: RF-CTX-01
+  - capability: project-technical-context
+    old: [REQ-24.27]
+    new: RF-CTX-02
+  - capability: project-technical-context
+    old: [REQ-24.28]
+    new: RF-CTX-03
+  - capability: project-technical-context
+    old: [REQ-24.29]
+    new: RF-CTX-04
+  - capability: project-technical-context
+    old: [REQ-24.30]
+    new: RF-CTX-05
+  - capability: project-technical-context
+    old: [REQ-24.31]
+    new: RF-CTX-06
+  - capability: project-technical-context
+    old: [REQ-24.32]
+    new: RF-CTX-07
+  - capability: project-technical-context
+    old: [REQ-24.33]
+    new: RF-CTX-08
+  - capability: project-technical-context
+    old: [REQ-24.34]
+    new: RF-CTX-09
+  - capability: project-technical-context
+    old: [REQ-24.35]
+    new: RF-CTX-10
+  - capability: project-technical-context
+    old: [REQ-24.36]
+    new: RF-CTX-11
+  - capability: project-technical-context
+    old: [REQ-24.37]
+    new: RF-CTX-12
+  - capability: project-technical-context
+    old: [REQ-30.15]
+    new: RF-CTX-13
+  - capability: project-technical-context
+    old: [REQ-30.16]
+    new: RF-CTX-14
+  - capability: project-technical-context
+    old: [REQ-30.17]
+    new: RF-CTX-15
+  - capability: project-technical-context
+    old: [REQ-30.18]
+    new: RF-CTX-16
+  - capability: project-technical-context
+    old: [REQ-30.19]
+    new: RF-CTX-17
+  - capability: project-technical-context
+    old: [REQ-30.20]
+    new: RF-CTX-18
+  - capability: project-technical-context
+    old: [REQ-30.29]
+    new: RF-CTX-19
+  - capability: project-technical-context
+    old: [REQ-30.30]
+    new: RF-CTX-20
+  - capability: project-technical-context
+    old: [REQ-30.32]
+    new: RF-CTX-21
+  - capability: requirement-identifiers
+    old: [REQ-44.1]
+    new: RF-RID-01
+  - capability: requirement-identifiers
+    old: [REQ-44.2]
+    new: RF-RID-02
+  - capability: requirement-identifiers
+    old: [REQ-44.3]
+    new: RF-RID-03
+  - capability: requirement-identifiers
+    old: [REQ-44.4]
+    new: RF-RID-04
+  - capability: requirement-identifiers
+    old: [REQ-44.5]
+    new: RF-RID-05
+  - capability: requirement-identifiers
+    old: [REQ-44.6]
+    new: RF-RID-06
+  - capability: requirement-identifiers
+    old: [REQ-44.7]
+    new: RF-RID-07
+  - capability: requirement-identifiers
+    old: [REQ-44.9]
+    new: RF-RID-08
+  - capability: requirement-identifiers
+    old: [REQ-47.1]
+    new: RF-RID-09
+  - capability: requirement-identifiers
+    old: [REQ-47.2]
+    new: RF-RID-10
+  - capability: requirement-identifiers
+    old: [REQ-47.3]
+    new: RF-RID-11
+  - capability: requirement-identifiers
+    old: [REQ-47.4]
+    new: RF-RID-12
+  - capability: requirement-identifiers
+    old: [REQ-47.5]
+    new: RF-RID-13
+  - capability: requirement-identifiers
+    old: [REQ-47.6]
+    new: RF-RID-14
+  - capability: requirement-identifiers
+    old: [REQ-47.10]
+    new: RF-RID-15
+  - capability: requirement-trace
+    old: [REQ-48.1]
+    new: RF-TRC-01
+  - capability: requirement-trace
+    old: [REQ-48.2]
+    new: RF-TRC-02
+  - capability: requirement-trace
+    old: [REQ-48.3]
+    new: RF-TRC-03
+  - capability: requirement-trace
+    old: [REQ-48.4]
+    new: RF-TRC-04
+  - capability: requirement-trace
+    old: [REQ-48.5]
+    new: RF-TRC-05
+  - capability: requirement-trace
+    old: [REQ-48.6]
+    new: RF-TRC-06
+  - capability: requirement-trace
+    old: [REQ-48.7]
+    new: RF-TRC-07
+  - capability: requirement-trace
+    old: [REQ-48.8]
+    new: RF-TRC-08
+  - capability: requirement-trace
+    old: [REQ-48.9]
+    new: RF-TRC-09
+  - capability: requirement-trace
+    old: [REQ-48.10]
+    new: RF-TRC-10
+  - capability: requirement-trace
+    old: [REQ-48.11]
+    new: RF-TRC-11
+  - capability: requirement-trace
+    old: [REQ-48.12]
+    new: RF-TRC-12
+  - capability: requirement-trace
+    old: [REQ-48.13]
+    new: RF-TRC-13
+  - capability: requirement-trace
+    old: [REQ-48.14]
+    new: RF-TRC-14
+  - capability: requirement-trace
+    old: [REQ-48.15]
+    new: RF-TRC-15
+  - capability: sdd-archive-lifecycle
+    old: [REQ-21.16]
+    new: RF-ARC-01
+  - capability: sdd-archive-lifecycle
+    old: [REQ-21.17]
+    new: RF-ARC-02
+  - capability: sdd-archive-lifecycle
+    old: [REQ-21.18]
+    new: RF-ARC-03
+  - capability: sdd-archive-lifecycle
+    old: [REQ-24.55]
+    new: RF-ARC-04
+  - capability: sdd-archive-lifecycle
+    old: [REQ-24.56]
+    new: RF-ARC-05
+  - capability: sdd-archive-lifecycle
+    old: [REQ-24.57]
+    new: RF-ARC-06
+  - capability: sdd-archive-lifecycle
+    old: [REQ-25.39]
+    new: RF-ARC-07
+  - capability: sdd-archive-lifecycle
+    old: [REQ-27.14]
+    new: RF-ARC-08
+  - capability: sdd-archive-lifecycle
+    old: [REQ-29.10]
+    new: RF-ARC-09
+  - capability: sdd-archive-lifecycle
+    old: [REQ-29.11]
+    new: RF-ARC-10
+  - capability: sdd-archive-lifecycle
+    old: [REQ-30.22]
+    new: RF-ARC-11
+  - capability: sdd-archive-lifecycle
+    old: [REQ-30.23]
+    new: RF-ARC-12
+  - capability: sdd-archive-lifecycle
+    old: [REQ-30.24]
+    new: RF-ARC-13
+  - capability: sdd-archive-lifecycle
+    old: [REQ-30.25]
+    new: RF-ARC-14
+  - capability: sdd-archive-lifecycle
+    old: [REQ-47.8]
+    new: RF-ARC-15
+  - capability: sdd-block-review-gates
+    old: [REQ-21.7]
+    new: RF-GAT-01
+  - capability: sdd-block-review-gates
+    old: [REQ-21.8]
+    new: RF-GAT-02
+  - capability: sdd-block-review-gates
+    old: [REQ-21.9]
+    new: RF-GAT-03
+  - capability: sdd-block-review-gates
+    old: [REQ-21.10]
+    new: RF-GAT-04
+  - capability: sdd-block-review-gates
+    old: [REQ-21.11]
+    new: RF-GAT-05
+  - capability: sdd-block-review-gates
+    old: [REQ-21.12]
+    new: RF-GAT-06
+  - capability: sdd-block-review-gates
+    old: [REQ-26.1]
+    new: RF-GAT-07
+  - capability: sdd-block-review-gates
+    old: [REQ-26.2]
+    new: RF-GAT-08
+  - capability: sdd-block-review-gates
+    old: [REQ-26.3]
+    new: RF-GAT-09
+  - capability: sdd-block-review-gates
+    old: [REQ-26.4]
+    new: RF-GAT-10
+  - capability: sdd-block-review-gates
+    old: [REQ-26.5]
+    new: RF-GAT-11
+  - capability: sdd-block-review-gates
+    old: [REQ-26.6]
+    new: RF-GAT-12
+  - capability: sdd-block-review-gates
+    old: [REQ-26.7]
+    new: RF-GAT-13
+  - capability: sdd-block-review-gates
+    old: [REQ-26.8]
+    new: RF-GAT-14
+  - capability: sdd-block-review-gates
+    old: [REQ-27.12]
+    new: RF-GAT-15
+  - capability: sdd-block-review-gates
+    old: [REQ-28.10]
+    new: RF-GAT-16
+  - capability: sdd-block-review-gates
+    old: [REQ-43.22]
+    new: RF-GAT-17
+  - capability: sdd-block-review-gates
+    old: [REQ-43.23]
+    new: RF-GAT-18
+  - capability: sdd-block-review-gates
+    old: [REQ-33.1]
+    new: RF-GAT-19
+  - capability: sdd-block-review-gates
+    old: [REQ-33.2]
+    new: RF-GAT-20
+  - capability: sdd-block-review-gates
+    old: [REQ-33.3]
+    new: RF-GAT-21
+  - capability: sdd-block-review-gates
+    old: [REQ-33.4]
+    new: RF-GAT-22
+  - capability: sdd-block-review-gates
+    old: [REQ-33.5]
+    new: RF-GAT-23
+  - capability: sdd-block-review-gates
+    old: [REQ-33.6]
+    new: RF-GAT-24
+  - capability: sdd-block-review-gates
+    old: [REQ-33.7]
+    new: RF-GAT-25
+  - capability: sdd-block-review-gates
+    old: [REQ-43.32]
+    new: RF-GAT-26
+  - capability: sdd-docs-publication
+    old: [REQ-27.5]
+    new: RF-PUB-01
+  - capability: sdd-docs-publication
+    old: [REQ-27.6]
+    new: RF-PUB-02
+  - capability: sdd-docs-publication
+    old: [REQ-27.7]
+    new: RF-PUB-03
+  - capability: sdd-docs-publication
+    old: [REQ-27.8]
+    new: RF-PUB-04
+  - capability: sdd-docs-publication
+    old: [REQ-27.9]
+    new: RF-PUB-05
+  - capability: sdd-docs-publication
+    old: [REQ-27.10]
+    new: RF-PUB-06
+  - capability: sdd-docs-publication
+    old: [REQ-27.11]
+    new: RF-PUB-07
+  - capability: sdd-docs-publication
+    old: [REQ-27.13]
+    new: RF-PUB-08
+  - capability: sdd-docs-publication
+    old: [REQ-43.26]
+    new: RF-PUB-09
+  - capability: sdd-docs-publication
+    old: [REQ-43.27]
+    new: RF-PUB-10
+  - capability: sdd-docs-publication
+    old: [REQ-27.18]
+    new: RF-PUB-11
+  - capability: sdd-docs-publication
+    old: [REQ-27.19]
+    new: RF-PUB-12
+  - capability: sdd-independent-review
+    old: [REQ-28.1]
+    new: RF-REV-01
+  - capability: sdd-independent-review
+    old: [REQ-28.2]
+    new: RF-REV-02
+  - capability: sdd-independent-review
+    old: [REQ-28.3]
+    new: RF-REV-03
+  - capability: sdd-independent-review
+    old: [REQ-28.4]
+    new: RF-REV-04
+  - capability: sdd-independent-review
+    old: [REQ-28.5]
+    new: RF-REV-05
+  - capability: sdd-independent-review
+    old: [REQ-28.6]
+    new: RF-REV-06
+  - capability: sdd-independent-review
+    old: [REQ-28.7]
+    new: RF-REV-07
+  - capability: sdd-independent-review
+    old: [REQ-28.8]
+    new: RF-REV-08
+  - capability: sdd-independent-review
+    old: [REQ-28.9]
+    new: RF-REV-09
+  - capability: sdd-independent-review
+    old: [REQ-28.41]
+    new: RF-REV-10
+  - capability: sdd-independent-review
+    old: [REQ-28.42]
+    new: RF-REV-11
+  - capability: sdd-independent-review
+    old: [REQ-28.43]
+    new: RF-REV-12
+  - capability: sdd-iso-evidence
+    old: [REQ-29.1]
+    new: RF-ISO-01
+  - capability: sdd-iso-evidence
+    old: [REQ-29.2]
+    new: RF-ISO-02
+  - capability: sdd-iso-evidence
+    old: [REQ-29.3]
+    new: RF-ISO-03
+  - capability: sdd-iso-evidence
+    old: [REQ-29.4]
+    new: RF-ISO-04
+  - capability: sdd-iso-evidence
+    old: [REQ-29.5]
+    new: RF-ISO-05
+  - capability: sdd-iso-evidence
+    old: [REQ-29.6]
+    new: RF-ISO-06
+  - capability: sdd-iso-evidence
+    old: [REQ-29.7]
+    new: RF-ISO-07
+  - capability: sdd-iso-evidence
+    old: [REQ-29.8]
+    new: RF-ISO-08
+  - capability: sdd-iso-evidence
+    old: [REQ-29.9]
+    new: RF-ISO-09
+  - capability: sdd-iso-evidence
+    old: [REQ-29.19]
+    new: RF-ISO-10
+  - capability: sdd-lane-kickoff
+    old: [REQ-21.1]
+    new: RF-KOF-01
+  - capability: sdd-lane-kickoff
+    old: [REQ-21.2]
+    new: RF-KOF-02
+  - capability: sdd-lane-kickoff
+    old: [REQ-21.3]
+    new: RF-KOF-03
+  - capability: sdd-lane-kickoff
+    old: [REQ-21.4]
+    new: RF-KOF-04
+  - capability: sdd-lane-kickoff
+    old: [REQ-25.35]
+    new: RF-KOF-05
+  - capability: sdd-lane-kickoff
+    old: [REQ-25.36]
+    new: RF-KOF-06
+  - capability: sdd-lane-kickoff
+    old: [REQ-25.37]
+    new: RF-KOF-07
+  - capability: sdd-lane-kickoff
+    old: [REQ-25.38]
+    new: RF-KOF-08
+  - capability: sdd-lane-kickoff
+    old: [REQ-27.3]
+    new: RF-KOF-09
+  - capability: sdd-lane-kickoff
+    old: [REQ-27.4]
+    new: RF-KOF-10
+  - capability: sdd-lane-kickoff
+    old: [REQ-29.12]
+    new: RF-KOF-11
+  - capability: sdd-lane-kickoff
+    old: [REQ-29.13]
+    new: RF-KOF-12
+  - capability: sdd-orchestrator-assets
+    title: Chain Strategy Guidance Parity
+    new: RF-ORQ-01
+  - capability: sdd-orchestrator-assets
+    title: Chain Strategy Propagation to Downstream Phases
+    new: RF-ORQ-02
+  - capability: sdd-orchestrator-assets
+    title: Non-Claude Chain Strategy Guidance Parity
+    new: RF-ORQ-03
+  - capability: sdd-orchestrator-assets
+    title: Non-Claude Strategy Propagation to Downstream Phases
+    new: RF-ORQ-04
+  - capability: sdd-orchestrator-assets
+    title: Platform-Native Solo Inline Semantics Preservation
+    new: RF-ORQ-05
+  - capability: sdd-orchestrator-assets
+    title: chained-pr Skill Binding in Chain Strategy Guidance
+    new: RF-ORQ-06
+  - capability: sdd-orchestrator-assets
+    title: Inline Chain Strategy Summary Retained
+    new: RF-ORQ-07
+  - capability: sdd-orchestrator-assets
+    title: Cursor Chain Strategy Section Parity
+    new: RF-ORQ-08
+  - capability: sdd-orchestrator-assets
+    title: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
+    new: RF-ORQ-09
+  - capability: sdd-orchestrator-assets
+    title: Golden Fixture and Static Assertion Coverage for the Binding
+    new: RF-ORQ-10
+  - capability: sdd-orchestrator-assets
+    title: Claude-Native Delegation Semantics
+    new: RF-ORQ-11
+  - capability: sdd-orchestrator-assets
+    title: Claude Golden and Static Validation Coverage
+    new: RF-ORQ-12
+  - capability: sdd-orchestrator-assets
+    title: Orchestrator-Owned Discovery and Confirmed Handoff
+    new: RF-ORQ-13
+  - capability: sdd-orchestrator-assets
+    title: Optional-Lane and Status-v1 Compatibility
+    new: RF-ORQ-14
+  - capability: sdd-orchestrator-assets
+    title: Optional Research Lifecycle Parity Across Catalog Agents
+    new: RF-ORQ-15
+  - capability: sdd-orchestrator-assets
+    title: Read-Only Judgment Day Judges
+    new: RF-ORQ-16
+  - capability: sdd-orchestrator-assets
+    old: [REQ-29.17]
+    new: RF-ORQ-17
+  - capability: sdd-orchestrator-assets
+    old: [REQ-30.28]
+    new: RF-ORQ-18
+  - capability: sdd-orchestrator-assets
+    old: [REQ-30.31]
+    new: RF-ORQ-19
+  - capability: sdd-orchestrator-assets
+    old: [REQ-32.3]
+    new: RF-ORQ-20
+  - capability: sdd-orchestrator-assets
+    old: [REQ-33.8]
+    new: RF-ORQ-21
+  - capability: sdd-orchestrator-assets
+    old: [REQ-33.9]
+    new: RF-ORQ-22
+  - capability: sdd-orchestrator-assets
+    old: [REQ-33.10]
+    new: RF-ORQ-23
+  - capability: sdd-orchestrator-assets
+    old: [REQ-33.11]
+    new: RF-ORQ-24
+  - capability: sdd-orchestrator-assets
+    old: [REQ-46.3]
+    new: RF-ORQ-25
+  - capability: sdd-orchestrator-assets
+    old: [REQ-46.4]
+    new: RF-ORQ-26
+  - capability: sdd-preflight-configuration
+    old: [REQ-21.5]
+    new: RF-PRE-01
+  - capability: sdd-preflight-configuration
+    old: [REQ-21.6]
+    new: RF-PRE-02
+  - capability: sdd-preflight-configuration
+    old: [REQ-26.9]
+    new: RF-PRE-03
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.12]
+    new: RF-PRE-04
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.13]
+    new: RF-PRE-05
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.14]
+    new: RF-PRE-06
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.15]
+    new: RF-PRE-07
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.16]
+    new: RF-PRE-08
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.17]
+    new: RF-PRE-09
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.18]
+    new: RF-PRE-10
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.19]
+    new: RF-PRE-11
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.20]
+    new: RF-PRE-12
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.21]
+    new: RF-PRE-13
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.22]
+    new: RF-PRE-14
+  - capability: sdd-preflight-configuration
+    old: [REQ-28.23]
+    new: RF-PRE-15
+  - capability: sdd-research
+    title: 'Open Capability Admission for Optional Research (formerly: Closed Capability Admission)'
+    new: RF-RES-01
+  - capability: sdd-research
+    title: Auditable Evidence Integrity
+    new: RF-RES-02
+  - capability: sdd-research
+    title: Hybrid Completion and Recovery
+    new: RF-RES-03
+  - capability: sdd-role-closure-handoff
+    old: [REQ-21.13]
+    new: RF-RCL-01
+  - capability: sdd-role-closure-handoff
+    old: [REQ-21.14]
+    new: RF-RCL-02
+  - capability: sdd-role-closure-handoff
+    old: [REQ-21.15]
+    new: RF-RCL-03
+  - capability: spec-baseline-integration
+    old: [REQ-29.14]
+    new: RF-BAS-01
+  - capability: structured-handoffs
+    old: [REQ-1.1]
+    new: RF-HND-01
+  - capability: structured-handoffs
+    old: [REQ-1.2]
+    new: RF-HND-02
+  - capability: structured-handoffs
+    old: [REQ-1.3]
+    new: RF-HND-03
+  - capability: structured-handoffs
+    old: [REQ-1.4]
+    new: RF-HND-04
+  - capability: structured-handoffs
+    old: [REQ-2.1]
+    new: RF-HND-05
+  - capability: structured-handoffs
+    old: [REQ-2.2]
+    new: RF-HND-06
+  - capability: structured-handoffs
+    old: [REQ-2.3]
+    new: RF-HND-07
+  - capability: tui-ui-parity
+    old: [REQ-17.1]
+    new: RF-UIP-01
+  - capability: tui-ui-parity
+    old: [REQ-17.2]
+    new: RF-UIP-02
+  - capability: tui-ui-parity
+    old: [REQ-17.3]
+    new: RF-UIP-03
+  - capability: tui-ui-parity
+    old: [REQ-17.4]
+    new: RF-UIP-04
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.1]
+    new: RF-UPS-01
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.2]
+    new: RF-UPS-02
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.3]
+    new: RF-UPS-03
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.4]
+    new: RF-UPS-04
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.5]
+    new: RF-UPS-05
+  - capability: upstream-absorption-protocol
+    old: [REQ-20.6]
+    new: RF-UPS-06
+  - capability: visual-decoupling
+    old: [REQ-09.4]
+    new: RF-VIS-01
+  - capability: workspace-topology
+    old: [REQ-1.1]
+    new: RF-TOP-01
+  - capability: workspace-topology
+    old: [REQ-1.2]
+    new: RF-TOP-02
+  - capability: workspace-topology
+    old: [REQ-2.1]
+    new: RF-TOP-03
+  - capability: workspace-topology
+    old: [REQ-2.2]
+    new: RF-TOP-04
+  - capability: workspace-topology
+    old: [REQ-2.3]
+    new: RF-TOP-05
+  - capability: workspace-topology
+    old: [REQ-2.4]
+    new: RF-TOP-06
+  - capability: workspace-topology
+    old: [REQ-2.5]
+    new: RF-TOP-07
+  - capability: workspace-topology
+    old: [REQ-25.25]
+    new: RF-TOP-08
+  - capability: workspace-topology
+    old: [REQ-25.26]
+    new: RF-TOP-09
+  - capability: workspace-topology
+    old: [REQ-25.27]
+    new: RF-TOP-10
+  - capability: workspace-topology
+    old: [REQ-27.1]
+    new: RF-TOP-11
+  - capability: workspace-topology
+    old: [REQ-30.21]
+    new: RF-TOP-12
+  - capability: workspace-topology
+    old: [REQ-2.6]
+    new: RF-TOP-13
+  - capability: workspace-topology
+    old: [REQ-32.1]
+    new: RF-TOP-14
+  - capability: workspace-topology
+    old: [REQ-32.2]
+    new: RF-TOP-15
+  - capability: workspace-topology
+    old: [REQ-43.19]
+    new: RF-TOP-16
+  - capability: workspace-topology
+    old: [REQ-43.20]
+    new: RF-TOP-17
+  - capability: workspace-topology
+    old: [REQ-43.21]
+    new: RF-TOP-18

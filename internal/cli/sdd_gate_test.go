@@ -15,7 +15,7 @@ import (
 // --cwd/--change/--execution-style checkpointed/--handoff-policy none),
 // failing the test immediately on error. Every gate record scenario in this
 // file needs a sealed kickoff first: checkpointed mode is what makes block
-// review gates apply at all (REQ-21.7).
+// review gates apply at all (RF-GAT-01).
 func sealForGateTest(t *testing.T, root, change string, extra ...string) {
 	t.Helper()
 	args := append([]string{"seal", "--cwd", root, "--change", change, "--execution-style", "checkpointed", "--handoff-policy", "none"}, extra...)
@@ -71,7 +71,7 @@ func TestRunSDDGateRecordFixedGateNeedsNoSealedRoster(t *testing.T) {
 	}
 }
 
-// TestRunSDDGateRecordRejectedWithoutReason is REQ-21.12's hard rule,
+// TestRunSDDGateRecordRejectedWithoutReason is RF-GAT-06's hard rule,
 // exercised end to end through the CLI (args.go already enforces it; this
 // confirms the CLI adapter surfaces that rejection as a failing exit).
 func TestRunSDDGateRecordRejectedWithoutReason(t *testing.T) {
@@ -138,8 +138,8 @@ func TestRunSDDGateRecordOnArchivedRootRefused(t *testing.T) {
 	if err == nil {
 		t.Fatal("RunSDDGate() = nil error, se esperaba rechazo por raiz archivada (D-14)")
 	}
-	if !strings.Contains(err.Error(), "REQ-21.18") {
-		t.Fatalf("error = %v, se esperaba que nombrase REQ-21.18", err)
+	if !strings.Contains(err.Error(), "RF-ARC-03") {
+		t.Fatalf("error = %v, se esperaba que nombrase RF-ARC-03", err)
 	}
 }
 
@@ -188,8 +188,8 @@ func TestRunSDDGateShowOnEmptyLedger(t *testing.T) {
 // TestRunSDDGateRecordEmitsLastRoleNoticeExactlyOnceForSingleFullstackRole
 // is task 18.1's base case (routing already confirmed in task 10.1):
 // approving the sole fullstack role's role-apply gate emits the last-role
-// notice exactly once and writes NO handoff.md (REQ-21.13; REQ-21.14 was
-// retired, the ledger alone opens verify, REQ-21.15).
+// notice exactly once and writes NO handoff.md (RF-RCL-01; REQ-21.14 was
+// retired, the ledger alone opens verify, RF-RCL-03).
 func TestRunSDDGateRecordEmitsLastRoleNoticeExactlyOnceForSingleFullstackRole(t *testing.T) {
 	root, changeRoot := newGovernanceWorkspace(t, "inc-99-example")
 	sealForGateTest(t, root, "inc-99-example")
@@ -271,7 +271,7 @@ func TestRunSDDGateRecordNoNoticeWithRolesStillPending(t *testing.T) {
 	}
 }
 
-// TestRunSDDGateRecordRejectedRoleApplyNeverEmitsNotice is REQ-21.13's
+// TestRunSDDGateRecordRejectedRoleApplyNeverEmitsNotice is RF-RCL-01's
 // third scenario: a rejection never fires the notice, even for the only
 // pending role, and never writes handoff.md.
 func TestRunSDDGateRecordRejectedRoleApplyNeverEmitsNotice(t *testing.T) {
@@ -287,7 +287,7 @@ func TestRunSDDGateRecordRejectedRoleApplyNeverEmitsNotice(t *testing.T) {
 		t.Fatalf("RunSDDGate() error = %v", err)
 	}
 	if strings.Contains(out.String(), lastRoleNoticeMarker) {
-		t.Fatalf("aviso de ultimo rol emitido pese a un rechazo (REQ-21.13, tercer escenario):\n%s", out.String())
+		t.Fatalf("aviso de ultimo rol emitido pese a un rechazo (RF-RCL-01, tercer escenario):\n%s", out.String())
 	}
 	if _, statErr := os.Stat(filepath.Join(changeRoot, "handoff.md")); statErr == nil {
 		t.Fatal("handoff.md fue escrito pese a un rechazo; se esperaba que no existiese")
@@ -314,7 +314,7 @@ func newGovernanceGitWorkspace(t *testing.T, change string) (root, changeRoot st
 	writeCLIFixture(t, filepath.Join(root, "README.md"), "root\n")
 	runGateTestGit(t, root, "add", "--", "README.md")
 	runGateTestGit(t, root, "commit", "-q", "-m", "root")
-	// inc-25 (guarda A, REQ-25.19, REQ-25.37): el cambio vive en un repositorio git en `main` y la
+	// inc-25 (guarda A, RF-BRA-20, RF-KOF-07): el cambio vive en un repositorio git en `main` y la
 	// compuerta de integración se registra en el contexto de archivado. Un cambio sin ningún
 	// kickoff.yaml no está exento, así que el fixture lo retro-sella (`--infer`: kickoff.yaml sin
 	// instantánea de política git), que es la forma de un cambio preexistente y lo exime.

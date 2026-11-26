@@ -258,8 +258,8 @@ func configWithTopology(topology string) string {
 	return "workspace:\n  name: Test\n  topology: " + topology + "\n  specs_repository: especificacion\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
 }
 
-// workspace-topology REQ-25.25 (escenario «La carga rechaza la topología
-// retirada») y REQ-2.1: el literal retirado da un mensaje propio que nombra la
+// workspace-topology RF-TOP-08 (escenario «La carga rechaza la topología
+// retirada») y RF-TOP-03: el literal retirado da un mensaje propio que nombra la
 // corrección, tanto desde bytes como desde un fichero.
 func TestLoadRejectsTheRetiredTopologyWithAnActionableMessage(t *testing.T) {
 	data := configWithTopology("monorepo-decoupled")
@@ -293,7 +293,7 @@ func TestLoadRejectsTheRetiredTopologyWithAnActionableMessage(t *testing.T) {
 	})
 }
 
-// workspace-topology REQ-2.1 (escenario «Topología desconocida o ausente»): el
+// workspace-topology RF-TOP-03 (escenario «Topología desconocida o ausente»): el
 // resto de valores conserva el mensaje existente, con los dos valores restantes.
 func TestLoadKeepsTheUnknownTopologyMessageWithTheRemainingValues(t *testing.T) {
 	for name, topology := range map[string]string{

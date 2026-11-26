@@ -24,11 +24,11 @@ Leer antes de escribir: la documentación mantenida se actualiza con conocimient
   - Resuelve el workspace con `workspace.Locate(cwd)` (la misma resolución que `axiom sdd status` sin raíz explícita) y proyecta con `projectTechnicalContext`.
   - JSON: `{"schemaName":"axiom.workspace-context","schemaVersion":1,"workspaceRoot":"<abs>","technicalContext":{…}|null}`; con `technicalContext` de la misma forma que el campo del status (`maintained`/`reference`, `paths` absolutas, `entry` si se declaró).
   - Sin declaración: `technicalContext: null` y código 0.
-  - Declaración inválida: falla cerrado (REQ-30.30): `technicalContext: null`, campo `invalid` con el motivo y la indicación de `axiom workspace validate`, y código distinto de cero.
+  - Declaración inválida: falla cerrado (RF-CTX-20): `technicalContext: null`, campo `invalid` con el motivo y la indicación de `axiom workspace validate`, y código distinto de cero.
   - Sin `--json`: texto breve en español con `entry` y `paths` de cada modo, o «sin contexto técnico declarado».
 - El paso 7 deja de citar `technical_context.maintained` «in `axiom.yaml`» como fuente del locator y remite al comando nuevo. La frase de RDD del paso 7 (`routing.go:77`, «The native review candidate…») es de C-01-c (apartado 6.3 del README): **no se retira**.
-- El test `TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext` prohibía mencionar el contexto técnico fuera del paso 7 (decisión deliberada de inc-24, REQ-24.58: «El cierre NO DEBE alterar los demás pasos»). Se revierte a propósito por C-04-b; el commit lo explica.
-- La spec viva se modifica (REQ-24.58 y REQ-24.28) en vez de añadir requisitos nuevos, para no asignar un identificador nuevo antes de C-03-b.
+- El test `TestRenderRoutingClosesODDWithTheMaintainedTechnicalContext` prohibía mencionar el contexto técnico fuera del paso 7 (decisión deliberada de inc-24, RF-RUT-14: «El cierre NO DEBE alterar los demás pasos»). Se revierte a propósito por C-04-b; el commit lo explica.
+- La spec viva se modifica (RF-RUT-14 y RF-CTX-03) en vez de añadir requisitos nuevos, para no asignar un identificador nuevo antes de C-03-b.
 
 ## Alcance autorizado
 
@@ -62,7 +62,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
   - Reescribir la regla del test: fija la frase nueva en el paso 2 y en el paso 7, idéntica para todos los adaptadores; ningún otro paso (0, 1, 3-6) la menciona.
   - Comprobación: `go test ./internal/components/agentguidance/...`.
 - [x] **T4 · Spec viva** (ruta: en línea)
-  - MODIFIED REQ-24.58 (`organic-agent-trigger-rules`) y REQ-24.28 (`project-technical-context`) en `## Spec viva`; integración con `axiom archive integrate --odd odd-lee-contexto`.
+  - MODIFIED RF-RUT-14 (`organic-agent-trigger-rules`) y RF-CTX-03 (`project-technical-context`) en `## Spec viva`; integración con `axiom archive integrate --odd odd-lee-contexto`.
   - Comprobación: la integración termina sin rechazo y repetirla da `already_integrated`.
 
 ## Criterio de terminado
@@ -80,14 +80,14 @@ Una sola PR (`single-pr`) con etiqueta `type:feat`; previsión, unas 300-450 lí
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (REQ-24.58)
+### Requirement: El cierre de ODD mantiene al día el contexto técnico mantenido (RF-RUT-14)
 
 Las instrucciones de enrutamiento gestionadas que proyectan el protocolo ODD DEBEN incluir, en sus pasos de exploración y de cierre, estas reglas mínimas, en un texto idéntico para todos los proyectos y adaptadores:
 
 1. Lectura del contexto técnico: el paso de exploración DEBE indicar que, si el proyecto declara un contexto técnico mantenido, se obtienen los localizadores con `axiom workspace context --cwd <repo> --json`, se abre primero `technicalContext.maintained.entry` y se consultan los demás `technicalContext.maintained.paths` solo bajo demanda. Sin contexto mantenido declarado, el paso NO DEBE exigir ninguna lectura adicional. La regla NO DEBE depender de `axiom sdd status --json` ni de un cambio SDD.
 2. Contexto técnico: el cierre DEBE indicar que, si el proyecto declara un contexto técnico mantenido y una unidad de trabajo cambia algo que ese contexto documenta, la documentación afectada se actualiza en el mismo commit de esa unidad de trabajo, con los localizadores leídos en la exploración (la salida de `axiom workspace context --cwd <repo> --json`). La regla NO DEBE exigir nada cuando el proyecto no declara contexto mantenido y NO DEBE autorizar la modificación de documentación declarada como de referencia (`technical_context.reference`).
-3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`, que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`) y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (REQ-27.17). La integración en `openspec/specs/` es la única escritura permitida fuera del documento ODD y del código.
-4. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (REQ-30.7 de `odd-living-spec-integration`).
+3. Spec viva: el cierre DEBE indicar que, cuando el trabajo cambia o debe revisar la spec viva, la delta OpenSpec se escribe en la sección `## Spec viva` del documento `odd/tasks/<feature>.md`, que todo bug (señalado con `Tipo: bug`) aporta una `## Spec viva` con contenido o el marcador de la sección `## Impacto en la spec` (la línea `Sin impacto en la spec` más una línea `Motivo:` no vacía, el mismo contrato que el carril SDD; el bug ODD no exige `## Informe de bug`) y que se ejecuta `axiom archive integrate --odd <feature>` en el commit de la unidad de trabajo que cierra la feature, sin paradas (RF-RUT-18). La integración en `openspec/specs/` es la única escritura permitida fuera del documento ODD y del código.
+4. Remisión: el cierre NO DEBE contener el valor del carril ni la condición ISO de ningún proyecto; la negativa de la integración en proyectos ISO la emite el verbo (RF-OLS-07 de `odd-living-spec-integration`).
 
 Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SDD. La proyección DEBE seguir siendo determinista: el mismo texto en cada renderizado. Estas reglas son la extensión de `project-technical-context` y de `odd-living-spec-integration` al carril ODD, que no tiene archive.
 (Previously: solo el paso de cierre mencionaba el contexto técnico, con el localizador de `axiom sdd status --json`, y la exploración no lo leía)
@@ -146,11 +146,11 @@ Estas reglas NO DEBEN alterar los demás pasos del protocolo ODD ni el carril SD
 ```openspec
 ## MODIFIED Requirements
 
-### Requirement: Proyección Aditiva de `technicalContext` en el Status v2 (REQ-24.28)
+### Requirement: Proyección Aditiva de `technicalContext` en el Status v2 (RF-CTX-03)
 
 Cuando `axiom.yaml` declara `technical_context:` y la declaración es válida, el status v2 DEBE incluir el campo opcional `technicalContext` con, por cada modo declarado (`maintained`, `reference`), `paths` (rutas absolutas) y, si se declaró, `entry` (ruta absoluta). Un modo no declarado NO DEBE aparecer y, sin declaración, el campo NO DEBE aparecer. El campo se proyecta con o sin cambio seleccionado, también cuando el status queda bloqueado por no haber cambios activos o por una selección ambigua, y NO DEBE alterar `artifacts`, `artifactPaths` ni `contextFiles`: el delta de contexto no se proyecta en el status.
 
-La misma proyección DEBE obtenerse sin cambio SDD con `axiom workspace context [--cwd <dir>] [--json]`, que resuelve el workspace desde `--cwd` y devuelve un JSON con `schemaName` `axiom.workspace-context`, `schemaVersion` 1, `workspaceRoot` y `technicalContext` (la misma forma que el campo del status, o `null` sin declaración). Sin declaración el comando DEBE terminar con código 0. Con una declaración inválida DEBE fallar cerrado (REQ-30.30): `technicalContext` `null`, un campo `invalid` con el motivo y la indicación de ejecutar `axiom workspace validate`, y código distinto de cero.
+La misma proyección DEBE obtenerse sin cambio SDD con `axiom workspace context [--cwd <dir>] [--json]`, que resuelve el workspace desde `--cwd` y devuelve un JSON con `schemaName` `axiom.workspace-context`, `schemaVersion` 1, `workspaceRoot` y `technicalContext` (la misma forma que el campo del status, o `null` sin declaración). Sin declaración el comando DEBE terminar con código 0. Con una declaración inválida DEBE fallar cerrado (RF-CTX-20): `technicalContext` `null`, un campo `invalid` con el motivo y la indicación de ejecutar `axiom workspace validate`, y código distinto de cero.
 (Previously: la proyección solo existía en el status v2 y no constaba su presencia con cero o varios cambios activos)
 
 #### Scenario: Ambos modos proyectados

@@ -9,7 +9,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
-// Rechazos y decisión del modo de trabajo de `ensure` (REQ-25.8, design §4.3): la decisión
+// Rechazos y decisión del modo de trabajo de `ensure` (RF-BRA-08, design §4.3): la decisión
 // tipada de `ask` y los rechazos del modo, con la continuación como orden ejecutable.
 
 const modeTestCWD = `C:\repos\mi proyecto`

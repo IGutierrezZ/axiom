@@ -12,7 +12,7 @@ Definir de forma exhaustiva los requerimientos y escenarios de prueba para la ex
 
 Exposición de las operaciones de estado, despacho y presupuesto SDD directamente en el ejecutable `axiom`.
 
-### Requirement: Subcomando axiom sdd status (REQ-13.1)
+### Requirement: Subcomando axiom sdd status (RF-CLI-01)
 El binario `axiom` DEBE soportar la invocación `axiom sdd status [change] [flags]` (y su alias `axiom sdd-status`), retornando el informe de estado estructurado de la fase actual con idéntica fidelidad de contrato JSON que el motor v2.
 
 #### Scenario: Consulta de estado mediante axiom sdd status
@@ -21,7 +21,7 @@ El binario `axiom` DEBE soportar la invocación `axiom sdd status [change] [flag
 - **ENTONCES** la salida estándar emite el JSON del estado del cambio con código de salida `0`
 - **Y** los campos `activeChange`, `artifactStatuses` y `nextRecommended` se resuelven correctamente
 
-### Requirement: Subcomando axiom sdd continue (REQ-13.2)
+### Requirement: Subcomando axiom sdd continue (RF-CLI-02)
 El binario `axiom` DEBE soportar `axiom sdd continue [change]` para ejecutar el cálculo del despachador y emitir la siguiente acción autorizada del ciclo.
 
 #### Scenario: Enrutamiento mediante axiom sdd continue
@@ -29,7 +29,7 @@ El binario `axiom` DEBE soportar `axiom sdd continue [change]` para ejecutar el 
 - **CUANDO** se ejecuta `axiom sdd continue <change>`
 - **ENTONCES** la salida emite la instrucción correspondiente a la siguiente fase autorizada (`sdd-tasks` o `sdd-apply`)
 
-### Requirement: Subcomando axiom sdd attempt tras la retirada de la gobernanza de presupuesto (REQ-13.3)
+### Requirement: Subcomando axiom sdd attempt tras la retirada de la gobernanza de presupuesto (RF-CLI-03)
 El binario `axiom` NO DEBE soportar las operaciones `acquire` y `settle` del libro mayor de intentos de ejecución bajo `axiom sdd attempt`, siguiendo la retirada de la gobernanza de *attempts* absorbida de upstream (commit `18fa04fb`). El binario `axiom` DEBE conservar sin cambio de comportamiento la operación `axiom sdd attempt grant`, que registra la autoridad de edición por raíz (`--root`) para el cambio activo.
 
 (Previamente: el binario `axiom` DEBÍA soportar las operaciones `acquire` y `settle` del libro mayor de intentos de ejecución, `axiom sdd attempt acquire` y `axiom sdd attempt settle`.)
@@ -52,7 +52,7 @@ El binario `axiom` NO DEBE soportar las operaciones `acquire` y `settle` del lib
 
 Instrucciones de los agentes configuradas para utilizar la CLI `axiom`.
 
-### Requirement: Referencia exclusiva a la CLI axiom en prompts (REQ-13.4)
+### Requirement: Referencia exclusiva a la CLI axiom en prompts (RF-CLI-04)
 Los prompts de orquestadores, comandos slash y guías de agentes NO DEBEN instruir a ejecutar `gentle-ai`, sino que deben prescribir la sintaxis `axiom sdd ...` (o `axiom sdd-*`).
 
 #### Scenario: Verificación de sintaxis de comandos en sdd-orchestrator-sections.md
@@ -65,9 +65,9 @@ Los prompts de orquestadores, comandos slash y guías de agentes NO DEBEN instru
 - **DADO** el comando `/sdd-status` en OpenCode
 - **CUANDO** el agente ejecuta la tarea descrita en el archivo markdown del comando
 - **ENTONCES** invoca `axiom sdd status` con su herramienta bash
-### Requirement: `blocked(wrong_branch)` en `axiom sdd status` (REQ-25.42)
+### Requirement: `blocked(wrong_branch)` en `axiom sdd status` (RF-CLI-05)
 
-Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cambio es `wrong_branch`, `axiom sdd status` DEBE proyectar el estado de aplicación como bloqueado con el motivo tipado `blocked(wrong_branch)`, el segundo motivo tipado junto a `blocked(edit_authority_missing)`. El motivo DEBE nombrar el repositorio, la rama actual y la rama esperada, e incluir la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane`. En un repositorio con rama de cambio (`monorepo-embedded`) se evalúa en toda fase: en la fase archive la rama esperada es la rama de archivado `<prefijo>/<cambio>-archive` y la continuación exacta es `axiom branch ensure --cwd <ruta> --change <c> --archive`, de modo que estar en la rama del cambio, en la de integración o en una de rol bloquea; en el resto de fases la rama esperada es la del cambio (o una de rol). En un repositorio de código de un `multirepo` solo se evalúa cuando el estado de aplicación evalúa unidades de trabajo que lo tocan (apply); en el repositorio de specs de un `multirepo` exige la rama de integración, también en la fase archive. La evaluación NO consulta si la rama de integración contiene cambios activos (REQ-25.20 de `change-branch-lifecycle`). NO se proyecta para cambios exentos (REQ-25.37 de `sdd-lane-kickoff`). Cuando concurren `wrong_branch` y `edit_authority_missing`, `wrong_branch` DEBE proyectarse primero, porque las raíces autorizadas dependen de la rama correcta (supuesto S-9). `axiom sdd continue` DEBE reflejar el mismo bloqueo sin autorizar ninguna fase siguiente. La evaluación DEBE ser de solo lectura y, si git no está disponible o la ruta no es un repositorio git, NO DEBE bloquear y DEBE emitir un aviso. El motivo NO lleva envoltorio de consentimiento: la continuación es una orden que el orquestador ejecuta, no una concesión.
+Cuando el veredicto de rama (RF-BRA-19 de `change-branch-lifecycle`) para el cambio es `wrong_branch`, `axiom sdd status` DEBE proyectar el estado de aplicación como bloqueado con el motivo tipado `blocked(wrong_branch)`, el segundo motivo tipado junto a `blocked(edit_authority_missing)`. El motivo DEBE nombrar el repositorio, la rama actual y la rama esperada, e incluir la continuación exacta: la orden `axiom branch ensure` con `--cwd`, `--change` y, si procede, `--lane`. En un repositorio con rama de cambio (`monorepo-embedded`) se evalúa en toda fase: en la fase archive la rama esperada es la rama de archivado `<prefijo>/<cambio>-archive` y la continuación exacta es `axiom branch ensure --cwd <ruta> --change <c> --archive`, de modo que estar en la rama del cambio, en la de integración o en una de rol bloquea; en el resto de fases la rama esperada es la del cambio (o una de rol). En un repositorio de código de un `multirepo` solo se evalúa cuando el estado de aplicación evalúa unidades de trabajo que lo tocan (apply); en el repositorio de specs de un `multirepo` exige la rama de integración, también en la fase archive. La evaluación NO consulta si la rama de integración contiene cambios activos (RF-BRA-21 de `change-branch-lifecycle`). NO se proyecta para cambios exentos (RF-KOF-07 de `sdd-lane-kickoff`). Cuando concurren `wrong_branch` y `edit_authority_missing`, `wrong_branch` DEBE proyectarse primero, porque las raíces autorizadas dependen de la rama correcta (supuesto S-9). `axiom sdd continue` DEBE reflejar el mismo bloqueo sin autorizar ninguna fase siguiente. La evaluación DEBE ser de solo lectura y, si git no está disponible o la ruta no es un repositorio git, NO DEBE bloquear y DEBE emitir un aviso. El motivo NO lleva envoltorio de consentimiento: la continuación es una orden que el orquestador ejecuta, no una concesión.
 
 #### Scenario: Status en la rama de integración de un monorepo
 - **DADO** un cambio `x` con instantánea en el `kickoff.yaml` y el repositorio del planning home desplegado en `main`
@@ -137,7 +137,7 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 - **CUANDO** se compara con el de antes de este incremento
 - **ENTONCES** ninguna clave existente cambia de nombre, tipo ni valor
 
-### Requirement: Las Raíces Registradas por `ensure` Entran en `allowedEditRoots` (REQ-25.43)
+### Requirement: Las Raíces Registradas por `ensure` Entran en `allowedEditRoots` (RF-CLI-06)
 
 `actionContext.allowedEditRoots` DEBE incluir, además de `workspaceRoot` y las concesiones por cambio, las raíces absolutas de los repositorios y worktrees que `axiom branch ensure` registró para el cambio (en modo `in_place`, la raíz del propio repositorio). Las rutas de las unidades de trabajo de `tasks.md` y `tasks.<rol>.md` DEBEN resolverse respecto del worktree que corresponde al rol (el de la rama de rol para `tasks.<rol>.md` cuando existe, y el del cambio en otro caso) y reducirse a su raíz git. Un cambio cuyas tareas tocan solo sus propios worktrees NO DEBE quedar en `blocked(edit_authority_missing)`. Una raíz no registrada por `ensure` sigue exigiendo la concesión por cambio (`axiom sdd attempt grant`). Sin registro local para el cambio, el comportamiento DEBE ser el anterior a este incremento.
 
@@ -171,9 +171,9 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 
 ---
 
-### Requirement: `status` y `continue` Resuelven los Cambios de los Worktrees Registrados (REQ-25.44)
+### Requirement: `status` y `continue` Resuelven los Cambios de los Worktrees Registrados (RF-CLI-07)
 
-`axiom sdd status` y `axiom sdd continue` DEBEN resolver los cambios activos que viven en los worktrees registrados en el registro local de `axiom branch` (REQ-25.14), de modo que, al ejecutarse desde el checkout principal u otro directorio del proyecto, `axiom sdd status <cambio>` resuelva el cambio en su worktree. En ese caso `workspaceRoot`, `planningHome`, `changeRoot` y `artifactPaths` DEBEN referirse al worktree. Sin nombre de cambio, los candidatos DEBEN incluir los cambios activos de los worktrees registrados con el orden de preferencia vigente. Si un mismo cambio figura en el checkout principal y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado, porque el cambio ya está fusionado y solo falta archivarlo (REQ-25.45 de `change-branch-lifecycle`). Una entrada del registro cuyo worktree ya no existe DEBE omitirse con un aviso. Con `--cwd` dentro de un worktree, el cambio se resuelve en su propio árbol (REQ-25.28 de `planning-home-resolution`).
+`axiom sdd status` y `axiom sdd continue` DEBEN resolver los cambios activos que viven en los worktrees registrados en el registro local de `axiom branch` (RF-BRA-15), de modo que, al ejecutarse desde el checkout principal u otro directorio del proyecto, `axiom sdd status <cambio>` resuelva el cambio en su worktree. En ese caso `workspaceRoot`, `planningHome`, `changeRoot` y `artifactPaths` DEBEN referirse al worktree. Sin nombre de cambio, los candidatos DEBEN incluir los cambios activos de los worktrees registrados con el orden de preferencia vigente. Si un mismo cambio figura en el checkout principal y en un worktree, prevalece el del worktree; si figura en el worktree de la rama del cambio y en el de la rama de archivado, prevalece el de la rama de archivado, porque el cambio ya está fusionado y solo falta archivarlo (RF-BRA-13 de `change-branch-lifecycle`). Una entrada del registro cuyo worktree ya no existe DEBE omitirse con un aviso. Con `--cwd` dentro de un worktree, el cambio se resuelve en su propio árbol (RF-PLH-13 de `planning-home-resolution`).
 
 #### Scenario: Status desde el checkout principal resuelve el worktree
 - **DADO** un proyecto cuyo checkout principal solo contiene `archive/` y un cambio `x` activo en un worktree registrado
@@ -206,7 +206,7 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 - **DADO** el cambio `x` en un worktree registrado
 - **CUANDO** se ejecuta `axiom sdd continue x --cwd <checkout principal>`
 - **ENTONCES** la siguiente fase autorizada se calcula sobre el cambio del worktree
-### Requirement: `axiom sdd status` Proyecta el Carril Efectivo del Proyecto (REQ-27.2)
+### Requirement: `axiom sdd status` Proyecta el Carril Efectivo del Proyecto (RF-CLI-08)
 
 `axiom sdd status` DEBE incluir, en el JSON v1 y en el v2 y con o sin cambio seleccionado, un campo opcional `workflow` con el carril efectivo (`lane`: `odd`, `sdd` o `ask`) y su origen (`source`), con los tokens estables en inglés `declared`, `default`, `no_workspace` e `invalid`. El origen `declared` indica que `axiom.yaml` declara `workflow.lane`; `default` que `axiom.yaml` es válido y no lo declara (carril `sdd`); `no_workspace` que no hay `axiom.yaml` (repositorio no gobernado por Axiom); e `invalid` que el bloque `workflow` no es válido. Con `no_workspace` o `invalid` el carril proyectado DEBE ser `ask`, nunca `sdd`: la ausencia de configuración o una configuración inválida NO DEBEN activar SDD automático. El campo DEBE estar presente con `changeName: null` cuando no hay cambio seleccionado, con el mismo criterio que `technicalContext`, y NO DEBE alterar ningún otro campo del contrato ni de las rutas proyectadas. Un consumidor anterior que ignore los campos desconocidos DEBE seguir funcionando. El contrato publicado (`sdd-status-contract.md`) DEBE documentar el campo y la regla de fallo cerrado hacia `ask`.
 (Previously: el campo se proyectaba con el mismo criterio que `baseline` y `technicalContext`; la baseline ajena se retira)
@@ -260,7 +260,7 @@ Cuando el veredicto de rama (REQ-25.18 de `change-branch-lifecycle`) para el cam
 - **DADO** `sdd-status-contract.md`
 - **CUANDO** se inspecciona (prueba de pin)
 - **ENTONCES** documenta `workflow`, sus tres valores de `lane`, los cuatro orígenes y que `no_workspace` e `invalid` proyectan `ask`
-### Requirement: Subcomando `axiom sdd publish` en el Contrato del Binario (REQ-27.2b)
+### Requirement: Subcomando `axiom sdd publish` en el Contrato del Binario (RF-CLI-09)
 
 El binario `axiom` DEBE soportar la invocación `axiom sdd publish --change <nombre> [--cwd <ruta>] [--json]` como subcomando de `axiom sdd`, con el comportamiento de la capacidad `sdd-docs-publication`. La ayuda y la lista de subcomandos de `axiom sdd` DEBEN incluirlo.
 
@@ -275,14 +275,14 @@ El binario `axiom` DEBE soportar la invocación `axiom sdd publish --change <nom
 - **DADO** el binario `axiom`
 - **CUANDO** se ejecuta `axiom sdd publish` sin `--change`
 - **ENTONCES** termina con código de salida distinto de cero y un mensaje que nombra `--change`
-### Requirement: Preparación del Cambio con Bug sin Delta (con Requisito Existente o sin Impacto en la Spec), Aceptando el Formato Actual (REQ-29.15)
+### Requirement: Preparación del Cambio con Bug sin Delta (con Requisito Existente o sin Impacto en la Spec), Aceptando el Formato Actual (RF-CLI-10)
 
 `axiom sdd status` DEBE considerar cumplido el artefacto de specs del cambio cuando existe al menos una delta de spec, o cuando el cambio está declarado como bug sin delta. Esta ruta está disponible en todo proyecto, sea o no ISO. Un bug sin delta se declara en su `proposal.md` con una sección fija `## Informe de bug`, que es la propia declaración (no hay front matter), y admite dos variantes:
 
 | Variante | Qué declara | Qué más lleva |
 |---|---|---|
-| Bug con requisito existente | Restaura un requisito que ya existe en la baseline. | `Cubre:` en las tareas con el requisito existente; en ISO se añaden las comprobaciones de REQ-29.5 de `sdd-iso-evidence`. |
-| Bug sin impacto en la spec | No toca ningún requisito. | La sección `## Impacto en la spec` con la marca de abajo; sin delta y sin `Cubre:`; en ISO rige REQ-29.19 de `sdd-iso-evidence`. |
+| Bug con requisito existente | Restaura un requisito que ya existe en la baseline. | `Cubre:` en las tareas con el requisito existente; en ISO se añaden las comprobaciones de RF-ISO-05 de `sdd-iso-evidence`. |
+| Bug sin impacto en la spec | No toca ningún requisito. | La sección `## Impacto en la spec` con la marca de abajo; sin delta y sin `Cubre:`; en ISO rige RF-ISO-10 de `sdd-iso-evidence`. |
 
 **Formato de `## Informe de bug`** (contrato fijo): un encabezado de nivel 2 con ese texto exacto y, en su contenido, una línea `Observado:` (comportamiento observado) y una línea `Esperado:` (comportamiento esperado), ambas obligatorias y con texto no vacío tras los dos puntos, y una línea `Referencia:` opcional (referencia externa). Cada línea empieza por su etiqueta y lleva su valor en la misma línea (supuesto visible). Falta de `Observado:` o de `Esperado:`, o valor vacío, deja el informe incompleto: no cuenta como declaración de bug.
 
@@ -403,9 +403,9 @@ Un bug sin delta llega a la fase `archive` sin que la ausencia de delta la bloqu
 
 ---
 
-### Requirement: Motivos de Bloqueo Tipados de ISO, Cobertura, Escenarios y Matriz en `status` (REQ-29.16)
+### Requirement: Motivos de Bloqueo Tipados de ISO, Cobertura, Escenarios y Matriz en `status` (RF-CLI-11)
 
-`axiom sdd status` DEBE proyectar, con un motivo tipado que nombre el elemento afectado y la continuación, los bloqueos de un cambio ISO (sellado con `iso`, REQ-29.13 de `sdd-lane-kickoff`; la condición ISO y las reglas de proceso se leen de su instantánea y no de `axiom.yaml` en vivo, mientras que el patrón de identificador se lee siempre en vivo de `axiom.yaml`, nunca de la instantánea: REQ-44.1 de `requirement-identifiers`) definidos en `sdd-iso-evidence` y `sdd-archive-lifecycle`: identificador válido según el patrón declarado del proyecto (REQ-44.1 de `requirement-identifiers`; con el patrón por defecto, `REQ-<n>.<m>`) ausente, mal formado, ambiguo o repetido en el nombre de los requisitos de la delta (REQ-29.3), formulado con el patrón efectivo en su texto legible, cobertura `Cubre:` y `Cubre:` a un requisito inexistente (REQ-29.4), requisito de un bug con requisito existente inexistente, sin citar o sin escenarios (REQ-29.5), `Cubre:` en un bug sin impacto en la spec (REQ-29.19), requisito ADDED o MODIFIED sin escenarios (REQ-29.10), y matriz de verify ausente, inválida o con filas fallidas en la fase `archive` (REQ-29.6 a REQ-29.8 y REQ-29.11). Fuera de un cambio ISO, ninguna de esas reglas DEBE proyectar ni bloqueo ni aviso. `axiom sdd continue` DEBE reflejar cualquier bloqueo sin autorizar la fase siguiente. Los nuevos motivos son solo aditivos: ninguna clave existente del status v2 cambia, y el orden de precedencia de los motivos existentes (por ejemplo, `wrong_branch` antes de `edit_authority_missing`) se conserva. Cuando concurren varios bloqueos, el status DEBE proyectar todos con su continuación, no solo el primero. Si el patrón de identificador es inaccesible (bloque `sdd:` inválido o configuración ilegible), un cambio ISO NO DEBE evaluarse con un patrón no declarado: la etapa `specs` proyecta el mismo hallazgo que ya lleva el archivado, con el código `iso_declaration_invalid`, en lugar de las reglas de identificador; la etapa `tasks` no se evalúa; y la proyección `iso.matrix` se omite (REQ-44.9 de `requirement-identifiers`). No se crea ningún código de motivo nuevo.
+`axiom sdd status` DEBE proyectar, con un motivo tipado que nombre el elemento afectado y la continuación, los bloqueos de un cambio ISO (sellado con `iso`, RF-KOF-12 de `sdd-lane-kickoff`; la condición ISO y las reglas de proceso se leen de su instantánea y no de `axiom.yaml` en vivo, mientras que el patrón de identificador se lee siempre en vivo de `axiom.yaml`, nunca de la instantánea: RF-RID-01 de `requirement-identifiers`) definidos en `sdd-iso-evidence` y `sdd-archive-lifecycle`: identificador válido según el patrón declarado del proyecto (RF-RID-01 de `requirement-identifiers`; con el patrón por defecto, `REQ-<n>.<m>`) ausente, mal formado, ambiguo o repetido en el nombre de los requisitos de la delta (RF-ISO-03), formulado con el patrón efectivo en su texto legible, cobertura `Cubre:` y `Cubre:` a un requisito inexistente (RF-ISO-04), requisito de un bug con requisito existente inexistente, sin citar o sin escenarios (RF-ISO-05), `Cubre:` en un bug sin impacto en la spec (RF-ISO-10), requisito ADDED o MODIFIED sin escenarios (RF-ARC-09), y matriz de verify ausente, inválida o con filas fallidas en la fase `archive` (RF-ISO-06 a RF-ISO-08 y RF-ARC-10). Fuera de un cambio ISO, ninguna de esas reglas DEBE proyectar ni bloqueo ni aviso. `axiom sdd continue` DEBE reflejar cualquier bloqueo sin autorizar la fase siguiente. Los nuevos motivos son solo aditivos: ninguna clave existente del status v2 cambia, y el orden de precedencia de los motivos existentes (por ejemplo, `wrong_branch` antes de `edit_authority_missing`) se conserva. Cuando concurren varios bloqueos, el status DEBE proyectar todos con su continuación, no solo el primero. Si el patrón de identificador es inaccesible (bloque `sdd:` inválido o configuración ilegible), un cambio ISO NO DEBE evaluarse con un patrón no declarado: la etapa `specs` proyecta el mismo hallazgo que ya lleva el archivado, con el código `iso_declaration_invalid`, en lugar de las reglas de identificador; la etapa `tasks` no se evalúa; y la proyección `iso.matrix` se omite (RF-RID-08 de `requirement-identifiers`). No se crea ningún código de motivo nuevo.
 (Previously: la instantánea de `kickoff.yaml` gobernaba todas las reglas; ahora gobierna la condición ISO y el patrón se lee en vivo. El motivo de identificador se formulaba siempre con la forma literal `REQ-<n>.<m>`; ahora se formula con el patrón declarado del proyecto.)
 
 #### Scenario: Un bloqueo ISO nombra el elemento y la continuación
@@ -499,8 +499,8 @@ Un bug sin delta llega a la fase `archive` sin que la ausencia de delta la bloqu
 
 - **DADO** un cambio no ISO de un proyecto cuyo `sdd.id_pattern` es inválido
 - **CUANDO** se ejecuta `axiom sdd status <cambio> --json`
-- **ENTONCES** se reporta el error de carga del patrón de REQ-44.1, sin asumir el patrón por defecto
-### Requirement: El Binario No Expone `axiom review*`, `axiom review stop-hook` ni `axiom bench-model-picker` (REQ-46.1)
+- **ENTONCES** se reporta el error de carga del patrón de RF-RID-01, sin asumir el patrón por defecto
+### Requirement: El Binario No Expone `axiom review*`, `axiom review stop-hook` ni `axiom bench-model-picker` (RF-CLI-12)
 
 El binario `axiom` NO DEBE reconocer el verbo `review` ni ningún subverbo suyo (`start`, `status`, `capture`, `acknowledge`, `abandon`, `invalidate`, `recover`, `mode`, `assess`, `validate`, `stop-hook` y los demás), ni el verbo `bench-model-picker`, ni ofrecer una compatibilidad o una orden vacía (no-op) para ellos. La ayuda general y la de cada verbo NO DEBEN citarlos. Una invocación de `axiom review` o de `axiom review stop-hook` DEBE tratarse como un verbo desconocido: salida distinta de cero, mensaje de uso estándar y ningún efecto en el sistema de ficheros. Los verbos `axiom sdd-attempt grant`, `axiom sdd ...` y `axiom branch ...` NO cambian.
 
@@ -532,7 +532,7 @@ El binario `axiom` NO DEBE reconocer el verbo `review` ni ningún subverbo suyo 
 - **ENTONCES** funciona como antes de la retirada
 - **Y** el sobre `axiom.sdd-integration.consent/v1` se valida igual
 
-### Requirement: Resiliencia en Decodificación de Rutas Windows en Salidas JSON de SDD (REQ-46.7)
+### Requirement: Resiliencia en Decodificación de Rutas Windows en Salidas JSON de SDD (RF-CLI-13)
 
 Los consumidores y aserciones de la salida JSON de `sdd status` DEBEN decodificar estructuradamente en tipos Go nativos (`StatusV2Projection`) en lugar de hacer matching textual simple de rutas en Windows.
 (Trasladado desde REQ-18.3 de `rdd-decoupling-v3-stability`, retirada con RDD (C-01-e).)
@@ -542,20 +542,20 @@ Los consumidores y aserciones de la salida JSON de `sdd status` DEBEN decodifica
 - **DADO** un entorno de ejecución Windows con rutas que contienen separadores de barra invertida (`\`)
 - **CUANDO** se valida la salida JSON de `RunSDDStatus`
 - **ENTONCES** la validación se realiza mediante `json.Unmarshal`, tolerando el escape de backslashes sin fallos de aserción
-### Requirement: `axiom sdd status --json` Proyecta los Requisitos que el Cambio Modifica y Crea (REQ-47.9)
+### Requirement: `axiom sdd status --json` Proyecta los Requisitos que el Cambio Modifica y Crea (RF-CLI-14)
 
 `axiom sdd status --json` DEBE proyectar un campo aditivo `requirements` con dos listas, `modifies` y `creates`, derivadas de las deltas del cambio:
 
 - `creates`: un elemento por cada requisito ADDED, con su identificador (el definitivo o el provisional, tal como está escrito en la delta) y la capacidad. Una capacidad nueva escrita como especificación completa, sin secciones de delta, cuenta como ADDED.
 - `modifies`: un elemento por cada requisito MODIFIED, REMOVED y RENAMED (el nombre antiguo), con el identificador existente que cita y la capacidad.
 
-Cada elemento lleva siempre `capability`, `operation` (`ADDED`, `MODIFIED`, `REMOVED` o `RENAMED`) y `requirement`, el nombre exacto del requisito en la delta (en un RENAMED, el nombre antiguo). Lleva `id` solo cuando ese nombre contiene un identificador válido según el patrón o un provisional, y `provisional: true` cuando es un provisional. Un requisito sin identificador en el nombre (ADDED sin identificador, o MODIFIED, REMOVED o RENAMED por título fuera de ISO) no lleva `id`: se resuelve por el título exacto (REQ-30.22 de `sdd-archive-lifecycle`), y un título que coincide exactamente con el de la canónica tampoco contiene identificador, de modo que no hay ningún `id` que proyectar; `requirement` lo identifica.
+Cada elemento lleva siempre `capability`, `operation` (`ADDED`, `MODIFIED`, `REMOVED` o `RENAMED`) y `requirement`, el nombre exacto del requisito en la delta (en un RENAMED, el nombre antiguo). Lleva `id` solo cuando ese nombre contiene un identificador válido según el patrón o un provisional, y `provisional: true` cuando es un provisional. Un requisito sin identificador en el nombre (ADDED sin identificador, o MODIFIED, REMOVED o RENAMED por título fuera de ISO) no lleva `id`: se resuelve por el título exacto (RF-ARC-11 de `sdd-archive-lifecycle`), y un título que coincide exactamente con el de la canónica tampoco contiene identificador, de modo que no hay ningún `id` que proyectar; `requirement` lo identifica.
 
 Un elemento NO DEBE aparecer en las dos listas. El campo DEBE omitirse, y solo en estos casos, de modo que la salida es idéntica byte a byte a la anterior:
 
 1. El cambio no tiene deltas legibles en ficheros: sin `specs/`, con deltas sin ninguna sección ADDED, MODIFIED, REMOVED ni RENAMED ni requisitos, o con el almacén de artefactos `engram` o `none`, en el que no hay ficheros de delta.
-2. El cambio ya está archivado: su declaración ya está integrada y el mapa guardado la sustituye (REQ-47.6).
-3. El patrón de identificadores es inaccesible (bloque `sdd:` inválido o configuración ilegible): la proyección no se evalúa con un patrón no declarado (REQ-44.9 de `requirement-identifiers`). Las listas DEBEN tener un orden determinista (capacidades por nombre y requisitos por aparición en la delta) y un `status` repetido sin cambios en las deltas DEBE producir la misma salida. El campo es una proyección informativa: NO DEBE alterar `nextRecommended`, `dependencies`, los motivos de bloqueo ni ningún campo anterior; no resuelve identificadores inexistentes (eso lo rechaza la integración, REQ-47.3). Con un provisional en `creates` el elemento muestra el provisional, no el número que la integración asignará. Su contrato se documenta en `internal/assets/skills/_shared/sdd-status-contract.md`.
+2. El cambio ya está archivado: su declaración ya está integrada y el mapa guardado la sustituye (RF-RID-14).
+3. El patrón de identificadores es inaccesible (bloque `sdd:` inválido o configuración ilegible): la proyección no se evalúa con un patrón no declarado (RF-RID-08 de `requirement-identifiers`). Las listas DEBEN tener un orden determinista (capacidades por nombre y requisitos por aparición en la delta) y un `status` repetido sin cambios en las deltas DEBE producir la misma salida. El campo es una proyección informativa: NO DEBE alterar `nextRecommended`, `dependencies`, los motivos de bloqueo ni ningún campo anterior; no resuelve identificadores inexistentes (eso lo rechaza la integración, RF-RID-11). Con un provisional en `creates` el elemento muestra el provisional, no el número que la integración asignará. Su contrato se documenta en `internal/assets/skills/_shared/sdd-status-contract.md`.
 
 #### Scenario: Un cambio con deltas proyecta `modifies` y `creates`
 

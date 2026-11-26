@@ -49,7 +49,7 @@ const saveRequestID = 2
 //
 // Every failure (engram absent, handshake timeout, tool error, garbage output,
 // child that exits early) is returned as an ordinary error. Callers map it to
-// `mirror failed` and MUST NOT treat it as fatal (REQ-22.11). This function
+// `mirror failed` and MUST NOT treat it as fatal (RF-SKI-02). This function
 // never reports success without having read a satisfactory `tools/call`
 // response: there is no path that fabricates `mirror ok`.
 //
