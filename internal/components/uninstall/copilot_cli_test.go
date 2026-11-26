@@ -38,7 +38,7 @@ func installCopilot(t *testing.T, home string, id model.AgentID) agents.Adapter 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := persona.Inject(home, adapter, model.PersonaNeutral); err != nil {
+	if _, err := persona.Inject(home, adapter); err != nil {
 		t.Fatalf("persona.Inject(%s): %v", id, err)
 	}
 	if _, err := sdd.Inject(home, adapter, ""); err != nil {
@@ -225,7 +225,8 @@ func TestUninstallOneCopilotAgentKeepsTheSharedSkillsOfTheOther(t *testing.T) {
 	}
 }
 
-// Con COPILOT_HOME las carpetas de skills son distintas: cada agente retira las suyas.
+// Con COPILOT_HOME las carpetas de skills son distintas (VS Code sigue en
+// ~/.copilot/skills, que es lo que documenta): cada agente retira las suyas.
 func TestUninstallCopilotCLIWithCopilotHomeRemovesOnlyItsOwnSkills(t *testing.T) {
 	home := copilotHome(t)
 	custom := filepath.Join(t.TempDir(), "custom-copilot")

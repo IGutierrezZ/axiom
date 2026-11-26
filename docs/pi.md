@@ -179,6 +179,6 @@ If you start Pi with `pi -ns`, Pi skips startup skill loading/hooks. That mode i
 
 - Read [Supported Agents](agents.md) for the full agent matrix.
 - Read [Engram Commands](engram.md) if you want to inspect or sync persistent memory.
-- Read [Usage](usage.md) for the general Axiom CLI and TUI flow.
+- Read [Usage](usage.md) for the general Axiom CLI flow.
 
 ← [Back to README](../README.md)

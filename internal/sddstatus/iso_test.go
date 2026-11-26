@@ -170,6 +170,9 @@ func TestISOStatusContinuity(t *testing.T) {
 				t.Fatal(err)
 			}
 			decorateWorkspaceDeclarations(&want, location)
+			// `requirements` (REQ-47.9) es una decoración aditiva ajena a ISO: este caso solo
+			// fija que decorateISO no altera nada.
+			decorateRequirements(&want, location)
 
 			gotJSON, err := marshalStatusV2Indent(got)
 			if err != nil {

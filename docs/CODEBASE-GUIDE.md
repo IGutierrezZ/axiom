@@ -13,13 +13,13 @@ This guide helps maintainers find the right code path before changing Axiom. It 
 
 ## 90-second mental model
 
-Axiom is a Go CLI/TUI that configures AI coding agents. It installs and syncs managed assets such as SDD prompts, skills, MCP entries, permissions, personas, Engram™ wiring, skill registries, and community tool/plugin helpers.
+Axiom is a Go CLI (with a local web dashboard) that configures AI coding agents. It installs and syncs managed assets such as SDD prompts, skills, MCP entries, permissions, personas, Engram™ wiring, skill registries, and community tool/plugin helpers.
 
 ```text
 User
   |
   v
-axiom CLI / Bubbletea TUI
+axiom CLI / local web dashboard
   |
   +--> detection + flag normalization
   +--> planner resolves components and dependencies
@@ -42,7 +42,7 @@ Golden rule: **agent-specific paths belong in adapters; reusable behavior belong
 | [Mental model](codebase/mental-model.md) | Understand what the project is, is not, and must preserve. |
 | [Repository map](codebase/repository-map.md) | Find package ownership and placement rules. |
 | [Memory core](codebase/memory-core.md) | Understand the Engram boundary and what this repo wires vs owns. |
-| [Interfaces](codebase/interfaces.md) | Compare CLI, MCP, local HTTP API boundary, and TUI surfaces. |
+| [Interfaces](codebase/interfaces.md) | Compare CLI, MCP, and local web dashboard surfaces. |
 | [Sync and cloud](codebase/sync-and-cloud.md) | Separate Axiom config sync from Engram memory/cloud sync. |
 | [Dashboard](codebase/dashboard.md) | Know what dashboard code is absent from this repo and how to avoid inventing it. |
 | [Integrations](codebase/integrations.md) | Change agent adapters, plugins, and setup boundaries safely. |
@@ -62,8 +62,8 @@ Golden rule: **agent-specific paths belong in adapters; reusable behavior belong
 | Page | Job |
 |---|---|
 | [Architecture & Development](architecture.md) | Short codebase layout and test commands. |
-| [Usage](usage.md) | User-facing CLI/TUI behavior. |
-| [Components](components.md) | Component, preset, and managed asset overview. |
+| [Usage](usage.md) | User-facing CLI and dashboard behavior. |
+| [Components](components.md) | Component, skill, and managed asset overview. |
 | [Engram Commands](engram.md) | Engram user commands and MCP tool overview. |
 | [OpenCode SDD Profiles](opencode-profiles.md) | Profile sync details. |
 | [Skill Registry](skill-registry.md) | Skill indexing and refresh behavior. |

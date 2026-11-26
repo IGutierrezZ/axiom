@@ -204,6 +204,11 @@ type Status struct {
 	// when axiom.yaml has no `sdd:` block and the change is not ISO, so a consumer
 	// that predates it sees no difference (decorateISO).
 	ISO *ISOProjection `json:"iso,omitempty"`
+	// Requirements is C-03-b's additive projection of what the change's deltas
+	// create and modify (REQ-47.9). Structural absence (nil, omitempty) when there
+	// are no readable deltas, the change is archived, the store keeps no files or
+	// the ID pattern is inaccessible (decorateRequirements).
+	Requirements *RequirementsProjection `json:"requirements,omitempty"`
 	// GateQuestion is the typed blocking question for the one gate
 	// firstOpenGate names when NextRecommended is "await-gate" (design.md
 	// S5.5): the same Lossless Blocking Prompt shape as Consent, scoped to
@@ -539,6 +544,7 @@ func Resolve(options ResolveOptions) (Status, error) {
 	}
 	decorateWorkspaceDeclarations(&status, location)
 	decorateISO(&status, location)
+	decorateRequirements(&status, location)
 	return status, nil
 }
 

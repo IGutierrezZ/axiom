@@ -2,7 +2,7 @@
 
 > **Proyecto:** Axiom (Fork y versión paralela de Gentle-AI)  
 > **Propósito:** Evolución y desarrollo de flujos avanzados de IA, orquestación SDD y herramientas para agentes de codificación.  
-> **Stack Técnico:** Go 1.25+ (Go 1.27.0 en entorno local), Bubbletea TUI (`charmbracelet/bubbletea`), Lipgloss, arquitectura de paquetes en `internal/`, arnés SDD nativo de Gentle-AI y memoria persistente Engram MCP.
+> **Stack Técnico:** Go 1.25+ (Go 1.27.0 en entorno local), panel web local (`axiom ui`), arquitectura de paquetes en `internal/`, arnés SDD nativo de Gentle-AI y memoria persistente Engram MCP.
 
 ---
 
@@ -23,7 +23,7 @@ Para el trabajo habitual, refactorizaciones y funcionalidades directas sin sobre
 1. **Documento Único de Tarea:** Se crea y mantiene un único archivo vivo `odd/tasks/<nombre-feature>.md` y su réplica sincronizada en Engram MCP bajo el tópico `odd/<nombre-feature>/tasks`.
 2. **Ciclo Ágil:** `Exploración proporcional ➔ Implementación autorizada ➔ Comprobación funcional / TDD`.
 3. **Control y Evidencia:** El archivo de tarea registra objetivos, restricciones, lista de tareas accionables con IDs estables, progreso y comandos de prueba ejecutados.
-4. **Comandos canónicos ya operativos:** `axiom odd create <nombre>`, `axiom odd status [--json] [--check-mirror]` y `axiom odd promote <feature> [--dry-run] [--name <nombre>]`, con superficie reactiva en `axiom ui` (pestaña ODD) y `axiom tui` (Gobernanza → Carril Ágil ODD).
+4. **Comandos canónicos ya operativos:** `axiom odd create <nombre>`, `axiom odd status [--json] [--check-mirror]` y `axiom odd promote <feature> [--dry-run] [--name <nombre>]`, con superficie reactiva en `axiom ui` (pestaña ODD).
 
 ### B. SDD (Spec-Driven Development) — Vía Formal de Arquitectura
 Reservado para grandes incrementos del sistema, cambios estructurales profundos o cuando el usuario pida explícitamente *"usa SDD"* o lo fije el carril del proyecto (`workflow.lane` de `axiom.yaml`):
@@ -69,7 +69,7 @@ El proyecto cuenta con el servidor MCP de **Engram** conectado bajo el espacio d
 
 - **Estructura del Proyecto:**
   - `cmd/`: Puntos de entrada ejecutables (CLI de la herramienta).
-  - `internal/`: Paquetes y lógica interna del sistema (agentes, TUI, modelo, pipeline, catálogo, verificadores, etc.).
+  - `internal/`: Paquetes y lógica interna del sistema (agentes, modelo, pipeline, catálogo, verificadores, etc.).
   - `openspec/`: Especificaciones vivas, cambios en curso (`openspec/changes/`) y cambios archivados (`openspec/changes/archive/`).
   - `skills/`: Skills de desarrollo y flujos de trabajo de Gentle-AI.
 - **Pruebas y Calidad:**

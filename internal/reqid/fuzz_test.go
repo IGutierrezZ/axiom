@@ -57,3 +57,39 @@ func FuzzSynthetic(f *testing.F) {
 		}
 	})
 }
+
+// FuzzProvisionalIsNeverAnIdentifier fija REQ-47.1: con cualquier plantilla aceptada y
+// cualquier texto, un token provisional completo no es un identificador válido, no sale
+// de InTitle ni de TrailingCandidate y Scan no lo devuelve como candidato.
+func FuzzProvisionalIsNeverAnIdentifier(f *testing.F) {
+	for _, s := range fuzzTemplates {
+		f.Add(s, "prov:30:1")
+		f.Add(s, "prov:RF-3:1")
+		f.Add(s, "prov:USU-b:2")
+	}
+	f.Add("REQ-<n>.<m>", "prov::1")
+	f.Fuzz(func(t *testing.T, template, token string) {
+		p, err := reqid.Parse(template)
+		if err != nil {
+			return
+		}
+		spans := reqid.ScanProvisional(token)
+		if len(spans) != 1 || spans[0].Start != 0 || spans[0].End != len(token) {
+			return // no es un token provisional completo
+		}
+		if p.Valid(token) {
+			t.Fatalf("Valid(%q) con %q", token, template)
+		}
+		title := "Requisito (" + token + ")"
+		if id := p.InTitle(title); id != "" {
+			t.Fatalf("InTitle(%q) = %q con %q", title, id, template)
+		}
+		if _, id, ok := p.TrailingCandidate(title); ok {
+			t.Fatalf("TrailingCandidate(%q) = %q con %q", title, id, template)
+		}
+		valid, malformed := p.Scan("Cubre: " + token + ", " + title)
+		if len(valid)+len(malformed) != 0 {
+			t.Fatalf("Scan devolvió candidatos %v %v de %q con %q", valid, malformed, token, template)
+		}
+	})
+}

@@ -10,7 +10,7 @@
 cmd/axiom/                 CLI entrypoint
 internal/
   app/                     Command dispatch + runtime wiring
-  model/                   Domain types (agents, components, skills, presets, personas)
+  model/                   Domain types (agents, components, skills)
   catalog/                 Registry definitions (agents, skills, components)
   system/                  OS/distro detection, dependency checks, platform guards
   cli/                     Install flags, validation, orchestration, dry-run
@@ -20,7 +20,7 @@ internal/
   backup/                  Config snapshot + restore
   assets/                  Embedded skill files + persona templates
   components/              Per-component install/inject logic
-    engram/  sdd/  skills/  mcp/  persona/  theme/  permissions/
+    engram/  sdd/  skills/  mcp/  persona/  permissions/
     communitytool/         Community tool install/guidance/config orchestration
     opencodeplugin/        OpenCode TUI plugin registration/local plugin helpers
     uninstall/             Managed uninstall cleanup service
@@ -33,10 +33,8 @@ internal/
   update/                  Self-update + upgrade logic
     upgrade/               Tool upgrade execution and reporting
   verify/                  Post-apply health checks + reporting
-  tui/                     Bubbletea TUI (Rose Pine theme)
-    styles/  screens/
 scripts/                   Installer, release, and maintainer scripts (install.sh, release preflights, cross-lane battery)
-e2e/                       Docker-based E2E tests (Ubuntu + Arch)
+e2e/organicruntime/        Organic Runtime E2E against real agent binaries (real_agent_e2e tag)
 testdata/                  Golden test fixtures
 ```
 
@@ -49,15 +47,15 @@ testdata/                  Golden test fixtures
 go test ./...
 
 # Dry-run smoke test (macOS/Linux)
-axiom install --dry-run --agent claude-code --preset minimal
+axiom install --dry-run --agent claude-code --component engram,sdd
 
 # Dry-run smoke test (Windows PowerShell)
-axiom.exe install --dry-run --agent claude-code --preset minimal
+axiom.exe install --dry-run --agent claude-code --component engram,sdd
 ```
 
 Test coverage is broad and changes frequently. Keep this section qualitative unless counts are generated automatically:
 
-- Unit tests cover agent adapters, components, system detection, app dispatch, update/upgrade behavior, and TUI flows.
+- Unit tests cover agent adapters, components, system detection, app dispatch, and update/upgrade behavior.
 - The Organic Runtime E2E suite (`e2e/organicruntime`) drives real Claude Code and OpenCode binaries through the installed routing guidance; see [Testing agents deterministically](./testing-agents-deterministically.md).
 - Golden fixtures snapshot generated component output under `testdata/`.
 - Full pipeline paths are tested: detection, planning, execution, backup, restore, and verification.

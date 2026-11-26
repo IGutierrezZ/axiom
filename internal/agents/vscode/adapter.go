@@ -78,6 +78,7 @@ func (a *Adapter) InstallCommand(_ system.PlatformProfile) ([][]string, error) {
 // MCP servers go to the Copilot harness user file, <COPILOT_HOME|~/.copilot>/mcp-config.json
 // (see MCPConfigPath), not to the VS Code User profile mcp.json of the Local harness.
 
+// GlobalConfigDir es ~/.copilot aunque COPILOT_HOME esté definida; véase SkillsDir.
 func (a *Adapter) GlobalConfigDir(homeDir string) string {
 	return filepath.Join(homeDir, ".copilot")
 }
@@ -96,8 +97,18 @@ func (a *Adapter) LegacySystemPromptFiles(homeDir string) []string {
 	return []string{filepath.Join(a.SystemPromptDir(homeDir), "gentle-ai.instructions.md")}
 }
 
+// SkillsDir es ~/.copilot/skills, la carpeta personal de skills del arnés de Copilot
+// en VS Code. No usa copilotconfig.Root, a diferencia de MCPConfigPath y de Copilot
+// CLI: VS Code documenta COPILOT_HOME solo para mcp-config.json
+// (code.visualstudio.com/docs/agents/reference/mcp-configuration). Para las skills
+// documenta ~/.copilot/skills
+// (code.visualstudio.com/docs/copilot/customization/agent-skills), y para los agentes
+// de usuario ~/.copilot/agents
+// (code.visualstudio.com/docs/agents/reference/custom-agent-file-reference), sin
+// condicionarlos a COPILOT_HOME. Sin esa variable, la carpeta es la misma que la de
+// Copilot CLI. Con ella, Copilot CLI usa $COPILOT_HOME/skills y cada agente tiene la
+// suya.
 func (a *Adapter) SkillsDir(homeDir string) string {
-	// Skills under ~/.copilot/skills/ — VS Code Copilot global skills directory.
 	return filepath.Join(homeDir, ".copilot", "skills")
 }
 

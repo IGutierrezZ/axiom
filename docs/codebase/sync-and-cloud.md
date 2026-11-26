@@ -28,8 +28,7 @@ axiom sync
 Important behavior from `internal/cli/sync.go`:
 
 - Default sync scope includes SDD, Engram, Context7, skills, and persona.
-- Persona sync resolves the persisted persona from the scope state (`<workspace root>/.axiom/state.json` in workspace scope, `~/.axiom/state.json` in global scope) when the selection does not set one explicitly; the safe fallback is neutral.
-- Permissions and theme are user-adjacent and not included by default.
+- Permissions are user-adjacent and not included by default.
 - OpenCode SDD profile flags preserve and update profile model assignments.
 - Community tool guidance/config, such as CodeGraph guidance, belongs to the managed config sync path when the tool is configured or legacy guidance needs cleanup.
 - Idempotency matters: `FilesChanged == 0` means managed assets were already current.
@@ -51,7 +50,6 @@ This repository does not contain cloud server or cloud store packages. If future
 - [ ] Use `axiom sync` for managed config, not memory export/import.
 - [ ] Do not commit Engram memory exports (`.engram/chunks/`, `.engram/manifest.json`).
 - [ ] Keep sync changes idempotent and test `FilesChanged` expectations.
-- [ ] Check persona behavior against persisted state and neutral fallback rules.
 - [ ] Keep community tool guidance separate from OpenCode plugin registration.
 - [ ] Do not touch untracked local `.engram/cloud.json` or `.engram/engram.db` during docs or sync work.
 

@@ -68,6 +68,12 @@ type traceFlow struct {
 // archivado también si archive es verdadero.
 func newTraceFlow(t *testing.T, mode string, archive bool) traceFlow {
 	t.Helper()
+	return newTraceFlowWith(t, mode, archive, traceDelta, traceTasks, traceVerify)
+}
+
+// newTraceFlowWith es newTraceFlow con la delta, las tareas y el informe de verify dados.
+func newTraceFlowWith(t *testing.T, mode string, archive bool, delta, tasks, verify string) traceFlow {
+	t.Helper()
 	repo := traceRepo(t)
 	writeSDDAxiomYAML(t, repo, "sdd:\n  iso: true\n")
 	writeCLIFixture(t, filepath.Join(repo, "openspec", "specs", "pagos", "spec.md"), archiveCheckBaseline51)
@@ -80,12 +86,12 @@ func newTraceFlow(t *testing.T, mode string, archive bool) traceFlow {
 	// PR del cambio: dos commits, el segundo con verify-report.md.
 	traceGit(t, repo, "checkout", "-q", "-b", "inc/demo")
 	writeCLIFixture(t, filepath.Join(changeRoot, "proposal.md"), "# P\n")
-	writeCLIFixture(t, filepath.Join(changeRoot, "specs", "pagos", "spec.md"), traceDelta)
-	writeCLIFixture(t, filepath.Join(changeRoot, "tasks.md"), traceTasks)
+	writeCLIFixture(t, filepath.Join(changeRoot, "specs", "pagos", "spec.md"), delta)
+	writeCLIFixture(t, filepath.Join(changeRoot, "tasks.md"), tasks)
 	sealTestChange(t, changeRoot, "demo", true)
 	traceGit(t, repo, "add", "-A")
 	traceGit(t, repo, "commit", "-q", "-m", "plan")
-	writeCLIFixture(t, filepath.Join(changeRoot, "verify-report.md"), traceVerify)
+	writeCLIFixture(t, filepath.Join(changeRoot, "verify-report.md"), verify)
 	writeCLIFixture(t, filepath.Join(repo, "internal", "pagos", "cobro.go"), "package pagos\n")
 	traceGit(t, repo, "add", "-A")
 	traceGit(t, repo, "commit", "-q", "-m", "código y verify")
@@ -307,5 +313,22 @@ func TestSDDTraceIntegrationBranchFlag(t *testing.T) {
 	}
 	if got := runTrace(t, flow.repo, "--integration-branch", "release"); got.IntegrationBranch != "release" || !got.CodeCommit.Found {
 		t.Errorf("con --integration-branch release = %+v", got)
+	}
+}
+
+// REQ-29.3 y REQ-29.4 (C-03-b): la traza de un cambio ISO cuyo ADDED lleva un provisional
+// es legible: la cadena lleva el provisional con su `Cubre:` y su fila de matriz, sin error.
+func TestSDDTraceWithProvisionalIDInTheDelta(t *testing.T) {
+	delta := strings.Replace(traceDelta, "REQ-30.1 Cobro con IVA", "Cobro con IVA (prov:30:1)", 1)
+	tasks := strings.Replace(traceTasks, "REQ-30.1", "prov:30:1", 1)
+	verify := strings.Replace(traceVerify, "| REQ-30.1 |", "| prov:30:1 |", 1)
+	flow := newTraceFlowWith(t, "squash", false, delta, tasks, verify)
+	report := runTrace(t, flow.repo)
+	if len(report.Chain) != 1 || report.Chain[0].Requirement != "prov:30:1" {
+		t.Fatalf("cadena = %+v, se esperaba una entrada con el provisional", report.Chain)
+	}
+	entry := report.Chain[0]
+	if len(entry.Cubre) != 1 || len(entry.Rows) != 1 || entry.Rows[0].Scenario != "Cobro general" {
+		t.Errorf("la entrada del provisional pierde el Cubre o la fila: %+v", entry)
 	}
 }

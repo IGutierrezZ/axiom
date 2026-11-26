@@ -724,59 +724,6 @@ func renderProfileModelAssignmentsSection(profile model.Profile) string {
 	return b.String()
 }
 
-// RemoveProfileAgents reads the opencode.json at settingsPath, removes all agent
-// keys belonging to the named profile (sdd-orchestrator-{name},
-// sdd-{phase}-{name}, and profile-scoped Judgment Day agents), and atomically
-// writes the result back.
-//
-// Returns an error if name is empty or "default" (cannot remove the default profile).
-// If the profile's agent keys are not present, the operation is a no-op (no error).
-func RemoveProfileAgents(settingsPath string, profileName string) error {
-	if profileName == "" || profileName == "default" {
-		return fmt.Errorf("RemoveProfileAgents: cannot remove default profile (name=%q)", profileName)
-	}
-
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // No-op: file doesn't exist
-		}
-		return fmt.Errorf("read settings %q: %w", settingsPath, err)
-	}
-
-	root, err := filemerge.UnmarshalJSONObject(data)
-	if err != nil {
-		return fmt.Errorf("parse settings %q: %w", settingsPath, err)
-	}
-
-	deleted := 0
-	for _, section := range []string{"agent", "agents"} {
-		agentMap, _ := root[section].(map[string]any)
-		for _, key := range ProfileAgentKeys(profileName) {
-			if _, exists := agentMap[key]; exists {
-				delete(agentMap, key)
-				deleted++
-			}
-		}
-	}
-
-	// If no keys were found and deleted, the profile doesn't exist — no-op.
-	// Returning early avoids re-serializing the JSON, which would change key
-	// ordering and trigger false change detection on subsequent reads.
-	if deleted == 0 {
-		return nil
-	}
-
-	out, err := filemerge.MarshalJSONPreservingPermissions(data, root)
-	if err != nil {
-		return fmt.Errorf("marshal settings: %w", err)
-	}
-	out = append(out, '\n')
-
-	_, err = filemerge.WriteFileAtomic(settingsPath, out, 0o644)
-	return err
-}
-
 // MigrateLegacyOrchestrator updates legacy "gentle-orchestrator" references in
 // settingsPath (opencode.json) and in command files under commandsDir in-place,
 // migrating them to "axiom-orchestrator". Returns true if any file was modified.

@@ -24,7 +24,6 @@ roles:
       - path: "."
     tech:
       - "go"
-      - "bubbletea"
 
 governance:
   language: "es"

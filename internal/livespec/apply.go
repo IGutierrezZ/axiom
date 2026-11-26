@@ -14,16 +14,23 @@ import (
 )
 
 // Costuras de las pruebas: inyectan un fallo en cada punto de escritura del camino de
-// ida. La restauración usa siempre las funciones reales del sistema.
+// ida y en la restauración.
 var (
 	writeTempFile = os.WriteFile
 	renameFile    = os.Rename
+	restoreFile   = os.WriteFile
+	removeFile    = os.Remove
 	syncIndex     = syncIndexOf
 )
 
-const tempName = ".spec.md.axiom-tmp"
+// tempNameOf es el temporal determinista de un destino: `.<base>.axiom-tmp` junto a él. Un
+// huérfano de un proceso matado se sobrescribe y se consume en la siguiente ejecución
+// real que escribe ese destino.
+func tempNameOf(path string) string {
+	return filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+".axiom-tmp")
+}
 
-// applied es lo necesario para deshacer la escritura de una especificación.
+// applied es lo necesario para deshacer la escritura de un fichero.
 type applied struct {
 	path        string
 	previous    []byte
@@ -31,85 +38,130 @@ type applied struct {
 	createdDirs []string // de la más interior a la más exterior
 }
 
-// Apply escribe todas las especificaciones del plan o ninguna (REQ-30.2): primero
-// escribe un temporal por capacidad junto a su destino y, solo si todos se escriben,
-// los renombra; ante cualquier fallo restaura lo ya renombrado y quita lo creado. Con
-// una integración sin cambios no toca el disco. Si el proyecto ya tiene
-// openspec/INDEX.md lo regenera con livingdoc.Service.Sync y, si eso falla, también lo
-// deshace. Devuelve las rutas absolutas escritas, con el índice al final si cambió.
-func (i Integration) Apply() ([]string, error) {
-	var todo []CapabilityPlan
-	for _, c := range i.Capabilities {
-		if c.Outcome != OutcomeAlready {
-			todo = append(todo, c)
-		}
-	}
-	if len(todo) == 0 {
+// fileWrite es un fichero que escribe writeSet. Name solo sirve para nombrar el destino
+// en los motivos (la capacidad, normalmente).
+type fileWrite struct {
+	Path    string
+	Content []byte
+	Name    string
+}
+
+// writeOptions configura writeSet. Retry es la orden que el motivo propone repetir y
+// Extra un paso posterior a los renombrados (la regeneración del índice) que devuelve lo
+// que escribe y cómo deshacerlo, y que si falla se deshace junto con el resto.
+type writeOptions struct {
+	Retry string
+	Extra func() (written []string, undo func() (failed []string), err error)
+}
+
+// writeSet escribe todos los ficheros o ninguno (REQ-47.4): primero un temporal por fichero
+// junto a su destino y, solo si todos se escriben, los renombra; ante cualquier fallo
+// restaura lo ya renombrado y quita lo creado. Si la restauración falla conserva el
+// rollbackError, que nombra cada ruta no restaurada. Sin ficheros no toca el disco.
+// Devuelve las rutas absolutas escritas, con las del paso extra al final.
+func writeSet(files []fileWrite, opts writeOptions) ([]string, error) {
+	if len(files) == 0 {
 		return nil, nil
 	}
 
-	staged := make([]string, 0, len(todo))
+	staged := make([]string, 0, len(files))
 	cleanTemps := func() {
 		for _, tmp := range staged {
-			_ = os.Remove(tmp)
+			_ = removeFile(tmp)
 		}
 	}
 	var undo []applied
-	for _, c := range todo {
-		entry := applied{path: c.Path}
-		if data, err := os.ReadFile(c.Path); err == nil {
+	for _, f := range files {
+		entry := applied{path: f.Path}
+		if data, err := os.ReadFile(f.Path); err == nil {
 			entry.previous, entry.existed = data, true
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			cleanTemps()
 			rollbackDirs(undo)
-			return nil, fmt.Errorf("no se puede leer %s: %w; no se ha escrito nada; comprueba los permisos y vuelve a ejecutar `axiom archive integrate --odd %s`", c.Path, err, i.Feature)
+			return nil, fmt.Errorf("no se puede leer %s: %w; no se ha escrito nada; comprueba los permisos y vuelve a ejecutar `%s`", f.Path, err, opts.Retry)
 		}
-		dirs, err := makeDirs(filepath.Dir(c.Path))
+		dirs, err := makeDirs(filepath.Dir(f.Path))
 		entry.createdDirs = dirs
 		undo = append(undo, entry)
 		if err != nil {
 			cleanTemps()
 			rollbackDirs(undo)
-			return nil, fmt.Errorf("no se puede crear la carpeta de la capacidad %s: %w; no se ha escrito nada; comprueba los permisos y vuelve a ejecutar `axiom archive integrate --odd %s`", c.Name, err, i.Feature)
+			return nil, fmt.Errorf("no se puede crear la carpeta de la capacidad %s: %w; no se ha escrito nada; comprueba los permisos y vuelve a ejecutar `%s`", f.Name, err, opts.Retry)
 		}
-		tmp := filepath.Join(filepath.Dir(c.Path), tempName)
+		tmp := tempNameOf(f.Path)
 		staged = append(staged, tmp)
-		if err := writeTempFile(tmp, []byte(c.Content), 0o644); err != nil {
+		if err := writeTempFile(tmp, f.Content, 0o644); err != nil {
 			cleanTemps()
 			rollbackDirs(undo)
-			return nil, fmt.Errorf("no se puede escribir el temporal de %s: %w; no se ha escrito nada; libera espacio o permisos y vuelve a ejecutar `axiom archive integrate --odd %s`", c.Path, err, i.Feature)
+			return nil, fmt.Errorf("no se puede escribir el temporal de %s: %w; no se ha escrito nada; libera espacio o permisos y vuelve a ejecutar `%s`", f.Path, err, opts.Retry)
 		}
 	}
 
 	done := 0
-	for n, c := range todo {
-		if err := renameFile(staged[n], c.Path); err != nil {
+	for n, f := range files {
+		if err := renameFile(staged[n], f.Path); err != nil {
 			cleanTemps()
 			failures := restore(undo[:done])
 			rollbackDirs(undo)
-			return nil, rollbackError(fmt.Errorf("no se puede escribir %s: %w", c.Path, err), failures, i.Feature)
+			return nil, rollbackError(fmt.Errorf("no se puede escribir %s: %w", f.Path, err), failures, opts.Retry)
 		}
 		done++
 	}
 
-	written := make([]string, 0, len(todo)+1)
-	for _, c := range todo {
-		written = append(written, c.Path)
+	written := make([]string, 0, len(files)+1)
+	for _, f := range files {
+		written = append(written, f.Path)
 	}
-
-	indexPath := filepath.Join(i.loc.PlanningHome, "INDEX.md")
-	if previousIndex, err := os.ReadFile(indexPath); err == nil {
-		if err := syncIndex(i.loc); err != nil {
+	if opts.Extra != nil {
+		extra, undoExtra, err := opts.Extra()
+		if err != nil {
 			failures := restore(undo)
 			rollbackDirs(undo)
-			if werr := os.WriteFile(indexPath, previousIndex, 0o644); werr != nil {
-				failures = append(failures, indexPath)
+			if undoExtra != nil {
+				failures = append(failures, undoExtra()...)
 			}
-			return nil, rollbackError(fmt.Errorf("no se puede regenerar %s: %w", indexPath, err), failures, i.Feature)
+			return nil, rollbackError(err, failures, opts.Retry)
 		}
-		written = append(written, indexPath)
+		written = append(written, extra...)
 	}
 	return written, nil
+}
+
+// Apply escribe todas las especificaciones del plan o ninguna (REQ-30.2) con writeSet. Con
+// una integración sin cambios no toca el disco. Si el proyecto ya tiene openspec/INDEX.md
+// lo regenera con livingdoc.Service.Sync y, si eso falla, también lo deshace. Devuelve las
+// rutas absolutas escritas, con el índice al final si cambió.
+func (i Integration) Apply() ([]string, error) {
+	var files []fileWrite
+	for _, c := range i.Capabilities {
+		if c.Outcome != OutcomeAlready {
+			files = append(files, fileWrite{Path: c.Path, Content: []byte(c.Content), Name: c.Name})
+		}
+	}
+	if i.docText != "" {
+		// El documento ODD reescrito va en el mismo conjunto atómico, el último (REQ-30.2).
+		files = append(files, fileWrite{Path: i.docPath, Content: []byte(i.docText), Name: "documento ODD " + i.Feature})
+	}
+	return writeSet(files, writeOptions{
+		Retry: "axiom archive integrate --odd " + i.Feature,
+		Extra: func() ([]string, func() []string, error) {
+			indexPath := filepath.Join(i.loc.PlanningHome, "INDEX.md")
+			previousIndex, err := os.ReadFile(indexPath)
+			if err != nil {
+				return nil, nil, nil
+			}
+			restoreIndex := func() []string {
+				if werr := restoreFile(indexPath, previousIndex, 0o644); werr != nil {
+					return []string{indexPath}
+				}
+				return nil
+			}
+			if err := syncIndex(i.loc); err != nil {
+				return nil, restoreIndex, fmt.Errorf("no se puede regenerar %s: %w", indexPath, err)
+			}
+			return []string{indexPath}, restoreIndex, nil
+		},
+	})
 }
 
 // syncIndexOf regenera openspec/INDEX.md con el servicio de documentación viva.
@@ -134,7 +186,7 @@ func makeDirs(dir string) ([]string, error) {
 	return missing, os.MkdirAll(dir, 0o755)
 }
 
-// restore devuelve cada especificación escrita a su contenido anterior o la quita si no
+// restore devuelve cada fichero escrito a su contenido anterior o lo quita si no
 // existía; devuelve las rutas que no pudo restaurar.
 func restore(entries []applied) []string {
 	var failed []string
@@ -142,8 +194,8 @@ func restore(entries []applied) []string {
 		entry := entries[n]
 		var err error
 		if entry.existed {
-			err = os.WriteFile(entry.path, entry.previous, 0o644)
-		} else if rmErr := os.Remove(entry.path); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+			err = restoreFile(entry.path, entry.previous, 0o644)
+		} else if rmErr := removeFile(entry.path); rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
 			err = rmErr
 		}
 		if err != nil {
@@ -153,7 +205,7 @@ func restore(entries []applied) []string {
 	return failed
 }
 
-// rollbackDirs quita las carpetas que Apply creó, si están vacías.
+// rollbackDirs quita las carpetas que writeSet creó, si están vacías.
 func rollbackDirs(entries []applied) {
 	for n := len(entries) - 1; n >= 0; n-- {
 		for _, dir := range entries[n].createdDirs {
@@ -162,9 +214,9 @@ func rollbackDirs(entries []applied) {
 	}
 }
 
-func rollbackError(cause error, failed []string, feature string) error {
+func rollbackError(cause error, failed []string, retry string) error {
 	if len(failed) > 0 {
 		return fmt.Errorf("%w; no se pudo restaurar %s: revísalo con `git status` y recupéralo con `git checkout -- <ruta>` antes de repetir la integración", cause, strings.Join(failed, ", "))
 	}
-	return fmt.Errorf("%w; se ha deshecho lo escrito y no se ha cambiado ninguna especificación; corrige la causa y vuelve a ejecutar `axiom archive integrate --odd %s`", cause, feature)
+	return fmt.Errorf("%w; se ha deshecho lo escrito y no se ha cambiado ninguna especificación; corrige la causa y vuelve a ejecutar `%s`", cause, retry)
 }

@@ -4,43 +4,17 @@
 
 ---
 
-## Persona Modes
+## Interfaz de Axiom
 
-| Persona   | ID          | Description                                                                       |
-| --------- | ----------- | --------------------------------------------------------------------------------- |
-| Gentleman | `gentleman` | Teaching-oriented mentor persona — pushes back on bad practices, explains the why |
-| Neutral   | `neutral`   | Same teacher, same philosophy, no regional language — warm and professional       |
-| Custom    | `custom`    | Mantiene la persona/configuración existente fuera de la gestión de Axiom |
-
-`custom` es una opción de compatibilidad y propiedad, no un editor de personas. Úsala si ya tienes instrucciones propias y quieres que Axiom las deje intactas.
-
----
-
-## Interactive TUI
-
-Just run it — the Bubbletea TUI guides you through agent selection, components, skills, presets, and managed uninstall flows:
+Ejecuta `axiom` sin argumentos en una terminal interactiva para abrir la interfaz web local, igual que `axiom ui`. Sin terminal interactiva, `axiom` devuelve un error. La instalación de agentes se hace con `axiom install`; hoy la interfaz web no instala agentes. `install`, `setup`, `sync`, `upgrade`, `update`, `uninstall`, `restore`, `backup` y `doctor` siguen en la CLI.
 
 ```bash
 axiom
 ```
 
-The uninstall flow is also available from the TUI menu. It lets you:
-
-- select one or more configured agents
-- select which managed components to remove (for example `sdd`, `persona`, or `context7`)
-- confirm the exact uninstall scope before applying changes
-
 Antes de modificar cualquier fichero gestionado, Axiom crea una copia de seguridad que permite restaurar la configuración si es necesario.
 
-### Disable TUI spinner animation
-
-Define `AXIOM_NO_ANIMATION=1` para detener la animación del indicador de la TUI:
-
-```bash
-AXIOM_NO_ANIMATION=1 axiom
-```
-
-Esto solo detiene la animación del indicador; las operaciones de instalación, actualización, sincronización y desinstalación siguen funcionando con normalidad. Elimina la variable o asígnale un valor distinto de `1` para conservar la animación predeterminada.
+> La versión que retiró la TUI, las personas `gentleman` y `neutral`, los presets, los temas y el agent builder no limpia lo que dejaron las versiones anteriores. La lista de limpieza manual está en [Notas de retirada](releases/notas-retirada-arranque.md).
 
 ---
 
@@ -50,36 +24,33 @@ Esto solo detiene la animación del indicador; las operaciones de instalación, 
 
 Configuración inicial: detecta tus herramientas y configura los agentes y componentes seleccionados. Al instalar un único agente con `--agent X`, Axiom **añade** el nuevo agente a la lista `installed_agents` existente en el estado del ámbito (`~/.axiom/state.json` en global; `.axiom/state.json` en la raíz del proyecto en workspace; si el proyecto aún no tiene el suyo, las preferencias parten del estado global como semilla de solo lectura, sin los agentes, véase [Estado de instalación por proyecto](#cli-flags-install)) y **conserva** los valores de `model_assignments`; no sobrescribe todo el estado. Axiom migra una vez el estado antiguo de `~/.gentle-ai/` a `~/.axiom/`.
 
-**Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall`, y también la TUI, trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
+**Ámbito predeterminado: el proyecto.** `install`, `setup`, `sync` y `uninstall` trabajan por defecto con `--scope workspace`: escriben en la raíz del proyecto y no en tu carpeta de usuario. El ámbito global sigue disponible, pero hay que pedirlo (`--scope global` o `AXIOM_INSTALL_SCOPE=global`) y `install` lo avisa antes de escribir. Con el ámbito workspace:
 
 - Axiom no escribe en tu HOME salvo lo declarado: el binario `axiom`, el binario de Engram y el registro del hub (`~/.axiom/workspaces.json`). `~/.axiom` (o `AXIOM_STATE_DIR`) solo guarda el hub, las copias de seguridad, `bin` y la caché; el estado de cada proyecto vive en `<raíz>/.axiom/state.json`, sin versionar.
-- Lo opcional es opt-in. CodeGraph no entra en ningún preset y hay que pedirlo expresamente; si lo eliges, conserva su huella en HOME y Axiom la avisa.
+- Lo opcional es opt-in. CodeGraph no entra en el conjunto por defecto y hay que pedirlo expresamente; si lo eliges, conserva su huella en HOME y Axiom la avisa.
 - El componente de permisos solo añade reglas de denegación (`deny`) y nunca fija modos de autoaprobación. Detalle en [Componentes](components.md).
 - Un directorio cuenta como proyecto de Axiom solo si tiene un `axiom.yaml` propio, o el que se alcanza mediante el puntero `.axiom-workspace` de un multirepo, en él o en un ancestro. Un `openspec/` suelto no basta. Los hooks que Axiom instala (registro de skills, guarda de rama y preflight SDD) no hacen nada fuera de un proyecto así.
 - Cada agente recibe su configuración en las rutas de proyecto que lee (véase [Agentes](agents.md#modo-workspace-por-agente)). Trae, Antigravity y Pi no tienen modo workspace y se omiten con un aviso; Qwen Code ya no se puede elegir ([agentes no disponibles](agents.md#agentes-no-disponibles-de-momento)).
 
 ```bash
-# Ecosistema completo para varios agentes
+# Conjunto por defecto (Engram, SDD, skills, Context7, permisos y persona) para varios agentes
 axiom install \
-  --agent claude-code,opencode,gemini-cli \
-  --preset full-gentleman
+  --agent claude-code,opencode,gemini-cli
 
-# Configuración mínima para Cursor
+# Solo Engram y SDD para Cursor
 axiom install \
   --agent cursor \
-  --preset minimal
+  --component engram,sdd
 
 # Selección de componentes y skills concretos
 axiom install \
   --agent claude-code \
   --component engram,sdd,skills,context7,persona,permissions \
-  --skill go-testing,skill-creator,work-unit-commits,issue-creation \
-  --persona gentleman
+  --skill go-testing,skill-creator,work-unit-commits,issue-creation
 
 # Previsualiza primero el plan sin aplicar cambios
 axiom install --dry-run \
-  --agent claude-code,opencode \
-  --preset full-gentleman
+  --agent claude-code,opencode
 ```
 
 ### skill-registry refresh
@@ -108,7 +79,7 @@ Actualiza los recursos gestionados a la versión vigente. Ejecútalo después de
 
 > **Importante:** `axiom sync` actualiza los agentes registrados como instalados por Axiom, no todos los directorios de configuración de agentes de tu equipo.
 >
-> Axiom guarda los destinos seleccionados en `~/.axiom/state.json` con `--scope global` y en `<raíz del workspace>/.axiom/state.json` con `--scope workspace` (el ámbito predeterminado de la TUI y de `setup`). Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. Axiom migra una vez el estado antiguo de `~/.gentle-ai/state.json` a `~/.axiom/`. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
+> Axiom guarda los destinos seleccionados en `~/.axiom/state.json` con `--scope global` y en `<raíz del workspace>/.axiom/state.json` con `--scope workspace` (el ámbito predeterminado de `setup`). Las siguientes ejecuciones de `sync` utilizan esa selección para no escribir accidentalmente en herramientas que no hayas elegido gestionar. Axiom migra una vez el estado antiguo de `~/.gentle-ai/state.json` a `~/.axiom/`. Si repites la instalación y seleccionas un único agente, esa selección pasa a ser el ámbito predeterminado de sincronización.
 >
 > Antes de sincronizar, puedes previsualizar el ámbito activo con `axiom sync --dry-run`. Para sincronizar agentes que no figuran en la selección guardada, indícalos explícitamente con `--agent`.
 
@@ -125,9 +96,9 @@ axiom sync --agent claude-code --agent opencode
 
 Sync is safe and idempotent — running it twice produces no changes the second time. When files change, the summary reports the changed file count and lists the changed file paths. Every report (changes, no-op and `--dry-run`) also names the effective scope and its root right after the header, for example `Scope: workspace (C:\repos\axiom)` or `Scope: global (C:\Users\me)`. The default scope is `workspace`, so use `axiom sync --scope global` to refresh the user-wide installation.
 
-`sync` actualiza el conjunto de componentes gestionados para los agentes seleccionados. No admite `--component`; usa `--include-permissions` para incluir voluntariamente el componente de permisos (solo añade reglas de denegación y sigue el ámbito). La TUI, y el `axiom sync` diferido que Axiom lanza tras una autoactualización, añaden `--include-permissions` por su cuenta cuando descubren Codex; es inocuo, porque Codex no tiene overlay de permisos en ningún ámbito y no se escribe nada para él. La opción heredada `--include-theme` aún se interpreta por compatibilidad, pero no instala ni sincroniza temas.
+`sync` actualiza el conjunto de componentes gestionados para los agentes seleccionados. No admite `--component`; usa `--include-permissions` para incluir voluntariamente el componente de permisos (solo añade reglas de denegación y sigue el ámbito). El `axiom sync` diferido que Axiom lanza tras una autoactualización, añaden `--include-permissions` por su cuenta cuando descubren Codex; es inocuo, porque Codex no tiene overlay de permisos en ningún ámbito y no se escribe nada para él. La opción heredada `--include-theme` aún se interpreta por compatibilidad, pero no instala ni sincroniza temas.
 
-CodeGraph es opcional: ningún preset lo instala y `sync` no lo añade por su cuenta. Si ya lo tenías, `sync` lo mantiene por la selección guardada o por la guía gestionada que Axiom ya escribió.
+CodeGraph es opcional: el conjunto por defecto no lo instala y `sync` no lo añade por su cuenta. Si ya lo tenías, `sync` lo mantiene por la selección guardada o por la guía gestionada que Axiom ya escribió.
 
 Tras actualizar el binario, `axiom sync --dry-run` previsualiza los destinos seleccionados y `axiom sync` actualiza sus instrucciones principales de autorización remota. Para elegir un cliente gestionado concreto, por ejemplo, usa `axiom sync --agent opencode`. Estas instrucciones de comportamiento se incorporan siempre, sin necesidad de seleccionar persona, SDD o `--include-permissions`. Exigen autorización explícita del destino, la operación y las credenciales o sesión antes de realizar trabajo remoto o descubrir y reutilizar accesos existentes.
 
@@ -261,7 +232,7 @@ Para instalar o actualizar Axiom, sigue el [Inicio rápido](quickstart.md), que 
 
 ### model assignment
 
-The TUI **Configure Models** screen can assign different models to SDD phases, `sdd-onboard`, and Judgment Day agents (`jd-judge-a`, `jd-judge-b`, `jd-fix-agent`) when the selected agent supports those slots. This lets you keep review or apply phases on stronger models while routing cheaper phases to faster models.
+The dashboard (**Ecosistema → Modelos**) can assign different models to SDD phases, `sdd-onboard`, and Judgment Day agents (`jd-judge-a`, `jd-judge-b`, `jd-fix-agent`) when the selected agent supports those slots. This lets you keep review or apply phases on stronger models while routing cheaper phases to faster models.
 
 For Claude Code, the Custom picker offers `default`, `low`, `medium`, `high`, `xhigh`, and `max` for Sonnet, Opus, and Fable. An explicit effort is passed to the in-process reviewer with `--effort` and written to generated agent frontmatter; `default` inherits the runtime default. Haiku offers only `default`.
 
@@ -405,10 +376,8 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 | Flag                          | Description                                                                                                       |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `--agent`, `--agents`         | Agents to configure (comma-separated)                                                                             |
-| `--component`, `--components` | Components to install (comma-separated)                                                                           |
+| `--component`, `--components` | Components to install (comma-separated); without it, the default set: Engram, SDD, skills, Context7, permissions and persona |
 | `--skill`, `--skills`         | Skills to install (comma-separated)                                                                               |
-| `--persona`                   | Persona mode: `gentleman`, `neutral`, `custom` (`custom` keeps your existing persona unmanaged)                   |
-| `--preset`                    | Preset: `full-gentleman`, `ecosystem-only`, `minimal`, `custom` (`custom` means manual component/skill selection) |
 | `--sdd-mode`                  | SDD orchestrator mode: `single` or `multi`                                                                        |
 | `--scope`                     | Ámbito de instalación: `workspace` (predeterminado, escribe en la raíz del proyecto actual) o `global` (escribe en la configuración global de cada agente seleccionado y afecta a todos los proyectos de la máquina; hay que pedirlo y se avisa). También admite `AXIOM_INSTALL_SCOPE`, útil en CI y usos no interactivos. |
 | `--dry-run`                   | Preview the install plan without applying changes                                                                 |
@@ -447,7 +416,7 @@ Con la variable definida, `install`, `setup` y `sync` no crean nada bajo `~/.axi
 
 | Ámbito | Fichero de estado |
 | ------ | ----------------- |
-| `--scope workspace` (`install`, `setup`, `sync` y la TUI) | `<raíz del workspace>/.axiom/state.json`, sin versionar |
+| `--scope workspace` (`install`, `setup` y `sync`) | `<raíz del workspace>/.axiom/state.json`, sin versionar |
 | `--scope global` | `~/.axiom/state.json` (o `<AXIOM_STATE_DIR>/state.json`) |
 
 Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos del proyecto B. El estado global conserva lo que es de la máquina: la comprobación de actualizaciones (`last_update_check`) y la sincronización pendiente tras una autoactualización (`pending_sync`); el estado del proyecto nunca los guarda.
@@ -461,14 +430,13 @@ Así, instalar o sincronizar el proyecto A no pisa la selección ni los modelos 
 | Flag                     | Description                                                                                          |
 | ------------------------ | ---------------------------------------------------------------------------------------------------- |
 | `--agent`, `--agents`    | Agents to sync (defaults to all installed agents)                                                    |
-| `--skill`, `--skills`    | Skills to sync (comma-separated; defaults to selected preset skills)                                  |
+| `--skill`, `--skills`    | Skills to sync (comma-separated; defaults to the selected skills)                                  |
 | `--sdd-mode`             | SDD orchestrator mode: `single` or `multi`                                                           |
 | `--strict-tdd`           | Enable Strict TDD Mode for SDD agents                                                                |
 | `--profile`              | Create or update an SDD profile: `name:provider/model` (sets the default model for all phases)       |
 | `--profile-phase`        | Override a specific phase in a profile: `name:phase:provider/model`                                  |
 | `--sdd-profile-strategy` | OpenCode profile sync strategy: `generated-multi` or `external-single-active`                        |
 | `--include-permissions`  | Include permissions sync (opt-in)                                                                    |
-| `--include-theme`        | Opción heredada de compatibilidad: se interpreta, pero no instala ni sincroniza temas                  |
 | `--dry-run`              | Preview the sync plan without applying changes                                                       |
 
 **Profile examples:**
@@ -512,7 +480,7 @@ See [OpenCode SDD Profiles](opencode-profiles.md) for the full guide.
 git clone https://github.com/IGutierrezZ/axiom.git
 cd axiom
 go install ./cmd/axiom
-axiom install --agent claude-code,cursor --preset full-gentleman
+axiom install --agent claude-code,cursor
 
 # Tras una nueva versión: actualiza Axiom y sincroniza sus recursos gestionados
 axiom upgrade
@@ -522,7 +490,7 @@ axiom sync
 axiom uninstall --agent claude-code --component sdd,persona
 
 # Añade otro agente más adelante (en el ámbito workspace, que es el predeterminado)
-axiom install --agent gemini-cli --preset full-gentleman
+axiom install --agent gemini-cli
 ```
 
 ### Install and update troubleshooting

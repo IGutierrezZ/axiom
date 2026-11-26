@@ -2,7 +2,6 @@ package sdd
 
 import (
 	"os"
-	"sort"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -109,43 +108,4 @@ func ReadCurrentModelAssignments(settingsPath string) (map[string]model.ModelAss
 	}
 
 	return result, nil
-}
-
-// DiscoverCustomAgents inspects opencode.json at settingsPath and returns a sorted
-// slice of custom agent keys defined under "agent" that are not part of the standard
-// configurable agent set.
-func DiscoverCustomAgents(settingsPath string) ([]string, error) {
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	root, err := filemerge.UnmarshalJSONObject(data)
-	if err != nil {
-		return nil, nil
-	}
-
-	agentRaw, ok := root["agent"]
-	if !ok {
-		return nil, nil
-	}
-	agentMap, ok := agentRaw.(map[string]any)
-	if !ok {
-		return nil, nil
-	}
-
-	var custom []string
-	for name := range agentMap {
-		if !configurableAgentSet[name] && !reservedAgentSet[name] {
-			custom = append(custom, name)
-		}
-	}
-
-	sort.Slice(custom, func(i, j int) bool {
-		return custom[i] < custom[j]
-	})
-	return custom, nil
 }

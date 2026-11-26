@@ -40,3 +40,34 @@ func TestDocsPinOpenspecConfigBoundary(t *testing.T) {
 		}
 	}
 }
+
+// C-03-b (REQ-47.10, REQ-30.2): el manual explica el identificador provisional, que la
+// integración ODD reescribe el documento ODD y el verbo de archivado del carril SDD, y ya no
+// afirma que la integración no modifica el documento ODD.
+func TestDocsPinManualProvisionalIdentifiers(t *testing.T) {
+	manual := readRepoFile(t, "docs/manual-de-inicio.md")
+	for _, want := range []string{
+		"identificador provisional `(prov:<serie>:<ordinal>)`",
+		"el número lo asigna la integración, en orden de aparición",
+		"reescribe el documento ODD",
+		"## Identificadores asignados",
+		"`axiom archive integrate --odd <feature> --check`",
+		"`axiom sdd archive-integrate`",
+		"`axiom sdd archive-integrate --cwd <raíz> --change <cambio> --check`",
+		"`requirements` de `axiom sdd status --json`",
+		"(`archive-compose` no lo produce)",
+	} {
+		if !strings.Contains(manual, want) {
+			t.Errorf("docs/manual-de-inicio.md debe contener %q", want)
+		}
+	}
+	for _, stale := range []string{
+		"no modifica el documento ODD",
+		"axiom sdd archive-compose <nombre-cambio> --supersede",
+		"el propio documento `odd/tasks/<feature>.md` lleva la delta y se integra",
+	} {
+		if strings.Contains(manual, stale) {
+			t.Errorf("docs/manual-de-inicio.md conserva el texto obsoleto %q", stale)
+		}
+	}
+}

@@ -86,15 +86,12 @@ const (
 type ComponentID string
 
 const (
-	ComponentEngram             ComponentID = "engram"
-	ComponentSDD                ComponentID = "sdd"
-	ComponentSkills             ComponentID = "skills"
-	ComponentContext7           ComponentID = "context7"
-	ComponentPersona            ComponentID = "persona"
-	ComponentPermission         ComponentID = "permissions"
-	ComponentTheme              ComponentID = "theme"
-	ComponentClaudeTheme        ComponentID = "claude-theme"
-	ComponentOpenCodeGentleLogo ComponentID = "opencode-gentle-logo"
+	ComponentEngram     ComponentID = "engram"
+	ComponentSDD        ComponentID = "sdd"
+	ComponentSkills     ComponentID = "skills"
+	ComponentContext7   ComponentID = "context7"
+	ComponentPersona    ComponentID = "persona"
+	ComponentPermission ComponentID = "permissions"
 )
 
 type UninstallMode string
@@ -140,19 +137,6 @@ const (
 	SkillSystemicIssueTriage SkillID = "systemic-issue-triage"
 )
 
-type PersonaID string
-
-const (
-	PersonaAxiom     PersonaID = "axiom"
-	PersonaGentleman PersonaID = "gentleman"
-	// PersonaGentlemanNeutralArtifacts is a legacy alias accepted for backward
-	// compatibility. The CLI and sync normalization treat it as PersonaNeutral,
-	// and it is never offered as a selectable choice.
-	PersonaGentlemanNeutralArtifacts PersonaID = "gentleman-neutral-artifacts"
-	PersonaNeutral                   PersonaID = "neutral"
-	PersonaCustom                    PersonaID = "custom"
-)
-
 // SystemPromptStrategy defines how an agent's system prompt file is managed.
 type SystemPromptStrategy int
 
@@ -184,15 +168,6 @@ const (
 	StrategyTOMLFile
 )
 
-type PresetID string
-
-const (
-	PresetFullGentleman PresetID = "full-gentleman"
-	PresetEcosystemOnly PresetID = "ecosystem-only"
-	PresetMinimal       PresetID = "minimal"
-	PresetCustom        PresetID = "custom"
-)
-
 type SDDModeID string
 
 const (
@@ -219,7 +194,6 @@ type OpenCodeCommunityPluginID string
 const (
 	OpenCodePluginSubAgentStatusline OpenCodeCommunityPluginID = "sub-agent-statusline"
 	OpenCodePluginSDDEngramManage    OpenCodeCommunityPluginID = "sdd-engram-plugin"
-	OpenCodePluginGentleLogo         OpenCodeCommunityPluginID = "gentle-logo"
 )
 
 type CommunityToolID string
@@ -266,15 +240,12 @@ func IsKnownAgentID(id AgentID) bool {
 // (lo comprueba una prueba de catalog); está aquí para que el estado pueda
 // filtrar componentes retirados, como GGA, sin depender del catálogo.
 var knownComponentIDs = map[ComponentID]struct{}{
-	ComponentEngram:             {},
-	ComponentSDD:                {},
-	ComponentSkills:             {},
-	ComponentContext7:           {},
-	ComponentPersona:            {},
-	ComponentPermission:         {},
-	ComponentTheme:              {},
-	ComponentClaudeTheme:        {},
-	ComponentOpenCodeGentleLogo: {},
+	ComponentEngram:     {},
+	ComponentSDD:        {},
+	ComponentSkills:     {},
+	ComponentContext7:   {},
+	ComponentPersona:    {},
+	ComponentPermission: {},
 }
 
 // IsKnownComponentID dice si Axiom admite el componente. Un identificador que no

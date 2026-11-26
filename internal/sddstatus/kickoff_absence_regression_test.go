@@ -173,6 +173,16 @@ const kickoffAbsenceRegressionGolden = `{
     "lane": "ask",
     "source": "no_workspace"
   },
+  "requirements": {
+    "modifies": [],
+    "creates": [
+      {
+        "capability": "auth",
+        "operation": "ADDED",
+        "requirement": "Auth"
+      }
+    ]
+  },
   "phaseInstructions": {
     "apply": [
       "Change: regression-no-kickoff",

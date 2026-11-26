@@ -27,7 +27,6 @@ type UninstallOpenCodePluginFlags struct {
 var validOpenCodePluginIDs = []model.OpenCodeCommunityPluginID{
 	model.OpenCodePluginSubAgentStatusline,
 	model.OpenCodePluginSDDEngramManage,
-	model.OpenCodePluginGentleLogo,
 }
 
 // ParseUninstallOpenCodePluginFlags parses the args after "uninstall opencode-plugin".
@@ -146,8 +145,6 @@ func promptUninstallOpenCodePluginConfirm(id model.OpenCodeCommunityPluginID, st
 		_, _ = fmt.Fprintf(stdout, "  Layer 2: removes %s from package.json dependencies\n", pkg)
 		_, _ = fmt.Fprintf(stdout, "  Layer 3: removes ~/.config/opencode/node_modules/%s/\n", pkg)
 		_, _ = fmt.Fprintf(stdout, "  Layer 4: removes ~/.cache/opencode/packages/%s@latest\n", pkg)
-	} else if id == model.OpenCodePluginGentleLogo {
-		_, _ = fmt.Fprintf(stdout, "  Plus: removes the local .tsx file ~/.config/opencode/tui-plugins/gentle-logo.tsx\n")
 	}
 	_, _ = fmt.Fprintln(stdout, "Changes are staged and rolled back if the operation reports an error.")
 	_, _ = fmt.Fprint(stdout, "Type 'yes' to confirm: ")
@@ -183,15 +180,6 @@ func RenderUninstallOpenCodePluginReport(result opencodeplugin.UninstallResult) 
 		_, _ = fmt.Fprintln(&b, "  Layer 1 (tui.json): unchanged")
 	}
 
-	if result.PluginID == model.OpenCodePluginGentleLogo {
-		if result.TSXPath != "" {
-			_, _ = fmt.Fprintf(&b, "  Layer TSX: removed %s\n", result.TSXPath)
-		} else {
-			_, _ = fmt.Fprintln(&b, "  Layer TSX: no file present")
-		}
-		return strings.TrimRight(b.String(), "\n")
-	}
-
 	if result.ChangedPackageJSON {
 		_, _ = fmt.Fprintf(&b, "  Layer 2 (package.json): updated — %s removed from dependencies\n", pkg)
 	} else {
@@ -223,10 +211,6 @@ func RenderUninstallOpenCodePluginReport(result opencodeplugin.UninstallResult) 
 func pluginDisplayName(id model.OpenCodeCommunityPluginID) string {
 	if def, ok := opencodeplugin.DefinitionFor(id); ok {
 		return def.Name
-	}
-	switch id {
-	case model.OpenCodePluginGentleLogo:
-		return "Gentle Logo"
 	}
 	return string(id)
 }

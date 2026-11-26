@@ -56,7 +56,6 @@ func fullyPopulatedInstallState() InstallState {
 		SelectionConfigured:      true,
 		Components:               []model.ComponentID{model.ComponentEngram, model.ComponentSDD},
 		Skills:                   []model.SkillID{model.SkillSDDInit, model.SkillWorkUnitCommits},
-		Preset:                   model.PresetCustom,
 		SDDMode:                  model.SDDModeMulti,
 		StrictTDD:                true,
 		CommunityTools:           []string{"codegraph", "jq"},
@@ -79,8 +78,6 @@ func fullyPopulatedInstallState() InstallState {
 		ModelAssignments: map[string]ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4", Effort: "medium"},
 		},
-		Persona:          "neutral",
-		PersonaPresent:   true,
 		LastUpdateCheck:  &lastUpdateCheck,
 		PendingSync:      true,
 		BackgroundIntent: model.OpenCodeBackgroundOn,
@@ -177,7 +174,6 @@ func TestMergeAgents(t *testing.T) {
 				CommunityToolsConfigured: true,
 				ModelAssignments:         existingAssignments,
 				ClaudeModelAssignments:   existingClaude,
-				Persona:                  "gentleman",
 			},
 			newAgents: []string{"pi"},
 			wantIDs:   []string{"opencode", "pi"},
@@ -198,9 +194,6 @@ func TestMergeAgents(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments) {
 				t.Errorf("ClaudeModelAssignments not preserved: got %v, want %v", got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments)
-			}
-			if got.Persona != tt.existing.Persona {
-				t.Errorf("Persona not preserved: got %q, want %q", got.Persona, tt.existing.Persona)
 			}
 			if !reflect.DeepEqual(got.CommunityTools, tt.existing.CommunityTools) || got.CommunityToolsConfigured != tt.existing.CommunityToolsConfigured {
 				t.Errorf("CommunityTools not preserved: got (%v, %t), want (%v, %t)", got.CommunityTools, got.CommunityToolsConfigured, tt.existing.CommunityTools, tt.existing.CommunityToolsConfigured)
@@ -230,8 +223,8 @@ func TestCommunityToolsRoundTrip(t *testing.T) {
 
 func TestSelectionRoundTripPreservesPresenceAndExplicitEmpty(t *testing.T) {
 	tests := []InstallState{
-		{SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, Preset: model.PresetCustom, SDDMode: model.SDDModeMulti, StrictTDD: true},
-		{SelectionConfigured: true, Components: []model.ComponentID{}, Skills: []model.SkillID{}, Preset: model.PresetCustom},
+		{SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, SDDMode: model.SDDModeMulti, StrictTDD: true},
+		{SelectionConfigured: true, Components: []model.ComponentID{}, Skills: []model.SkillID{}},
 		{InstalledAgents: []string{"opencode"}},
 	}
 	for i, want := range tests {
@@ -240,7 +233,7 @@ func TestSelectionRoundTripPreservesPresenceAndExplicitEmpty(t *testing.T) {
 			t.Fatal(err)
 		}
 		got, err := Read(home)
-		if err != nil || got.SelectionConfigured != want.SelectionConfigured || !slices.Equal(got.Components, want.Components) || !slices.Equal(got.Skills, want.Skills) || got.Preset != want.Preset || got.SDDMode != want.SDDMode || got.StrictTDD != want.StrictTDD {
+		if err != nil || got.SelectionConfigured != want.SelectionConfigured || !slices.Equal(got.Components, want.Components) || !slices.Equal(got.Skills, want.Skills) || got.SDDMode != want.SDDMode || got.StrictTDD != want.StrictTDD {
 			t.Errorf("case %d selection = %#v, want %#v", i, got, want)
 		}
 	}
@@ -265,73 +258,50 @@ func TestWriteAndRead(t *testing.T) {
 	}
 }
 
-// TestPersonaRoundTrip verifies the Persona field round-trips through
-// Write/Read. Both `axiom install` (CLI in run.go) and the TUI app
-// (internal/app/app.go) write this field after a successful install so that
-// `axiom sync` regenerates the persona the user actually selected — not a
-// hard-coded default.
-func TestPersonaRoundTrip(t *testing.T) {
-	for _, persona := range []string{"gentleman", "neutral", "custom"} {
-		t.Run(persona, func(t *testing.T) {
-			home := t.TempDir()
-			if err := Write(home, InstallState{
-				InstalledAgents: []string{"claude-code"},
-				Persona:         persona,
-			}); err != nil {
-				t.Fatalf("Write() error = %v", err)
-			}
-			s, err := Read(home)
-			if err != nil {
-				t.Fatalf("Read() error = %v", err)
-			}
-			if s.Persona != persona {
-				t.Errorf("Persona = %q, want %q", s.Persona, persona)
-			}
-		})
-	}
-}
-
-// TestPersonaBackwardCompat verifies that state files written before persona
-// persistence (no `persona` JSON field) still read cleanly with an empty
-// Persona, allowing the sync fallback to take over.
-func TestPersonaBackwardCompat(t *testing.T) {
-	home := t.TempDir()
-	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}}); err != nil {
-		t.Fatalf("Write() error = %v", err)
-	}
-	s, err := Read(home)
-	if err != nil {
-		t.Fatalf("Read() error = %v", err)
-	}
-	if s.Persona != "" {
-		t.Errorf("Persona = %q, want empty for pre-feature state", s.Persona)
-	}
-}
-
-func TestPersonaPresenceDistinguishesOmittedAndExplicitEmpty(t *testing.T) {
+// TestLegacyPersonaIsIgnoredAndDroppedOnTheNextWrite verifica que un estado con
+// una persona retirada ("gentleman", "neutral", "custom"…) carga, deja el valor en
+// IgnoredPersona para que el llamador avise y la siguiente escritura ya no guarda
+// la clave. "axiom" y el vacío se aceptan en silencio.
+func TestLegacyPersonaIsIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
-		stateJSON   string
-		wantPresent bool
+		persona     string
+		wantIgnored string
 	}{
-		{name: "omitted", stateJSON: `{"installed_agents":["pi"]}`, wantPresent: false},
-		{name: "explicit empty", stateJSON: `{"installed_agents":["pi"],"persona":""}`, wantPresent: true},
+		{name: "gentleman", persona: "gentleman", wantIgnored: "gentleman"},
+		{name: "neutral", persona: "neutral", wantIgnored: "neutral"},
+		{name: "custom", persona: "custom", wantIgnored: "custom"},
+		{name: "axiom", persona: "axiom", wantIgnored: ""},
+		{name: "vacío", persona: "", wantIgnored: ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			home := t.TempDir()
-			if err := os.MkdirAll(filepath.Dir(Path(home)), 0o755); err != nil {
-				t.Fatalf("MkdirAll() error = %v", err)
-			}
-			if err := os.WriteFile(Path(home), []byte(tc.stateJSON), 0o644); err != nil {
-				t.Fatalf("WriteFile() error = %v", err)
-			}
-
+			home := writeLegacyState(t, `{"installed_agents":["claude-code"],"persona":"`+tc.persona+`","pending_sync":true}`)
 			got, err := Read(home)
 			if err != nil {
 				t.Fatalf("Read() error = %v", err)
 			}
-			if got.PersonaPresent != tc.wantPresent {
-				t.Fatalf("PersonaPresent = %t, want %t", got.PersonaPresent, tc.wantPresent)
+			if got.IgnoredPersona != tc.wantIgnored {
+				t.Fatalf("IgnoredPersona = %q, want %q", got.IgnoredPersona, tc.wantIgnored)
+			}
+			if !reflect.DeepEqual(got.InstalledAgents, []string{"claude-code"}) || !got.PendingSync {
+				t.Fatalf("Read() perdió el resto de campos: %+v", got)
+			}
+			if err := Write(home, got); err != nil {
+				t.Fatalf("Write() error = %v", err)
+			}
+			data, err := os.ReadFile(Path(home))
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			if strings.Contains(string(data), "persona") {
+				t.Fatalf("la escritura conserva la clave persona: %s", data)
+			}
+			again, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() tras escribir error = %v", err)
+			}
+			if again.IgnoredPersona != "" {
+				t.Fatalf("IgnoredPersona tras reescribir = %q, want vacío", again.IgnoredPersona)
 			}
 		})
 	}
@@ -435,7 +405,7 @@ func TestWriteOverwrite(t *testing.T) {
 
 func TestWriteFailurePreservesExistingState(t *testing.T) {
 	home := t.TempDir()
-	original := InstallState{InstalledAgents: []string{"opencode"}, Persona: "neutral", PersonaPresent: true, UpstreamVersion: "3.3.9"}
+	original := InstallState{InstalledAgents: []string{"opencode"}, InstalledBinaryVersion: "3.3.0", UpstreamVersion: "3.3.9"}
 	if err := Write(home, original); err != nil {
 		t.Fatal(err)
 	}
@@ -1157,15 +1127,15 @@ func TestLegacyRDDSwitchFieldsAreIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
 	}{
 		{
 			name: "string and timestamp",
-			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":"off","rdd_mode_recorded_at":"2026-08-12T09:00:00Z"}`,
+			raw:  `{"installed_agents":["claude-code"],"pending_sync":true,"rdd_mode":"off","rdd_mode_recorded_at":"2026-08-12T09:00:00Z"}`,
 		},
 		{
 			name: "unexpected types",
-			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":5,"rdd_mode_recorded_at":{"x":1}}`,
+			raw:  `{"installed_agents":["claude-code"],"pending_sync":true,"rdd_mode":5,"rdd_mode_recorded_at":{"x":1}}`,
 		},
 		{
 			name: "unparseable timestamp",
-			raw:  `{"installed_agents":["claude-code"],"persona":"neutral","pending_sync":true,"rdd_mode":"on","rdd_mode_recorded_at":"no-es-una-fecha"}`,
+			raw:  `{"installed_agents":["claude-code"],"pending_sync":true,"rdd_mode":"on","rdd_mode_recorded_at":"no-es-una-fecha"}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1174,7 +1144,7 @@ func TestLegacyRDDSwitchFieldsAreIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Read() error = %v", err)
 			}
-			if !reflect.DeepEqual(got.InstalledAgents, []string{"claude-code"}) || got.Persona != "neutral" || !got.PendingSync {
+			if !reflect.DeepEqual(got.InstalledAgents, []string{"claude-code"}) || !got.PendingSync {
 				t.Fatalf("Read() lost the remaining fields: %+v", got)
 			}
 			if err := Write(home, got); err != nil {
@@ -1547,5 +1517,78 @@ func TestReadIgnoresComponentsAxiomNoLongerSupports(t *testing.T) {
 	}
 	if strings.Contains(string(written), "gga") {
 		t.Errorf("la siguiente escritura no debe conservar el componente retirado: %s", written)
+	}
+}
+
+// Un estado con los componentes visuales retirados (theme, claude-theme y
+// opencode-gentle-logo) carga igual y los ignora para avisar.
+func TestReadIgnoresRetiredVisualComponents(t *testing.T) {
+	home := t.TempDir()
+	path := Path(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"selection_configured": true, "components": ["engram", "theme", "claude-theme", "opencode-gentle-logo", "sdd"]}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Read(home)
+	if err != nil {
+		t.Fatalf("Read() error = %v, want nil con componentes visuales retirados", err)
+	}
+	if want := []model.ComponentID{model.ComponentEngram, model.ComponentSDD}; !reflect.DeepEqual(s.Components, want) {
+		t.Errorf("Components = %v, want %v", s.Components, want)
+	}
+	if want := []model.ComponentID{"theme", "claude-theme", "opencode-gentle-logo"}; !reflect.DeepEqual(s.IgnoredComponents, want) {
+		t.Errorf("IgnoredComponents = %v, want %v", s.IgnoredComponents, want)
+	}
+}
+
+// TestLegacyPresetIsIgnoredAndDroppedOnTheNextWrite verifica que un estado con un
+// preset retirado carga, deja el valor en IgnoredPreset para que el llamador avise
+// y la siguiente escritura ya no guarda la clave. El resto de la selección se
+// conserva y un estado sin preset no avisa.
+func TestLegacyPresetIsIgnoredAndDroppedOnTheNextWrite(t *testing.T) {
+	for _, tc := range []struct {
+		preset      string
+		wantIgnored string
+	}{
+		{preset: "full-gentleman", wantIgnored: "full-gentleman"},
+		{preset: "ecosystem-only", wantIgnored: "ecosystem-only"},
+		{preset: "minimal", wantIgnored: "minimal"},
+		{preset: "custom", wantIgnored: "custom"},
+		{preset: "", wantIgnored: ""},
+	} {
+		t.Run("preset="+tc.preset, func(t *testing.T) {
+			home := writeLegacyState(t, `{"installed_agents":["claude-code"],"selection_configured":true,"components":["engram"],"preset":"`+tc.preset+`","sdd_mode":"multi"}`)
+			got, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() error = %v", err)
+			}
+			if got.IgnoredPreset != tc.wantIgnored {
+				t.Fatalf("IgnoredPreset = %q, want %q", got.IgnoredPreset, tc.wantIgnored)
+			}
+			if !got.SelectionConfigured || !slices.Equal(got.Components, []model.ComponentID{model.ComponentEngram}) || got.SDDMode != model.SDDModeMulti {
+				t.Fatalf("Read() perdió la selección: %+v", got)
+			}
+			if err := Write(home, got); err != nil {
+				t.Fatalf("Write() error = %v", err)
+			}
+			data, err := os.ReadFile(Path(home))
+			if err != nil {
+				t.Fatalf("ReadFile() error = %v", err)
+			}
+			if strings.Contains(string(data), "preset") {
+				t.Fatalf("la escritura conserva la clave preset: %s", data)
+			}
+			again, err := Read(home)
+			if err != nil {
+				t.Fatalf("Read() tras escribir error = %v", err)
+			}
+			if again.IgnoredPreset != "" {
+				t.Fatalf("IgnoredPreset tras reescribir = %q, want vacío", again.IgnoredPreset)
+			}
+		})
 	}
 }

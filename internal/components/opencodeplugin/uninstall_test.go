@@ -125,7 +125,7 @@ func TestUninstallNonExistentPluginNoOp(t *testing.T) {
 	if res.ChangedTUI || res.ChangedPackageJSON || res.ChangedNodeModules {
 		t.Fatalf("expected no-op flags: got %+v", res)
 	}
-	if res.CacheEntryRemoved != "" || res.NodeModulesPath != "" || res.TSXPath != "" {
+	if res.CacheEntryRemoved != "" || res.NodeModulesPath != "" {
 		t.Fatalf("expected empty path fields: got %+v", res)
 	}
 }
@@ -419,70 +419,6 @@ func TestUninstallReportsPostCommitCleanupFailure(t *testing.T) {
 	}
 }
 
-// ─── 7. GentleLogo ─────────────────────────────────────────────────────────
-
-func TestUninstallGentleLogoRemovesTSXAndTUI(t *testing.T) {
-	home := t.TempDir()
-	// Install-equivalent setup: write tui.json with the absolute .tsx path,
-	// and the .tsx file itself.
-	pluginDir := filepath.Join(home, ".config", "opencode", "tui-plugins")
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	tsxPath := filepath.Join(pluginDir, gentleLogoPluginFile)
-	if err := os.WriteFile(tsxPath, []byte("// fake plugin content"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	writeTUIConfig(t, home, []string{tsxPath})
-
-	res, err := Uninstall(home, model.OpenCodePluginGentleLogo)
-	if err != nil {
-		t.Fatalf("Uninstall() error = %v", err)
-	}
-	if !res.ChangedTUI {
-		t.Fatal("ChangedTUI = false, want true (entry should be removed)")
-	}
-	if res.TSXPath != tsxPath {
-		t.Fatalf("TSXPath = %q, want %q", res.TSXPath, tsxPath)
-	}
-	if _, err := os.Stat(tsxPath); !os.IsNotExist(err) {
-		t.Fatalf("expected .tsx file gone, stat err = %v", err)
-	}
-
-	// Layers 2/3/4 must NOT have run for GentleLogo.
-	if res.ChangedPackageJSON {
-		t.Fatal("ChangedPackageJSON = true, want false (GentleLogo skips layer 2)")
-	}
-	if res.ChangedNodeModules {
-		t.Fatal("ChangedNodeModules = true, want false (GentleLogo skips layer 3)")
-	}
-	if res.CacheEntryRemoved != "" {
-		t.Fatalf("CacheEntryRemoved = %q, want empty (GentleLogo skips layer 4)", res.CacheEntryRemoved)
-	}
-}
-
-func TestUninstallGentleLogoMissingTSX(t *testing.T) {
-	home := t.TempDir()
-	// tui.json references the .tsx, but the file does not exist on disk.
-	pluginDir := filepath.Join(home, ".config", "opencode", "tui-plugins")
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	tsxPath := filepath.Join(pluginDir, gentleLogoPluginFile)
-	writeTUIConfig(t, home, []string{tsxPath})
-
-	res, err := Uninstall(home, model.OpenCodePluginGentleLogo)
-	if err != nil {
-		t.Fatalf("Uninstall() error = %v", err)
-	}
-	if !res.ChangedTUI {
-		t.Fatal("ChangedTUI = false, want true (entry still gets removed even without the file)")
-	}
-	if res.TSXPath != "" {
-		t.Fatalf("TSXPath = %q, want empty (no file existed to remove)", res.TSXPath)
-	}
-}
-
 // ─── 8. Idempotency over the full setup ────────────────────────────────────
 
 func TestUninstallIdempotent(t *testing.T) {
@@ -538,7 +474,7 @@ func TestUninstallIdempotent(t *testing.T) {
 	if second.CacheEntryRemoved != "" {
 		t.Fatalf("second run: CacheEntryRemoved = %q, want empty", second.CacheEntryRemoved)
 	}
-	if second.NodeModulesPath != "" || second.TSXPath != "" {
+	if second.NodeModulesPath != "" {
 		t.Fatalf("second run: leaked path fields = %+v", second)
 	}
 

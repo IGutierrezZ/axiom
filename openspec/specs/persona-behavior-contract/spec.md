@@ -2,188 +2,45 @@
 
 ## Requirements
 
-### Requirement: Neutral Mentor Behavior Parity
-
-The system MUST treat `neutral` as a level-neutral variant of the Gentleman mentor behavior contract. Neutral persona content MUST preserve the same senior mentor expectations as Gentleman, including concise answers, direct correction after verification, concept-first teaching, careful technical reasoning, and user-growth-oriented guidance, while MUST NOT include Rioplatense Spanish, regional slang, voseo, Gentleman branding, or any persona-specific regional voice.
-
-#### Scenario: Neutral receives the same mentor contract without regional voice
-
-- GIVEN an agent persona asset is rendered with persona `neutral`
-- WHEN the generated instruction content is inspected
-- THEN it includes the same mentor behavior expectations as Gentleman for brevity, verification, concept-first explanation, and constructive correction
-- AND it does not include Rioplatense Spanish, regional slang, voseo, Gentleman branding, or regional persona voice instructions
-
-#### Scenario: Gentleman keeps regional mentor behavior when explicitly selected
-
-- GIVEN an agent persona asset is rendered with persona `gentleman`
-- WHEN the generated instruction content is inspected
-- THEN it preserves the Gentleman mentor behavior contract
-- AND it preserves the Gentleman regional voice constraints
-
----
-
-### Requirement: Neutral Interaction Discipline
-
-The neutral persona contract MUST require disciplined interaction defaults across supported agent consumers: short default answers, at most one question at a time, stopping after asking a question, no option menus or exhaustive alternatives unless a real tradeoff exists, and verification before accepting or correcting a user claim.
-
-#### Scenario: Neutral defaults to brief replies
-
-- GIVEN a neutral persona instruction is installed for an agent
-- WHEN the agent answers a normal user request that does not require extensive detail
-- THEN the instruction requires the minimum useful response
-- AND it permits expansion only when the user asks or the task genuinely requires it
-
-#### Scenario: Neutral asks one question and stops
-
-- GIVEN a neutral persona instruction needs clarification from the user
-- WHEN it asks a question
-- THEN it asks at most one question
-- AND it instructs the agent to stop and wait for the user's answer
-
-#### Scenario: Neutral avoids unnecessary menus
-
-- GIVEN a neutral persona instruction describes how to present alternatives
-- WHEN there is no real fork with meaningful tradeoffs
-- THEN it prohibits option menus, exhaustive lists, and multiple approaches by default
-
-#### Scenario: Neutral verifies before agreeing or correcting
-
-- GIVEN a user makes a technical claim
-- WHEN a neutral persona instruction governs the response
-- THEN it requires verification against code, docs, or other evidence before agreeing with the claim
-- AND it requires explaining why the claim is wrong when evidence disproves it
-
----
-
 ### Requirement: Artifact Language Independence
 
-Persona voice MUST govern only direct chat replies to the user. Generated technical artifacts MUST default to English and neutral professional wording regardless of selected persona, unless the user explicitly requests a different artifact language or the existing project artifact convention requires it.
+Persona voice MUST govern only direct chat replies to the user. Generated technical artifacts MUST default to English and neutral professional wording regardless of the persona, unless the user explicitly requests a different artifact language or the existing project artifact convention requires it.
+(Previously: the scenarios used the retired `neutral` and `gentleman` personas.)
 
-#### Scenario: Neutral keeps generated artifacts in English
+#### Scenario: Axiom keeps generated artifacts free of conversational voice
 
-- GIVEN persona `neutral` is active
-- WHEN the system generates code, identifiers, comments, UI copy, documentation, commit messages, PR descriptions, SDD artifacts, or tests
-- THEN the generated artifact content defaults to English and neutral professional wording
-
-#### Scenario: Gentleman voice does not leak into artifacts
-
-- GIVEN persona `gentleman` is active
-- WHEN the system generates a technical artifact without an explicit request for regional language or tone
-- THEN the artifact does not include Rioplatense slang, voseo, Gentleman stylistic emphasis, or regional persona voice
-- AND the artifact defaults to English unless project conventions require otherwise
-
----
-
-### Requirement: Claude Neutral Output Style Contract
-
-Claude-specific neutral output-style content MUST be meaningful and MUST NOT fall back to a generic default assistant character. It MUST encode the neutral mentor behavior contract, interaction discipline, verification-first rule, and artifact language independence without regional voice.
-
-#### Scenario: Claude neutral output-style is not default assistant behavior
-
-- GIVEN Claude assets are generated with persona `neutral`
-- WHEN the neutral output-style content is inspected
-- THEN it contains explicit neutral mentor behavior instructions
-- AND it contains brevity, one-question, no-menu, verification-first, and artifact-language constraints
-- AND it does not describe or imply an unstyled default assistant character
-
-#### Scenario: Claude explicit Gentleman output-style remains honored
-
-- GIVEN Claude assets are generated with persona `gentleman`
-- WHEN the output-style content is inspected
-- THEN it preserves Gentleman-specific mentor and regional voice instructions
-- AND it is not replaced by neutral output-style content
-
----
-
-### Requirement: Generic Neutral Asset Parity
-
-All neutral consumers that are not covered by an agent-specific override MUST receive parity through the generic neutral persona or output-style asset. Agent-specific assets MAY adapt wording to platform mechanics, but MUST NOT weaken the neutral behavior contract. For adapters with an active output-style channel (Claude Code), parity with the generic neutral requirements MUST be evaluated over the COMBINED persona-residual + output-style channel, not over the persona file in isolation — the residual file alone deliberately omits tone/language/philosophy content that now lives exclusively in the output style.
-(Previously: Kimi was also listed as an adapter with an active output-style channel.)
-
-#### Scenario: Non-agent-specific consumers receive generic neutral parity
-
-- GIVEN an agent or surface consumes the generic neutral persona asset
-- WHEN neutral instructions are rendered for that consumer
-- THEN the rendered content includes the neutral mentor behavior contract
-- AND it includes brevity, one-question, no-menu, verification-first, and artifact-language constraints
-
-#### Scenario: Agent-specific neutral assets do not weaken generic behavior
-
-- GIVEN an agent has its own neutral persona or output-style asset
-- WHEN that asset is compared against the generic neutral behavior contract
-- THEN it preserves all generic neutral requirements
-- AND any agent-specific differences are limited to platform-accurate wording or installation mechanics
-
-#### Scenario: Output-style-capable adapters are evaluated on the combined channel
-
-- GIVEN Claude Code has a residual neutral persona section plus a reconciled neutral output-style asset
-- WHEN that adapter's neutral behavior contract is compared against the generic neutral requirements
-- THEN the combined content of the residual persona section and the output-style asset preserves all generic neutral requirements
-- AND the residual persona section alone is not required to independently preserve tone/language/philosophy content
+- GIVEN the Axiom persona is installed
+- WHEN the system generates code, identifiers, comments, UI copy, documentation, commit messages, PR descriptions, SDD artifacts, or tests without an explicit request for another language or tone
+- THEN the generated artifact uses neutral professional wording without the persona's conversational register
+- AND it defaults to English unless the project artifact convention requires otherwise
 
 ### Requirement: Safe Persona Fallback Semantics
 
-When persisted persona state is missing, empty, unreadable, or invalid, sync and persona resolution MUST NOT silently select or reactivate `gentleman`. The fallback MUST be neutral/default-safe behavior that does not introduce Gentleman regional voice unless the user explicitly selected Gentleman.
+When the `persona` component is selected, install and sync MUST apply the Axiom persona. Persisted persona state that is missing, empty, `axiom`, or a retired or unknown value (such as `gentleman`, `neutral`, `gentleman-neutral-artifacts` or `custom`) MUST NOT block sync and MUST NOT select any other persona. A retired or unknown persisted value MUST be reported with a warning and MUST NOT be written back to the state.
+(Previously: the fallback for missing or invalid state was the `neutral` persona, and an explicit `gentleman` selection was honored.)
 
-#### Scenario: Missing persisted persona does not reactivate Gentleman
+#### Scenario: Missing persisted persona applies Axiom
 
 - GIVEN persisted persona state is absent
-- WHEN sync resolves the persona to apply
-- THEN it does not select `gentleman` implicitly
-- AND it applies neutral/default-safe persona behavior without regional voice
+- WHEN sync applies the `persona` component
+- THEN it applies the Axiom persona
 
-#### Scenario: Invalid persisted persona does not reactivate Gentleman
+#### Scenario: Retired persisted persona applies Axiom with a warning
 
-- GIVEN persisted persona state contains an unknown or invalid value
-- WHEN sync resolves the persona to apply
-- THEN it does not select `gentleman` implicitly
-- AND it applies neutral/default-safe persona behavior without regional voice
-
-#### Scenario: Unreadable persisted persona does not reactivate Gentleman
-
-- GIVEN persisted persona state cannot be read
-- WHEN sync resolves the persona to apply
-- THEN it does not select `gentleman` implicitly
-- AND it applies neutral/default-safe persona behavior without regional voice
-- AND it may surface a warning if the sync command already reports recoverable configuration issues
-
----
-
-### Requirement: Explicit Persona Selection Preservation
-
-Explicit persona selections MUST remain authoritative. When the user explicitly selects Gentleman, the system MUST apply Gentleman behavior and regional voice; when the user explicitly selects neutral, the system MUST apply neutral parity behavior without regional voice.
-
-#### Scenario: Explicit Gentleman selection remains honored during sync
-
-- GIVEN the user has explicitly selected persona `gentleman`
-- WHEN sync resolves and applies persona assets
-- THEN Gentleman persona assets are selected
-- AND Gentleman regional voice instructions remain present
-
-#### Scenario: Explicit neutral selection remains honored during sync
-
-- GIVEN the user has explicitly selected persona `neutral`
-- WHEN sync resolves and applies persona assets
-- THEN neutral persona assets are selected
-- AND the rendered content includes neutral parity behavior without regional voice
-
-#### Scenario: Fallback does not override an explicit selection
-
-- GIVEN a valid explicit persona selection exists
-- WHEN sync applies persona assets
-- THEN fallback logic is not used to replace that explicit selection
-- AND the selected persona remains the source of truth for rendered persona content
-
----
+- GIVEN persisted state contains persona `gentleman`
+- WHEN sync loads the state and applies the `persona` component
+- THEN it applies the Axiom persona
+- AND it reports that the persisted persona no longer exists
+- AND the next state write no longer contains the retired persona
 
 ### Requirement: Canonical Tone Channel for Output-Style-Capable Adapters
 
 For any adapter with an active output-style channel — Claude Code (gated by `SupportsOutputStyles()`) — the output-style asset MUST be the exclusive source of persona tone, language, and philosophy. The system-prompt persona section for these adapters MUST be reduced to a residual block containing only `## Rules`, `## Expertise`, `## Contextual Skill Loading (MANDATORY)` and a one-line pointer to the output style. The residual MUST NOT duplicate tone/language/philosophy content.
-(Previously: Kimi was an explicit carve-out with its own `## Kimi-native notes` section.)
+(Previously: the scenario covered the retired `gentleman` and `neutral` personas; Kimi was an explicit carve-out before C-08-d.)
 
 #### Scenario: Claude residual section carries no tone content
 
-- GIVEN Claude assets are generated with persona `gentleman` or `neutral`
+- GIVEN Claude assets are generated with the Axiom persona
 - WHEN the CLAUDE.md persona section is inspected
 - THEN it contains only Rules, Expertise, Contextual Skill Loading and a pointer to the output style
 - AND it contains no tone, language, or philosophy prose
@@ -198,19 +55,6 @@ Adapters without an active output-style channel MUST continue to receive the ful
 - GIVEN an adapter other than Claude Code is generated with a persona
 - WHEN its persona asset is inspected
 - THEN it contains the full persona section, including tone/language/philosophy, as before this change
-
-### Requirement: Persona Drift Reconciliation
-
-Where the system-prompt and output-style assets for a persona variant have drifted into independently authored paraphrases, the output-style asset MUST be reconciled to contain the union of normative tone rules found in either copy. Reconciliation MUST NOT drop a rule present in only one of the two drifted copies.
-
-#### Scenario: Gentleman and Neutral reconciliation preserve rules from both copies
-
-- GIVEN `claude/persona-{variant}.md` and `claude/output-style-{variant}.md` contain divergent normative tone rules, with Neutral using a different section structure than Gentleman
-- WHEN the reconciled output-style asset for each variant is produced
-- THEN it includes every normative rule that existed in either source for that variant
-- AND no rule present in either source is silently dropped
-
----
 
 ### Requirement: Idempotent Convergence on Re-Injection
 
@@ -256,16 +100,15 @@ Automated tests and golden fixtures MUST cover the residual persona section, the
 
 ### Requirement: Axiom Persona Definition and Default Selection (REQ-10.1 & REQ-10.2)
 
-The system MUST support `axiom` as the canonical default persona (`model.PersonaAxiom = "axiom"`). The persona MUST prescribe senior architect guidance in Peninsular Spanish (castellano peninsular) with professional tuteo ("tienes", "haz", "revisa"), strictly prohibiting forced Rioplatense voseo ("che", "tenés", "podés", "hacé") and informal regionalisms. The TUI and CLI MUST present Axiom as the default selection.
+The system MUST support `axiom` as its only managed persona. The persona MUST prescribe senior architect guidance in Peninsular Spanish (castellano peninsular) with professional tuteo ("tienes", "haz", "revisa"), strictly prohibiting forced Rioplatense voseo ("che", "tenés", "podés", "hacé") and informal regionalisms. The CLI MUST NOT offer a persona choice: selecting the `persona` component installs the Axiom persona, and deselecting it installs none.
+(Previously: `axiom` was the default among several personas, and the TUI and CLI presented it as the default selection.)
 
-#### Scenario: Axiom persona is default and uses Peninsular Spanish
+#### Scenario: Axiom is the only persona and uses Peninsular Spanish
 
-- GIVEN the persona options are resolved
-- WHEN inspecting the default persona
-- THEN `axiom` is the default persona
+- GIVEN the `persona` component is selected
+- WHEN Axiom installs it
+- THEN the installed persona is `axiom`
 - AND its instructions enforce Peninsular Spanish without voseo or Rioplatense regionalisms
-
----
 
 ### Requirement: SDD Language Domain Contract for Axiom Projects (REQ-10.3 & REQ-10.4)
 

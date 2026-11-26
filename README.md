@@ -90,7 +90,7 @@ Si el modelo tiene que adivinar el siguiente paso, mañana puede proponer uno di
 
 ### Interfaz de Axiom — Operación local del proyecto
 
-**Axiom incluye interfaces locales para trabajar con el proyecto.** `axiom tui` abre la interfaz de terminal; `axiom ui` inicia el panel web local. Ambas forman parte del producto Axiom y no requieren instalar un tema visual. El panel escucha siempre en `http://127.0.0.1:47700`, se puede instalar como aplicación (PWA) desde Edge o Chrome y, en Windows, el instalador crea el acceso directo `Axiom` en el menú Inicio y una tarea programada que arranca el servidor al iniciar sesión ([guía](docs/usage.md#ui)).
+**Axiom incluye interfaces locales para trabajar con el proyecto.** `axiom` (o `axiom ui`) abre el panel web local; sin terminal interactiva, `axiom` devuelve un error. El panel escucha siempre en `http://127.0.0.1:47700`, se puede instalar como aplicación (PWA) desde Edge o Chrome y, en Windows, el instalador crea el acceso directo `Axiom` en el menú Inicio y una tarea programada que arranca el servidor al iniciar sesión ([guía](docs/usage.md#ui)).
 
 **[Docs →](docs/pi.md)**
 
@@ -116,11 +116,10 @@ Axiom lleva sus flujos a Pi, OpenCode, Claude Code, Codex y otras integraciones.
 | **Lista de denegación de seguridad** | Bloquea el acceso a `~/.ssh`, `.env` y ficheros de credenciales |
 | **Copias de configuración** | Crea respaldos antes de escribir |
 | **Diagnóstico** | `axiom doctor` — comprobación de solo lectura |
-| **Personas** | Persona opcional de mentor o neutral, si se selecciona |
-| **Temas visuales** | Axiom no instala ni sincroniza temas visuales |
+| **Persona** | La persona de Axiom, si se selecciona el componente `persona` |
 | **Asignación de modelos por fase** | Permite asignar modelos por fase en Pi y OpenCode |
 
-> **Every component, skill and preset: [Full breakdown →](docs/components.md)**
+> **Every component and skill: [Full breakdown →](docs/components.md)**
 
 <div align="right"><a href="#top">Back to top</a></div>
 
@@ -143,11 +142,11 @@ irm https://raw.githubusercontent.com/IGutierrezZ/axiom/main/scripts/install.ps1
 En Windows el binario oficial sigue retenido hasta que se firme con Authenticode ([`docs/release-signing.md`](docs/release-signing.md)); mientras tanto el instalador compila desde el código con Go. Si falta Go, el propio instalador indica cómo obtenerlo (`winget install --id GoLang.Go -e`).
 
 ```bash
-axiom              # abre la TUI en una terminal interactiva
+axiom              # abre el panel web en una terminal interactiva
 axiom doctor       # diagnóstico de solo lectura
 ```
 
-Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar ficheros de configuración; algunas integraciones también pueden aprovisionar runtimes si se selecciona esa acción. Axiom ya no instala ni sincroniza temas visuales.
+Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar ficheros de configuración; algunas integraciones también pueden aprovisionar runtimes si se selecciona esa acción. Si vienes de una versión anterior, consulta las [notas de retirada](docs/releases/notas-retirada-arranque.md) para limpiar a mano lo que dejó.
 
 **Contribuir / desarrollo.** Solo si vas a modificar Axiom necesitas Git y Go: `git clone https://github.com/IGutierrezZ/axiom.git && cd axiom && go install ./cmd/axiom`.
 
@@ -167,7 +166,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Agents](docs/agents.md)** | Feature matrix and per-agent notes for all 16 |
 | **[Routing](docs/trigger-rules.md)** | How the agent picks direct, delegated or SDD |
 | **[Retirada de RDD](docs/releases/notas-retirada-rdd.md)** | Notas de migración: qué limpiar a mano antes de instalar la versión que retira `axiom review` y `bench/`. |
-| **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
+| **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, components and skills |
 | **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | How the codebase is organised and how to extend it |
 | **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and what to clean up by hand |
 

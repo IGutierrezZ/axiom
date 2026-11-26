@@ -166,7 +166,6 @@ func TestBackupTargetsIncludeSelectedOpenCodePluginPaths(t *testing.T) {
 	targets, err := backupTargets(home, "", ScopeGlobal, model.Selection{
 		OpenCodePlugins: []model.OpenCodeCommunityPluginID{
 			model.OpenCodePluginSubAgentStatusline,
-			model.OpenCodePluginGentleLogo,
 		},
 	}, planner.ResolvedPlan{})
 	if err != nil {
@@ -175,7 +174,6 @@ func TestBackupTargetsIncludeSelectedOpenCodePluginPaths(t *testing.T) {
 
 	for _, path := range []string{
 		filepath.Join(home, ".config", "opencode", "tui.json"),
-		filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
 	} {
 		if !slices.Contains(targets, path) {
 			t.Fatalf("backup targets = %v, missing selected plugin path %q", targets, path)
@@ -227,12 +225,9 @@ func TestInstallRollbackRestoresSelectedOpenCodePluginPathsAfterPluginRegistrati
 		t.Run(test.name, func(t *testing.T) {
 			home := t.TempDir()
 			tuiPath := filepath.Join(home, ".config", "opencode", "tui.json")
-			logoPath := filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx")
 			originalTUI := []byte("{\n  \"plugin\": [\"existing-plugin\"]\n}\n")
-			originalLogo := []byte("pre-existing Gentle Logo bytes\n")
 			if test.preexisting {
 				mustWriteFile(t, tuiPath, originalTUI)
-				mustWriteFile(t, logoPath, originalLogo)
 			}
 
 			previousInstall := installCommunityToolWithHome
@@ -247,7 +242,6 @@ func TestInstallRollbackRestoresSelectedOpenCodePluginPathsAfterPluginRegistrati
 				Agents: []model.AgentID{model.AgentOpenCode},
 				OpenCodePlugins: []model.OpenCodeCommunityPluginID{
 					model.OpenCodePluginSubAgentStatusline,
-					model.OpenCodePluginGentleLogo,
 				},
 				CommunityTools: []model.CommunityToolID{model.CommunityToolCodeGraph},
 			}, planner.ResolvedPlan{Agents: []model.AgentID{model.AgentOpenCode}}, system.PlatformProfile{})
@@ -260,7 +254,6 @@ func TestInstallRollbackRestoresSelectedOpenCodePluginPathsAfterPluginRegistrati
 			plan.Apply = append(plan.Apply, failAfterPluginRegistrationStep{
 				codeGraphSucceeded: &codeGraphSucceeded,
 				tuiPath:            tuiPath,
-				logoPath:           logoPath,
 			})
 			result := pipeline.NewOrchestrator(pipeline.DefaultRollbackPolicy()).Execute(plan)
 			if result.Err == nil || !strings.Contains(result.Err.Error(), "late plugin rollback control") {
@@ -271,14 +264,12 @@ func TestInstallRollbackRestoresSelectedOpenCodePluginPathsAfterPluginRegistrati
 			}
 
 			if !test.preexisting {
-				for _, path := range []string{tuiPath, logoPath} {
-					if _, err := os.Stat(path); !os.IsNotExist(err) {
-						t.Fatalf("created plugin path remains after rollback %q: %v", path, err)
-					}
+				if _, err := os.Stat(tuiPath); !os.IsNotExist(err) {
+					t.Fatalf("created plugin path remains after rollback %q: %v", tuiPath, err)
 				}
 				return
 			}
-			for path, want := range map[string][]byte{tuiPath: originalTUI, logoPath: originalLogo} {
+			for path, want := range map[string][]byte{tuiPath: originalTUI} {
 				got, err := os.ReadFile(path)
 				if err != nil || !reflect.DeepEqual(got, want) {
 					t.Fatalf("restored %q = %q, %v; want original bytes %q", path, got, err, want)
@@ -291,7 +282,6 @@ func TestInstallRollbackRestoresSelectedOpenCodePluginPathsAfterPluginRegistrati
 type failAfterPluginRegistrationStep struct {
 	codeGraphSucceeded *bool
 	tuiPath            string
-	logoPath           string
 }
 
 func (s failAfterPluginRegistrationStep) ID() string { return "test:late-plugin-rollback-control" }
@@ -310,13 +300,8 @@ func (s failAfterPluginRegistrationStep) Run() error {
 	if err := json.Unmarshal(tui, &config); err != nil {
 		return fmt.Errorf("decode plugin registration %q: %w", s.tuiPath, err)
 	}
-	for _, plugin := range []string{"opencode-subagent-statusline", s.logoPath} {
-		if !slices.Contains(config.Plugin, plugin) {
-			return fmt.Errorf("plugin registration %q is missing exact plugin %q", s.tuiPath, plugin)
-		}
-	}
-	if _, err := os.Stat(s.logoPath); err != nil {
-		return fmt.Errorf("Gentle Logo was not written before rollback control: %w", err)
+	if plugin := "opencode-subagent-statusline"; !slices.Contains(config.Plugin, plugin) {
+		return fmt.Errorf("plugin registration %q is missing exact plugin %q", s.tuiPath, plugin)
 	}
 	return errors.New("late plugin rollback control")
 }

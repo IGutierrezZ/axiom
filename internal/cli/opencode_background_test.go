@@ -171,7 +171,7 @@ func TestOpenCodeBackgroundStateIsOptionalAndLossless(t *testing.T) {
 	want := state.InstallState{
 		InstalledAgents: []string{"opencode"}, ManagedAssetDigest: "sha256:asset", SelectionConfigured: true,
 		Components: []model.ComponentID{model.ComponentSDD}, CommunityTools: []string{"codegraph"}, CommunityToolsConfigured: true,
-		Persona: "neutral", PersonaPresent: true, PendingSync: true, BackgroundIntent: model.OpenCodeBackgroundOn,
+		PendingSync: true, BackgroundIntent: model.OpenCodeBackgroundOn,
 	}
 	if err := state.Write(home, want); err != nil {
 		t.Fatal(err)
@@ -393,7 +393,7 @@ func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 	if err := state.Write(home, existing); err != nil {
 		t.Fatal(err)
 	}
-	fresh := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPermission}, Persona: "gentleman", BackgroundIntent: model.OpenCodeBackgroundOn}
+	fresh := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentPermission}, BackgroundIntent: model.OpenCodeBackgroundOn}
 	if err := persistInstallState(state.GlobalStore(home), fresh, []string{"opencode"}, InstallFlags{}, "new"); err != nil {
 		t.Fatal(err)
 	}
@@ -404,7 +404,6 @@ func TestPersistInstallStateFullInstallPreservesUnrelatedFields(t *testing.T) {
 	want := fresh
 	want.ManagedAssetDigest = "new"
 	want.LastUpdateCheck, want.PendingSync = existing.LastUpdateCheck, existing.PendingSync
-	want.PersonaPresent = true
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("full install state = %#v, want %#v", got, want)
 	}
@@ -671,7 +670,6 @@ func TestSyncBackgroundPublicationWaitsForVerification(t *testing.T) {
 				Agents:     []model.AgentID{model.AgentOpenCode},
 				Components: []model.ComponentID{model.ComponentSDD, model.ComponentPersona},
 				SDDMode:    model.SDDModeSingle,
-				Persona:    model.PersonaNeutral,
 			}
 			background := OpenCodeBackgroundResolution{Intent: tt.intent, Effective: tt.intent, Persist: tt.intent}
 			result, err := runSyncWithSelection(home, selection, background, PiBackgroundResolution{})
@@ -720,7 +718,6 @@ func TestSyncReportsManagedLauncherChanges(t *testing.T) {
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentPersona},
 		SDDMode:    model.SDDModeSingle,
-		Persona:    model.PersonaNeutral,
 	}
 	result, err := runSyncWithSelection(home, selection, background, PiBackgroundResolution{})
 	if err != nil {
@@ -787,7 +784,6 @@ func TestSyncBackgroundNoOpStillPublishesExplicitIntent(t *testing.T) {
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentPersona},
 		SDDMode:    model.SDDModeSingle,
-		Persona:    model.PersonaNeutral,
 	}
 	background := OpenCodeBackgroundResolution{Intent: model.OpenCodeBackgroundOn, Effective: model.OpenCodeBackgroundOn, Persist: model.OpenCodeBackgroundOn}
 	if _, err := runSyncWithSelection(home, selection, background, PiBackgroundResolution{}); err != nil {

@@ -71,7 +71,7 @@ func optInFootprintNotes(scope InstallScope, homeDir string, components []model.
 		}
 		notes = append(notes, note+". Es la huella de máquina declarada de CodeGraph.")
 	}
-	if paths := openCodeUserPluginPaths(homeDir, components, agentIDs, selection); len(paths) > 0 {
+	if paths := openCodeUserPluginPaths(homeDir, agentIDs, selection); len(paths) > 0 {
 		notes = append(notes, fmt.Sprintf(
 			"Los plugins de OpenCode elegidos de forma explícita se instalan en la configuración de usuario de OpenCode, fuera del proyecto: %s.",
 			strings.Join(paths, ", ")))
@@ -81,16 +81,12 @@ func optInFootprintNotes(scope InstallScope, homeDir string, components []model.
 
 // openCodeUserPluginPaths devuelve las rutas de HOME donde se instalan los
 // plugins de OpenCode elegidos de forma explícita: los comunitarios de la
-// selección y el logo, que es un componente propio. Sin OpenCode entre los
-// agentes no se instala ninguno.
-func openCodeUserPluginPaths(homeDir string, components []model.ComponentID, agentIDs []model.AgentID, selection model.Selection) []string {
+// selección. Sin OpenCode entre los agentes no se instala ninguno.
+func openCodeUserPluginPaths(homeDir string, agentIDs []model.AgentID, selection model.Selection) []string {
 	if !containsAgent(agentIDs, model.AgentOpenCode) {
 		return nil
 	}
 	plugins := slices.Clone(selection.OpenCodePlugins)
-	if slices.Contains(components, model.ComponentOpenCodeGentleLogo) && !slices.Contains(plugins, model.OpenCodePluginGentleLogo) {
-		plugins = append(plugins, model.OpenCodePluginGentleLogo)
-	}
 	if len(plugins) == 0 {
 		return nil
 	}

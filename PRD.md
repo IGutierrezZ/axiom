@@ -7,6 +7,8 @@
 **Date**: 2026-02-27
 **Status**: Draft
 
+> **Documento histórico (heredado de Gentle AI).** Describe el producto original y no refleja el estado actual de Axiom. En concreto, ya no existen la TUI, las personas `gentleman` y `neutral` ni la opción `custom`, los presets, los temas, el logo de OpenCode ni el agent builder: `axiom` sin argumentos abre el panel web y `axiom install` sin `--component` instala el conjunto por defecto (Engram, SDD, skills, Context7, permisos y persona). Véanse [docs/usage.md](docs/usage.md), [docs/components.md](docs/components.md) y las [notas de retirada](docs/releases/notas-retirada-arranque.md).
+
 ---
 
 ## 1. Problem Statement

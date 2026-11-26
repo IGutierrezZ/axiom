@@ -329,6 +329,13 @@ type traceMatrixRow struct {
 	Commit    string `json:"commit,omitempty"`
 }
 
+// requirementKeys devuelve los identificadores de un texto: los válidos del patrón y, hasta
+// archivar, el provisional de un ADDED (REQ-29.3).
+func requirementKeys(text string, pattern reqid.Pattern) []string {
+	valid, provisional, _ := isoevidence.RequirementKeys(text, pattern)
+	return append(valid, provisional...)
+}
+
 // traceChain construye la cadena de los artefactos del cambio: los requisitos de
 // la delta (ADDED y MODIFIED) y los citados en `Cubre:`, cada uno con sus líneas
 // `Cubre:` y sus filas de matriz, ordenados por identificador.
@@ -361,7 +368,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff, patter
 			if requirement.Section != isoevidence.SectionAdded && requirement.Section != isoevidence.SectionModified {
 				continue
 			}
-			if ids, _ := isoevidence.RequirementIDs(requirement.Name, pattern); len(ids) == 1 {
+			if ids := requirementKeys(requirement.Name, pattern); len(ids) == 1 {
 				e := entry(ids[0])
 				e.Domain, e.Section, e.Name = requirement.Domain, string(requirement.Section), requirement.Name
 			}
@@ -370,7 +377,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff, patter
 	for _, name := range tasksFiles {
 		for _, line := range isoevidence.ParseCubre(name, readTraceFile(changeRoot, name)) {
 			for _, raw := range line.IDs {
-				if ids, _ := isoevidence.RequirementIDs(raw, pattern); len(ids) == 1 {
+				if ids := requirementKeys(raw, pattern); len(ids) == 1 {
 					e := entry(ids[0])
 					e.Cubre = append(e.Cubre, traceCubre{File: line.File, Line: line.Line})
 				}
@@ -379,7 +386,7 @@ func traceChain(planningHome, changeRoot string, sealed *kickoff.Kickoff, patter
 	}
 	for _, name := range verifyFiles {
 		for _, row := range isoevidence.ParseMatrix(readTraceFile(changeRoot, name)).Rows {
-			if ids, _ := isoevidence.RequirementIDs(row.RequirementID, pattern); len(ids) == 1 {
+			if ids := requirementKeys(row.RequirementID, pattern); len(ids) == 1 {
 				e := entry(ids[0])
 				e.Rows = append(e.Rows, traceMatrixRow{Scenario: row.Scenario, Type: row.Type, Reference: row.Reference, Result: row.Result, Commit: row.Commit})
 			}

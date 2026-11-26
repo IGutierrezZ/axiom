@@ -102,12 +102,6 @@ var definitions = []Definition{
 	},
 }
 
-func Definitions() []Definition {
-	out := make([]Definition, len(definitions))
-	copy(out, definitions)
-	return out
-}
-
 func DefinitionFor(id model.CommunityToolID) (Definition, bool) {
 	for _, def := range definitions {
 		if def.ID == id {
@@ -372,21 +366,6 @@ func (s Status) CodeGraphReconcileSatisfied() bool {
 		}
 	}
 	return true
-}
-
-func (s Status) DetectedConfiguredMissingCounts() (detected, configured, missing int) {
-	for _, agent := range s.Agents {
-		if !agent.Detected {
-			continue
-		}
-		detected++
-		if agent.Configured {
-			configured++
-		} else {
-			missing++
-		}
-	}
-	return detected, configured, missing
 }
 
 func detectCodeGraphAgents(homeDir string) []AgentStatus {

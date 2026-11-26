@@ -108,16 +108,6 @@ var (
 	AppVersion = "dev"
 )
 
-// SetCommandOutputStreaming toggles whether command stdout/stderr is streamed
-// directly to the terminal. It returns a restore function.
-func SetCommandOutputStreaming(enabled bool) func() {
-	previous := streamCommandOutput
-	streamCommandOutput = enabled
-	return func() {
-		streamCommandOutput = previous
-	}
-}
-
 func RunInstall(args []string, detection system.DetectionResult) (InstallResult, error) {
 	flags, err := ParseInstallFlags(args)
 	if err != nil {
@@ -343,7 +333,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		CodexCarrilModelAssignments: input.Selection.CodexCarrilModelAssignments,
 		CodexPhaseModelAssignments:  input.Selection.CodexPhaseModelAssignments,
 		ModelAssignments:            modelAssignmentsToState(input.Selection.ModelAssignments),
-		Persona:                     string(input.Selection.Persona),
 	}
 	newState.SetSelection(input.Selection)
 	if background.Persist != "" {
@@ -394,7 +383,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	merged := existing
 	merged.InstalledAgents = fresh.InstalledAgents
 	merged.SelectionConfigured, merged.Components, merged.Skills = fresh.SelectionConfigured, fresh.Components, fresh.Skills
-	merged.Preset, merged.SDDMode, merged.StrictTDD = fresh.Preset, fresh.SDDMode, fresh.StrictTDD
+	merged.SDDMode, merged.StrictTDD = fresh.SDDMode, fresh.StrictTDD
 	merged.CommunityTools, merged.CommunityToolsConfigured = fresh.CommunityTools, fresh.CommunityToolsConfigured
 	merged.ClaudeModelAssignments, merged.ClaudePhaseAssignments = fresh.ClaudeModelAssignments, fresh.ClaudePhaseAssignments
 	merged.CodexModelAssignments = fresh.CodexModelAssignments
@@ -405,7 +394,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	}
 	merged.CodexOrchestratorAssignment = fresh.CodexOrchestratorAssignment
 	merged.CodexCarrilModelAssignments, merged.CodexPhaseModelAssignments = fresh.CodexCarrilModelAssignments, fresh.CodexPhaseModelAssignments
-	merged.ModelAssignments, merged.Persona = fresh.ModelAssignments, fresh.Persona
+	merged.ModelAssignments = fresh.ModelAssignments
 	if fresh.BackgroundIntent != "" {
 		merged.BackgroundIntent = fresh.BackgroundIntent
 	}
@@ -470,15 +459,9 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 		if len(flags.Skills) > 0 {
 			merged.Skills = newState.Skills
 		}
-		if flags.Preset != "" {
-			merged.Preset = newState.Preset
-		}
 		if flags.SDDMode != "" {
 			merged.SDDMode = newState.SDDMode
 		}
-	}
-	if flags.Persona != "" || merged.Persona == "" {
-		merged.Persona = newState.Persona
 	}
 	if newState.BackgroundIntent != "" {
 		merged.BackgroundIntent = newState.BackgroundIntent
@@ -790,13 +773,6 @@ func (s *runtimeState) compatibilityChangedFiles() []string {
 		return nil
 	}
 	return s.compatibilityTransaction.ChangedFiles()
-}
-
-func newInstallRuntime(homeDir string, scope InstallScope, channel InstallChannel, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile) (*installRuntime, error) {
-	// En ámbito workspace la raíz es la del proyecto, no la carpeta desde la que
-	// se lanzó el comando. El aviso al usuario lo emite quien llama.
-	workspaceDir, _ := resolveWorkspaceDir(scope, homeDir)
-	return newInstallRuntimeAt(homeDir, workspaceDir, scope, channel, selection, resolved, profile)
 }
 
 // newInstallRuntimeAt es newInstallRuntime con la raíz del workspace ya resuelta.
@@ -1806,14 +1782,14 @@ func (s componentApplyStep) Run() error {
 		for _, adapter := range adapters {
 			if adapter.Agent() == model.AgentPi {
 				for _, rootDir := range piPersonaConfigRoots(s.homeDir, s.workspaceDir, s.scope) {
-					if _, err := persona.InjectPiPersona(rootDir, s.selection.Persona); err != nil {
+					if _, err := persona.InjectPiPersona(rootDir); err != nil {
 						return fmt.Errorf("inject persona for %q: %w", adapter.Agent(), err)
 					}
 				}
 				continue
 			}
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-			if _, err := persona.Inject(targetDir, adapter, s.selection.Persona); err != nil {
+			if _, err := persona.Inject(targetDir, adapter); err != nil {
 				return fmt.Errorf("inject persona for %q: %w", adapter.Agent(), err)
 			}
 		}
@@ -1879,20 +1855,6 @@ func (s componentApplyStep) Run() error {
 			}
 		}
 		return nil
-	case model.ComponentTheme:
-		// Retained for legacy selections; no visual configuration is installed.
-		return nil
-	case model.ComponentClaudeTheme:
-		// Retained for legacy selections; no visual assets are installed.
-		return nil
-	case model.ComponentOpenCodeGentleLogo:
-		if !containsAgent(s.agents, model.AgentOpenCode) {
-			return nil
-		}
-		if _, err := opencodeplugin.Install(s.homeDir, model.OpenCodePluginGentleLogo); err != nil {
-			return fmt.Errorf("install OpenCode Gentle Logo plugin: %w", err)
-		}
-		return nil
 	default:
 		return fmt.Errorf("component %q is not supported in install runtime", s.component)
 	}
@@ -1939,66 +1901,6 @@ func windowsGoCandidates() []string {
 // the public TUI execution boundary and the real compatibility writer.
 var tuiInstallStagePlan = func(runtime *installRuntime) pipeline.StagePlan {
 	return runtime.stagePlan()
-}
-
-// ExecuteTUIInstallWithBackgroundAndOrchestrator runs a TUI install and returns
-// the orchestrator so a downstream state-persistence failure can be compensated.
-func ExecuteTUIInstallWithBackgroundAndOrchestrator(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	return executeTUIInstallWithBackground(homeDir, selection, resolved, profile, background, piBackground, onProgress)
-}
-
-func executeTUIInstallWithBackground(homeDir string, selection model.Selection, resolved planner.ResolvedPlan, profile system.PlatformProfile, background model.OpenCodeBackgroundIntent, piBackground model.PiBackgroundIntent, onProgress pipeline.ProgressFunc) (pipeline.ExecutionResult, *pipeline.Orchestrator) {
-	// La TUI sigue la misma regla de ámbito que la CLI: workspace por defecto y
-	// global solo cuando se pide de forma explícita (AXIOM_INSTALL_SCOPE=global).
-	scope, err := ResolveInstallScope("")
-	if err != nil {
-		return pipeline.ExecutionResult{Err: err}, nil
-	}
-	// Mismo filtro que la CLI. La TUI ocupa la terminal: el aviso no sale por stderr,
-	// se devuelve entre las acciones manuales del resultado.
-	selectionAgents, omittedAgents := splitAgentsForScope(scope, selection.Agents)
-	if len(omittedAgents) > 0 {
-		if len(selectionAgents) == 0 {
-			return pipeline.ExecutionResult{Err: errNoWorkspaceAgents(omittedAgents)}, nil
-		}
-		selection.Agents = selectionAgents
-		resolved.Agents = AgentsForScope(scope, resolved.Agents)
-	}
-	runtime, err := newInstallRuntime(homeDir, scope, ChannelStable, selection, resolved, profile)
-	if err != nil {
-		return pipeline.ExecutionResult{Err: err}, nil
-	}
-	defer runtime.state.cleanupCompatibilityTransaction()
-	backgroundResolution := OpenCodeBackgroundResolution{
-		Intent:    background,
-		Effective: background,
-	}
-	backgroundActivation, err := prepareOpenCodeBackgroundActivation(homeDir, &backgroundResolution, containsAgent(resolved.Agents, model.AgentOpenCode))
-	if err != nil {
-		return pipeline.ExecutionResult{Err: fmt.Errorf("prepare OpenCode background activation: %w", err)}, nil
-	}
-	runtime.background = backgroundResolution
-	runtime.progress = onProgress
-	runtime.backgroundActivation = backgroundActivation
-	runtime.runtimeReady = backgroundActivation != nil && backgroundActivation.Capability().Ready()
-	piBackgroundResolution := PiBackgroundResolution{
-		Intent:    piBackground,
-		Effective: piBackground,
-		managed:   piBackground == model.PiBackgroundOn || piBackground == model.PiBackgroundOff,
-	}
-	runtime.piBackgroundProjection = preparePiBackgroundProjection(homeDir, &piBackgroundResolution, containsAgent(resolved.Agents, model.AgentPi))
-	orchestrator := pipeline.NewOrchestrator(pipeline.DefaultRollbackPolicy(), pipeline.WithFailurePolicy(pipeline.ContinueOnError), pipeline.WithProgressFunc(onProgress))
-	result := orchestrator.Execute(tuiInstallStagePlan(runtime))
-	runtime.state.cleanupRollbackSnapshot()
-	if runtime.state.piCodeGraph != nil {
-		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
-	}
-	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
-	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
-	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
-	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
-	result.ManualActions = append(result.ManualActions, workspaceTrustNotes(scope, resolved.Agents)...)
-	return result, orchestrator
 }
 
 // RenderInstallManualActions renders non-fatal completion actions after the
@@ -2206,17 +2108,17 @@ func executeCommand(name string, args ...string) error {
 }
 
 // selectedSkillIDs returns the skill IDs to install. If the selection
-// has explicit skills, those are used; otherwise skills are derived from the preset.
+// has explicit skills, those are used; otherwise the default skill set applies.
 func selectedSkillIDs(selection model.Selection) []model.SkillID {
 	if len(selection.Skills) > 0 {
 		// Retired skills (#70) and any id without an embedded asset are never
 		// written by injection, so verification must not require them.
 		// Filtering after the length check keeps an explicit list made only of
-		// such IDs empty instead of falling back to the preset.
+		// such IDs empty instead of falling back to the default set.
 		return skills.Installable(selection.Skills)
 	}
 
-	return skills.SkillsForPreset(selection.Preset)
+	return skills.DefaultSkills()
 }
 
 func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection model.Selection, resolved planner.ResolvedPlan) ([]string, error) {
@@ -2250,7 +2152,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 		// selected one, so a failed persona switch can restore the file its
 		// cleanup removed. Backup-only: verification stays on the selected file.
 		if component == model.ComponentPersona {
-			plan := persona.ResourcePlanFor(selection.Persona)
+			plan := persona.ResourcePlanFor()
 			for _, adapter := range adapters {
 				if adapter.Agent() == model.AgentOpenCode {
 					// Persona can merge or clean a managed agent in settings during
@@ -2654,9 +2556,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				}
 			}
 		case model.ComponentPersona:
-			if selection.Persona == model.PersonaCustom {
-				break
-			}
 			if adapter.Agent() == model.AgentPi {
 				paths = append(paths, piPersonaConfigPaths(homeDir, workspaceDir, scope)...)
 				break
@@ -2665,7 +2564,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsOutputStyles() {
-				if stylePaths := persona.ResourcePlanFor(selection.Persona).OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
+				if stylePaths := persona.ResourcePlanFor().OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
 					paths = append(paths, stylePaths.Write)
 					if p := adapter.SettingsPath(targetDir); p != "" {
 						paths = append(paths, p)
@@ -2679,17 +2578,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				if p := permissions.TargetPath(root, adapter); p != "" {
 					paths = append(paths, p)
 				}
-			}
-		case model.ComponentTheme:
-			// No managed path: legacy theme component is inert.
-		case model.ComponentClaudeTheme:
-			// No required paths: visual assets are no longer installed.
-		case model.ComponentOpenCodeGentleLogo:
-			if adapter.Agent() == model.AgentOpenCode {
-				paths = append(paths,
-					filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-					filepath.Join(homeDir, ".config", "opencode", "tui.json"),
-				)
 			}
 		}
 	}

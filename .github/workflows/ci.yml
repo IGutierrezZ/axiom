@@ -47,7 +47,7 @@ concurrency:
 # paquetes que lanza el toolchain está en el selector.
 env:
   AXIOM_TEST_BUILD_BINARIES: "1"
-  TOOLCHAIN_META_TESTS: '^(TestDocumentedInvocationsRunAsDocumented|TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea|TestWindowsFullSuiteShardsCoverEveryTestName|TestCanonicalReleasePublicKeysControlRealLinkerBuild|TestReleaseDistributionPolicyAssertionFailsClosed|TestReleaseDistributionPolicyAcceptsSemanticYAMLFormatting|TestModifiedReleaseVerifierCannotGainWriteAuthority)$'
+  TOOLCHAIN_META_TESTS: '^(TestDocumentedInvocationsRunAsDocumented|TestBuiltBinaryClosedStdinRefusesBeforeUI|TestWindowsFullSuiteShardsCoverEveryTestName|TestCanonicalReleasePublicKeysControlRealLinkerBuild|TestReleaseDistributionPolicyAssertionFailsClosed|TestReleaseDistributionPolicyAcceptsSemanticYAMLFormatting|TestModifiedReleaseVerifierCannotGainWriteAuthority)$'
 
 jobs:
   # Este job, go-format, unit-tests y sus jobs hijos se omiten en un PR

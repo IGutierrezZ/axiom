@@ -11,20 +11,14 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
-	componentuninstall "github.com/IGutierrezZ/axiom/v3/internal/components/uninstall"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
-	"github.com/IGutierrezZ/axiom/v3/internal/pipeline"
-	"github.com/IGutierrezZ/axiom/v3/internal/planner"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 	"github.com/IGutierrezZ/axiom/v3/internal/statecoord"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
-	"github.com/IGutierrezZ/axiom/v3/internal/tui"
 	"github.com/IGutierrezZ/axiom/v3/internal/update"
 	"github.com/IGutierrezZ/axiom/v3/internal/update/upgrade"
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
-	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Version is set from main via ldflags at build time.
@@ -38,10 +32,6 @@ var (
 	selfUpdateFn              = selfUpdate
 	ensureCurrentOSSupported  = system.EnsureCurrentOSSupported
 	detectSystem              = system.Detect
-	runTUI                    = func(m tea.Model, opts ...tea.ProgramOption) (tea.Model, error) {
-		p := tea.NewProgram(m, opts...)
-		return p.Run()
-	}
 	// deferredSyncFn is the function called when PendingSync=true is found on
 	// launch. Swappable for tests; production value calls cli.RunSync directly.
 	// cli.RunSync is idempotent (re-reads state + re-applies configs each call),
@@ -60,7 +50,8 @@ func Run() error {
 	return RunArgs(os.Args[1:], os.Stdout)
 }
 
-const nonInteractiveTUIError = "axiom requires both stdin and stdout to be terminals (TTYs); use --version, axiom update, or --help for non-interactive use"
+// nonInteractiveStartError: `axiom` sin argumentos abre la UI y necesita terminal.
+const nonInteractiveStartError = "axiom requires both stdin and stdout to be terminals (TTYs); use --version, axiom update, or --help for non-interactive use"
 
 // clearPendingSyncAfterDeferredSync clears PendingSync under the canonical
 // install-state lock. It re-reads the latest state inside the lock so changes
@@ -83,7 +74,7 @@ func clearPendingSyncAfterDeferredSync(homeDir string, fallback state.InstallSta
 
 func RunArgs(args []string, stdout io.Writer) error {
 	if len(args) == 0 && (!isattyFn(os.Stdin.Fd()) || !isattyFn(os.Stdout.Fd())) {
-		return errors.New(nonInteractiveTUIError)
+		return errors.New(nonInteractiveStartError)
 	}
 
 	// Propagate the build-time version to the CLI and upgrade layers so backup
@@ -185,11 +176,11 @@ func RunArgs(args []string, stdout io.Writer) error {
 	}
 
 	// Self-update: check for a newer axiom release and apply it before
-	// CLI/TUI dispatch. Errors are non-fatal — logged and swallowed.
-	// Skip auto-upgrade on TUI entry (len(args) == 0) to avoid silently
-	// replacing the binary while the user expects a clean TUI launch (#696).
-	isTUIFlow := len(args) == 0
-	if !isTUIFlow && !isExplicitUpdateFlow(args) {
+	// CLI dispatch. Errors are non-fatal — logged and swallowed.
+	// Skip auto-upgrade on bare start (len(args) == 0) to avoid silently
+	// replacing the binary while the user expects a clean UI launch (#696).
+	isBareStart := len(args) == 0
+	if !isBareStart && !isExplicitUpdateFlow(args) {
 		if err := selfUpdateFn(context.Background(), Version, resolveProfile(), stdout); err != nil {
 			_, _ = fmt.Fprintf(stdout, "Warning: self-update failed: %v\n", err)
 		}
@@ -201,15 +192,13 @@ func RunArgs(args []string, stdout io.Writer) error {
 			return fmt.Errorf("resolve user home directory: %w", err)
 		}
 
-		// Load persisted state so the TUI pre-selects the agents the user
-		// previously chose instead of re-selecting every detected config dir.
-		// Missing state preserves the first-time filesystem fallback; unreadable
-		// state cannot safely be treated as an empty selection.
+		// Load persisted state to read PendingSync. Unreadable state cannot
+		// safely be treated as empty.
 		installedState, err := state.Read(homeDir)
 		if err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("read install state: %w", err)
 		}
-		// Con el ámbito workspace la selección que se preselecciona es la del proyecto
+		// Con el ámbito workspace se lee el estado del proyecto
 		// (D2); los campos de máquina, como PendingSync, siguen siendo los del estado
 		// global.
 		if store := installStateStore(homeDir); store.IsProject() {
@@ -223,10 +212,10 @@ func RunArgs(args []string, stdout io.Writer) error {
 		}
 
 		// Deferred sync: if a previous axiom self-upgrade set PendingSync=true,
-		// run sync now with the new binary before entering the TUI. On success,
+		// run sync now with the new binary before opening the UI. On success,
 		// clear the flag. On failure, log and leave the flag set for idempotent
 		// retry on the next launch (per spec scenario "deferred sync fails → retry").
-		// This is non-fatal — a sync failure must never block the TUI from opening.
+		// This is non-fatal — a sync failure must never block the UI from opening.
 		if installedState.PendingSync {
 			if err := deferredSyncFn(); err != nil {
 				_, _ = fmt.Fprintf(stdout, "Warning: deferred sync failed: %v\n", err)
@@ -240,7 +229,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 					_, _ = fmt.Fprintf(stdout, "Warning: failed to clear PendingSync flag: %v\n", writeErr)
 				}
 			}
-			// TUI self-update path: the previous launch completed an axiom
+			// Self-update path: the previous launch completed a axiom
 			// self-upgrade under the old binary and set PendingSync=true. We are
 			// now running under the new binary; print the doctor advisory so the
 			// user can verify ecosystem health against the post-upgrade state.
@@ -248,37 +237,7 @@ func RunArgs(args []string, stdout io.Writer) error {
 			printPostUpgradeDoctorAdvisory(stdout)
 		}
 
-		m := tui.NewModel(result, Version, installedState)
-		m.ExecuteFn = tuiExecuteWithBackground
-		m.RestoreFn = tuiRestore
-		m.DeleteBackupFn = func(manifest backup.Manifest) error {
-			return backup.DeleteBackup(manifest)
-		}
-		m.RenameBackupFn = func(manifest backup.Manifest, newDesc string) error {
-			return backup.RenameBackup(manifest, newDesc)
-		}
-		m.TogglePinFn = func(manifest backup.Manifest) error {
-			return backup.TogglePin(manifest)
-		}
-		m.ListBackupsFn = ListBackups
-		m.Backups = ListBackups()
-		m.UpgradeFn = tuiUpgrade(resolveProfile(), homeDir)
-		m.SyncFn = tuiSync(homeDir)
-		m.UninstallFn = tuiUninstall(homeDir)
-		m.UninstallWithProfilesFn = tuiUninstallWithProfiles(homeDir)
-		// Slice 3b — wire the 4-layer managed-uninstall runner used by the
-		// standalone "Uninstall OpenCode Plugin" TUI shortcut. The TUI
-		// model falls back to opencodeplugin.Uninstall when this field is
-		// nil; assigning it explicitly here keeps the production wiring
-		// visible at the same seam as the other injected functions.
-		m.OpenCodePluginUninstallFn = opencodeplugin.Uninstall
-		finalModel, err := runTUI(m, tea.WithAltScreen())
-		if err != nil {
-			return err
-		}
-		if latestVersion, ok := selfUpgradeVersionFromTUI(finalModel); ok {
-			return restartAfterSelfUpgrade(latestVersion, stdout)
-		}
+		// Abrir la UI lo hace main tras volver de aquí sin error.
 		return nil
 	}
 
@@ -349,20 +308,6 @@ func hasHelpFlag(args []string) bool {
 	}
 
 	return false
-}
-
-func selfUpgradeVersionFromTUI(finalModel tea.Model) (string, bool) {
-	switch m := finalModel.(type) {
-	case tui.Model:
-		return m.SelfUpgradeVersion()
-	case *tui.Model:
-		if m == nil {
-			return "", false
-		}
-		return m.SelfUpgradeVersion()
-	default:
-		return "", false
-	}
 }
 
 func runSkillRegistry(args []string, stdout io.Writer) error {
@@ -478,227 +423,6 @@ func updateCheckError(results []update.UpdateResult) error {
 	return fmt.Errorf("update check failed for: %s", strings.Join(failed, ", "))
 }
 
-// tuiExecute creates a real install runtime and runs the pipeline with progress reporting.
-var appUserHomeDir = os.UserHomeDir
-var appStateWriteReconciled = func(store state.Store, installState state.InstallState) error {
-	return store.WriteReconciled(installState)
-}
-
-func tuiExecuteWithBackground(
-	selection model.Selection,
-	resolved planner.ResolvedPlan,
-	detection system.DetectionResult,
-	background model.OpenCodeBackgroundIntent,
-	backgroundPersist model.OpenCodeBackgroundIntent,
-	piBackground model.PiBackgroundIntent,
-	piBackgroundPersist model.PiBackgroundIntent,
-	onProgress pipeline.ProgressFunc,
-) pipeline.ExecutionResult {
-	restoreCommandOutput := cli.SetCommandOutputStreaming(false)
-	defer restoreCommandOutput()
-
-	homeDir, err := appUserHomeDir()
-	if err != nil {
-		return pipeline.ExecutionResult{Err: fmt.Errorf("resolve user home directory: %w", err)}
-	}
-
-	profile := cli.ResolveInstallProfile(detection)
-	resolved.PlatformDecision = planner.PlatformDecisionFromProfile(profile)
-
-	execResult, orchestrator := cli.ExecuteTUIInstallWithBackgroundAndOrchestrator(homeDir, selection, resolved, profile, background, piBackground, onProgress)
-	if execResult.Err == nil {
-		// Persist the user's agent selection and model assignments so that future
-		// `sync` runs target only the installed agents and preserve model choices.
-		stateStore := installStateStore(homeDir)
-		// Con --scope workspace la instalación omitió los agentes sin modo workspace:
-		// el estado del proyecto no debe registrarlos como instalados.
-		if scope, scopeErr := cli.ResolveInstallScope(""); scopeErr == nil {
-			selection.Agents = cli.AgentsForScope(scope, selection.Agents)
-		}
-		persistErr := statecoord.WithStoreLock(stateStore, func() error {
-			agentIDs := make([]string, 0, len(selection.Agents))
-			for _, a := range selection.Agents {
-				agentIDs = append(agentIDs, string(a))
-			}
-			claudePhaseState := claudePhaseAssignmentsToState(selection.ClaudePhaseAssignments)
-			installState, readErr := stateStore.Read()
-			if errors.Is(readErr, os.ErrNotExist) {
-				installState = state.NewInstallState()
-			} else if readErr != nil {
-				return fmt.Errorf("read persisted install state: %w", readErr)
-			}
-			installState.InstalledAgents = agentIDs
-			installState.CommunityTools = appCommunityToolIDsToStrings(selection.CommunityTools)
-			installState.CommunityToolsConfigured = true
-			installState.ClaudeModelAssignments = claudeLegacyAssignmentsForState(selection.ClaudeModelAssignments, claudePhaseState)
-			installState.ClaudePhaseAssignments = claudePhaseState
-			if copilotState := state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments); copilotState != nil {
-				installState.CopilotPhaseAssignments = copilotState
-			}
-			installState.CodexModelAssignments = codexEffortsToStrings(selection.CodexModelAssignments)
-			installState.CodexOrchestratorAssignment = codexOrchestratorToState(selection.CodexOrchestratorAssignment)
-			installState.CodexCarrilModelAssignments = selection.CodexCarrilModelAssignments
-			installState.CodexPhaseModelAssignments = selection.CodexPhaseModelAssignments
-			installState.ModelAssignments = modelAssignmentsToState(selection.ModelAssignments)
-			installState.Persona = string(selection.Persona)
-			installState.SetSelection(selection)
-			if backgroundPersist != "" {
-				installState.BackgroundIntent = backgroundPersist
-			}
-			if piBackgroundPersist != "" {
-				installState.PiBackgroundIntent = piBackgroundPersist
-			}
-			if writeErr := appStateWriteReconciled(stateStore, installState); writeErr != nil {
-				return fmt.Errorf("persist install state: %w", writeErr)
-			}
-			return nil
-		})
-		if persistErr != nil {
-			execResult.Err = persistErr
-			if orchestrator != nil {
-				rollback := orchestrator.Rollback(execResult)
-				if rollback.Err != nil {
-					execResult.Err = errors.Join(execResult.Err, rollback.Err)
-				}
-			}
-		}
-	}
-
-	return execResult
-}
-
-func appCommunityToolIDsToStrings(tools []model.CommunityToolID) []string {
-	if tools == nil {
-		return nil
-	}
-	result := make([]string, 0, len(tools))
-	for _, tool := range tools {
-		result = append(result, string(tool))
-	}
-	return result
-}
-
-// tuiRestore restores a backup from its manifest.
-func tuiRestore(manifest backup.Manifest) error {
-	return backup.RestoreService{}.Restore(manifest)
-}
-
-// tuiUpgrade returns a tui.UpgradeFunc that wraps upgrade.Execute.
-// The profile and homeDir are captured from the call site so the closure
-// is self-contained and requires no extra parameters at call time.
-func tuiUpgrade(profile system.PlatformProfile, homeDir string) tui.UpgradeFunc {
-	return func(ctx context.Context, results []update.UpdateResult) upgrade.UpgradeReport {
-		return upgradeExecute(ctx, results, profile, homeDir, false)
-	}
-}
-
-// tuiSync returns a tui.SyncFunc that performs a full managed-asset sync.
-// It mirrors the RunSync CLI path: discovers installed agents from persisted
-// state (or filesystem fallback), builds the default sync selection, and
-// delegates to RunSyncWithSelection.
-//
-// When overrides is non-nil, model assignments are merged into the selection
-// so that the "Configure Models" TUI flow persists its choices to disk.
-func tuiSync(homeDir string) tui.SyncFunc {
-	return func(overrides *model.SyncOverrides) (tui.SyncOutcome, error) {
-		// El ámbito se resuelve antes de leer nada: decide qué estado de instalación
-		// (el del proyecto o el de usuario) alimenta la sincronización y dónde se
-		// persisten después las asignaciones.
-		cwd, _ := os.Getwd()
-		scope, _ := cli.ResolveInstallScope("")
-		if scope != cli.ScopeGlobal {
-			if _, statErr := os.Stat(filepath.Join(cwd, "axiom.yaml")); statErr == nil || scope == cli.ScopeWorkspace {
-				scope = cli.ScopeWorkspace
-			}
-		}
-		// En ámbito workspace la raíz es la del proyecto, no la carpeta actual. Se
-		// descarta el aviso: la TUI ocupa la terminal y no debe recibir texto suelto.
-		workspaceDir, _ := cli.ResolveWorkspaceDir(scope, homeDir)
-		stateStore := cli.StateStoreFor(scope, homeDir, workspaceDir)
-
-		agentIDs := syncAgentIDs(homeDir, stateStore, overrides)
-		syncFlags := cli.SyncFlags{IncludePermissions: syncShouldIncludePermissions(agentIDs)}
-		selection := cli.BuildSyncSelection(syncFlags, agentIDs)
-
-		// Load persisted model assignments so a plain sync (no overrides)
-		// preserves the user's previous choices instead of falling back
-		// to the "balanced" preset.
-		loadPersistedAssignments(stateStore, &selection)
-
-		applyOverrides(&selection, overrides)
-
-		result, err := cli.RunSyncWithSelectionScoped(homeDir, workspaceDir, scope, selection)
-		if err != nil {
-			return tui.SyncOutcome{}, err
-		}
-
-		// Persist model assignments that were actually used (from overrides
-		// or loaded from state) so the next sync preserves them too. Con workspace
-		// van al estado del proyecto; con global, al de usuario.
-		if err := persistAssignments(stateStore, selection); err != nil {
-			return tui.SyncOutcome{}, fmt.Errorf("persist model assignments: %w", err)
-		}
-
-		return tui.SyncOutcome{Files: result.ChangedFiles, Warnings: result.Warnings()}, nil
-	}
-}
-
-// tuiUninstall returns a tui.UninstallFunc that mirrors the CLI uninstall path
-// for selected agents/components, but without interactive flag parsing.
-func tuiUninstall(homeDir string) tui.UninstallFunc {
-	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID) (componentuninstall.Result, error) {
-		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
-		if err != nil {
-			return componentuninstall.Result{}, err
-		}
-		return cli.RunUninstallWithSelection(scope, homeDir, workspaceDir, agentIDs, componentIDs)
-	}
-}
-
-func tuiUninstallWithProfiles(homeDir string) tui.UninstallWithProfilesFunc {
-	return func(agentIDs []model.AgentID, componentIDs []model.ComponentID, profileNames []string, engramScope model.EngramUninstallScope) (componentuninstall.Result, error) {
-		scope, workspaceDir, err := tuiUninstallRoots(homeDir)
-		if err != nil {
-			return componentuninstall.Result{}, err
-		}
-		return cli.RunUninstallWithSelectionAndProfiles(scope, homeDir, workspaceDir, agentIDs, componentIDs, profileNames, engramScope)
-	}
-}
-
-// tuiUninstallRoots resuelve el ámbito de la desinstalación de la TUI igual que el
-// comando: workspace por defecto (o lo que fije AXIOM_INSTALL_SCOPE) y, en
-// workspace, la raíz del proyecto aunque la TUI se haya abierto en una subcarpeta.
-// Se descarta el aviso de la raíz: la TUI ocupa la terminal y no debe recibir texto
-// suelto.
-func tuiUninstallRoots(homeDir string) (scope cli.InstallScope, workspaceDir string, err error) {
-	scope, err = cli.ResolveInstallScope("")
-	if err != nil {
-		return "", "", err
-	}
-	workspaceDir, _ = cli.ResolveWorkspaceDir(scope, homeDir)
-	if workspaceDir == "" {
-		return "", "", fmt.Errorf("resolve workspace directory")
-	}
-	return scope, workspaceDir, nil
-}
-
-func syncAgentIDs(homeDir string, store state.Store, overrides *model.SyncOverrides) []model.AgentID {
-	if overrides == nil || len(overrides.TargetAgents) == 0 {
-		return cli.DiscoverAgents(store)
-	}
-
-	seen := make(map[model.AgentID]bool, len(overrides.TargetAgents))
-	ids := make([]model.AgentID, 0, len(overrides.TargetAgents))
-	for _, id := range overrides.TargetAgents {
-		if id == "" || seen[id] {
-			continue
-		}
-		seen[id] = true
-		ids = append(ids, id)
-	}
-	return ids
-}
-
 func syncShouldIncludePermissions(agentIDs []model.AgentID) bool {
 	for _, id := range agentIDs {
 		if id == model.AgentCodex {
@@ -720,296 +444,6 @@ func syncArgsForDiscoveredAgents(homeDir string) []string {
 		return []string{"--include-permissions"}
 	}
 	return nil
-}
-
-// applyOverrides merges non-nil fields from overrides into selection.
-// A nil overrides pointer is a no-op.
-func applyOverrides(selection *model.Selection, overrides *model.SyncOverrides) {
-	if overrides == nil {
-		return
-	}
-	if overrides.ModelAssignments != nil {
-		selection.ModelAssignments = overrides.ModelAssignments
-	}
-	if overrides.ClaudeModelAssignments != nil {
-		selection.ClaudeModelAssignments = overrides.ClaudeModelAssignments
-	}
-	if overrides.ClaudePhaseAssignments != nil {
-		selection.ClaudePhaseAssignments = overrides.ClaudePhaseAssignments
-		selection.ClaudeModelAssignments = nil
-	}
-	if overrides.CopilotPhaseAssignments != nil {
-		selection.CopilotPhaseAssignments = overrides.CopilotPhaseAssignments
-	}
-	if overrides.ClearCodexOrchestratorAssignment {
-		selection.CodexOrchestratorAssignment = nil
-		selection.ClearCodexOrchestratorAssignment = true
-	} else if overrides.CodexOrchestratorAssignment != nil {
-		selection.CodexOrchestratorAssignment = overrides.CodexOrchestratorAssignment
-		selection.ClearCodexOrchestratorAssignment = false
-	}
-	if overrides.CodexModelAssignments != nil {
-		selection.CodexModelAssignments = overrides.CodexModelAssignments
-	}
-	if overrides.CodexCarrilModelAssignments != nil {
-		selection.CodexCarrilModelAssignments = overrides.CodexCarrilModelAssignments
-	}
-	if overrides.CodexPhaseModelAssignments != nil {
-		selection.CodexPhaseModelAssignments = overrides.CodexPhaseModelAssignments
-	}
-	if overrides.SDDMode != "" {
-		selection.SDDMode = overrides.SDDMode
-	}
-	if overrides.SDDProfileStrategy != "" {
-		selection.SDDProfileStrategy = overrides.SDDProfileStrategy
-	}
-	if overrides.StrictTDD != nil {
-		selection.StrictTDD = *overrides.StrictTDD
-	}
-	if len(overrides.Profiles) > 0 {
-		selection.Profiles = overrides.Profiles
-		// Profiles are an OpenCode multi-mode feature — if profiles are being
-		// created/synced, SDDModeMulti is required so that WriteSharedPromptFiles
-		// runs and the {file:...} prompt references resolve correctly.
-		if selection.SDDMode == "" {
-			selection.SDDMode = model.SDDModeMulti
-		}
-	}
-	// A persisted component selection loaded earlier via loadPersistedAssignments
-	// may omit the SDD component (e.g. an install that predates profiles). When
-	// the caller explicitly asked for profile or model assignment work through
-	// this override, that request must not be silently dropped — see issue #3430.
-	if model.CarriesSDDWork(overrides.Profiles, overrides.ModelAssignments) {
-		selection.EnsureComponent(model.ComponentSDD)
-	}
-}
-
-// loadPersistedAssignments reads previously-saved model assignments from
-// state.json and populates the selection when the corresponding maps are empty.
-// This ensures a plain `sync` (no TUI overrides, no CLI flags) preserves the
-// user's last-known model choices.
-func loadPersistedAssignments(store state.Store, selection *model.Selection) {
-	s, err := store.Read()
-	if err != nil {
-		return
-	}
-	cli.RestorePersistedSelection(selection, s, cli.SyncFlags{})
-	if len(selection.ClaudePhaseAssignments) == 0 && len(s.ClaudePhaseAssignments) > 0 {
-		m := make(map[string]model.ClaudePhaseAssignment, len(s.ClaudePhaseAssignments))
-		for k, v := range s.ClaudePhaseAssignments {
-			if k == "orchestrator" {
-				continue
-			}
-			a := model.ClaudePhaseAssignment{Model: model.ClaudeModelAlias(v.Model), Effort: model.ClaudeEffort(v.Effort)}
-			if a.Valid() {
-				m[k] = a
-			}
-		}
-		selection.ClaudePhaseAssignments = m
-	}
-	if len(selection.ClaudeModelAssignments) == 0 && len(selection.ClaudePhaseAssignments) == 0 && len(s.ClaudeModelAssignments) > 0 {
-		m := make(map[string]model.ClaudeModelAlias, len(s.ClaudeModelAssignments))
-		for k, v := range s.ClaudeModelAssignments {
-			// Claude Code controls the main session/orchestrator model itself.
-			// Keep persisted assignments scoped to Agent tool calls only.
-			if k == "orchestrator" {
-				continue
-			}
-			m[k] = model.ClaudeModelAlias(v)
-		}
-		selection.ClaudeModelAssignments = m
-	}
-	if len(selection.CopilotPhaseAssignments) == 0 && len(s.CopilotPhaseAssignments) > 0 {
-		if assignments := s.CopilotAssignments(); model.ValidateCopilotPhaseAssignments(assignments) == nil {
-			selection.CopilotPhaseAssignments = assignments
-		}
-	}
-	if len(selection.CodexModelAssignments) == 0 && len(s.CodexModelAssignments) > 0 {
-		m := make(map[string]model.CodexEffort, len(s.CodexModelAssignments))
-		for k, v := range s.CodexModelAssignments {
-			m[k] = model.CodexEffort(v)
-		}
-		selection.CodexModelAssignments = m
-	}
-	if len(selection.CodexCarrilModelAssignments) == 0 && len(s.CodexCarrilModelAssignments) > 0 {
-		selection.CodexCarrilModelAssignments = model.MigrateLegacyCodexCarrilDefaults(s.CodexCarrilModelAssignments)
-	}
-	if len(selection.CodexPhaseModelAssignments) == 0 && len(s.CodexPhaseModelAssignments) > 0 {
-		m := make(map[string]string, len(s.CodexPhaseModelAssignments))
-		for k, v := range s.CodexPhaseModelAssignments {
-			m[k] = v
-		}
-		selection.CodexPhaseModelAssignments = m
-	}
-	if !selection.ClearCodexOrchestratorAssignment && selection.CodexOrchestratorAssignment == nil && s.CodexOrchestratorAssignment != nil {
-		selection.CodexOrchestratorAssignment = codexOrchestratorFromState(s.CodexOrchestratorAssignment)
-	}
-	if len(selection.ModelAssignments) == 0 && len(s.ModelAssignments) > 0 {
-		m := make(map[string]model.ModelAssignment, len(s.ModelAssignments))
-		for k, v := range s.ModelAssignments {
-			m[k] = model.ModelAssignment{ProviderID: v.ProviderID, ModelID: v.ModelID, Effort: v.Effort}
-		}
-		selection.ModelAssignments = m
-	}
-}
-
-// persistAssignments writes the model assignments from selection back to
-// state.json using a read-merge-write pattern so that other fields
-// (InstalledAgents) are not lost.
-//
-// For CodexPhaseModelAssignments the function distinguishes three states:
-//   - nil: not provided (partial sync) — leave the existing state value untouched.
-//   - non-nil, len > 0: new per-phase assignments — write them.
-//   - non-nil, len == 0: explicit clear signal (preset selected) — delete the key.
-func persistAssignments(store state.Store, selection model.Selection) error {
-	hasAssignmentSignal := selection.ClaudeModelAssignments != nil ||
-		selection.ClaudePhaseAssignments != nil ||
-		selection.CopilotPhaseAssignments != nil ||
-		selection.ModelAssignments != nil ||
-		selection.CodexModelAssignments != nil ||
-		selection.CodexOrchestratorAssignment != nil ||
-		selection.ClearCodexOrchestratorAssignment ||
-		selection.CodexCarrilModelAssignments != nil ||
-		selection.CodexPhaseModelAssignments != nil
-	if len(selection.ClaudeModelAssignments) == 0 && len(selection.ClaudePhaseAssignments) == 0 && len(selection.ModelAssignments) == 0 && len(selection.CodexModelAssignments) == 0 && len(selection.CodexCarrilModelAssignments) == 0 && len(selection.CodexPhaseModelAssignments) == 0 && !hasAssignmentSignal {
-		return nil
-	}
-	// The whole read-modify-write runs under the canonical install-state lock:
-	// the written value derives from the read below, so the read must happen
-	// inside the lock or a concurrent writer's changes would be lost.
-	return statecoord.WithStoreLock(store, func() error {
-		current, err := store.Read()
-		if err != nil {
-			// State file may not exist yet (e.g. pre-state users). Other read
-			// failures, such as invalid JSON, must not overwrite existing state.
-			if !errors.Is(err, os.ErrNotExist) {
-				return nil
-			}
-			current = state.NewInstallState()
-		}
-		if selection.ClaudeModelAssignments != nil {
-			if len(selection.ClaudeModelAssignments) > 0 {
-				current.ClaudeModelAssignments = claudeAliasesToStrings(selection.ClaudeModelAssignments)
-			} else {
-				current.ClaudeModelAssignments = nil
-			}
-		}
-		if selection.ClaudePhaseAssignments != nil {
-			if len(selection.ClaudePhaseAssignments) > 0 {
-				current.ClaudePhaseAssignments = claudePhaseAssignmentsToState(selection.ClaudePhaseAssignments)
-			} else {
-				current.ClaudePhaseAssignments = nil
-			}
-			current.ClaudeModelAssignments = nil
-		}
-		if selection.CopilotPhaseAssignments != nil {
-			// non-nil vacío = reiniciar (borra la clave); nil = no tocar.
-			current.CopilotPhaseAssignments = state.CopilotAssignmentsToState(selection.CopilotPhaseAssignments)
-		}
-		if selection.ClearCodexOrchestratorAssignment {
-			current.CodexOrchestratorAssignment = nil
-		} else if selection.CodexOrchestratorAssignment != nil {
-			current.CodexOrchestratorAssignment = codexOrchestratorToState(selection.CodexOrchestratorAssignment)
-		}
-		if selection.CodexModelAssignments != nil {
-			if len(selection.CodexModelAssignments) > 0 {
-				current.CodexModelAssignments = codexEffortsToStrings(selection.CodexModelAssignments)
-			} else {
-				current.CodexModelAssignments = nil
-			}
-		}
-		if selection.CodexCarrilModelAssignments != nil {
-			if len(selection.CodexCarrilModelAssignments) > 0 {
-				current.CodexCarrilModelAssignments = selection.CodexCarrilModelAssignments
-			} else {
-				current.CodexCarrilModelAssignments = nil
-			}
-		}
-		// non-nil, len > 0 → write; non-nil, len == 0 → clear (explicit preset signal); nil → leave untouched.
-		if selection.CodexPhaseModelAssignments != nil {
-			if len(selection.CodexPhaseModelAssignments) > 0 {
-				current.CodexPhaseModelAssignments = selection.CodexPhaseModelAssignments
-			} else {
-				current.CodexPhaseModelAssignments = nil
-			}
-		}
-		if selection.ModelAssignments != nil {
-			if len(selection.ModelAssignments) > 0 {
-				current.ModelAssignments = modelAssignmentsToState(selection.ModelAssignments)
-			} else {
-				current.ModelAssignments = nil
-			}
-		}
-		return store.Write(current)
-	})
-}
-
-// claudeAliasesToStrings converts a typed ClaudeModelAlias map to plain strings
-// for JSON serialisation in state.json.
-func claudeAliasesToStrings(m map[string]model.ClaudeModelAlias) map[string]string {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, v := range m {
-		// Claude Code owns the main session/orchestrator model; do not persist it
-		// as an Axiom model assignment.
-		if k == "orchestrator" {
-			continue
-		}
-		out[k] = string(v)
-	}
-	return out
-}
-
-func claudeLegacyAssignmentsForState(
-	legacy map[string]model.ClaudeModelAlias,
-	phase map[string]state.ClaudePhaseAssignmentState,
-) map[string]string {
-	if len(phase) > 0 {
-		return nil
-	}
-	return claudeAliasesToStrings(legacy)
-}
-
-func claudePhaseAssignmentsToState(m map[string]model.ClaudePhaseAssignment) map[string]state.ClaudePhaseAssignmentState {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]state.ClaudePhaseAssignmentState, len(m))
-	for k, v := range m {
-		if k == "orchestrator" || !v.Valid() {
-			continue
-		}
-		out[k] = state.ClaudePhaseAssignmentState{Model: string(v.Model), Effort: string(v.Effort)}
-	}
-	return out
-}
-
-// codexEffortsToStrings converts a typed CodexEffort map to plain strings
-// for JSON serialisation in state.json.
-func codexEffortsToStrings(m map[string]model.CodexEffort) map[string]string {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, v := range m {
-		out[k] = string(v)
-	}
-	return out
-}
-
-// modelAssignmentsToState converts model.ModelAssignment maps to the
-// state-serialisable form.
-func modelAssignmentsToState(m map[string]model.ModelAssignment) map[string]state.ModelAssignmentState {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]state.ModelAssignmentState, len(m))
-	for k, v := range m {
-		out[k] = state.ModelAssignmentState{ProviderID: v.ProviderID, ModelID: v.ModelID, Effort: v.Effort}
-	}
-	return out
 }
 
 // ListBackups returns all backup manifests from the backup directory.
@@ -1066,24 +500,10 @@ func isExplicitUpdateFlow(args []string) bool {
 	return args[0] == "update" || args[0] == "upgrade"
 }
 
-func codexOrchestratorToState(a *model.CodexOrchestratorAssignment) *state.CodexOrchestratorAssignmentState {
-	if a == nil {
-		return nil
-	}
-	return &state.CodexOrchestratorAssignmentState{Model: a.Model, Effort: string(a.Effort)}
-}
-
-func codexOrchestratorFromState(a *state.CodexOrchestratorAssignmentState) *model.CodexOrchestratorAssignment {
-	if a == nil {
-		return nil
-	}
-	return &model.CodexOrchestratorAssignment{Model: a.Model, Effort: model.CodexEffort(a.Effort)}
-}
-
-// installStateStore elige el almacén del estado de instalación para la TUI según el
+// installStateStore elige el almacén del estado de instalación para la UI según el
 // ámbito de instalación (workspace por defecto, global solo con
 // AXIOM_INSTALL_SCOPE=global): el estado del proyecto con workspace (D2) y el de
-// usuario con global. Se descarta el aviso de raíz: la TUI ocupa la terminal.
+// usuario con global. Se descarta el aviso de raíz.
 func installStateStore(homeDir string) state.Store {
 	scope, err := cli.ResolveInstallScope("")
 	if err != nil {

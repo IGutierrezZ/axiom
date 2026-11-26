@@ -53,7 +53,7 @@ import (
 //     quien los llama).
 
 // writerRoots son los árboles de producción que se inventarían, relativos a la raíz del repositorio.
-var writerRoots = []string{"cmd/axiom", "internal/cli", "internal/dashboard", "internal/tui", "internal/sddstatus"}
+var writerRoots = []string{"cmd/axiom", "internal/cli", "internal/dashboard", "internal/sddstatus"}
 
 const inventoryModule = "github.com/IGutierrezZ/axiom/v3/"
 

@@ -117,3 +117,67 @@ func TestNoRequirementIDFormatOutsideReqid(t *testing.T) {
 		t.Errorf("forma de identificador fuera de internal/reqid: %s", offender)
 	}
 }
+
+// TestProvisionalLiteralOnlyInReqid fija REQ-47.1: la forma del identificador provisional
+// (el literal `prov:`) solo existe en el código de producción de internal/reqid; el resto
+// del repositorio la usa a través de su API.
+func TestProvisionalLiteralOnlyInReqid(t *testing.T) {
+	t.Run("detector", func(t *testing.T) {
+		for _, tc := range []struct {
+			name string
+			src  string
+			want bool
+		}{
+			{"literal", `package p; var s = "prov:30:1"`, true},
+			{"dentro de un formato", `package p; var s = "(prov:%s:%d)"`, true},
+			{"literal crudo", "package p; var s = `prov:`", true},
+			{"comentario", "package p\n// prov:30:1\nvar s = 1", false},
+			{"otra palabra", `package p; var s = "provider"`, false},
+		} {
+			got := false
+			for _, lit := range stringLiterals(t, "x.go", []byte(tc.src)) {
+				got = got || strings.Contains(lit, "prov:")
+			}
+			if got != tc.want {
+				t.Errorf("%s: detectado = %v, quería %v", tc.name, got, tc.want)
+			}
+		}
+	})
+
+	root := filepath.Join("..", "..")
+	var offenders []string
+	for _, dir := range []string{"internal", "cmd"} {
+		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			slash := filepath.ToSlash(path)
+			if entry.IsDir() {
+				if strings.HasSuffix(slash, "/internal/reqid") || entry.Name() == "testdata" {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+			src, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			for _, lit := range stringLiterals(t, path, src) {
+				if strings.Contains(lit, "prov:") {
+					offenders = append(offenders, filepath.ToSlash(strings.TrimPrefix(path, root+string(filepath.Separator)))+": "+lit)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	sort.Strings(offenders)
+	for _, offender := range offenders {
+		t.Errorf("forma de provisional fuera de internal/reqid: %s", offender)
+	}
+}

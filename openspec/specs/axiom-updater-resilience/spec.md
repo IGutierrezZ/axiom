@@ -61,7 +61,8 @@ El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuen
 
 ### Requirement: No-regresión del verbo CLI axiom upgrade (REQ-22.5)
 
-El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una operación **solo-binario**; NO DEBE encadenar automáticamente `sync` ni `install`. La composición de `upgrade` ➔ `sync` es exclusiva de las superficies reactivas interactivas (Web UI y TUI).
+El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una operación **solo-binario**; NO DEBE encadenar automáticamente `sync` ni `install`. La composición de `upgrade` ➔ `sync` es exclusiva de la superficie reactiva interactiva (Web UI).
+(Previously: la composición era exclusiva de las superficies reactivas interactivas (Web UI y TUI).)
 
 #### Scenario: Ejecución de axiom upgrade desde consola
 - **DADO** la invocación de `axiom upgrade` en CLI
@@ -69,29 +70,15 @@ El comando de terminal `axiom upgrade` DEBE mantenerse estrictamente como una op
 - **ENTONCES** solo se actualizan los binarios
 - **Y** no se mutan configuraciones ni se disparan sincronizaciones de agentes
 
----
-
-### Requirement: Paridad TUI: encadenamiento y protección de reinicio (REQ-22.6)
-
-La vista combinada de actualización y sincronización de la TUI interactiva (`ScreenUpgradeSync`) DEBE ejecutar la secuencia `upgrade` ➔ `sync`, mostrando el avance en pantalla y respetando la precondición de reinicio si el binario activo fue modificado.
-
-#### Scenario: Vista de actualización en TUI
-- **DADO** la selección de actualización en la TUI
-- **CUANDO** finaliza la descarga del nuevo binario
-- **ENTONCES** informa al usuario del estado y ejecuta sync si es seguro
-
----
-
 ### Requirement: Identidad visible del fork en vistas de actualización (REQ-22.7)
 
-Todos los mensajes de confirmación, cabeceras, títulos y diálogos en TUI y Web UI DEBEN referirse exclusivamente a la identidad de `axiom`.
+Todos los mensajes de confirmación, cabeceras, títulos y diálogos en la Web UI DEBEN referirse exclusivamente a la identidad de `axiom`.
+(Previously: la identidad aplicaba a TUI y Web UI; el escenario comprobaba la pantalla `ScreenUpgradeSync`.)
 
 #### Scenario: Textos de interfaz limpios
-- **DADO** la pantalla `ScreenUpgradeSync`
+- **DADO** la vista de actualización y sincronización de la Web UI
 - **CUANDO** se renderizan los diálogos de progreso
 - **ENTONCES** todos los textos nombran `axiom`
-
----
 
 ### Requirement: Versión de build visible y consistente (REQ-22.8)
 

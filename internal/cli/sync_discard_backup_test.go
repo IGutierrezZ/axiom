@@ -15,7 +15,7 @@ func TestSyncWithoutChangesLeavesNoNewBackup(t *testing.T) {
 	root, _, home := workspaceRootFixture(t, false, true)
 	t.Chdir(root)
 
-	installInProject(t, root, "--component", "engram", "--persona", "neutral")
+	installInProject(t, root, "--component", "engram")
 	if got, want := backup.BackupRootFor(home), filepath.Join(home, ".axiom", "backups"); got != want {
 		t.Fatalf("BackupRootFor() = %q, want %q", got, want)
 	}

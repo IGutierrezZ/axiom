@@ -16,13 +16,14 @@ Read the state from `axiom sdd status --cwd <repo> --json`, never from `axiom.ya
 ## Requirement Identifiers and Scenarios (spec phase)
 
 - Each requirement name of a delta carries exactly one valid identifier according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`), for example `### Requirement: Cobro con IVA (REQ-30.1)`. A repeated copy of the same identifier counts as one; a malformed token (one that starts like the pattern and does not fit it, such as `REQ-30` with the default pattern) does not count.
+- A provisional identifier (`prov:<series>:<ordinal>`, for example `(prov:30:1)`) is valid in the name of an ADDED requirement instead of a number, once per name and with no other identifier beside it; it is never valid in MODIFIED, REMOVED or RENAMED (`iso_requirement_id`). The number is assigned when the change is archived with `axiom sdd archive-integrate`.
 - An ADDED identifier is unique among all the ADDED requirements of the change and absent from the baseline. MODIFIED and REMOVED requirements carry the identifier of the requirement they name; for a requirement that has none, use a RENAMED entry first. A RENAMED entry carries it in the new name.
 - Every ADDED or MODIFIED requirement has at least one `#### Scenario:` outside code fences, and no scenario name repeats within a requirement. REMOVED and RENAMED requirements need none.
 
 ## The `Cubre:` Line (tasks phase)
 
 - A line of its own in `tasks.md` or `tasks.<role>.md`, indented or bulleted if you like, outside code fences: `Cubre: REQ-x[, REQ-y ...]`. Put it under the task that covers the requirement.
-- Coverage is joint across every tasks file of the change: each requirement of the delta (ADDED, MODIFIED, REMOVED and the new name of a RENAMED) appears in some `Cubre:` line. A cited identifier that is neither in the delta nor in the baseline is `iso_cubre_unknown`.
+- Coverage is joint across every tasks file of the change: each requirement of the delta (ADDED, MODIFIED, REMOVED and the new name of a RENAMED) appears in some `Cubre:` line. A cited identifier that is neither in the delta nor in the baseline is `iso_cubre_unknown`. `Cubre:` accepts a provisional declared by an ADDED requirement of the same change, written exactly as in the delta; an undeclared provisional is `iso_cubre_unknown` with its own detail.
 - Do not cite a requirement in a bug without impact on the spec: `iso_bug_contradiction`.
 
 ## Bug Profile
@@ -63,6 +64,7 @@ In an ISO change, `verify` is mandatory before archive: status routes to `verify
 - The matrix is an additional section of the consolidated `verify-report.md` (the report of the single role `fullstack`), next to the "Cumplimiento técnico" section. It never contains a line that starts with `verdict:`: every row starts with `|`.
 - Exact level-2 heading `## Matriz de verificación`, outside code fences, and only one per report.
 - One row per affected scenario, no row for any other scenario, none repeated.
+- The `Requisito` column of the matrix accepts the provisional identifier of an ADDED requirement; `axiom sdd archive-integrate` rewrites it with the assigned number when the change is archived.
 
 ```markdown
 ## Matriz de verificación
@@ -85,9 +87,9 @@ In an ISO change, `verify` is mandatory before archive: status routes to `verify
 ## Archive Check and Interrupted Archives
 
 - `axiom sdd archive-check --cwd <workspaceRoot> --change <name> [--json]` is read-only. It exits `0` for a non-ISO change or when there are no findings, and `1` with the typed reasons otherwise. It covers the cases that compose nothing, such as a new capability that is copied and a bug without a delta.
-- `sdd-archive` runs it before composing and before any move. `archive-compose` also refuses on the same reasons, as defence in depth.
-- `--json` (`axiom.sdd-archive-check/v1`) reports `domains[]` with `alreadyComposed`: `true` when the baseline already holds the whole delta of that domain.
-- **Resume an interrupted archive.** If an earlier run composed some domains and stopped before moving the folder, compose only the domains with `alreadyComposed: false`, then finish the move. Composing a domain again fails with "a requirement named ... already exists".
+- `sdd-archive` runs it before `axiom sdd archive-integrate` and before any move. `archive-integrate` and `archive-compose` also refuse on the same reasons, as defence in depth.
+- `--json` (`axiom.sdd-archive-check/v1`) reports `domains[]` with `alreadyComposed`: `true` when the baseline already holds the whole delta of that domain, plus `assignments` (provisionals already assigned) and `pendingProvisionals`.
+- **Resume an interrupted archive.** If an earlier run integrated the change and stopped before moving the folder, run `axiom sdd archive-integrate` again: it skips what is already integrated and keeps the numbers already assigned, then finish the move.
 
 ## Trace
 

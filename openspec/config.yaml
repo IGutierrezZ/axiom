@@ -4,8 +4,8 @@ language: "es"
 
 context: |
   Axiom: Fork y version paralela de Gentle-AI.
-  Tech stack: Go 1.25.10+, Bubbletea TUI (charmbracelet/bubbletea v1.3.10), lipgloss v1.1.0
-  Architecture: cmd/ entrypoints, internal/ packages (agents, tui, model, pipeline, catalog, system, planner, verify, update, opencode, installcmd, cli, app, components, state, backup, assets, agentbuilder)
+  Tech stack: Go 1.25.10+, CLI y UI web local (dashboard embebido)
+  Architecture: cmd/ entrypoints, internal/ packages (agents, dashboard, model, pipeline, catalog, system, planner, verify, update, opencode, installcmd, cli, app, components, state, backup, assets)
   Agents: multi-agent support (antigravity, opencode, claude, cursor, codex, gemini, vscode)
   Skills catalog: internal/catalog/skills.go — known skill registry; project skills in skills/
   Build: goreleaser (.goreleaser.yaml), CI: GitHub Actions (ci.yml, pr-check.yml, release.yml)
@@ -23,7 +23,6 @@ rules:
     - Use Given/When/Then format for scenarios
     - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
   design:
-    - Include sequence diagrams for complex TUI flows
     - Document architecture decisions with rationale
   tasks:
     - Group tasks by phase (infrastructure, implementation, testing)
@@ -60,10 +59,6 @@ testing:
       available: true
       tool: "go test -tags real_agent_e2e ./e2e/organicruntime"
       note: "Organic Runtime E2E: needs real Claude Code and OpenCode binaries; runs in the organic-runtime-e2e CI job"
-    tui:
-      available: true
-      tool: "bubbletea tea.KeyMsg simulation (no teatest — direct model.Update() testing)"
-      note: "TUI tests use direct Bubbletea model updates, not teatest library"
 
   coverage:
     available: true

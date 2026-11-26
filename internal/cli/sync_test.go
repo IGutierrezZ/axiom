@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -26,7 +25,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -54,9 +52,6 @@ func TestParseSyncFlagsDefaults(t *testing.T) {
 	}
 	if flags.IncludePermissions {
 		t.Errorf("IncludePermissions = true, want false")
-	}
-	if flags.IncludeTheme {
-		t.Errorf("IncludeTheme = true, want false")
 	}
 	if flags.SDDMode != "" {
 		t.Errorf("SDDMode = %q, want empty", flags.SDDMode)
@@ -190,16 +185,13 @@ func TestParseSyncFlagsSDDProfileStrategy(t *testing.T) {
 	}
 }
 
-func TestParseSyncFlagsIncludePermissionsAndTheme(t *testing.T) {
-	flags, err := ParseSyncFlags([]string{"--include-permissions", "--include-theme"})
+func TestParseSyncFlagsIncludePermissions(t *testing.T) {
+	flags, err := ParseSyncFlags([]string{"--include-permissions"})
 	if err != nil {
 		t.Fatalf("ParseSyncFlags() error = %v", err)
 	}
 	if !flags.IncludePermissions {
 		t.Errorf("IncludePermissions = false, want true")
-	}
-	if !flags.IncludeTheme {
-		t.Errorf("IncludeTheme = false, want true")
 	}
 }
 
@@ -334,7 +326,6 @@ func TestBuildSyncSelectionDefaultExcludesPermissionsTheme(t *testing.T) {
 
 	excluded := []model.ComponentID{
 		model.ComponentPermission,
-		model.ComponentTheme,
 	}
 
 	for _, comp := range excluded {
@@ -361,37 +352,6 @@ func TestBuildSyncSelectionIncludePermissionsWhenFlagSet(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("BuildSyncSelection() expected ComponentPermission when --include-permissions is set")
-	}
-}
-
-func TestBuildSyncSelectionIncludeThemeFlagIsInert(t *testing.T) {
-	agents := []model.AgentID{model.AgentClaudeCode}
-	flags := SyncFlags{IncludeTheme: true}
-
-	sel := BuildSyncSelection(flags, agents)
-
-	for _, comp := range sel.Components {
-		if comp == model.ComponentTheme {
-			t.Fatalf("BuildSyncSelection() must not include ComponentTheme even with --include-theme")
-		}
-	}
-}
-
-func TestRestorePersistedSelectionRetiresVisualThemes(t *testing.T) {
-	selection := BuildSyncSelection(SyncFlags{}, []model.AgentID{model.AgentClaudeCode})
-	RestorePersistedSelection(&selection, state.InstallState{
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentPersona, model.ComponentTheme, model.ComponentClaudeTheme,
-		},
-	}, SyncFlags{})
-	if !slices.Contains(selection.Components, model.ComponentPersona) {
-		t.Fatal("non-visual persisted component was lost")
-	}
-	for _, visual := range []model.ComponentID{model.ComponentTheme, model.ComponentClaudeTheme} {
-		if slices.Contains(selection.Components, visual) {
-			t.Fatalf("retired visual component %q survived state restore", visual)
-		}
 	}
 }
 
@@ -752,7 +712,7 @@ func TestComponentSyncStepRunsPersonaInjectForSync(t *testing.T) {
 		component: model.ComponentPersona,
 		homeDir:   home,
 		agents:    []model.AgentID{model.AgentOpenCode},
-		selection: model.Selection{Persona: model.PersonaGentleman},
+		selection: model.Selection{},
 	}
 
 	if err := step.Run(); err != nil {
@@ -791,7 +751,7 @@ func TestComponentSyncStepWritesPiPersonaToHomeAndReportsChangedFile(t *testing.
 		homeDir:      home,
 		workspaceDir: workspace,
 		agents:       []model.AgentID{model.AgentPi},
-		selection:    model.Selection{Persona: model.PersonaNeutral},
+		selection:    model.Selection{},
 		changedFiles: &changed,
 	}
 
@@ -804,8 +764,8 @@ func TestComponentSyncStepWritesPiPersonaToHomeAndReportsChangedFile(t *testing.
 	if _, err := os.Stat(filepath.Join(workspace, ".pi", "axiom", "persona.json")); !os.IsNotExist(err) {
 		t.Fatalf("Pi sync wrote a workspace persona config; stat err = %v", err)
 	}
-	if got := readTextFile(t, path); got != "{\n  \"mode\": \"neutral\"\n}\n" {
-		t.Fatalf("Pi persona config = %q, want neutral mode", got)
+	if got := readTextFile(t, path); got != "{\n  \"mode\": \"axiom\"\n}\n" {
+		t.Fatalf("Pi persona config = %q, want axiom mode", got)
 	}
 
 	changed = nil
@@ -823,7 +783,6 @@ func TestSyncPersonaPathsAndBackupTargetsTrackOnlyPiGlobalConfig(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentPi},
 		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaNeutral,
 	}
 	adapters := resolveAdapters(selection.Agents)
 	want := filepath.Join(home, ".pi", "axiom", "persona.json")
@@ -841,11 +800,6 @@ func TestSyncPersonaPathsAndBackupTargetsTrackOnlyPiGlobalConfig(t *testing.T) {
 	if !containsPath(targets, want) || !containsPath(targets, prompt) || containsPath(targets, unwanted) {
 		t.Fatalf("sync backup targets = %v, want global Pi config %q and cleanup path %q", targets, want, prompt)
 	}
-
-	selection.Persona = model.PersonaCustom
-	if paths := syncPersonaPathsWithWorkspace(home, workspace, selection, adapters); len(paths) != 0 {
-		t.Fatalf("custom sync persona paths = %v, want none", paths)
-	}
 }
 
 func TestSyncRoutingCleanupReportsPiPromptForNormalAndExplicitSync(t *testing.T) {
@@ -853,7 +807,7 @@ func TestSyncRoutingCleanupReportsPiPromptForNormalAndExplicitSync(t *testing.T)
 		home := t.TempDir()
 		path := systemPromptFileFor(t, home, model.AgentPi)
 		mustWriteFile(t, path, []byte("user\n<!-- gentle-ai:agent-routing -->\nstale\n<!-- /gentle-ai:agent-routing -->\n"))
-		changed := runSyncInjectionSteps(t, home, model.Selection{Agents: []model.AgentID{model.AgentPi}, Components: components, Persona: model.PersonaNeutral})
+		changed := runSyncInjectionSteps(t, home, model.Selection{Agents: []model.AgentID{model.AgentPi}, Components: components})
 		if !containsPath(changed, path) || strings.Contains(readTextFile(t, path), "gentle-ai:agent-routing") {
 			t.Fatalf("sync components %v changed=%v prompt=%q", components, changed, path)
 		}
@@ -885,7 +839,6 @@ func TestPiPersonaSyncSnapshotRestoresGlobalConfig(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentPi},
 		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaNeutral,
 	}
 	targets, err := syncBackupTargets(home, workspace, selection, resolveAdapters(selection.Agents))
 	if err != nil {
@@ -926,7 +879,6 @@ func TestSyncPersonaRollbackRestoresPiSystemPromptFile(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentPi},
 		Components: []model.ComponentID{model.ComponentPersona, model.ComponentID("later-failure")},
-		Persona:    model.PersonaNeutral,
 	}
 	targets, err := syncBackupTargets(home, "", selection, resolveAdapters(selection.Agents))
 	if err != nil {
@@ -999,7 +951,6 @@ func TestRunSyncPreservesCurrentOpenCodeAssignmentOverStaleState(t *testing.T) {
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentSDD},
 		SDDMode:             model.SDDModeMulti,
-		Persona:             string(model.PersonaNeutral),
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-apply": {ProviderID: "openai", ModelID: "gpt-stale", Effort: "low"},
 		},
@@ -1059,7 +1010,6 @@ func TestRunSyncPreservesClearedOpenCodeAssignmentOverStaleState(t *testing.T) {
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentSDD},
 		SDDMode:             model.SDDModeMulti,
-		Persona:             string(model.PersonaNeutral),
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-apply": {ProviderID: "openai", ModelID: "gpt-stale", Effort: "low"},
 		},
@@ -1422,7 +1372,6 @@ func TestSyncPersonaOnlyRollbackRestoresOpenCodeSettingsAfterGentlemanCleanup(t 
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentPersona, model.ComponentID("later-failure")},
-		Persona:    model.PersonaGentleman,
 	}
 	targets, err := syncBackupTargets(home, "", selection, resolveAdapters(selection.Agents))
 	if err != nil {
@@ -1444,182 +1393,6 @@ func TestSyncPersonaOnlyRollbackRestoresOpenCodeSettingsAfterGentlemanCleanup(t 
 	}
 }
 
-func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
-	workspace, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatalf("EvalSymlinks(workspace) error = %v", err)
-	}
-	t.Chdir(workspace)
-	home, err := filepath.EvalSymlinks(t.TempDir())
-	if err != nil {
-		t.Fatalf("EvalSymlinks(home) error = %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"claude-code", "opencode"},
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentClaudeTheme,
-			model.ComponentOpenCodeGentleLogo,
-		},
-		Persona: "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	// Persisted visual themes are ignored.
-	// The last two entries are the routing guidance targets. Guidance is written
-	// for every configured agent regardless of which components are persisted.
-	wantFiles := []string{
-		filepath.Join(home, ".config", "opencode", "tui-plugins", "gentle-logo.tsx"),
-		filepath.Join(home, ".config", "opencode", "tui.json"),
-		filepath.Join(home, ".claude", "CLAUDE.md"),
-		filepath.Join(home, ".config", "opencode", "opencode.json"),
-	}
-
-	first, err := RunSync([]string{"--agents", "claude-code,opencode"})
-	if err != nil {
-		t.Fatalf("RunSync() first error = %v", err)
-	}
-	if !reflect.DeepEqual(first.ChangedFiles, wantFiles) {
-		t.Fatalf("first ChangedFiles = %#v, want %#v", first.ChangedFiles, wantFiles)
-	}
-	for _, path := range wantFiles {
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("expected managed non-theme file %q was not refreshed: %v", path, err)
-		}
-	}
-	for _, root := range []string{filepath.Join(home, ".claude", "themes"), filepath.Join(home, ".config", "opencode", "themes")} {
-		if _, err := os.Stat(root); !os.IsNotExist(err) {
-			t.Fatalf("sync installed a theme directory %q: %v", root, err)
-		}
-	}
-
-	second, err := RunSync([]string{"--agents", "claude-code,opencode"})
-	if err != nil {
-		t.Fatalf("RunSync() second error = %v", err)
-	}
-	if !second.NoOp || second.FilesChanged != 0 || len(second.ChangedFiles) != 0 {
-		t.Fatalf("second sync = NoOp %v, FilesChanged %d, ChangedFiles %#v; want idempotent no-op", second.NoOp, second.FilesChanged, second.ChangedFiles)
-	}
-}
-
-func TestRunSyncRetiresOnlyExactManagedVisualTheme(t *testing.T) {
-	workspace := t.TempDir()
-	t.Chdir(workspace)
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"}, SelectionConfigured: true,
-		Components: []model.ComponentID{model.ComponentClaudeTheme}, Persona: "custom",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	settings := filepath.Join(home, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(settings, []byte(`{"theme":"personal"}`), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	themes := filepath.Join(home, ".claude", "themes")
-	if err := os.MkdirAll(themes, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	asset := struct {
-		Name      string            `json:"name"`
-		Base      string            `json:"base"`
-		Overrides map[string]string `json:"overrides"`
-	}{"axiom", "dark", map[string]string{
-		"diffAdded": "#3F4A2D", "diffRemoved": "#5C3838", "diffAddedWord": "#76946A", "diffRemovedWord": "#C34043",
-		"chromeYellow": "#DCA561", "briefLabelYou": "#DCA561", "rainbow_yellow": "#DCA561", "yellow_FOR_SUBAGENTS_ONLY": "#DCA561",
-	}}
-	exact, err := json.MarshalIndent(asset, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	exact = append(exact, '\n')
-	exactPath := filepath.Join(themes, "axiom.json")
-	modifiedPath := filepath.Join(themes, "axiom-dark.json")
-	if err := os.WriteFile(exactPath, exact, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	modified := []byte(`{"name":"user-modified"}`)
-	if err := os.WriteFile(modifiedPath, modified, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() { osUserHomeDir = restoreHome; backup.UserHomeDirFn = restoreBackupHome })
-	result, err := RunSync([]string{"--agents", "claude-code"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(exactPath); !os.IsNotExist(err) {
-		t.Fatalf("exact theme remains: %v", err)
-	}
-	if got, err := os.ReadFile(modifiedPath); err != nil || string(got) != string(modified) {
-		t.Fatalf("modified theme changed: %q, %v", got, err)
-	}
-	if got, err := os.ReadFile(settings); err != nil || string(got) != `{"theme":"personal"}` {
-		t.Fatalf("theme preference changed: %q, %v", got, err)
-	}
-	if !slices.Contains(result.ChangedFiles, exactPath) {
-		t.Fatalf("removed theme missing from ChangedFiles: %v", result.ChangedFiles)
-	}
-}
-
-// TestRunSyncSkipsOpenCodeGentleLogoWhenOpenCodeNotSelected ensures that when
-// ComponentOpenCodeGentleLogo is in state, but OpenCode is not selected (e.g. only
-// Claude Code is selected), sync does not touch OpenCode directories or fail (issue #1212).
-func TestRunSyncSkipsOpenCodeGentleLogoWhenOpenCodeNotSelected(t *testing.T) {
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"claude-code"},
-		SelectionConfigured: true,
-		Components: []model.ComponentID{
-			model.ComponentOpenCodeGentleLogo,
-		},
-		Persona: "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	result, err := RunSync([]string{"--agents", "claude-code"})
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-
-	opencodeDir := filepath.Join(home, ".config", "opencode")
-	if _, err := os.Stat(opencodeDir); !os.IsNotExist(err) {
-		t.Fatalf("expected OpenCode config dir %q to not exist, err: %v", opencodeDir, err)
-	}
-
-	for _, p := range result.ChangedFiles {
-		if strings.Contains(p, "opencode") {
-			t.Fatalf("unexpected opencode path in ChangedFiles: %s", p)
-		}
-	}
-}
-
 // TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent
 // reproduces issue #1440: when the persisted selection lacks the SDD component
 // but managed OpenCode plugins are already installed on disk, `axiom sync`
@@ -1630,7 +1403,6 @@ func TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent(t *t
 		InstalledAgents:     []string{"opencode"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write() error = %v", err)
 	}
@@ -1688,7 +1460,6 @@ func TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled(t *testing
 		InstalledAgents:     []string{"opencode"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write() error = %v", err)
 	}
@@ -2587,7 +2358,7 @@ func TestRestorePersistedCommunityToolsDoesNotAdoptExternalWiring(t *testing.T) 
 
 func TestRunSyncMigratesLegacyManagedCodeGraphSelection(t *testing.T) {
 	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}, Persona: "neutral"}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}}); err != nil {
 		t.Fatal(err)
 	}
 	mustWriteFile(t, filepath.Join(home, ".config", "opencode", "opencode.json"), []byte(`{"mcp":{"codegraph":{"type":"local","command":["codegraph","serve","--mcp"],"enabled":true}}}`))
@@ -2597,7 +2368,7 @@ func TestRunSyncMigratesLegacyManagedCodeGraphSelection(t *testing.T) {
 	t.Cleanup(func() { cmdLookPath = restoreLookPath })
 	cmdLookPath = func(string) (string, error) { return "/bin/codegraph", nil }
 
-	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}, Persona: model.PersonaNeutral})
+	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}})
 	if err != nil {
 		t.Fatalf("RunSyncWithSelection() error = %v", err)
 	}
@@ -2615,7 +2386,7 @@ func TestRunSyncMigratesLegacyManagedCodeGraphSelection(t *testing.T) {
 
 func TestRunSyncMigratesLegacyManagedPiCodeGraphSelection(t *testing.T) {
 	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}, Persona: "neutral"}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"opencode"}}); err != nil {
 		t.Fatal(err)
 	}
 	writeManagedPiCodeGraphManifest(t, home)
@@ -2634,7 +2405,7 @@ func TestRunSyncMigratesLegacyManagedPiCodeGraphSelection(t *testing.T) {
 	}
 	t.Cleanup(func() { refreshPiCodeGraphIfConfigured = previousRefresh })
 
-	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}, Persona: model.PersonaNeutral})
+	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}})
 	if err != nil {
 		t.Fatalf("RunSyncWithSelection() error = %v", err)
 	}
@@ -2656,7 +2427,7 @@ func TestRunSyncReportsLegacySelectionMigrationPersistenceFailure(t *testing.T) 
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
-	original := state.InstallState{InstalledAgents: []string{"opencode"}, Persona: "neutral"}
+	original := state.InstallState{InstalledAgents: []string{"opencode"}}
 	if err := state.Write(home, original); err != nil {
 		t.Fatal(err)
 	}
@@ -2693,7 +2464,7 @@ func TestRunSyncReportsLegacySelectionMigrationPersistenceFailure(t *testing.T) 
 		cmdLookPath = previousLookPath
 	})
 
-	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}, Persona: model.PersonaNeutral})
+	result, err := RunSyncWithSelection(home, model.Selection{Agents: []model.AgentID{model.AgentOpenCode}})
 	if err == nil || !strings.Contains(err.Error(), "persist managed asset provenance") {
 		t.Fatalf("RunSyncWithSelection() error = %v, want migration persistence failure", err)
 	}
@@ -4138,14 +3909,14 @@ func TestBuildSyncSelectionStrictTDD(t *testing.T) {
 
 func TestRunSyncRestoresConfiguredSelectionAndExplicitOverrides(t *testing.T) {
 	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"cursor"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}, Preset: model.PresetCustom}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"cursor"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}}); err != nil {
 		t.Fatal(err)
 	}
 	original := osUserHomeDir
 	osUserHomeDir = func() (string, error) { return home, nil }
 	t.Cleanup(func() { osUserHomeDir = original })
 	plain, err := RunSync([]string{"--dry-run"})
-	if err != nil || !reflect.DeepEqual(plain.Selection.Components, []model.ComponentID{model.ComponentEngram}) || !reflect.DeepEqual(plain.Selection.Skills, []model.SkillID{model.SkillCommentWriter}) || plain.Selection.Preset != model.PresetCustom {
+	if err != nil || !reflect.DeepEqual(plain.Selection.Components, []model.ComponentID{model.ComponentEngram}) || !reflect.DeepEqual(plain.Selection.Skills, []model.SkillID{model.SkillCommentWriter}) {
 		t.Fatalf("plain sync selection = %#v, err = %v", plain.Selection, err)
 	}
 	overridden, err := RunSync([]string{"--dry-run", "--skill", "sdd-init", "--sdd-mode", "multi", "--strict-tdd"})
@@ -4156,7 +3927,7 @@ func TestRunSyncRestoresConfiguredSelectionAndExplicitOverrides(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := RunSync([]string{"--dry-run"})
-	if err != nil || result.Selection.Preset != model.PresetFullGentleman || !result.Selection.HasComponent(model.ComponentSkills) {
+	if err != nil || !result.Selection.HasComponent(model.ComponentSkills) {
 		t.Fatalf("legacy sync selection = %#v, err = %v", result.Selection, err)
 	}
 }
@@ -4684,7 +4455,6 @@ func TestSyncCodexGentlemanConvergesWithHooksJSON(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentCodex},
 		Components: []model.ComponentID{model.ComponentPersona, model.ComponentSDD},
-		Persona:    model.PersonaGentleman,
 		SDDMode:    model.SDDModeSingle,
 		CodexCarrilModelAssignments: map[string]string{
 			"sdd-strong": "gpt-5.5",
@@ -4728,15 +4498,6 @@ func TestSyncCodexGentlemanConvergesWithHooksJSON(t *testing.T) {
 	}
 }
 
-// TestBuildSyncSelectionDoesNotHardcodePersona verifies that BuildSyncSelection
-// leaves Persona empty so RunSync can resolve it from state.
-func TestBuildSyncSelectionDoesNotHardcodePersona(t *testing.T) {
-	sel := BuildSyncSelection(SyncFlags{}, []model.AgentID{model.AgentOpenCode})
-	if sel.Persona != "" {
-		t.Errorf("BuildSyncSelection().Persona = %q, want empty (state-resolved)", sel.Persona)
-	}
-}
-
 // TestSyncPersonaPathsExcludeOpenCodeAgentJson verifies the install/sync
 // contract split: syncPersonaPaths must NOT declare opencode.json (that JSON
 // merge is install-only because it conflicts with SDD).
@@ -4745,156 +4506,12 @@ func TestSyncPersonaPathsExcludeOpenCodeAgentJson(t *testing.T) {
 	reg, _ := agents.NewDefaultRegistry()
 	a, _ := reg.Get(model.AgentOpenCode)
 
-	paths := syncPersonaPaths(home, model.Selection{Persona: model.PersonaGentleman}, []agents.Adapter{a})
+	paths := syncPersonaPaths(home, model.Selection{}, []agents.Adapter{a})
 
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
 	for _, p := range paths {
 		if p == settingsPath {
 			t.Errorf("syncPersonaPaths should NOT declare opencode.json (install-only); got %v", paths)
-		}
-	}
-}
-
-func TestSyncPersonaPathsDeclareManagedClaudeOutputStyle(t *testing.T) {
-	home := t.TempDir()
-	reg, _ := agents.NewDefaultRegistry()
-	a, _ := reg.Get(model.AgentClaudeCode)
-
-	tests := []struct {
-		name       string
-		persona    model.PersonaID
-		wantStyle  string
-		unwanted   string
-		wantConfig string
-	}{
-		{
-			name:       "gentleman",
-			persona:    model.PersonaGentleman,
-			wantStyle:  filepath.Join(home, ".claude", "output-styles", "gentleman.md"),
-			unwanted:   filepath.Join(home, ".claude", "output-styles", "neutral.md"),
-			wantConfig: filepath.Join(home, ".claude", "settings.json"),
-		},
-		{
-			name:       "neutral",
-			persona:    model.PersonaNeutral,
-			wantStyle:  filepath.Join(home, ".claude", "output-styles", "neutral.md"),
-			unwanted:   filepath.Join(home, ".claude", "output-styles", "gentleman.md"),
-			wantConfig: filepath.Join(home, ".claude", "settings.json"),
-		},
-		{
-			name:       "legacy neutral alias",
-			persona:    model.PersonaGentlemanNeutralArtifacts,
-			wantStyle:  filepath.Join(home, ".claude", "output-styles", "neutral.md"),
-			unwanted:   filepath.Join(home, ".claude", "output-styles", "gentleman.md"),
-			wantConfig: filepath.Join(home, ".claude", "settings.json"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			paths := syncPersonaPaths(home, model.Selection{Persona: tt.persona}, []agents.Adapter{a})
-
-			if !containsPath(paths, tt.wantStyle) {
-				t.Fatalf("syncPersonaPaths(%q) missing managed style %q; got %v", tt.persona, tt.wantStyle, paths)
-			}
-			if !containsPath(paths, tt.wantConfig) {
-				t.Fatalf("syncPersonaPaths(%q) missing settings path %q; got %v", tt.persona, tt.wantConfig, paths)
-			}
-			if containsPath(paths, tt.unwanted) {
-				t.Fatalf("syncPersonaPaths(%q) included wrong managed style %q; got %v", tt.persona, tt.unwanted, paths)
-			}
-		})
-	}
-}
-
-// TestSyncBackupTargetsCaptureBothManagedOutputStyles pins the persona-switch
-// backup fix: the pre-sync snapshot must capture BOTH managed output-style
-// files so switching personas (which removes the previously selected file) can
-// be rolled back. Verification stays on the selected file (asserted by
-// TestSyncPersonaPathsDeclareManagedClaudeOutputStyle).
-func TestSyncBackupTargetsCaptureBothManagedOutputStyles(t *testing.T) {
-	home := t.TempDir()
-	reg, _ := agents.NewDefaultRegistry()
-	a, _ := reg.Get(model.AgentClaudeCode)
-
-	gentleman := filepath.Join(home, ".claude", "output-styles", "gentleman.md")
-	neutral := filepath.Join(home, ".claude", "output-styles", "neutral.md")
-
-	for _, persona := range []model.PersonaID{model.PersonaGentleman, model.PersonaNeutral} {
-		selection := model.Selection{Persona: persona, Components: []model.ComponentID{model.ComponentPersona}}
-		targets, err := syncBackupTargets(home, "", selection, []agents.Adapter{a})
-		if err != nil {
-			t.Fatalf("syncBackupTargets(%q) error = %v", persona, err)
-		}
-
-		if !containsPath(targets, gentleman) {
-			t.Errorf("syncBackupTargets(%q) missing gentleman.md; got %v", persona, targets)
-		}
-		if !containsPath(targets, neutral) {
-			t.Errorf("syncBackupTargets(%q) missing neutral.md; got %v", persona, targets)
-		}
-	}
-}
-
-func TestPersonaSyncOutputStyleSwitchIsIdempotent(t *testing.T) {
-	home := t.TempDir()
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaGentlemanNeutralArtifacts,
-	}
-	gentleman := filepath.Join(home, ".claude", "output-styles", "gentleman.md")
-
-	if _, err := persona.Inject(home, claude.NewAdapter(), model.PersonaGentleman); err != nil {
-		t.Fatalf("Inject(gentleman) error = %v", err)
-	}
-	if _, err := os.Stat(gentleman); err != nil {
-		t.Fatalf("precondition: gentleman output style missing: %v", err)
-	}
-
-	first, err := RunSyncWithSelection(home, selection)
-	if err != nil {
-		t.Fatalf("first RunSyncWithSelection() error = %v", err)
-	}
-	if first.FilesChanged == 0 || first.NoOp {
-		t.Fatalf("first sync files changed = %d, no-op = %t; want output-style switch", first.FilesChanged, first.NoOp)
-	}
-	if _, err := os.Stat(gentleman); !os.IsNotExist(err) {
-		t.Fatalf("first sync left retired gentleman output style: %v", err)
-	}
-
-	second, err := RunSyncWithSelection(home, selection)
-	if err != nil {
-		t.Fatalf("second RunSyncWithSelection() error = %v", err)
-	}
-	if second.FilesChanged != 0 || !second.NoOp {
-		t.Fatalf("second sync files changed = %d, no-op = %t; want idempotent no-op", second.FilesChanged, second.NoOp)
-	}
-}
-
-// TestBackupTargetsCaptureBothManagedOutputStyles is the install-side twin.
-func TestBackupTargetsCaptureBothManagedOutputStyles(t *testing.T) {
-	home := t.TempDir()
-
-	gentleman := filepath.Join(home, ".claude", "output-styles", "gentleman.md")
-	neutral := filepath.Join(home, ".claude", "output-styles", "neutral.md")
-
-	for _, persona := range []model.PersonaID{model.PersonaGentleman, model.PersonaNeutral} {
-		selection := model.Selection{Persona: persona, Components: []model.ComponentID{model.ComponentPersona}}
-		resolved := planner.ResolvedPlan{
-			Agents:            []model.AgentID{model.AgentClaudeCode},
-			OrderedComponents: []model.ComponentID{model.ComponentPersona},
-		}
-		targets, err := backupTargets(home, "", ScopeGlobal, selection, resolved)
-		if err != nil {
-			t.Fatalf("backupTargets(%q) error = %v", persona, err)
-		}
-
-		if !containsPath(targets, gentleman) {
-			t.Errorf("backupTargets(%q) missing gentleman.md; got %v", persona, targets)
-		}
-		if !containsPath(targets, neutral) {
-			t.Errorf("backupTargets(%q) missing neutral.md; got %v", persona, targets)
 		}
 	}
 }
@@ -4921,7 +4538,6 @@ func TestRunSyncRegeneratesPersonaBlockBetweenMarkers(t *testing.T) {
 	}
 	if err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{"claude-code"},
-		Persona:         "gentleman",
 	}); err != nil {
 		t.Fatalf("state.Write: %v", err)
 	}
@@ -4943,184 +4559,6 @@ func TestRunSyncRegeneratesPersonaBlockBetweenMarkers(t *testing.T) {
 	}
 	if !strings.Contains(got, "Contextual Skill Loading (MANDATORY)") {
 		t.Errorf("CLAUDE.md missing the new Contextual Skill Loading directive; got:\n%s", got)
-	}
-}
-
-// TestRunSyncReadsPersonaFromState verifies that sync uses the persona the
-// user installed (from state.json) rather than always defaulting to Gentleman.
-func TestRunSyncReadsPersonaFromState(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Persona:         "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	res, err := RunSync([]string{"--agents", "claude-code", "--sdd-mode", "single"})
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-	if got, want := res.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("Selection.Persona = %q, want %q (read from state.json)", got, want)
-	}
-}
-
-// TestRunSyncFallsBackToNeutralWhenStateLacksPersona verifies missing persona
-// state resolves to neutral/default-safe behavior instead of reactivating
-// Gentleman regional voice.
-func TestRunSyncFallsBackToNeutralWhenStateLacksPersona(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		// No Persona field — pre-feature state.
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	res, err := RunSync([]string{"--agents", "claude-code", "--sdd-mode", "single"})
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-	if got, want := res.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("Selection.Persona = %q, want %q (safe fallback for missing state persona)", got, want)
-	}
-}
-
-func TestRunSyncWithSelectionPiUsesNeutralForMissingPersonaField(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
-	mustWriteFile(t, piPath, []byte("{\n  \"mode\": \"gentleman\"\n}\n"))
-	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"]}`))
-
-	result, err := RunSyncWithSelection(home, model.Selection{
-		Agents:     []model.AgentID{model.AgentPi},
-		Components: []model.ComponentID{model.ComponentPersona},
-	})
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Fatalf("Selection.Persona = %q, want %q", got, want)
-	}
-	homePiPath := filepath.Join(home, ".pi", "axiom", "persona.json")
-	if got, want := readTextFile(t, homePiPath), "{\n  \"mode\": \"neutral\"\n}\n"; got != want {
-		t.Fatalf("global Pi persona config = %q, want %q", got, want)
-	}
-	if got, want := readTextFile(t, piPath), "{\n  \"mode\": \"gentleman\"\n}\n"; got != want {
-		t.Fatalf("workspace Pi persona config changed = %q, want %q", got, want)
-	}
-}
-
-func TestRunSyncWithSelectionPiRejectsInvalidPersistedPersonaWithoutMutation(t *testing.T) {
-	tests := []struct {
-		name       string
-		stateJSON  string
-		stateAsDir bool
-		wantErr    string
-	}{
-		{name: "malformed JSON", stateJSON: `{"installed_agents":["pi"],"persona":`, wantErr: "read persisted installation state"},
-		{name: "unreadable state", stateAsDir: true, wantErr: "read persisted installation state"},
-		{name: "unsupported persona", stateJSON: `{"installed_agents":["pi"],"persona":"unknown"}`, wantErr: `unsupported persona "unknown"`},
-		{name: "explicit empty persona", stateJSON: `{"installed_agents":["pi"],"persona":""}`, wantErr: "explicitly empty persona"},
-		{name: "whitespace-only persona", stateJSON: `{"installed_agents":["pi"],"persona":" \t "}`, wantErr: "whitespace-only persona"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			home := t.TempDir()
-			workspace := t.TempDir()
-			t.Chdir(workspace)
-			piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
-			originalPi := []byte("{\n  \"mode\": \"gentleman\"\n}\n")
-			mustWriteFile(t, piPath, originalPi)
-
-			if tt.stateAsDir {
-				if err := os.MkdirAll(state.Path(home), 0o755); err != nil {
-					t.Fatalf("MkdirAll(state path) error = %v", err)
-				}
-			} else {
-				mustWriteFile(t, state.Path(home), []byte(tt.stateJSON))
-			}
-
-			result, err := RunSyncWithSelection(home, model.Selection{
-				Agents:     []model.AgentID{model.AgentPi},
-				Components: []model.ComponentID{model.ComponentPersona},
-			})
-			if err == nil {
-				t.Fatal("RunSyncWithSelection() error = nil, want persisted persona validation error")
-			}
-			if !strings.Contains(err.Error(), tt.wantErr) {
-				t.Fatalf("RunSyncWithSelection() error = %q, want %q", err, tt.wantErr)
-			}
-			if result.Selection.Persona != "" {
-				t.Fatalf("Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-			}
-			if got := readTextFile(t, piPath); got != string(originalPi) {
-				t.Fatalf("Pi persona config mutated after rejected sync: got %q, want %q", got, originalPi)
-			}
-		})
-	}
-}
-
-func TestRunSyncPiRejectsUnsupportedPersistedPersonaBeforeMutation(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-	workspace := t.TempDir()
-	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
-	originalPi := []byte("{\n  \"mode\": \"gentleman\"\n}\n")
-	mustWriteFile(t, piPath, originalPi)
-	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"],"persona":"unknown"}`))
-
-	result, err := RunSync([]string{"--agents", "pi"})
-	if err == nil {
-		t.Fatal("RunSync() error = nil, want unsupported persisted persona error")
-	}
-	if !strings.Contains(err.Error(), `unsupported persona "unknown"`) {
-		t.Fatalf("RunSync() error = %q, want unsupported persona", err)
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-	}
-	if got := readTextFile(t, piPath); got != string(originalPi) {
-		t.Fatalf("Pi persona config mutated after rejected sync: got %q, want %q", got, originalPi)
-	}
-}
-
-func TestRunSyncWithSelectionPiCustomPersistedPersonaIsByteStable(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Chdir(workspace)
-	piPath := filepath.Join(workspace, ".pi", "axiom", "persona.json")
-	originalPi := []byte("user-owned Pi persona bytes\n")
-	mustWriteFile(t, piPath, originalPi)
-	mustWriteFile(t, state.Path(home), []byte(`{"installed_agents":["pi"],"persona":"custom"}`))
-
-	result, err := RunSyncWithSelection(home, model.Selection{
-		Agents:     []model.AgentID{model.AgentPi},
-		Components: []model.ComponentID{model.ComponentPersona},
-	})
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-	if got, want := result.Selection.Persona, model.PersonaCustom; got != want {
-		t.Fatalf("Selection.Persona = %q, want %q", got, want)
-	}
-	if got := readTextFile(t, piPath); got != string(originalPi) {
-		t.Fatalf("custom Pi persona config changed: got %q, want %q", got, originalPi)
 	}
 }
 
@@ -5238,278 +4676,6 @@ func TestRunSyncWithSelectionPiRetirementDoesNotTouchOtherAgents(t *testing.T) {
 
 // ─── TUI path: RunSyncWithSelection persona resolution from state ───────────
 
-// TestRunSyncWithSelection_PersonaResolvesFromStateNeutral verifies that when
-// the TUI calls RunSyncWithSelection with an empty persona, the persisted
-// persona from state.json is used — not the Gentleman default.
-func TestRunSyncWithSelection_PersonaResolvesFromStateNeutral(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Persona:         "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	// TUI path: empty persona — must be resolved from state.
-	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    "", // empty — the bug scenario
-	}
-
-	result, err := RunSyncWithSelection(home, sel)
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("result.Selection.Persona = %q, want %q (should be resolved from state.json)", got, want)
-	}
-}
-
-// TestRunSyncWithSelection_PersonaResolvesFromStateCustom verifies that a
-// "custom" persona persisted in state is restored on the TUI sync path.
-func TestRunSyncWithSelection_PersonaResolvesFromStateCustom(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Persona:         "custom",
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    "",
-	}
-
-	result, err := RunSyncWithSelection(home, sel)
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-
-	if got, want := result.Selection.Persona, model.PersonaCustom; got != want {
-		t.Errorf("result.Selection.Persona = %q, want %q (should be resolved from state.json)", got, want)
-	}
-}
-
-// TestRunSyncWithSelection_PersonaFallsBackToNeutralWhenStateHasNone verifies
-// missing state persona resolves to neutral/default-safe behavior.
-func TestRunSyncWithSelection_PersonaFallsBackToNeutralWhenStateHasNone(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	// Raw legacy state with no Persona field — old install before persona
-	// persistence. The omitted field is intentionally not an invalid value.
-	if err := os.MkdirAll(filepath.Dir(state.Path(home)), 0o755); err != nil {
-		t.Fatalf("MkdirAll state: %v", err)
-	}
-	if err := os.WriteFile(state.Path(home), []byte(`{"installed_agents":["claude-code"]}`), 0o644); err != nil {
-		t.Fatalf("WriteFile state: %v", err)
-	}
-
-	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    "",
-	}
-
-	result, err := RunSyncWithSelection(home, sel)
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("result.Selection.Persona = %q, want %q (safe fallback for missing state persona)", got, want)
-	}
-}
-
-// TestRunSyncWithSelection_ExplicitEmptyPersistedPersonaFailsClosed verifies
-// that an explicit empty persona is not treated as the omitted legacy field.
-func TestRunSyncWithSelection_ExplicitEmptyPersistedPersonaFailsClosed(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	originalPersona := "<!-- gentle-ai:persona -->\nexisting valid persona\n<!-- /gentle-ai:persona -->\n"
-	personaPath := filepath.Join(home, ".claude", "CLAUDE.md")
-	if err := os.WriteFile(personaPath, []byte(originalPersona), 0o644); err != nil {
-		t.Fatalf("WriteFile persona: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(state.Path(home)), 0o755); err != nil {
-		t.Fatalf("MkdirAll state: %v", err)
-	}
-	originalState := []byte(`{"installed_agents":["claude-code"],"persona":""}`)
-	if err := os.WriteFile(state.Path(home), originalState, 0o644); err != nil {
-		t.Fatalf("WriteFile state: %v", err)
-	}
-
-	result, err := RunSyncWithSelection(home, model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-	})
-	if err == nil {
-		t.Fatal("RunSyncWithSelection() error = nil, want explicit empty persisted persona error")
-	}
-	if !strings.Contains(err.Error(), "explicitly empty persona") {
-		t.Fatalf("RunSyncWithSelection() error = %q, want explicit empty persona context", err)
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("result.Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-	}
-
-	gotPersona, readErr := os.ReadFile(personaPath)
-	if readErr != nil {
-		t.Fatalf("ReadFile persona: %v", readErr)
-	}
-	if string(gotPersona) != originalPersona {
-		t.Fatalf("persona config changed after rejected sync: got %q, want %q", gotPersona, originalPersona)
-	}
-	gotState, readErr := os.ReadFile(state.Path(home))
-	if readErr != nil {
-		t.Fatalf("ReadFile state: %v", readErr)
-	}
-	if !bytes.Equal(gotState, originalState) {
-		t.Fatalf("state changed after rejected sync: got %q, want %q", gotState, originalState)
-	}
-}
-
-// TestRunSyncWithSelection_ExplicitPersonaWinsOverState verifies that when the
-// caller provides a non-empty persona (e.g. the user just picked one in the
-// ModelConfig TUI step), that explicit choice is preserved even if state says
-// something different.
-func TestRunSyncWithSelection_ExplicitPersonaWinsOverState(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	// State says "gentleman" but the caller explicitly chose "neutral".
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Persona:         "gentleman",
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaNeutral, // explicit — must not be overridden by state
-	}
-
-	result, err := RunSyncWithSelection(home, sel)
-	if err != nil {
-		t.Fatalf("RunSyncWithSelection() error = %v", err)
-	}
-
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("result.Selection.Persona = %q, want %q (explicit selection must win over state)", got, want)
-	}
-}
-
-// TestRunSyncWithSelection_UnknownPersistedPersonaFailsClosed verifies that an
-// unsupported persisted persona is rejected before sync can rewrite persona
-// assets.
-func TestRunSyncWithSelection_UnknownPersistedPersonaFailsClosed(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	originalPersona := "<!-- gentle-ai:persona -->\nexisting valid persona\n<!-- /gentle-ai:persona -->\n"
-	personaPath := filepath.Join(home, ".claude", "CLAUDE.md")
-	if err := os.WriteFile(personaPath, []byte(originalPersona), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(state.Path(home)), 0o755); err != nil {
-		t.Fatalf("MkdirAll state: %v", err)
-	}
-	if err := os.WriteFile(state.Path(home), []byte(`{"installed_agents":["claude-code"],"persona":"Gentleman"}`), 0o644); err != nil {
-		t.Fatalf("WriteFile state: %v", err)
-	}
-
-	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    "", // empty — resolution from state must happen
-	}
-
-	result, err := RunSyncWithSelection(home, sel)
-	if err == nil {
-		t.Fatal("RunSyncWithSelection() error = nil, want unsupported persisted persona error")
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("result.Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-	}
-	gotPersona, readErr := os.ReadFile(personaPath)
-	if readErr != nil {
-		t.Fatalf("ReadFile persona: %v", readErr)
-	}
-	if string(gotPersona) != originalPersona {
-		t.Fatalf("persona config changed after rejected sync: got %q, want %q", gotPersona, originalPersona)
-	}
-}
-
-func TestRunSyncWithSelection_WhitespaceOnlyPersistedPersonaFailsClosed(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	originalPersona := "<!-- gentle-ai:persona -->\nexisting valid persona\n<!-- /gentle-ai:persona -->\n"
-	personaPath := filepath.Join(home, ".claude", "CLAUDE.md")
-	if err := os.WriteFile(personaPath, []byte(originalPersona), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(state.Path(home)), 0o755); err != nil {
-		t.Fatalf("MkdirAll state: %v", err)
-	}
-	if err := os.WriteFile(state.Path(home), []byte(`{"installed_agents":["claude-code"],"persona":" \t "}`), 0o644); err != nil {
-		t.Fatalf("WriteFile state: %v", err)
-	}
-
-	result, err := RunSyncWithSelection(home, model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode},
-		Components: []model.ComponentID{model.ComponentPersona},
-	})
-	if err == nil {
-		t.Fatal("RunSyncWithSelection() error = nil, want whitespace-only persisted persona error")
-	}
-	if !strings.Contains(err.Error(), "whitespace-only persona") {
-		t.Fatalf("RunSyncWithSelection() error = %q, want whitespace-only persona context", err)
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("result.Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-	}
-	gotPersona, readErr := os.ReadFile(personaPath)
-	if readErr != nil {
-		t.Fatalf("ReadFile persona: %v", readErr)
-	}
-	if string(gotPersona) != originalPersona {
-		t.Fatalf("persona config changed after rejected sync: got %q, want %q", gotPersona, originalPersona)
-	}
-}
-
 func TestRunSyncWithSelection_UnreadablePersistedStateFailsClosed(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -5553,7 +4719,7 @@ func TestRunSyncWithSelection_UnreadablePersistedStateFailsClosed(t *testing.T) 
 			}
 			tt.setup(t, home)
 
-			result, err := RunSyncWithSelection(home, model.Selection{
+			_, err := RunSyncWithSelection(home, model.Selection{
 				Agents:     []model.AgentID{model.AgentClaudeCode},
 				Components: []model.ComponentID{model.ComponentPersona},
 			})
@@ -5563,9 +4729,6 @@ func TestRunSyncWithSelection_UnreadablePersistedStateFailsClosed(t *testing.T) 
 			if !strings.Contains(err.Error(), "read persisted installation state") {
 				t.Fatalf("RunSyncWithSelection() error = %q, want state read context", err)
 			}
-			if result.Selection.Persona != "" {
-				t.Fatalf("result.Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-			}
 			gotPersona, readErr := os.ReadFile(personaPath)
 			if readErr != nil {
 				t.Fatalf("ReadFile persona: %v", readErr)
@@ -5574,47 +4737,6 @@ func TestRunSyncWithSelection_UnreadablePersistedStateFailsClosed(t *testing.T) 
 				t.Fatalf("persona config changed after rejected sync: got %q, want %q", gotPersona, originalPersona)
 			}
 		})
-	}
-}
-
-func TestRunSync_UnsupportedPersistedPersonaFailsClosed(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	originalPersona := "<!-- gentle-ai:persona -->\nexisting valid persona\n<!-- /gentle-ai:persona -->\n"
-	personaPath := filepath.Join(home, ".claude", "CLAUDE.md")
-	if err := os.WriteFile(personaPath, []byte(originalPersona), 0o644); err != nil {
-		t.Fatalf("WriteFile persona: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Dir(state.Path(home)), 0o755); err != nil {
-		t.Fatalf("MkdirAll state: %v", err)
-	}
-	if err := os.WriteFile(state.Path(home), []byte(`{"installed_agents":["claude-code"],"persona":"unknown"}`), 0o644); err != nil {
-		t.Fatalf("WriteFile state: %v", err)
-	}
-
-	result, err := RunSync([]string{"--agents", "claude-code"})
-	if err == nil {
-		t.Fatal("RunSync() error = nil, want unsupported persisted persona error")
-	}
-	if !strings.Contains(err.Error(), `unsupported persona "unknown"`) {
-		t.Fatalf("RunSync() error = %q, want unsupported persona", err)
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("result.Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
-	}
-	gotPersona, readErr := os.ReadFile(personaPath)
-	if readErr != nil {
-		t.Fatalf("ReadFile persona: %v", readErr)
-	}
-	if string(gotPersona) != originalPersona {
-		t.Fatalf("persona config changed after rejected sync: got %q, want %q", gotPersona, originalPersona)
-	}
-	if result.Selection.Persona != "" {
-		t.Fatalf("Selection.Persona = %q, want unchanged empty persona", result.Selection.Persona)
 	}
 }
 
@@ -5841,84 +4963,6 @@ func TestDedupPathsNilOnEmpty(t *testing.T) {
 
 // ─── Dry-run persona resolution ───────────────────────────────────────────────
 
-// TestRunSyncDryRunResolvesPersonaFromState verifies that --dry-run mode
-// resolves the persona from state.json instead of leaving it empty.
-// This is a regression test: the dry-run branch returns early and never calls
-// RunSyncWithSelection, so without an explicit resolvePersonaFromState call the
-// persona is never populated.
-func TestRunSyncDryRunResolvesPersonaFromState(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	// Write state with persona "neutral" and the model-assignment maps populated
-	// to exercise a realistic dry-run scenario. RunSync reads state once
-	// unconditionally and resolves persona before the dry-run early return, so
-	// result.Selection.Persona must reflect the persisted value regardless of
-	// whether the model-assignment maps are empty or full.
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Persona:         "neutral",
-		ClaudeModelAssignments: map[string]string{
-			"sdd-apply": "sonnet",
-		},
-		ModelAssignments: map[string]state.ModelAssignmentState{
-			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
-		},
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	result, err := RunSync([]string{"--agents", "claude-code", "--dry-run"})
-	if err != nil {
-		t.Fatalf("RunSync() --dry-run error = %v", err)
-	}
-	if !result.DryRun {
-		t.Fatalf("DryRun = false, want true")
-	}
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("dry-run: Selection.Persona = %q, want %q (should be resolved from state.json)", got, want)
-	}
-}
-
-// TestRunSyncDryRunFallsBackToNeutralWhenStateLacksPersona verifies that
-// --dry-run mode falls back to neutral/default-safe behavior when state has no
-// recorded persona.
-func TestRunSyncDryRunFallsBackToNeutralWhenStateLacksPersona(t *testing.T) {
-	home := t.TempDir()
-	setSyncTestHome(t, home)
-
-	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	// State with all model maps populated but no Persona field (old install).
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		// No Persona field — pre-persona-persistence install.
-		ClaudeModelAssignments: map[string]string{
-			"sdd-apply": "sonnet",
-		},
-		ModelAssignments: map[string]state.ModelAssignmentState{
-			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
-		},
-	}); err != nil {
-		t.Fatalf("state.Write: %v", err)
-	}
-
-	result, err := RunSync([]string{"--agents", "claude-code", "--dry-run"})
-	if err != nil {
-		t.Fatalf("RunSync() --dry-run error = %v", err)
-	}
-	if !result.DryRun {
-		t.Fatalf("DryRun = false, want true")
-	}
-	if got, want := result.Selection.Persona, model.PersonaNeutral; got != want {
-		t.Errorf("dry-run fallback: Selection.Persona = %q, want %q (safe fallback for missing state persona)", got, want)
-	}
-}
-
 func TestDedupPathsFiltersEmptyStrings(t *testing.T) {
 	input := []string{
 		"/home/user/.config/opencode/AGENTS.md",
@@ -6134,8 +5178,6 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4", Effort: "medium"},
 		},
-		Persona:         "neutral",
-		PersonaPresent:  true,
 		LastUpdateCheck: &lastUpdate,
 		PendingSync:     true,
 	}
@@ -6396,7 +5438,6 @@ func TestSyncDeliversRoutingGuidanceWithoutSDDComponent(t *testing.T) {
 	runSyncInjectionSteps(t, home, model.Selection{
 		Agents:     []model.AgentID{model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaGentleman,
 	})
 
 	prompt := readTextFile(t, systemPromptFileFor(t, home, model.AgentClaudeCode))
@@ -6598,7 +5639,6 @@ func TestSyncBackupTargetsScopedWorkspace(t *testing.T) {
 		Agents:     []model.AgentID{model.AgentOpenCode, model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentSkills, model.ComponentPersona},
 		SDDMode:    model.SDDModeSingle,
-		Persona:    model.PersonaNeutral,
 	}
 
 	adapters := resolveAdapters(selection.Agents)
@@ -6643,7 +5683,6 @@ func TestRunSyncWithSelectionScopedWorkspaceDoesNotTouchHomeState(t *testing.T) 
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentSkills},
 		Skills:     []model.SkillID{"issue-creation"},
-		Persona:    model.PersonaNeutral,
 	}
 
 	result, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection)
@@ -6697,7 +5736,6 @@ func TestRunSyncRetiredSkillInPersistedSelectionDoesNotFailVerification(t *testi
 				SelectionConfigured: true,
 				Components:          []model.ComponentID{model.ComponentSkills},
 				Skills:              []model.SkillID{"branch-pr", "gentle-ai-bench", "rdd-defect-workflow", model.SkillGoTesting},
-				Persona:             "custom",
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -6777,7 +5815,6 @@ func TestRunSyncRetiresInstalledCopiesOfRetiredSkills(t *testing.T) {
 				SelectionConfigured: true,
 				Components:          []model.ComponentID{model.ComponentSkills},
 				Skills:              []model.SkillID{model.SkillGoTesting},
-				Persona:             "custom",
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -6891,7 +5928,6 @@ func TestRunSyncWarnsOnlyAboutKeptCopiesStillNamedAfterTheRetiredSkill(t *testin
 				SelectionConfigured: true,
 				Components:          []model.ComponentID{model.ComponentSkills},
 				Skills:              []model.SkillID{model.SkillGoTesting},
-				Persona:             "custom",
 			}); err != nil {
 				t.Fatal(err)
 			}
@@ -6927,4 +5963,52 @@ func btoi(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func TestSyncPersonaPathsDeclareManagedClaudeOutputStyle(t *testing.T) {
+	home := t.TempDir()
+	reg, _ := agents.NewDefaultRegistry()
+	a, _ := reg.Get(model.AgentClaudeCode)
+
+	paths := syncPersonaPaths(home, model.Selection{}, []agents.Adapter{a})
+
+	wantStyle := filepath.Join(home, ".claude", "output-styles", "axiom.md")
+	wantConfig := filepath.Join(home, ".claude", "settings.json")
+	if !containsPath(paths, wantStyle) {
+		t.Fatalf("syncPersonaPaths() missing managed style %q; got %v", wantStyle, paths)
+	}
+	if !containsPath(paths, wantConfig) {
+		t.Fatalf("syncPersonaPaths() missing settings path %q; got %v", wantConfig, paths)
+	}
+}
+
+// TestSyncAndInstallBackupTargetsCaptureManagedOutputStyle pins that the pre-sync
+// and pre-install snapshots capture the managed output-style file, so a failed
+// run can roll it back.
+func TestSyncAndInstallBackupTargetsCaptureManagedOutputStyle(t *testing.T) {
+	home := t.TempDir()
+	reg, _ := agents.NewDefaultRegistry()
+	a, _ := reg.Get(model.AgentClaudeCode)
+	axiom := filepath.Join(home, ".claude", "output-styles", "axiom.md")
+
+	selection := model.Selection{Components: []model.ComponentID{model.ComponentPersona}}
+	syncTargets, err := syncBackupTargets(home, "", selection, []agents.Adapter{a})
+	if err != nil {
+		t.Fatalf("syncBackupTargets() error = %v", err)
+	}
+	if !containsPath(syncTargets, axiom) {
+		t.Errorf("syncBackupTargets() missing axiom.md; got %v", syncTargets)
+	}
+
+	resolved := planner.ResolvedPlan{
+		Agents:            []model.AgentID{model.AgentClaudeCode},
+		OrderedComponents: []model.ComponentID{model.ComponentPersona},
+	}
+	installTargets, err := backupTargets(home, "", ScopeGlobal, selection, resolved)
+	if err != nil {
+		t.Fatalf("backupTargets() error = %v", err)
+	}
+	if !containsPath(installTargets, axiom) {
+		t.Errorf("backupTargets() missing axiom.md; got %v", installTargets)
+	}
 }

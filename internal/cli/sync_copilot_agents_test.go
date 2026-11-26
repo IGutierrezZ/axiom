@@ -17,7 +17,6 @@ func copilotProjectState(agents ...string) state.InstallState {
 		InstalledAgents:     agents,
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentPersona, model.ComponentSDD, model.ComponentEngram},
-		Persona:             "neutral",
 		CopilotPhaseAssignments: map[string]state.CopilotPhaseAssignmentState{
 			"sdd-apply": {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
 		},
@@ -187,7 +186,7 @@ func TestRunInstallWorkspace_CopilotCLIConfiguredForTheUserFeedsTheProject(t *te
 	t.Setenv("COPILOT_HOME", "")
 	mustWriteFile(t, filepath.Join(home, ".copilot", "config.json"), []byte("{}\n"))
 
-	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code", "--preset", "custom", "--component", "sdd"}, macOSDetectionResult()); err != nil {
+	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "claude-code", "--component", "sdd"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(root, ".github", "agents", "sdd-apply.agent.md")); err != nil {

@@ -2,79 +2,52 @@ package persona
 
 import (
 	"path/filepath"
-
-	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// OutputStylePaths describes the output-style resources owned for one persona.
-// Write is also the post-apply verification target. Backup may include a retired
-// style because a switch removes it and must be recoverable.
+// OutputStylePaths describes the output-style resources owned by the persona.
+// Write is also the post-apply verification target; Backup lists every file the
+// installation may overwrite.
 type OutputStylePaths struct {
 	Write  string
 	Backup []string
-	Remove []string
 }
 
-// OutputStyle describes the selected managed output style.
+// OutputStyle describes the managed output style.
 type OutputStyle struct {
 	Name      string
 	File      string
 	AssetPath string
 }
 
-// ResourcePlan is the ephemeral managed-resource definition for one persona.
-// It derives write, backup, verification, and removal paths without storing state.
+// ResourcePlan is the ephemeral managed-resource definition of the persona.
+// It derives write, backup and verification paths without storing state.
 type ResourcePlan struct {
-	outputStyle *OutputStyle
-	retired     []string
+	outputStyle OutputStyle
 }
 
 var managedOutputStyles = []OutputStyle{
 	{Name: "Axiom", File: "axiom.md", AssetPath: "claude/output-style-axiom.md"},
-	{Name: "Gentleman", File: "gentleman.md", AssetPath: "claude/output-style-gentleman.md"},
-	{Name: "Neutral", File: "neutral.md", AssetPath: "claude/output-style-neutral.md"},
 }
 
-// ManagedOutputStyles lists every output style Axiom has written, including the
-// retired ones. Uninstall removes a copy only when its content is still the one
-// embedded here.
+// ManagedOutputStyles lists every output style Axiom writes. Uninstall removes a
+// copy only when its content is still the one embedded here.
 func ManagedOutputStyles() []OutputStyle {
 	return append([]OutputStyle(nil), managedOutputStyles...)
 }
 
-func canonicalPersona(persona model.PersonaID) model.PersonaID {
-	if persona == model.PersonaGentlemanNeutralArtifacts {
-		return model.PersonaNeutral
-	}
-	return persona
+// ResourcePlanFor returns the managed resources of the Axiom persona.
+func ResourcePlanFor() ResourcePlan {
+	return ResourcePlan{outputStyle: managedOutputStyles[0]}
 }
 
-// ResourcePlanFor returns the managed resources selected by persona.
-func ResourcePlanFor(persona model.PersonaID) ResourcePlan {
-	persona = canonicalPersona(persona)
-	switch {
-	case persona == model.PersonaAxiom:
-		return ResourcePlan{outputStyle: &managedOutputStyles[0], retired: []string{managedOutputStyles[1].File, managedOutputStyles[2].File}}
-	case isGentlemanConversationPersona(persona):
-		return ResourcePlan{outputStyle: &managedOutputStyles[1], retired: []string{managedOutputStyles[0].File}}
-	case persona == model.PersonaNeutral:
-		return ResourcePlan{outputStyle: &managedOutputStyles[2], retired: []string{managedOutputStyles[0].File, managedOutputStyles[1].File}}
-	default:
-		return ResourcePlan{}
-	}
-}
-
-// OutputStyle returns the selected output-style definition, if this persona owns one.
-func (p ResourcePlan) OutputStyle() (OutputStyle, bool) {
-	if p.outputStyle == nil {
-		return OutputStyle{}, false
-	}
-	return *p.outputStyle, true
+// OutputStyle returns the managed output-style definition.
+func (p ResourcePlan) OutputStyle() OutputStyle {
+	return p.outputStyle
 }
 
 // OutputStylePaths derives all output-style paths for a delivery directory.
 func (p ResourcePlan) OutputStylePaths(dir string) OutputStylePaths {
-	if dir == "" || p.outputStyle == nil {
+	if dir == "" {
 		return OutputStylePaths{}
 	}
 
@@ -84,9 +57,6 @@ func (p ResourcePlan) OutputStylePaths(dir string) OutputStylePaths {
 	}
 	for _, style := range managedOutputStyles {
 		paths.Backup = append(paths.Backup, filepath.Join(dir, style.File))
-	}
-	for _, file := range p.retired {
-		paths.Remove = append(paths.Remove, filepath.Join(dir, file))
 	}
 	return paths
 }

@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
 const matrixHeading = "## Matriz de verificación"
@@ -458,4 +460,122 @@ func validateManualRow(row MatrixRow, invalid func(string)) {
 	if row.Rationale == "" {
 		invalid("falta por qué no se automatiza (Justificación)")
 	}
+}
+
+// matrixRequirementCells devuelve, de la matriz de un verify-report.md, la línea (base 1) de
+// cada fila del cuerpo y el índice de la columna `Requisito`. Aplica la misma selección que
+// ParseMatrix; sin matriz única o sin columna `Requisito` no devuelve filas.
+func matrixRequirementCells(lines []textLine) (rows []int, column int) {
+	var starts []int
+	for i, l := range lines {
+		if !l.Fenced && strings.TrimRight(l.Text, " \t") == matrixHeading {
+			starts = append(starts, i)
+		}
+	}
+	if len(starts) != 1 {
+		return nil, -1
+	}
+	var section []textLine
+	for _, l := range lines[starts[0]+1:] {
+		if !l.Fenced && (strings.HasPrefix(l.Text, "# ") || strings.HasPrefix(l.Text, "## ")) {
+			break
+		}
+		if l.Fenced {
+			continue
+		}
+		section = append(section, l)
+	}
+	headerIdx := -1
+	for i, l := range section {
+		if isTableLine(l.Text) {
+			headerIdx = i
+			break
+		}
+	}
+	if headerIdx < 0 {
+		return nil, -1
+	}
+	column = -1
+	for i, c := range splitCells(section[headerIdx].Text) {
+		if strings.EqualFold(c, "Requisito") {
+			column = i
+			break
+		}
+	}
+	if column < 0 {
+		return nil, -1
+	}
+	body := section[headerIdx+1:]
+	if len(body) > 0 && isSeparatorLine(body[0].Text) {
+		body = body[1:]
+	}
+	for _, l := range body {
+		if !isTableLine(l.Text) {
+			break
+		}
+		rows = append(rows, l.Num)
+	}
+	return rows, column
+}
+
+// rawCellSpan devuelve el intervalo en bytes de la celda n de una línea de tabla, con la
+// misma división que splitCells (`\|` es una barra literal).
+func rawCellSpan(line string, n int) (start, end int, ok bool) {
+	first := strings.IndexByte(line, '|')
+	if first < 0 {
+		return 0, 0, false
+	}
+	cell, begin := 0, first+1
+	for i := first + 1; i < len(line); i++ {
+		switch {
+		case line[i] == '\\' && i+1 < len(line) && line[i+1] == '|':
+			i++
+		case line[i] == '|':
+			if cell == n {
+				return begin, i, true
+			}
+			cell++
+			begin = i + 1
+		}
+	}
+	if cell == n && strings.TrimSpace(line[begin:]) != "" {
+		return begin, len(line), true
+	}
+	return 0, 0, false
+}
+
+// RewriteMatrix sustituye, solo en la columna `Requisito` de las filas de la matriz de un
+// verify-report.md, los identificadores del mapa por su sustituto, sin tocar ningún otro byte
+// del informe (REQ-47.4). Es la misma celda que lee ParseMatrix y que cita AffectedFromDelta.
+func RewriteMatrix(text string, m reqid.IDMap) string {
+	if m.Count() == 0 {
+		return text
+	}
+	rows, column := matrixRequirementCells(splitLines(text))
+	if len(rows) == 0 {
+		return text
+	}
+	isRow := map[int]bool{}
+	for _, n := range rows {
+		isRow[n] = true
+	}
+	raw := strings.SplitAfter(text, "\n")
+	var b strings.Builder
+	for i, l := range raw {
+		if !isRow[i+1] {
+			b.WriteString(l)
+			continue
+		}
+		content := strings.TrimRight(l, "\r\n")
+		start, end, ok := rawCellSpan(content, column)
+		if !ok {
+			b.WriteString(l)
+			continue
+		}
+		b.WriteString(content[:start])
+		b.WriteString(m.Substitute(content[start:end]))
+		b.WriteString(content[end:])
+		b.WriteString(l[len(content):])
+	}
+	return b.String()
 }

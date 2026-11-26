@@ -35,7 +35,7 @@ Definir cómo localiza Axiom el *planning home* (el directorio `openspec` que co
 | REQ-24.7 | Configuración no resoluble o no cargable | Con puntero, un destino roto o ilegible rechaza (planning home desconocido); sin puntero se conserva lo embebido con aviso |
 | REQ-24.8 | Consumo idéntico por los verbos SDD | Mismo planning home desde cualquier punto de partida |
 | REQ-24.9 | Semántica en el status y autoridad de edición | `workspaceRoot` y `planningHome` coherentes; repos de código por autorización |
-| REQ-24.10 | Consumidores de catálogo | Una sola convención para livingdoc, knowledge, dashboard y TUI |
+| REQ-24.10 | Consumidores de catálogo | Una sola convención para livingdoc, knowledge y dashboard |
 | REQ-24.11 | Regla de ejecutores | Las rutas `openspec/...` se resuelven contra `workspaceRoot` |
 | REQ-24.12 | Documentación y evidencia `pr_merged` | Receta canónica documentada y `pr_merged` contra el repo de specs |
 
@@ -362,7 +362,8 @@ El status v2 DEBE reportar `actionContext.workspaceRoot` igual al `workspaceRoot
 
 ### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (REQ-24.10)
 
-El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío), knowledge (raíz de especificaciones por defecto), el dashboard web y la TUI DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío), knowledge (raíz de especificaciones por defecto) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+(Previously: los consumidores de catálogo incluían la TUI, y el escenario comprobaba también su pantalla de ciclo de vida de incrementos.)
 
 #### Scenario: Catálogo del workspace canónico
 - **DADO** el workspace canónico con `<maestra>/repo-specs/openspec/specs/workspace-topology/spec.md`
@@ -380,13 +381,10 @@ El servicio de documentación viva (livingdoc, incluido el sintetizador de arran
 - **ENTONCES** el listado incluye `vigente` y no incluye `antiguo`
 - **Y** se emite un aviso que nombra `specs/specs` y `openspec/specs`
 
-#### Scenario: Dashboard y TUI leen el mismo planning home
+#### Scenario: El dashboard lee el planning home canónico
 - **DADO** el dashboard web con el workspace canónico activo (ruta registrada `<maestra>`)
 - **CUANDO** se consultan `GET /api/increments` y `GET /api/archive/specs`
 - **ENTONCES** ambas respuestas proceden de `<maestra>/repo-specs/openspec`
-- **Y** la pantalla de ciclo de vida de incrementos de la TUI lista los cambios de `<maestra>/repo-specs/openspec/changes`
-
----
 
 ### Requirement: Regla de Ejecutores para las Rutas `openspec/...` (REQ-24.11)
 

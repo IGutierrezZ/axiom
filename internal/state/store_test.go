@@ -55,9 +55,9 @@ func TestProjectStoresOfTwoProjectsDoNotOverwriteEachOther(t *testing.T) {
 	rootA, rootB := t.TempDir(), t.TempDir()
 	storeA, storeB := ProjectStore(home, rootA), ProjectStore(home, rootB)
 
-	a := InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral", ClaudeModelAssignments: map[string]string{"sdd-apply": "sonnet"}}
+	a := InstallState{InstalledAgents: []string{"claude-code"}, UpstreamVersion: "3.3.1", ClaudeModelAssignments: map[string]string{"sdd-apply": "sonnet"}}
 	a.SetSelection(model.Selection{Components: []model.ComponentID{model.ComponentEngram}})
-	b := InstallState{InstalledAgents: []string{"opencode"}, Persona: "gentleman", ClaudeModelAssignments: map[string]string{"sdd-apply": "opus"}}
+	b := InstallState{InstalledAgents: []string{"opencode"}, UpstreamVersion: "3.3.2", ClaudeModelAssignments: map[string]string{"sdd-apply": "opus"}}
 	b.SetSelection(model.Selection{Components: []model.ComponentID{model.ComponentSDD}})
 	if err := storeA.Write(a); err != nil {
 		t.Fatalf("Write A: %v", err)
@@ -74,10 +74,10 @@ func TestProjectStoresOfTwoProjectsDoNotOverwriteEachOther(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Read B: %v", err)
 	}
-	if gotA.Persona != "neutral" || gotA.InstalledAgents[0] != "claude-code" || gotA.ClaudeModelAssignments["sdd-apply"] != "sonnet" || gotA.Components[0] != model.ComponentEngram {
+	if gotA.UpstreamVersion != "3.3.1" || gotA.InstalledAgents[0] != "claude-code" || gotA.ClaudeModelAssignments["sdd-apply"] != "sonnet" || gotA.Components[0] != model.ComponentEngram {
 		t.Errorf("el estado de A se ha contaminado: %#v", gotA)
 	}
-	if gotB.Persona != "gentleman" || gotB.InstalledAgents[0] != "opencode" || gotB.ClaudeModelAssignments["sdd-apply"] != "opus" || gotB.Components[0] != model.ComponentSDD {
+	if gotB.UpstreamVersion != "3.3.2" || gotB.InstalledAgents[0] != "opencode" || gotB.ClaudeModelAssignments["sdd-apply"] != "opus" || gotB.Components[0] != model.ComponentSDD {
 		t.Errorf("el estado de B se ha contaminado: %#v", gotB)
 	}
 	if _, err := os.Stat(Path(home)); !os.IsNotExist(err) {
@@ -94,7 +94,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 		InstalledAgents:     []string{"claude-code", "codex"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
+		UpstreamVersion:     "3.3.1",
 		LastUpdateCheck:     &checked,
 		PendingSync:         true,
 	}
@@ -109,7 +109,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 		t.Fatalf("Read() = %v, want la semilla global", err)
 	}
 
-	if seed.InstalledAgents != nil || seed.Persona != "neutral" || !seed.SelectionConfigured {
+	if seed.InstalledAgents != nil || seed.UpstreamVersion != "3.3.1" || !seed.SelectionConfigured {
 		t.Errorf("la semilla no refleja la selección global: %#v", seed)
 	}
 	if seed.LastUpdateCheck != nil || seed.PendingSync {
@@ -126,7 +126,7 @@ func TestProjectStoreSeedsFromGlobalWithoutModifyingIt(t *testing.T) {
 func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	isolateGlobalState(t)
 	home, root := t.TempDir(), t.TempDir()
-	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral", PendingSync: true}); err != nil {
+	if err := Write(home, InstallState{InstalledAgents: []string{"claude-code"}, UpstreamVersion: "3.3.1", PendingSync: true}); err != nil {
 		t.Fatal(err)
 	}
 	before := readBytes(t, Path(home))
@@ -136,7 +136,7 @@ func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	seed.Persona = "gentleman"
+	seed.UpstreamVersion = "3.3.2"
 	if err := store.Write(seed); err != nil {
 		t.Fatalf("Write() = %v", err)
 	}
@@ -145,8 +145,8 @@ func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Persona != "gentleman" {
-		t.Errorf("tras la primera escritura manda el proyecto: persona = %q, want gentleman", got.Persona)
+	if got.UpstreamVersion != "3.3.2" {
+		t.Errorf("tras la primera escritura manda el proyecto: upstream_version = %q, want 3.3.2", got.UpstreamVersion)
 	}
 	if got.PendingSync {
 		t.Errorf("el documento del proyecto no debe guardar pending_sync: %v", got.PendingSync)
@@ -155,14 +155,14 @@ func TestProjectStoreFirstWriteDetachesFromGlobal(t *testing.T) {
 		t.Error("escribir el estado del proyecto ha modificado el global")
 	}
 	// Cambiar el global después ya no influye en el proyecto.
-	if err := Write(home, InstallState{InstalledAgents: []string{"opencode"}, Persona: "custom"}); err != nil {
+	if err := Write(home, InstallState{InstalledAgents: []string{"opencode"}, UpstreamVersion: "3.3.3"}); err != nil {
 		t.Fatal(err)
 	}
 	again, err := store.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.Persona != "gentleman" || again.InstalledAgents != nil {
+	if again.UpstreamVersion != "3.3.2" || again.InstalledAgents != nil {
 		t.Errorf("el global ha vuelto a pisar al proyecto: %#v", again)
 	}
 }
@@ -214,14 +214,14 @@ func TestProjectStoreAtHomeSharesTheGlobalFile(t *testing.T) {
 func TestWithMachineFieldsKeepsProjectSelection(t *testing.T) {
 	recorded := time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC)
 	machine := InstallState{LastUpdateCheck: &recorded, PendingSync: true, InstalledAgents: []string{"codex"}}
-	project := InstallState{InstalledAgents: []string{"claude-code"}, Persona: "neutral"}
+	project := InstallState{InstalledAgents: []string{"claude-code"}, UpstreamVersion: "3.3.1"}
 
 	got := WithMachineFields(project, machine)
 
 	if !got.PendingSync || got.LastUpdateCheck == nil {
 		t.Errorf("faltan los campos de máquina: %#v", got)
 	}
-	if got.InstalledAgents[0] != "claude-code" || got.Persona != "neutral" {
+	if got.InstalledAgents[0] != "claude-code" || got.UpstreamVersion != "3.3.1" {
 		t.Errorf("la selección debe seguir siendo la del proyecto: %#v", got)
 	}
 }
