@@ -5,7 +5,6 @@ import (
 	"errors"
 	"mime"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -351,15 +350,16 @@ func (p *attachmentPipeline) uniqueName(name string) string {
 
 // writeAttachmentFiles escribe los adjuntos aceptados bajo dir con permisos 0o644. Los nombres ya
 // están saneados: ninguno sale de dir.
-func writeAttachmentFiles(dir string, files []stagedFile) error {
+func writeAttachmentFiles(fs fsSeams, dir string, files []stagedFile) error {
 	if len(files) == 0 {
 		return nil
 	}
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	fs = fs.withDefaults()
+	if err := fs.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	for _, f := range files {
-		if err := os.WriteFile(filepath.Join(dir, f.Name), f.Data, attachmentFileMode); err != nil {
+		if err := fs.WriteFile(filepath.Join(dir, f.Name), f.Data, attachmentFileMode); err != nil {
 			return err
 		}
 	}

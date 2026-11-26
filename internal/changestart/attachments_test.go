@@ -162,7 +162,7 @@ func TestAttachmentNamedLikeArtifactStaysInSubdir(t *testing.T) {
 	})
 	ctxDir := filepath.Join(t.TempDir(), "context")
 	dir := filepath.Join(ctxDir, "attachments")
-	if err := writeAttachmentFiles(dir, p.files()); err != nil {
+	if err := writeAttachmentFiles(fsSeams{}, dir, p.files()); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"tasks.md", "spec.md"} {
@@ -181,7 +181,7 @@ func TestAttachmentNamedLikeArtifactStaysInSubdir(t *testing.T) {
 
 func TestAttachmentFilesWrittenReadable(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "attachments")
-	if err := writeAttachmentFiles(dir, []stagedFile{{Name: "a.txt", Data: []byte("hola")}}); err != nil {
+	if err := writeAttachmentFiles(fsSeams{}, dir, []stagedFile{{Name: "a.txt", Data: []byte("hola")}}); err != nil {
 		t.Fatal(err)
 	}
 	info, err := os.Stat(filepath.Join(dir, "a.txt"))

@@ -91,7 +91,8 @@ USO:
 COMANDOS DE GOBERNANZA Y WORKSPACE:
   init                 Inicializa un proyecto con axiom.yaml, andamiaje base y lo registra en el Hub
   change create        Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español
-  branch ensure        Crea la rama de un cambio y su worktree si faltan (idempotente; --change, --json)
+  change start         Arranca un cambio desde un work item del tracker en dos fases (--from <id|url>, --adopt --change, --discard --change; --json)
+  branch ensure       Crea la rama de un cambio y su worktree si faltan (idempotente; --change, --json)
   branch status        Muestra el estado de las ramas y worktrees de un cambio (solo lectura; --change, --json)
   branch scope         Alcance conjunto de un cambio: commits propios por repositorio y oferta de verificación (solo lectura; --change, --json)
   branch done          Elimina el worktree y la rama local de un cambio ya fusionado (--change, --force, --fetch, --json)
@@ -401,6 +402,7 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "Uso: axiom change <subcomando> [argumentos]")
 		fmt.Fprintln(stdout, "\nSubcomandos disponibles:")
 		fmt.Fprintln(stdout, "  create, new      Crea un nuevo incremento/cambio SDD con plantilla proposal.md en español")
+		fmt.Fprintln(stdout, "  start            Arranca un cambio desde un work item del tracker (--from <id|url>, --adopt --change <nombre>, --discard --change <nombre>)")
 		if len(args) < 1 {
 			return 1
 		}
@@ -424,8 +426,10 @@ func runChange(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 		return 0
+	case "start":
+		return cli.RunChangeStart(subArgs, stdout, stderr)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para change. Usa 'axiom change [create|new]'.\n", subCmd)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para change. Usa 'axiom change [create|new|start]'.\n", subCmd)
 		return 1
 	}
 }
