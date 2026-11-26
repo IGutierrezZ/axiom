@@ -160,7 +160,11 @@ respuesta a ask) y es idempotente; registra la rama con tipo archive y nunca la 
 --role <rol> arranca un rol del roster sellado del cambio: se valida antes de crear nada y, si el rol
 no es válido, rechaza sin efectos con plan_conflict (con --archive), role_not_applicable (carril odd),
 kickoff_not_sealed (sin kickoff.yaml sellado) o role_not_in_roster (rol fuera del roster, que
-lista). Con un ensure listo emite el evento role.start a los plugins de integración configurados
+lista). Con un tracker activo (plugin con items.create) y el work item del cambio vinculado, el rol
+necesita su Task: sin ella rechaza con task_not_bound (resuélvelo con axiom integrations tasks
+create o tasks bind) y, si integrations.yaml no se puede leer, con integrations_links_invalid. Con
+un ensure listo registra started_at en la Task del rol la primera vez (si falla, avisa con
+started_at_not_recorded) y emite el evento role.start a los plugins de integración configurados
 (axiom.yaml, bloque integrations:); si la entrega falla, ensure sale igual con su resultado de
 siempre y avisa por stderr. Sin --role nada cambia, y el JSON es idéntico con y sin la bandera.
 
@@ -321,6 +325,7 @@ func runBranchEnsure(args []string, stdout, stderr io.Writer) int {
 	})
 	code := writeBranchResult(result, *asJSON, stdout, stderr)
 	if roleGiven {
+		recordEnsureRoleStarted(dir, result, *change, *role)
 		emitEnsureRoleStart(dir, result, *change, *role)
 	}
 	return code

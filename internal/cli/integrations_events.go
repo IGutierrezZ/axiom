@@ -12,6 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/builtin"
+	"github.com/IGutierrezZ/axiom/v3/internal/integrations/identitystore"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/manifest"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/secrets"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
@@ -34,11 +35,14 @@ func newIntegrationDispatcher(loc workspace.Location) (*integrations.Dispatcher,
 	if err != nil {
 		return nil, err
 	}
+	deliverer, _ := defaultActor(loc.WorkspaceRoot, gateActorTarget)
 	return &integrations.Dispatcher{
 		Registry:      registry,
 		Config:        loc.Declarations.Integrations,
 		Secrets:       secrets.Default(),
 		WorkspaceRoot: loc.WorkspaceRoot,
+		Deliverer:     deliverer,
+		Identities:    storedIdentities(),
 		Guard: func(folder integrations.Folder) error {
 			writerContext := branch.ContextOrdinary
 			if folder.Archived() {
@@ -47,6 +51,27 @@ func newIntegrationDispatcher(loc workspace.Location) (*integrations.Dispatcher,
 			return integrationWriterGuard(folder.Root, folder.Change(), "integrations dispatch", writerContext)
 		},
 	}, nil
+}
+
+// storedIdentityLookup consulta, solo en lectura, las identidades que guarda `axiom integrations
+// connect`. Un fallo de lectura equivale a no tener identidad: el plugin avisa y no asigna.
+type storedIdentityLookup struct{ store identitystore.Store }
+
+func (l storedIdentityLookup) Lookup(plugin, account string) (integrations.TrackerIdentity, bool, error) {
+	entry, ok, err := l.store.Get(plugin, account)
+	if err != nil || !ok {
+		return integrations.TrackerIdentity{}, false, err
+	}
+	return integrations.TrackerIdentity{Account: account, ID: entry.ID, DisplayName: entry.DisplayName, Source: entry.Source}, true, nil
+}
+
+// storedIdentities devuelve la consulta de identidades guardadas, o nil si no se conoce su ruta.
+func storedIdentities() integrations.IdentityLookup {
+	path, err := identitystore.DefaultPath()
+	if err != nil {
+		return nil
+	}
+	return storedIdentityLookup{store: identitystore.Store{Path: path}}
 }
 
 // dispatchIntegrationEvent entrega un evento del ciclo de vida a los plugins configurados (D-11).

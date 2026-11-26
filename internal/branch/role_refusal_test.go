@@ -1,6 +1,7 @@
 package branch
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -18,6 +19,8 @@ func TestRoleRefusals(t *testing.T) {
 		{"archive", RoleArchiveConflict("x", "/p"), CodePlanConflict, []string{"--role", "--archive", "sin --role"}, map[string]string{"change": "x"}},
 		{"odd", RoleNotApplicable("x", "backend", "/p"), CodeRoleNotApplicable, []string{"backend", "odd", "--lane odd"}, map[string]string{"role": "backend", "lane": "odd"}},
 		{"kickoff", KickoffNotSealed("x", "backend", "/p"), CodeKickoffNotSealed, []string{"kickoff", "axiom sdd kickoff seal"}, map[string]string{"role": "backend"}},
+		{"task_not_bound", TaskNotBound("x", "backend", "/p"), CodeTaskNotBound, []string{"backend", "axiom integrations tasks create --change x", "axiom integrations tasks bind --change x --role backend=<id>"}, map[string]string{"role": "backend", "change": "x"}},
+		{"links_invalid", IntegrationsLinksInvalid("x", "backend", "/p", errors.New("yaml roto")), CodeIntegrationsLinksInvalid, []string{"yaml roto", "axiom integrations sync --change x"}, map[string]string{"role": "backend"}},
 		{"roster", RoleNotInRoster("x", "ops", []string{"backend", "web"}), CodeRoleNotInRoster, []string{"ops", "backend, web"}, map[string]string{"roster": "backend,web", "role": "ops"}},
 	}
 	for _, tt := range tests {
@@ -48,6 +51,9 @@ func TestRoleCodesHaveSpanishLabels(t *testing.T) {
 		"role_not_applicable": "rol no aplicable",
 		"kickoff_not_sealed":  "kickoff sin sellar",
 		"role_not_in_roster":  "rol fuera del roster",
+
+		"task_not_bound":             "rol sin Task vinculada",
+		"integrations_links_invalid": "vínculos de integraciones ilegibles",
 	} {
 		if got := Label(token); got != want {
 			t.Errorf("Label(%q) = %q, se esperaba %q", token, got, want)

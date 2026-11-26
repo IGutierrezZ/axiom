@@ -206,6 +206,15 @@ axiom archive sync --path "<workspaceRoot>"
 - A nonzero exit is a blocking failure: STOP and report `blocked` with the exact message. Do not write `openspec/INDEX.md` by hand and do not move the change.
 - Archive updates no roadmap: `axiom.yaml` and `openspec/config.yaml` cannot declare any, so there is nothing else to refresh.
 
+### Step 2b: Tracker Follow-up Section (`continuous` with an active tracker, BEFORE the move)
+
+Applies only when the sealed style is `continuous`, a work-item plugin with Tasks support is active, and the change folder holds `integrations.yaml`. The diary `.tracker-notes.yaml` lives in the change folder and is never written to an archived folder, so read it now, before Step 3 moves the folder. Compose the section offline (no tracker call), from `integrations.yaml` and `.tracker-notes.yaml`, and keep it for the archive report of Step 5 as `## Seguimiento en el tracker`:
+
+- One entry per Task: role, ID, URL, estimate (`estimate_hours`, or «sin estimación» when absent), hours recorded (sum of the `minutes` of that role's `time_entries`), and each entry with its actor, date and `item_id`.
+- A role with no `time_entries` is reported with 0 h, «sin imputación».
+- Every note of `.tracker-notes.yaml` with no later `done` note for the same verb and role is a pending event: list it with its code and its `continuation` command.
+- Without `integrations.yaml`, omit the section. Never retype it from memory and never invent a value.
+
 ### Step 3: Move to Archive
 
 **IF mode is `engram`:** Skip — there are no `openspec/` directories to move. The archive report in Engram serves as the audit trail.
@@ -322,6 +331,10 @@ A failed or skipped `diff -r` FAILS the phase regardless of the checkboxes above
 
 **IF mode is `none`:** Skip verification — no persisted artifacts.
 
+### Step 4b: Push the Summary of the Archived Change (only with an active tracker)
+
+When a work-item plugin with Tasks support is active, run `axiom integrations summary push --cwd <archive root> --change <c> --json` on the archived folder, after the move is verified and before the orchestrator runs `axiom sdd publish --archive` (which closes the work item). On the archived folder it replaces the provisional identifiers with the definitive ones. It answers `not_applicable` (exit code 0) when there is no active plugin. A failure never fails the archive and is not journaled (the diary is not written to an archived folder): it shows only in the output, so record its code and continuation in the archive report under `## Seguimiento en el tracker`.
+
 ### Step 5: Persist Archive Report
 
 **This step is MANDATORY — do NOT skip it.**
@@ -359,6 +372,9 @@ En proyectos gobernados por Axiom, el informe `archive-report.md` (o en Engram) 
 - `design.md`
 - `tasks.md`
 - `verify-report.md`
+
+## Seguimiento en el tracker
+*(Solo con tracker activo. En `continuous`, la sección compuesta en el paso 2b; en `checkpointed`, el resultado de `summary push`. Si el cambio no usó tracker, omitir la sección.)*
 ```
 
 When the maintained-context branch ran, append the integration trace mechanically with `axiom archive context show`, as `references/technical-context-integration.md` describes. Never retype the trace.

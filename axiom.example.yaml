@@ -167,6 +167,15 @@ workspace:
 #     item_keys:
 #       - "User Story=US"
 #       - "Bug=BUG"
+#     # Ciclo de vida de las Tasks (todas opcionales; se muestran los valores por defecto):
+#     task_state_start: Active                # estado de la Task del rol al arrancar el rol
+#     task_state_apply_approved: Tech Review  # estado al aprobarse el apply del rol
+#     # task_state_close: Tech Review         # sin valor, el efectivo de task_state_apply_approved
+#     # work_item_state_archive: Closed       # sin valor, el work item no cambia de estado al archivar
+#     req_tag_prefix: "req:"                  # 1 a 100 caracteres, sin ',' ni ';', sin empezar por axiom: ni axiom-task:
+#     req_tag_max: 50                         # etiquetas de requisito por work item, de 1 a 100
+#     workday_hours: 8                        # horas de una jornada, de 1 a 24
+#     workdays: [mon, tue, wed, thu, fri]     # días laborables, de mon a sun, sin repetir
 
 # ------------------------------------------------------------------------------
 # Ajustes de Ramas por Repositorio (opcional)

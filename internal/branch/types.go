@@ -152,6 +152,11 @@ const (
 	CodeKickoffNotSealed  Code = "kickoff_not_sealed"
 	CodeRoleNotInRoster   Code = "role_not_in_roster"
 
+	// Barrera de `ensure --role` con un tracker activo: el rol no tiene Task vinculada, o el fichero
+	// de vínculos no se puede leer (falla cerrado).
+	CodeTaskNotBound             Code = "task_not_bound"
+	CodeIntegrationsLinksInvalid Code = "integrations_links_invalid"
+
 	// CodeScopeNotApplicable es el rechazo de `axiom branch scope` ante un cambio del carril `odd` o
 	// con un kickoff sin instantánea de repositorios (RF-BRA-35).
 	CodeScopeNotApplicable Code = "scope_not_applicable"

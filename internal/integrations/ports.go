@@ -132,6 +132,8 @@ func portLabel(port string) string {
 		return "descubrimiento"
 	case PortWorkItems:
 		return "work items"
+	case PortTasks:
+		return "Tasks"
 	}
 	return port
 }

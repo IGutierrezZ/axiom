@@ -326,8 +326,8 @@ func TestApprovalOrdinalCountsApprovalsOfTheSameGate(t *testing.T) {
 const adoBlock = "integrations:\n  azure-devops:\n    organization: contoso\n    project: Fabrikam\n    team: Fabrikam Team\n"
 
 // RF-ADO-14: con el plugin azure-devops configurado y activo, `gate record` produce la misma salida
-// y el mismo código que sin el bloque, y no crea integrations.yaml ni la cola: el manifiesto solo
-// escucha change.start, que ningún verbo emite.
+// y el mismo código que sin el bloque, y no crea integrations.yaml ni la cola: el manifiesto no
+// escucha el evento de compuerta de spec.
 func TestGateRecordIsIdenticalWithAndWithoutAzureDevOpsBlock(t *testing.T) {
 	run := func(t *testing.T, block string) (stdout, stderr string, code int, changeRoot string) {
 		t.Helper()

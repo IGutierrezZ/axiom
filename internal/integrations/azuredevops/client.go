@@ -100,6 +100,9 @@ type orgState struct {
 	notBefore time.Time
 	rate      RateLimitInfo
 	repos     map[string][]Repository // caché por proyecto; solo éxitos
+
+	typeStates map[string][]TypeState     // caché por proyecto y tipo de work item; solo éxitos
+	typeFields map[string]map[string]bool // caché por proyecto y tipo; nombres de referencia en minúsculas
 }
 
 // Client es el cliente REST de Azure DevOps 7.1 para una organización, un proyecto y un equipo. Todo

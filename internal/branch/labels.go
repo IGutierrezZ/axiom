@@ -49,6 +49,10 @@ var labels = map[string]string{
 	string(CodeKickoffNotSealed):  "kickoff sin sellar",
 	string(CodeRoleNotInRoster):   "rol fuera del roster",
 
+	// Barrera de `ensure --role` con un tracker activo.
+	string(CodeTaskNotBound):             "rol sin Task vinculada",
+	string(CodeIntegrationsLinksInvalid): "vínculos de integraciones ilegibles",
+
 	// Modo de trabajo materializado y su origen (RF-BRA-16, design §4.4).
 	string(ModeWorktree): "un worktree por rama",
 	string(ModeInPlace):  "en la carpeta del proyecto",

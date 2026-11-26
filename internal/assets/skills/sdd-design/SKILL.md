@@ -150,7 +150,19 @@ If not applicable, state "No migration required."}
 
 - [ ] {Any unresolved technical question}
 - [ ] {Any decision that needs team input}
+
+## Estimación por rol
+
+- {role}: {hours} h
 ```
+
+#### Estimate per Role (only with an active tracker)
+
+Write the `## Estimación por rol` section only when a work-item plugin with Tasks support is active for the change (the orchestrator says so in the launch, or `context/work-item.md` exists in the change folder). Without a tracker, omit the section entirely.
+
+- One data line per role of the sealed roster, exactly `- <role>: <hours> h` (role as sealed, hours as a decimal with a dot, positive, two decimals at most, 1000 at most). Any other line shape breaks the reader.
+- Put the justification of each estimate outside the data lines (a paragraph before or after them), never inside one.
+- `axiom integrations tasks create` reads these lines to size each role's Task, and the person may override them with `--estimate <role>=<hours>`.
 
 ### Step 4: Persist Artifact
 
