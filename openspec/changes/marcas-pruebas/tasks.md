@@ -27,17 +27,17 @@ U1 -> (U2 ∥ U3) -> U4 -> (U5 ∥ U6); U7 depende solo de U2 y puede ir tras U2
 
 ## Phase 1: Núcleo puro (U1)
 
-- [ ] 1.1 RED: crear `internal/acceptancetests/marks/imports_test.go` (solo `internal/acceptancetests`, `yaml.v3` y librería estándar; sin `os/exec`, sin E/S) y las pruebas de `ExactAllowed` en `internal/docpaths/docpaths_test.go`: acepta solo `pruebas-estado.yaml`; rechaza `design.md`, `internal/x.go`, `../pruebas-estado.yaml`, ruta absoluta y `sub/pruebas-estado.yaml`.
-- [ ] 1.2 Crear `internal/acceptancetests/marks/{doc,model,codec}.go`: `Entry`, `Result`, `File`, `Parse` (válido/ilegible/no secuencia; entradas inválidas aparte), `Append` (el contenido previo es prefijo exacto; `\n` final garantizado), `Merge(local, remote)` sin duplicados (también entradas idénticas ya en el remoto) y `Pending` (multiconjunto por los ocho campos, orden local). Modificar `internal/docpaths/docpaths.go` con `ExactAllowed`.
+- [x] 1.1 RED: crear `internal/acceptancetests/marks/imports_test.go` (solo `internal/acceptancetests`, `yaml.v3` y librería estándar; sin `os/exec`, sin E/S) y las pruebas de `ExactAllowed` en `internal/docpaths/docpaths_test.go`: acepta solo `pruebas-estado.yaml`; rechaza `design.md`, `internal/x.go`, `../pruebas-estado.yaml`, ruta absoluta y `sub/pruebas-estado.yaml`.
+- [x] 1.2 Crear `internal/acceptancetests/marks/{doc,model,codec}.go`: `Entry`, `Result`, `File`, `Parse` (válido/ilegible/no secuencia; entradas inválidas aparte), `Append` (el contenido previo es prefijo exacto; `\n` final garantizado), `Merge(local, remote)` sin duplicados (también entradas idénticas ya en el remoto) y `Pending` (multiconjunto por los ocho campos, orden local). Modificar `internal/docpaths/docpaths.go` con `ExactAllowed`.
   Cubre: prov:KOF:1, prov:PUB:1, prov:PUB:2, RF-PUB-01
   Comprobación: `go test ./internal/acceptancetests/marks -run 'TestParse|TestAppend|TestMerge|TestPending|TestPackageImports'` y `go test ./internal/docpaths -run TestExactAllowed`
-- [ ] 1.3 Crear `internal/acceptancetests/marks/validate.go`: `Input`, `Rejection`, `ValidateInput` con códigos `marks_case_unknown`, `marks_environment_invalid`, `marks_result_invalid`, `marks_note_invalid`, `marks_note_too_long` (500 runas, sin controles ni UTF-8 inválido), `marks_commit_invalid` (100 runas, `[A-Za-z0-9._/+:#@-]`); prueba de ida y vuelta con notas hostiles (`: `, `#`, comillas, `- `, `yes`, `null`, `<script>`, Unicode, espacios iniciales).
+- [x] 1.3 Crear `internal/acceptancetests/marks/validate.go`: `Input`, `Rejection`, `ValidateInput` con códigos `marks_case_unknown`, `marks_environment_invalid`, `marks_result_invalid`, `marks_note_invalid`, `marks_note_too_long` (500 runas, sin controles ni UTF-8 inválido), `marks_commit_invalid` (100 runas, `[A-Za-z0-9._/+:#@-]`); prueba de ida y vuelta con notas hostiles (`: `, `#`, comillas, `- `, `yes`, `null`, `<script>`, Unicode, espacios iniciales).
   Cubre: prov:WEB:2, prov:KOF:1
   Comprobación: `go test ./internal/acceptancetests/marks -run 'TestValidate|TestRoundTrip'`
-- [ ] 1.4 Crear `internal/acceptancetests/marks/summary.go`: `Summarize` y `Summary.Text()` con la semántica de D4 (categorías disjuntas con suma igual al total, `n/a` aparte, vigente por mayor `at` con desempate por orden, total 0 = `sin casos`, huérfanas e inválidas aparte, CRLF, caso repetido cuenta una vez) y texto canónico `pre: 5/5 ok; local: 1/2 ok, 1 caducada`.
+- [x] 1.4 Crear `internal/acceptancetests/marks/summary.go`: `Summarize` y `Summary.Text()` con la semántica de D4 (categorías disjuntas con suma igual al total, `n/a` aparte, vigente por mayor `at` con desempate por orden, total 0 = `sin casos`, huérfanas e inválidas aparte, CRLF, caso repetido cuenta una vez) y texto canónico `pre: 5/5 ok; local: 1/2 ok, 1 caducada`.
   Cubre: RF-KOF-22, prov:KOF:1
   Comprobación: `go test ./internal/acceptancetests/marks -run 'TestSummarize|TestSummaryText'`
-- [ ] 1.5 Cierre U1: ejecutar las dos líneas de comprobación de 1.2-1.4 y commit `feat(marks): núcleo puro de marcas de pruebas y ruta exacta permitida`.
+- [x] 1.5 Cierre U1: ejecutar las dos líneas de comprobación de 1.2-1.4 y commit `feat(marks): núcleo puro de marcas de pruebas y ruta exacta permitida`.
 
 ## Phase 2: Lectura publicada y proyección en status (U2; depende de U1)
 
