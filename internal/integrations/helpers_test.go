@@ -133,6 +133,7 @@ type testPlugin struct {
 	block      <-chan struct{}
 	panicWith  any
 	hasPanic   bool
+	warnings   []string
 	hook       func(Delivery) // se llama al empezar cada entrega, antes de cualquier fallo programado
 }
 
@@ -209,7 +210,7 @@ func (p *testPlugin) Deliver(ctx context.Context, d Delivery) (Outcome, error) {
 	if out, seen := p.byKey[d.Event.IdempotencyKey]; seen {
 		return out, nil
 	}
-	out := Outcome{Links: append([]Link(nil), p.links...)}
+	out := Outcome{Links: append([]Link(nil), p.links...), Warnings: append([]string(nil), p.warnings...)}
 	p.byKey[d.Event.IdempotencyKey] = out
 	p.delivered = append(p.delivered, d.Event)
 	return out, nil

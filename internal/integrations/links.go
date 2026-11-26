@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/url"
 	"os"
 	"regexp"
@@ -18,10 +19,20 @@ import (
 const (
 	// LinksFile es el documento versionado con los vínculos e imputaciones de un cambio.
 	LinksFile = "integrations.yaml"
-	// LinksSchemaV1 es su esquema.
+	// LinksSchemaV1 es el esquema original: se sigue leyendo, y se reescribe como v2 solo cuando una
+	// fusión cambia algo.
 	LinksSchemaV1 = "axiom.integrations/v1"
+	// LinksSchemaV2 añade a los vínculos `estimate_hours` y `started_at` y a las imputaciones `actor`.
+	LinksSchemaV2 = "axiom.integrations/v2"
 
 	maxLinkIDLength = 128
+
+	// Orígenes (source) de los vínculos de Task y prefijo de las imputaciones de cierre de rol.
+	TasksCreateSource = "tasks.create"
+	TasksBindSource   = "tasks.bind"
+	roleCloseSource   = "role.close/"
+	// TaskLinkKind es el kind de los vínculos de la Task de un rol.
+	TaskLinkKind = "task"
 )
 
 var (
@@ -57,17 +68,25 @@ func readLinks(f Folder) (LinksDoc, error) {
 }
 
 func parseLinks(data []byte, change string) (LinksDoc, error) {
-	var doc LinksDoc
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	decoder.KnownFields(true)
-	if err := decoder.Decode(&doc); err != nil {
+	// Primero solo el esquema, sin lectura estricta: un esquema ajeno se rechaza nombrándolo antes de
+	// que sus campos desconocidos den un error confuso.
+	var head struct {
+		Schema string `yaml:"schema"`
+	}
+	if err := yaml.NewDecoder(bytes.NewReader(data)).Decode(&head); err != nil {
 		if errors.Is(err, io.EOF) {
 			return LinksDoc{}, errors.New("el fichero está vacío")
 		}
 		return LinksDoc{}, err
 	}
-	if doc.Schema != LinksSchemaV1 {
-		return LinksDoc{}, fmt.Errorf("esquema %q no admitido: debe ser %q", doc.Schema, LinksSchemaV1)
+	if head.Schema != LinksSchemaV1 && head.Schema != LinksSchemaV2 {
+		return LinksDoc{}, fmt.Errorf("esquema %q no admitido; admitidos: %s, %s", head.Schema, LinksSchemaV1, LinksSchemaV2)
+	}
+	var doc LinksDoc
+	decoder := yaml.NewDecoder(bytes.NewReader(data))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&doc); err != nil {
+		return LinksDoc{}, err
 	}
 	if doc.Change != change {
 		return LinksDoc{}, fmt.Errorf("el campo change es %q y la carpeta es la del cambio %q", doc.Change, change)
@@ -101,6 +120,16 @@ func validateLink(l Link) error {
 	if err := validateItemID("id", l.ID); err != nil {
 		return err
 	}
+	if l.EstimateHours != nil {
+		if err := validateEstimateHours(*l.EstimateHours); err != nil {
+			return err
+		}
+	}
+	if l.StartedAt != nil {
+		if _, offset := l.StartedAt.Zone(); offset != 0 {
+			return errors.New("started_at debe estar en UTC")
+		}
+	}
 	if l.URL != "" {
 		parsed, err := url.Parse(l.URL)
 		switch {
@@ -117,9 +146,23 @@ func validateLink(l Link) error {
 	return nil
 }
 
+// validateEstimateHours exige un valor positivo con, como mucho, dos decimales.
+func validateEstimateHours(h float64) error {
+	if math.IsNaN(h) || math.IsInf(h, 0) || h <= 0 {
+		return errors.New("estimate_hours debe ser positivo")
+	}
+	if math.Abs(h*100-math.Round(h*100)) > 1e-6 {
+		return errors.New("estimate_hours admite como mucho dos decimales")
+	}
+	return nil
+}
+
 func validateTimeEntry(e TimeEntry) error {
 	if err := validateItemID("item_id", e.ItemID); err != nil {
 		return err
+	}
+	if strings.HasPrefix(e.Source, roleCloseSource) && (strings.TrimSpace(e.Actor) == "" || strings.TrimSpace(e.Role) == "") {
+		return fmt.Errorf("una imputación %s* exige actor y role no vacíos", roleCloseSource)
 	}
 	if e.Minutes <= 0 {
 		return errors.New("minutes debe ser positivo")
@@ -175,9 +218,9 @@ func mergeLinks(f Folder, pluginID, key string, now time.Time, out Outcome) (boo
 		return false, err
 	}
 
-	haveLinks := map[linkIdentity]bool{}
-	for _, l := range doc.Links {
-		haveLinks[linkIdentity{l.Plugin, l.Kind, l.ID, l.Role}] = true
+	haveLinks := map[linkIdentity]int{}
+	for i, l := range doc.Links {
+		haveLinks[linkIdentity{l.Plugin, l.Kind, l.ID, l.Role}] = i
 	}
 	haveEntries := map[entryIdentity]bool{}
 	for _, e := range doc.TimeEntries {
@@ -186,9 +229,24 @@ func mergeLinks(f Folder, pluginID, key string, now time.Time, out Outcome) (boo
 	changed := false
 	for _, l := range links {
 		id := linkIdentity{l.Plugin, l.Kind, l.ID, l.Role}
-		if !haveLinks[id] {
-			haveLinks[id] = true
+		at, present := haveLinks[id]
+		if !present {
+			haveLinks[id] = len(doc.Links)
 			doc.Links = append(doc.Links, l)
+			changed = true
+			continue
+		}
+		// Un vínculo ya presente se conserva, salvo dos campos: la estimación entrante no nula y
+		// distinta lo actualiza, y el inicio del rol solo se fija si aún no constaba.
+		existing := &doc.Links[at]
+		if l.EstimateHours != nil && (existing.EstimateHours == nil || *existing.EstimateHours != *l.EstimateHours) {
+			hours := *l.EstimateHours
+			existing.EstimateHours = &hours
+			changed = true
+		}
+		if l.StartedAt != nil && existing.StartedAt == nil {
+			started := *l.StartedAt
+			existing.StartedAt = &started
 			changed = true
 		}
 	}
@@ -203,15 +261,20 @@ func mergeLinks(f Folder, pluginID, key string, now time.Time, out Outcome) (boo
 	if !changed {
 		return false, nil
 	}
-
-	payload, err := yaml.Marshal(doc)
-	if err != nil {
-		return false, fmt.Errorf("serializar %s: %w", LinksFile, err)
-	}
-	if err := f.writeAtomic(LinksFile, linksTempPattern, payload); err != nil {
+	if err := writeLinksDoc(f, doc); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// writeLinksDoc escribe doc como v2: el esquema nuevo solo se materializa cuando algo cambia.
+func writeLinksDoc(f Folder, doc LinksDoc) error {
+	doc.Schema = LinksSchemaV2
+	payload, err := yaml.Marshal(doc)
+	if err != nil {
+		return fmt.Errorf("serializar %s: %w", LinksFile, err)
+	}
+	return f.writeAtomic(LinksFile, linksTempPattern, payload)
 }
 
 // normalizeOutcome completa y valida lo que devuelve el plugin: el plugin, el origen (la clave del
@@ -233,6 +296,10 @@ func normalizeOutcome(pluginID, key string, now time.Time, out Outcome) ([]Link,
 			l.RecordedAt = recorded
 		}
 		l.RecordedAt = l.RecordedAt.UTC()
+		if l.StartedAt != nil {
+			started := l.StartedAt.UTC()
+			l.StartedAt = &started
+		}
 		if err := validateLink(l); err != nil {
 			return nil, nil, fmt.Errorf("vínculo %d: %w", i+1, err)
 		}
@@ -290,4 +357,150 @@ func WorkItemLinks(f Folder) ([]Link, error) {
 		}
 	}
 	return out, nil
+}
+
+// BindTask escribe en integrations.yaml el vínculo de la Task de un rol. l.Source debe ser
+// tasks.create o tasks.bind. Toma el cerrojo del cambio y reutiliza la fusión idempotente: repetir la
+// llamada no cambia el fichero, y una estimación entrante no nula y distinta actualiza
+// estimate_hours del vínculo ya presente. Devuelve si el fichero cambió.
+func BindTask(f Folder, pluginID string, l Link, now time.Time) (bool, error) {
+	if l.Kind != TaskLinkKind {
+		return false, fmt.Errorf("BindTask exige un vínculo kind %q y recibió %q", TaskLinkKind, l.Kind)
+	}
+	if l.Source != TasksCreateSource && l.Source != TasksBindSource {
+		return false, fmt.Errorf("BindTask exige source %q o %q y recibió %q", TasksCreateSource, TasksBindSource, l.Source)
+	}
+	release, err := f.acquire()
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	return mergeLinks(f, pluginID, l.Source, now, Outcome{Links: []Link{l}})
+}
+
+// ReplaceTaskLink sustituye el vínculo de la Task del rol por l. Es la única función que retira un
+// vínculo de integrations.yaml. Bajo el cerrojo quita el vínculo kind task del rol (del plugin) y
+// añade l; copia el started_at anterior si l no trae uno y no toca las imputaciones. Si el vínculo
+// vigente ya apunta a la misma Task, equivale a BindTask. Devuelve si el fichero cambió.
+func ReplaceTaskLink(f Folder, pluginID, role string, l Link, now time.Time) (bool, error) {
+	if l.Kind != TaskLinkKind || l.Role != role {
+		return false, fmt.Errorf("ReplaceTaskLink exige un vínculo kind %q del rol %q", TaskLinkKind, role)
+	}
+	if l.Source == "" {
+		l.Source = TasksBindSource
+	}
+	release, err := f.acquire()
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	if err := f.guard(LinksFile); err != nil {
+		return false, err
+	}
+	doc, err := readLinks(f)
+	if err != nil {
+		return false, err
+	}
+
+	var previous *Link
+	kept := make([]Link, 0, len(doc.Links))
+	for i := range doc.Links {
+		existing := doc.Links[i]
+		if existing.Plugin == pluginID && existing.Kind == TaskLinkKind && existing.Role == role {
+			if existing.ID == l.ID {
+				// Misma Task: no hay nada que retirar, solo actualizar estimación e inicio.
+				return mergeLinks(f, pluginID, l.Source, now, Outcome{Links: []Link{l}})
+			}
+			previous = &doc.Links[i]
+			continue
+		}
+		kept = append(kept, existing)
+	}
+	normalized, _, err := normalizeOutcome(pluginID, l.Source, now, Outcome{Links: []Link{l}})
+	if err != nil {
+		return false, Permanent(err)
+	}
+	replacement := normalized[0]
+	if replacement.StartedAt == nil && previous != nil && previous.StartedAt != nil {
+		started := *previous.StartedAt
+		replacement.StartedAt = &started
+	}
+	doc.Links = append(kept, replacement)
+	if err := writeLinksDoc(f, doc); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// MarkRoleStarted fija started_at en el vínculo de la Task del rol solo si aún no constaba (el
+// inicio es de escritura única). Devuelve si cambió. Sin vínculo de Task del rol es un error: la
+// barrera de ensure --role lo impide antes.
+func MarkRoleStarted(f Folder, pluginID, role string, at time.Time) (bool, error) {
+	release, err := f.acquire()
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	if err := f.guard(LinksFile); err != nil {
+		return false, err
+	}
+	doc, err := readLinks(f)
+	if err != nil {
+		return false, err
+	}
+	for i := range doc.Links {
+		l := &doc.Links[i]
+		if l.Plugin != pluginID || l.Kind != TaskLinkKind || l.Role != role {
+			continue
+		}
+		if l.StartedAt != nil {
+			return false, nil
+		}
+		started := at.UTC()
+		l.StartedAt = &started
+		if err := writeLinksDoc(f, doc); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, fmt.Errorf("no hay vínculo de Task del rol %q del plugin %q en %s", role, pluginID, LinksFile)
+}
+
+// RecordTimeEntry añade una imputación a integrations.yaml, idempotente por (plugin, source,
+// item_id). e.Source es obligatorio (role.close/<rol>/<n>). Devuelve si el fichero cambió.
+func RecordTimeEntry(f Folder, pluginID string, e TimeEntry, now time.Time) (bool, error) {
+	if strings.TrimSpace(e.Source) == "" {
+		return false, errors.New("RecordTimeEntry exige source")
+	}
+	release, err := f.acquire()
+	if err != nil {
+		return false, err
+	}
+	defer release()
+	return mergeLinks(f, pluginID, e.Source, now, Outcome{TimeEntries: []TimeEntry{e}})
+}
+
+// TaskLinks devuelve los vínculos kind task de integrations.yaml, sin tomar el cerrojo (la
+// escritura es atómica). Sin fichero, ninguno.
+func TaskLinks(f Folder) ([]Link, error) {
+	doc, err := readLinks(f)
+	if err != nil {
+		return nil, err
+	}
+	var out []Link
+	for _, l := range doc.Links {
+		if l.Kind == TaskLinkKind {
+			out = append(out, l)
+		}
+	}
+	return out, nil
+}
+
+// TimeEntries devuelve las imputaciones de integrations.yaml, sin tomar el cerrojo.
+func TimeEntries(f Folder) ([]TimeEntry, error) {
+	doc, err := readLinks(f)
+	if err != nil {
+		return nil, err
+	}
+	return append([]TimeEntry(nil), doc.TimeEntries...), nil
 }
