@@ -18,6 +18,7 @@ import (
 // registro de ramas los guarda igual que `scripts/axiom-worktree.ps1`.
 
 func TestParseODDDoc(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name            string
 		content         string
@@ -45,6 +46,7 @@ func TestParseODDDoc(t *testing.T) {
 }
 
 func TestODDPhase(t *testing.T) {
+	t.Parallel()
 	for doc, want := range map[oddDoc]string{
 		{}:                       "explore",
 		{Total: 3, Completed: 1}: "apply",
@@ -130,6 +132,7 @@ func (r listingResponse) wantODD(t *testing.T, keys ...string) {
 // Una feature ODD sin commit (documento sin seguimiento) figura como activa, con su rama, su ruta y su
 // progreso, aunque el worktree esté en el carril `sdd` del registro.
 func TestIncrementsListsAnODDFeatureOfAWorktree(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneSDD, "mi-feature")
 	writeODD(t, worktree, "mi-feature", "# ODD: Mi feature\n\n- [x] **T1 · a**\n- [ ] **T2 · b**\n")
@@ -157,6 +160,7 @@ func TestIncrementsListsAnODDFeatureOfAWorktree(t *testing.T) {
 
 // El carril `odd` del registro se enumera igual que el `sdd`.
 func TestIncrementsListsAnODDFeatureOfAnODDLaneWorktree(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneODD, "otra")
 	writeODD(t, worktree, "otra", "# ODD: Otra\n- [ ] T1\n")
@@ -167,6 +171,7 @@ func TestIncrementsListsAnODDFeatureOfAnODDLaneWorktree(t *testing.T) {
 // Las fases salen de las tareas del documento, y un documento ya confirmado en la rama (diferencia
 // con la base) cuenta igual que uno sin seguimiento.
 func TestIncrementsODDPhaseFollowsTheTasksOfACommittedDocument(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	explore := oddWorktree(t, ws, branch.LaneSDD, "sin-tareas")
 	writeODD(t, explore, "sin-tareas", "# ODD: Sin tareas\n\nSolo texto.\n")
@@ -188,6 +193,7 @@ func TestIncrementsODDPhaseFollowsTheTasksOfACommittedDocument(t *testing.T) {
 // Si un documento se llama como el slug del worktree, solo ese es la feature; los demás documentos que
 // difieren de la base se ignoran.
 func TestIncrementsODDPrefersTheDocumentNamedAsTheSlug(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneSDD, "propio")
 	writeODD(t, worktree, "propio", "# ODD: Propio\n- [ ] T1\n")
@@ -199,6 +205,7 @@ func TestIncrementsODDPrefersTheDocumentNamedAsTheSlug(t *testing.T) {
 // Sin documento con el slug, cuentan los añadidos en la rama o sin seguimiento; los modificados solo
 // si no hay ninguno añadido.
 func TestIncrementsODDFallsBackToAddedAndThenModifiedDocuments(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, map[string]string{"odd/tasks/previo.md": "# ODD: Previo\n- [ ] T1\n"})
 	added := oddWorktree(t, ws, branch.LaneSDD, "con-nuevo")
 	writeODD(t, added, "nuevo", "# ODD: Nuevo\n- [ ] T1\n")
@@ -223,6 +230,7 @@ func TestIncrementsODDFallsBackToAddedAndThenModifiedDocuments(t *testing.T) {
 // distinta de la base) no aporta feature activa, genera un aviso y su documento queda como archivado
 // en el checkout principal.
 func TestIncrementsODDIntegratedWorktreeIsNotActiveAndIsNoted(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneSDD, "ya-fusionada")
 	writeODD(t, worktree, "ya-fusionada", "# ODD: Ya fusionada\n- [x] T1\n")
@@ -241,6 +249,7 @@ func TestIncrementsODDIntegratedWorktreeIsNotActiveAndIsNoted(t *testing.T) {
 // Un worktree recién creado (rama en la punta de la base, sin cambios) también es ancestro de la base
 // y está limpio, pero no está integrado: ni feature ni aviso.
 func TestIncrementsODDFreshWorktreeHasNoItemAndNoNote(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	oddWorktree(t, ws, branch.LaneSDD, "recien-creado")
 
@@ -256,6 +265,7 @@ func TestIncrementsODDFreshWorktreeHasNoItemAndNoNote(t *testing.T) {
 
 // Un worktree integrado con cambios sin confirmar vuelve a ser trabajo en curso.
 func TestIncrementsODDIntegratedWorktreeWithUncommittedChangesIsActive(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneSDD, "retomada")
 	writeODD(t, worktree, "retomada", "# ODD: Retomada\n- [x] T1\n")
@@ -278,6 +288,7 @@ func TestIncrementsODDIntegratedWorktreeWithUncommittedChangesIsActive(t *testin
 // Los documentos ODD del checkout principal se listan como archivados, salvo los que están activos en
 // un worktree: el worktree prevalece y el documento figura una sola vez.
 func TestIncrementsODDMainCheckoutDocumentsAreArchivedAndTheWorktreePrevails(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, map[string]string{
 		"odd/tasks/viejo.md": "# ODD: Viejo\n- [x] T1\n- [x] T2\n",
 		"odd/tasks/doble.md": "# ODD: Doble\n- [ ] T1\n",
@@ -302,6 +313,7 @@ func TestIncrementsODDMainCheckoutDocumentsAreArchivedAndTheWorktreePrevails(t *
 
 // El worktree ODD desaparecido se omite con el aviso del motor, sin error.
 func TestIncrementsODDMissingWorktreeIsOmittedWithANote(t *testing.T) {
+	t.Parallel()
 	ws := oddProject(t, nil)
 	worktree := oddWorktree(t, ws, branch.LaneODD, "perdida")
 	if err := os.RemoveAll(worktree); err != nil {

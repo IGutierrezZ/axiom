@@ -17,6 +17,7 @@ type manifestIcon struct {
 }
 
 func TestManifestIsInstallable(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	rr := getAsset(t, h, "/manifest.webmanifest")
 	if rr.Code != http.StatusOK {
@@ -57,6 +58,7 @@ func TestManifestIsInstallable(t *testing.T) {
 }
 
 func TestPNGIconsHaveDeclaredSize(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	for target, size := range map[string]int{
 		"/icons/icon-192.png":          192,
@@ -87,6 +89,7 @@ func TestPNGIconsHaveDeclaredSize(t *testing.T) {
 }
 
 func TestMaskableIconKeepsLogoInsideSafeZone(t *testing.T) {
+	t.Parallel()
 	img := renderIcon(512, true)
 	bg := img.RGBAAt(0, 0)
 	// Fuera del círculo seguro (80 % central) solo hay fondo degradado, nunca el trazo.
@@ -106,6 +109,7 @@ func TestMaskableIconKeepsLogoInsideSafeZone(t *testing.T) {
 }
 
 func TestServiceWorkerIsServedAtRoot(t *testing.T) {
+	t.Parallel()
 	rr := getAsset(t, assetServer(t), "/sw.js")
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET /sw.js = %d", rr.Code)
@@ -126,6 +130,7 @@ func TestServiceWorkerIsServedAtRoot(t *testing.T) {
 }
 
 func TestIndexHTMLDeclaresPWA(t *testing.T) {
+	t.Parallel()
 	body := getAsset(t, assetServer(t), "/").Body.String()
 	for _, marker := range []string{
 		`<link rel="manifest" href="/manifest.webmanifest">`,

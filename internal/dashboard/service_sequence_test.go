@@ -226,6 +226,7 @@ func TestEcosystemUpgradeHTTPMethods(t *testing.T) {
 }
 
 func TestEcosystemUpgradeSequenceDTOKeepsRequiredFields(t *testing.T) {
+	t.Parallel()
 	// Required fields inside phases travel WITHOUT omitempty (D-07): consumers
 	// must see them even at zero value.
 	raw, err := json.Marshal(EcosystemPhases{

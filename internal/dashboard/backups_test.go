@@ -61,6 +61,7 @@ func TestGetBackupsReportsSizeOnDisk(t *testing.T) {
 // TestBackupSizeBytesToleratesMissingRoot comprueba que un respaldo cuya carpeta
 // ya no existe no rompe el listado: el tamaño queda a cero y se omite del JSON.
 func TestBackupSizeBytesToleratesMissingRoot(t *testing.T) {
+	t.Parallel()
 	if got := backupSizeBytes(""); got != 0 {
 		t.Errorf("backupSizeBytes(\"\") = %d, se esperaba 0", got)
 	}

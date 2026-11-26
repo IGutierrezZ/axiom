@@ -38,7 +38,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare` y `newMonorepo`, observador por repositorio y `t.Parallel()`.
 - [x] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
 - [x] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
-- [ ] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
+- [x] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
 - [ ] T6 · `cli`: `isolateIntegrateGit`, `isolateBranchGit` e `isolateGateGitEnv` sin `t.Setenv`, entorno de git en `TestMain` y `t.Parallel()` en sus pruebas.
 - [ ] T7 · Cierre: tiempos antes y después por paquete, CI en verde.
 
@@ -51,13 +51,14 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 | `sddpublish` | 106,4 s | 28,6 s |
 | `techcontext` | 62,8 s | 24,4 s |
 | `sddstatus` | 79,4 s | 21,5 s |
-| `dashboard` | 69,8 s | pendiente |
+| `dashboard` | 69,8 s | 50,5 s |
 
 ## Pruebas que siguen en serie
 
 - `sddpublish`: las 7 que instalan `observe`, las 3 con `t.Setenv` (`TestGitPortIdentityConfigured`, `TestPublishIgnoresGitDirEnvironment`, `TestPublishIdentityMissingWritesNothing`) y `TestGitPortPushOutcomes` (sustituye `pushTimeout`).
 - `sddstatus`: 45 de 348 (las que usan `t.Setenv` de `ENGRAM_PROJECT` o `HOME`, `t.Chdir`, `useBranchGuard` y sus fixtures `branchMonorepo`, `checkpointedMonorepo` e `isoBranchMonorepo`, `stubEngramExport`, `publishChangeInstanceMarker` o `gitcommon.Observe`).
 - `techcontext`: 6 de 69 (las de `t.Chdir`, `fixedClock` y `renameFile`).
+- `dashboard`: 75 de 253. Además de `t.Setenv`, `t.Chdir` y los seams del paquete (`runAppArgsFn`, `upgradeSequence*Fn`, los de `relaunch`, `installAdapters`, `discoverOpenCodeCatalog`), las que escriben preferencias de worktree en el hub del HOME compartido (`setWorktreePrefs` y sus fixtures `gitProject` y `embeddedProject`): `hub.Manager` reescribe `workspaces.json` con un renombrado sin bloqueo entre instancias, que en Windows choca con las escrituras de las pruebas paralelas. Son las de git más caras; inyectar el hub en el servicio sería un cambio de producción (fuera de alcance).
 
 ## Criterio de terminado
 

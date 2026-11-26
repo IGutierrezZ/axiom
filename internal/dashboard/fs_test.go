@@ -10,6 +10,7 @@ import (
 )
 
 func TestBrowseDirectories_EmptyPath(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	svc := NewService(tempDir)
 
@@ -30,6 +31,7 @@ func TestBrowseDirectories_EmptyPath(t *testing.T) {
 }
 
 func TestBrowseDirectories_ValidDir(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	svc := NewService(tempDir)
 
@@ -68,6 +70,7 @@ func TestBrowseDirectories_ValidDir(t *testing.T) {
 }
 
 func TestFSDirectoriesEndpoint(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	subDir := filepath.Join(tempDir, "test_proj")
 	_ = os.Mkdir(subDir, 0755)
@@ -104,6 +107,7 @@ func TestFSDirectoriesEndpoint(t *testing.T) {
 }
 
 func TestFSNativePickerEndpoint(t *testing.T) {
+	t.Parallel()
 	tempDir := t.TempDir()
 	svc := NewService(tempDir)
 	server := NewServer(svc)

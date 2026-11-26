@@ -18,6 +18,7 @@ import (
 // rechazar piden confirmación) y la accesibilidad.
 
 func TestKnowledgeAssetsAreServed(t *testing.T) {
+	t.Parallel()
 	h := assetServer(t)
 	for _, target := range []string{
 		"/js/core/spec.js", "/js/core/format.js",
@@ -35,6 +36,7 @@ func TestKnowledgeAssetsAreServed(t *testing.T) {
 }
 
 func TestSpecsDomainRouteIsWired(t *testing.T) {
+	t.Parallel()
 	router := readAsset(t, "js/core/router.js")
 	for _, marker := range []string{"head === 'specs' && parts.length >= 2", "name: 'specs', domain", "#/specs/${encodeURIComponent(params.domain)}", "hrefFor(route.name, route)"} {
 		if !strings.Contains(router, marker) {
@@ -62,6 +64,7 @@ func TestSpecsDomainRouteIsWired(t *testing.T) {
 
 // Aprobar y rechazar pasan por una confirmación antes de llamar a la API (D5).
 func TestSkillDecisionsGoThroughAConfirmation(t *testing.T) {
+	t.Parallel()
 	js := readAsset(t, "js/screens/skills.js")
 	for _, fn := range []struct{ name, endpoint string }{
 		{"async function approve(", "api('/api/skills/approve'"},
@@ -105,6 +108,7 @@ func TestSkillDecisionsGoThroughAConfirmation(t *testing.T) {
 }
 
 func TestSpecsViewerOmitsHistoryAndAffectedSpecs(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	start, end := strings.Index(html, `id="view-specs"`), strings.Index(html, `id="view-skills"`)
 	if start < 0 || end < start {
@@ -125,6 +129,7 @@ func TestSpecsViewerOmitsHistoryAndAffectedSpecs(t *testing.T) {
 }
 
 func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
+	t.Parallel()
 	legacy := []string{"skill-card", "inbox-card", "inbox-grid", "inbox-section", "livingdoc-domain-item", "livingdoc-viewer-box", "livingdoc-stats-grid", "livingdoc-layout", "livingdoc-list", "badge-origin-", "stat-card", "legacy-card", "filter-btn", "agent-item", "dep-chip", "badge-connector", "badge-kind", "symbols-toolbar", "search-box", "loading-state", "empty-state", "error-banner", "subsection-title", "btn-preview-skill"}
 	html := readAsset(t, "index.html")
 	start, end := strings.Index(html, `id="view-specs"`), strings.Index(html, `id="view-ecosistema"`)
@@ -162,6 +167,7 @@ func TestKnowledgeScreensUseNoLegacyStyles(t *testing.T) {
 }
 
 func TestKnowledgeScreensAreAccessible(t *testing.T) {
+	t.Parallel()
 	html := readAsset(t, "index.html")
 	for _, id := range []string{"specs-filter", "skills-filter"} {
 		if !regexp.MustCompile(`<label class="sr-only" for="` + id + `">[^<]+</label>`).MatchString(html) {
@@ -187,6 +193,7 @@ func TestKnowledgeScreensAreAccessible(t *testing.T) {
 
 // El analizador de escenarios y el router se ejecutan de verdad (si hay Node) con entradas hostiles.
 func TestSpecParserAndRouterRuntime(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite la prueba de ejecución del visor de specs")
@@ -352,6 +359,7 @@ func TestSpecParserAndRouterRuntime(t *testing.T) {
 // Todos los módulos embebidos se analizan con Node (sin ejecutarlos): un error de
 // sintaxis rompería la carga de la interfaz entera y las pruebas estructurales no lo verían.
 func TestEmbeddedModulesParse(t *testing.T) {
+	t.Parallel()
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node no está disponible: se omite el análisis de sintaxis de los módulos")

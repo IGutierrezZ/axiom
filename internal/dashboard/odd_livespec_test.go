@@ -33,6 +33,7 @@ const oddSpecSection = "\n## Spec viva\n\n### Capacidad: facturacion\n\n```opens
 	"#### Scenario: Alta correcta\n\n- **DADO** un formulario válido\n- **CUANDO** se envía\n- **ENTONCES** se crea la factura\n```\n"
 
 func TestParseODDDocCountsTheSameWithAndWithoutTheSpecSection(t *testing.T) {
+	t.Parallel()
 	without := parseODDDoc(oddWithoutSpecSection)
 	with := parseODDDoc(oddWithoutSpecSection + oddSpecSection)
 
@@ -48,6 +49,7 @@ func TestParseODDDocCountsTheSameWithAndWithoutTheSpecSection(t *testing.T) {
 }
 
 func TestParseODDDocCountsCheckboxesInsideFencesSoTheDeltaMayNotHaveThem(t *testing.T) {
+	t.Parallel()
 	withCheckbox := oddWithoutSpecSection + strings.Replace(oddSpecSection, "- **DADO** un formulario válido", "- [ ] un formulario válido", 1)
 
 	if got := parseODDDoc(withCheckbox); got.Total != 4 {
@@ -62,6 +64,7 @@ func TestParseODDDocCountsCheckboxesInsideFencesSoTheDeltaMayNotHaveThem(t *test
 // REQ-47.6 / D11: la sección `## Identificadores asignados` no tiene casillas ni altera el
 // listado, y el documento sigue siendo válido para la spec viva.
 func TestParseODDDocIgnoresTheLiveSpecIDTraceSection(t *testing.T) {
+	t.Parallel()
 	trace := "\n## Identificadores asignados\n\n```yaml\nschema: axiom.requirement-ids/v1\npattern: REQ-<n>.<m>\n" +
 		"assignments:\n  - provisional: prov:31:1\n    definitive: REQ-31.1\n    capability: facturacion\n    requirement: Alta de factura (REQ-31.1)\n```\n"
 	base := oddWithoutSpecSection + oddSpecSection

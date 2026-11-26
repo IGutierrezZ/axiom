@@ -40,6 +40,7 @@ func waitUpdateFinished(t *testing.T, svc *Service) UpdateJobStatus {
 }
 
 func TestUpdateJob_IdleBeforeAnyUpdate(t *testing.T) {
+	t.Parallel()
 	svc := updateTestService(t, availableVersion)
 	st := svc.UpdateStatus()
 	if st.Phase != "idle" || st.Running {
@@ -241,6 +242,7 @@ func TestUpdateJob_SingleJobAndPostReturnsImmediately(t *testing.T) {
 }
 
 func TestUpdateEndpoints_RejectWrongMethods(t *testing.T) {
+	t.Parallel()
 	router := NewServer(NewService(t.TempDir())).Router()
 	for _, tc := range []struct{ method, path string }{
 		{http.MethodGet, "/api/system/update"},
@@ -255,6 +257,7 @@ func TestUpdateEndpoints_RejectWrongMethods(t *testing.T) {
 }
 
 func TestUpdateStatusJSONContract(t *testing.T) {
+	t.Parallel()
 	rec := httptest.NewRecorder()
 	NewServer(NewService(t.TempDir())).Router().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/system/update/status", nil))
 	var raw map[string]any

@@ -147,6 +147,7 @@ func errorOf(t *testing.T, rr *httptest.ResponseRecorder) string {
 }
 
 func TestProjectsAddPersistsWorktreePrefs(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "con-modo")
 	router, _, hubPath := newPrefsServer(t, dir)
 
@@ -172,6 +173,7 @@ func TestProjectsAddPersistsWorktreePrefs(t *testing.T) {
 }
 
 func TestProjectsAddWithoutPrefsUsesDefaults(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "sin-modo")
 	router, _, hubPath := newPrefsServer(t, dir)
 
@@ -193,6 +195,7 @@ func TestProjectsAddWithoutPrefsUsesDefaults(t *testing.T) {
 }
 
 func TestProjectsInitPersistsWorktreePrefs(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join(t.TempDir(), "recien-iniciado")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -212,6 +215,7 @@ func TestProjectsInitPersistsWorktreePrefs(t *testing.T) {
 }
 
 func TestProjectsRegistrationRejectsInvalidPrefsWithoutTouchingHub(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "invalido")
 	router, _, hubPath := newPrefsServer(t, dir)
 	before := readOrEmpty(t, hubPath)
@@ -241,6 +245,7 @@ func TestProjectsRegistrationRejectsInvalidPrefsWithoutTouchingHub(t *testing.T)
 }
 
 func TestProjectsAddLinkedWorktreeNamesMainCheckout(t *testing.T) {
+	t.Parallel()
 	base := t.TempDir()
 	main := filepath.Join(base, "repo-principal")
 	gitDir := filepath.Join(main, ".git", "worktrees", "feature")
@@ -272,6 +277,7 @@ func TestProjectsAddLinkedWorktreeNamesMainCheckout(t *testing.T) {
 }
 
 func TestActiveWorktreePrefsRoundTrip(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "activo")
 	router, _, hubPath := newPrefsServer(t, dir)
 	if rr := request(router, http.MethodPost, "/api/projects/add", `{"path":`+quoteJSON(dir)+`}`); rr.Code != http.StatusOK {
@@ -327,6 +333,7 @@ func TestActiveWorktreePrefsRoundTrip(t *testing.T) {
 }
 
 func TestActiveWorktreePrefsRejectsInvalidValues(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "rechazo")
 	router, _, hubPath := newPrefsServer(t, dir)
 	if rr := request(router, http.MethodPost, "/api/projects/add", `{"path":`+quoteJSON(dir)+`}`); rr.Code != http.StatusOK {
@@ -355,6 +362,7 @@ func TestActiveWorktreePrefsRejectsInvalidValues(t *testing.T) {
 }
 
 func TestActiveWorktreePrefsRequiresRegisteredProject(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "sin-registrar")
 	router, _, hubPath := newPrefsServer(t, dir)
 
@@ -376,6 +384,7 @@ func TestActiveWorktreePrefsRequiresRegisteredProject(t *testing.T) {
 }
 
 func TestActiveWorktreePrefsMethodNotAllowed(t *testing.T) {
+	t.Parallel()
 	router, _, _ := newPrefsServer(t, newProjectDir(t, "metodos"))
 	for _, method := range []string{http.MethodPost, http.MethodDelete, http.MethodPatch} {
 		if rr := request(router, method, "/api/projects/active/worktree-prefs", `{}`); rr.Code != http.StatusMethodNotAllowed {
@@ -387,6 +396,7 @@ func TestActiveWorktreePrefsMethodNotAllowed(t *testing.T) {
 // El arnés de S7.11: GET /api/projects y PUT /api/projects/active/worktree-prefs sobre un hub
 // temporal, mostrando el cuerpo observable. `axiom ui` bloquea y no se ejecuta.
 func TestProjectsWorktreePrefsHarness(t *testing.T) {
+	t.Parallel()
 	dir := newProjectDir(t, "arnes")
 	router, _, _ := newPrefsServer(t, dir)
 	request(router, http.MethodPost, "/api/projects/add", `{"path":`+quoteJSON(dir)+`}`)
@@ -407,6 +417,7 @@ func TestProjectsWorktreePrefsHarness(t *testing.T) {
 // fija solo que lo que el navegador recibe por HTTP es lo que ofrece las preferencias (REQ-25.29,
 // REQ-25.33) y que la interfaz no deja editar el bloque `git:`.
 func TestRegistrationModalAsksWorktreePrefs(t *testing.T) {
+	t.Parallel()
 	router, _, _ := newPrefsServer(t, newProjectDir(t, "assets"))
 
 	html := request(router, http.MethodGet, "/", "").Body.String()
@@ -518,6 +529,7 @@ func getWorkspacePolicy(t *testing.T, router http.Handler) (workspacePolicyJSON,
 const policyHeader = "workspace:\n  name: politica\n  topology: monorepo-embedded\n  specs_repository: openspec\nroles:\n  core:\n    name: Core\n    repositories:\n      - path: .\n"
 
 func TestWorkspaceBranchPolicy(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		yaml       string // vacío: el proyecto no tiene axiom.yaml
@@ -595,6 +607,7 @@ func TestWorkspaceBranchPolicy(t *testing.T) {
 // Ninguna ruta del servidor escribe axiom.yaml (REQ-25.33): ni la lectura de la política ni
 // los métodos no permitidos sobre `/api/workspace` cambian el árbol del proyecto.
 func TestWorkspaceIsReadOnly(t *testing.T) {
+	t.Parallel()
 	dir := newPolicyProjectDir(t, policyHeader+"git:\n  integration_branch: develop\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n")
 	router, _, _ := newPrefsServer(t, dir)
 	before := snapshotTree(t, dir)
@@ -622,6 +635,7 @@ func TestWorkspaceIsReadOnly(t *testing.T) {
 // El arnés de S10.6: GET /api/workspace con y sin `git:` y `repositories:`, mostrando el cuerpo
 // observable. `axiom ui` bloquea y no se ejecuta.
 func TestWorkspaceBranchPolicyHarness(t *testing.T) {
+	t.Parallel()
 	for name, yaml := range map[string]string{
 		"sin git ni repositories": policyHeader,
 		"con git y repositories":  policyHeader + "git:\n  integration_branch: develop\nrepositories:\n  - path: repo-backend\n    integration_branch: release\n",
@@ -638,6 +652,7 @@ func TestWorkspaceBranchPolicyHarness(t *testing.T) {
 // G4.1: una configuración inválida es un 400 con la lista de violaciones y no
 // escribe nada en disco; ya no es un 500 opaco.
 func TestProjectsInitRejectsInvalidConfigurationWith400AndViolations(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
 	router, _, hubPath := newPrefsServer(t, t.TempDir())
 	// Roles especializados: solo admisibles en multirepo (en monorepo-embedded el
@@ -670,6 +685,7 @@ func TestProjectsInitRejectsInvalidConfigurationWith400AndViolations(t *testing.
 
 // G4.3: el campo `tech` de cada rol viaja hasta el axiom.yaml.
 func TestProjectsInitWritesRoleTech(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join(t.TempDir(), "proyecto-nuevo")
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	body := `{"path":` + quoteJSON(dir) + `,"name":"Con tech","topology":"multirepo","roles":[{"key":"web","name":"Web","repositories":["."],"tech":["go","react"]}]}`
@@ -690,6 +706,7 @@ func TestProjectsInitWritesRoleTech(t *testing.T) {
 // G4.2: el alta multirepo desde la API deja el axiom.yaml en el repositorio de specs
 // y el puntero en la carpeta del proyecto, y el dashboard lo carga a través del puntero.
 func TestProjectsInitMultirepoCreatesSpecsRepoAndPointer(t *testing.T) {
+	t.Parallel()
 	master := filepath.Join(t.TempDir(), "maestra")
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	body := `{"path":` + quoteJSON(master) + `,"name":"Multi","topology":"multirepo","specs_repository":"repo-specs","roles":[{"key":"api","name":"API","repositories":["repo-api"]}]}`
@@ -711,6 +728,7 @@ func TestProjectsInitMultirepoCreatesSpecsRepoAndPointer(t *testing.T) {
 }
 
 func TestProjectsInitRejectsBadSpecsRepositoryWith400(t *testing.T) {
+	t.Parallel()
 	master := filepath.Join(t.TempDir(), "maestra")
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	body := `{"path":` + quoteJSON(master) + `,"topology":"multirepo","specs_repository":"../fuera"}`
@@ -734,6 +752,7 @@ func stubInstallAdapters(t *testing.T, fn func(dir string, ids []string) ([]stri
 
 // G4.6: el catálogo lista los adaptadores seleccionables y dice cuáles admiten workspace.
 func TestAdaptersCatalogListsSelectableAgentsWithWorkspaceSupport(t *testing.T) {
+	t.Parallel()
 	router, _, _ := newPrefsServer(t, t.TempDir())
 	rr := request(router, http.MethodGet, "/api/adapters", "")
 	if rr.Code != http.StatusOK {

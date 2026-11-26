@@ -52,6 +52,7 @@ func TestPostUpdateSync_TargetsThePathRootWhileTheProcessCwdIsElsewhere(t *testi
 }
 
 func TestRelaunchedChildRunsOutsideTheWorkspace(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	dir := ServerWorkDir(root)
 	if isWithinDir(root, dir) {
