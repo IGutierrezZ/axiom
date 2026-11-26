@@ -91,9 +91,10 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
 
 ## Fase 4: Generación del mapa y datos curados (commits d1 y d2)
 
-- [ ] 4.1 Ejecutar `AXIOM_IDMIGRATION=map go test ./internal/idmigration -run TestMigrateRepository -count=1` para generar `openspec/id-map.yaml` (513 entradas). Comprobar la ida y vuelta con `legacyid.Load` y que `REQ-27.2b` y las dos entradas con dos antiguos están presentes. Sin ediciones a mano.
+- [x] 4.1 Ejecutar `AXIOM_IDMIGRATION=map go test ./internal/idmigration -run TestMigrateRepository -count=1` para generar `openspec/id-map.yaml` (513 entradas). Comprobar la ida y vuelta con `legacyid.Load` y que `REQ-27.2b` y las dos entradas con dos antiguos están presentes. Sin ediciones a mano.
   - Verificación: `go test ./internal/idmigration ./internal/legacyid -count=1`.
-  - Commit: `chore(specs): generar el mapa de identificadores heredados`.
+  - Evidencia: `openspec/id-map.yaml` generado (513 entradas, 1542 líneas; segunda generación idéntica byte a byte con `cmp`), `go test ./internal/idmigration ./internal/legacyid -count=1` ok, `plan` lo carga sin error; `REQ-27.2b` → `RF-CLI-09`, `REQ-48.2` → `RF-TRC-02`, `REQ-48.4` → `RF-TRC-04`, `REQ-24.3` (planning-home-resolution) → `RF-PLH-03`, 2 entradas con dos antiguos.
+  - Commit: `chore(openspec): generar el mapa de identificadores heredados`.
   - Cubre: prov:TRC:1
 - [ ] 4.2 Corregir a mano el mensaje de producción con el requisito retirado en `internal/techcontext/plan.go` (línea 137 al diseñar, sustituir la cita retirada por el requisito vivo de contexto técnico mantenido, D13) y ajustar la prueba que fija ese mensaje en `internal/techcontext`.
   - Verificación: `go test ./internal/techcontext -count=1` y `go vet ./internal/techcontext`.
