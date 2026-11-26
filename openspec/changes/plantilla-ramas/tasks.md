@@ -25,7 +25,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
 
 ## Fase 1: Cimientos puros
 
-- [ ] 1.1 **Unidad 1. Motor `nametemplate` (RED primero).**
+- [x] 1.1 **Unidad 1. Motor `nametemplate` (RED primero).**
   - Ficheros: crear `internal/branch/nametemplate/nametemplate.go` y `internal/branch/nametemplate/nametemplate_test.go`.
   - Qué: `Variable`, `Variables()`, `Parse`, `Template` (`Raw`, `IsZero`, `Uses`, `Render`), `Values`, `CheckDistinguishing`, `CheckSample`, `Slug(change, ref)` y los errores tipados de D-01/D-03. Sin E/S; solo `internal/gitref` y la biblioteca estándar. Sin escape de llaves.
   - RED previstos (matriz de amenazas, composición de argumentos): un valor por clase (`-D`, `--force`, `T#12`, `a b`, `..`, `x.lock`, `CON`) rechazado con su variable y sin saneado; plantilla `-{ref}` y `{prefix}/` rechazadas por `ValidRefName`; llaves sin cerrar, sueltas, anidadas y variable desconocida; `{prefix}/{kind}` sin variable distintiva; `Slug` (`us-2525-login`→`login`, `US-2525-login`, `us-2525`, `us-2525-`, sin `ref`, sin prefijo que case); render de los escenarios de prov:BRA:1.
@@ -33,6 +33,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
   - Verificación: `go test ./internal/branch/nametemplate/`; `go vet ./internal/branch/nametemplate/`; `go test ./internal/gitcommon/ -run Architecture`.
   - Alcanzabilidad: las funciones exportadas las consumen las tareas 2.1, 4.1 y 6.x; `Variables()` se usa en los mensajes de error. El trinquete de código muerto se comprueba al cerrar la 6.1 (hasta entonces el paquete es hoja sin consumidor, aceptado dentro de la PR única).
   - Commit: `feat(branch): motor puro de plantillas de nombre de rama`.
+  - Evidencia: hecho. `go test ./internal/branch/nametemplate/` ok; `go vet` limpio; `go test ./internal/gitcommon/ -run Architecture` ok. Nota de diseño: las constantes de variable se llaman `VarPrefix`, `VarKind`, `VarChange`, `VarSlug`, `VarRole`, `VarRef`, `VarTaskRef` porque `Slug` (constante) chocaría con la función `Slug`.
 
 ## Fase 2: Esquema, catálogo e instantánea
 
