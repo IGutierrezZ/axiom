@@ -11,6 +11,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // Matriz de pruebas de `Publisher.Run` (DD-09, REQ-27.5 a REQ-27.10, REQ-27.14) con git real, un
@@ -34,18 +35,24 @@ func run(t *testing.T, cwd string, request Request) Result {
 // remoto desnudo que ya tiene main, y la rama del cambio `feat/x` desplegada en el checkout.
 func newMonorepo(t *testing.T) (repo, bare string) {
 	t.Helper()
-	isolateGit(t)
-	repo, bare = newRepo(t), newBare(t)
+	dir := monorepoTemplate.Copy(t)
+	return filepath.Join(dir, "repo"), filepath.Join(dir, "bare")
+}
+
+// monorepoTemplate es la plantilla de newMonorepo: se construye una vez por binario de pruebas.
+var monorepoTemplate = testenv.NewRepoTemplate("monorepo", func(t testing.TB, dir string) {
+	repo, bare := filepath.Join(dir, "repo"), filepath.Join(dir, "bare")
+	buildRepo(t, repo)
+	buildBare(t, bare)
 	writeFile(t, filepath.Join(repo, "axiom.yaml"), monorepoConfig)
 	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "proposal.md"), "propuesta\n")
 	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "design.md"), "diseño\n")
-	runGit(t, repo, "add", "-A")
-	runGit(t, repo, "commit", "-q", "-m", "cambio x")
-	runGit(t, repo, "remote", "add", "origin", bare)
-	runGit(t, repo, "push", "-q", "origin", "main")
-	runGit(t, repo, "switch", "-q", "-c", "feat/x")
-	return repo, bare
-}
+	testenv.Git(t, repo, "add", "-A")
+	testenv.Git(t, repo, "commit", "-q", "-m", "cambio x")
+	testenv.Git(t, repo, "remote", "add", "origin", filepath.ToSlash(bare))
+	testenv.Git(t, repo, "push", "-q", "origin", "main")
+	testenv.Git(t, repo, "switch", "-q", "-c", "feat/x")
+})
 
 func editDesign(t *testing.T, repo, content string) {
 	t.Helper()
@@ -104,6 +111,7 @@ func installHook(t *testing.T, gitDir, name string) {
 
 // Matriz «Estado del commit»: el código preparado sigue preparado tras publicar, y no entra en el commit.
 func TestPublishKeepsStagedCodeStaged(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	editDesign(t, repo, "diseño nuevo\n")
 	writeFile(t, filepath.Join(repo, "src", "a.go"), "package a\n")
@@ -129,6 +137,7 @@ func TestPublishKeepsStagedCodeStaged(t *testing.T) {
 // Matriz «Estado del commit»: lo que no está preparado nunca se confirma, ni lo modificado ni lo
 // que no tiene seguimiento (nunca `commit -a`).
 func TestPublishNeverCommitsUnstagedCode(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	editDesign(t, repo, "diseño nuevo\n")
 	writeFile(t, filepath.Join(repo, "README.md"), "modificado sin preparar\n")
@@ -169,6 +178,7 @@ func TestPublishNoDocChangesMakesNoCommit(t *testing.T) {
 // Matriz «Estado del commit»: `.gates.lock`, `.axiom-instance` y los temporales de la raíz de la
 // carpeta del cambio nunca se versionan.
 func TestPublishExcludesLocalStateFiles(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	folder := filepath.Join(repo, "openspec", "changes", "x")
 	writeFile(t, filepath.Join(folder, "gates.yaml"), "schema: axiom.sdd-gate-ledger/v1\n")
@@ -193,6 +203,7 @@ func TestPublishExcludesLocalStateFiles(t *testing.T) {
 // REQ-27.14: el archivado publica la carpeta archivada, los borrados de `changes/<x>/`, las specs y el
 // índice, con el mensaje de archivado y solo con `--archive` en la rama de archivado.
 func TestPublishCommitsArchiveDeletions(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	writeFile(t, filepath.Join(repo, "openspec", "specs", "a", "spec.md"), "spec\n")
 	writeFile(t, filepath.Join(repo, "openspec", "INDEX.md"), "índice\n")
@@ -256,6 +267,7 @@ func TestPublishCommitsArchiveDeletions(t *testing.T) {
 // El cambio ya movido a `changes/archive/` y sin carpeta archivada en disco se reconoce por los
 // borrados que git aún ve; sin nada sucio ni archivado es `change_not_found`.
 func TestPublishArchiveFindsTheChangeThroughItsDeletions(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	runGit(t, repo, "switch", "-q", "main")
 	runGit(t, repo, "switch", "-q", "-c", "feat/x-archive")
@@ -305,6 +317,7 @@ func TestPublishFirstPushCreatesRemoteBranch(t *testing.T) {
 
 // Matriz «Estado del push»: con la rama ya publicada, el siguiente push es un avance rápido y no crea la rama.
 func TestPublishTrackedBranchFastForward(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	editDesign(t, repo, "primera\n")
 	wantPublished(t, run(t, repo, Request{}))
@@ -364,6 +377,7 @@ func TestPublishNonFastForwardRefusedWithoutRetry(t *testing.T) {
 // S9 y matriz «Estado del push»: la rama de integración de un repositorio de código no se publica, y la
 // negativa no crea ningún commit.
 func TestPublishRefusesIntegrationBranchInCodeRepo(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	runGit(t, repo, "switch", "-q", "main")
 	editDesign(t, repo, "diseño nuevo\n")
@@ -422,6 +436,7 @@ func TestPublishMultirepoSpecsPushesIntegration(t *testing.T) {
 
 // REQ-27.7 regla 4: `--branch` atado a otra rama es `wrong_branch` y no escribe nada.
 func TestPublishBranchFlagMismatchIsWrongBranch(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	editDesign(t, repo, "diseño nuevo\n")
 	head := runGit(t, repo, "rev-parse", "HEAD")
@@ -473,6 +488,7 @@ func TestPublishNeverRunsFetchOrForce(t *testing.T) {
 // Matriz «Rutas que parecen documentación»: un commit de código sin subir que toca `README.sh` en la
 // raíz es código y nunca se sube; el mismo nombre bajo la carpeta del cambio es documentación.
 func TestPublishRefusesUnpushedCommitTouchingReadmeSh(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	writeFile(t, filepath.Join(repo, "README.sh"), "#!/bin/sh\necho código\n")
 	writeFile(t, filepath.Join(repo, "requirements.txt"), "x==1\n")
@@ -506,6 +522,7 @@ func TestPublishRefusesUnpushedCommitTouchingReadmeSh(t *testing.T) {
 }
 
 func TestPublishTreatsReadmeShUnderTheChangeFolderAsDocumentation(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	writeFile(t, filepath.Join(repo, "openspec", "changes", "x", "README.sh"), "#!/bin/sh\necho documento\n")
 	runGit(t, repo, "add", "-A")
@@ -518,6 +535,7 @@ func TestPublishTreatsReadmeShUnderTheChangeFolderAsDocumentation(t *testing.T) 
 // Lo que ya está en la integración publicada no es trabajo del cambio: una fusión de `main` en la rama
 // no da una negativa falsa por los commits de código de main.
 func TestPublishIgnoresPublishedIntegrationCommits(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	editDesign(t, repo, "primera\n")
 	wantPublished(t, run(t, repo, Request{}))
@@ -573,6 +591,7 @@ func TestPublishRunsInTargetRootFromLinkedWorktree(t *testing.T) {
 
 // REQ-27.10: con un almacén sin ficheros no hay documentos que publicar.
 func TestPublishRefusesStoresWithoutFiles(t *testing.T) {
+	t.Parallel()
 	for _, store := range []string{"engram", "none"} {
 		t.Run(store, func(t *testing.T) {
 			repo, _ := newMonorepo(t)
@@ -598,6 +617,7 @@ func TestPublishRefusesStoresWithoutFiles(t *testing.T) {
 }
 
 func TestPublishChangeNotFound(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	result := publisher().Run(context.Background(), Request{CWD: repo, Change: "no-existe"})
 	wantRefused(t, result, CodeChangeNotFound)
@@ -605,6 +625,7 @@ func TestPublishChangeNotFound(t *testing.T) {
 
 // Sin `origin` no se crea ningún commit: la negativa va antes de escribir.
 func TestPublishRemoteMissingMakesNoCommit(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	runGit(t, repo, "remote", "remove", "origin")
 	editDesign(t, repo, "diseño nuevo\n")
@@ -622,6 +643,7 @@ func TestPublishRemoteMissingMakesNoCommit(t *testing.T) {
 }
 
 func TestPublishUnpublishedRangeUnknown(t *testing.T) {
+	t.Parallel()
 	isolateGit(t)
 	repo, bare := newRepo(t), newBare(t)
 	writeFile(t, filepath.Join(repo, "axiom.yaml"), monorepoConfig)
@@ -661,6 +683,7 @@ func TestPublishIdentityMissingWritesNothing(t *testing.T) {
 }
 
 func TestPublishDetachedHeadWritesNothing(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	runGit(t, repo, "switch", "-q", "--detach")
 	editDesign(t, repo, "diseño nuevo\n")
@@ -676,6 +699,7 @@ func TestPublishDetachedHeadWritesNothing(t *testing.T) {
 // Los hooks nunca se saltan: un `pre-commit` que rechaza es `commit_hook_rejected`, un `pre-push`
 // local y un `pre-receive` remoto son `push_hook_rejected`, y tras el commit el local se conserva.
 func TestPublishHooksRejectionsAreTyped(t *testing.T) {
+	t.Parallel()
 	t.Run("pre-commit", func(t *testing.T) {
 		repo, _ := newMonorepo(t)
 		installHook(t, filepath.Join(repo, ".git"), "pre-commit")
@@ -719,6 +743,7 @@ func TestPublishHooksRejectionsAreTyped(t *testing.T) {
 }
 
 func TestPublishRemoteWithNonexistentURLIsUnavailable(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	runGit(t, repo, "remote", "set-url", "origin", filepath.Join(t.TempDir(), "no-existe.git"))
 	editDesign(t, repo, "diseño nuevo\n")
@@ -732,6 +757,7 @@ func TestPublishRemoteWithNonexistentURLIsUnavailable(t *testing.T) {
 }
 
 func TestPublishUnpublishedRangeTooLarge(t *testing.T) {
+	t.Parallel()
 	repo, bare := newMonorepo(t)
 	previous := maxUnpublishedCommits
 	maxUnpublishedCommits = 2
@@ -756,6 +782,7 @@ func TestPublishUnpublishedRangeTooLarge(t *testing.T) {
 
 // Idempotencia: publicar dos veces seguidas la segunda es `up_to_date`.
 func TestPublishTwiceIsUpToDate(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	editDesign(t, repo, "diseño nuevo\n")
 	wantPublished(t, run(t, repo, Request{}))
@@ -773,6 +800,7 @@ func TestPublishTwiceIsUpToDate(t *testing.T) {
 // Las rutas de `technical_context.maintained` declaradas en axiom.yaml se publican, y las de
 // `reference` nunca, aunque estén sucias.
 func TestPublishDeclaredMaintainedPathsAreDocumentation(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	config := monorepoConfig +
 		"technical_context:\n  maintained:\n    entry: docs/contexto/README.md\n    paths:\n      - docs/contexto\n  reference:\n    paths:\n      - docs/ref\n"
@@ -825,6 +853,7 @@ func archiveBranchWithOutbox(t *testing.T) (repo, archived string) {
 // archivada sí tiene documentación sucia que confirmar, y una publicación repetida con la cola
 // pendiente no la confirma tampoco.
 func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
+	t.Parallel()
 	repo, archived := archiveBranchWithOutbox(t)
 	rel := "openspec/changes/archive/2026-11-19-x/"
 
@@ -869,6 +898,7 @@ func TestPublishArchiveExcludesArchivedOutbox(t *testing.T) {
 // REQ-43.9: `integrations.yaml` (sin punto) es documentación del cambio y `publish` la confirma como
 // cualquier otro documento; fija la regla de clasificación que ya cumple `docpaths`.
 func TestPublishCommitsIntegrationsLinks(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	folder := filepath.Join(repo, "openspec", "changes", "x")
 	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")
@@ -885,6 +915,7 @@ func TestPublishCommitsIntegrationsLinks(t *testing.T) {
 // `integrations.yaml`) son estado local con punto en la raíz de la carpeta del cambio: nunca se
 // confirman, aunque haya documentación sucia en la misma carpeta.
 func TestPublishExcludesIntegrationsOutbox(t *testing.T) {
+	t.Parallel()
 	repo, _ := newMonorepo(t)
 	folder := filepath.Join(repo, "openspec", "changes", "x")
 	writeFile(t, filepath.Join(folder, "integrations.yaml"), "schema: axiom.integrations/v1\nchange: x\n")

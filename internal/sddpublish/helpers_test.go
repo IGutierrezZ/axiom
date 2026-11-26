@@ -1,76 +1,60 @@
 package sddpublish
 
 import (
+	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
 // Ayudas de las pruebas con git real: repositorios y remotos desnudos temporales, un entorno de
 // git aislado (sin configuración global ni del sistema) y sin red. Las pruebas ejecutan git
 // directamente, sin pasar por el adaptador, para que el oráculo no dependa de lo que se prueba.
+//
+// El entorno se fija una sola vez en TestMain (testenv.IsolateGit), de modo que las pruebas
+// pueden marcarse con t.Parallel(). Siguen en serie las que fijan entorno propio (t.Setenv),
+// sustituyen una variable global (pushTimeout) o instalan el observador global de git (observe).
 
-// isolateGit aísla git de la configuración del usuario y fija la identidad de las pruebas. Los
-// hooks de ejemplo no existen porque `git init` los copia de una plantilla que se vacía.
+func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
+	_, cleanup, err := testenv.IsolateGit("sddpublish")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "sddpublish: %v\n", err)
+		return 1
+	}
+	defer cleanup()
+	// Las pruebas leen mensajes de git («non-fast-forward»): sin traducir.
+	if err := os.Setenv("LC_ALL", "C"); err != nil {
+		fmt.Fprintf(os.Stderr, "sddpublish: fijar LC_ALL: %v\n", err)
+		return 1
+	}
+	return m.Run()
+}
+
+// isolateGit omite la prueba si git no está disponible. El entorno de git lo fijó TestMain.
 func isolateGit(t *testing.T) {
 	t.Helper()
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git no está disponible en el PATH")
-	}
-	home := t.TempDir()
-	empty := filepath.Join(home, "gitconfig")
-	if err := os.WriteFile(empty, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	template := filepath.Join(home, "template")
-	if err := os.MkdirAll(template, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	for name, value := range map[string]string{
-		"HOME":                home,
-		"USERPROFILE":         home,
-		"XDG_CONFIG_HOME":     home,
-		"GIT_CONFIG_GLOBAL":   empty,
-		"GIT_CONFIG_NOSYSTEM": "1",
-		"GIT_TEMPLATE_DIR":    template,
-		"GIT_AUTHOR_NAME":     "Prueba",
-		"GIT_AUTHOR_EMAIL":    "prueba@example.invalid",
-		"GIT_COMMITTER_NAME":  "Prueba",
-		"GIT_COMMITTER_EMAIL": "prueba@example.invalid",
-		"GIT_TERMINAL_PROMPT": "0",
-		"LC_ALL":              "C",
-	} {
-		t.Setenv(name, value)
-	}
-	for _, name := range []string{"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"} {
-		t.Setenv(name, "")
-		os.Unsetenv(name)
-	}
+	testenv.RequireGit(t)
 }
 
 // runGit ejecuta git en dir y devuelve su salida sin el salto final; falla la prueba si git falla.
 func runGit(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	out, err := tryGit(dir, args...)
-	if err != nil {
-		t.Fatalf("git %s en %s: %v\n%s", strings.Join(args, " "), dir, err, out)
-	}
-	return out
+	return testenv.Git(t, dir, args...)
 }
 
 // tryGit ejecuta git en dir y devuelve su salida combinada y el error.
 func tryGit(dir string, args ...string) (string, error) {
-	command := exec.Command("git", args...)
-	command.Dir = dir
-	output, err := command.CombinedOutput()
-	return strings.TrimRight(string(output), "\r\n"), err
+	return testenv.TryGit(dir, args...)
 }
 
-func writeFile(t *testing.T, path, content string) {
+func writeFile(t testing.TB, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
@@ -80,37 +64,65 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
-// newRepo crea un repositorio con un commit inicial en main y devuelve su raíz.
+// Plantillas de los repositorios de las pruebas: se construyen una vez por binario y cada prueba
+// recibe una copia, en lugar de repetir los procesos git de `init`, `commit` y `push`.
+var (
+	repoTemplate = testenv.NewRepoTemplate("repo", func(t testing.TB, dir string) {
+		buildRepo(t, dir)
+	})
+	bareTemplate = testenv.NewRepoTemplate("bare", func(t testing.TB, dir string) {
+		buildBare(t, dir)
+	})
+	repoWithRemoteTemplate = testenv.NewRepoTemplate("repo-remoto", func(t testing.TB, dir string) {
+		repo, bare := filepath.Join(dir, "repo"), filepath.Join(dir, "bare")
+		buildRepo(t, repo)
+		buildBare(t, bare)
+		testenv.Git(t, repo, "remote", "add", "origin", filepath.ToSlash(bare))
+		testenv.Git(t, repo, "push", "-q", "origin", "main")
+	})
+)
+
+// buildRepo crea en dir un repositorio con un commit inicial en main.
+func buildRepo(t testing.TB, dir string) {
+	t.Helper()
+	writeFile(t, filepath.Join(dir, "README.md"), "inicial\n")
+	testenv.Git(t, dir, "init", "-q", "-b", "main")
+	testenv.Git(t, dir, "config", "core.autocrlf", "false")
+	testenv.Git(t, dir, "add", "-A")
+	testenv.Git(t, dir, "commit", "-q", "-m", "inicial")
+}
+
+// buildBare crea en dir un remoto desnudo vacío.
+func buildBare(t testing.TB, dir string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	testenv.Git(t, dir, "init", "-q", "--bare", "-b", "main")
+}
+
+// newRepo devuelve un repositorio con un commit inicial en main.
 func newRepo(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	runGit(t, dir, "init", "-q", "-b", "main")
-	runGit(t, dir, "config", "core.autocrlf", "false")
-	writeFile(t, filepath.Join(dir, "README.md"), "inicial\n")
-	runGit(t, dir, "add", "-A")
-	runGit(t, dir, "commit", "-q", "-m", "inicial")
-	return dir
+	return repoTemplate.Copy(t)
 }
 
-// newBare crea un remoto desnudo local vacío.
+// newBare devuelve un remoto desnudo local vacío.
 func newBare(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	runGit(t, dir, "init", "-q", "--bare", "-b", "main")
-	return dir
+	return bareTemplate.Copy(t)
 }
 
-// newRepoWithRemote crea un repositorio con `origin` apuntando a un remoto desnudo que ya tiene
-// main publicada.
+// newRepoWithRemote devuelve un repositorio con `origin` apuntando a un remoto desnudo que ya
+// tiene main publicada.
 func newRepoWithRemote(t *testing.T) (repo, bare string) {
 	t.Helper()
-	repo, bare = newRepo(t), newBare(t)
-	runGit(t, repo, "remote", "add", "origin", bare)
-	runGit(t, repo, "push", "-q", "origin", "main")
-	return repo, bare
+	dir := repoWithRemoteTemplate.Copy(t)
+	return filepath.Join(dir, "repo"), filepath.Join(dir, "bare")
 }
 
 // observe instala un observador de las invocaciones de git y lo retira al terminar la prueba.
+// gitcommon.Observe es global: una prueba que observa no puede marcarse con t.Parallel().
 func observe(t *testing.T) *[][]string {
 	t.Helper()
 	var seen [][]string

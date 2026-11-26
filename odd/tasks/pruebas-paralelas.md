@@ -15,7 +15,7 @@ En Windows lo caro es arrancar procesos git: `sddstatus` tarda 33 veces más que
 
 - **Entorno común en `internal/testenv` (plan).** `IsolateGit` lo llama el `TestMain` de cada paquete: HOME vacío, `gitconfig` global sin `gc`, mantenimiento, `fsmonitor`, caché de no seguidos ni `fsync`, plantilla de `git init` vacía, autor fijo, sin terminal ni sistema, y sin `GIT_DIR`, `GIT_WORK_TREE` ni `GIT_INDEX_FILE` heredados. Así los helpers `isolate*` dejan de llamar a `t.Setenv`, que impide `t.Parallel()`.
 - **Plantillas de repositorio (plan).** `testenv.RepoTemplate` construye el repositorio una vez por paquete y cada prueba recibe una copia del directorio. Las rutas absolutas de la plantilla en los ficheros `config`, `gitdir` y `.git` se reescriben a la copia, para que un `origin` de la plantilla nunca apunte al remoto compartido.
-- **Observador de git por repositorio (consecuencia).** `gitcommon.Observe` es global. En `sddpublish` se instala una sola vez en `TestMain` y reparte cada invocación a la prueba que registró el directorio, de modo que las pruebas que observan también corren en paralelo. No cambia producción.
+- **Observador de git global (consecuencia).** `gitcommon.Observe` es global, así que las pruebas de `sddpublish` que lo instalan (`observe`) siguen en serie. Se descartó repartir las invocaciones por directorio: git devuelve rutas largas con barras y `t.TempDir` cortas en Windows, y un fallo de normalización dejaría pasar en vacío las aserciones de «no se ejecutó nada». Son 7 de 51 pruebas.
 - **Pruebas que siguen en serie.** Las que fijan entorno propio (`t.Setenv`), cambian de directorio (`t.Chdir`) o sustituyen variables globales de producción. Se anotan por paquete en el registro de abajo.
 - **Duplicados de `runGit` y `requireGit` (plan).** En los paquetes tocados, los helpers locales pasan a delegar en `testenv`; no se reescriben las llamadas.
 - **Fuera de alcance.** Comportamiento de producción. `components/sdd`, `app` y `update` (el plan los deja para «si compensa»). `TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch` (fallo previo de `internal/workspace`).
@@ -35,7 +35,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 ## Tareas
 
 - [x] T1 · `internal/testenv`: `IsolateGit`, `RequireGit`, `Git`, `TryGit`, `RepoTemplate` y sus pruebas.
-- [ ] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare` y `newMonorepo`, observador por repositorio y `t.Parallel()`.
+- [x] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare` y `newMonorepo`, observador por repositorio y `t.Parallel()`.
 - [ ] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
 - [ ] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
 - [ ] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
@@ -48,14 +48,14 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 
 | Paquete | Antes | Después |
 |---|---|---|
-| `sddpublish` | pendiente | pendiente |
-| `techcontext` | pendiente | pendiente |
-| `sddstatus` | pendiente | pendiente |
-| `dashboard` | pendiente | pendiente |
+| `sddpublish` | 106,4 s | 28,6 s |
+| `techcontext` | 62,8 s | pendiente |
+| `sddstatus` | 79,4 s | pendiente |
+| `dashboard` | 69,8 s | pendiente |
 
 ## Pruebas que siguen en serie
 
-Pendiente.
+- `sddpublish`: las 7 que instalan `observe`, las 3 con `t.Setenv` (`TestGitPortIdentityConfigured`, `TestPublishIgnoresGitDirEnvironment`, `TestPublishIdentityMissingWritesNothing`) y `TestGitPortPushOutcomes` (sustituye `pushTimeout`).
 
 ## Criterio de terminado
 
