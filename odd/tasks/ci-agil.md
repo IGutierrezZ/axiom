@@ -26,7 +26,11 @@ Que la CI no repita trabajo:
 - **Un único selector.** `TOOLCHAIN_META_TESTS` se define una vez en el `env` del workflow. `Go Tests` lo usa en `-skip` y el job nuevo en `-run`, así que no pueden divergir.
 - **Paquetes del job nuevo.** Corre sobre `./internal/app ./internal/assets ./internal/update`. La guarda comprueba que los nombres del selector solo se declaran en esos paquetes; si no, un homónimo en otro paquete quedaría omitido en `Go Tests` sin correr en el job nuevo.
 - **Entradas del job nuevo.** Las del plan (`.github/workflows/**`, `.goreleaser.yaml`, `internal/update/**`, `scripts/**`, la documentación de comandos y `cmd/axiom/**`) más los propios ficheros de los meta-tests, `go.mod` y `go.sum`: un cambio en el test o en la versión de Go cambia su resultado.
-- **Agregador.** `Unit Tests` necesita el job nuevo y lo acepta omitido solo cuando `changes` dice que no tocaba (`toolchain != 'true'`).
+- **Entradas de documentación.** `docs/**/*.md` salvo `docs/audits/` y `internal/assets/**/*.md`: es lo que lee `TestDocumentedInvocationsRunAsDocumented`.
+- **Agregador.** `Unit Tests` necesita el job nuevo y lo acepta omitido solo cuando `changes` terminó bien y dijo `toolchain=false`.
+- **Familia de la política de release.** El plan nombra `TestReleaseDistributionPolicyAssertionFailsClosed`, pero la decisión es sacar «los meta-tests que compilan o lanzan el toolchain». Sus dos hermanos usan el mismo `newReleasePolicyFixture` (`go run ./internal/releasepolicycmd`): `TestReleaseDistributionPolicyAcceptsSemanticYAMLFormatting` y `TestModifiedReleaseVerifierCannotGainWriteAuthority`. Entran también; si no, la guarda nueva los señalaría.
+- **Guarda nueva** (`TestToolchainMetaTestsRunInExactlyOneJob`, sin toolchain): el selector es único y lo usan los dos jobs; ningún nombre seleccionado se declara fuera de `META_PACKAGES`; todo test de esos paquetes que llama a `RequireGoToolchain`, a `newReleasePolicyFixture` o a `go build|run|test` está seleccionado. Comprobada con dos mutaciones (quitar un nombre; seleccionar uno de `internal/testenv`): ambas fallan.
+- **Paso del job.** `-run` que no casa nada sale con 0, así que el paso exige al menos un `--- PASS: Test` y ningún `--- SKIP: Test` de primer nivel.
 - **`TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea`** (`internal/app/tty_boundary_test.go`) entra en el selector mientras exista. Si C-08-f lo borra, su nombre queda sin efecto en el selector: la guarda no exige que cada nombre exista, solo que alguno exista, para no obligar a C-08-f a tocar los workflows.
 
 ## Alcance autorizado
@@ -40,7 +44,7 @@ Fuera: `windows-full-suite.yml` y los jobs manuales.
 Modo TDD: desactivado (`openspec/config.yaml`, `strict_tdd: false`). Ruta: todas inline (unidades pequeñas, sin disparador de delegación).
 
 - [x] **T1.** `ci.yml`: sin `push`, con nocturna y puerta en `changes`; documentación de Windows actualizada.
-- [ ] **T2.** Job `Toolchain Meta Tests` con `-skip`/`-run`, agregador y guardas ampliadas.
+- [x] **T2.** Job `Toolchain Meta Tests` con `-skip`/`-run`, agregador y guardas ampliadas.
 - [ ] **T3.** `pr-check.yml` sin `edited`.
 - [ ] **T4.** Release: mensaje de `require-ci-success.sh` y guía en `docs/release-signing.md`.
 
