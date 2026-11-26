@@ -406,6 +406,19 @@ sdd:
 - `axiom sdd kickoff seal` crea la carpeta del cambio y copia `iso` en su `kickoff.yaml`: no se crea la carpeta a mano antes. Un cambio ISO es el que se selló con esa instantánea; uno sin ella es no ISO aunque el proyecto declare ISO después, y un retrosellado (`--infer`) nunca la lleva.
 - `axiom sdd status --json` proyecta el estado en el campo `iso` (`project`, `change`, `matrix` y `reason` si el bloque es `invalid`). Cada negativa es un motivo tipado `blocked(<token>)` con su continuación; la lista cerrada de trece tokens está en el contrato de status.
 - Reglas de un cambio ISO: cada requisito de la delta lleva en su nombre un identificador válido según el patrón del proyecto (`sdd.id_pattern`; por defecto `REQ-<n>.<m>`) y al menos un `#### Scenario:`; las tareas citan cada requisito con una línea `Cubre: REQ-x[, REQ-y ...]`; `verify` es obligatorio y escribe en `verify-report.md` la sección `## Matriz de verificación` (una fila por escenario afectado, con referencia de prueba `ruta/fichero:símbolo` o `TestX`, comando y código de salida, o responsable, fecha y justificación si es manual; nunca líneas `verdict:`); `archive` se bloquea mientras la matriz falte, sea inválida o tenga una fila `fail`. Los hallazgos de la revisión independiente siguen siendo informativos: solo bloquea la validez de la matriz.
+
+### HTML explicativo de spec y design (`sdd.explainer_html`)
+
+Con el almacén `openspec` o `hybrid`, `sdd-spec` y `sdd-design` pueden escribir además `resumen-spec.html` y `resumen-design.html` junto al md: un resumen con diagramas, en castellano y autocontenido (sin `<script>` ni recursos externos), pensado para quien no lee specs técnicas. Lo que se aprueba sigue siendo el md.
+
+```yaml
+sdd:
+  explainer_html: ask   # ask | always | never (por defecto: ask)
+```
+
+- `ask` hace que el orquestador pregunte una vez por cambio, antes de sellar, y pase la respuesta como `axiom sdd kickoff seal --explainer-html yes|no`; `always` sella `yes` y `never` sella `no` sin preguntar, y una bandera que los contradiga se rechaza sin escribir nada. Sellar con `ask` y sin bandera (por ejemplo desde el dashboard) sella `no` y avisa por stderr. `--explainer-html` no se combina con `--infer`; sin la clave en `kickoff.yaml` rige `no`.
+- `axiom sdd status --json` proyecta `explainer` (valor de proyecto y, con `yes`, el estado `fresh`, `stale` o `missing` de cada HTML con su `expectedDigest`) y `governance.kickoff.explainerHtml`. Es solo informativo: un HTML desactualizado o ausente nunca bloquea una fase, una puerta ni el archivo, y no entra en el digest de las puertas.
+- El dashboard (`axiom ui`) muestra la pestaña «Explicación» del detalle de cada cambio, que sirve el HTML en un `iframe` en sandbox y con una política CSP que impide scripts y recursos externos.
 - `axiom sdd archive-check --cwd <ruta> --change <cambio> [--json]` comprueba, sin escribir, si un cambio ISO puede archivarse; la skill `sdd-archive` lo ejecuta antes de componer o mover y se detiene si sale distinto de cero. Con `--json` informa por dominio de `alreadyComposed`: para reanudar un archivado interrumpido solo se compone lo que sigue en `false`.
 - `axiom sdd trace --cwd <ruta> --change <cambio> [--integration-branch <rama>] [--json]` deriva, sin escribir, la traza del cambio desde el historial git: commit de código, commit y carpeta de archivado, y la cadena requisito, línea `Cubre:` y filas de la matriz. Una divergencia con la evidencia de la compuerta `integration` se informa como discrepancia, nunca como error.
 - `axiom trace <ID> [--json] [--integration-branch <rama>]` traza un requisito de punta a punta, con la misma lectura de solo lectura del historial git: véase [Trazabilidad de un Requisito](#trazabilidad-de-un-requisito-axiom-trace).
