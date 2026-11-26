@@ -1,4 +1,4 @@
-# Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item)
+# Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19)
 
 > **Cambio:** `arranque-desde-wi` (C-07-d). **Idioma:** castellano de España; identificadores, comandos y claves en inglés.
 > Capacidad nueva, dominio `RF-ARR`. Identificadores asignados al archivar `arranque-desde-wi` (2026-11-26).
