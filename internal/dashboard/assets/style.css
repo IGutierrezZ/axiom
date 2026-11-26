@@ -172,7 +172,7 @@ dialog :focus-visible { outline-offset: 1px; }
 .topbar-spacer { flex: 1; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.main { padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; max-width: 1280px; width: 100%; }
+.main { padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; width: 100%; }
 .main:focus { outline: none; }
 .view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .view > [tabindex="-1"]:focus { outline: none; }
@@ -668,6 +668,8 @@ button.dt-doc:hover { background: var(--hover); color: var(--text); }
 
 /* Markdown renderizado */
 .md { display: flex; flex-direction: column; gap: 12px; max-width: 78ch; line-height: 1.6; color: var(--text); }
+/* En los visores de documentos el texto ocupa el ancho del panel. */
+.dt-viewer-body .md, .kn-viewer-body .md { max-width: none; }
 .md p { margin: 0; }
 .md-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 8px; font-weight: 650; line-height: 1.3; }
 h3.md-h { font-size: 17px; }
