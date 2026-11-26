@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 11:06:21 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2381
+> **Última Sincronización:** 2026-11-26 11:28:56 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 530 | **Total Escenarios BDD:** 2436
 
 ---
 
@@ -21,14 +21,14 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 38 | 307 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 40 | 350 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 16 | 56 | [Ver Spec](specs/local-web-dashboard/spec.md) |
-| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
+| `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
 | `odd-living-document` | Especificación de Requerimientos: Documento Vivo ODD y Espejo de Recuperación en Engram (INC-19) | 4 | 0 | [Ver Spec](specs/odd-living-document/spec.md) |
@@ -506,7 +506,9 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* La ayuda lista los cinco verbos
   - *Escenario BDD:* Un subcomando no listado no existe
   - *Escenario BDD:* Ningún subcomando publica ni abre PR
+  - *Escenario BDD:* Con el interruptor encendido tampoco se publica
   - *Escenario BDD:* `scope` no admite `--fetch`
+  - *Escenario BDD:* `scope` no hace red con el interruptor encendido
   - *Escenario BDD:* Una prueba de arquitectura fija el único punto de ejecución de git
   - *Escenario BDD:* El carril ODD no exige un cambio SDD
   - *Escenario BDD:* El verbo de publicación no pertenece a la familia
@@ -569,11 +571,21 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Un fichero sin seguimiento también cuenta
   - *Escenario BDD:* Ya en la rama esperada con el árbol sucio es un no-op
 - **[RF-BRA-10]** Base sin Red y `--fetch` Explícito
-  - *Escenario BDD:* Sin `--fetch` no hay operaciones remotas
+  - *Escenario BDD:* Sin `--fetch` y con el interruptor apagado no hay operaciones remotas
   - *Escenario BDD:* La base es la referencia remota local si existe
   - *Escenario BDD:* Sin referencia remota la base es la rama local
   - *Escenario BDD:* `--fetch` es explícito
   - *Escenario BDD:* `--fetch` fallido no deja efectos
+  - *Escenario BDD:* Con el interruptor encendido `ensure` hace fetch implícito
+  - *Escenario BDD:* El fetch implícito alcanza también a los repositorios de código sin mover sus ramas
+  - *Escenario BDD:* El fetch implícito incluye el repositorio de specs in situ de un multirepo
+  - *Escenario BDD:* Un repositorio sin remoto `origin` se omite sin aviso
+  - *Escenario BDD:* Con `--base <ref>` el fetch implícito se hace igual
+  - *Escenario BDD:* El fetch implícito tiene tiempo máximo por repositorio
+  - *Escenario BDD:* El fetch implícito no respeta el intervalo mínimo
+  - *Escenario BDD:* El fetch implícito fallido avisa y sigue con la base local
+  - *Escenario BDD:* El `--fetch` explícito fallido conserva el rechazo con el interruptor encendido
+  - *Escenario BDD:* `done` no hace fetch implícito con el interruptor encendido
   - *Escenario BDD:* Rama de integración inexistente
   - *Escenario BDD:* La rama del cambio publicada se indica con `createdFrom: remote`
   - *Escenario BDD:* En modo `branch` la base es la referencia remota local de la rama principal
@@ -602,6 +614,8 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Una fusión intermedia se rechaza con `change_not_integrated`
   - *Escenario BDD:* Con todos los role-apply aprobados e integrados, `--archive` procede
   - *Escenario BDD:* `--fetch` explícito permite alcanzar el cambio fusionado
+  - *Escenario BDD:* Con el interruptor encendido `ensure --archive` hace fetch implícito
+  - *Escenario BDD:* Con el interruptor encendido el rechazo no sugiere `--fetch`
   - *Escenario BDD:* Multirepo no tiene rama de archivado
   - *Escenario BDD:* El carril ODD no tiene rama de archivado
   - *Escenario BDD:* Modo `in_place` hace checkout de la rama de archivado
@@ -847,6 +861,37 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Nada que verificar
   - *Escenario BDD:* Modo release con la rama fusionada
   - *Escenario BDD:* Un repositorio no verificable domina la oferta
+- **[RF-BRA-39]** Autofetch del Repositorio de Specs con el Interruptor Personal
+  - *Escenario BDD:* Con el interruptor apagado no hay red ni escritura
+  - *Escenario BDD:* Interruptor encendido, árbol limpio y sin divergencia avanza por fast-forward
+  - *Escenario BDD:* Con la rama ya al día no se mueve nada
+  - *Escenario BDD:* Árbol sucio solo avisa con la orden exacta
+  - *Escenario BDD:* Divergencia solo avisa con la orden exacta
+  - *Escenario BDD:* Rama de integración no desplegada solo avisa
+  - *Escenario BDD:* La rama de un cambio nunca se mueve
+  - *Escenario BDD:* `main_branch` y los repositorios de código no se avanzan
+  - *Escenario BDD:* Con `main_branch` igual a la integración se avanza por fast-forward
+  - *Escenario BDD:* Integración por detrás con operación git en curso solo avisa
+  - *Escenario BDD:* Integración al día no emite aviso de no-avance
+  - *Escenario BDD:* Nunca se hace push ni prune
+  - *Escenario BDD:* Remoto inalcanzable no bloquea
+  - *Escenario BDD:* El intervalo mínimo evita repetir el fetch
+  - *Escenario BDD:* Transcurrido el intervalo el fetch se repite
+  - *Escenario BDD:* Solo se avisa de lo relevante para el cambio actual
+  - *Escenario BDD:* Un commit entrante sobre el documento ODD del cambio es relevante
+  - *Escenario BDD:* Sin nada relevante no hay aviso
+  - *Escenario BDD:* Proyecto no registrado o hub ilegible en `run`
+  - *Escenario BDD:* Multirepo opera solo sobre el repositorio de specs
+- **[RF-BRA-40]** Disparo del Autofetch por Hook de Sesión y por la Doctrina
+  - *Escenario BDD:* `axiom sync` instala el hook de sesión en Claude Code y Codex
+  - *Escenario BDD:* Sincronizar dos veces no duplica y conserva lo ajeno
+  - *Escenario BDD:* La desinstalación retira el hook
+  - *Escenario BDD:* El hook termina siempre en 0 y no bloquea
+  - *Escenario BDD:* El hook es inerte fuera de proyectos Axiom
+  - *Escenario BDD:* El hook es inerte con el interruptor apagado
+  - *Escenario BDD:* Los avisos llegan por el contexto adicional solo si hay algo relevante
+  - *Escenario BDD:* Los runtimes sin hook demostrado quedan solo con la doctrina
+  - *Escenario BDD:* La doctrina condiciona la regla de `--fetch` al autofetch
 
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
@@ -1198,6 +1243,10 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Re-registrar conserva las preferencias
   - *Escenario BDD:* Desregistrar elimina las preferencias
   - *Escenario BDD:* Un binario anterior ignora las preferencias
+  - *Escenario BDD:* El autofetch está apagado por defecto y la clave está ausente
+  - *Escenario BDD:* El autofetch nunca se lee de `axiom.yaml`
+  - *Escenario BDD:* Proyecto no registrado o hub ilegible dan apagado con aviso
+  - *Escenario BDD:* Hook de sesión y `ensure` no avisan con el hub no resoluble
 - **[RF-HUB-08]** Las Preferencias se Piden al Registrar y se Pueden Editar
   - *Escenario BDD:* Registro interactivo pregunta con valores por defecto
   - *Escenario BDD:* Registro sin terminal no pregunta
@@ -1218,6 +1267,15 @@ Definir formal y deterministamente los requerimientos funcionales, no funcionale
   - *Escenario BDD:* Con monorepo no hay constructor de roles y el rol es `fullstack`
   - *Escenario BDD:* Con multirepo el constructor de roles está disponible
   - *Escenario BDD:* Cambiar de multirepo a monorepo descarta los roles especializados
+- **[RF-HUB-13]** Comando `axiom autofetch` para Activar, Desactivar y Consultar la Preferencia
+  - *Escenario BDD:* `enable` persiste la preferencia en el hub y no toca `axiom.yaml`
+  - *Escenario BDD:* `disable` apaga y retira la clave
+  - *Escenario BDD:* `enable` y `disable` son idempotentes
+  - *Escenario BDD:* `status` no hace red ni escribe
+  - *Escenario BDD:* Registrar un proyecto no pregunta ni enciende el autofetch
+  - *Escenario BDD:* `enable` en un proyecto no registrado se rechaza
+  - *Escenario BDD:* `disable` en un proyecto no registrado no hace nada
+  - *Escenario BDD:* Hub ilegible equivale a apagado con aviso
 
 ### Dominio: `multi-role-fan-out` — Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD
 
