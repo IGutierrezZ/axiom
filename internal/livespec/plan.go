@@ -3,7 +3,6 @@ package livespec
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,19 +54,32 @@ type Integration struct {
 	Reason       string // el motivo del marcador, cuando Impact es ImpactNone
 	Capabilities []CapabilityPlan
 	Context      *ContextReport
+	// Assignments es el mapa de provisional a definitivo con el estado de cada entrada
+	// (REQ-47.6); vacío sin provisionales.
+	Assignments []PlannedEntry
+	// Requirements son los requisitos que las deltas del documento tocan y crean (REQ-47.7).
+	Requirements openspecdoc.Declaration
+	// Duplicates son los identificadores repetidos en la spec viva resultante; los que no
+	// escribe la integración se informan sin bloquear (REQ-47.5).
+	Duplicates []Duplicate
+	// Check dice que la integración se planificó solo para informar (`--check`): no se aplica.
+	Check bool
 
 	loc workspace.Location
+	// docPath y docText son el documento ODD reescrito con el mapa y su traza; docText es
+	// vacío si el documento no cambia.
+	docPath, docText string
 }
 
 // NothingToIntegrate dice si la integración no cambia ningún fichero: el documento no
-// tiene delta o todas sus capacidades ya estaban integradas.
+// tiene delta o todas sus capacidades ya estaban integradas y el documento no cambia.
 func (i Integration) NothingToIntegrate() bool {
 	for _, c := range i.Capabilities {
 		if c.Outcome != OutcomeAlready {
 			return false
 		}
 	}
-	return true
+	return i.docText == ""
 }
 
 // CollisionError es el rechazo de un requisito ADDED cuyo identificador ya existe (REQ-30.4).
@@ -131,13 +143,15 @@ type classified struct {
 }
 
 // PlanIntegration calcula en memoria la integración de cada capacidad del documento
-// sobre <planning home>/specs, sin escribir nada (REQ-30.2). Cada requisito se clasifica
-// contra la especificación canónica (D5): `already` si ya está con el mismo cuerpo,
-// rechazo si un ADDED está con otro cuerpo, `pending` en el resto. Después comprueba los
-// identificadores de los ADDED pendientes contra el registro (REQ-30.4) y compone solo
-// lo pendiente con la composición del archivado SDD. Antes comprueba la obligación de
-// impacto de los bugs (CheckImpact) y, al final, el contexto técnico de la rama (REQ-30.6).
-// El primer error rechaza todo el plan.
+// sobre <planning home>/specs, sin escribir nada (REQ-30.2). Antes comprueba la obligación
+// de impacto de los bugs (CheckImpact). Después valida y asigna los identificadores de todas
+// las capacidades con el plan único (PlanIDs: provisionales, traza del documento,
+// colisiones, REQ-30.4), sustituye el mapa en las deltas, clasifica cada requisito contra
+// la especificación canónica (D5: `already` si ya está con el mismo cuerpo, rechazo si un
+// ADDED está con otro cuerpo, `pending` en el resto), compone solo lo pendiente con la
+// composición del archivado SDD, comprueba los duplicados entre capacidades (REQ-47.5),
+// reescribe el documento con el mapa y su traza y, al final, comprueba el contexto técnico
+// de la rama (REQ-30.6). El primer error rechaza todo el plan.
 func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Integration, error) {
 	if err := CheckImpact(doc); err != nil {
 		return Integration{}, err
@@ -148,25 +162,87 @@ func PlanIntegration(loc workspace.Location, doc FeatureDoc, reg *Registry) (Int
 	}
 
 	pattern := reg.Pattern()
-	items := make([]classified, 0, len(doc.Capabilities))
+	docRel := oddDocRel(doc.Feature)
+	var trace Trace
+	var citations []Citation
+	if doc.text != "" {
+		var err error
+		if trace, _, err = ExtractODDTrace(doc.text, docRel); err != nil {
+			return Integration{}, err
+		}
+		if citations, err = docCitations(doc, docRel); err != nil {
+			return Integration{}, err
+		}
+	}
+	sources := make([]CapabilitySource, 0, len(doc.Capabilities))
 	for _, c := range doc.Capabilities {
-		item, err := classify(loc, c, pattern)
+		path, canonical, existed, err := readCanonical(loc, c.Name)
 		if err != nil {
 			return Integration{}, err
 		}
+		source := CapabilitySource{CapabilityDelta: c, File: docRel, Path: path, Canonical: canonical, Existed: existed}
+		if c.TextLine > 0 {
+			source.LineBase = c.TextLine - 1
+		}
+		sources = append(sources, source)
+		declared := openspecdoc.Declared(c.Name, c.Delta, pattern)
+		plan.Requirements.Modifies = append(plan.Requirements.Modifies, declared.Modifies...)
+		plan.Requirements.Creates = append(plan.Requirements.Creates, declared.Creates...)
+	}
+	idPlan, err := PlanIDs(IDPlanInput{Pattern: pattern, Capabilities: sources, Registry: reg, Trace: trace, Citations: citations})
+	if err != nil {
+		return Integration{}, err
+	}
+	plan.Assignments = idPlan.Entries
+
+	items := make([]classified, 0, len(sources))
+	for _, s := range sources {
+		cd, canonical := s.CapabilityDelta, s.Canonical
+		if idPlan.Map.Count() > 0 {
+			cd.Text = idPlan.Map.Substitute(cd.Text)
+			cd.Delta = openspecdoc.ParseDelta(cd.Text)
+		}
+		if edited, ok := idPlan.Canonical[s.Name]; ok {
+			canonical = edited
+		}
+		item, err := classifyIn(cd, s.Path, s.Existed, canonical, pattern)
+		if err != nil {
+			return Integration{}, err
+		}
+		dropTracedAdded(&item, idPlan.Entries, pattern)
 		items = append(items, item)
 	}
-
-	if err := checkIdentifiers(doc.Feature, items, reg); err != nil {
+	if err := checkAddedWithoutID(doc.Feature, items, pattern); err != nil {
 		return Integration{}, err
 	}
 
+	resulting := map[string]string{}
 	for _, item := range items {
 		step, err := compose(doc.Feature, item, pattern)
 		if err != nil {
 			return Integration{}, err
 		}
+		if edited, ok := idPlan.Canonical[item.cap.Name]; ok && step.Outcome == OutcomeAlready {
+			// Solo cambió el número de un bloque propio de la spec viva (reasignación).
+			step.Outcome, step.Content = OutcomeComposed, edited
+		}
+		if step.Outcome != OutcomeAlready {
+			resulting[step.Name] = step.Content
+		}
 		plan.Capabilities = append(plan.Capabilities, step)
+	}
+	if plan.Duplicates, err = checkDuplicates(reg, resulting, idPlan.Written); err != nil {
+		return Integration{}, err
+	}
+
+	if doc.text != "" {
+		rewritten, err := rewriteODDDoc(doc, idPlan, pattern)
+		if err != nil {
+			return Integration{}, err
+		}
+		if rewritten != doc.text {
+			plan.docPath, plan.docText = filepath.Join(loc.WorkspaceRoot, "odd", "tasks", doc.Feature+".md"), rewritten
+		}
 	}
 
 	// La comprobación del contexto es lo último que se calcula: Apply es la única
@@ -194,24 +270,10 @@ func specPath(loc workspace.Location, capability string) string {
 	return filepath.Join(loc.PlanningHome, "specs", capability, "spec.md")
 }
 
-// classify separa lo pendiente de lo ya integrado en la delta de una capacidad. MODIFIED y
+// classifyIn separa lo pendiente de lo ya integrado en la delta de una capacidad. MODIFIED y
 // REMOVED se emparejan con la canónica como el compositor, por identificador con vuelta al
 // título exacto (REQ-30.22), de modo que la segunda ejecución de una integración es
-// `already`; ADDED y RENAMED siguen por título exacto.
-func classify(loc workspace.Location, c CapabilityDelta, pattern reqid.Pattern) (classified, error) {
-	path := specPath(loc, c.Name)
-	data, err := os.ReadFile(path)
-	switch {
-	case err == nil:
-		return classifyIn(c, path, true, string(data), pattern)
-	case os.IsNotExist(err):
-		return classifyIn(c, path, false, "", pattern)
-	default:
-		return classified{}, &CapabilityError{Capability: c.Name, Err: fmt.Errorf("no se puede leer %s: %w; comprueba los permisos del fichero y vuelve a ejecutar `axiom archive integrate --odd <feature>`", path, err)}
-	}
-}
-
-// classifyIn es la clasificación de classify sobre una especificación canónica ya leída,
+// `already`; ADDED y RENAMED siguen por título exacto. Opera sobre una especificación canónica ya leída,
 // compartida por el carril ODD y el SDD (D3 paso 2.e). previous es el texto de la canónica
 // y existed dice si la capacidad existe; path solo sirve para los motivos.
 func classifyIn(c CapabilityDelta, path string, existed bool, previous string, pattern reqid.Pattern) (classified, error) {
@@ -275,47 +337,6 @@ func classifyIn(c CapabilityDelta, path string, existed bool, previous string, p
 		item.pending.Renamed = append(item.pending.Renamed, r)
 	}
 	return item, nil
-}
-
-// checkIdentifiers comprueba los ADDED pendientes: cada uno lleva un identificador válido
-// según el patrón del registro (con el defecto, `(REQ-n.m)`), no existe en el registro y no
-// se repite en otra capacidad del documento.
-func checkIdentifiers(feature string, items []classified, reg *Registry) error {
-	pattern := reg.Pattern()
-	taken := map[string]bool{}
-	for _, item := range items {
-		for _, r := range item.pending.Added {
-			if id := pattern.InTitle(r.Name); id != "" {
-				taken[id] = true
-			}
-		}
-	}
-	firstSeen := map[string]string{}
-	for _, item := range items {
-		for _, r := range item.pending.Added {
-			id := pattern.InTitle(r.Name)
-			if id == "" {
-				return &DocError{Feature: feature, Problems: []Problem{{
-					Code:    "added_without_id",
-					Line:    item.cap.Line + r.Line,
-					Subject: r.Name,
-					Message: fmt.Sprintf("el requisito ADDED %q de la capacidad %s no lleva un identificador `(%s)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: %s (%s)`%s", r.Name, item.cap.Name, pattern.Compact(), r.Name, pattern.Compact(), patternHint(pattern)),
-				}}}
-			}
-			if refs := reg.Lookup(id); len(refs) > 0 {
-				return &CollisionError{ID: id, Where: refs[0].Where(), NextFree: nextFree(reg, id, taken)}
-			}
-			if other, dup := firstSeen[id]; dup {
-				return &CollisionError{
-					ID:       id,
-					Where:    fmt.Sprintf("el propio documento, en las capacidades %s y %s", other, item.cap.Name),
-					NextFree: nextFree(reg, id, taken),
-				}
-			}
-			firstSeen[id] = item.cap.Name
-		}
-	}
-	return nil
 }
 
 // patternHint nombra la plantilla del proyecto en los motivos cuando no es la de por

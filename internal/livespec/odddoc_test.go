@@ -315,6 +315,7 @@ func TestParseFeatureDocValidatesTheSameWithTheIDTraceSection(t *testing.T) {
 
 	want := parseOK(t, plain)
 	got := parseOK(t, plain+trace)
+	want.text, got.text = "", "" // el texto crudo difiere por la traza, a propósito
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("la traza cambió el resultado:\nsin traza %+v\ncon traza %+v", want, got)
 	}

@@ -163,22 +163,22 @@ Depende de: U1 a U3. Paquete: `internal/livespec`.
 
 Depende de: U4. Paquetes: `internal/livespec`, `internal/cli/archive_integrate.go`.
 
-- [ ] 5.1 RED: en `internal/livespec/odddoc_test.go`, el documento ODD se reescribe en el mismo conjunto atómico: provisional → definitivo en la valla `openspec` de `## Spec viva` y en líneas `Cubre:` fuera de vallas; el resto del documento no cambia salvo `## Identificadores asignados` (un único bloque `yaml`); un provisional citado en el resto del documento se valida pero no se reescribe.
+- [x] 5.1 RED: en `internal/livespec/odddoc_test.go`, el documento ODD se reescribe en el mismo conjunto atómico: provisional → definitivo en la valla `openspec` de `## Spec viva` y en líneas `Cubre:` fuera de vallas; el resto del documento no cambia salvo `## Identificadores asignados` (un único bloque `yaml`); un provisional citado en el resto del documento se valida pero no se reescribe.
   Cubre: REQ-30.2, REQ-47.4, REQ-47.6
   Verificación: `go test ./internal/livespec -run 'ODDDoc|Rewrite'`
-- [ ] 5.2 GREEN: modificar `internal/livespec/odddoc.go` con la reescritura del documento y la sección de traza, y el orquestador `PlanIntegration` con provisionales sobre el plan único.
+- [x] 5.2 GREEN: modificar `internal/livespec/odddoc.go` con la reescritura del documento y la sección de traza, y el orquestador `PlanIntegration` con provisionales sobre el plan único.
   Cubre: REQ-30.2, REQ-30.3, REQ-30.4
   Verificación: `go test ./internal/livespec -run 'ODD|PlanIntegration'`
-- [ ] 5.3 RED: reintegración de dos ramas concurrentes con números distintos en el carril ODD: dos documentos con un ADDED provisional en la misma capacidad se integran uno tras otro y reciben números distintos; tras un rebase simulado en el que la base ocupó el definitivo con otro cuerpo, la reejecución reasigna con `previous`; documento ya integrado devuelve `kept` y `nothingToIntegrate`.
+- [x] 5.3 RED: reintegración de dos ramas concurrentes con números distintos en el carril ODD: dos documentos con un ADDED provisional en la misma capacidad se integran uno tras otro y reciben números distintos; tras un rebase simulado en el que la base ocupó el definitivo con otro cuerpo, la reejecución reasigna con `previous`; documento ya integrado devuelve `kept` y `nothingToIntegrate`.
   Cubre: REQ-30.3, REQ-47.5
   Verificación: `go test ./internal/cli -run 'ArchiveIntegrate.*(Concurrent|Rebase|Idempot)'`
-- [ ] 5.4 RED: `--check` de solo lectura (D4b): el hash del árbol no cambia, `INDEX.md` intacto, mismo motivo de rechazo que la ejecución real (contexto incluido, REQ-30.6), JSON `axiom.odd-integration/v1` con `check: true`, `requirements {modifies, creates}` y `assignments` con estado `assigned|kept|reassigned`; sobre un documento ya integrado código `0` y todas las entradas `kept`.
+- [x] 5.4 RED: `--check` de solo lectura (D4b): el hash del árbol no cambia, `INDEX.md` intacto, mismo motivo de rechazo que la ejecución real (contexto incluido, REQ-30.6), JSON `axiom.odd-integration/v1` con `check: true`, `requirements {modifies, creates}` y `assignments` con estado `assigned|kept|reassigned`; sobre un documento ya integrado código `0` y todas las entradas `kept`.
   Cubre: REQ-47.7
   Verificación: `go test ./internal/cli -run 'ArchiveIntegrate.*Check'`
-- [ ] 5.5 GREEN: modificar `internal/cli/archive_integrate.go` (bandera `--check`, recorrido completo salvo `guardODDWriter` y `plan.Apply()`, ayuda y texto) y `internal/livespec/report.go` (`check`, `assignments`, `requirements`, `duplicates`); conservar `added_without_id` para un ADDED sin definitivo ni provisional, con un texto que sugiere el provisional. Actualizar la prueba de «el documento ODD no se modifica» a la nueva garantía de REQ-30.2.
+- [x] 5.5 GREEN: modificar `internal/cli/archive_integrate.go` (bandera `--check`, recorrido completo salvo `guardODDWriter` y `plan.Apply()`, ayuda y texto) y `internal/livespec/report.go` (`check`, `assignments`, `requirements`, `duplicates`); conservar `added_without_id` para un ADDED sin definitivo ni provisional, con un texto que sugiere el provisional. Actualizar la prueba de «el documento ODD no se modifica» a la nueva garantía de REQ-30.2.
   Cubre: REQ-47.7, REQ-30.2, REQ-30.4
   Verificación: `go test ./internal/cli -run 'ArchiveIntegrate'`
-- [ ] 5.6 Cierre de U5: `go vet ./internal/livespec/... ./internal/cli` y commit `feat(odd): asignar el número al integrar, reescribir el documento y añadir archive integrate --check`.
+- [x] 5.6 Cierre de U5: `go vet ./internal/livespec/... ./internal/cli` y commit `feat(odd): asignar el número al integrar, reescribir el documento y añadir archive integrate --check`.
   Cubre: REQ-47.7, REQ-30.2, REQ-30.3, REQ-30.4
   Verificación: `go test ./internal/livespec/...` y `go test ./internal/cli -run 'ArchiveIntegrate'`
 

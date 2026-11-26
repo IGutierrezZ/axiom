@@ -138,6 +138,10 @@ func (i Integration) Apply() ([]string, error) {
 			files = append(files, fileWrite{Path: c.Path, Content: []byte(c.Content), Name: c.Name})
 		}
 	}
+	if i.docText != "" {
+		// El documento ODD reescrito va en el mismo conjunto atómico, el último (REQ-30.2).
+		files = append(files, fileWrite{Path: i.docPath, Content: []byte(i.docText), Name: "documento ODD " + i.Feature})
+	}
 	return writeSet(files, writeOptions{
 		Retry: "axiom archive integrate --odd " + i.Feature,
 		Extra: func() ([]string, func() []string, error) {

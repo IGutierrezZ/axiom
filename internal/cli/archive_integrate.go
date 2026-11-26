@@ -25,12 +25,14 @@ import (
 // consulta la guarda A en el carril ODD, lee odd/tasks/<feature>.md y entrega todo a
 // livespec, que es dueño de cada decisión: analiza el documento, comprueba los
 // identificadores, compone cada delta sobre openspec/specs/ en memoria y las escribe
-// todas o ninguna. No tiene compuertas, no crea artefactos SDD y no modifica el
-// documento ODD.
+// todas o ninguna. No tiene compuertas y no crea artefactos SDD. Cuando el documento lleva
+// identificadores provisionales, asigna el número y reescribe el propio documento dentro
+// del mismo conjunto atómico (REQ-30.2); sin provisionales no lo modifica.
 //
 // El orden de rechazos es configuración (incluidos `baseline:` residual e ISO), rama, documento, secciones, impacto,
 // identificadores, composición y contexto técnico; la primera escritura ocurre tras la
-// última comprobación.
+// última comprobación. Con `--check` (REQ-47.7) recorre exactamente la misma secuencia
+// salvo la guarda de rama y la escritura: no escribe nada, ni el índice.
 func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	if hasGovernanceHelpFlag(args) {
 		return renderArchiveIntegrateHelp(stdout)
@@ -65,8 +67,11 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 	}
 	command := oddIntegrateCommandLine(parsed.feature, loc.WorkspaceRoot)
 
-	if err := guardODDWriter(loc.WorkspaceRoot, parsed.feature, "archive integrate --odd"); err != nil {
-		return err
+	// `--check` solo lee: la guarda de rama existe para proteger al escritor.
+	if !parsed.check {
+		if err := guardODDWriter(loc.WorkspaceRoot, parsed.feature, "archive integrate --odd"); err != nil {
+			return err
+		}
 	}
 
 	docPath := filepath.Join(loc.WorkspaceRoot, "odd", "tasks", parsed.feature+".md")
@@ -93,9 +98,12 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 		return fmt.Errorf("archive integrate: %w; corrige el documento o la spec viva y vuelve a ejecutar `%s`; no se ha escrito nada", err, command)
 	}
 
-	written, err := plan.Apply()
-	if err != nil {
-		return fmt.Errorf("archive integrate: %w", err)
+	plan.Check = parsed.check
+	var written []string
+	if !parsed.check {
+		if written, err = plan.Apply(); err != nil {
+			return fmt.Errorf("archive integrate: %w", err)
+		}
 	}
 	report := plan.Report(written)
 	if parsed.asJSON {
@@ -107,17 +115,19 @@ func RunArchiveIntegrate(args []string, stdout io.Writer) error {
 
 func renderArchiveIntegrateHelp(stdout io.Writer) error {
 	lines := []string{
-		"Uso: axiom archive integrate --odd <feature> [--path <ruta>] [--json]",
+		"Uso: axiom archive integrate --odd <feature> [--path <ruta>] [--check] [--json]",
 		"  Integra en la spec viva (openspec/specs/) la sección `## Spec viva` del documento odd/tasks/<feature>.md de la rama actual,",
 		"  con la misma composición que el archivado SDD. Cada capacidad lleva su delta en un bloque ```openspec bajo `### Capacidad: <dominio>`.",
 		"  Todo o nada: valida y compone todas las capacidades en memoria antes de escribir ninguna. Es idempotente: repetirla no cambia nada.",
 		fmt.Sprintf("  Un `### Requirement:` ADDED lleva su `(%s)` en el título; si el identificador ya existe en openspec/specs/ o en la delta de un cambio activo, se rechaza con el siguiente número libre.", reqid.Default().Compact()),
 		"  Un documento con `Tipo: bug` declara su impacto: una `## Spec viva` con delta, o una sección `## Impacto en la spec` con la línea exacta `Sin impacto en la spec` y una línea `Motivo: <una línea>`.",
 		"  Con `technical_context` en axiom.yaml, rechaza que la rama modifique rutas de referencia (modo reference) o no se pueda determinar su base, e informa de las rutas mantenidas que tocó.",
-		"  Escribe solo openspec/specs/ y, si ya existe, openspec/INDEX.md; no modifica el documento ODD ni crea artefactos SDD. Sale con código distinto de cero ante cualquier rechazo, sin escribir nada.",
+		"  Un ADDED puede llevar un identificador provisional `(prov:<serie>:<ordinal>)` en lugar del número: la orden asigna el siguiente número libre de la serie y reescribe el propio documento ODD (la valla `openspec` de `## Spec viva` y sus líneas `Cubre:`) en el mismo conjunto atómico, y deja el mapa en la sección `## Identificadores asignados` y en el informe.",
+		"  Escribe solo openspec/specs/, si ya existe openspec/INDEX.md y el documento ODD cuando asigna provisionales (sin provisionales no lo modifica); no crea artefactos SDD. Sale con código distinto de cero ante cualquier rechazo, sin escribir nada.",
 		"  Solo en la rama de la feature (guarda de rama del carril ODD). En multirepo opera sobre el repositorio de specs.",
 		"  --odd <feature>  Nombre de la feature: el documento es odd/tasks/<feature>.md (obligatorio).",
 		"  --path <ruta>    Directorio desde el que resolver el workspaceRoot (por defecto, el directorio actual). --cwd es un alias.",
+		"  --check          Solo lectura: valida y planifica como la integración real (contexto técnico incluido), sin guarda de rama y sin escribir nada; el informe añade `check`, `requirements` (modifies y creates) y `assignments` (assigned, kept o reassigned).",
 		"  --json           Emite el informe axiom.odd-integration/v1.",
 	}
 	_, err := io.WriteString(stdout, strings.Join(lines, "\n")+"\n")
@@ -128,6 +138,7 @@ type oddIntegrateArgs struct {
 	feature string
 	path    string
 	asJSON  bool
+	check   bool
 }
 
 func oddIntegrateCommandLine(feature, root string) string {
@@ -141,6 +152,7 @@ func parseODDIntegrateArgs(args []string) (oddIntegrateArgs, error) {
 	path := flags.String("path", "", "Directorio desde el que resolver el workspaceRoot (por defecto, el directorio actual)")
 	cwd := flags.String("cwd", "", "Alias de --path")
 	asJSON := flags.Bool("json", false, "Emite el informe en JSON")
+	check := flags.Bool("check", false, "Solo lectura: planifica sin escribir nada")
 	if err := flags.Parse(args); err != nil {
 		return oddIntegrateArgs{}, fmt.Errorf("archive integrate: %w; ejecuta `axiom archive integrate --help`", err)
 	}
@@ -154,7 +166,7 @@ func parseODDIntegrateArgs(args []string) (oddIntegrateArgs, error) {
 	if strings.TrimSpace(feature) != feature || feature == "." || feature == ".." || strings.ContainsAny(feature, `/\:`) {
 		return oddIntegrateArgs{}, fmt.Errorf("archive integrate: --odd %q no es un nombre de feature válido (sin rutas ni separadores); indica el nombre del fichero de odd/tasks sin la extensión y ejecuta `axiom archive integrate --odd <feature>`", feature)
 	}
-	parsed := oddIntegrateArgs{feature: feature, path: *path, asJSON: *asJSON}
+	parsed := oddIntegrateArgs{feature: feature, path: *path, asJSON: *asJSON, check: *check}
 	switch {
 	case *path != "" && *cwd != "" && !sameContextPath(*path, *cwd):
 		return oddIntegrateArgs{}, fmt.Errorf("archive integrate: --path (%s) y --cwd (%s) apuntan a rutas distintas; --cwd es un alias de --path: usa solo --path en `axiom archive integrate --odd %s --path <ruta>`", *path, *cwd, pathquote.ShellWord(feature))
@@ -197,6 +209,19 @@ func oddIntegrateReportText(report livespec.Report) string {
 		for _, c := range report.Capabilities {
 			fmt.Fprintf(&b, "  - %s: %s (%s)\n", c.Name, c.Outcome, c.Path)
 		}
+	}
+	if len(report.Assignments) > 0 {
+		b.WriteString("\nIdentificadores asignados:\n")
+		for _, a := range report.Assignments {
+			fmt.Fprintf(&b, "  - %s → %s (%s, %s)", a.Provisional, a.Definitive, a.Capability, a.State)
+			if len(a.Previous) > 0 {
+				fmt.Fprintf(&b, ", antes %s", strings.Join(a.Previous, ", "))
+			}
+			b.WriteString("\n")
+		}
+	}
+	if report.Check {
+		b.WriteString("\nSolo lectura (--check): no se ha escrito nada.\n")
 	}
 	if len(report.Written) > 0 {
 		b.WriteString("\nEscrito:\n")

@@ -59,6 +59,10 @@ type FeatureDoc struct {
 	Impact *Impact
 	// SpecSection dice si el documento tiene la sección `## Spec viva`, aunque esté vacía.
 	SpecSection bool
+
+	// text es el documento tal como se leyó, para reescribirlo al asignar identificadores
+	// (REQ-30.2); un FeatureDoc que no sale de ParseFeatureDoc no lo tiene y no se reescribe.
+	text string
 }
 
 // HasDelta dice si el documento aporta alguna capacidad con delta.
@@ -72,6 +76,9 @@ type CapabilityDelta struct {
 	Delta openspecdoc.Delta
 	// Text es el contenido de la valla `openspec`, sin las vallas, con LF.
 	Text string
+	// TextLine es la línea (desde 1) del documento en la que empieza Text, la siguiente a la
+	// de apertura de la valla.
+	TextLine int
 }
 
 // Impact es la sección `## Impacto en la spec` y el resultado de leer su marcador.
@@ -182,7 +189,7 @@ func splitSections(lines []docLine) (header []docLine, sections []docSection) {
 // documento. No decide si un bug sin delta ni marcador se rechaza (eso es CheckImpact)
 // ni mira la spec viva del proyecto (eso es PlanIntegration).
 func ParseFeatureDoc(feature string, data []byte) (FeatureDoc, error) {
-	doc := FeatureDoc{Feature: feature, Kind: KindIncrement}
+	doc := FeatureDoc{Feature: feature, Kind: KindIncrement, text: string(data)}
 	var problems []Problem
 	add := func(code string, line int, subject, message string) {
 		problems = append(problems, Problem{Code: code, Line: line, Subject: subject, Message: message})
@@ -327,7 +334,7 @@ func parseCapabilities(section docSection, add func(code string, line int, subje
 		if checkbox {
 			continue
 		}
-		capabilities = append(capabilities, CapabilityDelta{Name: g.name, Line: g.line, Delta: delta, Text: text.String()})
+		capabilities = append(capabilities, CapabilityDelta{Name: g.name, Line: g.line, Delta: delta, Text: text.String(), TextLine: blocks[0][0].n})
 	}
 	return capabilities
 }

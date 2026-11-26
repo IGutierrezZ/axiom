@@ -143,7 +143,7 @@ func TestPlanIntegrationAddedWithoutIDMessageIsUnchangedWithTheDefault(t *testin
 	if !errors.As(err, &docErr) {
 		t.Fatalf("error = %v", err)
 	}
-	want := "el requisito ADDED \"Alta\" de la capacidad facturacion no lleva un identificador `(REQ-n.m)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: Alta (REQ-n.m)`"
+	want := "el requisito ADDED \"Alta\" de la capacidad facturacion no lleva un identificador `(REQ-n.m)` en el título; añade el siguiente número libre de la serie, p. ej. `### Requirement: Alta (REQ-n.m)`, o un provisional `(prov:<serie>:<ordinal>)` cuyo número asigna la integración"
 	if got := docErr.Problems[0].Message; got != want {
 		t.Errorf("mensaje = %q\nquería %q", got, want)
 	}
