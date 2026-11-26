@@ -98,22 +98,22 @@ Depende de: U1 y U2. Paquetes: `internal/branch`, `internal/branch/engine`, `int
 
 Depende de: U3. Paquetes: `internal/sddstatus`, `internal/cli` (solo prueba).
 
-- [ ] 4.1 RED: en `internal/sddstatus/publication_test.go`, `publicationDue` en tabla: `checkpointed` con `spec` aprobada (sí); solo `integration` aprobada (no); `continuous` sin `auto` (no); `auto` con `specs` en `done` y 0 completadas (sí); `completed > 0` (no); `verifyReport` en `done` (no); archivado `continuous` con `auto` (sí, con `Archive`); archivado `checkpointed` (no); almacén `engram` o `none` (no); sin cambio seleccionado (no); sin motor (no); sin kickoff (no).
+- [x] 4.1 RED: en `internal/sddstatus/publication_test.go`, `publicationDue` en tabla: `checkpointed` con `spec` aprobada (sí); solo `integration` aprobada (no); `continuous` sin `auto` (no); `auto` con `specs` en `done` y 0 completadas (sí); `completed > 0` (no); `verifyReport` en `done` (no); archivado `continuous` con `auto` (sí, con `Archive`); archivado `checkpointed` (no); almacén `engram` o `none` (no); sin cambio seleccionado (no); sin motor (no); sin kickoff (no).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/sddstatus/... -run 'Publication'`
-- [ ] 4.2 RED: `projectPublication`, una fila por estado de la tabla de precedencia: `unavailable` (negativa y `git_failed`), `unavailable` con `unpublished_range_unknown`, `pending` con `docs_uncommitted` y motivos adicionales, `code_unpublished` con `range_too_big`, `code_unpublished` con `code_commits` y `codeCommits`, `pending` solo con `branch_ahead`, sin `origin` (ausente), sin nada que confirmar ni subir (ausente, también sin `refs/remotes/origin/<rama>`); `pushCommand` exacto (`git -C <raíz> push origin <b>:<b>`) con una ruta con espacios; sin `invocation` en `code_unpublished`.
+- [x] 4.2 RED: `projectPublication`, una fila por estado de la tabla de precedencia: `unavailable` (negativa y `git_failed`), `unavailable` con `unpublished_range_unknown`, `pending` con `docs_uncommitted` y motivos adicionales, `code_unpublished` con `range_too_big`, `code_unpublished` con `code_commits` y `codeCommits`, `pending` solo con `branch_ahead`, sin `origin` (ausente), sin nada que confirmar ni subir (ausente, también sin `refs/remotes/origin/<rama>`); `pushCommand` exacto (`git -C <raíz> push origin <b>:<b>`) con una ruta con espacios; sin `invocation` en `code_unpublished`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/sddstatus/... -run 'Publication'`
-- [ ] 4.3 GREEN: crear `internal/sddstatus/publication.go` (`PublicationProjection`, `decoratePublication`, `publicationDue`, `projectPublication`, `publicationPushCommand`); extraer `gatePublicationFrom` de `resolveGatePublication` en `governance_handoff.go` y usarla en ambos sitios (en el archivado, `branch.PublishArchiveInvocation`); campo `Publication *PublicationProjection` con `omitempty` tras `GateQuestion` en `status.go` y `status_v2.go`; llamada a `decoratePublication` en `Resolve` tras `decorateRequirements`.
+- [x] 4.3 GREEN: crear `internal/sddstatus/publication.go` (`PublicationProjection`, `decoratePublication`, `publicationDue`, `projectPublication`, `publicationPushCommand`); extraer `gatePublicationFrom` de `resolveGatePublication` en `governance_handoff.go` y usarla en ambos sitios (en el archivado, `branch.PublishArchiveInvocation`); campo `Publication *PublicationProjection` con `omitempty` tras `GateQuestion` en `status.go` y `status_v2.go`; llamada a `decoratePublication` en `Resolve` tras `decorateRequirements`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/sddstatus/... -run 'Publication|Gate|Status'`
-- [ ] 4.4 RED y GREEN: integración con el motor real: `checkpointed` con `spec` aprobada y un documento sucio da `pending` con `invocation` byte a byte igual a `gateQuestion.publication.invocation`, la clave en la raíz y no en `governance`; `nextRecommended`, dependencias y motivos de bloqueo idénticos con y sin el campo; tras un `publish` correcto no hay clave; con estado ausente el JSON es byte-idéntico al anterior (la clave `"publication"` no aparece).
+- [x] 4.4 RED y GREEN: integración con el motor real: `checkpointed` con `spec` aprobada y un documento sucio da `pending` con `invocation` byte a byte igual a `gateQuestion.publication.invocation`, la clave en la raíz y no en `governance`; `nextRecommended`, dependencias y motivos de bloqueo idénticos con y sin el campo; tras un `publish` correcto no hay clave; con estado ausente el JSON es byte-idéntico al anterior (la clave `"publication"` no aparece).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/sddstatus/... -run 'Publication'`
-- [ ] 4.5 RED y GREEN: extender `TestPublishIsolationNoVerbButPublishPushesCommitsOrFetches` en `internal/cli`: `sdd status --json` proyecta `pending` y no ejecuta `push`, `commit` ni `fetch`; `gate record` sigue sin ejecutar git (REQ-26.5).
+- [x] 4.5 RED y GREEN: extender `TestPublishIsolationNoVerbButPublishPushesCommitsOrFetches` en `internal/cli`: `sdd status --json` proyecta `pending` y no ejecuta `push`, `commit` ni `fetch`; `gate record` sigue sin ejecutar git (REQ-26.5).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/cli -run 'TestPublishIsolation'`
-- [ ] 4.6 Cierre de U4: `go vet ./internal/sddstatus/... ./internal/cli` y commit `feat(sddstatus): proyectar publication pendiente en el status del cambio`.
+- [x] 4.6 Cierre de U4: `go vet ./internal/sddstatus/... ./internal/cli` y commit `feat(sddstatus): proyectar publication pendiente en el status del cambio`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/sddstatus/... -run 'Publication|Gate|Status'` y `go test ./internal/cli -run 'TestPublishIsolation'`
 

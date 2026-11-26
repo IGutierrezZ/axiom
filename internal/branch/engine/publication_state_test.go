@@ -2,15 +2,19 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/gitcli"
+	"github.com/IGutierrezZ/axiom/v3/internal/branch/registry"
 )
 
 // Pruebas de `Engine.PublicationState` (REQ-27.18): con git real, entorno aislado y remotos
@@ -287,4 +291,25 @@ func TestPublicationStateRefusesLikePublicationTarget(t *testing.T) {
 	repo := handOffMonorepo(t, "core")
 	_, refusal := publicationState(t, branch.PublicationRequest{CWD: repo, Change: "x"})
 	wantPublicationRefusal(t, refusal, branch.CodeIntegrationBranch)
+}
+
+// remoteConfigFailure es el lector real de git con la lectura de la configuración del remoto rota.
+type remoteConfigFailure struct{ *gitcli.Git }
+
+func (remoteConfigFailure) RemoteConfigured(context.Context, string, string) (bool, error) {
+	return false, errors.New("config ilegible")
+}
+
+// Si falla la lectura del remoto, el estado no se inventa: es el rechazo `git_failed`, que el
+// status proyecta como `unavailable`.
+func TestPublicationStateFailedRemoteReadIsGitFailed(t *testing.T) {
+	t.Parallel()
+	repo := handOffMonorepo(t, "core")
+	worktree := plannedWorktree(t, repo, "x", filepath.Base(repo))
+	real := gitcli.New()
+	failing := &Engine{git: remoteConfigFailure{real}, writer: real, registry: registry.New(), prefs: hubPrefs{}, goos: runtime.GOOS}
+
+	_, refusal := failing.PublicationState(context.Background(), branch.PublicationRequest{CWD: worktree, Change: "x"})
+
+	wantPublicationRefusal(t, refusal, branch.CodeGitFailed)
 }

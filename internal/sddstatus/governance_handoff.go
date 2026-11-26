@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
-	"github.com/IGutierrezZ/axiom/v3/internal/branch/engine"
 	"github.com/IGutierrezZ/axiom/v3/internal/consentenvelope"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
@@ -95,10 +94,7 @@ const publicationKeepsApprovalNote = "A refused publication keeps the approval. 
 // engine is wired (tests that disable the branch guard): the question then names no remote or
 // branch and its choices stay the gate record ones.
 func resolveGatePublication(change, workspaceRoot string) (*GatePublication, string) {
-	eng := engine.Default()
-	if branchEngine != nil {
-		eng = branchEngine()
-	}
+	eng := publicationEngine()
 	if eng == nil {
 		return nil, ""
 	}
@@ -106,12 +102,19 @@ func resolveGatePublication(change, workspaceRoot string) (*GatePublication, str
 	if refusal != nil {
 		return nil, string(refusal.Code)
 	}
+	return gatePublicationFrom(target, workspaceRoot, change), ""
+}
+
+// gatePublicationFrom shapes the remote, branch, pull request target and invocation of a resolved
+// publication target. It is the only place that does, so the gate question and the `publication`
+// field of the status name exactly the same invocation.
+func gatePublicationFrom(target branch.PublicationTarget, workspaceRoot, change string) *GatePublication {
 	return &GatePublication{
 		Remote:     branch.PublishRemote,
 		Branch:     target.Branch,
 		PRTarget:   target.PRTarget,
 		Invocation: branch.PublishInvocation(workspaceRoot, change, target.Branch),
-	}, ""
+	}
 }
 
 // publicationBranchLabel names the branch that is pushed: the one the target resolved, or the change
