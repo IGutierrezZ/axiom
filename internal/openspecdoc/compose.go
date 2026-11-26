@@ -33,6 +33,47 @@ func (e *UnappliedDeltaError) Error() string {
 	return fmt.Sprintf("sdd-archive-compose: unapplied %s delta for requirement %q: %s", e.Section, e.Requirement, e.Reason)
 }
 
+// UnknownRequirementIDError es el rechazo de un MODIFIED, un REMOVED o el nombre antiguo de un
+// RENAMED cuyo nombre lleva un identificador válido que ningún requisito de la canónica
+// lleva (REQ-47.3). El paquete no conoce la capacidad: la añade quien la sabe (livespec o
+// la orden `archive-compose`, por la carpeta).
+type UnknownRequirementIDError struct {
+	Section     string
+	Requirement string
+	ID          string
+
+	// name es el nombre que se buscó en la canónica (el antiguo, en un RENAMED).
+	name string
+}
+
+func (e *UnknownRequirementIDError) Error() string { return e.Unwrap().Error() }
+
+// Unwrap devuelve el *UnappliedDeltaError equivalente, de modo que quien ya lo trata con
+// errors.As siga viéndolo.
+func (e *UnknownRequirementIDError) Unwrap() error {
+	return &UnappliedDeltaError{Section: e.Section, Requirement: e.Requirement, Reason: fmt.Sprintf("no canonical requirement named %q", e.searched())}
+}
+
+func (e *UnknownRequirementIDError) searched() string {
+	if e.name != "" {
+		return e.name
+	}
+	return e.Requirement
+}
+
+// ProvisionalIDError es el rechazo de un requisito cuyo nombre o cuerpo contiene un
+// identificador provisional: la composición produce la spec viva, y un provisional nunca
+// llega a ella (REQ-47.1, REQ-30.22).
+type ProvisionalIDError struct {
+	Section     string
+	Requirement string
+	Token       string
+}
+
+func (e *ProvisionalIDError) Error() string {
+	return fmt.Sprintf("el requisito %q de %s contiene el identificador provisional %s, que no puede llegar a la spec viva; asigna los números definitivos antes de componer", e.Requirement, e.Section, e.Token)
+}
+
 var openSpecReqHeadingLine = regexp.MustCompile(`(?m)^### Requirement:[ \t]*(.+?)[ \t]*$`)
 var openSpecH2Heading = regexp.MustCompile(`(?m)^## \S`)
 var openSpecDeltaSectionHeading = regexp.MustCompile(`(?m)^## (ADDED|MODIFIED|REMOVED|RENAMED) Requirements[ \t]*$`)
@@ -323,6 +364,19 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		return "", &UnappliedDeltaError{Section: "DELTA", Reason: "delta spec declares no ADDED, MODIFIED, REMOVED, or RENAMED requirements"}
 	}
 
+	// Un provisional en el nombre o el cuerpo de cualquier requisito se rechaza antes de
+	// tocar nada (REQ-30.22). Se mira en el orden en que se aplican las secciones.
+	for _, group := range []struct {
+		section string
+		blocks  []specRequirementBlock
+	}{{"RENAMED", deltaDoc.Renamed}, {"MODIFIED", deltaDoc.Modified}, {"REMOVED", deltaDoc.Removed}, {"ADDED", deltaDoc.Added}} {
+		for _, r := range group.blocks {
+			if spans := reqid.ScanProvisional(r.Text); len(spans) > 0 {
+				return "", &ProvisionalIDError{Section: group.section, Requirement: r.Name, Token: spans[0].Token}
+			}
+		}
+	}
+
 	// segments re-emits the whole document, including non-requirement spans
 	// between requirement blocks, so nothing but a targeted delta edit ever
 	// changes a byte of it.
@@ -338,7 +392,7 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 	// resolve empareja el nombre de una delta con un requisito de la canónica por
 	// identificador, con vuelta al título exacto (REQ-30.22). Devuelve el índice del
 	// segmento y, si no hay emparejamiento, la causa para el rechazo.
-	resolve := func(section, name string) (int, *UnappliedDeltaError) {
+	resolve := func(section, name, display string) (int, error) {
 		var names []string
 		var at []int
 		for i, s := range segments {
@@ -352,9 +406,12 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		case reqid.MatchFound:
 			return at[k], nil
 		case reqid.MatchAmbiguous:
-			return -1, &UnappliedDeltaError{Section: section, Requirement: name, Reason: ambiguousReason(segments, name, opts.IDPattern)}
+			return -1, &UnappliedDeltaError{Section: section, Requirement: display, Reason: ambiguousReason(segments, name, opts.IDPattern)}
 		}
-		return -1, &UnappliedDeltaError{Section: section, Requirement: name, Reason: fmt.Sprintf("no canonical requirement named %q", name)}
+		if id := opts.IDPattern.InTitle(name); id != "" {
+			return -1, &UnknownRequirementIDError{Section: section, Requirement: display, ID: id, name: name}
+		}
+		return -1, &UnappliedDeltaError{Section: section, Requirement: display, Reason: fmt.Sprintf("no canonical requirement named %q", name)}
 	}
 	lastRequirementIndex := func() int {
 		last := -1
@@ -371,10 +428,9 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		if !ok {
 			return "", &UnappliedDeltaError{Section: "RENAMED", Requirement: r.Name, Reason: `heading must state "Old Name → New Name"`}
 		}
-		i, unapplied := resolve("RENAMED", oldName)
-		if unapplied != nil {
-			unapplied.Requirement = r.Name
-			return "", unapplied
+		i, err := resolve("RENAMED", oldName, r.Name)
+		if err != nil {
+			return "", err
 		}
 		if !openSpecReasonNote.MatchString(r.Text) {
 			return "", &UnappliedDeltaError{Section: "RENAMED", Requirement: r.Name, Reason: `missing required "(Reason: ...)" note`}
@@ -387,9 +443,9 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 	}
 
 	for _, r := range deltaDoc.Modified {
-		i, unapplied := resolve("MODIFIED", r.Name)
-		if unapplied != nil {
-			return "", unapplied
+		i, err := resolve("MODIFIED", r.Name, r.Name)
+		if err != nil {
+			return "", err
 		}
 		segments[i].Text = ensureTrailingNewline(r.Text)
 		// El segmento toma el nombre de la delta: las operaciones siguientes de la misma
@@ -408,9 +464,9 @@ func Compose(canonical, delta string, opts ComposeOptions) (string, error) {
 		if !openSpecReasonNote.MatchString(r.Text) {
 			return "", &UnappliedDeltaError{Section: "REMOVED", Requirement: r.Name, Reason: `missing required "(Reason: ...)" note`}
 		}
-		i, unapplied := resolve("REMOVED", r.Name)
-		if unapplied != nil {
-			return "", unapplied
+		i, err := resolve("REMOVED", r.Name, r.Name)
+		if err != nil {
+			return "", err
 		}
 		if opts.SupersedeRemoved {
 			// La anotación usa el nombre del segmento de la canónica, que puede diferir del

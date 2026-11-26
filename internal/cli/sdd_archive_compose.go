@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -144,7 +145,7 @@ func runSDDArchiveComposeWithStderr(args []string, stdout, _ io.Writer) error {
 	options := sddstatus.ComposeOptions{SupersedeRemoved: *supersede, ExplicitSuperseded: splitSupersededRequirements(*supersededReqs), IDPattern: pattern}
 	native, err := sddstatus.ComposeOpenSpecCanonicalSpecWithOptions(string(canonicalBytes), string(deltaBytes), options)
 	if err != nil {
-		return err
+		return explainComposeError(err, resolve(*deltaPath))
 	}
 	composed := []byte(native)
 
@@ -173,6 +174,21 @@ func refuseRetiredBaselineAtDestination(output string) error {
 		return nil
 	}
 	return loc.GuardSpecsWrite("sdd archive-compose")
+}
+
+// explainComposeError añade a un rechazo de la composición lo que solo la orden sabe: la
+// capacidad (la carpeta de la delta) de un identificador inexistente y la continuación de un
+// provisional, que esta orden no asigna (REQ-47.8). El error original se conserva con %w.
+func explainComposeError(err error, deltaPath string) error {
+	var unknown *openspecdoc.UnknownRequirementIDError
+	if errors.As(err, &unknown) {
+		return fmt.Errorf("capacidad %s: %w", filepath.Base(filepath.Dir(deltaPath)), err)
+	}
+	var provisional *openspecdoc.ProvisionalIDError
+	if errors.As(err, &provisional) {
+		return fmt.Errorf("%w; `axiom sdd archive-compose` compone una sola capacidad y no asigna números: ejecuta `axiom sdd archive-integrate --cwd <dir> --change <cambio>` (con `--check` para ensayarlo), que asigna los definitivos de todo el cambio y compone todas sus capacidades", err)
+	}
+	return err
 }
 
 func splitSupersededRequirements(list string) []string {

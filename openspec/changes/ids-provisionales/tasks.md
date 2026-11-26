@@ -79,22 +79,22 @@ Depende de: nada. Paquetes: `internal/reqid`, `internal/livespec/registry.go`.
 
 Depende de: U1. Paquetes: `internal/openspecdoc`, `internal/cli/sdd_archive_compose.go`.
 
-- [ ] 2.1 RED: en `internal/openspecdoc/compose_test.go`, `UnknownRequirementIDError` en MODIFIED, REMOVED y nombre antiguo de RENAMED con ID válido que `Resolve` no encuentra (`errors.As` también al `*UnappliedDeltaError` mediante `Unwrap()`); `ProvisionalIDError` ante un provisional en el nombre y en el cuerpo de un requisito de cualquier sección; un MODIFIED sin ID se resuelve por título y conserva el rechazo vigente si no casa; un nombre con dos definitivos conserva la regla actual.
+- [x] 2.1 RED: en `internal/openspecdoc/compose_test.go`, `UnknownRequirementIDError` en MODIFIED, REMOVED y nombre antiguo de RENAMED con ID válido que `Resolve` no encuentra (`errors.As` también al `*UnappliedDeltaError` mediante `Unwrap()`); `ProvisionalIDError` ante un provisional en el nombre y en el cuerpo de un requisito de cualquier sección; un MODIFIED sin ID se resuelve por título y conserva el rechazo vigente si no casa; un nombre con dos definitivos conserva la regla actual.
   Cubre: REQ-47.3, REQ-30.4, REQ-30.22
   Verificación: `go test ./internal/openspecdoc -run 'Compose.*(Unknown|Provisional)'`
-- [ ] 2.2 GREEN: modificar `internal/openspecdoc/compose.go` con `UnknownRequirementIDError{Section, Requirement, ID}` y `ProvisionalIDError{Section, Requirement, Token}`, y los puntos de emisión de D7.
+- [x] 2.2 GREEN: modificar `internal/openspecdoc/compose.go` con `UnknownRequirementIDError{Section, Requirement, ID}` y `ProvisionalIDError{Section, Requirement, Token}`, y los puntos de emisión de D7.
   Cubre: REQ-47.3, REQ-30.22
   Verificación: `go test ./internal/openspecdoc -run 'Compose'`
-- [ ] 2.3 Regresión: el corpus `compose_corpus_test.go` sigue siendo byte a byte para toda composición aceptada hasta hoy.
+- [x] 2.3 Regresión: el corpus `compose_corpus_test.go` sigue siendo byte a byte para toda composición aceptada hasta hoy.
   Cubre: REQ-30.22
   Verificación: `go test ./internal/openspecdoc -run 'Corpus'`
-- [ ] 2.4 RED y GREEN: crear `internal/openspecdoc/declared.go` y su prueba con `ParseChangeSpec`, `DeclaredRequirement`, `Declaration` y `Declared(capability, delta, pattern)`. Casos: ADDED con provisional (`id` y `provisional: true`), ADDED con definitivo, MODIFIED sin ID (sin `id`), RENAMED por nombre antiguo, capacidad nueva como spec completa que cuenta como ADDED, orden estable.
+- [x] 2.4 RED y GREEN: crear `internal/openspecdoc/declared.go` y su prueba con `ParseChangeSpec`, `DeclaredRequirement`, `Declaration` y `Declared(capability, delta, pattern)`. Casos: ADDED con provisional (`id` y `provisional: true`), ADDED con definitivo, MODIFIED sin ID (sin `id`), RENAMED por nombre antiguo, capacidad nueva como spec completa que cuenta como ADDED, orden estable.
   Cubre: REQ-47.9, REQ-47.7
   Verificación: `go test ./internal/openspecdoc -run 'Declared|ParseChangeSpec'`
-- [ ] 2.5 RED y GREEN: modificar `internal/cli/sdd_archive_compose.go` para que un `ProvisionalIDError` lleve la continuación al verbo `axiom sdd archive-integrate` y un `UnknownRequirementIDError` añada la capacidad por la carpeta; `archive-compose` conserva su comportamiento con nombres superados inexistentes (REQ-30.23).
+- [x] 2.5 RED y GREEN: modificar `internal/cli/sdd_archive_compose.go` para que un `ProvisionalIDError` lleve la continuación al verbo `axiom sdd archive-integrate` y un `UnknownRequirementIDError` añada la capacidad por la carpeta; `archive-compose` conserva su comportamiento con nombres superados inexistentes (REQ-30.23).
   Cubre: REQ-30.22, REQ-47.8
   Verificación: `go test ./internal/cli -run 'SDDArchiveCompose'`
-- [ ] 2.6 Cierre de U2: `go vet ./internal/openspecdoc/... ./internal/cli` y commit `feat(openspecdoc): error tipado de ID inexistente y rechazo del provisional en Compose`.
+- [x] 2.6 Cierre de U2: `go vet ./internal/openspecdoc/... ./internal/cli` y commit `feat(openspecdoc): error tipado de ID inexistente y rechazo del provisional en Compose`.
   Cubre: REQ-47.3, REQ-47.9, REQ-30.22
   Verificación: `go test ./internal/openspecdoc/...`
 
