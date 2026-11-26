@@ -1,0 +1,26 @@
+workspace:
+  name: "Mini"
+  topology: "monorepo-embedded"
+  specs_repository: "openspec"
+  root: "."
+
+# Política de ramas del proyecto (REQ-25.24): se integran en main.
+git:
+  integration_branch: "main"
+  branch_prefix: "inc"
+
+# Carril de trabajo del proyecto (REQ-27.1).
+workflow:
+  lane: "ask"
+
+roles:
+  fullstack:
+    name: "Mini Fullstack"
+    repositories:
+      - path: "."
+    tech:
+      - "go"
+
+governance:
+  language: "es"
+  shared_memory: "engram"

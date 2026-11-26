@@ -1,0 +1,6 @@
+schema: axiom.id-contexts/v1
+entries:
+  - path: internal/foo/foo.go
+    token: REQ-2.3
+    capability: workspace-topology
+    reason: "El comentario describe la topología."
