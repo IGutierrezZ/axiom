@@ -53,6 +53,7 @@ type gitReader interface {
 	MergeTreeEquivalent(ctx context.Context, dir, target, branch string) (equivalent, supported bool, err error)
 	RevList(ctx context.Context, dir string, firstParent bool, revisions ...string) ([]branch.RevEntry, error)
 	CommitFiles(ctx context.Context, dir string, revisions ...string) ([]branch.CommitPaths, error)
+	MergeResolvedPaths(ctx context.Context, dir, sha string) ([]string, error)
 	BranchCreation(ctx context.Context, dir, name string) (sha, from string, ok bool, err error)
 }
 
