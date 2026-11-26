@@ -64,13 +64,9 @@ func registeredChangeBranch(facts changeFacts) string {
 	if named := branch.SnapshotChangeBranch(facts.input, planning); named != "" {
 		return named
 	}
-	switch exceptions := facts.input.Exceptions; {
-	case exceptions.Branch != "":
-		return exceptions.Branch
-	case exceptions.Prefix != "":
-		return exceptions.Prefix + "/" + facts.input.Change
-	}
-	return ""
+	exceptions := facts.input.Exceptions
+	return branch.ResolveChangeBranch(facts.input.Change, exceptions.Prefix,
+		branch.NamedBranch("--branch", exceptions.Branch))
 }
 
 // recordedArchiveBranch devuelve la rama de archivado que el registro guarda para el repositorio

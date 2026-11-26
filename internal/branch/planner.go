@@ -409,15 +409,15 @@ func planRepository(in PlanInput, selection repoSelection) (RepoPlan, *Refusal) 
 			return RepoPlan{}, refusal
 		}
 	}
-	changeBranch := prefix + "/" + in.Change
-	if in.Exceptions.Branch != "" {
-		changeBranch = in.Exceptions.Branch
-	}
 	// Con instantánea, sus nombres prevalecen sobre la política y las excepciones (D-10).
 	snapshot, hasSnapshot := snapshotRepo(in, facts)
-	if named := snapshotBranch(snapshot, KindChange, ""); hasSnapshot && named != "" {
-		changeBranch = named
+	snapshotName := ""
+	if hasSnapshot {
+		snapshotName = snapshotBranch(snapshot, KindChange, "")
 	}
+	changeBranch := ResolveChangeBranch(in.Change, prefix,
+		NamedBranch("instantánea", snapshotName),
+		NamedBranch("--branch", in.Exceptions.Branch))
 	repo.Branches = []BranchPlan{{
 		Name:     changeBranch,
 		Kind:     KindChange,

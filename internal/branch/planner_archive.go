@@ -148,16 +148,16 @@ func archiveBranchName(in PlanInput, repository string, effective RepoPolicy) (s
 	var archive string
 	switch {
 	case in.Exceptions.Prefix != "":
-		archive = in.Exceptions.Prefix + "/" + in.Change + archiveSuffix
+		archive = ArchiveBranchFor(ResolveChangeBranch(in.Change, in.Exceptions.Prefix))
 	case in.ArchiveBranch != "":
 		archive = in.ArchiveBranch
 	case in.ChangeBranch != "":
-		archive = in.ChangeBranch + archiveSuffix
+		archive = ArchiveBranchFor(in.ChangeBranch)
 	default:
 		if refusal := validatePolicyValue(in, repository, "branch_prefix", effective.BranchPrefix, gitref.ValidPrefix); refusal != nil {
 			return "", refusal
 		}
-		archive = effective.BranchPrefix + "/" + in.Change + archiveSuffix
+		archive = ArchiveBranchFor(ResolveChangeBranch(in.Change, effective.BranchPrefix))
 	}
 	if err := gitref.ValidRefName(archive); err != nil {
 		return "", invalidName("branch", "el nombre de la rama de archivado", archive, err,

@@ -9,9 +9,11 @@
 
 - [x] 2.3 Instantánea del kickoff: `GitSnapshotBranch.Template`, `GitSnapshotRepo.PendingBranches`, `GitSnapshot.TemplateValues` y su `Validate()`. Commit `feat(kickoff): la instantánea congela plantilla, pendientes y valores`. RED observado (fallo de compilación); GREEN: `go test ./internal/kickoff/ -run 'GitSnapshot|Snapshot'` ok, `go vet ./internal/kickoff/` ok, sin plantilla no se emite ninguna clave nueva.
 
+- [x] 3.1 `branch.ResolveChangeBranch(change, prefix, ...ChangeBranchSource)` y `ArchiveBranchFor(changeBranch)` (`change_branch.go`), adoptados por planner, planner_archive, archive_plan, verdict y autofetch_relevance conservando su orden de fuentes. Commit `refactor(branch): ResolveChangeBranch como único punto de composición`. Las pruebas existentes pasan sin tocar expectativas.
+
 ## Pendientes
 
-3.1, 3.2, 3.3, 4.1, 4.2, 5.1.
+3.2, 3.3, 4.1, 4.2, 5.1.
 
 ## Desviaciones
 

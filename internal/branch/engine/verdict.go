@@ -241,26 +241,23 @@ func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record
 	}
 
 	recordedChange, recordedRoles, recordedArchive := recordedBranches(record, repoCommon)
-	changeBranch := recordedChange
-	if changeBranch == "" {
-		switch {
-		case record != nil && record.Exceptions.Branch != "":
-			changeBranch = record.Exceptions.Branch
-		case record != nil && record.Exceptions.Prefix != "":
-			changeBranch = record.Exceptions.Prefix + "/" + q.Change
-		default:
-			changeBranch = effective.BranchPrefix + "/" + q.Change
-		}
+	var recordedException, recordedPrefix string
+	if record != nil {
+		recordedException, recordedPrefix = record.Exceptions.Branch, record.Exceptions.Prefix
+	}
+	if recordedPrefix == "" {
+		recordedPrefix = effective.BranchPrefix
 	}
 	// La instantánea manda sobre el registro y la política en la rama del cambio y en las de rol; un
 	// repositorio al que no da rama del cambio (uno fuera de la carpeta maestra, o un repositorio de
-	// código que no tocan los roles sellados) sigue con los nombres de arriba.
+	// código que no tocan los roles sellados) sigue con los nombres de abajo.
 	entry, fromSnapshot := snapshotEntry(snapshot, relative, inside)
 	snapshotChange := snapshotBranch(entry, "change")
 	fromSnapshot = fromSnapshot && snapshotChange != ""
-	if fromSnapshot {
-		changeBranch = snapshotChange
-	}
+	changeBranch := branch.ResolveChangeBranch(q.Change, recordedPrefix,
+		branch.NamedBranch("instantánea", snapshotChange),
+		branch.NamedBranch("registro", recordedChange),
+		branch.NamedBranch("--branch registrada", recordedException))
 	names := branch.ExpectedNames{Change: changeBranch, Integration: effective.IntegrationBranch}
 
 	// Con dos o más roles que tocan el repositorio hay ramas de rol (RF-BRA-04); las registradas
@@ -293,11 +290,11 @@ func expectedNames(q VerdictQuery, loc workspace.Location, record *branch.Record
 		case recordedArchive != "":
 			names.Archive = recordedArchive
 		case record != nil && record.ArchivePrefix != "":
-			names.Archive = record.ArchivePrefix + "/" + q.Change + "-archive"
+			names.Archive = branch.ArchiveBranchFor(branch.ResolveChangeBranch(q.Change, record.ArchivePrefix))
 		case fromSnapshot && snapshotArchive != "":
 			names.Archive = snapshotArchive
 		default:
-			names.Archive = changeBranch + "-archive"
+			names.Archive = branch.ArchiveBranchFor(changeBranch)
 		}
 	}
 	return names

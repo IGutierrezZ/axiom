@@ -139,7 +139,7 @@ func (e *Engine) handedOffChange(ctx context.Context, project AutofetchProject, 
 		if !ok || name == "" || strings.Contains(name, "/") || strings.HasSuffix(name, branch.ArchiveSuffix) {
 			continue
 		}
-		if local, err := e.git.BranchExists(ctx, project.Checkout, prefix+"/"+name); err != nil || local {
+		if local, err := e.git.BranchExists(ctx, project.Checkout, branch.ResolveChangeBranch(name, prefix)); err != nil || local {
 			continue
 		}
 		kickoff := path.Join(planRel, "changes", name, "kickoff.yaml")
@@ -158,7 +158,7 @@ func (e *Engine) handedOffChange(ctx context.Context, project AutofetchProject, 
 		repositories: []branch.RecordRepo{{
 			Name:     path.Base(project.Checkout),
 			GitRoot:  project.Checkout,
-			Branches: []branch.RecordBranch{{Name: prefix + "/" + name, Kind: branch.KindChange}},
+			Branches: []branch.RecordBranch{{Name: branch.ResolveChangeBranch(name, prefix), Kind: branch.KindChange}},
 		}},
 	}, true
 }

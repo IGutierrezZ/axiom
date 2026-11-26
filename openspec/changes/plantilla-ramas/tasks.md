@@ -67,7 +67,7 @@ Raíz de trabajo: `C:\repos\axiom-wt\plantilla-ramas\axiom`. Todas las verificac
 
 ## Fase 3: Helper único y plan con plantilla
 
-- [ ] 3.1 **Unidad 5. `ResolveChangeBranch` y `ArchiveBranchFor` (sin plantilla, refactor).**
+- [x] 3.1 **Unidad 5. `ResolveChangeBranch` y `ArchiveBranchFor` (sin plantilla, refactor).**
   - Ficheros: crear `internal/branch/change_branch.go` y `internal/branch/change_branch_test.go`; modificar `internal/branch/planner.go` (composición de la línea ~412), `internal/branch/planner_archive.go`, `internal/branch/engine/archive_plan.go`, `internal/branch/engine/verdict.go`, `internal/branch/engine/autofetch_relevance.go`.
   - Qué: helper puro con las fuentes con nombre en el orden de cada consumidor (D-14); `ArchiveBranchFor` único que añade `-archive`; los cinco consumidores lo adoptan conservando su orden actual. Aquí solo la rama sin plantilla (composición `<prefijo>/<cambio>`); la rama con plantilla se completa en 4.1.
   - Prueba de identidad: las pruebas existentes de `planner_test.go`, archivado, veredicto y autofetch pasan sin tocar sus expectativas. RED nuevas: orden de fuentes con nombre; `ArchiveBranchFor`; composición idéntica a `prefijo + "/" + cambio`.
