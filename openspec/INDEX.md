@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 14:33:10 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 569 | **Total Escenarios BDD:** 2674
+> **Última Sincronización:** 2026-11-26 14:47:41 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 576 | **Total Escenarios BDD:** 2744
 
 ---
 
@@ -22,13 +22,13 @@
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 19 | 92 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 40 | 350 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
-| `change-start-from-work-item` | Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
+| `change-start-from-work-item` | Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
 | `integration-plugins` | Especificación de integration-plugins | 24 | 107 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 17 | 63 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 21 | 108 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -59,7 +59,7 @@
 | `tui-ui-parity` | Especificación Viva: Gestión del Ecosistema desde la Web UI (antes, paridad entre TUI y Web UI) | 4 | 5 | [Ver Spec](specs/tui-ui-parity/spec.md) |
 | `upstream-absorption-protocol` | Especificación Viva: Protocolo de Absorción por Tandas desde Upstream | 6 | 9 | [Ver Spec](specs/upstream-absorption-protocol/spec.md) |
 | `visual-decoupling` | Especificación de Requerimientos: Desacoplamiento Visual y Limpieza de Marca (Axiom) | 1 | 2 | [Ver Spec](specs/visual-decoupling/spec.md) |
-| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 20 | 115 | [Ver Spec](specs/workspace-topology/spec.md) |
+| `workspace-topology` | Especificación Viva: Topología de Workspace y CLI de Axiom | 23 | 140 | [Ver Spec](specs/workspace-topology/spec.md) |
 
 ---
 
@@ -918,7 +918,7 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Los runtimes sin hook demostrado quedan solo con la doctrina
   - *Escenario BDD:* La doctrina condiciona la regla de `--fetch` al autofetch
 
-### Dominio: `change-start-from-work-item` — Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item)
+### Dominio: `change-start-from-work-item` — Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19)
 
 **Archivo:** [`specs/change-start-from-work-item/spec.md`](specs/change-start-from-work-item/spec.md)
 
@@ -1303,6 +1303,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Reporte de error cuando el archivo de configuración es inválido
   - *Escenario BDD:* La respuesta incluye la política de ramas efectiva
   - *Escenario BDD:* La respuesta incluye los ajustes por repositorio
+  - *Escenario BDD:* `/api/workspace` sigue siendo de solo lectura
 - **[RF-WEB-02]** Endpoints REST de Consulta de Incrementos
   - *Escenario BDD:* Listado consolidado de incrementos activos y archivados
   - *Escenario BDD:* Consulta de detalle de un incremento existente
@@ -1319,6 +1320,8 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Carga de recursos estáticos CSS y JS
 - **[RF-WEB-07]** Estructura de Navegación y Vistas en la Web UI
   - *Escenario BDD:* Navegación interactiva entre vistas del dashboard
+  - *Escenario BDD:* «Ajustes del proyecto» tiene entrada de navegación y ruta propia
+  - *Escenario BDD:* Topología no muestra la política de ramas
 - **[RF-WEB-08]** Subcomando axiom ui y Control del Servidor
   - *Escenario BDD:* Inicio del servidor en puerto por defecto con apertura de navegador
   - *Escenario BDD:* Detección y fallback ante puerto ocupado
@@ -1329,11 +1332,13 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Repetir con la respuesta completa la creación
   - *Escenario BDD:* Un rechazo de `ensure` no deja carpeta
   - *Escenario BDD:* Multirepo escribe in situ en el repositorio de specs
-- **[RF-WEB-10]** `git:` y `repositories:` en Solo Lectura; Solo se Editan las Preferencias Personales
-  - *Escenario BDD:* `git:` se muestra pero no se puede editar
-  - *Escenario BDD:* Ninguna ruta escribe `axiom.yaml`
+- **[RF-WEB-10]** Las Claves de `axiom.yaml` se Editan Solo por `/api/settings`; `/api/workspace` Sigue de Solo Lectura y Toda Escritura Exige Petición Local
+  - *Escenario BDD:* `git:` se edita desde Ajustes, no desde Topología
+  - *Escenario BDD:* `/api/workspace` no escribe `axiom.yaml`
   - *Escenario BDD:* Edición de las preferencias personales
   - *Escenario BDD:* Una preferencia inválida se rechaza
+  - *Escenario BDD:* El `PUT` de `worktree-prefs` exige petición local
+  - *Escenario BDD:* Toda escritura nueva exige petición local
 - **[RF-WEB-11]** Los Listados Agregan los Cambios de los Worktrees Registrados
   - *Escenario BDD:* Un cambio de un worktree figura en el listado
   - *Escenario BDD:* El detalle de un cambio en worktree se resuelve
@@ -1378,6 +1383,50 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Función no activada
   - *Escenario BDD:* Activa y sin fichero
   - *Escenario BDD:* Sin ruta nueva
+- **[RF-WEB-18]** Pantalla «Ajustes del Proyecto» Generada desde el Catálogo, con Reglas por Topología e ISO y sin Controles de RDD
+  - *Escenario BDD:* La pantalla se genera desde el catálogo
+  - *Escenario BDD:* Aviso de que solo afecta a cambios nuevos
+  - *Escenario BDD:* Cambiar el carril conserva comentarios y orden
+  - *Escenario BDD:* Valor inválido o revisión obsoleta no pierde lo tecleado
+  - *Escenario BDD:* Claves de solo lectura con «Abrir en el editor» y «Copiar ruta»
+  - *Escenario BDD:* Bloque «Preferencias personales»
+  - *Escenario BDD:* Monorepo sin claves de multirepo
+  - *Escenario BDD:* Multirepo con `gate_policy` incluido `optional`
+  - *Escenario BDD:* ISO no ofrece `odd`
+  - *Escenario BDD:* Ningún control de RDD ni de integraciones
+  - *Escenario BDD:* Lo guardado queda sin confirmar en git
+  - *Escenario BDD:* Documento no editable deshabilita los controles
+  - *Escenario BDD:* Texto hostil se muestra como texto
+- **[RF-WEB-19]** Endpoint `GET|PUT /api/settings` con Catálogo, Revisión, Escritura Validada y Errores Tipados en Castellano
+  - *Escenario BDD:* GET devuelve catálogo, valores, revisión y ruta
+  - *Escenario BDD:* GET no filtra secretos
+  - *Escenario BDD:* PUT válido escribe y devuelve la revisión nueva
+  - *Escenario BDD:* Revisión obsoleta devuelve 409
+  - *Escenario BDD:* Valor inválido devuelve 422 con el error del validador
+  - *Escenario BDD:* `odd` en ISO se rechaza
+  - *Escenario BDD:* Clave no editable devuelve 422
+  - *Escenario BDD:* Cuerpo mal formado o sin revisión devuelve 400
+  - *Escenario BDD:* Petición no local devuelve 403
+  - *Escenario BDD:* Sin proyecto activo o sin fichero devuelve 404
+  - *Escenario BDD:* Métodos no admitidos devuelven 405
+  - *Escenario BDD:* Multirepo escribe el fichero del repositorio de specs
+  - *Escenario BDD:* El lote es atómico, todo o nada
+  - *Escenario BDD:* Un lote puede pasar de `odd` a ISO de una vez
+  - *Escenario BDD:* Las claves por elemento se direccionan por ruta o por identificador
+  - *Escenario BDD:* Varios documentos YAML se rechazan
+  - *Escenario BDD:* La petición no local se rechaza antes de leer el cuerpo
+  - *Escenario BDD:* Un error previo del documento no impide guardar
+  - *Escenario BDD:* Fallo de escritura devuelve 500
+- **[RF-WEB-20]** Endpoint `GET|PUT /api/settings/personal` para el Autofetch del Proyecto Activo
+  - *Escenario BDD:* Lectura del autofetch
+  - *Escenario BDD:* Escritura del autofetch persiste en el hub
+  - *Escenario BDD:* Proyecto no registrado devuelve 404
+  - *Escenario BDD:* Valor no booleano devuelve 400
+  - *Escenario BDD:* Petición no local devuelve 403
+- **[RF-WEB-21]** Ecosistema Deja de Mostrar la Política de Ramas y, Junto con el Selector de Proyecto, Enlaza a «Ajustes del Proyecto»
+  - *Escenario BDD:* Ecosistema enlaza a Ajustes
+  - *Escenario BDD:* El selector de proyecto enlaza a Ajustes
+  - *Escenario BDD:* Las pruebas de assets reflejan la retirada
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -3653,4 +3702,32 @@ Definir de forma canónica el comportamiento del punto de entrada CLI `axiom` y 
   - *Escenario BDD:* Archivado no bloqueado
   - *Escenario BDD:* `init --force` conserva el bloque
   - *Escenario BDD:* Plantilla y manual cubiertos por las pruebas de contrato
+- **[RF-TOP-21]** Catálogo Único de Claves de `axiom.yaml` Derivado del Esquema, Filtrado por Topología e ISO
+  - *Escenario BDD:* Los valores permitidos salen de las constantes del esquema
+  - *Escenario BDD:* Claves por topología en monorepo
+  - *Escenario BDD:* Claves por topología en multirepo
+  - *Escenario BDD:* Claves de solo lectura
+  - *Escenario BDD:* Exclusiones del catálogo
+  - *Escenario BDD:* Claves registradas de cambios anteriores
+  - *Escenario BDD:* ISO no ofrece `odd`
+- **[RF-TOP-22]** Escritor de Round-Trip de `axiom.yaml` que Conserva Comentarios y Orden y Revalida el Documento Completo
+  - *Escenario BDD:* El round-trip conserva comentarios y orden (golden)
+  - *Escenario BDD:* `null` borra la clave
+  - *Escenario BDD:* Un bloque que queda vacío se borra
+  - *Escenario BDD:* Se rechazan anclas, alias y claves de mezcla
+  - *Escenario BDD:* Se rechaza un fichero con varios documentos YAML
+  - *Escenario BDD:* El lote es atómico, todo o nada
+  - *Escenario BDD:* Se conservan líneas en blanco, CRLF y BOM
+  - *Escenario BDD:* Un error previo del motor no bloquea y vuelve como aviso
+  - *Escenario BDD:* Un error nuevo del motor bloquea
+  - *Escenario BDD:* Valor inválido rechazado con el error del validador
+  - *Escenario BDD:* Un parche válido por bloque pero inválido en conjunto se rechaza
+  - *Escenario BDD:* Clave no editable rechazada
+  - *Escenario BDD:* Escritura atómica
+  - *Escenario BDD:* Multirepo escribe el fichero del repositorio de specs
+- **[RF-TOP-23]** Revisión SHA-256 del Fichero con Recomprobación Justo Antes del Reemplazo
+  - *Escenario BDD:* Revisión coincidente permite escribir
+  - *Escenario BDD:* Revisión obsoleta rechazada sin escribir
+  - *Escenario BDD:* Cambio externo entre la validación y el reemplazo
+  - *Escenario BDD:* Escritura sin revisión esperada
 
