@@ -3549,9 +3549,14 @@ func TestSDDSpecAdoptionReferenceDescribesTheWholeFlow(t *testing.T) {
 		`axiom archive adopt scan --path "<workspaceRoot>" --change "{change-name}"`,
 		`axiom archive adopt check --path "<workspaceRoot>" --change "{change-name}"`,
 		"**only `## ADDED Requirements`**",
-		"(REQ-n.m)",
-		"one series `REQ-n.*` that is new for the migrated project",
-		"never the identity of the migrated requirement",
+		"Declare the identifier pattern",
+		"`proposed_id_pattern`",
+		"`sdd.id_pattern`",
+		"`origin_id`",
+		"`pattern_undeclared`",
+		"`foreign_id_conflict`",
+		"`prov::<ordinal>`",
+		"`axiom sdd archive-integrate`",
 		"`Origen: <path>#<anchor> (<original ID>)`",
 		"`#### Scenario:`",
 		"`## Descartado` section",
@@ -3559,12 +3564,16 @@ func TestSDDSpecAdoptionReferenceDescribesTheWholeFlow(t *testing.T) {
 		"The reason is never empty",
 		"`wrong_branch`",
 		"`inventory_stale`",
-		"`axiom sdd archive-compose --canonical --delta`",
 		"keeps each `Origen:` line byte for byte",
 		"`spec` gate",
 	} {
 		if !strings.Contains(reference, want) {
 			t.Errorf("sdd-spec adoption reference is missing %q", want)
+		}
+	}
+	for _, retired := range []string{"one new series", "one series `REQ-n.*`", "C-03-c", "never the identity", "`axiom sdd archive-compose --canonical --delta`", "`series`"} {
+		if strings.Contains(reference, retired) {
+			t.Errorf("sdd-spec adoption reference still carries the retired %q", retired)
 		}
 	}
 }

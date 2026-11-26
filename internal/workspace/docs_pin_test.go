@@ -28,6 +28,29 @@ func TestDocsPinManualDeInicio(t *testing.T) {
 	}
 }
 
+// REQ-30.31 (parte documental): la adopción conserva los IDs del cliente y valida contra el patrón declarado.
+func TestDocsPinManualAdopcionConservaLosIDs(t *testing.T) {
+	manual := readRepoFile(t, "docs/manual-de-inicio.md")
+	for _, want := range []string{
+		"`proposed_id_pattern`",
+		"`sdd.id_pattern`",
+		"`origin_id`",
+		"`pattern_undeclared`",
+		"`foreign_id_conflict`",
+		"`prov::<ordinal>`",
+		"axiom sdd archive-integrate --change <cambio>",
+	} {
+		if !strings.Contains(manual, want) {
+			t.Errorf("docs/manual-de-inicio.md debe citar %q en la adopción", want)
+		}
+	}
+	for _, retired := range []string{"El identificador ajeno nunca es la identidad", "de una serie nueva"} {
+		if strings.Contains(manual, retired) {
+			t.Errorf("docs/manual-de-inicio.md conserva el texto retirado %q", retired)
+		}
+	}
+}
+
 // REQ-30.32 (parte documental): el reparto entre axiom.yaml y openspec/config.yaml.
 func TestDocsPinOpenspecConfigBoundary(t *testing.T) {
 	doc := readRepoFile(t, "docs/openspec-config.md")
