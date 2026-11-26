@@ -83,3 +83,29 @@ func TestTraceRealMapResolvesLegacyID(t *testing.T) {
 		t.Errorf("REQ-27.2b resuelve a %v, esperado [%s]", got, newID)
 	}
 }
+
+// TestTraceRealMapFindsTitleEntryIncrements comprueba con el mapa y los cambios archivados
+// reales que un requisito sin ID antiguo (RF-ENG-01) encuentra por título los incrementos
+// anteriores a la migración (RF-TRC-04, regla 5).
+func TestTraceRealMapFindsTitleEntryIncrements(t *testing.T) {
+	p, m := realProject(t)
+	if c, title := m.Title("RF-ENG-01"); c != "engram-protocol-injection" || title != "Single canonical Codex protocol asset" {
+		t.Fatalf("Title(RF-ENG-01) = %q, %q", c, title)
+	}
+	q, err := ParseID("RF-ENG-01", p, m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := Source{Files: os.DirFS("../../openspec"), GitPrefix: "openspec"}
+	folders, _ := listSDDFolders(src)
+	traces, _ := readSDDTraces(src, folders)
+	eq, _ := resolveEquivalentsLegacy(q, p, traces, m, m)
+	found := 0
+	for _, f := range folders {
+		c, _ := classifySDD(src, p, eq, f)
+		found += len(c)
+	}
+	if found == 0 {
+		t.Fatal("RF-ENG-01 no encuentra ningún cambio archivado por su título")
+	}
+}

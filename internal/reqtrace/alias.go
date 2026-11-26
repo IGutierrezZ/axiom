@@ -27,6 +27,9 @@ type LegacyResolver interface {
 	InCapability(capability, old string) string
 	// Capabilities devuelve, ordenadas, las capacidades con old como clave antigua.
 	Capabilities(old string) []string
+	// Title devuelve la capacidad y el título de la entrada sin ID antiguo cuyo ID nuevo es
+	// id, o dos cadenas vacías (regla 5).
+	Title(id string) (capability, title string)
 }
 
 // NoAliases es la implementación por defecto: no añade nada más allá de las trazas.

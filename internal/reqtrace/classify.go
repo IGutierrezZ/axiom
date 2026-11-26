@@ -177,6 +177,24 @@ func (m *matcher) legacyMatches(token string, ctx []string) bool {
 	return false
 }
 
+// titleIDs devuelve, ordenados, los IDs del conjunto cuya entrada del mapa sin ID antiguo
+// lleva el título name en la capacidad capability (RF-TRC-04, regla 5): esos requisitos no
+// tenían ID y los incrementos anteriores a la migración los citan solo por título.
+func (m *matcher) titleIDs(name, capability string) []string {
+	if m.eq.legacy == nil || capability == "" {
+		return nil
+	}
+	name = strings.TrimSpace(name)
+	var out []string
+	for id := range m.set {
+		if c, t := m.eq.legacy.Title(id); c == capability && t == name {
+			out = append(out, id)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
 // warnings devuelve un legacy_ambiguous por ID heredado que no se pudo acotar, en orden estable.
 func (m *matcher) warnings(path string) []Warning {
 	var out []Warning
@@ -218,6 +236,7 @@ func classifyDelta(h hits, capability string, d openspecdoc.Delta, m *matcher) b
 			}
 			for _, name := range names {
 				ids = append(ids, m.idTokens(name, ctx)...)
+				ids = append(ids, m.titleIDs(name, capability)...)
 			}
 			if len(ids) > 0 {
 				h.record(role, ids, capability)

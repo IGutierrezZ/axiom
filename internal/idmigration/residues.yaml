@@ -438,6 +438,11 @@ entries:
     tokens: [REQ-29.1, REQ-29.2, REQ-30.1, REQ-30.4, REQ-30.5, REQ-30.6, REQ-30.9, REQ-30.99, REQ-31.1, REQ-31.2]
     category: legacy-citation
     reason: "Bloque openspec de una capacidad retirada o histórica, conservado entero: cita IDs heredados como tales."
+  - paths: ["odd/tasks/trace-titulo-sin-id.md"]
+    scope: md-code
+    tokens: [REQ-1.1, REQ-24.3]
+    category: legacy-citation
+    reason: "La delta de la spec viva copia RF-TRC-04, cuyos ejemplos citan IDs heredados como tales."
   - paths: ["odd/tasks/quitar-serena.md"]
     scope: md-code
     tokens: [REQ-1.1, REQ-1.3, REQ-23.13, REQ-23.14, REQ-23.8, REQ-3.1, REQ-4.2]
