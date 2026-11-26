@@ -1,0 +1,31 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:BRA:1
+    definitive: RF-BRA-42
+    capability: change-branch-lifecycle
+    requirement: 'Plantilla de Nombre de Rama: Motor y Variables (RF-BRA-42)'
+  - provisional: prov:BRA:2
+    definitive: RF-BRA-43
+    capability: change-branch-lifecycle
+    requirement: Origen de los Valores de las Variables de la Plantilla (RF-BRA-43)
+  - provisional: prov:BRA:3
+    definitive: RF-BRA-44
+    capability: change-branch-lifecycle
+    requirement: Plantilla Efectiva por Rol, Repositorio y Proyecto, y Precedencia de Nombres (RF-BRA-44)
+  - provisional: prov:BRA:4
+    definitive: RF-BRA-45
+    capability: change-branch-lifecycle
+    requirement: Rechazos Tipados de la Resolución de Plantillas (RF-BRA-45)
+  - provisional: prov:BRA:5
+    definitive: RF-BRA-46
+    capability: change-branch-lifecycle
+    requirement: Diferido de las Ramas con `{task_ref}` a la Entrada del Rol (RF-BRA-46)
+  - provisional: prov:KOF:1
+    definitive: RF-KOF-26
+    capability: sdd-lane-kickoff
+    requirement: La Instantánea Congela la Plantilla, el Tipo y la Referencia de Work Item (RF-KOF-26)
+  - provisional: prov:TOP:1
+    definitive: RF-TOP-24
+    capability: workspace-topology
+    requirement: Validación de `branch_template` al Cargar `axiom.yaml` (RF-TOP-24)
