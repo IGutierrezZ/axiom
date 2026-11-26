@@ -21,7 +21,7 @@ T0..T9 marcadas completas en `tasks.md` (incluida 8.6 de RF-GAT-32). T9 sin comm
 | `go.mod`/`go.sum`, `git status --porcelain` | sin cambios; árbol limpio |
 | Atribución de IA en commits | ninguna |
 
-## Requisitos (prov:74:1..27, RF-INT-09, RF-ADO-01/02/16)
+## Requisitos (prov:ARR:1..27, RF-INT-09, RF-ADO-01/02/16)
 Los 27 identificadores existen en las deltas, sin pérdidas. Cada uno tiene pruebas de la matriz de `tasks.md` presentes y en verde (comprobada la existencia de las pruebas clave): uso/orden de comprobación y `git_repository_required` (TestChangeStartCheckOrder, ...GitRepositoryRequired), resolución de referencia (TestParseItemRef), rechazos (TestStartRefusals, TestStartLinked), perfil bug (TestStartProfile*), inyección y neutralización (TestNeutralize*, TestRender*, FuzzConvert), adjuntos y PAT (TestAttachment*, TestDownload*), fases y atomicidad (TestStart*, TestAdopt*, TestAdoptStagingIntactOnFailure, TestAdoptContextNeverUntracked), cerrojos (TestLockOrderPhase2NeverTakesItemLock, TestStartConcurrent*), enlace de vuelta (TestLinkBack*, TestAdoptTagAddedOnce), `context/` ignorado (TestRepoGitignoreIgnoresContext, TestLocalStateIncludesContext, TestPublishExcludesContext), hermeticidad (adotest, TestChangeStartEndToEndLocalOnly), doctrina y goldens (TestOrchestratorWorkItemRuleParity, TestODDRoutingWorkItemRule, TestRoutingAddsNoStop), skills (TestSkillsTreatWorkItemContextAsUntrusted, TestProposeExternalRefRule, TestStatusDoesNotRequireExternalRef). RF-INT-09, RF-ADO-01, RF-ADO-02 y RF-ADO-16 cubiertos por T1/T2/T6.
 
 ## Conformidad con el diseño (D-01..D-29)

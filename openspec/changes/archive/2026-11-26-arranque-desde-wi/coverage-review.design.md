@@ -7,7 +7,7 @@ Revisión informativa: no bloquea fases, compuertas ni archivo. Revisores ciegos
 | # | Tipo | Ubicación | Hueco | Revisores |
 |---|---|---|---|---|
 | 1 | uncovered_requirement | design D-21 | La doctrina no recoge: fallo de `ensure` (`decision_required` o error) o de `seal` tras la fase 1 (conservar staging, no ejecutar fase 2, reintentar o `--discard`); rechazo de `--adopt` que detiene el arranque antes de `proposal.md`/`sdd-explore`/documento ODD; no ejecutar `--discard` por cuenta propia; aviso de enlace pendiente que no detiene; perfil bug en ODD (`Tipo: bug`, `## Spec viva` o `## Impacto en la spec`). Sin pruebas de paridad para ello. | A, B |
-| 2 | edge_case | design D-04 | `ReadItem` consulta los estados antes de validar el tipo mapeado: un tipo sin mapear con fallo de esa consulta daría `tracker_unavailable` en vez de `work_item_type_unmapped`, contra el orden de prov:74:6. | A, B |
+| 2 | edge_case | design D-04 | `ReadItem` consulta los estados antes de validar el tipo mapeado: un tipo sin mapear con fallo de esa consulta daría `tracker_unavailable` en vez de `work_item_type_unmapped`, contra el orden de prov:ARR:6. | A, B |
 | 3 | edge_case | design D-03/D-04 | Todo 404 se mapea a `work_item_not_found`; el 404 de estados, relaciones o adjuntos debe ser `tracker_unavailable` u omisión. | B |
 | 4 | edge_case | design D-11, D-18, D-20 | La etiqueta `axiom:<otro>` y el tipo son texto del tracker: se usan sin validar en rutas (`changes/archive/…-<otro>`, posible recorrido), mensajes y continuaciones. Validar con `gitref.ValidBranchComponent` y neutralizar; `TestChangeStartJSONCarriesNoTrackerText` contradice los escenarios que exigen nombrarlos. | A, B |
 | 5 | edge_case | design D-11 | «Archivado localmente» solo se define en SDD; una etiqueta de un cambio ODD terminado o archivado en otra máquina bloquea el WI para siempre. | B |
@@ -22,4 +22,4 @@ Revisión informativa: no bloquea fases, compuertas ni archivo. Revisores ciegos
 | 14 | edge_case | design D-12 | Temporales `.tmp-*` y cerrojos huérfanos sin limpieza; el cerrojo por nombre permite dos stagings del mismo WI con títulos distintos. | A |
 | 15 | use_case | design D-07 | El perfil bug compara literalmente `Bug`: sin vía de configuración en procesos localizados o personalizados. | A |
 | 16 | edge_case | design D-21 | `sdd-propose`: con `context/` pero sin vínculo, la spec prohíbe escribir `external_ref` y el diseño lo extraería; otras fases que leen `context/` no reciben la regla de dato no fiable. | B |
-| 17 | use_case | spec prov:74:4 | URLs de tablero (`?workitem=`), con consulta o fragmento, barra final y de la API no están definidas; ni si el proyecto de la URL debe coincidir. | A |
+| 17 | use_case | spec prov:ARR:4 | URLs de tablero (`?workitem=`), con consulta o fragmento, barra final y de la API no están definidas; ni si el proyecto de la URL debe coincidir. | A |

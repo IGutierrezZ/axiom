@@ -1,0 +1,111 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:ADO:21
+    definitive: RF-ADO-17
+    capability: azure-devops-adapter
+    requirement: Lectura Tipada del Work Item con Relaciones, Etiquetas y Adjuntos (RF-ADO-17)
+  - provisional: prov:ADO:22
+    definitive: RF-ADO-18
+    capability: azure-devops-adapter
+    requirement: Descarga Binaria Acotada con el PAT Restringido (RF-ADO-18)
+  - provisional: prov:ADO:23
+    definitive: RF-ADO-19
+    capability: azure-devops-adapter
+    requirement: Enlace de Vuelta por Etiqueta Idempotente sobre `test /rev` (RF-ADO-19)
+  - provisional: prov:ARR:1
+    definitive: RF-ARR-01
+    capability: change-start-from-work-item
+    requirement: Verbo `axiom change start` en Dos Fases con Salida Versionada (RF-ARR-01)
+  - provisional: prov:ARR:2
+    definitive: RF-ARR-02
+    capability: change-start-from-work-item
+    requirement: Sin Plugin Activo el Verbo Responde «No Aplica» sin Red (RF-ARR-02)
+  - provisional: prov:ARR:3
+    definitive: RF-ARR-03
+    capability: change-start-from-work-item
+    requirement: Con Plugin Activo y sin WI el Verbo se Niega y Pide el WI (RF-ARR-03)
+  - provisional: prov:ARR:4
+    definitive: RF-ARR-04
+    capability: change-start-from-work-item
+    requirement: Resolución del WI por ID o por URL del Host y la Organización Configurados (RF-ARR-04)
+  - provisional: prov:ARR:5
+    definitive: RF-ARR-05
+    capability: change-start-from-work-item
+    requirement: La Fase 1 Solo Escribe en Staging bajo el Common Dir de Git (RF-ARR-05)
+  - provisional: prov:ARR:6
+    definitive: RF-ARR-06
+    capability: change-start-from-work-item
+    requirement: Rechazos Tipados de la Fase 1 con Continuación Nombrada (RF-ARR-06)
+  - provisional: prov:ARR:7
+    definitive: RF-ARR-07
+    capability: change-start-from-work-item
+    requirement: Un WI Enlazado a Otro Cambio Abierto se Rechaza (RF-ARR-07)
+  - provisional: prov:ARR:8
+    definitive: RF-ARR-08
+    capability: change-start-from-work-item
+    requirement: Derivación Determinista del Nombre del Cambio (RF-ARR-08)
+  - provisional: prov:ARR:9
+    definitive: RF-ARR-09
+    capability: change-start-from-work-item
+    requirement: Perfil del Cambio según el Tipo del WI (RF-ARR-09)
+  - provisional: prov:ARR:10
+    definitive: RF-ARR-10
+    capability: change-start-from-work-item
+    requirement: Importación del WI como Contexto en Markdown (RF-ARR-10)
+  - provisional: prov:ARR:11
+    definitive: RF-ARR-11
+    capability: change-start-from-work-item
+    requirement: El Contenido Importado es Dato no Fiable de un Tercero (RF-ARR-11)
+  - provisional: prov:ARR:12
+    definitive: RF-ARR-12
+    capability: change-start-from-work-item
+    requirement: Adjuntos con Lista Blanca y Límites (RF-ARR-12)
+  - provisional: prov:ARR:13
+    definitive: RF-ARR-13
+    capability: change-start-from-work-item
+    requirement: El PAT Solo se Envía al Host y la Organización Configurados y los Nombres se Sanean (RF-ARR-13)
+  - provisional: prov:ARR:14
+    definitive: RF-ARR-14
+    capability: change-start-from-work-item
+    requirement: Fase 2 `--adopt` Mueve el Contexto, Vincula el WI y es Idempotente (RF-ARR-14)
+  - provisional: prov:ARR:15
+    definitive: RF-ARR-15
+    capability: change-start-from-work-item
+    requirement: Enlace de Vuelta por Etiqueta; un Fallo del Tracker Avisa sin Fallar (RF-ARR-15)
+  - provisional: prov:ARR:16
+    definitive: RF-ARR-16
+    capability: change-start-from-work-item
+    requirement: '`--discard` Retira un Staging Abandonado (RF-ARR-16)'
+  - provisional: prov:ARR:17
+    definitive: RF-ARR-17
+    capability: change-start-from-work-item
+    requirement: Un Cerrojo Local por Cambio Evita Arranques Simultáneos (RF-ARR-17)
+  - provisional: prov:ARR:18
+    definitive: RF-ARR-18
+    capability: change-start-from-work-item
+    requirement: '`context/` no se Versiona (RF-ARR-18)'
+  - provisional: prov:ARR:19
+    definitive: RF-ARR-19
+    capability: change-start-from-work-item
+    requirement: Hermeticidad de las Pruebas del Arranque (RF-ARR-19)
+  - provisional: prov:INT:20
+    definitive: RF-INT-24
+    capability: integration-plugins
+    requirement: Puerto Opcional de Work Items (RF-INT-24)
+  - provisional: prov:RUT:25
+    definitive: RF-RUT-22
+    capability: organic-agent-trigger-rules
+    requirement: La Doctrina ODD Exige el WI con Plugin Activo y Rodea `ensure` con las Dos Fases (RF-RUT-22)
+  - provisional: prov:KOF:24
+    definitive: RF-KOF-24
+    capability: sdd-lane-kickoff
+    requirement: Con Plugin Activo el WI y la Fase 1 Preceden a `ensure` y a `seal` (RF-KOF-24)
+  - provisional: prov:ORQ:26
+    definitive: RF-ORQ-27
+    capability: sdd-orchestrator-assets
+    requirement: Paridad entre Runtimes de la Regla del WI Obligatorio y del Contenido Importado como Dato no Fiable (RF-ORQ-27)
+  - provisional: prov:ORQ:27
+    definitive: RF-ORQ-28
+    capability: sdd-orchestrator-assets
+    requirement: '`sdd-propose` Copia `external_ref` y `Referencia:` desde el Vínculo del WI (RF-ORQ-28)'

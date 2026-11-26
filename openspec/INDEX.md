@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 12:05:09 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 542 | **Total Escenarios BDD:** 2504
+> **Última Sincronización:** 2026-11-26 14:33:10 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 569 | **Total Escenarios BDD:** 2674
 
 ---
 
@@ -19,12 +19,13 @@
 | `axiom-tui-branding` | Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 3 | 7 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
 | `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 8 | 9 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
-| `azure-devops-adapter` | Especificación de azure-devops-adapter | 16 | 71 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
+| `azure-devops-adapter` | Especificación de azure-devops-adapter | 19 | 92 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
 | `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 40 | 350 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-start-from-work-item` | Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
-| `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
+| `integration-plugins` | Especificación de integration-plugins | 24 | 107 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
 | `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 17 | 63 | [Ver Spec](specs/local-web-dashboard/spec.md) |
@@ -37,7 +38,7 @@
 | `odd-ui-integration` | Especificación de Requerimientos: Integración de ODD en Dashboard Web y TUI (INC-19) | 3 | 0 | [Ver Spec](specs/odd-ui-integration/spec.md) |
 | `openspec-adoption` | Especificación de Requerimientos: Adopción de OpenSpec como Spec Viva Única (RF-ADP-01 a RF-ADP-06) | 6 | 53 | [Ver Spec](specs/openspec-adoption/spec.md) |
 | `orchestrator-commands-markers` | Especificación de Requerimientos: axiom-orchestrator y Comandos Slash Canónicos (INC-11) | 4 | 5 | [Ver Spec](specs/orchestrator-commands-markers/spec.md) |
-| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 21 | 69 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
+| `organic-agent-trigger-rules` | Organic Agent Routing Projection | 22 | 78 | [Ver Spec](specs/organic-agent-trigger-rules/spec.md) |
 | `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
@@ -48,8 +49,8 @@
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 23 | 139 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
-| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 92 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 24 | 149 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 28 | 101 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
 | `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
@@ -363,12 +364,17 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
   - *Escenario BDD:* El manifiesto es válido e idéntico al del catálogo
   - *Escenario BDD:* Variable de entorno del secreto
   - *Escenario BDD:* Ninguna capacidad de escritura del ciclo de vida
+  - *Escenario BDD:* Alias de referencia y clave `item_keys` en el manifiesto
 - **[RF-ADO-02]** Configuración `integrations.azure-devops` y Secreto `pat`
   - *Escenario BDD:* Bloque válido
   - *Escenario BDD:* Clave desconocida
   - *Escenario BDD:* Clave que parece un secreto
   - *Escenario BDD:* El PAT se resuelve en cada llamada
   - *Escenario BDD:* Secreto ausente
+  - *Escenario BDD:* `item_keys` válido
+  - *Escenario BDD:* `item_keys` malformado
+  - *Escenario BDD:* Prefijo o tipo duplicado
+  - *Escenario BDD:* Prefijo no apto para una rama
 - **[RF-ADO-03]** Cliente REST con Autenticación, Versión y Timeout
   - *Escenario BDD:* Versión y autenticación en toda petición
   - *Escenario BDD:* Timeout por petición
@@ -446,6 +452,25 @@ Primer adaptador real del marco de integraciones (C-07-c): el plugin `azure-devo
 - **[RF-ADO-16]** Pruebas Herméticas sin Azure DevOps Real
   - *Escenario BDD:* Servidor local inyectado
   - *Escenario BDD:* Reintentos sin dormir
+  - *Escenario BDD:* `adotest` simula relaciones, etiquetas y adjuntos
+  - *Escenario BDD:* Un host no local hace fallar la prueba
+- **[RF-ADO-17]** Lectura Tipada del Work Item con Relaciones, Etiquetas y Adjuntos
+  - *Escenario BDD:* Traducción de un work item completo
+  - *Escenario BDD:* Categoría del estado desde el descubrimiento
+  - *Escenario BDD:* Relación desconocida y campos ausentes
+  - *Escenario BDD:* Relación con URL de otro host
+- **[RF-ADO-18]** Descarga Binaria Acotada con el PAT Restringido
+  - *Escenario BDD:* Descarga correcta
+  - *Escenario BDD:* Superar el límite aborta
+  - *Escenario BDD:* Host ajeno
+  - *Escenario BDD:* Redirección no seguida
+  - *Escenario BDD:* Error del servidor saneado
+- **[RF-ADO-19]** Enlace de Vuelta por Etiqueta Idempotente sobre `test /rev`
+  - *Escenario BDD:* Se añade la etiqueta conservando las demás
+  - *Escenario BDD:* Etiqueta ya presente
+  - *Escenario BDD:* Conflicto de revisión
+  - *Escenario BDD:* Conflicto persistente
+  - *Escenario BDD:* Sin relaciones ni Hyperlinks
 
 ### Dominio: `change-actor-identity` — Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09)
 
@@ -893,6 +918,142 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* Los runtimes sin hook demostrado quedan solo con la doctrina
   - *Escenario BDD:* La doctrina condiciona la regla de `--fetch` al autofetch
 
+### Dominio: `change-start-from-work-item` — Delta para Arranque de un Cambio desde un Work Item (change-start-from-work-item)
+
+**Archivo:** [`specs/change-start-from-work-item/spec.md`](specs/change-start-from-work-item/spec.md)
+
+- **[RF-ARR-01]** Verbo `axiom change start` en Dos Fases con Salida Versionada
+  - *Escenario BDD:* La ayuda de `axiom change` lista `start`
+  - *Escenario BDD:* Modos incompatibles se rechazan como uso incorrecto
+  - *Escenario BDD:* `--adopt` y `--discard` exigen `--change`
+  - *Escenario BDD:* `--lane` con `--from` o `--discard` es uso incorrecto
+  - *Escenario BDD:* `--cwd` fuera de un repositorio git
+  - *Escenario BDD:* La salida `--json` es versionada
+  - *Escenario BDD:* El verbo no ejecuta el resto del arranque
+- **[RF-ARR-02]** Sin Plugin Activo el Verbo Responde «No Aplica» sin Red
+  - *Escenario BDD:* Proyecto sin integraciones
+  - *Escenario BDD:* Plugin desactivado explícitamente
+  - *Escenario BDD:* `axiom.yaml` ausente
+  - *Escenario BDD:* `axiom.yaml` inválido
+  - *Escenario BDD:* Plugin activo con configuración incompleta
+- **[RF-ARR-03]** Con Plugin Activo y sin WI el Verbo se Niega y Pide el WI
+  - *Escenario BDD:* Falta el WI
+  - *Escenario BDD:* `--from` vacío
+- **[RF-ARR-04]** Resolución del WI por ID o por URL del Host y la Organización Configurados
+  - *Escenario BDD:* ID numérico
+  - *Escenario BDD:* URL de la organización configurada
+  - *Escenario BDD:* URL de otra organización
+  - *Escenario BDD:* URL de tablero con `workitem=`
+  - *Escenario BDD:* URL de otro proyecto de la misma organización
+  - *Escenario BDD:* Host `visualstudio.com` no aceptado
+  - *Escenario BDD:* Valor que no es un WI
+- **[RF-ARR-05]** La Fase 1 Solo Escribe en Staging bajo el Common Dir de Git
+  - *Escenario BDD:* Fase 1 sobre un WI ya adoptado por el mismo cambio
+  - *Escenario BDD:* Fase 1 correcta no toca el repositorio ni el WI
+  - *Escenario BDD:* El tracker se lee una sola vez
+  - *Escenario BDD:* Staging existente del mismo WI
+  - *Escenario BDD:* Staging del mismo WI con otro nombre por un título cambiado
+  - *Escenario BDD:* Staging sin `work-item.json` legible
+  - *Escenario BDD:* Staging existente de otro WI
+  - *Escenario BDD:* Fallo durante la escritura del staging
+- **[RF-ARR-06]** Rechazos Tipados de la Fase 1 con Continuación Nombrada
+  - *Escenario BDD:* WI inexistente
+  - *Escenario BDD:* Tipo sin mapear
+  - *Escenario BDD:* WI cerrado por categoría Completed
+  - *Escenario BDD:* WI eliminado por categoría Removed
+  - *Escenario BDD:* El cierre se decide por categoría y no por nombre
+  - *Escenario BDD:* El tracker no responde
+  - *Escenario BDD:* PAT ausente con el plugin activo
+  - *Escenario BDD:* Falla la consulta de categorías con el WI ya leído
+  - *Escenario BDD:* Estado ausente entre los estados de su tipo
+  - *Escenario BDD:* Ningún rechazo filtra el PAT
+  - *Escenario BDD:* Cada rechazo cumple el trinquete de continuaciones
+- **[RF-ARR-07]** Un WI Enlazado a Otro Cambio Abierto se Rechaza
+  - *Escenario BDD:* Etiqueta de otro cambio en el WI
+  - *Escenario BDD:* Vínculo local a otro cambio sin etiqueta en el WI
+  - *Escenario BDD:* WI ya adoptado en un cambio ODD abierto
+  - *Escenario BDD:* Etiqueta de un cambio sin rastro local
+  - *Escenario BDD:* Etiqueta de un cambio ya archivado
+  - *Escenario BDD:* La misma etiqueta del mismo cambio no es conflicto
+  - *Escenario BDD:* Registro local ilegible
+- **[RF-ARR-08]** Derivación Determinista del Nombre del Cambio
+  - *Escenario BDD:* Nombre canónico
+  - *Escenario BDD:* Tildes, signos y mayúsculas
+  - *Escenario BDD:* Título largo truncado
+  - *Escenario BDD:* Título sin caracteres aprovechables
+  - *Escenario BDD:* Título con secuencias peligrosas para git
+- **[RF-ARR-09]** Perfil del Cambio según el Tipo del WI
+  - *Escenario BDD:* User Story produce incremento
+  - *Escenario BDD:* Bug produce perfil de bug
+- **[RF-ARR-10]** Importación del WI como Contexto en Markdown
+  - *Escenario BDD:* Descripción HTML convertida
+  - *Escenario BDD:* HTML hostil
+  - *Escenario BDD:* Relaciones padre y Related
+  - *Escenario BDD:* Campos vacíos
+- **[RF-ARR-11]** El Contenido Importado es Dato no Fiable de un Tercero
+  - *Escenario BDD:* Cabecera fija presente
+  - *Escenario BDD:* Delimitador inyectado en la descripción
+  - *Escenario BDD:* Cabecera falsificada en el contenido
+- **[RF-ARR-12]** Adjuntos con Lista Blanca y Límites
+  - *Escenario BDD:* Adjunto permitido
+  - *Escenario BDD:* Extensión fuera de la lista
+  - *Escenario BDD:* SVG excluido
+  - *Escenario BDD:* Extensión y tipo de contenido discordantes
+  - *Escenario BDD:* Adjunto servido como `application/octet-stream`
+  - *Escenario BDD:* Adjunto genérico con firma discordante
+  - *Escenario BDD:* Adjunto sin `Content-Type`
+  - *Escenario BDD:* Imágenes incrustadas que no se descargan
+  - *Escenario BDD:* Imagen repetida y reescritura a la ruta local
+  - *Escenario BDD:* Fichero por encima de 10 MiB
+  - *Escenario BDD:* Total por encima de 50 MiB
+  - *Escenario BDD:* Un adjunto fallido no aborta la importación
+- **[RF-ARR-13]** El PAT Solo se Envía al Host y la Organización Configurados y los Nombres se Sanean
+  - *Escenario BDD:* Imagen incrustada en un host ajeno
+  - *Escenario BDD:* Adjunto en la misma organización
+  - *Escenario BDD:* Otra organización en el mismo host
+  - *Escenario BDD:* Esquema `http` o `userinfo`
+  - *Escenario BDD:* Redirección a un host ajeno
+  - *Escenario BDD:* Nombres peligrosos
+  - *Escenario BDD:* Colisión de nombres
+- **[RF-ARR-14]** Fase 2 `--adopt` Mueve el Contexto, Vincula el WI y es Idempotente
+  - *Escenario BDD:* Adopción en SDD
+  - *Escenario BDD:* Adopción en ODD
+  - *Escenario BDD:* Segundo `--adopt` idempotente
+  - *Escenario BDD:* Segundo `--adopt` en ODD
+  - *Escenario BDD:* Reintento tras una adopción interrumpida
+  - *Escenario BDD:* Destino `context/` de otro WI
+  - *Escenario BDD:* Fallo de escritura al adoptar
+  - *Escenario BDD:* Sin staging ni contexto adoptado
+  - *Escenario BDD:* Cambio sin preparar
+  - *Escenario BDD:* Cambio ODD sin preparar o `--lane` incongruente
+  - *Escenario BDD:* HEAD de otra rama
+  - *Escenario BDD:* Staging y destino en volúmenes distintos
+  - *Escenario BDD:* Fallo al retirar el staging
+  - *Escenario BDD:* Vínculo concurrente con una entrega
+- **[RF-ARR-15]** Enlace de Vuelta por Etiqueta; un Fallo del Tracker Avisa sin Fallar
+  - *Escenario BDD:* Etiqueta añadida una sola vez
+  - *Escenario BDD:* El tracker no responde en la fase 2
+  - *Escenario BDD:* Reintento tras el fallo
+  - *Escenario BDD:* Etiqueta de otro cambio aparecida entre fases
+  - *Escenario BDD:* Etiqueta de un cambio archivado en la fase 2
+  - *Escenario BDD:* Escritura protegida contra carreras
+- **[RF-ARR-16]** `--discard` Retira un Staging Abandonado
+  - *Escenario BDD:* Descarte de un staging existente
+  - *Escenario BDD:* Descarte sin staging
+  - *Escenario BDD:* Nombre con salida del directorio
+- **[RF-ARR-17]** Un Cerrojo Local por Cambio Evita Arranques Simultáneos
+  - *Escenario BDD:* Dos fases 1 simultáneas
+  - *Escenario BDD:* Dos fases 1 del mismo WI con títulos distintos
+  - *Escenario BDD:* Cerrojo huérfano
+- **[RF-ARR-18]** `context/` no se Versiona
+  - *Escenario BDD:* Este repositorio ignora `context/`
+  - *Escenario BDD:* Proyecto de usuario
+  - *Escenario BDD:* Entradas ajenas conservadas
+  - *Escenario BDD:* Un cambio con `context/` se archiva y se publica
+- **[RF-ARR-19]** Hermeticidad de las Pruebas del Arranque
+  - *Escenario BDD:* Toda petición va al servidor local
+  - *Escenario BDD:* Sin binarios sueltos
+
 ### Dominio: `dashboard-sdd-orchestration` — Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15)
 
 <!-- Especificación Viva generada a partir de '2026-09-16-inc-15-dashboard-interactive-sdd-orchestration' -->
@@ -996,6 +1157,10 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
   - *Escenario BDD:* URL con credenciales
   - *Escenario BDD:* Sin vínculos no hay fichero
   - *Escenario BDD:* Ningún estado de entrega en el fichero versionado
+  - *Escenario BDD:* El vínculo del work item se escribe con `source: change.start`
+  - *Escenario BDD:* Vincular dos veces el mismo work item
+  - *Escenario BDD:* El vínculo convive con los de las entregas
+  - *Escenario BDD:* URL del work item con credenciales
 - **[RF-INT-10]** La Emisión Nunca Hace Fallar el Verbo de Origen
   - *Escenario BDD:* Fallo del plugin no rompe el verbo
   - *Escenario BDD:* Bloque `integrations` inválido
@@ -1065,6 +1230,12 @@ Marco de plugins de integración (C-07-b): un punto de extensión hacia trackers
   - *Escenario BDD:* Plugin sin puerto de identidad
   - *Escenario BDD:* Plugin sin puerto de descubrimiento
   - *Escenario BDD:* El puerto `Plugin` no cambia
+- **[RF-INT-24]** Puerto Opcional de Work Items
+  - *Escenario BDD:* Plugin que ofrece el puerto
+  - *Escenario BDD:* Plugin sin el puerto
+  - *Escenario BDD:* Pánico del plugin
+  - *Escenario BDD:* Los errores no llevan secretos
+  - *Escenario BDD:* La interfaz `Plugin` no cambia
 
 ### Dominio: `knowledge-profile-init` — Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23)
 
@@ -1622,6 +1793,16 @@ Define the managed, provider-neutral instructions that project Gentle AI's
   - *Escenario BDD:* Una petición de parada en el chat no cambia el modo
   - *Escenario BDD:* El registro de commits con cambios pedidos va al documento ODD
   - *Escenario BDD:* La doctrina ODD declara validación implícita y merge sin squash
+- **[RF-RUT-22]** La Doctrina ODD Exige el WI con Plugin Activo y Rodea `ensure` con las Dos Fases
+  - *Escenario BDD:* La doctrina pide el WI antes de `ensure`
+  - *Escenario BDD:* La fase 2 precede a la primera escritura del documento ODD
+  - *Escenario BDD:* `external_ref` en la cabecera del documento ODD
+  - *Escenario BDD:* Perfil de bug en ODD
+  - *Escenario BDD:* Fallo de `ensure` o rechazo de `--adopt` en ODD
+  - *Escenario BDD:* Contenido importado como dato
+  - *Escenario BDD:* Trabajo pequeño sin documento
+  - *Escenario BDD:* Sin plugin activo la doctrina de `ensure` no cambia
+  - *Escenario BDD:* Paridad entre runtimes y sin paradas
 
 ### Dominio: `persona-behavior-contract` — persona-behavior-contract Specification
 
@@ -2903,6 +3084,17 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* El resto del fichero no cambia
   - *Escenario BDD:* Idempotencia y ausencia
   - *Escenario BDD:* IDs definitivos intactos
+- **[RF-KOF-24]** Con Plugin Activo el WI y la Fase 1 Preceden a `ensure` y a `seal`
+  - *Escenario BDD:* Plugin activo y sin WI
+  - *Escenario BDD:* Orden de las fases
+  - *Escenario BDD:* Rechazo de la fase 1 detiene el arranque
+  - *Escenario BDD:* Abandono tras la fase 1
+  - *Escenario BDD:* Falla `ensure` o `seal` tras la fase 1
+  - *Escenario BDD:* Rechazo de `--adopt`
+  - *Escenario BDD:* Aviso de enlace de vuelta pendiente
+  - *Escenario BDD:* El explore recibe el contexto
+  - *Escenario BDD:* Proyecto ISO y bug
+  - *Escenario BDD:* Sin plugin activo no cambia nada
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -3028,6 +3220,17 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* Los overlays de OpenCode no definen agentes de revisión
   - *Escenario BDD:* Los restos de una versión anterior no se tocan
   - *Escenario BDD:* Una selección persistida con `rdd-defect-workflow` no rompe la carga
+- **[RF-ORQ-27]** Paridad entre Runtimes de la Regla del WI Obligatorio y del Contenido Importado como Dato no Fiable
+  - *Escenario BDD:* Paridad de la regla del WI
+  - *Escenario BDD:* `sdd-explore` trata el contexto como dato
+  - *Escenario BDD:* `sdd-propose` trata el contexto como dato
+  - *Escenario BDD:* Goldens regenerados
+- **[RF-ORQ-28]** `sdd-propose` Copia `external_ref` y `Referencia:` desde el Vínculo del WI
+  - *Escenario BDD:* Cambio con vínculo de WI
+  - *Escenario BDD:* Bug con vínculo de WI
+  - *Escenario BDD:* Falta información del bug
+  - *Escenario BDD:* Sin vínculo no hay referencia
+  - *Escenario BDD:* La referencia no condiciona el estado
 
 ### Dominio: `sdd-preflight-configuration` — Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21)
 

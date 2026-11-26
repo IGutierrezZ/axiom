@@ -6,7 +6,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Lectura Tipada del Work Item con Relaciones, Etiquetas y Adjuntos (prov:74:21)
+### Requirement: Lectura Tipada del Work Item con Relaciones, Etiquetas y Adjuntos (RF-ADO-17)
 
 El adaptador MUST implementar el puerto de work items traduciendo la respuesta del tracker (`GetWorkItem` con relaciones) al tipo neutral del marco: tipo (`System.WorkItemType`), título, estado (`System.State`) con su categoría tomada del descubrimiento del proceso del proyecto, URL, descripción (`System.Description`), pasos de reproducción y criterios de aceptación (campos del proceso, cuando existan), etiquetas (`System.Tags`, separadas por `;` y recortadas), padre (relación `Hierarchy-Reverse`), relaciones Related y adjuntos (`AttachedFile`, con nombre y tamaño declarado). Una relación de tipo desconocido MUST ignorarse sin error. Un campo ausente MUST producir un valor vacío sin error. Los identificadores de relaciones MUST derivarse únicamente de URL del propio host y la organización configurados. La categoría del estado MUST obtenerse con una sola consulta de descubrimiento por invocación del verbo.
 
@@ -30,7 +30,7 @@ El adaptador MUST implementar el puerto de work items traduciendo la respuesta d
 - **CUANDO** se lee por el puerto
 - **ENTONCES** no se solicita ninguna URL ajena con el PAT
 
-### Requirement: Descarga Binaria Acotada con el PAT Restringido (prov:74:22)
+### Requirement: Descarga Binaria Acotada con el PAT Restringido (RF-ADO-18)
 
 El adaptador MUST descargar adjuntos con una petición binaria propia que reutilice el punto de salida HTTP del cliente (autenticación, timeout, esperas, reintentos y saneado de errores), sin redirecciones, con `api-version=7.1` cuando proceda y con las comprobaciones previas de esquema `https`, ausencia de `userinfo`, host configurado y prefijo `/{organización}/` antes de construir la petición con credenciales. MUST leer el cuerpo con un lector limitado por el límite que le pasa el llamador (10 MiB por fichero; el presupuesto de 50 MiB por WI lo aplica el llamador) y MUST abortar al superarlo, sin conservar datos parciales. Una URL que no cumpla las comprobaciones MUST devolver un error tipado sin petición de red. Una respuesta no 2xx MUST producir un error tipado y saneado, sin el PAT ni cabeceras de autenticación.
 
@@ -59,7 +59,7 @@ El adaptador MUST descargar adjuntos con una petición binaria propia que reutil
 - **CUANDO** se descarga
 - **ENTONCES** el error devuelto no contiene el PAT
 
-### Requirement: Enlace de Vuelta por Etiqueta Idempotente sobre `test /rev` (prov:74:23)
+### Requirement: Enlace de Vuelta por Etiqueta Idempotente sobre `test /rev` (RF-ADO-19)
 
 El adaptador MUST añadir la etiqueta `axiom:<cambio>` a `System.Tags` del WI con `UpdateWorkItem` protegido por `test /rev`, releyendo antes el WI para conservar el resto de etiquetas (separadas por `;`) y sin duplicar la etiqueta si ya figura. Si el WI ya contiene la etiqueta, MUST NOT enviar ninguna escritura. Si la revisión cambió entre la lectura y la escritura (conflicto de `test /rev`), MUST releer y reintentar un número acotado de veces y, si persiste, devolver un error tipado de conflicto. MUST NOT escribir relaciones ni Hyperlinks (C-07-f) ni tocar otros campos.
 

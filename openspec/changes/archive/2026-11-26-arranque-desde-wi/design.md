@@ -1,9 +1,9 @@
 # Diseño: arranque de un cambio desde un work item existente (C-07-d)
 
 > **Cambio:** `arranque-desde-wi`. **Idioma:** castellano de España; identificadores, comandos, claves y rutas en inglés.
-> Fuentes: `proposal.md`, `explore.md` y las seis specs delta de `specs/` (27 requisitos ADDED `prov:74:1..27` y 4 MODIFIED: RF-INT-09, RF-ADO-01, RF-ADO-02, RF-ADO-16).
+> Fuentes: `proposal.md`, `explore.md` y las seis specs delta de `specs/` (27 requisitos ADDED `prov:ARR:1..27` y 4 MODIFIED: RF-INT-09, RF-ADO-01, RF-ADO-02, RF-ADO-16).
 > El status no proyecta `technicalContext.maintained` ni `explainer`: no hay `context-impact.md` ni `resumen-design.html`.
-> **Revisión 2026-11-26.** Alineado con la spec corregida (prov:74:1, 5, 6, 7, 12, 14, 15, 24, 25) y con los huecos 1-16 de `coverage-review.design.md`. Cambian D-02, D-03, D-04, D-06, D-07, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20 y D-21; se añaden D-23 a D-29. El hueco 17 (formas de URL de prov:74:4) se decide en D-29 y se registra en «Huecos de spec».
+> **Revisión 2026-11-26.** Alineado con la spec corregida (prov:ARR:1, 5, 6, 7, 12, 14, 15, 24, 25) y con los huecos 1-16 de `coverage-review.design.md`. Cambian D-02, D-03, D-04, D-06, D-07, D-11, D-12, D-13, D-14, D-15, D-16, D-17, D-18, D-19, D-20 y D-21; se añaden D-23 a D-29. El hueco 17 (formas de URL de prov:ARR:4) se decide en D-29 y se registra en «Huecos de spec».
 
 ## Enfoque técnico
 
@@ -22,7 +22,7 @@ cmd/axiom (runChange "start")
              └─ internal/gitcommon           common dir, raíz git y HEAD leídos de ficheros (nunca ejecuta git)
 ```
 
-- La fase 1 (`--from`) lee el WI una vez por el puerto, valida en el orden de prov:74:6 (existe → tipo mapeado → no cerrado → no enlazado), deriva el nombre y publica un staging atómico en `<common>/axiom/change-start/v1/<cambio>/context/`, donde `<common>` es el common dir del repositorio que contiene la raíz del workspace (D-23). No escribe en el árbol ni en el WI.
+- La fase 1 (`--from`) lee el WI una vez por el puerto, valida en el orden de prov:ARR:6 (existe → tipo mapeado → no cerrado → no enlazado), deriva el nombre y publica un staging atómico en `<common>/axiom/change-start/v1/<cambio>/context/`, donde `<common>` es el common dir del repositorio que contiene la raíz del workspace (D-23). No escribe en el árbol ni en el WI.
 - El orquestador ejecuta `axiom branch ensure` y `axiom sdd kickoff seal` (SDD) o `ensure --lane odd` (ODD) con el nombre devuelto. El verbo no los ejecuta.
 - La fase 2 (`--adopt`) copia y verifica `context/` en el destino del carril, vincula el WI en `integrations.yaml` (solo SDD), asegura `.git/info/exclude`, actualiza `work-item.json`, y solo entonces retira el staging y añade la etiqueta `axiom:<cambio>` al WI. Un fallo del tracker en este último paso solo avisa.
 - `--discard` retira un staging abandonado.
@@ -44,12 +44,12 @@ El núcleo `internal/integrations` sigue sin conocer Azure DevOps: el puerto es 
 
 - `ParseItemRef(cfg, raw)`: pura, sin red; el plugin conoce su endpoint y su organización (formas aceptadas en D-29).
 - `ReadItem(ctx, ItemRequest)`: lectura tipada neutral del WI, sin la categoría del estado.
-- `StateCategory(ctx, StateRequest)`: la consulta única de descubrimiento de la categoría del estado, separada de la lectura para respetar el orden de prov:74:6 (D-04).
+- `StateCategory(ctx, StateRequest)`: la consulta única de descubrimiento de la categoría del estado, separada de la lectura para respetar el orden de prov:ARR:6 (D-04).
 - `DownloadAttachment(ctx, AttachmentRequest)`: descarga acotada por URL.
 - `LinkBack(ctx, BackLinkRequest)`: etiqueta idempotente con `test /rev`; la decisión de si otra etiqueta `axiom:*` es conflicto la toma el llamador mediante `Allow func(tags []string) error`.
 
 Un plugin sin el puerto devuelve `*PortUnsupportedError` (`port_unsupported`) sin red. Se añade `PortWorkItems = "work_items"` y su etiqueta en `portLabel`.
-**Alternativas consideradas**: métodos nuevos en `Plugin` (rompe RF-INT-23 y los plugins existentes); dos operaciones separadas `ReadTags` + `AddTag` (el bucle de relectura por `test /rev` saldría del adaptador, contra prov:74:23); que el adaptador decida el conflicto (no sabe qué cambios están archivados localmente).
+**Alternativas consideradas**: métodos nuevos en `Plugin` (rompe RF-INT-23 y los plugins existentes); dos operaciones separadas `ReadTags` + `AddTag` (el bucle de relectura por `test /rev` saldría del adaptador, contra prov:ADO:23); que el adaptador decida el conflicto (no sabe qué cambios están archivados localmente).
 **Justificación**: mismo patrón que `IdentityResolver`/`Discoverer` (`ports.go:45-52`). El callback deja el bucle de revisión en el adaptador y la política (cambios archivados tolerados, D-11) en `changestart`; un pánico del callback lo recupera `invokePort`.
 
 ### D-03: Errores neutrales del puerto mediante centinelas
@@ -61,21 +61,21 @@ Un plugin sin el puerto devuelve `*PortUnsupportedError` (`port_unsupported`) si
 - El 404 de un adjunto es un fallo de descarga: el adjunto se omite con su motivo.
 
 Todo lo demás (`AuthError`, `TransportError`, `APIError`, `RateLimitError`, `secrets.MissingError`, cancelación) es, para `changestart`, «tracker no disponible»; `secrets.MissingError` se distingue con `errors.As` sobre el tipo neutral de `internal/secrets` para añadir la continuación del secreto.
-**Alternativas consideradas**: que `changestart` importe `azuredevops` para `errors.As` (rompe la neutralidad); códigos en texto; extender `NotFoundError.Is` (convertiría en `work_item_not_found` cualquier 404, contra prov:74:6).
+**Alternativas consideradas**: que `changestart` importe `azuredevops` para `errors.As` (rompe la neutralidad); códigos en texto; extender `NotFoundError.Is` (convertiría en `work_item_not_found` cualquier 404, contra prov:ARR:6).
 **Justificación**: `PortError.Unwrap` conserva la causa, así que `errors.Is` atraviesa el saneado. El texto que llega a la persona ya viene saneado. Solo la ausencia del propio WI es `work_item_not_found`.
 
-### D-04: Lectura del WI y categoría del estado en dos operaciones, en el orden de prov:74:6
+### D-04: Lectura del WI y categoría del estado en dos operaciones, en el orden de prov:ARR:6
 
 **Elección**: tres peticiones como máximo, repartidas en dos operaciones que `changestart.Start` invoca en este orden:
 
 1. `ReadItem`: (a) `GetWorkItem` con `$expand=relations`; (b) a lo sumo un `workitemsbatch` con los identificadores de padre y Related (tope 50) para su tipo y título. Si el lote falla (incluido un 404), las relaciones quedan con su identificador y un aviso. Solo el 404 de (a) es `ErrItemNotFound` (D-03); cualquier otro fallo de (a) es «tracker no disponible».
 2. `changestart` comprueba el tipo contra `item_keys` (sin distinguir mayúsculas). Si no está mapeado: `work_item_type_unmapped` **sin** consultar los estados.
-3. `StateCategory`: un único `GET {project}/_apis/wit/workitemtypes/{tipo}/states`, con `{tipo}` tomado de la grafía **configurada** en `item_keys` (dato de confianza), nunca del texto del WI; el segmento se escapa con `url.PathEscape` como el resto. Cualquier error, incluido un 404, es `tracker_unavailable` y no queda staging. Si el estado del WI no figura en la lista (comparación sin distinguir mayúsculas), devuelve `Known: false`: el WI se acepta con la categoría vacía y un aviso (prov:74:6).
+3. `StateCategory`: un único `GET {project}/_apis/wit/workitemtypes/{tipo}/states`, con `{tipo}` tomado de la grafía **configurada** en `item_keys` (dato de confianza), nunca del texto del WI; el segmento se escapa con `url.PathEscape` como el resto. Cualquier error, incluido un 404, es `tracker_unavailable` y no queda staging. Si el estado del WI no figura en la lista (comparación sin distinguir mayúsculas), devuelve `Known: false`: el WI se acepta con la categoría vacía y un aviso (prov:ARR:6).
 4. Cierre por categoría (`Completed` o `Removed`) y, después, el escaneo de vínculos (D-11).
 
 Las relaciones solo se derivan de URL del propio host y organización; una relación desconocida se ignora. El adaptador construye la URL del WI desde la configuración (`{endpoint}/{org}/{project}/_workitems/edit/{id}`), nunca desde el contenido, y redacta el PAT de todos los textos devueltos.
-**Alternativas consideradas**: `Discover` completo (decenas de peticiones, exige `team` y miembros); una sola operación `ReadItem` que consulte también los estados (un tipo sin mapear con la consulta de estados caída daría `tracker_unavailable` en vez de `work_item_type_unmapped`, contra prov:74:6); un callback de filtrado de tipos dentro de `ReadItem` (mezcla política y transporte).
-**Justificación**: cumple «el WI se lee una sola vez y el descubrimiento como mucho una vez» (prov:74:5, prov:74:21) y el orden existe → tipo → cerrado → enlazado. Usar la grafía configurada del tipo en la URL elimina que un tipo hostil del tracker componga rutas de la API.
+**Alternativas consideradas**: `Discover` completo (decenas de peticiones, exige `team` y miembros); una sola operación `ReadItem` que consulte también los estados (un tipo sin mapear con la consulta de estados caída daría `tracker_unavailable` en vez de `work_item_type_unmapped`, contra prov:ARR:6); un callback de filtrado de tipos dentro de `ReadItem` (mezcla política y transporte).
+**Justificación**: cumple «el WI se lee una sola vez y el descubrimiento como mucho una vez» (prov:ARR:5, prov:ADO:21) y el orden existe → tipo → cerrado → enlazado. Usar la grafía configurada del tipo en la URL elimina que un tipo hostil del tracker componga rutas de la API.
 
 ### D-05: Descarga binaria por el mismo punto `do`, con URL absoluta validada antes de resolver el PAT
 
@@ -84,10 +84,10 @@ Las relaciones solo se derivan de URL del propio host y organización; una relac
 1. `validateResourceURL`: el esquema es igual al del endpoint (en producción `https`, que no es configurable), sin `userinfo`, host igual al del endpoint (sin distinguir mayúsculas), ruta con prefijo `/{organización}/` (sin distinguir mayúsculas) y sin segmentos `.`/`..`. Si falla: `*ForeignURLError` con el motivo cerrado (`scheme`, `userinfo`, `host`, `organization`, `path`), traducido a `*integrations.ResourceURLRejection`, sin red y sin resolver el secreto. Así `file:`, `ftp:` y `http:` (en producción) se omiten sin petición con el motivo `scheme`.
 2. `do` añade `api-version=7.1` si falta, aplica autenticación, ritmo, reintentos 429/503, `CheckRedirect` que no sigue redirecciones y saneado.
 3. `attempt` lee el cuerpo 2xx con `io.LimitReader(body, bodyLimit+1)`; si lo supera devuelve `*TooLargeError` y descarta los bytes (no depende de `Content-Length`).
-4. `classify` en modo `binary` devuelve bytes y `Content-Type` sin `decodeSuccess`; un 3xx sigue siendo `AuthError` («redirección no seguida»). El `Content-Type` se normaliza con `mime.ParseMediaType` (sin parámetros, en minúsculas); si falta o no se puede analizar, se devuelve `application/octet-stream` (prov:74:12).
+4. `classify` en modo `binary` devuelve bytes y `Content-Type` sin `decodeSuccess`; un 3xx sigue siendo `AuthError` («redirección no seguida»). El `Content-Type` se normaliza con `mime.ParseMediaType` (sin parámetros, en minúsculas); si falta o no se puede analizar, se devuelve `application/octet-stream` (prov:ARR:12).
 
 **Alternativas consideradas**: un `http.Client` aparte para descargas (duplica autenticación, reintentos y saneado); seguir redirecciones dentro del mismo host (Azure DevOps redirige al inicio de sesión).
-**Justificación**: prov:74:13 y prov:74:22 piden validar antes de construir la petición con credencial y reutilizar el punto de salida. Como el esquema se compara con el del endpoint, `adotest` (`http://127.0.0.1`) sigue sirviendo, y en producción solo pasa `https://dev.azure.com/{org}/…`.
+**Justificación**: prov:ARR:13 y prov:ADO:22 piden validar antes de construir la petición con credencial y reutilizar el punto de salida. Como el esquema se compara con el del endpoint, `adotest` (`http://127.0.0.1`) sigue sirviendo, y en producción solo pasa `https://dev.azure.com/{org}/…`.
 
 ### D-06: Enlace de vuelta con como mucho tres escrituras y sin escritura si la etiqueta ya está
 
@@ -129,7 +129,7 @@ Las relaciones solo se derivan de URL del propio host y organización; una relac
 
 Como la cabecera y los dos delimitadores contienen `AXIOM::` y el conversor nunca emite `<!--`, el contenido no puede cerrar el bloque ni imitar la cabecera.
 **Alternativas consideradas**: valla de código de longitud variable (no hay un delimitador fijo que contar); sustituir cada `<` (estropea los ejemplos de código).
-**Justificación**: prov:74:11 exige «exactamente un delimitador de apertura y uno de cierre propios». Las etiquetas `axiom:<cambio>` (dos puntos simples) no se ven afectadas. La `external_ref` está fuera del bloque, de modo que `sdd-propose` la toma de una zona de confianza.
+**Justificación**: prov:ARR:11 exige «exactamente un delimitador de apertura y uno de cierre propios». Las etiquetas `axiom:<cambio>` (dos puntos simples) no se ven afectadas. La `external_ref` está fuera del bloque, de modo que `sdd-propose` la toma de una zona de confianza.
 
 ### D-11: «Enlazado a otro cambio abierto» con dos fuentes y precedencia del WI
 
@@ -144,17 +144,17 @@ Como la cabecera y los dos delimitadores contienen `AXIOM::` y el conversor nunc
 
 En cualquier otro caso `<otro>` cuenta como **abierto**, incluido el cambio del que no hay ningún rastro local: la etiqueta es la verdad entre máquinas y este equipo no puede distinguir un cambio abierto en otra máquina de uno cerrado allí y aún no traído. Para ese caso el mensaje de `work_item_linked` dice que el cambio no consta en este equipo y la continuación ofrece las dos salidas: retirar la etiqueta en el tracker, o actualizar el checkout principal (operación de la persona) y repetir `axiom change start --from <id|url>`. Con registro local, la continuación es la de la spec: retirar la etiqueta o `axiom branch done --change <otro>`.
 
-Un registro ilegible no bloquea: se acepta y se avisa. En la fase 2, `Allow` reutiliza la regla 1 con la misma definición de cerrado (prov:74:15).
+Un registro ilegible no bloquea: se acepta y se avisa. En la fase 2, `Allow` reutiliza la regla 1 con la misma definición de cerrado (prov:ARR:15).
 **Alternativas consideradas**: solo escanear `openspec/changes/*` del checkout (no ve los worktrees); solo la etiqueta (pierde la evidencia local cuando el `PATCH` de vuelta falló); tratar como cerrado todo cambio sin registro local (rompe «manda el WI» entre máquinas); limitar «archivado» al workspace de `--cwd` (un worktree creado antes del archivado no lo ve).
-**Justificación**: cierra la decisión 8 y cumple los escenarios de prov:74:7. El WI nunca queda bloqueado sin salida: la persona siempre puede retirar la etiqueta o traer el cierre. Validar `<otro>` antes de componer `changes/archive/…-<otro>` impide recorridos de ruta con una etiqueta hostil.
+**Justificación**: cierra la decisión 8 y cumple los escenarios de prov:ARR:7. El WI nunca queda bloqueado sin salida: la persona siempre puede retirar la etiqueta o traer el cierre. Validar `<otro>` antes de componer `changes/archive/…-<otro>` impide recorridos de ruta con una etiqueta hostil.
 
 ### D-12: Staging atómico, cerrojos y adopción en orden fijo
 
 **Elección**:
-- **Rutas** (bajo `<v1> = <common>/axiom/change-start/v1/`): staging `<v1>/<cambio>/context/{work-item.md, work-item.json, attachments/}`; temporales `<v1>/.tmp/<cambio>/<aleatorio>/`; cerrojos `<v1>/.locks/change-<cambio>.lock` y `<v1>/.locks/item-<plugin>-<id>.lock` (D-24). Los nombres que empiezan por punto no pueden colisionar con un nombre de cambio, que debe empezar por letra o dígito. `work-item.json` del staging es el «WI normalizado en JSON» de prov:74:5 y la única fuente de identidad (`plugin`, `id`).
+- **Rutas** (bajo `<v1> = <common>/axiom/change-start/v1/`): staging `<v1>/<cambio>/context/{work-item.md, work-item.json, attachments/}`; temporales `<v1>/.tmp/<cambio>/<aleatorio>/`; cerrojos `<v1>/.locks/change-<cambio>.lock` y `<v1>/.locks/item-<plugin>-<id>.lock` (D-24). Los nombres que empiezan por punto no pueden colisionar con un nombre de cambio, que debe empezar por letra o dígito. `work-item.json` del staging es el «WI normalizado en JSON» de prov:ARR:5 y la única fuente de identidad (`plugin`, `id`).
 - **Invariante de completitud**: un staging o un destino con `context/work-item.json` legible está completo. La fase 1 escribe `work-item.json` en último lugar y publica con un único `os.Rename`; toda retirada (paso 6, `--discard`, sustitución de un staging inválido) empieza por un `os.Rename` atómico del directorio a `<v1>/.tmp/<cambio>/<aleatorio>/` y solo después borra. Nunca existe un staging a medio borrar con `work-item.json` legible.
 - **Fase 1**: referencia → cerrojo del WI → lectura → validación (D-04) → enlazado (D-11) → nombre → cerrojo del cambio → barrido de `<v1>/.tmp/<cambio>/` → comprobación del staging y de la adopción propia (D-13) → importación completa en `<v1>/.tmp/<cambio>/<aleatorio>/` → `work-item.json` en último lugar → `os.Rename` a `<v1>/<cambio>`. Si existía un directorio `<v1>/<cambio>` sin `work-item.json` legible, antes se retira como se describe arriba. Cualquier fallo borra el temporal (`defer`) y devuelve `write_failed`: nunca queda un staging parcial adoptable.
-- **Fase 2**, bajo el cerrojo del cambio, en el orden de prov:74:14 (detalle de fallos en D-25):
+- **Fase 2**, bajo el cerrojo del cambio, en el orden de prov:ARR:14 (detalle de fallos en D-25):
   1. Comprobar la preparación (D-14) y que existe qué adoptar. Barrer temporales del cambio.
   2. Copiar y verificar `context/` en el destino (D-15). El staging no se toca.
   3. SDD: `integrations.LinkWorkItem`.
@@ -167,20 +167,20 @@ Un registro ilegible no bloquea: se acepta y se avisa. En la fase 2, `Allow` reu
 - **Descarte**: `--discard` toma el cerrojo del cambio, retira `<v1>/<cambio>/` (renombrado atómico y borrado) y barre `<v1>/.tmp/<cambio>/`. No toca el destino ni el WI.
 
 **Alternativas consideradas**: solo cerrojo por WI (la fase 2 y el descarte no conocen el id antes de leer); solo cerrojo por cambio (dos fases 1 del mismo WI con títulos distintos crearían dos stagings, hueco 14); un recibo de adopción en el common dir (contradice «el staging deja de existir»); borrar el staging directamente con `os.RemoveAll` (un fallo a mitad dejaría un staging incompleto con `work-item.json` legible).
-**Justificación**: prov:74:5, prov:74:14, prov:74:16 y prov:74:17. Orden de cerrojos fijo (WI → cambio → integraciones): la fase 2 y el descarte nunca piden el del WI y las entregas solo toman el de integraciones, así que no hay interbloqueo.
+**Justificación**: prov:ARR:5, prov:ARR:14, prov:ARR:16 y prov:ARR:17. Orden de cerrojos fijo (WI → cambio → integraciones): la fase 2 y el descarte nunca piden el del WI y las entregas solo toman el de integraciones, así que no hay interbloqueo.
 
 ### D-13: Repetición de la fase 1
 
-**Elección**: tras superar las validaciones de prov:74:6 y derivar el nombre, bajo los dos cerrojos, se comprueba en este orden:
+**Elección**: tras superar las validaciones de prov:ARR:6 y derivar el nombre, bajo los dos cerrojos, se comprueba en este orden:
 1. Staging válido de ese nombre y, si no lo hay, del mismo `(plugin, id)` con otro nombre:
    - Mismo WI (con ese nombre o con otro): `status: already_staged`, código 0, aviso con la ruta y el nombre; el nombre devuelto es el del staging existente. No se descarga nada.
    - Mismo nombre con otro WI: `staging_conflict` con la continuación `axiom change start --discard --change <cambio>`.
    - Un directorio de staging sin `work-item.json` legible se trata como inexistente y se sustituye.
 2. Sin staging, adopción propia (cierra el hueco 10): si el escaneo de D-11 marcó `selfAdopted` (un cambio del registro con el **mismo** nombre derivado cuyo vínculo o `context/work-item.json` es de este WI), `status: already_adopted`, código 0, sin descarga ni escrituras. El JSON nombra la ruta del `context/` adoptado y, si su `backlink` no es `done`, un aviso con `axiom change start --adopt --change <cambio>` (y `--lane odd` en ODD) para completar el enlace. Con un staging presente y una adopción interrumpida a la vez, gana el punto 1 (`already_staged`): el `--adopt` siguiente completa los pasos que faltan.
 
-Un WI adoptado por un cambio con **otro** nombre (por ejemplo, porque el título cambió tras la adopción) no llega aquí: D-11 lo rechaza con `work_item_linked`, como pide el escenario «Vínculo local a otro cambio» de prov:74:7.
+Un WI adoptado por un cambio con **otro** nombre (por ejemplo, porque el título cambió tras la adopción) no llega aquí: D-11 lo rechaza con `work_item_linked`, como pide el escenario «Vínculo local a otro cambio» de prov:ARR:7.
 
-**Justificación**: prov:74:5, escenarios «Staging existente» y «título cambiado», y prov:74:17 «la segunda informó del staging existente». `already_adopted` es el mismo estado que prov:74:14 define para la fase 2; aquí evita reimportar y descargar un WI que ya tiene su contexto en el cambio.
+**Justificación**: prov:ARR:5, escenarios «Staging existente» y «título cambiado», y prov:ARR:17 «la segunda informó del staging existente». `already_adopted` es el mismo estado que prov:ARR:14 define para la fase 2; aquí evita reimportar y descargar un WI que ya tiene su contexto en el cambio.
 
 ### D-14: «Cambio preparado» se comprueba con el registro de ramas y el HEAD leído de ficheros
 
@@ -198,7 +198,7 @@ El rol `specs_in_place` (multirepo) solo exige 1 y 2. Si el HEAD no se puede lee
 - Registro presente con HEAD de otra rama o sin carpeta: `axiom branch ensure --change <cambio> [--lane odd] --json` y, si el registro tiene worktree, el mensaje nombra `axiom change start --adopt --change <cambio> [--lane odd] --cwd <worktree>`.
 
 En todos los casos el staging no se toca. Nada de esto ejecuta git.
-**Justificación**: prov:74:14 «MUST NOT escribir en una rama protegida distinta de la del cambio ni ejecutar git», su escenario «`--lane` incongruente» (la continuación incluye `--lane odd`) y el observador de `gitcommon.Observe` del escenario de prov:74:1.
+**Justificación**: prov:ARR:14 «MUST NOT escribir en una rama protegida distinta de la del cambio ni ejecutar git», su escenario «`--lane` incongruente» (la continuación incluye `--lane odd`) y el observador de `gitcommon.Observe` del escenario de prov:ARR:1.
 
 ### D-15: `context/` se copia y verifica; el staging queda intacto hasta el paso 6
 
@@ -210,7 +210,7 @@ En todos los casos el staging no se toca. Nada de esto ejecuta git.
 
 El staging solo se retira en el paso 6, tras los pasos 2 a 5. Destinos: SDD `openspec/changes/<cambio>/context/`; ODD `odd/context/<cambio>/` (los ficheros de `context/` quedan directamente bajo esa carpeta).
 **Alternativas consideradas**: `os.Rename` del staging con caída a copia entre volúmenes (diseño anterior: vacía el staging en el paso 2 y un fallo en el paso 3 contradiría «el staging permanece intacto»); copiar al destino definitivo sin temporal (un fallo a mitad dejaría un `context/` parcial con apariencia de adoptado).
-**Justificación**: prov:74:14 («el staging MUST conservarse hasta que [pasos 2 a 5]») y sus escenarios «Fallo de escritura al adoptar» y «Movimiento entre volúmenes»: con copia y verificación siempre, el resultado final es idéntico en uno o dos volúmenes y la caída a copia deja de ser un camino aparte. Coste: copiar hasta 50 MiB una vez por adopción. La copia es la «caída a copia verificada» de la spec aplicada siempre; se registra en «Huecos de spec».
+**Justificación**: prov:ARR:14 («el staging MUST conservarse hasta que [pasos 2 a 5]») y sus escenarios «Fallo de escritura al adoptar» y «Movimiento entre volúmenes»: con copia y verificación siempre, el resultado final es idéntico en uno o dos volúmenes y la caída a copia deja de ser un camino aparte. Coste: copiar hasta 50 MiB una vez por adopción. La copia es la «caída a copia verificada» de la spec aplicada siempre; se registra en «Huecos de spec».
 
 ### D-16: `context/` fuera de git por tres vías
 
@@ -222,7 +222,7 @@ El staging solo se retira en el paso 6, tras los pasos 2 a 5. Destinos: SDD `ope
 Las garantías de visibilidad ante fallos de cada paso de la adopción están en D-25.
 
 **Archivado y validadores (decisión 7)**: `sddstatus` solo enumera la carpeta del cambio para marcadores de primer nivel y de subcarpetas inmediatas (`status.go:465-482`); `context/` contiene `work-item.md`, `work-item.json` y `attachments/`, ninguno es marcador, y los adjuntos van en una subcarpeta para que un adjunto llamado `tasks.md` o `spec.md` nunca parezca un artefacto. `livespec.changeArtifacts` solo lee `.md` de primer nivel. El archivado trabaja en el worktree de archivado, que parte de la rama publicada, donde `context/` no existe porque nunca se confirmó; no hay nada que mover. `git worktree remove` (en `axiom branch done`) no considera sucios los ficheros ignorados; se fija con una prueba.
-**Justificación**: prov:74:18. Sin la tercera vía, un fallo al escribir `exclude` acabaría con datos de un tercero confirmados y publicados por `axiom sdd publish`.
+**Justificación**: prov:ARR:18. Sin la tercera vía, un fallo al escribir `exclude` acabaría con datos de un tercero confirmados y publicados por `axiom sdd publish`.
 
 ### D-17: Aplicabilidad y orden de comprobación en la CLI
 
@@ -244,7 +244,7 @@ Aplicabilidad: `workspace.Locate(cwd)`.
 
 Sin modo y con plugin activo: `work_item_required`. `--from` vacío o en blanco: `work_item_required`.
 **Alternativas consideradas**: bandera `--check` (la spec no la pide; la invocación sin argumentos ya es la consulta); comprobar la aplicabilidad antes que el uso; comprobar git antes que `work_item_required` (la consulta fallaría fuera de git y el orquestador no sabría si el WI es obligatorio); comprobar git después de `ParseItemRef` (un `--from` inválido fuera de git daría dos rechazos según el orden de corrección).
-**Justificación**: prov:74:1, prov:74:2 y prov:74:3. Los errores de uso son estáticos y no dependen de la configuración; la consulta sin argumentos distingue «no aplica» (0) de «WI obligatorio» (1). `git_repository_required` solo se exige a los modos que leen o escriben el common dir.
+**Justificación**: prov:ARR:1, prov:ARR:2 y prov:ARR:3. Los errores de uso son estáticos y no dependen de la configuración; la consulta sin argumentos distingue «no aplica» (0) de «WI obligatorio» (1). `git_repository_required` solo se exige a los modos que leen o escriben el common dir.
 
 ### D-18: Catálogo cerrado de rechazos y códigos de salida
 
@@ -296,7 +296,7 @@ Sin modo y con plugin activo: `work_item_required`. `--from` vacío o en blanco:
 - **Nombres**: base tras el último `/` o `\`; solo `[A-Za-z0-9._-]` (el resto, `_`, con el mismo plegado ASCII de D-08); sin puntos ni espacios al principio o al final; `..` colapsado; un nombre de dispositivo de Windows en la raíz recibe el prefijo `_`; un nombre vacío pasa a ser `adjunto`; la extensión va en minúsculas; como mucho 48 caracteres conservando la extensión; las colisiones se resuelven en orden con `-2`, `-3`… Se escriben bajo `context/attachments/` con permisos `0o644`. Nunca se ejecutan ni se interpretan.
 - **Fallos**: un fallo de descarga (5xx, red, URL ajena, redirección) omite el adjunto con su motivo saneado y no aborta la fase 1.
 
-**Justificación**: prov:74:12 y prov:74:13. Exigir el `Content-Type` exacto rechazaría casi todos los adjuntos reales; la detección por firma sigue atrapando el caso hostil del escenario (`foto.png` servido como `text/html`).
+**Justificación**: prov:ARR:12 y prov:ARR:13. Exigir el `Content-Type` exacto rechazaría casi todos los adjuntos reales; la detección por firma sigue atrapando el caso hostil del escenario (`foto.png` servido como `text/html`).
 
 ### D-20: Salida `axiom.change-start/v1` sin texto libre del tracker
 
@@ -337,7 +337,7 @@ El título, la descripción, los demás campos, las otras etiquetas, los título
 - `sdd-propose`: la condición es el vínculo, no la carpeta. Solo si `integrations.yaml` tiene un vínculo `kind: work_item`, escribe `external_ref: <alias>:<id>`, con `<alias>:<id>` tomado del campo `external_ref` de `context/work-item.json` (dato de confianza que escribe Axiom), tras comprobar que su id coincide con el del vínculo; si `context/` falta o el id no coincide, pregunta. **Sin vínculo no escribe `external_ref` ni `Referencia:`, aunque exista `context/`.** En un bug con vínculo escribe además `Referencia: <alias>:<id>` bajo `## Informe de bug` y redacta `Observado:` y `Esperado:` desde el contexto, preguntando lo que falte.
 
 Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de doctrina.
-**Justificación**: prov:74:24–27. Minimiza los conflictos de fusión con C-07-e y C-07-f (la sección H es un añadido al final de `sdd-phase-common.md`). RF-RUT-18: la regla no añade paradas; pedir el WI es la misma pregunta de datos que ya se hace al nombrar el cambio, y los fallos se relayan con las salidas que ya existen.
+**Justificación**: prov:KOF:24–27. Minimiza los conflictos de fusión con C-07-e y C-07-f (la sección H es un añadido al final de `sdd-phase-common.md`). RF-RUT-18: la regla no añade paradas; pedir el WI es la misma pregunta de datos que ya se hace al nombrar el cambio, y los fallos se relayan con las salidas que ya existen.
 
 ### D-22: Alcanzabilidad y canario de secretos
 
@@ -351,8 +351,8 @@ Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de d
 - **Exclusión**: `<common>/info/exclude` de ese mismo repositorio, con las entradas prefijadas por la ruta del workspace relativa a `gitRoot` (`projectExcludeTarget`, que ya lo hace así). Los repositorios de código de un multirepo no reciben entradas: `context/` nunca se escribe en ellos.
 - Si la raíz del workspace no está en un repositorio git, `git_repository_required` (D-17): el motor de ramas tampoco podría preparar el cambio.
 
-**Alternativas consideradas**: el repositorio de `--cwd` (en multirepo, un `--cwd` en un repositorio de código separaría staging y registro); ejecutar `git rev-parse --git-common-dir` (el verbo no ejecuta git, prov:74:1).
-**Justificación**: prov:74:5 («staging bajo el common dir de git»), prov:74:14 (registro en `<common>/axiom/branch/v1/…`) y prov:74:18 («`.git/info/exclude` del repositorio, resuelto con el common dir»).
+**Alternativas consideradas**: el repositorio de `--cwd` (en multirepo, un `--cwd` en un repositorio de código separaría staging y registro); ejecutar `git rev-parse --git-common-dir` (el verbo no ejecuta git, prov:ARR:1).
+**Justificación**: prov:ARR:5 («staging bajo el common dir de git»), prov:ARR:14 (registro en `<common>/axiom/branch/v1/…`) y prov:ARR:18 («`.git/info/exclude` del repositorio, resuelto con el common dir»).
 
 ### D-24: Cerrojo por identidad del WI, espera acotada y limpieza de temporales
 
@@ -365,7 +365,7 @@ Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de d
 - **Temporales**: todos viven en directorios por cambio (`<v1>/.tmp/<cambio>/`, `openspec/changes/<cambio>/.context-tmp/`, `odd/context/.tmp/<cambio>/`). Quien sostiene el cerrojo del cambio sabe que ningún otro proceso escribe ahí, así que los barre enteros sin heurísticas de antigüedad: la fase 1 antes de importar, la fase 2 en el paso 1 y el descarte al final. Un fallo al barrer solo avisa.
 
 **Alternativas consideradas**: un único cerrojo por WI (el descarte de un staging sin `work-item.json` legible no conoce el id); barrer temporales por antigüedad (borra el trabajo de un proceso lento); borrar ficheros de cerrojo al terminar (carrera descrita).
-**Justificación**: prov:74:17 («un cerrojo local por cambio», al que se suma el del WI sin contradecirlo) y su escenario «Dos fases 1 simultáneas»; el cerrojo huérfano se recupera sin intervención.
+**Justificación**: prov:ARR:17 («un cerrojo local por cambio», al que se suma el del WI sin contradecirlo) y su escenario «Dos fases 1 simultáneas»; el cerrojo huérfano se recupera sin intervención.
 
 ### D-25: Fallos de E/S por paso y `context/` nunca visible para git
 
@@ -382,16 +382,16 @@ Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de d
 | Fase 2, paso 5 | `work-item.json` del destino | `write_failed` | `context/` ya excluido (invisible); staging intacto; el reintento da el paso 2 por hecho |
 | Fase 2, paso 6 | Renombrar el staging a `.tmp` | Aviso `staging_not_retired` con `axiom change start --adopt --change <cambio>`; continúa al paso 7 | Adopción completa; el reintento retira el staging |
 | Fase 2, paso 6 | Borrar el `.tmp` renombrado | Sin aviso | Se barre en la siguiente operación del cambio |
-| Fase 2, paso 7 | Tracker | Aviso de enlace pendiente o conflicto (prov:74:15), salida 0 | `backlink: pending` o `conflict` |
+| Fase 2, paso 7 | Tracker | Aviso de enlace pendiente o conflicto (prov:ARR:15), salida 0 | `backlink: pending` o `conflict` |
 | Fase 2, paso 8 | Escribir el resultado del enlace | Aviso; salida 0 | `backlink: pending`; el reintento relee y obtiene `present` → `done` |
 | Descarte | Renombrar el staging a `.tmp` | `write_failed` | Staging intacto |
 | Descarte | Borrar el `.tmp` | Aviso; `discarded` | Se barre después |
 
 «El `context/` creado en esta ejecución» es el que el paso 2 renombró en esta invocación; un `context/` que ya existía (reintento) nunca se retira.
 
-**Garantía de invisibilidad**: los temporales de la adopción viven en rutas que cubren `.gitignore` (este repositorio) y las entradas de D-16; desde la primera adopción completa de un repositorio, todo `context/` posterior es invisible desde su creación. En la primera adopción, la única ventana es la muerte del proceso entre los pasos 2 y 4: ningún fallo controlado la deja abierta (se retira el `context/`), el verbo no ejecuta git dentro de ella, `axiom sdd publish` lo excluye por `LocalStateGlobs` y el siguiente `--adopt` asegura la exclusión. Cerrarla del todo exigiría ejecutar el paso 4 antes del 2, contra el orden fijo de prov:74:14: se registra en «Huecos de spec».
+**Garantía de invisibilidad**: los temporales de la adopción viven en rutas que cubren `.gitignore` (este repositorio) y las entradas de D-16; desde la primera adopción completa de un repositorio, todo `context/` posterior es invisible desde su creación. En la primera adopción, la única ventana es la muerte del proceso entre los pasos 2 y 4: ningún fallo controlado la deja abierta (se retira el `context/`), el verbo no ejecuta git dentro de ella, `axiom sdd publish` lo excluye por `LocalStateGlobs` y el siguiente `--adopt` asegura la exclusión. Cerrarla del todo exigiría ejecutar el paso 4 antes del 2, contra el orden fijo de prov:ARR:14: se registra en «Huecos de spec».
 **Alternativas consideradas**: deshacer también el vínculo en los fallos del paso 4 (requiere una operación de desvinculación nueva en `integrations` y el vínculo es inocuo y versionado); dejar `context/` tras un fallo del paso 3 o 4 (visible para git hasta el reintento).
-**Justificación**: prov:74:5, prov:74:14 (`write_failed` con el staging intacto y reintentable) y prov:74:18 (`git status` no lista `context/`).
+**Justificación**: prov:ARR:5, prov:ARR:14 (`write_failed` con el staging intacto y reintentable) y prov:ARR:18 (`git status` no lista `context/`).
 
 ### D-26: Imágenes sin petición y deduplicación por URL normalizada
 
@@ -401,7 +401,7 @@ Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de d
 - **Efecto**: la primera aparición, en el orden de D-19 (adjuntos `AttachedFile` primero), decide la descarga, el nombre de fichero y el resultado. Las apariciones siguientes, en cualquier campo o como adjunto, reutilizan ese resultado: apuntan al mismo `attachments/<fichero>` o al mismo `[imagen omitida: <motivo>]`, no hacen petición y no consumen presupuesto ni plaza del tope de 100 candidatos. La lista de adjuntos de `work-item.md` muestra cada recurso una vez, con el número de apariciones.
 
 **Alternativas consideradas**: comparar la URL literal (dos URL que solo difieren en `fileName` o en mayúsculas descargarían dos veces); deduplicar por el GUID de Azure DevOps (conocimiento del tracker fuera del adaptador).
-**Justificación**: prov:74:12 (a)-(d).
+**Justificación**: prov:ARR:12 (a)-(d).
 
 ### D-27: Firmas explícitas por extensión
 
@@ -426,7 +426,7 @@ Las reglas de doctrina se redactan en inglés, como el resto de las fuentes de d
 
 Los contenedores ZIP se inspeccionan con `archive/zip.NewReader` sobre los bytes ya descargados (≤ 10 MiB) **sin descomprimir ninguna entrada**: solo se listan nombres, así que no hay riesgo de bomba de descompresión. El texto en UTF-16 se omite (limitación documentada). Una firma que no concuerda omite el adjunto con «tipo de contenido no permitido» y no deja fichero.
 **Alternativas consideradas**: `http.DetectContentType` (no reconoce OLE ni distingue los tres OOXML); leer `[Content_Types].xml` (exige descomprimir).
-**Justificación**: prov:74:12, segundo párrafo, y sus escenarios «octet-stream con firma PNG», «firma discordante» y «sin `Content-Type`».
+**Justificación**: prov:ARR:12, segundo párrafo, y sus escenarios «octet-stream con firma PNG», «firma discordante» y «sin `Content-Type`».
 
 ### D-28: Texto del tracker en rutas y mensajes
 
@@ -435,7 +435,7 @@ Los contenedores ZIP se inspeccionan con `archive/zip.NewReader` sobre los bytes
 - `changestart.inlineNeutral(s) string` para el tipo en el mensaje de `work_item_type_unmapped`: aplica `neutralize` de D-10, sustituye cualquier carácter de control o salto de línea por un espacio, colapsa espacios, recorta a 64 runas con `…` y lo envuelve en `«»`. El tipo del WI no se usa en rutas: la URL de estados usa la grafía configurada (D-04) y el JSON lleva `type_key` de `item_keys`.
 - Prueba: `TestChangeStartTrackerTextConfined` (sustituye a `TestChangeStartJSONCarriesNoTrackerText`) siembra un WI con título, descripción, etiquetas, tipo y nombres de adjuntos hostiles (saltos de línea, bidi, anchura cero, `AXIOM::`, `../`) y comprueba en la salida de texto y en `--json` de cada fase y rechazo que: no aparece el título ni la descripción; el tipo solo aparece en `work_item_type_unmapped` y neutralizado; solo aparecen etiquetas `axiom:<otro>` válidas y solo en `work_item_linked`; una etiqueta `axiom:../x` no bloquea ni aparece.
 
-**Justificación**: escenarios «Tipo sin mapear» y «Etiqueta de otro cambio» de prov:74:6 y prov:74:7, coherentes con D-20.
+**Justificación**: escenarios «Tipo sin mapear» y «Etiqueta de otro cambio» de prov:ARR:6 y prov:ARR:7, coherentes con D-20.
 
 ### D-29: Formas de referencia aceptadas por `ParseItemRef`
 
@@ -449,7 +449,7 @@ Los contenedores ZIP se inspeccionan con `archive/zip.NewReader` sobre los bytes
    - `{id}` cumple la regla 1. Los demás parámetros de consulta se ignoran.
 3. Cualquier otra cosa es `work_item_reference_invalid`, sin red y sin escribir la URL.
 
-**Justificación**: prov:74:4. Cubre las URL que la persona copia del navegador (edición y tablero) y las de la API; exigir el proyecto configurado evita leer la categoría con el proceso de otro proyecto.
+**Justificación**: prov:ARR:4. Cubre las URL que la persona copia del navegador (edición y tablero) y las de la API; exigir el proyecto configurado evita leer la categoría con el proceso de otro proyecto.
 
 ## Flujo de datos
 
@@ -718,33 +718,33 @@ Solo `go test` en proceso, focalizado por paquete y con `-run`; ninguna prueba l
 
 | Requisito | Componente / fichero | Pruebas (nombre previsto) |
 |---|---|---|
-| prov:74:1 Verbo en dos fases y salida versionada | `cmd/axiom/main.go`, `internal/cli/change_start.go` (D-17, D-18, D-20, D-23) | `TestChangeHelpListsStart`, `TestAxiomHelpMentionsChangeStart`, `TestChangeStartExclusiveModesUsage`, `TestChangeStartAdoptDiscardRequireChange`, `TestChangeStartLaneOnlyWithAdopt` (`--from`/`--discard` con `--lane`, valor inválido; `usage_invalid`, 2, continuación `--help`, sin red ni ficheros), `TestChangeStartUnknownFlagAndPositionalUsage`, `TestChangeStartCheckOrder` (uso antes que aplicabilidad; `work_item_required` sin git; git antes que `ParseItemRef`), `TestChangeStartGitRepositoryRequired/{from,adopt,discard}` (sin red ni ficheros), `TestChangeStartJSONSchema` (éxito y rechazo), `TestChangeStartRunsNoGit` (con `gitcommon.Observe`; sin rama, worktree, `kickoff.yaml`, `proposal.md` ni documento ODD) |
-| prov:74:2 Sin plugin, «no aplica» | `cli.resolveWorkItemTracker` (D-17) | `TestChangeStartNotApplicable/{no_integrations,disabled,no_axiom_yaml,invalid_yaml_warns_validate,incomplete_block_warns_validate,not_registered_warns}` con observador de red y de ficheros y en los tres modos; `TestChangeStartPortUnsupported` |
-| prov:74:3 WI obligatorio | `cli` (D-17, D-18) | `TestChangeStartWorkItemRequired`, `TestChangeStartEmptyFrom` |
-| prov:74:4 ID o URL | `azuredevops/ref.go` `ParseItemRef`, `integrations.ParseItemRef` (D-29) | `TestParseItemRef` (tabla: id, `0`, cero inicial, > int32, `abc`; URL `_workitems/edit` con y sin proyecto, barra final, fragmento; `_apis/wit/workitems`; tablero `?workitem=`; otra organización, otro proyecto, otro host, `visualstudio.com`, `http`, `userinfo`); `TestChangeStartReferenceInvalidNoNetwork` |
-| prov:74:5 Staging en el common dir | `changestart/staging.go`, `start.go`, `commondir.go` (D-12, D-13, D-23) | `TestStartStagesWithoutTouchingRepo`, `TestStartReadsTrackerOnce`, `TestStartExistingStagingSameItem`, `TestStartAlreadyStagedOtherName` (título cambiado: nombre y ruta del existente, sin descargas), `TestStartReplacesStagingWithoutJSON`, `TestStartStagingConflictOtherItem`, `TestStartWriteFailureLeavesNoStaging` (fallo en cada escritura y en el `rename`), `TestStartAlreadyAdoptedSameChange` (`already_adopted`, sin descarga), `TestStartFromLinkedWorktreeUsesCommonDir` |
-| prov:74:6 Rechazos de la fase 1 | `changestart/validate.go`, `azuredevops/workitem_port.go`, `cli` (D-03, D-04, D-18) | `TestStartRefusals/{not_found,type_unmapped,closed_completed,closed_removed,category_not_name,unavailable_503,unavailable_timeout,unavailable_401}`, `TestStartTypeCheckedBeforeStates` (tipo sin mapear con estados en 503: `work_item_type_unmapped` y cero peticiones de estados), `TestStartStatesFailureIsUnavailable/{503,404}`, `TestStartBatchNotFoundOnlyWarns`, `TestStartUnknownStateWarns`, `TestChangeStartMissingPATNoNetwork` (continuación del secreto), `TestChangeStartNoPATInOutput`, trinquete de rechazos |
-| prov:74:7 Enlazado a otro cambio | `changestart/links.go`, `closed.go` (D-11, D-28) | `TestStartLinked/{tag_other_open,local_link_no_tag,odd_local_adoption,tag_archived_accepted,tag_archived_on_main_worktree,odd_finished_accepted,odd_registry_open,tag_unknown_locally_refused,same_name_tag,same_name_tag_case_insensitive,tag_invalid_component_ignored,tag_archive_reserved_ignored,unreadable_registry_warns}`, `TestStartLinkedTagWinsOverLocal` |
-| prov:74:8 Nombre determinista | `changestart/name.go` (D-08) | `TestDeriveNameCanonical`, `TestDeriveNameAccentsAndSigns`, `TestDeriveNameTruncated`, `TestDeriveNameEmptySlug`, `TestDeriveNameGitDangerous`, `FuzzDeriveName` |
-| prov:74:9 Perfil por tipo | `changestart/validate.go` (D-07) | `TestStartProfileIncrement`, `TestStartProfileBugCaseInsensitive`, `TestStartProfileOtherDefectTypeIsIncrement`, `TestStartProfileBugWritesNoObservedExpected` |
-| prov:74:10 Importación en Markdown | `htmlmd`, `changestart/render.go` (D-09) | `TestConvertBasic`, `TestConvertHostile`, `TestConvertLinkSchemes`, `TestRenderRelations`, `TestRenderOmitsEmptySections` |
-| prov:74:11 Dato no fiable | `changestart/untrusted.go` (D-10) | `TestRenderHeaderFirstLine`, `TestNeutralizeInjectedDelimiter`, `TestNeutralizeForgedHeader`, `TestNeutralizeTitlesNamesReasons` |
-| prov:74:12 Lista blanca y límites | `changestart/attachments.go`, `dedup.go`, `signature.go` (D-19, D-26, D-27) | `TestAttachmentAllowed`, `TestAttachmentExtensionRejected`, `TestAttachmentSVGRejected`, `TestAttachmentContentTypeMismatch` (`text/html` con `.png`), `TestAttachmentOctetStreamWithMatchingSignature`, `TestAttachmentOctetStreamHTMLBody`, `TestAttachmentNoContentTypeIsOctetStream`, `TestSignatureTable` (PNG, JPEG, GIF, WEBP, BMP, PDF, DOCX/XLSX/PPTX distinguidos, OLE, texto UTF-8, UTF-16 omitido), `TestOOXMLCheckDoesNotDecompress`, `TestImageSkippedWithoutRequest/{data,relative,file,ftp,http}` (cero peticiones y `[imagen omitida: …]` sin la URL), `TestImageDedupSingleDownload`, `TestAttachmentAndImageSameURLDedup`, `TestAttachmentOverTenMiBNoContentLength`, `TestAttachmentTotalBudget`, `TestAttachmentFailureDoesNotAbort` |
-| prov:74:13 PAT restringido y nombres saneados | `azuredevops/download.go` `validateResourceURL`, `changestart/attachments.go` | `TestImageForeignHostNoRequest`, `TestAttachmentSameOrgAuthenticated`, `TestAttachmentOtherOrgSkipped`, `TestAttachmentHTTPAndUserinfoSkipped`, `TestAttachmentRedirectNotFollowed`, `TestAttachmentNamesSanitized`, `TestAttachmentNameCollisions` |
-| prov:74:14 Adopción idempotente | `changestart/adopt.go`, `copy.go`, `integrations.LinkWorkItem` (D-12, D-14, D-15, D-25) | `TestAdoptSDD`, `TestAdoptODDNoIntegrationsYAML`, `TestAdoptTwiceAlreadyAdoptedNoNetwork` (SDD y ODD), `TestAdoptInterruptedRetry`, `TestAdoptDestinationOtherItemConflict`, `TestAdoptDestinationWithoutJSONConflict`, `TestAdoptWithoutStaging`, `TestAdoptChangeNotPrepared`, `TestAdoptLaneMismatch/{sdd_default_odd_record,odd_on_sdd_record,odd_head_other_branch}` (continuaciones de D-14), `TestAdoptHeadOtherBranch`, `TestAdoptStagingIntactOnFailure/{copy,verify,rename,link,exclude,workitem_json}`, `TestAdoptStagingRetireFailureWarns`, `TestAdoptCopyAcrossVolumesEquivalent`, `TestAdoptMultirepoSpecsInPlace`, `TestAdoptConcurrentWithDelivery` |
-| prov:74:15 Etiqueta de vuelta, avisa sin fallar | `changestart/adopt.go`, `azuredevops/linkback.go` (D-06) | `TestAdoptTagAddedOnce`, `TestAdoptTrackerDownWarnsExitZero`, `TestAdoptRetryCompletesPendingBacklink`, `TestAdoptOtherTagAppearedBetweenPhases`, `TestAdoptArchivedTagToleratedInPhase2`, `TestAdoptRevRaceKeepsTags` |
-| prov:74:16 `--discard` | `changestart/discard.go`, `cli` (D-12, D-25) | `TestDiscardExisting`, `TestDiscardNothingWarns`, `TestDiscardRenameFailureWriteFailed`, `TestDiscardSweepsTemps`, `TestChangeStartDiscardTraversalUsage` |
-| prov:74:17 Cerrojo por cambio | `changestart/lock.go`, `sweep.go` (D-24) | `TestStartConcurrentSameItem`, `TestStartConcurrentSameItemDifferentTitles` (un solo staging), `TestStartOrphanLockRecovered`, `TestStartBusyAfterBoundedWait`, `TestLockOrderPhase2NeverTakesItemLock`, `TestSweepOnlyUnderChangeLock` |
-| prov:74:18 `context/` fuera de git | `.gitignore`, `state.EnsureChangeContextIgnored`, `docpaths` (D-16, D-23, D-25) | `TestRepoGitignoreIgnoresContext` (`git check-ignore`, incluidos los temporales), `TestEnsureChangeContextIgnoredIdempotent`, `TestEnsureChangeContextIgnoredKeepsUserLines`, `TestEnsureChangeContextIgnoredWorkspacePrefix` (workspace en subcarpeta), `TestAdoptContextNeverUntracked` (`git status --porcelain` tras cada fallo inyectado y tras el éxito), `TestLocalStateIncludesContext`, `TestPublishExcludesContext` (`sddpublish` con su puerto Git de prueba), `TestStatusWithContextDir` (`sddstatus`), `TestBranchDoneIgnoresIgnoredContext` (engine) |
-| prov:74:19 Hermeticidad | `adotest`, pruebas de `changestart` y `cli` | `localOnlyTransport` en todas; `TestChangeStartEndToEndLocalOnly` afirma que todas las peticiones van al servidor local |
-| prov:74:20 Puerto opcional | `internal/integrations/workitems.go` (D-02, D-03) | `TestWorkItemPortDispatch` (cinco operaciones), `TestWorkItemPortUnsupported`, `TestWorkItemPortPanicRecovered`, `TestWorkItemPortSanitizesSecret`, `TestLegacyPluginStillRegisters` |
-| prov:74:21 Lectura tipada | `azuredevops/workitem_port.go`, `workitems.go` (D-03, D-04) | `TestReadItemFullTranslation`, `TestStateCategoryFromStates`, `TestStateCategoryUsesConfiguredTypeSpelling`, `TestStateCategoryUnknownState`, `TestReadItemNotFoundOnlyForItem`, `TestReadItemUnknownRelationAndMissingFields`, `TestReadItemForeignRelationNotRequested`, `TestReadItemRedactsPAT` |
-| prov:74:22 Descarga binaria acotada | `azuredevops/download.go`, `client.go` (D-05) | `TestDownloadOK`, `TestDownloadLimitAborts`, `TestDownloadForeignHostNoRequest`, `TestDownloadRejectionReasons` (cinco motivos, sin red), `TestDownloadMissingContentType`, `TestDownloadRedirectNotFollowed`, `TestDownloadErrorSanitized` |
-| prov:74:23 Etiqueta idempotente con `test /rev` | `azuredevops/linkback.go` (D-06) | `TestLinkBackAddsKeepingOthers`, `TestLinkBackPresentNoWrite`, `TestLinkBackRevConflictRetries`, `TestLinkBackPersistentConflict`, `TestLinkBackOnlyTagsField`, `TestLinkBackAllowRefuses` |
-| prov:74:24 Kickoff SDD con plugin activo | `_shared/sdd-orchestrator-sections.md` (D-21) | `TestOrchestratorWorkItemRuleParity` (puntos 1-11 de D-21: consulta, pedir el WI, orden fase 1 → `ensure` → `seal` → fase 2 → `proposal.md`/explore, fallo de `ensure`/`decision_required`/`seal` sin fase 2 y con reintento o `--discard`, rechazo de `--adopt` que detiene, no ejecutar `--discard` por cuenta propia, aviso que no detiene, ISO/bug, sin cambios sin plugin), `TestGolden` |
-| prov:74:25 Doctrina ODD | `agentguidance/routing.go` (D-21) | `TestODDRoutingWorkItemRule` (fase 1 antes de `ensure --lane odd`, fallo de `ensure` sin fase 2, fase 2 antes de `odd/tasks`, rechazo de `--adopt` que detiene, `external_ref`, perfil bug con `Tipo: bug` y `## Spec viva` o `## Impacto en la spec`/`Sin impacto en la spec`/`Motivo:`, el verbo no crea el documento, dato no fiable, trabajo pequeño), `TestRoutingAddsNoStop` (RF-RUT-18), `TestGolden` |
-| prov:74:26 Paridad y dato no fiable en skills | `sdd-explore`, `sdd-propose`, `sdd-iso-convention`, `sdd-phase-common` (D-21) | `TestSkillsTreatWorkItemContextAsUntrusted` (las cuatro fuentes), `TestGolden` |
-| prov:74:27 `external_ref` y `Referencia:` | `sdd-propose/SKILL.md`, `sdd-iso-convention.md` (D-21) | `TestProposeExternalRefRule` (con vínculo; bug con `Referencia:`; sin vínculo ni `external_ref` ni `Referencia:` aunque exista `context/`; preguntar lo que falte), `TestStatusDoesNotRequireExternalRef` (`sddstatus`) |
+| prov:ARR:1 Verbo en dos fases y salida versionada | `cmd/axiom/main.go`, `internal/cli/change_start.go` (D-17, D-18, D-20, D-23) | `TestChangeHelpListsStart`, `TestAxiomHelpMentionsChangeStart`, `TestChangeStartExclusiveModesUsage`, `TestChangeStartAdoptDiscardRequireChange`, `TestChangeStartLaneOnlyWithAdopt` (`--from`/`--discard` con `--lane`, valor inválido; `usage_invalid`, 2, continuación `--help`, sin red ni ficheros), `TestChangeStartUnknownFlagAndPositionalUsage`, `TestChangeStartCheckOrder` (uso antes que aplicabilidad; `work_item_required` sin git; git antes que `ParseItemRef`), `TestChangeStartGitRepositoryRequired/{from,adopt,discard}` (sin red ni ficheros), `TestChangeStartJSONSchema` (éxito y rechazo), `TestChangeStartRunsNoGit` (con `gitcommon.Observe`; sin rama, worktree, `kickoff.yaml`, `proposal.md` ni documento ODD) |
+| prov:ARR:2 Sin plugin, «no aplica» | `cli.resolveWorkItemTracker` (D-17) | `TestChangeStartNotApplicable/{no_integrations,disabled,no_axiom_yaml,invalid_yaml_warns_validate,incomplete_block_warns_validate,not_registered_warns}` con observador de red y de ficheros y en los tres modos; `TestChangeStartPortUnsupported` |
+| prov:ARR:3 WI obligatorio | `cli` (D-17, D-18) | `TestChangeStartWorkItemRequired`, `TestChangeStartEmptyFrom` |
+| prov:ARR:4 ID o URL | `azuredevops/ref.go` `ParseItemRef`, `integrations.ParseItemRef` (D-29) | `TestParseItemRef` (tabla: id, `0`, cero inicial, > int32, `abc`; URL `_workitems/edit` con y sin proyecto, barra final, fragmento; `_apis/wit/workitems`; tablero `?workitem=`; otra organización, otro proyecto, otro host, `visualstudio.com`, `http`, `userinfo`); `TestChangeStartReferenceInvalidNoNetwork` |
+| prov:ARR:5 Staging en el common dir | `changestart/staging.go`, `start.go`, `commondir.go` (D-12, D-13, D-23) | `TestStartStagesWithoutTouchingRepo`, `TestStartReadsTrackerOnce`, `TestStartExistingStagingSameItem`, `TestStartAlreadyStagedOtherName` (título cambiado: nombre y ruta del existente, sin descargas), `TestStartReplacesStagingWithoutJSON`, `TestStartStagingConflictOtherItem`, `TestStartWriteFailureLeavesNoStaging` (fallo en cada escritura y en el `rename`), `TestStartAlreadyAdoptedSameChange` (`already_adopted`, sin descarga), `TestStartFromLinkedWorktreeUsesCommonDir` |
+| prov:ARR:6 Rechazos de la fase 1 | `changestart/validate.go`, `azuredevops/workitem_port.go`, `cli` (D-03, D-04, D-18) | `TestStartRefusals/{not_found,type_unmapped,closed_completed,closed_removed,category_not_name,unavailable_503,unavailable_timeout,unavailable_401}`, `TestStartTypeCheckedBeforeStates` (tipo sin mapear con estados en 503: `work_item_type_unmapped` y cero peticiones de estados), `TestStartStatesFailureIsUnavailable/{503,404}`, `TestStartBatchNotFoundOnlyWarns`, `TestStartUnknownStateWarns`, `TestChangeStartMissingPATNoNetwork` (continuación del secreto), `TestChangeStartNoPATInOutput`, trinquete de rechazos |
+| prov:ARR:7 Enlazado a otro cambio | `changestart/links.go`, `closed.go` (D-11, D-28) | `TestStartLinked/{tag_other_open,local_link_no_tag,odd_local_adoption,tag_archived_accepted,tag_archived_on_main_worktree,odd_finished_accepted,odd_registry_open,tag_unknown_locally_refused,same_name_tag,same_name_tag_case_insensitive,tag_invalid_component_ignored,tag_archive_reserved_ignored,unreadable_registry_warns}`, `TestStartLinkedTagWinsOverLocal` |
+| prov:ARR:8 Nombre determinista | `changestart/name.go` (D-08) | `TestDeriveNameCanonical`, `TestDeriveNameAccentsAndSigns`, `TestDeriveNameTruncated`, `TestDeriveNameEmptySlug`, `TestDeriveNameGitDangerous`, `FuzzDeriveName` |
+| prov:ARR:9 Perfil por tipo | `changestart/validate.go` (D-07) | `TestStartProfileIncrement`, `TestStartProfileBugCaseInsensitive`, `TestStartProfileOtherDefectTypeIsIncrement`, `TestStartProfileBugWritesNoObservedExpected` |
+| prov:ARR:10 Importación en Markdown | `htmlmd`, `changestart/render.go` (D-09) | `TestConvertBasic`, `TestConvertHostile`, `TestConvertLinkSchemes`, `TestRenderRelations`, `TestRenderOmitsEmptySections` |
+| prov:ARR:11 Dato no fiable | `changestart/untrusted.go` (D-10) | `TestRenderHeaderFirstLine`, `TestNeutralizeInjectedDelimiter`, `TestNeutralizeForgedHeader`, `TestNeutralizeTitlesNamesReasons` |
+| prov:ARR:12 Lista blanca y límites | `changestart/attachments.go`, `dedup.go`, `signature.go` (D-19, D-26, D-27) | `TestAttachmentAllowed`, `TestAttachmentExtensionRejected`, `TestAttachmentSVGRejected`, `TestAttachmentContentTypeMismatch` (`text/html` con `.png`), `TestAttachmentOctetStreamWithMatchingSignature`, `TestAttachmentOctetStreamHTMLBody`, `TestAttachmentNoContentTypeIsOctetStream`, `TestSignatureTable` (PNG, JPEG, GIF, WEBP, BMP, PDF, DOCX/XLSX/PPTX distinguidos, OLE, texto UTF-8, UTF-16 omitido), `TestOOXMLCheckDoesNotDecompress`, `TestImageSkippedWithoutRequest/{data,relative,file,ftp,http}` (cero peticiones y `[imagen omitida: …]` sin la URL), `TestImageDedupSingleDownload`, `TestAttachmentAndImageSameURLDedup`, `TestAttachmentOverTenMiBNoContentLength`, `TestAttachmentTotalBudget`, `TestAttachmentFailureDoesNotAbort` |
+| prov:ARR:13 PAT restringido y nombres saneados | `azuredevops/download.go` `validateResourceURL`, `changestart/attachments.go` | `TestImageForeignHostNoRequest`, `TestAttachmentSameOrgAuthenticated`, `TestAttachmentOtherOrgSkipped`, `TestAttachmentHTTPAndUserinfoSkipped`, `TestAttachmentRedirectNotFollowed`, `TestAttachmentNamesSanitized`, `TestAttachmentNameCollisions` |
+| prov:ARR:14 Adopción idempotente | `changestart/adopt.go`, `copy.go`, `integrations.LinkWorkItem` (D-12, D-14, D-15, D-25) | `TestAdoptSDD`, `TestAdoptODDNoIntegrationsYAML`, `TestAdoptTwiceAlreadyAdoptedNoNetwork` (SDD y ODD), `TestAdoptInterruptedRetry`, `TestAdoptDestinationOtherItemConflict`, `TestAdoptDestinationWithoutJSONConflict`, `TestAdoptWithoutStaging`, `TestAdoptChangeNotPrepared`, `TestAdoptLaneMismatch/{sdd_default_odd_record,odd_on_sdd_record,odd_head_other_branch}` (continuaciones de D-14), `TestAdoptHeadOtherBranch`, `TestAdoptStagingIntactOnFailure/{copy,verify,rename,link,exclude,workitem_json}`, `TestAdoptStagingRetireFailureWarns`, `TestAdoptCopyAcrossVolumesEquivalent`, `TestAdoptMultirepoSpecsInPlace`, `TestAdoptConcurrentWithDelivery` |
+| prov:ARR:15 Etiqueta de vuelta, avisa sin fallar | `changestart/adopt.go`, `azuredevops/linkback.go` (D-06) | `TestAdoptTagAddedOnce`, `TestAdoptTrackerDownWarnsExitZero`, `TestAdoptRetryCompletesPendingBacklink`, `TestAdoptOtherTagAppearedBetweenPhases`, `TestAdoptArchivedTagToleratedInPhase2`, `TestAdoptRevRaceKeepsTags` |
+| prov:ARR:16 `--discard` | `changestart/discard.go`, `cli` (D-12, D-25) | `TestDiscardExisting`, `TestDiscardNothingWarns`, `TestDiscardRenameFailureWriteFailed`, `TestDiscardSweepsTemps`, `TestChangeStartDiscardTraversalUsage` |
+| prov:ARR:17 Cerrojo por cambio | `changestart/lock.go`, `sweep.go` (D-24) | `TestStartConcurrentSameItem`, `TestStartConcurrentSameItemDifferentTitles` (un solo staging), `TestStartOrphanLockRecovered`, `TestStartBusyAfterBoundedWait`, `TestLockOrderPhase2NeverTakesItemLock`, `TestSweepOnlyUnderChangeLock` |
+| prov:ARR:18 `context/` fuera de git | `.gitignore`, `state.EnsureChangeContextIgnored`, `docpaths` (D-16, D-23, D-25) | `TestRepoGitignoreIgnoresContext` (`git check-ignore`, incluidos los temporales), `TestEnsureChangeContextIgnoredIdempotent`, `TestEnsureChangeContextIgnoredKeepsUserLines`, `TestEnsureChangeContextIgnoredWorkspacePrefix` (workspace en subcarpeta), `TestAdoptContextNeverUntracked` (`git status --porcelain` tras cada fallo inyectado y tras el éxito), `TestLocalStateIncludesContext`, `TestPublishExcludesContext` (`sddpublish` con su puerto Git de prueba), `TestStatusWithContextDir` (`sddstatus`), `TestBranchDoneIgnoresIgnoredContext` (engine) |
+| prov:ARR:19 Hermeticidad | `adotest`, pruebas de `changestart` y `cli` | `localOnlyTransport` en todas; `TestChangeStartEndToEndLocalOnly` afirma que todas las peticiones van al servidor local |
+| prov:INT:20 Puerto opcional | `internal/integrations/workitems.go` (D-02, D-03) | `TestWorkItemPortDispatch` (cinco operaciones), `TestWorkItemPortUnsupported`, `TestWorkItemPortPanicRecovered`, `TestWorkItemPortSanitizesSecret`, `TestLegacyPluginStillRegisters` |
+| prov:ADO:21 Lectura tipada | `azuredevops/workitem_port.go`, `workitems.go` (D-03, D-04) | `TestReadItemFullTranslation`, `TestStateCategoryFromStates`, `TestStateCategoryUsesConfiguredTypeSpelling`, `TestStateCategoryUnknownState`, `TestReadItemNotFoundOnlyForItem`, `TestReadItemUnknownRelationAndMissingFields`, `TestReadItemForeignRelationNotRequested`, `TestReadItemRedactsPAT` |
+| prov:ADO:22 Descarga binaria acotada | `azuredevops/download.go`, `client.go` (D-05) | `TestDownloadOK`, `TestDownloadLimitAborts`, `TestDownloadForeignHostNoRequest`, `TestDownloadRejectionReasons` (cinco motivos, sin red), `TestDownloadMissingContentType`, `TestDownloadRedirectNotFollowed`, `TestDownloadErrorSanitized` |
+| prov:ADO:23 Etiqueta idempotente con `test /rev` | `azuredevops/linkback.go` (D-06) | `TestLinkBackAddsKeepingOthers`, `TestLinkBackPresentNoWrite`, `TestLinkBackRevConflictRetries`, `TestLinkBackPersistentConflict`, `TestLinkBackOnlyTagsField`, `TestLinkBackAllowRefuses` |
+| prov:KOF:24 Kickoff SDD con plugin activo | `_shared/sdd-orchestrator-sections.md` (D-21) | `TestOrchestratorWorkItemRuleParity` (puntos 1-11 de D-21: consulta, pedir el WI, orden fase 1 → `ensure` → `seal` → fase 2 → `proposal.md`/explore, fallo de `ensure`/`decision_required`/`seal` sin fase 2 y con reintento o `--discard`, rechazo de `--adopt` que detiene, no ejecutar `--discard` por cuenta propia, aviso que no detiene, ISO/bug, sin cambios sin plugin), `TestGolden` |
+| prov:RUT:25 Doctrina ODD | `agentguidance/routing.go` (D-21) | `TestODDRoutingWorkItemRule` (fase 1 antes de `ensure --lane odd`, fallo de `ensure` sin fase 2, fase 2 antes de `odd/tasks`, rechazo de `--adopt` que detiene, `external_ref`, perfil bug con `Tipo: bug` y `## Spec viva` o `## Impacto en la spec`/`Sin impacto en la spec`/`Motivo:`, el verbo no crea el documento, dato no fiable, trabajo pequeño), `TestRoutingAddsNoStop` (RF-RUT-18), `TestGolden` |
+| prov:ORQ:26 Paridad y dato no fiable en skills | `sdd-explore`, `sdd-propose`, `sdd-iso-convention`, `sdd-phase-common` (D-21) | `TestSkillsTreatWorkItemContextAsUntrusted` (las cuatro fuentes), `TestGolden` |
+| prov:ORQ:27 `external_ref` y `Referencia:` | `sdd-propose/SKILL.md`, `sdd-iso-convention.md` (D-21) | `TestProposeExternalRefRule` (con vínculo; bug con `Referencia:`; sin vínculo ni `external_ref` ni `Referencia:` aunque exista `context/`; preguntar lo que falte), `TestStatusDoesNotRequireExternalRef` (`sddstatus`) |
 | RF-INT-09 (MOD) | `integrations.LinkWorkItem` | `TestLinkWorkItemCreatesFile`, `TestLinkWorkItemIdempotent`, `TestLinkWorkItemKeepsDeliveryLinks`, `TestLinkWorkItemRejectsUserinfo`; las pruebas existentes de `mergeLinks` siguen verdes |
 | RF-ADO-01 (MOD) | `manifest/azuredevops.go` (D-07) | `TestAzureDevOpsManifestCapabilities` (exactamente `items.read`, `discovery`, `tags`, `attachments`), `TestAzureDevOpsManifestRefAlias`, `TestAzureDevOpsManifestItemKeys`, `TestDefaultRegistryMatchesCatalog`; el verbo lee el alias con `Manifest().RefAlias` (`TestChangeStartExternalRefUsesManifestAlias`) |
 | RF-ADO-02 (MOD) | `workspace/integrations.go`, `manifest/format.go` | `TestItemKeysValid`, `TestItemKeysDefaultApplied`, `TestItemKeysMalformed`, `TestItemKeysDuplicate`, `TestItemKeysPrefixInvalid`; las pruebas existentes de `base_url`, `pat` y PAT por llamada siguen verdes |
@@ -782,29 +782,29 @@ Amenazas específicas (no proceden de la plantilla, pero son requisitos de dise�
 Una sola PR (`single-pr`), un commit por unidad, pruebas focalizadas por paquete con `-run`. Las amenazas aplicables de la matriz se convierten en pruebas RED de la unidad indicada.
 
 1. **Manifiesto y configuración**: `RefAlias`, `ConfigField.Format`, `ParseTypePrefixes`, capacidades `tags`/`attachments`, `item_keys` por defecto, validación en `workspace` (RF-ADO-01, RF-ADO-02).
-2. **Puerto y adaptador**: `integrations/workitems.go` con cinco operaciones y `ResourceURLRejection`; traducción de errores en la frontera (D-03); `ParseItemRef` con las formas de D-29; `ReadItem` y `StateCategory` separados (D-04); `Download` (modo binario de `do`, `Content-Type` ausente); `LinkBack`; ampliación de `adotest` (prov:74:4, 20–23, RF-ADO-16).
-3. **Conversor y marcado**: `htmlmd`, `untrusted.go` (`neutralize`, `inlineNeutral`), `render.go` (prov:74:10–11).
-4. **Adjuntos**: filtrado sin petición, deduplicación (D-26), lista blanca, firmas (D-27), presupuesto, nombres y colisiones (prov:74:12–13).
-5. **Fase 1 y verbo**: `ValidChangeName`, nombre, validación en orden, «cerrado localmente» y escaneo de vínculos (D-11), common dir (D-23), cerrojos y barrido (D-24), staging atómico y `already_staged`/`already_adopted` (D-12, D-13); `cli/change_start.go` con consulta, orden de comprobaciones (D-17), `--from`, aplicabilidad, catálogo y estados (D-18), salida confinada (D-20, D-28); `runChange` y ayuda; `axiom.example.yaml` y `docs/manual-de-inicio.md` (prov:74:1–9, 17, 19).
-6. **Fase 2 y descarte**: preparación y carril incongruente (D-14), copia verificada (D-15), `LinkWorkItem`, `EnsureChangeContextIgnored`, `docpaths`, `.gitignore`, fallos por paso y retirada (D-25), enlace de vuelta, `--discard` (prov:74:14–16, 18; RF-INT-09).
-7. **Skills y convención común**: sección H de `sdd-phase-common.md`, `sdd-explore`, `sdd-propose` (condición de vínculo), `sdd-iso-convention` y sus aserciones (prov:74:26–27).
-8. **Doctrina y goldens (final)**: `sdd-orchestrator-sections.md` y `routing.go` con los puntos de D-21, `TestGolden -update` y aserciones de paridad (prov:74:24–25).
+2. **Puerto y adaptador**: `integrations/workitems.go` con cinco operaciones y `ResourceURLRejection`; traducción de errores en la frontera (D-03); `ParseItemRef` con las formas de D-29; `ReadItem` y `StateCategory` separados (D-04); `Download` (modo binario de `do`, `Content-Type` ausente); `LinkBack`; ampliación de `adotest` (prov:ARR:4, 20–23, RF-ADO-16).
+3. **Conversor y marcado**: `htmlmd`, `untrusted.go` (`neutralize`, `inlineNeutral`), `render.go` (prov:ARR:10–11).
+4. **Adjuntos**: filtrado sin petición, deduplicación (D-26), lista blanca, firmas (D-27), presupuesto, nombres y colisiones (prov:ARR:12–13).
+5. **Fase 1 y verbo**: `ValidChangeName`, nombre, validación en orden, «cerrado localmente» y escaneo de vínculos (D-11), common dir (D-23), cerrojos y barrido (D-24), staging atómico y `already_staged`/`already_adopted` (D-12, D-13); `cli/change_start.go` con consulta, orden de comprobaciones (D-17), `--from`, aplicabilidad, catálogo y estados (D-18), salida confinada (D-20, D-28); `runChange` y ayuda; `axiom.example.yaml` y `docs/manual-de-inicio.md` (prov:ARR:1–9, 17, 19).
+6. **Fase 2 y descarte**: preparación y carril incongruente (D-14), copia verificada (D-15), `LinkWorkItem`, `EnsureChangeContextIgnored`, `docpaths`, `.gitignore`, fallos por paso y retirada (D-25), enlace de vuelta, `--discard` (prov:ARR:14–16, 18; RF-INT-09).
+7. **Skills y convención común**: sección H de `sdd-phase-common.md`, `sdd-explore`, `sdd-propose` (condición de vínculo), `sdd-iso-convention` y sus aserciones (prov:ORQ:26–27).
+8. **Doctrina y goldens (final)**: `sdd-orchestrator-sections.md` y `routing.go` con los puntos de D-21, `TestGolden -update` y aserciones de paridad (prov:KOF:24–25).
 
 ## Huecos de spec
 
-Resueltos por la corrección de la spec (se conservan como historial): los códigos `usage_invalid`, `git_repository_required` y `write_failed` (cabecera y prov:74:1); el `Content-Type` genérico y la firma (prov:74:12); la etiqueta de un cambio archivado en la fase 2 (prov:74:15); la categoría de estado desconocida (prov:74:6); el aviso de `axiom.yaml` inválido (prov:74:2). `odd-living-document` RF-ODO-01 y `dashboard-sdd-orchestration` RF-DSO-04 siguen sin necesitar delta.
+Resueltos por la corrección de la spec (se conservan como historial): los códigos `usage_invalid`, `git_repository_required` y `write_failed` (cabecera y prov:ARR:1); el `Content-Type` genérico y la firma (prov:ARR:12); la etiqueta de un cambio archivado en la fase 2 (prov:ARR:15); la categoría de estado desconocida (prov:ARR:6); el aviso de `axiom.yaml` inválido (prov:ARR:2). `odd-living-document` RF-ODO-01 y `dashboard-sdd-orchestration` RF-DSO-04 siguen sin necesitar delta.
 
 Los nueve huecos siguientes están recogidos en la spec (T0 de `apply`); las decisiones D-xx no cambian:
 
-1. **Formas de URL de prov:74:4** (hueco 17 de la revisión): la spec no define URL de tablero, consulta, fragmento, barra final, URL de la API ni si el proyecto de la URL debe coincidir. El diseño acepta las formas de D-29 y exige el proyecto configurado cuando la URL lo nombra.
-2. **Orden de los pasos 2 y 4 de prov:74:14**: con el orden fijo, la primera adopción de un repositorio tiene una ventana (solo ante la muerte del proceso) en la que `context/` existe sin la entrada de `info/exclude` (D-25). Poner el paso 4 antes del 2 la cerraría; la spec debería permitirlo.
-3. **«Renombrado y caída a copia» de prov:74:14 (paso 2)**: el diseño copia y verifica siempre (D-15), porque renombrar el staging contradiría «el staging MUST conservarse hasta los pasos 2 a 5» del mismo requisito. El resultado final es el mismo.
+1. **Formas de URL de prov:ARR:4** (hueco 17 de la revisión): la spec no define URL de tablero, consulta, fragmento, barra final, URL de la API ni si el proyecto de la URL debe coincidir. El diseño acepta las formas de D-29 y exige el proyecto configurado cuando la URL lo nombra.
+2. **Orden de los pasos 2 y 4 de prov:ARR:14**: con el orden fijo, la primera adopción de un repositorio tiene una ventana (solo ante la muerte del proceso) en la que `context/` existe sin la entrada de `info/exclude` (D-25). Poner el paso 4 antes del 2 la cerraría; la spec debería permitirlo.
+3. **«Renombrado y caída a copia» de prov:ARR:14 (paso 2)**: el diseño copia y verifica siempre (D-15), porque renombrar el staging contradiría «el staging MUST conservarse hasta los pasos 2 a 5» del mismo requisito. El resultado final es el mismo.
 4. **`already_adopted` en la fase 1**: la spec solo lo define para la fase 2; el diseño lo usa también en la fase 1 cuando el cambio del mismo nombre ya adoptó el WI (D-13).
 5. **Fallo al retirar el staging (paso 6)**: la spec no lo trata; el diseño lo convierte en aviso con salida 0, porque la adopción ya es completa (D-25).
-6. **Cerrojo por WI**: prov:74:17 pide un cerrojo por cambio; el diseño añade uno por WI en la fase 1 para el escenario «dos fases 1 simultáneas» con títulos distintos (D-24). Es compatible.
-7. **Etiqueta de un cambio sin rastro local** (prov:74:7): la spec no dice si cuenta como abierto; el diseño la trata como abierta (manda el WI) con una continuación que ofrece retirarla o traer el cierre (D-11).
-8. **Perfil bug literal** (prov:74:9): un tipo de defecto con otro nombre en un proceso personalizado o localizado produce `incremento`; está documentado y no hay clave de configuración (D-07). Si se quiere configurable, hace falta ampliar RF-ADO-02.
-9. **`git_repository_required` y la consulta sin argumentos** (prov:74:1): la spec no fija la posición; el diseño no lo exige a la consulta ni a `--from` vacío (D-17).
+6. **Cerrojo por WI**: prov:ARR:17 pide un cerrojo por cambio; el diseño añade uno por WI en la fase 1 para el escenario «dos fases 1 simultáneas» con títulos distintos (D-24). Es compatible.
+7. **Etiqueta de un cambio sin rastro local** (prov:ARR:7): la spec no dice si cuenta como abierto; el diseño la trata como abierta (manda el WI) con una continuación que ofrece retirarla o traer el cierre (D-11).
+8. **Perfil bug literal** (prov:ARR:9): un tipo de defecto con otro nombre en un proceso personalizado o localizado produce `incremento`; está documentado y no hay clave de configuración (D-07). Si se quiere configurable, hace falta ampliar RF-ADO-02.
+9. **`git_repository_required` y la consulta sin argumentos** (prov:ARR:1): la spec no fija la posición; el diseño no lo exige a la consulta ni a `--from` vacío (D-17).
 
 ## Preguntas abiertas
 
