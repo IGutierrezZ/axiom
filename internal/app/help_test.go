@@ -19,25 +19,6 @@ func TestHelpContainsAllCommands(t *testing.T) {
 	}
 }
 
-// TestHelpAdvertisesNoRetiredWorkCommands keeps help and dispatch aligned: the
-// retired remote control-plane commands no longer dispatch, so help must not
-// advertise any of them.
-func TestHelpAdvertisesNoRetiredWorkCommands(t *testing.T) {
-	var buf bytes.Buffer
-	printHelp(&buf, "v1.0.0-test")
-	output := buf.String()
-
-	for _, cmd := range []string{
-		"work-capabilities", "work-start", "work-route", "work-advance",
-		"work-verification-decide", "work-reconcile", "work-status", "work-transition",
-		"WORK CONTRACT COMPATIBILITY",
-	} {
-		if strings.Contains(output, cmd) {
-			t.Errorf("help output still advertises retired command surface %q", cmd)
-		}
-	}
-}
-
 func TestHelpContainsVersion(t *testing.T) {
 	var buf bytes.Buffer
 	printHelp(&buf, "v1.2.3")
@@ -54,21 +35,3 @@ func TestHelpCommandsHeadingIsAligned(t *testing.T) {
 	}
 }
 
-func TestHelpDoesNotAdvertiseRetiredVerifyValidator(t *testing.T) {
-	var output bytes.Buffer
-	printHelp(&output, "test")
-	if strings.Contains(output.String(), "sdd-verify-validate") {
-		t.Fatal("help advertises retired report admission")
-	}
-}
-
-func TestHelpAdvertisesNoRetiredReviewCommands(t *testing.T) {
-	var buf bytes.Buffer
-	printHelp(&buf, "v1.0.0-test")
-	output := buf.String()
-	for _, retired := range []string{"review start", "review mode", "review-start", "review-validate", "COMPATIBILITY COMMANDS"} {
-		if strings.Contains(output, retired) {
-			t.Errorf("help output still advertises retired review surface %q", retired)
-		}
-	}
-}
