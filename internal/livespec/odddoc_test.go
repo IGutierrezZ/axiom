@@ -305,3 +305,23 @@ func TestDocErrorProblemsKeepTheirOrder(t *testing.T) {
 // idOfName deriva el identificador del título con el patrón por defecto: el ID ya no es un
 // campo de openspecdoc.Requirement (REQ-44.4).
 func idOfName(name string) string { return reqid.Default().InTitle(name) }
+
+// REQ-47.6 / D11: la sección de traza no altera la validación del documento ODD; una
+// sección de traza duplicada la rechaza la lectura de la traza, no ParseFeatureDoc.
+func TestParseFeatureDocValidatesTheSameWithTheIDTraceSection(t *testing.T) {
+	body := "## Spec viva\n\n" + capability("pagos", fence("## ADDED Requirements\n\n### Requirement: Alta (prov:30:1)\n\nCuerpo.\n"))
+	plain := featureDoc("", body)
+	trace := "\n## Identificadores asignados\n\n```yaml\n" + goodTrace + "```\n"
+
+	want := parseOK(t, plain)
+	got := parseOK(t, plain+trace)
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("la traza cambió el resultado:\nsin traza %+v\ncon traza %+v", want, got)
+	}
+	doubled := parseOK(t, plain+trace+trace)
+	if len(doubled.Capabilities) != 1 {
+		t.Fatalf("capacidades = %d", len(doubled.Capabilities))
+	}
+	_, _, err := ExtractODDTrace(plain+trace+trace, "doc")
+	wantPlanError(t, err, CodeIDTraceInvalid)
+}

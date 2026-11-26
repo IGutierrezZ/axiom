@@ -125,37 +125,37 @@ Depende de: U1. Paquetes: `internal/isoevidence`, `internal/sddstatus/iso.go`, `
 
 Depende de: U1 a U3. Paquete: `internal/livespec`.
 
-- [ ] 4.1 RED: en `internal/livespec/ids_test.go`, un caso por código de D7 con el motivo y los campos esperados: `provisional_malformed`, `provisional_new_series_unsupported`, `provisional_outside_added`, `provisional_duplicate`, `provisional_ambiguous`, `provisional_undeclared`, `unknown_requirement_id` (con capacidad), `id_allocation_failed`, `superseded_requirement_unknown`, `superseded_requirement_ambiguous`, `flat_delta_unsupported`. Cada uno rechaza sin escribir.
+- [x] 4.1 RED: en `internal/livespec/ids_test.go`, un caso por código de D7 con el motivo y los campos esperados: `provisional_malformed`, `provisional_new_series_unsupported`, `provisional_outside_added`, `provisional_duplicate`, `provisional_ambiguous`, `provisional_undeclared`, `unknown_requirement_id` (con capacidad), `id_allocation_failed`, `superseded_requirement_unknown`, `superseded_requirement_ambiguous`, `flat_delta_unsupported`. Cada uno rechaza sin escribir.
   Cubre: REQ-47.3, REQ-30.4
   Verificación: `go test ./internal/livespec -run 'IDPlanError|PlanIDs.*Reject'`
-- [ ] 4.2 GREEN: crear `internal/livespec/ids.go` con `IDPlanInput`, `CapabilitySource`, `Citation`, `IDPlan`, `IDPlanError` y `PlanIDs` con la validación previa de D3 paso 2 (a a g) en ese orden, idéntica con y sin `--check`.
+- [x] 4.2 GREEN: crear `internal/livespec/ids.go` con `IDPlanInput`, `CapabilitySource`, `Citation`, `IDPlan`, `IDPlanError` y `PlanIDs` con la validación previa de D3 paso 2 (a a g) en ese orden, idéntica con y sin `--check`.
   Cubre: REQ-47.3
   Verificación: `go test ./internal/livespec -run 'PlanIDs'`
-- [ ] 4.3 RED y GREEN: modificar `internal/livespec/plan.go` para compartir `classify` y `reducedDelta` entre ODD y SDD: capacidad sin canónica con MODIFIED, REMOVED o RENAMED da `capability_missing`; ADDED presente con otro cuerpo da `requirement_diverged`; REMOVED que ya no se resuelve y RENAMED ya aplicado son `already`, no error; un MODIFIED sin ID que no casa sigue pendiente y lo rechaza la composición con el motivo vigente.
+- [x] 4.3 RED y GREEN: modificar `internal/livespec/plan.go` para compartir `classify` y `reducedDelta` entre ODD y SDD: capacidad sin canónica con MODIFIED, REMOVED o RENAMED da `capability_missing`; ADDED presente con otro cuerpo da `requirement_diverged`; REMOVED que ya no se resuelve y RENAMED ya aplicado son `already`, no error; un MODIFIED sin ID que no casa sigue pendiente y lo rechaza la composición con el motivo vigente.
   Cubre: REQ-47.3, REQ-30.4, REQ-30.22
   Verificación: `go test ./internal/livespec -run 'Classify|MissingCapability|Divergent'`
-- [ ] 4.4 RED y GREEN: asignación determinista (D3 pasos 1, 3 y 4): orden por capacidad y por aparición, dos capacidades consecutivas sin repetir número, ocupación por registro, ADDED definitivos propios, cambios activos (con `ExcludeChange`) y definitivos de la traza, serie nueva que no recae en una fijada, etiquetas con números consecutivos desde 1, y la entrada de la traza conserva su definitivo si cambia el orden.
+- [x] 4.4 RED y GREEN: asignación determinista (D3 pasos 1, 3 y 4): orden por capacidad y por aparición, dos capacidades consecutivas sin repetir número, ocupación por registro, ADDED definitivos propios, cambios activos (con `ExcludeChange`) y definitivos de la traza, serie nueva que no recae en una fijada, etiquetas con números consecutivos desde 1, y la entrada de la traza conserva su definitivo si cambia el orden.
   Cubre: REQ-47.2, REQ-47.3
   Verificación: `go test ./internal/livespec -run 'PlanIDs.*(Assign|Order|Occup|Series)'`
-- [ ] 4.5 RED y GREEN: crear `internal/livespec/trace.go` y `trace_test.go` con `Trace` YAML (`axiom.requirement-ids/v1`), lectura, validación y escritura en fichero y en sección ODD. Casos: YAML ilegible, esquema desconocido, sección duplicada y definitivo no válido dan `id_trace_invalid`; `pattern` distinto da `id_trace_pattern_mismatch`; entrada sin exactamente un ADDED de su capacidad da `id_trace_stale`; traza borrada degrada a definitivos elegidos por el autor; sin asignaciones no se escribe.
+- [x] 4.5 RED y GREEN: crear `internal/livespec/trace.go` y `trace_test.go` con `Trace` YAML (`axiom.requirement-ids/v1`), lectura, validación y escritura en fichero y en sección ODD. Casos: YAML ilegible, esquema desconocido, sección duplicada y definitivo no válido dan `id_trace_invalid`; `pattern` distinto da `id_trace_pattern_mismatch`; entrada sin exactamente un ADDED de su capacidad da `id_trace_stale`; traza borrada degrada a definitivos elegidos por el autor; sin asignaciones no se escribe.
   Cubre: REQ-47.6, REQ-47.3
   Verificación: `go test ./internal/livespec -run 'Trace'`
-- [ ] 4.6 RED y GREEN: reintegración D5 en el plan: `assigned`, `kept` (D libre y D ya integrado con cuerpo igual módulo sustitución), rechazo `requirement_diverged` para el bloque propio editado (por título guardado en la traza), `reassigned` individual con serie fijada y por etiqueta entera con serie nueva, con `previous`.
+- [x] 4.6 RED y GREEN: reintegración D5 en el plan: `assigned`, `kept` (D libre y D ya integrado con cuerpo igual módulo sustitución), rechazo `requirement_diverged` para el bloque propio editado (por título guardado en la traza), `reassigned` individual con serie fijada y por etiqueta entera con serie nueva, con `previous`.
   Cubre: REQ-47.5, REQ-30.3
   Verificación: `go test ./internal/livespec -run 'Reassign|Kept|Reintegr'`
-- [ ] 4.7 RED y GREEN: duplicados (REQ-47.5): tras componer en memoria se cuentan las apariciones de cada ID que escribe la integración en todas las capacidades resultantes; más de una da `duplicate_assigned_id`; los históricos ajenos se informan con `blocking: false`.
+- [x] 4.7 RED y GREEN: duplicados (REQ-47.5): tras componer en memoria se cuentan las apariciones de cada ID que escribe la integración en todas las capacidades resultantes; más de una da `duplicate_assigned_id`; los históricos ajenos se informan con `blocking: false`.
   Cubre: REQ-47.5
   Verificación: `go test ./internal/livespec -run 'Duplicate'`
-- [ ] 4.8 RED: en `internal/livespec/apply_test.go`, atomicidad sin temporales con fallo inyectado en cada escritura de `writeSet` (costuras `writeTempFile` y `renameFile`): ningún `.axiom-tmp` residual, árbol sin cambios; fallo de restauración conserva `rollbackError` con cada ruta no restaurada y la continuación `git checkout -- <ruta>`; temporal huérfano de un proceso matado se sustituye y se consume en la siguiente ejecución real; `--check` no lo toca; carpetas creadas se retiran.
+- [x] 4.8 RED: en `internal/livespec/apply_test.go`, atomicidad sin temporales con fallo inyectado en cada escritura de `writeSet` (costuras `writeTempFile` y `renameFile`): ningún `.axiom-tmp` residual, árbol sin cambios; fallo de restauración conserva `rollbackError` con cada ruta no restaurada y la continuación `git checkout -- <ruta>`; temporal huérfano de un proceso matado se sustituye y se consume en la siguiente ejecución real; `--check` no lo toca; carpetas creadas se retiran.
   Cubre: REQ-47.4, REQ-30.2
   Verificación: `go test ./internal/livespec -run 'WriteSet|Apply|Rollback|Orphan'`
-- [ ] 4.9 GREEN: modificar `internal/livespec/apply.go` para generalizar `Integration.Apply` a `writeSet(files []fileWrite, opts)`; `Apply` lo usa y `rollbackError` se conserva; el nombre del temporal es determinista (`.<base>.axiom-tmp`).
+- [x] 4.9 GREEN: modificar `internal/livespec/apply.go` para generalizar `Integration.Apply` a `writeSet(files []fileWrite, opts)`; `Apply` lo usa y `rollbackError` se conserva; el nombre del temporal es determinista (`.<base>.axiom-tmp`).
   Cubre: REQ-47.4
   Verificación: `go test ./internal/livespec -run 'WriteSet|Apply|Rollback|Orphan'`
-- [ ] 4.10 RED y GREEN: no regresión de los lectores de deltas activas (D11): `livespec/registry.go` no indexa ni colisiona un `(prov:…)` de un cambio activo; `livingdoc/indexer.go` no lo toma como `TrailingCandidate`; el dashboard (`odd_livespec_test.go`) ignora la sección de traza; `ParseFeatureDoc` valida igual con la traza y una traza duplicada da `id_trace_invalid`.
+- [x] 4.10 RED y GREEN: no regresión de los lectores de deltas activas (D11): `livespec/registry.go` no indexa ni colisiona un `(prov:…)` de un cambio activo; `livingdoc/indexer.go` no lo toma como `TrailingCandidate`; el dashboard (`odd_livespec_test.go`) ignora la sección de traza; `ParseFeatureDoc` valida igual con la traza y una traza duplicada da `id_trace_invalid`.
   Cubre: REQ-47.1, REQ-47.6
   Verificación: `go test ./internal/livespec -run 'Registry.*Provisional|ParseFeatureDoc.*Trace'` y `go test ./internal/livingdoc/... -run 'Provisional'` y `go test ./internal/dashboard/... -run 'LiveSpec'`
-- [ ] 4.11 Cierre de U4: `go vet ./internal/livespec/... ./internal/livingdoc/...` y commit `feat(livespec): plan único de asignación de IDs con validación previa y escritura atómica`.
+- [x] 4.11 Cierre de U4: `go vet ./internal/livespec/... ./internal/livingdoc/...` y commit `feat(livespec): plan único de asignación de IDs con validación previa y escritura atómica`.
   Cubre: REQ-47.2, REQ-47.3, REQ-47.4, REQ-47.5, REQ-47.6
   Verificación: `go test ./internal/livespec/...`
 

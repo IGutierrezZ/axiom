@@ -125,6 +125,9 @@ type classified struct {
 	existed  bool
 	previous string
 	pending  openspecdoc.Delta
+	// canonical son los requisitos de la especificación canónica, en orden; vacío si la
+	// capacidad no existe.
+	canonical []openspecdoc.Requirement
 }
 
 // PlanIntegration calcula en memoria la integración de cada capacidad del documento
@@ -196,15 +199,23 @@ func specPath(loc workspace.Location, capability string) string {
 // título exacto (REQ-30.22), de modo que la segunda ejecución de una integración es
 // `already`; ADDED y RENAMED siguen por título exacto.
 func classify(loc workspace.Location, c CapabilityDelta, pattern reqid.Pattern) (classified, error) {
-	item := classified{cap: c, path: specPath(loc, c.Name)}
-	data, err := os.ReadFile(item.path)
+	path := specPath(loc, c.Name)
+	data, err := os.ReadFile(path)
 	switch {
 	case err == nil:
-		item.existed, item.previous = true, string(data)
+		return classifyIn(c, path, true, string(data), pattern)
 	case os.IsNotExist(err):
+		return classifyIn(c, path, false, "", pattern)
 	default:
-		return classified{}, &CapabilityError{Capability: c.Name, Err: fmt.Errorf("no se puede leer %s: %w; comprueba los permisos del fichero y vuelve a ejecutar `axiom archive integrate --odd <feature>`", item.path, err)}
+		return classified{}, &CapabilityError{Capability: c.Name, Err: fmt.Errorf("no se puede leer %s: %w; comprueba los permisos del fichero y vuelve a ejecutar `axiom archive integrate --odd <feature>`", path, err)}
 	}
+}
+
+// classifyIn es la clasificación de classify sobre una especificación canónica ya leída,
+// compartida por el carril ODD y el SDD (D3 paso 2.e). previous es el texto de la canónica
+// y existed dice si la capacidad existe; path solo sirve para los motivos.
+func classifyIn(c CapabilityDelta, path string, existed bool, previous string, pattern reqid.Pattern) (classified, error) {
+	item := classified{cap: c, path: path, existed: existed, previous: previous}
 
 	if !item.existed {
 		for _, group := range []struct {
@@ -227,6 +238,7 @@ func classify(loc workspace.Location, c CapabilityDelta, pattern reqid.Pattern) 
 		canonicalList = append(canonicalList, r)
 		canonicalNames = append(canonicalNames, r.Name)
 	}
+	item.canonical = canonicalList
 	same := func(a, b openspecdoc.Requirement) bool {
 		return openspecdoc.NormalizeBody(a.Body) == openspecdoc.NormalizeBody(b.Body)
 	}

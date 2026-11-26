@@ -288,3 +288,154 @@ func TestApplyWithNothingToIntegrateDoesNotTouchTheDisk(t *testing.T) {
 		t.Error("no debe escribirse nada")
 	}
 }
+
+// writeSetFixture crea tres destinos: dos especificaciones existentes y una en una
+// carpeta que no existe, y devuelve las escrituras y el árbol inicial.
+func writeSetFixture(t *testing.T) (root string, files []fileWrite, before map[string]string) {
+	t.Helper()
+	root = t.TempDir()
+	writeTree(t, root, map[string]string{
+		"a/spec.md":  "contenido anterior de a\n",
+		"c/tasks.md": "contenido anterior de c\n",
+	})
+	files = []fileWrite{
+		{Path: filepath.Join(root, "a", "spec.md"), Content: []byte("nuevo a\n"), Name: "a"},
+		{Path: filepath.Join(root, "b", "nueva", "spec.md"), Content: []byte("nuevo b\n"), Name: "b"},
+		{Path: filepath.Join(root, "c", "tasks.md"), Content: []byte("nuevo c\n"), Name: "c"},
+	}
+	return root, files, snapshotTree(t, root)
+}
+
+func noTemporaries(t *testing.T, root string) {
+	t.Helper()
+	for path := range snapshotTree(t, root) {
+		if strings.HasSuffix(path, ".axiom-tmp") {
+			t.Errorf("queda un temporal residual: %s", path)
+		}
+	}
+}
+
+func TestWriteSetWritesEveryFileAndLeavesNoTemporaries(t *testing.T) {
+	root, files, _ := writeSetFixture(t)
+	written, err := writeSet(files, writeOptions{Retry: "axiom prueba"})
+	if err != nil {
+		t.Fatalf("writeSet: %v", err)
+	}
+	if len(written) != 3 || readFile(t, files[1].Path) != "nuevo b\n" || readFile(t, files[2].Path) != "nuevo c\n" {
+		t.Fatalf("escrito = %v", written)
+	}
+	noTemporaries(t, root)
+}
+
+func TestWriteSetInjectedFailureAtEachWriteLeavesTheTreeUntouched(t *testing.T) {
+	for _, seam := range []string{"temporal", "renombrado"} {
+		for failAt := 1; failAt <= 3; failAt++ {
+			t.Run(seam+" "+string(rune('0'+failAt)), func(t *testing.T) {
+				root, files, before := writeSetFixture(t)
+				calls := 0
+				boom := errors.New("fallo inyectado")
+				if seam == "temporal" {
+					defer func(old func(string, []byte, os.FileMode) error) { writeTempFile = old }(writeTempFile)
+					writeTempFile = func(name string, data []byte, perm os.FileMode) error {
+						if calls++; calls == failAt {
+							return boom
+						}
+						return os.WriteFile(name, data, perm)
+					}
+				} else {
+					defer func(old func(string, string) error) { renameFile = old }(renameFile)
+					renameFile = func(from, to string) error {
+						if calls++; calls == failAt {
+							return boom
+						}
+						return os.Rename(from, to)
+					}
+				}
+				if _, err := writeSet(files, writeOptions{Retry: "axiom prueba"}); !errors.Is(err, boom) {
+					t.Fatalf("error = %v, quería el fallo inyectado", err)
+				}
+				noTemporaries(t, root)
+				if after := snapshotTree(t, root); !sameTree(before, after) {
+					t.Fatalf("el árbol cambió:\nantes %v\ndespués %v", before, after)
+				}
+			})
+		}
+	}
+}
+
+func TestRollbackFailureNamesEveryPathNotRestoredAndTheGitContinuation(t *testing.T) {
+	_, files, _ := writeSetFixture(t)
+	boom := errors.New("fallo inyectado")
+	defer func(old func(string, string) error) { renameFile = old }(renameFile)
+	calls := 0
+	renameFile = func(from, to string) error {
+		if calls++; calls == 3 {
+			return boom
+		}
+		return os.Rename(from, to)
+	}
+	defer func(old func(string, []byte, os.FileMode) error) { restoreFile = old }(restoreFile)
+	restoreFile = func(string, []byte, os.FileMode) error { return errors.New("sin permisos") }
+
+	_, err := writeSet(files, writeOptions{Retry: "axiom prueba"})
+	if !errors.Is(err, boom) {
+		t.Fatalf("error = %v", err)
+	}
+	for _, path := range []string{files[0].Path} {
+		if !strings.Contains(err.Error(), path) {
+			t.Errorf("el error no nombra %s: %v", path, err)
+		}
+	}
+	if !strings.Contains(err.Error(), "git checkout -- <ruta>") {
+		t.Errorf("falta la continuación de git: %v", err)
+	}
+}
+
+func TestOrphanTemporaryOfAKilledProcessIsReplacedAndConsumedByTheNextRealRun(t *testing.T) {
+	root, files, _ := writeSetFixture(t)
+	orphan := filepath.Join(root, "a", ".spec.md.axiom-tmp")
+	if err := os.WriteFile(orphan, []byte("basura de un proceso matado"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Sin nada que escribir (el caso de --check) el huérfano no se toca.
+	if _, err := writeSet(nil, writeOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if readFile(t, orphan) != "basura de un proceso matado" {
+		t.Fatal("una escritura vacía tocó el temporal huérfano")
+	}
+	if _, err := writeSet(files, writeOptions{Retry: "axiom prueba"}); err != nil {
+		t.Fatalf("writeSet: %v", err)
+	}
+	if _, err := os.Stat(orphan); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("el huérfano debía consumirse: %v", err)
+	}
+	if readFile(t, files[0].Path) != "nuevo a\n" {
+		t.Errorf("a = %q", readFile(t, files[0].Path))
+	}
+}
+
+func TestWriteSetTemporaryNameIsDeterministicPerDestination(t *testing.T) {
+	if got := tempNameOf(filepath.Join("x", "tasks.md")); got != filepath.Join("x", ".tasks.md.axiom-tmp") {
+		t.Errorf("tempNameOf = %q", got)
+	}
+}
+
+func TestWriteSetExtraStepFailureRestoresEverything(t *testing.T) {
+	root, files, before := writeSetFixture(t)
+	boom := errors.New("fallo del paso extra")
+	undone := false
+	extra := func() ([]string, func() []string, error) {
+		return nil, func() []string { undone = true; return nil }, boom
+	}
+	if _, err := writeSet(files, writeOptions{Retry: "axiom prueba", Extra: extra}); !errors.Is(err, boom) {
+		t.Fatalf("error = %v", err)
+	}
+	if !undone {
+		t.Error("el paso extra no pudo deshacerse")
+	}
+	noTemporaries(t, root)
+	if after := snapshotTree(t, root); !sameTree(before, after) {
+		t.Fatalf("el árbol cambió:\nantes %v\ndespués %v", before, after)
+	}
+}
