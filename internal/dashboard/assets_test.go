@@ -279,7 +279,7 @@ func TestRouterDefinesEveryRoute(t *testing.T) {
 	router := readAsset(t, "js/core/router.js")
 	for _, marker := range []string{
 		"'inicio'", "'incrementos'", "'specs'", "'skills'", "'ecosistema'",
-		"'artefactos'", "'roles'", "'handoff'",
+		"'artefactos'", "'roles'", "'handoff'", "'explicacion'",
 		"#/inicio", "hashchange", "#/incrementos/",
 	} {
 		if !strings.Contains(router, marker) {

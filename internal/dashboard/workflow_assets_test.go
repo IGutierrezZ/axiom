@@ -22,7 +22,7 @@ func TestWorkflowAssetsAreServed(t *testing.T) {
 	for _, target := range []string{
 		"/js/core/markdown.js", "/js/core/increment.js",
 		"/js/screens/incrementos.js", "/js/screens/detalle.js",
-		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js",
+		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js", "/js/screens/detalle-explicacion.js",
 	} {
 		rr := getAsset(t, h, target)
 		if rr.Code != 200 {
@@ -100,7 +100,7 @@ func TestIncrementsScreenBoardListAndFilters(t *testing.T) {
 func TestIncrementDetailTabsAndRoutes(t *testing.T) {
 	t.Parallel()
 	html := readAsset(t, "index.html")
-	for _, tab := range []string{"artefactos", "roles", "handoff"} {
+	for _, tab := range []string{"artefactos", "roles", "handoff", "explicacion"} {
 		if !strings.Contains(html, `data-tab="`+tab+`"`) {
 			t.Errorf("index.html no contiene la pestaña %q", tab)
 		}
@@ -381,5 +381,47 @@ func TestIncrementsODDChipAndHomeStatsRuntime(t *testing.T) {
 	}
 	if css := readAsset(t, "style.css"); !strings.Contains(css, ".type-odd") {
 		t.Errorf("style.css no define .type-odd")
+	}
+}
+
+// La pestaña «Explicación» sigue a «Handoff», siempre es visible y enmarca el HTML en un iframe
+// de origen opaco, sin controles de edición.
+func TestExplainerTab(t *testing.T) {
+	t.Parallel()
+	html := readAsset(t, "index.html")
+	handoff := strings.Index(html, `data-tab="handoff"`)
+	tab := strings.Index(html, `data-tab="explicacion"`)
+	if handoff < 0 || tab < handoff {
+		t.Errorf("la pestaña «Explicación» debe ir tras «Handoff» (handoff=%d, explicacion=%d)", handoff, tab)
+	}
+	if !regexp.MustCompile(`data-tab="explicacion"[^>]*>Explicación<`).MatchString(html) {
+		t.Error("la pestaña «Explicación» no tiene su rótulo")
+	}
+	if regexp.MustCompile(`data-tab="explicacion"[^>]*hidden`).MatchString(html) {
+		t.Error("la pestaña «Explicación» debe ser siempre visible")
+	}
+	if !strings.Contains(html, `data-panel="explicacion"`) {
+		t.Error("index.html no contiene el panel explicacion")
+	}
+
+	src := readAsset(t, "js/screens/detalle-explicacion.js")
+	if !strings.Contains(src, `sandbox=""`) {
+		t.Error(`el iframe debe llevar sandbox="" literal`)
+	}
+	for _, forbidden := range []string{"allow-same-origin", "allow-scripts", "<button", "<textarea", "contenteditable", "method: 'POST'", "Regenerar", "Guardar"} {
+		if strings.Contains(src, forbidden) {
+			t.Errorf("detalle-explicacion.js no debe contener %q", forbidden)
+		}
+	}
+	for _, marker := range []string{
+		"no está activada", "Todavía no hay documento de origen", "No hay explicación generada", "desactualizado",
+		"/api/explainer?change=", "encodeURIComponent(change)",
+	} {
+		if !strings.Contains(src, marker) {
+			t.Errorf("detalle-explicacion.js no contiene %q", marker)
+		}
+	}
+	if !strings.Contains(readAsset(t, "js/screens/detalle.js"), "renderExplainer(") {
+		t.Error("detalle.js no pinta la pestaña «Explicación»")
 	}
 }

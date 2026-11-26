@@ -83,7 +83,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Verificación: `go test ./internal/dashboard -run 'Explainer|TestIncrementDetailExplainer'`
   - Ruta: inline (~600 líneas; depende de T1 y T4).
 
-- [ ] T7 Pestaña «Explicación»: `index.html`, `router.js`, `detalle.js`, `detalle-explicacion.js` y tests de assets.
+- [x] T7 Pestaña «Explicación»: `index.html`, `router.js`, `detalle.js`, `detalle-explicacion.js` y tests de assets.
   - Cubre: prov:WEB:2
   - Ficheros: `internal/dashboard/assets/index.html`, `internal/dashboard/assets/js/core/router.js`, `internal/dashboard/assets/js/screens/detalle.js`, `internal/dashboard/assets/js/screens/detalle-explicacion.js`, `internal/dashboard/workflow_assets_test.go`, `internal/dashboard/assets_test.go`
   - Pruebas: pestaña y panel `explicacion`; `'explicacion'` en `INCREMENT_TABS`; `sandbox=""` literal sin `allow-same-origin` ni `allow-scripts`; textos «no está activada», «Todavía no hay documento de origen», «No hay explicación generada» y «desactualizado»; sin controles de edición, guardado ni regeneración; la pestaña va tras «Handoff» y siempre es visible.

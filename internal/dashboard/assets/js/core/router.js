@@ -10,7 +10,7 @@
 // entrada del historial (location.hash).
 
 export const SIMPLE_ROUTES = ['inicio', 'incrementos', 'specs', 'skills', 'ecosistema'];
-export const INCREMENT_TABS = ['artefactos', 'roles', 'handoff'];
+export const INCREMENT_TABS = ['artefactos', 'roles', 'handoff', 'explicacion'];
 
 // parseHash convierte un hash en una ruta {name, change, tab} o {name:'specs', domain}.
 // name es una de SIMPLE_ROUTES o 'incremento' (detalle). Lo desconocido cae en inicio.

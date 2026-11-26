@@ -10,6 +10,7 @@ import { firstParagraph, renderMarkdown } from '../core/markdown.js';
 import { hrefFor } from '../core/router.js';
 import { barrierSummary, renderRoles } from './detalle-roles.js';
 import { initHandoff, renderHandoff } from './detalle-handoff.js';
+import { renderExplainer } from './detalle-explicacion.js';
 
 // Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
 const ctx = { change: null, failed: null, detail: null, tab: 'artefactos', token: 0, artifact: null, raw: false };
@@ -201,6 +202,8 @@ async function renderTabContent() {
   const isCurrent = () => token === ctx.token && ctx.change === change;
   if (tab === 'roles') {
     await renderRoles($('#inc-panel-roles'), { detail, change, onMigrated: reloadDetail });
+  } else if (tab === 'explicacion') {
+    renderExplainer($('#inc-panel-explicacion'), { change, detail });
   } else if (tab === 'handoff') {
     await renderHandoff($('#inc-panel-handoff'), change, { archived: isArchived(detail.summary), isCurrent });
   }
