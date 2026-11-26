@@ -416,11 +416,15 @@ func TestWorkspaceVSCodeBackupAndVerifyCoverProjectFiles(t *testing.T) {
 	}
 }
 
-// Con el ámbito global VS Code sigue escribiendo en su perfil de usuario y en
-// ~/.copilot/skills, y nada en el proyecto.
+// Con el ámbito global VS Code escribe las instrucciones en su perfil de usuario, las
+// skills en ~/.copilot/skills y el MCP en ~/.copilot/mcp-config.json (`mcpServers`, el
+// destino de usuario del arnés de Copilot). Del mcp.json del perfil (`servers`, arnés
+// Local) retira las entradas de Axiom y conserva las del usuario. Nada en el proyecto.
 func TestRunInstallGlobalVSCodeKeepsGlobalLayout(t *testing.T) {
 	home, workspace, _, _ := vscodeUserEnv(t)
 	adapter := vscode.NewAdapter()
+	profile := adapter.LegacyMCPConfigPath(home)
+	mustWriteFile(t, profile, []byte("{\"servers\":{\"del-usuario\":{\"command\":\"usuario\"},\"engram\":{\"command\":\"engram\",\"args\":[\"mcp\",\"--tools=agent\"]},\"context7\":{\"type\":\"http\",\"url\":\"https://mcp.context7.com/mcp\"}}}\n"))
 
 	if _, err := RunInstall([]string{"--scope", "global", "--agent", "vscode-copilot", "--component", "persona", "--component", "sdd", "--component", "engram", "--component", "skills", "--component", "context7"}, macOSDetectionResult()); err != nil {
 		t.Fatalf("RunInstall() error = %v", err)
@@ -433,9 +437,20 @@ func TestRunInstallGlobalVSCodeKeepsGlobalLayout(t *testing.T) {
 	if !strings.Contains(string(instructions), ".agent/skills/_shared/") {
 		t.Errorf("el orquestador global conserva su texto de siempre")
 	}
-	servers, _ := readJSONObject(t, adapter.MCPConfigPath(home, "engram"))["servers"].(map[string]any)
-	if servers["engram"] == nil || servers["del-usuario"] == nil {
-		t.Errorf("el mcp.json del perfil de usuario debe declarar engram y conservar lo del usuario: %v", servers)
+	config := adapter.MCPConfigPath(home, "engram")
+	if config != filepath.Join(home, ".copilot", "mcp-config.json") {
+		t.Fatalf("MCPConfigPath = %q, quiero ~/.copilot/mcp-config.json", config)
+	}
+	mcpServers, _ := readJSONObject(t, config)["mcpServers"].(map[string]any)
+	for _, name := range []string{"engram", "context7"} {
+		entry, _ := mcpServers[name].(map[string]any)
+		if entry == nil || entry["tools"] == nil {
+			t.Errorf("mcp-config.json debe declarar %s con tools: %v", name, mcpServers)
+		}
+	}
+	servers, _ := readJSONObject(t, profile)["servers"].(map[string]any)
+	if servers["engram"] != nil || servers["context7"] != nil || servers["del-usuario"] == nil {
+		t.Errorf("el mcp.json del perfil debe perder las entradas de Axiom y conservar las del usuario: %v", servers)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".copilot", "skills", "sdd-init", "SKILL.md")); err != nil {
 		t.Errorf("falta ~/.copilot/skills/sdd-init: %v", err)

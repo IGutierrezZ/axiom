@@ -2233,7 +2233,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 				paths[path] = struct{}{}
 			}
 		}
-		for _, path := range legacyWorkspaceMCPConfigPaths(homeDir, workspaceDir, scope, adapters, component) {
+		for _, path := range legacyMCPConfigPaths(homeDir, workspaceDir, scope, adapters, component) {
 			paths[path] = struct{}{}
 		}
 		if component == model.ComponentEngram {
@@ -2407,22 +2407,23 @@ func claudeMCPSettingsCleanupPaths(homeDir, workspaceDir string, scope InstallSc
 	return paths
 }
 
-// legacyWorkspaceMCPConfigPaths declara los ficheros MCP de instalaciones anteriores
+// legacyMCPConfigPaths declara los ficheros MCP de instalaciones anteriores
 // de los que la inyección de Engram y Context7 retira las entradas de Axiom
-// (.vscode/mcp.json de VS Code Copilot en el proyecto). Van en la copia de
+// (de VS Code Copilot: .vscode/mcp.json en el proyecto y el mcp.json del perfil de
+// usuario en global). Van en la copia de
 // seguridad para poder restaurarlos, pero no se verifican: la retirada es
 // condicional y el fichero puede no existir.
-func legacyWorkspaceMCPConfigPaths(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter, component model.ComponentID) []string {
+func legacyMCPConfigPaths(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter, component model.ComponentID) []string {
 	if component != model.ComponentEngram && component != model.ComponentContext7 {
 		return nil
 	}
 	paths := []string{}
 	for _, adapter := range adapters {
-		provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider)
+		provider, ok := adapter.(agents.LegacyMCPConfigProvider)
 		if !ok {
 			continue
 		}
-		if path := provider.LegacyWorkspaceMCPConfigPath(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, component)); path != "" {
+		if path := provider.LegacyMCPConfigPath(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, component)); path != "" {
 			paths = append(paths, path)
 		}
 	}

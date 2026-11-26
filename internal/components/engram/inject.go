@@ -132,50 +132,19 @@ func engramOverlayJSON(agentID model.AgentID, cmd string) []byte {
 	return append(b, '\n')
 }
 
-// vsCodeEngramOverlayJSON is the VS Code mcp.json overlay using the "servers" key.
-// Uses --tools=agent per engram contract.
-// VS Code uses a fixed "servers" key structure rather than mcpServers, so it
-// is kept as a separate helper.
-func vsCodeEngramOverlayJSON(cmd string) []byte {
-	cfg := map[string]any{
-		"servers": map[string]any{
-			"engram": map[string]any{
-				"command": cmd,
-				"args":    []string{"mcp", "--tools=agent"},
-			},
-		},
-	}
-	b, _ := json.MarshalIndent(cfg, "", "  ")
-	return append(b, '\n')
-}
-
-// vsCodeWorkspaceEngramOverlayJSON es la entrada de Engram en <proyecto>/.mcp.json
-// para VS Code Copilot: raíz `mcpServers`, la misma orden y argumentos que escribe
-// Claude Code en ese fichero compartido y, además, lo que el arnés de Copilot espera
-// y Claude Code acepta: `type: "stdio"` y `tools: ["*"]`.
-func vsCodeWorkspaceEngramOverlayJSON(cmd string) []byte {
+// copilotEngramOverlayJSON es la entrada de Engram del arnés de Copilot, la misma en
+// todos sus ficheros: <COPILOT_HOME|~/.copilot>/mcp-config.json, que comparten VS Code
+// Copilot y Copilot CLI, y <proyecto>/.mcp.json, que VS Code Copilot comparte con
+// Claude Code. Lleva la raíz `mcpServers`, la orden y los argumentos del resto de
+// agentes, `type: "stdio"` y `tools: ["*"]`. `stdio` es el único valor que documentan
+// a la vez VS Code (code.visualstudio.com/docs/agents/reference/mcp-configuration) y
+// Copilot CLI (`copilot mcp add --transport stdio`); `local` solo sale en los ejemplos
+// de GitHub. Claude Code acepta las dos claves.
+func copilotEngramOverlayJSON(cmd string) []byte {
 	cfg := map[string]any{
 		"mcpServers": map[string]any{
 			"engram": map[string]any{
 				"type":    "stdio",
-				"command": cmd,
-				"args":    []string{"mcp", "--tools=agent"},
-				"tools":   []string{"*"},
-			},
-		},
-	}
-	b, _ := json.MarshalIndent(cfg, "", "  ")
-	return append(b, '\n')
-}
-
-// copilotCLIEngramOverlayJSON es la entrada de Engram en mcp-config.json de
-// Copilot CLI: raíz `mcpServers`, `type: "local"` (proceso hijo por stdio) y
-// `tools: ["*"]`. Lleva el mismo comando y argumentos que el resto de agentes.
-func copilotCLIEngramOverlayJSON(cmd string) []byte {
-	cfg := map[string]any{
-		"mcpServers": map[string]any{
-			"engram": map[string]any{
-				"type":    "local",
 				"command": cmd,
 				"args":    []string{"mcp", "--tools=agent"},
 				"tools":   []string{"*"},
@@ -407,17 +376,14 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		}
 		engramCommand := stableEngramCommandForMergedConfig(mcpPath, adapter.Agent())
 		legacyPath := ""
-		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
-			legacyPath = provider.LegacyWorkspaceMCPConfigPath(configHomeDir)
+		if provider, ok := adapter.(agents.LegacyMCPConfigProvider); ok {
+			legacyPath = provider.LegacyMCPConfigPath(configHomeDir)
 		}
 		var overlay []byte
-		if adapter.Agent() == model.AgentVSCodeCopilot && legacyPath != "" {
-			// En el proyecto, VS Code comparte <proyecto>/.mcp.json con Claude Code.
-			overlay = vsCodeWorkspaceEngramOverlayJSON(engramCommand)
-		} else if adapter.Agent() == model.AgentVSCodeCopilot {
-			overlay = vsCodeEngramOverlayJSON(engramCommand)
-		} else if adapter.Agent() == model.AgentGitHubCopilotCLI {
-			overlay = copilotCLIEngramOverlayJSON(engramCommand)
+		if adapter.Agent() == model.AgentVSCodeCopilot || adapter.Agent() == model.AgentGitHubCopilotCLI {
+			// VS Code comparte <proyecto>/.mcp.json con Claude Code y
+			// <COPILOT_HOME|~/.copilot>/mcp-config.json con Copilot CLI.
+			overlay = copilotEngramOverlayJSON(engramCommand)
 		} else {
 			overlay = engramOverlayJSON(adapter.Agent(), engramCommand)
 		}
@@ -901,16 +867,6 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 	switch agentID {
 	case model.AgentOpenCode:
 		server, _ = opencode.MCPEntry(root, "engram")
-	case model.AgentVSCodeCopilot:
-		// El perfil de usuario usa `servers`; el proyecto, .mcp.json con `mcpServers`.
-		servers, ok := root["servers"].(map[string]any)
-		if !ok {
-			servers, ok = root["mcpServers"].(map[string]any)
-		}
-		if !ok {
-			return "", false
-		}
-		server = servers["engram"]
 	default:
 		mcpServers, ok := root["mcpServers"].(map[string]any)
 		if !ok {

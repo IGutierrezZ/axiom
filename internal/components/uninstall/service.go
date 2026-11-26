@@ -950,6 +950,12 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, workspaceOps...)
 			break
 		}
+		if adapter.MCPStrategy() == model.StrategyMCPConfigFile {
+			fileTargets, fileOps := s.globalMCPConfigFileOperations(adapter, "context7")
+			targets = append(targets, fileTargets...)
+			ops = append(ops, fileOps...)
+			break
+		}
 		targets = append(targets, context7Targets(adapter, homeDir)...)
 		ops = append(ops, context7Operations(adapter, homeDir)...)
 	case model.ComponentEngram:
@@ -971,6 +977,10 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
+		case adapter.MCPStrategy() == model.StrategyMCPConfigFile:
+			fileTargets, fileOps := s.globalMCPConfigFileOperations(adapter, "engram")
+			targets = append(targets, fileTargets...)
+			ops = append(ops, fileOps...)
 		default:
 			targets = append(targets, engramTargets(adapter, homeDir)...)
 			ops = append(ops, engramOperations(adapter, homeDir)...)
@@ -1235,7 +1245,7 @@ func context7Targets(adapter agents.Adapter, homeDir string) []string {
 			return []string{claude.UserConfigPath(homeDir), adapter.SettingsPath(homeDir), adapter.MCPConfigPath(homeDir, "context7")}
 		}
 		return []string{adapter.MCPConfigPath(homeDir, "context7")}
-	case model.StrategyMergeIntoSettings, model.StrategyMCPConfigFile:
+	case model.StrategyMergeIntoSettings:
 		if adapter.Agent() == model.AgentOpenCode {
 			return settingsTargets(homeDir, adapter)
 		}
@@ -1266,12 +1276,6 @@ func context7Operations(adapter agents.Adapter, homeDir string) []operation {
 		}
 		path := adapter.SettingsPath(homeDir)
 		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
-	case model.StrategyMCPConfigFile:
-		path := adapter.MCPConfigPath(homeDir, "context7")
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "context7")}
-		}
-		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "context7")}
 	case model.StrategyTOMLFile:
 		// Codex: la tabla [mcp_servers.context7], solo si es la del servidor remoto de
 		// Axiom.
@@ -1293,8 +1297,6 @@ func engramTargets(adapter agents.Adapter, homeDir string) []string {
 		targets = append(targets, adapter.MCPConfigPath(homeDir, "engram"))
 	case model.StrategyMergeIntoSettings:
 		targets = append(targets, settingsTargets(homeDir, adapter)...)
-	case model.StrategyMCPConfigFile:
-		targets = append(targets, adapter.MCPConfigPath(homeDir, "engram"))
 	case model.StrategyTOMLFile:
 		targets = append(targets,
 			adapter.MCPConfigPath(homeDir, "engram"),
@@ -1322,12 +1324,6 @@ func engramOperations(adapter agents.Adapter, homeDir string) []operation {
 			return ops
 		}
 		path := adapter.SettingsPath(homeDir)
-		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
-	case model.StrategyMCPConfigFile:
-		path := adapter.MCPConfigPath(homeDir, "engram")
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			return []operation{rewriteMCPServerEntry(path, jsonPath{"servers"}, "engram")}
-		}
 		return []operation{rewriteMCPServerEntry(path, jsonPath{"mcpServers"}, "engram")}
 	case model.StrategyTOMLFile:
 		configPath := adapter.MCPConfigPath(homeDir, "engram")

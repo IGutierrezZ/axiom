@@ -13,15 +13,18 @@ import (
 // anteriores declaraban para VS Code en .vscode/mcp.json.
 const context7RemoteURL = "https://mcp.context7.com/mcp"
 
-// RetireLegacyVSCodeServer retira el servidor name (engram o context7) de
-// <proyecto>/.vscode/mcp.json, donde lo declaraban las instalaciones anteriores con la
-// clave `servers`, del arnés Local de VS Code. Ahora va en <proyecto>/.mcp.json.
+// RetireLegacyVSCodeServer retira el servidor name (engram o context7) de un mcp.json
+// con la clave `servers`, del arnés Local de VS Code, donde lo declaraban las
+// instalaciones anteriores: <proyecto>/.vscode/mcp.json (ahora va en
+// <proyecto>/.mcp.json) o el mcp.json del perfil de usuario (ahora va en
+// <COPILOT_HOME|~/.copilot>/mcp-config.json).
 //
 // Solo retira la entrada que escribió Axiom: la misma forma, sin claves añadidas por
 // el usuario. El resto del fichero conserva su texto y sus comentarios. Si el
 // documento se queda sin miembros, se borra, y con él la carpeta .vscode si queda
-// vacía. Un fichero ausente, ilegible o con otra definición no se toca: la entrada
-// del usuario sigue en su sitio y VS Code la reenvía al arnés de Copilot.
+// vacía; la carpeta de usuario de VS Code nunca se borra. Un fichero ausente, ilegible
+// o con otra definición no se toca: la entrada del usuario sigue en su sitio y VS Code
+// la reenvía al arnés de Copilot.
 func RetireLegacyVSCodeServer(path, name string) (bool, error) {
 	if path == "" {
 		return false, nil
@@ -49,8 +52,11 @@ func RetireLegacyVSCodeServer(path, name string) (bool, error) {
 		if err := os.Remove(path); err != nil {
 			return false, fmt.Errorf("borrar %s: %w", path, err)
 		}
-		// La carpeta .vscode solo se quita si queda vacía: casi siempre es del equipo.
-		_ = os.Remove(filepath.Dir(path))
+		// La carpeta .vscode solo se quita si queda vacía: casi siempre es del equipo. La
+		// del perfil de usuario es de VS Code y se queda.
+		if dir := filepath.Dir(path); filepath.Base(dir) == ".vscode" {
+			_ = os.Remove(dir)
+		}
 		return true, nil
 	}
 	if _, err := filemerge.WriteFileAtomic(path, updated, 0o644); err != nil {

@@ -501,8 +501,6 @@ func engramServerFromJSON(root map[string]any, agentID model.AgentID) (map[strin
 	switch agentID {
 	case model.AgentOpenCode:
 		server = nestedJSONObject(root["mcp"])["engram"]
-	case model.AgentVSCodeCopilot:
-		server = nestedJSONObject(root["servers"])["engram"]
 	default:
 		server = nestedJSONObject(root["mcpServers"])["engram"]
 	}

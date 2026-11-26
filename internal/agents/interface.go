@@ -117,13 +117,14 @@ type WorkspaceUserConfigFilesProvider interface {
 	WorkspaceUserConfigFiles(dir string) []string
 }
 
-// LegacyWorkspaceMCPConfigProvider es una capacidad opcional de los adaptadores ligados
-// a la raíz de un proyecto cuyos servidores MCP iban antes a otro fichero (VS Code
-// Copilot: .vscode/mcp.json, con la clave `servers`, antes de pasar a .mcp.json).
-// Devuelve ese fichero en la raíz del proyecto dir, o "" fuera de ella. Sirve para
-// retirar las entradas que escribió Axiom: las del usuario se conservan.
-type LegacyWorkspaceMCPConfigProvider interface {
-	LegacyWorkspaceMCPConfigPath(dir string) string
+// LegacyMCPConfigProvider es una capacidad opcional de los adaptadores cuyos servidores
+// MCP iban antes a otro fichero. En VS Code Copilot es el formato `servers` del arnés
+// Local: .vscode/mcp.json en el proyecto (ahora .mcp.json) y el mcp.json del perfil de
+// usuario en la carpeta de usuario (ahora <COPILOT_HOME|~/.copilot>/mcp-config.json).
+// Devuelve ese fichero para la raíz del ámbito dir, o "" si no hay. Sirve para retirar
+// las entradas que escribió Axiom: las del usuario se conservan.
+type LegacyMCPConfigProvider interface {
+	LegacyMCPConfigPath(dir string) string
 }
 
 // BranchGuardHooksFileProvider es una capacidad opcional de los adaptadores ligados a la

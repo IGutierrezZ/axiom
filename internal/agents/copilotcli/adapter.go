@@ -1,10 +1,11 @@
 // Package copilotcli es el adaptador de GitHub Copilot CLI (binario `copilot`).
 //
 // Es deliberadamente distinto del adaptador de VS Code Copilot: solo comparten la
-// carpeta de skills (<raíz>/skills). El resto difiere. El prompt global va en
-// <raíz>/copilot-instructions.md, el MCP en <raíz>/mcp-config.json con raíz
-// `mcpServers`, y los ajustes en <raíz>/settings.json. La raíz es COPILOT_HOME o
-// ~/.copilot (véase copilotconfig.Root).
+// carpeta de skills (<raíz>/skills) y el MCP de usuario del arnés de Copilot,
+// <raíz>/mcp-config.json con raíz `mcpServers`, donde los dos escriben la misma
+// entrada. El resto difiere. El prompt global va en <raíz>/copilot-instructions.md y
+// los ajustes en <raíz>/settings.json. La raíz es COPILOT_HOME o ~/.copilot (véase
+// copilotconfig.Root).
 package copilotcli
 
 import (
@@ -114,8 +115,8 @@ func (a *Adapter) MCPStrategy() model.MCPStrategy { return model.StrategyMCPConf
 
 // --- MCP ---
 
-// MCPConfigPath es <raíz>/mcp-config.json, con raíz `mcpServers` (no `servers`, que
-// es la de VS Code).
+// MCPConfigPath es <raíz>/mcp-config.json, con raíz `mcpServers`. Es el mismo fichero
+// que escribe VS Code Copilot con el ámbito global.
 func (a *Adapter) MCPConfigPath(homeDir string, _ string) string {
 	return filepath.Join(copilotconfig.Root(homeDir), "mcp-config.json")
 }

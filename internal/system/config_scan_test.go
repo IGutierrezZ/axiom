@@ -241,7 +241,7 @@ func TestScanConfigs_UsesCopilotHome(t *testing.T) {
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "mcp-config.json"), []byte("{}"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "config.json"), []byte("{}"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	c := scanStateFor(t, ScanConfigs(home), "github-copilot-cli")

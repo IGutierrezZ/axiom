@@ -16,9 +16,6 @@ var defaultContext7OverlayJSON = []byte(fmt.Sprintf("{\n  \"mcpServers\": {\n   
 // deep merge into OpenCode's strict MCP schema.
 var openCodeContext7OverlayJSON = []byte("{\n  \"mcp\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"type\": \"remote\",\n        \"url\": \"https://mcp.context7.com/mcp\",\n        \"enabled\": true\n      }\n    }\n  }\n}\n")
 
-// vsCodeContext7OverlayJSON is the VS Code mcp.json overlay using the "servers" key.
-var vsCodeContext7OverlayJSON = []byte("{\n  \"servers\": {\n    \"context7\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.context7.com/mcp\"\n    }\n  }\n}\n")
-
 // antigravityContext7OverlayJSON is the Antigravity mcp_config.json overlay.
 // Uses mcpServers key (same schema as Claude Code) with serverUrl for HTTP remote.
 // The context7 entry must replace atomically so legacy local keys do not survive
@@ -40,12 +37,6 @@ func DefaultContext7OverlayJSON() []byte {
 func OpenCodeContext7OverlayJSON() []byte {
 	content := make([]byte, len(openCodeContext7OverlayJSON))
 	copy(content, openCodeContext7OverlayJSON)
-	return content
-}
-
-func VSCodeContext7OverlayJSON() []byte {
-	content := make([]byte, len(vsCodeContext7OverlayJSON))
-	copy(content, vsCodeContext7OverlayJSON)
 	return content
 }
 
@@ -71,8 +62,9 @@ func AntigravityContext7OverlayJSON() []byte {
 	return content
 }
 
-// copilotCLIContext7OverlayJSON es el overlay de <COPILOT_HOME|~/.copilot>/mcp-config.json
-// de Copilot CLI. La raíz es `mcpServers` (VS Code usa `servers`) y cada entrada
+// copilotCLIContext7OverlayJSON es el overlay de <COPILOT_HOME|~/.copilot>/mcp-config.json,
+// el fichero de usuario del arnés de Copilot que comparten Copilot CLI y VS Code
+// Copilot. La raíz es `mcpServers` y cada entrada
 // declara `type` y `tools`: `tools: ["*"]` expone todas las herramientas del
 // servidor, que es lo que el CLI exige para no dejarlo sin herramientas. Context7 es
 // remoto (http), así que no hace falta npx. La entrada se reemplaza entera para que

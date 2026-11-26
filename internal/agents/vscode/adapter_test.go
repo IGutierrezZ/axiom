@@ -117,32 +117,54 @@ func TestSettingsPathUsesVSCodeUserProfile(t *testing.T) {
 	}
 }
 
-func TestMCPConfigPathUsesVSCodeUserProfile(t *testing.T) {
+// El MCP de usuario va al fichero del arnés de Copilot, el mismo que el de Copilot CLI:
+// <COPILOT_HOME|~/.copilot>/mcp-config.json. COPILOT_HOME solo cuenta con el home real.
+func TestMCPConfigPathUsesCopilotUserConfig(t *testing.T) {
+	a := NewAdapter()
+	home := t.TempDir()
+	custom := filepath.Join(t.TempDir(), "copilot")
+	t.Setenv("COPILOT_HOME", custom)
+
+	if got, want := a.MCPConfigPath(home, "context7"), filepath.Join(home, ".copilot", "mcp-config.json"); got != want {
+		t.Fatalf("MCPConfigPath() = %q, quiero %q: otra raíz no sigue COPILOT_HOME", got, want)
+	}
+	realHome, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir() error = %v", err)
+	}
+	if got, want := a.MCPConfigPath(realHome, "context7"), filepath.Join(custom, "mcp-config.json"); got != want {
+		t.Fatalf("MCPConfigPath(realHome) = %q, quiero %q", got, want)
+	}
+}
+
+// El mcp.json del perfil de usuario (formato `servers` del arnés Local) es el destino
+// de las instalaciones anteriores, del que se retiran las entradas de Axiom.
+func TestLegacyMCPConfigPathUsesVSCodeUserProfile(t *testing.T) {
 	a := NewAdapter()
 	home := "/tmp/home"
 
 	switch runtime.GOOS {
 	case "darwin":
-		path := a.MCPConfigPath(home, "context7")
+		path := a.LegacyMCPConfigPath(home)
 		want := filepath.Join(home, "Library", "Application Support", "Code", "User", "mcp.json")
 		if path != want {
-			t.Fatalf("MCPConfigPath() = %q, want %q", path, want)
+			t.Fatalf("LegacyMCPConfigPath() = %q, want %q", path, want)
 		}
 	case "windows":
 		appData := filepath.Join(home, "AppData", "Roaming")
 		t.Setenv("APPDATA", appData)
-		path := a.MCPConfigPath(home, "context7")
+		path := a.LegacyMCPConfigPath(home)
 		want := filepath.Join(appData, "Code", "User", "mcp.json")
 		if path != want {
-			t.Fatalf("MCPConfigPath() = %q, want %q", path, want)
+			t.Fatalf("LegacyMCPConfigPath() = %q, want %q", path, want)
 		}
 	default:
 		// A custom root never follows ambient XDG_CONFIG_HOME: containment wins.
 		t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
-		path := a.MCPConfigPath(home, "context7")
+		path := a.LegacyMCPConfigPath(home)
 		want := filepath.Join(home, ".config", "Code", "User", "mcp.json")
 		if path != want {
-			t.Fatalf("MCPConfigPath() = %q, want %q", path, want)
+			t.Fatalf("LegacyMCPConfigPath() = %q, want %q", path, want)
 		}
 
 		// The real user home is the only root that honors XDG_CONFIG_HOME.
@@ -150,10 +172,10 @@ func TestMCPConfigPathUsesVSCodeUserProfile(t *testing.T) {
 		if err != nil {
 			t.Fatalf("UserHomeDir() error = %v", err)
 		}
-		path = a.MCPConfigPath(realHome, "context7")
+		path = a.LegacyMCPConfigPath(realHome)
 		want = filepath.Join(home, "xdg", "Code", "User", "mcp.json")
 		if path != want {
-			t.Fatalf("MCPConfigPath(realHome) = %q, want %q", path, want)
+			t.Fatalf("LegacyMCPConfigPath(realHome) = %q, want %q", path, want)
 		}
 	}
 }

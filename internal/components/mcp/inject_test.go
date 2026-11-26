@@ -20,6 +20,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
 	"github.com/IGutierrezZ/axiom/v3/internal/versions"
 )
 
@@ -1129,11 +1130,21 @@ args = ["mcp", "--tools=agent"]
 	}
 }
 
+// En global, Context7 de VS Code va a <COPILOT_HOME|~/.copilot>/mcp-config.json con la
+// misma entrada que Copilot CLI (remoto por http), y se retira del mcp.json del perfil
+// de usuario en el que lo declaraban las instalaciones anteriores.
 func TestInjectVSCodeWritesContext7ToMCPConfigFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	adapter := vscode.NewAdapter()
+	profile := adapter.LegacyMCPConfigPath(home)
+	if err := os.MkdirAll(filepath.Dir(profile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(profile, []byte(`{"servers": {"context7": {"type": "http", "url": "https://mcp.context7.com/mcp"}}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	first, err := Inject(home, home, adapter)
 	if err != nil {
@@ -1152,20 +1163,25 @@ func TestInjectVSCodeWritesContext7ToMCPConfigFile(t *testing.T) {
 	}
 
 	path := adapter.MCPConfigPath(home, "context7")
+	if path != filepath.Join(home, ".copilot", "mcp-config.json") {
+		t.Fatalf("MCPConfigPath = %q, quiero ~/.copilot/mcp-config.json", path)
+	}
 	content, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("ReadFile(mcp.json) error = %v", err)
+		t.Fatalf("ReadFile(mcp-config.json) error = %v", err)
 	}
-
-	text := string(content)
-	if !strings.Contains(text, `"servers"`) {
-		t.Fatal("mcp.json missing servers key")
+	want, err := filemerge.MergeJSONObjects(nil, CopilotCLIContext7OverlayJSON())
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(text, `"context7"`) {
-		t.Fatal("mcp.json missing context7 server")
+	if string(content) != string(want) {
+		t.Fatalf("mcp-config.json debe llevar la entrada de Copilot CLI:\n%s\nquiero:\n%s", content, want)
 	}
-	if strings.Contains(text, `"mcpServers"`) {
-		t.Fatal("mcp.json should use 'servers' key, not 'mcpServers'")
+	if _, err := os.Stat(profile); !os.IsNotExist(err) {
+		t.Fatalf("el mcp.json del perfil, solo con la entrada de Axiom, debe desaparecer: %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(profile)); err != nil {
+		t.Fatalf("la carpeta de usuario de VS Code nunca se borra: %v", err)
 	}
 }
 
