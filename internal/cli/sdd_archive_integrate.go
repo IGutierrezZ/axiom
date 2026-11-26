@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -44,12 +45,11 @@ func RunSDDArchiveIntegrate(args []string, stdout io.Writer) error {
 	if err := flags.Parse(args); err != nil {
 		return fmt.Errorf("sdd archive-integrate: %w; ejecuta `axiom sdd archive-integrate --help`", err)
 	}
-	const usage = "`axiom sdd archive-integrate --cwd <dir> --change <cambio> [--supersede] [--superseded-requirements <a,b>] [--check] [--json]`"
 	if flags.NArg() != 0 {
-		return fmt.Errorf("sdd archive-integrate: argumento inesperado %q; ejecuta %s", flags.Arg(0), usage)
+		return fmt.Errorf("sdd archive-integrate: argumento inesperado %q; ejecuta `axiom sdd archive-integrate --cwd <dir> --change <cambio> [--supersede] [--superseded-requirements <a,b>] [--check] [--json]`", flags.Arg(0))
 	}
 	if strings.TrimSpace(*change) == "" {
-		return fmt.Errorf("sdd archive-integrate requiere --change; ejecuta %s", usage)
+		return errors.New("sdd archive-integrate requiere --change; ejecuta `axiom sdd archive-integrate --cwd <dir> --change <cambio> [--supersede] [--superseded-requirements <a,b>] [--check] [--json]`")
 	}
 	if err := gitref.ValidBranchComponent(*change); err != nil || *change == "archive" {
 		reason := "es un nombre reservado"
