@@ -44,6 +44,16 @@ func approved(keys ...kickoff.GateKey) []kickoff.GateState {
 	return gates
 }
 
+func gates(states ...kickoff.GateState) []kickoff.GateState { return states }
+
+func passedGate(key kickoff.GateKey) kickoff.GateState {
+	return kickoff.GateState{Key: key, Status: "approved"}
+}
+
+func openGate(key kickoff.GateKey, status string) kickoff.GateState {
+	return kickoff.GateState{Key: key, Status: status}
+}
+
 // sealArchivedChange sella un kickoff en la carpeta archivada del cambio bajo root.
 func sealArchivedChange(t *testing.T, root string, style kickoff.ExecutionStyle, docs kickoff.DocsPublication) {
 	t.Helper()
@@ -69,6 +79,10 @@ func TestPublicationDue(t *testing.T) {
 	planned := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactMissing, "tasks": ArtifactMissing}
 	reviewed := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactDone, "tasks": ArtifactDone, "verifyReport": ArtifactDone}
 	none := map[string]ArtifactState{"specs": ArtifactPartial, "design": ArtifactMissing, "tasks": ArtifactMissing}
+	designing := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactDone, "tasks": ArtifactMissing}
+	designPartial := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactPartial, "tasks": ArtifactMissing}
+	reviewedTasks := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactDone, "tasks": ArtifactDone, "applyProgress": ArtifactMissing}
+	applying := map[string]ArtifactState{"specs": ArtifactDone, "design": ArtifactDone, "tasks": ArtifactDone, "applyProgress": ArtifactDone}
 	checkpointed, continuous := kickoff.ExecutionCheckpointed, kickoff.ExecutionContinuous
 
 	archivedRoot := t.TempDir()
@@ -97,6 +111,17 @@ func TestPublicationDue(t *testing.T) {
 		{"checkpointed con spec aprobada", dueStatus(checkpointed, "", approved(kickoff.GateSpec), planned, 0), "", true, false},
 		{"checkpointed con tasks y apply por rol aprobadas", dueStatus(checkpointed, "", approved(kickoff.GateTasks, kickoff.GateKey("role-apply:fullstack")), reviewed, 3), "", true, false},
 		{"checkpointed solo con integration aprobada", dueStatus(checkpointed, "", approved(kickoff.GateIntegration), reviewed, 3), "", false, false},
+		// W1 de C-05-c: con la fase siguiente en curso no se proyecta; iterar no publica nada.
+		{"checkpointed con spec aprobada y design por empezar", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateSpec), openGate(kickoff.GateDesign, "pending")), planned, 0), "", true, false},
+		{"checkpointed con spec aprobada y design en iteración", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateSpec), openGate(kickoff.GateDesign, "pending")), designing, 0), "", false, false},
+		{"checkpointed con spec aprobada y design a medio escribir", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateSpec), openGate(kickoff.GateDesign, "pending")), designPartial, 0), "", false, false},
+		{"checkpointed con spec aprobada y design rechazado", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateSpec), openGate(kickoff.GateDesign, "rejected")), designing, 0), "", false, false},
+		{"checkpointed con design aprobado y tasks en iteración", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateSpec), passedGate(kickoff.GateDesign), openGate(kickoff.GateTasks, "pending")), reviewedTasks, 0), "", false, false},
+		{"checkpointed con tasks aprobada y apply sin empezar", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateTasks), openGate("role-apply:fullstack", "pending")), reviewedTasks, 0), "", true, false},
+		{"checkpointed con tasks aprobada y apply en curso", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateTasks), openGate("role-apply:fullstack", "pending")), reviewedTasks, 1), "", false, false},
+		{"checkpointed con tasks aprobada y progreso de apply", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateTasks), openGate("role-apply:fullstack", "pending")), applying, 0), "", false, false},
+		{"checkpointed con solo integration abierta", dueStatus(checkpointed, "", gates(passedGate(kickoff.GateTasks), passedGate("role-apply:fullstack"), openGate(kickoff.GateIntegration, "pending")), reviewed, 3), "", true, false},
+		{"continuous con auto y design parcial", dueStatus(continuous, kickoff.DocsPublicationAuto, nil, designPartial, 0), "", false, false},
 		{"checkpointed sin ninguna aprobada", dueStatus(checkpointed, "", nil, planned, 0), "", false, false},
 		{"continuous sin auto", dueStatus(continuous, "", nil, planned, 0), "", false, false},
 		{"continuous con auto y specs hechas", dueStatus(continuous, kickoff.DocsPublicationAuto, nil, planned, 0), "", true, false},
@@ -294,7 +319,15 @@ func TestStatusProjectsPendingPublicationWithTheRealEngine(t *testing.T) {
 		t.Fatalf("Publication = %+v, sin compuertas aprobadas no procede", status.Publication)
 	}
 
+	// Con `spec` aprobada y `design.md` en iteración (compuerta `design` abierta), iterar no
+	// publica nada (W1 de C-05-c).
 	approveGates(t, changeRoot, kickoff.GateSpec)
+	if status := resolveFrom(t, root, publicationChange); status.Publication != nil {
+		t.Fatalf("Publication = %+v, con el design en iteración no procede", status.Publication)
+	}
+
+	// Aprobados design y tasks, y con apply sin empezar, es el momento de publicar.
+	approveGates(t, changeRoot, kickoff.GateDesign, kickoff.GateTasks)
 	pending := resolveFrom(t, root, publicationChange)
 	if pending.Publication == nil || pending.Publication.State != "pending" {
 		t.Fatalf("Publication = %+v, se esperaba pending", pending.Publication)
@@ -302,11 +335,12 @@ func TestStatusProjectsPendingPublicationWithTheRealEngine(t *testing.T) {
 	if want := []string{"docs_uncommitted", "remote_branch_missing"}; !slices.Equal(pending.Publication.Reasons, want) {
 		t.Errorf("reasons = %v, se esperaba %v", pending.Publication.Reasons, want)
 	}
-	if pending.GateQuestion == nil || pending.GateQuestion.Publication == nil {
-		t.Fatalf("GateQuestion = %+v, se esperaba la pregunta de la compuerta siguiente con su publicación", pending.GateQuestion)
+	gate, code := resolveGatePublication(publicationChange, root)
+	if gate == nil {
+		t.Fatalf("resolveGatePublication: %s", code)
 	}
-	if pending.Publication.Invocation != pending.GateQuestion.Publication.Invocation {
-		t.Errorf("invocation = %q, la pregunta de la compuerta dice %q", pending.Publication.Invocation, pending.GateQuestion.Publication.Invocation)
+	if pending.Publication.Invocation != gate.Invocation {
+		t.Errorf("invocation = %q, la de la pregunta de compuerta es %q", pending.Publication.Invocation, gate.Invocation)
 	}
 	if pending.Publication.Branch != "feat/x" || pending.Publication.Remote != "origin" || pending.Publication.PRTarget != "main" {
 		t.Errorf("destino = %+v, se esperaba origin feat/x hacia main", pending.Publication)
@@ -365,9 +399,9 @@ func TestStatusProjectsCodeUnpublishedWithTheRealEngine(t *testing.T) {
 	gitIn(t, bare, "init", "-q", "--bare", "-b", "main")
 	gitIn(t, root, "remote", "add", "origin", bare)
 	gitIn(t, root, "push", "-q", "origin", "main")
-	approveGates(t, filepath.Join(root, "openspec", "changes", publicationChange), kickoff.GateSpec)
+	approveGates(t, filepath.Join(root, "openspec", "changes", publicationChange), kickoff.GateSpec, kickoff.GateDesign, kickoff.GateTasks)
 	gitIn(t, root, "add", "-A")
-	gitIn(t, root, "commit", "-q", "-m", "docs: compuerta spec")
+	gitIn(t, root, "commit", "-q", "-m", "docs: compuertas de planificación")
 	write(t, filepath.Join(root, "requirements.txt"), "x\n")
 	gitIn(t, root, "add", "requirements.txt")
 	gitIn(t, root, "commit", "-q", "-m", "dependencias")

@@ -415,8 +415,8 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 **Condición (a), según el caso.** No se lee nada de git si no se cumple (a):
 
-- **Cambio activo `checkpointed`:** existe al menos una compuerta aprobada cuya clave no es `integration`.
-- **Cambio activo `continuous`:** el kickoff registra `docs_publication: auto`; al menos uno de los artefactos `spec`, `design` o `tasks` está completo; no hay tareas de `apply` completadas; y el informe de `verify` no está hecho. Las dos últimas condiciones excluyen la ventana de `apply` y `verify` (REQ-27.13: no se publica tras `apply`).
+- **Cambio activo `checkpointed`:** existe al menos una compuerta aprobada cuya clave no es `integration`, y la fase que juzga la primera compuerta abierta (en el orden `spec`, `design`, `tasks`, `role-apply:<rol>`, `integration`) no ha empezado. Ha empezado cuando su artefacto existe, parcial o completo (`design`, `tasks`), o cuando hay alguna tarea completada o progreso de `apply` (`role-apply:<rol>`); `integration` no tiene fase propia. Así, iterar no publica nada (REQ-27.12): mientras se itera una fase, o mientras su compuerta espera decisión, la publicación pendiente espera a la aprobación siguiente.
+- **Cambio activo `continuous`:** el kickoff registra `docs_publication: auto`; al menos uno de los artefactos `spec`, `design` o `tasks` está completo y ninguno está a medio escribir (parcial); no hay tareas de `apply` completadas; y el informe de `verify` no está hecho. La condición del parcial excluye una fase en curso, y las dos últimas excluyen la ventana de `apply` y `verify` (REQ-27.13: no se publica tras `apply`).
 - **Cambio archivado:** solo si es `continuous` con `docs_publication: auto`; entonces la publicación se calcula sobre la rama de archivado y su `invocation` DEBE incluir `--archive` (REQ-27.14). Un cambio `checkpointed` archivado NO DEBE proyectar nada (el archivado se ofrece a la persona).
 
 **Condición (b).** Con (a) cumplida, `publication` se proyecta solo si hay algo que `publish` haría: documentación sin confirmar (rutas de la lista cerrada de REQ-27.5, con el estado local con punto excluido) o al menos un commit sin subir (mismo rango que REQ-27.8). La ausencia de `refs/remotes/origin/<rama>` (primera publicación) es solo un **motivo** (`remote_branch_missing`) y NO basta por sí sola: sin documentación sin confirmar y sin commits sin subir, `publish` respondería `up_to_date` y NO DEBE proyectarse nada.
@@ -438,7 +438,7 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 - `unavailable`: informativo; lleva el código y nunca hace fallar el status.
 - Con documentación sin confirmar y commits de código a la vez, el estado es `pending` (con el motivo `code_commits`) para que `publish` confirme en local; el status siguiente proyecta `code_unpublished`.
 
-**Exclusiones.** NO DEBE proyectarse `publication` cuando: no hay cambio seleccionado; el almacén de artefactos es `engram` o `none`; no se cumple (a) (sin aprobaciones, solo la compuerta `integration`, `continuous` sin `docs_publication: auto` o en la ventana de `apply`/`verify`); o el repositorio no tiene el remoto `origin` configurado (no hay publicación posible). La configuración de `origin` se lee con una consulta de solo lectura de la configuración; no se deduce de la ausencia de referencias remotas, porque un remoto añadido y aún no traído sí permite publicar.
+**Exclusiones.** NO DEBE proyectarse `publication` cuando: no hay cambio seleccionado; el almacén de artefactos es `engram` o `none`; no se cumple (a) (sin aprobaciones, solo la compuerta `integration`, la fase de la primera compuerta abierta en curso, `continuous` sin `docs_publication: auto`, con un artefacto de planificación parcial o en la ventana de `apply`/`verify`); o el repositorio no tiene el remoto `origin` configurado (no hay publicación posible). La configuración de `origin` se lee con una consulta de solo lectura de la configuración; no se deduce de la ausencia de referencias remotas, porque un remoto añadido y aún no traído sí permite publicar.
 
 **Multirepo.** En el repositorio de specs de un `multirepo`, la rama de publicación es su rama de integración in situ (REQ-27.7) y el adelanto se mide contra `origin/<integración>`.
 
@@ -446,12 +446,32 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 
 #### Scenario: Compuerta aprobada con documentación sin confirmar
 
-- **DADO** un cambio `checkpointed` con la compuerta `spec` aprobada y ficheros de `openspec/changes/<x>/` sin confirmar
+- **DADO** un cambio `checkpointed` con la compuerta `spec` aprobada, la fase `design` sin empezar y ficheros de `openspec/changes/<x>/` sin confirmar
 - **CUANDO** se ejecuta `axiom sdd status --change <x> --json`
 - **ENTONCES** `publication.state` es `pending` con el motivo `docs_uncommitted`
-- **Y** su `invocation` es idéntica a `gateQuestion.publication.invocation`
+- **Y** su `invocation` es idéntica a la `publication.invocation` de la pregunta de compuerta (REQ-27.12)
 - **Y** la clave está en la raíz del status, no dentro de `governance`
 - **Y** `nextRecommended` y las dependencias no cambian
+
+#### Scenario: Con la fase siguiente en iteración no se proyecta
+
+- **DADO** un cambio `checkpointed` con la compuerta `spec` aprobada, la compuerta `design` pendiente o rechazada, `design.md` presente y documentación sin confirmar
+- **CUANDO** se consulta el status
+- **ENTONCES** no hay clave `publication`, porque iterar no publica nada (REQ-27.12)
+- **Y** al aprobar `design`, con `tasks` sin empezar, se proyecta `pending`
+
+#### Scenario: Con apply en curso tras aprobar tasks no se proyecta
+
+- **DADO** un cambio `checkpointed` con la compuerta `tasks` aprobada, su compuerta `role-apply:<rol>` abierta y alguna tarea completada o progreso de `apply`
+- **CUANDO** se consulta el status
+- **ENTONCES** no hay clave `publication`
+- **Y** con todas las compuertas aprobadas salvo `integration`, se proyecta si hay algo que publicar
+
+#### Scenario: En `continuous`, un artefacto de planificación a medio escribir no proyecta
+
+- **DADO** un cambio `continuous` con `docs_publication: auto`, el artefacto `spec` completo, el artefacto `design` parcial y documentación sin confirmar
+- **CUANDO** se consulta el status
+- **ENTONCES** no hay clave `publication`
 
 #### Scenario: Varios motivos a la vez
 
@@ -608,8 +628,6 @@ El despacho de `archive` NO DEBE modificar `integrations.yaml` de la carpeta arc
 - **CUANDO** el registro termina
 - **ENTONCES** devuelve la orden de publicación sin ejecutarla (REQ-26.5)
 - **Y** la publicación pendiente solo se proyecta después en el status
-
----
 
 ### Requirement: El Orquestador Resuelve la Publicación Pendiente Antes de la Fase Siguiente (REQ-27.19)
 
