@@ -500,7 +500,7 @@ Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con l
 | C-06-a | fusionado | | `inc/fix-detalle-specs` | #268 (`2de9ae38`) |
 | C-06-b | fusionado | | `inc/html-explicativo` | #350 (`410105d9`); archive #351 (`89d81b31`) |
 | C-06-c | fusionado | | `inc/bateria-pruebas` | #356 (`da433c3a`); archive #357 (`804fa42b`) |
-| C-06-d | pendiente | | | |
+| C-06-d | fusionado | | `inc/marcas-pruebas` | #369 (`f7da2e59`); archive #370 (`dc5e4ec7`) |
 | C-06-e | fusionado | | `inc/ajustes-proyecto` | #361 (`3c406805`); archive #362 (`7a7f8ee9`) |
 | C-06-f | pendiente | | | |
 | C-06-g | fusionado | | `inc/agentes-ui` | #336 (`da5762ba`) |
@@ -509,7 +509,7 @@ Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con l
 | C-07-c | fusionado | | `inc/adaptador-ado` | #291 (`b1ba7246`); archive #292 (`d580368d`) |
 | C-07-d | fusionado | | `inc/arranque-desde-wi` | #359 (`64fd72a0`); archive #360 (`e365e538`) |
 | C-07-e | en curso | | `inc/eventos-ado` | |
-| C-07-f | pendiente | | | |
+| C-07-f | fusionado | | `inc/plantilla-ramas` | #371 (`aed635e7`); archive #372 (`aa3f8525`) |
 | C-07-g | fusionado | | `inc/mcp-ado` | #368 (`711807e6`); remate #373 (`67ce26e1`) |
 | C-07-h | pendiente | | | |
 | C-08-a | fusionado | | `inc/paquetes-huerfanos` | #298 (`7abf7590`) |
