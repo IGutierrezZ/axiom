@@ -71,11 +71,15 @@ type rawEntry struct {
 // capOld es la clave natural de una entrada: el par (capacidad, ID antiguo).
 type capOld struct{ capability, old string }
 
+// capTitle es la capacidad y el título de una entrada sin ID antiguo.
+type capTitle struct{ capability, title string }
+
 // Map es el mapa cargado e indexado.
 type Map struct {
 	byPair  map[capOld]string
 	oldCaps map[string][]string // ID antiguo -> capacidades, ordenadas
 	newOlds map[string][]string // ID nuevo -> IDs antiguos, ordenados
+	titles  map[string]capTitle // ID nuevo sin ID antiguo -> (capacidad, título)
 }
 
 // rfPattern es el patrón con el que Axiom numera los IDs nuevos del mapa.
@@ -130,7 +134,7 @@ func index(name string, raw rawMap, p reqid.Pattern) (*Map, error) {
 	if len(raw.Entries) == 0 {
 		return nil, invariant(name, "el mapa no tiene entradas")
 	}
-	m := &Map{byPair: map[capOld]string{}, oldCaps: map[string][]string{}, newOlds: map[string][]string{}}
+	m := &Map{byPair: map[capOld]string{}, oldCaps: map[string][]string{}, newOlds: map[string][]string{}, titles: map[string]capTitle{}}
 	for i, e := range raw.Entries {
 		at := fmt.Sprintf("entrada %d", i+1)
 		if strings.TrimSpace(e.Capability) == "" {
@@ -151,6 +155,9 @@ func index(name string, raw rawMap, p reqid.Pattern) (*Map, error) {
 		olds := append([]string(nil), e.Old...)
 		sort.Strings(olds)
 		m.newOlds[e.New] = olds
+		if len(e.Old) == 0 {
+			m.titles[e.New] = capTitle{e.Capability, strings.TrimSpace(e.Title)}
+		}
 		for _, old := range e.Old {
 			if strings.TrimSpace(old) == "" || strings.TrimSpace(old) != old {
 				return nil, invariant(name, "%s (%s): el ID antiguo %q no es válido", at, e.Capability, old)
@@ -205,3 +212,10 @@ func (m *Map) InCapability(capability, old string) string { return m.byPair[capO
 
 // Capabilities devuelve, ordenadas, las capacidades en las que old es una clave antigua.
 func (m *Map) Capabilities(old string) []string { return append([]string(nil), m.oldCaps[old]...) }
+
+// Title devuelve la capacidad y el título de la entrada sin ID antiguo cuyo ID nuevo es id, o
+// dos cadenas vacías si id no es una de ellas (RF-TRC-04, regla 5).
+func (m *Map) Title(id string) (capability, title string) {
+	t := m.titles[id]
+	return t.capability, t.title
+}

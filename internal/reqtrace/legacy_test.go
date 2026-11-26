@@ -33,6 +33,9 @@ entries:
   - capability: persona
     old: [REQ-10.1, REQ-10.2]
     new: RF-PER-08
+  - capability: engram
+    title: Single canonical asset
+    new: RF-ENG-01
 `
 
 func rfPattern(t *testing.T) reqid.Pattern {
@@ -306,5 +309,38 @@ func TestRequirementTraceLegacyODDCapabilityContext(t *testing.T) {
 	got, _ = oddLegacy(t, files, "REQ-1.1")
 	if len(got) != 1 {
 		t.Fatalf("consulta literal del antiguo en ODD = %v", got)
+	}
+}
+
+// TestRequirementTraceLegacyTitleEntryMatchesByTitle cubre la regla 5 de RF-TRC-04: el ID nuevo
+// de una entrada sin ID antiguo trae los incrementos cuya delta de su capacidad nombra el
+// requisito por su título exacto.
+func TestRequirementTraceLegacyTitleEntryMatchesByTitle(t *testing.T) {
+	files := fstest.MapFS{
+		"changes/archive/2026-01-01-a/specs/engram/spec.md": deltaSpec("MODIFIED", "Single canonical asset"),
+		"changes/archive/2026-01-02-b/specs/otra/spec.md":   deltaSpec("MODIFIED", "Single canonical asset"),
+		"changes/archive/2026-01-03-c/specs/engram/spec.md": deltaSpec("RENAMED", "Viejo nombre → Single canonical asset"),
+		"changes/archive/2026-01-04-d/specs/engram/spec.md": deltaSpec("MODIFIED", "Single canonical asset extra"),
+		"changes/archive/2026-01-05-e/specs/engram/spec.md": deltaSpec("ADDED", "Otro requisito (RF-ENG-01)"),
+	}
+	got, _ := sddLegacy(t, files, "RF-ENG-01")
+	byName := map[string]Role{}
+	for _, c := range got {
+		byName[c.Name] = c.Role
+		if !reflect.DeepEqual(c.IDs, []string{"RF-ENG-01"}) {
+			t.Errorf("incremento %s: ids %v; quería [RF-ENG-01]", c.Name, c.IDs)
+		}
+	}
+	want := map[string]Role{"a": RoleModified, "c": RoleRenamed, "e": RoleCreated}
+	if !reflect.DeepEqual(byName, want) {
+		t.Fatalf("incrementos = %v; quería %v", byName, want)
+	}
+
+	viva := func(capability string) *fstest.MapFile {
+		return oddDocText("", "## Spec viva\n\n### Capacidad: "+capability+"\n\n```openspec\n## MODIFIED Requirements\n\n### Requirement: Single canonical asset\n\nEl sistema MUST.\n\n#### Scenario: x\n\n- **DADO** a\n```\n")
+	}
+	oddGot, _ := oddLegacy(t, fstest.MapFS{"titulo.md": viva("engram"), "otra.md": viva("otra")}, "RF-ENG-01")
+	if names := paths(oddGot); !reflect.DeepEqual(names, []string{"titulo"}) || oddGot[0].Role != RoleModified {
+		t.Fatalf("ODD: incrementos %v", oddGot)
 	}
 }

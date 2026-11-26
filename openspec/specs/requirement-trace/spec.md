@@ -90,6 +90,7 @@ La resolución de equivalentes MUST pasar por un punto de extensión de alias su
 2. Un ID nuevo MUST resolverse a su ID antiguo (cuando lo tiene), para encontrar los incrementos archivados que lo citan.
 3. La coincidencia de un ID antiguo en los incrementos archivados MUST acotarse por la capacidad: un ID antiguo que aparece en el título de una delta archivada de la capacidad `C` (carpeta `specs/C/`), o en una línea `Cubre:` o una entrada de `ids.yaml` cuyo contexto nombra `C`, equivale solo al ID nuevo de (`C`, ID antiguo). MUST NOT contar como incremento del ID nuevo de otra capacidad que usaba el mismo ID antiguo.
 4. Consultar por un ID nuevo MUST traer los incrementos archivados que tocaron su ID antiguo en su capacidad, con los roles de RF-TRC-05, además de los que citan el ID nuevo.
+5. Consultar por el ID nuevo de una entrada del mapa sin ID antiguo (la que lleva el título) MUST traer también los incrementos, SDD archivados u ODD, cuya delta de esa misma capacidad nombra un requisito con ese título exacto (sin espacios al principio ni al final), con los roles de RF-TRC-05; en RENAMED cuentan el nombre origen y el destino. Una delta de otra capacidad con el mismo título MUST NOT contar, y las líneas `Cubre:` no casan por título.
 
 Un alias que no sea válido bajo el patrón del proyecto MUST aceptarse cuando proviene del mapa de identificadores heredados.
 
@@ -130,6 +131,14 @@ Un alias que no sea válido bajo el patrón del proyecto MUST aceptarse cuando p
 - **DADO** un cambio archivado cuya delta de la capacidad `C` modifica `«ID-antiguo»` y el mapa que lo asocia a `«ID-nuevo»` en `C`
 - **CUANDO** se consulta `«ID-nuevo»`
 - **ENTONCES** el resultado incluye ese cambio archivado con el rol `modified`
+
+#### Scenario: Un requisito sin ID antiguo se encuentra por su título en su capacidad
+
+- **DADO** el mapa con la entrada (`C`, título `«Título»`, `«ID-nuevo»`) sin ID antiguo, un cambio archivado cuya delta de `C` modifica `### Requirement: «Título»` y otro cuya delta de otra capacidad modifica un requisito con el mismo título
+- **CUANDO** se consulta `«ID-nuevo»`
+- **ENTONCES** el resultado incluye el primer cambio con el rol `modified`
+- **Y** no incluye el segundo
+
 ### Requirement: Incrementos SDD Archivados como Fuente (RF-TRC-05)
 
 El sistema MUST recorrer los cambios archivados `openspec/changes/archive/<fecha>-<cambio>/` del árbol de trabajo y reconocer un incremento SDD cuando el ID (o uno de sus equivalentes) aparece en: el título de un requisito de una delta `specs/*/spec.md` bajo ADDED, MODIFIED, REMOVED o RENAMED (en RENAMED, tanto el nombre origen como el destino cuando los incluyen); una línea `Cubre:` de un fichero `tasks*.md` del cambio; o una entrada de `ids.yaml`. El rol de la aparición MUST ser `created` (ADDED), `modified`, `removed`, `renamed` o `covered` (línea `Cubre:`). Cuando un mismo cambio toca el ID con varios roles, MUST informarse un incremento por rol. Las tareas que citan el ID en `Cubre:` MUST listarse con su fichero y línea. Los cambios activos (no archivados) MUST ignorarse. Un incremento SDD MUST anclarse por su carpeta archivada, no por el nombre del cambio, de modo que dos carpetas con el mismo nombre de cambio no se confundan.
