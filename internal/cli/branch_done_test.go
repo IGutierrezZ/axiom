@@ -119,6 +119,7 @@ func TestBranchDoneUsageErrorsExitWithCode2(t *testing.T) {
 // continuación es una orden ejecutable que ofrece `--force`; con `--force` se elimina y el JSON
 // lleva la capa `forced` y la punta. En texto, la salida describe cada rama y el error va a stderr.
 func TestBranchDoneRemovesAMergedChangeAndRefusesAnUnmergedOne(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	for _, change := range []string{"x", "y"} {
 		if code, stdout, stderr := runBranchCLI(t, "ensure", "--change", change, "--cwd", repo); code != 0 {
@@ -212,6 +213,7 @@ func TestBranchDoneRemovesAMergedChangeAndRefusesAnUnmergedOne(t *testing.T) {
 // REQ-25.17 (rechazos previos): un nombre de cambio inválido y un directorio que no es un
 // repositorio salen con 1 y un código tipado, sin datos de ninguna rama.
 func TestBranchDoneRefusesAnInvalidChangeNameAndAnUnusableDirectory(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "done", "--change", "../x", "--json", "--cwd", repo)

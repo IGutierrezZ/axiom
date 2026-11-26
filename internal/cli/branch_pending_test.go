@@ -69,6 +69,7 @@ func pendingEntries(t *testing.T, result branchResultJSON) []branchPendingJSON {
 // REQ-25.20, escenario «Un cambio fusionado y sin archivar figura como pendiente»: `x`
 // registrado y `y` fusionado y sin archivar; con la continuación para archivarlo y salida 0.
 func TestBranchStatusWithoutChangeListsRegisteredAndPendingAsJSON(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	addBranchChanges(t, repo, "y")
 	record := branchRecord(repo)
@@ -115,6 +116,7 @@ func TestBranchStatusWithoutChangeListsRegisteredAndPendingAsJSON(t *testing.T) 
 // está pendiente»: `pendingArchive` es un booleano con `--change`, y el pendiente lleva la
 // orden para archivarlo; un cambio que no lo está, no.
 func TestBranchStatusWithChangeReportsPendingArchiveAsABoolean(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	addBranchChanges(t, repo, "x")
 
@@ -154,6 +156,7 @@ func TestBranchStatusWithChangeReportsPendingArchiveAsABoolean(t *testing.T) {
 // Sin nada registrado ni pendiente, ambas listas se imprimen vacías: «evaluada y sin
 // elementos» no es lo mismo que «no evaluada».
 func TestBranchStatusWithoutChangeOfAProjectWithNothingToShow(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "status", "--json", "--cwd", repo)
@@ -174,6 +177,7 @@ func TestBranchStatusWithoutChangeOfAProjectWithNothingToShow(t *testing.T) {
 // Sin la rama de integración la lista de pendientes se omite con un aviso y la salida
 // sigue siendo 0 (REQ-25.20): el JSON no trae `pendingArchive`.
 func TestBranchStatusWithoutChangeOmitsThePendingListWithoutAnIntegrationBranch(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	writeBranchConfig(t, repo, "git:\n  integration_branch: develop\n")
 
@@ -194,6 +198,7 @@ func TestBranchStatusWithoutChangeOmitsThePendingListWithoutAnIntegrationBranch(
 // Sin --json, el texto en castellano lista los registrados y los pendientes con la orden
 // para archivarlos; con `--change`, indica que está pendiente.
 func TestBranchStatusWithoutChangePrintsSpanishText(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	addBranchChanges(t, repo, "y")
 	writeBranchRegistry(t, repo, branchRecord(repo))
@@ -223,6 +228,7 @@ func TestBranchStatusWithoutChangePrintsSpanishText(t *testing.T) {
 
 // El carril elige qué registros se listan (`--lane odd`).
 func TestBranchStatusWithoutChangeListsTheRegisteredChangesOfTheLane(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	writeBranchRegistry(t, repo, branchRecord(repo))
 	odd := branchRecord(repo)
@@ -286,6 +292,7 @@ func TestBranchStatusWithoutChangeLaunchesNoRemoteGitOperation(t *testing.T) {
 // `not_a_git_repository` con código 1 y la continuación; un fichero del registro corrupto,
 // `config_invalid` que lo nombra.
 func TestBranchStatusWithoutChangeRefusals(t *testing.T) {
+	t.Parallel()
 	t.Run("fuera de un repositorio git", func(t *testing.T) {
 		outside := branchOutsideGit(t)
 

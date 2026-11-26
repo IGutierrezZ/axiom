@@ -34,6 +34,7 @@ func TestBranchEnsureHelpDocumentsInPlaceAndDirtyWorktree(t *testing.T) {
 // continuación por stderr. Con el árbol limpio, sale con 0, hace `git switch` sin worktree,
 // registra el modo y repetir da el mismo JSON.
 func TestBranchEnsureInPlaceRefusesADirtyTreeAndSwitchesACleanOne(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	loose := filepath.Join(repo, "suelto.txt")
 	if err := os.WriteFile(loose, []byte("suelto\n"), 0o644); err != nil {

@@ -15,53 +15,15 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 )
 
-// isolatedBranchGitConfig es el gitconfig global de estas pruebas: sin gc ni
-// mantenimiento automático en segundo plano (que compite con la limpieza del directorio
-// temporal) y sin fsmonitor, caché de ficheros sin seguimiento ni fsync, que solo
-// encarecen cada proceso git en Windows.
-const isolatedBranchGitConfig = `[gc]
-	auto = 0
-	autoDetach = false
-[maintenance]
-	auto = false
-[core]
-	fsmonitor = false
-	untrackedCache = false
-	fsync = none
-`
-
-// isolateBranchGit deja a git sin acceso a la configuración del usuario, con un
-// autor fijo y sin preguntas ni red (tasks.md, regla 9). Omite la prueba con -short
+// isolateBranchGit: TestMain ya dejó a git sin acceso a la configuración del usuario, con
+// un autor fijo y sin preguntas ni red (tasks.md, regla 9; testenv.IsolateGit). Omite la prueba con -short
 // o sin git: ejecuta procesos externos (skill go-testing).
 func isolateBranchGit(t *testing.T) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("la prueba ejecuta git: se omite con -short")
-	}
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skipf("git no está disponible: %v", err)
-	}
-	home := t.TempDir()
-	gitConfig := filepath.Join(home, "gitconfig")
-	if err := os.WriteFile(gitConfig, []byte(isolatedBranchGitConfig), 0o644); err != nil {
-		t.Fatalf("escribir el gitconfig aislado: %v", err)
-	}
-	templateDir := filepath.Join(home, "git-template")
-	if err := os.MkdirAll(templateDir, 0o755); err != nil {
-		t.Fatalf("crear la plantilla vacía de git: %v", err)
-	}
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", gitConfig)
-	t.Setenv("GIT_TEMPLATE_DIR", templateDir)
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
-	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
-	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	testenv.RequireGit(t)
 }
 
 func branchTestGit(t *testing.T, dir string, args ...string) {
@@ -348,6 +310,7 @@ func TestBranchRejectsUnrecognisedSubcommandsWithCode2(t *testing.T) {
 // git, git common dir, rama actual (por ReadHead), rama de integración y base, con las
 // ramas del plan.
 func TestBranchStatusPrintsTheResultAsJSON(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "branch", "feat/x")
 
@@ -407,6 +370,7 @@ func TestBranchStatusPrintsTheResultAsJSON(t *testing.T) {
 // tokens en inglés con etiqueta en castellano»): un cambio sin ramas es `not_started`
 // con la etiqueta «no iniciado» y código de salida 0.
 func TestBranchStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "status", "--change", "nuevo", "--json", "--cwd", repo)
@@ -431,6 +395,7 @@ func TestBranchStatusOfAChangeWithoutBranchesIsNotStarted(t *testing.T) {
 
 // La salida es estable: dos ejecuciones sobre el mismo estado dan los mismos bytes.
 func TestBranchStatusOutputIsDeterministic(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	_, first, _ := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", repo)
 	_, second, _ := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", repo)
@@ -445,6 +410,7 @@ func TestBranchStatusOutputIsDeterministic(t *testing.T) {
 // Desde un worktree enlazado, la raíz es la del worktree y el common dir el del
 // checkout principal; la rama actual es la del worktree.
 func TestBranchStatusInALinkedWorktree(t *testing.T) {
+	t.Parallel()
 	main := newBranchRepository(t)
 	linked := filepath.Join(t.TempDir(), "enlazado")
 	branchTestGit(t, main, "worktree", "add", "-q", "-b", "inc/mi-cambio", linked, "HEAD")
@@ -463,6 +429,7 @@ func TestBranchStatusInALinkedWorktree(t *testing.T) {
 }
 
 func TestBranchStatusWithADetachedHead(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "checkout", "-q", "--detach")
 
@@ -480,6 +447,7 @@ func TestBranchStatusWithADetachedHead(t *testing.T) {
 // Un HEAD que no se puede leer sin git (reftable) no es un fallo: el resultado sigue
 // listo, sin rama y con un aviso.
 func TestBranchStatusWarnsWhenHeadHasAnUnknownForm(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "branch", "feat/x")
 	if err := os.WriteFile(filepath.Join(repo, ".git", "HEAD"), []byte("ref: refs/heads/.invalid\n"), 0o644); err != nil {
@@ -535,6 +503,7 @@ func TestBranchStatusCwdFixesTheStartingDirectory(t *testing.T) {
 // REQ-25.2: fuera de git, `not_a_git_repository` con código 1, token con etiqueta y
 // una continuación en castellano con la ruta citada.
 func TestBranchStatusOutsideGitIsRefusedWithATypedCode(t *testing.T) {
+	t.Parallel()
 	isolateBranchGit(t)
 	outside := branchOutsideGit(t)
 
@@ -560,6 +529,7 @@ func TestBranchStatusOutsideGitIsRefusedWithATypedCode(t *testing.T) {
 }
 
 func TestBranchStatusOfAMissingDirectoryIsRefusedWithTheSameCode(t *testing.T) {
+	t.Parallel()
 	isolateBranchGit(t)
 	missing := filepath.Join(branchOutsideGit(t), "no", "existe")
 
@@ -573,6 +543,7 @@ func TestBranchStatusOfAMissingDirectoryIsRefusedWithTheSameCode(t *testing.T) {
 // REQ-25.3 y REQ-25.11: un nombre de cambio inválido es `invalid_name`, con código de
 // salida 1, antes de leer nada con él.
 func TestBranchStatusRefusesAnInvalidChangeNameAsInvalidName(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	for _, invalid := range []string{"a b:c", "CON", "../fuera"} {
@@ -596,6 +567,7 @@ func TestBranchStatusRefusesAnInvalidChangeNameAsInvalidName(t *testing.T) {
 
 // Sin --json la salida es texto en castellano, con los mismos códigos de salida.
 func TestBranchStatusPrintsSpanishTextWithoutJSON(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "branch", "feat/x")
 
@@ -669,6 +641,7 @@ func TestBranchStatusUsageErrorsExitWithCode2(t *testing.T) {
 // REQ-25.13: el carril ODD se elige con `--lane odd` y el resultado nombra el documento
 // `odd/tasks/<feature>.md`.
 func TestBranchStatusOddLane(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, _ := runBranchCLI(t, "status", "--change", "mi-feature", "--lane", "odd", "--json", "--cwd", repo)
@@ -692,6 +665,7 @@ func TestBranchStatusOddLane(t *testing.T) {
 // rol, con su tipo y su etiqueta y el destino propuesto de su PR, y el aviso de
 // publicar la de seguimiento.
 func TestBranchStatusWithTwoSealedRolesShowsTheRoleBranches(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	configWithTwoRoles := strings.Replace(branchConfigBase, "roles:\n", "roles:\n  qa:\n    name: QA\n    repositories:\n      - path: .\n", 1)
 	if err := os.WriteFile(filepath.Join(repo, "axiom.yaml"), []byte(configWithTwoRoles), 0o644); err != nil {
@@ -789,6 +763,7 @@ func TestBranchStatusLaunchesNoRemoteGitOperation(t *testing.T) {
 // REQ-25.2 (G-4): cada token del JSON lleva su etiqueta en castellano en un campo
 // hermano, tanto en un resultado listo como en un rechazo.
 func TestBranchStatusPairsEveryTokenWithItsLabel(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "branch", "feat/x")
 	_, ready, _ := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", repo)
@@ -826,6 +801,7 @@ func TestBranchStatusPairsEveryTokenWithItsLabel(t *testing.T) {
 // REQ-25.3: sin configuración rige `main`; el bloque `git:` lo sustituye; una entrada
 // de `repositories:` prevalece sobre `git:` solo en su repositorio.
 func TestBranchStatusShowsTheIntegrationBranchPerRepository(t *testing.T) {
+	t.Parallel()
 	statusOf := func(t *testing.T, cwd string) []branchRepositoryJSON {
 		t.Helper()
 		code, stdout, stderr := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", cwd)
@@ -972,6 +948,7 @@ repositories:
 // `config_invalid`, con código de salida 1, la causa en el mensaje y la continuación
 // ejecutable con la carpeta maestra citada.
 func TestBranchStatusRefusesAnInvalidConfigurationAsConfigInvalid(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		content   string

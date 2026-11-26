@@ -55,6 +55,7 @@ func branchRecord(repo string) branch.Record {
 // REQ-25.14, escenario «Registro ausente informado por `status`»: el JSON indica que el
 // cambio no tiene registro y el comando no falla.
 func TestBranchStatusReportsAnAbsentRegistry(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 
 	code, stdout, stderr := runBranchCLI(t, "status", "--change", "x", "--json", "--cwd", repo)
@@ -78,6 +79,7 @@ func TestBranchStatusReportsAnAbsentRegistry(t *testing.T) {
 // materializado y su origen (token y etiqueta) y del worktree registrado, tanto en JSON
 // como en el texto en castellano.
 func TestBranchStatusReadsTheRegistry(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	branchTestGit(t, repo, "branch", "feat/x")
 	record := branchRecord(repo)
@@ -118,6 +120,7 @@ func TestBranchStatusReadsTheRegistry(t *testing.T) {
 // REQ-25.14: un registro corrupto es `config_invalid` con código de salida 1, el
 // fichero nombrado y la continuación de borrarlo y reconstruirlo con `ensure`.
 func TestBranchStatusRefusesACorruptRegistry(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	path := writeBranchRegistry(t, repo, branchRecord(repo))
 	if err := os.WriteFile(path, []byte("{no es json"), 0o644); err != nil {
@@ -157,6 +160,7 @@ func TestBranchStatusRefusesACorruptRegistry(t *testing.T) {
 // ramas, y cada repositorio de código con su rama del cambio; el JSON lleva el papel con
 // su etiqueta.
 func TestBranchStatusMultirepoReportsTheSpecsRepositoryInPlace(t *testing.T) {
+	t.Parallel()
 	isolateBranchGit(t)
 	master := t.TempDir()
 	for _, dir := range []string{"repo-specs", "repo-backend", "repo-frontend"} {
@@ -209,6 +213,7 @@ roles:
 // y su raíz de worktrees (`<carpeta>-wt`) quedaría dentro del repositorio: `plan_conflict`
 // con código de salida 1 y una continuación ejecutable con la carpeta citada.
 func TestBranchStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
+	t.Parallel()
 	repo := newBranchRepository(t)
 	sub := filepath.Join(repo, "app", "web")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
@@ -236,6 +241,7 @@ func TestBranchStatusRefusesAWorktreeRootInsideTheRepository(t *testing.T) {
 // con las reglas de Windows inyectadas. El carril ODD no lee el kickoff, de modo que el
 // nombre largo no obliga a la prueba a crear ficheros de más de 260 caracteres.
 func TestBranchStatusRefusesAWorktreePathOverTheWindowsLimit(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS != "windows" {
 		t.Skip("el límite real de 220 caracteres solo rige en Windows")
 	}

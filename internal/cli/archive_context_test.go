@@ -16,6 +16,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
 	"github.com/IGutierrezZ/axiom/v3/internal/techcontext"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
 )
@@ -78,24 +79,10 @@ type contextCLIFixture struct {
 	changeRoot string
 }
 
+// contextCLIIsolateGit omite la prueba con -short o sin git; TestMain ya aisló git.
 func contextCLIIsolateGit(t *testing.T) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("la prueba ejecuta git: se omite con -short")
-	}
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skipf("git no está disponible: %v", err)
-	}
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	t.Setenv("USERPROFILE", home)
-	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, "gitconfig"))
-	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
-	t.Setenv("GIT_AUTHOR_NAME", "Autor de Prueba")
-	t.Setenv("GIT_AUTHOR_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_COMMITTER_NAME", "Autor de Prueba")
-	t.Setenv("GIT_COMMITTER_EMAIL", "autor@ejemplo.invalid")
-	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	testenv.RequireGit(t)
 }
 
 func contextCLIGit(t *testing.T, dir string, args ...string) string {
@@ -239,6 +226,7 @@ func decodeContextReport(t *testing.T, stdout string) techcontext.Report {
 }
 
 func TestArchiveContextCheckReportsAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, false)
 	before := f.snapshot(t)
 	for name, start := range map[string]string{
@@ -283,6 +271,7 @@ func TestArchiveContextCheckReportsAndWritesNothing(t *testing.T) {
 }
 
 func TestArchiveContextCwdIsAnAliasOfPath(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, false)
 	for _, args := range [][]string{
 		{"check", "--cwd", f.ws.Specs, "--change", contextCLIChange, "--json"},
@@ -304,6 +293,7 @@ func TestArchiveContextCwdIsAnAliasOfPath(t *testing.T) {
 }
 
 func TestArchiveContextArgumentErrorsNameTheContinuation(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, false)
 	tests := []struct {
 		name string
@@ -348,6 +338,7 @@ func TestArchiveContextHelp(t *testing.T) {
 }
 
 func TestArchiveContextCheckExitsNonZeroWithErrors(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, false)
 	f.writeChange(t, techcontext.DeltaFileName, "## Entrada: referencia/legado/VIEJO.md\n\n- Ancla: Viejo\n- Acción: modify\n- Motivo: x\n")
 
@@ -403,6 +394,7 @@ func TestArchiveContextPrepareWritesOnlyTheTrace(t *testing.T) {
 }
 
 func TestArchiveContextPrepareRefusesWithoutEditAuthorization(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, true, false)
 	before := f.snapshot(t)
 	stdout, err := runArchiveContextCLI(t, "prepare", "--path", f.ws.Specs, "--change", contextCLIChange, "--json")
@@ -483,6 +475,7 @@ func TestArchiveContextVerifyAndShow(t *testing.T) {
 }
 
 func TestArchiveContextShowWithoutATraceNamesPrepare(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, false)
 	_, err := runArchiveContextCLI(t, "show", "--path", f.ws.Specs, "--change", contextCLIChange)
 	if err == nil {
@@ -498,6 +491,7 @@ func TestArchiveContextShowWithoutATraceNamesPrepare(t *testing.T) {
 // REQ-30.21: con un `baseline:` residual, `archive context` se niega sin escribir
 // con el error tipado de la retirada y la migración `axiom archive adopt`.
 func TestArchiveContextRefusesWhenABaselineIsRetired(t *testing.T) {
+	t.Parallel()
 	f := newContextCLIFixture(t, false, true)
 	before := f.snapshot(t)
 	for _, verb := range []string{"check", "prepare", "verify", "show"} {

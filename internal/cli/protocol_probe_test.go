@@ -15,6 +15,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/gitidentity"
 	runtimeopencode "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
+	"github.com/IGutierrezZ/axiom/v3/internal/testenv"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -99,16 +100,14 @@ func TestMain(m *testing.M) {
 	if err := os.Unsetenv("AXIOM_CHANNEL"); err != nil {
 		panic(err)
 	}
-	testHome, err := os.MkdirTemp("", "axiom-cli-test-home-*")
+	// testenv.IsolateGit fija el HOME aislado (HOME y USERPROFILE) y el entorno de git
+	// una sola vez para todo el binario: los helpers isolate*Git ya no llaman a
+	// t.Setenv y las pruebas que solo los usan pueden marcarse con t.Parallel().
+	_, cleanupGit, err := testenv.IsolateGit("cli")
 	if err != nil {
 		panic(err)
 	}
-	if err := os.Setenv("HOME", testHome); err != nil {
-		panic(err)
-	}
-	if err := os.Setenv("USERPROFILE", testHome); err != nil {
-		panic(err)
-	}
+	testHome := os.Getenv("HOME")
 	if err := os.Setenv(ScopeAxiomEnvVar, string(ScopeGlobal)); err != nil {
 		panic(err)
 	}
@@ -149,6 +148,6 @@ func TestMain(m *testing.M) {
 	qwen.LookPathOverride = agentPresent
 
 	code := m.Run()
-	_ = os.RemoveAll(testHome)
+	cleanupGit()
 	os.Exit(code)
 }

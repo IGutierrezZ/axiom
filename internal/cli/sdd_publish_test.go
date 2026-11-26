@@ -103,6 +103,7 @@ func decodePublish(t *testing.T, stdout string) publishJSON {
 
 // Los errores de uso salen con error y sin efectos: nada se confirma ni se sube.
 func TestSDDPublishUsageErrorsHaveNoEffects(t *testing.T) {
+	t.Parallel()
 	repo, bare := newPublishProject(t)
 	branchTestGit(t, repo, "status")
 	writePublishFile(t, filepath.Join(repo, "openspec", "changes", "x", "design.md"), "editado\n")
@@ -152,6 +153,7 @@ func TestSDDPublishHelpDocumentsTheVerb(t *testing.T) {
 
 // published: salida 0, texto en castellano con commit, push y la continuación de quien siga.
 func TestSDDPublishPublishesAndPrintsTheNextStepForWhoFollows(t *testing.T) {
+	t.Parallel()
 	repo, bare := newPublishProject(t)
 	writePublishFile(t, filepath.Join(repo, "openspec", "changes", "x", "design.md"), "editado\n")
 
@@ -184,6 +186,7 @@ func TestSDDPublishPublishesAndPrintsTheNextStepForWhoFollows(t *testing.T) {
 // `--json` escribe axiom.sdd-publish/v1, también en una negativa, y la negativa devuelve el error que
 // hace salir con 1.
 func TestSDDPublishJSONIsWrittenAlsoOnARefusal(t *testing.T) {
+	t.Parallel()
 	repo, _ := newPublishProject(t)
 	writePublishFile(t, filepath.Join(repo, "openspec", "changes", "x", "design.md"), "editado\n")
 
@@ -215,6 +218,7 @@ func TestSDDPublishJSONIsWrittenAlsoOnARefusal(t *testing.T) {
 // Sin `--json`, una negativa escribe su etiqueta, su mensaje y su continuación en la salida, y el commit
 // local que se conserva.
 func TestSDDPublishRefusalTextNamesTheKeptCommit(t *testing.T) {
+	t.Parallel()
 	repo, _ := newPublishProject(t)
 	writePublishFile(t, filepath.Join(repo, "README.sh"), "#!/bin/sh\n")
 	branchTestGit(t, repo, "add", "-A")
@@ -257,6 +261,7 @@ func TestPublishRelativeCwdResolvesToWorkspace(t *testing.T) {
 // REQ-27.14: tras archivar, la rama de archivado solo se publica con `--archive`, y sin él la negativa
 // nombra el flag que falta.
 func TestSDDPublishArchiveBranchRequiresTheArchiveFlag(t *testing.T) {
+	t.Parallel()
 	repo, _ := newPublishProject(t)
 	branchTestGit(t, repo, "switch", "-q", "main")
 	branchTestGit(t, repo, "switch", "-q", "-c", "feat/x-archive")

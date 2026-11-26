@@ -39,7 +39,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 - [x] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
 - [x] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
 - [x] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
-- [ ] T6 · `cli`: `isolateIntegrateGit`, `isolateBranchGit` e `isolateGateGitEnv` sin `t.Setenv`, entorno de git en `TestMain` y `t.Parallel()` en sus pruebas.
+- [x] T6 · `cli`: `isolateIntegrateGit`, `isolateBranchGit` e `isolateGateGitEnv` sin `t.Setenv`, entorno de git en `TestMain` y `t.Parallel()` en sus pruebas.
 - [ ] T7 · Cierre: tiempos antes y después por paquete, CI en verde.
 
 Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requiere un mapeo que exceda el presupuesto de evidencia ni hay motivo nombrado para delegar un escritor).
@@ -52,6 +52,7 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 | `techcontext` | 62,8 s | 24,4 s |
 | `sddstatus` | 79,4 s | 21,5 s |
 | `dashboard` | 69,8 s | 50,5 s |
+| `cli`, las 190 pruebas que usan los helpers `isolate*Git` (con `-run`) | 305,3 s | 213,0 s |
 
 ## Pruebas que siguen en serie
 
@@ -59,6 +60,8 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 - `sddstatus`: 45 de 348 (las que usan `t.Setenv` de `ENGRAM_PROJECT` o `HOME`, `t.Chdir`, `useBranchGuard` y sus fixtures `branchMonorepo`, `checkpointedMonorepo` e `isoBranchMonorepo`, `stubEngramExport`, `publishChangeInstanceMarker` o `gitcommon.Observe`).
 - `techcontext`: 6 de 69 (las de `t.Chdir`, `fixedClock` y `renameFile`).
 - `dashboard`: 75 de 253. Además de `t.Setenv`, `t.Chdir` y los seams del paquete (`runAppArgsFn`, `upgradeSequence*Fn`, los de `relaunch`, `installAdapters`, `discoverOpenCodeCatalog`), las que escriben preferencias de worktree en el hub del HOME compartido (`setWorktreePrefs` y sus fixtures `gitProject` y `embeddedProject`): `hub.Manager` reescribe `workspaces.json` con un renombrado sin bloqueo entre instancias, que en Windows choca con las escrituras de las pruebas paralelas. Son las de git más caras; inyectar el hub en el servicio sería un cambio de producción (fuera de alcance).
+- `cli`: de las 190 pruebas con git, 125 siguen en serie: además de `t.Setenv` y `t.Chdir`, sustituyen alguna de las 58 variables del paquete que las pruebas cambian (`resolveActorIdentity`, los avisos `*Warnings`, `cmdLookPath`, etc.), `backup.UserHomeDirFn`, los `LookPathOverride` o `gitcommon.Observe`, o escriben el hub compartido (`askModeHub`). El resto de `cli` (unas 1.000 pruebas sin git) queda como estaba: 209 `t.Setenv` y decenas de variables sustituidas impiden marcarlas sin reescribirlas.
+- Efecto colateral: los helpers `isolate*Git` daban a cada prueba un HOME propio; ahora comparten el de `TestMain`. `TestBranchEnsureAskAnswerWithTheModeFlagIsRecordedAndReused` suponía un hub vacío (`Workspaces[0]`) y ahora busca el proyecto por id.
 
 ## Criterio de terminado
 
