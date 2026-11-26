@@ -99,9 +99,19 @@ workspace:
 # juntar dos marcadores. Ejemplos: RF-<DOM>-<NN> (RF-USU-01), RF-<m> (RF-121),
 # HU-<NNN> (HU-007). Una plantilla inválida es un error de 'axiom workspace
 # validate' y los comandos que la necesitan se niegan con ese motivo.
+#
+# El HTML explicativo (un resumen con diagramas de la spec y del diseño para
+# lectores no técnicos, 'resumen-spec.html' y 'resumen-design.html', que se ve en
+# la pestaña «Explicación» del dashboard) se declara con 'explainer_html':
+#   ask     es el valor por defecto; el orquestador pregunta una vez por cambio.
+#   always  todo cambio nuevo lo genera, sin preguntar.
+#   never   ningún cambio nuevo lo genera, sin preguntar.
+# Cada cambio sella su decisión en 'kickoff.yaml'; lo que se aprueba sigue siendo
+# el md. Un valor distinto de ask, always o never es un error de validación.
 # sdd:
 #   iso: true
 #   id_pattern: "RF-<DOM>-<NN>"
+#   explainer_html: ask
 
 # ------------------------------------------------------------------------------
 # Integraciones con Trackers (opcional)

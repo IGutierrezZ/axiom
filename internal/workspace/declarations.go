@@ -67,6 +67,22 @@ func (d Declarations) IDPattern() (reqid.Pattern, error) {
 	return *d.SDD.IDPattern, nil
 }
 
+// ExplainerHTML devuelve el modo efectivo de `sdd.explainer_html`: ask sin bloque
+// `sdd:` o sin la clave; con un `axiom.yaml` ilegible o un bloque `sdd:` inválido
+// devuelve un error que envuelve ParseErr o SDDErr (%w), nunca asume ask.
+func (d Declarations) ExplainerHTML() (ExplainerHTMLMode, error) {
+	if d.ParseErr != nil {
+		return "", fmt.Errorf("no se puede leer axiom.yaml para conocer sdd.explainer_html: %w", d.ParseErr)
+	}
+	if d.SDDErr != nil {
+		return "", fmt.Errorf("el bloque sdd de axiom.yaml no es válido y sdd.explainer_html no se puede conocer: %w", d.SDDErr)
+	}
+	if d.SDD == nil || d.SDD.ExplainerHTML == "" {
+		return ExplainerHTMLAsk, nil
+	}
+	return d.SDD.ExplainerHTML, nil
+}
+
 // Claves admitidas por nodo (D-04). yaml.v3 no ofrece KnownFields en
 // Node.Decode, así que cada mapeo de los bloques nuevos se recorre contra su
 // lista cerrada; el resto de claves de axiom.yaml se sigue ignorando (REQ-24.17).

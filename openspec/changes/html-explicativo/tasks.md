@@ -38,7 +38,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 2: Declaración y sellado
 
-- [ ] T2 Declaración `sdd.explainer_html` en el decodificador estricto del bloque `sdd:`, accesor `Declarations.ExplainerHTML()` y `axiom.example.yaml` (RF-ISO-01 modificado).
+- [x] T2 Declaración `sdd.explainer_html` en el decodificador estricto del bloque `sdd:`, accesor `Declarations.ExplainerHTML()` y `axiom.example.yaml` (RF-ISO-01 modificado).
   - Cubre: prov:KOF:1, RF-ISO-01
   - Ficheros: `internal/workspace/sdd.go`, `internal/workspace/declarations.go`, `internal/workspace/sdd_test.go`, `axiom.example.yaml`, `internal/workspace/example_config_test.go`
   - Pruebas (RED primero): `ask`, `always`, `never`; `quizás`, `true`, nulo, lista, mapeo, duplicado → error con clave, valor y admitidos; sin clave → `ask`; independencia de `iso` y `workflow.lane`; `ExplainerHTML()` con `SDDErr`/`ParseErr` devuelve error envuelto; el bloque descomentado del ejemplo declara `explainer_html: ask`.
