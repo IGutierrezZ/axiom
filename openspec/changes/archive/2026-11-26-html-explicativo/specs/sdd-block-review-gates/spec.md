@@ -5,13 +5,13 @@
 
 ## ADDED Requirements
 
-### Requirement: Contrato del HTML Explicativo que Generan `sdd-spec` y `sdd-design` cuando el Kickoff Sella `yes` (prov:GAT:1)
+### Requirement: Contrato del HTML Explicativo que Generan `sdd-spec` y `sdd-design` cuando el Kickoff Sella `yes` (RF-GAT-27)
 
 Cuando el kickoff del cambio sella `explainer_html: yes`, la fase `sdd-spec` DEBE escribir, después de los md de spec, el fichero `resumen-spec.html`, y la fase `sdd-design` DEBE escribir, después de `design.md`, el fichero `resumen-design.html`, ambos en la raíz de la carpeta del cambio (uno por cambio, no uno por dominio). Cada HTML DEBE:
 
 - estar escrito en castellano, para público no técnico, e incluir qué cambia, para quién, los flujos antes y después, diagramas SVG en línea y un glosario;
 - ser autocontenido: HTML, CSS y SVG en línea, sin ninguna etiqueta `<script>` y sin ningún recurso externo (ni URL `http://` o `https://` en `src`, `href` o `url(...)`, ni hojas de estilo, fuentes, imágenes o marcos externos);
-- llevar `<meta name="axiom-source-digest" content="...">` con el mismo digest que `axiom` calcula para los md de origen de esa fase (los de spec para `resumen-spec.html`, `design.md` para `resumen-design.html`), de modo que su frescura sea verificable (prov:GAT:4).
+- llevar `<meta name="axiom-source-digest" content="...">` con el mismo digest que `axiom` calcula para los md de origen de esa fase (los de spec para `resumen-spec.html`, `design.md` para `resumen-design.html`), de modo que su frescura sea verificable (RF-GAT-30).
 
 Cuando el kickoff sella `no` o no tiene el campo, las fases NO DEBEN escribir estos HTML y su comportamiento NO DEBE cambiar. El HTML es exclusivo de SDD: ninguna fase de ODD, ni `sdd-propose`, `sdd-tasks` o `sdd-verify`, lo genera. La doctrina de las skills (y de sus copias por agente) DEBE exigir estas restricciones y una comprobación automática DEBE detectar si la doctrina deja de exigirlas.
 
@@ -52,7 +52,7 @@ Cuando el kickoff sella `no` o no tiene el campo, las fases NO DEBEN escribir es
 
 ---
 
-### Requirement: Contenido Fiel del HTML: Cita de IDs, Nada Fuera del md y Aviso de que se Aprueba el md (prov:GAT:2)
+### Requirement: Contenido Fiel del HTML: Cita de IDs, Nada Fuera del md y Aviso de que se Aprueba el md (RF-GAT-28)
 
 Cada bloque del HTML DEBE citar el ID del requisito (en `resumen-spec.html`) o de la decisión (en `resumen-design.html`) del md del que sale. El HTML NO DEBE afirmar nada que no esté en el md de origen. El HTML DEBE decir expresamente, de forma visible, que lo que se aprueba en la puerta es el md y no el HTML. Cuando una puerta se rechaza y la fase regenera el md (RF-GAT-06), DEBE regenerar también el HTML correspondiente, con el digest del md regenerado.
 
@@ -78,7 +78,7 @@ Cada bloque del HTML DEBE citar el ID del requisito (en `resumen-spec.html`) o d
 
 ---
 
-### Requirement: El HTML Queda Fuera del Digest de las Puertas (prov:GAT:3)
+### Requirement: El HTML Queda Fuera del Digest de las Puertas (RF-GAT-29)
 
 Crear, modificar o borrar un `resumen-spec.html` o un `resumen-design.html` NO DEBE cambiar el digest que juzgan las puertas `spec` y `design`, NO DEBE reabrir una puerta ya aprobada ni cambiar su estado, y NO DEBE entrar en el conjunto de artefactos que una puerta aprueba. La puerta aprueba el md, que es el contrato.
 
@@ -103,7 +103,7 @@ Crear, modificar o borrar un `resumen-spec.html` o un `resumen-design.html` NO D
 
 ---
 
-### Requirement: Frescura Informativa `fresh`, `stale` o `missing` del HTML en `axiom sdd status` (prov:GAT:4)
+### Requirement: Frescura Informativa `fresh`, `stale` o `missing` del HTML en `axiom sdd status` (RF-GAT-30)
 
 Cuando el kickoff del cambio sella `explainer_html: yes`, `axiom sdd status --json` DEBE proyectar, para `spec` y para `design`, un estado de frescura de su HTML con tres valores, calculado de solo lectura sobre los md de origen que ya descubre el status (sin una regla paralela de descubrimiento de specs) y con independencia del estilo de ejecución, también en `continuous`:
 

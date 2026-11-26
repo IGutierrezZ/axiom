@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Declaración de Proyecto `sdd.explainer_html` con Valor por Defecto `ask` (prov:KOF:1)
+### Requirement: Declaración de Proyecto `sdd.explainer_html` con Valor por Defecto `ask` (RF-KOF-13)
 
 `axiom.yaml` PUEDE declarar, dentro del bloque `sdd:`, la clave `explainer_html` con uno de tres valores: `ask`, `always` o `never`. El valor por defecto, cuando la clave o el bloque `sdd:` están ausentes, DEBE ser `ask`. El valor DEBE validarse con el decodificador estricto del bloque `sdd:` (RF-ISO-01 de `sdd-iso-evidence`): un valor no admitido DEBE fallar en `axiom workspace validate`, al cargar la configuración y al sellar, con un mensaje en español que nombre `sdd.explainer_html`, el valor y los admitidos. `axiom.example.yaml` DEBE documentar la clave y sus tres valores. La declaración es por proyecto y exclusiva de SDD: no afecta al carril ODD.
 
@@ -32,7 +32,7 @@
 
 ---
 
-### Requirement: `kickoff.yaml` Registra el Campo Sellado `explainer_html` con Valores `yes` o `no` (prov:KOF:2)
+### Requirement: `kickoff.yaml` Registra el Campo Sellado `explainer_html` con Valores `yes` o `no` (RF-KOF-14)
 
 `kickoff.yaml` PUEDE registrar el campo `explainer_html` con uno de dos valores: `yes` o `no`. El campo DEBE omitirse cuando no está sellado (`omitempty`) y su ausencia DEBE equivaler a `no`. El campo DEBE escribirse una sola vez, por `axiom sdd kickoff seal`, y DEBE ser independiente del estilo de ejecución (`continuous` o `checkpointed`), del rol y de `docs_publication`. Un valor distinto de `yes` o `no` en un `kickoff.yaml` DEBE rechazarse como inválido. Un cambio sellado antes de este cambio, sin el campo, NO DEBE cambiar de comportamiento. Un binario anterior ignora el campo al leer `kickoff.yaml`.
 
@@ -64,7 +64,7 @@
 
 ---
 
-### Requirement: La Bandera `--explainer-html` y la Resolución contra el Valor del Proyecto (prov:KOF:3)
+### Requirement: La Bandera `--explainer-html` y la Resolución contra el Valor del Proyecto (RF-KOF-15)
 
 `axiom sdd kickoff seal` DEBE aceptar la bandera `--explainer-html yes|no`. El valor sellado DEBE resolverse así:
 
@@ -145,7 +145,7 @@ La salida de `seal`, en texto y en JSON, DEBE informar del valor sellado. La ayu
 
 ---
 
-### Requirement: El Status Proyecta el Valor de Proyecto y el Valor Sellado de `explainer_html` (prov:KOF:4)
+### Requirement: El Status Proyecta el Valor de Proyecto y el Valor Sellado de `explainer_html` (RF-KOF-16)
 
 `axiom sdd status --json` DEBE proyectar de forma aditiva: (a) el valor vigente del proyecto (`ask`, `always` o `never`), con o sin cambio seleccionado, para que el orquestador sepa si debe preguntar antes de sellar; y (b) el valor sellado del cambio consultado dentro de `governance.kickoff` (`yes` o `no`), para que las fases sepan si deben generar el HTML. Un cambio sin el campo sellado se proyecta como `no` o sin la clave, de modo que un consumidor anterior no observa diferencia. Con un `sdd:` inválido el status DEBE proyectar la declaración como inválida en lugar de asumir `ask`. Ninguna clave existente del status DEBE cambiar de nombre, tipo ni valor, y la proyección NO DEBE alterar `nextRecommended`, las dependencias ni los motivos de bloqueo. El contrato publicado (`sdd-status-contract.md`) DEBE documentar ambas proyecciones.
 

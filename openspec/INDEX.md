@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 08:31:13 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 516 | **Total Escenarios BDD:** 2316
+> **Última Sincronización:** 2026-11-26 10:12:49 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 527 | **Total Escenarios BDD:** 2380
 
 ---
 
@@ -27,7 +27,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 23 | 98 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 14 | 43 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 16 | 56 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 12 | 45 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -44,13 +44,13 @@
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 17 | 49 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 30 | 144 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 12 | 87 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
-| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 118 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
-| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 12 | 77 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
+| `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
+| `sdd-lane-kickoff` | Especificación de Requerimientos: Selección Temprana y Bloqueante de Carril ODD/SDD en el Kickoff (INC-21) | 16 | 99 | [Ver Spec](specs/sdd-lane-kickoff/spec.md) |
 | `sdd-orchestrator-assets` | SDD Orchestrator Assets Specification | 26 | 92 | [Ver Spec](specs/sdd-orchestrator-assets/spec.md) |
-| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 15 | 111 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
+| `sdd-preflight-configuration` | Especificación de Requerimientos: Cuestionario Pre-Vuelo de SDD, Modalidad de Avance y Asignación Obligatoria de Roles (INC-21) | 16 | 118 | [Ver Spec](specs/sdd-preflight-configuration/spec.md) |
 | `sdd-research` | sdd-research Specification | 3 | 9 | [Ver Spec](specs/sdd-research/spec.md) |
 | `sdd-role-closure-handoff` | Especificación de Requerimientos: Cierre de Último Rol, Aviso Formal y Relevo de Integración (INC-21) | 3 | 20 | [Ver Spec](specs/sdd-role-closure-handoff/spec.md) |
 | `spec-baseline-integration` | Especificación de Requerimientos: Integración de los Cambios en la Baseline del Proyecto (INC-24) | 1 | 7 | [Ver Spec](specs/spec-baseline-integration/spec.md) |
@@ -1139,6 +1139,21 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Un agente sin modo workspace se rechaza antes de escribir
   - *Escenario BDD:* Sin proyecto activo no se instala
   - *Escenario BDD:* La interfaz no ofrece el botón a un agente sin modo workspace
+- **[RF-WEB-15]** Endpoint de Solo Lectura que Sirve Únicamente `resumen-spec.html` y `resumen-design.html`
+  - *Escenario BDD:* Sirve `resumen-spec.html` con las cabeceras de seguridad
+  - *Escenario BDD:* Sirve `resumen-design.html`
+  - *Escenario BDD:* Cualquier otro fichero se rechaza
+  - *Escenario BDD:* Nombre de cambio con `..` o separadores
+  - *Escenario BDD:* Fichero ausente
+  - *Escenario BDD:* Cambio inexistente
+  - *Escenario BDD:* Método distinto de GET
+- **[RF-WEB-16]** Pestaña «Explicación» en el Detalle del Incremento con `iframe` en Sandbox y Aviso de Desactualizado
+  - *Escenario BDD:* HTML al día se muestra en un `iframe` en sandbox
+  - *Escenario BDD:* HTML desactualizado muestra el aviso
+  - *Escenario BDD:* HTML ausente
+  - *Escenario BDD:* Cambio sin explicación activada
+  - *Escenario BDD:* La frescura del dashboard coincide con la del status
+  - *Escenario BDD:* Sin acciones de escritura
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -2275,6 +2290,28 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* La consulta de alcance falla
   - *Escenario BDD:* Aprobar integration sin verificación conjunta sigue siendo posible
   - *Escenario BDD:* En continuous no hay declaración
+- **[RF-GAT-27]** Contrato del HTML Explicativo que Generan `sdd-spec` y `sdd-design` cuando el Kickoff Sella `yes`
+  - *Escenario BDD:* Con `yes`, `sdd-spec` escribe `resumen-spec.html` tras el md
+  - *Escenario BDD:* Con `yes`, `sdd-design` escribe `resumen-design.html`
+  - *Escenario BDD:* El HTML es autocontenido
+  - *Escenario BDD:* Con `no` o sin campo no se genera
+  - *Escenario BDD:* Las skills exigen las restricciones
+- **[RF-GAT-28]** Contenido Fiel del HTML: Cita de IDs, Nada Fuera del md y Aviso de que se Aprueba el md
+  - *Escenario BDD:* Cada bloque cita su ID
+  - *Escenario BDD:* Aviso de que se aprueba el md
+  - *Escenario BDD:* Tras un rechazo se regeneran md y HTML
+- **[RF-GAT-29]** El HTML Queda Fuera del Digest de las Puertas
+  - *Escenario BDD:* Crear el HTML no cambia el digest
+  - *Escenario BDD:* Modificar el HTML no reabre una puerta aprobada
+  - *Escenario BDD:* Modificar el md sí cambia el digest
+- **[RF-GAT-30]** Frescura Informativa `fresh`, `stale` o `missing` del HTML en `axiom sdd status`
+  - *Escenario BDD:* HTML al día es `fresh`
+  - *Escenario BDD:* Modificar el md marca el HTML como `stale`
+  - *Escenario BDD:* Sin HTML es `missing`
+  - *Escenario BDD:* HTML sin meta de digest es `stale`
+  - *Escenario BDD:* Se proyecta también en `continuous`
+  - *Escenario BDD:* Con `no` o sin campo no se proyecta
+  - *Escenario BDD:* Un cambio ISO no se bloquea por la frescura
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
@@ -2507,6 +2544,10 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* Sin el bloque `sdd:` la validación no cambia
   - *Escenario BDD:* La clave del patrón de identificador es admitida en `sdd:`
   - *Escenario BDD:* Un patrón de identificador inválido es un error del bloque `sdd:`
+  - *Escenario BDD:* La clave `explainer_html` es admitida en `sdd:` con sus tres valores
+  - *Escenario BDD:* Un valor no admitido de `explainer_html` es un error del bloque `sdd:`
+  - *Escenario BDD:* `explainer_html` es independiente de `iso` y de `workflow.lane`
+  - *Escenario BDD:* `explainer_html` fuera del bloque `sdd:` no es una declaración
 - **[RF-ISO-02]** Proyección Aditiva de `sdd.iso` en el Status v2
   - *Escenario BDD:* El status proyecta el cambio ISO
   - *Escenario BDD:* Sin cambio seleccionado se proyecta el valor del proyecto
@@ -2711,6 +2752,32 @@ Definir el **modo ISO**, una opción declarada por el proyecto en `axiom.yaml` y
   - *Escenario BDD:* El retrosellado sigue exento de las guardas de rama
   - *Escenario BDD:* Un `sdd:` inválido rechaza el sellado
   - *Escenario BDD:* Un binario anterior ignora el campo
+- **[RF-KOF-13]** Declaración de Proyecto `sdd.explainer_html` con Valor por Defecto `ask`
+  - *Escenario BDD:* Sin declaración el valor vigente es `ask`
+  - *Escenario BDD:* Valor inválido en `axiom.yaml` falla en validación y al sellar
+  - *Escenario BDD:* La plantilla de ejemplo documenta la clave
+- **[RF-KOF-14]** `kickoff.yaml` Registra el Campo Sellado `explainer_html` con Valores `yes` o `no`
+  - *Escenario BDD:* Sellado con `yes` queda registrado
+  - *Escenario BDD:* Ausente equivale a `no`
+  - *Escenario BDD:* Es independiente del estilo de ejecución
+  - *Escenario BDD:* Valor inválido en `kickoff.yaml`
+- **[RF-KOF-15]** La Bandera `--explainer-html` y la Resolución contra el Valor del Proyecto
+  - *Escenario BDD:* `always` sella `yes` sin bandera
+  - *Escenario BDD:* `never` sella `no` sin bandera
+  - *Escenario BDD:* Una bandera contradictoria con `always` o `never` se rechaza sin escribir
+  - *Escenario BDD:* Una bandera coherente con `always` se acepta
+  - *Escenario BDD:* Con `ask` la bandera decide
+  - *Escenario BDD:* `ask` sin bandera sella `no` con aviso
+  - *Escenario BDD:* Valor inválido en la bandera
+  - *Escenario BDD:* `--infer` rechaza la bandera y no escribe el campo
+  - *Escenario BDD:* Cambio sin carpeta
+  - *Escenario BDD:* La salida informa del valor sellado
+- **[RF-KOF-16]** El Status Proyecta el Valor de Proyecto y el Valor Sellado de `explainer_html`
+  - *Escenario BDD:* Valor de proyecto sin cambio seleccionado
+  - *Escenario BDD:* Valor sellado en `governance.kickoff`
+  - *Escenario BDD:* Cambio sellado antes de este cambio
+  - *Escenario BDD:* Declaración inválida
+  - *Escenario BDD:* La proyección no altera el encadenado
 
 ### Dominio: `sdd-orchestrator-assets` — SDD Orchestrator Assets Specification
 
@@ -2969,6 +3036,14 @@ Defines required behavior for agent-specific SDD orchestrator guidance assets so
   - *Escenario BDD:* El texto y el bloque del pre-vuelo no contienen un umbral de entrega
   - *Escenario BDD:* Los comandos de OpenCode no exigen presupuesto de revisión en el pre-vuelo
   - *Escenario BDD:* Un valor heredado de entrega en un bloque no se acepta como bloque derivado
+- **[RF-PRE-16]** La Pregunta del HTML Explicativo es una Interacción Propia de Marcador `Axiom SDD kickoff explainer:`, Una Vez por Cambio y Solo con `ask`
+  - *Escenario BDD:* Con `ask` se pregunta una sola vez al iniciar el cambio
+  - *Escenario BDD:* Con `always` o `never` no se pregunta
+  - *Escenario BDD:* En ODD nunca aparece
+  - *Escenario BDD:* Un cambio ya sellado no se vuelve a preguntar
+  - *Escenario BDD:* El hook del pre-vuelo ignora la pregunta
+  - *Escenario BDD:* El plugin de OpenCode también la ignora
+  - *Escenario BDD:* No cambia los grupos del pre-vuelo
 
 ### Dominio: `sdd-research` — sdd-research Specification
 
