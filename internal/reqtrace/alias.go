@@ -92,14 +92,6 @@ type equivalence struct {
 	touched map[string][]livespec.TraceEntry
 }
 
-// resolveEquivalents calcula el cierre de equivalentes de q sobre las trazas (decisión 3):
-// semillas, cierre hasta punto fijo con los Previous y el AliasResolver, y los provisionales
-// de las entradas que lo tocan. Un provisional con varios definitivos distintos los resuelve
-// todos y emite provisional_ambiguous.
-func resolveEquivalents(q Query, p reqid.Pattern, traces []traceSet, aliases AliasResolver) (equivalence, []Warning) {
-	return resolveEquivalentsLegacy(q, p, traces, aliases, nil)
-}
-
 // translateLegacyTraces sustituye, en las entradas con capacidad, los IDs heredados por el ID
 // nuevo de (capacidad, ID antiguo): así el cierre no arrastra los IDs nuevos de otras
 // capacidades que usaban el mismo ID antiguo.
@@ -131,8 +123,10 @@ func translateLegacyTraces(traces []traceSet, legacy LegacyResolver) []traceSet 
 	return out
 }
 
-// resolveEquivalentsLegacy es resolveEquivalents con el resolutor de IDs heredados (nil sin
-// mapa). Con él, un ID antiguo consultado resuelve a todos sus IDs nuevos (legacy_ambiguous si
+// resolveEquivalentsLegacy calcula el cierre de equivalentes de q sobre las trazas (decisión 3):
+// semillas, cierre hasta punto fijo con los Previous y el AliasResolver, y los provisionales
+// de las entradas que lo tocan. Un provisional con varios definitivos distintos los resuelve
+// todos y emite provisional_ambiguous. El resolutor de IDs heredados es nil sin mapa. Con él, un ID antiguo consultado resuelve a todos sus IDs nuevos (legacy_ambiguous si
 // son varios) y un ID nuevo a sus antiguos; un antiguo alcanzado desde un nuevo no vuelve a
 // expandirse, para no arrastrar los IDs nuevos de otras capacidades.
 func resolveEquivalentsLegacy(q Query, p reqid.Pattern, traces []traceSet, aliases AliasResolver, legacy LegacyResolver) (equivalence, []Warning) {
