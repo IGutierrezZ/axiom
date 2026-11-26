@@ -143,6 +143,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)
   sdd archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas
   sdd archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)
+  sdd archive-integrate Integra el cambio entero en la spec viva: asigna los IDs provisionales, compone todas las capacidades y reescribe tareas, deltas y traza (--check, --json)
   sdd trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)
   sdd integrate        Retirado: remite a "axiom archive context" (contexto técnico) y "axiom archive adopt" (migración)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
@@ -2184,6 +2185,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  attempt          Registra la autoridad de edición por raíz para el cambio activo (grant)")
 		fmt.Fprintln(stdout, "  archive-compose  Compone el reporte de archivado formal y actualiza las especificaciones vivas")
 		fmt.Fprintln(stdout, "  archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)")
+		fmt.Fprintln(stdout, "  archive-integrate Integra el cambio entero en la spec viva: asigna los IDs provisionales, compone todas las capacidades y reescribe tareas, deltas y traza (--check, --json)")
 		fmt.Fprintln(stdout, "  trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)")
 		fmt.Fprintln(stdout, "  integrate        Retirado: remite a `axiom archive context` (contexto técnico) y `axiom archive adopt` (migración)")
 		fmt.Fprintln(stdout, "  task-result      Valida y extrae el resultado tipado de una fase delegada")
@@ -2214,6 +2216,8 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 		err = cli.RunSDDTrace(subArgs, stdout)
 	case "archive-check":
 		err = cli.RunSDDArchiveCheck(subArgs, stdout)
+	case "archive-integrate":
+		err = cli.RunSDDArchiveIntegrate(subArgs, stdout)
 	case "integrate":
 		err = cli.RunSDDIntegrate(subArgs, stdout)
 	case "task-result":
@@ -2227,7 +2231,7 @@ func runSDD(args []string, stdout, stderr io.Writer) int {
 	case "publish":
 		err = cli.RunSDDPublish(subArgs, stdout)
 	default:
-		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, archive-check, trace, integrate, task-result, preflight-hook, kickoff, gate, publish\n", subCmd)
+		fmt.Fprintf(stderr, "Error: subcomando '%s' no reconocido para sdd. Opciones: status, continue, attempt, archive-compose, archive-check, archive-integrate, trace, integrate, task-result, preflight-hook, kickoff, gate, publish\n", subCmd)
 		return 1
 	}
 

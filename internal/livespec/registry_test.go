@@ -213,3 +213,26 @@ func defaultSeries(n int) reqid.Series {
 	series, _ := reqid.Default().Series(fmt.Sprintf("REQ-%d.0", n))
 	return series
 }
+
+// REQ-47.1 / D11: un provisional en el título de un requisito de un cambio activo no es un
+// identificador: no se indexa, no colisiona y no ocupa números.
+func TestRegistryIgnoresAProvisionalOfAnActiveChange(t *testing.T) {
+	home := t.TempDir()
+	writeTree(t, home, map[string]string{
+		"specs/pagos/spec.md":               "# E\n\n## Requirements\n\n### Requirement: Cobro (REQ-30.1)\n\nCuerpo.\n",
+		"changes/inc-a/specs/pagos/spec.md": "## ADDED Requirements\n\n### Requirement: Alta (prov:30:1)\n\nCuerpo.\n\n### Requirement: Baja (prov:30:2)\n\nCuerpo.\n",
+		"changes/inc-b/specs/pagos/spec.md": "## ADDED Requirements\n\n### Requirement: Otra (prov:30:1)\n\nCuerpo.\n",
+	})
+	reg, err := LoadRegistry(home, RegistryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, token := range []string{"prov:30:1", "prov:30:2", ""} {
+		if refs := reg.Lookup(token); len(refs) != 0 {
+			t.Errorf("Lookup(%q) = %v: un provisional no se indexa", token, refs)
+		}
+	}
+	if got := reg.NextFree(defaultSeries(30)); got != "REQ-30.2" {
+		t.Errorf("NextFree = %s: un provisional no ocupa números", got)
+	}
+}

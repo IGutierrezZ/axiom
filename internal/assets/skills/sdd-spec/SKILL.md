@@ -175,6 +175,16 @@ The system {MUST/SHALL/SHOULD} {do something specific}.
 (Migration: {how references/tests/docs should update, or "None" if no migration is needed})
 ```
 
+#### Provisional Identifiers for New Requirements
+
+You never choose the number of a new requirement. Name an ADDED requirement with a provisional identifier, `### Requirement: {Name} (prov:<series>:<ordinal>)`, for example `(prov:30:1)` to join the existing series `30`, or `(prov:a:1)` to open a new series with the label `a` (a label needs a project pattern with `<n>`; with `<DOM>` patterns the domain is written literally, as in `(prov:USU:1)`).
+
+- The ordinal only tells apart the provisionals of one series inside the change. The number is assigned in order of appearance when the change is archived (`axiom sdd archive-integrate`), never when it is written.
+- A provisional is valid only in the name of an ADDED requirement, once per name and with no other identifier beside it. MODIFIED, REMOVED and RENAMED keep citing the existing definitive identifier.
+- Cite it exactly as written in the `Cubre:` lines of the tasks files; the archive rewrites those lines and the verification matrix with the number assigned. `axiom sdd status --json` projects what the change creates and modifies in `requirements`.
+- An ADDED requirement with a definitive identifier chosen by hand stays valid and is checked for collisions as before.
+- In text that is validated, write the form with angle brackets (`prov:<series>:<ordinal>`), which is not a token; a real `prov:...` token in validated text must be declared by an ADDED requirement.
+
 #### For NEW Specs (No Existing Spec)
 
 If this is a completely new domain, create a FULL spec (not a delta) at `openspec/changes/{change-name}/specs/{domain}/spec.md`. Do not write it to `openspec/specs/{domain}/spec.md`; sdd-archive promotes it there.
@@ -254,7 +264,7 @@ La rama la prepara `axiom branch ensure` (el orquestador la ejecuta antes de la 
 - Your own coverage table does not replace the independent coverage review (`../_shared/sdd-coverage-review.md`); never present it as that review.
 - **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
 - Rama del cambio: la prepara `axiom branch ensure`; escribe en la rama del cambio, bajo `workspaceRoot` del status, y usa `--cwd` y las rutas absolutas de su JSON. La fase no hace commit ni push: tras la aprobación de la parada el orquestador publica los documentos con `axiom sdd publish`; el push de código y la PR son de la persona.
-- In an ISO change (`iso.change: iso` in the status), and for a bug without a delta, follow `../_shared/sdd-iso-convention.md`: exactly one identifier valid according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`) in each requirement name and at least one `#### Scenario:` in every ADDED or MODIFIED requirement.
+- In an ISO change (`iso.change: iso` in the status), and for a bug without a delta, follow `../_shared/sdd-iso-convention.md`: exactly one identifier valid according to the project pattern (`sdd.id_pattern` of `axiom.yaml`; without it, `REQ-<n>.<m>`) in each requirement name, or a provisional identifier (`prov:<series>:<ordinal>`) in an ADDED one, and at least one `#### Scenario:` in every ADDED or MODIFIED requirement.
 - Never create, modify, or delete files under `technicalContext.reference` paths.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/openspecdoc"
+	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -355,4 +356,51 @@ func TestPlanIntegrationNothingToIntegrateWhenEveryCapabilityIsAlreadyIntegrated
 	if !plan.NothingToIntegrate() {
 		t.Errorf("plan = %+v, no había nada que integrar", plan)
 	}
+}
+
+// D3 paso 2.e: la clasificación compartida por ODD y SDD sobre una canónica en memoria.
+func TestClassifyInSplitsPendingFromAlreadyIntegratedAgainstAnInMemoryCanonical(t *testing.T) {
+	canon := pagosCanon
+	cd := func(delta string) CapabilityDelta {
+		return CapabilityDelta{Name: "pagos", Delta: openspecdoc.ParseDelta(delta), Text: delta}
+	}
+	pattern := reqid.Default()
+
+	t.Run("REMOVED que ya no se resuelve y RENAMED ya aplicado son already", func(t *testing.T) {
+		delta := "## REMOVED Requirements\n\n" + block("Retirado (REQ-30.77)", "(Reason: obsoleto)") +
+			"\n## RENAMED Requirements\n\n" + block("Cobro → Cobro (REQ-30.1)", "(Reason: nombre)")
+		item, err := classifyIn(cd(delta), "p", true, canon, pattern)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(item.pending.Removed) != 0 {
+			t.Errorf("REMOVED pendiente = %v", item.pending.Removed)
+		}
+	})
+	t.Run("MODIFIED sin ID que no casa sigue pendiente", func(t *testing.T) {
+		item, err := classifyIn(cd("## MODIFIED Requirements\n\n"+block("Sin coincidencia", "Cuerpo.")), "p", true, canon, pattern)
+		if err != nil || len(item.pending.Modified) != 1 {
+			t.Fatalf("pending = %+v, err = %v", item.pending, err)
+		}
+	})
+	t.Run("capacidad sin canónica con MODIFIED da capability_missing", func(t *testing.T) {
+		_, err := classifyIn(cd("## MODIFIED Requirements\n\n"+block("Cobro (REQ-30.1)", "Cuerpo.")), "p", false, "", pattern)
+		var missing *MissingCapabilityError
+		if !errors.As(err, &missing) || missing.Section != "MODIFIED" {
+			t.Fatalf("error = %v", err)
+		}
+	})
+	t.Run("ADDED presente con otro cuerpo da requirement_diverged", func(t *testing.T) {
+		_, err := classifyIn(cd(added(block("Cobro (REQ-30.1)", "Otro cuerpo."))), "p", true, canon, pattern)
+		var diverged *DivergentRequirementError
+		if !errors.As(err, &diverged) || diverged.ID != "REQ-30.1" {
+			t.Fatalf("error = %v", err)
+		}
+	})
+	t.Run("ADDED presente con el mismo cuerpo es already", func(t *testing.T) {
+		item, err := classifyIn(cd(added(block("Cobro (REQ-30.1)", "El sistema DEBE cobrar."))), "p", true, canon, pattern)
+		if err != nil || len(item.pending.Added) != 0 {
+			t.Fatalf("pending = %+v, err = %v", item.pending, err)
+		}
+	})
 }

@@ -99,3 +99,52 @@ func TestRunSDDArchiveComposeSupersedeFlag(t *testing.T) {
 		t.Errorf("se esperaba Active Feature marcado como SUPERSEDED:\n%s", composed)
 	}
 }
+
+// REQ-47.3, REQ-47.8: un identificador inexistente nombra la capacidad por la carpeta de la
+// delta, y un provisional lleva la continuación al verbo que asigna; sin escribir en ambos.
+func TestRunSDDArchiveComposeTypedIDErrors(t *testing.T) {
+	cases := []struct {
+		name, delta string
+		wantParts   []string
+	}{
+		{"identificador inexistente", "## MODIFIED Requirements\n\n### Requirement: Fantasma (REQ-9.9)\n\nNew body.\n",
+			[]string{"capacidad pagos", "REQ-9.9", "MODIFIED"}},
+		{"provisional", "## ADDED Requirements\n\n### Requirement: Nuevo (prov:1:1)\n\nBody.\n",
+			[]string{"prov:1:1", "axiom sdd archive-integrate", "--check"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			canonicalPath := filepath.Join(root, "openspec", "specs", "pagos", "spec.md")
+			deltaPath := filepath.Join(root, "openspec", "changes", "c", "specs", "pagos", "spec.md")
+			outputPath := filepath.Join(root, "out.md")
+			writeCLIFixture(t, canonicalPath, "## Requirements\n\n### Requirement: Existing (REQ-1.1)\n\nBody.\n")
+			writeCLIFixture(t, deltaPath, tc.delta)
+
+			err := runSDDArchiveCompose([]string{"--canonical", canonicalPath, "--delta", deltaPath, "--output", outputPath}, &bytes.Buffer{})
+			if err == nil {
+				t.Fatal("se esperaba un rechazo")
+			}
+			for _, part := range tc.wantParts {
+				if !strings.Contains(err.Error(), part) {
+					t.Errorf("el error no contiene %q: %v", part, err)
+				}
+			}
+			if _, statErr := os.Stat(outputPath); !os.IsNotExist(statErr) {
+				t.Errorf("se escribió la salida pese al rechazo: %v", statErr)
+			}
+		})
+	}
+}
+
+// REQ-30.23: un nombre superado inexistente sigue ignorándose en archive-compose.
+func TestRunSDDArchiveComposeStillIgnoresUnknownSupersededName(t *testing.T) {
+	root := t.TempDir()
+	canonicalPath, deltaPath := filepath.Join(root, "spec.md"), filepath.Join(root, "delta.md")
+	writeCLIFixture(t, canonicalPath, "## Requirements\n\n### Requirement: Existing (REQ-1.1)\n\nBody.\n")
+	writeCLIFixture(t, deltaPath, "## ADDED Requirements\n\n### Requirement: Nuevo (REQ-1.2)\n\nBody.\n")
+	var out bytes.Buffer
+	if err := runSDDArchiveCompose([]string{"--canonical", canonicalPath, "--delta", deltaPath, "--superseded-requirements", "No existe"}, &out); err != nil {
+		t.Fatalf("un nombre superado inexistente se ignora: %v", err)
+	}
+}

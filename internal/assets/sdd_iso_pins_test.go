@@ -55,7 +55,7 @@ func TestSDDISOConvention(t *testing.T) {
 		"`ruta/fichero:símbolo`",
 		"`TestX`",
 		"axiom sdd archive-check --cwd <workspaceRoot> --change <name>",
-		"compose only the domains with `alreadyComposed: false`",
+		"run `axiom sdd archive-integrate` again: it skips what is already integrated and keeps the numbers already assigned",
 		"axiom sdd trace --cwd <dir> --change <name>",
 		// La matriz histórica baja a nivel 3 con fecha (REQ-28.8, D10).
 		"### Matriz de verificación (histórica, AAAA-MM-DD)",
@@ -129,9 +129,9 @@ func TestSDDArchiveRequiresArchiveCheck(t *testing.T) {
 	requireContains(t, "Archive Readiness", readiness,
 		"**Archive check (mandatory, before composing or moving).**",
 		"axiom sdd archive-check --cwd <workspaceRoot> --change <name>",
-		"before any `axiom sdd archive-compose` and before any move",
+		"before `axiom sdd archive-integrate` and before any move",
 		"On a non-zero exit, STOP and return `blocked`, quoting its typed reasons",
-		"compose only the domains with `alreadyComposed: false`",
+		"run `axiom sdd archive-integrate` again and then finish the move",
 		"`../_shared/sdd-iso-convention.md`",
 	)
 
@@ -297,4 +297,84 @@ func TestSDDISOPins(t *testing.T) {
 			t.Fatal("no orchestrator composes the SDD Independent Review section")
 		}
 	})
+}
+
+// C-03-b (REQ-47.10): sdd-spec describe el identificador provisional del ADDED, su cita en
+// `Cubre:` y la forma con ángulos para los textos validados.
+func TestSDDSpecDescribesProvisionalIdentifiers(t *testing.T) {
+	const path = "skills/sdd-spec/SKILL.md"
+	requireContains(t, path, MustRead(path),
+		"#### Provisional Identifiers for New Requirements",
+		"`### Requirement: {Name} (prov:<series>:<ordinal>)`",
+		"A provisional is valid only in the name of an ADDED requirement",
+		"Cite it exactly as written in the `Cubre:` lines",
+		"(`axiom sdd archive-integrate`)",
+		"`prov:<series>:<ordinal>`), which is not a token",
+		"or a provisional identifier (`prov:<series>:<ordinal>`) in an ADDED one",
+	)
+}
+
+// C-03-b (REQ-47.10): la convención ISO cubre el provisional en el ADDED, en `Cubre:` y en la
+// matriz, y nombra el verbo.
+func TestSDDISOConventionCoversProvisionalIdentifiers(t *testing.T) {
+	requireContains(t, sddISOConventionPath, MustRead(sddISOConventionPath),
+		"A provisional identifier (`prov:<series>:<ordinal>`, for example `(prov:30:1)`) is valid in the name of an ADDED requirement",
+		"never valid in MODIFIED, REMOVED or RENAMED (`iso_requirement_id`)",
+		"`Cubre:` accepts a provisional declared by an ADDED requirement of the same change",
+		"The `Requisito` column of the matrix accepts the provisional identifier of an ADDED requirement",
+		"`axiom sdd archive-integrate` rewrites it with the assigned number when the change is archived",
+		"`sdd-archive` runs it before `axiom sdd archive-integrate` and before any move",
+	)
+}
+
+// C-03-b (REQ-47.10, REQ-47.8): sdd-archive integra el cambio con una sola invocación del verbo,
+// después de `archive-check` y antes de `archive sync` y del movimiento, manda `--check` tras
+// cada rebase y ya no conserva el bucle `archive-compose` por dominio ni la copia `cp` de una
+// capacidad nueva.
+func TestSDDArchiveIntegratesWithOneNativeInvocation(t *testing.T) {
+	skill := MustRead("skills/sdd-archive/SKILL.md")
+
+	const invocation = "axiom sdd archive-integrate --cwd \"<workspaceRoot>\" --change \"{change-name}\" --json"
+	if got := strings.Count(skill, invocation); got != 1 {
+		t.Fatalf("sdd-archive carries the plain invocation %d times, want exactly 1", got)
+	}
+	requireContains(t, "sdd-archive/SKILL.md", skill,
+		"#### Integrate the Change Specs (one native invocation)",
+		"Run it once, from the archive branch, after `axiom sdd archive-check`",
+		"between `axiom archive context prepare` and the context\n  edits",
+		"`axiom sdd archive-integrate --cwd \"<path>\" --change \"{change-name}\" --check --json`",
+		"after\n  every rebase of the archive branch",
+		"`duplicate_assigned_id`",
+		"`axiom branch done --force`",
+		"`--superseded-requirements \"Nombre Req 1 (REQ-x.y), <capacidad>/Nombre Req 2 (REQ-x.z)\"`",
+		"incluido el identificador entre paréntesis",
+		"`superseded_requirement_ambiguous`",
+		"## Identificadores Asignados",
+	)
+	for _, gone := range []string{
+		"axiom sdd archive-compose \\n",
+		"#### If Main Spec Exists",
+		"#### If Main Spec Does NOT Exist",
+		"mkdir -p \"$target_dir\"",
+		".compose-tmp",
+	} {
+		if strings.Contains(skill, gone) {
+			t.Errorf("sdd-archive/SKILL.md still carries the former per-domain flow: %q", gone)
+		}
+	}
+
+	// Orden: archive-check, integración, catálogo maestro, instantánea y movimiento.
+	last := -1
+	for _, fragment := range []string{
+		"**Archive check (mandatory, before composing or moving).**",
+		invocation,
+		"axiom archive sync --path \"<workspaceRoot>\"",
+		"### Step 3: Move to Archive",
+	} {
+		at := strings.Index(skill, fragment)
+		if at < 0 || at < last {
+			t.Errorf("archive step %q is out of order (at %d, previous at %d)", fragment, at, last)
+		}
+		last = at
+	}
 }

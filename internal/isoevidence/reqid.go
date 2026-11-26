@@ -7,12 +7,33 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-// RequirementIDs extrae los identificadores del nombre de un requisito. Es válido el
-// que encaja exactamente con el patrón p del proyecto (`REQ-<n>.<m>` por defecto); el
-// resto de candidatos (`REQ-30`, `REQ-x.1`) son mal formados. Cada lista va sin
-// repetidos y en el orden de aparición. El análisis es del puerto reqid (REQ-44.5).
-func RequirementIDs(name string, p reqid.Pattern) (valid []string, malformed []string) {
-	return p.Scan(name)
+// RequirementKeys extrae los identificadores del nombre de un requisito. Es válido el que
+// encaja exactamente con el patrón p del proyecto (`REQ-<n>.<m>` por defecto); es
+// provisional el token `prov:…` que el patrón admite (REQ-47.1); el resto de candidatos
+// (`REQ-30`, `REQ-x.1`, un provisional que el patrón no admite) son mal formados. Cada
+// lista va sin repetidos y en el orden de aparición. El análisis es del puerto reqid
+// (REQ-44.5).
+func RequirementKeys(name string, p reqid.Pattern) (valid, provisional, malformed []string) {
+	valid, malformed = p.Scan(name)
+	seen := map[string]bool{}
+	for _, span := range reqid.ScanProvisional(name) {
+		if seen[span.Token] {
+			continue
+		}
+		seen[span.Token] = true
+		if _, err := p.ParseProvisional(span.Token); err != nil {
+			malformed = append(malformed, span.Token)
+			continue
+		}
+		provisional = append(provisional, span.Token)
+	}
+	return valid, provisional, malformed
+}
+
+// isProvisionalToken dice si s es, entero, un token con la forma de un provisional.
+func isProvisionalToken(s string) bool {
+	spans := reqid.ScanProvisional(s)
+	return len(spans) == 1 && spans[0].Start == 0 && spans[0].End == len(s)
 }
 
 // ensureTrailingNewline reproduce la única normalización que aplica el
@@ -31,16 +52,20 @@ func describeRequirement(r Requirement) string {
 
 // continuations son las continuaciones de REQ-29.3; nombran el patrón efectivo con
 // su plantilla, de modo que con el defecto el texto es el de siempre.
-type continuations struct{ addID, renamed, unique, oneID, sameID string }
+type continuations struct {
+	addID, renamed, unique, oneID, sameID, provisionalAdded, uniqueProvisional string
+}
 
 func continuationsFor(p reqid.Pattern) continuations {
 	t := p.Template()
 	return continuations{
-		addID:   "añade o corrige en el nombre un identificador " + t,
-		renamed: "añade el identificador " + t + " al nombre con un RENAMED de la delta",
-		unique:  "elige un identificador " + t + " que no exista ya en la baseline ni en otro requisito ADDED",
-		oneID:   "deja un único identificador " + t + " en el nombre",
-		sameID:  "conserva el mismo identificador al renombrar, o retira el del nombre antiguo",
+		addID:             "añade o corrige en el nombre un identificador " + t,
+		renamed:           "añade el identificador " + t + " al nombre con un RENAMED de la delta",
+		unique:            "elige un identificador " + t + " que no exista ya en la baseline ni en otro requisito ADDED",
+		oneID:             "deja un único identificador " + t + " en el nombre",
+		sameID:            "conserva el mismo identificador al renombrar, o retira el del nombre antiguo",
+		provisionalAdded:  "usa el identificador definitivo del requisito existente: un provisional solo va en el nombre de un ADDED",
+		uniqueProvisional: "usa un provisional distinto en cada requisito ADDED del cambio",
 	}
 }
 
@@ -65,7 +90,7 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 
 	baselineByID := map[string][]Requirement{}
 	for _, b := range baseline {
-		valid, _ := RequirementIDs(b.Name, p)
+		valid, _, _ := RequirementKeys(b.Name, p)
 		for _, id := range valid {
 			baselineByID[id] = append(baselineByID[id], b)
 		}
@@ -82,11 +107,23 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 		adders[id] = append(adders[id], r)
 	}
 
+	// provisionals recoge, por token, los ADDED que lo declaran: un provisional es único en el
+	// cambio, en el mismo dominio o en otro (REQ-47.1).
+	provisionals := map[string][]Requirement{}
+	var provisionalOrder []string
+
 	for _, r := range delta {
-		valid, malformed := RequirementIDs(r.Name, p)
+		valid, provisional, malformed := RequirementKeys(r.Name, p)
 		subject := describeRequirement(r)
+		if r.Section == SectionRenamed {
+			if _, oldProvisional, _ := RequirementKeys(r.OldName, p); len(oldProvisional) > 0 {
+				add(r, fmt.Sprintf("%s: el nombre antiguo del RENAMED contiene el provisional %s, que solo es válido en un ADDED", subject, oldProvisional[0]), c.provisionalAdded)
+				continue
+			}
+		}
+		all := append(append([]string(nil), valid...), provisional...)
 		switch {
-		case len(valid) == 0:
+		case len(all) == 0:
 			detail := subject + ": el nombre no contiene un identificador " + p.Template()
 			if len(malformed) > 0 {
 				detail += fmt.Sprintf(" (forma no válida: %s)", strings.Join(malformed, ", "))
@@ -97,8 +134,17 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 			}
 			add(r, detail, continuation)
 			continue
-		case len(valid) > 1:
-			add(r, fmt.Sprintf("%s: el nombre es ambiguo, contiene los identificadores %s", subject, strings.Join(valid, ", ")), c.oneID)
+		case len(all) > 1:
+			add(r, fmt.Sprintf("%s: el nombre es ambiguo, contiene los identificadores %s", subject, strings.Join(all, ", ")), c.oneID)
+			continue
+		case len(provisional) > 0 && r.Section != SectionAdded:
+			add(r, fmt.Sprintf("%s: el nombre contiene el provisional %s, que solo es válido en un ADDED", subject, provisional[0]), c.provisionalAdded)
+			continue
+		case len(provisional) > 0:
+			if _, seen := provisionals[provisional[0]]; !seen {
+				provisionalOrder = append(provisionalOrder, provisional[0])
+			}
+			provisionals[provisional[0]] = append(provisionals[provisional[0]], r)
 			continue
 		}
 		id := valid[0]
@@ -114,7 +160,7 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 				break
 			}
 		case SectionRenamed:
-			oldValid, _ := RequirementIDs(r.OldName, p)
+			oldValid, _, _ := RequirementKeys(r.OldName, p)
 			if len(oldValid) > 0 {
 				if len(oldValid) != 1 || oldValid[0] != id {
 					add(r, fmt.Sprintf("%s: el RENAMED cambia el identificador de %s a %s", subject, strings.Join(oldValid, ", "), id), c.sameID)
@@ -127,6 +173,24 @@ func CheckRequirementIDs(delta, baseline []Requirement, p reqid.Pattern) []Findi
 				add(r, fmt.Sprintf("%s: el identificador %s ya existe en la baseline (dominio %q, requisito %q)", subject, id, b.Domain, b.Name), c.unique)
 			}
 		}
+	}
+
+	for _, token := range provisionalOrder {
+		group := provisionals[token]
+		if len(group) < 2 {
+			continue
+		}
+		names := make([]string, 0, len(group))
+		for _, r := range group {
+			names = append(names, fmt.Sprintf("%q (dominio %q)", r.Name, r.Domain))
+		}
+		findings = append(findings, Finding{
+			Code:         CodeRequirementID,
+			Stage:        StageSpecs,
+			Subject:      token,
+			Detail:       fmt.Sprintf("el provisional %s se repite en %d requisitos ADDED de la delta: %s", token, len(group), strings.Join(names, " y ")),
+			Continuation: c.uniqueProvisional,
+		})
 	}
 
 	for _, id := range adderOrder {

@@ -58,3 +58,19 @@ func TestParseODDDocCountsCheckboxesInsideFencesSoTheDeltaMayNotHaveThem(t *test
 		t.Errorf("ParseFeatureDoc debe rechazar la casilla de la delta: %v", err)
 	}
 }
+
+// REQ-47.6 / D11: la sección `## Identificadores asignados` no tiene casillas ni altera el
+// listado, y el documento sigue siendo válido para la spec viva.
+func TestParseODDDocIgnoresTheLiveSpecIDTraceSection(t *testing.T) {
+	trace := "\n## Identificadores asignados\n\n```yaml\nschema: axiom.requirement-ids/v1\npattern: REQ-<n>.<m>\n" +
+		"assignments:\n  - provisional: prov:31:1\n    definitive: REQ-31.1\n    capability: facturacion\n    requirement: Alta de factura (REQ-31.1)\n```\n"
+	base := oddWithoutSpecSection + oddSpecSection
+	without := parseODDDoc(base)
+	with := parseODDDoc(base + trace)
+	if with.Total != without.Total || with.Completed != without.Completed || with.Title != without.Title {
+		t.Errorf("con traza = %+v, sin traza = %+v: el recuento no debe cambiar", with, without)
+	}
+	if _, err := livespec.ParseFeatureDoc("facturacion", []byte(base+trace)); err != nil {
+		t.Errorf("el documento con traza debe ser válido para la spec viva: %v", err)
+	}
+}

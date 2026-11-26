@@ -53,7 +53,7 @@ type BaselineIndex map[string][]Requirement
 func NewBaselineIndex(baseline []Requirement, p reqid.Pattern) BaselineIndex {
 	index := BaselineIndex{}
 	for _, r := range baseline {
-		valid, _ := RequirementIDs(r.Name, p)
+		valid, _, _ := RequirementKeys(r.Name, p)
 		for _, id := range valid {
 			index[id] = append(index[id], r)
 		}
@@ -85,13 +85,18 @@ func citations(cubre []CubreLine) []citation {
 	return out
 }
 
-// deltaIDs devuelve los identificadores válidos de los requisitos de la delta
-// (en un RENAMED, el de su nombre nuevo), con el requisito que los declara.
+// deltaIDs devuelve los identificadores válidos de los requisitos de la delta (en un
+// RENAMED, el de su nombre nuevo) y el provisional de cada ADDED, con el requisito que los
+// declara. Un provisional fuera de un ADDED no cuenta: lo bloquea CheckRequirementIDs.
 func deltaIDs(delta []Requirement, p reqid.Pattern) (order []string, byID map[string]Requirement) {
 	byID = map[string]Requirement{}
 	for _, r := range delta {
-		valid, _ := RequirementIDs(r.Name, p)
-		for _, id := range valid {
+		valid, provisional, _ := RequirementKeys(r.Name, p)
+		ids := valid
+		if r.Section == SectionAdded {
+			ids = append(append([]string(nil), valid...), provisional...)
+		}
+		for _, id := range ids {
 			if _, seen := byID[id]; !seen {
 				order = append(order, id)
 				byID[id] = r
@@ -133,6 +138,16 @@ func CheckCoverage(delta []Requirement, index BaselineIndex, cubre []CubreLine, 
 			continue
 		}
 		if len(index[c.ID]) > 0 {
+			continue
+		}
+		if isProvisionalToken(c.ID) {
+			findings = append(findings, Finding{
+				Code:         CodeCubreUnknown,
+				Stage:        StageTasks,
+				Subject:      c.ID,
+				Detail:       fmt.Sprintf("%s:%d: `Cubre:` cita el provisional %s, que ningún requisito ADDED de la delta declara", c.File, c.Line, c.ID),
+				Continuation: "declara el provisional en el nombre de un ADDED de la delta, o corrige o retira la cita",
+			})
 			continue
 		}
 		findings = append(findings, Finding{
@@ -232,7 +247,10 @@ func AffectedFromDelta(delta []Requirement, p reqid.Pattern) []ScenarioKey {
 		if r.Section != SectionAdded && r.Section != SectionModified {
 			continue
 		}
-		valid, _ := RequirementIDs(r.Name, p)
+		valid, provisional, _ := RequirementKeys(r.Name, p)
+		if r.Section == SectionAdded {
+			valid = append(append([]string(nil), valid...), provisional...)
+		}
 		if len(valid) != 1 {
 			continue
 		}
@@ -265,4 +283,32 @@ func AffectedFromBaseline(index BaselineIndex, ids []string) []ScenarioKey {
 		}
 	}
 	return out
+}
+
+// RewriteCubre sustituye, en las líneas `Cubre:` de un fichero de tareas (fuera de vallas),
+// los identificadores del mapa por su sustituto, sin tocar ningún otro byte: ni el resto del
+// fichero, ni la posición del token en la línea, ni los finales de línea (REQ-47.4).
+func RewriteCubre(text string, m reqid.IDMap) string {
+	if m.Count() == 0 {
+		return text
+	}
+	lines := splitLines(text)
+	raw := strings.SplitAfter(text, "\n")
+	var b strings.Builder
+	for i, l := range raw {
+		content := strings.TrimRight(l, "\r\n")
+		if i >= len(lines) || lines[i].Fenced {
+			b.WriteString(l)
+			continue
+		}
+		loc := cubreLine.FindStringSubmatchIndex(content)
+		if loc == nil {
+			b.WriteString(l)
+			continue
+		}
+		b.WriteString(content[:loc[2]])
+		b.WriteString(m.Substitute(content[loc[2]:]))
+		b.WriteString(l[len(content):])
+	}
+	return b.String()
 }

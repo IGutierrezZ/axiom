@@ -101,6 +101,10 @@ iso: # optional; omitted when axiom.yaml has no `sdd:` block and the selected ch
     state: valid | invalid | missing | not_required
     successful: <boolean>
     findings: <count>
+requirements: # optional; omitted when the change declares no requirements in readable delta files
+  modifies: [<requirement item>] # MODIFIED, REMOVED and RENAMED (the old name)
+  creates: [<requirement item>] # ADDED, including a new capability written as a full spec
+  # <requirement item>: {capability, id?, provisional?, operation, requirement}
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
@@ -131,6 +135,16 @@ SDD status never reads review mode or exposes review state. After completed impl
 - `lane` is `odd`, `sdd` or `ask`. `source` says where it comes from: `declared` (the block sets `lane`), `default` (a valid `axiom.yaml` without the block or without `workflow.lane`; the lane is `sdd`), `no_workspace` (there is no `axiom.yaml`) or `invalid` (`axiom.yaml` or its `workflow:` block cannot be read or is invalid, even when the block itself is valid but the rest of the file is not).
 - `no_workspace` and `invalid` always project `ask`: the rule fails closed toward asking the lane question. If the status does not answer, the orchestrator acts as `ask`.
 - The field is informational: it adds no note and no blocking reason, and the recommended route does not depend on it.
+
+## Requirements
+
+`requirements` is an additive, optional field of the status. It projects what the deltas of the selected change create and modify, so orchestrators and phase skills never parse the deltas themselves. It never changes the route.
+
+- Each item has `capability` (the folder under `specs/`), `operation` (`ADDED`, `MODIFIED`, `REMOVED` or `RENAMED`) and `requirement` (the exact name in the delta; the old name in a RENAMED entry). Items are ordered by capability and, within it, by their order in the delta.
+- `id` is present only when the requirement name carries a valid identifier or a provisional (`prov:<series>:<ordinal>`); then `provisional: true` marks the provisional ones. A name without an identifier has no `id`: it is resolved by exact title when composed, and the canonical spec is never read here.
+- `creates` holds the ADDED requirements, with a new capability written as a full spec counting as ADDED; `modifies` holds MODIFIED, REMOVED and RENAMED. An item never appears in both lists.
+- The field is omitted entirely, and the output is byte-for-byte what it was before, only when: the change has no readable delta files (no `specs/`, deltas without any requirement, or the `engram` or `none` store, which keeps no files); the change is already archived (its declaration is integrated and the saved trace replaces it); or the ID pattern is inaccessible.
+- `nextRecommended`, `dependencies` and `blockedReasons` never depend on it.
 
 ## ISO Evidence
 

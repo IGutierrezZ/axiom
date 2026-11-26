@@ -55,7 +55,7 @@ type RegistryOptions struct {
 type Registry struct {
 	pattern reqid.Pattern
 	byID    map[string][]IDRef
-	maxFor  map[reqid.Series]int
+	alloc   *reqid.Allocator
 }
 
 // Pattern devuelve el patrón de identificadores con el que se construyó el registro.
@@ -65,7 +65,7 @@ func (r *Registry) Pattern() reqid.Pattern { return r.pattern }
 // SpecsOnly, de <planningHome>/changes/*/specs/*/spec.md. Una carpeta que no existe no
 // es un error: el registro queda vacío en esa parte.
 func LoadRegistry(planningHome string, opts RegistryOptions) (*Registry, error) {
-	reg := &Registry{pattern: opts.Pattern, byID: map[string][]IDRef{}, maxFor: map[reqid.Series]int{}}
+	reg := &Registry{pattern: opts.Pattern, byID: map[string][]IDRef{}, alloc: reqid.NewAllocator(opts.Pattern)}
 
 	specsDir := filepath.Join(planningHome, "specs")
 	capabilities, err := subdirectories(specsDir)
@@ -122,11 +122,8 @@ func (r *Registry) add(ref IDRef) {
 		return
 	}
 	r.byID[ref.ID] = append(r.byID[ref.ID], ref)
-	if series, ok := r.pattern.Series(ref.ID); ok {
-		if number, _ := r.pattern.Number(ref.ID); number > r.maxFor[series] {
-			r.maxFor[series] = number
-		}
-	}
+	// InTitle solo devuelve identificadores válidos: Occupy no puede fallar aquí.
+	_ = r.alloc.Occupy(ref.ID)
 }
 
 // Lookup devuelve todas las apariciones de un identificador, en un orden estable.
@@ -139,10 +136,15 @@ func (r *Registry) Lookup(id string) []IDRef {
 // NextFree devuelve el siguiente identificador libre de una serie del patrón del registro:
 // el número máximo de la serie en todo el registro, más uno, con el relleno que declara la
 // plantilla (`RF-USU-09` da `RF-USU-10`, sin truncar). Los huecos no se rellenan y otra
-// serie no cuenta. Solo parte de una serie existente: la asignación de una serie vacía no
-// es de este paquete (C-03-b).
+// serie no cuenta. Delega en reqid.Allocator sobre una copia, de modo que no altera el
+// registro: una serie vacía da el `1`, con el relleno de la plantilla. Un desbordamiento
+// devuelve "".
 func (r *Registry) NextFree(series reqid.Series) string {
-	return r.pattern.Format(series, r.maxFor[series]+1)
+	id, err := r.alloc.Clone().Next(series)
+	if err != nil {
+		return ""
+	}
+	return id
 }
 
 // SeriesRefs devuelve todas las apariciones de identificadores de una serie, en un orden

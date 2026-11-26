@@ -156,3 +156,26 @@ func TestServiceWithAnInaccessiblePatternIndexesWithTheDefaultAndWarns(t *testin
 		t.Errorf("SyncReport.Warnings debe nombrar el error del patrón: %v", report.Warnings)
 	}
 }
+
+// REQ-47.1 / D11: un `(prov:…)` final no se toma como candidato a identificador con
+// ningún patrón; el requisito recibe un sintético y conserva el título entero.
+func TestIndexerDoesNotTakeAProvisionalAsATrailingCandidate(t *testing.T) {
+	for template, token := range map[string]string{
+		"REQ-<n>.<m>":      "prov:30:1",
+		"RF-<DOM>-<NN>":    "prov:USU:1",
+		"RF-<DOM>-<n>.<m>": "prov:RF-3:1",
+		"RF-<m>":           "prov::1",
+	} {
+		t.Run(template, func(t *testing.T) {
+			idx := patternIndexer(t, template)
+			entry, _ := idx.ParseSpecContent("# E\n\n### Requirement: Alta ("+token+")\n\n#### Scenario: A\n", "dominio", "dominio/spec.md", time.Time{})
+			if len(entry.Requirements) != 1 {
+				t.Fatalf("requisitos = %d", len(entry.Requirements))
+			}
+			got := entry.Requirements[0]
+			if got.ID != "REQ-dominio-1" || got.Title != "Alta ("+token+")" {
+				t.Errorf("ID = %q, Title = %q: un provisional no es un identificador", got.ID, got.Title)
+			}
+		})
+	}
+}

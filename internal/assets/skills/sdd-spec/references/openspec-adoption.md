@@ -19,7 +19,7 @@ Read this reference when `openspec/changes/{change-name}/adoption-inventory.yaml
 4. **Discard with a reason.** Create `openspec/changes/{change-name}/adoption.md` with a `## Descartado` section: one bullet `- <path>#<anchor>: <reason>` per inventory unit that you do not migrate (a whole-file unit is `- <path>: <reason>`). The reason is never empty. Do not discard to silence a coverage failure: discard only what is not a requirement (a title, a glossary, an introduction).
 5. **Check.** Run `axiom archive adopt check --path "<workspaceRoot>" --change "{change-name}"`. It reports every failure, not only the first, each with the rule (`format`, `uniqueness`, `series`, `scenarios`, `origin`, `coverage`, `discard_reason`, `inventory_missing`, `inventory_stale`) and the requirement or unit involved. Fix them all and repeat until it exits `0`. On `inventory_stale` a source changed after the scan: repeat step 1 and re-evaluate coverage against the new units.
 6. **Gate.** Present the migration at the `spec` gate for human approval of its fidelity. Do not claim that `adopt check` verified fidelity, and do not record the gate yourself.
-7. **Archive.** The adoption change is archived like any other: `axiom sdd archive-compose --canonical --delta` composes it and the living spec keeps each `Origen:` line byte for byte.
+7. **Archive.** The adoption change is archived like any other: `sdd-archive` integrates it with `axiom sdd archive-integrate`, which composes with the same engine as `axiom sdd archive-compose --canonical --delta` (the manual preview and composition of one capability), and the living spec keeps each `Origen:` line byte for byte.
 
 ## Limits
 
