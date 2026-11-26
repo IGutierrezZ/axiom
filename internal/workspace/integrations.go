@@ -168,11 +168,18 @@ func decodeIntegrationValue(label string, field manifest.ConfigField, node *yaml
 		if err != nil {
 			return nil, err
 		}
-		return s, checkEnum(label, s, field.Enum)
+		if err := checkEnum(label, s, field.Enum); err != nil {
+			return s, err
+		}
+		return s, checkStringFormat(label, field, s)
 	case manifest.FieldBool:
 		return sddBool(label, node)
 	case manifest.FieldInt:
-		return scalarInt(label, node)
+		n, err := scalarInt(label, node)
+		if err != nil {
+			return n, err
+		}
+		return n, checkIntRange(label, field, n)
 	case manifest.FieldStringList:
 		return stringList(label, field, node)
 	}
@@ -247,10 +254,52 @@ func stringList(label string, field manifest.ConfigField, node *yaml.Node) ([]st
 			errs = append(errs, fmt.Errorf("%s: el elemento '%s' (línea %d) no es válido: %s", label, p.Element, lines[p.Index], p.Reason))
 		}
 	}
+	if len(errs) == 0 && field.Format == manifest.FormatWeekdaySet {
+		for _, p := range manifest.ParseWeekdaySet(list) {
+			if p.Index < 0 {
+				errs = append(errs, fmt.Errorf("%s: %s", label, p.Reason))
+				continue
+			}
+			errs = append(errs, fmt.Errorf("%s: el elemento '%s' (línea %d) no es válido: %s", label, p.Element, lines[p.Index], p.Reason))
+		}
+	}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 	return list, nil
+}
+
+// checkStringFormat aplica los formatos non_empty y tag_prefix a un valor string.
+func checkStringFormat(label string, field manifest.ConfigField, value string) error {
+	var reason string
+	switch field.Format {
+	case manifest.FormatNonEmpty:
+		reason = manifest.CheckNonEmpty(value)
+	case manifest.FormatTagPrefix:
+		reason = manifest.CheckTagPrefix(value)
+	}
+	if reason != "" {
+		return fmt.Errorf("%s: el valor '%s' no es válido: %s", label, value, reason)
+	}
+	return nil
+}
+
+// checkIntRange aplica Min y Max (inclusivos) de un campo int.
+func checkIntRange(label string, field manifest.ConfigField, n int) error {
+	if field.Min != nil && n < *field.Min || field.Max != nil && n > *field.Max {
+		return fmt.Errorf("%s: el valor %d está fuera del rango admitido (%s)", label, n, intRangeText(field))
+	}
+	return nil
+}
+
+func intRangeText(f manifest.ConfigField) string {
+	switch {
+	case f.Min != nil && f.Max != nil:
+		return fmt.Sprintf("de %d a %d", *f.Min, *f.Max)
+	case f.Min != nil:
+		return fmt.Sprintf("mínimo %d", *f.Min)
+	}
+	return fmt.Sprintf("máximo %d", *f.Max)
 }
 
 func checkEnum(label, value string, enum []string) error {
