@@ -470,58 +470,95 @@ Para la sesión padre que coordine el plan.
 
 ### Seguimiento
 
+Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con las PR fusionadas en GitHub. Junto a cada PR va el commit de fusión corto. La columna «Sesión» queda vacía: las sesiones son locales y su registro está en Engram.
+
 | Id | Estado | Sesión | Rama | PR |
 |---|---|---|---|---|
-| C-01-a | pendiente | | | |
-| C-01-b | pendiente | | | |
-| C-01-c | pendiente | | | |
-| C-01-d | pendiente | | | |
-| C-01-e | pendiente | | | |
-| C-02-a | pendiente | | | |
-| C-02-b | pendiente | | | |
-| C-02-c | pendiente | | | |
-| C-02-d | pendiente | | | |
-| C-02-e | pendiente | | | |
-| C-03-a | pendiente | | | |
-| C-03-b | pendiente | | | |
-| C-03-c | pendiente | | | |
-| C-03-d | pendiente | | | |
-| C-03-e | pendiente | | | |
-| C-04-a | pendiente | | | |
-| C-04-b | pendiente | | | |
-| C-04-c | pendiente | | | |
-| C-04-d | pendiente | | | |
-| C-05-a | pendiente | | | |
-| C-05-b | pendiente | | | |
-| C-05-c | pendiente | | | |
-| C-05-d | pendiente | | | |
-| C-06-a | pendiente | | | |
-| C-06-b | pendiente | | | |
-| C-06-c | pendiente | | | |
+| C-01-a | fusionado | | `inc/hook-preflight-etiqueta` | #267 (`00d17330`) |
+| C-01-b | fusionado | | `inc/preflight-topologia` | #272 (`bd36e5c2`); archive #273 (`591840be`) |
+| C-01-c | fusionado | | `inc/rdd-apagado` | #275 (`87629aae`) |
+| C-01-d | fusionado | | `inc/quitar-serena` | #282 (`aa707c37`) |
+| C-01-e | fusionado | | `inc/retirar-rdd` | #306 (`d3e189e6`); archive #307 (`402ad63d`); remate #309 (`3c55c493`) |
+| C-02-a | fusionado | | `inc/promocion-ramas` | #277 (`148f0588`); archive #279 (`c18dd786`) |
+| C-02-b | fusionado | | `inc/verify-conjunto` | #296 (`fc4585c6`); archive #297 (`c54e9632`) |
+| C-02-c | fusionado | | `inc/single-pr` | #280 (`5849fe17`); archive #283 (`a6e0bd15`) |
+| C-02-d | fusionado | | `inc/aviso-commit` | #289 (`a0967497`); archive #290 (`b5a1c97e`) |
+| C-02-e | fusionado | | `inc/quitar-check-400` | #286 (`28084a56`) |
+| C-03-a | fusionado | | `inc/puerto-reqid` | #293 (`fc3f5ab1`); archive #294 (`6bbd2716`) |
+| C-03-b | fusionado | | `inc/ids-provisionales` | #326 (`fb2c97cd`); archive #331 (`7464c5a7`) |
+| C-03-c | fusionado | | `inc/adopcion-ids` | #335 (`11fb90ff`); archive #340 (`5bd02a8e`) |
+| C-03-d | fusionado | | `inc/axiom-trace` | #337 (`25c4f3b0`); archive #341 (`3c6d93a2`) |
+| C-03-e | fusionado | | `inc/migrar-ids-rf` | #347 (`acaa8343`); archive #348 (`98a2af59`) |
+| C-04-a | fusionado | | `inc/fix-miner-frontmatter` | #269 (`668a72e8`) |
+| C-04-b | fusionado | | `inc/odd-lee-contexto` | #271 (`476b2ef2`) |
+| C-04-c | fusionado | | `inc/propose-lee-contexto` | #274 (`f60c4be4`) |
+| C-04-d | fusionado | | `inc/skillcheck` | #284 (`ca2d56b0`) |
+| C-05-a | fusionado | | `inc/limpiar-engram` | #270 (`302d8f4b`) |
+| C-05-b | fusionado | | `inc/publicar-spec-design` | #319 (`b4b5aa10`) |
+| C-05-c | fusionado | | `inc/publicacion-pendiente` | #342 (`fe46b903`); archive #343 (`c45781ba`) |
+| C-05-d | fusionado | | `inc/autofetch-specs` | #353 (`4df28b04`); archive #354 (`8e9412c1`) |
+| C-06-a | fusionado | | `inc/fix-detalle-specs` | #268 (`2de9ae38`) |
+| C-06-b | fusionado | | `inc/html-explicativo` | #350 (`410105d9`); archive #351 (`89d81b31`) |
+| C-06-c | fusionado | | `inc/bateria-pruebas` | #356 (`da433c3a`); archive #357 (`804fa42b`) |
 | C-06-d | pendiente | | | |
-| C-06-e | pendiente | | | |
+| C-06-e | fusionado | | `inc/ajustes-proyecto` | #361 (`3c406805`); archive #362 (`7a7f8ee9`) |
 | C-06-f | pendiente | | | |
-| C-06-g | pendiente | | | |
-| C-07-a | pendiente | | | |
-| C-07-b | pendiente | | | |
-| C-07-c | pendiente | | | |
-| C-07-d | pendiente | | | |
-| C-07-e | pendiente | | | |
+| C-06-g | fusionado | | `inc/agentes-ui` | #336 (`da5762ba`) |
+| C-07-a | fusionado | | `inc/identidad-git-actor` | #276 (`bddd7ee9`); archive #278 (`cb92574f`) |
+| C-07-b | fusionado | | `inc/marco-integraciones` | #285 (`c0de4c0f`); archive #287 (`0d6852a2`) |
+| C-07-c | fusionado | | `inc/adaptador-ado` | #291 (`b1ba7246`); archive #292 (`d580368d`) |
+| C-07-d | fusionado | | `inc/arranque-desde-wi` | #359 (`64fd72a0`); archive #360 (`e365e538`) |
+| C-07-e | en curso | | `inc/eventos-ado` | |
 | C-07-f | pendiente | | | |
 | C-07-g | pendiente | | | |
 | C-07-h | pendiente | | | |
-| C-08-a | pendiente | | | |
-| C-08-b | pendiente | | | |
-| C-08-c | pendiente | | | |
-| C-08-d | pendiente | | | |
-| C-08-e | pendiente | | | |
-| C-08-f | pendiente | | | |
-| C-08-g | pendiente | | | |
-| C-08-h | pendiente | | | |
-| C-08-i | pendiente | | | |
-| C-08-j | pendiente | | | |
-| C-08-k | pendiente | | | |
-| C-08-l | pendiente | | | |
+| C-08-a | fusionado | | `inc/paquetes-huerfanos` | #298 (`7abf7590`) |
+| C-08-b | fusionado | | `inc/suite-local-windows` | #301 (`3c520778`) |
+| C-08-c | fusionado | | `refactor/primitivas-fichero` | #300 (`3417cbbf`) |
+| C-08-d | fusionado | | `inc/retirar-agentes` | #310 (`9ed8e03c`); remate #314 (`5e9dbd8a`, `inc/retirar-agentes-restos`) |
+| C-08-e | fusionado | | `inc/retirar-gga-telemetria` | #318 (`814b3ce5`) |
+| C-08-f | fusionado | | `inc/arranque-minimo` | #330 (`37b33e4c`) |
+| C-08-g | fusionado | | `inc/pruebas-paralelas` | #338 (`64eb5d31`) |
+| C-08-h | fusionado | | `inc/centinelas-golden` | #333 (`b613ff76`) |
+| C-08-i | fusionado | | `inc/ci-por-jobs` | #317 (`478e137c`) |
+| C-08-j | fusionado | | `inc/politica-pruebas` | #321 (`4558cb8c`) |
+| C-08-k | fusionado | | `inc/ci-agil` | #322 (`b7e91d67`) |
+| C-08-l | fusionado | | `inc/retirar-knowledge-semantic` | #332 (`13186d5c`) |
+
+**Nota: PR fusionadas fuera del catálogo** (desde el alta del plan, #266). No son cambios del plan; se listan para que el historial cuadre.
+
+- Revisiones del propio plan: #266 `inc/plan-backlog-2026-11` (`a7fb0ed9`), #295 `inc/plan-adelgazamiento` (`8324f3ca`), #313 `inc/plan-agentes-ui` (`c264d347`) y #320 `inc/plan-agilidad` (`3193c716`).
+- Arreglos y mejoras sueltas:
+
+| PR | Rama | Fusión |
+|---|---|---|
+| #281 | `fix/verificacion-agentes-review` | `f650f8e6` |
+| #288 | `fix/done-cerrojo-local` | `a8cb13b4` |
+| #299 | `fix/barra-lateral-fija` | `13d2832f` |
+| #302 | `feat/contexto-por-proyecto` | `62dbf1da` |
+| #303 | `fix/jd-engram` | `9f3902ec` |
+| #304 | `fix/uninstall-alcance` | `e2aecca4` |
+| #305 | `fix/guard-ignorados` | `08f1b836` |
+| #308 | `fix/tui-uninstall-preseleccion` | `39ba81cf` |
+| #311 | `inc/detalle-chip-roles` | `95f7db55` |
+| #312 | `fix/skills-sin-avisos` | `75b2b550` |
+| #315 | `fix/pr-etiqueta-tipo` | `2ad292dd` |
+| #316 | `fix/textos-estilo-ejecucion` | `f85ae071` |
+| #323 | `inc/vscode-mcp-guardas` | `4294564a` |
+| #324 | `inc/retirar-gentle-ai` | `931c2f4d` |
+| #325 | `inc/vscode-mcp-global` | `6824bbe0` |
+| #327 | `fix/ci-manual-sin-e2e` | `0901a6e1` |
+| #328 | `inc/vscode-skills-copilot-home` | `cc24a1de` |
+| #329 | `refactor/e2e-adelgazar` | `d688018a` |
+| #334 | `fix/worktree-test-label` (envoltorio PowerShell) | `19cab007` |
+| #339 | `fix/doctor-agentes-no-registrados` | `a973c68e` |
+| #344 | `fix/prov-ids-arreglo` | `f596a985` |
+| #345 | `fix/publicacion-frontera-fase` | `3b1b5653` |
+| #346 | `fix/publicacion-fusiones-cc` | `a63a985c` |
+| #349 | `fix/visor-ids-rf` | `3eeedd07` |
+| #352 | `fix/trace-titulo-sin-id` (trace por título) | `8df91b97` |
+| #355 | `inc/trace-legacy-ambiguous` (advertencia `legacy_ambiguous`) | `51436ae5` |
+| #358 | `fix/fix-hook-codex-windows` (hook de Codex) | `64bdbf8d` |
 
 ## 9. Registro de revisión
 
@@ -553,3 +590,4 @@ Para la sesión padre que coordine el plan.
   - Se añaden C-08-j (política de pruebas), C-08-k (CI nocturna, meta-tests aparte y `pr-check` sin `edited`; P24) y C-08-l (retirar `knowledge` y `semantic`; P23).
   - Olas: A5 = C-08-f, C-08-j y C-08-k; A6 = C-08-l y C-08-h; A7 = C-08-g.
   - No se recorta ningún cambio del backlog. El modo ISO se queda (P25). `unlabeled` sigue en `pr-check.yml`.
+- **Revisión 11 (2026-11-26):** tabla de seguimiento al día.
