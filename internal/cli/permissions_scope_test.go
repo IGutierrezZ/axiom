@@ -62,7 +62,6 @@ func seedAgentConfigs(t *testing.T, root string) []string {
 	seeds := map[string]string{
 		filepath.Join(root, ".claude", "settings.json"):             `{"permissions":{"defaultMode":"default","deny":["WebFetch"]}}`,
 		filepath.Join(root, ".config", "opencode", "opencode.json"): `{"permission":{"bash":{"*":"ask"}}}`,
-		filepath.Join(root, ".config", "kilo", "opencode.json"):     `{"permission":{"bash":{"*":"ask"}}}`,
 		filepath.Join(root, ".gemini", "settings.json"):             `{"general":{"defaultApprovalMode":"default"}}`,
 	}
 	paths := make([]string, 0, len(seeds))
@@ -79,7 +78,7 @@ func seedAgentConfigs(t *testing.T, root string) []string {
 }
 
 var permissionScopeAgents = []model.AgentID{
-	model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode,
+	model.AgentClaudeCode, model.AgentOpenCode,
 	model.AgentGeminiCLI, model.AgentQwenCode, model.AgentVSCodeCopilot, model.AgentCodex,
 }
 
@@ -89,17 +88,15 @@ func permissionTargets(root string) []string {
 	return []string{
 		filepath.Join(root, ".claude", "settings.json"),
 		filepath.Join(root, ".config", "opencode", "opencode.json"),
-		filepath.Join(root, ".config", "kilo", "opencode.json"),
 	}
 }
 
 // workspacePermissionTargets son los ficheros que escribe una ejecución de permisos con
-// el ámbito workspace: OpenCode lee opencode.json de la raíz y Kilo su kilo.json de .kilo.
+// el ámbito workspace: OpenCode lee opencode.json de la raíz.
 func workspacePermissionTargets(root string) []string {
 	return []string{
 		filepath.Join(root, ".claude", "settings.json"),
 		filepath.Join(root, "opencode.json"),
-		filepath.Join(root, ".kilo", "kilo.json"),
 	}
 }
 
@@ -123,11 +120,9 @@ func TestPermissionsRoot(t *testing.T) {
 		{"global unsupported agent keeps home", ScopeGlobal, workspace, model.AgentVSCodeCopilot, home, true},
 		{"workspace claude", ScopeWorkspace, workspace, model.AgentClaudeCode, workspace, true},
 		{"workspace opencode", ScopeWorkspace, workspace, model.AgentOpenCode, workspace, true},
-		{"workspace kilocode", ScopeWorkspace, workspace, model.AgentKilocode, workspace, true},
 		// VS Code Copilot ya tiene modo workspace; sigue sin destino de permisos.
 		{"workspace vscode", ScopeWorkspace, workspace, model.AgentVSCodeCopilot, workspace, true},
 		{"workspace trae skipped", ScopeWorkspace, workspace, model.AgentTrae, "", false},
-		{"workspace windsurf skipped", ScopeWorkspace, workspace, model.AgentWindsurf, "", false},
 		{"workspace antigravity skipped", ScopeWorkspace, workspace, model.AgentAntigravity, "", false},
 		// Codex ya tiene modo workspace; sigue sin destino de permisos (TargetPath
 		// vacío), así que el componente no escribe nada para él en ningún ámbito.
@@ -180,7 +175,7 @@ func TestComponentPathsPermissionsFollowScope(t *testing.T) {
 func TestComponentPathsPermissionsWorkspaceSkipsAgentsWithoutWorkspaceMode(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
-	adapters := resolveAdapters([]model.AgentID{model.AgentVSCodeCopilot, model.AgentCodex, model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity})
+	adapters := resolveAdapters([]model.AgentID{model.AgentVSCodeCopilot, model.AgentCodex, model.AgentTrae, model.AgentAntigravity})
 
 	paths := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{}, adapters, model.ComponentPermission)
 
@@ -193,7 +188,7 @@ func TestBackupTargetsPermissionsFollowScope(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 	isolatePermissionEnv(t, home)
-	adapters := resolveAdapters([]model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode})
+	adapters := resolveAdapters([]model.AgentID{model.AgentClaudeCode, model.AgentOpenCode})
 
 	// backupTargets and the post-apply verification both read this one list.
 	for _, tt := range []struct {
@@ -334,7 +329,7 @@ func TestPermissionStepsWorkspaceNeverWriteHome(t *testing.T) {
 	permissionsNoticeWriter = &out
 	t.Cleanup(func() { permissionsNoticeWriter = restore })
 
-	allAgents := append([]model.AgentID{model.AgentTrae, model.AgentWindsurf, model.AgentAntigravity}, permissionScopeAgents...)
+	allAgents := append([]model.AgentID{model.AgentTrae, model.AgentAntigravity}, permissionScopeAgents...)
 	apply := componentApplyStep{component: model.ComponentPermission, homeDir: home, workspaceDir: workspace, scope: ScopeWorkspace, agents: allAgents}
 	if err := apply.Run(); err != nil {
 		t.Fatalf("apply: %v", err)

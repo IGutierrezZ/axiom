@@ -34,7 +34,7 @@ func TestCanonicalCompositionAddsOnlyItsKnownSteps(t *testing.T) {
 			// plus the shared sections plus the Pi route, and nothing else.
 			content := assets.MustRead(path)
 			if agent.ID == model.AgentVSCodeCopilot || agent.ID == model.AgentGitHubCopilotCLI || agent.ID == model.AgentCursor || agent.ID == model.AgentGeminiCLI ||
-				agent.ID == model.AgentAntigravity || agent.ID == model.AgentQwenCode || agent.ID == model.AgentHermes || agent.ID == model.AgentKimi || agent.ID == model.AgentKiroIDE || agent.ID == model.AgentCodex || agent.ID == model.AgentWindsurf {
+				agent.ID == model.AgentAntigravity || agent.ID == model.AgentQwenCode || agent.ID == model.AgentCodex {
 				assertFallbackSessionPreflight(t, composeOrchestratorPrompt(agent.ID))
 				return
 			}
@@ -52,7 +52,7 @@ func TestCanonicalCompositionAddsOnlyItsKnownSteps(t *testing.T) {
 }
 
 func TestFallbackSessionPreflightRejectsAmbiguousSource(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex} {
 		source := resolvedOrchestratorSource(sddOrchestratorAsset(agent))
 		initStart := strings.Index(source, "1. Search Engram:")
 		initEnd := strings.Index(source[initStart:], "\n\n") + initStart
@@ -118,8 +118,8 @@ func TestPiClosedChoiceRouteReplacesTheGenericFallback(t *testing.T) {
 		t.Fatal("generic source contains the Pi closed-choice route")
 	}
 
-	if strings.Contains(composeOrchestratorPrompt(model.AgentKilocode), testPiClosedSingleSelectNativeRoute) {
-		t.Fatal("Kilo composition received the Pi closed-choice route")
+	if strings.Contains(composeOrchestratorPrompt(model.AgentOpenCode), testPiClosedSingleSelectNativeRoute) {
+		t.Fatal("OpenCode composition received the Pi closed-choice route")
 	}
 }
 
@@ -408,19 +408,6 @@ func TestOpenCodeBackgroundPolicyMalformedPreservedPromptReturnsError(t *testing
 	}()
 	if _, err := Inject(home, adapter, model.SDDModeSingle, InjectOptions{PreserveOpenCodeOrchestratorPrompt: true}); err == nil || !strings.Contains(err.Error(), "validate preserved OpenCode background policy") {
 		t.Fatalf("Inject() error = %v, want preserved-policy validation error", err)
-	}
-}
-
-func TestOpenCodeBackgroundPolicyIsExcludedByKilocodePublicInject(t *testing.T) {
-	home := t.TempDir()
-	adapter := kilocodeAdapter()
-	_, err := Inject(home, adapter, model.SDDModeMulti, InjectOptions{IncludeOpenCodeBackgroundPolicy: true})
-	if err != nil {
-		t.Fatalf("Inject(Kilocode) error = %v", err)
-	}
-	prompt := agentPrompt(t, readOpenCodeAgents(t, adapter.SettingsPath(home)), "gentle-orchestrator")
-	if strings.Contains(prompt, openCodeBackgroundPolicyMarker) || strings.Contains(prompt, openCodeBackgroundPolicyEnd) {
-		t.Fatal("Kilocode received the OpenCode-only background policy")
 	}
 }
 

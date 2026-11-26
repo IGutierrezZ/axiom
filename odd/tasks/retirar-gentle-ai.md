@@ -468,6 +468,8 @@ The selected-research lane is optional, not mandatory, following the absorption 
 
 T1 hecha (commit «fix(update): autoupdate y registro con el nombre axiom»). T2 hecha (commit «refactor(env): retirar las variables GENTLE_AI_*»). T3 hecha (commit «refactor(state): rutas de estado axiom con migración desde gentle-ai»). T4 hecha (commit «refactor(sync): marcadores, plugins y MCP con el prefijo axiom»). T5 hecha (commit «refactor(sddstatus): esquemas axiom con lectura de los gentle-ai persistidos»). T6 hecha (commit «ci(release): nombres axiom en la procedencia, la firma y la CI»). T7 hecha (commit «refactor: nombres internos, plantillas y pruebas sin gentle-ai»). T8 hecha (commit «docs: documentación y specs vivas sin los nombres gentle-ai»). Progreso: T1–T8 hechas.
 
+Integración de `origin/main` (retiradas de agentes, GGA y telemetría, CI y política de pruebas #318–#322): conflictos resueltos conservando lo de main y aplicando encima el renombrado axiom; `testdata/golden` regenerado con `-update`, `openspec/INDEX.md` regenerado con `axiom archive sync` (53 dominios), digests del manifiesto de capacidades recalculados. Evidencia: `go build ./...`, `go vet ./...` y `go test` de los paquetes afectados en verde.
+
 ## Siguiente paso
 
 Abrir la PR.

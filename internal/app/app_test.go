@@ -951,9 +951,6 @@ func TestTuiSyncClaudePhaseAssignmentsPersistAndGenerateEffort(t *testing.T) {
 	}
 }
 
-// TestApplyOverrides_KiroModelAssignments verifies that a non-nil KiroModelAssignments
-// override replaces the entire KiroModelAssignments map in the selection (same
-// replacement semantics as ClaudeModelAssignments — not a key-level merge).
 func filesUnder(t *testing.T, root string) []string {
 	t.Helper()
 
@@ -978,25 +975,6 @@ func filesUnder(t *testing.T, root string) []string {
 	return files
 }
 
-func TestApplyOverrides_KiroModelAssignments(t *testing.T) {
-	selection := model.Selection{
-		KiroModelAssignments: map[string]model.KiroModelAlias{"sdd-apply": model.KiroModelSonnet},
-	}
-	overrides := &model.SyncOverrides{
-		KiroModelAssignments: map[string]model.KiroModelAlias{"sdd-design": model.KiroModelOpus},
-	}
-
-	applyOverrides(&selection, overrides)
-
-	// The whole map is replaced — prior entries (sdd-apply) are gone.
-	if got := selection.KiroModelAssignments["sdd-design"]; got != model.KiroModelOpus {
-		t.Fatalf("KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelOpus)
-	}
-	if _, exists := selection.KiroModelAssignments["sdd-apply"]; exists {
-		t.Fatal("KiroModelAssignments[sdd-apply] should not exist after full-map replacement")
-	}
-}
-
 // ─── Persist model assignments (TUI path) ───────────────────────────────────
 
 // TestLoadPersistedAssignmentsPopulatesEmptySelection verifies that when
@@ -1005,16 +983,12 @@ func TestApplyOverrides_KiroModelAssignments(t *testing.T) {
 func TestLoadPersistedAssignmentsPopulatesEmptySelection(t *testing.T) {
 	home := t.TempDir()
 
-	// Seed state with assignments including Kiro.
+	// Seed state with assignments.
 	err := state.Write(home, state.InstallState{
 		InstalledAgents: []string{"opencode"},
 		ClaudeModelAssignments: map[string]string{
 			"orchestrator": "opus",
 			"sdd-apply":    "sonnet",
-		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design":  "opus",
-			"sdd-archive": "haiku",
 		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
@@ -1032,12 +1006,6 @@ func TestLoadPersistedAssignmentsPopulatesEmptySelection(t *testing.T) {
 	}
 	if got := selection.ClaudeModelAssignments["sdd-apply"]; got != "sonnet" {
 		t.Errorf("ClaudeModelAssignments[sdd-apply] = %q, want %q", got, "sonnet")
-	}
-	if got := selection.KiroModelAssignments["sdd-design"]; got != model.KiroModelOpus {
-		t.Errorf("KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelOpus)
-	}
-	if got := selection.KiroModelAssignments["sdd-archive"]; got != model.KiroModelHaiku {
-		t.Errorf("KiroModelAssignments[sdd-archive] = %q, want %q", got, model.KiroModelHaiku)
 	}
 	ma := selection.ModelAssignments["sdd-init"]
 	if ma.ProviderID != "anthropic" || ma.ModelID != "claude-sonnet-4" {
@@ -1123,12 +1091,9 @@ func TestPersistAssignmentsPreservesInstalledAgents(t *testing.T) {
 func TestPersistAssignmentsClearsNonPhaseAssignmentMaps(t *testing.T) {
 	home := t.TempDir()
 	if err := state.Write(home, state.InstallState{
-		InstalledAgents: []string{"opencode", "codex", "kiro", "claude-code"},
+		InstalledAgents: []string{"opencode", "codex", "claude-code"},
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "sonnet",
-		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design": "auto",
 		},
 		CodexModelAssignments: map[string]string{
 			"sdd-apply": "high",
@@ -1145,7 +1110,6 @@ func TestPersistAssignmentsClearsNonPhaseAssignmentMaps(t *testing.T) {
 
 	persistAssignments(state.GlobalStore(home), model.Selection{
 		ClaudeModelAssignments:      map[string]model.ClaudeModelAlias{},
-		KiroModelAssignments:        map[string]model.KiroModelAlias{},
 		CodexModelAssignments:       map[string]model.CodexEffort{},
 		CodexCarrilModelAssignments: map[string]string{},
 		ModelAssignments:            map[string]model.ModelAssignment{},
@@ -1158,9 +1122,6 @@ func TestPersistAssignmentsClearsNonPhaseAssignmentMaps(t *testing.T) {
 	if got.ClaudeModelAssignments != nil {
 		t.Fatalf("ClaudeModelAssignments = %#v, want nil", got.ClaudeModelAssignments)
 	}
-	if got.KiroModelAssignments != nil {
-		t.Fatalf("KiroModelAssignments = %#v, want nil", got.KiroModelAssignments)
-	}
 	if got.CodexModelAssignments != nil {
 		t.Fatalf("CodexModelAssignments = %#v, want nil", got.CodexModelAssignments)
 	}
@@ -1170,7 +1131,7 @@ func TestPersistAssignmentsClearsNonPhaseAssignmentMaps(t *testing.T) {
 	if got.ModelAssignments != nil {
 		t.Fatalf("ModelAssignments = %#v, want nil", got.ModelAssignments)
 	}
-	if len(got.InstalledAgents) != 4 {
+	if len(got.InstalledAgents) != 3 {
 		t.Fatalf("InstalledAgents = %#v, want preserved agents", got.InstalledAgents)
 	}
 }
@@ -1249,34 +1210,6 @@ func TestPersistAssignmentsClearsClaudePhaseAssignments(t *testing.T) {
 	}
 	if len(got.InstalledAgents) != 1 || got.InstalledAgents[0] != string(model.AgentClaudeCode) {
 		t.Fatalf("InstalledAgents = %#v, want preserved claude-code", got.InstalledAgents)
-	}
-}
-
-// TestPersistAndLoadKiroModelAssignments verifies that KiroModelAssignments
-// survive a persist/load round-trip via state.json.
-func TestPersistAndLoadKiroModelAssignments(t *testing.T) {
-	home := t.TempDir()
-
-	selection := model.Selection{
-		KiroModelAssignments: map[string]model.KiroModelAlias{
-			"sdd-design":  model.KiroModelGLM,
-			"sdd-archive": model.KiroModelQwen,
-			"default":     model.KiroModelAuto,
-		},
-	}
-	persistAssignments(state.GlobalStore(home), selection)
-
-	loaded := model.Selection{}
-	loadPersistedAssignments(state.GlobalStore(home), &loaded)
-
-	if got := loaded.KiroModelAssignments["sdd-design"]; got != model.KiroModelGLM {
-		t.Errorf("round-trip KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelGLM)
-	}
-	if got := loaded.KiroModelAssignments["sdd-archive"]; got != model.KiroModelQwen {
-		t.Errorf("round-trip KiroModelAssignments[sdd-archive] = %q, want %q", got, model.KiroModelQwen)
-	}
-	if got := loaded.KiroModelAssignments["default"]; got != model.KiroModelAuto {
-		t.Errorf("round-trip KiroModelAssignments[default] = %q, want %q", got, model.KiroModelAuto)
 	}
 }
 

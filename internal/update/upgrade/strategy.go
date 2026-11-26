@@ -66,7 +66,6 @@ type strategyOutcome struct {
 //   - go-install method + apt/pacman/other → goInstallUpgrade
 //   - binary method + linux/darwin → binaryUpgrade
 //   - binary method + windows → manualFallback (axiom explains the signed-distribution hold)
-//   - script method + linux/darwin + gga → ggaScriptUpgrade (git clone approach)
 //   - script method + linux/darwin + other → scriptUpgrade (curl | bash install.sh)
 //   - script method + windows → manualFallback
 //   - OpenCode plugin method → update materialized package in ~/.config/opencode when possible
@@ -105,14 +104,6 @@ func runStrategy(ctx context.Context, r update.UpdateResult, profile system.Plat
 	case update.InstallBinary:
 		return false, binaryUpgrade(ctx, r, profile)
 	case update.InstallScript:
-		// GGA's install.sh expects to run from within a cloned repo — it references
-		// $SCRIPT_DIR/bin/gga and $SCRIPT_DIR/lib/*.sh. The generic scriptUpgrade
-		// only downloads and runs the script in isolation (bash -c <content>), which
-		// breaks because those relative paths don't exist. Use the git clone approach
-		// (same as the initial install resolver) for GGA specifically.
-		if r.Tool.Name == "gga" {
-			return false, ggaScriptUpgrade(ctx, r)
-		}
 		return false, scriptUpgrade(ctx, r, profile)
 	case update.InstallOpenCodePlugin:
 		_, err := opencodePluginUpgrade(ctx, r)
@@ -432,13 +423,13 @@ func brewUpgrade(ctx context.Context, r update.UpdateResult, ownership update.Ho
 	toolName := r.Tool.Name
 	flag := "--" + string(ownership)
 	// Ensure the Gentleman-Programming homebrew tap is present before upgrading
-	// engram and gga, whose formulas really live there. Axiom itself is not routed here
+	// engram, whose formula really lives there. Axiom itself is not routed here
 	// (effectiveMethod/runStrategy exclude it) and is skipped here as defense in depth:
 	// trusting a foreign tap for our own tool would be wrong.
 	// Non-fatal: brew tap is a no-op when already present; if it fails for any other
 	// reason, the subsequent brew upgrade will surface the real error. See issue #455:
 	// without this, a lost tap (untap, machine swap, brew cleanup) makes upgrades fail
-	// with "No available formula" for engram/gga.
+	// with "No available formula" for engram.
 	if !update.IsSelfToolName(toolName) {
 		tapCmd := execCommand("brew", "tap", "Gentleman-Programming/homebrew-tap")
 		tapCmd.Stdin = nil
@@ -804,7 +795,7 @@ func installScriptURL(owner, repo, version string) (string, error) {
 }
 
 // scriptUpgrade downloads and executes the project's install.sh via curl | bash.
-// This is used for tools that distribute via shell scripts (e.g., GGA) rather than
+// This is used for tools that distribute via shell scripts rather than
 // pre-built release binary assets.
 //
 // The script is downloaded to a temp file, then executed with bash and stdin set to nil
@@ -863,81 +854,7 @@ func scriptUpgrade(ctx context.Context, r update.UpdateResult, profile system.Pl
 	return nil
 }
 
-// ggaMkdirTemp is the function used to create a temporary directory for GGA git clone.
-// Package-level var for testability — swapped in tests to control the temp dir path.
-var ggaMkdirTemp = func() (string, error) {
-	return os.MkdirTemp("", "axiom-gga-*")
-}
-
-// ggaScriptUpgrade upgrades GGA by cloning its repository and running install.sh
-// from within the cloned repo — the same approach used by the initial install resolver.
-//
-// This is required because GGA's install.sh references $SCRIPT_DIR/bin/gga and
-// $SCRIPT_DIR/lib/*.sh (relative to the cloned repo). The generic scriptUpgrade
-// downloads and runs the script in isolation via `bash -c <content>`, which fails
-// because those relative paths don't exist without the full repo context.
-//
-// On Windows, bash is not available — returns ManualFallbackError.
-func ggaScriptUpgrade(ctx context.Context, r update.UpdateResult) error {
-	return ggaScriptUpgradeForOS(ctx, r, detectOS())
-}
-
 // detectOS returns the current runtime OS name. Package-level var for testability.
 var detectOS = func() string {
 	return runtime.GOOS
-}
-
-// ggaScriptUpgradeForOS is the testable version of ggaScriptUpgrade that accepts
-// an explicit OS string so tests can simulate Windows without actually running on it.
-func ggaScriptUpgradeForOS(ctx context.Context, r update.UpdateResult, osName string) error {
-	if osName == "windows" {
-		hint := r.UpdateHint
-		if hint == "" {
-			hint = fmt.Sprintf("Download manually from https://github.com/%s/%s/releases", r.Tool.Owner, r.Tool.Repo)
-		}
-		return &ManualFallbackError{
-			Hint: fmt.Sprintf("upgrade %q on Windows requires manual update: %s", r.Tool.Name, hint),
-		}
-	}
-
-	// Use an unpredictable temp directory to avoid TOCTOU races on the fixed path.
-	tmpDir, err := ggaMkdirTemp()
-	if err != nil {
-		return fmt.Errorf("create temp dir for gga clone: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	// Fetch and check out the exact release tag so the install.sh
-	// executed here matches the version the user is upgrading TO, not whatever
-	// is on main at the moment of the upgrade or a homonymous branch ref.
-	targetTagRef := "refs/tags/v" + r.LatestVersion
-	repoURL := fmt.Sprintf("https://github.com/%s/%s.git", r.Tool.Owner, r.Tool.Repo)
-
-	initCmd := execCommand("git", "init", tmpDir)
-	initCmd.Stdin = nil
-	if out, err := initCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git init %s: %w (output: %s)", r.Tool.Repo, err, strings.TrimSpace(string(out)))
-	}
-
-	fetchCmd := execCommand("git", "-C", tmpDir, "fetch", "--depth=1", repoURL, targetTagRef+":"+targetTagRef)
-	fetchCmd.Stdin = nil
-	if out, err := fetchCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git fetch %s: %w (output: %s)", r.Tool.Repo, err, strings.TrimSpace(string(out)))
-	}
-
-	checkoutCmd := execCommand("git", "-C", tmpDir, "checkout", "-f", targetTagRef)
-	checkoutCmd.Stdin = nil
-	if out, err := checkoutCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git checkout %s: %w (output: %s)", r.Tool.Repo, err, strings.TrimSpace(string(out)))
-	}
-
-	// Execute install.sh from within the cloned repo (non-interactive).
-	installScript := filepath.Join(tmpDir, "install.sh")
-	installCmd := execCommand("bash", installScript)
-	installCmd.Stdin = nil
-	if out, err := installCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("install.sh failed for %q: %w\nOutput: %s", r.Tool.Name, err, strings.TrimSpace(string(out)))
-	}
-
-	return nil
 }

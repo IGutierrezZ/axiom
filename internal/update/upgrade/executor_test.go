@@ -14,7 +14,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
@@ -55,8 +54,8 @@ func TestExecute_NoopWhenNothingIsExecutable(t *testing.T) {
 	results := []update.UpdateResult{
 		makeResult("axiom", update.UpToDate, "1.0.0", "1.0.0", update.InstallBinary),
 		makeResult("engram", update.NotInstalled, "", "0.4.0", update.InstallGoInstall),
-		// gga: CheckFailed — should also be omitted from results.
-		makeResult("gga", update.CheckFailed, "", "", update.InstallScript),
+		// CheckFailed — should also be omitted from results.
+		makeResult("opencode-subagent-statusline", update.CheckFailed, "", "", update.InstallScript),
 	}
 
 	report := Execute(context.Background(), results, brewProfile(), t.TempDir(), false)
@@ -456,8 +455,7 @@ func TestExecute_PerToolSuccessAndFailure(t *testing.T) {
 	t.Cleanup(func() { execCommand = origExecCommand })
 
 	execCommand = func(name string, args ...string) *exec.Cmd {
-		// engram go install succeeds, gga curl/download attempt fails — we simulate
-		// the failure by having execCommand return false for "gga" detection.
+		// engram go install succeeds; any other exec attempt fails.
 		if name == "go" {
 			return mockCmd("echo", "go install ok")
 		}
@@ -487,7 +485,7 @@ func TestExecute_PerToolSuccessAndFailure(t *testing.T) {
 // TestExecute_DevBuildIsSkipped verifies the spec requirement:
 // axiom with DevBuild status must appear in Results as UpgradeSkipped
 // with a non-empty ManualHint explaining it is a source/dev build.
-// DevBuild tools must NOT be auto-executed, and engram/gga remain eligible.
+// DevBuild tools must NOT be auto-executed, and engram remains eligible.
 func TestExecute_DevBuildIsSkipped(t *testing.T) {
 	origExecCommand := execCommand
 	t.Cleanup(func() { execCommand = origExecCommand })
@@ -978,50 +976,6 @@ func TestConfigPathsForBackup_CoversRegistryAgentsNotInOldList(t *testing.T) {
 
 	if _, ok := pathSet[codexFile]; !ok {
 		t.Errorf("configPathsForBackup() missing codex managed file %q — must cover registry agents, not just old hardcoded 4; got paths: %v", codexFile, paths)
-	}
-}
-
-// TestConfigPathsForBackup_GGAExtrasAreIncluded verifies that GGA-specific
-// paths (config file, runtime lib dir) are included in the backup paths even
-// though GGA is not an agent in the adapter registry. These are approved
-// non-agent extras that must be preserved outside the canonical managed set.
-func TestConfigPathsForBackup_GGAExtrasAreIncluded(t *testing.T) {
-	homeDir := t.TempDir()
-
-	if runtime.GOOS == "windows" {
-		t.Setenv("APPDATA", filepath.Join(homeDir, "AppData", "Roaming"))
-	}
-
-	// Create GGA config file at the platform-appropriate path
-	ggaConfigFile := gga.ConfigPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(ggaConfigFile), 0o755); err != nil {
-		t.Fatalf("MkdirAll gga config: %v", err)
-	}
-	if err := os.WriteFile(ggaConfigFile, []byte("gga-config"), 0o644); err != nil {
-		t.Fatalf("WriteFile gga config: %v", err)
-	}
-
-	// Create GGA runtime lib file at the platform-appropriate path
-	ggaLibFile := gga.RuntimePRModePath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(ggaLibFile), 0o755); err != nil {
-		t.Fatalf("MkdirAll gga lib: %v", err)
-	}
-	if err := os.WriteFile(ggaLibFile, []byte("#!/bin/sh"), 0o755); err != nil {
-		t.Fatalf("WriteFile gga lib: %v", err)
-	}
-
-	paths := configPathsForBackup(homeDir)
-
-	pathSet := make(map[string]struct{}, len(paths))
-	for _, p := range paths {
-		pathSet[p] = struct{}{}
-	}
-
-	if _, ok := pathSet[ggaConfigFile]; !ok {
-		t.Errorf("configPathsForBackup() missing GGA config file %q — GGA extras must remain in backup; got paths: %v", ggaConfigFile, paths)
-	}
-	if _, ok := pathSet[ggaLibFile]; !ok {
-		t.Errorf("configPathsForBackup() missing GGA lib file %q — GGA extras must remain in backup; got paths: %v", ggaLibFile, paths)
 	}
 }
 

@@ -19,7 +19,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	codexagent "github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
 	opencodeagent "github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
@@ -27,7 +26,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodeplugin"
@@ -35,7 +33,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/installcmd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -77,14 +74,9 @@ var (
 	pathEnvEntries               = func(profile system.PlatformProfile) []string {
 		return splitPathForOS(os.Getenv("PATH"), profile.OS)
 	}
-	addUserPath          = system.AddToUserPath
-	ensureUserPathFirst  = system.PrioritizeUserPath
-	userPathEntries      = system.UserPathEntries
-	cleanupGGAInstallDir = gga.CleanupInstallDir
-
-	// ggaAvailableCheck is an optional override for ggaAvailable behavior.
-	// When set, it is called instead of the default filesystem check.
-	ggaAvailableCheck func(system.PlatformProfile) bool
+	addUserPath         = system.AddToUserPath
+	ensureUserPathFirst = system.PrioritizeUserPath
+	userPathEntries     = system.UserPathEntries
 
 	// engramDownloadFn is the function used to download the engram binary on non-brew platforms.
 	// Package-level var for testability — tests can replace this to avoid real HTTP calls.
@@ -295,7 +287,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		return result, fmt.Errorf("execute install pipeline: %w", result.Execution.Err)
 	}
 	result.PiCodeGraph = runtime.state.piCodeGraph
-	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.ggaManualActions()...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, runtime.state.retirementNotes...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, engramSetupSkippedNote(input.Scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.Execution.ManualActions = append(result.Execution.ManualActions, optInFootprintNotes(input.Scope, homeDir, resolved.OrderedComponents, resolved.Agents, input.Selection)...)
@@ -308,7 +299,7 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		Resolved:     resolved,
 		State:        runtime.state,
 	})
-	result.Verify = withPostInstallNotes(result.Verify, resolved, runtime.state.ggaInstallDeferred)
+	result.Verify = withPostInstallNotes(result.Verify, resolved)
 	result.Verify = withOpenCodeBackgroundPending(result.Verify, background, runtime.runtimeReady, resolved.Agents)
 	result.Verify = withOpenCodeBackgroundActivationNote(result.Verify, background, resolved.Agents)
 	if plan := piBackground.projectionPlan; plan != nil && plan.skipReason != "" {
@@ -347,7 +338,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		ClaudeModelAssignments:      claudeLegacyAssignmentsForState(input.Selection.ClaudeModelAssignments, claudePhaseState),
 		ClaudePhaseAssignments:      claudePhaseState,
 		CopilotPhaseAssignments:     state.CopilotAssignmentsToState(input.Selection.CopilotPhaseAssignments),
-		KiroModelAssignments:        kiroAliasesToStrings(input.Selection.KiroModelAssignments),
 		CodexModelAssignments:       codexEffortsToStrings(input.Selection.CodexModelAssignments),
 		CodexOrchestratorAssignment: codexOrchestratorToState(input.Selection.CodexOrchestratorAssignment),
 		CodexCarrilModelAssignments: input.Selection.CodexCarrilModelAssignments,
@@ -407,7 +397,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	merged.Preset, merged.SDDMode, merged.StrictTDD = fresh.Preset, fresh.SDDMode, fresh.StrictTDD
 	merged.CommunityTools, merged.CommunityToolsConfigured = fresh.CommunityTools, fresh.CommunityToolsConfigured
 	merged.ClaudeModelAssignments, merged.ClaudePhaseAssignments = fresh.ClaudeModelAssignments, fresh.ClaudePhaseAssignments
-	merged.KiroModelAssignments, merged.CodexModelAssignments = fresh.KiroModelAssignments, fresh.CodexModelAssignments
+	merged.CodexModelAssignments = fresh.CodexModelAssignments
 	// Una instalación sin asignaciones de Copilot no las borra: se conservan las que
 	// ya hubiera en el estado del proyecto.
 	if fresh.CopilotPhaseAssignments != nil {
@@ -461,9 +451,6 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	if newState.CopilotPhaseAssignments != nil {
 		merged.CopilotPhaseAssignments = newState.CopilotPhaseAssignments
 	}
-	if newState.KiroModelAssignments != nil {
-		merged.KiroModelAssignments = newState.KiroModelAssignments
-	}
 	if newState.CodexOrchestratorAssignment != nil {
 		merged.CodexOrchestratorAssignment = newState.CodexOrchestratorAssignment
 	}
@@ -502,12 +489,9 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 	return merged, nil
 }
 
-func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan, ggaInstallDeferred bool) verify.Report {
+func withPostInstallNotes(report verify.Report, resolved planner.ResolvedPlan) verify.Report {
 	report = withReadyAgentRunNote(report, resolved)
 	report = withFailedVerificationNote(report, resolved)
-	if hasComponent(resolved.OrderedComponents, model.ComponentGGA) && report.Ready && !ggaInstallDeferred {
-		report.FinalNote = report.FinalNote + "\n\nGGA is now installed globally. To enable project hooks, run in each repo:\n- gga init\n- gga install"
-	}
 	report = withGoInstallPathNote(report, resolved)
 	return report
 }
@@ -738,9 +722,9 @@ type installRuntime struct {
 }
 
 type runtimeState struct {
-	// retiredFiles and retirementNotes carry the outcome of the OpenCode
-	// telemetry plugin retirement: files removed, and non-fatal warnings for
-	// copies kept because ownership could not be proven.
+	// retiredFiles and retirementNotes carry the outcome of the retirement
+	// steps: files removed, and non-fatal warnings for copies kept because
+	// ownership could not be proven.
 	retiredFiles        []string
 	retirementNotes     []string
 	manifest            backup.Manifest
@@ -750,10 +734,6 @@ type runtimeState struct {
 	createdBackupDir         string
 	piCodeGraph              *communitytool.PiCodeGraphResult
 	compatibilityTransaction compatibilityRefreshTransaction
-	// ggaInstallDeferred indica que la instalación del binario de GGA se pospuso
-	// porque falta Homebrew en macOS; la configuración de GGA sí se aplicó.
-	ggaInstallDeferred bool
-
 	// engramVersionResolved, engramVersion, and engramVersionErr cache the
 	// single `engram version` invocation performed by componentApplyStep.Run
 	// for ComponentEngram (Decision 1 gate), so the post-apply health check
@@ -762,20 +742,6 @@ type runtimeState struct {
 	engramVersionResolved bool
 	engramVersion         string
 	engramVersionErr      error
-}
-
-func (s *runtimeState) recordGGAInstallDeferred() {
-	if s != nil {
-		s.ggaInstallDeferred = true
-	}
-}
-
-// ggaManualActions devuelve las acciones de cierre que deben los pasos de GGA.
-func (s *runtimeState) ggaManualActions() []string {
-	if s == nil || !s.ggaInstallDeferred {
-		return nil
-	}
-	return []string{GGAHomebrewDeferredAction}
 }
 
 func (s *runtimeState) cleanupRollbackSnapshot() {
@@ -894,17 +860,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 		apply = append(apply, piBackgroundProjectionStep{id: "pi:background-projection", plan: r.piBackgroundProjection})
 	}
 
-	// Before installing components, ensure modular agents have their system prompt hub.
-	// This ensures that SDD or Engram can inject their modules even if Persona is skipped.
-	for _, agent := range r.resolved.Agents {
-		if agent == model.AgentKimi {
-			// El hub se crea en la misma raíz donde inyectan los componentes: con el
-			// ámbito workspace es el proyecto, no la carpeta de usuario.
-			rootDir := ResolveAgentConfigDir(r.scope, r.homeDir, r.workspaceDir)
-			apply = append(apply, kimiSystemPromptHubStep{id: "agent:kimi-prompt-hub", homeDir: rootDir})
-		}
-	}
-
 	for _, agent := range r.resolved.Agents {
 		apply = append(apply, agentInstallStep{
 			id:       "agent:" + string(agent),
@@ -957,7 +912,7 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 	for _, tool := range r.selection.CommunityTools {
 		apply = append(apply, communityToolInstallStep{id: "community-tool:" + string(tool), tool: tool, workspaceDir: r.workspaceDir, homeDir: r.homeDir, state: r.state})
 	}
-	// En workspace, OpenCode, Kilo y Gemini solo cargan el fichero de instrucciones
+	// En workspace, OpenCode y Gemini solo cargan el fichero de instrucciones
 	// de Axiom si está registrado en su configuración de proyecto (instructions o
 	// context.fileName).
 	if r.scope == ScopeWorkspace && registersWorkspaceInstructions(r.resolved.Agents) {
@@ -983,10 +938,6 @@ func (r *installRuntime) stagePlan() pipeline.StagePlan {
 			stepID = "community-tool:pi-codegraph-deselect"
 		}
 		apply = append(apply, piCodeGraphReconcileStep{id: stepID, homeDir: r.homeDir, workspaceDir: r.workspaceDir, selected: selected, state: r.state})
-	}
-	// Retire last so a failing earlier step never leaves the plugin half-removed.
-	if telemetryDir := openCodeGlobalConfigDir(r.homeDir, r.workspaceDir, r.scope, r.resolved.Agents); telemetryDir != "" {
-		apply = append(apply, openCodeTelemetryRetirementStep{id: "opencode:retire-telemetry-plugin", configDir: telemetryDir, state: r.state})
 	}
 	if legacy := legacyPromptAdapters(resolveAdaptersScoped(r.scope, r.workspaceDir, r.resolved.Agents)); len(legacy) > 0 {
 		apply = append(apply, legacyPromptRetirementStep{
@@ -1103,14 +1054,12 @@ func (s agentRoutingGuidanceStep) recordChanged(result agentguidance.Result) {
 // frente a `opencode.json` global): la limpieza debe actuar sobre ese mismo.
 func stripLegacyTriggerRules(targetDir string, adapter agents.Adapter, effectiveSettingsPath string) (agentguidance.Result, error) {
 	switch {
-	case adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode:
+	case adapter.Agent() == model.AgentOpenCode:
 		settingsPath := adapter.SettingsPath(targetDir)
 		if strings.TrimSpace(effectiveSettingsPath) != "" {
 			settingsPath = effectiveSettingsPath
 		}
 		return stripLegacyTriggerRulesFromOrchestrator(settingsPath)
-	case adapter.SystemPromptStrategy() == model.StrategyJinjaModules:
-		return removeLegacyTriggerRulesModule(filepath.Join(adapter.GlobalConfigDir(targetDir), legacyTriggerRulesSection+".md"))
 	default:
 		return stripLegacyTriggerRulesFromPrompt(adapter.SystemPromptFile(targetDir))
 	}
@@ -1139,23 +1088,6 @@ func stripLegacyTriggerRulesFromPrompt(promptPath string) (agentguidance.Result,
 		return agentguidance.Result{}, err
 	}
 	return agentguidance.Result{Changed: writeResult.Changed, Files: []string{promptPath}}, nil
-}
-
-// removeLegacyTriggerRulesModule deletes the standalone include module used by
-// Jinja adapters. Their router template includes it with "ignore missing", so
-// deleting the file is exactly the section removal for that strategy.
-func removeLegacyTriggerRulesModule(modulePath string) (agentguidance.Result, error) {
-	if strings.TrimSpace(modulePath) == "" {
-		return agentguidance.Result{}, nil
-	}
-
-	if err := os.Remove(modulePath); err != nil {
-		if os.IsNotExist(err) {
-			return agentguidance.Result{}, nil
-		}
-		return agentguidance.Result{}, fmt.Errorf("remove legacy %q module %q: %w", legacyTriggerRulesSection, modulePath, err)
-	}
-	return agentguidance.Result{Changed: true, Files: []string{modulePath}}, nil
 }
 
 // stripLegacyTriggerRulesFromOrchestrator removes the section from the managed
@@ -1464,35 +1396,6 @@ func openCodeGlobalConfigDir(home, workspace string, scope InstallScope, agentID
 	return adapter.GlobalConfigDir(componentInjectionDirScoped(home, workspace, scope, adapter))
 }
 
-// openCodeTelemetryRetirementStep removes the OpenCode telemetry plugin that
-// earlier releases installed. Axiom no longer installs it: it shelled out to a
-// `gentle-ai` binary, so an upstream `gentle-ai` on PATH would have received
-// runtime telemetry through it. Retirement is best effort and never fails the
-// run, and it has no rollback because restoring the plugin would reinstall the
-// unwanted behaviour. A copy that is edited or whose ownership cannot be proven
-// is kept and reported as a warning for the user to act on.
-type openCodeTelemetryRetirementStep struct {
-	state     *runtimeState
-	id        string
-	configDir string
-}
-
-func (s openCodeTelemetryRetirementStep) ID() string { return s.id }
-
-func (s openCodeTelemetryRetirementStep) Run() error {
-	removed, err := telemetryruntime.RemoveManaged(s.configDir)
-	if s.state == nil {
-		return nil
-	}
-	s.state.retiredFiles = append(s.state.retiredFiles, removed...)
-	if err != nil {
-		s.state.retirementNotes = append(s.state.retirementNotes, fmt.Sprintf(
-			"The retired OpenCode telemetry plugin was kept (%v). It may still call a 'gentle-ai' binary; review or delete %s manually.",
-			err, filepath.Join(s.configDir, "plugins", "telemetry-runtime.ts")))
-	}
-	return nil
-}
-
 type openCodePluginInstallStep struct {
 	id      string
 	plugin  model.OpenCodeCommunityPluginID
@@ -1544,19 +1447,6 @@ func (s agentInstallStep) Run() error {
 	}
 
 	return runCommandSequenceWithProgress(commands, s.progress, s.id)
-}
-
-type kimiSystemPromptHubStep struct {
-	id      string
-	homeDir string
-}
-
-func (s kimiSystemPromptHubStep) ID() string {
-	return s.id
-}
-
-func (s kimiSystemPromptHubStep) Run() error {
-	return kimi.NewAdapter().BootstrapTemplate(s.homeDir)
 }
 
 type componentApplyStep struct {
@@ -1893,15 +1783,11 @@ func (s componentApplyStep) Run() error {
 				Version:                     engramVersion,
 			}
 			var err error
-			if adapter.Agent() == model.AgentOpenClaw {
-				_, err = engram.InjectWithPromptDir(s.homeDir, componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter), adapter)
+			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
+			if s.scope == ScopeWorkspace {
+				_, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
 			} else {
-				targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-				if s.scope == ScopeWorkspace {
-					_, err = engram.InjectWorkspaceWithOptions(targetDir, adapter, engramOpts)
-				} else {
-					_, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
-				}
+				_, err = engram.InjectWithOptions(targetDir, adapter, engramOpts)
 			}
 			if err != nil {
 				return fmt.Errorf("inject engram for %q: %w", adapter.Agent(), err)
@@ -1953,7 +1839,6 @@ func (s componentApplyStep) Run() error {
 				OpenCodeSettingsPath:        effectiveOpenCodeSettingsPath(s.homeDir, s.workspaceDir, s.scope, adapter),
 				ClaudeModelAssignments:      s.selection.ClaudeModelAssignments,
 				ClaudePhaseAssignments:      s.selection.ClaudePhaseAssignments,
-				KiroModelAssignments:        s.selection.KiroModelAssignments,
 				CopilotPhaseAssignments:     s.selection.CopilotPhaseAssignments,
 				CodexModelAssignments:       s.selection.CodexModelAssignments,
 				CodexCarrilModelAssignments: s.selection.CodexCarrilModelAssignments,
@@ -1992,64 +1877,6 @@ func (s componentApplyStep) Run() error {
 			if _, err := skills.Inject(targetDir, adapter, skillIDs); err != nil {
 				return fmt.Errorf("inject skills for %q: %w", adapter.Agent(), err)
 			}
-		}
-		return nil
-	case model.ComponentGGA:
-		installGGA := !ggaAvailable(s.profile)
-		if installGGA && s.profile.PackageManager == "brew" && !homebrewAvailable() {
-			// Sin Homebrew el binario de GGA es un prerrequisito opcional que falta, no
-			// una instalación fallida: se anota una acción manual y se sigue aplicando
-			// la configuración de GGA. Un Homebrew presente que falle sí falla el paso.
-			s.state.recordGGAInstallDeferred()
-			installGGA = false
-		}
-		if installGGA {
-			// GGA not found on any known PATH — install it.
-			if s.profile.OS == "windows" {
-				if err := cleanupGGAInstallDir(); err != nil {
-					return err
-				}
-			}
-			commands, err := gga.InstallCommand(s.profile)
-			if err != nil {
-				return fmt.Errorf("resolve install command for component %q: %w", s.component, err)
-			}
-			installErr := runCommandSequence(withResolvedBrewCommand(commands))
-			if installErr != nil {
-				if ggaAvailable(s.profile) {
-					// The GGA install script uses `set -e` and `read -p` for
-					// the "already installed" confirmation. Without a TTY
-					// (common in automated/re-run scenarios), `read` fails
-					// with exit code 1 and `set -e` kills the script before
-					// it can exit 0. If GGA is actually available after the
-					// script ran, the install succeeded functionally — treat
-					// as success but warn the user.
-					fmt.Fprintf(os.Stderr, "WARNING: gga install command reported an error but gga is available — continuing. Error was: %v\n", installErr)
-				} else {
-					return installErr
-				}
-			}
-		}
-		if err := gga.EnsureRuntimeAssets(s.homeDir); err != nil {
-			return fmt.Errorf("ensure gga runtime assets: %w", err)
-		}
-		if runtime.GOOS == "windows" {
-			if err := gga.EnsurePowerShellShim(s.homeDir); err != nil {
-				return fmt.Errorf("ensure gga powershell shim: %w", err)
-			}
-			if err := gga.EnsureCommandShim(s.homeDir); err != nil {
-				return fmt.Errorf("ensure gga command shim: %w", err)
-			}
-			// Add GGA bin dir to the user PATH persistently on Windows.
-			// GGA's install.sh drops the binary into ~/bin which is not on PATH by default.
-			ggaBinDir := filepath.Join(s.homeDir, "bin")
-			if err := addUserPath(ggaBinDir); err != nil {
-				// Non-fatal: warn but continue — GGA was installed successfully.
-				fmt.Fprintf(os.Stderr, "WARNING: could not add %s to PATH: %v\n", ggaBinDir, err)
-			}
-		}
-		if _, err := gga.Inject(s.homeDir, s.agents); err != nil {
-			return fmt.Errorf("inject gga config: %w", err)
 		}
 		return nil
 	case model.ComponentTheme:
@@ -2167,7 +1994,6 @@ func executeTUIInstallWithBackground(homeDir string, selection model.Selection, 
 		result.ManualActions = append(result.ManualActions, runtime.state.piCodeGraph.ManualActions...)
 	}
 	result.ManualActions = append(result.ManualActions, omittedWorkspaceAgentNotices(omittedAgents)...)
-	result.ManualActions = append(result.ManualActions, runtime.state.ggaManualActions()...)
 	result.ManualActions = append(result.ManualActions, runtime.state.retirementNotes...)
 	result.ManualActions = append(result.ManualActions, engramSetupSkippedNote(scope, resolved.OrderedComponents, resolved.Agents)...)
 	result.ManualActions = append(result.ManualActions, optInFootprintNotes(scope, homeDir, resolved.OrderedComponents, resolved.Agents, selection)...)
@@ -2200,48 +2026,6 @@ func ResolveInstallProfile(detection system.DetectionResult) system.PlatformProf
 		PackageManager: "brew",
 		Supported:      true,
 	}
-}
-
-// ggaAvailable reports whether the gga binary is reachable. gga is often
-// installed to ~/.local/bin (the default for install.sh on Linux and macOS)
-// or ~/bin (the default for install.sh on Windows), which may not be on PATH.
-// On macOS with Homebrew, gga may be in /opt/homebrew/bin or /usr/local/bin.
-// We check the filesystem directly to avoid spawning a subprocess and to work
-// regardless of whether the install directory has been added to PATH.
-func ggaAvailable(profile system.PlatformProfile) bool {
-	// Allow test override.
-	if ggaAvailableCheck != nil {
-		return ggaAvailableCheck(profile)
-	}
-	if _, err := cmdLookPath("gga"); err == nil {
-		return true
-	}
-	homeDir, err := osUserHomeDir()
-	if err != nil {
-		return false
-	}
-	if _, err := osStat(filepath.Join(homeDir, ".local", "bin", "gga")); err == nil {
-		return true
-	}
-	// Check well-known Homebrew prefixes for macOS (arm64 and x86).
-	// gga may be installed via brew but not yet in the shell PATH
-	// (e.g. new terminal session, Rosetta environment mismatch).
-	if profile.OS == "darwin" || profile.PackageManager == "brew" {
-		for _, brewBin := range []string{
-			"/opt/homebrew/bin/gga",
-			"/usr/local/bin/gga",
-		} {
-			if _, err := osStat(brewBin); err == nil {
-				return true
-			}
-		}
-	}
-	if profile.OS == "windows" {
-		if _, err := osStat(filepath.Join(homeDir, "bin", "gga")); err == nil {
-			return true
-		}
-	}
-	return false
 }
 
 func isExecutableFile(path string) bool {
@@ -2282,21 +2066,6 @@ func resolveEngramInstalledPath(profile system.PlatformProfile) (string, bool) {
 		return standardHomebrewExecutable("engram")
 	}
 	return "", false
-}
-
-// GGAHomebrewDeferredAction es la acción manual que se registra cuando se
-// pospone la instalación de GGA por falta de Homebrew. Los renderizadores de
-// cierre la usan para no afirmar que GGA quedó instalado.
-const GGAHomebrewDeferredAction = "gga was not installed because Homebrew is not available. Install Homebrew (https://brew.sh), then run `axiom install --component gga`."
-
-// homebrewAvailable indica si brew está en el PATH o en un prefijo estándar de
-// Homebrew, las mismas ubicaciones que usa resolveBrewCommand.
-func homebrewAvailable() bool {
-	if _, err := cmdLookPath("brew"); err == nil {
-		return true
-	}
-	_, found := standardHomebrewExecutable("brew")
-	return found
 }
 
 // resolveBrewCommand avoids environment-sensitive shell profile probing. The
@@ -2480,7 +2249,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 		if component == model.ComponentPersona {
 			plan := persona.ResourcePlanFor(selection.Persona)
 			for _, adapter := range adapters {
-				if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+				if adapter.Agent() == model.AgentOpenCode {
 					// Persona can merge or clean a managed agent in settings during
 					// install. This is backup-only: ComponentPersona verification
 					// does not promise a settings write for every persona path.
@@ -2514,7 +2283,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 	for _, path := range routingGuidancePaths(homeDir, workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
 	}
-	// El registro de instrucciones de OpenCode y Kilo reescribe su configuración de
+	// El registro de instrucciones de OpenCode reescribe su configuración de
 	// proyecto aunque ningún componente seleccionado la toque.
 	for _, path := range workspaceInstructionsSettingsPaths(workspaceDir, scope, adapters) {
 		paths[path] = struct{}{}
@@ -2698,15 +2467,8 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					paths = append(paths, adapter.MCPConfigPath(targetDir, "engram"))
 				}
 			case model.StrategyMergeIntoSettings:
-				// For OpenClaw, SettingsPath(targetDir) would yield <workspace>/.openclaw/openclaw.json,
-				// but engram injection writes to the canonical ~/.openclaw/openclaw.json (homeDir).
-				// For other merge-into-settings agents (like OpenCode in workspace scope), injection
-				// writes to targetDir.
-				if adapter.Agent() == model.AgentOpenClaw {
-					if p := adapter.SettingsPath(homeDir); p != "" {
-						paths = append(paths, p)
-					}
-				} else if p := adapter.SettingsPath(targetDir); p != "" {
+				// Merge-into-settings agents (like OpenCode in workspace scope) write to targetDir.
+				if p := adapter.SettingsPath(targetDir); p != "" {
 					paths = append(paths, p)
 				}
 			case model.StrategyMCPConfigFile:
@@ -2745,20 +2507,16 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 		case model.ComponentSDD:
-			// Jinja modular hubs (e.g. Kimi KIMI.md) are appended once below so SDD+Persona
-			// do not duplicate the same system prompt path. OpenCode-compatible adapters
+			// OpenCode-compatible adapters
 			// write the SDD orchestrator to their settings file instead (#3975).
 			if adapter.SupportsSystemPrompt() &&
-				!sdd.AgentReceivesManagedOpenCodePlugins(adapter.Agent()) &&
-				adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
+				!sdd.AgentReceivesManagedOpenCodePlugins(adapter.Agent()) {
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsSlashCommands() {
 				paths = append(paths, sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(targetDir))...)
 			}
-			// Kilo solo declara sus ficheros SDD en workspace: en global esa lista nunca
-			// los incluyó y ampliarla cambiaría lo que se verifica y respalda hoy.
-			if adapter.Agent() == model.AgentOpenCode || (adapter.Agent() == model.AgentKilocode && scope == ScopeWorkspace) {
+			if adapter.Agent() == model.AgentOpenCode {
 				if p := effectiveOpenCodeSettingsPath(homeDir, workspaceDir, scope, adapter); p != "" {
 					paths = append(paths, p)
 					if adapter.Agent() == model.AgentOpenCode {
@@ -2816,12 +2574,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				// <project>/.codex/hooks.json for a workspace one.
 				paths = append(paths, filepath.Join(adapter.GlobalConfigDir(targetDir), "hooks.json"))
 			}
-			// SDD also writes the standalone Kiro skill-registry hook outside
-			// the skills directory; it shares the component's backup and
-			// verification contract. targetDir: Kiro supports workspace scope.
-			if p := sdd.SkillRegistryHookPath(adapter, targetDir); p != "" {
-				paths = append(paths, p)
-			}
 		case model.ComponentSkills:
 			for _, skillID := range selectedSkillIDs(selection) {
 				if skills.IsSDDSkill(skillID) {
@@ -2876,11 +2628,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, piPersonaConfigPaths(homeDir, workspaceDir, scope)...)
 				break
 			}
-			if adapter.Agent() == model.AgentOpenClaw {
-				paths = append(paths, filepath.Join(targetDir, "SOUL.md"))
-				break
-			}
-			if adapter.SupportsSystemPrompt() && adapter.SystemPromptStrategy() != model.StrategyJinjaModules {
+			if adapter.SupportsSystemPrompt() {
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsOutputStyles() {
@@ -2899,12 +2647,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					paths = append(paths, p)
 				}
 			}
-		case model.ComponentGGA:
-			if scope == ScopeWorkspace {
-				break
-			}
-			paths = append(paths, gga.ConfigPath(homeDir))
-			paths = append(paths, gga.AgentsTemplatePath(homeDir))
 		case model.ComponentTheme:
 			// No managed path: legacy theme component is inert.
 		case model.ComponentClaudeTheme:
@@ -2916,18 +2658,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 					filepath.Join(homeDir, ".config", "opencode", "tui.json"),
 				)
 			}
-		}
-	}
-
-	// Always ensure the main system prompt file is included for verification if the agent
-	// supports modular system prompts (like Kimi), even if no specific component
-	// (like Persona) was selected. This prevents false negatives when the skeleton
-	// is bootstrapped but not explicitly owned by any other component path list.
-	for _, adapter := range adapters {
-		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-			// El hub se crea en la raíz del ámbito (kimiSystemPromptHubStep), no
-			// siempre en HOME.
-			paths = append(paths, adapter.SystemPromptFile(componentInjectionDirScoped(homeDir, workspaceDir, scope, adapter)))
 		}
 	}
 
@@ -3001,7 +2731,7 @@ func routingGuidanceOptions(homeDir, workspaceDir string, scope InstallScope, ad
 	if scope == ScopeWorkspace && boundToWorkspace(adapter) {
 		options.Adapter = adapter
 	}
-	// OpenCode y Kilo guardan la guía en su configuración, que en el proyecto es
+	// OpenCode guarda la guía en su configuración, que en el proyecto es
 	// del equipo y está versionada: se conservan sus comentarios.
 	if scope == ScopeWorkspace && agentguidance.DeliversThroughOrchestratorPrompt(adapter.Agent()) {
 		options.Adapter = adapter
@@ -3040,7 +2770,7 @@ func routingGuidanceDir(homeDir, workspaceDir string, scope InstallScope, adapte
 // taking the install scope into account. When scope is ScopeWorkspace, agent-scoped
 // components write to workspaceDir instead of the selected agent's global config root.
 //
-// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae, Windsurf,
+// Los agentes que no admiten el ámbito workspace (VS Code Copilot, Trae,
 // Antigravity) no llegan aquí: install, sync y la TUI los omiten enteros al
 // construir el plan (splitAgentsForScope). Si uno se colara, el resultado queda
 // confinado al proyecto; nunca vuelve a ser la carpeta de usuario.
@@ -3284,8 +3014,8 @@ func isLegacyOpenCodeBackgroundAgentsPlugin(path string) bool {
 	if filepath.Base(path) != "background-agents.ts" || filepath.Base(pluginsDir) != "plugins" {
 		return false
 	}
-	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode o .kilo.
-	if base := filepath.Base(opencodeDir); base == ".opencode" || base == ".kilo" {
+	// En un proyecto (ámbito workspace) la carpeta de recursos es .opencode.
+	if base := filepath.Base(opencodeDir); base == ".opencode" {
 		return true
 	}
 	if filepath.Base(opencodeDir) != "opencode" {
@@ -3515,19 +3245,6 @@ func claudePhaseAssignmentsToState(m map[string]model.ClaudePhaseAssignment) map
 			continue
 		}
 		out[k] = state.ClaudePhaseAssignmentState{Model: string(v.Model), Effort: string(v.Effort)}
-	}
-	return out
-}
-
-// kiroAliasesToStrings converts a typed KiroModelAlias map to plain strings
-// for JSON serialisation in state.json.
-func kiroAliasesToStrings(m map[string]model.KiroModelAlias) map[string]string {
-	if len(m) == 0 {
-		return nil
-	}
-	out := make(map[string]string, len(m))
-	for k, v := range m {
-		out[k] = string(v)
 	}
 	return out
 }

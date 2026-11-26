@@ -1,16 +1,15 @@
-// Detalle de incremento: cabecera, pasos de fase, «Siguiente paso» y pestañas
-// Artefactos · Roles y barrera · Handoff, sincronizadas con la ruta por hash.
-// Roles y Handoff viven en detalle-roles.js y detalle-handoff.js.
+// Detalle de incremento: cabecera (con la orden de agente copiable), pasos de fase
+// y pestañas Artefactos · Roles y barrera · Handoff, sincronizadas con la ruta por
+// hash. Roles y Handoff viven en detalle-roles.js y detalle-handoff.js.
 
 import { api, escapeHtml } from '../core/api.js';
-import { $, $all, button, reminder, renderConsole, setBusy, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
+import { $, $all, button, commandChip, stateEmpty, stateError, stateLoading, toast } from '../core/components.js';
 import { icon } from '../core/icons.js';
-import { continueIncrement, deriveNextStep, detailSteps, formatDate, isArchived, typeChip } from '../core/increment.js';
+import { detailSteps, formatDate, isArchived, nextCommand, progressBar, typeChip } from '../core/increment.js';
 import { firstParagraph, renderMarkdown } from '../core/markdown.js';
 import { hrefFor } from '../core/router.js';
 import { barrierSummary, renderRoles } from './detalle-roles.js';
 import { initHandoff, renderHandoff } from './detalle-handoff.js';
-import { loadIncrements } from './incrementos.js';
 
 // Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
 const ctx = { change: null, failed: null, detail: null, tab: 'artefactos', token: 0, artifact: null, raw: false };
@@ -29,7 +28,8 @@ function renderHeader(detail) {
     isArchived(s) ? `<span class="badge badge-neutral">${icon('archive', 13)}Archivado</span>` : '',
     `<span class="badge badge-mono">Fase: ${escapeHtml(s.phase)}</span>`,
     s.tasks_total > 0 ? `<span class="badge badge-neutral">Tareas: ${s.tasks_completed}/${s.tasks_total} (${s.progress_pct}%)</span>` : '',
-    date ? `<time class="badge badge-neutral" datetime="${escapeHtml(s.date)}">${escapeHtml(date)}</time>` : ''
+    date ? `<time class="badge badge-neutral" datetime="${escapeHtml(s.date)}">${escapeHtml(date)}</time>` : '',
+    commandChip(nextCommand(s))
   ].filter(Boolean).join('');
   $('#inc-title').textContent = s.name;
   const desc = firstParagraph(detail.proposal);
@@ -38,40 +38,36 @@ function renderHeader(detail) {
   descEl.textContent = desc;
 }
 
+const ROLE_TONE = { ok: 'text-ok' };
+
+// stepRoles: en multirol, una fila por rol dentro del paso Apply y el enlace a la
+// pestaña «Roles y barrera»; con la barrera cerrada, también su primer bloqueo.
+function stepRoles(st, change) {
+  if (!st.roles) return '';
+  const rows = st.roles.map(r => {
+    const tone = ROLE_TONE[r.status.tone] || '';
+    return `<li class="dt-step-role"><span class="dt-step-role-name" title="${escapeHtml(r.label)}">${escapeHtml(r.label)}</span><span class="dt-step-role-state mono${tone ? ` ${tone}` : ''}">${escapeHtml(r.status.text)}</span>${progressBar(r.pct, `Tareas del rol ${r.label}`)}</li>`;
+  }).join('');
+  const blocker = st.blocker ? `<span class="dt-step-role-blocker" title="${escapeHtml(st.blocker)}">${escapeHtml(st.blocker)}</span>` : '';
+  const link = `<a class="dt-step-role-link" href="${hrefFor('incremento', { change, tab: 'roles' })}">${icon(st.waiting ? 'clock' : 'users', 12)}${st.waiting ? 'Barrera cerrada · ver roles' : 'Ver roles'}</a>`;
+  return `<ul class="dt-step-roles" aria-label="Avance por rol">${rows}</ul>${blocker}${link}`;
+}
+
 function renderStepper(detail) {
   const steps = detailSteps(detail);
+  const change = detail.summary.name;
   const stateText = { done: 'completada', current: 'en curso', todo: 'pendiente' };
   $('#inc-stepper').innerHTML = `<ol class="dt-steps" aria-label="Fases SDD">${steps.map(st => {
     const dot = st.state === 'done' ? icon('check', 12) : st.state === 'current' ? '<span class="dt-step-core"></span>' : '';
     const sub = st.detail ? `${escapeHtml(st.detail)}${st.pct != null ? ` · ${st.pct}%` : ''}` : escapeHtml(st.file);
-    return `<li class="dt-step is-${st.state}"${st.state === 'current' ? ' aria-current="step"' : ''}>
+    const waiting = st.waiting ? ', barrera cerrada' : '';
+    return `<li class="dt-step is-${st.state}${st.waiting ? ' is-waiting' : ''}"${st.state === 'current' ? ' aria-current="step"' : ''}>
       <span class="dt-step-track"><span class="dt-step-dot">${dot}</span><span class="dt-step-bar"></span></span>
-      <span class="dt-step-label">${escapeHtml(st.label)}<span class="sr-only"> — ${stateText[st.state]}</span></span>
+      <span class="dt-step-label">${escapeHtml(st.label)}<span class="sr-only"> — ${stateText[st.state]}${waiting}</span></span>
       <span class="dt-step-sub mono">${sub}</span>
+      ${stepRoles(st, change)}
     </li>`;
   }).join('')}</ol>`;
-}
-
-// ---- Siguiente paso (D5) -------------------------------------------------------------------
-
-function renderNext(detail) {
-  const next = deriveNextStep(detail);
-  const action = next.canContinue
-    ? `<div class="dt-next-actions">${button({ label: 'Continuar con Axiom', iconName: 'play', variant: 'primary', attrs: 'data-action="continue" title="Ejecuta la orden de Axiom que calcula la siguiente instrucción SDD"' })}<span class="field-hint">Axiom calcula la siguiente instrucción SDD y la muestra aquí abajo. No ejecuta fases de agente.</span></div>`
-    : '';
-  const rem = next.reminder ? reminder(next.reminder) : '';
-  $('#inc-next-body').innerHTML = `<div class="dt-next-main"><div class="dt-next-text"><p class="dt-next-title">${escapeHtml(next.title)}</p><p class="muted">${escapeHtml(next.text)}</p></div>${action}</div>${rem}`;
-}
-
-async function runContinue(btn) {
-  const change = ctx.change;
-  if (!change) return;
-  const restore = setBusy(btn, 'Ejecutando…');
-  const result = await continueIncrement(change);
-  renderConsole($('#inc-console'), { title: 'Continuar con Axiom', state: result.ok ? 'ok' : 'error', text: result.text });
-  restore();
-  await loadIncrements();
-  if (ctx.change === change) await reloadDetail();
 }
 
 // ---- Pestañas --------------------------------------------------------------------------------------
@@ -194,7 +190,6 @@ function paintDetail() {
   const detail = ctx.detail;
   renderHeader(detail);
   renderStepper(detail);
-  renderNext(detail);
   renderTabPill(detail);
   renderArtifacts();
 }
@@ -216,7 +211,7 @@ export function refreshDetail() {
   return reloadDetail();
 }
 
-// reloadDetail vuelve a pedir el detalle sin vaciar la pantalla (tras Continuar, Migrar o un handoff).
+// reloadDetail vuelve a pedir el detalle sin vaciar la pantalla (tras Migrar o un handoff).
 async function reloadDetail() {
   const change = ctx.change;
   if (!change) return;
@@ -236,14 +231,13 @@ function showLoading(change) {
   $('#inc-title').textContent = change;
   $('#inc-meta').innerHTML = '';
   $('#inc-desc').hidden = true;
-  $('#inc-stepper').innerHTML = '';
-  $('#inc-next-body').innerHTML = stateLoading('Cargando el incremento…');
+  $('#inc-stepper').innerHTML = stateLoading('Cargando el incremento…');
   $('#inc-tab-roles-pill').hidden = true;
   $('#inc-panel-artefactos').innerHTML = stateLoading('Cargando artefactos…');
 }
 
 function showLoadError(err) {
-  $('#inc-next-body').innerHTML = '';
+  $('#inc-stepper').innerHTML = '';
   $('#inc-panel-artefactos').innerHTML = `${stateError(err.message, 'No se pudo obtener el incremento')}<p class="ix-more">${button({ label: 'Reintentar', iconName: 'refresh', size: 'sm', attrs: 'data-action="retry"' })}</p>`;
 }
 
@@ -255,8 +249,7 @@ export async function enterDetail(route) {
 
   if (ctx.change !== change || !ctx.detail) {
     if (ctx.change !== change) {
-      // La consola, la selección de artefacto y el formato solo se reinician al cambiar de incremento.
-      $('#inc-console').hidden = true;
+      // La selección de artefacto y el formato solo se reinician al cambiar de incremento.
       ctx.artifact = null;
       ctx.raw = false;
     }
@@ -281,11 +274,6 @@ export async function enterDetail(route) {
 }
 
 export function initDetail() {
-  $('#inc-next-body').addEventListener('click', (event) => {
-    const btn = event.target.closest('[data-action="continue"]');
-    if (btn) runContinue(btn);
-  });
-
   $('#inc-panel-artefactos').addEventListener('click', (event) => {
     const art = event.target.closest('[data-artifact]');
     const fmt = event.target.closest('[data-format]');

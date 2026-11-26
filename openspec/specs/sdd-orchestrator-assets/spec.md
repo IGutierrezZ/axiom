@@ -128,10 +128,11 @@ Los activos del orquestador SDD que no son de Claude y lanzan fases de entrega D
 ### Requirement: Platform-Native Solo Inline Semantics Preservation
 
 For non-Claude solo-inline and platform-native orchestrator assets, the system MUST preserve platform-accurate inline execution wording and MUST NOT add inaccurate subagent or OpenCode persistence claims.
+(Previously: the first scenario also covered the Windsurf asset.)
 
-#### Scenario: Windsurf and Antigravity keep inline-accurate wording
+#### Scenario: Antigravity keeps inline-accurate wording
 
-- GIVEN Windsurf and Antigravity orchestrator assets are reviewed
+- GIVEN the Antigravity orchestrator asset is reviewed
 - WHEN delegation and execution wording is validated
 - THEN wording remains accurate to inline/platform-native execution
 - AND wording does not claim persisted OpenCode plugin-backed background delegation
@@ -143,14 +144,12 @@ For non-Claude solo-inline and platform-native orchestrator assets, the system M
 - THEN wording stays platform-accurate
 - AND wording does not introduce inaccurate subagent or OpenCode persistence guarantees
 
----
-
 ### Requirement: chained-pr Skill Binding in Chain Strategy Guidance
 
-Los 12 activos del orquestador SDD DEBEN enlazar la skill `chained-pr` en su guía de estrategia de cadena. Cuando la persona pida PRs encadenadas o apiladas, el orquestador DEBE resolver la skill `chained-pr` por su nombre de registro (no por una ruta del sistema de ficheros fija) mediante su Sub-Agent Launch Pattern, y DEBE inyectar la ruta resuelta en los prompts de las fases `sdd-tasks` y `sdd-apply` bajo `## Skills to load before work`. Esas fases DEBEN leer y seguir la skill ANTES de planificar o crear cualquier PR. Con la entrega `single-pr` por defecto la skill NO se resuelve ni se inyecta, y la propia skill `chained-pr` se activa solo cuando la persona pide encadenar, apilar o rebanar, o con `delivery_strategy: chained`, sin ningún umbral numérico.
+Los activos del orquestador SDD DEBEN enlazar la skill `chained-pr` en su guía de estrategia de cadena. Cuando la persona pida PRs encadenadas o apiladas, el orquestador DEBE resolver la skill `chained-pr` por su nombre de registro (no por una ruta del sistema de ficheros fija) mediante su Sub-Agent Launch Pattern, y DEBE inyectar la ruta resuelta en los prompts de las fases `sdd-tasks` y `sdd-apply` bajo `## Skills to load before work`. Esas fases DEBEN leer y seguir la skill ANTES de planificar o crear cualquier PR. Con la entrega `single-pr` por defecto la skill NO se resuelve ni se inyecta, y la propia skill `chained-pr` se activa solo cuando la persona pide encadenar, apilar o rebanar, o con `delivery_strategy: chained`, sin ningún umbral numérico.
 
 El enlace DEBE referenciar la skill por el nombre de registro `chained-pr` (frontmatter `chained-pr`). No se permite ninguna ruta fija a un fichero `SKILL.md` como referencia del enlace.
-(Previously: la skill se resolvía cuando la planificación de entrega producía PRs encadenadas, y la skill se activaba por un presupuesto de revisión numérico)
+(Previously: decía «Los 12 activos» y el escenario enumeraba también las plantillas de hermes, kimi, kiro y windsurf, retiradas por C-08-d.)
 
 #### Scenario: Orchestrator resolves chained-pr skill by registry name on chained delivery
 
@@ -161,9 +160,9 @@ El enlace DEBE referenciar la skill por el nombre de registro `chained-pr` (fron
 - **Y** la ruta resuelta se inyecta en el prompt de `sdd-apply` bajo `## Skills to load before work`
 - **Y** no se usa ninguna ruta fija como referencia del enlace
 
-#### Scenario: Binding is present in all 12 orchestrator templates
+#### Scenario: Binding is present in all orchestrator templates
 
-- **DADO** las 12 plantillas del orquestador SDD (antigravity, claude, codex, cursor, gemini, generic, hermes, kimi, kiro, opencode, qwen, windsurf)
+- **DADO** las plantillas del orquestador SDD (antigravity, claude, codex, cursor, gemini, generic, opencode, qwen)
 - **CUANDO** se inspecciona la sección de estrategia de cadena de cada una
 - **ENTONCES** cada plantilla contiene una instrucción de enlace que referencia la skill `chained-pr` por nombre de registro
 - **Y** la instrucción está dentro de la sección de estrategia de cadena o inmediatamente junto a ella
@@ -188,8 +187,6 @@ El enlace DEBE referenciar la skill por el nombre de registro `chained-pr` (fron
 - **CUANDO** se inspeccionan (pin de texto)
 - **ENTONCES** la activación se describe como una petición de la persona de encadenar, apilar o rebanar
 - **Y** no contienen ningún número de líneas como umbral ni `400-line budget risk`
-
----
 
 ### Requirement: Inline Chain Strategy Summary Retained
 
@@ -250,35 +247,27 @@ La plantilla `cursor/sdd-orchestrator.md` DEBE incluir una sección `### Chain S
 
 ### Requirement: Platform-Accurate Binding Wording for Solo-Inline and Platform-Native Hosts
 
-For solo-inline and platform-native orchestrator hosts (windsurf, antigravity, kimi, kiro), the skill-binding instruction MUST phrase "inject under `## Skills to load before work`" in a way that maps to each host's actual phase-context mechanism. The binding MUST NOT reintroduce OpenCode-style persisted-delegation claims that the existing spec forbids for these hosts.
+For solo-inline and platform-native orchestrator hosts (antigravity), the skill-binding instruction MUST phrase "inject under `## Skills to load before work`" in a way that maps to each host's actual phase-context mechanism. The binding MUST NOT reintroduce OpenCode-style persisted-delegation claims that the existing spec forbids for these hosts.
+(Previously: the hosts were windsurf, antigravity, kimi and kiro, with a second scenario for kimi and kiro.)
 
 #### Scenario: Solo-inline binding wording is platform-accurate
 
-- GIVEN a solo-inline orchestrator asset (windsurf or antigravity) is reviewed
+- GIVEN a solo-inline orchestrator asset (antigravity) is reviewed
 - WHEN the skill binding instruction is read
 - THEN the binding references the `chained-pr` skill by registry name
 - AND the wording maps skill injection to the host's inline or platform-native phase-context mechanism
 - AND the wording does not claim persisted OpenCode plugin-backed background delegation
 
-#### Scenario: Platform-native non-Claude binding wording avoids inaccurate persistence claims
-
-- GIVEN a platform-native non-Claude orchestrator asset (kimi or kiro) is reviewed
-- WHEN the skill binding instruction is read
-- THEN the binding references the `chained-pr` skill by registry name
-- AND the wording does not introduce inaccurate subagent or OpenCode persistence guarantees
-- AND the wording stays platform-accurate per the existing solo-inline semantics requirement
-
----
-
 ### Requirement: Golden Fixture and Static Assertion Coverage for the Binding
 
 Static-validation tests and golden fixtures that cover chain strategy content MUST be updated to assert the presence of the `chained-pr` skill binding. Golden churn MUST be limited to the intended binding wording and the new Cursor chain strategy section; no unrelated content changes are permitted.
+(Previously: the scenarios counted 12 templates and 12 golden fixtures.)
 
-#### Scenario: New static assertions verify binding presence in all 12 templates
+#### Scenario: New static assertions verify binding presence in all templates
 
 - GIVEN static-validation tests run after the change is applied
 - WHEN binding assertions execute
-- THEN each of the 12 orchestrator templates has a binding assertion that passes
+- THEN each orchestrator template has a binding assertion that passes
 - AND the assertions verify the registry-name reference, not a hardcoded path
 
 #### Scenario: Cursor is added to chain-strategy parity static assertions
@@ -290,7 +279,7 @@ Static-validation tests and golden fixtures that cover chain strategy content MU
 
 #### Scenario: Golden fixtures updated without unrelated churn
 
-- GIVEN the 12 golden fixtures that reference Chain Strategy are regenerated
+- GIVEN the golden fixtures that reference Chain Strategy are regenerated
 - WHEN the regenerated fixtures are compared with the previous versions
 - THEN the diff is limited to the binding wording and the new Cursor chain strategy section
 - AND no unrelated content is modified in the golden fixtures
@@ -300,8 +289,6 @@ Static-validation tests and golden fixtures that cover chain strategy content MU
 - GIVEN `internal/components/sdd/inject_test.go` is updated with a binding assertion
 - WHEN the test executes
 - THEN the assertion verifies that the `chained-pr` skill binding is present in generated prompts for `sdd-tasks` and `sdd-apply` when chain strategy is active
-
----
 
 ### Requirement: Claude-Native Delegation Semantics
 
@@ -390,12 +377,12 @@ Research MUST be optional before selection; no-request changes MUST skip only th
 
 ### Requirement: Optional Research Lifecycle Parity Across Catalog Agents
 
-All 12 source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render that guidance, and all 16 supported IDs MUST be covered, including OpenCode/Kilocode sharing and Pi/VS Code Copilot/OpenClaw/Trae using the generic runtime family.
-(Previously: the requirement also demanded that every rendered variant carry the canonical bounded review execution contract; that contract belonged to RDD and is retired.)
+All source orchestrator templates MUST render equivalent optional research lifecycle guidance; mappings MAY be shared. Every AgentID returned by `catalog.AllAgents()` MUST render that guidance, including Pi/VS Code Copilot/Trae using the generic runtime family.
+(Previously: «All 12 source orchestrator templates» and «all 16 supported IDs», including OpenCode/Kilocode sharing and OpenClaw in the generic family; the requirement also demanded that every rendered variant carry the canonical bounded review execution contract, which belonged to RDD and is retired.)
 
 #### Scenario: Catalog-derived parity test renders all agents
 
-- GIVEN the current catalog contains 16 supported AgentIDs
+- GIVEN the current catalog's supported AgentIDs
 - WHEN each ID is passed through the real orchestrator asset renderer
 - THEN every rendered variant contains the optional research lifecycle guidance
 - AND no rendered variant contains a `Review Execution Contract` section, its marker, `review/start(target)` or a refuter batch
@@ -403,8 +390,8 @@ All 12 source orchestrator templates MUST render equivalent optional research li
 
 ### Requirement: Read-Only Judgment Day Judges
 
-Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Kiro/Kimi/Cursor assets MUST use their equivalent read-only capability boundary.
-(Previously: the requirement covered every dedicated reviewer, Judgment Day judge, and refuter; reviewers and refuters belonged to RDD and are retired.)
+Every Judgment Day judge (`jd-judge-a`, `jd-judge-b`) MUST be structurally read-only for its adapter. OpenCode overlays MUST explicitly disable write, edit, bash, and task for these roles; Claude/Cursor assets MUST use their equivalent read-only capability boundary.
+(Previously: Kiro and Kimi assets were also listed; the requirement covered every dedicated reviewer, Judgment Day judge, and refuter, and reviewers and refuters belonged to RDD and are retired.)
 
 #### Scenario: Judge finishes
 

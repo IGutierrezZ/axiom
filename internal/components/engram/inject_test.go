@@ -16,8 +16,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/gemini"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/qwen"
@@ -33,10 +31,8 @@ func validCodexRuntime(t *testing.T) {
 	t.Helper()
 	t.Cleanup(codex.SetRuntimeVersionCommandForTest("codex-cli 0.144.0", nil))
 }
-func geminiAdapter() agents.Adapter   { return gemini.NewAdapter() }
-func hermesAdapter() agents.Adapter   { return hermes.NewAdapter() }
-func qwenAdapter() agents.Adapter     { return qwen.NewAdapter() }
-func openclawAdapter() agents.Adapter { return openclaw.NewAdapter() }
+func geminiAdapter() agents.Adapter { return gemini.NewAdapter() }
+func qwenAdapter() agents.Adapter   { return qwen.NewAdapter() }
 func antigravityAdapter() agents.Adapter {
 	return antigravity.NewAdapter()
 }
@@ -1813,27 +1809,27 @@ func assertNestedMissing(t *testing.T, root map[string]any, path ...string) {
 
 // TestEngramInjectUsesAbsolutePathWhenAvailable verifies that when engram is
 // resolvable on PATH, its absolute path is written into the MCP config file
-// for agents that use StrategyMCPConfigFile (e.g. Windsurf).
+// for agents that use StrategyMCPConfigFile (e.g. Cursor).
 func TestEngramInjectUsesAbsolutePathWhenAvailable(t *testing.T) {
 	home := t.TempDir()
 
 	absPath := "/usr/local/bin/engram"
 	mockEngramLookPath(t, absPath, "")
 
-	windsurfAdapter, err := agents.NewAdapter("windsurf")
+	mcpFileAdapter, err := agents.NewAdapter("cursor")
 	if err != nil {
-		t.Fatalf("NewAdapter(windsurf) error = %v", err)
+		t.Fatalf("NewAdapter(cursor) error = %v", err)
 	}
 
-	result, injectErr := Inject(home, windsurfAdapter)
+	result, injectErr := Inject(home, mcpFileAdapter)
 	if injectErr != nil {
-		t.Fatalf("Inject(windsurf) error = %v", injectErr)
+		t.Fatalf("Inject(cursor) error = %v", injectErr)
 	}
 	if !result.Changed {
-		t.Fatalf("Inject(windsurf) changed = false")
+		t.Fatalf("Inject(cursor) changed = false")
 	}
 
-	mcpPath := windsurfAdapter.MCPConfigPath(home, "engram")
+	mcpPath := mcpFileAdapter.MCPConfigPath(home, "engram")
 	content, readErr := os.ReadFile(mcpPath)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", mcpPath, readErr)
@@ -1876,20 +1872,20 @@ func TestEngramInjectFallsBackToRelativeWhenNotFound(t *testing.T) {
 
 	mockEngramLookPath(t, "", "not found")
 
-	windsurfAdapter, err := agents.NewAdapter("windsurf")
+	mcpFileAdapter, err := agents.NewAdapter("cursor")
 	if err != nil {
-		t.Fatalf("NewAdapter(windsurf) error = %v", err)
+		t.Fatalf("NewAdapter(cursor) error = %v", err)
 	}
 
-	result, injectErr := Inject(home, windsurfAdapter)
+	result, injectErr := Inject(home, mcpFileAdapter)
 	if injectErr != nil {
-		t.Fatalf("Inject(windsurf) error = %v", injectErr)
+		t.Fatalf("Inject(cursor) error = %v", injectErr)
 	}
 	if !result.Changed {
-		t.Fatalf("Inject(windsurf) changed = false")
+		t.Fatalf("Inject(cursor) changed = false")
 	}
 
-	mcpPath := windsurfAdapter.MCPConfigPath(home, "engram")
+	mcpPath := mcpFileAdapter.MCPConfigPath(home, "engram")
 	content, readErr := os.ReadFile(mcpPath)
 	if readErr != nil {
 		t.Fatalf("ReadFile(%q) error = %v", mcpPath, readErr)
@@ -2052,244 +2048,6 @@ func TestQwenEngramIdempotency(t *testing.T) {
 	}
 }
 
-func TestInjectOpenClawMergesEngramIntoMCPServersPreservingStdioAndRemoteFields(t *testing.T) {
-	mockEngramLookPath(t, "engram", "")
-
-	home := t.TempDir()
-	adapter := openclawAdapter()
-	configPath := adapter.SettingsPath(home)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll() error = %v", err)
-	}
-
-	existing := `{
-  "mcp": {
-    "sessionIdleTtlMs": 120000,
-    "servers": {
-      "filesystem": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem"],
-        "env": {"ROOT": "/workspace"},
-        "unknownStdioField": true
-      },
-      "linear": {
-        "url": "https://mcp.linear.app/sse",
-        "transport": "sse",
-        "headers": {"Authorization": "Bearer existing-token"},
-        "unknownRemoteField": "preserve-me"
-      }
-    }
-  },
-  "theme": "kanagawa"
-}`
-	if err := os.WriteFile(configPath, []byte(existing), 0o644); err != nil {
-		t.Fatalf("WriteFile(openclaw.json) error = %v", err)
-	}
-
-	result, err := Inject(home, adapter)
-	if err != nil {
-		t.Fatalf("Inject(openclaw) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(openclaw) changed = false")
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile(openclaw.json) error = %v", err)
-	}
-	root := unmarshalObjectForTest(t, content)
-	mcp := objectAtForTest(t, root, "mcp")
-	if got := mcp["sessionIdleTtlMs"]; got != float64(120000) {
-		t.Fatalf("mcp.sessionIdleTtlMs = %v, want preserved 120000", got)
-	}
-	servers := objectAtForTest(t, mcp, "servers")
-
-	filesystem := objectAtForTest(t, servers, "filesystem")
-	if got := filesystem["command"]; got != "npx" {
-		t.Fatalf("filesystem.command = %v, want npx", got)
-	}
-	if got := filesystem["unknownStdioField"]; got != true {
-		t.Fatalf("filesystem.unknownStdioField = %v, want true", got)
-	}
-	args, ok := filesystem["args"].([]any)
-	if !ok || len(args) != 2 || args[1] != "@modelcontextprotocol/server-filesystem" {
-		t.Fatalf("filesystem.args = %#v, want preserved stdio args", filesystem["args"])
-	}
-
-	linear := objectAtForTest(t, servers, "linear")
-	if got := linear["url"]; got != "https://mcp.linear.app/sse" {
-		t.Fatalf("linear.url = %v, want preserved remote url", got)
-	}
-	if got := linear["transport"]; got != "sse" {
-		t.Fatalf("linear.transport = %v, want sse", got)
-	}
-	headers := objectAtForTest(t, linear, "headers")
-	if got := headers["Authorization"]; got != "Bearer existing-token" {
-		t.Fatalf("linear Authorization header = %v, want preserved token", got)
-	}
-	if got := linear["unknownRemoteField"]; got != "preserve-me" {
-		t.Fatalf("linear.unknownRemoteField = %v, want preserve-me", got)
-	}
-
-	engram := objectAtForTest(t, servers, "engram")
-	if got := engram["command"]; got != "engram" {
-		t.Fatalf("engram.command = %v, want engram", got)
-	}
-	engramArgs, ok := engram["args"].([]any)
-	if !ok || len(engramArgs) != 2 || engramArgs[0] != "mcp" || engramArgs[1] != "--tools=agent" {
-		t.Fatalf("engram.args = %#v, want [mcp --tools=agent]", engram["args"])
-	}
-	if _, hasMCPServers := root["mcpServers"]; hasMCPServers {
-		t.Fatal("OpenClaw config must use mcp.servers, not top-level mcpServers")
-	}
-}
-
-func TestInjectOpenClawHandlesJSON5ConfigAndMissingConfigPath(t *testing.T) {
-	t.Run("preserves JSON5 compatible config content as normalized JSON", func(t *testing.T) {
-		home := t.TempDir()
-		adapter := openclawAdapter()
-		configPath := adapter.SettingsPath(home)
-		if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-			t.Fatalf("MkdirAll() error = %v", err)
-		}
-
-		existing := `{
-  // OpenClaw user config with JSON5-style comments.
-  "ui": {
-    "theme": "kanagawa", // trailing comma survives via normalization
-  },
-  "mcp": {
-    "servers": {
-      "remoteDocs": {
-        "url": "https://docs.example/mcp",
-        "transport": "http",
-      },
-    },
-  },
-}`
-		if err := os.WriteFile(configPath, []byte(existing), 0o644); err != nil {
-			t.Fatalf("WriteFile(openclaw.json) error = %v", err)
-		}
-
-		if _, err := Inject(home, adapter); err != nil {
-			t.Fatalf("Inject(openclaw) error = %v", err)
-		}
-
-		content, err := os.ReadFile(configPath)
-		if err != nil {
-			t.Fatalf("ReadFile(openclaw.json) error = %v", err)
-		}
-		root := unmarshalObjectForTest(t, content)
-		ui := objectAtForTest(t, root, "ui")
-		if got := ui["theme"]; got != "kanagawa" {
-			t.Fatalf("ui.theme = %v, want preserved kanagawa", got)
-		}
-		servers := objectAtForTest(t, objectAtForTest(t, root, "mcp"), "servers")
-		remoteDocs := objectAtForTest(t, servers, "remoteDocs")
-		if got := remoteDocs["transport"]; got != "http" {
-			t.Fatalf("remoteDocs.transport = %v, want preserved http", got)
-		}
-		if _, ok := servers["engram"]; !ok {
-			t.Fatal("mcp.servers.engram missing after JSON5 merge")
-		}
-	})
-
-	t.Run("creates canonical OpenClaw config when missing", func(t *testing.T) {
-		home := t.TempDir()
-		adapter := openclawAdapter()
-		configPath := filepath.Join(home, ".openclaw", "openclaw.json")
-
-		if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-			t.Fatalf("expected missing OpenClaw config before inject, got err=%v", err)
-		}
-		if _, err := Inject(home, adapter); err != nil {
-			t.Fatalf("Inject(openclaw) error = %v", err)
-		}
-		content, err := os.ReadFile(configPath)
-		if err != nil {
-			t.Fatalf("ReadFile(created openclaw.json) error = %v", err)
-		}
-		servers := objectAtForTest(t, objectAtForTest(t, unmarshalObjectForTest(t, content), "mcp"), "servers")
-		if _, ok := servers["engram"]; !ok {
-			t.Fatal("created OpenClaw config missing mcp.servers.engram")
-		}
-	})
-}
-
-func TestInjectOpenClawWritesEngramProtocolToWorkspaceAgentsOnly(t *testing.T) {
-	workspace := t.TempDir()
-	adapter := openclawAdapter()
-	toolsPath := filepath.Join(workspace, "TOOLS.md")
-	if err := os.WriteFile(toolsPath, []byte("# Tool guidance\n\nUser-owned tool notes.\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(TOOLS.md) error = %v", err)
-	}
-
-	first, err := Inject(workspace, adapter)
-	if err != nil {
-		t.Fatalf("Inject(openclaw) first error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatal("Inject(openclaw) first changed = false")
-	}
-
-	agentsPath := filepath.Join(workspace, "AGENTS.md")
-	agentsContent, err := os.ReadFile(agentsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) error = %v", err)
-	}
-	agentsText := string(agentsContent)
-	if !containsEngramMarker(agentsText) || !containsEngramCloseMarker(agentsText) || !strings.Contains(agentsText, "mem_save") {
-		t.Fatalf("OpenClaw AGENTS.md missing Engram protocol content; got:\n%s", agentsText)
-	}
-	if _, err := os.Stat(filepath.Join(workspace, ".openclaw", "AGENTS.md")); !os.IsNotExist(err) {
-		t.Fatalf("OpenClaw Engram injection must not write global .openclaw/AGENTS.md; stat err=%v", err)
-	}
-
-	toolsContent, err := os.ReadFile(toolsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(TOOLS.md) error = %v", err)
-	}
-	toolsText := string(toolsContent)
-	if strings.Contains(toolsText, "engram-protocol") || strings.Contains(toolsText, "mem_save") {
-		t.Fatalf("TOOLS.md must not receive Engram protocol sections; got:\n%s", toolsText)
-	}
-	if !strings.Contains(toolsText, "User-owned tool notes.") {
-		t.Fatalf("TOOLS.md user content was modified; got:\n%s", toolsText)
-	}
-
-	second, err := Inject(workspace, adapter)
-	if err != nil {
-		t.Fatalf("Inject(openclaw) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("OpenClaw Engram injection should be idempotent")
-	}
-	updated, err := os.ReadFile(agentsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) second error = %v", err)
-	}
-	if count := countEngramMarker(string(updated)); count != 1 {
-		t.Fatalf("AGENTS.md has %d Engram protocol markers, want exactly 1", count)
-	}
-}
-
-func TestInjectOpenClawRejectsAmbiguousWorkspacePath(t *testing.T) {
-	cwd := t.TempDir()
-	t.Chdir(cwd)
-
-	result, err := Inject("", openclawAdapter())
-	if err == nil {
-		t.Fatalf("Inject(openclaw, empty workspace) error = nil, want deterministic ambiguity error; result=%+v", result)
-	}
-	if _, statErr := os.Stat(filepath.Join(cwd, ".openclaw", "openclaw.json")); !os.IsNotExist(statErr) {
-		t.Fatalf("ambiguous OpenClaw workspace must not create relative config; stat err=%v", statErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(cwd, "AGENTS.md")); !os.IsNotExist(statErr) {
-		t.Fatalf("ambiguous OpenClaw workspace must not create relative AGENTS.md; stat err=%v", statErr)
-	}
-}
-
 func unmarshalObjectForTest(t *testing.T, content []byte) map[string]any {
 	t.Helper()
 	var root map[string]any
@@ -2310,175 +2068,6 @@ func objectAtForTest(t *testing.T, root map[string]any, key string) map[string]a
 		t.Fatalf("key %q has type %T, want object", key, value)
 	}
 	return object
-}
-
-// TestInjectEngramHermesYAMLOverlay verifies that Inject writes the engram MCP
-// server block under mcp_servers: in ~/.hermes/config.yaml (StrategyMergeIntoYAML),
-// and that a second call is idempotent (Changed=false).
-func TestInjectEngramHermesYAMLOverlay(t *testing.T) {
-	home := t.TempDir()
-	SetLookPathForTest(t, "engram", "")
-
-	result, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(hermes) first run: changed = false, want true")
-	}
-
-	configPath := filepath.Join(home, ".hermes", "config.yaml")
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile(config.yaml) error = %v", err)
-	}
-	text := string(content)
-
-	if !strings.Contains(text, "mcp_servers:") {
-		t.Fatal("config.yaml missing mcp_servers: key")
-	}
-	if !strings.Contains(text, "  engram:") {
-		t.Fatal("config.yaml missing engram: entry under mcp_servers:")
-	}
-	if !strings.Contains(text, "--tools=agent") {
-		t.Fatal("config.yaml missing --tools=agent in engram args")
-	}
-
-	// Second call must be idempotent.
-	second, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("Inject(hermes) second run changed = true (not idempotent)")
-	}
-}
-
-// TestEngramYAMLCommandRecoveryCustomPath verifies that a custom absolute
-// engram command already in config.yaml is preserved (not clobbered) on re-run.
-func TestEngramYAMLCommandRecoveryCustomPath(t *testing.T) {
-	home := t.TempDir()
-	SetLookPathForTest(t, "engram", "")
-
-	configPath := filepath.Join(home, ".hermes", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	// Write a config.yaml with a custom absolute engram command.
-	prior := "mcp_servers:\n  engram:\n    command: /custom/path/engram\n    args:\n      - mcp\n      - --tools=agent\n"
-	if err := os.WriteFile(configPath, []byte(prior), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	_, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
-	}
-	text := string(content)
-	if !strings.Contains(text, "/custom/path/engram") {
-		t.Fatalf("config.yaml clobbered custom engram command; got:\n%s", text)
-	}
-}
-
-// TestEngramYAMLCommandRecoveryVersionedCellar verifies that a versioned Homebrew
-// cellar path is stabilized to the bare "engram" command on re-run.
-func TestEngramYAMLCommandRecoveryVersionedCellar(t *testing.T) {
-	home := t.TempDir()
-	SetLookPathForTest(t, "engram", "")
-
-	configPath := filepath.Join(home, ".hermes", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	// Write a config.yaml with a versioned Cellar engram path.
-	prior := "mcp_servers:\n  engram:\n    command: /opt/homebrew/Cellar/engram/1.2.3/bin/engram\n    args:\n      - mcp\n      - --tools=agent\n"
-	if err := os.WriteFile(configPath, []byte(prior), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	_, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
-	}
-	text := string(content)
-	// Versioned cellar path must be stabilized — the versioned path should not remain.
-	if strings.Contains(text, "/Cellar/engram/") {
-		t.Fatalf("config.yaml retained versioned Cellar path after stabilization; got:\n%s", text)
-	}
-	// And it must be stabilized to the bare "engram" command.
-	if !strings.Contains(text, "command: engram") {
-		t.Fatalf("config.yaml did not stabilize to bare \"engram\" command; got:\n%s", text)
-	}
-}
-
-// TestEngramYAMLCommandRecoveryAbsent verifies that when no prior engram entry
-// exists in config.yaml, the stable "engram" fallback is written.
-func TestEngramYAMLCommandRecoveryAbsent(t *testing.T) {
-	home := t.TempDir()
-	SetLookPathForTest(t, "engram", "")
-
-	result, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(hermes) changed = false")
-	}
-
-	configPath := filepath.Join(home, ".hermes", "config.yaml")
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
-	}
-	text := string(content)
-	if !strings.Contains(text, "command: engram") {
-		t.Fatalf("expected 'command: engram' fallback when no prior entry; got:\n%s", text)
-	}
-}
-
-// TestEngramYAMLCommandRecoveryListShape verifies that a YAML list-shaped command
-// (command: - /path/engram) has its first element recovered correctly.
-func TestEngramYAMLCommandRecoveryListShape(t *testing.T) {
-	home := t.TempDir()
-	SetLookPathForTest(t, "engram", "")
-
-	configPath := filepath.Join(home, ".hermes", "config.yaml")
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-
-	// Write a config.yaml with command as a YAML list.
-	prior := "mcp_servers:\n  engram:\n    command:\n      - /absolute/path/engram\n    args:\n      - mcp\n      - --tools=agent\n"
-	if err := os.WriteFile(configPath, []byte(prior), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	_, err := Inject(home, hermesAdapter())
-	if err != nil {
-		t.Fatalf("Inject(hermes) error = %v", err)
-	}
-
-	content, err := os.ReadFile(configPath)
-	if err != nil {
-		t.Fatalf("ReadFile: %v", err)
-	}
-	text := string(content)
-	// The list first element (/absolute/path/engram) should be recovered and preserved.
-	if !strings.Contains(text, "/absolute/path/engram") {
-		t.Fatalf("list-shaped command first element not recovered; got:\n%s", text)
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -2502,23 +2091,17 @@ func TestProtocolForSelectsSlimOrFullPerDecision1Matrix(t *testing.T) {
 		{model.AgentClaudeCode, true},
 		{model.AgentCodex, false},
 		{model.AgentOpenCode, false},
-		{model.AgentKilocode, false},
 		{model.AgentGeminiCLI, false},
 		{model.AgentAntigravity, false},
-		{model.AgentWindsurf, false},
 		{model.AgentQwenCode, false},
 		{model.AgentCursor, false},
 		{model.AgentVSCodeCopilot, false},
 		{model.AgentGitHubCopilotCLI, false},
-		{model.AgentKiroIDE, false},
-		{model.AgentKimi, false},
 		{model.AgentTrae, false},
-		{model.AgentHermes, false},
-		{model.AgentOpenClaw, false},
 	}
 
-	if len(tests) != 16 {
-		t.Fatalf("expected 16 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
+	if len(tests) != 10 {
+		t.Fatalf("expected 10 non-Pi adapters in the Decision 1 matrix, got %d", len(tests))
 	}
 
 	slim := protocolSlim()

@@ -182,19 +182,19 @@ func TestCheckOneTool_WindowsPowerShellShimFallback(t *testing.T) {
 	executableExtsFn = func() []string { return []string{".exe", ".cmd"} }
 
 	dir := t.TempDir()
-	ps1Path := filepath.Join(dir, "gga.ps1")
+	ps1Path := filepath.Join(dir, "engram.ps1")
 	if err := os.WriteFile(ps1Path, []byte("fake"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
 	lookPathFn = func(file string) (string, error) {
-		if file == "gga.ps1" {
+		if file == "engram.ps1" {
 			return ps1Path, nil
 		}
 		return "", errors.New("not found")
 	}
 
-	got := checkOneTool("gga", []string{dir})
+	got := checkOneTool("engram", []string{dir})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass, got %s: %s", got.Status, got.Detail)
@@ -217,21 +217,21 @@ func TestCheckOneTool_WindowsShimVariantsInSameDirAreNotDuplicates(t *testing.T)
 	executableExtsFn = func() []string { return []string{".cmd"} }
 
 	dir := t.TempDir()
-	cmdPath := filepath.Join(dir, "gga.cmd")
-	for _, path := range []string{cmdPath, filepath.Join(dir, "gga.ps1")} {
+	cmdPath := filepath.Join(dir, "engram.cmd")
+	for _, path := range []string{cmdPath, filepath.Join(dir, "engram.ps1")} {
 		if err := os.WriteFile(path, []byte("fake"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	lookPathFn = func(file string) (string, error) {
-		if file == "gga" {
+		if file == "engram" {
 			return cmdPath, nil
 		}
 		return "", errors.New("not found")
 	}
 
-	got := checkOneTool("gga", []string{dir})
+	got := checkOneTool("engram", []string{dir})
 
 	if got.Status != CheckStatusPass {
 		t.Fatalf("expected pass for same-directory shim variants, got %s: %s", got.Status, got.Detail)
@@ -527,9 +527,9 @@ func TestCheckStateJSON_AbsentAncestorChainKeepsSyncRemedy(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(homeDir, ".axiom"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// windsurf lives two levels below home (~/.codeium/windsurf); neither
+	// opencode lives two levels below home (~/.config/opencode); neither
 	// level exists, so the path is genuinely missing and sync must stay.
-	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(`{"installed_agents":["windsurf"]}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(homeDir, ".axiom", "state.json"), []byte(`{"installed_agents":["opencode"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1377,7 +1377,7 @@ func TestCheckToolBinaries_StateMissing_ChecksCoreOnly(t *testing.T) {
 			t.Errorf("expected %s in core-only output, got %+v", core, required)
 		}
 	}
-	for _, forbidden := range []string{"tool:claude", "tool:opencode", "tool:gga"} {
+	for _, forbidden := range []string{"tool:claude", "tool:opencode"} {
 		if _, ok := required[forbidden]; ok {
 			t.Errorf("did not expect %s when state is missing, got %+v", forbidden, required)
 		}

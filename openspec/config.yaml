@@ -6,7 +6,7 @@ context: |
   Axiom: Fork y version paralela de Gentle-AI.
   Tech stack: Go 1.25.10+, Bubbletea TUI (charmbracelet/bubbletea v1.3.10), lipgloss v1.1.0
   Architecture: cmd/ entrypoints, internal/ packages (agents, tui, model, pipeline, catalog, system, planner, verify, update, opencode, installcmd, cli, app, components, state, backup, assets, agentbuilder)
-  Agents: multi-agent support (antigravity, opencode, claude, cursor, codex, gemini, vscode, windsurf)
+  Agents: multi-agent support (antigravity, opencode, claude, cursor, codex, gemini, vscode)
   Skills catalog: internal/catalog/skills.go — known skill registry; project skills in skills/
   Build: goreleaser (.goreleaser.yaml), CI: GitHub Actions (ci.yml, pr-check.yml, release.yml)
   Style: gofmt (standard), go vet, no golangci-lint config found
@@ -30,14 +30,11 @@ rules:
     - Use hierarchical numbering (1.1, 1.2, etc.)
     - Keep tasks small enough to complete in one session
   apply:
-    - Load gentleman-bubbletea skill for TUI work (internal/tui/)
-    - Load gentleman-installer skill for installation steps
-    - Load gentleman-system skill for OS/system detection
     - Load go-testing skill when writing tests
     - Follow existing code patterns in internal/ packages
   verify:
-    - Run: go test ./...
-    - Run: go vet ./...
+    - "Run: go test <touched packages> -count=1, narrowed with -run; never internal/cli whole (the full suite runs in CI)"
+    - "Run: go vet <touched packages>"
     - Compare implementation against every spec scenario
   archive:
     - Warn before merging destructive deltas (large removals)
@@ -47,8 +44,9 @@ testing:
   detected: "2026-05-05"
 
   runner:
-    command: "go test ./..."
+    command: "go test <touched packages> -count=1"
     framework: "Go standard testing"
+    note: "Locally, only the touched packages (narrowed with -run); the full suite runs in CI"
 
   layers:
     unit:
@@ -69,7 +67,7 @@ testing:
 
   coverage:
     available: true
-    command: "go test -cover ./..."
+    command: "go test -cover <touched packages>"
 
   quality:
     linter:

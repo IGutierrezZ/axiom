@@ -46,7 +46,6 @@ type InjectOptions struct {
 	// Prefer ClaudePhaseAssignments for new callers that need per-phase effort.
 	ClaudeModelAssignments      map[string]model.ClaudeModelAlias
 	ClaudePhaseAssignments      map[string]model.ClaudePhaseAssignment
-	KiroModelAssignments        map[string]model.KiroModelAlias
 	CodexModelAssignments       map[string]model.CodexEffort
 	CodexCarrilModelAssignments map[string]string // carril→model-id; nil = use defaults
 	CodexPhaseModelAssignments  map[string]string // phase→model-id; non-empty = Custom per-phase mode; nil/empty = preset/carril mode
@@ -57,8 +56,6 @@ type InjectOptions struct {
 	CopilotPhaseAssignments map[string]model.CopilotPhaseAssignment
 
 	// WorkspaceDir is the root of the current workspace (e.g. os.Getwd()).
-	// When non-empty and the adapter implements workflowInjector, native
-	// workflow files are copied to <workspaceDir>/.windsurf/workflows/.
 	WorkspaceDir string
 
 	// StrictTDD enables Strict TDD mode. When true, a
@@ -102,8 +99,8 @@ func (opts InjectOptions) orchestratorPolicyRenderOptions() OrchestratorRenderOp
 	}
 }
 
-// openCodeRenderOptions son las opciones de render de los overlays de OpenCode y
-// Kilo: las de política del orquestador más la carpeta de prompts compartidos del
+// openCodeRenderOptions son las opciones de render de los overlays de OpenCode:
+// las de política del orquestador más la carpeta de prompts compartidos del
 // adaptador, que en workspace es la del proyecto.
 func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir string) OrchestratorRenderOptions {
 	options := opts.orchestratorPolicyRenderOptions()
@@ -111,68 +108,12 @@ func (opts InjectOptions) openCodeRenderOptions(adapter agents.Adapter, homeDir 
 	return options
 }
 
-// workflowInjector is an optional adapter capability: if an adapter
-// implements this interface, sdd.Inject will copy the embedded workflow
-// assets into the workspace directory provided via InjectOptions.WorkspaceDir.
-// This intentionally does NOT extend agents.Adapter to avoid requiring all
-// adapters to implement no-op stubs.
-type workflowInjector interface {
-	SupportsWorkflows() bool
-	// WorkflowsDir returns the target filesystem directory where workflow files
-	// should be written (e.g. <workspaceDir>/.windsurf/workflows/).
-	WorkflowsDir(workspaceDir string) string
-	// EmbeddedWorkflowsDir returns the path inside the embedded assets FS where
-	// this adapter's workflow sources live (e.g. "windsurf/workflows").
-	// This removes the hardcoded agent name from the injection step, making
-	// the workflowInjector pattern reusable for future agents.
-	EmbeddedWorkflowsDir() string
-}
-
-// hookInjector is an optional adapter capability: if an adapter implements
-// this interface, sdd.Inject writes an Axiom-owned standalone hook file into
-// HooksDir(rootDir) that refreshes the skill registry at session start.
-// This intentionally does NOT extend agents.Adapter to avoid requiring all
-// adapters to implement no-op stubs.
-type hookInjector interface {
-	// HooksDir returns the directory the agent loads standalone hook files
-	// from (e.g. <rootDir>/.kiro/hooks/).
-	HooksDir(rootDir string) string
-}
-
-// skillRegistryHookFileName is the Axiom-owned hook file written into
-// hookInjector.HooksDir. User hooks live in their own files beside it.
-const skillRegistryHookFileName = "axiom-skill-registry.json"
-
-// SkillRegistryHookPath returns the standalone skill-registry hook file for
-// adapters implementing hookInjector, or "" when the adapter has no such
-// capability. Callers outside sdd use it for backup, verification and
-// uninstall without asserting on unexported types or agent IDs.
-func SkillRegistryHookPath(adapter agents.Adapter, rootDir string) string {
-	hooks, ok := adapter.(hookInjector)
-	if !ok {
-		return ""
-	}
-	dir := hooks.HooksDir(rootDir)
-	if dir == "" {
-		return ""
-	}
-	return filepath.Join(dir, skillRegistryHookFileName)
-}
-
-// kiroModelResolver is an optional adapter capability. When implemented,
-// the subagent copy loop resolves KiroModelAlias values to native model IDs
-// and stamps them into the agent frontmatter sentinel {{KIRO_MODEL}}.
-// Adapters that do not implement this interface are unaffected.
-type kiroModelResolver interface {
-	KiroModelID(alias model.KiroModelAlias) string
-}
-
 // claudeModelResolver is an optional adapter capability. When implemented,
 // the subagent copy loop stamps the resolved ClaudeModelAlias into the agent
 // frontmatter sentinel {{CLAUDE_MODEL}}. Claude Code accepts "fable", "opus",
 // "sonnet", and "haiku" directly as model values, so the resolver is effectively an
 // identity function on the alias string — but the interface keeps the opt-in
-// shape consistent with kiroModelResolver.
+// opt-in shape consistent with the other resolvers.
 type claudeModelResolver interface {
 	ClaudeModelID(alias model.ClaudeModelAlias) string
 }
@@ -186,96 +127,6 @@ type claudeModelResolver interface {
 // the substitution only fires when the adapter satisfies this interface.
 type codexModelResolver interface {
 	RenderCodexPhaseEfforts(assignments map[string]model.CodexEffort, carrilModels map[string]string) string
-}
-
-// monorepoRootMarkers identify files/dirs that ONLY exist at the true root
-// of a multi-package workspace. If any of these is found while walking up,
-// we stop immediately — this is the authoritative project root.
-var monorepoRootMarkers = []string{
-	"pnpm-workspace.yaml",
-	"pnpm-workspace.yml",
-	"nx.json",
-	"turbo.json",
-	"lerna.json",
-	"rush.json",
-}
-
-// strongProjectMarkers are definitive project roots that are not
-// package.json (which can appear at every level in a monorepo).
-var strongProjectMarkers = []string{
-	".git",
-	"go.mod",
-	"Cargo.toml",
-	"pyproject.toml",
-	"pom.xml",
-	"build.gradle",
-}
-
-// maxAncestorDepth is the maximum number of parent directories findProjectRoot
-// will traverse before giving up. This prevents infinite loops on deeply-nested
-// trees and ensures we stop well before reaching the filesystem root.
-const maxAncestorDepth = 20
-
-// bootstrapper is an optional adapter capability: if an adapter implements
-// this interface, any injector that writes Jinja modules will first ensure
-// the base template (entry point) exists.
-type bootstrapper interface {
-	BootstrapTemplate(homeDir string) error
-}
-
-// findProjectRoot walks upward from dir, looking for the best project root.
-//
-// Priority order:
-//  1. Monorepo root markers (pnpm-workspace.yaml, nx.json, turbo.json, etc.) —
-//     return immediately when found; these are authoritative workspace roots.
-//  2. Strong markers (.git, go.mod, Cargo.toml, etc.) — return immediately;
-//     these are unambiguous project roots.
-//  3. Weak marker (package.json only) — record as candidate but keep walking
-//     upward, since a monorepo marker may exist higher up.
-//
-// Walking upward means users can run axiom from any subdirectory of their
-// project (e.g. repo/packages/app) and still detect the correct workspace root.
-// In a JS/TS monorepo, every package has package.json, so we must not stop at
-// the first one — we keep walking to find the highest ancestor with package.json
-// (or a monorepo root marker above it).
-func findProjectRoot(dir string) (string, bool) {
-	if dir == "" {
-		return "", false
-	}
-	current := filepath.Clean(dir)
-	var bestCandidate string // best weak (package.json-only) match found so far
-
-	for i := 0; i < maxAncestorDepth; i++ {
-		// Check monorepo root markers first — highest priority; return immediately.
-		for _, marker := range monorepoRootMarkers {
-			if _, err := os.Stat(filepath.Join(current, marker)); err == nil {
-				return current, true
-			}
-		}
-		// Check strong project markers — definitive roots; return immediately.
-		for _, marker := range strongProjectMarkers {
-			if _, err := os.Stat(filepath.Join(current, marker)); err == nil {
-				return current, true
-			}
-		}
-		// Weak marker: package.json — record but keep walking. Always update
-		// to the highest ancestor with a package.json, since in a JS project
-		// the root package.json is the authoritative project boundary.
-		if _, err := os.Stat(filepath.Join(current, "package.json")); err == nil {
-			bestCandidate = current
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			// Reached filesystem root ("/" on Unix, "C:\" on Windows).
-			break
-		}
-		current = parent
-	}
-
-	if bestCandidate != "" {
-		return bestCandidate, true
-	}
-	return "", false
 }
 
 // overlayAssetPath returns the embedded asset path for the SDD agent overlay
@@ -439,9 +290,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	if !adapter.SupportsSystemPrompt() {
 		return InjectionResult{}, nil
 	}
-	if err := validateOpenClawWorkspacePath(homeDir, adapter); err != nil {
-		return InjectionResult{}, err
-	}
 	var opts InjectOptions
 	if len(options) > 0 {
 		opts = options[0]
@@ -483,7 +331,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 
 	// Validate every selected session-contract carrier before the first SDD
 	// mutation, including bootstrap directories, commands, plugins and skills.
-	prompt, lazyWorkflow, workflows, err := prepareSessionPreflight(homeDir, adapter, opts)
+	prompt, lazyWorkflow, err := prepareSessionPreflight(homeDir, adapter, opts)
 	if err != nil {
 		return InjectionResult{}, err
 	}
@@ -501,12 +349,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		preparedOverlay, err = inlineOpenCodeSDDPrompts([]byte(content), homeDir, settingsPath, adapter.Agent(), opts.PreserveOpenCodeOrchestratorPrompt, opts.openCodeRenderOptions(adapter, homeDir), opts.CodeGraphGuidanceMarkdown)
 		if err != nil {
 			return InjectionResult{}, err
-		}
-		if adapter.Agent() == model.AgentKilocode {
-			preparedOverlay, err = stripOpenCodeNativeFallbackAgents(preparedOverlay)
-			if err != nil {
-				return InjectionResult{}, err
-			}
 		}
 		for _, profile := range opts.Profiles {
 			if profile.Name == "" || profile.Name == "default" {
@@ -530,10 +372,10 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 	changed := false
 
 	// 1. Inject SDD orchestrator into the global system prompt for agents that
-	// rely on prompt files. OpenCode and Kilocode are handled differently: their
+	// rely on prompt files. OpenCode are handled differently: their
 	// orchestrator instructions must be scoped to the OpenCode gentle-orchestrator agent only,
 	// otherwise the SDD phase sub-agents inherit coordinator-only delegation rules.
-	if adapter.Agent() != model.AgentOpenCode && adapter.Agent() != model.AgentKilocode {
+	if adapter.Agent() != model.AgentOpenCode {
 		switch adapter.SystemPromptStrategy() {
 		case model.StrategyMarkdownSections:
 			result, err := injectMarkdownSections(homeDir, adapter, opts.ClaudeModelAssignments, opts.ClaudePhaseAssignments, prompt)
@@ -543,7 +385,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			changed = changed || result.Changed
 			files = append(files, result.Files...)
 
-		case model.StrategyFileReplace, model.StrategyAppendToFile, model.StrategyInstructionsFile, model.StrategySteeringFile:
+		case model.StrategyFileReplace, model.StrategyAppendToFile, model.StrategyInstructionsFile:
 			// For FileReplace/AppendToFile agents, the SDD orchestrator is included
 			// in the generic persona asset. However, if the user chose neutral or
 			// custom persona, the SDD content must still be injected. We append the
@@ -556,67 +398,34 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 			changed = changed || result.Changed
 			files = append(files, result.Files...)
 
-		case model.StrategyJinjaModules:
-			// Ensure the base template exists for Jinja-based agents.
-			if bs, ok := adapter.(bootstrapper); ok {
-				if err := bs.BootstrapTemplate(homeDir); err != nil {
-					return InjectionResult{}, fmt.Errorf("bootstrap template: %w", err)
-				}
-			}
-
-			// Write the SDD orchestrator as a standalone Jinja include module.
-			// The static KIMI.md template references it via {% include "sdd-orchestrator.md" %}.
-			configDir := adapter.GlobalConfigDir(homeDir)
-			content := prompt
-			modulePath := filepath.Join(configDir, "sdd-orchestrator.md")
-			writeResult, err := filemerge.WriteFileAtomic(modulePath, []byte(content), 0o644)
-			if err != nil {
-				return InjectionResult{}, err
-			}
-			changed = changed || writeResult.Changed
-			files = append(files, modulePath)
 		}
 	}
 
 	// 1b. If StrictTDD is enabled, inject the strict-tdd-mode marker section
 	// into the system prompt file so agents know Strict TDD is active.
-	if opts.StrictTDD && adapter.Agent() != model.AgentOpenCode && adapter.Agent() != model.AgentKilocode {
-		if adapter.SystemPromptStrategy() == model.StrategyJinjaModules {
-			// Write the strict-tdd-mode marker as a standalone Jinja include module.
-			// The static KIMI.md template references it via {% include "strict-tdd-mode.md" %}.
-			configDir := adapter.GlobalConfigDir(homeDir)
-			content := "Strict TDD Mode: enabled"
-			modulePath := filepath.Join(configDir, "strict-tdd-mode.md")
-			writeResult, err := filemerge.WriteFileAtomic(modulePath, []byte(content), 0o644)
-			if err != nil {
-				return InjectionResult{}, err
+	if opts.StrictTDD && adapter.Agent() != model.AgentOpenCode {
+		promptPath := adapter.SystemPromptFile(homeDir)
+		strictTDDContent := "Strict TDD Mode: enabled"
+		existing, readErr := readFileOrEmpty(promptPath)
+		if readErr != nil {
+			return InjectionResult{}, readErr
+		}
+		updated := filemerge.InjectMarkdownSection(existing, filemerge.StrictTDDSectionID, strictTDDContent)
+		writeResult, writeErr := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
+		if writeErr != nil {
+			return InjectionResult{}, writeErr
+		}
+		changed = changed || writeResult.Changed
+		// Only append path once (it may already be in files from step 1).
+		alreadyInFiles := false
+		for _, f := range files {
+			if f == promptPath {
+				alreadyInFiles = true
+				break
 			}
-			changed = changed || writeResult.Changed
-			files = append(files, modulePath)
-		} else {
-			promptPath := adapter.SystemPromptFile(homeDir)
-			strictTDDContent := "Strict TDD Mode: enabled"
-			existing, readErr := readFileOrEmpty(promptPath)
-			if readErr != nil {
-				return InjectionResult{}, readErr
-			}
-			updated := filemerge.InjectMarkdownSection(existing, filemerge.StrictTDDSectionID, strictTDDContent)
-			writeResult, writeErr := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
-			if writeErr != nil {
-				return InjectionResult{}, writeErr
-			}
-			changed = changed || writeResult.Changed
-			// Only append path once (it may already be in files from step 1).
-			alreadyInFiles := false
-			for _, f := range files {
-				if f == promptPath {
-					alreadyInFiles = true
-					break
-				}
-			}
-			if !alreadyInFiles {
-				files = append(files, promptPath)
-			}
+		}
+		if !alreadyInFiles {
+			files = append(files, promptPath)
 		}
 	}
 
@@ -771,21 +580,7 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 					return InjectionResult{}, fmt.Errorf("clean stale profile JD agents %q: %w", profile.Name, cleanupErr)
 				}
 				changed = changed || cleanupResult.Changed
-				if adapter.Agent() == model.AgentKilocode {
-					cleanupResult, cleanupErr = cleanupKilocodeProfileJDPermissions(settingsPath, profile)
-					if cleanupErr != nil {
-						return InjectionResult{}, fmt.Errorf("clean Kilocode profile JD permissions %q: %w", profile.Name, cleanupErr)
-					}
-					changed = changed || cleanupResult.Changed
-				}
 				profileOverlay := profileOverlays[profile.Name]
-				var profileErr error
-				if adapter.Agent() == model.AgentKilocode {
-					profileOverlay, profileErr = restoreKilocodeManagedAgentToolsInOverlay(profileOverlay)
-					if profileErr != nil {
-						return InjectionResult{}, fmt.Errorf("restore Kilocode profile tools %q: %w", profile.Name, profileErr)
-					}
-				}
 				profileResult, profileErr := mergeSettings(settingsPath, profileOverlay)
 				if profileErr != nil {
 					return InjectionResult{}, fmt.Errorf("merge profile overlay %q: %w", profile.Name, profileErr)
@@ -837,37 +632,6 @@ func Inject(homeDir string, adapter agents.Adapter, sddMode model.SDDModeID, opt
 		}
 		changed = changed || workflowResult.Changed
 		files = append(files, workflowResult.Files...)
-	}
-
-	// 3b. Write native workflow files (Windsurf Hybrid-First, and any future
-	// agent that implements the workflowInjector optional interface).
-	// findProjectRoot walks upward from WorkspaceDir so axiom can be
-	// invoked from any subdirectory (e.g. repo/internal/foo) and still inject
-	// workflows at the real project root. Skips silently if no root is found
-	// (e.g. running from home dir without a project).
-	if wi, ok := adapter.(workflowInjector); ok && wi.SupportsWorkflows() {
-		if projectRoot, found := findProjectRoot(opts.WorkspaceDir); found {
-			workflowsDir := wi.WorkflowsDir(projectRoot)
-			embedDir := wi.EmbeddedWorkflowsDir()
-			entries, readErr := fs.ReadDir(assets.FS, embedDir)
-			if readErr != nil {
-				return InjectionResult{}, fmt.Errorf("read embedded %s: %w", embedDir, readErr)
-			}
-
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				content := workflows[entry.Name()]
-				path := filepath.Join(workflowsDir, entry.Name())
-				writeResult, err := filemerge.WriteFileAtomic(path, []byte(content), 0o644)
-				if err != nil {
-					return InjectionResult{}, fmt.Errorf("write workflow %q: %w", path, err)
-				}
-				changed = changed || writeResult.Changed
-				files = append(files, path)
-			}
-		}
 	}
 
 	// 3c. Write native sub-agent files for adapters that support them. Sub-agent files are
@@ -991,7 +755,7 @@ func renderClaudeSessionPreflight() (string, error) {
 
 // Preparation is read-only. A template composer panic must not escape after a
 // partial install; surface it as an injection error before any SDD-owned writes.
-func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts InjectOptions) (prompt, lazy string, workflows map[string]string, err error) {
+func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts InjectOptions) (prompt, lazy string, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			err = fmt.Errorf("render SDD session preflight: %v", recovered)
@@ -1014,36 +778,6 @@ func prepareSessionPreflight(homeDir string, adapter agents.Adapter, opts Inject
 		lazy = resolveSkillsDirPlaceholders(lazy, adapter, workspace)
 		if err = validateRenderedSessionPreflight(lazy, adapter.Agent()); err != nil {
 			return
-		}
-	}
-	if wi, ok := adapter.(workflowInjector); ok && wi.SupportsWorkflows() {
-		if _, found := findProjectRoot(opts.WorkspaceDir); found {
-			var entries []fs.DirEntry
-			entries, err = fs.ReadDir(assets.FS, wi.EmbeddedWorkflowsDir())
-			if err != nil {
-				return
-			}
-			workflows = make(map[string]string)
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				var content string
-				content, err = assets.Read(wi.EmbeddedWorkflowsDir() + "/" + entry.Name())
-				if err != nil {
-					return
-				}
-				if adapter.Agent() == model.AgentWindsurf && entry.Name() == "sdd-new.md" {
-					content, err = renderWindsurfSessionPreflightEntry(content)
-					if err != nil {
-						return
-					}
-				}
-				workflows[entry.Name()] = content
-			}
-			if adapter.Agent() == model.AgentWindsurf && workflows["sdd-new.md"] == "" {
-				err = fmt.Errorf("Windsurf sdd-new authority consumer is missing")
-			}
 		}
 	}
 	return
@@ -1103,13 +837,6 @@ func openCodeSettingsPath(homeDir string, adapter agents.Adapter, effectivePath 
 	return adapter.SettingsPath(homeDir)
 }
 
-func validateOpenClawWorkspacePath(workspaceDir string, adapter agents.Adapter) error {
-	if adapter.Agent() == model.AgentOpenClaw && strings.TrimSpace(workspaceDir) == "" {
-		return fmt.Errorf("openclaw workspace path is required for workspace-first injection")
-	}
-	return nil
-}
-
 func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string, agent model.AgentID, preserveExistingOrchestratorPrompt bool, renderOptions OrchestratorRenderOptions, codeGraphGuidance string) ([]byte, error) {
 	var overlay map[string]any
 	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
@@ -1125,9 +852,6 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 		return overlayBytes, nil
 	}
 	expandOpenCodeJudgmentDayAgents(agentsMap, agent == model.AgentOpenCode)
-	if agent == model.AgentKilocode {
-		restoreKilocodeManagedAgentTools(agentsMap)
-	}
 
 	// Inline the orchestrator prompt (always inlined, not a file reference),
 	// unless an external strategy requested preserving the existing prompt.
@@ -1177,8 +901,8 @@ func inlineOpenCodeSDDPrompts(overlayBytes []byte, homeDir, settingsPath string,
 	}
 
 	// Carry the organic routing guidance across the wholesale prompt assignment
-	// above. The orchestrator prompt is the only always-loaded scope OpenCode and
-	// Kilocode read, and every branch above replaces it in full, so guidance that
+	// above. The orchestrator prompt is the only always-loaded scope OpenCode
+	// reads, and every branch above replaces it in full, so guidance that
 	// is not re-injected here is destroyed by an SDD install.
 	//
 	// Preserving is deliberately chosen over merely ordering the installers: the
@@ -1281,69 +1005,6 @@ func extractManagedSection(content, sectionID string) string {
 		return strings.Trim(content[start+len(open):end], "\n")
 	}
 	return ""
-}
-
-// restoreKilocodeManagedAgentTools restores the exact Kilocode tools and
-// permission shapes that the shared OpenCode-compatible overlays carried before
-// managed OpenCode tools were removed.
-func restoreKilocodeManagedAgentTools(agentsMap map[string]any) {
-	for name, raw := range agentsMap {
-		agent, ok := raw.(map[string]any)
-		if !ok {
-			continue
-		}
-		switch {
-		case name == "axiom-orchestrator" || name == "gentle-orchestrator" || strings.HasPrefix(name, "sdd-orchestrator-"):
-			agent["tools"] = map[string]any{"__replace__": map[string]any{"read": true, "write": true, "edit": true, "bash": true, "question": true, "task": true}}
-		case isKilocodeProfilePhase(name):
-			agent["tools"] = map[string]any{"read": true, "write": true, "edit": true, "bash": true}
-			if name == "sdd-research" {
-				agent["permission"] = kilocodeResearchPermission()
-			} else {
-				delete(agent, "permission")
-			}
-		case name == "jd-judge-a" || name == "jd-judge-b" || strings.HasPrefix(name, "jd-judge-a-") || strings.HasPrefix(name, "jd-judge-b-"):
-			if name == "jd-judge-a" || name == "jd-judge-b" {
-				agent["tools"] = map[string]any{"*": false, "read": true, "write": false, "edit": false, "bash": false, "task": false}
-			} else {
-				agent["tools"] = map[string]any{"__replace__": map[string]any{"read": true, "bash": true}}
-			}
-			delete(agent, "permission")
-		case name == "jd-fix-agent" || strings.HasPrefix(name, "jd-fix-agent-"):
-			agent["tools"] = map[string]any{"read": true, "write": true, "edit": true, "bash": true}
-			delete(agent, "permission")
-		}
-	}
-}
-
-func kilocodeResearchPermission() map[string]any {
-	return map[string]any{"bash": "deny", "webfetch": "deny", "websearch": "deny", "task": "deny"}
-}
-
-func restoreKilocodeManagedAgentToolsInOverlay(overlayBytes []byte) ([]byte, error) {
-	var overlay map[string]any
-	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
-		return nil, fmt.Errorf("unmarshal Kilocode profile overlay: %w", err)
-	}
-	agentsMap, ok := overlay["agent"].(map[string]any)
-	if !ok {
-		return overlayBytes, nil
-	}
-	restoreKilocodeManagedAgentTools(agentsMap)
-	result, err := json.MarshalIndent(overlay, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal Kilocode profile overlay: %w", err)
-	}
-	return append(result, '\n'), nil
-}
-
-func isKilocodeProfilePhase(name string) bool {
-	for _, phase := range subAgentPhaseOrder {
-		if name == phase || strings.HasPrefix(name, phase+"-") {
-			return true
-		}
-	}
-	return false
 }
 
 // expandOpenCodeJudgmentDayAgents gives the Judgment Day judges the read-only
@@ -1738,13 +1399,6 @@ func readMisnamedOpenCodeGentlemanSDDPrompt(settingsPath string) (string, error)
 }
 
 func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
-	if path := SkillRegistryHookPath(adapter, homeDir); path != "" {
-		changed, err := ensureKiroSkillRegistryHook(path)
-		if err != nil {
-			return InjectionResult{}, fmt.Errorf("install Kiro skill-registry hook: %w", err)
-		}
-		return InjectionResult{Changed: changed, Files: []string{path}}, nil
-	}
 	if adapter.Agent() == model.AgentCodex {
 		hooksPath := filepath.Join(adapter.GlobalConfigDir(homeDir), "hooks.json")
 		changed, err := ensureCodexSkillRegistryHook(hooksPath)
@@ -1776,11 +1430,7 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude branch guard hook: %w", err)
 	}
-	telemetryHookChanged, err := retireClaudeTelemetryHooks(settingsPath)
-	if err != nil {
-		return InjectionResult{}, fmt.Errorf("retire Claude runtime telemetry hooks: %w", err)
-	}
-	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged || telemetryHookChanged, Files: []string{settingsPath}}, nil
+	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged, Files: []string{settingsPath}}, nil
 }
 
 func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
@@ -1828,10 +1478,6 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 		changed = true
 	}
 
-	// Runtime telemetry was retired: drop the hooks earlier versions installed.
-	if retireRuntimeTelemetryHooks(hooksMap, "codex") {
-		changed = true
-	}
 	if !changed {
 		return false, nil
 	}
@@ -1848,54 +1494,6 @@ func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
 	wr, err := filemerge.WriteFileAtomic(hooksPath, out, 0o644)
 	if err != nil {
 		return false, err
-	}
-	return wr.Changed, nil
-}
-
-// kiroSkillRegistryHookCommand uses a relative --cwd because "." resolves the
-// same way in cmd, PowerShell and sh, while "$PWD" and "|| true" do not. A
-// failing SessionStart hook only warns in Kiro, so no fallback is needed.
-const kiroSkillRegistryHookCommand = "axiom skill-registry refresh --quiet --no-gitignore --cwd ."
-
-type kiroHookFile struct {
-	Version string     `json:"version"`
-	Hooks   []kiroHook `json:"hooks"`
-}
-
-type kiroHook struct {
-	Name    string         `json:"name"`
-	Trigger string         `json:"trigger"`
-	Action  kiroHookAction `json:"action"`
-}
-
-type kiroHookAction struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
-}
-
-// ensureKiroSkillRegistryHook writes the canonical Axiom-owned Kiro hook file.
-// The whole file belongs to Axiom: manual edits are overwritten (backups cover
-// them) and identical bytes report Changed=false.
-func ensureKiroSkillRegistryHook(path string) (bool, error) {
-	file := kiroHookFile{
-		Version: "v1",
-		Hooks: []kiroHook{{
-			Name:    "axiom-skill-registry",
-			Trigger: "SessionStart",
-			Action:  kiroHookAction{Type: "command", Command: kiroSkillRegistryHookCommand},
-		}},
-	}
-	out, err := json.MarshalIndent(file, "", "  ")
-	if err != nil {
-		return false, fmt.Errorf("marshal Kiro hook %q: %w", path, err)
-	}
-	out = append(out, '\n')
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return false, fmt.Errorf("create Kiro hooks dir for %q: %w", path, err)
-	}
-	wr, err := filemerge.WriteFileAtomic(path, out, 0o644)
-	if err != nil {
-		return false, fmt.Errorf("write Kiro hook %q: %w", path, err)
 	}
 	return wr.Changed, nil
 }
@@ -2300,7 +1898,7 @@ func ManagedOpenCodePluginNames() []string {
 }
 
 // ManagedOpenCodePluginNamesFor devuelve los plugins gestionados de un agente de
-// la familia OpenCode (OpenCode y Kilo reciben conjuntos distintos).
+// la familia OpenCode (hoy solo OpenCode).
 func ManagedOpenCodePluginNamesFor(agent model.AgentID) []string {
 	return managedOpenCodePluginNames(agent)
 }
@@ -2310,8 +1908,6 @@ func managedOpenCodePluginNames(agent model.AgentID) []string {
 	case model.AgentOpenCode:
 		// axiom-branch-guard.ts es la capa D de la guarda de rama (inc-25, REQ-25.22): solo OpenCode.
 		return []string{"axiom-branch-guard.ts", "model-variants.ts", "sdd-task-result-artifacts.ts", "skill-registry.ts"}
-	case model.AgentKilocode:
-		return []string{"model-variants.ts", "skill-registry.ts"}
 	default:
 		return nil
 	}
@@ -2322,25 +1918,7 @@ func managedOpenCodePluginNames(agent model.AgentID) []string {
 // Inject's settings/plugins gate and sync's plugin refresh both use this
 // predicate so the two gates cannot drift (issue #1440).
 func AgentReceivesManagedOpenCodePlugins(agent model.AgentID) bool {
-	return agent == model.AgentOpenCode || agent == model.AgentKilocode
-}
-
-func stripOpenCodeNativeFallbackAgents(overlayBytes []byte) ([]byte, error) {
-	var overlay map[string]any
-	if err := json.Unmarshal(overlayBytes, &overlay); err != nil {
-		return nil, fmt.Errorf("unmarshal overlay: %w", err)
-	}
-	agents, ok := overlay["agent"].(map[string]any)
-	if !ok {
-		return overlayBytes, nil
-	}
-	delete(agents, "general")
-	delete(agents, "explore")
-	result, err := json.MarshalIndent(overlay, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal overlay: %w", err)
-	}
-	return append(result, '\n'), nil
+	return agent == model.AgentOpenCode
 }
 
 // RefreshInstalledOpenCodePlugins rewrites managed OpenCode plugins that are
@@ -2446,7 +2024,7 @@ type mergeJSONResult struct {
 }
 
 // mergeOpenCodeCompatibleJSONFile applies the legacy settings migrations shared
-// by OpenCode and Kilocode while preserving each provider's managed tools.
+// by OpenCode while preserving each provider's managed tools.
 func mergeOpenCodeCompatibleJSONFile(path string, overlay []byte) (mergeJSONResult, error) {
 	baseJSON, err := readAndMigrateOpenCodeCompatibleJSON(path)
 	if err != nil {
@@ -2897,10 +2475,6 @@ func injectFileAppend(homeDir string, adapter agents.Adapter, content string) (I
 
 	if adapter.SystemPromptStrategy() == model.StrategyInstructionsFile && strings.TrimSpace(existing) == "" {
 		existing = filemerge.SDDInstructionsFrontmatter
-	}
-
-	if adapter.SystemPromptStrategy() == model.StrategySteeringFile && strings.TrimSpace(existing) == "" {
-		existing = filemerge.SDDSteeringFrontmatter
 	}
 
 	// If there is a bare (un-marked) legacy orchestrator block, strip it first
@@ -3658,31 +3232,9 @@ func writeSubAgents(homeDir string, adapter agents.Adapter, opts InjectOptions) 
 		if entry.IsDir() {
 			continue
 		}
-		// Copy all files (not just .md) to support Kimi's YAML-based agents
+		// Copy all files, not just .md
 		contentStr := renderManagedAsset(adapter.Agent(), embeddedDir+"/"+entry.Name())
 		contentStr = resolveSkillsDirPlaceholders(contentStr, adapter, workspaceRootFor(homeDir, opts))
-
-		// Resolve {{KIRO_MODEL}} placeholder for adapters that support it (e.g. Kiro).
-		// Non-Kiro adapters (Cursor, etc.) don't implement kiroModelResolver and are unaffected.
-		if kmr, ok := adapter.(kiroModelResolver); ok {
-			phase := strings.TrimSuffix(entry.Name(), ".md")
-			alias := model.KiroModelAuto // safe default
-			if opts.KiroModelAssignments != nil {
-				if a, hasAlias := opts.KiroModelAssignments[phase]; hasAlias {
-					alias = a
-				} else if d, hasDefault := opts.KiroModelAssignments["default"]; hasDefault {
-					alias = d
-				}
-			} else if opts.ClaudeModelAssignments != nil {
-				// Backward-compatible fallback when Kiro-specific assignments are not provided.
-				if a, hasAlias := opts.ClaudeModelAssignments[phase]; hasAlias {
-					alias = model.KiroModelAlias(a)
-				} else if d, hasDefault := opts.ClaudeModelAssignments["default"]; hasDefault {
-					alias = model.KiroModelAlias(d)
-				}
-			}
-			contentStr = strings.ReplaceAll(contentStr, "{{KIRO_MODEL}}", kmr.KiroModelID(alias))
-		}
 
 		// Resolve {{CLAUDE_MODEL}} placeholder for adapters that support it (e.g. Claude Code).
 		// Non-Claude adapters don't implement claudeModelResolver and are unaffected.

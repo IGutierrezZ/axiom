@@ -38,19 +38,25 @@ This page covers how to run the Go tests on Windows and when CI runs the Windows
   - Those tests call `testenv.RequireBinaryBuilds(t)` before any `go build` and skip with a message naming `AXIOM_TEST_BUILD_BINARIES`.
   - The variable must be `1` or `true`. It is not implied by `CI`: the workflows set `AXIOM_TEST_BUILD_BINARIES: "1"` explicitly, so CI runs them all.
   - On a machine without such an EDR, opt in with `$env:AXIOM_TEST_BUILD_BINARIES = "1"`.
-  - Affected: `internal/app`, `internal/update`, `internal/opencode`, `internal/components/gga` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
+  - Affected: `internal/app`, `internal/update`, `internal/opencode` and `e2e/organicruntime` (its `TestMain` builds nothing without the variable).
 - **Tests that launch the Go toolchain skip behind the same variable.** They call `testenv.RequireGoToolchain(t)` before the first `go build`, `go run`, `go test -list` or `go version` subprocess, because each costs minutes on Windows. CI runs them because the workflows set the variable.
   - `internal/update`: `TestCanonicalReleasePublicKeysControlRealLinkerBuild` and the release distribution policy tests (`newReleasePolicyFixture`, which runs `go run ./internal/releasepolicycmd`).
   - `internal/app`: `TestDocumentedInvocationsRunAsDocumented`.
   - `internal/assets`: `TestWindowsFullSuiteShardsCoverEveryTestName` (nested `go test -list`).
+- **In `ci.yml` the toolchain meta-tests run in their own job.** The workflow-level `TOOLCHAIN_META_TESTS` selector names them, together with `TestBuiltBinaryClosedStdinRefusesBeforeBubbleTea` (`internal/app`, `go build`). The `Go Tests` jobs skip it (`-skip`) and the `Toolchain Meta Tests` job runs it (`-run`).
+  - That job runs on the nightly run, on `workflow_dispatch`, and on PRs that touch its inputs: the workflows, `.goreleaser.yaml`, `internal/update/`, `scripts/`, `cmd/axiom/`, the command documentation (`docs/**/*.md` except `docs/audits/`, `internal/assets/**/*.md`), `go.mod`, `go.sum`, and the meta-test files themselves.
+  - `Unit Tests` accepts the job as skipped only when the change detection succeeded and found none of those inputs.
+  - `internal/assets` fails if a selected name is declared outside the job's packages, or if a test in those packages launches the toolchain without being selected.
 
 ## When CI runs the Windows tests
 
-Windows tests do not run on every PR or merge. Linux runs the full suite on every PR. Windows runs when a change needs it, on request, or once a week.
+Windows tests do not run on every PR or merge. Linux runs the full suite on every PR, except the toolchain meta-tests above when the PR does not touch their inputs. Windows runs when a change needs it, on request, or once a week.
+
+A merge to `main` does not start `ci.yml`: the PR already ran it. `ci.yml` runs on `main` once a night at 02:40 UTC, and only when `main` has commits that no successful run has covered; otherwise every job is skipped. It also runs on `workflow_dispatch`.
 
 | Workflow | Runs on |
 |---|---|
-| `ci.yml`, job `windows-runtime` | `workflow_dispatch`, plus any PR or push to `main` whose diff touches a Windows-relevant path, plus any PR carrying the `ci:windows` label. |
+| `ci.yml`, job `windows-runtime` | `workflow_dispatch`, plus any PR whose diff touches a Windows-relevant path, plus the nightly run on `main` when its new commits touch one, plus any PR carrying the `ci:windows` label. |
 | `windows-full-suite.yml` | `workflow_dispatch`, plus the `ci:windows` label, plus a weekly schedule on Mondays at 03:20 UTC. |
 
 The Windows-relevant paths are:

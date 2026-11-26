@@ -22,7 +22,6 @@ func TestAdaptConventionsClauseForWorkspace(t *testing.T) {
 		want  string
 	}{
 		{model.AgentCursor, "Convention files under `.agents/skills/_shared/`:"},
-		{model.AgentKiroIDE, "Convention files under `.kiro/skills/_shared/`:"},
 	} {
 		adapter, err := agents.NewAdapter(tc.agent)
 		if err != nil {

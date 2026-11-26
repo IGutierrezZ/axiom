@@ -299,8 +299,7 @@ func TestBuildSyncSelectionDefaultScopeIncludesManagedComponents(t *testing.T) {
 
 	sel := BuildSyncSelection(flags, agents)
 
-	// Default sync must include: SDD, Engram, Context7, Skills, Persona. GGA is
-	// optional and is restored only from persisted state or detection.
+	// Default sync must include: SDD, Engram, Context7, Skills, Persona.
 	// Persona is included because the content between <!-- gentle-ai:persona -->
 	// markers is harness-managed; sync must propagate embedded-asset changes to
 	// users who already have a persona installed. Content outside the markers
@@ -1445,51 +1444,6 @@ func TestSyncPersonaOnlyRollbackRestoresOpenCodeSettingsAfterGentlemanCleanup(t 
 	}
 }
 
-func TestComponentSyncStepRunsGGAInjectWithoutBinaryInstall(t *testing.T) {
-	home := t.TempDir()
-	restoreCommand := runCommand
-	restoreLookPath := cmdLookPath
-	t.Cleanup(func() {
-		runCommand = restoreCommand
-		cmdLookPath = restoreLookPath
-	})
-
-	cmdLookPath = func(name string) (string, error) {
-		return "", os.ErrNotExist
-	}
-
-	var commandsCalled []string
-	runCommand = func(name string, args ...string) error {
-		commandsCalled = append(commandsCalled, name+" "+strings.Join(args, " "))
-		return nil
-	}
-
-	step := componentSyncStep{
-		id:        "sync:gga",
-		component: model.ComponentGGA,
-		homeDir:   home,
-		agents:    []model.AgentID{model.AgentOpenCode},
-		selection: model.Selection{},
-	}
-
-	if err := step.Run(); err != nil {
-		t.Fatalf("componentSyncStep.Run() GGA error = %v", err)
-	}
-
-	// No GGA binary install command should have been called.
-	for _, cmd := range commandsCalled {
-		if strings.Contains(cmd, "clone") || strings.Contains(cmd, "install.sh") {
-			t.Errorf("componentSyncStep GGA must not run binary install, got command: %s", cmd)
-		}
-	}
-
-	// GGA runtime asset should be written.
-	prModePath := filepath.Join(home, ".local", "share", "gga", "lib", "pr_mode.sh")
-	if _, err := os.Stat(prModePath); err != nil {
-		t.Errorf("expected GGA runtime asset at %q: %v", prModePath, err)
-	}
-}
-
 func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 	workspace, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
@@ -1521,7 +1475,7 @@ func TestRunSyncDoesNotRefreshPersistedVisualThemes(t *testing.T) {
 		backup.UserHomeDirFn = restoreBackupHome
 	})
 
-	// Persisted visual themes are ignored and no telemetry plugin is written.
+	// Persisted visual themes are ignored.
 	// The last two entries are the routing guidance targets. Guidance is written
 	// for every configured agent regardless of which components are persisted.
 	wantFiles := []string{
@@ -1725,52 +1679,6 @@ func TestRunSyncRefreshesInstalledManagedOpenCodePluginsWithoutSDDComponent(t *t
 	}
 }
 
-// TestRunSyncLeavesResidualReviewPluginInKilocode pins REQ-46.4: a review
-// plugin an earlier release left in the Kilo plugins directory is neither
-// removed nor reported as changed, and sync ends without error.
-func TestRunSyncLeavesResidualReviewPluginInKilocode(t *testing.T) {
-	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{
-		InstalledAgents:     []string{"kilocode"},
-		SelectionConfigured: true,
-		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
-	}); err != nil {
-		t.Fatalf("state.Write() error = %v", err)
-	}
-
-	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
-	reviewPlugin := filepath.Join(pluginsDir, "review-result-artifacts.ts")
-	mustWriteFile(t, reviewPlugin, []byte("// stale v2.1.7 managed plugin"))
-
-	restoreHome := osUserHomeDir
-	restoreBackupHome := backup.UserHomeDirFn
-	osUserHomeDir = func() (string, error) { return home, nil }
-	backup.UserHomeDirFn = func() (string, error) { return home, nil }
-	t.Cleanup(func() {
-		osUserHomeDir = restoreHome
-		backup.UserHomeDirFn = restoreBackupHome
-	})
-
-	result, err := RunSync(nil)
-	if err != nil {
-		t.Fatalf("RunSync() error = %v", err)
-	}
-
-	if _, statErr := os.Stat(reviewPlugin); statErr != nil {
-		t.Fatalf("sync removed the residual review plugin left for Kilo: %v", statErr)
-	}
-	if containsPath(result.ChangedFiles, reviewPlugin) {
-		t.Errorf("ChangedFiles reports the residual Kilocode plugin path %q\nchanged = %#v", reviewPlugin, result.ChangedFiles)
-	}
-
-	// skill-registry.ts was never installed — sync must not create it.
-	skillRegistry := filepath.Join(pluginsDir, "skill-registry.ts")
-	if _, err := os.Stat(skillRegistry); !os.IsNotExist(err) {
-		t.Errorf("sync must not create never-installed plugin %q; stat err = %v", skillRegistry, err)
-	}
-}
-
 // TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled guards the
 // refresh behavior for issue #1440: users who never had the SDD/OpenCode
 // plugins installed must not receive them from a plain sync.
@@ -1810,7 +1718,7 @@ func TestRunSyncDoesNotCreateManagedOpenCodePluginsWhenNeverInstalled(t *testing
 func TestSyncBackupTargetsIncludeManagedOpenCodePluginsWithoutSDD(t *testing.T) {
 	home := t.TempDir()
 	sel := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenCode, model.AgentKilocode},
+		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentEngram},
 	}
 
@@ -1819,7 +1727,7 @@ func TestSyncBackupTargetsIncludeManagedOpenCodePluginsWithoutSDD(t *testing.T) 
 		t.Fatalf("syncBackupTargets() error = %v", err)
 	}
 
-	for configDir, agent := range map[string]model.AgentID{"opencode": model.AgentOpenCode, "kilo": model.AgentKilocode} {
+	for configDir, agent := range map[string]model.AgentID{"opencode": model.AgentOpenCode} {
 		for _, plugin := range sdd.ManagedOpenCodePluginNamesFor(agent) {
 			want := filepath.Join(home, ".config", configDir, "plugins", plugin)
 			if !containsPath(targets, want) {
@@ -2069,76 +1977,6 @@ func TestSyncRollbackKeepsResidualReviewPluginAndRemovesReplacement(t *testing.T
 		if _, statErr := os.Stat(filepath.Join(pluginsDir, plugin)); !os.IsNotExist(statErr) {
 			t.Fatalf("rollback retained replacement plugin %q: %v", plugin, statErr)
 		}
-	}
-}
-
-func TestSyncSkillBackupRollsBackOpenClawGlobalSkills(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	currentProject := t.TempDir()
-	writeOpenClawConfigWithWorkspace(t, home, workspace)
-	t.Chdir(currentProject)
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenClaw},
-		Components: []model.ComponentID{model.ComponentSkills},
-		Skills:     []model.SkillID{model.SkillGoTesting},
-	}
-
-	openClawGlobalSkills := filepath.Join(home, ".openclaw", "skills")
-	openClawWorkspaceSkills := filepath.Join(workspace, ".openclaw", "skills")
-	globalSkill := filepath.Join(openClawGlobalSkills, "go-testing", "SKILL.md")
-	globalReference := filepath.Join(openClawGlobalSkills, "go-testing", "references", "examples.md")
-	writeStale(t, globalSkill)
-	writeStale(t, globalReference)
-
-	runtime, err := newSyncRuntime(home, selection)
-	if err != nil {
-		t.Fatal(err)
-	}
-	plan := runtime.stagePlan()
-	plan.Apply = append(plan.Apply, failingCompatibilityStep{})
-	result := pipeline.NewOrchestrator(pipeline.DefaultRollbackPolicy()).Execute(plan)
-	if result.Err == nil {
-		t.Fatal("injected later failure did not trigger sync rollback")
-	}
-	for _, path := range []string{globalSkill, globalReference} {
-		content, readErr := os.ReadFile(path)
-		if readErr != nil || string(content) != "stale" {
-			t.Errorf("sync rollback did not restore %q: content=%q error=%v", path, content, readErr)
-		}
-	}
-	for _, path := range []string{
-		filepath.Join(openClawWorkspaceSkills, "go-testing", "SKILL.md"),
-		filepath.Join(openClawWorkspaceSkills, "go-testing", "references", "examples.md"),
-	} {
-		if _, statErr := os.Stat(path); !os.IsNotExist(statErr) {
-			t.Errorf("OpenClaw sync must not write configured workspace skill path %q: %v", path, statErr)
-		}
-	}
-}
-
-func TestSyncBackupTargetsOpenClawSkillsUseGlobalRoot(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentOpenClaw},
-		Components: []model.ComponentID{model.ComponentSkills},
-		Skills:     []model.SkillID{model.SkillGoTesting},
-	}
-
-	targets, err := syncBackupTargets(home, workspace, selection, resolveAdapters(selection.Agents))
-	if err != nil {
-		t.Fatalf("syncBackupTargets() error = %v", err)
-	}
-
-	workspaceReference := filepath.Join(workspace, ".openclaw", "skills", "go-testing", "references", "examples.md")
-	if containsPath(targets, workspaceReference) {
-		t.Errorf("sync backup targets include OpenClaw workspace skill path %q\ntargets = %v", workspaceReference, targets)
-	}
-
-	homeReference := filepath.Join(home, ".openclaw", "skills", "go-testing", "references", "examples.md")
-	if !containsPath(targets, homeReference) {
-		t.Errorf("sync backup targets missing OpenClaw home-root skill path %q\ntargets = %v", homeReference, targets)
 	}
 }
 
@@ -3524,7 +3362,6 @@ func TestRunSyncWithProfilesIntegration(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode:  model.SDDModeSingle,
@@ -3638,7 +3475,6 @@ func TestRunSyncDetectsExistingProfilesOnRegularSync(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode: model.SDDModeSingle,
@@ -3691,7 +3527,6 @@ func TestRunSyncDetectsExistingProfilesOnRegularSync(t *testing.T) {
 			model.ComponentSDD,
 			model.ComponentEngram,
 			model.ComponentContext7,
-			model.ComponentGGA,
 			model.ComponentSkills,
 		},
 		SDDMode: model.SDDModeSingle,
@@ -3864,7 +3699,7 @@ func TestRunSyncWithSelection_WritesExpectedFiles(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 
@@ -3958,7 +3793,7 @@ func TestRunSyncWithSelection_FilesChangedOnFreshHome(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 
@@ -3988,7 +3823,7 @@ func TestRunSyncWithSelection_IsIdempotent(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 		SDDMode:    model.SDDModeSingle,
 	}
 	settingsPath := filepath.Join(home, ".config", "opencode", "opencode.json")
@@ -4046,7 +3881,7 @@ func TestRunSyncWithSelection_SelectionAgentsForwarded(t *testing.T) {
 
 	sel := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentGGA, model.ComponentSkills},
+		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentContext7, model.ComponentSkills},
 	}
 
 	result, err := RunSyncWithSelection(home, sel)
@@ -4210,7 +4045,7 @@ func TestRunSyncRollsBackOnFailure(t *testing.T) {
 	// Fail after context7 inject to trigger rollback.
 	runCommand = func(string, ...string) error { return nil }
 
-	// Inject a forced failure by injecting a bad gga step — we use a test
+	// Inject a forced failure by injecting a bad step — we use a test
 	// hook approach. We must fail the sync pipeline somehow. The simplest
 	// approach without a hook: use an invalid agent ID that will fail the
 	// adapter resolution inside the sync step.
@@ -4637,10 +4472,6 @@ func TestRunSyncLoadsPersistedModelAssignments(t *testing.T) {
 			"orchestrator": "opus",
 			"sdd-apply":    "sonnet",
 		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design": "glm",
-			"default":    "auto",
-		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -4663,12 +4494,6 @@ func TestRunSyncLoadsPersistedModelAssignments(t *testing.T) {
 	}
 	if got := result.Selection.ClaudeModelAssignments["sdd-apply"]; got != "sonnet" {
 		t.Errorf("ClaudeModelAssignments[sdd-apply] = %q, want %q", got, "sonnet")
-	}
-	if got := result.Selection.KiroModelAssignments["sdd-design"]; got != model.KiroModelGLM {
-		t.Errorf("KiroModelAssignments[sdd-design] = %q, want %q", got, model.KiroModelGLM)
-	}
-	if got := result.Selection.KiroModelAssignments["default"]; got != model.KiroModelAuto {
-		t.Errorf("KiroModelAssignments[default] = %q, want %q", got, model.KiroModelAuto)
 	}
 
 	// OpenCode assignments must be loaded.
@@ -6039,9 +5864,6 @@ func TestRunSyncDryRunResolvesPersonaFromState(t *testing.T) {
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "sonnet",
 		},
-		KiroModelAssignments: map[string]string{
-			"default": "auto",
-		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -6077,9 +5899,6 @@ func TestRunSyncDryRunFallsBackToNeutralWhenStateLacksPersona(t *testing.T) {
 		// No Persona field — pre-persona-persistence install.
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "sonnet",
-		},
-		KiroModelAssignments: map[string]string{
-			"default": "auto",
 		},
 		ModelAssignments: map[string]state.ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
@@ -6306,7 +6125,6 @@ func TestRunSyncPreservesCompletePersistedState(t *testing.T) {
 		CopilotPhaseAssignments: map[string]state.CopilotPhaseAssignmentState{
 			"sdd-apply": {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
 		},
-		KiroModelAssignments: map[string]string{"sdd-design": "sonnet"},
 		CodexModelAssignments: map[string]string{
 			"sdd-apply": "medium",
 		},
@@ -6718,7 +6536,7 @@ func TestSyncBackupTargetsIncludeRoutingGuidancePathsWithoutAnyComponent(t *test
 func TestSyncBackupTargetsContainNoDuplicatePaths(t *testing.T) {
 	home := t.TempDir()
 	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentKimi, model.AgentCodex},
+		Agents:     []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentCodex},
 		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentPersona},
 		SDDMode:    model.SDDModeSingle,
 	}
@@ -6805,53 +6623,6 @@ func TestSyncBackupTargetsScopedWorkspace(t *testing.T) {
 	claudePrompt := claudeAdapter.SystemPromptFile(workspace)
 	if !containsPath(targets, claudePrompt) {
 		t.Errorf("targets missing Claude workspace prompt %q: %v", claudePrompt, targets)
-	}
-}
-
-// TestSyncBackupTargetsScopedWorkspaceKiroStaysInWorkspace comprueba que sync en
-// ámbito workspace no declara rutas de Kiro bajo home. APPDATA y XDG_CONFIG_HOME
-// apuntan bajo home para que una fuga de SettingsPath se detecte.
-func TestSyncBackupTargetsScopedWorkspaceKiroStaysInWorkspace(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	homePrefix := home + string(filepath.Separator)
-
-	selection := model.Selection{
-		Agents:     []model.AgentID{model.AgentKiroIDE},
-		Components: []model.ComponentID{model.ComponentSDD, model.ComponentEngram, model.ComponentSkills, model.ComponentContext7, model.ComponentPersona},
-		SDDMode:    model.SDDModeSingle,
-		Persona:    model.PersonaNeutral,
-	}
-	adapters := resolveAdapters(selection.Agents)
-
-	for _, comp := range selection.Components {
-		t.Run(string(comp), func(t *testing.T) {
-			for _, p := range syncComponentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, selection, adapters, comp) {
-				if strings.HasPrefix(p, homePrefix) {
-					t.Errorf("componente %s: la ruta %q está bajo home, se esperaba bajo el workspace %q", comp, p, workspace)
-				}
-			}
-		})
-	}
-
-	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, selection, adapters)
-	if err != nil {
-		t.Fatalf("syncBackupTargetsScoped() error = %v", err)
-	}
-	for _, p := range targets {
-		if strings.HasPrefix(p, homePrefix) {
-			t.Errorf("objetivo de backup %q está bajo home, se esperaba bajo el workspace %q", p, workspace)
-		}
-	}
-	for _, want := range []string{
-		filepath.Join(workspace, ".kiro", "steering", "axiom.md"),
-		filepath.Join(workspace, ".kiro", "settings", "mcp.json"),
-	} {
-		if !containsPath(targets, want) {
-			t.Errorf("faltan objetivos de backup de Kiro en el workspace %q: %v", want, targets)
-		}
 	}
 }
 

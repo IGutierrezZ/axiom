@@ -37,12 +37,6 @@ dist/
 .mcp.json
 # Índice local de CodeGraph (`codegraph init`): base de datos por máquina
 .codegraph/
-# Kiro: artefactos regenerados por `axiom setup --agent kiro-ide` (settings lleva rutas absolutas por máquina
-# y el steering axiom.md se regenera desde internal/assets/kiro). Se versionan .kiro/hooks/ y el steering propio del equipo.
-.kiro/agents/
-.kiro/skills/
-.kiro/settings/
-.kiro/steering/axiom.md
 # GitHub Copilot: agentes de fase SDD que regenera `axiom sync` en el ámbito del repositorio
 .github/agents/
 # Artefactos de trabajo de orquestadores externos (planes, revisiones y metadatos de PR con rutas locales)

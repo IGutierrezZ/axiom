@@ -12,16 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/hermes"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kilocode"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kimi"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/openclaw"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
-	windsurfagent "github.com/IGutierrezZ/axiom/v3/internal/agents/windsurf"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/agentguidance"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -31,37 +25,18 @@ import (
 )
 
 func claudeAdapter() agents.Adapter   { return claude.NewAdapter() }
-func hermesAdapter() agents.Adapter   { return hermes.NewAdapter() }
-func kilocodeAdapter() agents.Adapter { return kilocode.NewAdapter() }
-func kimiAdapter() agents.Adapter     { return kimi.NewAdapter() }
-func openclawAdapter() agents.Adapter { return openclaw.NewAdapter() }
 func opencodeAdapter() agents.Adapter { return opencode.NewAdapter() }
-func windsurfAdapter() agents.Adapter { return windsurfagent.NewAdapter() }
 
-// Exercise the production optional workflow adapter boundary, not a renderer bypass.
-type invalidSessionPreflightWorkflowAdapter struct{ agents.Adapter }
-
-func (a invalidSessionPreflightWorkflowAdapter) SupportsWorkflows() bool { return true }
-func (a invalidSessionPreflightWorkflowAdapter) WorkflowsDir(root string) string {
-	return filepath.Join(root, ".windsurf", "workflows")
-}
-func (a invalidSessionPreflightWorkflowAdapter) EmbeddedWorkflowsDir() string {
-	if a.Agent() == model.AgentWindsurf {
-		return "opencode/commands" // Real assets, but not a native authority consumer.
-	}
-	return "missing-session-preflight-workflows"
-}
-
-type invalidRenderedSessionPreflightAdapter struct {
-	invalidSessionPreflightWorkflowAdapter
-}
+// invalidRenderedSessionPreflightAdapter introduces a second preflight block
+// while the orchestrator is rendered.
+type invalidRenderedSessionPreflightAdapter struct{ agents.Adapter }
 
 func (a invalidRenderedSessionPreflightAdapter) RenderCodexPhaseEfforts(map[string]model.CodexEffort, map[string]string) string {
 	return sddSessionPreflightBlockWithTool("") // A second block introduced during rendering.
 }
 
 func TestInjectSessionPreflightFailurePrecedesAllSDDWrites(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentWindsurf, model.AgentClaudeCode, model.AgentKimi, model.AgentOpenCode, model.AgentKilocode, model.AgentCodex} {
+	for _, agent := range []model.AgentID{model.AgentCodex} {
 		for _, existing := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/existing=%t", agent, existing), func(t *testing.T) {
 				home := t.TempDir()
@@ -70,10 +45,7 @@ func TestInjectSessionPreflightFailurePrecedesAllSDDWrites(t *testing.T) {
 				if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module example\n"), 0o644); err != nil {
 					t.Fatal(err)
 				}
-				var adapter agents.Adapter = invalidSessionPreflightWorkflowAdapter{mustAdapter(t, agent)}
-				if agent == model.AgentCodex {
-					adapter = invalidRenderedSessionPreflightAdapter{adapter.(invalidSessionPreflightWorkflowAdapter)}
-				}
+				var adapter agents.Adapter = invalidRenderedSessionPreflightAdapter{mustAdapter(t, agent)}
 				if existing {
 					path := adapter.SystemPromptFile(home)
 					if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -107,7 +79,7 @@ func TestInjectSessionPreflightFailurePrecedesAllSDDWrites(t *testing.T) {
 				beforeHome, beforeWorkspace := snapshot(home), snapshot(workspace)
 				_, err := Inject(home, adapter, model.SDDModeMulti, InjectOptions{WorkspaceDir: workspace, StrictTDD: true, Profiles: []model.Profile{{Name: "focused"}}})
 				if err == nil {
-					t.Fatal("invalid selected workflow source accepted")
+					t.Fatal("invalid rendered session preflight accepted")
 				}
 				if !reflect.DeepEqual(beforeHome, snapshot(home)) || !reflect.DeepEqual(beforeWorkspace, snapshot(workspace)) {
 					t.Fatal("invalid session preflight input mutated SDD files or directories")
@@ -170,9 +142,6 @@ func TestInjectMaterializesStatusContinuationContract(t *testing.T) {
 				return string(data)
 			}
 			promptPath := adapter.SystemPromptFile(home)
-			if agent == model.AgentKimi {
-				promptPath = filepath.Join(adapter.GlobalConfigDir(home), "sdd-orchestrator.md")
-			}
 			if AgentReceivesManagedOpenCodePlugins(agent) {
 				var settings struct {
 					Agent map[string]struct{ Prompt string } `json:"agent"`
@@ -215,7 +184,7 @@ func TestInjectMaterializesStatusContinuationContract(t *testing.T) {
 }
 
 func TestInjectFallbackSessionPreflight(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex} {
 		t.Run(string(agent), func(t *testing.T) {
 			home := t.TempDir()
 			t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
@@ -225,9 +194,6 @@ func TestInjectFallbackSessionPreflight(t *testing.T) {
 				t.Fatal(err)
 			}
 			path := adapter.SystemPromptFile(home)
-			if agent == model.AgentKimi {
-				path = filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-			}
 			before, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
@@ -252,21 +218,15 @@ func TestSDDOrchestratorAssetSelectionCoversSupportedAgents(t *testing.T) {
 	}{
 		{model.AgentClaudeCode, "claude/sdd-orchestrator.md"},
 		{model.AgentOpenCode, "opencode/sdd-orchestrator.md"},
-		{model.AgentKilocode, "opencode/sdd-orchestrator.md"},
 		{model.AgentGeminiCLI, "gemini/sdd-orchestrator.md"},
 		{model.AgentCursor, "cursor/sdd-orchestrator.md"},
 		{model.AgentVSCodeCopilot, "generic/sdd-orchestrator.md"},
 		{model.AgentGitHubCopilotCLI, "generic/sdd-orchestrator.md"},
 		{model.AgentCodex, "codex/sdd-orchestrator.md"},
 		{model.AgentAntigravity, "antigravity/sdd-orchestrator.md"},
-		{model.AgentWindsurf, "windsurf/sdd-orchestrator.md"},
-		{model.AgentKimi, "kimi/sdd-orchestrator.md"},
 		{model.AgentQwenCode, "qwen/sdd-orchestrator.md"},
-		{model.AgentKiroIDE, "kiro/sdd-orchestrator.md"},
-		{model.AgentOpenClaw, "generic/sdd-orchestrator.md"},
 		{model.AgentPi, "generic/sdd-orchestrator.md"},
 		{model.AgentTrae, "generic/sdd-orchestrator.md"},
-		{model.AgentHermes, "hermes/sdd-orchestrator.md"},
 	}
 
 	for _, tc := range tests {
@@ -293,93 +253,11 @@ func TestSDDOrchestratorAssetSelectionCoversSupportedAgents(t *testing.T) {
 	}
 }
 
-// TestInjectHermesWritesSDDOrchestratorToSOULMD verifies that sdd.Inject writes
-// the Hermes-specific SDD orchestrator content into ~/.hermes/SOUL.md via
-// StrategyMarkdownSections markers. Content is preserved across re-runs.
-func TestInjectHermesWritesSDDOrchestratorToSOULMD(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-
-	adapter := hermesAdapter()
-
-	result, err := Inject(home, adapter, "")
-	if err != nil {
-		t.Fatalf("Inject(hermes) first error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(hermes) first run: changed = false, want true")
-	}
-
-	soulPath := filepath.Join(home, ".hermes", "SOUL.md")
-	content, err := os.ReadFile(soulPath)
-	if err != nil {
-		t.Fatalf("ReadFile(SOUL.md) error = %v", err)
-	}
-	text := string(content)
-
-	if !strings.Contains(text, "<!-- axiom:sdd-orchestrator -->") && !strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->") {
-		t.Fatal("SOUL.md missing sdd-orchestrator open marker")
-	}
-	if !strings.Contains(text, "<!-- /axiom:sdd-orchestrator -->") && !strings.Contains(text, "<!-- /gentle-ai:sdd-orchestrator -->") {
-		t.Fatal("SOUL.md missing sdd-orchestrator close marker")
-	}
-	// Verify the Hermes-specific content is present (references ~/.hermes/skills/).
-	if !strings.Contains(text, "~/.hermes/skills/") {
-		t.Fatal("SOUL.md missing ~/.hermes/skills/ reference — wrong orchestrator asset loaded")
-	}
-
-	// Add user content outside markers and verify it is preserved on re-run.
-	userContent := "\n\n# My custom Hermes rules\nAlways be concise.\n"
-	if err := os.WriteFile(soulPath, []byte(text+userContent), 0o644); err != nil {
-		t.Fatalf("WriteFile(SOUL.md user content) error = %v", err)
-	}
-
-	_, err = Inject(home, adapter, "")
-	if err != nil {
-		t.Fatalf("Inject(hermes) second error = %v", err)
-	}
-	afterContent, err := os.ReadFile(soulPath)
-	if err != nil {
-		t.Fatalf("ReadFile(SOUL.md) after second inject error = %v", err)
-	}
-	if !strings.Contains(string(afterContent), "My custom Hermes rules") {
-		t.Fatal("Inject(hermes) second run clobbered user content outside markers")
-	}
-}
-
-// TestInjectHermesSDDIdempotent verifies that Inject for the Hermes adapter writes
-// the SDD orchestrator markdown into ~/.hermes/SOUL.md via markdown-section injection,
-// and that a second Inject call converges to Changed=false (idempotent).
-func TestInjectHermesSDDIdempotent(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-
-	adapter := hermesAdapter()
-
-	first, err := Inject(home, adapter, "")
-	if err != nil {
-		t.Fatalf("Inject(hermes) first error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatal("Inject(hermes) first changed = false")
-	}
-
-	second, err := Inject(home, adapter, "")
-	if err != nil {
-		t.Fatalf("Inject(hermes) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("Inject(hermes) second changed = true (not idempotent)")
-	}
-}
-
 func TestRemoteAuthorizationInstalledExecutors(t *testing.T) {
 	for _, tc := range []struct {
 		id    model.AgentID
 		count int
-	}{
-		{"claude-code", 14}, {"cursor", 11}, {model.AgentKiroIDE, 14}, {"kimi", 11},
-	} {
+	}{} {
 		t.Run(string(tc.id), func(t *testing.T) {
 			adapter, err := agents.NewAdapter(tc.id)
 			if err != nil {
@@ -419,7 +297,7 @@ func TestRemoteAuthorizationInstalledExecutors(t *testing.T) {
 }
 
 func TestRemoteAuthorizationEmbeddedExecutors(t *testing.T) {
-	for _, adapter := range []agents.Adapter{opencodeAdapter(), kilocodeAdapter()} {
+	for _, adapter := range []agents.Adapter{opencodeAdapter()} {
 		t.Run(string(adapter.Agent()), func(t *testing.T) {
 			home := t.TempDir()
 			mockNoPackageManager(t)
@@ -451,13 +329,12 @@ func TestRemoteAuthorizationEmbeddedExecutors(t *testing.T) {
 	}
 }
 
-func TestInjectOpenCodeAndKilocodeLanguageContractOutputs(t *testing.T) {
+func TestInjectOpenCodeLanguageContractOutputs(t *testing.T) {
 	tests := []struct {
 		name    string
 		adapter agents.Adapter
 	}{
 		{name: "opencode", adapter: opencodeAdapter()},
-		{name: "kilocode", adapter: kilocodeAdapter()},
 	}
 
 	for _, tc := range tests {
@@ -1231,13 +1108,12 @@ func TestInjectOpenCodePreservesExistingOrchestratorPromptWhenRequested(t *testi
 	}
 }
 
-func TestInjectOpenCodeAndKilocodeRejectMalformedPreservedPreflightBeforeAnyWrite(t *testing.T) {
+func TestInjectOpenCodeRejectMalformedPreservedPreflightBeforeAnyWrite(t *testing.T) {
 	adapters := []struct {
 		name    string
 		adapter agents.Adapter
 	}{
 		{name: "opencode", adapter: opencodeAdapter()},
-		{name: "kilocode", adapter: kilocodeAdapter()},
 	}
 	markers := []struct {
 		name, prompt string
@@ -1283,13 +1159,12 @@ func TestInjectOpenCodeAndKilocodeRejectMalformedPreservedPreflightBeforeAnyWrit
 	}
 }
 
-func TestInjectOpenCodeAndKilocodePreservedExternalPreflightUsesCanonicalOwnedBlock(t *testing.T) {
+func TestInjectOpenCodePreservedExternalPreflightUsesCanonicalOwnedBlock(t *testing.T) {
 	adapters := []struct {
 		name    string
 		adapter agents.Adapter
 	}{
 		{name: "opencode", adapter: opencodeAdapter()},
-		{name: "kilocode", adapter: kilocodeAdapter()},
 	}
 	for _, adapterCase := range adapters {
 		for _, lineEnding := range []struct {
@@ -1601,8 +1476,8 @@ var retiredWorkRoutingTokens = []string{
 	"authorizedTransition",
 }
 
-// The exact rule 7 a previous install wrote into every preserved OpenCode and
-// Kilocode orchestrator prompt.
+// The exact rule 7 a previous install wrote into every preserved OpenCode
+// orchestrator prompt.
 const retiredWorkRoutingAuthorityRule = "7. **Authority rule**: when a WorkRun exists, request `gentle-ai.work-status/v1`" +
 	" and apply only its exact provider-issued `gentle-ai.work-transition/v1` authorization." +
 	" Never select lenses, synthesize transitions, or infer PASS from prose."
@@ -2392,70 +2267,7 @@ func TestInjectGeminiWritesSDDOrchestratorAndSkills(t *testing.T) {
 	}
 }
 
-func TestInjectKimiWritesNativeAgentFilesAndGlobalSkills(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := Inject(home, kimiAdapter(), "")
-	if err != nil {
-		t.Fatalf("Inject(kimi) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(kimi) changed = false")
-	}
-
-	// SDD orchestrator is written as a standalone Jinja include module.
-	sddModulePath := filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-	sddModule, err := os.ReadFile(sddModulePath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", sddModulePath, err)
-	}
-
-	sddText := string(sddModule)
-	if !strings.Contains(sddText, "/skill:sdd-init") {
-		t.Fatal("sdd-orchestrator.md missing native /skill guidance")
-	}
-	if !strings.Contains(sddText, "multiagent:Task") {
-		t.Fatal("sdd-orchestrator.md should reference Kimi's documented Task tool for custom subagent delegation")
-	}
-
-	rootAgentPath := filepath.Join(home, ".kimi", "agents", "gentleman.yaml")
-	rootAgent, err := os.ReadFile(rootAgentPath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", rootAgentPath, err)
-	}
-
-	rootText := string(rootAgent)
-	if !strings.Contains(rootText, "name: gentleman") {
-		t.Fatal("gentleman.yaml should define a named root custom agent")
-	}
-	if strings.Contains(rootText, "kimi_cli.tools.agent:Agent") {
-		t.Fatal("gentleman.yaml should inherit Kimi's default tool set instead of hardcoding the old Agent tool path")
-	}
-	if !strings.Contains(rootText, "../KIMI.md") {
-		t.Fatal("gentleman.yaml should load the installed KIMI.md system prompt")
-	}
-
-	for _, want := range []string{
-		filepath.Join(home, ".kimi", "agents", "sdd-init.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-init.md"),
-		filepath.Join(home, ".kimi", "agents", "sdd-explore.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-propose.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-spec.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-design.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-tasks.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-apply.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-verify.yaml"),
-		filepath.Join(home, ".kimi", "agents", "sdd-archive.yaml"),
-		filepath.Join(home, ".config", "agents", "skills", "sdd-init", "SKILL.md"),
-		filepath.Join(home, ".config", "agents", "skills", "_shared", "sdd-phase-common.md"),
-	} {
-		if _, err := os.Stat(want); err != nil {
-			t.Fatalf("expected Kimi SDD artifact %q: %v", want, err)
-		}
-	}
-}
-
-func TestInjectKimiKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *testing.T) {
+func TestInjectAntigravityPreservesNativeChainStrategyWording(t *testing.T) {
 	tests := []struct {
 		name       string
 		agentID    model.AgentID
@@ -2463,33 +2275,6 @@ func TestInjectKimiKiroWindsurfAntigravityPreserveNativeChainStrategyWording(t *
 		required   []string
 		forbidden  []string
 	}{
-		{
-			name:    "kimi",
-			agentID: model.AgentKimi,
-			promptPath: func(home string, _ agents.Adapter) string {
-				return filepath.Join(home, ".kimi", "sdd-orchestrator.md")
-			},
-			required:  []string{"### Chain Strategy", "`stacked-to-main`", "`feature-branch-chain`", "delivery_strategy", "chain_strategy", "/skill:sdd-*", "multiagent:Task", "custom-agent prompt", "treat `chained-pr` (registry skill `chained-pr`) as a required skill match"},
-			forbidden: []string{"OpenCode's background-agent plugin", "plugin-backed persisted background delegation"},
-		},
-		{
-			name:    "kiro",
-			agentID: model.AgentKiroIDE,
-			promptPath: func(home string, adapter agents.Adapter) string {
-				return adapter.SystemPromptFile(home)
-			},
-			required:  []string{"### Chain Strategy", "`stacked-to-main`", "`feature-branch-chain`", "delivery_strategy", "chain_strategy", "Kiro phase context", "native Kiro subagent context", "treat `chained-pr` (registry skill `chained-pr`) as a required skill match"},
-			forbidden: []string{"OpenCode's background-agent plugin", "plugin-backed persisted background delegation"},
-		},
-		{
-			name:    "windsurf",
-			agentID: model.AgentWindsurf,
-			promptPath: func(home string, adapter agents.Adapter) string {
-				return adapter.SystemPromptFile(home)
-			},
-			required:  []string{"### Chain Strategy", "`stacked-to-main`", "`feature-branch-chain`", "delivery_strategy", "chain_strategy", "inline phase context", "There are no sub-agents", "treat `chained-pr` (registry skill `chained-pr`) as a required skill match"},
-			forbidden: []string{"OpenCode's background-agent plugin", "plugin-backed persisted background delegation", "custom sub-agent prompts"},
-		},
 		{
 			name:    "antigravity",
 			agentID: model.AgentAntigravity,
@@ -3435,27 +3220,6 @@ func TestInjectOpenCodeSubagentPromptsStayExecutorScoped(t *testing.T) {
 	}
 }
 
-func TestInjectKilocodeSubagentPromptUsesSharedRelativePath(t *testing.T) {
-	home := t.TempDir()
-	adapter := kilocodeAdapter()
-
-	if _, err := Inject(home, adapter, "multi"); err != nil {
-		t.Fatalf("Inject(multi) error = %v", err)
-	}
-
-	prompt := agentPrompt(t, readOpenCodeAgents(t, adapter.SettingsPath(home)), "sdd-apply")
-	want, err := SharedPromptFileRef(adapter.SettingsPath(home), SharedPromptDir(home), "sdd-apply")
-	if err != nil {
-		t.Fatalf("SharedPromptFileRef() error = %v", err)
-	}
-	if prompt != want {
-		t.Fatalf("sdd-apply prompt = %q, want %q", prompt, want)
-	}
-	if strings.Contains(prompt, filepath.ToSlash(home)) {
-		t.Fatalf("sdd-apply prompt = %q, contains home path", prompt)
-	}
-}
-
 func TestInjectOpenCodeEmptySDDModeDefaultsSingle(t *testing.T) {
 	mockNoPackageManager(t)
 	home := t.TempDir()
@@ -3742,23 +3506,6 @@ func TestInjectOpenCodeRemovesStaleProfileToolsWithoutExplicitProfiles(t *testin
 	}
 }
 
-func TestInjectKilocodeNamedProfileRetainsToolsSchema(t *testing.T) {
-	home := t.TempDir()
-	if _, err := Inject(home, kilocodeAdapter(), model.SDDModeMulti, InjectOptions{Profiles: []model.Profile{{Name: "fast"}}}); err != nil {
-		t.Fatal(err)
-	}
-	agents := readOpenCodeAgents(t, kilocodeAdapter().SettingsPath(home))
-	orchestrator := agents["sdd-orchestrator-fast"].(map[string]any)
-	wantOrchestratorTools := map[string]any{"read": true, "write": true, "edit": true, "bash": true, "question": true, "task": true}
-	if !reflect.DeepEqual(orchestrator["tools"], wantOrchestratorTools) || orchestrator["permission"].(map[string]any)["read"] != nil || orchestrator["permission"].(map[string]any)["write"] != nil || orchestrator["permission"].(map[string]any)["edit"] != nil || orchestrator["permission"].(map[string]any)["bash"] != nil {
-		t.Fatalf("Kilocode profile = %#v", orchestrator)
-	}
-	phase := agents["sdd-apply-fast"].(map[string]any)
-	if !reflect.DeepEqual(phase["tools"], map[string]any{"read": true, "write": true, "edit": true, "bash": true}) || phase["permission"] != nil {
-		t.Fatalf("Kilocode profile phase = %#v", phase)
-	}
-}
-
 func TestInjectClaudeIgnoresSDDMode(t *testing.T) {
 	home := t.TempDir()
 
@@ -3983,106 +3730,6 @@ func TestInjectClaudeDeduplicatesBareOrchestratorAtEndOfFile(t *testing.T) {
 	}
 	if !strings.Contains(text, "Be excellent.") {
 		t.Fatal("user content outside orchestrator section was lost")
-	}
-}
-
-func TestInjectOpenClawWritesWorkspaceAgentsProtocolSectionsAndNoToolsProtocol(t *testing.T) {
-	workspace := t.TempDir()
-	adapter := openclawAdapter()
-	toolsPath := filepath.Join(workspace, "TOOLS.md")
-	if err := os.WriteFile(toolsPath, []byte("# User tool notes\n\nKeep this.\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(TOOLS.md) error = %v", err)
-	}
-
-	result, err := Inject(workspace, adapter, model.SDDModeSingle, InjectOptions{StrictTDD: true, WorkspaceDir: workspace})
-	if err != nil {
-		t.Fatalf("Inject(openclaw) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(openclaw) changed = false")
-	}
-
-	agentsPath := filepath.Join(workspace, "AGENTS.md")
-	content, err := os.ReadFile(agentsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) error = %v", err)
-	}
-	text := string(content)
-	hasOpen := strings.Contains(text, "<!-- axiom:sdd-orchestrator -->") || strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->")
-	hasClose := strings.Contains(text, "<!-- /axiom:sdd-orchestrator -->") || strings.Contains(text, "<!-- /gentle-ai:sdd-orchestrator -->")
-	hasTDD := strings.Contains(text, "<!-- axiom:strict-tdd-mode -->") || strings.Contains(text, "<!-- gentle-ai:strict-tdd-mode -->")
-	if !hasOpen || !hasClose || !hasTDD || !strings.Contains(text, "Strict TDD Mode: enabled") || !strings.Contains(text, "Spec-Driven Development") {
-		t.Fatalf("OpenClaw AGENTS.md missing managed sections; got:\n%s", text)
-	}
-	if _, err := os.Stat(filepath.Join(workspace, ".openclaw", "AGENTS.md")); !os.IsNotExist(err) {
-		t.Fatalf("OpenClaw SDD injection must not write global .openclaw/AGENTS.md; stat err=%v", err)
-	}
-
-	toolsContent, err := os.ReadFile(toolsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(TOOLS.md) error = %v", err)
-	}
-	toolsText := string(toolsContent)
-	if strings.Contains(toolsText, "sdd-orchestrator") || strings.Contains(toolsText, "Strict TDD Mode") {
-		t.Fatalf("TOOLS.md must not receive OpenClaw protocol sections; got:\n%s", toolsText)
-	}
-	if !strings.Contains(toolsText, "Keep this.") {
-		t.Fatalf("TOOLS.md user content was modified; got:\n%s", toolsText)
-	}
-
-	second, err := Inject(workspace, adapter, model.SDDModeSingle, InjectOptions{StrictTDD: true, WorkspaceDir: workspace})
-	if err != nil {
-		t.Fatalf("Inject(openclaw) second error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("OpenClaw SDD injection should be idempotent on second run")
-	}
-	updated, err := os.ReadFile(agentsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) second error = %v", err)
-	}
-	count := strings.Count(string(updated), "<!-- axiom:sdd-orchestrator -->") + strings.Count(string(updated), "<!-- gentle-ai:sdd-orchestrator -->")
-	if count != 1 {
-		t.Fatalf("AGENTS.md has %d SDD markers, want exactly 1", count)
-	}
-}
-
-func TestInjectOpenClawPreservesWorkspaceAgentsUserContent(t *testing.T) {
-	workspace := t.TempDir()
-	agentsPath := filepath.Join(workspace, "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte("# Project Rules\n\nDo not delete workspace instructions.\n"), 0o644); err != nil {
-		t.Fatalf("WriteFile(AGENTS.md) error = %v", err)
-	}
-
-	if _, err := Inject(workspace, openclawAdapter(), model.SDDModeSingle); err != nil {
-		t.Fatalf("Inject(openclaw) error = %v", err)
-	}
-	content, err := os.ReadFile(agentsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(AGENTS.md) error = %v", err)
-	}
-	text := string(content)
-	if !strings.Contains(text, "Do not delete workspace instructions.") {
-		t.Fatalf("OpenClaw workspace AGENTS.md user content was lost; got:\n%s", text)
-	}
-	if !strings.Contains(text, "<!-- axiom:sdd-orchestrator -->") && !strings.Contains(text, "<!-- gentle-ai:sdd-orchestrator -->") {
-		t.Fatalf("OpenClaw workspace AGENTS.md missing managed SDD section; got:\n%s", text)
-	}
-}
-
-func TestInjectOpenClawRejectsAmbiguousWorkspacePath(t *testing.T) {
-	cwd := t.TempDir()
-	t.Chdir(cwd)
-
-	result, err := Inject("", openclawAdapter(), model.SDDModeSingle, InjectOptions{StrictTDD: true})
-	if err == nil {
-		t.Fatalf("Inject(openclaw, empty workspace) error = nil, want deterministic ambiguity error; result=%+v", result)
-	}
-	if _, statErr := os.Stat(filepath.Join(cwd, "AGENTS.md")); !os.IsNotExist(statErr) {
-		t.Fatalf("ambiguous OpenClaw workspace must not create relative AGENTS.md; stat err=%v", statErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(cwd, "TOOLS.md")); !os.IsNotExist(statErr) {
-		t.Fatalf("ambiguous OpenClaw workspace must not create relative TOOLS.md; stat err=%v", statErr)
 	}
 }
 
@@ -5694,185 +5341,6 @@ func TestInjectModelAssignments_CustomAgentVariantFollowsEffort(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Windsurf workflow injection tests
-// ---------------------------------------------------------------------------
-
-func TestInjectWindsurf_WorkflowsCopiedToWorkspace(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod marker: %v", err)
-	}
-
-	mockNoPackageManager(t)
-
-	result, err := Inject(home, windsurfAdapter(), "", InjectOptions{WorkspaceDir: workspace})
-	if err != nil {
-		t.Fatalf("Inject(windsurf) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(windsurf) changed = false")
-	}
-
-	// Verify sdd-new.md was written to .windsurf/workflows/
-	workflowPath := filepath.Join(workspace, ".windsurf", "workflows", "sdd-new.md")
-	if _, err := os.Stat(workflowPath); err != nil {
-		t.Fatalf("workflow file %q not found: %v", workflowPath, err)
-	}
-
-	// Verify the file is in the returned Files slice.
-	found := false
-	for _, f := range result.Files {
-		if f == workflowPath {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("workflow path %q not in result.Files: %v", workflowPath, result.Files)
-	}
-}
-
-func TestInjectWindsurf_WorkflowsIdempotent(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod marker: %v", err)
-	}
-
-	mockNoPackageManager(t)
-
-	opts := InjectOptions{WorkspaceDir: workspace}
-
-	if _, err := Inject(home, windsurfAdapter(), "", opts); err != nil {
-		t.Fatalf("first Inject(windsurf) error = %v", err)
-	}
-
-	second, err := Inject(home, windsurfAdapter(), "", opts)
-	if err != nil {
-		t.Fatalf("second Inject(windsurf) error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("second Inject(windsurf) changed = true — workflow injection is not idempotent")
-	}
-}
-
-func TestInjectWindsurf_WorkflowsSkippedWithoutWorkspaceDir(t *testing.T) {
-	home := t.TempDir()
-
-	mockNoPackageManager(t)
-
-	// No WorkspaceDir → workflow step must be silently skipped.
-	result, err := Inject(home, windsurfAdapter(), "")
-	if err != nil {
-		t.Fatalf("Inject(windsurf) without workspaceDir error = %v", err)
-	}
-
-	for _, f := range result.Files {
-		if strings.Contains(f, ".windsurf") {
-			t.Fatalf("unexpected .windsurf path in result.Files when WorkspaceDir is empty: %q", f)
-		}
-	}
-}
-
-func TestInjectWindsurf_WorkflowsSkippedForNonProjectDir(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir() // empty dir — no .git, go.mod, package.json, etc.
-
-	mockNoPackageManager(t)
-
-	result, err := Inject(home, windsurfAdapter(), "", InjectOptions{WorkspaceDir: workspace})
-	if err != nil {
-		t.Fatalf("Inject(windsurf) error = %v", err)
-	}
-
-	for _, f := range result.Files {
-		if strings.Contains(f, ".windsurf") {
-			// On Windows, if t.TempDir is under a real home dir with package.json,
-			// findProjectRoot may legitimately find the home dir as a project.
-			// We skip the failure if it targets the real user home.
-			if strings.Contains(f, `\Users\`) {
-				t.Logf("Skipping unexpected workflow found in real home: %q", f)
-				continue
-			}
-			t.Fatalf("workflow file %q should not be injected into non-project dir", f)
-		}
-	}
-}
-
-func TestInjectWindsurf_WorkflowContentMatchesAsset(t *testing.T) {
-	home := t.TempDir()
-	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod marker: %v", err)
-	}
-
-	mockNoPackageManager(t)
-
-	if _, err := Inject(home, windsurfAdapter(), "", InjectOptions{WorkspaceDir: workspace}); err != nil {
-		t.Fatalf("Inject(windsurf) error = %v", err)
-	}
-
-	got, err := os.ReadFile(filepath.Join(workspace, ".windsurf", "workflows", "sdd-new.md"))
-	if err != nil {
-		t.Fatalf("ReadFile() error = %v", err)
-	}
-
-	want, err := renderWindsurfSessionPreflightEntry(assets.MustRead("windsurf/workflows/sdd-new.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, required := range []string{"~/.codeium/windsurf/memories/global_rules.md", "SDD Session Preflight", "before any SDD-owned mutation", "STOP"} {
-		if !strings.Contains(string(got), required) {
-			t.Errorf("installed authority consumer missing %q", required)
-		}
-	}
-	if string(got) != want {
-		t.Fatalf("workflow file content mismatch:\ngot len=%d, want len=%d", len(got), len(want))
-	}
-}
-
-func TestInjectWindsurf_WorkflowsFoundFromSubdirectory(t *testing.T) {
-	home := t.TempDir()
-
-	// Simulate a real project: go.mod lives at the root.
-	projectRoot := t.TempDir()
-	if err := os.WriteFile(filepath.Join(projectRoot, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod: %v", err)
-	}
-
-	// Simulate running axiom from a subdirectory inside that project.
-	subDir := filepath.Join(projectRoot, "internal", "foo")
-	if err := os.MkdirAll(subDir, 0o755); err != nil {
-		t.Fatalf("mkdir subDir: %v", err)
-	}
-
-	mockNoPackageManager(t)
-
-	// Pass the subdirectory as WorkspaceDir — findProjectRoot must traverse
-	// upward and find go.mod at projectRoot.
-	result, err := Inject(home, windsurfAdapter(), "", InjectOptions{WorkspaceDir: subDir})
-	if err != nil {
-		t.Fatalf("Inject(windsurf) from subDir error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(windsurf) from subDir: changed = false, expected workflow to be written")
-	}
-
-	// Workflow must be at the PROJECT ROOT, not inside the subdirectory.
-	expectedPath := filepath.Join(projectRoot, ".windsurf", "workflows", "sdd-new.md")
-	if _, err := os.Stat(expectedPath); err != nil {
-		t.Fatalf("workflow not found at project root %q: %v", expectedPath, err)
-	}
-
-	// Must NOT be written inside the subdirectory.
-	unexpectedPath := filepath.Join(subDir, ".windsurf", "workflows", "sdd-new.md")
-	if _, err := os.Stat(unexpectedPath); err == nil {
-		t.Fatalf("workflow was incorrectly written inside subdirectory %q", unexpectedPath)
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Agent-specific SDD orchestrator asset selection tests
 // ---------------------------------------------------------------------------
 
@@ -5887,12 +5355,10 @@ func TestSDDOrchestratorAssetSelection(t *testing.T) {
 		{agent: model.AgentGeminiCLI, want: "gemini/sdd-orchestrator.md"},
 		{agent: model.AgentAntigravity, want: "antigravity/sdd-orchestrator.md"},
 		{agent: model.AgentCodex, want: "codex/sdd-orchestrator.md"},
-		{agent: model.AgentWindsurf, want: "windsurf/sdd-orchestrator.md"},
 		{agent: model.AgentCursor, want: "cursor/sdd-orchestrator.md"},
 		{agent: model.AgentQwenCode, want: "qwen/sdd-orchestrator.md"},
 		{agent: model.AgentClaudeCode, want: "claude/sdd-orchestrator.md"},
 		{agent: model.AgentOpenCode, want: "opencode/sdd-orchestrator.md"},
-		{agent: model.AgentKilocode, want: "opencode/sdd-orchestrator.md"},
 		{agent: model.AgentVSCodeCopilot, want: "generic/sdd-orchestrator.md"},
 		{agent: model.AgentGitHubCopilotCLI, want: "generic/sdd-orchestrator.md"},
 	}
@@ -6361,265 +5827,6 @@ func TestInjectOpenCodeMultiModeInstallsGentleOrchestratorWithModel(t *testing.T
 	}
 }
 
-func TestKilocodeRestoresGlobalManagedToolsToMainPolicy(t *testing.T) {
-	home := t.TempDir()
-	first, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle)
-	if err != nil {
-		t.Fatalf("Inject(kilocode) error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatal("first Kilocode inject did not change settings")
-	}
-
-	settingsPath := kilocodeAdapter().SettingsPath(home)
-	payload, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatalf("ReadFile(kilocode settings) error = %v", err)
-	}
-	root := map[string]any{}
-	if err := json.Unmarshal(payload, &root); err != nil {
-		t.Fatalf("Unmarshal(kilocode settings) error = %v", err)
-	}
-	agentsMap, ok := root["agent"].(map[string]any)
-	if !ok {
-		t.Fatal("Kilocode settings missing agent map")
-	}
-
-	for _, name := range []string{"jd-judge-a", "jd-judge-b"} {
-		agent, ok := agentsMap[name].(map[string]any)
-		if !ok {
-			t.Fatalf("missing %s agent", name)
-		}
-		wantTools := map[string]any{"*": false, "read": true, "write": false, "edit": false, "bash": false, "task": false}
-		if got := agent["tools"]; !reflect.DeepEqual(got, wantTools) {
-			t.Fatalf("%s tools = %#v, want main policy %#v", name, got, wantTools)
-		}
-		if _, exists := agent["permission"]; exists {
-			t.Fatalf("%s retained OpenCode permission = %#v", name, agent["permission"])
-		}
-	}
-
-	research, ok := agentsMap["sdd-research"].(map[string]any)
-	if !ok {
-		t.Fatal("missing sdd-research agent")
-	}
-	if got, want := research["permission"], kilocodeResearchPermission(); !reflect.DeepEqual(got, want) {
-		t.Fatalf("sdd-research permission = %#v, want main policy %#v", got, want)
-	}
-
-	second, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle)
-	if err != nil {
-		t.Fatalf("second Inject(kilocode) error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("second Kilocode inject changed settings")
-	}
-}
-
-func TestKilocodeSharedLegacyMigrationsPreserveTools(t *testing.T) {
-	home := t.TempDir()
-	settingsPath := kilocodeAdapter().SettingsPath(home)
-	before := []byte(`{
-	  // Legacy OpenCode-compatible settings may be JSONC.
-	  "agents": {
-	    "sdd-orchestrator": {"prompt": "legacy", "legacyMetadata": "preserve", "tools": {"read": true}},
-	    "legacy-agent": {"tools": {"bash": true}},
-	  },
-	  "agent": {
-	    "user-owned": {"tools": {"custom": true}},
-	  },
-	  "command": {
-			"legacy": {"prompt": "legacy command"},
-	  },
-	}
-	`)
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(settingsPath, before, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	result, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle)
-	if err != nil {
-		t.Fatalf("Inject(kilocode) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Kilocode migration did not change legacy settings")
-	}
-
-	payload, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := map[string]any{}
-	if err := json.Unmarshal(payload, &root); err != nil {
-		t.Fatal(err)
-	}
-	if _, exists := root["agents"]; exists {
-		t.Fatal("legacy agents key survived Kilocode migration")
-	}
-	agentsMap := root["agent"].(map[string]any)
-	for name, wantTools := range map[string]map[string]any{
-		"legacy-agent": {"bash": true},
-		"user-owned":   {"custom": true},
-	} {
-		agent, ok := agentsMap[name].(map[string]any)
-		if !ok || !reflect.DeepEqual(agent["tools"], wantTools) {
-			t.Fatalf("%s tools = %#v, want preserved %#v", name, agent["tools"], wantTools)
-		}
-	}
-	orch, ok := agentsMap["axiom-orchestrator"].(map[string]any)
-	if !ok {
-		orch = agentsMap["gentle-orchestrator"].(map[string]any)
-	}
-	if got := orch["legacyMetadata"]; got != "preserve" {
-		t.Fatalf("legacy sdd-orchestrator metadata = %#v, want migrated value", got)
-	}
-	command := root["command"].(map[string]any)["legacy"].(map[string]any)
-	if got := command["template"]; got != "legacy command" {
-		t.Fatalf("legacy command template = %#v, want migrated prompt", got)
-	}
-	if _, exists := command["prompt"]; exists {
-		t.Fatal("legacy command prompt survived Kilocode migration")
-	}
-
-	second, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle)
-	if err != nil {
-		t.Fatalf("second Inject(kilocode) error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("second Kilocode migration changed already-migrated settings")
-	}
-}
-
-func TestJudgmentDayProfilePermissionsConvertForKilocode(t *testing.T) {
-	profile := model.Profile{
-		Name: "review",
-		PhaseAssignments: map[string]model.ModelAssignment{
-			"jd-judge-a": {ProviderID: "openai", ModelID: "gpt-4o"},
-			"jd-judge-b": {ProviderID: "openai", ModelID: "gpt-4o"},
-		},
-	}
-	overlay, err := GenerateProfileOverlay(profile, t.TempDir(), filepath.Join(t.TempDir(), "opencode.json"), nil, "")
-	if err != nil {
-		t.Fatalf("GenerateProfileOverlay() error = %v", err)
-	}
-	root := map[string]any{}
-	if err := json.Unmarshal(overlay, &root); err != nil {
-		t.Fatal(err)
-	}
-	agentsMap := root["agent"].(map[string]any)
-	for _, name := range []string{"jd-judge-a-review", "jd-judge-b-review"} {
-		agent := agentsMap[name].(map[string]any)
-		if got, want := agent["permission"], judgmentDayJudgePermission(); !reflect.DeepEqual(got, want) {
-			t.Fatalf("OpenCode %s permission = %#v, want %#v", name, got, want)
-		}
-		if _, exists := agent["tools"]; exists {
-			t.Fatalf("OpenCode %s unexpectedly has tools", name)
-		}
-	}
-
-	restoreKilocodeManagedAgentTools(agentsMap)
-	for _, name := range []string{"jd-judge-a-review", "jd-judge-b-review"} {
-		agent := agentsMap[name].(map[string]any)
-		wantTools := map[string]any{"read": true, "bash": true}
-		tools := agent["tools"].(map[string]any)
-		if got := tools["__replace__"]; !reflect.DeepEqual(got, wantTools) {
-			t.Fatalf("Kilocode %s tools = %#v, want %#v", name, got, wantTools)
-		}
-		if _, exists := agent["permission"]; exists {
-			t.Fatalf("Kilocode %s retained OpenCode permission", name)
-		}
-	}
-	research := agentsMap["sdd-research-review"].(map[string]any)
-	if _, exists := research["permission"]; exists {
-		t.Fatalf("Kilocode named sdd-research retained global permission = %#v", research["permission"])
-	}
-}
-
-func TestInjectKilocodeProfileJudgesReplaceContaminatedToolsAndPermissions(t *testing.T) {
-	home := t.TempDir()
-	profile := model.Profile{
-		Name: "review",
-		PhaseAssignments: map[string]model.ModelAssignment{
-			"jd-judge-a": {ProviderID: "openai", ModelID: "gpt-4o"},
-			"jd-judge-b": {ProviderID: "openai", ModelID: "gpt-4o"},
-		},
-	}
-	settingsPath := kilocodeAdapter().SettingsPath(home)
-	mustWriteSettings := func(content string) {
-		t.Helper()
-		if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(settingsPath, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	mustWriteSettings(`{
-  "user-setting": {"keep": true},
-  "agent": {
-    "jd-judge-a-review": {
-      "tools": {"read": false, "bash": false, "write": true, "edit": true, "task": true},
-      "permission": {"write": "allow", "edit": "allow"},
-      "user-metadata": "preserve-a"
-    },
-    "jd-judge-b-review": {
-      "tools": {"read": false, "bash": false, "write": true, "edit": true, "task": true},
-      "permission": {"task": "allow"},
-      "user-metadata": "preserve-b"
-    },
-    "user-owned": {"tools": {"write": true}, "permission": {"bash": "allow"}}
-  }
-}
-`)
-
-	first, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle, InjectOptions{Profiles: []model.Profile{profile}})
-	if err != nil {
-		t.Fatalf("Inject(kilocode profile) error = %v", err)
-	}
-	if !first.Changed {
-		t.Fatal("first Kilocode profile inject did not change settings")
-	}
-	payload, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := map[string]any{}
-	if err := json.Unmarshal(payload, &root); err != nil {
-		t.Fatal(err)
-	}
-	if got := root["user-setting"].(map[string]any)["keep"]; got != true {
-		t.Fatalf("user setting changed: %#v", root["user-setting"])
-	}
-	agentsMap := root["agent"].(map[string]any)
-	for name, metadata := range map[string]string{"jd-judge-a-review": "preserve-a", "jd-judge-b-review": "preserve-b"} {
-		agent := agentsMap[name].(map[string]any)
-		wantTools := map[string]any{"read": true, "bash": true}
-		if got := agent["tools"]; !reflect.DeepEqual(got, wantTools) {
-			t.Fatalf("%s tools = %#v, want exact %#v", name, got, wantTools)
-		}
-		if _, exists := agent["permission"]; exists {
-			t.Fatalf("%s retained stale permission: %#v", name, agent["permission"])
-		}
-		if got := agent["user-metadata"]; got != metadata {
-			t.Fatalf("%s user metadata = %#v, want %q", name, got, metadata)
-		}
-	}
-	if got := agentsMap["user-owned"].(map[string]any)["tools"]; !reflect.DeepEqual(got, map[string]any{"write": true}) {
-		t.Fatalf("user-owned tools changed: %#v", got)
-	}
-
-	second, err := Inject(home, kilocodeAdapter(), model.SDDModeSingle, InjectOptions{Profiles: []model.Profile{profile}})
-	if err != nil {
-		t.Fatalf("second Inject(kilocode profile) error = %v", err)
-	}
-	if second.Changed {
-		t.Fatal("second Kilocode profile inject changed already-clean settings")
-	}
-}
-
 // TestMergeOpenCodeCompatibleJSONFileReturnsMergedBytes verifies that the
 // production merge path returns merged bytes in-memory, so callers never need
 // to re-read from disk to validate the result (the Windows/WSL2 post-check fix).
@@ -6761,460 +5968,9 @@ func assertNativeAgentFile(t *testing.T, path string, contains string) {
 	}
 }
 
-// TestInjectKiroFallsBackToClaudeModelAssignmentsWhenKiroMapUnset verifies that
-// when KiroModelAssignments is nil, the injector falls back to ClaudeModelAssignments
-// for Kiro phase model resolution (legacy backward-compatible path).
-func TestInjectKiroFallsBackToClaudeModelAssignmentsWhenKiroMapUnset(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	adapter, err := agents.NewAdapter(model.AgentKiroIDE)
-	if err != nil {
-		t.Fatalf("NewAdapter(kiro-ide) error = %v", err)
-	}
-
-	assignments := map[string]model.ClaudeModelAlias{
-		// Non-default overrides we need to prove at runtime.
-		"sdd-design":  model.ClaudeModelOpus,
-		"sdd-archive": model.ClaudeModelHaiku,
-		// Default fallback for unspecified phases.
-		"default": model.ClaudeModelSonnet,
-	}
-
-	result, err := Inject(home, adapter, "", InjectOptions{ClaudeModelAssignments: assignments})
-	if err != nil {
-		t.Fatalf("Inject(kiro, custom assignments) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(kiro, custom assignments) changed = false")
-	}
-
-	tests := []struct {
-		phase string
-		want  string
-	}{
-		{phase: "sdd-design", want: "model: claude-opus-4.8"},
-		{phase: "sdd-archive", want: "model: claude-haiku-4.5"},
-		// Unspecified phase should use default sonnet.
-		{phase: "sdd-spec", want: "model: claude-sonnet-4.6"},
-	}
-
-	for _, tt := range tests {
-		path := filepath.Join(home, ".kiro", "agents", tt.phase+".md")
-		content, readErr := os.ReadFile(path)
-		if readErr != nil {
-			t.Fatalf("ReadFile(%s) error = %v", tt.phase, readErr)
-		}
-		text := string(content)
-		if strings.Contains(text, "{{KIRO_MODEL}}") {
-			t.Fatalf("agent %s still contains unresolved {{KIRO_MODEL}} placeholder", tt.phase)
-		}
-		if !strings.Contains(text, tt.want) {
-			t.Fatalf("agent %s missing %q", tt.phase, tt.want)
-		}
-	}
-}
-
-func TestInjectKiroBalancedPresetAssignmentsEndToEnd(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	adapter, err := agents.NewAdapter(model.AgentKiroIDE)
-	if err != nil {
-		t.Fatalf("NewAdapter(kiro-ide) error = %v", err)
-	}
-
-	// This mirrors the map emitted by the Claude model picker (balanced preset).
-	balance := model.ClaudeModelPresetBalanced()
-
-	result, err := Inject(home, adapter, "", InjectOptions{ClaudeModelAssignments: balance})
-	if err != nil {
-		t.Fatalf("Inject(kiro, balanced preset) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatal("Inject(kiro, balanced preset) changed = false")
-	}
-
-	// Validate every generated Kiro phase file gets the expected model ID.
-	for _, phase := range []string{
-		"sdd-init", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design",
-		"sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive", "sdd-onboard",
-	} {
-		alias, ok := balance[phase]
-		if !ok {
-			alias = balance["default"]
-		}
-		wantModelLine := "model: " + model.KiroModelID(model.KiroModelAlias(alias))
-
-		path := filepath.Join(home, ".kiro", "agents", phase+".md")
-		content, readErr := os.ReadFile(path)
-		if readErr != nil {
-			t.Fatalf("ReadFile(%s) error = %v", phase, readErr)
-		}
-		if !strings.Contains(string(content), wantModelLine) {
-			t.Fatalf("agent %s model line mismatch: want %q", phase, wantModelLine)
-		}
-	}
-}
-
-// TestInjectKiroModelAssignmentsTakePrecedenceOverClaude verifies that when
-// both KiroModelAssignments and ClaudeModelAssignments are provided,
-// KiroModelAssignments wins for Kiro subagent file generation.
-func TestInjectKiroModelAssignmentsTakePrecedenceOverClaude(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	adapter, err := agents.NewAdapter(model.AgentKiroIDE)
-	if err != nil {
-		t.Fatalf("NewAdapter(kiro-ide) error = %v", err)
-	}
-
-	// Conflicting values: Kiro says opus for sdd-design, Claude says haiku.
-	// Kiro-specific assignments MUST take precedence.
-	opts := InjectOptions{
-		KiroModelAssignments: map[string]model.KiroModelAlias{
-			"sdd-design": model.KiroModelOpus,
-		},
-		ClaudeModelAssignments: map[string]model.ClaudeModelAlias{
-			"sdd-design": model.ClaudeModelHaiku,
-		},
-	}
-
-	_, err = Inject(home, adapter, "", opts)
-	if err != nil {
-		t.Fatalf("Inject error = %v", err)
-	}
-
-	path := filepath.Join(home, ".kiro", "agents", "sdd-design.md")
-	content, readErr := os.ReadFile(path)
-	if readErr != nil {
-		t.Fatalf("ReadFile(sdd-design) error = %v", readErr)
-	}
-
-	wantKiro := "model: " + model.KiroModelID(model.KiroModelOpus)
-	wantClaude := "model: " + model.KiroModelID(model.KiroModelHaiku)
-
-	if !strings.Contains(string(content), wantKiro) {
-		t.Fatalf("expected KiroModelAssignments to take precedence: want %q not found in file", wantKiro)
-	}
-	if strings.Contains(string(content), wantClaude) {
-		t.Fatalf("ClaudeModelAssignments must NOT be used when KiroModelAssignments is set: found %q", wantClaude)
-	}
-}
-
 // ---------------------------------------------------------------------------
 // Fix 2: findProjectRoot — monorepo and enhanced workspace root detection
 // ---------------------------------------------------------------------------
-
-// TestFindProjectRootPnpmMonorepo verifies that when the starting directory
-// has a package.json but a parent has pnpm-workspace.yaml, the function
-// returns the monorepo root (parent), not the sub-package directory.
-func TestFindProjectRootPnpmMonorepo(t *testing.T) {
-	root := t.TempDir()
-
-	// Monorepo root: has pnpm-workspace.yaml
-	if err := os.WriteFile(filepath.Join(root, "pnpm-workspace.yaml"), []byte("packages:\n  - packages/*\n"), 0o644); err != nil {
-		t.Fatalf("write pnpm-workspace.yaml: %v", err)
-	}
-
-	// Sub-package: has its own package.json
-	subPkg := filepath.Join(root, "packages", "app")
-	if err := os.MkdirAll(subPkg, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subPkg): %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(subPkg, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
-	}
-
-	// Also add a package.json at the monorepo root
-	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(`{"name":"monorepo"}`), 0o644); err != nil {
-		t.Fatalf("write root package.json: %v", err)
-	}
-
-	// Start from sub-package — should resolve to the monorepo root.
-	got, ok := findProjectRoot(subPkg)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want monorepo root %q", got, root)
-	}
-}
-
-// TestFindProjectRootNxMonorepo verifies that nx.json is recognized as a
-// monorepo root marker.
-func TestFindProjectRootNxMonorepo(t *testing.T) {
-	root := t.TempDir()
-
-	// Monorepo root: has nx.json
-	if err := os.WriteFile(filepath.Join(root, "nx.json"), []byte(`{"version":2}`), 0o644); err != nil {
-		t.Fatalf("write nx.json: %v", err)
-	}
-
-	// Sub-package: has its own package.json
-	subPkg := filepath.Join(root, "apps", "web")
-	if err := os.MkdirAll(subPkg, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subPkg): %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(subPkg, "package.json"), []byte(`{"name":"web"}`), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
-	}
-
-	got, ok := findProjectRoot(subPkg)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want nx monorepo root %q", got, root)
-	}
-}
-
-// TestFindProjectRootTurboMonorepo verifies that turbo.json is recognized as
-// a monorepo root marker.
-func TestFindProjectRootTurboMonorepo(t *testing.T) {
-	root := t.TempDir()
-
-	if err := os.WriteFile(filepath.Join(root, "turbo.json"), []byte(`{"$schema":"..."}`), 0o644); err != nil {
-		t.Fatalf("write turbo.json: %v", err)
-	}
-
-	subPkg := filepath.Join(root, "packages", "ui")
-	if err := os.MkdirAll(subPkg, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subPkg): %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(subPkg, "package.json"), []byte(`{"name":"ui"}`), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
-	}
-
-	got, ok := findProjectRoot(subPkg)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want turbo root %q", got, root)
-	}
-}
-
-// TestFindProjectRootGitTakesPrecedence verifies that a .git directory at a
-// higher level takes precedence over a package.json in a subdirectory.
-func TestFindProjectRootGitTakesPrecedence(t *testing.T) {
-	root := t.TempDir()
-
-	// Project root: has .git
-	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatalf("MkdirAll(.git): %v", err)
-	}
-
-	// Subdirectory: has package.json
-	subDir := filepath.Join(root, "frontend")
-	if err := os.MkdirAll(subDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subDir): %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(subDir, "package.json"), []byte(`{"name":"frontend"}`), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
-	}
-
-	// Start from subdirectory — should find .git at root immediately.
-	got, ok := findProjectRoot(subDir)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want .git root %q", got, root)
-	}
-}
-
-// TestFindProjectRootPackageJsonFallback verifies that when only package.json
-// exists (no .git, go.mod, or monorepo markers), it is returned as the best
-// candidate root.
-func TestFindProjectRootPackageJsonFallback(t *testing.T) {
-	root := t.TempDir()
-
-	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
-	}
-
-	// Isolation: add a strong marker at the test sandbox root to stop findProjectRoot
-	// from walking up into the real home directory on Windows.
-	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatalf("MkdirAll(.git): %v", err)
-	}
-
-	subDir := filepath.Join(root, "src", "components")
-	if err := os.MkdirAll(subDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subDir): %v", err)
-	}
-
-	got, ok := findProjectRoot(subDir)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want root with package.json %q", got, root)
-	}
-}
-
-// TestFindProjectRootEmptyDirReturnsNotFound verifies that an empty directory
-// (no markers at all) returns false.
-func TestFindProjectRootEmptyDirReturnsNotFound(t *testing.T) {
-	emptyDir := t.TempDir() // No markers, isolated temp dir
-
-	// The temp dir has no markers; we start from a subdirectory of it.
-	subDir := filepath.Join(emptyDir, "deep", "path")
-	if err := os.MkdirAll(subDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(subDir): %v", err)
-	}
-
-	_, ok := findProjectRoot(subDir)
-	if ok {
-		// Note: this may find markers in ancestor dirs outside emptyDir
-		// on some systems. The test is best-effort for isolated environments.
-		t.Log("findProjectRoot found a marker outside the temp dir — acceptable on some systems")
-	}
-}
-
-// TestFindProjectRootEmptyStringReturnsNotFound verifies the early-return for
-// empty dir input.
-func TestFindProjectRootEmptyStringReturnsNotFound(t *testing.T) {
-	got, ok := findProjectRoot("")
-	if ok {
-		t.Fatalf("findProjectRoot(\"\") = (%q, true), want (\"\", false)", got)
-	}
-}
-
-// TestFindProjectRootDeepNested verifies that findProjectRoot handles deeply
-// nested directories without panicking or infinite looping, and that it
-// correctly returns ("", false) when the marker is beyond maxAncestorDepth.
-func TestFindProjectRootDeepNested(t *testing.T) {
-	root := t.TempDir()
-
-	// Build a directory 25 levels deep (beyond maxAncestorDepth=20).
-	deepDir := root
-	for i := 0; i < 25; i++ {
-		deepDir = filepath.Join(deepDir, fmt.Sprintf("level%02d", i))
-	}
-	if err := os.MkdirAll(deepDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(deepDir): %v", err)
-	}
-
-	// Place a go.mod only at the root (25 levels above deepDir).
-	// With maxAncestorDepth=20, findProjectRoot cannot reach it from level 25.
-	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod: %v", err)
-	}
-
-	// This must not panic or loop infinitely.
-	// The important assertion is that it completes quickly.
-	done := make(chan struct{})
-	var gotPath string
-	var gotOk bool
-	go func() {
-		defer close(done)
-		gotPath, gotOk = findProjectRoot(deepDir)
-	}()
-
-	select {
-	case <-done:
-		// Completed without hanging — test passes.
-	case <-time.After(5 * time.Second):
-		t.Fatal("findProjectRoot appeared to hang on deeply nested dir")
-	}
-
-	// Correctness: starting 25 levels deep with go.mod only at level 0 and
-	// maxAncestorDepth=20, the function cannot reach level 0 — must return ("", false).
-	if gotOk {
-		t.Fatalf("findProjectRoot should return false when marker is beyond maxAncestorDepth, got path=%q ok=%v", gotPath, gotOk)
-	}
-	if gotPath != "" {
-		t.Fatalf("findProjectRoot should return empty path when not found, got %q", gotPath)
-	}
-}
-
-// TestFindProjectRootMultiplePackageJsonPicksHighest verifies that when
-// multiple package.json files exist in ancestor directories, findProjectRoot
-// returns the highest ancestor (closest to filesystem root), not the first
-// (closest to starting dir).
-func TestFindProjectRootMultiplePackageJsonPicksHighest(t *testing.T) {
-	root := t.TempDir()
-
-	// root/package.json  ← highest ancestor, should win
-	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(`{"name":"root"}`), 0o644); err != nil {
-		t.Fatalf("write root package.json: %v", err)
-	}
-
-	// Isolation: add a strong marker at the test sandbox root to stop findProjectRoot
-	// from walking up into the real home directory on Windows.
-	if err := os.MkdirAll(filepath.Join(root, ".git"), 0o755); err != nil {
-		t.Fatalf("MkdirAll(.git): %v", err)
-	}
-
-	// root/packages/app/package.json  ← closer to start, should NOT win
-	appDir := filepath.Join(root, "packages", "app")
-	if err := os.MkdirAll(appDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(appDir): %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(appDir, "package.json"), []byte(`{"name":"app"}`), 0o644); err != nil {
-		t.Fatalf("write app package.json: %v", err)
-	}
-
-	// root/packages/app/src/ — start here
-	srcDir := filepath.Join(appDir, "src")
-	if err := os.MkdirAll(srcDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(srcDir): %v", err)
-	}
-
-	got, ok := findProjectRoot(srcDir)
-	if !ok {
-		t.Fatal("findProjectRoot returned false, want true")
-	}
-	if got != root {
-		t.Fatalf("findProjectRoot = %q, want highest ancestor root %q (not closest package.json %q)", got, root, appDir)
-	}
-}
-
-// TestFindProjectRootAllMarkers verifies that each project marker (beyond .git,
-// go.mod, and package.json) is correctly recognized as a project root.
-func TestFindProjectRootAllMarkers(t *testing.T) {
-	allMarkers := []struct {
-		name   string
-		marker string
-		isDir  bool
-	}{
-		{"pnpm-workspace.yml", "pnpm-workspace.yml", false},
-		{"lerna.json", "lerna.json", false},
-		{"rush.json", "rush.json", false},
-		{"Cargo.toml", "Cargo.toml", false},
-		{"pyproject.toml", "pyproject.toml", false},
-		{"pom.xml", "pom.xml", false},
-		{"build.gradle", "build.gradle", false},
-	}
-
-	for _, tt := range allMarkers {
-		t.Run(tt.name, func(t *testing.T) {
-			root := t.TempDir()
-			subDir := filepath.Join(root, "sub", "deep")
-			os.MkdirAll(subDir, 0o755)
-
-			markerPath := filepath.Join(root, tt.marker)
-			if tt.isDir {
-				os.MkdirAll(markerPath, 0o755)
-			} else {
-				os.WriteFile(markerPath, []byte(""), 0o644)
-			}
-
-			result, ok := findProjectRoot(subDir)
-			if !ok {
-				t.Fatalf("findProjectRoot(%s) returned false for marker %s", subDir, tt.marker)
-			}
-			if result != root {
-				t.Fatalf("findProjectRoot(%s) = %s, want %s", subDir, result, root)
-			}
-		})
-	}
-}
 
 // ---------------------------------------------------------------------------
 // Fix: SDD post-check disk fallback on Windows
@@ -8021,266 +6777,6 @@ func TestPruneLegacyClaudeHookDeletesUserPromptSubmitWhenAllEntriesPruned(t *tes
 	}
 }
 
-func TestRetireClaudeTelemetryHooksRemovesOnlyRetiredCommands(t *testing.T) {
-	home := t.TempDir()
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	seed := `{"hooks":{
-  "Stop":[
-    {"matcher":"","hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"axiom telemetry runtime claude --json","async":true,"timeout":5}]},
-    {"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true,"timeout":5}]},
-    {"matcher":"","hooks":[{"type":"command","command":"axiom telemetry runtime codex --json"}]}
-  ],
-  "SubagentStop":[{"matcher":"","hooks":[{"type":"command","command":"axiom telemetry runtime claude --json","async":true,"timeout":5}]}],
-  "PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"axiom telemetry runtime claude --json"}]}]
-}}`
-	if err := os.WriteFile(settingsPath, []byte(seed), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	changed, err := retireClaudeTelemetryHooks(settingsPath)
-	if err != nil || !changed {
-		t.Fatal(changed, err)
-	}
-	first, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var root struct {
-		Hooks map[string][]struct {
-			Hooks []struct {
-				Command string `json:"command"`
-			} `json:"hooks"`
-		} `json:"hooks"`
-	}
-	if err := json.Unmarshal(first, &root); err != nil {
-		t.Fatalf("settings no longer valid JSON: %v\n%s", err, first)
-	}
-	if _, ok := root.Hooks["SubagentStop"]; ok {
-		t.Fatalf("emptied SubagentStop event must be dropped:\n%s", first)
-	}
-	stop := root.Hooks["Stop"]
-	if len(stop) != 2 || len(stop[0].Hooks) != 1 || stop[0].Hooks[0].Command != "echo keep" || stop[1].Hooks[0].Command != "axiom telemetry runtime codex --json" {
-		t.Fatalf("Stop must keep the user hook and entries for other agents only:\n%s", first)
-	}
-	if got := root.Hooks["PreToolUse"]; len(got) != 1 || len(got[0].Hooks) != 1 {
-		t.Fatalf("events other than Stop/SubagentStop must be untouched:\n%s", first)
-	}
-	if strings.Contains(string(first), "gentle-ai") || strings.Count(string(first), "telemetry runtime claude") != 1 {
-		t.Fatalf("retired commands still present:\n%s", first)
-	}
-
-	changed, err = retireClaudeTelemetryHooks(settingsPath)
-	if err != nil || changed {
-		t.Fatalf("second run must be a no-op: changed=%v err=%v", changed, err)
-	}
-	second, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(first) != string(second) {
-		t.Fatalf("second run rewrote the file:\nfirst:  %s\nsecond: %s", first, second)
-	}
-}
-
-func TestRetireClaudeTelemetryHooksNeverCreatesSettings(t *testing.T) {
-	settingsPath := filepath.Join(t.TempDir(), ".claude", "settings.json")
-	changed, err := retireClaudeTelemetryHooks(settingsPath)
-	if err != nil || changed {
-		t.Fatalf("missing settings: changed=%v err=%v", changed, err)
-	}
-	if _, err := os.Stat(settingsPath); !os.IsNotExist(err) {
-		t.Fatalf("settings.json must not be created, stat err = %v", err)
-	}
-}
-
-func TestInstallSkillRegistryAutomationClaudeWritesNoTelemetryHook(t *testing.T) {
-	home := t.TempDir()
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	if _, err := installSkillRegistryAutomation(home, claudeAdapter()); err != nil {
-		t.Fatalf("installSkillRegistryAutomation(claude) error = %v", err)
-	}
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(data)
-	if strings.Contains(text, "telemetry") {
-		t.Fatalf("fresh install must not write telemetry hooks:\n%s", text)
-	}
-	if strings.Count(text, "axiom skill-registry refresh") != 1 || strings.Contains(text, "review stop-hook") || strings.Count(text, "axiom sdd-preflight-hook --agent claude-code") != 1 {
-		t.Fatalf("other Axiom hooks missing:\n%s", text)
-	}
-	result, err := installSkillRegistryAutomation(home, claudeAdapter())
-	if err != nil || result.Changed {
-		t.Fatalf("second install must be a no-op: changed=%v err=%v", result.Changed, err)
-	}
-}
-
-func TestEnsureKiroSkillRegistryHook(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func(t *testing.T, path string) []byte
-		wantChanged bool
-	}{
-		{
-			name:        "missing file is created",
-			setup:       func(*testing.T, string) []byte { return nil },
-			wantChanged: true,
-		},
-		{
-			name: "second call is a byte-identical no-op",
-			setup: func(t *testing.T, path string) []byte {
-				if _, err := ensureKiroSkillRegistryHook(path); err != nil {
-					t.Fatalf("first ensureKiroSkillRegistryHook() error = %v", err)
-				}
-				data, err := os.ReadFile(path)
-				if err != nil {
-					t.Fatal(err)
-				}
-				return data
-			},
-			wantChanged: false,
-		},
-		{
-			name: "manual or stale content is overwritten",
-			setup: func(t *testing.T, path string) []byte {
-				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-					t.Fatal(err)
-				}
-				stale := `{"version":"v1","hooks":[{"name":"axiom-skill-registry","trigger":"SessionStart","matcher":"x","action":{"type":"command","command":"echo stale"}}]}`
-				if err := os.WriteFile(path, []byte(stale), 0o644); err != nil {
-					t.Fatal(err)
-				}
-				return nil
-			},
-			wantChanged: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), ".kiro", "hooks", skillRegistryHookFileName)
-			before := tt.setup(t, path)
-
-			changed, err := ensureKiroSkillRegistryHook(path)
-			if err != nil {
-				t.Fatalf("ensureKiroSkillRegistryHook() error = %v", err)
-			}
-			if changed != tt.wantChanged {
-				t.Fatalf("ensureKiroSkillRegistryHook() changed = %v, want %v", changed, tt.wantChanged)
-			}
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("ReadFile(%q) error = %v", path, err)
-			}
-			if before != nil && !bytes.Equal(before, data) {
-				t.Fatalf("hook bytes changed on no-op call:\nbefore: %s\nafter:  %s", before, data)
-			}
-			if !bytes.HasSuffix(data, []byte("}\n")) {
-				t.Fatalf("hook file must end with a single trailing newline:\n%q", data)
-			}
-
-			var parsed struct {
-				Version string           `json:"version"`
-				Hooks   []map[string]any `json:"hooks"`
-			}
-			if err := json.Unmarshal(data, &parsed); err != nil {
-				t.Fatalf("hook file is not valid JSON: %v\n%s", err, data)
-			}
-			if parsed.Version != "v1" {
-				t.Fatalf("version = %q, want v1", parsed.Version)
-			}
-			if len(parsed.Hooks) != 1 {
-				t.Fatalf("hooks = %d entries, want 1:\n%s", len(parsed.Hooks), data)
-			}
-			hook := parsed.Hooks[0]
-			if _, hasMatcher := hook["matcher"]; hasMatcher {
-				t.Fatalf("hook must not declare a matcher:\n%s", data)
-			}
-			if hook["name"] != "axiom-skill-registry" || hook["trigger"] != "SessionStart" {
-				t.Fatalf("hook name/trigger = %v/%v, want axiom-skill-registry/SessionStart", hook["name"], hook["trigger"])
-			}
-			action, _ := hook["action"].(map[string]any)
-			if action["type"] != "command" {
-				t.Fatalf("action.type = %v, want command", action["type"])
-			}
-			if action["command"] != "axiom skill-registry refresh --quiet --no-gitignore --cwd ." {
-				t.Fatalf("action.command = %v", action["command"])
-			}
-		})
-	}
-}
-
-func TestSkillRegistryHookPath(t *testing.T) {
-	root := t.TempDir()
-	tests := []struct {
-		name  string
-		agent model.AgentID
-		want  string
-	}{
-		{name: "kiro owns a standalone hook file", agent: model.AgentKiroIDE, want: filepath.Join(root, ".kiro", "hooks", "axiom-skill-registry.json")},
-		{name: "claude has no standalone hook dir", agent: model.AgentClaudeCode, want: ""},
-		{name: "codex has no standalone hook dir", agent: model.AgentCodex, want: ""},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			adapter, err := agents.NewAdapter(tt.agent)
-			if err != nil {
-				t.Fatalf("NewAdapter(%s) error = %v", tt.agent, err)
-			}
-			if got := SkillRegistryHookPath(adapter, root); got != tt.want {
-				t.Fatalf("SkillRegistryHookPath(%s) = %q, want %q", tt.agent, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestInject_KiroInstallsSkillRegistryHook(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-
-	adapter, err := agents.NewAdapter(model.AgentKiroIDE)
-	if err != nil {
-		t.Fatalf("NewAdapter(kiro-ide) error = %v", err)
-	}
-	hookPath := filepath.Join(home, ".kiro", "hooks", "axiom-skill-registry.json")
-
-	result, err := Inject(home, adapter, "")
-	if err != nil {
-		t.Fatalf("Inject(kiro) error = %v", err)
-	}
-	found := false
-	for _, f := range result.Files {
-		if f == hookPath {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Fatalf("Inject(kiro) files missing %q: %v", hookPath, result.Files)
-	}
-	first, err := os.ReadFile(hookPath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) error = %v", hookPath, err)
-	}
-	if got := strings.Count(string(first), "axiom skill-registry refresh"); got != 1 {
-		t.Fatalf("hook file has %d skill-registry commands, want 1:\n%s", got, first)
-	}
-
-	if _, err := Inject(home, adapter, ""); err != nil {
-		t.Fatalf("second Inject(kiro) error = %v", err)
-	}
-	second, err := os.ReadFile(hookPath)
-	if err != nil {
-		t.Fatalf("ReadFile(%q) after second Inject error = %v", hookPath, err)
-	}
-	if !bytes.Equal(first, second) {
-		t.Fatalf("second Inject(kiro) rewrote the hook:\nfirst:  %s\nsecond: %s", first, second)
-	}
-}
-
 func TestEnsureCodexSkillRegistryHookWritesSessionStartHookIdempotently(t *testing.T) {
 	home := t.TempDir()
 	hooksPath := filepath.Join(home, ".codex", "hooks.json")
@@ -8355,22 +6851,6 @@ func TestEnsureCodexSkillRegistryHookMigratesLegacyCommands(t *testing.T) {
           {"type": "command", "command": "gentle-ai skill-registry refresh --quiet --no-gitignore --cwd \"$PWD\" || true"}
         ]
       }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true, "timeout": 5}
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true, "timeout": 5}
-        ]
-      }
     ]
   }
 }`
@@ -8397,55 +6877,6 @@ func TestEnsureCodexSkillRegistryHookMigratesLegacyCommands(t *testing.T) {
 	if strings.Count(text, "axiom skill-registry refresh") != 1 {
 		t.Fatalf("expected 1 axiom skill-registry refresh, got:\n%s", text)
 	}
-	if strings.Contains(text, "telemetry") || strings.Contains(text, `"Stop"`) || strings.Contains(text, `"SubagentStop"`) {
-		t.Fatalf("retired Codex telemetry hooks and their emptied events must be removed, got:\n%s", text)
-	}
-}
-
-func TestEnsureCodexSkillRegistryHookRetiresTelemetryKeepingUserHooks(t *testing.T) {
-	hooksPath := filepath.Join(t.TempDir(), ".codex", "hooks.json")
-	if err := os.MkdirAll(filepath.Dir(hooksPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	seed := `{"hooks":{
-  "Stop":[
-    {"hooks":[{"type":"command","command":"echo keep"},{"type":"command","command":"axiom telemetry runtime codex --json","async":true,"timeout":4}]},
-    {"hooks":[{"type":"command","command":"gentle-ai telemetry runtime codex --json","async":true,"timeout":4}]}
-  ],
-  "SubagentStop":[{"hooks":[{"type":"command","command":"axiom telemetry runtime codex --json","async":true,"timeout":4}]}]
-}}`
-	if err := os.WriteFile(hooksPath, []byte(seed), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	changed, err := ensureCodexSkillRegistryHook(hooksPath)
-	if err != nil || !changed {
-		t.Fatal(changed, err)
-	}
-	first, err := os.ReadFile(hooksPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	text := string(first)
-	if strings.Contains(text, "telemetry") || strings.Contains(text, `"SubagentStop"`) {
-		t.Fatalf("telemetry hooks must be retired and the emptied event dropped:\n%s", text)
-	}
-	if strings.Count(text, "echo keep") != 1 || !strings.Contains(text, `"Stop"`) {
-		t.Fatalf("user hook in the same event must survive:\n%s", text)
-	}
-	if strings.Count(text, "axiom skill-registry refresh") != 1 {
-		t.Fatalf("skill-registry hook missing:\n%s", text)
-	}
-	changed, err = ensureCodexSkillRegistryHook(hooksPath)
-	if err != nil || changed {
-		t.Fatalf("second run must be a no-op: changed=%v err=%v", changed, err)
-	}
-	second, err := os.ReadFile(hooksPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(first) != string(second) {
-		t.Fatalf("second run rewrote the file:\n%s\n%s", first, second)
-	}
 }
 
 func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
@@ -8469,22 +6900,6 @@ func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
         "matcher": "Agent",
         "hooks": [
           {"type": "command", "command": "gentle-ai sdd-preflight-hook --agent claude-code", "timeout": 30}
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime claude --json", "async": true, "timeout": 5}
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime claude --json", "async": true, "timeout": 5}
         ]
       }
     ]
@@ -8515,9 +6930,6 @@ func TestEnsureClaudeHooksMigrateLegacyCommands(t *testing.T) {
 	}
 	if strings.Contains(text, "review stop-hook") {
 		t.Fatalf("no review stop-hook may be written, got:\n%s", text)
-	}
-	if strings.Contains(text, "telemetry") || strings.Contains(text, `"SubagentStop"`) {
-		t.Fatalf("retired Claude telemetry hooks and their emptied event must be removed, got:\n%s", text)
 	}
 }
 
@@ -8832,7 +7244,7 @@ func TestInject_CodexNilPhaseModelAssignments_UsesCarrilTable(t *testing.T) {
 }
 
 func TestInject_NonCodexAdapterUnaffected(t *testing.T) {
-	// Kiro, Cursor, and Gemini adapters must not be affected by CodexModelAssignments.
+	// Cursor and Gemini adapters must not be affected by CodexModelAssignments.
 	adapters := []struct {
 		name    string
 		adapter agents.Adapter
@@ -9608,8 +8020,8 @@ func TestInjectBranchGuardTwoSyncsLeaveIdenticalBytes(t *testing.T) {
 const branchGuardPluginName = "axiom-branch-guard.ts"
 
 // El plugin figura en la lista gestionada de OpenCode (la que usan Inject, la sincronización, el
-// desinstalador y la restauración transaccional) y en la tabla de resúmenes, y no llega a Kilocode,
-// que no tiene el hook (REQ-25.22: solo Claude Code, Codex y OpenCode).
+// desinstalador y la restauración transaccional) y en la tabla de resúmenes, y no llega a otros
+// agentes sin el hook (REQ-25.22: solo Claude Code, Codex y OpenCode).
 func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
 	if !slices.Contains(ManagedOpenCodePluginNames(), branchGuardPluginName) {
 		t.Fatalf("ManagedOpenCodePluginNames() no contiene %q: %v", branchGuardPluginName, ManagedOpenCodePluginNames())
@@ -9617,7 +8029,7 @@ func TestOpenCodeBranchGuardPluginIsManagedOnlyForOpenCode(t *testing.T) {
 	if !slices.Contains(ManagedOpenCodePluginNamesFor(model.AgentOpenCode), branchGuardPluginName) {
 		t.Fatalf("ManagedOpenCodePluginNamesFor(opencode) no contiene %q: instantánea y retirada no lo verían", branchGuardPluginName)
 	}
-	for _, agent := range []model.AgentID{model.AgentKilocode, model.AgentClaudeCode, model.AgentCodex} {
+	for _, agent := range []model.AgentID{model.AgentClaudeCode, model.AgentCodex} {
 		if slices.Contains(managedOpenCodePluginNames(agent), branchGuardPluginName) {
 			t.Errorf("%s no debe recibir %q", agent, branchGuardPluginName)
 		}
@@ -9703,19 +8115,6 @@ func TestInstallOpenCodeBranchGuardPluginV2UsesV2AssetAndIsIdempotent(t *testing
 	}
 }
 
-// Kilocode no recibe el plugin: no tiene hook de la guarda.
-func TestInjectKilocodeDoesNotReceiveBranchGuardPlugin(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-	if _, err := Inject(home, kilocodeAdapter(), model.SDDModeMulti); err != nil {
-		t.Fatal(err)
-	}
-	pluginPath := filepath.Join(kilocodeAdapter().GlobalConfigDir(home), "plugins", branchGuardPluginName)
-	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
-		t.Fatalf("Kilocode no debe recibir %q (stat err = %v)", pluginPath, err)
-	}
-}
-
 // La sincronización refresca una copia instalada y desactualizada y nunca crea un plugin que no
 // estaba instalado.
 func TestRefreshInstalledOpenCodePluginsKeepsBranchGuardPluginInSync(t *testing.T) {
@@ -9750,7 +8149,7 @@ func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.
 	mockNoPackageManager(t)
 	want := assets.MustRead("skills/sdd-spec/references/openspec-adoption.md")
 
-	adapters := map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter(), "kimi": kimiAdapter()}
+	adapters := map[string]agents.Adapter{"claude-code": claudeAdapter(), "opencode": opencodeAdapter()}
 	for name, adapter := range adapters {
 		t.Run(name, func(t *testing.T) {
 			home := t.TempDir()
@@ -9766,79 +8165,5 @@ func TestInjectInstallsTheAdoptionReferenceIdenticallyAcrossRuntimes(t *testing.
 				t.Errorf("la referencia instalada en %s difiere del activo embebido", name)
 			}
 		})
-	}
-}
-
-func TestInjectKilocodeKeepsLegacyBackgroundAgentsPluginAndLeavesResidualReviewPlugin(t *testing.T) {
-	home := t.TempDir()
-	mockNoPackageManager(t)
-
-	pluginsDir := filepath.Join(home, ".config", "kilo", "plugins")
-	if err := os.MkdirAll(pluginsDir, 0o755); err != nil {
-		t.Fatalf("MkdirAll(plugins) error = %v", err)
-	}
-	legacyPluginPath := filepath.Join(pluginsDir, "background-agents.ts")
-	legacyContent := []byte("legacy kilo background agent plugin")
-	if err := os.WriteFile(legacyPluginPath, legacyContent, 0o644); err != nil {
-		t.Fatalf("WriteFile(background-agents.ts) error = %v", err)
-	}
-	reviewPluginPath := filepath.Join(pluginsDir, "review-result-artifacts.ts")
-	if err := os.WriteFile(reviewPluginPath, []byte("residual review plugin left by an earlier release"), 0o644); err != nil {
-		t.Fatalf("WriteFile(review-result-artifacts.ts) error = %v", err)
-	}
-
-	result, err := Inject(home, kilocodeAdapter(), "multi")
-	if err != nil {
-		t.Fatalf("Inject(multi) error = %v", err)
-	}
-
-	got, err := os.ReadFile(legacyPluginPath)
-	if err != nil {
-		t.Fatalf("legacy Kilo background-agents plugin should remain: %v", err)
-	}
-	if !bytes.Equal(got, legacyContent) {
-		t.Fatalf("legacy Kilo background-agents plugin content changed: got %q, want %q", got, legacyContent)
-	}
-	for _, file := range result.Files {
-		if file == legacyPluginPath {
-			t.Fatalf("legacy Kilo plugin path %q should not be reported as managed cleanup: %v", legacyPluginPath, result.Files)
-		}
-	}
-
-	for _, plugin := range []string{"model-variants.ts", "skill-registry.ts"} {
-		pluginPath := filepath.Join(pluginsDir, plugin)
-		if _, err := os.Stat(pluginPath); err != nil {
-			t.Fatalf("%s plugin should still be installed for Kilo: %v", plugin, err)
-		}
-	}
-	if _, err := os.Stat(reviewPluginPath); err != nil {
-		t.Fatalf("the residual review plugin must be left untouched: %v", err)
-	}
-	settings, err := os.ReadFile(filepath.Join(home, ".config", "kilo", "opencode.json"))
-	if err != nil {
-		t.Fatalf("ReadFile(Kilocode settings) error = %v", err)
-	}
-	var root map[string]any
-	if err := json.Unmarshal(settings, &root); err != nil {
-		t.Fatalf("Unmarshal(Kilocode settings) error = %v", err)
-	}
-	agentMap, ok := root["agent"].(map[string]any)
-	if !ok {
-		t.Fatalf("Kilocode settings missing agent map: %v", root)
-	}
-	_, exists := agentMap["axiom-orchestrator"]
-	if !exists {
-		_, exists = agentMap["gentle-orchestrator"]
-	}
-	if !exists {
-		t.Fatalf("Kilocode settings must retain orchestrator agent: %v", agentMap)
-	}
-	if strings.Contains(string(settings), "codegraph_codegraph_explore") {
-		t.Fatal("Kilocode settings must not receive the OpenCode CodeGraph grant")
-	}
-	for _, openCodeOnlyAgent := range []string{"general", "explore"} {
-		if _, exists := agentMap[openCodeOnlyAgent]; exists {
-			t.Fatalf("Kilocode settings must not receive OpenCode-only agent %q", openCodeOnlyAgent)
-		}
 	}
 }

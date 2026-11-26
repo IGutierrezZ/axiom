@@ -7,7 +7,7 @@ package sharedskills
 import "path/filepath"
 
 // Dir es la carpeta de skills de proyecto de la raíz root: .agents/skills. La leen
-// Codex, VS Code Copilot, OpenCode, Kilo, Gemini CLI y Cursor, así que una sola copia
+// Codex, VS Code Copilot, OpenCode, Gemini CLI y Cursor, así que una sola copia
 // sirve a todos; con una carpeta propia por agente, cada uno leería además las de los
 // demás y vería las skills duplicadas. Claude Code no la lee y conserva .claude/skills.
 func Dir(root string) string {

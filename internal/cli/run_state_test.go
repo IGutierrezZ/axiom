@@ -21,9 +21,6 @@ func TestMergeExplicitAgentInstallStatePreservesExistingAssignmentsWhenFreshStat
 		ClaudeModelAssignments: map[string]string{
 			"sdd-apply": "opus",
 		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design": "auto",
-		},
 		CodexModelAssignments: map[string]string{
 			"sdd-apply": "low",
 		},
@@ -50,9 +47,6 @@ func TestMergeExplicitAgentInstallStatePreservesExistingAssignmentsWhenFreshStat
 	}
 	if merged.ClaudeModelAssignments["sdd-apply"] != "opus" {
 		t.Fatalf("ClaudeModelAssignments not preserved: %#v", merged.ClaudeModelAssignments)
-	}
-	if merged.KiroModelAssignments["sdd-design"] != "auto" {
-		t.Fatalf("KiroModelAssignments not preserved: %#v", merged.KiroModelAssignments)
 	}
 	if merged.CodexModelAssignments["sdd-apply"] != "low" {
 		t.Fatalf("CodexModelAssignments not preserved: %#v", merged.CodexModelAssignments)

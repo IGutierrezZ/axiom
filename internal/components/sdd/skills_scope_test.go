@@ -10,7 +10,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/kiro"
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
@@ -21,11 +20,8 @@ func skillsScopeAdapters() map[string]agents.Adapter {
 	return map[string]agents.Adapter{
 		"claude": claudeAdapter(),
 		"cursor": cursor.NewAdapter(),
-		"kimi":   kimiAdapter(),
-		"kiro":   kiro.NewAdapter(),
-		// OpenCode y Kilo llevan la ruta en los overlays JSON de sus subagentes.
+		// OpenCode lleva la ruta en los overlays JSON de sus subagentes.
 		"opencode": opencodeAdapter(),
-		"kilocode": kilocodeAdapter(),
 	}
 }
 
@@ -172,45 +168,6 @@ func TestClaudeSubAgentsReadSkillsFromInstallScope(t *testing.T) {
 	}
 }
 
-// Kiro conserva las dos grafías (POSIX y Windows) y ambas siguen el ámbito.
-func TestKiroSubAgentsResolveBothPathSpellings(t *testing.T) {
-	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
-	adapter := kiro.NewAdapter()
-
-	workspaceRoot := t.TempDir()
-	if _, err := Inject(workspaceRoot, adapter, "", InjectOptions{WorkspaceDir: workspaceRoot}); err != nil {
-		t.Fatalf("Inject(workspace): %v", err)
-	}
-	data, err := os.ReadFile(filepath.Join(adapter.SubAgentsDir(workspaceRoot), "sdd-apply.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{"`.kiro/skills/sdd-apply/SKILL.md`", `.kiro\\skills\\sdd-apply\\SKILL.md`} {
-		if !strings.Contains(string(data), want) {
-			t.Errorf("workspace: falta %s", want)
-		}
-	}
-	for _, forbidden := range []string{"~/.kiro", "%USERPROFILE%"} {
-		if strings.Contains(string(data), forbidden) {
-			t.Errorf("workspace: no debe quedar %s", forbidden)
-		}
-	}
-
-	globalRoot := t.TempDir()
-	if _, err := Inject(globalRoot, adapter, "", InjectOptions{}); err != nil {
-		t.Fatalf("Inject(global): %v", err)
-	}
-	data, err = os.ReadFile(filepath.Join(adapter.SubAgentsDir(globalRoot), "sdd-apply.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, want := range []string{"`~/.kiro/skills/sdd-apply/SKILL.md`", `%USERPROFILE%\\.kiro\\skills\\sdd-apply\\SKILL.md`} {
-		if !strings.Contains(string(data), want) {
-			t.Errorf("global: falta %s", want)
-		}
-	}
-}
-
 // Un adaptador sin modo workspace recibe el home aunque la instalación pida
 // workspace: sus rutas de skills deben seguir apuntando al home.
 func TestInstallsInWorkspaceOnlyWhenRootIsWorkspace(t *testing.T) {
@@ -242,7 +199,7 @@ func TestInstallsInWorkspaceOnlyWhenRootIsWorkspace(t *testing.T) {
 // nombra también la alternativa de workspace.
 func TestSubAgentAndCommandAssetsUseSkillsDirPlaceholder(t *testing.T) {
 	dirs := []string{
-		"claude/agents", "claude/commands", "cursor/agents", "kimi/agents", "kiro/agents",
+		"claude/agents", "claude/commands", "cursor/agents",
 	}
 	for _, dir := range dirs {
 		entries, err := fs.ReadDir(assets.FS, dir)
@@ -255,7 +212,7 @@ func TestSubAgentAndCommandAssetsUseSkillsDirPlaceholder(t *testing.T) {
 			}
 			content := assets.MustRead(dir + "/" + entry.Name())
 			for _, line := range strings.Split(content, "\n") {
-				for _, home := range []string{"~/.claude/skills", "~/.cursor/skills", "~/.config/agents/skills", "~/.kiro/skills", `%USERPROFILE%\\.kiro`} {
+				for _, home := range []string{"~/.claude/skills", "~/.cursor/skills", "~/.config/agents/skills"} {
 					if strings.Contains(line, home) && !strings.Contains(line, "if absent") {
 						t.Errorf("%s/%s codifica %s sin marcador: %s", dir, entry.Name(), home, strings.TrimSpace(line))
 					}
@@ -273,7 +230,7 @@ func TestResolveSkillsDirPlaceholdersLeavesUnrelatedContentUntouched(t *testing.
 }
 
 // openCodeSubAgentPrompts devuelve los prompts inline de los agentes del
-// opencode.json (o del equivalente de Kilo) que escribe la inyección.
+// opencode.json que escribe la inyección.
 func openCodeSubAgentPrompts(t *testing.T, settingsPath string) map[string]string {
 	t.Helper()
 	data, err := os.ReadFile(settingsPath)
@@ -295,15 +252,13 @@ func openCodeSubAgentPrompts(t *testing.T, settingsPath string) map[string]strin
 	return prompts
 }
 
-// Los overlays de OpenCode y Kilo llevan la ruta de las skills dentro de cadenas
+// Los overlays de OpenCode llevan la ruta de las skills dentro de cadenas
 // JSON. En workspace los subagentes deben leer la skill de fase relativa al
-// proyecto; en global conservan la ruta del home del adaptador. Kilo reutiliza
-// los overlays de OpenCode pero no puede heredar su directorio de skills.
+// proyecto; en global conservan la ruta del home del adaptador.
 func TestOpenCodeOverlaySkillsPathsFollowInstallScope(t *testing.T) {
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	adapters := map[string]agents.Adapter{
 		"opencode": opencodeAdapter(),
-		"kilocode": kilocodeAdapter(),
 	}
 	for name, adapter := range adapters {
 		rel := skillsRelDir(adapter)

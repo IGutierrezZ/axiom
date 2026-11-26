@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"strings"
 	"time"
 
@@ -33,16 +32,14 @@ const (
 )
 
 // coreTools are ecosystem-level binaries that axiom always requires
-// regardless of which agents the user installed. GGA is no longer one of them:
-// it is optional and only required when the persisted selection includes it
-// (see doctorGGARequired). Agent-specific binaries are
+// regardless of which agents the user installed. Agent-specific binaries are
 // derived from state.json's InstalledAgents field (see #709) so the doctor
 // only reports missing agents the user actually selected.
 var coreTools = []string{"axiom", "engram"}
 
 // agentToolBinaries maps an agent ID from state.json's InstalledAgents to the
 // CLI binary name exec.LookPath should resolve. An empty string means "no CLI
-// binary to check" — typically IDE-only agents like cursor, windsurf, or
+// binary to check" — typically IDE-only agents like cursor or
 // antigravity that do not ship a standalone executable on PATH.
 //
 // Keep this map in sync with the agentID → binary convention used by the
@@ -55,13 +52,8 @@ var agentToolBinaries = map[string]string{
 	"codex":              "codex",
 	"pi":                 "pi",
 	"gemini-cli":         "gemini",
-	"kilocode":           "kilo",
-	"kiro-ide":           "kiro",
-	"kimi":               "kimi",
 	"qwen-code":          "qwen",
 	"vscode-copilot":     "code",
-	"openclaw":           "openclaw",
-	"hermes":             "hermes",
 	"github-copilot-cli": "copilot",
 }
 
@@ -144,9 +136,6 @@ func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState)
 
 	pathDirs := pathDirsFn()
 	requiredTools := requiredDoctorTools(installedAgents)
-	if doctorGGARequired(installedState) && !slices.Contains(requiredTools, "gga") {
-		requiredTools = append(requiredTools, "gga")
-	}
 	checks := make([]doctor.Check, 0, len(requiredTools)+4)
 	for _, tool := range requiredTools {
 		tool := tool
@@ -578,14 +567,10 @@ func agentConfigDir(homeDir, agentID string) string {
 		return filepath.Join(cfgBase, "opencode")
 	case "cursor":
 		return filepath.Join(homeDir, ".cursor")
-	case "windsurf":
-		return filepath.Join(homeDir, ".codeium", "windsurf")
 	case "vscode":
 		return filepath.Join(cfgBase, "Code")
 	case "codex":
 		return filepath.Join(homeDir, ".codex")
-	case "kiro":
-		return filepath.Join(homeDir, ".kiro")
 	default:
 		return ""
 	}

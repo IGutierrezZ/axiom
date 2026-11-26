@@ -12,7 +12,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
-// #3817: the SDD orchestrator contract is maintained as twelve hand-written
+// #3817: the SDD orchestrator contract is maintained as every hand-written
 // near-duplicates. Measured across them, 19 of 21 shared subsections have
 // drifted -- Delegation Rules alone has eleven variants across eleven runtimes
 // -- so reconciling those is a decision per section, not a refactor.
@@ -67,7 +67,7 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.SupportedAgents()
-	if len(ids) != 17 {
+	if len(ids) != 11 {
 		t.Fatalf("registered cohort changed: %v", ids)
 	}
 	templates := map[string]bool{}
@@ -88,8 +88,8 @@ func TestRegisteredAgentsRenderStatusContinuationContract(t *testing.T) {
 			assertStatusContinuationContract(t, content)
 		})
 	}
-	if len(templates) != 12 {
-		t.Fatalf("effective template coverage = %d, want 12", len(templates))
+	if len(templates) != orchestratorTemplateCount {
+		t.Fatalf("effective template coverage = %d, want %d", len(templates), orchestratorTemplateCount)
 	}
 	t.Run("claude-lazy-workflow", func(t *testing.T) {
 		content, err := renderClaudeSessionPreflight()
@@ -105,22 +105,15 @@ var sharedOrchestratorSectionNames = []string{
 	"Language Domain Contract",
 	"Dependency Graph",
 	"Recovery Rule",
-	// #4296: the RDD-aware, risk-gated delegated-verification rule. Every
-	// runtime that names a concrete delegation mechanism in its own
-	// Delegation Rules body (claude, codex, opencode, cursor, gemini,
-	// antigravity, generic, hermes, kimi, kiro, qwen) carries the full form
-	// under "Delegated Verification Gate (MANDATORY)". Windsurf ("Windsurf
-	// has no subagents" in its own Delegation Rules body) is the only
-	// runtime with no delegation mechanism, so it carries the reduced form
-	// under its own distinct heading, "Delegated Verification Gate (Reduced
-	// Form)".
+	// #4296: the risk-gated delegated-verification rule. Every runtime names a
+	// concrete delegation mechanism in its own Delegation Rules body and carries
+	// it under "Delegated Verification Gate (MANDATORY)".
 	"Delegated Verification Gate (MANDATORY)",
-	"Delegated Verification Gate (Reduced Form)",
 	// INC-21 (design.md S4.7, H-2): the per-change kickoff questionnaire and
 	// the four block-review gates, plus their normative boundary against
 	// RDD (design.md S1.3). Registered here, in Phase 22, ahead of Phase
 	// 23 inserting the {{AXIOM_SDD_SECTION:...}} marker into the
-	// twelve per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
+	// every per-agent orchestrator assets: TestEveryRuntimeRendersTheSharedSections'
 	// own "continue" guard keeps this registration a no-op for every
 	// runtime until that marker exists.
 	"SDD Change Kickoff and Block Gates",
@@ -198,8 +191,8 @@ func TestSharedOrchestratorSectionsHaveOneSource(t *testing.T) {
 func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
-		model.AgentClaudeCode, model.AgentKiroIDE, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
+		model.AgentCodex,
+		model.AgentClaudeCode, model.AgentAntigravity, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		rendered := renderSDDOrchestratorAsset(agent)
 		if agent == model.AgentClaudeCode {
@@ -224,7 +217,7 @@ func TestEveryRuntimeRendersTheSharedSections(t *testing.T) {
 }
 
 // TestDelegatedVerificationGateCarriesNoRDDProse pins the RDD suspension
-// (C-01-c): the canonical bodies (full and reduced forms) and every rendered
+// (C-01-c): the canonical body and every rendered
 // orchestrator state the diff-inferred verification tier without mentioning RDD,
 // the review switch, or the native risk assessment.
 func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
@@ -233,11 +226,26 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 
 	for _, name := range []string{
 		"Delegated Verification Gate (MANDATORY)",
-		"Delegated Verification Gate (Reduced Form)",
 	} {
 		body := sharedOrchestratorSection(name)
 		if !strings.Contains(body, sddBoundary) || !strings.Contains(body, "The parent spot check") {
 			t.Errorf("shared section %q canonical body lacks the SDD boundary or the parent spot check", name)
+		}
+		// C-08-j: the independent verifier is reserved for security-sensitive,
+		// executable or operational, and mode-changing changes, and verification
+		// stays on the touched packages; the full suite belongs to CI.
+		for _, want := range []string{
+			"security-sensitive, executable or operational, or mode-changing changes: writer self-verification plus an independent verifier.",
+			"Verification runs the checks of the touched packages or modules; the full suite belongs to CI.",
+		} {
+			if !strings.Contains(body, want) {
+				t.Errorf("shared section %q lacks %q", name, want)
+			}
+		}
+		for _, stale := range []string{"or unclear changes", "treat it as the highest one"} {
+			if strings.Contains(body, stale) {
+				t.Errorf("shared section %q still carries the retired tier rule %q", name, stale)
+			}
 		}
 		for _, bad := range forbidden {
 			if strings.Contains(body, bad) {
@@ -263,8 +271,8 @@ func TestDelegatedVerificationGateCarriesNoRDDProse(t *testing.T) {
 func TestNoRawSharedSectionPlaceholderSurvivesRendering(t *testing.T) {
 	for _, agent := range []model.AgentID{
 		model.AgentOpenCode, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode,
-		model.AgentHermes, model.AgentKimi, model.AgentWindsurf, model.AgentCodex,
-		model.AgentKiroIDE, model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
+		model.AgentCodex,
+		model.AgentAntigravity, model.AgentClaudeCode, model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI,
 	} {
 		if rendered := renderSDDOrchestratorAsset(agent); strings.Contains(rendered, "{{AXIOM_SDD_SECTION:") {
 			t.Errorf("%s kept a raw shared-section placeholder", agent)

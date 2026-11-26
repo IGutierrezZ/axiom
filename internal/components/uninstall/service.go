@@ -20,13 +20,11 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/opencodedefault"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/permissions"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/persona"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
@@ -60,7 +58,7 @@ type Result struct {
 	// retries it.
 	FailedAgents []model.AgentID
 	// RemovedPathEntries son las entradas de PATH de usuario que una desinstalación
-	// global completa retiró (carpeta de Engram, shims de GGA, lanzadores).
+	// global completa retiró (carpeta de Engram, lanzadores).
 	RemovedPathEntries []string
 	// PurgedPaths es lo que borró --purge-state de la raíz de estado de Axiom.
 	PurgedPaths []string
@@ -134,12 +132,6 @@ type Service struct {
 	keepEngramRegistration bool
 }
 
-type workflowCapability interface {
-	SupportsWorkflows() bool
-	WorkflowsDir(workspaceDir string) string
-	EmbeddedWorkflowsDir() string
-}
-
 type opType int
 
 const (
@@ -160,7 +152,6 @@ var (
 		model.ComponentTheme,
 		model.ComponentClaudeTheme,
 		model.ComponentOpenCodeGentleLogo,
-		model.ComponentGGA,
 	}
 	fullAgentRemovalComponents = []model.ComponentID{
 		model.ComponentPersona,
@@ -274,7 +265,7 @@ func (s *Service) root() string {
 }
 
 // adapter devuelve el adaptador del agente ligado al ámbito. En workspace, los que
-// tienen otra distribución de proyecto (OpenCode, Kilo, Gemini, Codex, VS Code y
+// tienen otra distribución de proyecto (OpenCode, Gemini, Codex, VS Code y
 // Cursor) resuelven sus rutas con la raíz del proyecto, igual que la instalación.
 func (s *Service) adapter(agentID model.AgentID) (agents.Adapter, bool) {
 	adapter, ok := s.registry.Get(agentID)
@@ -360,32 +351,20 @@ func (s *Service) PartialUninstallWithProfiles(agentIDs []model.AgentID, compone
 }
 
 // partialUninstall is the shared body of PartialUninstall and
-// PartialUninstallWithProfiles. It resolves the requested components,
-// downgrades any that are still shared with an agent this run is not
-// removing (see reconcileSharedComponents), and executes the resulting plan.
+// PartialUninstallWithProfiles. It resolves the requested components and
+// executes the resulting plan.
 func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []model.ComponentID) (Result, error) {
 	if len(agentIDs) == 0 {
 		return Result{}, fmt.Errorf("partial uninstall requires at least one agent")
 	}
 
-	// explicitGGA tracks whether the caller itself named "gga". It decides
-	// whether an unreadable install state fails the whole command or is merely
-	// downgraded to a kept-GGA note.
-	explicitGGA := slices.Contains(componentIDs, model.ComponentGGA)
-
 	// Sin componentes se retira el agente entero (fullAgentRemovalComponents, lo
-	// mismo que exige stateAgentsToRemove), no todo lo gestionado: GGA es huella
-	// de máquina y solo se retira si se nombra (`--components gga`) o con `--all`.
+	// mismo que exige stateAgentsToRemove).
 	components := componentIDs
 	if len(components) == 0 {
 		components = slices.Clone(fullAgentRemovalComponents)
 	}
 	components = expandVisualPolishUninstallComponents(components)
-
-	components, sharedNote, err := s.reconcileSharedComponents(agentIDs, components, explicitGGA)
-	if err != nil {
-		return Result{}, err
-	}
 
 	s.keepEngramRegistration = !s.workspace && !slices.Contains(componentIDs, model.ComponentEngram)
 	defer func() { s.keepEngramRegistration = false }()
@@ -399,9 +378,6 @@ func (s *Service) partialUninstall(agentIDs []model.AgentID, componentIDs []mode
 	result, err := s.executePlan(plan, stateRemovals)
 	if err != nil {
 		return result, err
-	}
-	if sharedNote != "" {
-		result.ManualActions = append(result.ManualActions, sharedNote)
 	}
 	if s.keepEngramRegistration && slices.Contains(components, model.ComponentEngram) {
 		if note := keptEngramRegistrationNote(s.homeDir, agentIDs); note != "" {
@@ -432,60 +408,6 @@ func keptEngramRegistrationNote(homeDir string, agentIDs []model.AgentID) string
 	)
 }
 
-// reconcileSharedComponents downgrades components that are shared across all
-// installed agents (currently just GGA's global config) when at least one
-// agent outside agentIDs is still installed. Ownership is derived from the
-// persisted install state (state.json's InstalledAgents) rather than probing
-// disk, so it stays correct even when files were hand-edited (#3534).
-//
-// A missing state file is treated as "no other agent is recorded", matching
-// the pre-existing behavior of an install predating state.json. Any other
-// read failure (corrupt JSON, permission error, ...) fails closed toward
-// preservation: GGA is kept and a note explains why, and the rest of the
-// uninstall still proceeds — unless the caller explicitly asked for
-// "--components gga", in which case there is nothing safe left to do for
-// that explicit request and the error is returned instead.
-func (s *Service) reconcileSharedComponents(agentIDs []model.AgentID, componentIDs []model.ComponentID, explicitGGA bool) ([]model.ComponentID, string, error) {
-	// GGA es un componente de máquina: el ámbito workspace nunca lo instala ni lo
-	// retira.
-	if s.workspace || !slices.Contains(componentIDs, model.ComponentGGA) {
-		return componentIDs, "", nil
-	}
-
-	remaining, err := otherInstalledAgents(s.homeDir, agentIDs)
-	if err != nil {
-		if explicitGGA {
-			return nil, "", fmt.Errorf("check remaining installed agents for shared GGA config: %w", err)
-		}
-		note := fmt.Sprintf(
-			"No action needed: kept the shared GGA config (%s) because the install state could not be read (%v), so it is unclear whether another installed agent still depends on it.",
-			gga.ConfigPath(s.homeDir), err,
-		)
-		return withoutComponent(componentIDs, model.ComponentGGA), note, nil
-	}
-	if len(remaining) == 0 {
-		return componentIDs, "", nil
-	}
-
-	note := fmt.Sprintf(
-		"No action needed: kept the shared GGA config (%s) because installed agent(s) still use it: %s. It is removed automatically once those agents are also uninstalled.",
-		gga.ConfigPath(s.homeDir), strings.Join(remaining, ", "),
-	)
-	return withoutComponent(componentIDs, model.ComponentGGA), note, nil
-}
-
-// withoutComponent returns componentIDs with every occurrence of excluded
-// removed, preserving order.
-func withoutComponent(componentIDs []model.ComponentID, excluded model.ComponentID) []model.ComponentID {
-	kept := make([]model.ComponentID, 0, len(componentIDs))
-	for _, componentID := range componentIDs {
-		if componentID != excluded {
-			kept = append(kept, componentID)
-		}
-	}
-	return kept
-}
-
 // isStateNotFound reports whether err indicates the install state file does
 // not exist. It uses errors.Is against fs.ErrNotExist (rather than
 // os.IsNotExist) so a caller that wraps state.Read's error — e.g. via
@@ -493,35 +415,6 @@ func withoutComponent(componentIDs []model.ComponentID, excluded model.Component
 // to the "unreadable state" path.
 func isStateNotFound(err error) bool {
 	return errors.Is(err, fs.ErrNotExist)
-}
-
-// otherInstalledAgents returns the sorted IDs of agents recorded as installed
-// in state.json that are not in agentIDs. It answers "which agents remain
-// installed after this uninstall" for components shared across every
-// installed agent.
-func otherInstalledAgents(homeDir string, agentIDs []model.AgentID) ([]string, error) {
-	current, err := state.Read(homeDir)
-	if err != nil {
-		if isStateNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	removing := make(map[string]struct{}, len(agentIDs))
-	for _, agentID := range agentIDs {
-		removing[string(agentID)] = struct{}{}
-	}
-
-	remaining := make([]string, 0, len(current.InstalledAgents))
-	for _, installed := range current.InstalledAgents {
-		if _, ok := removing[installed]; ok {
-			continue
-		}
-		remaining = append(remaining, installed)
-	}
-	slices.Sort(remaining)
-	return remaining, nil
 }
 
 func expandVisualPolishUninstallComponents(components []model.ComponentID) []model.ComponentID {
@@ -572,9 +465,6 @@ func (s *Service) CompleteUninstall() (Result, error) {
 			return !s.options.AgentSupportsWorkspace(id)
 		})
 	}
-	// Se evalúa antes de retirar la configuración de GGA: es lo que dice si `~/bin`
-	// en el PATH lo añadió Axiom.
-	ggaManaged := !s.workspace && s.ggaManagedByAxiom()
 	s.completeRun = true
 	defer func() { s.completeRun = false }()
 	plan, err := s.buildPlan(allAgents, allManagedComponents)
@@ -587,7 +477,7 @@ func (s *Service) CompleteUninstall() (Result, error) {
 	}
 
 	if !s.workspace {
-		s.finishGlobalUninstall(ggaManaged, &result)
+		s.finishGlobalUninstall(&result)
 		result.ManualActions = append(result.ManualActions, "To completely remove axiom from your system, delete the executable (e.g., rm -f $(which axiom))")
 	}
 	return result, nil
@@ -639,34 +529,7 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 			return plan{}, err
 		}
 	} else {
-		for _, target := range globalBackupTargets(s.homeDir) {
-			files, err := expandBackupTarget(target)
-			if err != nil {
-				return plan{}, fmt.Errorf("expand backup target %q: %w", target, err)
-			}
-			for _, file := range files {
-				backupTargets[file] = struct{}{}
-			}
-		}
 		backupTargets[state.Path(s.homeDir)] = struct{}{}
-		if removesAllAgentComponents(componentIDs) {
-			// El steering de Kiro lleva la persona entera, sin marcadores: tras retirar
-			// las secciones con marcadores, solo se borra si lo que queda es de Axiom.
-			for _, agentID := range agentIDs {
-				adapter, ok := s.adapter(agentID)
-				if !ok {
-					continue
-				}
-				for _, path := range s.globalSteeringFiles(adapter) {
-					backupTargets[path] = struct{}{}
-					addPlanOperation(operationsByKey, agentID, s.sweepInstructionsFile(path, true))
-					// Las carpetas que se quedan vacías (steering y la de Kiro), sin
-					// aviso si conservan algo del usuario.
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(filepath.Dir(path)))
-					addPlanOperation(operationsByKey, agentID, quietDirIfEmpty(adapter.GlobalConfigDir(s.homeDir)))
-				}
-			}
-		}
 		if s.completeRun {
 			targets, compatOps, err := s.compatibilitySkillsOperations()
 			if err != nil {
@@ -697,15 +560,6 @@ func (s *Service) buildPlan(agentIDs []model.AgentID, componentIDs []model.Compo
 		}
 	}
 	if !s.workspace && slices.Contains(agentIDs, model.AgentOpenCode) && removesAllAgentComponents(componentIDs) {
-		adapter, _ := s.registry.Get(model.AgentOpenCode)
-		configDir := adapter.GlobalConfigDir(s.homeDir)
-		if err := telemetryruntime.CheckManaged(configDir); err != nil {
-			return plan{}, err
-		}
-		for _, op := range removeOwnedTelemetryRuntime(configDir) {
-			backupTargets[op.path] = struct{}{}
-			operationsByKey[operationKey(op)] = op
-		}
 		allLauncherPaths := append(opencodeactivation.LauncherPaths(s.homeDir, runtime.GOOS), opencodeactivation.LegacyManagedLauncherPaths(s.homeDir, runtime.GOOS)...)
 		for _, path := range allLauncherPaths {
 			backupTargets[path] = struct{}{}
@@ -1036,7 +890,7 @@ func settingsTargets(homeDir string, adapter agents.Adapter) []string {
 }
 
 // systemPromptFiles lists the prompt file the adapter writes and the earlier
-// names a previous release used (Kiro, VS Code and Cursor renamed theirs), so an
+// names a previous release used (VS Code and Cursor renamed theirs), so an
 // uninstall also clears managed sections from a copy that sync has not retired.
 func systemPromptFiles(adapter agents.Adapter, homeDir string) []string {
 	files := []string{adapter.SystemPromptFile(homeDir)}
@@ -1090,7 +944,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			ops = append(ops, rewriteJSONFile(path, jsonPaths...))
 		}
 	case model.ComponentContext7:
-		if s.workspace || usesManagedMCPShape(adapter) {
+		if s.workspace {
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "context7")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1113,7 +967,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			keptTargets, keptOps := engramOperationsKeepingRegistration(adapter, homeDir)
 			targets = append(targets, keptTargets...)
 			ops = append(ops, keptOps...)
-		case s.workspace || usesManagedMCPShape(adapter):
+		case s.workspace:
 			workspaceTargets, workspaceOps := s.managedMCPOperations(adapter, "engram")
 			targets = append(targets, workspaceTargets...)
 			ops = append(ops, workspaceOps...)
@@ -1137,7 +991,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			// chat.tools.autoApprove) ya no los escribe Axiom: si están, son del
 			// usuario y se quedan.
 			switch adapter.Agent() {
-			case model.AgentClaudeCode, model.AgentOpenCode, model.AgentKilocode:
+			case model.AgentClaudeCode, model.AgentOpenCode:
 				ops = append(ops, rewriteManagedPermissions(path, adapter.Agent()))
 			}
 		}
@@ -1235,16 +1089,7 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			targets = append(targets, path)
 			ops = append(ops, rewriteSkillRegistryHook(path, adapter.Agent()))
 		}
-		if path := sdd.SkillRegistryHookPath(adapter, homeDir); path != "" {
-			// Axiom owns the whole file; user hooks beside it are left alone.
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path), removeDirIfEmpty(filepath.Dir(path)))
-		}
-		// Kilo usa el mismo formato de configuración que OpenCode (agentes con la marca
-		// de Axiom, plugins y share), así que se retira con el mismo código en el
-		// proyecto y en la carpeta de usuario. Antes la desinstalación global no lo
-		// trataba como tal y dejaba su opencode.json y sus plugins.
-		if adapter.Agent() == model.AgentOpenCode || adapter.Agent() == model.AgentKilocode {
+		if adapter.Agent() == model.AgentOpenCode {
 			for _, path := range s.settingsTargets(adapter) {
 				var defaultPlan *opencodedefault.UninstallPlan
 				if adapter.Agent() == model.AgentOpenCode {
@@ -1302,10 +1147,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				ops = append(ops, removeFile(pluginPath))
 			}
 			ops = append(ops, removeDirIfEmpty(pluginDir))
-			if adapter.Agent() == model.AgentKilocode {
-				// La carpeta de Kilo (~/.config/kilo) también se quita si queda vacía.
-				ops = append(ops, quietDirIfEmpty(adapter.GlobalConfigDir(homeDir)))
-			}
 
 			if s.workspace {
 				// Los prompts compartidos de las fases (<proyecto>/.opencode/prompts/sdd).
@@ -1317,7 +1158,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 				}
 				ops = append(ops, removeDirIfEmpty(promptDir), removeDirIfEmpty(filepath.Dir(promptDir)))
 			} else if adapter.Agent() == model.AgentOpenCode {
-				// La caché y la dependencia son de OpenCode: Kilo no las usa.
 				// La caché activa (AXIOM_STATE_DIR si está definida) y también las que el
 				// plugin de OpenCode o versiones anteriores pudieron dejar en la raíz por
 				// defecto y en la heredada.
@@ -1349,22 +1189,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(skillDir))
 		}
-		if cap, ok := adapter.(workflowCapability); ok && cap.SupportsWorkflows() && s.workspaceDir != "" {
-			workflowsDir := cap.WorkflowsDir(s.workspaceDir)
-			entries, err := fs.ReadDir(assets.FS, cap.EmbeddedWorkflowsDir())
-			if err != nil {
-				return nil, nil, fmt.Errorf("read embedded workflows: %w", err)
-			}
-			for _, entry := range entries {
-				if entry.IsDir() {
-					continue
-				}
-				path := filepath.Join(workflowsDir, entry.Name())
-				targets = append(targets, path)
-				ops = append(ops, removeFile(path))
-			}
-			ops = append(ops, removeDirIfEmpty(workflowsDir), removeDirIfEmpty(filepath.Dir(workflowsDir)))
-		}
 		// Copilot CLI no tiene modo workspace, pero si consta en el estado del proyecto los
 		// agentes de .github/agents son también suyos: los retira si VS Code no los necesita.
 		if s.workspace && adapter.Agent() == model.AgentGitHubCopilotCLI && !s.copilotProjectAgentsStayInUse(adapter.Agent()) {
@@ -1391,24 +1215,6 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			}
 			ops = append(ops, removeDirIfEmpty(agentsDir))
 		}
-	case model.ComponentGGA:
-		// GGA es de máquina: el ámbito workspace nunca lo instala.
-		if s.workspace {
-			break
-		}
-		for _, path := range globalBackupTargets(homeDir) {
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path))
-		}
-		ops = append(ops, removeDirIfEmpty(filepath.Dir(gga.ConfigPath(homeDir))))
-		// Lo que Axiom escribe para GGA además de su configuración: los shims de
-		// PowerShell y de cmd, y el script del modo PR. El resto de GGA (su binario y
-		// su runtime) es de la herramienta, no de Axiom, y se queda.
-		for _, path := range []string{gga.RuntimeCMDPath(homeDir), gga.RuntimePS1Path(homeDir), gga.RuntimePRModePath(homeDir)} {
-			targets = append(targets, path)
-			ops = append(ops, removeFile(path))
-		}
-		ops = append(ops, removeDirIfEmpty(filepath.Dir(gga.RuntimeCMDPath(homeDir))), removeDirIfEmpty(filepath.Dir(gga.RuntimePRModePath(homeDir))))
 	default:
 		return nil, nil, fmt.Errorf("unsupported component ID %q", componentID)
 	}
@@ -1798,11 +1604,7 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 					strings.Contains(cmd, "gentle-ai review stop-hook") ||
 					strings.Contains(cmd, "axiom sdd-preflight-hook") ||
 					strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
-					cmd == branchGuardCommand ||
-					cmd == "axiom telemetry runtime claude --json" ||
-					cmd == "gentle-ai telemetry runtime claude --json" ||
-					cmd == "axiom telemetry runtime codex --json" ||
-					cmd == "gentle-ai telemetry runtime codex --json") {
+					cmd == branchGuardCommand) {
 					changed = true
 					continue
 				}
@@ -2277,36 +2079,6 @@ func removesAllAgentComponents(componentIDs []model.ComponentID) bool {
 		}
 	}
 	return true
-}
-
-func globalBackupTargets(homeDir string) []string {
-	return []string{
-		gga.ConfigPath(homeDir),
-		gga.AgentsTemplatePath(homeDir),
-	}
-}
-
-// One transactional removal of the pair, projected as two file results for the
-// existing uninstall reporter. Validation happens at execution, not plan time.
-func removeOwnedTelemetryRuntime(configDir string) []operation {
-	var attempted bool
-	var removed []string
-	var err error
-	var operations []operation
-	for _, path := range telemetryruntime.ManagedPaths(configDir) {
-		operations = append(operations, operation{
-			typeID: opRemoveFile, path: path, agents: []model.AgentID{model.AgentOpenCode},
-			apply: func(path string) (bool, bool, error) {
-				if !attempted {
-					attempted = true
-					removed, err = telemetryruntime.RemoveManaged(configDir)
-				}
-				changed := slices.Contains(removed, path)
-				return changed, changed, err
-			},
-		})
-	}
-	return operations
 }
 
 func removeOwnedOpenCodeLauncher(path string) operation {

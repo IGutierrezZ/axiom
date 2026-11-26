@@ -194,8 +194,6 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 			agents = append(agents, model.AgentClaudeCode)
 		case string(model.AgentOpenCode):
 			agents = append(agents, model.AgentOpenCode)
-		case string(model.AgentKilocode):
-			agents = append(agents, model.AgentKilocode)
 		case string(model.AgentGeminiCLI):
 			agents = append(agents, model.AgentGeminiCLI)
 		case string(model.AgentCursor):
@@ -208,12 +206,6 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 			agents = append(agents, model.AgentCodex)
 		case string(model.AgentAntigravity):
 			agents = append(agents, model.AgentAntigravity)
-		case string(model.AgentWindsurf):
-			agents = append(agents, model.AgentWindsurf)
-		case string(model.AgentKiroIDE):
-			agents = append(agents, model.AgentKiroIDE)
-		case string(model.AgentOpenClaw):
-			agents = append(agents, model.AgentOpenClaw)
 		case string(model.AgentPi):
 			agents = append(agents, model.AgentPi)
 		case string(model.AgentTrae):
@@ -221,8 +213,8 @@ func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentI
 		}
 	}
 
-	// Qwen Code, Hermes y Kimi no se detectan aquí: no son seleccionables (véase
-	// catalog.IsSelectableAgent), aunque tengan carpeta en HOME.
+	// Qwen Code no se detecta aquí: no es seleccionable (véase
+	// catalog.IsSelectableAgent), aunque tenga carpeta en HOME.
 	if len(agents) > 0 {
 		return agents
 	}
@@ -267,7 +259,7 @@ func asAgentIDs(values []string) ([]model.AgentID, error) {
 }
 
 // asInstallAgentIDs es asAgentIDs para install: además rechaza los agentes que
-// existen pero no se pueden elegir de momento (Qwen Code, Hermes y Kimi; véase
+// existen pero no se pueden elegir de momento (Qwen Code; véase
 // catalog.IsSelectableAgent). Si la lista mezcla uno de ellos con otros agentes, la
 // instalación entera falla igualmente: un --agent explícito no se recorta en
 // silencio. sync sigue usando asAgentIDs para no romper instalaciones existentes.

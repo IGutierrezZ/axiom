@@ -48,7 +48,7 @@ type OrchestratorRenderOptions struct {
 
 	// SharedPromptDir sustituye a SharedPromptDir(homeDir) como carpeta de los
 	// prompts compartidos de las fases (SharedPromptDirFor). Vacío usa la ruta
-	// global. En workspace apunta a .opencode/prompts/sdd (o .kilo/prompts/sdd).
+	// global. En workspace apunta a .opencode/prompts/sdd.
 	SharedPromptDir string
 }
 
@@ -122,12 +122,12 @@ func composeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRende
 	return bindRuntimeAgentIdentity(content, agent)
 }
 
-// Generic is also consumed by Pi, OpenClaw, and Trae. Select by identity,
+// Generic is also consumed by Pi and Trae. Select by identity,
 // not asset path, so this cohort cannot change deferred runtime prompts.
 func usesFallbackSessionPreflight(agent model.AgentID) bool {
 	switch agent {
 	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI,
-		model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf:
+		model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex:
 		return true
 	default:
 		return false
@@ -166,9 +166,6 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	}
 	// Keep runtime-specific execution semantics and phase approval rules.
 	executionEnd := "In **Interactive** mode, between phases:"
-	if agent == model.AgentKimi || agent == model.AgentKiroIDE {
-		executionEnd = "Interactive approval is phase-scoped."
-	}
 	for _, bounds := range [][2]string{
 		{"When the user invokes `/sdd-new`", "- **Automatic**"},
 		{"No mode is assumed by default: `multirepo` always runs **Interactive** and never asks; `monorepo-embedded` asks it in the session preflight.", executionEnd},
@@ -202,19 +199,10 @@ func composeFallbackSessionPreflight(content string, agent model.AgentID) string
 	legacyInitAction := "run `sdd-init` FIRST (delegate to sdd-init sub-agent)"
 	initAction := "delegate to `sdd-init`"
 	switch agent {
-	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentHermes, model.AgentCodex:
-	case model.AgentWindsurf:
-		legacyInitAction = "run the `sdd-init` phase inline FIRST"
-		initAction = "run the `sdd-init` phase inline"
+	case model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentQwenCode, model.AgentCodex:
 	case model.AgentAntigravity:
 		legacyInitAction = "invoke the `sdd-init` phase subagent FIRST"
 		initAction = "invoke the `sdd-init` phase subagent"
-	case model.AgentKimi:
-		legacyInitAction = "run `sdd-init` FIRST by launching the `sdd-init` custom agent"
-		initAction = "launch the `sdd-init` custom agent"
-	case model.AgentKiroIDE:
-		legacyInitAction = "run `sdd-init` FIRST (load the sdd-init skill and execute it)"
-		initAction = "load the `sdd-init` skill and execute it in the native Kiro phase context"
 	default:
 		panic("sdd: unsupported fallback runtime: " + string(agent))
 	}
@@ -246,7 +234,7 @@ func replacePiClosedSingleSelectRoute(content string, agent model.AgentID) strin
 }
 
 func composeOpenCodeOrchestratorPrompt(agent model.AgentID, options ...OrchestratorRenderOptions) (string, error) {
-	if agent != model.AgentOpenCode && agent != model.AgentKilocode {
+	if agent != model.AgentOpenCode {
 		return composeOrchestratorPrompt(agent, options...), nil
 	}
 	return projectSDDSessionPreflight(composeOrchestratorPrompt(agent, options...), "### SDD Entry Routing (MANDATORY)")
@@ -328,19 +316,11 @@ func sddOrchestratorAsset(agent model.AgentID) string {
 		return "codex/sdd-orchestrator.md"
 	case model.AgentAntigravity:
 		return "antigravity/sdd-orchestrator.md"
-	case model.AgentWindsurf:
-		return "windsurf/sdd-orchestrator.md"
 	case model.AgentCursor:
 		return "cursor/sdd-orchestrator.md"
-	case model.AgentKimi:
-		return "kimi/sdd-orchestrator.md"
 	case model.AgentQwenCode:
 		return "qwen/sdd-orchestrator.md"
-	case model.AgentKiroIDE:
-		return "kiro/sdd-orchestrator.md"
-	case model.AgentHermes:
-		return "hermes/sdd-orchestrator.md"
-	case model.AgentOpenCode, model.AgentKilocode:
+	case model.AgentOpenCode:
 		return "opencode/sdd-orchestrator.md"
 	default:
 		return "generic/sdd-orchestrator.md"

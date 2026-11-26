@@ -68,10 +68,6 @@ internal/components/engram/verify.go	CountVersionCallsForTest
 internal/components/engram/verify.go	SetVersionForTest
 internal/components/filemerge/section.go	ExtractManagedSection
 internal/components/filemerge/toml.go	UpsertCodexMCPServerBlock
-internal/components/gga/config.go	InjectionResult.FilesWritten
-internal/components/gga/config.go	PostInstallMessages
-internal/components/gga/install.go	ShouldInstall
-internal/components/gga/runtime.go	RuntimeBinDir
 internal/components/mcp/inject.go	context7Args
 internal/components/sdd/inject.go	injectClaudeModelAssignments
 internal/components/sdd/inject.go	resolveClaudeModelAlias
@@ -83,7 +79,6 @@ internal/dashboard/server.go	Server.Router
 internal/handoff/mirror.go	ToEngramPayload
 internal/hub/init.go	buildAxiomYaml
 internal/hub/manager.go	Manager.Save
-internal/installcmd/resolver.go	GitBashPath
 internal/installcmd/resolver.go	validateGoForModuleInstall
 internal/installcmd/testhelper.go	OverrideGetenv
 internal/installcmd/testhelper.go	OverrideGoVersion

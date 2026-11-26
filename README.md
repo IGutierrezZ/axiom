@@ -43,16 +43,12 @@ Tus agentes de IA generan código, pero pierden contexto en cada sesión y carec
 <strong><a href="docs/agents.md#cursor">Cursor</a></strong> ·
 <strong><a href="docs/agents.md#vs-code-copilot">VS Code Copilot</a></strong> ·
 <strong><a href="docs/agents.md#github-copilot-cli">GitHub Copilot CLI</a></strong> ·
-<strong><a href="docs/agents.md#gemini-cli">Gemini CLI</a></strong> ·
-<strong><a href="docs/agents.md#kilo-code">Kilo Code</a></strong><br/>
-<strong><a href="docs/agents.md#kiro-ide">Kiro IDE</a></strong> ·
+<strong><a href="docs/agents.md#gemini-cli">Gemini CLI</a></strong><br/>
 <strong><a href="docs/agents.md#antigravity">Antigravity</a></strong> ·
-<strong><a href="docs/agents.md#windsurf">Windsurf</a></strong> ·
-<strong><a href="docs/agents.md#openclaw">OpenClaw</a></strong> ·
 <strong><a href="docs/agents.md#trae">Trae</a></strong>
 
-<sub>14 integraciones · configuración no-intrusiva · <a href="docs/agents.md">comparar capacidades →</a></sub><br/>
-<sub>Kimi Code, Qwen Code y Hermes: no disponibles de momento (<a href="docs/agents.md#agentes-no-disponibles-de-momento">detalle</a>).</sub>
+<sub>10 integraciones · configuración no-intrusiva · <a href="docs/agents.md">comparar capacidades →</a></sub><br/>
+<sub>Qwen Code: no disponible de momento (<a href="docs/agents.md#agentes-no-disponibles-de-momento">detalle</a>).</sub>
 
 </div>
 
@@ -173,7 +169,7 @@ Después, usa el agente con normalidad. Axiom crea respaldos antes de modificar 
 | **[Retirada de RDD](docs/releases/notas-retirada-rdd.md)** | Notas de migración: qué limpiar a mano antes de instalar la versión que retira `axiom review` y `bench/`. |
 | **[Engram](docs/engram.md)** · **[Components](docs/components.md)** | Memory commands, skills, presets and personas |
 | **[Codebase Guide](docs/CODEBASE-GUIDE.md)** | How the codebase is organised and how to extend it |
-| **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and how old installs are cleaned up |
+| **[Telemetry](docs/telemetry.md)** | Axiom sends no telemetry; what was removed and what to clean up by hand |
 
 <div align="right"><a href="#top">Back to top</a></div>
 

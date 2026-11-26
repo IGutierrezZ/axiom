@@ -19,124 +19,17 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
-	"github.com/IGutierrezZ/axiom/v3/internal/agents/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/pi"
 	"github.com/IGutierrezZ/axiom/v3/internal/backup"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/communitytool"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/mutationjournal"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/skills"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/telemetryruntime"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/theme"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	opencodeactivation "github.com/IGutierrezZ/axiom/v3/internal/opencode"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
-
-// writeLegacyTelemetryPair reproduces the plugin and ownership manifest that
-// releases before the telemetry retirement installed. The plugin is no longer
-// shipped, so the vendored copy of its last version stands in for it.
-func writeLegacyTelemetryPair(t *testing.T, configDir string) {
-	t.Helper()
-	content, err := os.ReadFile(filepath.Join("..", "telemetryruntime", "testdata", "telemetry-runtime-axiom-v1.ts"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	paths := telemetryruntime.ManagedPaths(configDir)
-	if err := os.MkdirAll(filepath.Dir(paths[0]), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(paths[0], content, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	manifest, err := json.MarshalIndent(map[string]any{
-		"schema": "gentle-ai.telemetry-runtime-ownership/v1",
-		"file": mutationjournal.OwnedFile{
-			After: string(content), AfterHash: fmt.Sprintf("%x", sha256.Sum256(content)), Mode: 0o644,
-		},
-	}, "", "  ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(paths[1], append(manifest, '\n'), 0o600); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestUninstallOpenCodeTelemetryOwnershipAndScope(t *testing.T) {
-	for _, kind := range []string{"owned", "modified", "modified-after-plan", "unowned", "other-agent", "component-only"} {
-		t.Run(kind, func(t *testing.T) {
-			home := t.TempDir()
-			t.Setenv("HOME", home)
-			t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
-			config := opencode.NewAdapter().GlobalConfigDir(home)
-			paths := telemetryruntime.ManagedPaths(config)
-			if kind != "unowned" {
-				writeLegacyTelemetryPair(t, config)
-			}
-			if kind == "modified" || kind == "unowned" {
-				if err := os.MkdirAll(filepath.Dir(paths[0]), 0700); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(paths[0], []byte("user plugin"), 0600); err != nil {
-					t.Fatal(err)
-				}
-			}
-			sibling := filepath.Join(filepath.Dir(paths[0]), "community.ts")
-			if err := os.WriteFile(sibling, []byte("community"), 0600); err != nil {
-				t.Fatal(err)
-			}
-			svc, err := NewService(home, t.TempDir(), "dev")
-			if err != nil {
-				t.Fatal(err)
-			}
-			agent := model.AgentOpenCode
-			components := allManagedComponents
-			if kind == "other-agent" {
-				agent = model.AgentClaudeCode
-			}
-			if kind == "component-only" {
-				components = []model.ComponentID{model.ComponentSDD}
-			}
-			plan, err := svc.buildPlan([]model.AgentID{agent}, components)
-			var result Result
-			if kind == "modified-after-plan" {
-				if writeErr := os.WriteFile(paths[0], []byte("user plugin"), 0600); writeErr != nil {
-					t.Fatal(writeErr)
-				}
-			}
-			if err == nil {
-				result, err = svc.executePlan(plan, nil)
-			}
-			if strings.HasPrefix(kind, "modified") || kind == "unowned" {
-				if err == nil {
-					t.Fatal("ownership conflict not reported")
-				}
-			} else if err != nil {
-				t.Fatal(err)
-			}
-			if kind == "owned" {
-				for _, path := range paths {
-					if _, err := os.Stat(path); !os.IsNotExist(err) {
-						t.Fatal("owned runtime remains", path)
-					}
-					if !slices.Contains(result.RemovedFiles, path) {
-						t.Fatal("removed file unreported", path)
-					}
-				}
-			} else {
-				if _, err := os.Stat(paths[0]); err != nil {
-					t.Fatal("unrelated/custom runtime removed", err)
-				}
-			}
-			if data, err := os.ReadFile(sibling); err != nil || string(data) != "community" {
-				t.Fatal("community plugin affected")
-			}
-		})
-	}
-}
 
 type stubSnapshotter struct{}
 
@@ -249,211 +142,8 @@ func TestUninstallOpenCodeClearsBackgroundIntent(t *testing.T) {
 	}
 }
 
-// TestPartialUninstallKeepsSharedGGAWhileOtherAgentInstalled covers #3534:
-// uninstalling one agent must not wipe the shared GGA config that another
-// still-installed agent depends on, while agent-scoped assets (here,
-// OpenCode's gentle-logo TUI plugin) are still removed as before.
-func TestPartialUninstallKeepsSharedGGAWhileOtherAgentInstalled(t *testing.T) {
-	homeDir := t.TempDir()
-	if err := state.Write(homeDir, state.InstallState{
-		InstalledAgents: []string{"claude-code", "opencode"},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	configPath := gga.ConfigPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(configPath, []byte("shared gga config"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	logoPath := filepath.Join(homeDir, ".config", "opencode", "tui-plugins", "gentle-logo.tsx")
-	if err := os.MkdirAll(filepath.Dir(logoPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(logoPath, []byte("logo"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	svc.snapshotter = stubSnapshotter{}
-
-	result, err := svc.PartialUninstall([]model.AgentID{model.AgentOpenCode}, allManagedComponents)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(configPath); err != nil {
-		t.Fatalf("shared GGA config = %v, want it to survive because claude-code is still installed", err)
-	}
-	if _, err := os.Stat(logoPath); !os.IsNotExist(err) {
-		t.Fatalf("opencode gentle-logo stat error = %v, want removed", err)
-	}
-	if !slices.Contains(result.RemovedFiles, logoPath) {
-		t.Fatalf("removed files = %v, want %q", result.RemovedFiles, logoPath)
-	}
-
-	foundNote := false
-	for _, action := range result.ManualActions {
-		if strings.Contains(action, "GGA") && strings.Contains(action, "claude-code") {
-			foundNote = true
-		}
-	}
-	if !foundNote {
-		t.Fatalf("manual actions = %v, want a note explaining the kept shared GGA config", result.ManualActions)
-	}
-
-	got, err := state.Read(homeDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Equal(got.InstalledAgents, []string{"claude-code"}) {
-		t.Fatalf("installed agents after uninstall = %v, want [claude-code]", got.InstalledAgents)
-	}
-}
-
-// TestPartialUninstallRemovesSharedGGAOnLastAgent covers the other half of
-// #3534: once the last agent that depends on GGA is uninstalled, the shared
-// config is removed like any other managed component.
-func TestPartialUninstallRemovesSharedGGAOnLastAgent(t *testing.T) {
-	homeDir := t.TempDir()
-	if err := state.Write(homeDir, state.InstallState{
-		InstalledAgents: []string{"opencode"},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	configPath := gga.ConfigPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(configPath, []byte("shared gga config"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	svc.snapshotter = stubSnapshotter{}
-
-	result, err := svc.PartialUninstall([]model.AgentID{model.AgentOpenCode}, allManagedComponents)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-		t.Fatalf("shared GGA config stat error = %v, want removed once no agent needs it", err)
-	}
-	if !slices.Contains(result.RemovedFiles, configPath) {
-		t.Fatalf("removed files = %v, want %q", result.RemovedFiles, configPath)
-	}
-	for _, action := range result.ManualActions {
-		if strings.Contains(action, "GGA") {
-			t.Fatalf("manual actions = %v, want no kept-GGA note on last-agent removal", result.ManualActions)
-		}
-	}
-}
-
-// TestPartialUninstallWithoutComponentsKeepsGGAOnLastAgent reproduce
-// `axiom uninstall --scope global --agent claude-code` sin --components con
-// Claude Code como único agente en state.json: GGA es huella de máquina y solo
-// se retira si se nombra (`--components gga`) o con `--all`. El agente sí sale
-// de state.json.
-func TestPartialUninstallWithoutComponentsKeepsGGAOnLastAgent(t *testing.T) {
-	homeDir := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(homeDir, "AppData", "Roaming"))
-	if err := state.Write(homeDir, state.InstallState{
-		InstalledAgents: []string{"claude-code"},
-		Components:      []model.ComponentID{model.ComponentGGA},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	ggaFiles := []string{gga.ConfigPath(homeDir), gga.RuntimeCMDPath(homeDir), gga.RuntimePS1Path(homeDir), gga.RuntimePRModePath(homeDir)}
-	for _, path := range ggaFiles {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte("gga"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	svc.snapshotter = stubSnapshotter{}
-
-	result, err := svc.PartialUninstall([]model.AgentID{model.AgentClaudeCode}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for _, path := range ggaFiles {
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("GGA file %q stat error = %v, want kept: GGA was not requested", path, err)
-		}
-	}
-	if !slices.Equal(result.AgentsRemovedFromState, []model.AgentID{model.AgentClaudeCode}) {
-		t.Fatalf("AgentsRemovedFromState = %v, want [claude-code]", result.AgentsRemovedFromState)
-	}
-}
-
-// TestPartialUninstallExplicitGGARequestSkippedWhileSharedWithAnotherAgent
-// covers requesting `--components gga` explicitly for one agent while
-// another installed agent still relies on it: the safer behavior is to skip
-// the shared removal (rather than fail the whole command) and say why,
-// instead of silently deleting a config another agent still needs.
-func TestPartialUninstallExplicitGGARequestSkippedWhileSharedWithAnotherAgent(t *testing.T) {
-	homeDir := t.TempDir()
-	if err := state.Write(homeDir, state.InstallState{
-		InstalledAgents: []string{"claude-code", "opencode"},
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	configPath := gga.ConfigPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(configPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(configPath, []byte("shared gga config"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	svc.snapshotter = stubSnapshotter{}
-
-	result, err := svc.PartialUninstall([]model.AgentID{model.AgentOpenCode}, []model.ComponentID{model.ComponentGGA})
-	if err != nil {
-		t.Fatalf("explicit --components gga while shared should be skipped, not fail: %v", err)
-	}
-
-	if _, err := os.Stat(configPath); err != nil {
-		t.Fatalf("shared GGA config = %v, want it to survive an explicit but unsafe removal request", err)
-	}
-	foundNote := false
-	for _, action := range result.ManualActions {
-		if strings.Contains(action, "GGA") && strings.Contains(action, "claude-code") {
-			foundNote = true
-		}
-	}
-	if !foundNote {
-		t.Fatalf("manual actions = %v, want a note explaining why the explicit gga removal was skipped", result.ManualActions)
-	}
-}
-
 // TestIsStateNotFoundUnwrapsWrappedError guards the classification used by
-// otherInstalledAgents: it must follow the error-wrap chain (via errors.Is)
+// the scope detection: it must follow the error-wrap chain (via errors.Is)
 // rather than only recognizing a bare *fs.PathError the way os.IsNotExist
 // effectively does for a caller that wraps state.Read's error further.
 func TestIsStateNotFoundUnwrapsWrappedError(t *testing.T) {
@@ -466,53 +156,6 @@ func TestIsStateNotFoundUnwrapsWrappedError(t *testing.T) {
 	if isStateNotFound(other) {
 		t.Fatalf("isStateNotFound(%v) = true, want false for a non-not-exist error", other)
 	}
-}
-
-// TestReconcileSharedComponentsWithUnreadableState covers a corrupt
-// state.json: reconcileSharedComponents cannot tell whether another agent
-// still needs GGA, so it fails closed toward preservation — GGA is dropped
-// from the returned component set and a note explains why — instead of
-// aborting the caller's partial uninstall, unless the caller explicitly
-// requested "--components gga", where there is nothing safe left to do for
-// that explicit request and the error is returned instead.
-func TestReconcileSharedComponentsWithUnreadableState(t *testing.T) {
-	homeDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Dir(state.Path(homeDir)), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(state.Path(homeDir), []byte("{not valid json"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Run("default components keep GGA and continue", func(t *testing.T) {
-		components, note, err := svc.reconcileSharedComponents(
-			[]model.AgentID{model.AgentOpenCode}, slices.Clone(allManagedComponents), false)
-		if err != nil {
-			t.Fatalf("reconcileSharedComponents() error = %v, want nil (fail closed, don't abort)", err)
-		}
-		if slices.Contains(components, model.ComponentGGA) {
-			t.Fatalf("components = %v, want GGA dropped when state cannot be read", components)
-		}
-		if !slices.Contains(components, model.ComponentTheme) {
-			t.Fatalf("components = %v, want unrelated components preserved so the rest of the uninstall proceeds", components)
-		}
-		if !strings.Contains(note, "GGA") || !strings.Contains(note, "could not be read") {
-			t.Fatalf("note = %q, want it to explain the state could not be read", note)
-		}
-	})
-
-	t.Run("explicit gga request fails instead of silently skipping", func(t *testing.T) {
-		_, _, err := svc.reconcileSharedComponents(
-			[]model.AgentID{model.AgentOpenCode}, []model.ComponentID{model.ComponentGGA}, true)
-		if err == nil {
-			t.Fatal("reconcileSharedComponents() error = nil, want an error for an explicit --components gga request when state is unreadable")
-		}
-	})
 }
 
 func TestBuildPlanSnapshotsPiManifestAndOwnedOverlay(t *testing.T) {
@@ -1951,7 +1594,6 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
     "SubagentStop": [
       {
         "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true},
           {"type": "command", "command": "echo subagent keep"}
         ]
       }
@@ -1959,7 +1601,6 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
     "Stop": [
       {
         "hooks": [
-          {"type": "command", "command": "gentle-ai telemetry runtime codex --json", "async": true},
           {"type": "command", "command": "echo stop keep"}
         ]
       }
@@ -1986,7 +1627,7 @@ func TestComponentOperationsSDD_ClaudeRemovesSkillRegistryHook(t *testing.T) {
 		t.Fatal(err)
 	}
 	text := string(raw)
-	if strings.Contains(text, "gentle-ai skill-registry refresh") || strings.Contains(text, "gentle-ai telemetry runtime codex") {
+	if strings.Contains(text, "gentle-ai skill-registry refresh") {
 		t.Fatalf("managed hook should be removed:\n%s", text)
 	}
 	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "echo pre") || !strings.Contains(text, "echo subagent keep") || !strings.Contains(text, "echo stop keep") {
@@ -2167,41 +1808,6 @@ func TestComponentOperationsSDD_RemovesBranchGuardHooks(t *testing.T) {
 	}
 }
 
-func TestComponentOperationsSDD_ClaudeRemovesTelemetryHooks(t *testing.T) {
-	homeDir := t.TempDir()
-	svc, err := NewService(homeDir, t.TempDir(), "dev")
-	if err != nil {
-		t.Fatal(err)
-	}
-	adapter, _ := svc.registry.Get(model.AgentClaudeCode)
-	settingsPath := adapter.SettingsPath(homeDir)
-	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	initial := `{"hooks":{"Stop":[{"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true},{"type":"command","command":"echo keep"}]}],"SubagentStop":[{"matcher":"","hooks":[{"type":"command","command":"gentle-ai telemetry runtime claude --json","async":true}]}]}}`
-	if err := os.WriteFile(settingsPath, []byte(initial), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	ops, _, err := svc.componentOperations(adapter, model.ComponentSDD)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, op := range ops {
-		if op.typeID == opRewriteFile && op.path == settingsPath {
-			if _, _, err := op.apply(op.path); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-	raw, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), "telemetry runtime claude") || !strings.Contains(string(raw), "echo keep") {
-		t.Fatalf("managed telemetry hook removal failed:\n%s", raw)
-	}
-}
-
 func TestComponentOperationsSDD_CodexRemovesSkillRegistryHook(t *testing.T) {
 	homeDir := t.TempDir()
 	workspaceDir := t.TempDir()
@@ -2262,71 +1868,6 @@ func TestComponentOperationsSDD_CodexRemovesSkillRegistryHook(t *testing.T) {
 	}
 	if !strings.Contains(text, "echo keep") || !strings.Contains(text, "echo pre") {
 		t.Fatalf("unrelated hooks should be preserved:\n%s", text)
-	}
-}
-
-func TestComponentOperationsSDD_KiroRemovesSkillRegistryHook(t *testing.T) {
-	tests := []struct {
-		name        string
-		userHook    bool
-		wantDirKept bool
-	}{
-		{name: "un hook ajeno conserva el directorio", userHook: true, wantDirKept: true},
-		{name: "sin hooks ajenos el directorio vacío se elimina", userHook: false, wantDirKept: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			homeDir := t.TempDir()
-			svc, err := NewService(homeDir, t.TempDir(), "dev")
-			if err != nil {
-				t.Fatalf("NewService() error = %v", err)
-			}
-			adapter, ok := svc.registry.Get(model.AgentKiroIDE)
-			if !ok {
-				t.Fatal("kiro-ide adapter not found in registry")
-			}
-			hooksDir := filepath.Join(homeDir, ".kiro", "hooks")
-			hookPath := filepath.Join(hooksDir, "axiom-skill-registry.json")
-			userPath := filepath.Join(hooksDir, "usuario.json")
-			if err := os.MkdirAll(hooksDir, 0o755); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(hookPath, []byte(`{"version":"v1","hooks":[]}`+"\n"), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			if tt.userHook {
-				if err := os.WriteFile(userPath, []byte(`{"version":"v1","hooks":[]}`), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			ops, targets, err := svc.componentOperations(adapter, model.ComponentSDD)
-			if err != nil {
-				t.Fatalf("componentOperations() error = %v", err)
-			}
-			if !slices.Contains(targets, hookPath) {
-				t.Fatalf("targets missing %q: %v", hookPath, targets)
-			}
-			for _, op := range ops {
-				if op.path == hookPath || op.path == hooksDir {
-					if _, _, err := op.apply(op.path); err != nil {
-						t.Fatalf("op.apply(%q) error = %v", op.path, err)
-					}
-				}
-			}
-
-			if _, err := os.Stat(hookPath); !os.IsNotExist(err) {
-				t.Fatalf("managed Kiro hook should be removed, stat err = %v", err)
-			}
-			if _, err := os.Stat(hooksDir); (err == nil) != tt.wantDirKept {
-				t.Fatalf("hooks dir kept = %v, want %v (stat err = %v)", err == nil, tt.wantDirKept, err)
-			}
-			if tt.userHook {
-				if _, err := os.Stat(userPath); err != nil {
-					t.Fatalf("user hook must survive uninstall: %v", err)
-				}
-			}
-		})
 	}
 }
 
@@ -2492,7 +2033,7 @@ func TestUninstallSkillsRetiresOnlyUnmodifiedRetiredCopies(t *testing.T) {
 }
 
 // TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles covers
-// Kiro, VS Code and Cursor, which renamed their prompt file: uninstall clears the
+// VS Code and Cursor, which renamed their prompt file: uninstall clears the
 // managed sections from the current name and from the legacy name a sync has not
 // retired yet, and keeps the user's own content in both.
 func TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles(t *testing.T) {
@@ -2504,7 +2045,7 @@ func TestComponentOperationsSDD_RemovesManagedSectionsFromRenamedPromptFiles(t *
 		t.Fatalf("NewService() error = %v", err)
 	}
 	const managed = "<!-- axiom:sdd-orchestrator -->\nmanaged\n<!-- /axiom:sdd-orchestrator -->\n"
-	for _, id := range []model.AgentID{model.AgentKiroIDE, model.AgentVSCodeCopilot, model.AgentCursor} {
+	for _, id := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentCursor} {
 		t.Run(string(id), func(t *testing.T) {
 			adapter, ok := svc.registry.Get(id)
 			if !ok {

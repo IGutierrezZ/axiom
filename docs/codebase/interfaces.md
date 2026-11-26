@@ -35,7 +35,7 @@ Axiom writes agent-specific MCP configuration so agents can call external server
 engram mcp --tools=agent
 ```
 
-OpenCode/Kilo Code use an array-style local MCP command in settings. Other agents use their adapter strategy: separate MCP files, merged settings, dedicated MCP config files, or TOML.
+OpenCode uses an array-style local MCP command in settings. Other agents use their adapter strategy: separate MCP files, merged settings, dedicated MCP config files, or TOML.
 
 ## TUI flow
 

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
@@ -9,20 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/verify"
 )
 
-func TestWithPostInstallNotesAddsGGANextSteps(t *testing.T) {
-	report := verify.Report{Ready: true, FinalNote: "You're ready."}
-	resolved := planner.ResolvedPlan{OrderedComponents: []model.ComponentID{model.ComponentGGA}}
-
-	updated := withPostInstallNotes(report, resolved, false)
-	if !strings.Contains(updated.FinalNote, "GGA is now installed globally") {
-		t.Fatalf("FinalNote missing GGA global install note: %q", updated.FinalNote)
-	}
-	if !strings.Contains(updated.FinalNote, "gga init") || !strings.Contains(updated.FinalNote, "gga install") {
-		t.Fatalf("FinalNote missing GGA repo setup steps: %q", updated.FinalNote)
-	}
-}
-
-func TestWithPostInstallNotesDoesNotChangeNonGGA(t *testing.T) {
+func TestWithPostInstallNotesLeavesFinalNoteUnchanged(t *testing.T) {
 	// Set GOBIN and PATH to the same directory so that withGoInstallPathNote
 	// detects that GOBIN is already in PATH and does not append a guidance note.
 	gobin := "/usr/local/bin"
@@ -32,7 +18,7 @@ func TestWithPostInstallNotesDoesNotChangeNonGGA(t *testing.T) {
 	report := verify.Report{Ready: true, FinalNote: "You're ready."}
 	resolved := planner.ResolvedPlan{OrderedComponents: []model.ComponentID{model.ComponentEngram}}
 
-	updated := withPostInstallNotes(report, resolved, false)
+	updated := withPostInstallNotes(report, resolved)
 	if updated.FinalNote != report.FinalNote {
 		t.Fatalf("FinalNote changed unexpectedly: %q", updated.FinalNote)
 	}

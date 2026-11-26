@@ -368,7 +368,7 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 		{
 			// Full picker chain, SDD single mode (no model picker). This is the
 			// scenario that exercises every model-picker back edge in one run:
-			// Claude → Kiro → Codex → SDDMode and the full reverse. It is the
+			// Claude → Codex → SDDMode and the full reverse. It is the
 			// coverage that would have caught the Codex back-navigation bugs
 			// (Codex Back row inert + SDDMode back skipping Codex).
 			name: "all picker agents SDD single round-trips through every picker",
@@ -377,7 +377,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 				m.Screen = ScreenPreset
 				m.Selection.Agents = []model.AgentID{
 					model.AgentClaudeCode,
-					model.AgentKiroIDE,
 					model.AgentCodex,
 					model.AgentOpenCode,
 				}
@@ -386,8 +385,7 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 			},
 			forwardActions: []flowAction{
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // Preset → Claude picker
-				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // Claude preset → Kiro picker
-				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // Kiro preset → Codex picker
+				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // Claude preset → Codex picker
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // Codex preset → SDDMode
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // SDDMode single → StrictTDD
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                                 // StrictTDD → OpenCodePlugins
@@ -395,7 +393,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 			},
 			forwardScreens: []Screen{
 				ScreenClaudeModelPicker,
-				ScreenKiroModelPicker,
 				ScreenCodexModelPicker,
 				ScreenSDDMode,
 				ScreenStrictTDD,
@@ -407,7 +404,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 				ScreenStrictTDD,
 				ScreenSDDMode,
 				ScreenCodexModelPicker, // regression: SDDMode back must hit Codex, not skip to Claude
-				ScreenKiroModelPicker,
 				ScreenClaudeModelPicker,
 				ScreenPreset,
 			},
@@ -415,7 +411,7 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 		{
 			// Same full picker chain but SDD multi mode, so the OpenCode model
 			// picker sits between SDDMode and StrictTDD. Confirms the model
-			// picker edge composes with the Claude/Kiro/Codex picker chain in
+			// picker edge composes with the Claude/Codex picker chain in
 			// both directions.
 			name: "all picker agents SDD multi round-trips through every picker and model picker",
 			setup: func(t *testing.T) Model {
@@ -423,7 +419,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 				m.Screen = ScreenPreset
 				m.Selection.Agents = []model.AgentID{
 					model.AgentClaudeCode,
-					model.AgentKiroIDE,
 					model.AgentCodex,
 					model.AgentOpenCode,
 				}
@@ -432,8 +427,7 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 			},
 			forwardActions: []flowAction{
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                             // Preset → Claude picker
-				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                             // Claude preset → Kiro picker
-				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                             // Kiro preset → Codex picker
+				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                             // Claude preset → Codex picker
 				{key: tea.KeyMsg{Type: tea.KeyEnter}},                                             // Codex preset → SDDMode
 				{key: tea.KeyMsg{Type: tea.KeyEnter}, cursor: sddMultiCursor(t), setCursor: true}, // SDDMode multi → ModelPicker
 				{
@@ -453,7 +447,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 			},
 			forwardScreens: []Screen{
 				ScreenClaudeModelPicker,
-				ScreenKiroModelPicker,
 				ScreenCodexModelPicker,
 				ScreenSDDMode,
 				ScreenModelPicker,
@@ -467,7 +460,6 @@ func TestInstallNavigationRoundTrips(t *testing.T) {
 				ScreenModelPicker,
 				ScreenSDDMode,
 				ScreenCodexModelPicker, // regression: SDDMode back must hit Codex, not skip to Claude
-				ScreenKiroModelPicker,
 				ScreenClaudeModelPicker,
 				ScreenPreset,
 			},

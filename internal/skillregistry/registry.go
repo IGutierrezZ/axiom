@@ -54,11 +54,9 @@ func UserSkillDirs(home string) []string {
 		filepath.Join(home, ".pi", "agent", "skills"),
 		filepath.Join(home, ".config", "agents", "skills"),
 		filepath.Join(home, ".agents", "skills"),
-		filepath.Join(home, ".kimi", "skills"),
 
 		// Agent-specific global skill locations supported by Axiom adapters.
 		filepath.Join(home, ".config", "opencode", "skills"),
-		filepath.Join(home, ".config", "kilo", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 		filepath.Join(home, ".gemini", "skills"),
 		filepath.Join(home, ".gemini", "antigravity", "skills"),
@@ -67,11 +65,7 @@ func UserSkillDirs(home string) []string {
 		filepath.Join(home, ".cursor", "skills"),
 		filepath.Join(home, ".copilot", "skills"),
 		filepath.Join(home, ".codex", "skills"),
-		filepath.Join(home, ".codeium", "windsurf", "skills"),
 		filepath.Join(home, ".qwen", "skills"),
-		filepath.Join(home, ".kiro", "skills"),
-		filepath.Join(home, ".openclaw", "skills"),
-		filepath.Join(home, ".hermes", "skills"),
 	}
 }
 
@@ -107,15 +101,12 @@ func ProjectSkillDirs(cwd string) []string {
 		filepath.Join(cwd, ".github", "skills"),
 		filepath.Join(cwd, ".codex", "skills"),
 		filepath.Join(cwd, ".qwen", "skills"),
-		filepath.Join(cwd, ".kiro", "skills"),
-		filepath.Join(cwd, ".openclaw", "skills"),
 
 		// Axiom/Pi and generic Agent Skills workspace locations.
 		filepath.Join(cwd, ".pi", "skills"),
 		filepath.Join(cwd, ".agent", "skills"),
 		filepath.Join(cwd, ".agents", "skills"),
 		filepath.Join(cwd, ".atl", "skills"),
-		filepath.Join(cwd, ".hermes", "skills"),
 	)
 
 	// Multirrepo: repositorio de especificaciones y repositorios de los roles.
@@ -595,10 +586,7 @@ var perAgentSkillsPrefixes = []string{
 	".github/skills/",
 	".codex/skills/",
 	".qwen/skills/",
-	".kiro/skills/",
-	".openclaw/skills/",
 	".pi/skills/",
-	".hermes/skills/",
 }
 
 const sharedSkillsPrefix = ".agents/skills/"

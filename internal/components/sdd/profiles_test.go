@@ -14,7 +14,7 @@ import (
 )
 
 func TestProfileCleanupPreservesPermissionOrder(t *testing.T) {
-	for _, operation := range []string{"stale", "kilo", "remove"} {
+	for _, operation := range []string{"stale", "remove"} {
 		t.Run(operation, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "opencode.json")
 			seed := `{"permission":{"bash":{"ssh *":"allow","*":"deny"}},"agent":{"jd-judge-a-test":{"permission":{"bash":"deny"}},"sdd-apply-test":{}}}`
@@ -26,9 +26,6 @@ func TestProfileCleanupPreservesPermissionOrder(t *testing.T) {
 			switch operation {
 			case "stale":
 				_, err = cleanupStaleProfileJDAgents(path, profile)
-			case "kilo":
-				profile.PhaseAssignments = map[string]model.ModelAssignment{"jd-judge-a": {ProviderID: "test", ModelID: "test"}}
-				_, err = cleanupKilocodeProfileJDPermissions(path, profile)
 			case "remove":
 				err = RemoveProfileAgents(path, "test")
 			}

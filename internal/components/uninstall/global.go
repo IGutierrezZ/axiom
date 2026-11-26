@@ -11,7 +11,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/assets"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/engram"
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
 
@@ -30,33 +29,14 @@ const hubRegistryFile = "workspaces.json"
 // desinstalación global completa retira. No incluye ninguna carpeta compartida:
 //   - el directorio del binario de Engram, solo donde Axiom lo registra en el PATH
 //     (Windows; véase engram.ManagedBinaryDir);
-//   - `~/bin`, donde GGA deja sus shims, solo si GGA estaba gestionado por Axiom
-//     (ggaManaged, evaluado antes de retirar su configuración);
 //   - `<raíz de estado>/bin`, donde viven los lanzadores gestionados de OpenCode.
-func (s *Service) managedPathDirs(ggaManaged bool) []string {
+func (s *Service) managedPathDirs() []string {
 	var dirs []string
 	if dir := engram.ManagedBinaryDir(pathGOOS); dir != "" {
 		dirs = append(dirs, dir)
 	}
-	if ggaManaged {
-		dirs = append(dirs, gga.FootprintPathEntries(s.homeDir, pathGOOS)...)
-	}
 	dirs = append(dirs, system.BinDir(s.homeDir))
 	return uniquePaths(dirs...)
-}
-
-// ggaManagedByAxiom dice si hay en HOME algo de GGA que Axiom escribió: su
-// configuración o sus shims.
-func (s *Service) ggaManagedByAxiom() bool {
-	if gga.Managed(s.homeDir) {
-		return true
-	}
-	for _, path := range []string{gga.RuntimeCMDPath(s.homeDir), gga.RuntimePS1Path(s.homeDir)} {
-		if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() {
-			return true
-		}
-	}
-	return false
 }
 
 // pathEntryPresent dice si dir figura entre las entradas del PATH de usuario. La
@@ -75,14 +55,14 @@ func pathEntryPresent(entries []string, dir string) bool {
 // removeManagedPathEntries retira del PATH de usuario las carpetas gestionadas que
 // siguen en él y deja el resto de entradas como estaban. Un fallo no interrumpe la
 // desinstalación: se anota como acción manual con la carpeta que hay que quitar.
-func (s *Service) removeManagedPathEntries(ggaManaged bool, result *Result) {
+func (s *Service) removeManagedPathEntries(result *Result) {
 	entries, err := userPathEntries(pathGOOS)
 	if err != nil {
 		result.ManualActions = append(result.ManualActions,
-			fmt.Sprintf("No se pudo leer el PATH de usuario (%v): quita a mano las carpetas que Axiom añadió, si las hay: %s", err, strings.Join(s.managedPathDirs(ggaManaged), ", ")))
+			fmt.Sprintf("No se pudo leer el PATH de usuario (%v): quita a mano las carpetas que Axiom añadió, si las hay: %s", err, strings.Join(s.managedPathDirs(), ", ")))
 		return
 	}
-	for _, dir := range s.managedPathDirs(ggaManaged) {
+	for _, dir := range s.managedPathDirs() {
 		if !pathEntryPresent(entries, dir) {
 			continue
 		}
@@ -183,8 +163,8 @@ func (s *Service) purgeStateDir(result *Result) {
 // finishGlobalUninstall completa una desinstalación global completa con lo que no
 // es configuración de un agente: las entradas de PATH gestionadas, la carpeta de
 // lanzadores si queda vacía y, si se pidió, la purga del estado.
-func (s *Service) finishGlobalUninstall(ggaManaged bool, result *Result) {
-	s.removeManagedPathEntries(ggaManaged, result)
+func (s *Service) finishGlobalUninstall(result *Result) {
+	s.removeManagedPathEntries(result)
 
 	binDir := system.BinDir(s.homeDir)
 	if removed, err := removeDirIfEmptyRecursive(binDir); err == nil && removed {

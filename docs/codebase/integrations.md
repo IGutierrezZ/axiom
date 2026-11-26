@@ -22,7 +22,7 @@ Axiom integration code should stay thin: adapters describe where and how an agen
 
 | Boundary | Rule |
 |---|---|
-| Binary installation | Install only external tools this component owns, such as Engram or GGA. |
+| Binary installation | Install only external tools this component owns, such as Engram. |
 | Agent discovery | Detect config roots or binaries through system/adapters; do not hard-code in UI screens. |
 | MCP wiring | Use adapter MCP strategy instead of custom JSON writes in feature code. |
 | Prompt injection | Use component/filemerge helpers to preserve user content when strategy requires it. |

@@ -115,7 +115,6 @@ The installer follows a **dependency-first** approach:
 │                                                                  │
 │  Ecosystem:                                                      │
 │    ◌ Engram (via Homebrew — no runtime deps)                     │
-│    ◌ GGA (via Homebrew — needs bash + git + provider CLI)        │
 │    ◌ SDD skills (file copy — no deps)                            │
 │    ◌ Skills library (file copy — no deps)                        │
 └──────────────────────────────────────────────────────────────────┘
@@ -129,9 +128,9 @@ These are the base tools the installer itself and the ecosystem need.
 
 | Dependency | Min Version | Why | Install Method |
 |-----------|-------------|-----|----------------|
-| `bash` | 3.2+ | GGA, install scripts, Engram plugin hooks | Pre-installed on all targets |
-| `git` | 2.x | GGA (diff/staging), Engram (git sync), skills clone, agent integrations | `brew`/`apt`/`pacman`/`dnf`/`pkg` |
-| `curl` | Any | Binary downloads, GGA providers (lmstudio, github), installer script | Pre-installed on most systems |
+| `bash` | 3.2+ | Install scripts, Engram plugin hooks | Pre-installed on all targets |
+| `git` | 2.x | Engram (git sync), skills clone, agent integrations | `brew`/`apt`/`pacman`/`dnf`/`pkg` |
+| `curl` | Any | Binary downloads, installer script | Pre-installed on most systems |
 
 #### Conditionally Required (based on user's selections)
 
@@ -141,8 +140,6 @@ These are the base tools the installer itself and the ecosystem need.
 | **Node.js** | 20+ | Claude Code (needs 18+), Gemini CLI (needs 20+) — installer picks the highest required version | `brew install node` / `nvm` / `fnm` / distro package |
 | **npm** | Comes with Node.js | Installing Claude Code, Gemini CLI, Codex | Bundled with Node.js |
 | **Go** | 1.25+ | ONLY if building Engram from source (NOT needed for binary/Homebrew install) | `brew install go` / distro package |
-| **python3** | 3.x | GGA with Ollama API mode or LM Studio provider (has fallback without it) | Pre-installed on macOS, `apt`/`pacman`/`dnf` on Linux |
-| **gh** (GitHub CLI) | Any | GGA with `github:<model>` provider | `brew install gh` / distro package |
 
 #### Platform-Specific Notes
 
@@ -153,7 +150,7 @@ These are the base tools the installer itself and the ecosystem need.
 | **Arch** | bash, curl, git, python3, sha256sum | Node.js (`pacman -S nodejs npm`) | Arch packages are usually current — `pacman` versions are fine |
 | **Fedora/RHEL** | bash, curl, git, sha256sum | Node.js (`dnf install nodejs`) | May need `dnf module enable nodejs:20` for correct version |
 | **WSL 2** | Same as host Linux distro | Same as Linux + note about Windows-side agents (Cursor, VSCode) | Windows-side agents use Windows paths; WSL agents use Linux paths |
-| **Windows native** | None guaranteed | Everything: git (Git for Windows), Node.js (winget/scoop), bash (Git Bash) | GGA needs bash — Git for Windows includes Git Bash |
+| **Windows native** | None guaranteed | Everything: git (Git for Windows), Node.js (winget/scoop), bash (Git Bash) | Git for Windows includes Git Bash |
 | **Termux** | bash, curl, git | Node.js (`pkg install nodejs`), python (`pkg install python`) | No sudo, no Homebrew. Commands run directly, not via `sh -c`. Go cross-compile has limitations on Android. |
 
 ### 5.0.3 Node.js Version Management
@@ -184,16 +181,15 @@ Node.js is the most critical dependency — multiple agents depend on it, and di
 
 ### 5.0.4 Component → Dependency Matrix
 
-| Component | bash | git | curl | Node.js | Homebrew | python3 | gh CLI |
-|-----------|------|-----|------|---------|----------|---------|--------|
-| **Engram** (binary) | — | — | ✓ (download) | — | ✓ (preferred) | — | — |
-| **GGA** | ✓ | ✓ | ◌ (some providers) | — | ✓ (preferred) | ◌ (some providers) | ◌ (github provider) |
-| **Claude Code** | ✓ (hooks) | ✓ | — | ✓ (20+) | ◌ | — | — |
-| **OpenCode** | — | — | ✓ (download) | — | — | — | — |
-| **Gemini CLI** | — | — | — | ✓ (20+) | ◌ | — | — |
-| **Codex** | — | — | — | ✓ (18+) | — | — | — |
-| **SDD Skills** | ✓ (install script) | ✓ (clone) | — | — | — | — | — |
-| **Coding Skills** | — | ✓ (clone) | — | — | — | — | — |
+| Component | bash | git | curl | Node.js | Homebrew |
+|-----------|------|-----|------|---------|----------|
+| **Engram** (binary) | — | — | ✓ (download) | — | ✓ (preferred) |
+| **Claude Code** | ✓ (hooks) | ✓ | — | ✓ (20+) | ◌ |
+| **OpenCode** | — | — | ✓ (download) | — | — |
+| **Gemini CLI** | — | — | — | ✓ (20+) | ◌ |
+| **Codex** | — | — | — | ✓ (18+) | — |
+| **SDD Skills** | ✓ (install script) | ✓ (clone) | — | — | — |
+| **Coding Skills** | — | ✓ (clone) | — | — | — |
 
 ✓ = required, ◌ = optional/conditional, — = not needed
 
@@ -221,7 +217,6 @@ The installer supports configuring the Gentleman ecosystem into ANY AI coding ag
 |-------|-----------------|-------------------|----------|
 | Cursor | `~/.cursor/` | Good: skills via .cursorrules, MCP | P1 |
 | VSCode + Copilot/Cline | `~/.vscode/` + extension settings | Partial: skills via workspace rules, MCP via extensions | P1 |
-| Windsurf (Codeium) | `~/.windsurf/` or similar | Partial: rules, MCP | P2 |
 | Xcode + AI extensions | Xcode config paths | Minimal: persona via project rules | P2 |
 | JetBrains + AI Assistant | IDE config paths | Partial: rules, MCP via plugins | P2 |
 | Antigravity | TBD (emerging agent) | TBD — implement via Agent interface when stable | P2 |
@@ -231,12 +226,10 @@ The installer supports configuring the Gentleman ecosystem into ANY AI coding ag
 
 | Tier | What Gets Configured | Agents |
 |------|---------------------|--------|
-| **Full** | Engram plugin + MCP servers + skills + SDD orchestrator + GGA integration + persona + theme + permissions + statusline + hooks | Claude Code, OpenCode |
-| **Good** | Skills + MCP servers + SDD (inline mode, no sub-agents) + GGA as review provider + persona rules | Cursor, VSCode |
-| **Partial** | Skills via system instructions + MCP where supported + GGA provider config + persona | Gemini CLI, Codex, Windsurf, JetBrains, Zed |
+| **Full** | Engram plugin + MCP servers + skills + SDD orchestrator + persona + theme + permissions + statusline + hooks | Claude Code, OpenCode |
+| **Good** | Skills + MCP servers + SDD (inline mode, no sub-agents) + persona rules | Cursor, VSCode |
+| **Partial** | Skills via system instructions + MCP where supported + persona | Gemini CLI, Codex, JetBrains, Zed |
 | **Minimal** | Persona and coding conventions via project/workspace rules | Xcode, Antigravity, any emerging agent |
-
-> **Note:** GGA (Guardian Angel) is agent-agnostic — it works with ANY provider for review execution, independent of which AI coding agent the user chose. It's a cross-cutting concern, not tied to a specific agent tier.
 
 **Requirements:**
 - R-AGENT-01: The installer MUST detect already-installed agents and offer configuration only (not re-install)
@@ -286,42 +279,6 @@ The full SDD Agent Team skill set (9 skills):
 - R-SDD-02: The SDD orchestrator configuration MUST be injected into the agent's global config (CLAUDE.md, opencode.json agents, .cursorrules)
 - R-SDD-03: OpenCode slash commands for SDD phases MUST be installed when OpenCode is selected, enabling the agent to invoke SDD organically when it detects a substantial change
 - R-SDD-04: The installer MUST pull SDD skills from the latest release of `Gentleman-Programming/sdd-agent-team`
-
-### 6.4 GGA — Gentleman Guardian Angel (AI Code Review)
-
-GGA is a zero-dependency, pure Bash CLI tool that performs **AI-powered code review on every git commit**. It acts as a pre-commit git hook: staged files are sent to any AI provider, validated against team coding standards (defined in `AGENTS.md`), and the commit is allowed or blocked based on the AI's verdict.
-
-**This is the quality gate of the ecosystem.** While skills teach the agent HOW to write code, and SDD ensures the agent PLANS before coding, GGA ensures the code that gets committed actually meets standards — even code the developer wrote manually.
-
-| Component | What It Does |
-|-----------|-------------|
-| `gga` binary | Pure Bash CLI, installs via Homebrew or direct download |
-| Git hook | Pre-commit or commit-msg hook that runs `gga run` |
-| `AGENTS.md` rules file | Team coding standards the AI validates against — single source of truth |
-| Smart cache | SHA256-based, two-level invalidation (metadata + file content). Only `PASSED` files are cached. |
-| PR mode | `gga run --pr-mode` reviews all changed files in a branch vs base |
-| CI mode | `gga run --ci` for pipeline integration |
-
-#### Supported AI Providers (for review execution)
-
-| Provider | Config Value | Mechanism |
-|----------|-------------|-----------|
-| Claude Code | `claude` | Pipes prompt to `claude --print` |
-| Gemini CLI | `gemini` | `gemini -p` CLI |
-| Codex | `codex` | `codex exec` |
-| OpenCode | `opencode[:model]` | `opencode run` |
-| Ollama (local) | `ollama:<model>` | REST API or CLI fallback |
-| LM Studio (local) | `lmstudio[:model]` | OpenAI-compatible REST API |
-| GitHub Models | `github:<model>` | Azure-hosted API via `gh auth` |
-
-**Requirements:**
-- R-GGA-01: The installer MUST offer GGA installation as an ecosystem component (opt-in, not forced)
-- R-GGA-02: When GGA is selected, the installer MUST install the `gga` binary to the system PATH (via Homebrew or direct download)
-- R-GGA-03: The installer MUST ask which AI provider to configure for GGA reviews and write the appropriate `.gga` config
-- R-GGA-04: The installer SHOULD offer to install the git hook globally (`git config --global core.hooksPath`) or explain per-project setup via `gga install`
-- R-GGA-05: The installer MUST NOT configure GGA's provider with API keys — only the provider name. Keys are managed separately by the user.
-- R-GGA-06: The installer SHOULD create a starter `AGENTS.md` template in the user's home directory with common coding standards, or link to examples
-- R-GGA-07: If the user selected an AI agent (e.g., Claude Code) AND GGA, the installer SHOULD auto-configure GGA to use that same provider (e.g., `GGA_PROVIDER=claude`)
 
 ### 6.5 MCP Servers
 
@@ -468,7 +425,6 @@ curl -sL get.gentleman.ai/ai | sh
         │  ┌──────────────────────┐
         │  │ ☑ Engram (memory)    │
         │  │ ☑ SDD (workflow)     │
-        │  │ ☑ GGA (code review)  │
         │  │ Select Skills...     │
         │  │ Select MCP servers...│
         │  │ Select Theme...      │
@@ -484,7 +440,6 @@ curl -sL get.gentleman.ai/ai | sh
      │  Persona: Gentleman              │
      │  Memory: Engram ✓                │
      │  Workflow: SDD (9 skills) ✓      │
-     │  Code Review: GGA (claude) ✓     │
      │  Coding Skills: 15 skills ✓      │
      │  MCP: Context7, Notion ✓         │
      │  Theme: Gentleman Dark ✓         │
@@ -497,13 +452,11 @@ curl -sL get.gentleman.ai/ai | sh
      │  Configuring...                  │
      │                                  │
      │  ✓ Installing Engram             │
-     │  ✓ Installing GGA               │
      │  ✓ Configuring Claude Code       │
      │    ✓ Skills (22 files)           │
      │    ✓ MCP servers                 │
      │    ✓ Engram plugin               │
      │    ✓ Permissions & theme         │
-     │  ✓ Configuring GGA (claude)      │
      │  ◌ Configuring OpenCode...       │
      │    [████████░░] 80%              │
      └──────────┬──────────────────────┘
@@ -608,7 +561,6 @@ graph TB
         direction TB
         ENGRAM[🧠 Engram<br/>Persistent Memory]
         SDD[📋 SDD Skills<br/>Spec-Driven Development]
-        GGA_COMP[🛡️ GGA<br/>Guardian Angel Code Review]
         SKILLS[📚 Coding Skills<br/>React, TS, Tailwind, etc.]
         MCP[🔌 MCP Servers<br/>Context7, Notion, Jira]
         PERSONA[🎭 Persona & Config<br/>Gentleman / Neutral / Custom]
@@ -625,7 +577,6 @@ graph TB
     DEV -->|uses| CC
     DEV -->|uses| OC
     DEV -->|uses| GEM
-    DEV -->|commits| GGA_COMP
 
     CC -->|remembers via| ENGRAM
     OC -->|remembers via| ENGRAM
@@ -695,32 +646,18 @@ graph LR
         SDD_ORCH --> SDD_SKILLS_2
     end
 
-    subgraph GGA_LAYER["GGA Code Review"]
-        direction TB
-        GGA_HOOK[Pre-commit Hook]
-        GGA_RULES[AGENTS.md<br/>Team Standards]
-        GGA_CACHE[Smart Cache<br/>~/.cache/gga/]
-        GGA_PROVIDER[AI Provider<br/>claude / gemini / ollama / etc.]
-        GGA_HOOK --> GGA_RULES
-        GGA_HOOK --> GGA_CACHE
-        GGA_HOOK --> GGA_PROVIDER
-    end
-
     CODE -->|"ask AI for help"| AGENT_CORE
     AGENT_CORE -->|"search docs"| C7
     AGENT_CORE -->|"check tasks"| JIRA
     AGENT_CORE -->|"check notes"| NOTION
     AGENT_CORE -->|"save/recall memories"| MEM_PLUGIN
     AGENT_CORE -->|"plan feature"| SDD_ORCH
-    COMMIT -->|"triggers"| GGA_HOOK
-    GGA_PROVIDER -.->|"uses same AI"| AGENT_CORE
 
     style DEV_WORKFLOW fill:#1a1b26,stroke:#E0C15A,color:#E0C15A
     style AGENT_LAYER fill:#1a1b26,stroke:#7FB4CA,color:#7FB4CA
     style MEMORY_LAYER fill:#1a1b26,stroke:#B7CC85,color:#B7CC85
     style MCP_LAYER fill:#1a1b26,stroke:#957FB8,color:#957FB8
     style SDD_LAYER fill:#1a1b26,stroke:#CB7C94,color:#CB7C94
-    style GGA_LAYER fill:#1a1b26,stroke:#FF9E64,color:#FF9E64
 ```
 
 #### 8.0.3 Installation Pipeline — Dependency Resolution Order
@@ -767,8 +704,7 @@ flowchart TD
         direction TB
         AGENT_INSTALL[Install missing agents<br/>Claude Code / OpenCode / etc.]
         AGENT_INSTALL --> ENGRAM_INSTALL[Install Engram binary<br/>via Homebrew or download]
-        ENGRAM_INSTALL --> GGA_INSTALL[Install GGA binary<br/>via Homebrew or download]
-        GGA_INSTALL --> ENGRAM_START[Start Engram server<br/>+ configure auto-start]
+        ENGRAM_INSTALL --> ENGRAM_START[Start Engram server<br/>+ configure auto-start]
     end
 
     ENGRAM_START --> CONFIG_LOOP
@@ -782,10 +718,9 @@ flowchart TD
         INJECT_SDD --> INJECT_MCP[Configure MCP servers<br/>Context7, Notion, Jira]
         INJECT_MCP --> INJECT_PERSONA[Inject persona<br/>CLAUDE.md / agents / rules]
         INJECT_PERSONA --> INJECT_THEME[Apply theme +<br/>permissions + statusline]
-        INJECT_THEME --> INJECT_GGA[Configure GGA provider<br/>to match this agent]
     end
 
-    INJECT_GGA --> VERIFY
+    INJECT_THEME --> VERIFY
 
     subgraph PHASE_7["Phase 7: Verification"]
         direction TB
@@ -793,10 +728,9 @@ flowchart TD
         VERIFY --> CHECK_ENGRAM[Engram: GET /health ✓]
         CHECK_ENGRAM --> CHECK_SKILLS[Skills: files exist ✓]
         CHECK_SKILLS --> CHECK_MCP[MCP: configs valid ✓]
-        CHECK_MCP --> CHECK_GGA[GGA: gga --version ✓]
     end
 
-    CHECK_GGA --> DONE([Complete!<br/>Show next steps])
+    CHECK_MCP --> DONE([Complete!<br/>Show next steps])
 
     style PHASE_1 fill:#1a1b26,stroke:#957FB8,color:#957FB8
     style PHASE_2 fill:#1a1b26,stroke:#E0C15A,color:#E0C15A
@@ -814,7 +748,6 @@ graph TD
     subgraph SOURCES["Source Repositories (fetched at install time)"]
         REPO_SDD[Gentleman-Programming/<br/>sdd-agent-team]
         REPO_ENGRAM[Gentleman-Programming/<br/>engram]
-        REPO_GGA[Gentleman-Programming/<br/>gentleman-guardian-angel]
         REPO_SKILLS[Skills Registry<br/>30+ skill files]
     end
 
@@ -845,10 +778,6 @@ graph TD
         GEM_ENV[.env<br/>GEMINI_SYSTEM_MD=1]
     end
 
-    subgraph GGA_CONFIG["GGA (~/.config/gga/)"]
-        GGA_GLOBAL[config<br/>GGA_PROVIDER=claude<br/>GGA_TIMEOUT=120]
-    end
-
     REPO_SDD -->|"9 SKILL.md files"| CC_SKILLS_DIR
     REPO_SDD -->|"9 SKILL.md files"| OC_SKILLS_DIR
     REPO_SDD -->|"condensed .cursorrules"| CUR_RULES
@@ -863,14 +792,12 @@ graph TD
     REPO_SKILLS -->|"coding skill files"| OC_SKILLS_DIR
     REPO_SKILLS -->|"coding skill files"| CUR_SKILLS_DIR
 
-    REPO_GGA -->|"provider config"| GGA_GLOBAL
 
     style SOURCES fill:#1a1b26,stroke:#E0C15A,color:#E0C15A
     style CC_CONFIG fill:#1a1b26,stroke:#7FB4CA,color:#7FB4CA
     style OC_CONFIG fill:#1a1b26,stroke:#B7CC85,color:#B7CC85
     style CUR_CONFIG fill:#1a1b26,stroke:#957FB8,color:#957FB8
     style GEM_CONFIG fill:#1a1b26,stroke:#FF9E64,color:#FF9E64
-    style GGA_CONFIG fill:#1a1b26,stroke:#CB7C94,color:#CB7C94
 ```
 
 #### 8.0.5 Memory & Knowledge Flow — How the Agent Learns Over Time
@@ -885,15 +812,14 @@ sequenceDiagram
     participant DB as SQLite + FTS5<br/>(~/.engram/engram.db)
     participant MCP as MCP Servers<br/>(Context7, Notion, Jira)
     participant SDD as SDD Workflow
-    participant GGA as GGA<br/>(Pre-commit Hook)
 
-    Note over Dev,GGA: === SESSION START ===
+    Note over Dev,SDD: === SESSION START ===
 
     Agent->>Engram: mem_session_start(project)
     Engram->>DB: INSERT session
     Engram-->>Agent: Previous context injected<br/>(recent sessions, decisions, bugs)
 
-    Note over Dev,GGA: === DEVELOPMENT LOOP ===
+    Note over Dev,SDD: === DEVELOPMENT LOOP ===
 
     Dev->>Agent: "Add auth to the API"
     Agent->>MCP: Query Context7 for JWT docs
@@ -911,21 +837,12 @@ sequenceDiagram
     Agent->>Engram: mem_save("JWT auth middleware",<br/>type: decision)
     Engram->>DB: INSERT observation<br/>(with topic_key upsert)
 
-    Note over Dev,GGA: === COMMIT ===
-
-    Dev->>GGA: git commit -m "feat: add auth"
-    GGA->>GGA: Read staged files<br/>+ AGENTS.md rules
-    GGA->>Agent: Review code against standards
-    Agent-->>GGA: STATUS: PASSED ✓
-    GGA->>GGA: Cache passed files (SHA256)
-    GGA-->>Dev: Commit allowed ✓
-
-    Note over Dev,GGA: === SESSION END ===
+    Note over Dev,SDD: === SESSION END ===
 
     Agent->>Engram: mem_session_summary(goal,<br/>discoveries, accomplished, files)
     Engram->>DB: INSERT summary observation
 
-    Note over Dev,GGA: === NEXT SESSION (days later) ===
+    Note over Dev,SDD: === NEXT SESSION (days later) ===
 
     Agent->>Engram: mem_context(project)
     Engram-->>Agent: "Last session: added JWT auth<br/>to src/middleware/auth.ts.<br/>Decision: httpOnly cookies,<br/>refresh token rotation."
@@ -941,7 +858,6 @@ graph TB
     subgraph SHARED["Shared Layer (single source of truth)"]
         ENGRAM_DB[(Engram DB<br/>~/.engram/engram.db<br/>All memories, all sessions)]
         SKILLS_SOURCE[Skills Files<br/>Identical copies in<br/>each agent's skill dir]
-        GGA_RULES[AGENTS.md<br/>Per-project standards]
     end
 
     subgraph AGENT_CC["Claude Code Session"]
@@ -1003,14 +919,6 @@ graph TB
         E5[Git sync for teams]
     end
 
-    subgraph GGA_OWNS["GGA Owns (commit-time)"]
-        direction LR
-        G1[Pre-commit review]
-        G2[File caching]
-        G3[Multi-provider routing]
-        G4[PR review mode]
-    end
-
     subgraph AGENT_OWNS["Agent Owns (session-time)"]
         direction LR
         A1[Code generation]
@@ -1024,19 +932,15 @@ graph TB
         direction LR
         U1[API keys & auth]
         U2[AGENTS.md rules]
-        U3[Project-level .gga config]
         U4[Which agents to use]
     end
 
     INSTALLER_OWNS -->|"sets up"| ENGRAM_OWNS
-    INSTALLER_OWNS -->|"sets up"| GGA_OWNS
     INSTALLER_OWNS -->|"configures"| AGENT_OWNS
     USER_OWNS -->|"provides to"| AGENT_OWNS
-    USER_OWNS -->|"provides to"| GGA_OWNS
 
     style INSTALLER_OWNS fill:#1a1b26,stroke:#E0C15A,color:#E0C15A
     style ENGRAM_OWNS fill:#1a1b26,stroke:#B7CC85,color:#B7CC85
-    style GGA_OWNS fill:#1a1b26,stroke:#CB7C94,color:#CB7C94
     style AGENT_OWNS fill:#1a1b26,stroke:#7FB4CA,color:#7FB4CA
     style USER_OWNS fill:#1a1b26,stroke:#957FB8,color:#957FB8
 ```
@@ -1071,11 +975,9 @@ gentle-ai/
 │   │   ├── opencode.go             # OpenCode install + config
 │   │   ├── cursor.go               # Cursor install + config
 │   │   ├── gemini_cli.go           # Gemini CLI install + config
-│   │   ├── codex.go                # Codex install + config
-│   │   └── windsurf.go             # Windsurf install + config
+│   │   └── codex.go                # Codex install + config
 │   ├── components/
 │   │   ├── engram.go               # Engram install + config per agent
-│   │   ├── gga.go                  # GGA install + provider config
 │   │   ├── sdd.go                  # SDD skills install + orchestrator config
 │   │   ├── mcp.go                  # MCP server configuration per agent
 │   │   ├── skills.go               # Skills library install
@@ -1255,12 +1157,6 @@ When the installer completes with "Dev Stack + Polish" (`full-gentleman`) preset
 - Database initialized at `~/.engram/engram.db`
 - Integrated with all selected agents
 
-**GGA (Guardian Angel):**
-- `gga` binary in PATH
-- Configured with selected AI provider (e.g., `GGA_PROVIDER=claude`)
-- Global config at `~/.config/gga/config`
-- Ready for per-project setup via `gga install`
-
 **Verification:**
 - The installer runs a health check: `engram serve` responds, MCP tools are callable, skills are in correct paths
 - Clear output: "You're ready. Run `claude` or `opencode` and start building."
@@ -1375,10 +1271,9 @@ These are NOT requirements for v1 but should inform architectural decisions:
 | `opencode` install | Installs OpenCode only | Single tool, manual config |
 | `engram setup` | Installs Engram for one agent | Memory only, no skills/agents |
 | `sdd-agent-team/install.sh` | Installs SDD skills | Skills only, no agents/memory |
-| `gga` install | Installs GGA for one project | Code review only, no ecosystem |
 | Various dotfile managers | Stow, chezmoi, etc. | Generic, not AI-specific |
 
-**None of these solve the full problem.** Each handles one piece. This installer orchestrates ALL of them — Engram, SDD, GGA, skills, MCP, persona, theme — into a coherent, working AI development ecosystem across any agent the user chooses.
+**None of these solve the full problem.** Each handles one piece. This installer orchestrates ALL of them — Engram, SDD, skills, MCP, persona, theme — into a coherent, working AI development ecosystem across any agent the user chooses.
 
 ---
 

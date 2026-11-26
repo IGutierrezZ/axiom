@@ -377,9 +377,9 @@ func TestCommonComponentsExist(t *testing.T) {
 	components := readAsset(t, "js/core/components.js")
 	for _, marker := range []string{
 		"export function button(", "export function iconButton(", "export function chip(", "export function badge(",
-		"export function statusPill(", "export function reminder(", "function copyText(", "navigator.clipboard",
+		"export function statusPill(", "export function commandChip(", "function copyText(", "navigator.clipboard",
 		"export function stateLoading(", "export function stateEmpty(", "export function stateError(",
-		"export function tableWrap(", "export function consoleBox(", "export function confirmDialog(", "showModal",
+		"export function tableWrap(", "export function renderConsole(", "export function confirmDialog(", "showModal",
 	} {
 		if !strings.Contains(components, marker) {
 			t.Errorf("components.js no contiene %q", marker)
@@ -392,7 +392,7 @@ func TestCommonComponentsExist(t *testing.T) {
 		}
 	}
 	css := readAsset(t, "style.css")
-	for _, marker := range []string{".btn-primary", ".btn-danger", ".btn-ghost", ".btn-icon", ".chip", `[aria-pressed="true"]`, ".reminder", ".table-wrap", ".seg-group", "dialog.modal", ".console", ".state-error"} {
+	for _, marker := range []string{".btn-primary", ".btn-danger", ".btn-ghost", ".btn-icon", ".chip", `[aria-pressed="true"]`, ".cmd-chip", ".reminder-cmd", ".table-wrap", ".seg-group", "dialog.modal", ".console", ".state-error"} {
 		if !strings.Contains(css, marker) {
 			t.Errorf("style.css no contiene %q", marker)
 		}

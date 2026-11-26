@@ -51,10 +51,9 @@ const legacyInstructionsFrontmatter = "---\n" +
 
 // installerFrontmatters returns the only headers a legacy prompt file of this
 // adapter may start with, chosen by the prompt strategy that decides which
-// header Axiom writes at that path: steering files (Kiro) take the steering
-// headers, instructions files (VS Code) the instructions headers, and any other
-// target (Cursor) none. For each target they are the persona installer's
-// (wrapSteeringFile, wrapInstructionsFile) and the one the SDD component writes
+// header Axiom writes at that path: instructions files (VS Code) take the
+// instructions headers, and any other target (Cursor) none. For instructions
+// files they are the persona installer's (wrapInstructionsFile) and the one the SDD component writes
 // when it creates the file on its own (shared with its injector through
 // filemerge), plus the instructions headers earlier releases wrote under the
 // previous product name. A header that belongs to another adapter is not what Axiom wrote
@@ -63,8 +62,6 @@ const legacyInstructionsFrontmatter = "---\n" +
 // write.
 func installerFrontmatters(adapter agents.Adapter) []string {
 	switch adapter.SystemPromptStrategy() {
-	case model.StrategySteeringFile:
-		return []string{wrapSteeringFile(""), filemerge.SDDSteeringFrontmatter}
 	case model.StrategyInstructionsFile:
 		return []string{
 			wrapInstructionsFile(""),
@@ -79,7 +76,7 @@ func installerFrontmatters(adapter agents.Adapter) []string {
 var managedSectionOpenMarker = regexp.MustCompile(`<!-- (axiom|gentle-ai):([A-Za-z0-9_.-]+) -->`)
 
 // RetireLegacyPromptFiles removes the prompt files an earlier release wrote
-// under a name the adapter no longer uses (for example Kiro's gentle-ai.md),
+// under a name the adapter no longer uses (for example VS Code's gentle-ai.instructions.md),
 // which otherwise stay next to the renamed file and deliver the prompt twice.
 //
 // A legacy file is deleted only when Axiom provably wrote all of it:

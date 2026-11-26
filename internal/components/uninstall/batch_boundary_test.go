@@ -20,13 +20,11 @@ import (
 func TestPartialUninstallCommitsSucceededAgentsWhenAnotherAgentFails(t *testing.T) {
 	home := t.TempDir()
 	claudeSettings := filepath.Join(home, ".claude", "settings.json")
-	hermesConfig := filepath.Join(home, ".hermes", "config.yaml")
-	hermesSoul := filepath.Join(home, ".hermes", "SOUL.md")
+	geminiSettings := filepath.Join(home, ".gemini", "settings.json")
 
 	writeBatchFile(t, claudeSettings, `{"theme":"gentleman","outputStyle":"gentleman","env":{"MY_VAR":"1"}}`)
-	writeBatchFile(t, hermesConfig, "providers:\n  - name: hermes\n")
-	writeBatchFile(t, hermesSoul, "<!-- gentle-ai:persona -->\nmanaged\n<!-- /gentle-ai:persona -->\n")
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"claude-code", "hermes"}}); err != nil {
+	writeBatchFile(t, geminiSettings, "not json")
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"claude-code", "gemini-cli"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -36,16 +34,16 @@ func TestPartialUninstallCommitsSucceededAgentsWhenAnotherAgentFails(t *testing.
 	}
 	svc.snapshotter = stubSnapshotter{}
 
-	result, err := svc.PartialUninstall([]model.AgentID{model.AgentClaudeCode, model.AgentHermes}, nil)
+	result, err := svc.PartialUninstall([]model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI}, nil)
 	if err == nil {
-		t.Fatal("PartialUninstall() error = nil, want the hermes cleanup failure surfaced")
+		t.Fatal("PartialUninstall() error = nil, want the gemini cleanup failure surfaced")
 	}
-	if want := fmt.Sprintf("%q", hermesConfig); !strings.Contains(err.Error(), want) {
+	if want := fmt.Sprintf("%q", geminiSettings); !strings.Contains(err.Error(), want) {
 		t.Fatalf("PartialUninstall() error = %v, want it to name the representation %s", err, want)
 	}
 
-	if !slices.Equal(result.FailedAgents, []model.AgentID{model.AgentHermes}) {
-		t.Fatalf("FailedAgents = %v, want [hermes]", result.FailedAgents)
+	if !slices.Equal(result.FailedAgents, []model.AgentID{model.AgentGeminiCLI}) {
+		t.Fatalf("FailedAgents = %v, want [gemini-cli]", result.FailedAgents)
 	}
 	if !slices.Equal(result.AgentsRemovedFromState, []model.AgentID{model.AgentClaudeCode}) {
 		t.Fatalf("AgentsRemovedFromState = %v, want [claude-code]", result.AgentsRemovedFromState)
@@ -57,7 +55,7 @@ func TestPartialUninstallCommitsSucceededAgentsWhenAnotherAgentFails(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(current.InstalledAgents, []string{"hermes"}) {
+	if !slices.Equal(current.InstalledAgents, []string{"gemini-cli"}) {
 		t.Fatalf("state.json installed_agents = %v, want only the agent that failed", current.InstalledAgents)
 	}
 
@@ -70,7 +68,7 @@ func TestPartialUninstallCommitsSucceededAgentsWhenAnotherAgentFails(t *testing.
 	}
 
 	if !slices.ContainsFunc(result.ManualActions, func(action string) bool {
-		return strings.Contains(action, "hermes") && strings.Contains(action, hermesConfig)
+		return strings.Contains(action, "gemini-cli") && strings.Contains(action, geminiSettings)
 	}) {
 		t.Fatalf("ManualActions = %v, want the failed agent and its path reported", result.ManualActions)
 	}
@@ -82,7 +80,7 @@ func TestPartialUninstallCommitsSucceededAgentsWhenAnotherAgentFails(t *testing.
 // commit their state removal.
 func TestExecutePlanReportsPerAgentOutcomesInsteadOfAbortingOnTheFirstFailure(t *testing.T) {
 	home := t.TempDir()
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"claude-code", "codex", "hermes"}}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"claude-code", "codex", "gemini-cli"}}); err != nil {
 		t.Fatal(err)
 	}
 	svc, err := NewService(home, t.TempDir(), "dev")
@@ -94,7 +92,7 @@ func TestExecutePlanReportsPerAgentOutcomesInsteadOfAbortingOnTheFirstFailure(t 
 	failure := errors.New("clean json file: invalid character 'p'")
 	ranAfterFailure := false
 	plan := plan{operations: []operation{
-		{typeID: opRewriteFile, path: filepath.Join(home, "a-fails"), agents: []model.AgentID{model.AgentHermes}, apply: func(string) (bool, bool, error) {
+		{typeID: opRewriteFile, path: filepath.Join(home, "a-fails"), agents: []model.AgentID{model.AgentGeminiCLI}, apply: func(string) (bool, bool, error) {
 			return false, false, failure
 		}},
 		{typeID: opRewriteFile, path: filepath.Join(home, "b-succeeds"), agents: []model.AgentID{model.AgentClaudeCode}, apply: func(string) (bool, bool, error) {
@@ -103,7 +101,7 @@ func TestExecutePlanReportsPerAgentOutcomesInsteadOfAbortingOnTheFirstFailure(t 
 		}},
 	}}
 
-	result, err := svc.executePlan(plan, []model.AgentID{model.AgentClaudeCode, model.AgentCodex, model.AgentHermes})
+	result, err := svc.executePlan(plan, []model.AgentID{model.AgentClaudeCode, model.AgentCodex})
 	if err == nil {
 		t.Fatal("executePlan() error = nil, want the failure surfaced")
 	}
@@ -113,8 +111,8 @@ func TestExecutePlanReportsPerAgentOutcomesInsteadOfAbortingOnTheFirstFailure(t 
 	if !ranAfterFailure {
 		t.Fatal("operations after the failing one did not run: the batch still aborts on first failure")
 	}
-	if !slices.Equal(result.FailedAgents, []model.AgentID{model.AgentHermes}) {
-		t.Fatalf("FailedAgents = %v, want [hermes]", result.FailedAgents)
+	if !slices.Equal(result.FailedAgents, []model.AgentID{model.AgentGeminiCLI}) {
+		t.Fatalf("FailedAgents = %v, want [gemini-cli]", result.FailedAgents)
 	}
 	if !slices.Equal(result.AgentsRemovedFromState, []model.AgentID{model.AgentClaudeCode, model.AgentCodex}) {
 		t.Fatalf("AgentsRemovedFromState = %v, want the two agents with no failed operation", result.AgentsRemovedFromState)
@@ -127,7 +125,7 @@ func TestExecutePlanReportsPerAgentOutcomesInsteadOfAbortingOnTheFirstFailure(t 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(current.InstalledAgents, []string{"hermes"}) {
+	if !slices.Equal(current.InstalledAgents, []string{"gemini-cli"}) {
 		t.Fatalf("state.json installed_agents = %v, want only the failed agent retained", current.InstalledAgents)
 	}
 }
@@ -182,7 +180,7 @@ func TestBuildPlanAttributesOperationsToTheAgentsThatContributedThem(t *testing.
 		t.Fatal(err)
 	}
 
-	built, err := svc.buildPlan([]model.AgentID{model.AgentClaudeCode, model.AgentHermes}, []model.ComponentID{model.ComponentTheme, model.ComponentPersona})
+	built, err := svc.buildPlan([]model.AgentID{model.AgentClaudeCode, model.AgentGeminiCLI}, []model.ComponentID{model.ComponentTheme, model.ComponentPersona})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,9 +194,9 @@ func TestBuildPlanAttributesOperationsToTheAgentsThatContributedThem(t *testing.
 	}
 
 	claudeSettings := filepath.Join(home, ".claude", "settings.json")
-	hermesConfig := filepath.Join(home, ".hermes", "config.yaml")
+	geminiSettings := filepath.Join(home, ".gemini", "settings.json")
 	assertOperationAgents(t, built, claudeSettings, []model.AgentID{model.AgentClaudeCode})
-	assertOperationAgents(t, built, hermesConfig, []model.AgentID{model.AgentHermes})
+	assertOperationAgents(t, built, geminiSettings, []model.AgentID{model.AgentGeminiCLI})
 }
 
 func assertOperationAgents(t *testing.T, built plan, path string, want []model.AgentID) {

@@ -13,13 +13,8 @@ var defaultContext7OverlayJSON = []byte(fmt.Sprintf("{\n  \"mcpServers\": {\n   
 // openCodeContext7OverlayJSON is the opencode.json overlay using the new MCP format.
 // Context7 is a remote MCP server — no npx needed.
 // The context7 entry must replace atomically so legacy local keys do not survive
-// deep merge into OpenCode/KiloCode's strict MCP schema.
+// deep merge into OpenCode's strict MCP schema.
 var openCodeContext7OverlayJSON = []byte("{\n  \"mcp\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"type\": \"remote\",\n        \"url\": \"https://mcp.context7.com/mcp\",\n        \"enabled\": true\n      }\n    }\n  }\n}\n")
-
-// openClawContext7OverlayJSON is the OpenClaw openclaw.json overlay.
-// OpenClaw rejects top-level mcpServers and expects MCP entries under
-// mcp.servers.
-var openClawContext7OverlayJSON = []byte(fmt.Sprintf("{\n  \"mcp\": {\n    \"servers\": {\n      \"context7\": {\n        \"command\": \"npx\",\n        \"args\": [\n          \"-y\",\n          \"--package=@upstash/context7-mcp@%s\",\n          \"--\",\n          \"context7-mcp\"\n        ]\n      }\n    }\n  }\n}\n", versions.Context7MCP))
 
 // vsCodeContext7OverlayJSON is the VS Code mcp.json overlay using the "servers" key.
 var vsCodeContext7OverlayJSON = []byte("{\n  \"servers\": {\n    \"context7\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.context7.com/mcp\"\n    }\n  }\n}\n")
@@ -29,12 +24,6 @@ var vsCodeContext7OverlayJSON = []byte("{\n  \"servers\": {\n    \"context7\": {
 // The context7 entry must replace atomically so legacy local keys do not survive
 // deep merge into this managed MCP server entry.
 var antigravityContext7OverlayJSON = []byte("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"serverUrl\": \"https://mcp.context7.com/mcp\"\n      }\n    }\n  }\n}\n")
-
-// kimiContext7OverlayJSON follows Kimi's documented mcp.json "well-known MCP
-// config format", using mcpServers + explicit http transport for Context7.
-// The context7 entry must replace atomically so legacy local keys do not survive
-// deep merge into this managed MCP server entry.
-var kimiContext7OverlayJSON = []byte("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"__replace__\": {\n        \"transport\": \"http\",\n        \"url\": \"https://mcp.context7.com/mcp\"\n      }\n    }\n  }\n}\n")
 
 func DefaultContext7ServerJSON() []byte {
 	content := make([]byte, len(defaultContext7ServerJSON))
@@ -54,12 +43,6 @@ func OpenCodeContext7OverlayJSON() []byte {
 	return content
 }
 
-func OpenClawContext7OverlayJSON() []byte {
-	content := make([]byte, len(openClawContext7OverlayJSON))
-	copy(content, openClawContext7OverlayJSON)
-	return content
-}
-
 func VSCodeContext7OverlayJSON() []byte {
 	content := make([]byte, len(vsCodeContext7OverlayJSON))
 	copy(content, vsCodeContext7OverlayJSON)
@@ -69,12 +52,6 @@ func VSCodeContext7OverlayJSON() []byte {
 func AntigravityContext7OverlayJSON() []byte {
 	content := make([]byte, len(antigravityContext7OverlayJSON))
 	copy(content, antigravityContext7OverlayJSON)
-	return content
-}
-
-func KimiContext7OverlayJSON() []byte {
-	content := make([]byte, len(kimiContext7OverlayJSON))
-	copy(content, kimiContext7OverlayJSON)
 	return content
 }
 

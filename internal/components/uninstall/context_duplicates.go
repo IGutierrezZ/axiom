@@ -75,7 +75,7 @@ func ContextDuplicates(homeDir, root string) []ContextDuplicate {
 		if !ok {
 			continue
 		}
-		// Claude Code y Kiro no se ligan: con la raíz del proyecto sus rutas ya son
+		// Claude Code no se liga: con la raíz del proyecto sus rutas ya son
 		// las del proyecto.
 		project := agents.BindWorkspace(user, root)
 
@@ -175,7 +175,7 @@ func managedInstructionsSignature(path string) (string, bool) {
 		sort.Strings(sections)
 		return strings.Join(sections, "\x01"), true
 	}
-	if !isManagedSteeringContent(content) {
+	if !isManagedPromptFileContent(content) {
 		return "", false
 	}
 	return strings.TrimSpace(stripManagedFrontmatter(content)), true

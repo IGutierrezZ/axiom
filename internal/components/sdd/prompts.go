@@ -14,7 +14,6 @@ import (
 
 const (
 	claudeCodeGraphToolGrant = "mcp__codegraph__codegraph_explore"
-	kiroCodeGraphToolGrant   = "@codegraph"
 )
 
 // readSkillContent reads the embedded skill content for the given phase.
@@ -29,8 +28,8 @@ func SharedPromptDir(homeDir string) string {
 }
 
 // SharedPromptDirFor devuelve la carpeta de los prompts compartidos para el
-// adaptador. En el proyecto de OpenCode y Kilo está dentro de su carpeta de
-// recursos (.opencode/prompts/sdd, .kilo/prompts/sdd); en cualquier otro caso es
+// adaptador. En el proyecto de OpenCode está dentro de su carpeta de
+// recursos (.opencode/prompts/sdd); en cualquier otro caso es
 // SharedPromptDir.
 func SharedPromptDirFor(adapter agents.Adapter, dir string) string {
 	if provider, ok := adapter.(agents.WorkspacePromptsDirProvider); ok {
@@ -165,8 +164,6 @@ func injectCodeGraphToolGrantIntoPrompt(prompt string, agentID model.AgentID, gu
 	switch agentID {
 	case model.AgentClaudeCode:
 		grant = claudeCodeGraphToolGrant
-	case model.AgentKiroIDE:
-		grant = kiroCodeGraphToolGrant
 	default:
 		return prompt
 	}

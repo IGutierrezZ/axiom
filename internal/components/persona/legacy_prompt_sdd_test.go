@@ -24,8 +24,6 @@ func sddOnlyContent(frontmatter string) string {
 // adapter case, or "" when it writes none (Cursor).
 func sddFrontmatterFor(name string) string {
 	switch name {
-	case "kiro":
-		return filemerge.SDDSteeringFrontmatter
 	case "vscode":
 		return filemerge.SDDInstructionsFrontmatter
 	}
@@ -234,8 +232,8 @@ func TestRetireLegacyPromptFilesKeepsSDDOnlyCopyWhenCurrentPromptHasNoSection(t 
 	}
 }
 
-// Each frontmatter proves ownership only for the target that writes it: Kiro
-// writes steering files, VS Code instructions files and Cursor none. A header
+// Each frontmatter proves ownership only for the target that writes it: VS Code
+// writes instructions files and Cursor none. A header
 // that belongs to another adapter is not what Axiom wrote at this path.
 func TestRetireLegacyPromptFilesKeepsFrontmatterOfAnotherAdapter(t *testing.T) {
 	home := t.TempDir()
@@ -243,16 +241,11 @@ func TestRetireLegacyPromptFilesKeepsFrontmatterOfAnotherAdapter(t *testing.T) {
 		"persona instructions": wrapInstructionsFile(""),
 		"sdd instructions":     filemerge.SDDInstructionsFrontmatter,
 	}
-	steering := map[string]string{
-		"persona steering": wrapSteeringFile(""),
-		"sdd steering":     filemerge.SDDSteeringFrontmatter,
-	}
 	foreign := map[string]map[string]string{
-		"kiro":   instructions,
-		"vscode": steering,
+		"vscode": {},
 		"cursor": {},
 	}
-	for _, set := range []map[string]string{instructions, steering} {
+	for _, set := range []map[string]string{instructions} {
 		for name, frontmatter := range set {
 			foreign["cursor"][name] = frontmatter
 		}
@@ -274,8 +267,6 @@ func TestRetireLegacyPromptFilesRemovesCopyWithOwnPersonaFrontmatter(t *testing.
 	for _, c := range legacyPromptCases(t, home) {
 		var frontmatter string
 		switch c.name {
-		case "kiro":
-			frontmatter = wrapSteeringFile("")
 		case "vscode":
 			frontmatter = wrapInstructionsFile("")
 		default:

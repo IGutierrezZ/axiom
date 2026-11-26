@@ -63,7 +63,7 @@ func TestRunUpgrade_ReturnsErrorBeforeExecutingWhenChecksFail(t *testing.T) {
 				Status: update.CheckFailed,
 			},
 			{
-				Tool:             update.ToolInfo{Name: "gga"},
+				Tool:             update.ToolInfo{Name: "opencode-subagent-statusline"},
 				InstalledVersion: "1.0.0",
 				LatestVersion:    "2.0.0",
 				Status:           update.UpdateAvailable,
@@ -260,15 +260,15 @@ func TestRunUpgrade_ForwardsParsedArgsOnceWithoutReparsing(t *testing.T) {
 	setupMockHome(t, home)
 
 	var buf bytes.Buffer
-	err := runUpgrade(context.Background(), upgradeArgs{dryRun: true, noBackup: true, toolFilter: []string{"engram", "gga"}}, system.DetectionResult{System: system.SystemInfo{Profile: system.PlatformProfile{OS: "darwin", PackageManager: "brew", Supported: true}}}, &buf)
+	err := runUpgrade(context.Background(), upgradeArgs{dryRun: true, noBackup: true, toolFilter: []string{"engram", "opencode-subagent-statusline"}}, system.DetectionResult{System: system.SystemInfo{Profile: system.PlatformProfile{OS: "darwin", PackageManager: "brew", Supported: true}}}, &buf)
 	if err != nil {
 		t.Fatalf("runUpgrade() error = %v, want nil", err)
 	}
 	if checkCalls != 1 {
 		t.Fatalf("updateCheckFiltered called %d times, want exactly 1", checkCalls)
 	}
-	if !reflect.DeepEqual(checkFilters, []string{"engram", "gga"}) {
-		t.Fatalf("updateCheckFiltered filters = %#v, want [engram gga] forwarded once", checkFilters)
+	if !reflect.DeepEqual(checkFilters, []string{"engram", "opencode-subagent-statusline"}) {
+		t.Fatalf("updateCheckFiltered filters = %#v, want [engram opencode-subagent-statusline] forwarded once", checkFilters)
 	}
 	if execCalls != 1 {
 		t.Fatalf("upgradeExecuteWithOptions called %d times, want exactly 1", execCalls)
@@ -381,7 +381,7 @@ func TestRunUpgrade_DryRunDoesNotPrintDoctorAdvisory(t *testing.T) {
 }
 
 // TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory verifies that
-// upgrading a tool other than axiom (e.g. engram, gga) does NOT trigger
+// upgrading a tool other than axiom (e.g. engram, opencode-subagent-statusline) does NOT trigger
 // the doctor advisory. The advisory is gated on axiom specifically.
 func TestRunUpgrade_NonAxiomUpgradeDoesNotPrintDoctorAdvisory(t *testing.T) {
 	origCheckFiltered := updateCheckFiltered

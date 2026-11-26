@@ -16,7 +16,6 @@ func TestIsSelfToolName(t *testing.T) {
 		{name: "accepts uppercase AXIOM", toolName: "AXIOM", want: true},
 		{name: "accepts mixed case with edge spaces", toolName: " Axiom ", want: true},
 		{name: "rejects engram", toolName: "engram", want: false},
-		{name: "rejects gga", toolName: "gga", want: false},
 		{name: "rejects empty", toolName: "", want: false},
 		{name: "rejects lookalike Ax1om", toolName: "Ax1om", want: false},
 	}

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/json"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -64,7 +65,6 @@ func fullyPopulatedInstallState() InstallState {
 		ClaudePhaseAssignments: map[string]ClaudePhaseAssignmentState{
 			"sdd-apply": {Model: "opus", Effort: "max"},
 		},
-		KiroModelAssignments: map[string]string{"sdd-design": "opus"},
 		CodexModelAssignments: map[string]string{
 			"sdd-verify": "high",
 		},
@@ -137,7 +137,6 @@ func TestMergeAgents(t *testing.T) {
 		"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 	}
 	existingClaude := map[string]string{"sdd-explore": "sonnet", "sdd-archive": "haiku"}
-	existingKiro := map[string]string{"sdd-design": "opus"}
 	existingCommunityTools := []string{"codegraph"}
 
 	tests := []struct {
@@ -178,7 +177,6 @@ func TestMergeAgents(t *testing.T) {
 				CommunityToolsConfigured: true,
 				ModelAssignments:         existingAssignments,
 				ClaudeModelAssignments:   existingClaude,
-				KiroModelAssignments:     existingKiro,
 				Persona:                  "gentleman",
 			},
 			newAgents: []string{"pi"},
@@ -200,9 +198,6 @@ func TestMergeAgents(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments) {
 				t.Errorf("ClaudeModelAssignments not preserved: got %v, want %v", got.ClaudeModelAssignments, tt.existing.ClaudeModelAssignments)
-			}
-			if !reflect.DeepEqual(got.KiroModelAssignments, tt.existing.KiroModelAssignments) {
-				t.Errorf("KiroModelAssignments not preserved: got %v, want %v", got.KiroModelAssignments, tt.existing.KiroModelAssignments)
 			}
 			if got.Persona != tt.existing.Persona {
 				t.Errorf("Persona not preserved: got %q, want %q", got.Persona, tt.existing.Persona)
@@ -498,11 +493,6 @@ func TestModelAssignmentsRoundTrip(t *testing.T) {
 			"sdd-propose":  "fable",
 			"sdd-archive":  "haiku",
 		},
-		KiroModelAssignments: map[string]string{
-			"sdd-design":  "opus",
-			"sdd-archive": "haiku",
-			"default":     "sonnet",
-		},
 		ModelAssignments: map[string]ModelAssignmentState{
 			"sdd-init": {ProviderID: "anthropic", ModelID: "claude-sonnet-4"},
 		},
@@ -519,9 +509,6 @@ func TestModelAssignmentsRoundTrip(t *testing.T) {
 
 	if !reflect.DeepEqual(got.ClaudeModelAssignments, want.ClaudeModelAssignments) {
 		t.Errorf("ClaudeModelAssignments = %v, want %v", got.ClaudeModelAssignments, want.ClaudeModelAssignments)
-	}
-	if !reflect.DeepEqual(got.KiroModelAssignments, want.KiroModelAssignments) {
-		t.Errorf("KiroModelAssignments = %v, want %v", got.KiroModelAssignments, want.KiroModelAssignments)
 	}
 	if !reflect.DeepEqual(got.ModelAssignments, want.ModelAssignments) {
 		t.Errorf("ModelAssignments = %v, want %v", got.ModelAssignments, want.ModelAssignments)
@@ -1502,4 +1489,63 @@ func findSub(s, sub string) bool {
 		}
 	}
 	return false
+}
+
+// Un estado guardado con un agente que Axiom ya no conoce sigue cargando: el
+// agente sale de InstalledAgents y queda en IgnoredAgents para avisar.
+func TestReadIgnoresAgentsTheCatalogNoLongerKnows(t *testing.T) {
+	var s InstallState
+	if err := json.Unmarshal([]byte(`{"installed_agents":["claude-code","kiro-ide","codex"]}`), &s); err != nil {
+		t.Fatalf("Unmarshal() error = %v", err)
+	}
+	if want := []string{"claude-code", "codex"}; !reflect.DeepEqual(s.InstalledAgents, want) {
+		t.Errorf("InstalledAgents = %v, want %v", s.InstalledAgents, want)
+	}
+	if want := []string{"kiro-ide"}; !reflect.DeepEqual(s.IgnoredAgents, want) {
+		t.Errorf("IgnoredAgents = %v, want %v", s.IgnoredAgents, want)
+	}
+	out, err := json.Marshal(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "kiro-ide") {
+		t.Errorf("la siguiente escritura no debe conservar el agente retirado: %s", out)
+	}
+}
+
+// Un estado guardado con un componente que Axiom ya no admite (como gga) sigue
+// cargando sin error: el componente sale de Components y queda en
+// IgnoredComponents para avisar, y la siguiente escritura ya no lo conserva.
+func TestReadIgnoresComponentsAxiomNoLongerSupports(t *testing.T) {
+	home := t.TempDir()
+	path := Path(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"selection_configured": true, "components": ["engram", "gga", "sdd"]}`
+	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Read(home)
+	if err != nil {
+		t.Fatalf("Read() error = %v, want nil con un componente retirado", err)
+	}
+	if want := []model.ComponentID{model.ComponentEngram, model.ComponentSDD}; !reflect.DeepEqual(s.Components, want) {
+		t.Errorf("Components = %v, want %v", s.Components, want)
+	}
+	if want := []model.ComponentID{"gga"}; !reflect.DeepEqual(s.IgnoredComponents, want) {
+		t.Errorf("IgnoredComponents = %v, want %v", s.IgnoredComponents, want)
+	}
+
+	if err := Write(home, s); err != nil {
+		t.Fatalf("Write() error = %v", err)
+	}
+	written, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(written), "gga") {
+		t.Errorf("la siguiente escritura no debe conservar el componente retirado: %s", written)
+	}
 }

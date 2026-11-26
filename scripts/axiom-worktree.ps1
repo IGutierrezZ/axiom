@@ -9,7 +9,10 @@
     decisión de la persona):
 
     new  <slug> [-Lane l] [-Prefix p]  axiom branch ensure --cwd <checkout principal> --change <slug> --lane l [--prefix p] --json
-    pr   <slug> [-Lane l]    push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json
+    pr   <slug> -Label t [-Lane l]  push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json,
+                             creada ya con la etiqueta `type:t`. El check `Check PR Has type:* Label`
+                             (.github/workflows/pr-check.yml) se lanza al abrirse la PR: etiquetarla
+                             después hace que esa primera ejecución falle y GitHub avise por correo
     done <slug> [-Lane l] [-Force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l --fetch y,
                              después, el avance rápido de main. `--fetch` trae origin antes de confirmar
                              la fusión: sin él, un squash recién fusionado no se ve y da merge_not_confirmed. La rama sale del registro local que escribe
@@ -27,7 +30,7 @@
 
 .USAGE
     scripts/axiom-worktree.ps1 new <slug> [-Lane sdd|odd] [-Prefix feat|inc|fix|refactor]
-    scripts/axiom-worktree.ps1 pr <slug> [-Lane sdd|odd]
+    scripts/axiom-worktree.ps1 pr <slug> -Label bug|feature|refactor|docs|chore|breaking-change [-Lane sdd|odd]
     scripts/axiom-worktree.ps1 done <slug> [-Lane sdd|odd] [-Force]
 #>
 param(
@@ -47,6 +50,11 @@ param(
     [Parameter(Mandatory = $false)]
     [ValidateSet('sdd', 'odd')]
     [string]$Lane = 'sdd',
+
+    # Tipo de la PR (`pr`): se crea ya con la etiqueta `type:<tipo>` que exige pr-check.yml.
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('bug', 'feature', 'refactor', 'docs', 'chore', 'breaking-change')]
+    [string]$Label,
 
     [Parameter(Mandatory = $false)]
     [switch]$Force
@@ -128,11 +136,17 @@ switch ($Verb) {
         }
         foreach ($path in $worktrees) { Ok "Worktree: $path" }
         Info 'Trabaja con rutas absolutas dentro de esos directorios (--cwd y git -C).'
-        Info "Al verificar, ejecuta: scripts/axiom-worktree.ps1 pr $Slug"
+        Info "Al verificar, ejecuta: scripts/axiom-worktree.ps1 pr $Slug -Label <tipo>"
     }
 
     'pr' {
-        $lines = & axiom branch status --cwd $mainRoot --change $Slug --lane $Lane --json 2>&1
+        # Sin etiqueta al crearla, la primera ejecución de pr-check.yml (evento `opened`) falla.
+        if (-not $Label) {
+            Fail "Falta -Label: la PR debe crearse ya con su etiqueta type:*. Valores: bug, feature, refactor, docs, chore, breaking-change."
+        }
+        $typeLabel = "type:$Label"
+
+        $lines =& axiom branch status --cwd $mainRoot --change $Slug --lane $Lane --json 2>&1
         $exitCode = $LASTEXITCODE
         $text = ($lines | ForEach-Object { "$_" }) -join "`n"
         if ($exitCode -ne 0) {
@@ -178,7 +192,7 @@ switch ($Verb) {
 
         $remoteUrl = (git -C $wtPath remote get-url origin 2>$null).Trim()
         $remoteUrl = $remoteUrl -replace '\.git$', ''
-        $compareUrl = "$remoteUrl/compare/$prTarget...$branch" + '?expand=1'
+        $compareUrl = "$remoteUrl/compare/$prTarget...$branch" + '?expand=1&labels=' + [uri]::EscapeDataString($typeLabel)
         # HOST/OWNER/REPO de origin (https o ssh) para no depender de 'gh repo set-default'.
         $ghRepo = $remoteUrl -replace '^(?:[a-zA-Z][a-zA-Z0-9+.-]*://)?(?:[^@/]+@)?([^/:]+)[:/]', '$1/'
 
@@ -186,10 +200,10 @@ switch ($Verb) {
         if ($gh) {
             gh auth status 2>$null
             if ($LASTEXITCODE -eq 0) {
-                Info "Creando el Pull Request mediante gh CLI (base: $prTarget)..."
+                Info "Creando el Pull Request mediante gh CLI (base: $prTarget, etiqueta: $typeLabel)..."
                 Push-Location $wtPath
                 try {
-                    & gh pr create --repo $ghRepo --base $prTarget --head $branch --fill
+                    & gh pr create --repo $ghRepo --base $prTarget --head $branch --fill --label $typeLabel
                     if ($LASTEXITCODE -eq 0) {
                         Ok "Pull Request creado exitosamente."
                         return

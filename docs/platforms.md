@@ -13,7 +13,7 @@
 | Linux (Fedora Silverblue) | rpm-ostree | Supported |
 | Windows 10/11 | `go install` (Go toolchain) | Supported (binary distribution held) |
 
-The "Package Manager" column is the system manager Axiom uses for dependencies. Axiom itself is not distributed through Homebrew: on Linux/macOS it comes from the signed release archive (`curl -fsSL .../scripts/install.sh | bash`) and on Windows from `go install` (`irm .../scripts/install.ps1 | iex`). The Homebrew tap of Gentleman Programming only serves `engram` and `gga`.
+The "Package Manager" column is the system manager Axiom uses for dependencies. Axiom itself is not distributed through Homebrew: on Linux/macOS it comes from the signed release archive (`curl -fsSL .../scripts/install.sh | bash`) and on Windows from `go install` (`irm .../scripts/install.ps1 | iex`). The Homebrew tap of Gentleman Programming only serves `engram`.
 
 Derivatives are detected via `ID_LIKE` in `/etc/os-release` (Linux Mint, Pop!_OS, Manjaro, EndeavourOS, CentOS Stream, Rocky Linux, AlmaLinux, etc.).
 
@@ -58,16 +58,15 @@ Restart OpenCode after enabling managed activation. Restart the shell if the lau
 - **npm global installs** do not require `sudo` on Windows (user-writable by default).
 - **curl** is pre-installed on Windows 10+ and does not require separate installation.
 - **PowerShell** is the default shell when `$SHELL` is not set.
-- **GGA on Windows** works from both Git Bash and PowerShell. Axiom installs a `gga.ps1` shim that automatically delegates to Git Bash, so no manual shell switching is required.
 - **PowerShell source-installer output** is forced to UTF-8 and installs through Go's configured `GOBIN`/`GOPATH`.
-- **Fresh install detection** falls back to known Engram™/GGA install locations when the running process has a stale `PATH`.
+- **Fresh install detection** falls back to known Engram™ install locations when the running process has a stale `PATH`.
 - **Running the test suite on Windows** (contributors): see [Windows test policy](testing/windows-tests.md) for focused local runs, symlink skips, `TEMP` placement, and when CI runs the Windows tests.
 
 ---
 
 ## Windows Config Paths (ámbito global)
 
-Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `.kiro/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Windsurf, Trae, Antigravity, Pi, OpenClaw y GitHub Copilot CLI solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
+Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `workspace`: en él Axiom escribe en la raíz del proyecto (por ejemplo `.claude/`, `.codex/`, `.gemini/`, `.cursor/`, `opencode.json` y `.opencode/`, `.vscode/mcp.json` y `.github/instructions/`), con las skills compartidas en `.agents/skills/`, y no toca estas carpetas de usuario. Trae, Antigravity, Pi y GitHub Copilot CLI solo tienen configuración global y se omiten en workspace con un aviso. El detalle por agente está en [Agentes](agents.md#modo-workspace-por-agente).
 
 | Agent | Windows Config Path |
 |-------|-------------------|
@@ -78,11 +77,6 @@ Estas son las rutas que usa `--scope global`. El ámbito predeterminado es `work
 | VS Code Copilot | `%APPDATA%\Code\User\` (settings, MCP, prompts) + `%USERPROFILE%\.copilot\` (skills) |
 | GitHub Copilot CLI (solo global) | `%COPILOT_HOME%` o `%USERPROFILE%\.copilot\` (instrucciones, `settings.json`, `mcp-config.json` y skills) |
 | Codex | `%USERPROFILE%\.codex\` |
-| Windsurf (solo global) | `%USERPROFILE%\.codeium\windsurf\` (skills, MCP, rules) + `%APPDATA%\Windsurf\User\` (settings) |
-| Kimi (no disponible de momento) | `%USERPROFILE%\.kimi\` (includes `config.toml`, system prompt, agents, MCP) |
 | Antigravity (solo global) | `%USERPROFILE%\.gemini\antigravity\` |
-| Kiro IDE | `%USERPROFILE%\.kiro\steering\` (prompts) + `%USERPROFILE%\.kiro\skills\` (skills) + `%USERPROFILE%\.kiro\agents\` (SDD agents) + `%APPDATA%\kiro\User\settings.json` (settings) + `%USERPROFILE%\.kiro\settings\mcp.json` (MCP) |
-| OpenClaw | `%USERPROFILE%\.openclaw\openclaw.json` (global MCP/settings) + active workspace from `agents.defaults.workspace` for `AGENTS.md` / `SOUL.md` / workspace-scoped SDD skills |
 | Trae (solo global) | `%USERPROFILE%\.trae\` (skills) + `%APPDATA%\Trae\User\user_rules.md` (rules) + `%APPDATA%\Trae\User\mcp.json` (MCP) |
-| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, gentle-pi support assets) |
-| Hermes (no disponible de momento) | `%USERPROFILE%\.hermes\` (config.yaml, SOUL.md, skills/) |
+| Pi | `%USERPROFILE%\.pi\` (Pi config, project agents/chains, Axiom support assets) |

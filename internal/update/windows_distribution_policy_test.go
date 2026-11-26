@@ -37,7 +37,7 @@ func TestOfficialReleaseOmitsUnsignedWindowsDistribution(t *testing.T) {
 		t.Fatal("release workflow contains mock signing")
 	}
 	ci := readRepositoryFile(t, ".github", "workflows", "ci.yml")
-	for _, required := range []string{"windows-runtime:", "runs-on: windows-latest", "go build -trimpath", "go test ./..."} {
+	for _, required := range []string{"windows-runtime:", "runs-on: windows-latest", "go build -trimpath", "go list ./..."} {
 		if !strings.Contains(ci, required) {
 			t.Errorf("Windows source-compatibility CI is missing %q", required)
 		}

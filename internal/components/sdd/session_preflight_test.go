@@ -44,10 +44,10 @@ func TestSessionPreflightActualProjectionInventory(t *testing.T) {
 		t.Fatal(err)
 	}
 	covered := map[string]bool{}
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf, model.AgentOpenCode, model.AgentKilocode, model.AgentClaudeCode} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex, model.AgentOpenCode, model.AgentClaudeCode} {
 		t.Run(string(agent), func(t *testing.T) {
-			// OpenCode/Kilo share a template. Claude's full projection is lazy;
-			// its always-on bootstrap and Windsurf's native entry are consumers.
+			// OpenCode share a template. Claude's full projection is lazy;
+			// its always-on bootstrap is a consumer.
 			covered[sddOrchestratorAsset(agent)] = true
 			content, err := composeOpenCodeOrchestratorPrompt(agent)
 			if agent == model.AgentClaudeCode {
@@ -94,7 +94,7 @@ func TestSessionPreflightActualProjectionInventory(t *testing.T) {
 }
 
 func TestFallbackSessionPreflightCohort(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentHermes, model.AgentKimi, model.AgentKiroIDE, model.AgentCodex, model.AgentWindsurf} {
+	for _, agent := range []model.AgentID{model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI, model.AgentCursor, model.AgentGeminiCLI, model.AgentAntigravity, model.AgentQwenCode, model.AgentCodex} {
 		t.Run(string(agent), func(t *testing.T) {
 			got := composeOrchestratorPrompt(agent)
 			if agent == model.AgentCodex {
@@ -199,7 +199,7 @@ func TestClaudeSessionPreflightProjectionStructure(t *testing.T) {
 }
 
 func TestOpenCodeSessionPreflightCompositionIsRuntimeScoped(t *testing.T) {
-	for _, agent := range []model.AgentID{model.AgentOpenCode, model.AgentKilocode} {
+	for _, agent := range []model.AgentID{model.AgentOpenCode} {
 		content, err := composeOpenCodeOrchestratorPrompt(agent)
 		if err != nil {
 			t.Fatalf("composeOpenCodeOrchestratorPrompt(%s) error = %v", agent, err)

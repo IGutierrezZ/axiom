@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/components/gga"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
@@ -79,37 +78,6 @@ func writeFootprintFile(t *testing.T, path string) {
 	}
 }
 
-// El doctor no marca GGA ausente como fallo: ya no forma parte de ningún preset.
-func TestRunDoctor_GGAAbsentIsNotAFailure(t *testing.T) {
-	// El proyecto de la carpeta actual aporta sus propias comprobaciones (project:skills): se aísla.
-	t.Chdir(t.TempDir())
-	stubDoctorUserPath(t, nil)
-	home := t.TempDir()
-	writeDoctorState(t, home, `{"installed_agents":["claude-code"]}`)
-
-	out := runDoctorOutput(t, home, "gga")
-
-	if strings.Contains(out, "tool:gga") {
-		t.Errorf("GGA no elegido no debe aparecer entre las herramientas exigidas:\n%s", out)
-	}
-	if !strings.Contains(out, "Status:  healthy") {
-		t.Errorf("el doctor debe ser healthy sin GGA:\n%s", out)
-	}
-}
-
-// Si el usuario eligió GGA de forma explícita, su ausencia sí es un fallo.
-func TestRunDoctor_GGARequiredWhenSelected(t *testing.T) {
-	stubDoctorUserPath(t, nil)
-	home := t.TempDir()
-	writeDoctorState(t, home, `{"installed_agents":["claude-code"],"components":["gga"]}`)
-
-	out := runDoctorOutput(t, home, "gga")
-
-	if !strings.Contains(out, "[xx]  tool:gga") {
-		t.Errorf("GGA elegido y ausente debe fallar:\n%s", out)
-	}
-}
-
 // Sin nada a nivel de usuario salvo los binarios y el estado, el apartado solo
 // lista lo declarado.
 func TestRunDoctor_FootprintListsOnlyDeclaredOnCleanHome(t *testing.T) {
@@ -162,8 +130,6 @@ func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
 	if err := os.MkdirAll(skills, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	ggaRuntime := gga.RuntimePRModePath(home)
-	writeFootprintFile(t, ggaRuntime)
 	plugin := filepath.Join(home, ".config", "opencode", "plugins", "skill-registry.ts")
 	writeFootprintFile(t, plugin)
 	if err := os.MkdirAll(filepath.Join(home, ".gentle-ai"), 0o755); err != nil {
@@ -184,7 +150,6 @@ func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
 	out := runDoctorOutput(t, home)
 
 	for _, want := range []string{
-		"[resto global] GGA",
 		"[resto global] ~/.agents/skills",
 		"[resto global] plugins de OpenCode en HOME",
 		"[resto global] ~/.gentle-ai",
@@ -196,29 +161,8 @@ func TestRunDoctor_FootprintMarksGlobalLeftovers(t *testing.T) {
 			t.Errorf("falta %q en la salida:\n%s", want, out)
 		}
 	}
-	if !strings.Contains(out, ggaRuntime) && !strings.Contains(out, filepath.Dir(filepath.Dir(ggaRuntime))) {
-		t.Errorf("GGA debe nombrar sus rutas de HOME:\n%s", out)
-	}
 	if !strings.Contains(out, "Status:  healthy") {
 		t.Errorf("los restos globales no deben cambiar el estado de salud:\n%s", out)
-	}
-}
-
-// GGA elegido de forma explícita figura como opcional, no como resto.
-func TestRunDoctor_FootprintShowsSelectedGGAAsOptional(t *testing.T) {
-	stubDoctorUserPath(t, nil)
-	home := t.TempDir()
-	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
-	writeDoctorState(t, home, `{"installed_agents":["claude-code"],"components":["gga"]}`)
-	writeFootprintFile(t, gga.RuntimePRModePath(home))
-
-	out := runDoctorOutput(t, home)
-
-	if !strings.Contains(out, "[opcional]     GGA") {
-		t.Errorf("GGA elegido debe figurar como opcional:\n%s", out)
-	}
-	if strings.Contains(out, "[resto global] GGA") {
-		t.Errorf("GGA elegido no es un resto:\n%s", out)
 	}
 }
 

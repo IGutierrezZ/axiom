@@ -56,6 +56,7 @@ func TestDelegationDoctrineIsRenderedFromTheManifest(t *testing.T) {
 		"(b) context",
 		"Never delegate a writer for size, file count, or because the task is large",
 		"**Proportionality:**",
+		"run focused checks of the touched packages or modules while iterating and when a task closes, and leave the full suite to CI; never run the full suite locally.",
 		"it never fires on a count of calls, reads, edits, or files",
 	} {
 		if !strings.Contains(triggers, want) {

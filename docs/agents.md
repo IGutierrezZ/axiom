@@ -10,34 +10,28 @@
 | --------------- | ---------------- | ------------ | --- | -------------------------------- | ------------- | -------------- | ----------------------------------- |
 | Claude Code     | `claude-code`    | Yes          | Yes | Full (Task tool)                 | Yes           | Yes            | `~/.claude`                         |
 | OpenCode        | `opencode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/opencode`                |
-| Kilo Code       | `kilocode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/kilo`                    |
 | Gemini CLI      | `gemini-cli`     | Yes          | Yes | Full (experimental)              | No            | No             | `~/.gemini`                         |
 | Cursor          | `cursor`         | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.cursor`                         |
 | VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent; agentes `.agent.md` por fase, solo en el proyecto) | No            | No             | `~/.copilot` + VS Code User profile |
 | GitHub Copilot CLI | `github-copilot-cli` | Yes      | Yes | Agentes `.agent.md` por fase, en `.github/agents` del proyecto (delegación por `description`) | No            | No             | `~/.copilot` o `$COPILOT_HOME` (solo global) |
 | Codex           | `codex`          | Yes          | Yes | Native multi-agent (default; solo fallback) | No            | No             | `~/.codex`                          |
-| Windsurf        | `windsurf`       | Yes (native) | Yes | Solo-agent                       | No            | No             | `~/.codeium/windsurf`               |
 | Antigravity     | `antigravity`    | Yes (native) | Yes | Solo-agent + Mission Control     | No            | No             | `~/.gemini/antigravity`             |
-| Kimi Code (no disponible de momento) | `kimi`           | Yes          | Yes | Full (native custom agents)      | Via KIMI.md include [^kimi-output-style] | No | `~/.kimi`                           |
 | Qwen Code (no disponible de momento) | `qwen-code`      | Yes          | Yes | Full (native sub-agents)         | No            | Yes            | `~/.qwen`                           |
-| Kiro IDE        | `kiro-ide`       | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.kiro`                           |
-| OpenClaw        | `openclaw`       | Yes          | Yes | Solo-agent                       | No            | No             | `~/.openclaw`                       |
 | Trae            | `trae-ide`       | Yes          | Yes | Solo-agent                       | No            | No             | `~/.trae`                           |
 | Pi              | `pi`             | Yes          | Yes | Full (package-managed subagents) | No            | Yes            | `~/.pi`                             |
-| Hermes (no disponible de momento) | `hermes`         | Yes          | Yes | Full (delegate_task ephemeral)   | No            | No             | `~/.hermes`                         |
 
 La columna «Config Path» es la ruta del ámbito global (`--scope global`). Con `--scope workspace`, el predeterminado, cada agente usa las rutas de proyecto que se resumen en [Modo workspace por agente](#modo-workspace-por-agente).
 
 ### Agentes no disponibles de momento
 
-Kimi Code (`kimi`), Qwen Code (`qwen-code`) y Hermes (`hermes`) **no están disponibles de momento**: no se pueden elegir al instalar. No aparecen en la pantalla de selección de agentes de la TUI, no entran en las selecciones por defecto ni en el descubrimiento por carpetas, y `axiom install --agent kimi|qwen-code|hermes` falla con un error (también si va junto a otros agentes). El motivo es que hoy no son utilizables con Axiom: en el ámbito workspace escriben en rutas que el agente no lee y su MCP solo es global. Sus adaptadores se conservan en el código para retomarlos más adelante.
+Qwen Code (`qwen-code`) **no está disponible de momento**: no se puede elegir al instalar. No aparecen en la pantalla de selección de agentes de la TUI, no entran en las selecciones por defecto ni en el descubrimiento por carpetas, y `axiom install --agent qwen-code` falla con un error (también si va junto a otros agentes). El motivo es que hoy no es utilizable con Axiom: en el ámbito workspace escribe en rutas que el agente no lee y su MCP solo es global. Su adaptador se conserva en el código para retomarlo más adelante.
 
-- Una instalación global existente que ya los tiene en el estado se sigue sincronizando con `axiom sync`.
-- Con `--scope workspace` se omiten con un aviso, igual que los agentes sin modo workspace.
+- Una instalación global existente que ya lo tiene en el estado se sigue sincronizando con `axiom sync`.
+- Con `--scope workspace` se omite con un aviso, igual que los agentes sin modo workspace.
 - `uninstall`, `doctor` y `verify` no cambian.
-- Las secciones de Kimi Code, Qwen Code y Hermes de más abajo describen el adaptador conservado, no una integración instalable hoy.
+- La sección de Qwen Code de más abajo describe el adaptador conservado, no una integración instalable hoy.
 
-La mayoría de los agentes recibe la política completa del orquestador SDD y las skills correspondientes en su directorio de configuración. Axiom la incorpora al prompt de sistema; OpenCode y Kilo Code la reciben mediante el overlay compatible con OpenCode (`opencode.json`). Pi es la excepción: Axiom aprovisiona paquetes de Pi y `gentle-pi` —nombre del paquete externo— gestiona las skills, los prompts, los agentes SDD y las cadenas durante la ejecución. El agente usa SDD cuando el trabajo lo requiere o cuando se lo pides.
+La mayoría de los agentes recibe la política completa del orquestador SDD y las skills correspondientes en su directorio de configuración. Axiom la incorpora al prompt de sistema; OpenCode la recibe mediante el overlay compatible con OpenCode (`opencode.json`). Pi es la excepción: Axiom aprovisiona paquetes de Pi y `gentle-pi` —nombre del paquete externo— gestiona las skills, los prompts, los agentes SDD y las cadenas durante la ejecución. El agente usa SDD cuando el trabajo lo requiere o cuando se lo pides.
 
 `axiom install --scope=workspace` permite limitar al workspace los ficheros de agente compatibles, no solo los de Claude Code. En ese ámbito, Axiom escribe prompts de sistema, skills, agentes SDD y ficheros de persona en el proyecto actual cuando el agente admite configuración local. Las integraciones globales —por ejemplo, paquetes o ajustes que el agente solo lee desde su configuración de usuario— permanecen globales. Axiom migra una vez los nombres antiguos (`gentle-ai`) que encuentre en disco: rutas de estado, marcadores y entradas gestionadas.
 
@@ -49,15 +43,13 @@ El ámbito workspace es el predeterminado de la CLI y de la TUI. Axiom escribe e
 | --- | --- | --- | --- |
 | Claude Code | `.claude/CLAUDE.md` | `.claude/` (`settings.json`, `agents/`, `commands/`, `output-styles/`); MCP en `.mcp.json` (`mcpServers`) | `.claude/skills` |
 | OpenCode | `.opencode/axiom.md`, registrado en `instructions` de `opencode.json` | `opencode.json` (o `opencode.jsonc`) y `.opencode/{commands,plugins,prompts/sdd}` | `.agents/skills` |
-| Kilo Code | `.kilo/rules/axiom.md`, registrado en `instructions` | `.kilo/kilo.json` (o el `kilo.jsonc`/`kilo.json` existente) y `.kilo/{commands,plugins,prompts/sdd}` | `.agents/skills` |
 | Gemini CLI | `.gemini/AXIOM.md`, registrado en `context.fileName` de `.gemini/settings.json` | `.gemini/settings.json` (`mcpServers`) y `.gemini/` | `.agents/skills` |
 | Codex | `developer_instructions` de `.codex/config.toml` (bloque `<!-- axiom:workspace-instructions -->`) y `.codex/axiom-instructions.md` | `.codex/config.toml`, `.codex/hooks.json`; exige proyecto de confianza | `.agents/skills` |
 | VS Code Copilot | `.github/instructions/axiom.instructions.md` (`applyTo: "**"`) | `.vscode/mcp.json` (clave `servers`) y `.github/agents/` (un `.agent.md` por fase SDD); sin prompts ni hooks | `.agents/skills` |
 | Cursor | `.cursor/rules/axiom.mdc` | `.cursor/` (`agents/`, `mcp.json`) | `.agents/skills` |
-| Kiro IDE | `.kiro/steering/axiom.md` | `.kiro/` (`agents/`, `settings/mcp.json`, `hooks/`) | `.kiro/skills` |
 
-- **Sin modo workspace.** Windsurf, Trae, Antigravity, Pi, OpenClaw y GitHub Copilot CLI solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Pi se omite porque `pi install -l` solo cubre los paquetes (`.pi/settings.json`), mientras que `pi-engram init`, `~/.pi/npm/package.json` y el prompt de sistema solo tienen ruta de usuario. OpenClaw se omite porque su configuración, incluido el MCP de Engram, vive en `~/.openclaw/openclaw.json` y no documenta configuración por proyecto. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
-- **No seleccionables.** Kimi Code, Qwen Code y Hermes ya no se pueden elegir (véase [Agentes no disponibles de momento](#agentes-no-disponibles-de-momento)).
+- **Sin modo workspace.** Trae, Antigravity, Pi y GitHub Copilot CLI solo tienen configuración global: con `--scope workspace` se omiten con un aviso en castellano y Axiom nunca cae a escribir en su configuración de usuario. Para instalarlos hay que pedir `--scope global` de forma expresa. Pi se omite porque `pi install -l` solo cubre los paquetes (`.pi/settings.json`), mientras que `pi-engram init`, `~/.pi/npm/package.json` y el prompt de sistema solo tienen ruta de usuario. Antigravity queda aplazado: sus reglas de proyecto limitan el tamaño de cada fichero y el orquestador de Axiom no cabe en una sola regla.
+- **No seleccionable.** Qwen Code ya no se puede elegir (véase [Agentes no disponibles de momento](#agentes-no-disponibles-de-momento)).
 - **Precedencia.** Lo del proyecto prevalece sobre lo del usuario y ambos conviven, con dos matices. En Claude Code, una skill personal con el mismo nombre que una de proyecto gana a esta. En Gemini CLI, el `context.fileName` del proyecto sustituye al del usuario y no se fusiona: Axiom escribe una lista que conserva los nombres que el proyecto ya declaraba (o `GEMINI.md`) y añade `.gemini/AXIOM.md`, de modo que un nombre que solo figure en `~/.gemini/settings.json` deja de cargarse en ese proyecto.
 - **GitHub Copilot CLI.** Tiene adaptador (`github-copilot-cli`), pero solo global: lo que Axiom le escribe vive en `~/.copilot` (o `$COPILOT_HOME`) y no hay una ruta de proyecto documentada para ello, así que se omite en workspace. El CLI sí lee del proyecto `.github/instructions`, `.github/skills` y el `.mcp.json` de Claude Code, así que se beneficia de lo que Axiom escribe en workspace para VS Code Copilot y Claude Code.
 - **Lo que no escribe en `~/`.** `engram setup <agente>` se omite con un aviso, porque escribe en la carpeta de usuario del agente; el MCP de Engram ya queda en el proyecto. Con Codex, el aviso sugiere `engram setup codex` como acción manual opcional: ejecútalo solo si quieres además el registro de usuario, porque escribe en `~/.codex`, fuera del proyecto.
@@ -71,19 +63,15 @@ Con `--scope workspace`, Axiom escribe las skills en el menor número de carpeta
 | Codex | `.agents/skills` | «Codex scans `.agents/skills` in every directory from your current working directory up to the repository root» ([learn.chatgpt.com/docs/build-skills](https://learn.chatgpt.com/docs/build-skills.md)). |
 | VS Code Copilot | `.agents/skills` | «Local sessions also read project skills from `.claude/skills/` and `.agents/skills/`» ([code.visualstudio.com/docs/copilot/customization/agent-skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills)). Las sesiones locales son las de la vista de chat. La tabla de esa página da `.github/skills` como carpeta de proyecto del arnés de Copilot, y la documentación de GitHub lista `.agents/skills` entre las ubicaciones de proyecto de Copilot. |
 | OpenCode | `.agents/skills` | Busca en `.opencode/skills`, `.claude/skills` y `.agents/skills` ([opencode.ai/docs/skills](https://opencode.ai/docs/skills/)). |
-| Kilo | `.agents/skills` | «`~/.agents/skills/` and `.agents/skills/` - Open agent standard, loaded by default» ([kilo.ai/docs/customize/skills](https://kilo.ai/docs/customize/skills)). |
 | Gemini CLI | `.agents/skills` | `.agents/skills` es un alias de `.gemini/skills` y gana a esta en el mismo nivel ([docs/cli/skills.md](https://raw.githubusercontent.com/google-gemini/gemini-cli/main/docs/cli/skills.md)). |
 | Cursor | `.agents/skills` | Carga `.agents/skills` y `.cursor/skills` como carpetas de proyecto ([cursor.com/docs/context/skills](https://cursor.com/docs/context/skills)). |
 | Claude Code | `.claude/skills` | No lee `.agents/skills` ([code.claude.com/docs/en/skills](https://code.claude.com/docs/en/skills)). Solo se escribe si Claude Code está entre los agentes. |
-| Kiro | `.kiro/skills` | Su documentación solo cita `.kiro/skills`; no confirma que lea `.agents/skills`, así que conserva su carpeta ([kiro.dev/docs/skills](https://kiro.dev/docs/skills/)). |
 
 - La carpeta compartida se escribe una sola vez por ejecución, aunque varios agentes la usen, y no aparece repetida en la copia de seguridad ni en la verificación. Con solo Claude Code no se crea `.agents/skills`.
 - Las rutas de skills que Axiom escribe en los prompts, overlays y orquestadores (`{{AXIOM_SKILLS_DIR}}` y las rutas `_shared`) apuntan a la carpeta efectiva de cada agente, y el índice de skills del bloque `axiom:skills-index` de `AGENTS.md` prefiere `.agents/skills` cuando existe (una skill en `skills/` o en una raíz declarada sigue ganando).
 - Los ficheros de soporte `_shared` de la copia compartida llevan el hueco genérico `<runtime>` en lugar de la identidad de un agente concreto, igual que la copia de compatibilidad de `~/.agents/skills`, para que su contenido no dependa de qué agente la escriba.
-- **Migración.** Las instalaciones workspace anteriores dejaron copias en `.github/skills`, `.opencode/skills`, `.kilo/skills`, `.gemini/skills`, `.cursor/skills` y `.codex/skills`. Al instalar o sincronizar, Axiom retira una carpeta de skill solo si prueba que es suya: tiene el nombre de una skill que Axiom distribuye, contiene exactamente los ficheros que Axiom genera y cada uno es byte a byte igual a lo que Axiom genera hoy, y la copia compartida ya existe. Si difiere o tiene ficheros de más, se conserva y se avisa para que la revises. Las skills ajenas no se tocan, y la carpeta contenedora (`.github/skills`, etc.) solo se borra si queda vacía. Los ficheros que se pueden retirar van en la copia de seguridad previa.
+- **Migración.** Las instalaciones workspace anteriores dejaron copias en `.github/skills`, `.opencode/skills`, `.gemini/skills`, `.cursor/skills` y `.codex/skills`. Al instalar o sincronizar, Axiom retira una carpeta de skill solo si prueba que es suya: tiene el nombre de una skill que Axiom distribuye, contiene exactamente los ficheros que Axiom genera y cada uno es byte a byte igual a lo que Axiom genera hoy, y la copia compartida ya existe. Si difiere o tiene ficheros de más, se conserva y se avisa para que la revises. Las skills ajenas no se tocan, y la carpeta contenedora (`.github/skills`, etc.) solo se borra si queda vacía. Los ficheros que se pueden retirar van en la copia de seguridad previa.
 - El ámbito global no cambia: cada agente sigue escribiendo en su carpeta de usuario.
-
-[^kimi-output-style]: Kimi has no `settings.json` `outputStyle` mechanism like Claude Code. Instead, `KIMI.md` unconditionally includes `output-style.md` as a Jinja module — the canonical tone/language/philosophy channel for Kimi's persona (`persona.md` carries only tooling/action directives plus a pointer to this module).
 
 ---
 
@@ -91,10 +79,9 @@ Con `--scope workspace`, Axiom escribe las skills en el menor número de carpeta
 
 | Model                 | How It Works                                                                                                                                                                                       | Agents                                                                                                    |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Full (sub-agents)** | Each SDD phase runs in an isolated context window via native sub-agent delegation, package-managed subagents, or an OpenCode-compatible overlay. The orchestrator coordinates; sub-agents execute. | Claude Code, OpenCode, Kilo Code, Gemini CLI, Cursor, VS Code Copilot, Kiro IDE, Pi (Kimi Code y Qwen Code, con adaptador conservado pero no seleccionable) |
-| **Full (delegate_task)** | The orchestrator uses Hermes's native `delegate_task` primitive to spawn ephemeral workers in fresh context windows. Workers receive only a self-contained mission; the parent receives only their final summary. Toolsets, MCP, and skills must be passed explicitly (not inherited by default). | Hermes |
+| **Full (sub-agents)** | Each SDD phase runs in an isolated context window via native sub-agent delegation, package-managed subagents, or an OpenCode-compatible overlay. The orchestrator coordinates; sub-agents execute. | Claude Code, OpenCode, Gemini CLI, Cursor, VS Code Copilot, Pi (Qwen Code, con adaptador conservado pero no seleccionable) |
 | **Native multi-agent** | The orchestrator delegates through the agent's native collaboration tools when configured and available, with inline execution as a graceful fallback. | Codex |
-| **Solo-agent**        | All SDD phases run inline in the same conversation. The orchestrator IS the executor. Engram™ provides cross-phase persistence.                                                                     | Windsurf, Antigravity, OpenClaw, Trae                                                                     |
+| **Solo-agent**        | All SDD phases run inline in the same conversation. The orchestrator IS the executor. Engram™ provides cross-phase persistence.                                                                     | Antigravity, Trae                                                                     |
 
 ### Cursor Native Subagents
 
@@ -104,40 +91,22 @@ Cursor usa su sistema integrado `.cursor/agents/`. Axiom escribe ficheros de age
 - Each subagent gets its own context window (fresh context, no pollution)
 - The orchestrator resolves skill paths from the skill registry and passes exact `SKILL.md` files in the invocation message
 
-### Windsurf Cascade
-
-Windsurf runs as a solo-agent (no custom sub-agents). The orchestrator leverages Windsurf-native features:
-
-- **Plan Mode** — creates persistent plan documents that can be @mentioned across sessions; ideal for spec and design artifacts on large changes
-- **Code Mode** — default agentic execution mode
-- **Native Workflows** — `sdd-new` is available as a `.windsurf/workflows/sdd-new.md` workflow
-- **Size Classification** — the orchestrator routes tasks through Small/Medium/Large decision paths
-
 ### Antigravity + Mission Control
 
 Antigravity is an agent-first platform with built-in sub-agents (Browser, Terminal) managed by Mission Control. However, custom sub-agent creation is not yet available. SDD phases run inline, with Mission Control handling automatic delegation to built-in sub-agents when specialized tooling is needed (e.g., Browser for research during `sdd-explore`).
-
-### Kiro Native Subagents
-
-Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes de fase (`sdd-init` a `sdd-onboard` y los agentes de Judgment Day) y traduce el campo `model:` de las asignaciones de Kiro (`auto|opus|sonnet|haiku|minimax|glm|deepseek|qwen`) a los identificadores nativos de Kiro.
-
-- Frontmatter includes `includeMcpJson: true` for all phase agents
-- Phase-specific tools are preserved (`sdd-explore` and `sdd-verify` use read/shell/context7 as required)
-- El orquestador permanece en el fichero de steering `~/.kiro/steering/axiom.md`; su contenido delega en los agentes nativos.
 
 ---
 
 ## SDD Mode Support
 
-| Feature          | Claude Code | OpenCode | Kilo Code | Gemini CLI | Cursor | VS Code Copilot | Codex | Windsurf | Antigravity | Kiro IDE | Qwen Code | OpenClaw | Trae |   Pi    | Hermes |
-| ---------------- | :---------: | :------: | :-------: | :--------: | :----: | :-------------: | :---: | :------: | :---------: | :------: | :-------: | :------: | :--: | :-----: | :----: |
-| SDD orchestrator |     Yes     |   Yes    |    Yes    |    Yes     |  Yes   |       Yes       |  Yes  |   Yes    |     Yes     |   Yes    |    Yes    |   Yes    | Yes  |   Yes   |  Yes   |
-| Single-mode SDD  |     Yes     |   Yes    |    Yes    |    Yes     |  Yes   |       Yes       |  Yes  |   Yes    |     Yes     |   Yes    |    Yes    |   Yes    | Yes  |   Yes   |  Yes   |
-| Multi-mode SDD   |      —      |   Yes    |    Yes    |     —      |   —    |        —        |   —   |    —     |      —      |  Yes\*   |     —     |    —     |  —   | Yes\*\* |   —    |
+| Feature          | Claude Code | OpenCode | Gemini CLI | Cursor | VS Code Copilot | Codex | Antigravity | Qwen Code | Trae |   Pi    |
+| ---------------- | :---------: | :------: | :--------: | :----: | :-------------: | :---: | :---------: | :-------: | :--: | :-----: |
+| SDD orchestrator |     Yes     |   Yes    |    Yes     |  Yes   |       Yes       |  Yes  |     Yes     |    Yes    | Yes  |   Yes   |
+| Single-mode SDD  |     Yes     |   Yes    |    Yes     |  Yes   |       Yes       |  Yes  |     Yes     |    Yes    | Yes  |   Yes   |
+| Multi-mode SDD   |      —      |   Yes    |     —      |   —    |        —        |   —   |      —      |     —     |  —   | Yes** |
 
-**Multi-mode** (assigning different AI models to each SDD phase) is supported by **OpenCode** and **Kilo Code** through the OpenCode-compatible multi-mode overlay, and by **Kiro IDE** through native subagent `model:` frontmatter. All other agents run in **single-mode** — the orchestrator manages everything using whatever model the agent is already running.
+**Multi-mode** (assigning different AI models to each SDD phase) is supported by **OpenCode** through the OpenCode-compatible multi-mode overlay. All other agents run in **single-mode** — the orchestrator manages everything using whatever model the agent is already running.
 
-> \* **Kiro multi-mode** assigns models per phase through `KiroModelAssignments` (configured via _Configure Models → Configure Kiro models_ in the TUI). The selected Kiro alias (`auto|opus|sonnet|haiku|minimax|glm|deepseek|qwen`) is resolved to a Kiro-native model ID and stamped into each `~/.kiro/agents/sdd-{phase}.md` at sync time.
 
 > **Pi multi-mode** lo gestionan los paquetes de Pi. `gentle-pi` instala los recursos de agentes SDD y cadenas en `.pi/agents/` y `.pi/chains/`; las asignaciones de modelo viven en esos ficheros o en los pasos de las cadenas.
 
@@ -174,16 +143,6 @@ Kiro usa agentes personalizados en `~/.kiro/agents/`. Axiom escribe los agentes 
 - Axiom establece `share: disabled` como valor predeterminado de los agentes SDD de OpenCode por privacidad y conserva los valores gestionados por el usuario, como `manual` o `auto`.
 - OpenCode Desktop SDD commands resolve the project with `git rev-parse --show-toplevel || pwd` before acting, avoiding Electron current-working-directory drift.
 - Con `--scope workspace`, Axiom escribe en la distribución de proyecto que OpenCode lee, no en `<proyecto>/.config/opencode` (que ningún agente lee): la configuración (overlay SDD, `mcp`, `permission`, `instructions`) va en `<proyecto>/opencode.json` —o en `opencode.jsonc` si ya existe, con sus comentarios—; comandos y plugins, en `<proyecto>/.opencode/{commands,plugins}` (las skills, en la carpeta compartida `.agents/skills`); y los prompts compartidos del modo multi, en `.opencode/prompts/sdd`. Las instrucciones (persona, protocolo de memoria) van en un fichero propio, `.opencode/axiom.md`, que se añade a la lista `instructions` de `opencode.json` sin duplicados y conservando las entradas del usuario; el `AGENTS.md` de la raíz es del equipo y Axiom no lo toca. Un `opencode.json` que no sea JSON válido se rechaza sin modificarlo. Los restos de instalaciones anteriores en `<proyecto>/.config/opencode` no se borran (pueden mezclar ficheros del usuario): Axiom avisa para que se revisen. La instalación global no cambia.
-
-### Kilo Code
-
-- **Detección**: Axiom detecta Kilo Code en `~/.config/kilo` y comprueba si el ejecutable `kilo` está en `PATH`.
-- Uses the OpenCode-compatible adapter: `AGENTS.md`, `skills/`, `commands/`, and `opencode.json` live under `~/.config/kilo`
-- Full SDD delegation is provided by the merged multi-agent overlay in `~/.config/kilo/opencode.json`, not by a separate native sub-agent directory
-- Kilo no expone la vía de interceptación de herramientas ejecutables gestionada por Axiom; su preflight sigue siendo un bloqueo a nivel del prompt y no declara aplicar autoridad en tiempo de ejecución.
-- MCP servers are merged into `opencode.json`; Engram uses the OpenCode-style local MCP entry with `command` as an array
-- Auto-install is supported via npm: `npm install -g @kilocode/cli`
-- Con `--scope workspace`, Axiom escribe en la distribución de proyecto de Kilo, no en `<proyecto>/.config/kilo`: la configuración en `<proyecto>/.kilo/kilo.json` (o en el `kilo.jsonc`/`kilo.json` que ya exista, respetando la precedencia de Kilo: así no se crea un segundo fichero junto al del usuario), comandos y plugins en `<proyecto>/.kilo/{commands,plugins}` (las skills, en la carpeta compartida `.agents/skills`), y las instrucciones en `.kilo/rules/axiom.md`, registrado en `instructions` de la configuración del proyecto con la ruta relativa a la raíz que documenta Kilo (`.kilo/rules/axiom.md`). El `AGENTS.md` de la raíz no se toca. La instalación global no cambia.
 
 ### Gemini CLI
 
@@ -283,17 +242,10 @@ Fuentes: [referencia del fichero de agente personalizado de VS Code](https://cod
   - **Configuración**: `<proyecto>/.codex/config.toml`, que prevalece sobre `~/.codex/config.toml` clave a clave. La fusión conserva todo lo del usuario (claves, comentarios, tablas y servidores MCP propios). Un `config.toml` que no sea TOML válido se rechaza sin modificarlo y antes de escribir nada. Axiom escribe ahí `[mcp_servers.engram]`, `[mcp_servers.context7]`, `features.multi_agent = true`, `agents.max_threads` / `agents.max_depth`, el modelo del orquestador si lo elegiste y `experimental_compact_prompt_file = "engram-compact-prompt.md"` (ruta relativa a `.codex/`; si ya declaras el tuyo se respeta y se avisa). Nunca escribe las claves que Codex ignora en la configuración de proyecto (`openai_base_url`, `chatgpt_base_url`, `apps_mcp_product_sku`, `model_provider`, `model_providers`, `notify`, `profile`, `profiles`, `experimental_realtime_ws_base_url`, `otel`), ni `model_instructions_file`, que sustituye las instrucciones base en lugar de añadirse a ellas.
   - **Instrucciones**: persona, orquestador ODD/SDD, protocolo de memoria (con la captura pasiva) y guía de enrutado van en la clave `developer_instructions` de `.codex/config.toml`, que Codex añade a sus instrucciones base. Axiom las compone en `.codex/axiom-instructions.md` y copia ese contenido a un bloque delimitado por `<!-- axiom:workspace-instructions -->` dentro del valor de `developer_instructions`; el texto que ya tuvieras en esa clave queda fuera del bloque y no se toca, y repetir `sync` no cambia ni un byte. El valor se escribe como cadena multilínea literal (o básica con escapes si el texto contiene tres comillas simples seguidas o caracteres de control). Si `developer_instructions` existe con un tipo que no es cadena, no se modifica y se avisa. Un `.codex/AGENTS.md` de una instalación workspace anterior se retira solo si Axiom prueba que lo escribió; si tiene contenido propio se conserva y se avisa.
   - **Hooks**: `<proyecto>/.codex/hooks.json` (registro de skills al iniciar la sesión y guarda de rama de `apply_patch`). Codex pide aprobar cada hook por su hash.
-  - **Skills**: `<proyecto>/.agents/skills`, la única carpeta de skills de proyecto que documenta Codex, y las rutas del orquestador que antes apuntaban a `~/.codex/skills` se resuelven a `.agents/skills`. Esa carpeta la leen también otros agentes (Gemini CLI, OpenCode, Kilo, Cursor, VS Code Copilot), y Axiom escribe una sola copia para todos: ya no instala las skills además en la carpeta propia de cada uno. Un `.codex/skills` de una instalación anterior se migra como se explica en «Skills en `--scope workspace`».
+  - **Skills**: `<proyecto>/.agents/skills`, la única carpeta de skills de proyecto que documenta Codex, y las rutas del orquestador que antes apuntaban a `~/.codex/skills` se resuelven a `.agents/skills`. Esa carpeta la leen también otros agentes (Gemini CLI, OpenCode, Cursor, VS Code Copilot), y Axiom escribe una sola copia para todos: ya no instala las skills además en la carpeta propia de cada uno. Un `.codex/skills` de una instalación anterior se migra como se explica en «Skills en `--scope workspace`».
   - **Sin escritura en HOME**: Axiom no escribe la confianza del proyecto en `~/.codex/config.toml`. Al terminar avisa de que Codex pedirá confiar en el proyecto la primera vez y de que cada hook se aprueba por hash. Tampoco se escriben los ficheros de perfil `<carril>.config.toml` (Codex ignora `profiles` en proyecto), ni se valida el ejecutable de Codex, que solo servía para esos perfiles. Los permisos no se escriben en ningún ámbito: Codex usa los suyos.
   - **`engram setup codex`**: con `--scope workspace` Axiom no lo ejecuta, porque escribe en `~/.codex`, y lo avisa como acción manual. El MCP de Engram ya queda declarado en `.codex/config.toml`, así que el comando solo hace falta si además quieres el registro de usuario; ejecutarlo escribe fuera del proyecto. Con `--scope global` se ejecuta como siempre.
   - La instalación global no cambia.
-
-### Windsurf
-
-- Skills at `~/.codeium/windsurf/skills/` (native Windsurf feature)
-- MCP config at `~/.codeium/windsurf/mcp_config.json`
-- Global rules at `~/.codeium/windsurf/memories/global_rules.md`
-- Workflows at `.windsurf/workflows/` (workspace-scoped)
 
 ### Antigravity
 
@@ -302,25 +254,6 @@ Fuentes: [referencia del fichero de agente personalizado de VS Code](https://cod
 - System prompt appended to `~/.gemini/GEMINI.md` (shared with Gemini CLI — collision check warns if both are installed)
 - Mission Control handles built-in sub-agent delegation (Browser, Terminal) automatically
 - Settings managed via the IDE's Agent settings UI, not via `settings.json`
-
-### Kimi Code (no disponible de momento)
-
-- Installation requires the `uv` Python package manager (`uv tool install kimi-cli`).
-- Root custom agent at `~/.kimi/agents/gentleman.yaml` with `system_prompt_path: ../KIMI.md`
-- `KIMI.md` is a thin Jinja template that includes modular prompt files:
-  `persona.md`, `output-style.md`, `engram-protocol.md`, `sdd-orchestrator.md`
-- Built-in Kimi variables are preserved in `KIMI.md`: `${KIMI_AGENTS_MD}` and `${KIMI_SKILLS}`
-
-### Kiro IDE
-
-- **Detección**: Axiom detecta Kiro mediante el ejecutable `kiro` en `PATH`; también informa de si existe `~/.kiro`. Tener solo el directorio de configuración no basta para marcar Kiro como instalado.
-- **Steering file** (all platforms): `~/.kiro/steering/axiom.md` with frontmatter `inclusion: always`. `axiom sync` retira el antiguo `gentle-ai.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
-- Native subagents at `~/.kiro/agents/sdd-{phase}.md` (11 phase files, plus the Judgment Day and review agents)
-- Skills (all platforms) at `~/.kiro/skills/`
-- **MCP config at a separate root** — always `~/.kiro/settings/mcp.json` (macOS/Linux) or `%USERPROFILE%\.kiro\settings\mcp.json` (Windows), regardless of GlobalConfigDir
-- Native Kiro specs workflow: `.kiro/specs/<feature>/requirements.md`, `design.md`, `tasks.md` — with approval gates before apply and archive phases
-- Manual install only — download from [kiro.dev/downloads](https://kiro.dev/downloads)
-- See [docs/kiro.md](kiro.md) for full path reference and SDD behavior details
 
 ### Qwen Code (no disponible de momento)
 
@@ -334,16 +267,6 @@ Fuentes: [referencia del fichero de agente personalizado de VS Code](https://cod
 - **Install**: via npm — `npm install -g @qwen-code/qwen-code@latest`
 - **Engram slug**: `"qwen-code"` for `engram setup` integration
 - **SDD orchestrator**: `internal/assets/qwen/sdd-orchestrator.md` with Qwen-specific path references
-
-### OpenClaw
-
-- **Detección**: Axiom detecta OpenClaw mediante el ejecutable `openclaw` en `PATH` y la raíz `~/.openclaw`.
-- **Ámbito**: solo con `--scope global`. Con `--scope workspace` se omite con un aviso y no se escribe nada (ni `~/.openclaw/openclaw.json` ni `SOUL.md` en el proyecto).
-- **Instalación**: manual; instala primero OpenClaw y después ejecuta `axiom install --agent openclaw`.
-- **Workspace activo**: Axiom lee `agents.defaults.workspace` de `~/.openclaw/openclaw.json` y escribe allí los ficheros de instrucciones.
-- **Instructions**: Engram and SDD protocols are injected into workspace `AGENTS.md`; persona is injected into workspace `SOUL.md`.
-- **MCP config**: Engram and Context7 are merged into global `~/.openclaw/openclaw.json` under `mcp.servers`; legacy root `mcpServers` entries are migrated.
-- **Skills**: selected portable skills and SDD phase skills are workspace-scoped at `<workspace>/.openclaw/skills/`.
 
 ### Trae
 
@@ -384,41 +307,3 @@ For the full Pi command and package reference, see [Pi Agent](pi.md).
 - **`@juicesharp/rpiv-ask-user-question` package**: lets Pi child agents ask the active user session for clarification when they need human input.
 - **Pi companion packages**: `pi-web-access` and `pi-btw` add web access and companion workflow support. Todo tracking ships inside `gentle-pi` (Gentle Todo); an existing `@juicesharp/rpiv-todo` entry is dropped from `settings.json` on the next install or update, and Pi uninstalls it on its next package sync.
 - **Solo Pi**: cuando Pi es el único agente seleccionado, Axiom omite las preguntas de persona, componentes del ecosistema y TDD estricto, porque las gestiona `gentle-pi`.
-
-### Hermes Ephemeral Delegation
-
-Hermes uses `delegate_task` to spawn ephemeral sub-agents. Each worker starts in a fresh context window and returns only its final summary to the parent orchestrator.
-
-**Delegation rules:**
-
-- Delegate by what the evidence costs, never by how many files it touches: inline evidence is one parallel batch of at most 3 calls and about 10k tokens; when it does not fit, one read-only explorer returns a handoff of at most about 2k tokens with `path:line` evidence. A writer is delegated only for a named reason (independent units in parallel, or protecting the parent context), and a unit of about 100 changed lines or less always runs inline. Test/build execution and fresh adversarial review may use fresh workers per action. Each trigger holds only when its condition truly holds; when in doubt, work inline.
-- Each worker mission must be self-contained: include the exact goal, file paths or targets, relevant prior context, constraints, expected evidence, and the toolsets/MCP/skills the worker is allowed to use.
-- Toolsets, MCP servers, and skills are NOT automatically inherited from the parent; pass them explicitly in the mission when `inherit_mcp_toolsets` is false (the default).
-- Prefer parallel workers only for truly independent workstreams. Dependencies must run sequentially.
-- Treat worker output as self-report: verify file writes, test pass/fail, URLs, and external side effects before reporting success.
-
-**Tuning knobs** (configure in `~/.hermes/config.yaml` under the `delegation` key):
-
-| Parameter | Default | Effect |
-|-----------|---------|--------|
-| `max_spawn_depth` | 2 | Maximum recursive delegation depth |
-| `max_concurrent_children` | 4 | Maximum parallel workers |
-| `max_iterations` | agent default | Iteration budget per worker |
-| `child_timeout_seconds` | agent default | Hard timeout per worker |
-| `inherit_mcp_toolsets` | false | When true, workers inherit parent MCP toolsets automatically |
-| `subagent_auto_approve` | false | When true, workers auto-approve tool calls |
-
-La tabla completa de decisión de delegación está en `~/.hermes/skills/hermes-ephemeral-delegation/SKILL.md` (instalada por Axiom). El orquestador SDD de `~/.hermes/SOUL.md` remite a esa skill.
-
-### Hermes (no disponible de momento)
-
-- **Detección**: Axiom informa por separado de la presencia del ejecutable `hermes` en `PATH` y de la raíz `~/.hermes`; el directorio de configuración determina si Hermes figura como configurado, aunque falte el ejecutable.
-- **Instalación**: solo detección; Axiom no instala Hermes. Instálalo manualmente y después ejecuta `axiom install --agent hermes`.
-- **Config path**: `~/.hermes/` (config.yaml, SOUL.md, skills/)
-- **MCP config**: Engram and Context7 are injected as YAML blocks under `mcp_servers:` in `~/.hermes/config.yaml` (`StrategyMergeIntoYAML`). Pre-existing top-level keys (e.g. `model:`) are preserved verbatim.
-- **Prompt de sistema**: Axiom escribe el orquestador SDD y la persona en `~/.hermes/SOUL.md` mediante los marcadores Markdown `<!-- axiom:sdd-orchestrator -->` y `<!-- axiom:persona -->`.
-- **Skills**: Axiom escribe las skills de fases SDD en `~/.hermes/skills/`; el registro de skills también consulta esa ruta.
-- **Permisos**: Hermes utiliza un formato de permisos no documentado. Axiom no inyecta permisos en Hermes.
-- **Profiles**: Hermes does not support multi-mode SDD (no per-phase model routing). Single-mode only.
-- **Memory**: Hermes has a native memory and skill-learning loop. Engram complements it — Engram provides cross-agent, cross-session memory protocol so knowledge is portable across all agents, not just Hermes.
-- **Marcadores de persona e identidad**: Los marcadores `<!-- axiom:persona -->` / `<!-- /axiom:persona -->` en `SOUL.md` delimitan la sección que Axiom gestiona y actualiza durante la sincronización; al sincronizar, Axiom sustituye los marcadores antiguos `<!-- gentle-ai:persona -->` por los nuevos. Las tres personas de Hermes (`axiom`, `neutral` y `gentleman`) incluyen literalmente `## Identity` con la instrucción de identificarse como **Axiom running on Hermes Agent** en cualquier idioma. Cualquier sección `## Identity` escrita fuera de los marcadores se conserva y puede contradecir la sección gestionada.

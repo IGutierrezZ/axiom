@@ -68,17 +68,15 @@ export function tableWrap(tableHtml, label = '') {
   return `<div class="table-wrap"${aria}>${tableHtml}</div>`;
 }
 
-// ---- Recordatorio (D5) -----------------------------------------------------
+// ---- Orden de agente copiable ----------------------------------------------
 
-// reminder: texto que dice qué paso de agente toca y que se lance desde el IDE
-// o la CLI favoritos, con la orden copiable. No es un botón de acción.
-// compact (listas, p. ej. Inicio): una línea con título y orden; el texto largo se
-// mantiene solo para lectores de pantalla.
-export function reminder({ title, text, command = '', compact = false }) {
-  const cmd = command
-    ? `<div class="reminder-cmd"><code>${escapeHtml(command)}</code>${iconButton({ iconName: 'copy', label: 'Copiar la orden', size: 'sm', attrs: `data-copy="${escapeHtml(command)}"` })}</div>`
-    : '';
-  return `<aside class="reminder${compact ? ' reminder-compact' : ''}" aria-label="Recordatorio">${icon('terminal', compact ? 16 : 18)}<div class="reminder-body"><span class="reminder-title">${escapeHtml(title)}</span><span class="reminder-text${compact ? ' sr-only' : ''}">${escapeHtml(text)}</span>${cmd}</div></aside>`;
+// commandChip: orden de agente en una línea, copiable con un clic (data-copy, que
+// atiende bindCopyButtons). El chip entero es el botón; el texto lo lee el lector
+// de pantalla junto a la etiqueta de la acción.
+export function commandChip(command) {
+  if (!command) return '';
+  const label = `Copiar la orden ${command}`;
+  return `<button type="button" class="cmd-chip" data-copy="${escapeHtml(command)}" aria-label="${escapeHtml(label)}" title="Copiar la orden para lanzarla desde tu IDE o CLI">${icon('terminal', 13)}<code>${escapeHtml(command)}</code>${icon('copy', 13)}</button>`;
 }
 
 // copyText copia al portapapeles con respaldo para contextos sin la API moderna.
@@ -197,12 +195,7 @@ function askDialog({ title, message, confirmLabel, danger, input }) {
 
 // ---- Consola de ejecución --------------------------------------------------
 
-// consoleBox devuelve el HTML de una consola; usa renderConsole para escribir.
-export function consoleBox(id, title = 'Salida de ejecución') {
-  return `<div class="console" id="${escapeHtml(id)}" hidden><div class="console-head"><span>${icon('terminal', 14)} <span data-role="title">${escapeHtml(title)}</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div><pre class="console-out" data-role="out" tabindex="0"></pre></div>`;
-}
-
-// renderConsole escribe en una consola creada con consoleBox (state: ok | error | '').
+// renderConsole escribe en una consola .console del HTML (state: ok | error | '').
 export function renderConsole(box, { title, text, state = '' }) {
   if (!box) return;
   if (title) box.querySelector('[data-role="title"]').textContent = title;
