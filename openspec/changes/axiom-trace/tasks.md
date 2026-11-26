@@ -111,7 +111,7 @@ Depende de: Fases 3 y 4.
 
 Depende de: Fase 5.
 
-- [ ] 6.1 Crear `collect.go` con `Input` y `Collect(ctx, in) (Result, error)` que encadena: referencia, lectura, cierre, clasificación, anclaje, orden. Prueba de extremo a extremo con `MapFS` e `History` falso: SDD `created` + ODD `modified` + bug SDD `covered`; ID válido sin apariciones (listas vacías, no `nil`); referencia inexistente (`RefError`); asignación visible en los incrementos de su fuente; consulta por provisional y por definitivo idénticas.
+- [x] 6.1 Crear `collect.go` con `Input` y `Collect(ctx, in) (Result, error)` que encadena: referencia, lectura, cierre, clasificación, anclaje, orden. Prueba de extremo a extremo con `MapFS` e `History` falso: SDD `created` + ODD `modified` + bug SDD `covered`; ID válido sin apariciones (listas vacías, no `nil`); referencia inexistente (`RefError`); asignación visible en los incrementos de su fuente; consulta por provisional y por definitivo idénticas.
   Cubre: prov:trace:11, prov:trace:15
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`; `go vet ./internal/reqtrace`
 
