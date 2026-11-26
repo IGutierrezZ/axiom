@@ -153,7 +153,7 @@ Depende de: Fase 7. Fichero: `internal/cli/trace_flow_test.go`.
 
 Depende de: Fase 7.
 
-- [ ] 9.1 En `cmd/axiom/main.go`: `case "trace"` junto a `case "archive"`, `runTrace` que envuelve `runSimpleCommand(cli.RunTrace)` y la línea `  trace ` de `axiomHelpText()` junto a `sdd trace`. Crear `trace_help_test.go`: la ayuda global contiene `"\n  trace "`; `runTrace(nil)` devuelve 1 con «requiere un ID»; `runTrace({"--help"})` devuelve 0 con `Uso: axiom trace`. Esto hace alcanzable `reqtrace` desde `main` para el trinquete de código muerto.
+- [x] 9.1 En `cmd/axiom/main.go`: `case "trace"` junto a `case "archive"`, `runTrace` que envuelve `runSimpleCommand(cli.RunTrace)` y la línea `  trace ` de `axiomHelpText()` junto a `sdd trace`. Crear `trace_help_test.go`: la ayuda global contiene `"\n  trace "`; `runTrace(nil)` devuelve 1 con «requiere un ID»; `runTrace({"--help"})` devuelve 0 con `Uso: axiom trace`. Esto hace alcanzable `reqtrace` desde `main` para el trinquete de código muerto.
   Cubre: prov:trace:1
   Verificación: `go test ./cmd/axiom -run TraceVerb -count=1`; `go vet ./cmd/axiom`
 

@@ -145,6 +145,7 @@ COMANDOS DE GOBERNANZA Y WORKSPACE:
   sdd archive-check    Comprueba, sin escribir, si un cambio ISO puede archivarse (--json)
   sdd archive-integrate Integra el cambio entero en la spec viva: asigna los IDs provisionales, compone todas las capacidades y reescribe tareas, deltas y traza (--check, --json)
   sdd trace            Deriva, sin escribir, la traza git de un cambio: commit de código, de archivado y cadena requisito-matriz (--json)
+  trace                Traza un requisito por su ID: incrementos SDD archivados y ODD integrados, bugs, tareas y commits --first-parent (--json)
   sdd integrate        Retirado: remite a "axiom archive context" (contexto técnico) y "axiom archive adopt" (migración)
   ui                   Inicia el servidor local y abre el dashboard web interactivo
 
@@ -376,6 +377,9 @@ func main() {
 			fmt.Printf("Error: subcomando '%s' no reconocido para semantic. Usa 'axiom semantic [status|symbols|inspect|reindex]'.\n", subCmd)
 			os.Exit(1)
 		}
+
+	case "trace":
+		os.Exit(runTrace(os.Args[2:], os.Stdout, os.Stderr))
 
 	case "archive":
 		os.Exit(runArchive(os.Args[2:], os.Stdout, os.Stderr))
@@ -1715,6 +1719,12 @@ Subcomandos disponibles:
   context    Valida (check), prepara (prepare), verifica (verify) y consulta la traza (show) de la integración del contexto técnico de un cambio
   adopt      Inventaría (scan) los orígenes de requisitos previos y verifica (check) el cambio SDD que los migra a OpenSpec (--change <cambio>)
 `
+}
+
+// runTrace despacha `axiom trace <ID>`: la consulta de solo lectura de un requisito de punta a
+// punta (C-03-d). Devuelve su código de salida como el resto de adaptadores finos.
+func runTrace(args []string, stdout, stderr io.Writer) int {
+	return runSimpleCommand(cli.RunTrace, args, stdout, stderr)
 }
 
 // runArchive despacha el grupo `axiom archive`. Los subcomandos históricos
