@@ -805,11 +805,13 @@ func (s *Server) handleEcosystemSync(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
-	scope := "workspace"
-	if strings.TrimSpace(req.Scope) != "" {
-		scope = strings.TrimSpace(req.Scope)
+	// El dashboard solo sincroniza el proyecto abierto: el ámbito global se pide
+	// en la terminal con `axiom sync --scope global`.
+	if scope := strings.TrimSpace(req.Scope); scope != "" && scope != "workspace" {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "el dashboard solo sincroniza el ámbito workspace; para el global usa `axiom sync --scope global` en la terminal"})
+		return
 	}
-	resp, err := s.service.RunSync(scope)
+	resp, err := s.service.RunSync("workspace")
 	if err != nil {
 		s.respondJSON(w, http.StatusInternalServerError, resp)
 		return

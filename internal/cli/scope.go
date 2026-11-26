@@ -26,18 +26,37 @@ const (
 	scopeEnvVar      = ScopeAxiomEnvVar
 )
 
-// ResolveInstallScope resolves the install scope from the flag value and env var.
-// Priority: explicit flag > AXIOM_INSTALL_SCOPE > default (workspace).
-// An empty flagValue means the flag was not set.
+// ScopeEnvGlobalOverride permite que AXIOM_INSTALL_SCOPE=global elija el ámbito
+// global. Es solo para las pruebas: los arneses de cli y app fijan la variable para
+// trabajar sobre un HOME aislado sin pasar --scope en cada llamada. En producción
+// vale false y el ámbito global solo se elige con --scope global explícito.
+var ScopeEnvGlobalOverride = false
+
+// errGlobalScopeFromEnv es el rechazo de AXIOM_INSTALL_SCOPE=global: el ámbito
+// global escribe en la configuración de usuario de cada agente y afecta a todos
+// los proyectos de la máquina, así que tiene que pedirse en la propia orden.
+var errGlobalScopeFromEnv = fmt.Errorf("%s=global no elige el ámbito global: pídelo de forma explícita en la orden, por ejemplo axiom sync --scope global", ScopeAxiomEnvVar)
+
+// ResolveInstallScope resuelve el ámbito a partir de la opción y de la variable.
+// Prioridad: --scope explícito > AXIOM_INSTALL_SCOPE > workspace (predeterminado).
+// Un flagValue vacío significa que no se pasó la opción. La variable solo admite
+// workspace: el ámbito global exige --scope global (véase ScopeEnvGlobalOverride).
 func ResolveInstallScope(flagValue string) (InstallScope, error) {
-	raw := strings.TrimSpace(flagValue)
-	if raw == "" {
-		raw = strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar))
+	if raw := strings.TrimSpace(flagValue); raw != "" {
+		return parseInstallScope(raw)
 	}
+	raw := strings.TrimSpace(system.Getenv(ScopeAxiomEnvVar))
 	if raw == "" {
 		return ScopeWorkspace, nil
 	}
-	return parseInstallScope(raw)
+	scope, err := parseInstallScope(raw)
+	if err != nil {
+		return "", err
+	}
+	if scope == ScopeGlobal && !ScopeEnvGlobalOverride {
+		return "", errGlobalScopeFromEnv
+	}
+	return scope, nil
 }
 
 func parseInstallScope(raw string) (InstallScope, error) {

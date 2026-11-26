@@ -132,7 +132,7 @@ func ParseSyncFlags(args []string) (SyncFlags, error) {
 	fs.BoolVar(&opts.IncludePermissions, "include-permissions", false, "include permissions component in sync")
 	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS; eligible versions use a managed launcher")
 	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS; the resolved policy is projected for gentle-pi")
-	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE")
+	fs.StringVar(&opts.Scope, "scope", "", "sync scope: workspace (default) or global (only as an explicit flag) — env: AXIOM_INSTALL_SCOPE (workspace only)")
 	fs.BoolVar(&opts.DryRun, "dry-run", false, "preview plan without executing")
 	registerListFlag(fs, "profile", &opts.rawProfiles)
 	registerListFlag(fs, "profile-phase", &opts.rawProfilePhases)
@@ -201,7 +201,7 @@ FLAGS
   --sdd-profile-strategy <strategy>  OpenCode SDD profile sync strategy
   --strict-tdd                       Enable strict TDD mode for SDD agents
   --include-permissions              Include permissions component
-  --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE)
+  --scope global|workspace           Sync scope (env: AXIOM_INSTALL_SCOPE, workspace only)
   --profile <name:provider/model>    Sync a named SDD profile
   --profile-phase <name:phase:model> Sync a named SDD profile phase
   --opencode-background-subagents=auto|on|off

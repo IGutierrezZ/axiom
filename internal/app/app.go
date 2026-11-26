@@ -501,13 +501,14 @@ func isExplicitUpdateFlow(args []string) bool {
 }
 
 // installStateStore elige el almacén del estado de instalación para la UI según el
-// ámbito de instalación (workspace por defecto, global solo con
-// AXIOM_INSTALL_SCOPE=global): el estado del proyecto con workspace (D2) y el de
-// usuario con global. Se descarta el aviso de raíz.
+// ámbito de instalación: el estado del proyecto con workspace (D2). La UI no
+// recibe --scope, así que no elige el ámbito global: una variable
+// AXIOM_INSTALL_SCOPE no válida, o con global, deja el ámbito predeterminado.
+// Se descarta el aviso de raíz.
 func installStateStore(homeDir string) state.Store {
 	scope, err := cli.ResolveInstallScope("")
 	if err != nil {
-		return state.GlobalStore(homeDir)
+		scope = cli.ScopeWorkspace
 	}
 	workspaceDir, _ := cli.ResolveWorkspaceDir(scope, homeDir)
 	return cli.StateStoreFor(scope, homeDir, workspaceDir)

@@ -87,7 +87,7 @@ func uninstallOptions(scope InstallScope, purgeState, purgeHub bool) componentun
 
 // resolveUninstallRoots resuelve el ámbito y la raíz sobre la que opera la
 // desinstalación, igual que install y sync: el ámbito sale de --scope o de
-// AXIOM_INSTALL_SCOPE (workspace por defecto) y, en workspace, la raíz es la del
+// AXIOM_INSTALL_SCOPE (workspace por defecto; la variable no elige el global) y, en workspace, la raíz es la del
 // proyecto aunque el comando se lance desde una subcarpeta.
 func resolveUninstallRoots(scopeFlag string) (scope InstallScope, homeDir, workspaceDir string, err error) {
 	scope, err = ResolveInstallScope(scopeFlag)

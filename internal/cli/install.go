@@ -34,7 +34,7 @@ FLAGS
   --component, --components <list>   Components to install
   --skill, --skills <list>           Skills to install
   --sdd-mode single|multi            SDD orchestrator mode
-  --scope global|workspace           Install scope (env: AXIOM_INSTALL_SCOPE)
+  --scope global|workspace           Install scope (env: AXIOM_INSTALL_SCOPE, workspace only)
   --channel stable|beta|nightly      Release channel; nightly is an alias for beta (env: AXIOM_CHANNEL)
   --opencode-background-subagents=auto|on|off
                                      Resolve OpenCode capability and manage a launcher when eligible; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS
@@ -59,7 +59,7 @@ func ParseInstallFlags(args []string) (InstallFlags, error) {
 	registerListFlag(fs, "skill", &opts.Skills)
 	registerListFlag(fs, "skills", &opts.Skills)
 	fs.StringVar(&opts.SDDMode, "sdd-mode", "", "SDD orchestrator mode: single or multi (default: single)")
-	fs.StringVar(&opts.Scope, "scope", "", "install scope: workspace (default) or global — env: AXIOM_INSTALL_SCOPE")
+	fs.StringVar(&opts.Scope, "scope", "", "install scope: workspace (default) or global (only as an explicit flag) — env: AXIOM_INSTALL_SCOPE (workspace only)")
 	fs.StringVar(&opts.Channel, "channel", "", installChannelHelp)
 	fs.StringVar(&opts.OpenCodeBackgroundSubagents, "opencode-background-subagents", "", "--opencode-background-subagents=auto|on|off; env: AXIOM_OPENCODE_BACKGROUND_SUBAGENTS; eligible versions use a managed launcher")
 	fs.StringVar(&opts.PiBackgroundSubagents, "pi-background-subagents", "", "--pi-background-subagents=auto|on|off; env: AXIOM_PI_BACKGROUND_SUBAGENTS; the resolved policy is projected for gentle-pi")

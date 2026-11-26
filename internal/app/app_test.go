@@ -665,6 +665,11 @@ func TestIsExplicitUpdateFlow(t *testing.T) {
 
 func setupMockHome(t *testing.T, home string) {
 	t.Helper()
+	// Estas pruebas trabajan en el ámbito global sobre el HOME de prueba sin pasar
+	// --scope; en producción la variable ya no elige el ámbito global.
+	origOverride := cli.ScopeEnvGlobalOverride
+	cli.ScopeEnvGlobalOverride = true
+	t.Cleanup(func() { cli.ScopeEnvGlobalOverride = origOverride })
 	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
 	origHome := os.Getenv("HOME")
 	origUserProfile := os.Getenv("USERPROFILE")

@@ -45,8 +45,10 @@ func TestInstallStateStoreFollowsTheInstallScope(t *testing.T) {
 	if store := installStateStore(home); !store.IsProject() || store.Path() != state.ProjectPath(root) {
 		t.Fatalf("installStateStore() = %q, want el estado del proyecto %q", store.Path(), state.ProjectPath(root))
 	}
+	// La UI no recibe --scope: AXIOM_INSTALL_SCOPE=global ya no la lleva al estado
+	// de usuario y sigue trabajando con el del proyecto.
 	t.Setenv(cli.ScopeAxiomEnvVar, string(cli.ScopeGlobal))
-	if store := installStateStore(home); store.IsProject() {
-		t.Errorf("con AXIOM_INSTALL_SCOPE=global el almacén debe ser el de usuario: %q", store.Path())
+	if store := installStateStore(home); !store.IsProject() || store.Path() != state.ProjectPath(root) {
+		t.Errorf("con AXIOM_INSTALL_SCOPE=global el almacén debe seguir siendo el del proyecto %q: %q", state.ProjectPath(root), store.Path())
 	}
 }
