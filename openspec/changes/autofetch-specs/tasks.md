@@ -44,11 +44,12 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
 
 ## Fase 2: Motor
 
-- [ ] T3 Fetch implícito en `ensure` y `ensure --archive` (~450 líneas; depende de T1, T2)
+- [x] T3 Fetch implícito en `ensure` y `ensure --archive` (~450 líneas; depende de T1, T2)
   - Ficheros: `internal/branch/engine/ensure.go` (`fetchMode` none/explicit/implicit, 8 s por repositorio en serie, `RemoteConfigured` antes de traer, repositorio de specs in situ en `checkPlan`, lectura de la preferencia tras `resolveMode`), `internal/branch/engine/archive.go`, `internal/branch/archive_refusal.go` (`ChangeNotIntegrated(..., autofetch bool)`), `internal/branch/result.go` (`RepositoryResult.Fetched *bool omitempty`), `internal/branch/engine/ensure_autofetch_test.go` (crear).
   - Cubre: RF-BRA-10, RF-BRA-13, RF-BRA-01 (`scope` sin red), RF-HUB-07 (ensure sin aviso nuevo).
   - Pruebas: fetch implícito en todos los repositorios del plan incluido specs in situ (`fetched:true`); código sin mover ramas; sin `origin` omitido sin aviso; `--base <ref>` con fetch; corte a 8 s con `autofetchFetchTimeout` reducido y doble que devuelve `ErrTimeout`; fallo con aviso `el autofetch no pudo traer origin…` y `fetched:false`; `--fetch` explícito con `fetch_failed` y límite 30 s; `decision_required` sin fetch; `done` y `scope` sin fetch; intervalo ignorado; `--archive` sin sugerir `--fetch` (ambos mensajes); proyecto no registrado/hub ilegible como apagado; salida idéntica byte a byte con el interruptor apagado; `prefs == nil` equivale a apagado.
   - Verificación: `go test ./internal/branch/engine -run "EnsureAutofetch|Archive|Ensure"`; `go test ./internal/branch -run ChangeNotIntegrated`.
+  - Evidencia: `go test ./internal/branch/engine -run "EnsureAutofetch|Archive|Ensure"`: ok; `go test ./internal/branch -run "ChangeNotIntegrated|Archive"`: ok; `go vet ./internal/branch/... ./internal/cli`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline.
 
 - [ ] T4 Ciclo `Engine.Autofetch` base (~450 líneas; depende de T1, T2)
   - Ficheros: `internal/branch/autofetch.go` (`AutofetchResult`, `AutofetchIntegration`, `AutofetchChange`, `AutofetchNotice`, `AutofetchResultSchema`, `WriteText`), `internal/branch/engine/autofetch.go` (`Autofetch`, `AutofetchProject` solo por ficheros: `IsAxiomProject`→`Locate`→`GitRootFromFiles`/`CommonDirFromFiles`/`MainWorktreeFromFiles`; presupuesto `autofetchRunBudget` 10 s con `recover`), `internal/branch/engine/autofetch_stamp.go` (`<commonDir>/axiom/autofetch/v1/state.json`, escritura atómica, constantes `autofetchInterval`/`autofetchFetchTimeout`/`autofetchAdvanceReserve` como variables de paquete, reloj `now`), `internal/branch/engine/autofetch_test.go` (crear).

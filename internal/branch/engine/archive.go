@@ -53,7 +53,7 @@ func useArchivePlan(facts *changeFacts, r EnsureRequest) *branch.Refusal {
 // lugar contiene `changes/archive/<fecha>-<cambio>/`, el cambio ya está archivado y el mensaje
 // nombra esa entrada y dice que no hay nada que archivar (G-13). fetched dice si esta ejecución
 // ya trajo el remoto.
-func (e *Engine) checkIntegrated(ctx context.Context, command, cwd string, repo branch.RepoPlan, facts changeFacts, base baseReference, fetched bool) *branch.Refusal {
+func (e *Engine) checkIntegrated(ctx context.Context, command, cwd string, repo branch.RepoPlan, facts changeFacts, base baseReference, fetched, autofetch bool) *branch.Refusal {
 	planningHome := facts.location.PlanningHome
 	relative, inside := relativeWithin(repo.GitRoot, planningHome)
 	if !inside {
@@ -90,7 +90,7 @@ func (e *Engine) checkIntegrated(ctx context.Context, command, cwd string, repo 
 			entry = archivePath + "/" + archived[i] + "/"
 		}
 	}
-	return branch.ChangeNotIntegrated(change, facts.input.Master, facts.input.Exceptions.Prefix, repo, base.ref, changePath+"/", entry, fetched)
+	return branch.ChangeNotIntegrated(change, facts.input.Master, facts.input.Exceptions.Prefix, repo, base.ref, changePath+"/", entry, fetched, autofetch)
 }
 
 // archivedEntry reconoce la carpeta con la que `archive` mueve un cambio a `changes/archive/`:

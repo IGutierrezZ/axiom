@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathidentity"
@@ -168,7 +169,16 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	}
 	promotions := facts.input.Promotions
 
-	pending, fetched, refusal := e.checkPlan(ctx, command, r.CWD, plan, facts, r.Fetch)
+	// El interruptor del autofetch se lee aquí, después de resolver el modo y la promoción, de
+	// modo que un `decision_required` llega antes de cualquier red (D-04).
+	fetching := fetchNone
+	switch {
+	case r.Fetch:
+		fetching = fetchExplicit
+	case e.autofetchEnabled(facts):
+		fetching = fetchImplicit
+	}
+	pending, report, refusal := e.checkPlan(ctx, command, r.CWD, plan, facts, fetching)
 	if refusal != nil {
 		return refused(refusal)
 	}
@@ -208,10 +218,17 @@ func (e *Engine) Ensure(ctx context.Context, r EnsureRequest) branch.Result {
 	// `fetched` dice qué repositorios se trajeron en esta ejecución: describe solo lee
 	// referencias locales y deja `base.fetched` en falso.
 	for i := range result.Repositories {
-		if base := result.Repositories[i].Base; base != nil && fetched[result.Repositories[i].GitRoot] {
+		repository := &result.Repositories[i]
+		if base := repository.Base; base != nil && report.fetched[repository.GitRoot] {
 			base.Fetched = true
 		}
+		// El repositorio de specs in situ no tiene base: su resultado va en `fetched`, solo con
+		// el fetch implícito (la salida con el interruptor apagado no cambia).
+		if value, ok := report.specs[repository.GitRoot]; ok {
+			repository.Fetched = &value
+		}
 	}
+	result.Warnings = append(result.Warnings, report.warnings...)
 	// En `in_place` no hay worktrees: la raíz de worktrees no se informa.
 	if !facts.input.InPlace {
 		result.WorktreeRoot = plan.WorktreeRoot
@@ -252,42 +269,109 @@ type repositorySteps struct {
 	steps        []ensureStep
 	// fetched dice que la comprobación ejecutó `git fetch origin` en este repositorio.
 	fetched bool
+	// warning es el aviso del fetch implícito fallido de este repositorio, vacío si no falló.
+	warning string
+}
+
+// fetchMode es cómo trae `ensure` el remoto (D-04): no lo trae, lo trae porque se pidió
+// `--fetch` (un fallo rechaza con `fetch_failed`) o lo trae implícitamente porque el
+// interruptor del autofetch está encendido (un fallo es un aviso y se sigue con la base local).
+type fetchMode int
+
+const (
+	fetchNone fetchMode = iota
+	fetchExplicit
+	fetchImplicit
+)
+
+// autofetchFetchTimeout es el tiempo máximo del fetch implícito por repositorio; las pruebas lo
+// reducen.
+var autofetchFetchTimeout = 8 * time.Second
+
+// fetchReport es lo que dejó el fetch de la comprobación del plan: los repositorios con base
+// que se trajeron (por raíz git), el resultado de los de specs in situ (solo con fetch
+// implícito) y los avisos de los fetch implícitos fallidos.
+type fetchReport struct {
+	fetched  map[string]bool
+	specs    map[string]bool
+	warnings []string
+}
+
+// autofetchEnabled lee la preferencia `autofetch` del hub por la identidad del proyecto. Sin
+// puerto, con el proyecto sin registrar o con el hub ilegible vale apagado, sin ningún aviso
+// nuevo en `ensure` (D-03, RF-HUB-07).
+func (e *Engine) autofetchEnabled(facts changeFacts) bool {
+	if e.prefs == nil {
+		return false
+	}
+	master := resolveDirectory(projectMaster(facts.location, facts.input.PlanningRepo))
+	enabled, _, _ := e.prefs.Autofetch(master)
+	return enabled
+}
+
+// implicitFetch trae `origin` en el checkout principal con el tiempo máximo del autofetch.
+// Sin `origin` configurado no hace nada ni avisa (`attempted` es falso). Un fallo, incluida la
+// consulta de la configuración, devuelve el aviso en castellano y deja `fetched` en falso.
+func (e *Engine) implicitFetch(ctx context.Context, repo branch.RepoPlan, mainCheckout string) (fetched bool, warning string) {
+	configured, err := e.git.RemoteConfigured(ctx, mainCheckout, originRemote)
+	if err == nil && !configured {
+		return false, ""
+	}
+	if err == nil {
+		err = e.writer.FetchWithin(ctx, mainCheckout, originRemote, autofetchFetchTimeout)
+	}
+	if err != nil {
+		return false, fmt.Sprintf("el autofetch no pudo traer %s en %s (%v): se sigue con la base local", originRemote, repo.Name, err)
+	}
+	return true, ""
 }
 
 // checkPlan es la fase 3 de D-05: comprueba, sin efectos, todos los repositorios del plan
-// antes de mutar ninguno y devuelve lo que falta por crear en cada uno, y los repositorios
-// (por raíz git) en los que se ejecutó `git fetch origin`. Con fetch, cada repositorio con
-// ramas se trae justo antes de resolver su base. Los repositorios sin ramas (el de specs de
-// un multirepo, que se trabaja in situ) no tienen nada que traer ni que crear, pero sí que
-// estar en su rama de integración (checkSpecsRepository, RF-BRA-05).
-func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts, fetch bool) ([]repositorySteps, map[string]bool, *branch.Refusal) {
+// antes de mutar ninguno y devuelve lo que falta por crear en cada uno, y lo que trajo el
+// fetch. Con fetch, cada repositorio con ramas se trae justo antes de resolver su base. Los
+// repositorios sin ramas (el de specs de un multirepo, que se trabaja in situ) no tienen nada
+// que crear, pero sí que estar en su rama de integración (checkSpecsRepository, RF-BRA-05); con
+// fetch implícito (y solo con él) también se traen, sin base ni avance.
+func (e *Engine) checkPlan(ctx context.Context, operation, cwd string, plan branch.ChangePlan, facts changeFacts, fetching fetchMode) ([]repositorySteps, fetchReport, *branch.Refusal) {
 	var pending []repositorySteps
-	fetched := map[string]bool{}
+	report := fetchReport{fetched: map[string]bool{}, specs: map[string]bool{}}
 	for _, repo := range plan.Repositories {
 		if len(repo.Branches) == 0 {
 			if repo.Role == branch.RepoSpecsInPlace {
+				if fetching == fetchImplicit {
+					if listed := facts.worktrees[repo.GitRoot]; len(listed) > 0 {
+						fetched, warning := e.implicitFetch(ctx, repo, listed[0].Path)
+						report.specs[repo.GitRoot] = fetched
+						if warning != "" {
+							report.warnings = append(report.warnings, warning)
+						}
+					}
+				}
 				if refusal := checkSpecsRepository(operation, cwd, repo, facts); refusal != nil {
-					return nil, nil, refusal
+					return nil, fetchReport{}, refusal
 				}
 			}
 			continue
 		}
-		steps, refusal := e.checkRepository(ctx, operation, cwd, repo, facts, fetch)
+		steps, refusal := e.checkRepository(ctx, operation, cwd, repo, facts, fetching)
 		if refusal != nil {
-			return nil, nil, refusal
+			return nil, fetchReport{}, refusal
 		}
-		fetched[repo.GitRoot] = steps.fetched
+		report.fetched[repo.GitRoot] = steps.fetched
+		if steps.warning != "" {
+			report.warnings = append(report.warnings, steps.warning)
+		}
 		if len(steps.steps) > 0 {
 			pending = append(pending, steps)
 		}
 	}
-	return pending, fetched, nil
+	return pending, report, nil
 }
 
 // checkRepository comprueba un repositorio del plan: con fetch, trae `origin`; después, que
 // tiene base y, por rama, si existe, si está desplegada y dónde, y si su ruta planificada
 // está libre. Devuelve el rechazo que impide aplicar el plan, o los pasos que faltan.
-func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts, fetch bool) (repositorySteps, *branch.Refusal) {
+func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, repo branch.RepoPlan, facts changeFacts, fetching fetchMode) (repositorySteps, *branch.Refusal) {
 	change, master := facts.input.Change, facts.input.Master
 	listed := facts.worktrees[repo.GitRoot]
 	if len(listed) == 0 {
@@ -297,11 +381,14 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 
 	// El fetch va antes de resolver la base (D-06): es lo único que cambia el resultado de
 	// resolveBase. Solo trae referencias remotas locales; no crea ramas ni worktrees.
-	if fetch {
+	switch fetching {
+	case fetchExplicit:
 		if err := e.writer.Fetch(ctx, pending.mainCheckout, originRemote); err != nil {
 			return repositorySteps{}, branch.FetchFailed(operation, change, master, repo, originRemote, err)
 		}
 		pending.fetched = true
+	case fetchImplicit:
+		pending.fetched, pending.warning = e.implicitFetch(ctx, repo, pending.mainCheckout)
 	}
 
 	base, haveBase, err := e.resolveBase(ctx, repo)
@@ -313,7 +400,7 @@ func (e *Engine) checkRepository(ctx context.Context, operation, cwd string, rep
 	}
 	// La rama de archivado solo sale de una base que ya contiene el cambio fusionado (D-25).
 	if facts.input.Archive {
-		if refusal := e.checkIntegrated(ctx, operation, cwd, repo, facts, base, pending.fetched); refusal != nil {
+		if refusal := e.checkIntegrated(ctx, operation, cwd, repo, facts, base, pending.fetched, fetching == fetchImplicit); refusal != nil {
 			return repositorySteps{}, refusal
 		}
 	}

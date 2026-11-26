@@ -183,6 +183,10 @@ type RepositoryResult struct {
 	Base              *BaseResult    `json:"base,omitempty"`
 	Branches          []BranchResult `json:"branches,omitempty"`
 
+	// Fetched dice si el fetch implícito del autofetch trajo `origin` en un repositorio sin base
+	// (el de specs in situ de un multirepo). Solo se informa con el fetch implícito.
+	Fetched *bool `json:"fetched,omitempty"`
+
 	// La promoción de un repositorio de dos etapas (RF-BRA-30): la rama principal, el modo y su
 	// origen, cada token con su etiqueta. Solo aparecen con `main_branch` efectivo.
 	MainBranch           string `json:"mainBranch,omitempty"`

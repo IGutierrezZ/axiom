@@ -417,7 +417,7 @@ func TestChangeNotIntegratedNamesTheBaseTheFolderAndAnExecutableContinuation(t *
 	quoted := pathquote.Quote(testMaster)
 
 	t.Run("sin fetch sugiere --fetch", func(t *testing.T) {
-		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", false)
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", false, false)
 
 		if refusal.Code != CodeChangeNotIntegrated {
 			t.Fatalf("código = %s", refusal.Code)
@@ -432,20 +432,20 @@ func TestChangeNotIntegratedNamesTheBaseTheFolderAndAnExecutableContinuation(t *
 		}
 	})
 	t.Run("la continuación conserva el prefijo", func(t *testing.T) {
-		refusal := ChangeNotIntegrated("x", testMaster, "doc", repo, "main", "openspec/changes/x/", "", false)
+		refusal := ChangeNotIntegrated("x", testMaster, "doc", repo, "main", "openspec/changes/x/", "", false, false)
 		if want := "--change x --archive --fetch --prefix doc"; !strings.Contains(refusal.Continuation, want) {
 			t.Errorf("la continuación %q debe contener %q", refusal.Continuation, want)
 		}
 	})
 	t.Run("tras el fetch falta fusionar el PR", func(t *testing.T) {
-		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", true)
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "origin/main", "openspec/changes/x/", "", true, false)
 		if !strings.Contains(refusal.Message, "tras el --fetch") || !strings.Contains(refusal.Continuation, "fusiona el PR del cambio en main") {
 			t.Errorf("mensaje %q, continuación %q", refusal.Message, refusal.Continuation)
 		}
 	})
 	t.Run("cambio ya archivado", func(t *testing.T) {
 		entry := "openspec/changes/archive/2026-10-01-x/"
-		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "main", "openspec/changes/x/", entry, false)
+		refusal := ChangeNotIntegrated("x", testMaster, "", repo, "main", "openspec/changes/x/", entry, false, false)
 
 		if refusal.Code != CodeChangeNotIntegrated || refusal.Details["archivedEntry"] != entry {
 			t.Fatalf("código %s, details %v", refusal.Code, refusal.Details)
