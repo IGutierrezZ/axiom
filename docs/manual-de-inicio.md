@@ -38,7 +38,7 @@
    - [Compuertas de Bloque e Integración Pre-Archive](#b-carril-formal-sdd-spec-driven-development)
 10. [Relevos Estructurados entre Roles y Fases (Handoffs)](#10-relevos-estructurados-entre-roles-y-fases-handoffs)
 11. [Mantenimiento, Actualizaciones y Sincronización](#11-mantenimiento-actualizaciones-y-sincronización)
-   - [Mantenimiento Semántico del CodeGraph](#mantenimiento-semántico-del-codegraph-axiom-semantic-reindex)
+   - [CodeGraph en Uso Directo](#codegraph-en-uso-directo)
    - [Automatización Post-Archivado y Scripts de Soporte](#automatización-post-archivado-y-scripts-de-soporte)
 
 ---
@@ -114,7 +114,6 @@ axiom doctor
 * Binarios requeridos en el `PATH` (Git, Go, Node.js, npm, etc.).
 * Agentes de IA detectados en el sistema.
 * Disponibilidad de servidores MCP y memoria Engram.
-* Integridad de herramientas semánticas (CodeGraph, motor nativo).
 * Huella de máquina: lo que Axiom tiene a nivel de usuario (binarios, registro del hub, CodeGraph global, entradas de PATH gestionadas) y qué elementos son restos de una instalación global. Para retirarlos, `axiom uninstall --all --scope global`; la guía de migración está en [Uso: migrar de una instalación global a una por proyecto](usage.md#migrar-de-una-instalación-global-a-una-por-proyecto). Con raíz de proyecto añade, solo como información, el contexto de Axiom `duplicado` entre usuario y workspace ([Uso: contexto duplicado](usage.md#contexto-duplicado-entre-usuario-y-workspace)).
 
 ---
@@ -307,7 +306,6 @@ roles:
 governance:
   language: "es"                  # Idioma obligatorio de comunicación y artefactos
   shared_memory: "engram"         # Conector de memoria persistente
-  semantic_analysis: "auto"    # auto (CodeGraph si está disponible; si no, motor nativo) | codegraph | native-ast
 ```
 
 `workspace.skill_roots` es opcional. Sirve para proyectos que guardan sus skills canónicas fuera de `skills/`: cada ruta debe ser relativa a la carpeta maestra y quedar dentro de ella (no se admiten rutas absolutas, `..` ni `.`). Esas raíces se escanean justo después de `skills/` y antes de los directorios de cada agente (`.claude/skills`, `.gemini/skills`, etc.), de modo que el índice de skills de `AGENTS.md` apunta a la copia versionada y no a una copia local.
@@ -593,15 +591,16 @@ La adopción es un cambio SDD ordinario (kickoff, compuertas y archivado) cuya f
    ```bash
    axiom archive adopt scan --change <cambio>
    ```
-   Inventaría los orígenes (`.md`, `.markdown`, `.txt`, `.docx`, `.xlsx` y `.pdf` fuera de `openspec/`), sus unidades (encabezados con su ancla), los identificadores ajenos (`RF-120`…) y los candidatos a `technical_context`. Es determinista, solo lee y, con `--change`, escribe únicamente `adoption-inventory.yaml` en la carpeta del cambio. Sin `--change` solo informa. `axiom ui` muestra el mismo inventario al inicializar el proyecto.
-2. **Delta.** `sdd-spec` escribe por capacidad una delta con solo `## ADDED Requirements`, cada requisito con su `(REQ-n.m)` de una serie nueva, al menos un escenario y una línea `Origen: <ruta>#<ancla> (<ID original>)` por unidad que migra. Lo que no se migra se declara con motivo en la sección `## Descartado` de `adoption.md`. El identificador ajeno nunca es la identidad del requisito migrado.
-3. **Comprobación.**
+   Inventaría los orígenes (`.md`, `.markdown`, `.txt`, `.docx`, `.xlsx` y `.pdf` fuera de `openspec/`), sus unidades (encabezados con su ancla), los identificadores ajenos (`RF-120`…) y los candidatos a `technical_context`. Si los orígenes traen identificadores, propone además su patrón en `proposed_id_pattern` (por ejemplo `RF-<NNN>`), con la evidencia y las líneas `sdd:` / `id_pattern:` listas para copiar, y muestra el patrón ya declarado frente al propuesto. Es determinista, solo lee y, con `--change`, escribe únicamente `adoption-inventory.yaml` en la carpeta del cambio; nunca escribe `axiom.yaml`. Sin `--change` solo informa. `axiom ui` muestra el mismo inventario al inicializar el proyecto.
+2. **Declaración del patrón.** La persona copia las líneas propuestas a `axiom.yaml` (`sdd.id_pattern`) en la rama de trabajo de la adopción: la del cambio o, en `multirepo`, la de integración del repositorio de especificaciones. Si hay mezcla de prefijos, separadores o dominios no hay plantilla: se normalizan a mano los identificadores del origen (Axiom no los reescribe) y se vuelve a inventariar. Un origen sin identificadores no necesita declaración: rige el patrón por defecto y los requisitos llevan provisionales. Declarar el patrón del cliente es una decisión del proyecto: si `openspec/specs/` ya tiene specs vivas con otro esquema (`REQ-n.m`), esos requisitos dejan de indexarse con el patrón nuevo.
+3. **Delta.** `sdd-spec` escribe por capacidad una delta con solo `## ADDED Requirements`. Cada requisito conserva el identificador del cliente de su unidad (`RF-120` sigue siendo `RF-120`, y coincide con el `<ID original>` de su `Origen:`) o lleva un provisional `prov:<serie>:<ordinal>` que numera el archivado (con un patrón de serie fija como `RF-<NNN>`, `prov::<ordinal>`). Una unidad sin identificador, o varias unidades unidas en un requisito, usan provisional. Cada requisito lleva al menos un escenario y una línea `Origen: <ruta>#<ancla> (<ID original>)` por unidad que migra. Lo que no se migra se declara con motivo en la sección `## Descartado` de `adoption.md`.
+4. **Comprobación.**
    ```bash
    axiom archive adopt check --change <cambio>
    ```
-   No escribe nada ni registra compuertas: lista todos los fallos (formato, unicidad, serie, escenarios, origen, cobertura del inventario, motivo de descarte, inventario ausente o desactualizado) y sale con 1 si hay alguno.
-4. **Compuerta `spec`.** Axiom comprueba la forma y la cobertura; **un humano aprueba que la migración es fiel** a sus orígenes. Ninguna orden juzga la fidelidad semántica.
-5. **Archivado.** Se archiva como cualquier cambio: la spec viva conserva cada línea `Origen:` tal cual.
+   No escribe nada ni registra compuertas: mide con el patrón efectivo del proyecto, lista todos los fallos (`format`, `uniqueness`, `scenarios`, `origin`, `origin_id` por el identificador del cliente no conservado, `coverage`, `discard_reason`, `inventory_missing`, `inventory_stale`, `pattern_undeclared` por identificadores que el patrón no reconoce y `foreign_id_conflict` por una unidad con varios identificadores o dos con el mismo) y sale con 1 si hay alguno.
+5. **Compuerta `spec`.** Axiom comprueba la forma y la cobertura; **un humano aprueba que la migración es fiel** a sus orígenes. Ninguna orden juzga la fidelidad semántica.
+6. **Archivado.** `axiom sdd archive-integrate --change <cambio>` integra la delta como en cualquier cambio: la spec viva conserva los identificadores del cliente y cada línea `Origen:` tal cual, y un provisional recibe el siguiente número tras el más alto de su serie.
 
 Los documentos de origen no se modifican. La propuesta de `technical_context` que sugiere el inventario la decide la persona.
 
@@ -790,16 +789,9 @@ axiom sync --scope=workspace
 
 Este comando asegura que los prompts, agentes locales (`opencode.json`) y herramientas del proyecto reflejen las últimas directivas sin tocar tu configuración global de usuario en `~/.config/opencode/`. Usa la raíz del proyecto aunque lo lances desde una subcarpeta y actualiza el estado de `<raíz>/.axiom/state.json`.
 
-### Mantenimiento Semántico del CodeGraph (`axiom semantic reindex`)
+### CodeGraph en Uso Directo
 
-Axiom integra análisis semántico del código fuente mediante CodeGraph y el motor AST nativo de Go. Tras refactorizaciones mayores o tras sincronizar cambios de otros roles:
-* **Por Línea de Comandos:**
-  ```bash
-  axiom semantic reindex
-  ```
-  Actualiza incrementalmente el grafo de dependencias, tipos, funciones y llamadas del workspace sin necesidad de reiniciar la sesión.
-* **Por Panel Web (`axiom ui`):**
-  En la barra de herramientas superior del dashboard, el botón **"Reindexar CodeGraph"** ejecuta el proceso en segundo plano informando visualmente del progreso y completitud en tiempo real.
+Los agentes consultan el código con CodeGraph directamente: por su MCP, que Axiom registra cuando eliges CodeGraph al instalar (no se instala por defecto), y por su CLI (`codegraph explore "<consulta>"`). Axiom no tiene comandos ni panel propios de análisis semántico. Para preparar o refrescar el índice de un proyecto, usa la CLI de CodeGraph en su raíz: `codegraph init` la primera vez y `codegraph index` después de refactorizaciones mayores.
 
 ### Automatización Post-Archivado y Scripts de Soporte
 

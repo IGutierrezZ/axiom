@@ -80,7 +80,6 @@
             <span class="nav-label">Conocimiento</span>
             <a class="nav-item" href="#/specs" data-nav="specs"><i data-icon="book" data-size="18"></i><span class="grow">Specs vivas</span></a>
             <a class="nav-item" href="#/skills" data-nav="skills"><i data-icon="cube" data-size="18"></i><span class="grow">Skills</span><span class="nav-pill" id="badge-skills" hidden></span></a>
-            <a class="nav-item" href="#/codigo" data-nav="codigo"><i data-icon="graph" data-size="18"></i><span class="grow">Código y grafo</span></a>
           </div>
           <div class="nav-group">
             <span class="nav-label">Plataforma</span>
@@ -310,74 +309,6 @@
           </section>
         </section>
 
-        <!-- ===== Código y grafo ===== -->
-        <section id="view-codigo" class="view" hidden aria-labelledby="codigo-title">
-          <div class="page-header">
-            <div>
-              <h1 id="codigo-title" class="page-title" tabindex="-1">Código y grafo</h1>
-              <p class="page-sub">Lo que los agentes entienden de tu código: conectores semánticos, símbolos y dependencias entre paquetes.</p>
-            </div>
-            <div class="page-actions">
-              <button type="button" class="btn btn-primary" id="btn-reindex-codegraph" title="Reindexar CodeGraph bajo demanda"><i data-icon="bolt"></i>Reindexar CodeGraph</button>
-            </div>
-          </div>
-
-          <div id="reindex-feedback" class="hidden" role="status" aria-live="polite"></div>
-          <div class="console" id="reindex-console" hidden>
-            <div class="console-head"><span><i data-icon="terminal" data-size="14"></i> <span data-role="title">Salida de la reindexación</span></span><button type="button" class="btn btn-ghost btn-xs" data-role="clear">Limpiar</button></div>
-            <pre class="console-out" data-role="out" tabindex="0" aria-label="Salida de la reindexación"></pre>
-          </div>
-
-          <section aria-label="Estado de los conectores">
-            <div class="kn-status" id="semantic-status-cards">
-              <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Evaluando el entorno semántico y los conectores…</span></div>
-            </div>
-          </section>
-
-          <section class="card card-flush" aria-labelledby="sym-h">
-            <div class="card-head">
-              <div class="kn-title-row">
-                <h2 class="card-title-h" id="sym-h">Símbolos</h2>
-                <span class="badge badge-mono" id="semantic-symbols-count" role="status" aria-live="polite">–</span>
-              </div>
-              <div class="kn-search kn-search-inline">
-                <label class="sr-only" for="semantic-search-input">Buscar símbolos</label>
-                <i data-icon="search" data-size="16"></i>
-                <input type="search" id="semantic-search-input" placeholder="Struct, interfaz, función o signatura" autocomplete="off">
-              </div>
-            </div>
-            <div class="kn-toolbar">
-              <div class="chip-group" id="semantic-kind-filters" role="group" aria-label="Filtrar por tipo de símbolo">
-                <button type="button" class="chip" data-kind="" aria-pressed="true">Todos</button>
-                <button type="button" class="chip" data-kind="struct" aria-pressed="false">Structs</button>
-                <button type="button" class="chip" data-kind="interface" aria-pressed="false">Interfaces</button>
-                <button type="button" class="chip" data-kind="func" aria-pressed="false">Funciones</button>
-                <button type="button" class="chip" data-kind="method" aria-pressed="false">Métodos</button>
-              </div>
-            </div>
-            <div id="semantic-symbols-container" class="kn-pad kn-pad-top"></div>
-          </section>
-
-          <div class="kn-two">
-            <section class="card card-flush" aria-labelledby="dep-h">
-              <div class="card-head">
-                <h2 class="card-title-h" id="dep-h">Dependencias entre paquetes</h2>
-                <button type="button" class="chip" id="deps-internal-toggle" aria-pressed="false">Solo internas</button>
-              </div>
-              <div id="semantic-dependencies-container" class="kn-pad">
-                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Calculando relaciones de importación…</span></div>
-              </div>
-            </section>
-
-            <section class="card card-flush" aria-labelledby="ag-h">
-              <div class="card-head"><h2 class="card-title-h" id="ag-h">Agentes y MCPs</h2></div>
-              <div id="semantic-agents-list" class="kn-pad">
-                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Detectando configuraciones de agentes…</span></div>
-              </div>
-            </section>
-          </div>
-        </section>
-
         <!-- ===== Ecosistema ===== -->
         <section id="view-ecosistema" class="view" hidden aria-labelledby="ecosistema-title">
           <div class="page-header">
@@ -487,6 +418,16 @@
                   </div>
                   <p id="worktree-prefs-status" class="field-hint" role="status"></p>
                 </form>
+              </div>
+            </section>
+
+            <section class="card card-flush eco-wide" aria-labelledby="eco-agents-h">
+              <div class="card-head">
+                <h2 class="card-title-h" id="eco-agents-h">Agentes</h2>
+                <span class="kn-count" id="eco-agents-count"></span>
+              </div>
+              <div id="eco-agents-body" class="eco-table-box">
+                <div class="state" role="status"><div class="spinner" aria-hidden="true"></div><span>Consultando los agentes del proyecto…</span></div>
               </div>
             </section>
 

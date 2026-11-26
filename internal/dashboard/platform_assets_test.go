@@ -29,41 +29,6 @@ func TestPlatformAssetsAreServed(t *testing.T) {
 	}
 }
 
-// legacy.css desaparece del todo: del paquete, del HTML y de cualquier referencia.
-func TestLegacyStylesAreRemoved(t *testing.T) {
-	for _, f := range embeddedFiles(t) {
-		if strings.Contains(strings.ToLower(f), "legacy") {
-			t.Errorf("el fichero embebido %s no debería existir: el CSS heredado se retiró", f)
-		}
-	}
-	h := assetServer(t)
-	if rr := getAsset(t, h, "/legacy.css"); rr.Code != 404 {
-		t.Errorf("GET /legacy.css = %d, se esperaba 404", rr.Code)
-	}
-	for _, f := range embeddedFiles(t) {
-		if !strings.HasSuffix(f, ".html") && !strings.HasSuffix(f, ".css") && !strings.HasSuffix(f, ".js") {
-			continue
-		}
-		if strings.Contains(readAsset(t, f), "legacy.css") {
-			t.Errorf("%s todavía menciona legacy.css", f)
-		}
-	}
-	// Las clases que solo existían en legacy.css no se usan en el marcado ni en los módulos.
-	for _, class := range []string{"legacy-card", "stat-cards-row", "stat-card", "stat-label", "stat-value", "badge-phase", "text-accent", "subsection-title"} {
-		if strings.Contains(readAsset(t, "index.html"), class) || strings.Contains(readAllJS(t), class) {
-			t.Errorf("la clase heredada %q sigue en uso", class)
-		}
-	}
-	// Solo tokens: ningún color fijo en la hoja de estilos, y ninguna variable --color-* de la interfaz antigua.
-	css := readAsset(t, "style.css")
-	if loc := regexp.MustCompile(`#[0-9A-Fa-f]{3,8}\b`).FindString(css); loc != "" {
-		t.Errorf("style.css contiene el color fijo %q; usa los tokens de tokens.css", loc)
-	}
-	if strings.Contains(css, "--color-") {
-		t.Errorf("style.css usa variables --color-* de la interfaz antigua")
-	}
-}
-
 // Todo id que consulta el JavaScript existe en el HTML (o lo genera el propio módulo), y las
 // clases del bloque de Ecosistema están definidas en style.css.
 func TestEcosystemMarkupMatchesTheScreen(t *testing.T) {

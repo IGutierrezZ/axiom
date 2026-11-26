@@ -235,7 +235,7 @@ func TestIndexHTMLShell(t *testing.T) {
 	for _, marker := range []string{
 		`aria-label="Navegación principal"`,
 		"Trabajo", "Conocimiento", "Plataforma",
-		`href="#/inicio"`, `href="#/incrementos"`, `href="#/specs"`, `href="#/skills"`, `href="#/codigo"`, `href="#/ecosistema"`,
+		`href="#/inicio"`, `href="#/incrementos"`, `href="#/specs"`, `href="#/skills"`, `href="#/ecosistema"`,
 		`aria-label="Ruta"`,
 		`id="btn-refresh" class="btn btn-icon" aria-label="Actualizar datos"`,
 		"Nuevo incremento",
@@ -273,7 +273,7 @@ func TestIndexHTMLShell(t *testing.T) {
 func TestRouterDefinesEveryRoute(t *testing.T) {
 	router := readAsset(t, "js/core/router.js")
 	for _, marker := range []string{
-		"'inicio'", "'incrementos'", "'specs'", "'skills'", "'codigo'", "'ecosistema'",
+		"'inicio'", "'incrementos'", "'specs'", "'skills'", "'ecosistema'",
 		"'artefactos'", "'roles'", "'handoff'",
 		"#/inicio", "hashchange", "#/incrementos/",
 	} {

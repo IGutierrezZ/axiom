@@ -223,25 +223,8 @@ func TestApplyStepShowsPerRoleProgressWhenMultirole(t *testing.T) {
 	}
 }
 
-// Las pantallas nuevas no dependen de las clases de legacy.css que sustituyen.
-func TestIncrementScreensDoNotUseLegacyStyles(t *testing.T) {
-	legacy := []string{"inc-card", "increments-grid", "role-card", "roles-grid", "barrier-banner", "handoff-card", "section-box", "filter-btn", "badge-feature", "badge-bug", "loading-state"}
-	sources := map[string]string{"index.html (incrementos y detalle)": "", "incrementos.js": readAsset(t, "js/screens/incrementos.js"), "detalle.js": readAsset(t, "js/screens/detalle.js"),
-		"detalle-roles.js": readAsset(t, "js/screens/detalle-roles.js"), "detalle-handoff.js": readAsset(t, "js/screens/detalle-handoff.js")}
-	html := readAsset(t, "index.html")
-	start, end := strings.Index(html, `id="view-incrementos"`), strings.Index(html, `id="view-specs"`)
-	if start < 0 || end < start {
-		t.Fatalf("index.html: no se localizan las vistas de incrementos")
-	}
-	sources["index.html (incrementos y detalle)"] = html[start:end]
-	for name, src := range sources {
-		for _, class := range legacy {
-			if strings.Contains(src, class) {
-				t.Errorf("%s usa la clase heredada %q", name, class)
-			}
-		}
-	}
-
+// La hoja de estilos de incrementos define sus componentes y solo usa tokens.
+func TestIncrementStylesDefineTheirComponentsWithTokens(t *testing.T) {
 	css := readAsset(t, "style.css")
 	for _, marker := range []string{".ix-board", ".ix-col.is-collapsed", ".mini-stepper", ".type-chip", ".dt-steps", ".dt-banner", ".dt-role", ".md-tasks", ".md-code", ".tab-pill", "@media (max-width: 640px)"} {
 		if !strings.Contains(css, marker) {

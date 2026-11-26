@@ -170,8 +170,11 @@ func TestRegistryTreatsLeadingZerosInTheSeriesAsTheSameSeries(t *testing.T) {
 	if got := reg.NextFree(defaultSeries(9)); got != "REQ-9.5" {
 		t.Errorf("NextFree(9) = %q, se esperaba REQ-9.5", got)
 	}
-	if got := len(reg.SeriesRefs(defaultSeries(9))); got != 2 {
-		t.Errorf("SeriesRefs(9) tiene %d referencias, se esperaban 2", got)
+	if got := len(reg.LookupIdentity("REQ-9.4")); got != 1 {
+		t.Errorf("LookupIdentity(REQ-9.4) tiene %d referencias, se esperaba 1", got)
+	}
+	if got := len(reg.LookupIdentity("REQ-09.2")); got != 1 {
+		t.Errorf("LookupIdentity(REQ-09.2) tiene %d referencias, se esperaba 1: la serie 09 es la 9", got)
 	}
 }
 
@@ -183,28 +186,6 @@ func TestIDRefWhereNamesTheCapabilityOrTheChange(t *testing.T) {
 	}
 	if got := change.Where(); got != "el cambio activo inc-7 (capacidad pagos)" {
 		t.Errorf("Where() = %q", got)
-	}
-}
-
-func TestRegistrySeriesRefsListsEveryReferenceOfTheSeries(t *testing.T) {
-	reg, err := LoadRegistry(registryFixture(t), RegistryOptions{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := map[string]bool{}
-	for _, ref := range reg.SeriesRefs(defaultSeries(31)) {
-		ids[ref.ID] = true
-	}
-	for _, want := range []string{"REQ-31.1", "REQ-31.2", "REQ-31.5", "REQ-31.6"} {
-		if !ids[want] {
-			t.Errorf("SeriesRefs(31) no incluye %s: %v", want, ids)
-		}
-	}
-	if ids["REQ-32.7"] || ids["REQ-31.40"] {
-		t.Errorf("SeriesRefs(31) incluye otra serie o el archivo: %v", ids)
-	}
-	if got := reg.SeriesRefs(defaultSeries(3)); len(got) != 0 {
-		t.Errorf("la serie 3 no comparte prefijo con la 31: %v", got)
 	}
 }
 

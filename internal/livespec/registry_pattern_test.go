@@ -68,10 +68,11 @@ func TestRegistryNextFreeWithDeclaredPattern(t *testing.T) {
 			t.Errorf("NextFree(%s) = %s, quería %s", id, got, want)
 		}
 	}
-	usu, _ := p.Series("RF-USU-01")
-	refs := reg.SeriesRefs(usu)
-	if len(refs) != 2 || refs[0].ID != "RF-USU-01" || refs[1].ID != "RF-USU-05" {
-		t.Errorf("SeriesRefs(USU) = %+v", refs)
+	if refs := reg.LookupIdentity("RF-USU-05"); len(refs) != 1 || refs[0].ID != "RF-USU-05" {
+		t.Errorf("LookupIdentity(RF-USU-05) = %+v", refs)
+	}
+	if refs := reg.LookupIdentity("RF-FAC-05"); len(refs) != 0 {
+		t.Errorf("otra serie no comparte clave: %+v", refs)
 	}
 }
 
@@ -217,5 +218,77 @@ func TestClassifyAndComposeAgreeOnResolution(t *testing.T) {
 	idx, match := openspecdoc.Resolve(names, "Baja vieja (RF-USU-02)", mustPattern(t, "RF-<DOM>-<NN>"))
 	if match != openspecdoc.MatchFound || idx != 1 {
 		t.Fatalf("Resolve = %d, %v", idx, match)
+	}
+}
+
+// REQ-30.11 y REQ-44.4: LookupIdentity compara por serie y número, no por cadena.
+func TestRegistryLookupIdentityMatchesByKeyNotByString(t *testing.T) {
+	_, reg := patternFixture(t, "RF-<m>", map[string]string{
+		"specs/b/spec.md":                   specWith("b", "Uno (RF-001)"),
+		"specs/a/spec.md":                   specWith("a", "Otro (RF-1)"),
+		"changes/inc-1/specs/c/spec.md":     "## ADDED Requirements\n\n### Requirement: Tercero (RF-01)\n\nCuerpo.\n",
+		"changes/inc-2/specs/d/spec.md":     "## ADDED Requirements\n\n### Requirement: Cuarto (RF-002)\n\nCuerpo.\n",
+		"changes/archive/x/specs/e/spec.md": "## ADDED Requirements\n\n### Requirement: Archivado (RF-1)\n\nCuerpo.\n",
+	})
+	refs := reg.LookupIdentity("RF-1")
+	if len(refs) != 3 {
+		t.Fatalf("LookupIdentity(RF-1) = %+v, se esperaban 3 (RF-1, RF-001 y RF-01, incluido el cambio activo)", refs)
+	}
+	// Orden estable: ruta y después ID.
+	for i := 1; i < len(refs); i++ {
+		if refs[i-1].Path > refs[i].Path || (refs[i-1].Path == refs[i].Path && refs[i-1].ID > refs[i].ID) {
+			t.Errorf("orden inestable: %+v", refs)
+		}
+	}
+	if got := reg.LookupIdentity("RF-001"); len(got) != 3 {
+		t.Errorf("LookupIdentity(RF-001) = %d referencias", len(got))
+	}
+	if got := reg.LookupIdentity("RF-3"); len(got) != 0 {
+		t.Errorf("RF-3 está libre: %+v", got)
+	}
+}
+
+func TestRegistryLookupIdentityFixedWidthRejectsOtherFormats(t *testing.T) {
+	_, reg := patternFixture(t, "RF-<NNN>", map[string]string{
+		"specs/a/spec.md": specWith("a", "Uno (RF-001)"),
+	})
+	if got := reg.LookupIdentity("RF-001"); len(got) != 1 {
+		t.Errorf("LookupIdentity(RF-001) = %+v", got)
+	}
+	if got := reg.LookupIdentity("RF-1"); len(got) != 0 {
+		t.Errorf("RF-1 no es válido con RF-<NNN>: %+v", got)
+	}
+}
+
+func TestRegistryLookupIdentityHonoursExcludeChange(t *testing.T) {
+	root := t.TempDir()
+	home := filepath.Join(root, "openspec")
+	writeTree(t, home, map[string]string{
+		"changes/propio/specs/a/spec.md": "## ADDED Requirements\n\n### Requirement: Uno (RF-1)\n\nCuerpo.\n",
+		"changes/otro/specs/a/spec.md":   "## ADDED Requirements\n\n### Requirement: Dos (RF-001)\n\nCuerpo.\n",
+	})
+	reg, err := LoadRegistry(home, RegistryOptions{Pattern: mustPattern(t, "RF-<m>"), ExcludeChange: "propio"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	refs := reg.LookupIdentity("RF-1")
+	if len(refs) != 1 || refs[0].Change != "otro" {
+		t.Fatalf("ExcludeChange debe dejar fuera el cambio propio: %+v", refs)
+	}
+}
+
+func TestRegistryLookupIdentityDefaultPatternBehavesLikeLookup(t *testing.T) {
+	reg, err := LoadRegistry(registryFixture(t), RegistryOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"REQ-31.1", "REQ-31.2", "REQ-99.1", "REQ-31.5"} {
+		a, b := reg.Lookup(id), reg.LookupIdentity(id)
+		if len(a) != len(b) {
+			t.Errorf("%s: Lookup=%d LookupIdentity=%d", id, len(a), len(b))
+		}
+	}
+	if got := reg.LookupIdentity("no es un id"); got != nil {
+		t.Errorf("un ID inválido no tiene clave: %+v", got)
 	}
 }

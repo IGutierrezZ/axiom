@@ -13,15 +13,14 @@ El pipeline de CI DEBE construir y ejercitar el binario canónico `cmd/axiom`, i
 
 ### Requirement: Construcción y ejercicio bloqueante de la superficie exclusiva de axiom (REQ-20.15)
 
-El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloqueante su superficie exclusiva: `init`, `change`, `project`, `workspace`, `handoff`, `role`, `skill`, `semantic`, `archive`, y el arranque/ayuda de `ui`.
+El flujo de trabajo de CI DEBE construir `cmd/axiom` y ejercitar de forma bloqueante su superficie exclusiva: `init`, `change`, `project`, `workspace`, `handoff`, `role`, `skill`, `archive`, y el arranque/ayuda de `ui`.
+(Previously: la superficie incluía `semantic`, que C-08-l retira.)
 
 #### Scenario: Humo bloqueante sobre la superficie exclusiva
 - **DADO** el binario `cmd/axiom` recién construido en CI
 - **CUANDO** el paso de cobertura se ejecuta
 - **ENTONCES** ejercita los comandos de la superficie exclusiva de Axiom con salida esperada y stderr limpio de avisos de deprecación
 - **Y** un fallo en cualquiera de ellos bloquea la fusión
-
----
 
 ### Requirement: Ventana informativa acotada y registrada para superficie roja (REQ-20.16)
 

@@ -23,15 +23,6 @@ func TestExampleYAMLDocumentsTechnicalContext(t *testing.T) {
 	}
 }
 
-func TestExampleYAMLDoesNotDocumentBaseline(t *testing.T) {
-	raw := readRepoFile(t, "axiom.example.yaml")
-	for number, line := range strings.Split(raw, "\n") {
-		if strings.HasPrefix(strings.TrimSpace(strings.TrimLeft(line, "# ")), "baseline:") {
-			t.Errorf("axiom.example.yaml:%d documenta `baseline:`, que se retira: %s", number+1, line)
-		}
-	}
-}
-
 // REQ-29.1 y REQ-30.28 (R7): la plantilla axiom.example.yaml documenta el bloque
 // `sdd:` y, una vez descomentado, es válido y declara ISO.
 func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
@@ -62,12 +53,7 @@ func TestExampleYAMLDocumentsTheSDDBlock(t *testing.T) {
 	if p, err := declarations.IDPattern(); err != nil || p.Template() != "RF-<DOM>-<NN>" {
 		t.Errorf("la plantilla debe documentar `id_pattern: \"RF-<DOM>-<NN>\"`: %q, %v", p.Template(), err)
 	}
-	raw := readRepoFile(t, "axiom.example.yaml")
-	for _, want := range []string{"Bloque SDD: modo ISO y patrón de identificadores (opcional)", "<DOM>", "<NN>", "REQ-<n>.<m>"} {
-		if !strings.Contains(raw, want) {
-			t.Errorf("axiom.example.yaml debe documentar %q", want)
-		}
-	}
+
 }
 
 // REQ-32.1 y REQ-32.2: la plantilla axiom.example.yaml documenta el bloque

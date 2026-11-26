@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"mime"
 	"net"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
-	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -76,6 +76,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/projects/add", s.handleProjectsAdd)
 	s.mux.HandleFunc("/api/projects/init", s.handleProjectsInit)
 	s.mux.HandleFunc("/api/adapters", s.handleAdapters)
+	s.mux.HandleFunc("/api/agents", s.handleAgents)
+	s.mux.HandleFunc("/api/agents/install", s.handleAgentsInstall)
 	s.mux.HandleFunc("/api/projects/active/worktree-prefs", s.handleActiveWorktreePrefs)
 	s.mux.HandleFunc("/api/fs/directories", s.handleFSDirectories)
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
@@ -93,10 +95,6 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/skills/scan", s.handleSkillsScan)
 	s.mux.HandleFunc("/api/skills/approve", s.handleSkillsApprove)
 	s.mux.HandleFunc("/api/skills/reject", s.handleSkillsReject)
-	s.mux.HandleFunc("/api/semantic/status", s.handleSemanticStatus)
-	s.mux.HandleFunc("/api/semantic/symbols", s.handleSemanticSymbols)
-	s.mux.HandleFunc("/api/semantic/dependencies", s.handleSemanticDependencies)
-	s.mux.HandleFunc("/api/semantic/reindex", s.handleSemanticReindex)
 	s.mux.HandleFunc("/api/archive/specs", s.handleArchiveSpecs)
 	s.mux.HandleFunc("/api/archive/specs/", s.handleArchiveSpecDetail)
 	s.mux.HandleFunc("/api/archive/sync", s.handleArchiveSync)
@@ -351,6 +349,45 @@ func (s *Server) handleAdapters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.respondJSON(w, http.StatusOK, map[string]any{"adapters": s.service.ListAdapters()})
+}
+
+// handleAgents devuelve los agentes del catálogo con sus tres marcas (admitido,
+// detectado en el equipo e instalado en el proyecto activo). Es de solo lectura.
+func (s *Server) handleAgents(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	s.respondJSON(w, http.StatusOK, s.service.ListProjectAgents())
+}
+
+// handleAgentsInstall instala un agente en el proyecto activo (ámbito workspace).
+// Escribe en el repositorio y, según el agente, en la carpeta de usuario: solo la
+// acepta el propio dashboard.
+func (s *Server) handleAgentsInstall(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.isLocalRequest(r) {
+		s.respondJSON(w, http.StatusForbidden, map[string]string{"error": "Petición rechazada: solo se admiten peticiones del propio dashboard"})
+		return
+	}
+	var req AgentInstallRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido"})
+		return
+	}
+	resp, err := s.service.InstallProjectAgent(req.Agent)
+	var rejected *AgentInstallError
+	switch {
+	case errors.As(err, &rejected):
+		s.respondJSON(w, rejected.Status, map[string]string{"error": rejected.Error()})
+	case err != nil:
+		s.respondJSON(w, http.StatusInternalServerError, resp)
+	default:
+		s.respondJSON(w, http.StatusOK, resp)
+	}
 }
 
 func (s *Server) handleFSDirectories(w http.ResponseWriter, r *http.Request) {
@@ -681,70 +718,6 @@ func (s *Server) handleSkillsReject(w http.ResponseWriter, r *http.Request) {
 		"status":  "rejected",
 		"message": fmt.Sprintf("Propuesta '%s' descartada del buzón", req.Name),
 	})
-}
-
-func (s *Server) handleSemanticStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	status, err := s.service.GetSemanticStatus(r.Context())
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	s.respondJSON(w, http.StatusOK, status)
-}
-
-func (s *Server) handleSemanticSymbols(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	q := semantic.SemanticQuery{
-		Query: r.URL.Query().Get("query"),
-		Kind:  semantic.SymbolKind(r.URL.Query().Get("kind")),
-		Role:  r.URL.Query().Get("role"),
-	}
-	symbols, err := s.service.FindSemanticSymbols(q)
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	if symbols == nil {
-		symbols = make([]semantic.SymbolItem, 0)
-	}
-	s.respondJSON(w, http.StatusOK, symbols)
-}
-
-func (s *Server) handleSemanticDependencies(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	role := r.URL.Query().Get("role")
-	deps, err := s.service.InspectSemanticDependencies(role)
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-	if deps == nil {
-		deps = make([]semantic.DependencyRelation, 0)
-	}
-	s.respondJSON(w, http.StatusOK, deps)
-}
-
-func (s *Server) handleSemanticReindex(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
-		return
-	}
-	res, err := s.service.ReindexCodeGraph(r.Context())
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, res)
-		return
-	}
-	s.respondJSON(w, http.StatusOK, res)
 }
 
 func (s *Server) handleArchiveSpecs(w http.ResponseWriter, r *http.Request) {

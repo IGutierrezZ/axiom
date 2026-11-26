@@ -42,8 +42,9 @@ type RoleConfig struct {
 
 // GovernanceConfig define configuraciones transversales del proyecto.
 type GovernanceConfig struct {
-	Language         string `yaml:"language,omitempty"`
-	SharedMemory     string `yaml:"shared_memory,omitempty"`
+	Language     string `yaml:"language,omitempty"`
+	SharedMemory string `yaml:"shared_memory,omitempty"`
+	// SemanticAnalysis ya no tiene efecto: se lee solo para avisar (ObsoleteKeyWarnings).
 	SemanticAnalysis string `yaml:"semantic_analysis,omitempty"`
 	Context          string `yaml:"context,omitempty"`
 }

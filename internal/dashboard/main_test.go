@@ -26,7 +26,7 @@ var sandboxHome string
 // subprocess (not a Go test binary, so it bypasses the in-process guard) from
 // writing the developer's real user PATH.
 //
-// Tests that run a side-effecting flow (sync, upgrade, reindex, archive sync)
+// Tests that run a side-effecting flow (sync, upgrade, archive sync)
 // must also use a t.TempDir() project and, where the production code shells out,
 // the package seams (runAppArgsFn, upgradeSequenceReportFn) or a stand-in binary
 // on PATH, so nothing is written to the repository checkout either. The
