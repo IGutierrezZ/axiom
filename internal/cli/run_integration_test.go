@@ -469,7 +469,6 @@ func TestInstallPersonaOnlyRollbackRestoresOpenCodeSettingsAfterCleanup(t *testi
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaGentleman,
 	}
 	resolved := planner.ResolvedPlan{Agents: selection.Agents, OrderedComponents: selection.Components}
 	runtime, err := newInstallRuntime(home, ScopeGlobal, ChannelStable, selection, resolved, system.PlatformProfile{})
@@ -2305,7 +2304,6 @@ func TestOpenCodePersonaBeforeSDDPreservesAllSections(t *testing.T) {
 			"--component", "persona",
 			"--component", "engram",
 			"--component", "sdd",
-			"--persona", "gentleman",
 		},
 		system.DetectionResult{},
 	)
@@ -2321,8 +2319,8 @@ func TestOpenCodePersonaBeforeSDDPreservesAllSections(t *testing.T) {
 	text := string(content)
 
 	// Persona content must be present
-	if !strings.Contains(text, "Senior Architect") {
-		t.Error("AGENTS.md missing Gentleman persona content (persona not written)")
+	if !strings.Contains(text, "## Personality") {
+		t.Error("AGENTS.md missing persona content (persona not written)")
 	}
 
 	// For OpenCode, the SDD orchestrator goes into opencode.json (agent overlay),

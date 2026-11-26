@@ -383,107 +383,40 @@ func TestGoldenSDD_Codex_Powerful(t *testing.T) {
 // Persona Injector golden tests
 // ---------------------------------------------------------------------------
 
-func TestGoldenPersona_Claude_Gentleman(t *testing.T) {
+func TestGoldenPersona_Claude(t *testing.T) {
 	home := t.TempDir()
 
-	result, err := persona.Inject(home, claudeAdapter(), model.PersonaGentleman)
+	result, err := persona.Inject(home, claudeAdapter())
 	if err != nil {
-		t.Fatalf("persona.Inject(claude, gentleman) error = %v", err)
+		t.Fatalf("persona.Inject(claude) error = %v", err)
 	}
 	if !result.Changed {
-		t.Fatalf("persona.Inject(claude, gentleman) changed = false")
+		t.Fatalf("persona.Inject(claude) changed = false")
 	}
 
 	claudeMD := readTestFile(t, filepath.Join(home, ".claude", "CLAUDE.md"))
-	assertGolden(t, "persona-claude-gentleman.golden", claudeMD)
+	assertGolden(t, "persona-claude-axiom.golden", claudeMD)
 
-	outputStyle := readTestFile(t, filepath.Join(home, ".claude", "output-styles", "gentleman.md"))
-	assertGolden(t, "persona-claude-gentleman-outputstyle.golden", outputStyle)
+	outputStyle := readTestFile(t, filepath.Join(home, ".claude", "output-styles", "axiom.md"))
+	assertGolden(t, "persona-claude-axiom-outputstyle.golden", outputStyle)
 
 	settingsJSON := readTestFile(t, filepath.Join(home, ".claude", "settings.json"))
-	assertGolden(t, "persona-claude-gentleman-settings.golden", settingsJSON)
+	assertGolden(t, "persona-claude-axiom-settings.golden", settingsJSON)
 }
 
-func TestGoldenPersona_Claude_Neutral(t *testing.T) {
+func TestGoldenPersona_OpenCode(t *testing.T) {
 	home := t.TempDir()
 
-	result, err := persona.Inject(home, claudeAdapter(), model.PersonaNeutral)
+	result, err := persona.Inject(home, opencodeAdapter())
 	if err != nil {
-		t.Fatalf("persona.Inject(claude, neutral) error = %v", err)
+		t.Fatalf("persona.Inject(opencode) error = %v", err)
 	}
 	if !result.Changed {
-		t.Fatalf("persona.Inject(claude, neutral) changed = false")
-	}
-
-	claudeMD := readTestFile(t, filepath.Join(home, ".claude", "CLAUDE.md"))
-	assertGolden(t, "persona-claude-neutral.golden", claudeMD)
-
-	// Locks the reconciled Neutral output style (Decision 4) — no golden
-	// existed for this file before the canonical-channel change.
-	outputStyle := readTestFile(t, filepath.Join(home, ".claude", "output-styles", "neutral.md"))
-	assertGolden(t, "persona-claude-neutral-outputstyle.golden", outputStyle)
-}
-
-func TestGoldenPersona_OpenCode_Gentleman(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := persona.Inject(home, opencodeAdapter(), model.PersonaGentleman)
-	if err != nil {
-		t.Fatalf("persona.Inject(opencode, gentleman) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("persona.Inject(opencode, gentleman) changed = false")
+		t.Fatalf("persona.Inject(opencode) changed = false")
 	}
 
 	agentsMD := readTestFile(t, filepath.Join(home, ".config", "opencode", "AGENTS.md"))
-	assertGolden(t, "persona-opencode-gentleman.golden", agentsMD)
-}
-
-func TestGoldenPersona_OpenCode_Neutral(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := persona.Inject(home, opencodeAdapter(), model.PersonaNeutral)
-	if err != nil {
-		t.Fatalf("persona.Inject(opencode, neutral) error = %v", err)
-	}
-	if !result.Changed {
-		t.Fatalf("persona.Inject(opencode, neutral) changed = false")
-	}
-
-	agentsMD := readTestFile(t, filepath.Join(home, ".config", "opencode", "AGENTS.md"))
-	assertGolden(t, "persona-opencode-neutral.golden", agentsMD)
-}
-
-func TestGoldenPersona_Claude_Custom(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := persona.Inject(home, claudeAdapter(), model.PersonaCustom)
-	if err != nil {
-		t.Fatalf("persona.Inject(claude, custom) error = %v", err)
-	}
-	// Custom persona does nothing — no files written.
-	if result.Changed {
-		t.Fatalf("persona.Inject(claude, custom) changed = true, want false")
-	}
-	if len(result.Files) != 0 {
-		t.Fatalf("persona.Inject(claude, custom) returned files %v, want none", result.Files)
-	}
-}
-
-func TestGoldenPersona_OpenCode_Custom(t *testing.T) {
-	home := t.TempDir()
-
-	result, err := persona.Inject(home, opencodeAdapter(), model.PersonaCustom)
-	if err != nil {
-		t.Fatalf("persona.Inject(opencode, custom) error = %v", err)
-	}
-	// Custom persona does nothing — no files written.
-	if result.Changed {
-		t.Fatalf("persona.Inject(opencode, custom) changed = true, want false")
-	}
-	if len(result.Files) != 0 {
-		t.Fatalf("persona.Inject(opencode, custom) returned files %v, want none", result.Files)
-	}
+	assertGolden(t, "persona-opencode-axiom.golden", agentsMD)
 }
 
 // ---------------------------------------------------------------------------
@@ -618,7 +551,7 @@ func TestGoldenCombined_Claude(t *testing.T) {
 	engram.SetLookPathForTest(t, "/opt/homebrew/bin/engram", "")
 
 	// Inject persona first, then SDD, then Engram — all write sections into CLAUDE.md.
-	if _, err := persona.Inject(home, claudeAdapter(), model.PersonaGentleman); err != nil {
+	if _, err := persona.Inject(home, claudeAdapter()); err != nil {
 		t.Fatalf("persona.Inject error = %v", err)
 	}
 	if _, err := sdd.Inject(home, claudeAdapter(), ""); err != nil {
@@ -673,19 +606,19 @@ func TestGoldenSDD_Antigravity(t *testing.T) {
 	}
 }
 
-func TestGoldenPersona_Antigravity_Gentleman(t *testing.T) {
+func TestGoldenPersona_Antigravity(t *testing.T) {
 	home := t.TempDir()
 
-	result, err := persona.Inject(home, antigravityAdapter(), model.PersonaGentleman)
+	result, err := persona.Inject(home, antigravityAdapter())
 	if err != nil {
-		t.Fatalf("persona.Inject(antigravity, gentleman) error = %v", err)
+		t.Fatalf("persona.Inject(antigravity) error = %v", err)
 	}
 	if !result.Changed {
-		t.Fatalf("persona.Inject(antigravity, gentleman) changed = false")
+		t.Fatalf("persona.Inject(antigravity) changed = false")
 	}
 
 	rulesFile := readTestFile(t, filepath.Join(home, ".gemini", "GEMINI.md"))
-	assertGolden(t, "persona-antigravity-gentleman.golden", rulesFile)
+	assertGolden(t, "persona-antigravity-axiom.golden", rulesFile)
 }
 
 func TestGoldenEngram_Antigravity(t *testing.T) {

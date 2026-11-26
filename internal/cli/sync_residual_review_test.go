@@ -26,7 +26,6 @@ func TestRunSyncLeavesResidualReviewInstallUntouched(t *testing.T) {
 		InstalledAgents:     []string{"claude-code", "opencode"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentSDD},
-		Persona:             "custom",
 	}); err != nil {
 		t.Fatal(err)
 	}

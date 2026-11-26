@@ -57,15 +57,15 @@ func readProjectState(t *testing.T, home, root string) state.InstallState {
 func TestInstallWorkspaceStateIsPerProject(t *testing.T) {
 	rootA, rootB, home := projectStateFixture(t)
 
-	installInProject(t, rootA, "--component", "engram", "--persona", "neutral")
-	installInProject(t, rootB, "--component", "context7", "--persona", "gentleman")
+	installInProject(t, rootA, "--component", "engram")
+	installInProject(t, rootB, "--component", "context7")
 
 	a, b := readProjectState(t, home, rootA), readProjectState(t, home, rootB)
-	if a.Persona != "neutral" || len(a.Components) != 1 || a.Components[0] != model.ComponentEngram {
-		t.Errorf("el estado de A = persona %q componentes %v, want neutral/[engram]", a.Persona, a.Components)
+	if len(a.Components) != 1 || a.Components[0] != model.ComponentEngram {
+		t.Errorf("el estado de A = componentes %v, want [engram]", a.Components)
 	}
-	if b.Persona != "gentleman" || len(b.Components) != 1 || b.Components[0] != model.ComponentContext7 {
-		t.Errorf("el estado de B = persona %q componentes %v, want gentleman/[context7]", b.Persona, b.Components)
+	if len(b.Components) != 1 || b.Components[0] != model.ComponentContext7 {
+		t.Errorf("el estado de B = componentes %v, want [context7]", b.Components)
 	}
 	for _, root := range []string{rootA, rootB} {
 		if _, err := os.Stat(state.ProjectPath(root)); err != nil {
@@ -79,7 +79,7 @@ func TestInstallWorkspaceStateIsPerProject(t *testing.T) {
 
 func TestInstallWorkspaceDoesNotModifyTheGlobalState(t *testing.T) {
 	rootA, _, home := projectStateFixture(t)
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, Persona: "neutral", PendingSync: true}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, PendingSync: true}); err != nil {
 		t.Fatal(err)
 	}
 	before, err := os.ReadFile(state.Path(home))
@@ -155,7 +155,7 @@ func TestSyncWorkspaceSeedsFromGlobalAndLeavesItUntouched(t *testing.T) {
 		t.Errorf("sync en workspace ha modificado el estado global:\n%s\n---\n%s", before, after)
 	}
 	project := readProjectState(t, home, rootA)
-	if project.Persona != "neutral" || len(project.Components) != 1 || project.Components[0] != model.ComponentEngram {
+	if len(project.Components) != 1 || project.Components[0] != model.ComponentEngram {
 		t.Errorf("el proyecto no ha heredado la selección global: %#v", project)
 	}
 	if project.PendingSync {
@@ -169,14 +169,13 @@ func TestSyncWorkspaceSeedsFromGlobalAndLeavesItUntouched(t *testing.T) {
 func TestSyncWorkspaceDiscoversAgentsFromTheProjectState(t *testing.T) {
 	rootA, _, home := projectStateFixture(t)
 	t.Chdir(rootA)
-	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, SelectionConfigured: true, Persona: "neutral"}); err != nil {
+	if err := state.Write(home, state.InstallState{InstalledAgents: []string{"codex"}, SelectionConfigured: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.ProjectStore(home, rootA).Write(state.InstallState{
 		InstalledAgents:     []string{"claude-code"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -193,8 +192,8 @@ func TestSyncWorkspaceDiscoversAgentsFromTheProjectState(t *testing.T) {
 
 func TestSyncOfTwoProjectsKeepsTheirOwnSelection(t *testing.T) {
 	rootA, rootB, home := projectStateFixture(t)
-	installInProject(t, rootA, "--component", "engram", "--persona", "neutral")
-	installInProject(t, rootB, "--component", "context7", "--persona", "gentleman")
+	installInProject(t, rootA, "--component", "engram")
+	installInProject(t, rootB, "--component", "context7")
 
 	t.Chdir(rootA)
 	if _, err := RunSync([]string{"--scope", "workspace"}); err != nil {
@@ -206,10 +205,10 @@ func TestSyncOfTwoProjectsKeepsTheirOwnSelection(t *testing.T) {
 	}
 
 	a, b := readProjectState(t, home, rootA), readProjectState(t, home, rootB)
-	if a.Persona != "neutral" || a.Components[0] != model.ComponentEngram {
+	if a.Components[0] != model.ComponentEngram {
 		t.Errorf("sync ha pisado el estado de A: %#v", a)
 	}
-	if b.Persona != "gentleman" || b.Components[0] != model.ComponentContext7 {
+	if b.Components[0] != model.ComponentContext7 {
 		t.Errorf("sync ha pisado el estado de B: %#v", b)
 	}
 }
@@ -298,7 +297,6 @@ func TestSyncWorkspaceWithoutProjectStateDoesNotInheritTheGlobalAgents(t *testin
 		InstalledAgents:     []string{"codex"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +316,7 @@ func TestSyncWorkspaceWithoutProjectStateDoesNotInheritTheGlobalAgents(t *testin
 	if project.InstalledAgents != nil {
 		t.Errorf("un sync no registra agentes en el proyecto: %v", project.InstalledAgents)
 	}
-	if project.Persona != "neutral" || len(project.Components) != 1 {
+	if len(project.Components) != 1 {
 		t.Errorf("las preferencias sí vienen de la semilla: %#v", project)
 	}
 

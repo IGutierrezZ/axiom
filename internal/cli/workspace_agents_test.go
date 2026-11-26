@@ -73,7 +73,6 @@ func persistedAgents(agentIDs ...string) state.InstallState {
 		InstalledAgents:     agentIDs,
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}
 }
 
@@ -434,7 +433,6 @@ func TestRunSyncWithSelectionScopedWorkspaceOmitsTraeSilently(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentTrae},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentSDD, model.ComponentSkills},
-		Persona:    model.PersonaNeutral,
 	}
 	result, err := RunSyncWithSelectionScoped(home, root, ScopeWorkspace, selection)
 	if err != nil {

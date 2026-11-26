@@ -847,13 +847,8 @@ func (s *Service) componentOperations(adapter agents.Adapter, componentID model.
 			for _, style := range persona.ManagedOutputStyles() {
 				path := filepath.Join(styleDir, style.File)
 				targets = append(targets, path)
-				if style.File == "gentleman.md" && !s.workspace {
-					// Comportamiento de siempre en la carpeta de usuario.
-					ops = append(ops, removeFile(path))
-					continue
-				}
-				// Los estilos axiom.md y neutral.md, y todos en el proyecto, solo se
-				// retiran si su contenido sigue siendo el que Axiom incrusta.
+				// El estilo solo se retira si su contenido sigue siendo el que Axiom
+				// incrusta.
 				ops = append(ops, s.removeManagedOutputStyle(path, style.AssetPath))
 			}
 			ops = append(ops, removeDirIfEmpty(styleDir))

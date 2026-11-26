@@ -129,7 +129,6 @@ func TestWorkspaceOpenCodeKeepsUserConfigAndIsIdempotent(t *testing.T) {
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentPersona, model.ComponentSDD, model.ComponentSkills},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {

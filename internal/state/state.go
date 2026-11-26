@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
@@ -149,15 +150,11 @@ type InstallState struct {
 	// ModelAssignments maps sub-agent names to provider/model pairs (OpenCode).
 	ModelAssignments map[string]ModelAssignmentState `json:"model_assignments,omitempty"`
 
-	// Persona records the persona the user installed ("gentleman", "neutral",
-	// "custom"). Persisted so that `gentle-ai sync` regenerates the same persona
-	// the user originally chose instead of defaulting to Gentleman every time.
-	// Empty for state files written before persona persistence was added —
-	// callers fall back to PersonaGentleman in that case.
-	Persona string `json:"persona,omitempty"`
-	// PersonaPresent distinguishes an omitted legacy field from an explicit
-	// empty persona, which must fail closed during sync validation.
-	PersonaPresent bool `json:"-"`
+	// IgnoredPersona es la persona guardada por una versión anterior ("gentleman",
+	// "neutral", "custom"…) que Axiom ya no admite: solo existe la persona de
+	// Axiom. Se descarta al leer el estado, quien lo lee puede avisar y no se
+	// persiste, así que la siguiente escritura ya no incluye la clave.
+	IgnoredPersona string `json:"-"`
 
 	// IgnoredAgents son los agentes de installed_agents que el catálogo ya no conoce
 	// (agentes retirados). El estado los descarta al leerse, para que una instalación
@@ -202,8 +199,8 @@ type InstallState struct {
 	UpstreamVersion string `json:"upstream_version,omitempty"`
 }
 
-// UnmarshalJSON preserves whether the persisted persona field was present.
-// The value itself is still decoded into the public InstallState field.
+// UnmarshalJSON descarta los agentes, los componentes y la persona retirados y
+// los deja en los campos Ignored*, para que el estado siga cargando.
 func (s *InstallState) UnmarshalJSON(data []byte) error {
 	type plainInstallState InstallState
 	var decoded plainInstallState
@@ -217,10 +214,27 @@ func (s *InstallState) UnmarshalJSON(data []byte) error {
 	}
 
 	*s = InstallState(decoded)
-	_, s.PersonaPresent = fields["persona"]
+	s.IgnoredPersona = ignoredPersona(fields["persona"])
 	s.InstalledAgents, s.IgnoredAgents = splitKnownAgents(s.InstalledAgents)
 	s.Components, s.IgnoredComponents = splitKnownComponents(s.Components)
 	return nil
+}
+
+// ignoredPersona devuelve la persona guardada en el estado cuando no es la de
+// Axiom. La clave ausente, vacía o "axiom" se acepta en silencio.
+func ignoredPersona(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var value string
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return ""
+	}
+	value = strings.TrimSpace(value)
+	if value == "" || value == "axiom" {
+		return ""
+	}
+	return value
 }
 
 // Path returns the absolute path to the canonical Axiom state file for the given home directory.
@@ -283,7 +297,7 @@ func (s InstallState) RestoreSelection(selection *model.Selection) {
 // MergeAgents returns a new InstallState that combines existing with the
 // provided newAgents. The new agents are appended to existing.InstalledAgents
 // with deduplication. All other persisted selections, including community
-// tools, model assignments, and persona, are preserved from existing.
+// tools and model assignments, are preserved from existing.
 //
 // This is the correct operation for an incremental `--agent X` install: the
 // caller loads the persisted state, calls MergeAgents, and writes the result
@@ -326,8 +340,6 @@ func MergeAgents(existing InstallState, newAgents []string) InstallState {
 		CodexOrchestratorAssignment: existing.CodexOrchestratorAssignment,
 		CodexCarrilModelAssignments: existing.CodexCarrilModelAssignments,
 		CodexPhaseModelAssignments:  existing.CodexPhaseModelAssignments,
-		Persona:                     existing.Persona,
-		PersonaPresent:              existing.PersonaPresent,
 		LastUpdateCheck:             existing.LastUpdateCheck,
 		PendingSync:                 existing.PendingSync,
 

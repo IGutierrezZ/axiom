@@ -30,12 +30,11 @@ func TestMergeExplicitAgentInstallStatePreservesExistingAssignmentsWhenFreshStat
 		CodexPhaseModelAssignments: map[string]string{
 			"sdd-verify": "gpt-5.4",
 		},
-		Persona: "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write: %v", err)
 	}
 
-	merged, err := mergeExplicitAgentInstallState(state.GlobalStore(home), state.InstallState{InstalledAgents: []string{"codex"}, Persona: "gentleman"}, []string{"codex"}, InstallFlags{})
+	merged, err := mergeExplicitAgentInstallState(state.GlobalStore(home), state.InstallState{InstalledAgents: []string{"codex"}}, []string{"codex"}, InstallFlags{})
 	if err != nil {
 		t.Fatalf("mergeExplicitAgentInstallState() error = %v, want nil", err)
 	}
@@ -57,23 +56,20 @@ func TestMergeExplicitAgentInstallStatePreservesExistingAssignmentsWhenFreshStat
 	if merged.CodexPhaseModelAssignments["sdd-verify"] != "gpt-5.4" {
 		t.Fatalf("CodexPhaseModelAssignments not preserved: %#v", merged.CodexPhaseModelAssignments)
 	}
-	if merged.Persona != "neutral" {
-		t.Fatalf("Persona = %q, want existing neutral", merged.Persona)
-	}
 }
 
 func TestMergeExplicitAgentInstallStateMergesOnlyExplicitSelectionField(t *testing.T) {
-	original := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}, Preset: model.PresetCustom, SDDMode: model.SDDModeSingle, StrictTDD: true, Persona: "neutral"}
-	fresh := state.InstallState{InstalledAgents: []string{"codex"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, Preset: model.PresetFullGentleman, SDDMode: model.SDDModeMulti, Persona: "gentleman"}
-	cases := []InstallFlags{{Components: []string{"sdd"}}, {Skills: []string{"sdd-init"}}, {Preset: "full-gentleman"}, {SDDMode: "multi"}, {Persona: "gentleman"}}
-	wants := []string{"[sdd]|[comment-writer]|custom|single|true|neutral", "[engram]|[sdd-init]|custom|single|true|neutral", "[engram]|[comment-writer]|full-gentleman|single|true|neutral", "[engram]|[comment-writer]|custom|multi|true|neutral", "[engram]|[comment-writer]|custom|single|true|gentleman"}
+	original := state.InstallState{InstalledAgents: []string{"opencode"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentEngram}, Skills: []model.SkillID{model.SkillCommentWriter}, Preset: model.PresetCustom, SDDMode: model.SDDModeSingle, StrictTDD: true}
+	fresh := state.InstallState{InstalledAgents: []string{"codex"}, SelectionConfigured: true, Components: []model.ComponentID{model.ComponentSDD}, Skills: []model.SkillID{model.SkillSDDInit}, Preset: model.PresetFullGentleman, SDDMode: model.SDDModeMulti}
+	cases := []InstallFlags{{Components: []string{"sdd"}}, {Skills: []string{"sdd-init"}}, {Preset: "full-gentleman"}, {SDDMode: "multi"}}
+	wants := []string{"[sdd]|[comment-writer]|custom|single|true", "[engram]|[sdd-init]|custom|single|true", "[engram]|[comment-writer]|full-gentleman|single|true", "[engram]|[comment-writer]|custom|multi|true"}
 	for i, flags := range cases {
 		home := t.TempDir()
 		if err := state.Write(home, original); err != nil {
 			t.Fatal(err)
 		}
 		got, err := mergeExplicitAgentInstallState(state.GlobalStore(home), fresh, []string{"codex"}, flags)
-		if key := fmt.Sprintf("%v|%v|%s|%s|%t|%s", got.Components, got.Skills, got.Preset, got.SDDMode, got.StrictTDD, got.Persona); err != nil || key != wants[i] {
+		if key := fmt.Sprintf("%v|%v|%s|%s|%t", got.Components, got.Skills, got.Preset, got.SDDMode, got.StrictTDD); err != nil || key != wants[i] {
 			t.Errorf("flags %#v merged selection %s, err %v", flags, key, err)
 		}
 	}
@@ -129,7 +125,6 @@ func TestMergeExplicitAgentInstallStatePreservesFreshAssignments(t *testing.T) {
 		CodexPhaseModelAssignments: map[string]string{
 			"sdd-apply": "gpt-5.4",
 		},
-		Persona: "gentleman",
 	}
 
 	merged, err := mergeExplicitAgentInstallState(state.GlobalStore(home), fresh, []string{"codex"}, InstallFlags{})
@@ -147,9 +142,6 @@ func TestMergeExplicitAgentInstallStatePreservesFreshAssignments(t *testing.T) {
 	}
 	if merged.CodexPhaseModelAssignments["sdd-apply"] != "gpt-5.4" {
 		t.Fatalf("CodexPhaseModelAssignments not preserved: %#v", merged.CodexPhaseModelAssignments)
-	}
-	if merged.Persona != "gentleman" {
-		t.Fatalf("Persona = %q, want gentleman", merged.Persona)
 	}
 }
 

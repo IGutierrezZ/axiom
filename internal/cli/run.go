@@ -333,7 +333,6 @@ func runInstall(flags InstallFlags, input InstallInput, detection system.Detecti
 		CodexCarrilModelAssignments: input.Selection.CodexCarrilModelAssignments,
 		CodexPhaseModelAssignments:  input.Selection.CodexPhaseModelAssignments,
 		ModelAssignments:            modelAssignmentsToState(input.Selection.ModelAssignments),
-		Persona:                     string(input.Selection.Persona),
 	}
 	newState.SetSelection(input.Selection)
 	if background.Persist != "" {
@@ -395,7 +394,7 @@ func mergeFullInstallState(existing, fresh state.InstallState) state.InstallStat
 	}
 	merged.CodexOrchestratorAssignment = fresh.CodexOrchestratorAssignment
 	merged.CodexCarrilModelAssignments, merged.CodexPhaseModelAssignments = fresh.CodexCarrilModelAssignments, fresh.CodexPhaseModelAssignments
-	merged.ModelAssignments, merged.Persona = fresh.ModelAssignments, fresh.Persona
+	merged.ModelAssignments = fresh.ModelAssignments
 	if fresh.BackgroundIntent != "" {
 		merged.BackgroundIntent = fresh.BackgroundIntent
 	}
@@ -466,9 +465,6 @@ func mergeExplicitAgentInstallState(store state.Store, newState state.InstallSta
 		if flags.SDDMode != "" {
 			merged.SDDMode = newState.SDDMode
 		}
-	}
-	if flags.Persona != "" || merged.Persona == "" {
-		merged.Persona = newState.Persona
 	}
 	if newState.BackgroundIntent != "" {
 		merged.BackgroundIntent = newState.BackgroundIntent
@@ -1789,14 +1785,14 @@ func (s componentApplyStep) Run() error {
 		for _, adapter := range adapters {
 			if adapter.Agent() == model.AgentPi {
 				for _, rootDir := range piPersonaConfigRoots(s.homeDir, s.workspaceDir, s.scope) {
-					if _, err := persona.InjectPiPersona(rootDir, s.selection.Persona); err != nil {
+					if _, err := persona.InjectPiPersona(rootDir); err != nil {
 						return fmt.Errorf("inject persona for %q: %w", adapter.Agent(), err)
 					}
 				}
 				continue
 			}
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
-			if _, err := persona.Inject(targetDir, adapter, s.selection.Persona); err != nil {
+			if _, err := persona.Inject(targetDir, adapter); err != nil {
 				return fmt.Errorf("inject persona for %q: %w", adapter.Agent(), err)
 			}
 		}
@@ -2156,7 +2152,7 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 		// selected one, so a failed persona switch can restore the file its
 		// cleanup removed. Backup-only: verification stays on the selected file.
 		if component == model.ComponentPersona {
-			plan := persona.ResourcePlanFor(selection.Persona)
+			plan := persona.ResourcePlanFor()
 			for _, adapter := range adapters {
 				if adapter.Agent() == model.AgentOpenCode {
 					// Persona can merge or clean a managed agent in settings during
@@ -2530,9 +2526,6 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				}
 			}
 		case model.ComponentPersona:
-			if selection.Persona == model.PersonaCustom {
-				break
-			}
 			if adapter.Agent() == model.AgentPi {
 				paths = append(paths, piPersonaConfigPaths(homeDir, workspaceDir, scope)...)
 				break
@@ -2541,7 +2534,7 @@ func componentPathsWithWorkspaceScoped(homeDir, workspaceDir string, scope Insta
 				paths = append(paths, adapter.SystemPromptFile(targetDir))
 			}
 			if adapter.SupportsOutputStyles() {
-				if stylePaths := persona.ResourcePlanFor(selection.Persona).OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
+				if stylePaths := persona.ResourcePlanFor().OutputStylePaths(adapter.OutputStyleDir(targetDir)); stylePaths.Write != "" {
 					paths = append(paths, stylePaths.Write)
 					if p := adapter.SettingsPath(targetDir); p != "" {
 						paths = append(paths, p)

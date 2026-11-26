@@ -169,7 +169,6 @@ func TestRunSyncWorkspaceLeavesHomeUntouched(t *testing.T) {
 		Agents:     []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentSkills},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {
 		t.Fatalf("RunSyncWithSelectionScoped() error = %v", err)

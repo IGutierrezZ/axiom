@@ -1,7 +1,6 @@
 package persona
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -26,20 +25,13 @@ func PiPersonaConfigPath(rootDir string) string {
 	return filepath.Join(rootDir, ".pi", "gentle-ai", "persona.json")
 }
 
-// InjectPiPersona writes the small runtime config consumed by gentle-pi.
-// Custom personas remain user-owned and therefore intentionally do nothing.
-func InjectPiPersona(rootDir string, persona model.PersonaID) (InjectionResult, error) {
+// InjectPiPersona writes the small runtime config consumed by gentle-pi. El
+// modo es siempre el de Axiom.
+func InjectPiPersona(rootDir string) (InjectionResult, error) {
 	if strings.TrimSpace(rootDir) == "" {
 		return InjectionResult{}, fmt.Errorf("Pi persona root must not be empty")
 	}
-	if persona == model.PersonaCustom {
-		return InjectionResult{}, nil
-	}
-
-	mode := string(persona)
-	if mode == "" {
-		mode = string(model.PersonaGentleman)
-	}
+	mode := "axiom"
 	content, err := json.MarshalIndent(struct {
 		Mode string `json:"mode"`
 	}{Mode: mode}, "", "  ")
@@ -62,50 +54,28 @@ func outputStyleOverlayJSON(name string) []byte {
 	return []byte(fmt.Sprintf("{\n  \"outputStyle\": %q\n}\n", name))
 }
 
-// openCodeAgentOverlayJSON defines the Tab-switchable persona agent for OpenCode.
-// SDD is installed separately by the SDD component as "gentle-orchestrator";
-// persona injection must not create legacy SDD conductor keys.
-var openCodeAgentOverlayJSON = []byte("{\n  \"agent\": {\n    \"gentleman\": {\n      \"mode\": \"primary\",\n      \"description\": \"Senior Architect mentor - helpful first, challenging when it matters\",\n      \"prompt\": \"{file:./AGENTS.md}\"\n    }\n  }\n}\n")
-
-// Inject performs a full persona injection: the marker-bound markdown block,
-// the OpenCode `gentleman` agent definition in settings JSON, AND
-// the Claude Code output-style overlay. Used by `gentle-ai install`.
-func Inject(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
-	return injectInternal(homeDir, adapter, persona, false)
+// Inject applies the Axiom persona: the marker-bound markdown block, the
+// retirement of a residual OpenCode `agent.gentleman` key and the Claude Code
+// output-style overlay. Used by `axiom install`.
+func Inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
+	return inject(homeDir, adapter)
 }
 
-// InjectForSync regenerates the persona assets that `gentle-ai sync` is
-// allowed to touch. It writes:
-//   - The marker-bound persona block in the agent's prompt file (markdown).
-//   - The Gentleman output-style file + outputStyle settings overlay (Claude
-//     Code only — no conflict with other components).
-//
-// It deliberately skips the OpenCode `gentleman` agent definition in
-// opencode.json: that JSON merge shares the "agent" key with
-// SDD's gentle-orchestrator overlay, so running both in the same sync clobbers
-// each other's entries and breaks idempotency. That overlay remains an
-// install-only concern.
-func InjectForSync(homeDir string, adapter agents.Adapter, persona model.PersonaID) (InjectionResult, error) {
-	return injectInternal(homeDir, adapter, persona, true)
+// InjectForSync regenerates the persona assets `axiom sync` manages. Install and
+// sync apply the same persona, so it delegates to Inject.
+func InjectForSync(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
+	return inject(homeDir, adapter)
 }
 
-// syncManaged is the internal flag previously called `markdownOnly`.
-// When true the OpenCode agent overlay is skipped (see InjectForSync).
-func injectInternal(homeDir string, adapter agents.Adapter, persona model.PersonaID, syncManaged bool) (InjectionResult, error) {
-	persona = canonicalPersona(persona)
+func inject(homeDir string, adapter agents.Adapter) (InjectionResult, error) {
 	if !adapter.SupportsSystemPrompt() {
-		return InjectionResult{}, nil
-	}
-
-	// Custom persona does nothing — user keeps their own config.
-	if persona == model.PersonaCustom {
 		return InjectionResult{}, nil
 	}
 
 	files := make([]string, 0, 3)
 	changed := false
 
-	content := personaContent(adapter.Agent(), persona, residualChannel(adapter))
+	content := personaContent(adapter.Agent(), residualChannel(adapter))
 	if content == "" {
 		return InjectionResult{}, nil
 	}
@@ -120,16 +90,8 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 			return InjectionResult{}, err
 		}
 
-		// Auto-heal: strip any legacy free-text Gentleman persona block that was
-		// written before the marker-based injection system existed. This is safe
-		// for StrategyMarkdownSections because InjectMarkdownSection preserves
-		// all existing marker sections — only the unmarked free-text preamble is
-		// removed, and StripLegacyPersonaBlock requires ALL three fingerprints
-		// to be present in the pre-marker zone before stripping.
-		healed := filemerge.StripLegacyPersonaBlock(existing)
-
-		// Also strip legacy Agent Teams Lite block (standalone ATL installer leftover).
-		healed = filemerge.StripLegacyATLBlock(healed)
+		// Strip legacy Agent Teams Lite block (standalone ATL installer leftover).
+		healed := filemerge.StripLegacyATLBlock(existing)
 
 		updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
@@ -149,20 +111,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 				return InjectionResult{}, err
 			}
 
-			healed := existing
-
-			// Only strip legacy persona when a managed persona section already
-			// exists — that is the only strong proof the pre-marker content is
-			// stale installer output, not user-authored content.
-			if shouldStripManagedLegacyPersona(existing) {
-				healed = filemerge.StripLegacyPersonaBlock(existing)
-			} else if isExactLegacyPersonaAsset(existing) {
-				// The file is byte-for-byte the old installer asset with no
-				// markers. Safe to replace entirely — no user content to lose.
-				healed = ""
-			}
-
-			healed = filemerge.StripLegacyATLBlock(healed)
+			healed := filemerge.StripLegacyATLBlock(existing)
 			updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 			writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
@@ -174,21 +123,16 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 			break
 		}
 
-		// For non-Gentleman personas (e.g. neutral), the content is just a short
-		// one-liner. Writing ONLY that content would destroy any SDD/engram
-		// sections that are injected later in the pipeline. Instead, we write the
-		// persona content as the base and let subsequent inject steps (SDD, engram)
-		// append their sections. For Gentleman, the content is the full persona
-		// asset which is safe to write as-is.
-		//
-		// If the file already exists and has managed sections (SDD, engram), we
-		// must preserve them — replace only the persona portion at the top.
+		// Escribir solo el contenido de la persona destruiría las secciones de
+		// SDD/Engram que se inyectan después en el pipeline. Si el fichero ya existe
+		// y tiene secciones gestionadas, se conservan y solo se sustituye la parte
+		// de la persona al principio.
 		existing, readErr := readFileOrEmpty(promptPath)
 		if readErr != nil {
 			return InjectionResult{}, readErr
 		}
 
-		if preserved, ok := preserveManagedSections(existing, content, persona); ok {
+		if preserved, ok := preserveManagedSections(existing, content); ok {
 			writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(preserved), 0o644)
 			if err != nil {
 				return InjectionResult{}, err
@@ -208,28 +152,14 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 	case model.StrategyInstructionsFile:
 		promptPath := adapter.SystemPromptFile(homeDir)
 
-		// Auto-heal: remove any stale Gentleman persona content left at the
-		// old VSCode path (~/.github/copilot-instructions.md) that was written
-		// by an older installer version.  VS Code still reads that path for
-		// global instructions, so the two files would conflict.
-		//
-		// En un proyecto no se aplica: .github/copilot-instructions.md es del equipo
-		// y Axiom nunca escribió ahí, así que no se retira ni siquiera si su texto
-		// se parece a la persona.
-		if scoped, inProject := adapter.(agents.WorkspaceScopedProvider); !inProject || !scoped.InWorkspace(homeDir) {
-			if cleaned, cleanErr := cleanLegacyVSCodePersona(homeDir); cleanErr == nil && cleaned {
-				changed = true
-			}
-		}
-
-		// For non-Gentleman personas, preserve managed sections (same logic
-		// as StrategyFileReplace above).
+		// Se conservan las secciones gestionadas (misma lógica que en
+		// StrategyFileReplace).
 		existing, readErr := readFileOrEmpty(promptPath)
 		if readErr != nil {
 			return InjectionResult{}, readErr
 		}
 
-		if preserved, ok := preserveManagedSections(existing, wrapInstructionsFile(content), persona); ok {
+		if preserved, ok := preserveManagedSections(existing, wrapInstructionsFile(content)); ok {
 			writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(preserved), 0o644)
 			if err != nil {
 				return InjectionResult{}, err
@@ -262,8 +192,7 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		// Append-style agents still need marker-bound persona sections so sync can
 		// replace managed content without duplicating it or disturbing user-authored
 		// rules in the shared prompt file.
-		healed := filemerge.StripLegacyPersonaBlock(existing)
-		healed = filemerge.StripLegacyATLBlock(healed)
+		healed := filemerge.StripLegacyATLBlock(existing)
 		updated := filemerge.InjectMarkdownSection(healed, filemerge.PersonaSectionID, content)
 
 		writeResult, err := filemerge.WriteFileAtomic(promptPath, []byte(updated), 0o644)
@@ -275,58 +204,30 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 
 	}
 
-	// 2. OpenCode agent definitions — Tab-switchable agents in settings.
-	// Gentleman overlay creation remains install-only because this overlay shares
-	// the "agent" key in opencode.json with SDD's gentle-orchestrator overlay.
-	// Sync only performs narrow cleanup: OpenCode removes stale gentleman tools,
-	// while non-gentleman personas remove agent.gentleman entirely.
-	if (adapter.Agent() == model.AgentOpenCode) && persona != model.PersonaCustom {
+	// 2. OpenCode: la persona de Axiom no define agente propio, así que se retira
+	// el agent.gentleman residual de una instalación anterior. Solo se borra la
+	// subclave "gentleman": el resto de agentes del usuario se conservan.
+	if adapter.Agent() == model.AgentOpenCode {
 		settingsPath := adapter.SettingsPath(homeDir)
 		if settingsPath != "" {
-			if isGentlemanConversationPersona(persona) {
-				if !syncManaged {
-					overlay, managedAgentNames := openCodeAgentOverlayJSON, []string{"gentleman"}
-					agentResult, err := mergeJSONFile(settingsPath, overlay, managedAgentNames...)
-					if err != nil {
-						return InjectionResult{}, err
-					}
-					changed = changed || agentResult.Changed
-					files = append(files, settingsPath)
-				}
-				if syncManaged && adapter.Agent() == model.AgentOpenCode {
-					cleanupResult, err := removeJSONAgentTools(settingsPath, "gentleman")
-					if err != nil {
-						return InjectionResult{}, fmt.Errorf("clean stale gentleman tools from settings: %w", err)
-					}
-					changed = changed || cleanupResult.Changed
-					if cleanupResult.Changed {
-						files = append(files, settingsPath)
-					}
-				}
-			} else {
-				// Non-gentleman: remove any residual agent.gentleman key left by a
-				// previous gentleman install. Only the "gentleman" sub-key is removed
-				// from within "agent" — other user-defined agents are preserved.
-				removed, err := removeJSONNestedSubKey(settingsPath, "agent", "gentleman")
-				if err != nil {
-					return InjectionResult{}, fmt.Errorf("clean agent.gentleman from settings: %w", err)
-				}
-				if removed {
-					changed = true
-					files = append(files, settingsPath)
-				}
+			removed, err := removeJSONNestedSubKey(settingsPath, "agent", "gentleman")
+			if err != nil {
+				return InjectionResult{}, fmt.Errorf("clean agent.gentleman from settings: %w", err)
+			}
+			if removed {
+				changed = true
+				files = append(files, settingsPath)
 			}
 		}
 	}
 
-	// 3. Write the selected managed output style, then remove only the retired
-	// resources declared by the persona plan. The backup/verify callers derive
-	// their paths from this same plan.
-	plan := ResourcePlanFor(persona)
-	style, selectedStyle := plan.OutputStyle()
+	// 3. Write the managed output style. The backup/verify callers derive their
+	// paths from the same plan.
+	plan := ResourcePlanFor()
+	style := plan.OutputStyle()
 	if adapter.SupportsOutputStyles() {
 		stylePaths := plan.OutputStylePaths(adapter.OutputStyleDir(homeDir))
-		if selectedStyle && stylePaths.Write != "" {
+		if stylePaths.Write != "" {
 			styleResult, err := filemerge.WriteFileAtomic(stylePaths.Write, []byte(assets.MustRead(style.AssetPath)), 0o644)
 			if err != nil {
 				return InjectionResult{}, err
@@ -336,85 +237,17 @@ func injectInternal(homeDir string, adapter agents.Adapter, persona model.Person
 		}
 
 		settingsPath := adapter.SettingsPath(homeDir)
-		if selectedStyle && settingsPath != "" {
-			var settingsResult filemerge.WriteResult
-			var err error
-			if persona == model.PersonaNeutral {
-				settingsResult, err = mergeJSONFileToleratingMalformed(settingsPath, outputStyleOverlayJSON(style.Name))
-			} else {
-				settingsResult, err = mergeJSONFile(settingsPath, outputStyleOverlayJSON(style.Name))
-			}
+		if settingsPath != "" {
+			settingsResult, err := mergeJSONFile(settingsPath, outputStyleOverlayJSON(style.Name))
 			if err != nil {
 				return InjectionResult{}, err
 			}
 			changed = changed || settingsResult.Changed
 			files = append(files, settingsPath)
-		} else if settingsPath != "" {
-			removed, err := removeJSONKeyIfValue(settingsPath, "outputStyle", "Gentleman")
-			if err != nil {
-				return InjectionResult{}, fmt.Errorf("clean outputStyle from settings: %w", err)
-			}
-			if removed {
-				changed = true
-				files = append(files, settingsPath)
-			}
-		}
-
-		for _, retiredPath := range stylePaths.Remove {
-			styleRemoved, err := removeFileAtomic(retiredPath)
-			if err != nil {
-				return InjectionResult{}, fmt.Errorf("remove retired output style: %w", err)
-			}
-			if styleRemoved {
-				changed = true
-				files = append(files, retiredPath)
-			}
 		}
 	}
 
 	return InjectionResult{Changed: changed, Files: files}, nil
-}
-
-// shouldStripManagedLegacyPersona returns true ONLY when the existing file
-// already contains a <!-- gentle-ai:persona --> section. That is the strongest
-// evidence that the pre-marker persona content is stale legacy text written by
-// an older installer, not user-authored content that happens to share headings.
-//
-// We intentionally do NOT trigger on ATL markers, engram markers, sdd markers,
-// or any other managed marker — their presence does not prove that the
-// pre-marker content is installer-owned.
-// isExactLegacyPersonaAsset returns true when the file content is an exact
-// match of one of the known persona assets (gentleman or neutral). This handles
-// the case where an old installer wrote the asset as the entire file with no
-// markers — we can safely replace it because there is zero user content.
-func isExactLegacyPersonaAsset(existing string) bool {
-	trimmed := strings.TrimSpace(existing)
-	if trimmed == "" {
-		return false
-	}
-	for _, assetPath := range []string{
-		"opencode/persona-gentleman.md",
-		"generic/persona-gentleman.md",
-		"generic/persona-neutral.md",
-	} {
-		asset := strings.TrimSpace(assets.MustRead(assetPath))
-		if trimmed == asset {
-			return true
-		}
-	}
-	return false
-}
-
-func shouldStripManagedLegacyPersona(existing string) bool {
-	return strings.Contains(existing, "<!-- axiom:persona -->") || strings.Contains(existing, "<!-- gentle-ai:persona -->")
-}
-
-// isGentlemanConversationPersona reports whether the persona keeps the voseo
-// conversation tone. The gentleman-neutral-artifacts legacy alias is remapped
-// to neutral (cli.normalizePersona in internal/cli/validate.go, mirrored at
-// the injectInternal entry) and is intentionally NOT gentleman here.
-func isGentlemanConversationPersona(persona model.PersonaID) bool {
-	return persona == model.PersonaGentleman
 }
 
 // residualChannel reports whether the adapter already delivers tone/language/
@@ -425,22 +258,8 @@ func residualChannel(adapter agents.Adapter) bool {
 	return adapter.SupportsOutputStyles()
 }
 
-// personaContent returns the persona asset for the given agent and persona.
-func personaContent(agent model.AgentID, persona model.PersonaID, residualContentAvailable bool) string {
-	persona = canonicalPersona(persona)
-	switch persona {
-	case model.PersonaAxiom:
-		return axiomPersonaContent(agent, residualContentAvailable)
-	case model.PersonaNeutral:
-		return neutralPersonaContent(agent, residualContentAvailable)
-	case model.PersonaCustom:
-		return ""
-	default:
-		return gentlemanPersonaContent(agent)
-	}
-}
-
-func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
+// personaContent returns the Axiom persona asset for the given agent.
+func personaContent(agent model.AgentID, residualContentAvailable bool) string {
 	if residualContentAvailable {
 		switch agent {
 		case model.AgentClaudeCode:
@@ -455,76 +274,17 @@ func axiomPersonaContent(agent model.AgentID, residualContentAvailable bool) str
 	}
 }
 
-func neutralPersonaContent(agent model.AgentID, residualContentAvailable bool) string {
-	if residualContentAvailable {
-		switch agent {
-		case model.AgentClaudeCode:
-			return assets.MustRead("claude/persona-neutral-residual.md")
-		}
-	}
-	return assets.MustRead("generic/persona-neutral.md")
-}
-
-func gentlemanPersonaContent(agent model.AgentID) string {
-	// Claude Gentleman assets are already residual/slim in place; unlike
-	// Neutral, there is no separate residual variant to choose here.
-	switch agent {
-	case model.AgentClaudeCode:
-		return assets.MustRead("claude/persona-gentleman.md")
-	case model.AgentOpenCode:
-		return assets.MustRead("opencode/persona-gentleman.md")
-	default:
-		return assets.MustRead("generic/persona-gentleman.md")
-	}
-}
-
-func mergeJSONFile(path string, overlay []byte, managedAgentNames ...string) (filemerge.WriteResult, error) {
+func mergeJSONFile(path string, overlay []byte) (filemerge.WriteResult, error) {
 	baseJSON, err := osReadFile(path)
 	if err != nil {
 		return filemerge.WriteResult{}, err
 	}
-	if len(managedAgentNames) > 0 {
-		baseJSON, err = filemerge.RemoveJSONAgentTools(baseJSON, managedAgentNames...)
-		if err != nil {
-			return filemerge.WriteResult{}, err
-		}
-	}
-
 	merged, err := filemerge.MergeJSONObjectsForPath(path, baseJSON, overlay)
 	if err != nil {
 		return filemerge.WriteResult{}, err
 	}
 
 	return filemerge.WriteFileAtomic(path, merged, 0o644)
-}
-
-func removeJSONAgentTools(path string, names ...string) (filemerge.WriteResult, error) {
-	baseJSON, err := osReadFile(path)
-	if err != nil {
-		return filemerge.WriteResult{}, err
-	}
-	if baseJSON == nil {
-		return filemerge.WriteResult{}, nil
-	}
-	cleaned, err := filemerge.RemoveJSONAgentTools(baseJSON, names...)
-	if err != nil {
-		return filemerge.WriteResult{}, err
-	}
-	if bytes.Equal(cleaned, baseJSON) {
-		return filemerge.WriteResult{}, nil
-	}
-	return filemerge.WriteFileAtomic(path, cleaned, 0o644)
-}
-
-func mergeJSONFileToleratingMalformed(path string, overlay []byte) (filemerge.WriteResult, error) {
-	result, err := mergeJSONFile(path, overlay)
-	if err == nil {
-		return result, nil
-	}
-	if strings.Contains(err.Error(), "invalid character") || strings.Contains(err.Error(), "unexpected end of JSON") {
-		return filemerge.WriteResult{}, nil
-	}
-	return filemerge.WriteResult{}, err
 }
 
 var osReadFile = func(path string) ([]byte, error) {
@@ -543,9 +303,9 @@ var osReadFile = func(path string) ([]byte, error) {
 // gentle-ai managed sections (SDD orchestrator, engram protocol, etc.) and
 // returns new content that preserves those sections while replacing only the
 // persona text before them. Returns ("", false) when no preservation is needed
-// (empty file, Gentleman persona, or no managed markers found).
-func preserveManagedSections(existing, newPersona string, persona model.PersonaID) (string, bool) {
-	if existing == "" || isGentlemanConversationPersona(persona) {
+// (empty file or no managed markers found).
+func preserveManagedSections(existing, newPersona string) (string, bool) {
+	if existing == "" {
 		return "", false
 	}
 
@@ -602,99 +362,6 @@ func wrapInstructionsFile(content string) string {
 	return frontmatter + content
 }
 
-// isLegacyUnwrappedPersona reports whether content is a Gentleman persona
-// file written by an older installer version without YAML frontmatter.
-// Requires ALL fingerprints to match (not just one) to reduce false positives.
-// This is only used for legacy path cleanup (e.g. ~/.github/copilot-instructions.md)
-// where the file is at a known old installer path — the combination of legacy
-// path + all fingerprints is strong enough evidence of installer ownership.
-func isLegacyUnwrappedPersona(content string) bool {
-	if strings.HasPrefix(content, "---\n") {
-		// Already has YAML frontmatter — not a legacy file.
-		return false
-	}
-	// Require ALL fingerprints — a user is unlikely to have all of these
-	// exact strings in a hand-written file at the old legacy path.
-	personaFingerprints := []string{
-		"## Personality",
-		"Senior Architect",
-	}
-	for _, fp := range personaFingerprints {
-		if !strings.Contains(content, fp) {
-			return false
-		}
-	}
-	return true
-}
-
-// legacyVSCodePersonaPaths returns the old VS Code persona file paths that may
-// contain stale Gentleman persona content from older installer versions.
-// These paths are no longer written by the current installer but may still
-// be read by VS Code, causing conflicting instructions.
-func legacyVSCodePersonaPaths(homeDir string) []string {
-	return []string{
-		// v1 path: wrote raw persona to ~/.github/copilot-instructions.md
-		filepath.Join(homeDir, ".github", "copilot-instructions.md"),
-	}
-}
-
-// removeFileAtomic removes path if it exists. Returns true when the file was
-// present and successfully deleted, false when it did not exist. Any other
-// OS-level error is returned as-is.
-func removeFileAtomic(path string) (bool, error) {
-	err := os.Remove(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-// removeJSONKeyIfValue reads the JSON object at path, removes the top-level key
-// only when its current string value equals wantValue, and writes the result
-// back atomically. Returns true when the key was actually removed.
-// If the file does not exist, the key is absent, or the value differs, it is
-// a no-op and returns false.
-func removeJSONKeyIfValue(path, key, wantValue string) (bool, error) {
-	raw, err := osReadFile(path)
-	if err != nil {
-		return false, err
-	}
-	if len(raw) == 0 {
-		return false, nil
-	}
-
-	root := map[string]any{}
-	if err := json.Unmarshal(raw, &root); err != nil {
-		// Malformed settings — leave untouched to avoid data loss.
-		return false, nil
-	}
-
-	current, ok := root[key]
-	if !ok {
-		return false, nil
-	}
-	if current != wantValue {
-		// User has a different value — do not touch it.
-		return false, nil
-	}
-
-	delete(root, key)
-
-	encoded, err := json.MarshalIndent(root, "", "  ")
-	if err != nil {
-		return false, fmt.Errorf("marshal settings after cleanup: %w", err)
-	}
-	encoded = append(encoded, '\n')
-
-	if _, err := filemerge.WriteFileAtomic(path, encoded, 0o644); err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // removeJSONNestedSubKey reads the JSON object at path and removes subKey from
 // within the top-level parentKey object. Only the named subKey is deleted —
 // sibling keys inside parentKey are preserved. If the file does not exist, the
@@ -742,33 +409,4 @@ func removeJSONNestedSubKey(path, parentKey, subKey string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-// cleanLegacyVSCodePersona removes Gentleman persona content from any old VS Code
-// persona file paths that are no longer written by the current installer.
-// Only files that contain clear Gentleman persona fingerprints are removed —
-// files with user-written content are left untouched.
-// Returns true if at least one file was cleaned.
-func cleanLegacyVSCodePersona(homeDir string) (bool, error) {
-	cleaned := false
-	for _, oldPath := range legacyVSCodePersonaPaths(homeDir) {
-		data, err := os.ReadFile(oldPath)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return cleaned, fmt.Errorf("read legacy vscode persona %q: %w", oldPath, err)
-		}
-
-		if !isLegacyUnwrappedPersona(string(data)) {
-			// File exists but doesn't look like a Gentleman persona — leave it alone.
-			continue
-		}
-
-		if err := os.Remove(oldPath); err != nil && !os.IsNotExist(err) {
-			return cleaned, fmt.Errorf("remove legacy vscode persona %q: %w", oldPath, err)
-		}
-		cleaned = true
-	}
-	return cleaned, nil
 }

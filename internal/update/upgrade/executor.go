@@ -211,10 +211,6 @@ func managedAgentBackupPaths(homeDir string, adapter agents.Adapter, diagnostics
 		add(adapter.MCPConfigPath(homeDir, "engram"), adapter.MCPConfigPath(homeDir, "context7"))
 	}
 
-	if adapter.SupportsOutputStyles() {
-		add(filepath.Join(adapter.OutputStyleDir(homeDir), "gentleman.md"))
-	}
-
 	if adapter.SupportsSlashCommands() {
 		add(sdd.SlashCommandPaths(adapter.Agent(), adapter.CommandsDir(homeDir))...)
 	}

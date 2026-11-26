@@ -201,7 +201,6 @@ func writeWorkspaceRootSyncState(t *testing.T, home string) {
 		InstalledAgents:     []string{"claude-code"},
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentEngram},
-		Persona:             "neutral",
 	}); err != nil {
 		t.Fatalf("state.Write() error = %v", err)
 	}
@@ -266,7 +265,6 @@ func TestRunSyncWithSelectionScopedExplicitWorkspaceDirWins(t *testing.T) {
 	selection := model.Selection{
 		Agents:     []model.AgentID{model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentEngram},
-		Persona:    model.PersonaNeutral,
 	}
 
 	result, err := RunSyncWithSelectionScoped(home, sub, ScopeWorkspace, selection)

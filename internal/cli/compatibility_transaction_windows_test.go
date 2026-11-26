@@ -29,7 +29,6 @@ func windowsCompatibilitySelection() model.Selection {
 		Agents:     []model.AgentID{model.AgentOpenCode},
 		Components: []model.ComponentID{model.ComponentSkills},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 }
 

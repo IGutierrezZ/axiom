@@ -40,7 +40,7 @@ func TestClearPendingSyncAfterDeferredSyncReReadsLatestStateUnderLock(t *testing
 	if err := clearPendingSyncAfterDeferredSync(home, state.InstallState{PendingSync: true}); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
 		t.Fatalf("contended deferred-sync clear error = %v, want lock acquisition failure", err)
 	}
-	if err := state.Write(home, state.InstallState{PendingSync: true, LastUpdateCheck: &concurrentCheck, Persona: "concurrent"}); err != nil {
+	if err := state.Write(home, state.InstallState{PendingSync: true, LastUpdateCheck: &concurrentCheck, InstalledBinaryVersion: "9.9.9"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := held.Release(); err != nil {
@@ -57,7 +57,7 @@ func TestClearPendingSyncAfterDeferredSyncReReadsLatestStateUnderLock(t *testing
 	if got.PendingSync {
 		t.Errorf("PendingSync = true, want false after deferred sync")
 	}
-	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) || got.Persona != "concurrent" {
+	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) || got.InstalledBinaryVersion != "9.9.9" {
 		t.Fatalf("concurrent writer state was clobbered: %#v", got)
 	}
 }
@@ -72,7 +72,7 @@ func TestMarkPendingSyncAfterSelfUpdateReReadsLatestStateUnderLock(t *testing.T)
 	if err := markPendingSyncAfterSelfUpdate(home); err == nil || !strings.Contains(err.Error(), "acquire install state lock") {
 		t.Fatalf("contended self-update PendingSync set error = %v, want lock acquisition failure", err)
 	}
-	if err := state.Write(home, state.InstallState{LastUpdateCheck: &concurrentCheck, Persona: "concurrent"}); err != nil {
+	if err := state.Write(home, state.InstallState{LastUpdateCheck: &concurrentCheck, InstalledBinaryVersion: "9.9.9"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := held.Release(); err != nil {
@@ -89,7 +89,7 @@ func TestMarkPendingSyncAfterSelfUpdateReReadsLatestStateUnderLock(t *testing.T)
 	if !got.PendingSync {
 		t.Errorf("PendingSync = false, want true after self-update")
 	}
-	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) || got.Persona != "concurrent" {
+	if got.LastUpdateCheck == nil || !got.LastUpdateCheck.Equal(concurrentCheck) || got.InstalledBinaryVersion != "9.9.9" {
 		t.Fatalf("concurrent writer state was clobbered: %#v", got)
 	}
 }

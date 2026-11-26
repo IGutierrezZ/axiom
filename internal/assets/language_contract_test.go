@@ -55,15 +55,6 @@ func TestManagedDirectReplyAssetsEnforceEnglishNoCodeSwitching(t *testing.T) {
 		{name: "claude axiom persona", path: "claude/persona-axiom.md", combineWith: "claude/output-style-axiom.md"},
 		{name: "generic axiom persona", path: "generic/persona-axiom.md"},
 		{name: "opencode axiom persona", path: "opencode/persona-axiom.md"},
-		{name: "claude gentleman output style", path: "claude/output-style-gentleman.md"},
-		{name: "claude neutral output style", path: "claude/output-style-neutral.md"},
-		// Claude personas are residuals (Decision 1) — evaluate the
-		// combined persona-residual + output-style channel, not the persona
-		// file alone.
-		{name: "claude gentleman persona", path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
-		{name: "generic gentleman persona", path: "generic/persona-gentleman.md"},
-		{name: "generic neutral persona", path: "generic/persona-neutral.md"},
-		{name: "opencode gentleman persona", path: "opencode/persona-gentleman.md"},
 	}
 
 	for _, tc := range tests {
@@ -269,99 +260,6 @@ func TestCommentWriterLanguageContractSources(t *testing.T) {
 	}
 }
 
-func TestGentlemanPersonaKeepsDirectConversationVoice(t *testing.T) {
-	// Claude personas are residuals (Decision 1) — the direct-
-	// conversation voice now lives exclusively in the output style; evaluate
-	// the combined persona-residual + output-style channel for those two.
-	tests := []struct {
-		path        string
-		combineWith string
-	}{
-		{path: "claude/persona-gentleman.md", combineWith: "claude/output-style-gentleman.md"},
-		{path: "generic/persona-gentleman.md"},
-		{path: "opencode/persona-gentleman.md"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.path, func(t *testing.T) {
-			content := MustRead(tc.path)
-			if tc.combineWith != "" {
-				content += "\n" + MustRead(tc.combineWith)
-			}
-			for _, required := range []string{"Rioplatense", "voseo", "Passionate teacher"} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s (combined=%q) missing Gentleman direct-conversation voice marker %q", tc.path, tc.combineWith, required)
-				}
-			}
-		})
-	}
-}
-
-func TestNeutralPersonaAssetsProvideMentorParityWithoutRegionalVoice(t *testing.T) {
-	for _, path := range []string{
-		"generic/persona-neutral.md",
-	} {
-		t.Run(path, func(t *testing.T) {
-			content := resolveSharedOrchestratorSections(MustRead(path))
-			for _, required := range []string{
-				"Response-length contract",
-				"minimum useful response",
-				"Ask at most one question at a time",
-				"STOP and wait",
-				"Do not present option menus",
-				"verification",
-				"CONCEPTS > CODE",
-				"Generated technical artifacts default to English",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing neutral parity contract %q", path, required)
-				}
-			}
-
-			for _, banned := range []string{
-				"Rioplatense",
-				"voseo",
-				"Gentleman regional voice",
-				"When replying to the user in Spanish, use warm natural Rioplatense Spanish",
-			} {
-				if strings.Contains(content, banned) {
-					t.Fatalf("%s contains banned regional neutral wording %q", path, banned)
-				}
-			}
-		})
-	}
-}
-
-func TestNeutralOutputStyleAssetsProvideMeaningfulContract(t *testing.T) {
-	for _, path := range []string{
-		"claude/output-style-neutral.md",
-	} {
-		t.Run(path, func(t *testing.T) {
-			content := resolveSharedOrchestratorSections(MustRead(path))
-			if strings.TrimSpace(content) == "" {
-				t.Fatalf("%s is empty", path)
-			}
-			for _, required := range []string{
-				"Neutral Output Style",
-				"minimum useful response",
-				"Ask at most one question at a time",
-				"STOP",
-				"Do not offer option menus",
-				"verify",
-				"Generated technical artifacts default to English",
-			} {
-				if !strings.Contains(content, required) {
-					t.Fatalf("%s missing output-style contract %q", path, required)
-				}
-			}
-			for _, banned := range []string{"Rioplatense", "voseo", "Gentleman Output Style"} {
-				if strings.Contains(content, banned) {
-					t.Fatalf("%s contains banned neutral output-style wording %q", path, banned)
-				}
-			}
-		})
-	}
-}
-
 func allSDDOrchestratorAssetPaths(t *testing.T) []string {
 	t.Helper()
 	var paths []string
@@ -433,43 +331,6 @@ func readRepoRootFile(t *testing.T, rel string) string {
 		t.Fatalf("ReadFile(%q) error = %v", path, err)
 	}
 	return string(content)
-}
-
-const preWriteArtifactSelfCheckRequired = "Before any Write/Edit whose content is an artifact, re-verify the artifact language rules."
-
-const neutralToneDialectAntiDriftRequired = "The same rule applies to tone and dialect: do not adopt regional forms from memory context, prior turns, or quoted material."
-
-func TestPersonaChannelsCarryPreWriteArtifactSelfCheck(t *testing.T) {
-	paths := []string{
-		"claude/output-style-gentleman.md",
-		"claude/output-style-neutral.md",
-		"generic/persona-gentleman.md",
-		"generic/persona-neutral.md",
-		"opencode/persona-gentleman.md",
-	}
-	for _, path := range paths {
-		t.Run(path, func(t *testing.T) {
-			content := resolveSharedOrchestratorSections(MustRead(path))
-			if !strings.Contains(content, preWriteArtifactSelfCheckRequired) {
-				t.Fatalf("%s: missing pre-write artifact self-check sentence", path)
-			}
-		})
-	}
-}
-
-func TestNeutralChannelsExtendAntiDriftToToneAndDialect(t *testing.T) {
-	paths := []string{
-		"claude/output-style-neutral.md",
-		"generic/persona-neutral.md",
-	}
-	for _, path := range paths {
-		t.Run(path, func(t *testing.T) {
-			content := resolveSharedOrchestratorSections(MustRead(path))
-			if !strings.Contains(content, neutralToneDialectAntiDriftRequired) {
-				t.Fatalf("%s: missing tone/dialect anti-drift sentence", path)
-			}
-		})
-	}
 }
 
 func TestPersonaAxiomAssetsContract(t *testing.T) {

@@ -170,8 +170,6 @@ func resolveAdaptersScoped(scope InstallScope, workspaceDir string, agentIDs []m
 	return adapters
 }
 
-// noteIgnoredStateAgents avisa de los agentes que el estado guardaba y Axiom ya no
-// conoce (agentes retirados): el sync los ignora y sigue con los demás.
 // noteIgnoredStateComponents avisa de los componentes retirados (como GGA) que
 // figuraban en el estado y que la lectura ha descartado.
 func noteIgnoredStateComponents(ignored []model.ComponentID) {
@@ -180,6 +178,18 @@ func noteIgnoredStateComponents(ignored []model.ComponentID) {
 	}
 }
 
+// noteIgnoredStatePersona avisa de la persona retirada (gentleman, neutral o
+// custom) que figuraba en el estado y que la lectura ha descartado: Axiom solo
+// instala su propia persona.
+func noteIgnoredStatePersona(ignored string) {
+	if ignored == "" {
+		return
+	}
+	fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: la persona %q guardada en el estado ya no existe; Axiom solo instala su propia persona (componente persona).\n", ignored)
+}
+
+// noteIgnoredStateAgents avisa de los agentes que el estado guardaba y Axiom ya no
+// conoce (agentes retirados): el sync los ignora y sigue con los demás.
 func noteIgnoredStateAgents(ignored []string) {
 	for _, id := range ignored {
 		fmt.Fprintf(workspaceAgentsNoticeWriter, "Aviso: el estado incluye el agente %q, que Axiom ya no admite; se ignora y se sincronizan los demás.\n", id)

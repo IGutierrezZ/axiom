@@ -17,7 +17,6 @@ func copilotProjectState(agents ...string) state.InstallState {
 		InstalledAgents:     agents,
 		SelectionConfigured: true,
 		Components:          []model.ComponentID{model.ComponentPersona, model.ComponentSDD, model.ComponentEngram},
-		Persona:             "neutral",
 		CopilotPhaseAssignments: map[string]state.CopilotPhaseAssignmentState{
 			"sdd-apply": {Model: "Claude Sonnet 4.6 (copilot)", Effort: "high"},
 		},

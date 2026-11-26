@@ -137,19 +137,6 @@ const (
 	SkillSystemicIssueTriage SkillID = "systemic-issue-triage"
 )
 
-type PersonaID string
-
-const (
-	PersonaAxiom     PersonaID = "axiom"
-	PersonaGentleman PersonaID = "gentleman"
-	// PersonaGentlemanNeutralArtifacts is a legacy alias accepted for backward
-	// compatibility. The CLI and sync normalization treat it as PersonaNeutral,
-	// and it is never offered as a selectable choice.
-	PersonaGentlemanNeutralArtifacts PersonaID = "gentleman-neutral-artifacts"
-	PersonaNeutral                   PersonaID = "neutral"
-	PersonaCustom                    PersonaID = "custom"
-)
-
 // SystemPromptStrategy defines how an agent's system prompt file is managed.
 type SystemPromptStrategy int
 

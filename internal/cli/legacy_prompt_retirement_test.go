@@ -31,7 +31,7 @@ func TestLegacyPromptAdaptersSelectsOnlyRenamedPromptAgents(t *testing.T) {
 func TestLegacyPromptRetirementStepReportsRetiredAndKeptFiles(t *testing.T) {
 	home := t.TempDir()
 	adapter := cursor.NewAdapter()
-	if _, err := persona.Inject(home, adapter, model.PersonaGentleman); err != nil {
+	if _, err := persona.Inject(home, adapter); err != nil {
 		t.Fatal(err)
 	}
 	current := adapter.SystemPromptFile(home)
@@ -88,7 +88,7 @@ func TestLegacyPromptFilesAreSnapshottedBeforeInstallAndSync(t *testing.T) {
 	workspace := t.TempDir()
 	adapter := cursor.NewAdapter()
 	adapters := []agents.Adapter{adapter}
-	if _, err := persona.Inject(home, adapter, model.PersonaGentleman); err != nil {
+	if _, err := persona.Inject(home, adapter); err != nil {
 		t.Fatal(err)
 	}
 	current := adapter.SystemPromptFile(home)

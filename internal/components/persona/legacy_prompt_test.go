@@ -10,7 +10,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/cursor"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
-	"github.com/IGutierrezZ/axiom/v3/internal/model"
 )
 
 // legacyPromptCase describes one adapter whose prompt file was renamed.
@@ -36,7 +35,7 @@ func legacyPromptCases(t *testing.T, home string) []legacyPromptCase {
 // which is what an earlier release left behind.
 func writeManagedLegacyPrompt(t *testing.T, home string, c legacyPromptCase) (current, legacy string) {
 	t.Helper()
-	if _, err := Inject(home, c.adapter, model.PersonaGentleman); err != nil {
+	if _, err := Inject(home, c.adapter); err != nil {
 		t.Fatalf("Inject(%s): %v", c.name, err)
 	}
 	current = c.adapter.SystemPromptFile(home)
@@ -154,7 +153,7 @@ func TestRetireLegacyPromptFilesNoLegacyFileIsANoOp(t *testing.T) {
 	home := t.TempDir()
 	for _, c := range legacyPromptCases(t, home) {
 		t.Run(c.name, func(t *testing.T) {
-			if _, err := Inject(home, c.adapter, model.PersonaGentleman); err != nil {
+			if _, err := Inject(home, c.adapter); err != nil {
 				t.Fatal(err)
 			}
 			if result := RetireLegacyPromptFiles(home, c.adapter); len(result.Removed) != 0 || len(result.Notes) != 0 {

@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io"
-	"os"
 	"sort"
 	"strings"
 
@@ -32,22 +30,13 @@ func NormalizeInstallFlags(flags InstallFlags, detection system.DetectionResult)
 	}
 	selection.Agents = unique(agents)
 
-	persona, personaRemapped, err := normalizePersona(flags.Persona)
-	if err != nil {
-		return InstallInput{}, err
-	}
-	if personaRemapped {
-		fmt.Fprintln(personaNoticeWriter, personaAliasRemapNotice)
-	}
-	selection.Persona = persona
-
 	preset, err := normalizePreset(flags.Preset)
 	if err != nil {
 		return InstallInput{}, err
 	}
 	selection.Preset = preset
 
-	components, err := normalizeComponents(flags.Components, selection.Preset, selection.Persona)
+	components, err := normalizeComponents(flags.Components, selection.Preset)
 	if err != nil {
 		return InstallInput{}, err
 	}
@@ -82,32 +71,6 @@ func NormalizeInstallFlags(flags InstallFlags, detection system.DetectionResult)
 	return InstallInput{Selection: selection, Scope: scope, Channel: channel, DryRun: flags.DryRun}, nil
 }
 
-// personaAliasRemapNotice is printed whenever the legacy
-// gentleman-neutral-artifacts alias is remapped to the neutral persona.
-const personaAliasRemapNotice = `"gentleman-neutral-artifacts" now maps to "neutral". For a voseo conversation use --persona gentleman.`
-
-// personaNoticeWriter is swappable in tests.
-var personaNoticeWriter io.Writer = os.Stderr
-
-// normalizePersona resolves a --persona flag or persisted state value.
-// The second return is true when the legacy gentleman-neutral-artifacts
-// alias was remapped to neutral: its name promised a neutral tone, so the
-// name now wins; users who want voseo have --persona gentleman.
-func normalizePersona(value string) (model.PersonaID, bool, error) {
-	if strings.TrimSpace(value) == "" {
-		return model.PersonaAxiom, false, nil
-	}
-
-	switch model.PersonaID(value) {
-	case model.PersonaGentlemanNeutralArtifacts:
-		return model.PersonaNeutral, true, nil
-	case model.PersonaAxiom, model.PersonaGentleman, model.PersonaNeutral, model.PersonaCustom:
-		return model.PersonaID(value), false, nil
-	default:
-		return "", false, fmt.Errorf("unsupported persona %q", value)
-	}
-}
-
 func normalizePreset(value string) (model.PresetID, error) {
 	if strings.TrimSpace(value) == "" {
 		return model.PresetFullGentleman, nil
@@ -121,9 +84,9 @@ func normalizePreset(value string) (model.PresetID, error) {
 	}
 }
 
-func normalizeComponents(values []string, preset model.PresetID, persona model.PersonaID) ([]model.ComponentID, error) {
+func normalizeComponents(values []string, preset model.PresetID) ([]model.ComponentID, error) {
 	if len(values) == 0 {
-		return componentsForPreset(preset, persona), nil
+		return componentsForPreset(preset), nil
 	}
 
 	allowed := map[model.ComponentID]struct{}{}
@@ -178,8 +141,8 @@ func normalizeSDDMode(value string) (model.SDDModeID, error) {
 	}
 }
 
-func componentsForPreset(preset model.PresetID, persona model.PersonaID) []model.ComponentID {
-	return model.ComponentsForPreset(preset, persona)
+func componentsForPreset(preset model.PresetID) []model.ComponentID {
+	return model.ComponentsForPreset(preset)
 }
 
 func defaultAgentsFromDetection(detection system.DetectionResult) []model.AgentID {

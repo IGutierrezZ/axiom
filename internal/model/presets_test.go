@@ -10,7 +10,7 @@ func TestExistingPresetsDoNotImplyCommunityTools(t *testing.T) {
 		t.Run(string(preset), func(t *testing.T) {
 			selection := Selection{
 				Preset:     preset,
-				Components: ComponentsForPreset(preset, PersonaGentleman),
+				Components: ComponentsForPreset(preset),
 			}
 			if len(selection.CommunityTools) != 0 {
 				t.Fatalf("preset %q community tools = %v, want none", preset, selection.CommunityTools)
@@ -20,7 +20,7 @@ func TestExistingPresetsDoNotImplyCommunityTools(t *testing.T) {
 }
 
 func TestFullGentlemanKeepsPermissionComponent(t *testing.T) {
-	if got := ComponentsForPreset(PresetFullGentleman, PersonaAxiom); !slices.Contains(got, ComponentPermission) {
+	if got := ComponentsForPreset(PresetFullGentleman); !slices.Contains(got, ComponentPermission) {
 		t.Fatalf("full-gentleman debe conservar el componente de permisos (solo deny): %v", got)
 	}
 }

@@ -16,7 +16,6 @@ func TestParseInstallFlagsSupportsCSVAndRepeated(t *testing.T) {
 		"--component", "engram,sdd",
 		"--component", "skills",
 		"--skill", "sdd-apply",
-		"--persona", "neutral",
 		"--preset", "minimal",
 		"--channel", "beta",
 		"--dry-run",
@@ -69,9 +68,8 @@ func TestNormalizeInstallFlagsDefaults(t *testing.T) {
 	}
 
 	want := model.Selection{
-		Agents:  []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI},
-		Persona: model.PersonaAxiom,
-		Preset:  model.PresetFullGentleman,
+		Agents: []model.AgentID{model.AgentClaudeCode, model.AgentOpenCode, model.AgentGeminiCLI, model.AgentCodex, model.AgentCursor, model.AgentVSCodeCopilot, model.AgentAntigravity, model.AgentPi, model.AgentTrae, model.AgentGitHubCopilotCLI},
+		Preset: model.PresetFullGentleman,
 		Components: []model.ComponentID{
 			model.ComponentEngram,
 			model.ComponentSDD,
@@ -112,22 +110,6 @@ func TestNormalizeInstallFlagsChannelBeta(t *testing.T) {
 	}
 	if input.Channel != ChannelBeta {
 		t.Fatalf("Channel = %q, want %q", input.Channel, ChannelBeta)
-	}
-}
-
-func TestNormalizeInstallFlagsFullPresetCustomPersonaExcludesVisualComponents(t *testing.T) {
-	input, err := NormalizeInstallFlags(InstallFlags{
-		Preset:  string(model.PresetFullGentleman),
-		Persona: string(model.PersonaCustom),
-	}, system.DetectionResult{})
-	if err != nil {
-		t.Fatalf("NormalizeInstallFlags() error = %v", err)
-	}
-
-	for _, got := range input.Selection.Components {
-		if got == model.ComponentPersona {
-			t.Fatalf("components should not include persona for custom persona; got %#v", input.Selection.Components)
-		}
 	}
 }
 
@@ -178,13 +160,6 @@ func TestNormalizeInstallFlagsPiOnlyRespectsExplicitPreset(t *testing.T) {
 	want := []model.ComponentID{model.ComponentEngram, model.ComponentPersona}
 	if !reflect.DeepEqual(input.Selection.Components, want) {
 		t.Fatalf("components = %#v, want %#v", input.Selection.Components, want)
-	}
-}
-
-func TestNormalizeInstallFlagsRejectsUnknownPersona(t *testing.T) {
-	_, err := NormalizeInstallFlags(InstallFlags{Persona: "wizard"}, system.DetectionResult{})
-	if err == nil {
-		t.Fatalf("NormalizeInstallFlags() expected error")
 	}
 }
 

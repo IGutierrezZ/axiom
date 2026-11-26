@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -155,7 +156,7 @@ func TestComponentPathsPiPersonaUsesResolvedScopePath(t *testing.T) {
 	home := t.TempDir()
 	workspace := t.TempDir()
 	adapters := resolveAdapters([]model.AgentID{model.AgentPi})
-	selection := model.Selection{Persona: model.PersonaNeutral}
+	selection := model.Selection{}
 
 	global := componentPathsWithWorkspaceScoped(home, workspace, ScopeGlobal, selection, adapters, model.ComponentPersona)
 	if !containsPath(global, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
@@ -171,11 +172,6 @@ func TestComponentPathsPiPersonaUsesResolvedScopePath(t *testing.T) {
 	}
 	if containsPath(workspacePaths, filepath.Join(home, ".pi", "gentle-ai", "persona.json")) {
 		t.Fatalf("workspace Pi persona paths = %v, unexpectedly contains home config", workspacePaths)
-	}
-
-	custom := componentPathsWithWorkspaceScoped(home, workspace, ScopeWorkspace, model.Selection{Persona: model.PersonaCustom}, adapters, model.ComponentPersona)
-	if len(custom) != 0 {
-		t.Fatalf("custom Pi persona paths = %v, want none", custom)
 	}
 }
 
@@ -201,7 +197,7 @@ func TestInstallPiPersonaWritesManagedScopePaths(t *testing.T) {
 				workspaceDir: workspace,
 				scope:        tt.scope,
 				agents:       []model.AgentID{model.AgentPi},
-				selection:    model.Selection{Persona: model.PersonaNeutral},
+				selection:    model.Selection{},
 			}
 			if err := step.Run(); err != nil {
 				t.Fatalf("componentApplyStep.Run() error = %v", err)
@@ -736,11 +732,11 @@ func TestInstallRoutingCleanupRetiresPiPrompt(t *testing.T) {
 }
 
 func TestInstallRemoteAuthorizationIndependentOfComponents(t *testing.T) {
-	for _, persona := range []model.PersonaID{"", model.PersonaCustom} {
-		t.Run(string(persona), func(t *testing.T) {
+	for _, withPersona := range []bool{false, true} {
+		t.Run(fmt.Sprintf("persona=%t", withPersona), func(t *testing.T) {
 			home := t.TempDir()
-			selection := model.Selection{Agents: []model.AgentID{model.AgentClaudeCode}, Persona: persona}
-			if persona != "" {
+			selection := model.Selection{Agents: []model.AgentID{model.AgentClaudeCode}}
+			if withPersona {
 				selection.Components = []model.ComponentID{model.ComponentPersona}
 			}
 			runInstallInjectionSteps(t, newTestInstallRuntime(t, home, selection))
@@ -758,7 +754,6 @@ func TestInstallDeliversRoutingGuidanceWithoutSDDComponent(t *testing.T) {
 	rt := newTestInstallRuntime(t, home, model.Selection{
 		Agents:     []model.AgentID{model.AgentClaudeCode},
 		Components: []model.ComponentID{model.ComponentPersona},
-		Persona:    model.PersonaGentleman,
 	})
 	runInstallInjectionSteps(t, rt)
 

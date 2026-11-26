@@ -25,7 +25,6 @@ func geminiSelection() model.Selection {
 		Agents:     []model.AgentID{model.AgentGeminiCLI},
 		Components: []model.ComponentID{model.ComponentEngram, model.ComponentPersona, model.ComponentSDD, model.ComponentSkills},
 		Skills:     []model.SkillID{model.SkillGoTesting},
-		Persona:    model.PersonaNeutral,
 	}
 }
 
@@ -258,7 +257,7 @@ func TestWorkspaceGeminiSyncRetiresLegacyGeminiMDWithInstallerPersona(t *testing
 	t.Setenv("AXIOM_STATE_DIR", t.TempDir())
 	home, workspace, _ := footprintEnv(t)
 	legacy := filepath.Join(workspace, ".gemini", "GEMINI.md")
-	mustWriteFile(t, legacy, []byte(assets.MustRead("generic/persona-neutral.md")+"\n<!-- axiom:sdd-orchestrator -->\nOrquestador antiguo.\n<!-- /axiom:sdd-orchestrator -->\n"))
+	mustWriteFile(t, legacy, []byte(assets.MustRead("generic/persona-axiom.md")+"\n<!-- axiom:sdd-orchestrator -->\nOrquestador antiguo.\n<!-- /axiom:sdd-orchestrator -->\n"))
 
 	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, geminiSelection()); err != nil {
 		t.Fatalf("sync: %v", err)

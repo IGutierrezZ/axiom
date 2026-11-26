@@ -38,7 +38,7 @@ func installCopilot(t *testing.T, home string, id model.AgentID) agents.Adapter 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := persona.Inject(home, adapter, model.PersonaNeutral); err != nil {
+	if _, err := persona.Inject(home, adapter); err != nil {
 		t.Fatalf("persona.Inject(%s): %v", id, err)
 	}
 	if _, err := sdd.Inject(home, adapter, ""); err != nil {

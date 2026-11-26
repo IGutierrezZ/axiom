@@ -29,7 +29,7 @@ func TestSyncProbesTheSameEngramCommandAsInstall(t *testing.T) {
 		return "engram 1.18.0", nil
 	}
 
-	installInProject(t, root, "--component", "engram", "--persona", "neutral")
+	installInProject(t, root, "--component", "engram")
 	claudeMD := filepath.Join(root, ".claude", "CLAUDE.md")
 	installed, err := os.ReadFile(claudeMD)
 	if err != nil {
