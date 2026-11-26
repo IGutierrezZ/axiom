@@ -197,13 +197,6 @@ function helpRows() {
       rows.push(helpRow({ href: '#/skills', iconName: 'cube', title: `${plural(inbox.length, 'skill propuesta', 'skills propuestas')} en el buzón`, text: 'Revísalas y apruébalas o recházalas.' }));
     }
   });
-  check('semantic', 'el estado del código', (sem) => {
-    if (!(sem.total_symbols > 0)) {
-      rows.push(helpRow({ href: '#/codigo', iconName: 'graph', title: 'El grafo de código no está indexado', text: 'Indexa el código para que los agentes puedan consultarlo.' }));
-    } else if (Array.isArray(sem.warnings) && sem.warnings.length > 0) {
-      rows.push(helpRow({ href: '#/codigo', iconName: 'graph', title: `${plural(sem.warnings.length, 'aviso', 'avisos')} del conector de código`, text: String(sem.warnings[0]) }));
-    }
-  });
   check('specs', 'las specs vivas', (catalog) => {
     const domains = Array.isArray(catalog.specs) ? catalog.specs.length : 0;
     if (domains > 0) {

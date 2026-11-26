@@ -388,7 +388,7 @@ jobs:
   # Informative window -- cmd/axiom coverage (INC-20 F0, opened 2026-09-19)
   #
   # Blocking: init, project, change, workspace, handoff, role, skill,
-  # semantic, archive, and ui in their help or no-argument form -- the
+  # archive, and ui in their help or no-argument form -- the
   # exclusive surface axiom-distribution-identity's build-identity
   # contract touches (REQ-20.15). The odd verb blocked here too until
   # this increment's Phase 11 (F6.2a) retired the `axiom odd` command
@@ -469,7 +469,6 @@ jobs:
           smoke "handoff"     1 handoff
           smoke "role"        1 role
           smoke "skill"       1 skill
-          smoke "semantic"    1 semantic
           smoke "archive"     1 archive
           smoke "init --help" 0 init --help
           smoke "ui --help"   0 ui --help

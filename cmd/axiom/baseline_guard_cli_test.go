@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"io/fs"
 	"os"
@@ -38,17 +37,6 @@ func requireNoLivingSpecs(t *testing.T, ws workspacetest.Workspace) {
 			t.Errorf("no debe existir %s (stat = %v)", absent, err)
 		}
 	}
-}
-
-// jsonOf recorta la salida del subproceso auxiliar, que el marco de pruebas
-// cierra con una línea PASS, hasta la llave que cierra el objeto JSON.
-func jsonOf(t *testing.T, output string) []byte {
-	t.Helper()
-	end := strings.LastIndex(output, "}")
-	if end < 0 {
-		t.Fatalf("la salida no contiene un objeto JSON:\n%s", output)
-	}
-	return []byte(output[:end+1])
 }
 
 func requireContains(t *testing.T, output string, wants ...string) {
@@ -106,113 +94,6 @@ func TestArchiveListWarnsAboutAResidualBaseline(t *testing.T) {
 			}
 		})
 	}
-	requireNoLivingSpecs(t, ws)
-}
-
-// REQ-30.21: `knowledge sweep` completa el análisis con código 0, devuelve
-// `created_specs` vacío y omite la siembra y el índice.
-func TestKnowledgeSweepSkipsTheSeedingWithAResidualBaseline(t *testing.T) {
-	ws := baselineWorkspace(t, cliResidualBaseline)
-	for name, start := range canonicalStarts(ws) {
-		t.Run(name, func(t *testing.T) {
-			output, code := runAxiom(t, "knowledge", "sweep", "--cwd", start, "--json")
-			if code != 0 {
-				t.Fatalf("knowledge sweep salió con %d:\n%s", code, output)
-			}
-			var res struct {
-				Modules      []json.RawMessage `json:"modules"`
-				CreatedSpecs []string          `json:"created_specs"`
-				Notes        []string          `json:"notes"`
-			}
-			if err := json.Unmarshal(jsonOf(t, output), &res); err != nil {
-				t.Fatalf("la salida no es JSON: %v\n%s", err, output)
-			}
-			if res.CreatedSpecs == nil || len(res.CreatedSpecs) != 0 {
-				t.Errorf("created_specs = %#v, se esperaba []", res.CreatedSpecs)
-			}
-			if !strings.Contains(strings.Join(res.Notes, " "), "baseline_retired") {
-				t.Errorf("notes = %q, se esperaba la omisión con el error tipado", res.Notes)
-			}
-		})
-	}
-	requireNoLivingSpecs(t, ws)
-
-	t.Run("texto", func(t *testing.T) {
-		output, code := runAxiom(t, "knowledge", "sweep", "--cwd", ws.Backend)
-		if code != 0 {
-			t.Fatalf("knowledge sweep salió con %d:\n%s", code, output)
-		}
-		requireContains(t, output, "[AVISO]", "baseline_retired", "No se sembraron especificaciones")
-		if strings.Contains(output, "Catálogo maestro actualizado") {
-			t.Errorf("no debe afirmar que actualizó INDEX.md:\n%s", output)
-		}
-		requireNoLivingSpecs(t, ws)
-	})
-}
-
-// REQ-30.21: `knowledge query --enrich` responde sin enriquecer y anota la omisión.
-func TestKnowledgeQueryEnrichIsSkippedWithAResidualBaseline(t *testing.T) {
-	ws := baselineWorkspace(t, cliResidualBaseline)
-	// Solo la carpeta maestra y el repositorio de código contienen código con la
-	// regla; el repositorio de especificaciones no tiene evidencias que enriquecer.
-	for name, start := range map[string]string{"carpeta maestra": ws.Master, "repositorio de código": ws.Backend} {
-		t.Run(name, func(t *testing.T) {
-			output, code := runAxiom(t, "knowledge", "query", "¿Cuál es la regla_facturacion_anual?", "--cwd", start, "--enrich", "--json")
-			if code != 0 {
-				t.Fatalf("knowledge query salió con %d:\n%s", code, output)
-			}
-			var res struct {
-				SpecUpdated bool     `json:"spec_updated"`
-				Notes       []string `json:"notes"`
-			}
-			if err := json.Unmarshal(jsonOf(t, output), &res); err != nil {
-				t.Fatalf("la salida no es JSON: %v\n%s", err, output)
-			}
-			notes := strings.Join(res.Notes, " ")
-			if res.SpecUpdated || !strings.Contains(notes, "Se omite el enriquecimiento") || !strings.Contains(notes, "baseline_retired") {
-				t.Errorf("SpecUpdated = %v, notes = %q", res.SpecUpdated, res.Notes)
-			}
-		})
-	}
-	requireNoLivingSpecs(t, ws)
-}
-
-// REQ-30.21: `knowledge crawl --record-unit` y `--finalize` se rechazan con código
-// distinto de cero sin escribir en openspec/specs ni INDEX.md.
-func TestKnowledgeCrawlRecordAndFinalizeAreRejectedWithAResidualBaseline(t *testing.T) {
-	ws := baselineWorkspace(t, "")
-	job := filepath.Join(t.TempDir(), "crawl-job.json")
-	if output, code := runAxiom(t, "knowledge", "crawl", "--plan", "--cwd", ws.Backend, "--job", job, "--json"); code != 0 {
-		t.Fatalf("crawl --plan salió con %d:\n%s", code, output)
-	}
-	var plan struct {
-		Units []struct {
-			ID string `json:"id"`
-		} `json:"units"`
-	}
-	raw, err := os.ReadFile(job)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := json.Unmarshal(raw, &plan); err != nil || len(plan.Units) == 0 {
-		t.Fatalf("el plan debe tener unidades (%v): %s", err, raw)
-	}
-	// El bloque se declara después del plan: la guarda se resuelve al escribir.
-	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), cliCanonicalConfig+cliResidualBaseline)
-	payload := filepath.Join(t.TempDir(), "analisis.json")
-	workspacetest.WriteFile(t, payload, `{"unit_id":"`+plan.Units[0].ID+`","summary":"Resumen del análisis."}`)
-
-	output, code := runAxiom(t, "knowledge", "crawl", "--record-unit", "--job", job, "--unit", plan.Units[0].ID, "--input", payload)
-	if code == 0 {
-		t.Fatalf("crawl --record-unit debe salir con código distinto de cero:\n%s", output)
-	}
-	requireContains(t, output, "baseline_retired", "axiom archive adopt scan")
-
-	output, code = runAxiom(t, "knowledge", "crawl", "--finalize", "--job", job)
-	if code == 0 {
-		t.Fatalf("crawl --finalize debe salir con código distinto de cero:\n%s", output)
-	}
-	requireContains(t, output, "baseline_retired", "axiom archive adopt scan")
 	requireNoLivingSpecs(t, ws)
 }
 

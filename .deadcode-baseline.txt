@@ -93,7 +93,6 @@ internal/sddstatus/openspec_archive_compose.go	ComposeOpenSpecCanonicalSpec
 internal/sddstatus/status.go	RenderNativePhasePrompt
 internal/sddstatus/status.go	blockerReasons.forRoute
 internal/sddstatus/status.go	dependencyForPhase
-internal/semantic/detector.go	NewDetectorWithCustomHome
 internal/state/state.go	Bootstrap
 internal/storage/bytes.go	FormatBytes
 internal/system/install_deps.go	InstallCommandsForDep

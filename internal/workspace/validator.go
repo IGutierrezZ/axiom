@@ -146,6 +146,8 @@ func Validate(fs FS, cfg *WorkspaceConfig, baseDir string) (*ValidationReport, e
 		}
 	}
 
+	report.Warnings = append(report.Warnings, ObsoleteKeyWarnings(cfg)...)
+
 	if len(report.Errors) > 0 {
 		report.Valid = false
 	}
@@ -318,4 +320,17 @@ func legacyStoreError(store string, maintained bool) string {
 
 func storeError(declaration, subject, store string) string {
 	return fmt.Sprintf("la declaración '%s' exige un almacén de artefactos de ficheros, pero openspec/config.yaml declara artifact_store '%s' y %s necesita leer y escribir la carpeta del cambio. Declara 'artifact_store: openspec' o 'hybrid' en openspec/config.yaml, o retira la declaración '%s' de axiom.yaml", declaration, store, subject, declaration)
+}
+
+// ObsoleteKeyWarnings devuelve los avisos de las claves de axiom.yaml que se
+// siguen leyendo pero ya no tienen efecto. Nunca invalidan la configuración.
+func ObsoleteKeyWarnings(cfg *WorkspaceConfig) []string {
+	if cfg == nil {
+		return nil
+	}
+	var warnings []string
+	if strings.TrimSpace(cfg.Governance.SemanticAnalysis) != "" {
+		warnings = append(warnings, "la clave 'governance.semantic_analysis' de axiom.yaml ya no tiene efecto y se ignora: Axiom retiró su análisis semántico propio y los agentes usan CodeGraph directamente; puedes borrarla")
+	}
+	return warnings
 }

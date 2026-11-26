@@ -448,7 +448,6 @@ func buildAxiomYamlWithRoles(name, topology, specsRepo, root, domainContext stri
 	sb.WriteString("governance:\n")
 	sb.WriteString("  language: \"es\"\n")
 	sb.WriteString("  shared_memory: \"engram\"\n")
-	sb.WriteString("  semantic_analysis: \"auto\"\n")
 	if strings.TrimSpace(domainContext) != "" {
 		sb.WriteString("  context: |\n")
 		for _, line := range strings.Split(domainContext, "\n") {

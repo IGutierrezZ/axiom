@@ -32,7 +32,6 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
 	"github.com/IGutierrezZ/axiom/v3/internal/sddstatus"
-	"github.com/IGutierrezZ/axiom/v3/internal/semantic"
 	"github.com/IGutierrezZ/axiom/v3/internal/skillregistry"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
@@ -48,7 +47,6 @@ type Service struct {
 	hubManager       *hub.Manager
 	hubDetector      *hub.Detector
 	autoskillManager *autoskill.Manager
-	semanticService  *semantic.Service
 	livingdocService *livingdoc.Service
 
 	// versions comprueba la última versión publicada de Axiom (caché con TTL).
@@ -79,7 +77,6 @@ func NewService(rootPath string) *Service {
 		hubManager:       hubMgr,
 		hubDetector:      hubDet,
 		autoskillManager: newAutoskillManager(rootPath),
-		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
 		versions:         newVersionChecker(),
 	}
@@ -108,7 +105,6 @@ func NewServiceWithHub(rootPath string, hubMgr *hub.Manager) *Service {
 		hubManager:       hubMgr,
 		hubDetector:      hubDet,
 		autoskillManager: newAutoskillManager(rootPath),
-		semanticService:  semantic.NewService(rootPath, nil, nil),
 		livingdocService: livingdoc.NewService(rootPath, nil, nil),
 		versions:         newVersionChecker(),
 	}
@@ -806,26 +802,6 @@ func (s *Service) RejectSkill(name string) error {
 	return s.autoskillManager.Reject(name)
 }
 
-// GetSemanticStatus obtiene el diagnóstico del entorno semántico y métricas del workspace.
-func (s *Service) GetSemanticStatus(ctx context.Context) (*semantic.SemanticStatus, error) {
-	return s.semanticService.GetStatus(ctx)
-}
-
-// FindSemanticSymbols consulta y filtra los símbolos en el workspace.
-func (s *Service) FindSemanticSymbols(query semantic.SemanticQuery) ([]semantic.SymbolItem, error) {
-	return s.semanticService.FindSymbols(query)
-}
-
-// InspectSemanticDependencies obtiene las relaciones de dependencia entre paquetes.
-func (s *Service) InspectSemanticDependencies(role string) ([]semantic.DependencyRelation, error) {
-	return s.semanticService.InspectDependencies(role)
-}
-
-// ReindexCodeGraph dispara la reindexación de CodeGraph bajo demanda (ODD-3.1 y ODD-3.3).
-func (s *Service) ReindexCodeGraph(ctx context.Context) (*semantic.ReindexResult, error) {
-	return s.semanticService.ReindexCodeGraph(ctx)
-}
-
 // GetLivingSpecs obtiene el catálogo maestro de especificaciones vivas.
 func (s *Service) GetLivingSpecs(ctx context.Context) (*livingdoc.LivingCatalog, error) {
 	return s.livingdocService.GetCatalog(ctx)
@@ -856,7 +832,6 @@ func (s *Service) SwitchWorkspace(targetPath string) (*WorkspaceDTO, error) {
 	s.mu.Lock()
 	s.rootPath = absPath
 	s.autoskillManager = newAutoskillManager(absPath)
-	s.semanticService = semantic.NewService(absPath, nil, nil)
 	s.livingdocService = livingdoc.NewService(absPath, nil, nil)
 	s.mu.Unlock()
 

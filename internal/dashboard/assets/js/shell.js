@@ -14,7 +14,6 @@ const ROUTE_LABELS = {
   incremento: 'Incrementos',
   specs: 'Specs vivas',
   skills: 'Skills',
-  codigo: 'Código y grafo',
   ecosistema: 'Ecosistema'
 };
 

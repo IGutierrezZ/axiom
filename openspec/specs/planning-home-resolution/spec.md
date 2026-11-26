@@ -362,18 +362,13 @@ El status v2 DEBE reportar `actionContext.workspaceRoot` igual al `workspaceRoot
 
 ### Requirement: Los Consumidores de Catálogo Comparten la Convención de Raíz (REQ-24.10)
 
-El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío), knowledge (raíz de especificaciones por defecto) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
-(Previously: los consumidores de catálogo incluían la TUI, y el escenario comprobaba también su pantalla de ciclo de vida de incrementos.)
+El servicio de documentación viva (livingdoc, incluido el sintetizador de arranque en frío) y el dashboard web DEBEN obtener la raíz de especificaciones y el planning home del primitivo de REQ-24.1 y NO DEBEN mantener una convención propia. Las especificaciones vivas, los cambios y el índice residen en `<planning home>/specs`, `<planning home>/changes` y `<planning home>/INDEX.md`. Cuando en un proyecto `monorepo-embedded` con `specs_repository` distinto de `""`, `.` y `openspec` existe `<raíz>/<specs_repository>/specs` y difiere de `<planning home>/specs`, los consumidores de catálogo DEBEN leer solo `<planning home>/specs` y emitir un aviso que nombre ambas rutas.
+(Previously: los consumidores de catálogo incluían `knowledge` (raíz de especificaciones por defecto de `axiom knowledge sweep`), que C-08-l retira, y antes la TUI.)
 
 #### Scenario: Catálogo del workspace canónico
 - **DADO** el workspace canónico con `<maestra>/repo-specs/openspec/specs/workspace-topology/spec.md`
 - **CUANDO** se ejecuta `axiom archive list` desde `<maestra>`
 - **ENTONCES** el listado incluye el dominio `workspace-topology`
-
-#### Scenario: Raíz de especificaciones por defecto de knowledge
-- **DADO** el workspace canónico
-- **CUANDO** se ejecuta `axiom knowledge sweep` sin indicar raíz de especificaciones desde `<maestra>`
-- **ENTONCES** la raíz de especificaciones usada es el planning home `<maestra>/repo-specs/openspec`
 
 #### Scenario: Ubicación divergente en un proyecto embebido
 - **DADO** un proyecto `monorepo-embedded` con `specs_repository: specs`, un `specs/specs/antiguo/spec.md` y un `openspec/specs/vigente/spec.md`
