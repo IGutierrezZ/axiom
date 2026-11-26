@@ -576,7 +576,7 @@ func TestIntegrationsPluginWithoutPortsFailsWithTheTypedErrorAndNoEffects(t *tes
 
 // ---- ayuda (RF-INT-18)
 
-func TestIntegrationsHelpListsExactlyTheFiveSubcommands(t *testing.T) {
+func TestIntegrationsHelpListsExactlyTheSubcommands(t *testing.T) {
 	for _, args := range [][]string{{"--help"}, {"help"}, {"inspect"}} {
 		code, out, _ := runIntegrationsCLI(t, "", args...)
 		if args[0] == "inspect" && code == 0 {
@@ -594,13 +594,13 @@ func TestIntegrationsHelpListsExactlyTheFiveSubcommands(t *testing.T) {
 				inList = false
 			}
 		}
-		if strings.Join(listed, ",") != "sync,emit,secret,connect,discover" {
-			t.Errorf("%v: la ayuda de la familia lista %v, quería exactamente sync, emit, secret, connect y discover", args, listed)
+		if strings.Join(listed, ",") != "sync,emit,secret,connect,discover,tasks" {
+			t.Errorf("%v: la ayuda de la familia lista %v, quería exactamente sync, emit, secret, connect, discover y tasks", args, listed)
 		}
 	}
 	code, _, errOut := runIntegrationsCLI(t, "", "inspect")
-	if code == 0 || !strings.Contains(errOut, "sync, emit, secret, connect y discover") {
-		t.Errorf("el mensaje de subcomando desconocido debe enumerar los cinco: %d %q", code, errOut)
+	if code == 0 || !strings.Contains(errOut, "sync, emit, secret, connect, discover y tasks") {
+		t.Errorf("el mensaje de subcomando desconocido debe enumerar todos: %d %q", code, errOut)
 	}
 }
 

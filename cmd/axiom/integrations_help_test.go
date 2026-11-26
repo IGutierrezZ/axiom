@@ -8,9 +8,9 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 )
 
-var integrationsVerbs = []string{"sync", "emit", "secret", "connect", "discover"}
+var integrationsVerbs = []string{"sync", "emit", "secret", "connect", "discover", "tasks"}
 
-// RF-INT-18: la ayuda global lista los cinco verbos de integraciones, con el texto del diseño y sus
+// RF-INT-18: la ayuda global lista los verbos de integraciones, con el texto del diseño y sus
 // descripciones alineadas en la misma columna.
 func TestIntegrationsVerbsAreListedInTheGlobalHelp(t *testing.T) {
 	help := axiomHelpText()
