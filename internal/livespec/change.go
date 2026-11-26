@@ -321,7 +321,7 @@ func CheckArchivedTrace(reg *Registry, trace Trace) error {
 	}
 	for _, e := range trace.Assignments {
 		var where []string
-		for _, ref := range reg.Lookup(e.Definitive) {
+		for _, ref := range reg.LookupIdentity(e.Definitive) {
 			if ref.Kind == RefSpec {
 				where = append(where, ref.Capability)
 			}

@@ -360,15 +360,18 @@ func patternHint(pattern reqid.Pattern) string {
 }
 
 // nextFree es el siguiente número libre de la serie de id: el del registro, saltando los
-// que el propio documento ya usa.
-func nextFree(reg *Registry, id string, taken map[string]bool) string {
+// que el propio documento ya usa (por identidad: serie y número).
+func nextFree(reg *Registry, id string, taken map[identityKey]bool) string {
 	pattern := reg.Pattern()
 	series, ok := pattern.Series(id)
 	if !ok {
 		return id
 	}
 	candidate := reg.NextFree(series)
-	for taken[candidate] {
+	for {
+		if k, ok := reg.keyOf(candidate); !ok || !taken[k] {
+			break
+		}
 		number, _ := pattern.Number(candidate)
 		candidate = pattern.Format(series, number+1)
 	}

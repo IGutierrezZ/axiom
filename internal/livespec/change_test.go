@@ -450,6 +450,14 @@ func TestCheckArchivedTraceReportsADefinitiveThatAppearsMoreThanOnce(t *testing.
 			t.Errorf("la continuación de D5: %v", err)
 		}
 	})
+	t.Run("repetido en otra capacidad con otro ancho", func(t *testing.T) {
+		loc, _ := changeFixture(t, reqid.Default(), map[string]string{
+			"specs/pagos/spec.md":       pagosCanon + "\n### Requirement: Cobro (REQ-30.3)\n\nA.\n",
+			"specs/facturacion/spec.md": "# E\n\n## Requirements\n\n### Requirement: Ajeno (REQ-30.03)\n\nB.\n",
+		})
+		reg, _ := LoadRegistry(loc.PlanningHome, RegistryOptions{SpecsOnly: true})
+		wantPlanError(t, CheckArchivedTrace(reg, trace), CodeDuplicateAssignedID)
+	})
 	t.Run("ausente de la spec viva", func(t *testing.T) {
 		loc, _ := changeFixture(t, reqid.Default(), map[string]string{"specs/pagos/spec.md": pagosCanon})
 		reg, _ := LoadRegistry(loc.PlanningHome, RegistryOptions{SpecsOnly: true})

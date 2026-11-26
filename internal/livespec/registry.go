@@ -137,13 +137,6 @@ func (r *Registry) add(ref IDRef) {
 	_ = r.alloc.Occupy(ref.ID)
 }
 
-// Lookup devuelve todas las apariciones de un identificador, en un orden estable.
-func (r *Registry) Lookup(id string) []IDRef {
-	refs := append([]IDRef(nil), r.byID[id]...)
-	sort.SliceStable(refs, func(i, j int) bool { return refs[i].Path < refs[j].Path })
-	return refs
-}
-
 // NextFree devuelve el siguiente identificador libre de una serie del patrón del registro:
 // el número máximo de la serie en todo el registro, más uno, con el relleno que declara la
 // plantilla (`RF-USU-09` da `RF-USU-10`, sin truncar). Los huecos no se rellenan y otra

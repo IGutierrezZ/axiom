@@ -369,6 +369,28 @@ func TestPlanIDsDefinitiveAddedCollisionsKeepTheUsualRejection(t *testing.T) {
 	}
 }
 
+func TestPlanIDsDefinitiveAddedCollisionsCompareByIdentityWithFreeWidth(t *testing.T) {
+	p, err := reqid.Parse("RF-<m>")
+	if err != nil {
+		t.Fatal(err)
+	}
+	canon := "# E\n\n## Requirements\n\n### Requirement: Alta (RF-001)\n\nCuerpo.\n"
+	// RF-1 es RF-001 (misma serie y número); el siguiente libre salta el RF-02 del cambio.
+	in := idInput(t, p, map[string]string{"specs/usuarios/spec.md": canon},
+		source("usuarios", added(block("Uno (RF-1)", "Uno."), block("Dos (RF-02)", "Dos."))))
+	_, err = PlanIDs(in)
+	var collision *CollisionError
+	if !errors.As(err, &collision) || collision.ID != "RF-1" || collision.NextFree != "RF-3" || !strings.Contains(collision.Where, "usuarios") {
+		t.Fatalf("colisión con la canónica = %v (%+v)", err, collision)
+	}
+	// Dos capacidades del cambio con el mismo identificador escrito con anchos distintos.
+	in = idInput(t, p, nil, source("a", added(block("Uno (RF-5)", "Uno."))), source("b", added(block("Dos (RF-05)", "Dos."))))
+	_, err = PlanIDs(in)
+	if !errors.As(err, &collision) || collision.ID != "RF-05" || !strings.Contains(collision.Where, "a y b") {
+		t.Fatalf("duplicado propio = %v (%+v)", err, collision)
+	}
+}
+
 func TestPlanIDsMissingTitlelessMODIFIEDStaysPendingForTheComposition(t *testing.T) {
 	// Un MODIFIED sin ID que no casa no lo rechaza el plan: sigue pendiente y lo rechaza la
 	// composición con el motivo vigente (REQ-47.3 regla 2).
