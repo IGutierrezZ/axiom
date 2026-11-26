@@ -161,10 +161,10 @@ Depende de: Fase 7.
 
 Depende de: Fase 9.
 
-- [ ] 10.1 Manual `docs/manual-de-inicio.md`: subsección `### Trazabilidad de un Requisito (`axiom trace`)` al final de §8, tras «Baseline Retirada y Migración», y una línea tras el bullet de `sdd trace`. Debe documentar: uso y opciones, roles y tipos, que el commit ODD es el que trae el documento y no necesariamente el que añadió su `## Spec viva`, la limitación del bug con requisito mal especificado (sale `increment`), que se lee el árbol de trabajo mientras el anclaje usa la rama de integración (archivados o documentos ausentes del árbol no aparecen; ejecutar desde un worktree de feature da `found: false` o omisión; hueco design 5), el JSON `axiom.trace/v1`, que los errores van por stderr con `--json` y que `axiom sdd trace` no cambia.
+- [x] 10.1 Manual `docs/manual-de-inicio.md`: subsección `### Trazabilidad de un Requisito (`axiom trace`)` al final de §8, tras «Baseline Retirada y Migración», y una línea tras el bullet de `sdd trace`. Debe documentar: uso y opciones, roles y tipos, que el commit ODD es el que trae el documento y no necesariamente el que añadió su `## Spec viva`, la limitación del bug con requisito mal especificado (sale `increment`), que se lee el árbol de trabajo mientras el anclaje usa la rama de integración (archivados o documentos ausentes del árbol no aparecen; ejecutar desde un worktree de feature da `found: false` o omisión; hueco design 5), el JSON `axiom.trace/v1`, que los errores van por stderr con `--json` y que `axiom sdd trace` no cambia.
   Cubre: prov:trace:6, prov:trace:8, prov:trace:9
   Verificación: `go test ./internal/workspace -run DocsPinManualDeInicio -count=1`
-- [ ] 10.2 Añadir `"axiom trace <ID>"` a la lista de `TestDocsPinManualDeInicio` en `internal/workspace/docs_pin_test.go`.
+- [x] 10.2 Añadir `"axiom trace <ID>"` a la lista de `TestDocsPinManualDeInicio` en `internal/workspace/docs_pin_test.go`.
   Cubre: prov:trace:1
   Verificación: `go test ./internal/workspace -run DocsPinManualDeInicio -count=1`
 

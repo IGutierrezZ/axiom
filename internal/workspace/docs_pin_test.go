@@ -18,6 +18,7 @@ func TestDocsPinManualDeInicio(t *testing.T) {
 		"axiom archive adopt check",
 		"axiom archive integrate --odd",
 		"axiom archive context",
+		"axiom trace <ID>",
 		"## Spec viva",
 		"## Impacto en la spec",
 		"Sin impacto en la spec",
