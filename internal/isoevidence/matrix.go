@@ -85,7 +85,7 @@ const continuationMatrix = "ejecuta la fase `sdd-verify` para corregir `" + matr
 // nivel 3 no coincide con él. Dos encabezados de nivel 2 son una matriz
 // ambigua e inválida. La sección termina en el siguiente `#` o `##`.
 func ParseMatrix(report string) Matrix {
-	lines := splitLines(report)
+	lines := SplitLines(report)
 
 	var starts []int
 	for i, l := range lines {
@@ -104,7 +104,7 @@ func ParseMatrix(report string) Matrix {
 		return m
 	}
 
-	var section []textLine
+	var section []TextLine
 	for _, l := range lines[starts[0]+1:] {
 		if !l.Fenced && (strings.HasPrefix(l.Text, "# ") || strings.HasPrefix(l.Text, "## ")) {
 			break
@@ -125,7 +125,7 @@ func ParseMatrix(report string) Matrix {
 
 	var headerIdx = -1
 	for i, l := range section {
-		if isTableLine(l.Text) {
+		if IsTableLine(l.Text) {
 			headerIdx = i
 			break
 		}
@@ -134,7 +134,7 @@ func ParseMatrix(report string) Matrix {
 		return m
 	}
 
-	columns := splitCells(section[headerIdx].Text)
+	columns := SplitCells(section[headerIdx].Text)
 	position := map[string]int{}
 	for i, c := range columns {
 		key := strings.ToLower(c)
@@ -151,7 +151,7 @@ func ParseMatrix(report string) Matrix {
 	}
 
 	body := section[headerIdx+1:]
-	if len(body) > 0 && isSeparatorLine(body[0].Text) {
+	if len(body) > 0 && IsSeparatorLine(body[0].Text) {
 		body = body[1:]
 	}
 	cell := func(cells []string, name string) string {
@@ -162,10 +162,10 @@ func ParseMatrix(report string) Matrix {
 		return cells[i]
 	}
 	for _, l := range body {
-		if !isTableLine(l.Text) {
+		if !IsTableLine(l.Text) {
 			break
 		}
-		cells := splitCells(l.Text)
+		cells := SplitCells(l.Text)
 		if len(cells) > len(columns) {
 			m.Issues = append(m.Issues, matrixIssue(fmt.Sprintf("línea %d", l.Num),
 				fmt.Sprintf("la fila de la línea %d tiene %d celdas y la cabecera %d", l.Num, len(cells), len(columns)),
@@ -189,17 +189,19 @@ func ParseMatrix(report string) Matrix {
 	return m
 }
 
-func isTableLine(line string) bool {
+// IsTableLine indica si la línea (tras los espacios iniciales) empieza por `|`, es decir, si es una fila de tabla Markdown.
+func IsTableLine(line string) bool {
 	return strings.HasPrefix(strings.TrimLeft(line, " \t"), "|")
 }
 
 var separatorCell = regexp.MustCompile(`^:?-{1,}:?$`)
 
-func isSeparatorLine(line string) bool {
-	if !isTableLine(line) {
+// IsSeparatorLine indica si la línea es la fila separadora de una tabla (`| --- | :---: |`).
+func IsSeparatorLine(line string) bool {
+	if !IsTableLine(line) {
 		return false
 	}
-	cells := splitCells(line)
+	cells := SplitCells(line)
 	if len(cells) == 0 {
 		return false
 	}
@@ -211,10 +213,10 @@ func isSeparatorLine(line string) bool {
 	return true
 }
 
-// splitCells divide una línea de tabla en celdas. `\|` es una barra vertical
+// SplitCells divide una línea de tabla en celdas. `\|` es una barra vertical
 // literal. Se recortan los espacios y un par de comillas invertidas que envuelva
 // el valor; una celda con `-` o `—` no aplica y queda vacía.
-func splitCells(line string) []string {
+func SplitCells(line string) []string {
 	trimmed := strings.TrimSpace(line)
 	trimmed = strings.TrimPrefix(trimmed, "|")
 
@@ -465,7 +467,7 @@ func validateManualRow(row MatrixRow, invalid func(string)) {
 // matrixRequirementCells devuelve, de la matriz de un verify-report.md, la línea (base 1) de
 // cada fila del cuerpo y el índice de la columna `Requisito`. Aplica la misma selección que
 // ParseMatrix; sin matriz única o sin columna `Requisito` no devuelve filas.
-func matrixRequirementCells(lines []textLine) (rows []int, column int) {
+func matrixRequirementCells(lines []TextLine) (rows []int, column int) {
 	var starts []int
 	for i, l := range lines {
 		if !l.Fenced && strings.TrimRight(l.Text, " \t") == matrixHeading {
@@ -475,7 +477,7 @@ func matrixRequirementCells(lines []textLine) (rows []int, column int) {
 	if len(starts) != 1 {
 		return nil, -1
 	}
-	var section []textLine
+	var section []TextLine
 	for _, l := range lines[starts[0]+1:] {
 		if !l.Fenced && (strings.HasPrefix(l.Text, "# ") || strings.HasPrefix(l.Text, "## ")) {
 			break
@@ -487,7 +489,7 @@ func matrixRequirementCells(lines []textLine) (rows []int, column int) {
 	}
 	headerIdx := -1
 	for i, l := range section {
-		if isTableLine(l.Text) {
+		if IsTableLine(l.Text) {
 			headerIdx = i
 			break
 		}
@@ -496,7 +498,7 @@ func matrixRequirementCells(lines []textLine) (rows []int, column int) {
 		return nil, -1
 	}
 	column = -1
-	for i, c := range splitCells(section[headerIdx].Text) {
+	for i, c := range SplitCells(section[headerIdx].Text) {
 		if strings.EqualFold(c, "Requisito") {
 			column = i
 			break
@@ -506,11 +508,11 @@ func matrixRequirementCells(lines []textLine) (rows []int, column int) {
 		return nil, -1
 	}
 	body := section[headerIdx+1:]
-	if len(body) > 0 && isSeparatorLine(body[0].Text) {
+	if len(body) > 0 && IsSeparatorLine(body[0].Text) {
 		body = body[1:]
 	}
 	for _, l := range body {
-		if !isTableLine(l.Text) {
+		if !IsTableLine(l.Text) {
 			break
 		}
 		rows = append(rows, l.Num)
@@ -518,9 +520,9 @@ func matrixRequirementCells(lines []textLine) (rows []int, column int) {
 	return rows, column
 }
 
-// rawCellSpan devuelve el intervalo en bytes de la celda n de una línea de tabla, con la
-// misma división que splitCells (`\|` es una barra literal).
-func rawCellSpan(line string, n int) (start, end int, ok bool) {
+// RawCellSpan devuelve el intervalo en bytes de la celda n de una línea de tabla, con la
+// misma división que SplitCells (`\|` es una barra literal).
+func RawCellSpan(line string, n int) (start, end int, ok bool) {
 	first := strings.IndexByte(line, '|')
 	if first < 0 {
 		return 0, 0, false
@@ -551,7 +553,7 @@ func RewriteMatrix(text string, m reqid.IDMap) string {
 	if m.Count() == 0 {
 		return text
 	}
-	rows, column := matrixRequirementCells(splitLines(text))
+	rows, column := matrixRequirementCells(SplitLines(text))
 	if len(rows) == 0 {
 		return text
 	}
@@ -567,7 +569,7 @@ func RewriteMatrix(text string, m reqid.IDMap) string {
 			continue
 		}
 		content := strings.TrimRight(l, "\r\n")
-		start, end, ok := rawCellSpan(content, column)
+		start, end, ok := RawCellSpan(content, column)
 		if !ok {
 			b.WriteString(l)
 			continue

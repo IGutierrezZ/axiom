@@ -2,18 +2,18 @@ package isoevidence
 
 import "strings"
 
-// textLine es una línea de un texto Markdown, con su número (base 1) y si queda
+// TextLine es una línea de un texto Markdown, con su número (base 1) y si queda
 // dentro de una valla de código. Las propias líneas de apertura y cierre de la
 // valla cuentan como vallas.
-type textLine struct {
+type TextLine struct {
 	Num    int
 	Text   string // sin el final de línea
 	Fenced bool
 }
 
-// splitLines divide text en líneas (acepta `\n` y `\r\n`) y marca las que están
+// SplitLines divide text en líneas (acepta `\n` y `\r\n`) y marca las que están
 // dentro de una valla ``` o ~~~. Una valla sin cerrar abarca hasta el final.
-func splitLines(text string) []textLine {
+func SplitLines(text string) []TextLine {
 	if text == "" {
 		return nil
 	}
@@ -21,11 +21,11 @@ func splitLines(text string) []textLine {
 	if raw[len(raw)-1] == "" {
 		raw = raw[:len(raw)-1]
 	}
-	lines := make([]textLine, 0, len(raw))
+	lines := make([]TextLine, 0, len(raw))
 	inFence, fenceChar, fenceLen := false, byte(0), 0
 	for i, l := range raw {
 		l = strings.TrimSuffix(l, "\r")
-		line := textLine{Num: i + 1, Text: l}
+		line := TextLine{Num: i + 1, Text: l}
 		ch, n, hasInfo, ok := fenceMarker(l)
 		switch {
 		case !inFence && ok:

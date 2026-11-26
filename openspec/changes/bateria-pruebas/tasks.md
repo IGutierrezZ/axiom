@@ -43,7 +43,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
   - Verificación: `go test ./internal/workspace ./internal/hub -run 'AcceptanceTests|Validate|ExampleYAML|DocsContract|Declares|Locate' -count=1`; `go vet ./internal/workspace ./internal/hub`.
   - Commit: `feat(workspace): declarar el bloque acceptance_tests solo en multirepo`.
 
-- [ ] T2 Exportar los ayudantes de líneas y tablas de `isoevidence` (renombrado mecánico).
+- [x] T2 Exportar los ayudantes de líneas y tablas de `isoevidence` (renombrado mecánico).
   - Renombrar en su sitio: `textLine` a `TextLine`, `splitLines` a `SplitLines` (`fence.go`), `isTableLine` a `IsTableLine`, `isSeparatorLine` a `IsSeparatorLine`, `splitCells` a `SplitCells`, `rawCellSpan` a `RawCellSpan` (`matrix.go`) y actualizar los usos internos (`bug.go`, `cubre.go`, `scenarios.go`, `matrix.go`, `fence.go`). Sin cambio de comportamiento.
   - Tests: los existentes de `isoevidence` y `livespec` siguen en verde; añadir comentario de doc a cada símbolo exportado.
   - Ficheros: `internal/isoevidence/{fence,matrix,bug,cubre,scenarios}.go` y sus tests si usan los nombres antiguos.

@@ -8,6 +8,12 @@
 - Decisión: la clave `enabled` es obligatoria en el bloque (no se asume valor). Los duplicados de `environments` solo se exigen con `enabled: true`.
 - Verificación: `go test ./internal/workspace ./internal/hub -run 'AcceptanceTests|Validate|ExampleYAML|DocsContract|Declares|Locate|Docs' -count=1` ok; `go vet` ok; `go build ./...` ok.
 
+## T2 completada: ayudantes de `isoevidence` exportados
+
+- Renombrado mecánico en `internal/isoevidence/{fence,matrix,bug,cubre,scenarios}.go`: `TextLine`, `SplitLines`, `IsTableLine`, `IsSeparatorLine`, `SplitCells`, `RawCellSpan`, con comentario de doc en cada símbolo. Sin cambio de comportamiento; los tests no usaban los nombres antiguos.
+- Nota para el ratchet de código muerto: `IsTableLine`, `IsSeparatorLine`, `SplitLines`, `SplitCells` y `RawCellSpan` ya son alcanzables (los usa `isoevidence` internamente desde `cmd/axiom`); `TextLine` es tipo. Los consumidores externos llegan con T3.
+- Verificación: `go test ./internal/isoevidence ./internal/livespec -count=1` ok; `go vet ./internal/isoevidence` ok; `go build ./...` ok.
+
 ## Pendientes
 
-T2 a T10.
+T3 a T10.

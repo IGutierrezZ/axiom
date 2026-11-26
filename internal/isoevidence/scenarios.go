@@ -11,7 +11,7 @@ var scenarioHeading = regexp.MustCompile(`^#### Scenario:[ \t]*(.*?)[ \t]*$`)
 // bloque de requisito, en orden y sin contar los que quedan dentro de una valla.
 func Scenarios(blockText string) []string {
 	var names []string
-	for _, line := range splitLines(blockText) {
+	for _, line := range SplitLines(blockText) {
 		if line.Fenced {
 			continue
 		}
