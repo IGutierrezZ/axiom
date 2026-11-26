@@ -13,9 +13,11 @@
 
 - [x] 3.2 Códigos `branch_template_unresolved`/`branch_template_not_applicable`, `PendingReasonAwaitingRole`, etiquetas, constructores en `template_refusal.go` y `Verdict.Details`. Commit `feat(branch): códigos y constructores de rechazo de plantilla`.
 
+- [x] 3.3 Plantilla en el plan: `Policy`/`RepoPolicy` con plantilla, `PlanInput.EnteringRole/Sealing/TemplateValues/Describe`, `RepoFacts.Frozen`, `BranchPlan.Template`, `RepoPlan.Pending`, `planner_template.go` (atribución D-04, precedencia D-05, pendientes D-07, rechazos tipados, colisiones, `Describe`), archivado con plantilla, `engine/template_values.go` (`resolveTemplateValues`, `templatesInPlay`), `changestart.WorkItemFacts`, instantánea con `Template`, `PendingBranches` y `TemplateValues`, y pruebas de planner, motor y seal. Commit `feat(branch): plantilla efectiva, valores de variables y rechazos tipados`.
+
 ## Pendientes
 
-3.3, 4.1, 4.2, 5.1.
+4.1 (incluye leer `Frozen` del registro en `gatherWith`, `registeredChangeBranch` con plantilla y `recoverPending` con `TemplateCandidateCollision`), 4.2, 5.1.
 
 ## Desviaciones
 
@@ -24,3 +26,4 @@
 - 2.1: `openspecHostPath` trata `specs_repository` vacío, `.` u `openspec` como entrada `.` (el desplazamiento léxico vacío del repositorio de specs es la propia carpeta maestra); solo un `specs_repository` absoluto cae a `git:`.
 - 3.2: pruebas escritas junto con el código (sin RED separado). Firmas: `TemplateUnresolved(change, master, key, variable, role, lane)`, `TemplateNotApplicable(change, master, key, reason, lane)`, `TemplateInvalidName(change, master, key, field, value, cause)`, `TemplateCollision`/`TemplateCandidateCollision(change, master, repo, name, roles)`, `TemplateReservedName(change, master, repo, name, reserved)`, `IntegrationsLinksUnreadable(operation, change, master, cause)`; constantes `TemplateReason*`.
 - 2.1: la sección de usuario se añadió como `## Plantillas de nombre de rama (branch_template)` en `docs/usage.md` y la lista de claves editables ya cita las tres claves, aunque las filas del catálogo llegan en 2.2 (misma PR).
+- 3.3: la tarea se aplicó con TDD (RED por fallo de compilación). El tipo de `changestart.WorkItemFacts` se llama `WorkItemOrigin`. `PlanInput.Sealing` es el interruptor de «plan del sellado» (política aplica aunque haya kickoff sin instantánea). El planificador ya consume `RepoFacts.Frozen`, pero el motor aún no lo rellena (4.1). `EnteringRole` y `Describe` están en el planificador; el motor los cablea en 4.2. En ODD solo SDD escribe el vínculo `work_item`, así que `{ref}` sale del staging o del `work-item.json` adoptado.
