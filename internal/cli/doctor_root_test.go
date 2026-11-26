@@ -96,3 +96,71 @@ func TestBuildDoctorChecksFallsBackToGlobalStateWithoutProjectState(t *testing.T
 		}
 	}
 }
+
+// TestBuildDoctorChecksUsesTheAgentsSyncManagesWhenTheProjectHasNotRecordedThem fija
+// que un proyecto con estado propio pero sin lista de agentes (`installed_agents` nulo,
+// como lo deja `axiom sync --scope workspace` sin instalación previa) se comprueba con
+// los agentes que sync descubre por ficheros y gestiona, no como un proyecto sin
+// agentes: antes, engram:reachable no sondeaba el MCP del proyecto y mandaba a
+// `axiom sync`, que no registra agentes, así que el aviso no se iba nunca.
+func TestBuildDoctorChecksUsesTheAgentsSyncManagesWhenTheProjectHasNotRecordedThem(t *testing.T) {
+	stubDoctorWorld(t)
+	home := t.TempDir()
+	root := t.TempDir()
+	if err := state.ProjectStore(home, root).Write(state.InstallState{InstalledAgents: nil}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mcpPath := filepath.Join(root, ".mcp.json")
+	if err := os.WriteFile(mcpPath, []byte(`{"mcpServers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writeApprovalFixture(t, filepath.Join(root, ".claude", "settings.local.json"), `{"enabledMcpjsonServers":["engram"]}`)
+	t.Chdir(t.TempDir())
+
+	got := runDoctorChecks(t, doctor.Options{Home: home, Root: root})
+
+	st := got[doctor.CheckStateJSON]
+	if st.Status != doctor.StatusPass || !strings.Contains(st.Detail, "has not recorded") || !strings.Contains(st.Detail, "claude-code") {
+		t.Fatalf("state:json = %+v, want un pass que diga que el proyecto no ha registrado agentes y nombre los que gestiona sync", st)
+	}
+	if _, ok := got[doctor.ToolCheckID("claude")]; !ok {
+		t.Fatalf("la herramienta del agente que gestiona sync debe comprobarse: %v", got)
+	}
+	engramResult := got[doctor.CheckEngramReachable]
+	if engramResult.Status != doctor.StatusPass || !strings.Contains(engramResult.Detail, mcpPath) {
+		t.Fatalf("engram:reachable = %+v, want un pass que sondee el MCP del proyecto %s", engramResult, mcpPath)
+	}
+}
+
+// TestBuildDoctorChecksRespectsAnEmptyRecordedAgentList fija la otra mitad: una lista
+// registrada y vacía es una selección (ningún agente), no una lista sin registrar, así
+// que el doctor no descubre agentes por ficheros y manda a instalar.
+func TestBuildDoctorChecksRespectsAnEmptyRecordedAgentList(t *testing.T) {
+	stubDoctorWorld(t)
+	home := t.TempDir()
+	root := t.TempDir()
+	if err := state.ProjectStore(home, root).Write(state.InstallState{InstalledAgents: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+
+	got := runDoctorChecks(t, doctor.Options{Home: home, Root: root})
+
+	st := got[doctor.CheckStateJSON]
+	if st.Status != doctor.StatusWarn || !strings.Contains(st.Detail, "no installed agents") {
+		t.Fatalf("state:json = %+v, want el aviso de proyecto sin agentes", st)
+	}
+	if _, ok := got[doctor.ToolCheckID("claude")]; ok {
+		t.Fatalf("una lista vacía registrada no debe exigir la herramienta de un agente descubierto: %v", got)
+	}
+	engramResult := got[doctor.CheckEngramReachable]
+	if engramResult.Remedy == nil || engramResult.Remedy.ID != doctor.RemedyInstall {
+		t.Fatalf("engram:reachable = %+v, want el remedio %q y no 'axiom sync'", engramResult, doctor.RemedyInstall)
+	}
+}

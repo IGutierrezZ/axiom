@@ -126,6 +126,9 @@ func buildDoctorChecks(opts doctor.Options) ([]doctor.Check, state.InstallState)
 		installedState = state.InstallState{}
 	}
 	installedAgents := installedState.InstalledAgents
+	if stateErr == nil {
+		installedAgents, _ = doctorAgents(stateStore, installedState)
+	}
 
 	// The state checks read whichever store is effective, so they belong to the
 	// project exactly when that store is the project's.
@@ -444,7 +447,8 @@ func checkStateJSON(homeDir string, store state.Store) CheckResult {
 		}
 	}
 
-	if len(s.InstalledAgents) == 0 {
+	agentIDs, recorded := doctorAgents(store, s)
+	if len(agentIDs) == 0 {
 		return CheckResult{
 			Name:   id,
 			Status: CheckStatusWarn,
@@ -455,7 +459,7 @@ func checkStateJSON(homeDir string, store state.Store) CheckResult {
 
 	var missing []string
 	var dangling []string
-	for _, agentID := range s.InstalledAgents {
+	for _, agentID := range agentIDs {
 		if dir := agentConfigDir(homeDir, agentID); dir != "" {
 			info, lstatErr := os.Lstat(dir)
 			if os.IsNotExist(lstatErr) {
@@ -512,11 +516,35 @@ func checkStateJSON(homeDir string, store state.Store) CheckResult {
 		}
 	}
 
+	if !recorded {
+		return CheckResult{
+			Name:   id,
+			Status: CheckStatusPass,
+			Detail: fmt.Sprintf("state file OK — the project has not recorded its agents; 'axiom sync' manages the %d it discovers: %s", len(agentIDs), strings.Join(agentIDs, ", ")),
+		}
+	}
 	return CheckResult{
 		Name:   id,
 		Status: CheckStatusPass,
-		Detail: fmt.Sprintf("state file OK — %d agent(s) installed: %s", len(s.InstalledAgents), strings.Join(s.InstalledAgents, ", ")),
+		Detail: fmt.Sprintf("state file OK — %d agent(s) installed: %s", len(agentIDs), strings.Join(agentIDs, ", ")),
 	}
+}
+
+// doctorAgents devuelve los agentes que comprueba el doctor para el estado leído del
+// almacén: los que registra y, si el proyecto todavía no ha registrado su lista
+// (Store.AgentsRecorded: `installed_agents` nulo, como lo deja un `axiom sync --scope
+// workspace` sin instalación previa), los mismos que gestiona sync, que entonces los
+// descubre por ficheros (DiscoverAgents). recorded dice si salen del registro.
+func doctorAgents(store state.Store, current state.InstallState) (agents []string, recorded bool) {
+	if store.AgentsRecorded(current) {
+		return current.InstalledAgents, true
+	}
+	discovered := DiscoverAgents(store)
+	agents = make([]string, 0, len(discovered))
+	for _, agentID := range discovered {
+		agents = append(agents, string(agentID))
+	}
+	return agents, false
 }
 
 // danglingAncestor reports the nearest existing ancestor of path — walking
@@ -598,6 +626,17 @@ func checkEngramReachable(ctx context.Context, homeDir, workspaceDir string, ins
 			Status: CheckStatusFail,
 			Detail: "engram MCP persisted configuration is invalid: " + err.Error(),
 			Remedy: doctor.NewRemedy(doctor.RemedyInspectEngram, "Repair the persisted Engram MCP configuration, then run 'axiom sync'"),
+		}
+	}
+	// Sin agentes no hay configuración que leer, y `axiom sync` no lo arregla: sin
+	// agentes registrados ni descubiertos no tiene nada que sincronizar. El remedio es
+	// el de state:json, que nombra la causa.
+	if len(commands) == 0 && len(installedAgents) == 0 {
+		return CheckResult{
+			Name:   id,
+			Status: CheckStatusWarn,
+			Detail: "engram MCP not probed: there are no installed agents to read its configuration from (see the state:json check)",
+			Remedy: doctor.NewRemedy(doctor.RemedyInstall, "Run 'axiom install' to configure agents"),
 		}
 	}
 	if len(commands) == 0 {
