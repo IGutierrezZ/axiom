@@ -121,7 +121,7 @@ Recordatorio de CI: cadenas JS de `server_test.go:447` y `assets_branch_test.go`
 
 - [x] 8.1 `docs/usage.md`: subsección «Ajustes del proyecto desde el dashboard» con claves editables, claves de solo lectura, «solo afecta a cambios nuevos», endpoints con sus códigos, petición local y autofetch.
 - [x] 8.2 `docs/codebase/dashboard.md`: invariante de que `axiom.yaml` solo se escribe por `/api/settings` mediante `internal/settings` y de que toda escritura exige `isLocalRequest`.
-- [x] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario. Evidencia: commit 979545eb7 (ajusta también `internal/idmigration/residues.yaml`: el token REQ-25.33 de las pruebas del dashboard caducó al citar RF-WEB-10).
+- [x] 8.3 `axiom.example.yaml`: nota en la cabecera (solo comentario) sobre «Ajustes del proyecto» en `axiom ui`; comprobar que la ida y vuelta de la tarea 3.1 sigue idéntica con ese comentario. Evidencia: commit 979545eb7 (ajusta también `internal/idmigration/residues.yaml`: se retiró el token heredado de las pruebas del dashboard, que pasan a citar RF-WEB-10).
 
 Cubre: RF-WEB-10, RF-WEB-18, RF-TOP-21, RF-TOP-22
 

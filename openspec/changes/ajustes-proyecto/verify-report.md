@@ -13,7 +13,7 @@ Rol `fullstack`. Alcance: `git diff origin/main...HEAD`. Verificación localizad
 | `go test ./internal/settings` | ok |
 | `go test ./internal/workspace ./internal/multirole ./internal/hub -run 'Promotion\|WorkflowLane\|ExplainerHTML\|GatePolic\|PolicyViolations'` | ok |
 | `go test ./internal/dashboard -run 'Settings\|WorktreePrefs\|BranchPolicy\|Ecosystem\|SecretsCanary\|Classified\|WorkspaceIsReadOnly\|Assets\|Docs'` | ok |
-| `go test ./internal/idmigration -run Residue` | FAIL: `openspec/changes/ajustes-proyecto/tasks.md:124 REQ-25.33: cita heredada sin residuo declarado` |
+| `go test ./internal/idmigration -run Residue` | FAIL: `openspec/changes/ajustes-proyecto/tasks.md:124 el token heredado: cita heredada sin residuo declarado` |
 | `go vet` (settings, workspace, multirole, hub, dashboard) | sin salida |
 | `gofmt -l internal/` | sin salida |
 
@@ -38,7 +38,13 @@ Rol `fullstack`. Alcance: `git diff origin/main...HEAD`. Verificación localizad
 
 Fuentes consultadas: `openspec/config.yaml` (reglas de verify), skills del registro por trigger (Go, JS), contexto técnico: no aplicable.
 
-- CRITICAL · openspec/config.yaml (comprobación obligatoria de residuos de IDs) · `TestRepositoryLegacyIDResidues` · `openspec/changes/ajustes-proyecto/tasks.md:124` · la línea 8.3 cita el token heredado `REQ-25.33` sin residuo declarado; la CI fallará. Corrección: reescribir la línea sin el token (o declarar el residuo).
+- CRITICAL · openspec/config.yaml (comprobación obligatoria de residuos de IDs) · `TestRepositoryLegacyIDResidues` · `openspec/changes/ajustes-proyecto/tasks.md:124` · la línea 8.3 cita el token heredado sin residuo declarado; la CI fallará. Corrección: reescribir la línea sin el token (o declarar el residuo).
 - Sin otros hallazgos. SUGGESTION: `coverage-review.design.md` huecos 1, 3, 5-8, 10, 11 quedan informativos.
 
-**Estado:** no limpio — `TestRepositoryLegacyIDResidues` falla por `REQ-25.33` en `tasks.md:124`
+**Estado:** no limpio — `TestRepositoryLegacyIDResidues` falla por el token heredado en `tasks.md:124`
+
+## Corrección posterior (2026-11-26)
+
+El orquestador corrigió el CRITICAL: retiró el token heredado de la línea 8.3 de `tasks.md` y de las citas de este informe. Volvió a ejecutar la comprobación que fallaba: `go test ./internal/idmigration -run Residue` → `ok`. No se ha tocado código. Las demás comprobaciones de este informe siguen como se registraron arriba.
+
+**Estado:** limpio
