@@ -770,7 +770,7 @@ func syncBackupTargetsScoped(homeDir, workspaceDir string, scope InstallScope, s
 				paths[path] = struct{}{}
 			}
 		}
-		for _, path := range legacyWorkspaceMCPConfigPaths(homeDir, workspaceDir, scope, adapters, component) {
+		for _, path := range legacyMCPConfigPaths(homeDir, workspaceDir, scope, adapters, component) {
 			paths[path] = struct{}{}
 		}
 		if component == model.ComponentEngram {

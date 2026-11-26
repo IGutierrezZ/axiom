@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -533,11 +534,23 @@ func TestInjectCursorWithMalformedMCPJsonRecovery(t *testing.T) {
 	}
 }
 
+// En global, VS Code declara Engram en <COPILOT_HOME|~/.copilot>/mcp-config.json
+// (`mcpServers`, la entrada de Copilot CLI) y retira la que Axiom dejó en el mcp.json
+// del perfil de usuario (`servers`), sin tocar los servidores del usuario.
 func TestInjectVSCodeMergesEngramToMCPConfigFile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	t.Setenv("APPDATA", filepath.Join(home, "AppData", "Roaming"))
 	adapter := vscode.NewAdapter()
+	profile := adapter.LegacyMCPConfigPath(home)
+	writeFile(t, profile, `{
+  // del usuario
+  "servers": {
+    "mio": {"command": "mio"},
+    "engram": {"command": "/opt/engram", "args": ["mcp", "--tools=agent"]}
+  }
+}
+`)
 
 	result, err := Inject(home, adapter)
 	if err != nil {
@@ -548,26 +561,30 @@ func TestInjectVSCodeMergesEngramToMCPConfigFile(t *testing.T) {
 	}
 
 	mcpPath := adapter.MCPConfigPath(home, "engram")
+	if mcpPath != filepath.Join(home, ".copilot", "mcp-config.json") {
+		t.Fatalf("MCPConfigPath = %q, quiero ~/.copilot/mcp-config.json", mcpPath)
+	}
+	var root map[string]any
 	content, err := os.ReadFile(mcpPath)
-	if err != nil {
-		t.Fatalf("ReadFile(mcp.json) error = %v", err)
+	if err != nil || json.Unmarshal(content, &root) != nil {
+		t.Fatalf("mcp-config.json ilegible: %v\n%s", err, content)
 	}
-
-	text := string(content)
-	if !strings.Contains(text, `"servers"`) {
-		t.Fatal("mcp.json missing servers key")
+	if _, legacyShape := root["servers"]; legacyShape {
+		t.Fatal("mcp-config.json no debe usar la raíz `servers` del arnés Local")
 	}
-	if !strings.Contains(text, `"engram"`) {
-		t.Fatal("mcp.json missing engram server")
+	entry, _ := root["mcpServers"].(map[string]any)["engram"].(map[string]any)
+	if entry["type"] != "stdio" || !reflect.DeepEqual(entry["tools"], []any{"*"}) {
+		t.Fatalf("engram debe llevar type stdio y tools [*]: %v", entry)
 	}
-	if !strings.Contains(text, `"mcp"`) {
-		t.Fatal("mcp.json missing engram args mcp")
-	}
-	if strings.Contains(text, `"mcpServers"`) {
-		t.Fatal("mcp.json should use 'servers' key, not 'mcpServers'")
-	}
-	// RED: VS Code overlay must include --tools=agent
 	assertArgsHaveToolsAgent(t, mcpPath)
+
+	legacy, err := os.ReadFile(profile)
+	if err != nil {
+		t.Fatalf("el mcp.json del perfil, con un servidor del usuario, debe seguir ahí: %v", err)
+	}
+	if strings.Contains(string(legacy), `"engram"`) || !strings.Contains(string(legacy), `"mio"`) || !strings.Contains(string(legacy), "// del usuario") {
+		t.Fatalf("del perfil solo se retira la entrada de Axiom:\n%s", legacy)
+	}
 }
 
 // ─── Gemini tests ─────────────────────────────────────────────────────────────

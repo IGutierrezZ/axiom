@@ -268,18 +268,16 @@ func injectMCPConfigFile(homeDir string, adapter agents.Adapter) (InjectionResul
 
 	overlay := DefaultContext7OverlayJSON()
 	legacyPath := ""
-	if adapter.Agent() == model.AgentVSCodeCopilot {
-		overlay = VSCodeContext7OverlayJSON()
-		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
-			legacyPath = provider.LegacyWorkspaceMCPConfigPath(homeDir)
-		}
-		if legacyPath != "" {
-			// En el proyecto, VS Code comparte <proyecto>/.mcp.json con Claude Code.
+	if provider, ok := adapter.(agents.LegacyMCPConfigProvider); ok {
+		legacyPath = provider.LegacyMCPConfigPath(homeDir)
+	}
+	if adapter.Agent() == model.AgentVSCodeCopilot || adapter.Agent() == model.AgentGitHubCopilotCLI {
+		// VS Code comparte <COPILOT_HOME|~/.copilot>/mcp-config.json con Copilot CLI
+		// (Context7 remoto) y <proyecto>/.mcp.json con Claude Code (Context7 por npx).
+		overlay = CopilotCLIContext7OverlayJSON()
+		if filepath.Base(path) == ".mcp.json" {
 			overlay = VSCodeWorkspaceContext7OverlayJSON()
 		}
-	}
-	if adapter.Agent() == model.AgentGitHubCopilotCLI {
-		overlay = CopilotCLIContext7OverlayJSON()
 	}
 	if adapter.Agent() == model.AgentAntigravity {
 		overlay = AntigravityContext7OverlayJSON()

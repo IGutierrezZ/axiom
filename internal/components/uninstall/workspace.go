@@ -267,8 +267,8 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 		if path == "" {
 			return nil, nil
 		}
-		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
-			if legacy := provider.LegacyWorkspaceMCPConfigPath(root); legacy != "" {
+		if provider, ok := adapter.(agents.LegacyMCPConfigProvider); ok {
+			if legacy := provider.LegacyMCPConfigPath(root); legacy != "" {
 				// VS Code Copilot en el proyecto: <proyecto>/.mcp.json, compartido con
 				// Claude Code, y el .vscode/mcp.json de las instalaciones anteriores.
 				targets = []string{legacy}
@@ -280,11 +280,7 @@ func (s *Service) managedMCPOperations(adapter agents.Adapter, name string) (tar
 				return targets, ops
 			}
 		}
-		parent := jsonPath{"mcpServers"}
-		if adapter.Agent() == model.AgentVSCodeCopilot {
-			parent = jsonPath{"servers"}
-		}
-		return []string{path}, []operation{s.rewriteManagedMCPServer(path, parent, name)}
+		return []string{path}, []operation{s.rewriteManagedMCPServer(path, jsonPath{"mcpServers"}, name)}
 	case model.StrategyTOMLFile:
 		configPath := adapter.MCPConfigPath(root, name)
 		if configPath == "" {

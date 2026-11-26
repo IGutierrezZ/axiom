@@ -12,7 +12,7 @@
 | OpenCode        | `opencode`       | Yes          | Yes | Full (multi-mode overlay)        | No            | Yes            | `~/.config/opencode`                |
 | Gemini CLI      | `gemini-cli`     | Yes          | Yes | Full (experimental)              | No            | No             | `~/.gemini`                         |
 | Cursor          | `cursor`         | Yes          | Yes | Full (native subagents)          | No            | No             | `~/.cursor`                         |
-| VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent; agentes `.agent.md` por fase, solo en el proyecto) | No            | No             | `~/.copilot` + VS Code User profile |
+| VS Code Copilot | `vscode-copilot` | Yes          | Yes | Full (runSubagent; agentes `.agent.md` por fase, solo en el proyecto) | No            | No             | `~/.copilot` (skills, `mcp-config.json`) + VS Code User profile (prompts) |
 | GitHub Copilot CLI | `github-copilot-cli` | Yes      | Yes | Agentes `.agent.md` por fase, en `.github/agents` del proyecto (delegación por `description`) | No            | No             | `~/.copilot` o `$COPILOT_HOME` (solo global) |
 | Codex           | `codex`          | Yes          | Yes | Native multi-agent (default; solo fallback) | No            | No             | `~/.codex`                          |
 | Antigravity     | `antigravity`    | Yes (native) | Yes | Solo-agent + Mission Control     | No            | No             | `~/.gemini/antigravity`             |
@@ -162,7 +162,8 @@ Antigravity is an agent-first platform with built-in sub-agents (Browser, Termin
 - Uses the `runSubagent` tool with support for parallel execution
 - Skills at `~/.copilot/skills/`
 - System prompt at `Code/User/prompts/axiom.instructions.md`. `axiom sync` retira el antiguo `gentle-ai.instructions.md` solo si lo escribió Axiom; si tiene contenido propio lo conserva y avisa
-- MCP config at `Code/User/mcp.json`
+- **MCP con `--scope global`** (Context7 y Engram): `$COPILOT_HOME/mcp-config.json`, o `~/.copilot/mcp-config.json` si `COPILOT_HOME` no está definida, con la clave raíz `mcpServers`. Es el destino de usuario del arnés de Copilot, que lo lee directamente ([referencia de VS Code](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)). Es el mismo fichero que escribe Copilot CLI, y los dos agentes escriben la misma entrada (Context7 remoto por `http`, Engram con `type: "stdio"`, los dos con `tools: ["*"]`), así que con los dos instalados `axiom sync` no cambia nada. La orden de Engram que ya figure en el fichero se respeta. Si se desinstala uno de los dos, las entradas se quedan para el otro.
+- **`Code/User/mcp.json`** (perfil de usuario): es el formato `servers` del arnés Local, deprecado y que VS Code retira en febrero de 2027; el arnés de Copilot no lo lee directamente. `axiom sync --scope global` y la desinstalación global retiran de él solo las entradas de Engram y Context7 que escribió Axiom. Los servidores, las `inputs` y los comentarios del usuario se conservan, y el fichero se borra solo si se queda vacío.
 - Con `--scope workspace`, Axiom escribe en la distribución de proyecto que VS Code lee, y nada en el perfil de usuario de VS Code (`%APPDATA%\Code\User`, `~/.config/Code/User`, `~/Library/Application Support/Code/User`) ni en `~/.copilot`:
   - **Instrucciones**: persona, orquestador ODD/SDD y protocolo de memoria van en `<proyecto>/.github/instructions/axiom.instructions.md`, un fichero propio de Axiom cuya cabecera declara `applyTo: "**"` para que VS Code lo aplique a todas las peticiones (sin `applyTo` solo se adjuntaría a mano). Se suman a las instrucciones de usuario. `.github/copilot-instructions.md` y el `AGENTS.md` de la raíz son del equipo y Axiom no los toca, ni siquiera para retirar restos de instalaciones antiguas. Las rutas del orquestador que apuntaban a `.agent/skills` se resuelven a `.agents/skills`.
   - **Skills**: `<proyecto>/.agents/skills/<nombre>/SKILL.md`, la carpeta compartida (las sesiones locales de VS Code la leen junto a `.github/skills`). Una copia anterior en `.github/skills` se migra como se explica en «Skills en `--scope workspace`».
@@ -178,20 +179,20 @@ Antigravity is an agent-first platform with built-in sub-agents (Browser, Termin
 
 ### GitHub Copilot CLI
 
-Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`github-copilot-cli`), distinto del de VS Code Copilot: solo comparten la carpeta de skills.
+Agente de terminal de GitHub (binario `copilot`). Es un adaptador propio (`github-copilot-cli`), distinto del de VS Code Copilot: solo comparten la carpeta de skills y `mcp-config.json`.
 
 - **Raíz**: `$COPILOT_HOME` si está definida y es una ruta absoluta, o `~/.copilot`. `COPILOT_HOME` solo se respeta con el directorio personal real del usuario: una instalación aislada (otra raíz de instalación) se queda dentro de ella.
 - **Instrucciones**: `<raíz>/copilot-instructions.md` (persona, orquestador ODD/SDD y protocolo de memoria). El SDD es el mismo orquestador genérico de VS Code Copilot, con la elección de almacén de artefactos en la preflight de sesión.
 - **Skills**: `<raíz>/skills/`. Sin `COPILOT_HOME` es la misma carpeta que usa VS Code Copilot. La copia no depende de qué agente la escribe (lleva el hueco genérico de runtime), y desinstalar uno de los dos no retira las skills mientras el otro siga instalado.
-- **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` (no `servers`, la de VS Code) y entradas con `type` (`http` para Context7, `local` para Engram) y `tools: ["*"]`. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
+- **MCP** (Context7 y Engram): `<raíz>/mcp-config.json`, con la clave raíz `mcpServers` y entradas con `type` (`http` para Context7, `stdio` para Engram) y `tools: ["*"]`. Es el fichero de usuario del arnés de Copilot, que también lee VS Code Copilot: los dos agentes escriben la misma entrada, y desinstalar uno no retira las entradas mientras el otro siga instalado. `stdio` es el valor que documentan VS Code y `copilot mcp add`. `axiom sync` cambia a `stdio` el `local` que escribían las versiones anteriores. Se conservan los servidores del usuario. Engram se inyecta directamente, sin `engram setup`. CodeGraph tiene un destino nativo `copilot-cli` que escribe en el mismo fichero.
 - **Ajustes y permisos**: `<raíz>/settings.json`. Axiom no escribe permisos ni modos de autoaprobación: lo que decidas queda intacto.
 - **Agentes**: ninguno en `<raíz>/agents/`. Los agentes por fase viven solo en `.github/agents` del proyecto, que Copilot CLI también lee (véase [Agentes por fase de Copilot](#agentes-por-fase-de-copilot)).
 - **Hooks y comandos**: ninguno.
 - **Detección**: el binario `copilot` en el `PATH` o una entrada propia de Copilot CLI en la raíz:
   - su estado: `config.json`, `session-state/`, `session-store.db`, `logs/`, etc.;
-  - o lo que solo él lee: `settings.json`, `mcp-config.json` y `copilot-instructions.md`.
+  - o lo que solo él lee: `settings.json` y `copilot-instructions.md`.
 
-  `skills/` y `agents/` las lee también VS Code Copilot, y una entrada desconocida no cuenta, así que una `~/.copilot` sin ninguna de esas entradas no se toma por Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
+  `skills/`, `agents/` y `mcp-config.json` los lee también VS Code Copilot, y una entrada desconocida no cuenta, así que una `~/.copilot` sin ninguna de esas entradas no se toma por Copilot CLI; y VS Code Copilot se detecta en el escaneo por su extensión `github.copilot`, no por `~/.copilot`.
 - **Instalación** (solo se muestra, Axiom no la ejecuta): `npm install -g --ignore-scripts @github/copilot@latest`, con `sudo` en Linux si el npm es del sistema. `axiom doctor` comprueba el binario `copilot`.
 - **Ámbito workspace**: no tiene. Con `--scope workspace` se omite con un aviso. Lo único que Axiom escribe en el proyecto por él son los agentes por fase de `.github/agents`: el sync y la instalación de proyecto los escriben cuando Copilot CLI consta en el estado del proyecto o está configurado para el usuario.
 

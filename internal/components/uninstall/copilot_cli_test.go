@@ -252,3 +252,59 @@ func TestUninstallCopilotCLIWithCopilotHomeRemovesOnlyItsOwnSkills(t *testing.T)
 		t.Error("retirar Copilot CLI borró las skills de VS Code Copilot")
 	}
 }
+
+// <raíz>/mcp-config.json es de VS Code Copilot y de Copilot CLI, con la misma entrada.
+// Desinstalar uno deja Engram y Context7 para el otro; desinstalar el último los
+// retira. VS Code retira además las entradas de Axiom del mcp.json de su perfil de
+// usuario, donde las declaraban las instalaciones anteriores, y conserva las del usuario.
+func TestUninstallOneCopilotAgentKeepsTheSharedMCPConfigOfTheOther(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		remove, remains model.AgentID
+	}{
+		{"se retira Copilot CLI y queda VS Code", model.AgentGitHubCopilotCLI, model.AgentVSCodeCopilot},
+		{"se retira VS Code y queda Copilot CLI", model.AgentVSCodeCopilot, model.AgentGitHubCopilotCLI},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			home := copilotHome(t)
+			if err := state.Write(home, state.InstallState{InstalledAgents: []string{string(model.AgentVSCodeCopilot), string(model.AgentGitHubCopilotCLI)}}); err != nil {
+				t.Fatal(err)
+			}
+			vscodeAdapter := installCopilot(t, home, model.AgentVSCodeCopilot)
+			cliAdapter := installCopilot(t, home, model.AgentGitHubCopilotCLI)
+			config := vscodeAdapter.MCPConfigPath(home, "")
+			if config != cliAdapter.MCPConfigPath(home, "") {
+				t.Fatalf("los dos agentes deberían compartir mcp-config.json: %q / %q", config, cliAdapter.MCPConfigPath(home, ""))
+			}
+			profile := vscodeAdapter.(agents.LegacyMCPConfigProvider).LegacyMCPConfigPath(home)
+			if err := os.MkdirAll(filepath.Dir(profile), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(profile, []byte(`{"servers": {"mio": {"command": "mio"}, "engram": {"command": "/opt/engram", "args": ["mcp", "--tools=agent"]}, "context7": {"type": "http", "url": "https://mcp.context7.com/mcp"}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := newCopilotService(t, home).PartialUninstall([]model.AgentID{tc.remove}, allManagedComponents); err != nil {
+				t.Fatalf("PartialUninstall(%s): %v", tc.remove, err)
+			}
+			servers, _ := readJSONFileForTest(t, config)["mcpServers"].(map[string]any)
+			if servers["engram"] == nil || servers["context7"] == nil {
+				t.Fatalf("desinstalar %s retiró el MCP que %s sigue usando: %v", tc.remove, tc.remains, servers)
+			}
+
+			if _, err := newCopilotService(t, home).PartialUninstall([]model.AgentID{tc.remains}, allManagedComponents); err != nil {
+				t.Fatalf("PartialUninstall(%s): %v", tc.remains, err)
+			}
+			if raw, err := os.ReadFile(config); err == nil && (strings.Contains(string(raw), `"engram"`) || strings.Contains(string(raw), `"context7"`)) {
+				t.Fatalf("al retirar el último agente quedaron entradas de Axiom en mcp-config.json:\n%s", raw)
+			}
+			legacy, err := os.ReadFile(profile)
+			if err != nil {
+				t.Fatalf("el mcp.json del perfil, con un servidor del usuario, debe seguir ahí: %v", err)
+			}
+			if strings.Contains(string(legacy), `"engram"`) || strings.Contains(string(legacy), `"context7"`) || !strings.Contains(string(legacy), `"mio"`) {
+				t.Fatalf("del perfil solo se retiran las entradas de Axiom:\n%s", legacy)
+			}
+		})
+	}
+}

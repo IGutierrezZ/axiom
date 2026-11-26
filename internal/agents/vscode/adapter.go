@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/capabilitymanifest"
+	"github.com/IGutierrezZ/axiom/v3/internal/copilotconfig"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/system"
 )
@@ -74,6 +75,8 @@ func (a *Adapter) InstallCommand(_ system.PlatformProfile) ([][]string, error) {
 // VS Code Copilot reads .instructions.md files from the VS Code User prompts folder.
 // Skills are loaded from ~/.copilot/skills/ (global), .github/skills/ (workspace),
 // ~/.claude/skills/, and .claude/skills/. We target ~/.copilot/skills/ for global reach.
+// MCP servers go to the Copilot harness user file, <COPILOT_HOME|~/.copilot>/mcp-config.json
+// (see MCPConfigPath), not to the VS Code User profile mcp.json of the Local harness.
 
 func (a *Adapter) GlobalConfigDir(homeDir string) string {
 	return filepath.Join(homeDir, ".copilot")
@@ -114,7 +117,21 @@ func (a *Adapter) MCPStrategy() model.MCPStrategy {
 
 // --- MCP ---
 
+// MCPConfigPath es <COPILOT_HOME|~/.copilot>/mcp-config.json, con la clave
+// `mcpServers`: el destino de usuario del arnés de Copilot, que lo lee directamente
+// (code.visualstudio.com/docs/agents/reference/mcp-configuration). Es el mismo fichero
+// que escribe el adaptador de Copilot CLI, con la misma entrada para cada servidor, así
+// que con los dos instalados `sync` sigue siendo idempotente.
 func (a *Adapter) MCPConfigPath(homeDir string, _ string) string {
+	return filepath.Join(copilotconfig.Root(homeDir), "mcp-config.json")
+}
+
+// LegacyMCPConfigPath es el mcp.json del perfil de usuario de VS Code, donde las
+// instalaciones anteriores declaraban los servidores MCP con la clave `servers`. Ese
+// formato es del arnés Local, deprecado y que VS Code retira en febrero de 2027: el
+// arnés de Copilot no lo lee, solo lo reenvía el editor. `sync` y la desinstalación
+// retiran de él las entradas de Axiom.
+func (a *Adapter) LegacyMCPConfigPath(homeDir string) string {
 	return filepath.Join(a.vscodeUserDir(homeDir), "mcp.json")
 }
 

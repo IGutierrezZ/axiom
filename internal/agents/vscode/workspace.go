@@ -153,8 +153,9 @@ func (a *WorkspaceAdapter) SettingsPath(dir string) string {
 	return a.Adapter.SettingsPath(dir)
 }
 
-// MCPConfigPath es el mcp.json del perfil de usuario en la carpeta de usuario y
-// <proyecto>/.mcp.json (clave `mcpServers`) en el proyecto.
+// MCPConfigPath es <proyecto>/.mcp.json en el proyecto y
+// <COPILOT_HOME|~/.copilot>/mcp-config.json en la carpeta de usuario, los dos con la
+// clave `mcpServers`.
 func (a *WorkspaceAdapter) MCPConfigPath(dir string, serverName string) string {
 	if a.InWorkspace(dir) {
 		return filepath.Join(dir, ".mcp.json")
@@ -172,12 +173,12 @@ func (a *WorkspaceAdapter) BranchGuardHooksFile(dir string) string {
 	return filepath.Join(dir, githubDirName, "hooks", "axiom-branch-guard.json")
 }
 
-// LegacyWorkspaceMCPConfigPath es .vscode/mcp.json en el proyecto, donde las
-// instalaciones anteriores declaraban los servidores MCP con la clave `servers`.
-// Fuera del proyecto no devuelve nada: el perfil de usuario no cambia.
-func (a *WorkspaceAdapter) LegacyWorkspaceMCPConfigPath(dir string) string {
+// LegacyMCPConfigPath es .vscode/mcp.json en el proyecto, donde las instalaciones
+// anteriores declaraban los servidores MCP con la clave `servers`. Fuera del proyecto
+// es el mcp.json del perfil de usuario (véase Adapter.LegacyMCPConfigPath).
+func (a *WorkspaceAdapter) LegacyMCPConfigPath(dir string) string {
 	if !a.InWorkspace(dir) {
-		return ""
+		return a.Adapter.LegacyMCPConfigPath(dir)
 	}
 	return filepath.Join(dir, vscodeDirName, "mcp.json")
 }

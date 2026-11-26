@@ -17,7 +17,7 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 		"SubAgentsDir":     {a.SubAgentsDir(root), filepath.Join(root, ".github", "agents")},
 		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".mcp.json")},
-		"LegacyMCPConfig":  {a.LegacyWorkspaceMCPConfigPath(root), filepath.Join(root, ".vscode", "mcp.json")},
+		"LegacyMCPConfig":  {a.LegacyMCPConfigPath(root), filepath.Join(root, ".vscode", "mcp.json")},
 		"BranchGuardHooks": {a.BranchGuardHooksFile(root), filepath.Join(root, ".github", "hooks", "axiom-branch-guard.json")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".vscode", "settings.json")},
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".github")},
@@ -62,8 +62,8 @@ func TestWithWorkspaceKeepsGlobalLayoutElsewhere(t *testing.T) {
 	if files := a.WorkspaceUserConfigFiles(home); len(files) != 0 {
 		t.Errorf("WorkspaceUserConfigFiles(home) = %v, quiero ninguno", files)
 	}
-	if legacy := a.LegacyWorkspaceMCPConfigPath(home); legacy != "" {
-		t.Errorf("LegacyWorkspaceMCPConfigPath(home) = %q, quiero vacío: el perfil de usuario no cambia", legacy)
+	if got, want := a.LegacyMCPConfigPath(home), global.LegacyMCPConfigPath(home); got != want {
+		t.Errorf("LegacyMCPConfigPath(home) = %q, quiero el mcp.json del perfil de usuario %q", got, want)
 	}
 	if hooks := a.BranchGuardHooksFile(home); hooks != "" {
 		t.Errorf("BranchGuardHooksFile(home) = %q, quiero vacío: la instalación global no instala hooks", hooks)
@@ -81,9 +81,6 @@ func TestGlobalAdapterHasNoWorkspaceCapabilities(t *testing.T) {
 	}
 	if _, ok := global.(interface{ InWorkspace(string) bool }); ok {
 		t.Errorf("el adaptador global no está ligado a ningún proyecto")
-	}
-	if _, ok := global.(interface{ LegacyWorkspaceMCPConfigPath(string) string }); ok {
-		t.Errorf("el adaptador global no tiene MCP de proyecto que migrar")
 	}
 	var bound any = NewAdapter().WithWorkspace(t.TempDir())
 	if _, ok := bound.(interface{ WorkspaceUserConfigFiles(string) []string }); !ok {
