@@ -23,8 +23,8 @@ func acceptanceRow(id, cubre, envs string) string {
 	return "| " + id + " | " + cubre + " | backend | manual | alta | " + envs + " |  | abrir | ok |\n"
 }
 
-// acceptanceChange monta un cambio multirepo (canónico) con una delta que declara REQ-1.1 y
-// REQ-1.2, sellado checkpointed con el rol backend, y el bloque dado en axiom.yaml.
+// acceptanceChange monta un cambio multirepo (canónico) con una delta que declara dos requisitos
+// del patrón por defecto, sellado checkpointed con el rol backend, y el bloque dado en axiom.yaml.
 func acceptanceChange(t *testing.T, blocks string) (ws workspacetest.Workspace, changeRoot string) {
 	t.Helper()
 	ws = workspacetest.Canonical(t)
