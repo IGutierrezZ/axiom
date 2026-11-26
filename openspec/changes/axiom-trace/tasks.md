@@ -41,13 +41,13 @@ Entrega `single-pr`: los diez commits forman una sola PR. Si U3 o U4 superan cla
 
 Depende de: nada. Paquete: `internal/reqtrace`.
 
-- [ ] 1.1 Crear `doc.go` (con `Schema = "axiom.trace/v1"`) y `model.go`: `Result`, `Increment`, `Commit`, `Task`, `Assignment`, `Warning`; constantes `Lane`, `Kind`, `Role`, `Anchor` y los ocho códigos de advertencia de la decisión 5. Listas nunca `null` (constructores o normalización al emitir).
+- [x] 1.1 Crear `doc.go` (con `Schema = "axiom.trace/v1"`) y `model.go`: `Result`, `Increment`, `Commit`, `Task`, `Assignment`, `Warning`; constantes `Lane`, `Kind`, `Role`, `Anchor` y los ocho códigos de advertencia de la decisión 5. Listas nunca `null` (constructores o normalización al emitir).
   Cubre: prov:trace:9
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
-- [ ] 1.2 Crear `id.go` con `Query`, `ParseID` e `IDError` (`Code: "id_invalid"`, `Cause`) y su prueba de tabla: válido, provisional, inválido, patrón `RF-<DOM>-<NN>`, `REQ-01.1` frente a `REQ-1.1` (sin normalizar, hueco spec 5), espacios y minúsculas rechazados.
+- [x] 1.2 Crear `id.go` con `Query`, `ParseID` e `IDError` (`Code: "id_invalid"`, `Cause`) y su prueba de tabla: válido, provisional, inválido, patrón `RF-<DOM>-<NN>`, `REQ-01.1` frente a `REQ-1.1` (sin normalizar, hueco spec 5), espacios y minúsculas rechazados.
   Cubre: prov:trace:2
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`
-- [ ] 1.3 Crear `imports_test.go` (modelo: `internal/isoevidence/imports_test.go:19-50`): `reqtrace` no importa `os`, `os/exec` ni `internal/gitcommon`.
+- [x] 1.3 Crear `imports_test.go` (modelo: `internal/isoevidence/imports_test.go:19-50`): `reqtrace` no importa `os`, `os/exec` ni `internal/gitcommon`.
   Cubre: prov:trace:10
   Verificación: `go test ./internal/reqtrace -run RequirementTrace -count=1`; `go vet ./internal/reqtrace`
 
