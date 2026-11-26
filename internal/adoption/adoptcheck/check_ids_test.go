@@ -286,3 +286,18 @@ func TestCheck_OriginID_UnidadCitadaInexistenteFallaOrigin(t *testing.T) {
 		t.Fatalf("una unidad inexistente es de la regla origin, no de origin_id: %+v", got)
 	}
 }
+
+// Un `<ID original>` cuenta como ID si lo reconoce el escáner o si es un ID definitivo
+// válido para el patrón efectivo (`REQ-40.1` con el patrón por defecto).
+func TestCheck_OriginID_IDDelPatronEfectivoCuentaComoID(t *testing.T) {
+	f := newCheckFixture(t)
+	withoutDeclaredPattern(f)
+	f.delta(t, strings.Replace(validDelta, originRF001, "Origen: docs/requisitos.md#rf-001-alta-de-usuario (REQ-40.1)", 1))
+	report := f.check(t)
+	for _, fl := range failuresOf(report, RuleOriginID) {
+		if strings.Contains(fl.Detail, "un único identificador o ninguno") {
+			t.Fatalf("REQ-40.1 es un ID válido del patrón por defecto: %+v", fl)
+		}
+	}
+	requireFailure(t, report, RuleOriginID, "escribe `REQ-40.1`", "RF-001")
+}

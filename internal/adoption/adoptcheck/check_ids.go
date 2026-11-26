@@ -92,7 +92,7 @@ func (c *checker) checkOriginIDs() {
 			}
 			written := strings.TrimSpace(o.OriginalID)
 			if written != "" {
-				if ids := adoption.IdentityIDs(adoption.Unit{Title: written}); len(ids) != 1 || ids[0] != written {
+				if ids := adoption.IdentityIDs(adoption.Unit{Title: written}); !(len(ids) == 1 && ids[0] == written) && !c.pattern.Valid(written) {
 					c.fail(RuleOriginID, a.req.Name, "el `Origen:` %s del requisito (%s, línea %d) trae «%s» entre paréntesis; debe llevar un único identificador o ninguno",
 						ref, a.file, a.req.Line, written)
 					written = ""
