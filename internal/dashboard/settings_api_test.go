@@ -374,3 +374,121 @@ func TestWorktreePrefsPutFromAForeignHostIsForbidden(t *testing.T) {
 		t.Errorf("el GET sigue siendo normal: %d %s", rr.Code, rr.Body.String())
 	}
 }
+
+// registerProject da de alta dir en el hub del servidor de pruebas.
+func registerProject(t *testing.T, router http.Handler, dir string) {
+	t.Helper()
+	if rr := request(router, http.MethodPost, "/api/projects/add", `{"path":`+quoteJSON(dir)+`}`); rr.Code != http.StatusOK {
+		t.Fatalf("alta = %d: %s", rr.Code, rr.Body.String())
+	}
+}
+
+// RF-WEB-20: GET y PUT de autofetch con el hub actualizado y sin tocar el proyecto.
+func TestSettingsPersonalGetAndPutAutofetch(t *testing.T) {
+	t.Parallel()
+	dir := newProjectDir(t, "activo")
+	router, _, hubPath := newPrefsServer(t, dir)
+	registerProject(t, router, dir)
+	projectBefore := snapshotTree(t, dir)
+
+	var got PersonalSettingsDTO
+	rr := request(router, http.MethodGet, "/api/settings/personal", "")
+	if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil || rr.Code != http.StatusOK || got.Autofetch || got.Path != dir {
+		t.Fatalf("GET = %d %s", rr.Code, rr.Body.String())
+	}
+	for _, value := range []bool{true, false} {
+		body := `{"autofetch":false}`
+		if value {
+			body = `{"autofetch":true}`
+		}
+		rr = request(router, http.MethodPut, "/api/settings/personal", body)
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil || rr.Code != http.StatusOK || got.Autofetch != value {
+			t.Fatalf("PUT %s = %d %s", body, rr.Code, rr.Body.String())
+		}
+		rr = request(router, http.MethodGet, "/api/settings/personal", "")
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil || got.Autofetch != value {
+			t.Fatalf("GET tras el PUT = %s", rr.Body.String())
+		}
+	}
+	request(router, http.MethodPut, "/api/settings/personal", `{"autofetch":true}`)
+	if hubJSON := string(readOrEmpty(t, hubPath)); !strings.Contains(hubJSON, `"autofetch": true`) {
+		t.Errorf("workspaces.json no guarda el autofetch:\n%s", hubJSON)
+	}
+	if after := snapshotTree(t, dir); !equalTrees(projectBefore, after) {
+		t.Errorf("el PUT personal modificó ficheros del proyecto:\n%v\n%v", projectBefore, after)
+	}
+}
+
+// RF-WEB-20: un JSON inválido, un valor no booleano o la clave ausente responden 400 sin guardar
+// nada (en particular, {} no guarda false en silencio).
+func TestSettingsPersonalPutRejectsInvalidBodies(t *testing.T) {
+	t.Parallel()
+	dir := newProjectDir(t, "activo")
+	router, _, hubPath := newPrefsServer(t, dir)
+	registerProject(t, router, dir)
+	if rr := request(router, http.MethodPut, "/api/settings/personal", `{"autofetch":true}`); rr.Code != http.StatusOK {
+		t.Fatal(rr.Body.String())
+	}
+	hubBefore := string(readOrEmpty(t, hubPath))
+	for name, body := range map[string]string{
+		"JSON roto":       `{`,
+		"cadena":          `{"autofetch":"yes"}`,
+		"número":          `{"autofetch":1}`,
+		"nulo":            `{"autofetch":null}`,
+		"objeto vacío":    `{}`,
+		"otra clave":      `{"auto_fetch":false}`,
+		"cuerpo vacío":    ``,
+		"lista":           `[]`,
+		"booleano suelto": `false`,
+	} {
+		rr := request(router, http.MethodPut, "/api/settings/personal", body)
+		if rr.Code != http.StatusBadRequest || errorOf(t, rr) == "" {
+			t.Errorf("%s: estado = %d, quiero 400 con error: %s", name, rr.Code, rr.Body.String())
+		}
+	}
+	if hubAfter := string(readOrEmpty(t, hubPath)); hubAfter != hubBefore {
+		t.Errorf("un 400 no debe cambiar el hub:\n%s", hubAfter)
+	}
+}
+
+// RF-WEB-20, RF-WEB-10: el PUT ajeno responde 403 sin escribir; el GET sigue abierto; 404 sin
+// registrar con el mensaje de projectNotRegisteredError; 405 en otros métodos.
+func TestSettingsPersonalForbiddenNotFoundAndMethods(t *testing.T) {
+	t.Parallel()
+	dir := newProjectDir(t, "activo")
+	router, _, hubPath := newPrefsServer(t, dir)
+
+	// Sin registrar: 404 con la orden para registrarlo.
+	for _, rr := range []*httptest.ResponseRecorder{
+		request(router, http.MethodGet, "/api/settings/personal", ""),
+		request(router, http.MethodPut, "/api/settings/personal", `{"autofetch":true}`),
+	} {
+		if rr.Code != http.StatusNotFound || !strings.Contains(errorOf(t, rr), "axiom project add") {
+			t.Fatalf("sin registrar = %d: %s", rr.Code, rr.Body.String())
+		}
+	}
+	if data := readOrEmpty(t, hubPath); data != nil {
+		t.Errorf("un 404 no debe crear el hub:\n%s", data)
+	}
+
+	registerProject(t, router, dir)
+	hubBefore := string(readOrEmpty(t, hubPath))
+	rr := requestFrom(router, http.MethodPut, "/api/settings/personal", `{"autofetch":true}`, "evil.example.com", "")
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("PUT ajeno = %d: %s", rr.Code, rr.Body.String())
+	}
+	if rr := requestFrom(router, http.MethodPut, "/api/settings/personal", `{`, "127.0.0.1", "http://evil.example.com"); rr.Code != http.StatusForbidden {
+		t.Errorf("origen ajeno = %d", rr.Code)
+	}
+	if hubAfter := string(readOrEmpty(t, hubPath)); hubAfter != hubBefore {
+		t.Errorf("un 403 no debe cambiar el hub:\n%s", hubAfter)
+	}
+	if rr := requestFrom(router, http.MethodGet, "/api/settings/personal", "", "evil.example.com", ""); rr.Code != http.StatusOK {
+		t.Errorf("el GET personal no local sigue abierto: %d", rr.Code)
+	}
+	for _, method := range []string{http.MethodPost, http.MethodPatch, http.MethodDelete} {
+		if rr := request(router, method, "/api/settings/personal", `{}`); rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("%s = %d, quiero 405", method, rr.Code)
+		}
+	}
+}

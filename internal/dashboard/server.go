@@ -85,6 +85,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/fs/native-picker", s.handleFSNativePicker)
 	s.mux.HandleFunc("/api/workspace", s.handleWorkspace)
 	s.mux.HandleFunc("/api/settings", s.handleSettings)
+	s.mux.HandleFunc("/api/settings/personal", s.handleSettingsPersonal)
 	s.mux.HandleFunc("/api/workspace/specs/sync-status", s.handleSpecsSyncStatus)
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)

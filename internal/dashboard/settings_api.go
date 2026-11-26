@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 	"github.com/IGutierrezZ/axiom/v3/internal/settings"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
@@ -155,4 +156,80 @@ func (s *Service) PutSettings(req SettingsPutRequest) (*SettingsPutResponse, err
 		return nil, err
 	}
 	return &SettingsPutResponse{Settings: dto, Changed: result.Changed, Warnings: append([]string{}, result.Warnings...)}, nil
+}
+
+// handleSettingsPersonal sirve `GET|PUT /api/settings/personal` (RF-WEB-20): la preferencia
+// personal de autofetch del proyecto activo, guardada en el hub. El PUT exige una petición del
+// propio dashboard y un cuerpo `{"autofetch": true|false}`; un JSON inválido, un valor no booleano
+// o la clave ausente responden 400 sin guardar nada. Un proyecto sin registrar responde 404.
+func (s *Server) handleSettingsPersonal(w http.ResponseWriter, r *http.Request) {
+	var (
+		dto *PersonalSettingsDTO
+		err error
+	)
+	switch r.Method {
+	case http.MethodGet:
+		dto, err = s.service.GetPersonalSettings()
+	case http.MethodPut:
+		if s.rejectNonLocal(w, r) {
+			return
+		}
+		var req struct {
+			Autofetch *bool `json:"autofetch"`
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, maxSettingsBody)
+		if decodeErr := json.NewDecoder(r.Body).Decode(&req); decodeErr != nil {
+			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "JSON inválido: el cuerpo debe ser {\"autofetch\": true} o {\"autofetch\": false}"})
+			return
+		}
+		if req.Autofetch == nil {
+			s.respondJSON(w, http.StatusBadRequest, map[string]string{"error": "falta la clave 'autofetch': envía true o false"})
+			return
+		}
+		dto, err = s.service.SetPersonalAutofetch(*req.Autofetch)
+	default:
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var notRegistered *projectNotRegisteredError
+	switch {
+	case errors.As(err, &notRegistered) || errors.Is(err, hub.ErrProjectNotRegistered):
+		s.respondJSON(w, http.StatusNotFound, map[string]string{"error": (&projectNotRegisteredError{path: s.service.getRootPath()}).Error()})
+	case err != nil:
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	default:
+		s.respondJSON(w, http.StatusOK, dto)
+	}
+}
+
+// GetPersonalSettings devuelve la preferencia de autofetch del proyecto activo.
+func (s *Service) GetPersonalSettings() (*PersonalSettingsDTO, error) {
+	mgr, err := s.hub()
+	if err != nil {
+		return nil, err
+	}
+	root := s.getRootPath()
+	enabled, registered, err := mgr.LookupAutofetch(root)
+	if err != nil {
+		return nil, err
+	}
+	if !registered {
+		return nil, &projectNotRegisteredError{path: root}
+	}
+	return &PersonalSettingsDTO{Autofetch: enabled, Path: root}, nil
+}
+
+// SetPersonalAutofetch guarda la preferencia de autofetch del proyecto activo en el hub. Solo
+// escribe el hub: ningún fichero del proyecto cambia.
+func (s *Service) SetPersonalAutofetch(enabled bool) (*PersonalSettingsDTO, error) {
+	mgr, err := s.hub()
+	if err != nil {
+		return nil, err
+	}
+	root := s.getRootPath()
+	if _, _, err := mgr.SetAutofetch(root, enabled); err != nil {
+		return nil, err
+	}
+	return &PersonalSettingsDTO{Autofetch: enabled, Path: root}, nil
 }

@@ -69,7 +69,7 @@ Recordatorio de CI: ninguna exportación solo para pruebas (`beforeReplace` es v
 - [x] 4.3 Crear `internal/dashboard/settings_api.go`: `handleSettings`, `Service.GetSettings`, `Service.PutSettings` (bajo `settingsMu`, ruta de `workspace.Locate(root).ConfigPath`, `Master` de `loc.Master`) y la función única que traduce `settings.Code` a HTTP (400, 404, 409, 422, 500; cuerpo `{code, error, violations?}`). `isLocalRequest` va lo primero en el PUT.
 - [x] 4.4 Registrar `HandleFunc("/api/settings", …)` con literal de cadena en `internal/dashboard/server.go` (la guarda `registeredRoutes` solo analiza ese fichero) y actualizar el comentario de `handleWorkspace`.
 - [x] 4.5 Añadir `isLocalRequest` al inicio del `PUT` de `internal/dashboard/worktree_prefs.go` (antes de leer el cuerpo, mismo cuerpo de 403 que `server.go`).
-- [x] 4.6 Añadir `/api/settings` a `coveredRoutes` en `internal/dashboard/secrets_canary_test.go` y comprobar que `TestNoReadOnlyDashboardRouteReturnsAnIntegrationSecret` sigue en verde sin cambiar su estructura.
+- [x] 4.6 Añadir `/api/settings` a `coveredRoutes` en `internal/dashboard/secrets_canary_test.go` y comprobar que `TestNoReadOnlyDashboardRouteReturnsAnIntegrationSecret` sigue en verde sin cambiar su estructura. Evidencia: commit af2d8507c.
 
 Cubre: RF-WEB-18, RF-WEB-19, RF-WEB-10, RF-WEB-01
 
@@ -79,10 +79,10 @@ Recordatorios de CI: canario de secretos (`secrets_canary_test.go`); trinquete d
 
 ## Fase 5: Preferencias personales
 
-- [ ] 5.1 Escribir antes las pruebas (RED) en `internal/dashboard/settings_api_test.go`: `GET /api/settings/personal` devuelve `{autofetch, path}`; `PUT {"autofetch": true|false}` actualiza `workspaces.json` y no toca el árbol del proyecto; 400 con JSON inválido o valor no booleano; 403 con host ajeno; 404 con el mensaje de `projectNotRegisteredError`; 405 en otros métodos.
-- [ ] 5.2 Extraer a `Service.hub() (*hub.Manager, error)` la inicialización perezosa de `activeProjectRecord` en `internal/dashboard/worktree_prefs.go`, de modo que la comparten worktree-prefs y las rutas nuevas, sin cambiar el comportamiento previo.
-- [ ] 5.3 Añadir en `internal/dashboard/settings_api.go` `handleSettingsPersonal`, `Service.GetPersonalSettings` (`LookupAutofetch(root)`) y `Service.SetPersonalAutofetch` (`SetAutofetch(root, v)`, 404 con `errors.Is(err, hub.ErrProjectNotRegistered)`), con `PersonalSettingsDTO` en `types.go` y el registro de `/api/settings/personal` en `server.go`.
-- [ ] 5.4 Añadir `/api/settings/personal` a `coveredRoutes` de `internal/dashboard/secrets_canary_test.go` (solo el GET).
+- [x] 5.1 Escribir antes las pruebas (RED) en `internal/dashboard/settings_api_test.go`: `GET /api/settings/personal` devuelve `{autofetch, path}`; `PUT {"autofetch": true|false}` actualiza `workspaces.json` y no toca el árbol del proyecto; 400 con JSON inválido o valor no booleano; 403 con host ajeno; 404 con el mensaje de `projectNotRegisteredError`; 405 en otros métodos.
+- [x] 5.2 Extraer a `Service.hub() (*hub.Manager, error)` la inicialización perezosa de `activeProjectRecord` en `internal/dashboard/worktree_prefs.go`, de modo que la comparten worktree-prefs y las rutas nuevas, sin cambiar el comportamiento previo.
+- [x] 5.3 Añadir en `internal/dashboard/settings_api.go` `handleSettingsPersonal`, `Service.GetPersonalSettings` (`LookupAutofetch(root)`) y `Service.SetPersonalAutofetch` (`SetAutofetch(root, v)`, 404 con `errors.Is(err, hub.ErrProjectNotRegistered)`), con `PersonalSettingsDTO` en `types.go` y el registro de `/api/settings/personal` en `server.go`.
+- [x] 5.4 Añadir `/api/settings/personal` a `coveredRoutes` de `internal/dashboard/secrets_canary_test.go` (solo el GET).
 
 Cubre: RF-WEB-20, RF-WEB-10
 

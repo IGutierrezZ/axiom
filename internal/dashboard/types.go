@@ -69,6 +69,13 @@ type SettingsPutResponse struct {
 	Warnings []string     `json:"warnings"`
 }
 
+// PersonalSettingsDTO son las preferencias personales del proyecto activo que viven en el hub y no
+// en axiom.yaml (RF-WEB-20): hoy, si el proyecto se sincroniza solo con `git fetch`.
+type PersonalSettingsDTO struct {
+	Autofetch bool   `json:"autofetch"`
+	Path      string `json:"path"`
+}
+
 // settingsErrorBody es el cuerpo de error de /api/settings: código tipado, mensaje en castellano y,
 // con `validation_failed`, una violación por elemento.
 type settingsErrorBody struct {

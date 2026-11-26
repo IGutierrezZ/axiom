@@ -23,17 +23,18 @@ const dashboardCanary = "s3cr3t-CANARIO-9f8e7d"
 // Rutas de solo lectura que el canario recorre. Cada una se pide con GET y su cuerpo no puede
 // contener el valor de ningún secreto de integración (RF-INT-16).
 var coveredRoutes = map[string]string{
-	"/api/health":        "/api/health",
-	"/api/projects":      "/api/projects",
-	"/api/workspace":     "/api/workspace",
-	"/api/settings":      "/api/settings",
-	"/api/increments":    "/api/increments",
-	"/api/increments/":   "/api/increments/x",
-	"/api/roles":         "/api/roles",
-	"/api/handoffs":      "/api/handoffs",
-	"/api/skills":        "/api/skills",
-	"/api/archive/specs": "/api/archive/specs",
-	"/api/agents":        "/api/agents",
+	"/api/health":            "/api/health",
+	"/api/projects":          "/api/projects",
+	"/api/workspace":         "/api/workspace",
+	"/api/settings":          "/api/settings",
+	"/api/settings/personal": "/api/settings/personal",
+	"/api/increments":        "/api/increments",
+	"/api/increments/":       "/api/increments/x",
+	"/api/roles":             "/api/roles",
+	"/api/handoffs":          "/api/handoffs",
+	"/api/skills":            "/api/skills",
+	"/api/archive/specs":     "/api/archive/specs",
+	"/api/agents":            "/api/agents",
 }
 
 // Rutas registradas que el canario no recorre, cada una con su motivo. Ninguna lee el bloque
