@@ -90,6 +90,8 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/workspace/specs/pull", s.handleSpecsPull)
 	s.mux.HandleFunc("/api/increments", s.handleIncrements)
 	s.mux.HandleFunc("/api/increments/verify", s.handleIncrementVerify)
+	s.mux.HandleFunc("/api/increments/marks", s.handleIncrementMark)
+	s.mux.HandleFunc("/api/increments/marks/publish", s.handleIncrementMarksPublish)
 	s.mux.HandleFunc("/api/increments/migrate-cumulative", s.handleMigrateCumulative)
 	s.mux.HandleFunc("/api/increments/", s.handleIncrementDetail)
 	s.mux.HandleFunc("/api/explainer", s.handleExplainer)

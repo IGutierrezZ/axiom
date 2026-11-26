@@ -42,60 +42,17 @@ type pair struct{ caseID, env string }
 // par es la de mayor `at` entre las de digest igual al actual; a igualdad, la última del
 // fichero. Un par sin vigente pero con alguna entrada es caducado; sin ninguna, sin marcar.
 func Summarize(battery acceptancetests.Battery, environments []string, entries []Entry, digest string) Summary {
-	declared := make(map[string]bool, len(environments))
-	for _, env := range environments {
-		declared[env] = true
-	}
-	applicable := map[string]map[string]bool{}
-	var caseOrder []string
-	for _, c := range battery.Cases {
-		if !caseIDPattern.MatchString(c.ID) {
-			continue
-		}
-		if _, seen := applicable[c.ID]; !seen {
-			applicable[c.ID] = map[string]bool{}
-			caseOrder = append(caseOrder, c.ID)
-		}
-		for _, env := range c.Environments {
-			if declared[env] {
-				applicable[c.ID][env] = true
-			}
-		}
-	}
-
-	current := map[pair]Entry{}
-	currentAt := map[pair]time.Time{}
-	hasEntry := map[pair]bool{}
-	var out Summary
-	for _, e := range entries {
-		if !applicable[e.Case][e.Environment] {
-			out.Orphans++
-			continue
-		}
-		key := pair{e.Case, e.Environment}
-		hasEntry[key] = true
-		if e.PlanDigest != digest {
-			continue
-		}
-		at, err := time.Parse(time.RFC3339Nano, e.At)
-		if err != nil {
-			continue
-		}
-		if prev, ok := currentAt[key]; !ok || !at.Before(prev) {
-			current[key] = e
-			currentAt[key] = at
-		}
-	}
-
+	c := classify(battery, environments, entries, digest)
+	out := Summary{Orphans: c.orphans}
 	for _, env := range environments {
 		s := EnvSummary{Environment: env}
-		for _, id := range caseOrder {
-			if !applicable[id][env] {
+		for _, id := range c.caseOrder {
+			if !c.applicable[id][env] {
 				continue
 			}
 			s.Total++
 			key := pair{id, env}
-			if e, ok := current[key]; ok {
+			if e, ok := c.current[key]; ok {
 				switch e.Result {
 				case ResultOK:
 					s.OK++
@@ -106,7 +63,7 @@ func Summarize(battery acceptancetests.Battery, environments []string, entries [
 				case ResultNA:
 					s.NA++
 				}
-			} else if hasEntry[key] {
+			} else if c.hasEntry[key] {
 				s.Stale++
 			} else {
 				s.Unmarked++
@@ -115,6 +72,108 @@ func Summarize(battery acceptancetests.Battery, environments []string, entries [
 		out.Environments = append(out.Environments, s)
 	}
 	return out
+}
+
+// Estados de una celda sin marca vigente.
+const (
+	StateStale    = "stale"
+	StateUnmarked = "unmarked"
+)
+
+// Cell es el estado de un par aplicable (caso, entorno). State es el resultado de la marca
+// vigente (`ok`, `ko`, `blocked`, `n/a`), `stale` o `unmarked`. Current es la marca vigente;
+// Stale es la última marca caducada del par (la última del fichero), solo sin vigente.
+type Cell struct {
+	Case        string
+	Environment string
+	State       string
+	Current     *Entry
+	Stale       *Entry
+}
+
+// Cells devuelve las celdas aplicables con la misma clasificación que Summarize (D4): casos en
+// el orden de pruebas.md y, dentro de cada caso, entornos en el orden declarado.
+func Cells(battery acceptancetests.Battery, environments []string, entries []Entry, digest string) []Cell {
+	c := classify(battery, environments, entries, digest)
+	var out []Cell
+	for _, id := range c.caseOrder {
+		for _, env := range environments {
+			if !c.applicable[id][env] {
+				continue
+			}
+			key := pair{id, env}
+			cell := Cell{Case: id, Environment: env, State: StateUnmarked}
+			if e, ok := c.current[key]; ok {
+				entry := e
+				cell.Current, cell.State = &entry, string(e.Result)
+			} else if stale, ok := c.lastStale[key]; ok {
+				entry := stale
+				cell.Stale, cell.State = &entry, StateStale
+			}
+			out = append(out, cell)
+		}
+	}
+	return out
+}
+
+type classification struct {
+	applicable map[string]map[string]bool
+	caseOrder  []string
+	current    map[pair]Entry
+	lastStale  map[pair]Entry
+	hasEntry   map[pair]bool
+	orphans    int
+}
+
+// classify es el cálculo único de D4: entornos aplicables por caso, marca vigente por par y
+// entradas huérfanas.
+func classify(battery acceptancetests.Battery, environments []string, entries []Entry, digest string) classification {
+	declared := make(map[string]bool, len(environments))
+	for _, env := range environments {
+		declared[env] = true
+	}
+	c := classification{
+		applicable: map[string]map[string]bool{},
+		current:    map[pair]Entry{},
+		lastStale:  map[pair]Entry{},
+		hasEntry:   map[pair]bool{},
+	}
+	for _, cs := range battery.Cases {
+		if !caseIDPattern.MatchString(cs.ID) {
+			continue
+		}
+		if _, seen := c.applicable[cs.ID]; !seen {
+			c.applicable[cs.ID] = map[string]bool{}
+			c.caseOrder = append(c.caseOrder, cs.ID)
+		}
+		for _, env := range cs.Environments {
+			if declared[env] {
+				c.applicable[cs.ID][env] = true
+			}
+		}
+	}
+	currentAt := map[pair]time.Time{}
+	for _, e := range entries {
+		if !c.applicable[e.Case][e.Environment] {
+			c.orphans++
+			continue
+		}
+		key := pair{e.Case, e.Environment}
+		c.hasEntry[key] = true
+		if e.PlanDigest != digest {
+			c.lastStale[key] = e
+			continue
+		}
+		at, err := time.Parse(time.RFC3339Nano, e.At)
+		if err != nil {
+			continue
+		}
+		if prev, ok := currentAt[key]; !ok || !at.Before(prev) {
+			c.current[key] = e
+			currentAt[key] = at
+		}
+	}
+	return c
 }
 
 // Text es el texto canónico que copian las tres presentaciones: por entorno

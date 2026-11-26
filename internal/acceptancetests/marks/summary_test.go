@@ -159,3 +159,29 @@ func TestSummarizeToleratesCRLFBattery(t *testing.T) {
 		t.Fatalf("Text = %q (casos=%d)", got, len(b.Cases))
 	}
 }
+
+func TestCellsMatchTheSummaryClassification(t *testing.T) {
+	cases := []acceptancetests.Case{
+		{ID: "P-01", Environments: []string{"pre", "local"}},
+		{ID: "P-02", Environments: []string{"pre"}},
+	}
+	entries := []Entry{
+		entry("P-01", "pre", ResultKO, "2026-11-26T19:00:00.000Z"),
+		entry("P-01", "pre", ResultOK, "2026-11-26T19:05:00.000Z"),
+		withDigest(entry("P-01", "local", ResultOK, "2026-11-26T19:00:00.000Z"), otherDigest),
+	}
+	cells := Cells(acceptancetests.Battery{Cases: cases}, testEnvs2(), entries, testDigest)
+	if len(cells) != 3 {
+		t.Fatalf("celdas = %+v", cells)
+	}
+	want := []struct{ id, env, state string }{{"P-01", "pre", "ok"}, {"P-01", "local", "stale"}, {"P-02", "pre", "unmarked"}}
+	for i, w := range want {
+		got := cells[i]
+		if got.Case != w.id || got.Environment != w.env || got.State != w.state {
+			t.Errorf("celda %d = %+v, quería %+v", i, got, w)
+		}
+	}
+	if cells[0].Current == nil || cells[0].Current.Result != ResultOK || cells[1].Stale == nil || cells[1].Stale.Result != ResultOK {
+		t.Errorf("vigente y caducada: %+v %+v", cells[0], cells[1])
+	}
+}

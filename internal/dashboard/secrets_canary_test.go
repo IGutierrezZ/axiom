@@ -52,6 +52,8 @@ var excludedRoutes = map[string]string{
 	"/api/workspace/specs/sync-status":    "estado de git del repositorio de specs; no lee integraciones",
 	"/api/workspace/specs/pull":           "mutación (POST): git pull del repositorio de specs",
 	"/api/increments/verify":              "mutación (POST): lanza la verificación",
+	"/api/increments/marks":               "mutación (POST): añade una marca de ejecución a pruebas-estado.yaml",
+	"/api/increments/marks/publish":       "mutación (POST): publica las marcas de pruebas al remoto de specs",
 	"/api/increments/migrate-cumulative":  "mutación (POST): migra el sumidero acumulativo",
 	"/api/skills/inbox":                   "buzón de skills propuestas; no lee integraciones",
 	"/api/skills/scan":                    "mutación (POST): escanea tecnologías",

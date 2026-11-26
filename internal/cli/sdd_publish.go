@@ -186,3 +186,28 @@ func publishShortSHA(sha string) string {
 	}
 	return sha
 }
+
+// MarksPublishRequest es la petición del dashboard para publicar las marcas de pruebas de un
+// cambio (C-06-d): CWD es el workspaceRoot, Change el cambio y Branch la rama que la persona vio
+// en la pantalla (vacía si no se ata).
+type MarksPublishRequest struct{ CWD, Change, Branch string }
+
+// MarksPublishRefusal es una negativa tipada de la publicación de marcas, con el código, la
+// etiqueta, el mensaje y la continuación que da sddpublish.
+type MarksPublishRefusal struct {
+	Code         string
+	Label        string
+	Message      string
+	Continuation string
+	Details      map[string]any
+}
+
+// MarksPublishResult es el resultado de publicar las marcas. Status es `published` o `up_to_date`
+// sin Refusal; con Refusal, Status es `refused`. Commit es el commit de marcas y PushedSHA el
+// SHA subido; GitRoot es el repositorio donde se publicó.
+type MarksPublishResult struct {
+	Status, Remote, Branch, GitRoot, Commit, PushedSHA string
+	Replayed                                           bool
+	UncommittedDocs                                    []string
+	Refusal                                            *MarksPublishRefusal
+}
