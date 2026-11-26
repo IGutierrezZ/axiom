@@ -47,7 +47,7 @@ Sin configuración de TDD en el proyecto ni en la sesión: comprobaciones funcio
 
 ## Progreso
 
-T1 hecha; la cierra el primer commit de la rama. Siguiente paso: PR con etiqueta `type:bug`.
+T1 hecha en `ffc676210`; `go test ./internal/idmigration/` ok tras el commit. Siguiente paso: PR con etiqueta `type:bug`.
 
 Nota: `json.MarshalIndent` escribe `>` y `&` como `>` y `&` en `hooks.json`; es JSON equivalente y Codex lo lee igual.
 
