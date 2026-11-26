@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,14 +10,16 @@ import (
 	"testing"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/vscode"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/sdd"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/state"
 )
 
 // Las pruebas de este fichero cubren la distribución de proyecto de VS Code Copilot
 // con --scope workspace. VS Code lee .github/instructions/*.instructions.md (con
-// `applyTo: "**"` se aplican siempre), .agents/skills y .vscode/mcp.json (clave raíz
-// `servers`, con Workspace Trust). No se usan .github/copilot-instructions.md ni el
+// `applyTo: "**"` se aplican siempre), .agents/skills y .mcp.json (clave raíz
+// `mcpServers`, compartido con Claude Code y con Workspace Trust); de .vscode/mcp.json,
+// del arnés Local, solo se retiran las entradas de Axiom. No se usan .github/copilot-instructions.md ni el
 // AGENTS.md raíz (del equipo), y el perfil de usuario de VS Code no se toca.
 
 func vscodeSelection() model.Selection {
@@ -70,7 +73,8 @@ func seedVSCodeTeamFiles(t *testing.T, workspace string) map[string][]byte {
 	team := map[string][]byte{
 		filepath.Join(".github", "copilot-instructions.md"): []byte("# Instrucciones del equipo\n\n## Personality\nSenior Architect (texto del equipo con las mismas palabras que la persona antigua).\n"),
 		"AGENTS.md": []byte("# Reglas del equipo\n\nNo tocar.\n"),
-		filepath.Join(".vscode", "settings.json"): []byte("{\n  // ajustes del equipo\n  \"editor.tabSize\": 2\n}\n"),
+		filepath.Join(".vscode", "settings.json"):        []byte("{\n  // ajustes del equipo\n  \"editor.tabSize\": 2\n}\n"),
+		filepath.Join(".github", "hooks", "equipo.json"): []byte("{\"version\": 1, \"hooks\": {\"sessionStart\": [{\"type\": \"command\", \"command\": \"echo equipo\"}]}}\n"),
 	}
 	for rel, content := range team {
 		mustWriteFile(t, filepath.Join(workspace, rel), content)
@@ -88,8 +92,9 @@ func assertTeamFilesIntact(t *testing.T, workspace string, team map[string][]byt
 }
 
 // Las instrucciones van a .github/instructions con applyTo, las skills a .agents/skills
-// y el MCP a .vscode/mcp.json (clave servers, fusionado con lo del usuario); los
-// ficheros del equipo y el perfil de usuario de VS Code no cambian ni un byte.
+// y el MCP a .mcp.json (clave mcpServers, el destino del arnés de Copilot); el
+// .vscode/mcp.json del usuario conserva lo suyo, y los ficheros del equipo y el
+// perfil de usuario de VS Code no cambian ni un byte.
 func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 	home, workspace, _, userSnapshot := vscodeUserEnv(t)
 	team := seedVSCodeTeamFiles(t, workspace)
@@ -135,26 +140,37 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 		}
 	}
 
-	mcp := readJSONObject(t, filepath.Join(workspace, ".vscode", "mcp.json"))
-	servers, _ := mcp["servers"].(map[string]any)
-	for _, name := range []string{"propio", "engram", "context7"} {
-		if servers[name] == nil {
-			t.Errorf(".vscode/mcp.json debe declarar el servidor %q: %v", name, servers)
+	project := readJSONObject(t, filepath.Join(workspace, ".mcp.json"))
+	projectServers, _ := project["mcpServers"].(map[string]any)
+	for _, name := range []string{"engram", "context7"} {
+		entry, _ := projectServers[name].(map[string]any)
+		if entry == nil {
+			t.Errorf(".mcp.json debe declarar el servidor %q: %v", name, projectServers)
+			continue
+		}
+		if entry["type"] != "stdio" || fmt.Sprint(entry["tools"]) != "[*]" {
+			t.Errorf(".mcp.json debe declarar %q con type stdio y tools [*]: %v", name, entry)
 		}
 	}
-	if _, wrongKey := mcp["mcpServers"]; wrongKey {
-		t.Errorf(".vscode/mcp.json no usa mcpServers: %v", mcp)
+	legacy := readJSONObject(t, filepath.Join(workspace, ".vscode", "mcp.json"))
+	servers, _ := legacy["servers"].(map[string]any)
+	if servers["propio"] == nil || servers["engram"] != nil || servers["context7"] != nil {
+		t.Errorf(".vscode/mcp.json conserva solo el servidor del usuario: %v", servers)
 	}
-	if inputs, _ := mcp["inputs"].([]any); len(inputs) != 1 {
-		t.Errorf("las inputs del usuario deben conservarse: %v", mcp["inputs"])
+	if inputs, _ := legacy["inputs"].([]any); len(inputs) != 1 {
+		t.Errorf("las inputs del usuario deben conservarse: %v", legacy["inputs"])
 	}
 
 	// Un agente `.agent.md` por fase SDD en .github/agents.
 	if _, err := os.Stat(filepath.Join(workspace, ".github", "agents", "sdd-apply.agent.md")); err != nil {
 		t.Errorf("falta el agente sdd-apply en .github/agents: %v", err)
 	}
-	// Prompts y hooks: Axiom no instala ninguno para VS Code.
-	assertNothingUnder(t, workspace, filepath.Join(".github", "prompts"), filepath.Join(".github", "hooks"), filepath.Join(".github", "AGENTS.md"))
+	// Prompts: Axiom no instala ninguno para VS Code. Hooks: solo el suyo, con la guarda de rama.
+	assertNothingUnder(t, workspace, filepath.Join(".github", "prompts"), filepath.Join(".github", "AGENTS.md"))
+	hooks, err := os.ReadFile(filepath.Join(workspace, ".github", "hooks", "axiom-branch-guard.json"))
+	if err != nil || !bytes.Equal(hooks, sdd.VSCodeBranchGuardHooksJSON(model.AgentVSCodeCopilot)) {
+		t.Errorf("falta el hook de la guarda de rama en .github/hooks (err=%v):\n%s", err, hooks)
+	}
 	// La guía de enrutado va al fichero de proyecto: ninguna distribución del perfil
 	// de usuario de VS Code (macOS, Windows o Linux) aparece dentro del proyecto.
 	assertNothingUnder(t, workspace, "Library", "AppData", ".config")
@@ -162,7 +178,7 @@ func TestRunInstallWorkspaceVSCodeUsesProjectLayout(t *testing.T) {
 	assertSameTree(t, "home y APPDATA", before, userSnapshot())
 
 	notes := strings.Join(result.Execution.ManualActions, "\n")
-	if !strings.Contains(notes, "Workspace Trust") || !strings.Contains(notes, ".vscode/mcp.json") {
+	if !strings.Contains(notes, "Workspace Trust") || !strings.Contains(notes, ".mcp.json") || strings.Contains(notes, ".vscode/mcp.json") {
 		t.Errorf("falta el aviso de Workspace Trust:\n%s", notes)
 	}
 	_ = home
@@ -192,47 +208,105 @@ func TestWorkspaceVSCodeThirdSyncChangesNothing(t *testing.T) {
 	assertTeamFilesIntact(t, workspace, team)
 }
 
-// Un .vscode/mcp.json con comentarios (VS Code lo admite) los conserva, con los
-// servidores del usuario, y repetir sync no cambia ni un byte.
-func TestWorkspaceVSCodeMCPKeepsCommentsAndIsIdempotent(t *testing.T) {
+// Una instalación anterior dejó Engram y Context7 en .vscode/mcp.json, con
+// comentarios y un servidor del usuario. sync los lleva a .mcp.json y retira de
+// .vscode/mcp.json solo las entradas de Axiom: los comentarios y el servidor propio se
+// quedan, y repetir sync no cambia ni un byte de ninguno de los dos ficheros.
+func TestWorkspaceVSCodeMigratesLegacyMCPAndIsIdempotent(t *testing.T) {
 	home, workspace, _, _ := vscodeUserEnv(t)
-	mcpPath := filepath.Join(workspace, ".vscode", "mcp.json")
-	mustWriteFile(t, mcpPath, []byte("// Servidores MCP del equipo\n{\n  \"servers\": {\n    \"propio\": {\"command\": \"propio\"}\n  },\n  // entradas de entrada\n  \"inputs\": []\n}\n"))
+	legacyPath := filepath.Join(workspace, ".vscode", "mcp.json")
+	projectPath := filepath.Join(workspace, ".mcp.json")
+	mustWriteFile(t, legacyPath, []byte("// Servidores MCP del equipo\n{\n  \"servers\": {\n    \"propio\": {\"command\": \"propio\"},\n    \"engram\": {\"command\": \"engram\", \"args\": [\"mcp\", \"--tools=agent\"]},\n    \"context7\": {\"type\": \"http\", \"url\": \"https://mcp.context7.com/mcp\"}\n  },\n  // entradas de entrada\n  \"inputs\": []\n}\n"))
 
-	if _, err := RunInstall([]string{"--scope", "workspace", "--agent", "vscode-copilot"}, macOSDetectionResult()); err != nil {
-		t.Fatalf("RunInstall() error = %v", err)
+	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
+		t.Fatalf("sync: %v", err)
 	}
 
-	raw, _ := os.ReadFile(mcpPath)
+	raw, _ := os.ReadFile(legacyPath)
 	for _, comment := range []string{"// Servidores MCP del equipo", "// entradas de entrada"} {
 		if !strings.Contains(string(raw), comment) {
 			t.Errorf("se perdió el comentario %q:\n%s", comment, raw)
 		}
 	}
-	servers, _ := readJSONObject(t, mcpPath)["servers"].(map[string]any)
-	if servers["propio"] == nil || servers["engram"] == nil || servers["context7"] == nil {
-		t.Errorf("faltan servidores tras la fusión: %v", servers)
+	servers, _ := readJSONObject(t, legacyPath)["servers"].(map[string]any)
+	if servers["propio"] == nil || servers["engram"] != nil || servers["context7"] != nil {
+		t.Errorf(".vscode/mcp.json debe conservar solo el servidor del usuario: %v", servers)
+	}
+	projectServers, _ := readJSONObject(t, projectPath)["mcpServers"].(map[string]any)
+	if projectServers["engram"] == nil || projectServers["context7"] == nil || projectServers["propio"] != nil {
+		t.Errorf(".mcp.json debe declarar solo los servidores de Axiom: %v", projectServers)
 	}
 
-	for i := 0; i < 2; i++ {
-		if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
-			t.Fatalf("sync %d: %v", i+1, err)
-		}
+	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
+		t.Fatalf("sync 2: %v", err)
 	}
-	settled, _ := os.ReadFile(mcpPath)
+	settledLegacy, _ := os.ReadFile(legacyPath)
+	settledProject, _ := os.ReadFile(projectPath)
 	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
 		t.Fatalf("sync 3: %v", err)
 	}
-	if after, _ := os.ReadFile(mcpPath); !bytes.Equal(after, settled) {
-		t.Errorf("el tercer sync cambió .vscode/mcp.json:\n%s\n---\n%s", settled, after)
+	if after, _ := os.ReadFile(legacyPath); !bytes.Equal(after, settledLegacy) {
+		t.Errorf("el tercer sync cambió .vscode/mcp.json:\n%s\n---\n%s", settledLegacy, after)
+	}
+	if after, _ := os.ReadFile(projectPath); !bytes.Equal(after, settledProject) {
+		t.Errorf("el tercer sync cambió .mcp.json:\n%s\n---\n%s", settledProject, after)
 	}
 }
 
-// Un .vscode/mcp.json que no es JSON válido se rechaza antes de escribir nada.
+// Si .vscode/mcp.json solo tenía lo que escribió Axiom, la migración lo borra junto
+// con la carpeta .vscode vacía.
+func TestWorkspaceVSCodeMigrationRemovesLegacyFileLeftEmpty(t *testing.T) {
+	home, workspace, _, _ := vscodeUserEnv(t)
+	legacyPath := filepath.Join(workspace, ".vscode", "mcp.json")
+	mustWriteFile(t, legacyPath, []byte("{\n  \"servers\": {\n    \"context7\": {\n      \"type\": \"http\",\n      \"url\": \"https://mcp.context7.com/mcp\"\n    },\n    \"engram\": {\n      \"command\": \"C:\\\\tools\\\\engram.exe\",\n      \"args\": [\"mcp\", \"--tools=agent\"]\n    }\n  }\n}\n"))
+
+	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	assertNothingUnder(t, workspace, ".vscode")
+	if servers, _ := readJSONObject(t, filepath.Join(workspace, ".mcp.json"))["mcpServers"].(map[string]any); servers["engram"] == nil || servers["context7"] == nil {
+		t.Errorf(".mcp.json debe declarar Engram y Context7: %v", servers)
+	}
+}
+
+// Claude Code y VS Code Copilot comparten .mcp.json: con los dos instalados, cada
+// servidor tiene una sola entrada válida para ambos y repetir sync no cambia ni un
+// byte.
+func TestWorkspaceClaudeAndVSCodeShareProjectMCPJSON(t *testing.T) {
+	home, workspace, _, _ := vscodeUserEnv(t)
+	selection := vscodeSelection()
+	selection.Agents = []model.AgentID{model.AgentClaudeCode, model.AgentVSCodeCopilot}
+	projectPath := filepath.Join(workspace, ".mcp.json")
+
+	for i := 0; i < 2; i++ {
+		if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {
+			t.Fatalf("sync %d: %v", i+1, err)
+		}
+	}
+	settled, _ := os.ReadFile(projectPath)
+	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, selection); err != nil {
+		t.Fatalf("sync 3: %v", err)
+	}
+	if after, _ := os.ReadFile(projectPath); !bytes.Equal(after, settled) {
+		t.Errorf("el tercer sync cambió .mcp.json:\n%s\n---\n%s", settled, after)
+	}
+
+	servers, _ := readJSONObject(t, projectPath)["mcpServers"].(map[string]any)
+	context7, _ := servers["context7"].(map[string]any)
+	if context7["command"] != "npx" || context7["url"] != nil || context7["type"] != "stdio" {
+		t.Errorf("Context7 debe tener una sola forma (npx por stdio) para los dos clientes: %v", context7)
+	}
+	engram, _ := servers["engram"].(map[string]any)
+	if command, _ := engram["command"].(string); command == "" || engram["type"] != "stdio" || fmt.Sprint(engram["args"]) != "[mcp --tools=agent]" {
+		t.Errorf("Engram debe tener una sola forma para los dos clientes: %v", engram)
+	}
+}
+
+// Un .mcp.json que no es JSON válido se rechaza antes de escribir nada.
 func TestWorkspaceVSCodeRefusesInvalidMCPJSON(t *testing.T) {
 	_, workspace, _, userSnapshot := vscodeUserEnv(t)
-	broken := []byte("{\"servers\": \n[esto no es json")
-	mcpPath := filepath.Join(workspace, ".vscode", "mcp.json")
+	broken := []byte("{\"mcpServers\": \n[esto no es json")
+	mcpPath := filepath.Join(workspace, ".mcp.json")
 	mustWriteFile(t, mcpPath, broken)
 	before := userSnapshot()
 
@@ -241,10 +315,26 @@ func TestWorkspaceVSCodeRefusesInvalidMCPJSON(t *testing.T) {
 		t.Fatalf("RunInstall() debe rechazar el fichero ilegible, error = %v", err)
 	}
 	if after, _ := os.ReadFile(mcpPath); !bytes.Equal(after, broken) {
-		t.Errorf(".vscode/mcp.json se modificó:\n%s", after)
+		t.Errorf(".mcp.json se modificó:\n%s", after)
 	}
 	assertNothingUnder(t, workspace, ".github")
 	assertSameTree(t, "home y APPDATA", before, userSnapshot())
+}
+
+// Un .vscode/mcp.json ilegible no bloquea: Axiom ya no escribe en él y lo deja como
+// está.
+func TestWorkspaceVSCodeLeavesUnreadableLegacyMCPJSON(t *testing.T) {
+	home, workspace, _, _ := vscodeUserEnv(t)
+	broken := []byte("{\"servers\": \n[esto no es json")
+	legacyPath := filepath.Join(workspace, ".vscode", "mcp.json")
+	mustWriteFile(t, legacyPath, broken)
+
+	if _, err := RunSyncWithSelectionScoped(home, workspace, ScopeWorkspace, vscodeSelection()); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if after, _ := os.ReadFile(legacyPath); !bytes.Equal(after, broken) {
+		t.Errorf(".vscode/mcp.json se modificó:\n%s", after)
+	}
 }
 
 // sync --scope workspace por la CLI, con un estado persistido que lista VS Code, lo
@@ -269,8 +359,8 @@ func TestRunSyncWorkspaceInstallsPersistedVSCodeInProject(t *testing.T) {
 	if notices.Len() != 0 || len(result.OmittedAgents) != 0 {
 		t.Errorf("VS Code admite workspace y no debe omitirse: aviso=%q omitidos=%v", notices, result.OmittedAgents)
 	}
-	if _, statErr := os.Stat(filepath.Join(root, ".vscode", "mcp.json")); statErr != nil {
-		t.Errorf("falta .vscode/mcp.json en el proyecto: %v", statErr)
+	if _, statErr := os.Stat(filepath.Join(root, ".mcp.json")); statErr != nil {
+		t.Errorf("falta .mcp.json en el proyecto: %v", statErr)
 	}
 	assertSameTree(t, "home", before, homeSnapshotWithoutState(t, home))
 }
@@ -281,7 +371,7 @@ func TestWorkspaceVSCodeBackupAndVerifyCoverProjectFiles(t *testing.T) {
 	home, workspace, _, _ := vscodeUserEnv(t)
 	selection := vscodeSelection()
 	wanted := []string{
-		filepath.Join(workspace, ".vscode", "mcp.json"),
+		filepath.Join(workspace, ".mcp.json"),
 		filepath.Join(workspace, ".github", "instructions", "axiom.instructions.md"),
 		filepath.Join(workspace, ".agents", "skills", "sdd-init", "SKILL.md"),
 	}
@@ -289,6 +379,11 @@ func TestWorkspaceVSCodeBackupAndVerifyCoverProjectFiles(t *testing.T) {
 	targets, err := syncBackupTargetsScoped(home, workspace, ScopeWorkspace, selection, resolveAdaptersScoped(ScopeWorkspace, workspace, selection.Agents))
 	if err != nil {
 		t.Fatalf("syncBackupTargetsScoped() error = %v", err)
+	}
+	// La migración reescribe o borra .vscode/mcp.json: va en la copia para poder
+	// restaurarlo, aunque no se verifique.
+	if legacy := filepath.Join(workspace, ".vscode", "mcp.json"); !containsPath(targets, legacy) {
+		t.Errorf("la copia de seguridad no incluye %s: %v", legacy, targets)
 	}
 	for _, want := range wanted {
 		if !containsPath(targets, want) {

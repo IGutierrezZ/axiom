@@ -36,10 +36,11 @@ var userWorkspaceSeed = map[string]string{
 	filepath.Join(".claude", "settings.json"):                  `{"permissions":{"defaultMode":"acceptEdits","deny":["WebFetch","Bash(curl *)"]},"theme":"dark"}`,
 	".mcp.json":     `{"mcpServers":{"mi-servidor":{"command":"node","args":["servidor.js"]}}}`,
 	"opencode.json": `{"theme":"mi-tema","instructions":["docs/reglas.md"],"mcp":{"mi-servidor":{"type":"local","command":["node","s.js"]}}}`,
-	filepath.Join(".gemini", "settings.json"): `{"theme":"GitHub","context":{"fileName":["GEMINI.md","CONTRIBUTING.md"]}}`,
-	filepath.Join(".codex", "config.toml"):    "model = \"modelo-del-equipo\"\ndeveloper_instructions = \"Texto del equipo para Codex.\"\n\n[mcp_servers.mi-servidor]\ncommand = \"node\"\nargs = [\"servidor.js\"]\n",
-	filepath.Join(".vscode", "mcp.json"):      `{"servers":{"mi-servidor":{"command":"node","args":["servidor.js"]}}}`,
-	filepath.Join("docs", "reglas.md"):        "Reglas del equipo.\n",
+	filepath.Join(".gemini", "settings.json"):        `{"theme":"GitHub","context":{"fileName":["GEMINI.md","CONTRIBUTING.md"]}}`,
+	filepath.Join(".codex", "config.toml"):           "model = \"modelo-del-equipo\"\ndeveloper_instructions = \"Texto del equipo para Codex.\"\n\n[mcp_servers.mi-servidor]\ncommand = \"node\"\nargs = [\"servidor.js\"]\n",
+	filepath.Join(".vscode", "mcp.json"):             `{"servers":{"mi-servidor":{"command":"node","args":["servidor.js"]}}}`,
+	filepath.Join(".github", "hooks", "equipo.json"): `{"version":1,"hooks":{"sessionStart":[{"type":"command","command":"echo equipo"}]}}`,
+	filepath.Join("docs", "reglas.md"):               "Reglas del equipo.\n",
 }
 
 // byteIdenticalSeed son los ficheros sembrados que ningún paso de Axiom reescribe.
@@ -47,6 +48,7 @@ var byteIdenticalSeed = []string{
 	"AGENTS.md",
 	"GEMINI.md",
 	filepath.Join(".github", "copilot-instructions.md"),
+	filepath.Join(".github", "hooks", "equipo.json"),
 	filepath.Join(".agents", "skills", "mi-skill", "SKILL.md"),
 	filepath.Join("docs", "reglas.md"),
 }

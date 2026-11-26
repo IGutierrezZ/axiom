@@ -267,8 +267,16 @@ func injectMCPConfigFile(homeDir string, adapter agents.Adapter) (InjectionResul
 	}
 
 	overlay := DefaultContext7OverlayJSON()
+	legacyPath := ""
 	if adapter.Agent() == model.AgentVSCodeCopilot {
 		overlay = VSCodeContext7OverlayJSON()
+		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
+			legacyPath = provider.LegacyWorkspaceMCPConfigPath(homeDir)
+		}
+		if legacyPath != "" {
+			// En el proyecto, VS Code comparte <proyecto>/.mcp.json con Claude Code.
+			overlay = VSCodeWorkspaceContext7OverlayJSON()
+		}
 	}
 	if adapter.Agent() == model.AgentGitHubCopilotCLI {
 		overlay = CopilotCLIContext7OverlayJSON()
@@ -283,7 +291,19 @@ func injectMCPConfigFile(homeDir string, adapter agents.Adapter) (InjectionResul
 		return InjectionResult{}, err
 	}
 
-	return InjectionResult{Changed: settingsWrite.Changed, Files: []string{path}}, nil
+	result := InjectionResult{Changed: settingsWrite.Changed, Files: []string{path}}
+	if legacyPath == "" {
+		return result, nil
+	}
+	retired, err := RetireLegacyVSCodeServer(legacyPath, "context7")
+	if err != nil {
+		return InjectionResult{}, err
+	}
+	if retired {
+		result.Changed = true
+		result.Files = append(result.Files, legacyPath)
+	}
+	return result, nil
 }
 
 func mergeJSONFile(path string, overlay []byte) (filemerge.WriteResult, error) {

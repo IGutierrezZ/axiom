@@ -14,6 +14,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/claude"
 	"github.com/IGutierrezZ/axiom/v3/internal/agents/codex"
 	"github.com/IGutierrezZ/axiom/v3/internal/components/filemerge"
+	"github.com/IGutierrezZ/axiom/v3/internal/components/mcp"
 	"github.com/IGutierrezZ/axiom/v3/internal/model"
 	"github.com/IGutierrezZ/axiom/v3/internal/opencode"
 )
@@ -141,6 +142,25 @@ func vsCodeEngramOverlayJSON(cmd string) []byte {
 			"engram": map[string]any{
 				"command": cmd,
 				"args":    []string{"mcp", "--tools=agent"},
+			},
+		},
+	}
+	b, _ := json.MarshalIndent(cfg, "", "  ")
+	return append(b, '\n')
+}
+
+// vsCodeWorkspaceEngramOverlayJSON es la entrada de Engram en <proyecto>/.mcp.json
+// para VS Code Copilot: raíz `mcpServers`, la misma orden y argumentos que escribe
+// Claude Code en ese fichero compartido y, además, lo que el arnés de Copilot espera
+// y Claude Code acepta: `type: "stdio"` y `tools: ["*"]`.
+func vsCodeWorkspaceEngramOverlayJSON(cmd string) []byte {
+	cfg := map[string]any{
+		"mcpServers": map[string]any{
+			"engram": map[string]any{
+				"type":    "stdio",
+				"command": cmd,
+				"args":    []string{"mcp", "--tools=agent"},
+				"tools":   []string{"*"},
 			},
 		},
 	}
@@ -386,8 +406,15 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 			break
 		}
 		engramCommand := stableEngramCommandForMergedConfig(mcpPath, adapter.Agent())
+		legacyPath := ""
+		if provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider); ok {
+			legacyPath = provider.LegacyWorkspaceMCPConfigPath(configHomeDir)
+		}
 		var overlay []byte
-		if adapter.Agent() == model.AgentVSCodeCopilot {
+		if adapter.Agent() == model.AgentVSCodeCopilot && legacyPath != "" {
+			// En el proyecto, VS Code comparte <proyecto>/.mcp.json con Claude Code.
+			overlay = vsCodeWorkspaceEngramOverlayJSON(engramCommand)
+		} else if adapter.Agent() == model.AgentVSCodeCopilot {
 			overlay = vsCodeEngramOverlayJSON(engramCommand)
 		} else if adapter.Agent() == model.AgentGitHubCopilotCLI {
 			overlay = copilotCLIEngramOverlayJSON(engramCommand)
@@ -401,6 +428,17 @@ func injectWithOptions(configHomeDir, promptDir string, adapter agents.Adapter, 
 		}
 		changed = changed || mcpWrite.Changed
 		files = append(files, mcpPath)
+
+		if legacyPath != "" {
+			retired, err := mcp.RetireLegacyVSCodeServer(legacyPath, "engram")
+			if err != nil {
+				return InjectionResult{}, err
+			}
+			if retired {
+				changed = true
+				files = append(files, legacyPath)
+			}
+		}
 
 		if adapter.Agent() == model.AgentAntigravity {
 			settingsTarget := adapter.SettingsPath(configHomeDir)
@@ -864,7 +902,11 @@ func existingMergedEngramCommand(raw []byte, agentID model.AgentID) (string, boo
 	case model.AgentOpenCode:
 		server, _ = opencode.MCPEntry(root, "engram")
 	case model.AgentVSCodeCopilot:
+		// El perfil de usuario usa `servers`; el proyecto, .mcp.json con `mcpServers`.
 		servers, ok := root["servers"].(map[string]any)
+		if !ok {
+			servers, ok = root["mcpServers"].(map[string]any)
+		}
 		if !ok {
 			return "", false
 		}

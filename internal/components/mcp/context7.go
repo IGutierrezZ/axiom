@@ -49,6 +49,22 @@ func VSCodeContext7OverlayJSON() []byte {
 	return content
 }
 
+// vsCodeWorkspaceContext7OverlayJSON es la entrada de Context7 en <proyecto>/.mcp.json
+// para VS Code Copilot. Ese fichero lo comparte con Claude Code, así que la orden es
+// la misma que escribe Claude (npx con la versión fijada): si fueran distintas, la
+// fusión profunda mezclaría las dos formas y cada `sync` reescribiría la del otro.
+// Añade lo que el arnés de Copilot espera y Claude Code acepta: `type: "stdio"` y
+// `tools: ["*"]`, que expone todas las herramientas del servidor.
+var vsCodeWorkspaceContext7OverlayJSON = []byte(fmt.Sprintf("{\n  \"mcpServers\": {\n    \"context7\": {\n      \"type\": \"stdio\",\n      \"command\": \"npx\",\n      \"args\": [\n        \"-y\",\n        \"--package=@upstash/context7-mcp@%s\",\n        \"--\",\n        \"context7-mcp\"\n      ],\n      \"tools\": [\n        \"*\"\n      ]\n    }\n  }\n}\n", versions.Context7MCP))
+
+// VSCodeWorkspaceContext7OverlayJSON devuelve la entrada de Context7 de
+// <proyecto>/.mcp.json para VS Code Copilot.
+func VSCodeWorkspaceContext7OverlayJSON() []byte {
+	content := make([]byte, len(vsCodeWorkspaceContext7OverlayJSON))
+	copy(content, vsCodeWorkspaceContext7OverlayJSON)
+	return content
+}
+
 func AntigravityContext7OverlayJSON() []byte {
 	content := make([]byte, len(antigravityContext7OverlayJSON))
 	copy(content, antigravityContext7OverlayJSON)
