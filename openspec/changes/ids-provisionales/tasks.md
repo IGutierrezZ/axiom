@@ -221,16 +221,16 @@ Depende de: U4. Paquetes: `internal/livespec`, `internal/cli`, `cmd/axiom`, `int
 
 Depende de: U2. Paquetes: `internal/sddstatus`, contrato compartido.
 
-- [ ] 7.1 RED: en `internal/sddstatus/requirements_test.go`, `requirements.modifies` y `requirements.creates` ordenados; sin `id` para nombres sin ID (resolución por título, sin leer la canónica); `provisional: true` con `id` solo si el nombre lleva ID válido o provisional; RENAMED usa el nombre antiguo; capacidad nueva como spec completa cuenta como ADDED; el campo se omite byte a byte sin deltas legibles (incluido almacén `engram` o `none`), con cambio archivado (`status.Archived != nil`) y con patrón inaccesible; `nextRecommended`, `dependencies` y motivos iguales con y sin el campo.
+- [x] 7.1 RED: en `internal/sddstatus/requirements_test.go`, `requirements.modifies` y `requirements.creates` ordenados; sin `id` para nombres sin ID (resolución por título, sin leer la canónica); `provisional: true` con `id` solo si el nombre lleva ID válido o provisional; RENAMED usa el nombre antiguo; capacidad nueva como spec completa cuenta como ADDED; el campo se omite byte a byte sin deltas legibles (incluido almacén `engram` o `none`), con cambio archivado (`status.Archived != nil`) y con patrón inaccesible; `nextRecommended`, `dependencies` y motivos iguales con y sin el campo.
   Cubre: REQ-47.9
   Verificación: `go test ./internal/sddstatus -run 'Requirements'`
-- [ ] 7.2 GREEN: crear `internal/sddstatus/requirements.go` con `decorateRequirements` y `RequirementsProjection`; modificar `status.go` (campo `Requirements` con `omitempty`, llamada tras `decorateISO`) y `status_v2.go`.
+- [x] 7.2 GREEN: crear `internal/sddstatus/requirements.go` con `decorateRequirements` y `RequirementsProjection`; modificar `status.go` (campo `Requirements` con `omitempty`, llamada tras `decorateISO`) y `status_v2.go`.
   Cubre: REQ-47.9
   Verificación: `go test ./internal/sddstatus -run 'Requirements|Status'`
-- [ ] 7.3 RED y GREEN: añadir la sección «Requirements» a `internal/assets/skills/_shared/sdd-status-contract.md` y su pin en `internal/assets/assets_test.go` (campos, ausencia de `id`, los tres casos de omisión).
+- [x] 7.3 RED y GREEN: añadir la sección «Requirements» a `internal/assets/skills/_shared/sdd-status-contract.md` y su pin en `internal/assets/assets_test.go` (campos, ausencia de `id`, los tres casos de omisión).
   Cubre: REQ-47.9
   Verificación: `go test ./internal/assets -run 'StatusContract'`
-- [ ] 7.4 Cierre de U7: `go vet ./internal/sddstatus/...` y commit `feat(sddstatus): proyectar requirements.modifies y requirements.creates en status`.
+- [x] 7.4 Cierre de U7: `go vet ./internal/sddstatus/...` y commit `feat(sddstatus): proyectar requirements.modifies y requirements.creates en status`.
   Cubre: REQ-47.9
   Verificación: `go test ./internal/sddstatus -run 'Requirements'` y `go test ./internal/assets -run 'StatusContract'`
 

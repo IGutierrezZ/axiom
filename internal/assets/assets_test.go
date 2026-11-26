@@ -1494,6 +1494,32 @@ func TestSDDStatusContractDocumentsWorkflowLane(t *testing.T) {
 	}
 }
 
+// REQ-47.9: el contrato compartido documenta el campo aditivo `requirements`, la ausencia de
+// `id` en un nombre sin identificador y los casos de omisión.
+func TestSDDStatusContractDocumentsRequirements(t *testing.T) {
+	content := mustReadResolved("skills/_shared/sdd-status-contract.md")
+
+	for _, want := range []string{
+		"requirements: # optional; omitted when the change declares no requirements in readable delta files",
+		"modifies: [<requirement item>] # MODIFIED, REMOVED and RENAMED (the old name)",
+		"creates: [<requirement item>] # ADDED, including a new capability written as a full spec",
+		"## Requirements",
+		"`requirements` is an additive, optional field",
+		"`id` is present only when the requirement name carries a valid identifier or a provisional",
+		"A name without an identifier has no `id`",
+		"`provisional: true`",
+		"the canonical spec is never read",
+		"the change has no readable delta files",
+		"the change is already archived",
+		"the ID pattern is inaccessible",
+		"`nextRecommended`, `dependencies` and `blockedReasons` never depend on it",
+	} {
+		if !strings.Contains(content, want) {
+			t.Errorf("sdd-status-contract missing requirements rule %q", want)
+		}
+	}
+}
+
 // REQ-24.19, REQ-24.29, REQ-24.30 y REQ-30.28: la convención compartida fija de
 // dónde se leen los localizadores del contexto técnico, qué se lee y qué está
 // prohibido, para que cada skill la cite en lugar de repetirla; la spec viva es solo
