@@ -8,7 +8,7 @@ import (
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 )
 
-func TestRequirementIDs(t *testing.T) {
+func TestRequirementKeysValidAndMalformed(t *testing.T) {
 	cases := []struct {
 		name          string
 		in            string
@@ -30,7 +30,10 @@ func TestRequirementIDs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			valid, malformed := RequirementIDs(tc.in, reqid.Default())
+			valid, provisional, malformed := RequirementKeys(tc.in, reqid.Default())
+			if len(provisional) != 0 {
+				t.Errorf("provisionales = %v, no debería haber ninguno", provisional)
+			}
 			if !reflect.DeepEqual(valid, tc.wantValid) {
 				t.Errorf("válidos = %v, quería %v", valid, tc.wantValid)
 			}

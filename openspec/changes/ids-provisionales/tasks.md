@@ -102,22 +102,22 @@ Depende de: U1. Paquetes: `internal/openspecdoc`, `internal/cli/sdd_archive_comp
 
 Depende de: U1. Paquetes: `internal/isoevidence`, `internal/sddstatus/iso.go`, `internal/cli/sdd_trace.go`.
 
-- [ ] 3.1 RED: en `internal/isoevidence/reqid_test.go`, `RequirementKeys(name, pattern)` devuelve `valid`, `provisional` y `malformed`; REQ-29.3 admite un ADDED con provisional y rechaza con `iso_requirement_id` un nombre con provisional más otro identificador y un provisional fuera de ADDED.
+- [x] 3.1 RED: en `internal/isoevidence/reqid_test.go`, `RequirementKeys(name, pattern)` devuelve `valid`, `provisional` y `malformed`; REQ-29.3 admite un ADDED con provisional y rechaza con `iso_requirement_id` un nombre con provisional más otro identificador y un provisional fuera de ADDED.
   Cubre: REQ-29.3, REQ-47.3
   Verificación: `go test ./internal/isoevidence -run 'RequirementKeys|RequirementID'`
-- [ ] 3.2 GREEN: modificar `internal/isoevidence/reqid.go` para sustituir `RequirementIDs` por `RequirementKeys` en `CheckRequirementIDs`, `deltaIDs`, `CheckCoverage` y `AffectedFromDelta`; ajustar los llamadores en `internal/sddstatus/iso.go` y `internal/cli/sdd_trace.go`.
+- [x] 3.2 GREEN: modificar `internal/isoevidence/reqid.go` para sustituir `RequirementIDs` por `RequirementKeys` en `CheckRequirementIDs`, `deltaIDs`, `CheckCoverage` y `AffectedFromDelta`; ajustar los llamadores en `internal/sddstatus/iso.go` y `internal/cli/sdd_trace.go`.
   Cubre: REQ-29.3, REQ-29.4
   Verificación: `go test ./internal/isoevidence/... ./internal/sddstatus -run 'ISO'`
-- [ ] 3.3 RED y GREEN: en `internal/isoevidence/cubre_test.go`, REQ-29.4 con provisional: `Cubre:` acepta un provisional declarado por un ADDED de la propia delta y un provisional no declarado da `iso_cubre_unknown` con detalle propio; cada requisito de la delta aparece en alguna línea `Cubre:`.
+- [x] 3.3 RED y GREEN: en `internal/isoevidence/cubre_test.go`, REQ-29.4 con provisional: `Cubre:` acepta un provisional declarado por un ADDED de la propia delta y un provisional no declarado da `iso_cubre_unknown` con detalle propio; cada requisito de la delta aparece en alguna línea `Cubre:`.
   Cubre: REQ-29.4
   Verificación: `go test ./internal/isoevidence -run 'Cubre|Coverage'`
-- [ ] 3.4 RED y GREEN: modificar `internal/isoevidence/cubre.go` y `internal/isoevidence/matrix.go` con `RewriteCubre` y `RewriteMatrix` (sustituyen solo el token, conservan posición y bytes restantes; la matriz solo en la columna `Requisito`; la clave de escenario coincide con `AffectedFromDelta`).
+- [x] 3.4 RED y GREEN: modificar `internal/isoevidence/cubre.go` y `internal/isoevidence/matrix.go` con `RewriteCubre` y `RewriteMatrix` (sustituyen solo el token, conservan posición y bytes restantes; la matriz solo en la columna `Requisito`; la clave de escenario coincide con `AffectedFromDelta`).
   Cubre: REQ-47.4, REQ-29.3, REQ-47.8
   Verificación: `go test ./internal/isoevidence -run 'Rewrite|Matrix'`
-- [ ] 3.5 Regresión: `internal/cli/sdd_trace.go` con provisionales en una delta de fixture ISO (traza legible, sin error espurio).
+- [x] 3.5 Regresión: `internal/cli/sdd_trace.go` con provisionales en una delta de fixture ISO (traza legible, sin error espurio).
   Cubre: REQ-29.3, REQ-29.4
   Verificación: `go test ./internal/cli -run 'SDDTrace'`
-- [ ] 3.6 Cierre de U3: `go vet ./internal/isoevidence/... ./internal/sddstatus/...` y commit `feat(isoevidence): aceptar el provisional en el ADDED, Cubre y la matriz`.
+- [x] 3.6 Cierre de U3: `go vet ./internal/isoevidence/... ./internal/sddstatus/...` y commit `feat(isoevidence): aceptar el provisional en el ADDED, Cubre y la matriz`.
   Cubre: REQ-29.3, REQ-29.4, REQ-47.4
   Verificación: `go test ./internal/isoevidence/...`
 

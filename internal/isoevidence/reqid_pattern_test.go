@@ -37,9 +37,9 @@ func TestRequirementIDsWithDeclaredPattern(t *testing.T) {
 	p := rfPattern(t)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			valid, malformed := RequirementIDs(tc.in, p)
+			valid, _, malformed := RequirementKeys(tc.in, p)
 			if !reflect.DeepEqual(valid, tc.wantValid) || !reflect.DeepEqual(malformed, tc.wantMalformed) {
-				t.Errorf("RequirementIDs(%q) = %v, %v; quería %v, %v", tc.in, valid, malformed, tc.wantValid, tc.wantMalformed)
+				t.Errorf("RequirementKeys(%q) = %v, %v; quería %v, %v", tc.in, valid, malformed, tc.wantValid, tc.wantMalformed)
 			}
 		})
 	}
