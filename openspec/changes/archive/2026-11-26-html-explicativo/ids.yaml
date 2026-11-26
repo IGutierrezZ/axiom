@@ -1,0 +1,47 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:WEB:1
+    definitive: RF-WEB-15
+    capability: local-web-dashboard
+    requirement: Endpoint de Solo Lectura que Sirve Únicamente `resumen-spec.html` y `resumen-design.html` (RF-WEB-15)
+  - provisional: prov:WEB:2
+    definitive: RF-WEB-16
+    capability: local-web-dashboard
+    requirement: Pestaña «Explicación» en el Detalle del Incremento con `iframe` en Sandbox y Aviso de Desactualizado (RF-WEB-16)
+  - provisional: prov:GAT:1
+    definitive: RF-GAT-27
+    capability: sdd-block-review-gates
+    requirement: Contrato del HTML Explicativo que Generan `sdd-spec` y `sdd-design` cuando el Kickoff Sella `yes` (RF-GAT-27)
+  - provisional: prov:GAT:2
+    definitive: RF-GAT-28
+    capability: sdd-block-review-gates
+    requirement: 'Contenido Fiel del HTML: Cita de IDs, Nada Fuera del md y Aviso de que se Aprueba el md (RF-GAT-28)'
+  - provisional: prov:GAT:3
+    definitive: RF-GAT-29
+    capability: sdd-block-review-gates
+    requirement: El HTML Queda Fuera del Digest de las Puertas (RF-GAT-29)
+  - provisional: prov:GAT:4
+    definitive: RF-GAT-30
+    capability: sdd-block-review-gates
+    requirement: Frescura Informativa `fresh`, `stale` o `missing` del HTML en `axiom sdd status` (RF-GAT-30)
+  - provisional: prov:KOF:1
+    definitive: RF-KOF-13
+    capability: sdd-lane-kickoff
+    requirement: Declaración de Proyecto `sdd.explainer_html` con Valor por Defecto `ask` (RF-KOF-13)
+  - provisional: prov:KOF:2
+    definitive: RF-KOF-14
+    capability: sdd-lane-kickoff
+    requirement: '`kickoff.yaml` Registra el Campo Sellado `explainer_html` con Valores `yes` o `no` (RF-KOF-14)'
+  - provisional: prov:KOF:3
+    definitive: RF-KOF-15
+    capability: sdd-lane-kickoff
+    requirement: La Bandera `--explainer-html` y la Resolución contra el Valor del Proyecto (RF-KOF-15)
+  - provisional: prov:KOF:4
+    definitive: RF-KOF-16
+    capability: sdd-lane-kickoff
+    requirement: El Status Proyecta el Valor de Proyecto y el Valor Sellado de `explainer_html` (RF-KOF-16)
+  - provisional: prov:PRE:1
+    definitive: RF-PRE-16
+    capability: sdd-preflight-configuration
+    requirement: La Pregunta del HTML Explicativo es una Interacción Propia de Marcador `Axiom SDD kickoff explainer:`, Una Vez por Cambio y Solo con `ask` (RF-PRE-16)

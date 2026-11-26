@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Endpoint de Solo Lectura que Sirve Únicamente `resumen-spec.html` y `resumen-design.html` (prov:WEB:1)
+### Requirement: Endpoint de Solo Lectura que Sirve Únicamente `resumen-spec.html` y `resumen-design.html` (RF-WEB-15)
 
 El dashboard DEBE exponer un endpoint de solo lectura (método GET) que sirva el contenido de `resumen-spec.html` o de `resumen-design.html` de un cambio, y ningún otro fichero. El nombre del fichero DEBE validarse contra una lista blanca de exactamente esos dos nombres. El nombre del cambio DEBE rechazarse (error de cliente) cuando contenga `..`, un separador de ruta (`/` o `\`), su forma codificada (por ejemplo `%2e%2e`, `%2f`, `%5c`) o un byte nulo, sin llegar a leer del disco. Un fichero fuera de la lista blanca DEBE rechazarse sin leer del disco. Si el cambio no existe o el fichero no existe, la respuesta DEBE ser 404. Un método distinto de GET DEBE rechazarse.
 
@@ -67,16 +67,16 @@ El endpoint NO DEBE modificar ningún fichero ni estado, y NO DEBE ampliar la li
 
 ---
 
-### Requirement: Pestaña «Explicación» en el Detalle del Incremento con `iframe` en Sandbox y Aviso de Desactualizado (prov:WEB:2)
+### Requirement: Pestaña «Explicación» en el Detalle del Incremento con `iframe` en Sandbox y Aviso de Desactualizado (RF-WEB-16)
 
-El detalle de un incremento SDD DEBE incluir una pestaña «Explicación» que muestre `resumen-spec.html` y `resumen-design.html` del cambio, cada uno en un `iframe` cuyo atributo `sandbox` NO DEBE contener nunca `allow-same-origin` ni `allow-scripts` (puede estar vacío). El `iframe` DEBE cargar el contenido desde el endpoint de prov:WEB:1, nunca incrustarlo en el documento. El detalle DEBE proyectar la frescura de cada HTML con el mismo cálculo que `axiom sdd status` (`fresh`, `stale`, `missing`): con `stale` la pestaña DEBE mostrar un aviso visible de que el resumen está desactualizado respecto del md; con `missing` DEBE indicar que no hay explicación generada, sin mostrar un `iframe` roto. La pestaña NO DEBE ofrecer edición del HTML ni ninguna acción de escritura, y NO DEBE mostrar nada de HTML cuando el cambio no lo tiene sellado (`explainer_html` ausente o `no`) más allá de indicar que la explicación no está activada para el cambio. La frescura nunca bloquea ninguna otra acción del detalle.
+El detalle de un incremento SDD DEBE incluir una pestaña «Explicación» que muestre `resumen-spec.html` y `resumen-design.html` del cambio, cada uno en un `iframe` cuyo atributo `sandbox` NO DEBE contener nunca `allow-same-origin` ni `allow-scripts` (puede estar vacío). El `iframe` DEBE cargar el contenido desde el endpoint de RF-WEB-15, nunca incrustarlo en el documento. El detalle DEBE proyectar la frescura de cada HTML con el mismo cálculo que `axiom sdd status` (`fresh`, `stale`, `missing`): con `stale` la pestaña DEBE mostrar un aviso visible de que el resumen está desactualizado respecto del md; con `missing` DEBE indicar que no hay explicación generada, sin mostrar un `iframe` roto. La pestaña NO DEBE ofrecer edición del HTML ni ninguna acción de escritura, y NO DEBE mostrar nada de HTML cuando el cambio no lo tiene sellado (`explainer_html` ausente o `no`) más allá de indicar que la explicación no está activada para el cambio. La frescura nunca bloquea ninguna otra acción del detalle.
 
 #### Scenario: HTML al día se muestra en un `iframe` en sandbox
 
 - **DADO** un incremento con `explainer_html: yes` y un `resumen-spec.html` `fresh`
 - **CUANDO** se abre la pestaña «Explicación»
 - **ENTONCES** se muestra un `iframe` con `sandbox` que no contiene `allow-same-origin` ni `allow-scripts`
-- **Y** su origen apunta al endpoint de prov:WEB:1
+- **Y** su origen apunta al endpoint de RF-WEB-15
 - **Y** no se muestra aviso de desactualizado
 
 #### Scenario: HTML desactualizado muestra el aviso

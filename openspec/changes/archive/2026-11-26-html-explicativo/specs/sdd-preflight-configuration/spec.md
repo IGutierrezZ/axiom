@@ -5,7 +5,7 @@
 
 ## ADDED Requirements
 
-### Requirement: La Pregunta del HTML Explicativo es una Interacción Propia de Marcador `Axiom SDD kickoff explainer:`, Una Vez por Cambio y Solo con `ask` (prov:PRE:1)
+### Requirement: La Pregunta del HTML Explicativo es una Interacción Propia de Marcador `Axiom SDD kickoff explainer:`, Una Vez por Cambio y Solo con `ask` (RF-PRE-16)
 
 Cuando el valor de proyecto `sdd.explainer_html` es `ask` (RF-KOF y su proyección en el status, capacidad `sdd-lane-kickoff`), el orquestador DEBE formular una única pregunta de selección única, con las opciones `yes` y `no` (etiquetas y descripciones traducidas al idioma de la conversación; los tokens canónicos no se traducen), una sola vez al iniciar el cambio: después de `axiom branch ensure` y antes de `axiom sdd kickoff seal`. La respuesta DEBE pasarse al sellado con `--explainer-html` y quedar en `kickoff.yaml`.
 

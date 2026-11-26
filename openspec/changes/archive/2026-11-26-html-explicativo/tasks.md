@@ -29,7 +29,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 1: Contrato del HTML
 
 - [x] T1 Crear `internal/explainer/explainer.go` y `explainer_test.go` (tipos `Kind`, `State`, `FileName`, `MaxBytes`, `ReadFile`, `SourceDigest`, `FormatDigest`, `CitedIDs`, `Validate`, errores y expresiones del diseño; decisión 1).
-  - Cubre: prov:GAT:1, prov:GAT:2, prov:GAT:4, prov:WEB:1
+  - Cubre: RF-GAT-27, RF-GAT-28, RF-GAT-30, RF-WEB-15
   - Ficheros: `internal/explainer/explainer.go`, `internal/explainer/explainer_test.go`
   - Pruebas (RED primero): `Validate` (`<SCRIPT>` en mayúsculas, `src="https://"`, `href='//x'`, `xlink:href`, `srcset`, `url(//x)`, `@import`, `data:` admitido, meta ausente/vacía/mal formada, aviso ausente, sin `data-axiom-ref`); `SourceDigest` (orden de atributos, comillas, mayúsculas, varias etiquetas meta; absorbe hueco spec #10); `CitedIDs` (orden, sin repetidos); `ReadFile` (inexistente `fs.ErrNotExist`, enlace simbólico → `ErrNotRegular` omitido si la plataforma no lo permite, exactamente `MaxBytes` admitido, `MaxBytes+1` → `ErrTooLarge` sin contenido).
   - Terminado cuando: el paquete solo importa la biblioteca estándar y la prueba pasa.
@@ -39,7 +39,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 2: Declaración y sellado
 
 - [x] T2 Declaración `sdd.explainer_html` en el decodificador estricto del bloque `sdd:`, accesor `Declarations.ExplainerHTML()` y `axiom.example.yaml` (RF-ISO-01 modificado).
-  - Cubre: prov:KOF:1, RF-ISO-01
+  - Cubre: RF-KOF-13, RF-ISO-01
   - Ficheros: `internal/workspace/sdd.go`, `internal/workspace/declarations.go`, `internal/workspace/sdd_test.go`, `axiom.example.yaml`, `internal/workspace/example_config_test.go`
   - Pruebas (RED primero): `ask`, `always`, `never`; `quizás`, `true`, nulo, lista, mapeo, duplicado → error con clave, valor y admitidos; sin clave → `ask`; independencia de `iso` y `workflow.lane`; `ExplainerHTML()` con `SDDErr`/`ParseErr` devuelve error envuelto; el bloque descomentado del ejemplo declara `explainer_html: ask`.
   - Terminado cuando: `axiom.example.yaml` documenta los tres valores y los tests pasan.
@@ -47,7 +47,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Ruta: inline (~200 líneas).
 
 - [x] T3 Campo sellado `explainer_html`, bandera, `ResolveExplainerHTML` y cableado en `seal` (decisiones 5 y 6).
-  - Cubre: prov:KOF:2, prov:KOF:3
+  - Cubre: RF-KOF-14, RF-KOF-15
   - Ficheros: `internal/kickoff/types.go`, `internal/kickoff/schema.go`, `internal/kickoff/args.go`, `internal/kickoff/explainer.go`, `internal/kickoff/{args,schema,infer}_test.go`, `internal/kickoff/explainer_test.go`, `internal/cli/sdd_kickoff.go`, `internal/cli/sdd_kickoff_test.go`
   - Pruebas (RED primero):
     - kickoff: bandera válida e inválida, `--infer` + bandera rechazado, `ToKickoff`, `Validate` (`quizás` nombra `yes, no`), tabla de `ResolveExplainerHTML` (always/never/ask × yes/no/vacío, contradicción con el mensaje exacto), `--infer` sin campo (también con `always` en el proyecto), lectura heredada `TestLegacyBinaryReadsAKickoffWithExplainerHTML` con struct congelado sin el campo y `Load` sin clave → `no` efectivo (absorbe hueco spec #4).
@@ -59,7 +59,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 3: Proyección y puertas
 
 - [x] T4 `sddstatus`: `ExplainerFreshness`, `DeclaredArtifactStore`, `decorateExplainer`, `Status.Explainer`, `StatusV2Projection.Explainer` y `kickoffV2.ExplainerHTML` (decisiones 2, 3, 4, 10 y 11).
-  - Cubre: prov:KOF:4, prov:GAT:4, prov:GAT:3, RF-ISO-01
+  - Cubre: RF-KOF-16, RF-GAT-30, RF-GAT-29, RF-ISO-01
   - Ficheros: `internal/sddstatus/explainer.go`, `internal/sddstatus/explainer_test.go`, `internal/sddstatus/status.go`, `internal/sddstatus/status_v2.go`
   - Pruebas (RED primero): con `yes`, fresh → stale al editar el md → missing al borrar; meta vacía → stale; varios `spec.md` por dominio y alta/baja de dominio cambian el digest (hueco spec #10); sin md de origen → tipo omitido; HTML de `MaxBytes+1` → `error` sin `state`; `specs/` ilegible o kickoff corrupto → `explainer.error`; con `no`, sin campo o con almacén `engram`/`none` no hay frescura aunque exista el HTML; `continuous` proyecta; `nextRecommended`, `dependencies` y `blockedReasons` idénticos con `yes`/`no` y con/sin HTML; valor de proyecto sin cambio seleccionado; `invalid` con `reason` (hueco diseño #7); `governance.kickoff.explainerHtml`; copia en v2; claves exactas de `status_v2_clean_break_test.go` intactas; `TestExplainerISO`: cambio ISO con HTML `stale` y `missing` no bloquea y `dependencies.archive` e `iso` idénticos a los de `fresh` (hueco diseño #10).
   - Terminado cuando: ninguna rama de `decorateExplainer` toca `NextRecommended`, `Dependencies`, `BlockedReasons`, `Notes`, `ISO` ni `Governance.Gates`.
@@ -67,7 +67,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Ruta: inline (~600 líneas; un solo comportamiento; depende de T1 y T3).
 
 - [x] T5 Pruebas de que el HTML queda fuera del digest de las puertas y entra en la publicación.
-  - Cubre: prov:GAT:3, prov:GAT:2 (publicación)
+  - Cubre: RF-GAT-29, RF-GAT-28 (publicación)
   - Ficheros: `internal/cli/sdd_gate_artifact_digest_test.go`, `internal/sddpublish/publish_test.go`
   - Pruebas: crear, modificar y borrar `resumen-spec.html` y `resumen-design.html` no cambia `gateArtifactDigest` de `spec` ni de `design`, y modificar el md sí; una publicación de la carpeta del cambio incluye los `*.html` junto al resto de documentos (hueco spec #1, solo si basta una prueba; si exigiera cambiar el código de `sddpublish`, se registra como riesgo y no se amplía el alcance).
   - Verificación: `go test ./internal/cli -run 'TestGateArtifactDigest.*Explainer'` y `go test ./internal/sddpublish -run 'Explainer'`
@@ -76,7 +76,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 4: Dashboard
 
 - [x] T6 Endpoint `GET|HEAD /api/explainer`, `ReadExplainer`, `ErrExplainerNotFound`, DTO y relleno en `GetIncrementDetail` (decisiones 7, 8, 11 y 13).
-  - Cubre: prov:WEB:1, prov:WEB:2 (DTO)
+  - Cubre: RF-WEB-15, RF-WEB-16 (DTO)
   - Ficheros: `internal/dashboard/server.go`, `internal/dashboard/service.go`, `internal/dashboard/types.go`, `internal/dashboard/explainer_test.go`
   - Pruebas (RED primero): 200 con `Content-Type`, CSP exacta, `nosniff`, `no-store`, `Referrer-Policy`; CSP y `nosniff` también en 400/404; 400 con `..`, `../x`, `x/..`, `a/b`, `a\b`, `%2e%2e`, `a%2fb`, `%5c`, `C:x`, `%00`, vacío; 400 con `kind` fuera de lista (`spec.md`, `kickoff.yaml`, `tasks`); 404 sin fichero, sin cambio o enlace simbólico (se omite si no se puede crear); 405 con POST, PUT y DELETE; `HEAD`; directorio o fichero no regular → 404; `MaxBytes+1` → 500 con el mensaje y sin bytes del fichero; directorio hermano con `resumen-spec.html` nunca se sirve; con `explainer_html` ausente o `no` y el fichero presente, el endpoint lo sirve (la lista blanca no depende del sellado; hueco spec #3); cambio archivado servido; DTO: `enabled` falso con `no` y sin campo (`items: []`), con `yes` estados iguales a `sddstatus.ExplainerFreshness` del mismo directorio (hueco diseño #11), sin md → `state` vacío, archivado con `yes` mismo cálculo.
   - Terminado cuando: ningún test nuevo usa `freePort` ni el hub; las pruebas con `httptest.NewServer(server.Router())`.
@@ -84,7 +84,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
   - Ruta: inline (~600 líneas; depende de T1 y T4).
 
 - [x] T7 Pestaña «Explicación»: `index.html`, `router.js`, `detalle.js`, `detalle-explicacion.js` y tests de assets.
-  - Cubre: prov:WEB:2
+  - Cubre: RF-WEB-16
   - Ficheros: `internal/dashboard/assets/index.html`, `internal/dashboard/assets/js/core/router.js`, `internal/dashboard/assets/js/screens/detalle.js`, `internal/dashboard/assets/js/screens/detalle-explicacion.js`, `internal/dashboard/workflow_assets_test.go`, `internal/dashboard/assets_test.go`
   - Pruebas: pestaña y panel `explicacion`; `'explicacion'` en `INCREMENT_TABS`; `sandbox=""` literal sin `allow-same-origin` ni `allow-scripts`; textos «no está activada», «Todavía no hay documento de origen», «No hay explicación generada» y «desactualizado»; sin controles de edición, guardado ni regeneración; la pestaña va tras «Handoff» y siempre es visible.
   - Verificación: `go test ./internal/dashboard -run 'TestIncrementDetailTabsAndRoutes|TestRouterDefinesEveryRoute|TestExplainerTab'`
@@ -93,14 +93,14 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 5: Doctrina
 
 - [x] T8 Doctrina del orquestador (párrafo **Explainer HTML.** al final de `SDD Change Kickoff and Block Gates`), contrato de estado, test del hook y test del plugin de OpenCode.
-  - Cubre: prov:PRE:1, prov:KOF:4, prov:GAT:2 (presentación en paradas)
+  - Cubre: RF-PRE-16, RF-KOF-16, RF-GAT-28 (presentación en paradas)
   - Ficheros: `internal/assets/skills/_shared/sdd-orchestrator-sections.md`, `internal/assets/skills/_shared/sdd-status-contract.md`, `internal/cli/sdd_preflight_hook_test.go`, `internal/assets/opencode_sdd_preflight_topology_test.go`, `internal/assets/explainer_html_doctrine_test.go` (parte del orquestador y del contrato)
   - Pruebas: el orquestador contiene el marcador `Axiom SDD kickoff explainer:`, el orden (tras `axiom branch ensure`, antes de `kickoff seal`), la restricción a `ask`, una vez por cambio, nunca en ODD ni con `--infer` ni al reanudar, y `--explainer-html` (hueco spec #11); presenta el HTML y su frescura en las paradas `spec` y `design` de `checkpointed` sin sustituir al md (hueco spec #7); el contrato de estado nombra `explainerHtml`, `expectedDigest`, `reason`, `fresh|stale|missing`; gemelo del hook con pregunta y con cabecera que empiezan por el marcador (autoridad intacta; alinea la palabra «cabecera» de la pregunta abierta del diseño); plugin v1 y v2 (`SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX]`, el marcador no empieza por el prefijo, arnés de node); `TestOrchestratorSectionDriftDoesNotGrow` sigue verde.
   - Verificación: `go test ./internal/assets -run 'Explainer|TestOrchestratorSectionDriftDoesNotGrow|TestOpenCodePluginIgnoresExplainerQuestion|TestOpenCodeSDDPreflightTopologyContract'` y `go test ./internal/cli -run 'TestSDDPreflightHookIgnores'`
   - Ruta: inline (~300 líneas; depende de T4).
 
 - [x] T9 Documento compartido `sdd-explainer-html.md`, pasos en `sdd-spec` y `sdd-design`, y seis copias por agente (decisiones 9 y 12).
-  - Cubre: prov:GAT:1, prov:GAT:2
+  - Cubre: RF-GAT-27, RF-GAT-28
   - Ficheros: `internal/assets/skills/_shared/sdd-explainer-html.md`, `internal/assets/skills/sdd-spec/SKILL.md`, `internal/assets/skills/sdd-design/SKILL.md`, `internal/assets/claude/agents/sdd-{spec,design}.md`, `internal/assets/cursor/agents/sdd-{spec,design}.md`, `internal/assets/copilot/agents/sdd-{spec,design}.agent.md`, `internal/assets/explainer_html_doctrine_test.go` (parte de skills, copias y esqueleto)
   - Pruebas (RED primero): skills, seis copias y documento compartido contienen `castellano`, `<script>`, `external`, `axiom-source-digest` y `data-axiom-ref` (falla si falta uno en cualquiera); esqueleto `html` sin hallazgos de `explainer.Validate`; `CitedIDs` no vacío, cada ID citado existe en el md de ejemplo y cada requisito del md de ejemplo está citado (hueco diseño #9); el paso cubre: HTML que no se logra escribir o incumple termina igualmente con el md, avisa y deja `missing`/`stale` sin bloquear (hueco spec #2); regeneración tras rechazo, con HTML previo ausente y tras edición manual del md (hueco spec #6, solo como regla de regeneración); `engram`/`none` no escriben HTML.
   - Verificación: `go test ./internal/assets -run 'Explainer|TestSDDISOConvention|TestSDDSkillsReferenceISOConvention'`
@@ -109,14 +109,14 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 ## Fase 6: Goldens y docs
 
 - [x] T10 Regenerar los 12 goldens (10 de orquestador y 2 de agentes) y revisar el diff.
-  - Cubre: prov:PRE:1, prov:GAT:1 (doctrina desplegada)
+  - Cubre: RF-PRE-16, RF-GAT-27 (doctrina desplegada)
   - Ficheros: `testdata/golden/*` listados en «Goldens» del diseño
   - Orden: `go test ./internal/components -run 'TestGolden' -update`, después `go test ./internal/components -run 'TestGolden'` sin `-update`.
   - Terminado cuando: el diff solo muestra el párrafo **Explainer HTML.** y la sección de los agentes; nunca se edita un golden a mano.
   - Ruta: inline (mecánica).
 
 - [x] T11 Documentación de usuario donde el diseño la pide: `axiom.example.yaml` ya cubierto en T2; revisar y, si existe una guía de `kickoff seal` o de configuración SDD en `docs/`, añadir `sdd.explainer_html`, `--explainer-html` y la pestaña «Explicación». Si no hay documento que hable de `docs_publication` o `sdd.iso`, no se crea ninguno nuevo y se anota en el resultado.
-  - Cubre: prov:KOF:1, prov:KOF:3, prov:WEB:2
+  - Cubre: RF-KOF-13, RF-KOF-15, RF-WEB-16
   - Verificación: lectura estructural; sin comando de prueba (docs).
   - Ruta: inline.
 
