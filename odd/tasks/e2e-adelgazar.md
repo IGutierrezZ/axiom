@@ -36,10 +36,10 @@ Fuera de alcance: `Darwin Runtime` (fallo de red, no de prueba), `internal/cli/*
 
 ## Tareas
 
-- [ ] **T1 · Retirar la suite Docker e2e** — ruta: inline (borrado mecánico y ediciones pequeñas; sin disparadores de delegación).
+- [x] **T1 · Retirar la suite Docker e2e** — ruta: inline (borrado mecánico y ediciones pequeñas; sin disparadores de delegación).
   - Borrar ficheros, el job `e2e-tests`, `TestArchOpenCodeProvisioningRunsPublishedRepairBeforeVersionCheck` y la entrada `e2e-tests` de la tabla de jobs de `formatter_ordering_test.go`; actualizar la documentación viva.
   - Checks: `go test ./internal/assets -run 'TestFormatter|TestOrganicRuntimeE2EUsesInstalledOpenCodePin|TestCI'`; búsqueda de referencias vivas a los ficheros borrados.
-- [ ] **T2 · Corregir el subtest de OpenCode en Organic Runtime** — ruta: inline (una prueba de unas 20 líneas).
+- [x] **T2 · Corregir el subtest de OpenCode en Organic Runtime** — ruta: inline (una prueba de unas 20 líneas).
   - Esperar la guía en `<proyecto>/opencode.json` y comprobar que `~/.config/opencode/opencode.json` no existe.
   - Checks: `go vet -tags real_agent_e2e ./e2e/organicruntime`; la ejecución real, en CI.
 - [ ] **T3 · Organic Runtime en la nocturna** — ruta: inline (cambio de `if:` y su prueba).
@@ -79,8 +79,9 @@ Toda tanda de absorción DEBE presentar como evidencia de verificación `go buil
 
 ## Progreso y evidencias
 
-(pendiente)
+- **T1** — commit `3c528612`. `go test ./internal/assets -run 'TestRequiredChecksFailClosedWhenFormatFails|TestOrganicRuntimeE2EUsesInstalledOpenCodePin' -count=1` → ok. `git grep` de `e2e/e2e_test.sh`, `docker-test.sh`, los Dockerfiles, `RUN_FULL_E2E`, `e2e-tests` y `docker-e2e-testing`: sin referencias vivas fuera de documentos históricos y de la spec `upstream-absorption-protocol`, cuya delta va en `## Spec viva`. También se actualiza `openspec/config.yaml` (capa e2e).
+- **T2** — `go vet -tags real_agent_e2e ./e2e/organicruntime` → ok; `gofmt -l` limpio. La ejecución real (OpenCode y Claude Code instalados) queda para la CI: en local no hay OpenCode y no se compilan binarios (Cortex).
 
 ## Siguiente paso
 
-T1.
+T3.
