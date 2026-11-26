@@ -263,10 +263,6 @@ entries:
     scope: go-string
     category: default-pattern-fixture
     reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
-  - paths: ["internal/integrations/*_test.go"]
-    scope: go-string
-    category: default-pattern-fixture
-    reason: "Fixtures de las pruebas que ejercitan el patrón por defecto REQ-<n>.<m>."
   - paths: ["internal/isoevidence/*_test.go"]
     scope: go-string
     category: default-pattern-fixture
