@@ -36,7 +36,7 @@ Desactivado: `openspec/config.yaml` declara `strict_tdd: false` y no hay elecci�
 
 - [x] T1 · `internal/testenv`: `IsolateGit`, `RequireGit`, `Git`, `TryGit`, `RepoTemplate` y sus pruebas.
 - [x] T2 · `sddpublish`: `TestMain` con `IsolateGit`, plantillas para `newRepo`, `newBare` y `newMonorepo`, observador por repositorio y `t.Parallel()`.
-- [ ] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
+- [x] T3 · `sddstatus`: el `TestMain` aísla git y `t.Parallel()` donde no hay estado global.
 - [ ] T4 · `techcontext`: `TestMain` sobre `testenv.IsolateGit` y `t.Parallel()`.
 - [ ] T5 · `dashboard`: `t.Parallel()` donde no hay estado global.
 - [ ] T6 · `cli`: `isolateIntegrateGit`, `isolateBranchGit` e `isolateGateGitEnv` sin `t.Setenv`, entorno de git en `TestMain` y `t.Parallel()` en sus pruebas.
@@ -50,12 +50,13 @@ Ruta: todas en línea (cambios mecánicos y ya entendidos; ninguna unidad requie
 |---|---|---|
 | `sddpublish` | 106,4 s | 28,6 s |
 | `techcontext` | 62,8 s | pendiente |
-| `sddstatus` | 79,4 s | pendiente |
+| `sddstatus` | 79,4 s | 21,5 s |
 | `dashboard` | 69,8 s | pendiente |
 
 ## Pruebas que siguen en serie
 
 - `sddpublish`: las 7 que instalan `observe`, las 3 con `t.Setenv` (`TestGitPortIdentityConfigured`, `TestPublishIgnoresGitDirEnvironment`, `TestPublishIdentityMissingWritesNothing`) y `TestGitPortPushOutcomes` (sustituye `pushTimeout`).
+- `sddstatus`: 45 de 348 (las que usan `t.Setenv` de `ENGRAM_PROJECT` o `HOME`, `t.Chdir`, `useBranchGuard` y sus fixtures `branchMonorepo`, `checkpointedMonorepo` e `isoBranchMonorepo`, `stubEngramExport`, `publishChangeInstanceMarker` o `gitcommon.Observe`).
 
 ## Criterio de terminado
 

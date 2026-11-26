@@ -9,6 +9,7 @@ import (
 )
 
 func TestGrantRefusesMarkerReplacementDuringMutation(t *testing.T) {
+	t.Parallel()
 	for _, phase := range []string{"before", "before-replay", "after", "after-replay", "publication-error"} {
 		t.Run(phase, func(t *testing.T) {
 			repo := t.TempDir()

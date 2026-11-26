@@ -88,6 +88,7 @@ func wantTokens(t *testing.T, status Status, want ...string) {
 // van a blockedReasons, estrechan `specs` y `coreReady`, y devuelven la ruta a
 // `spec`; fuera de ISO no aparece ningún token iso_*.
 func TestISOSpecsStage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		deltas     map[string]string
@@ -166,6 +167,7 @@ func TestISOSpecsStage(t *testing.T) {
 // el compositor real no proyecta iso_requirement_id ni devuelve la ruta a `spec`;
 // con otro bloque o otro nombre sigue bloqueando.
 func TestISOInterruptedArchive(t *testing.T) {
+	t.Parallel()
 	canonical := baselineReq51
 	delta := deltaAddedOK
 	composed, err := ComposeOpenSpecCanonicalSpec(canonical, delta)
@@ -209,6 +211,7 @@ func TestISOInterruptedArchive(t *testing.T) {
 // blockedReasons, estrechan `tasks` y devuelven la ruta a `tasks`, un motivo por
 // hallazgo.
 func TestISOTasksStage(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		proposal   string

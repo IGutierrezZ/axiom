@@ -6,6 +6,7 @@ import (
 )
 
 func TestNonPhaseRoutingInstructionsRenderWindowsPathVerbatim(t *testing.T) {
+	t.Parallel()
 	want := `--cwd "C:\Users\dev\repo"`
 	tests := []struct {
 		next        string

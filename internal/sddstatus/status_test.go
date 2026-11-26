@@ -65,6 +65,7 @@ func TestResolveUsesEngramArtifactsWhenOpenSpecIsAbsent(t *testing.T) {
 }
 
 func TestResolveSelectionStates(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		seed          func(t *testing.T, root string)
@@ -140,6 +141,7 @@ func TestResolveSelectionStates(t *testing.T) {
 // nowhere to go. RenderDispatcherMarkdown already spelled the commands out, but
 // --json never reaches it.
 func TestAmbiguousChangeSelectionNamesARunnableCommandPerChange(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "first"))
 	mkdir(t, filepath.Join(root, "openspec", "changes", "second"))
@@ -164,6 +166,7 @@ func TestAmbiguousChangeSelectionNamesARunnableCommandPerChange(t *testing.T) {
 }
 
 func TestDispatcherMarkdownRendersSelectChangeInstructions(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes", "first"))
 	mkdir(t, filepath.Join(root, "openspec", "changes", "second"))
@@ -189,6 +192,7 @@ func TestDispatcherMarkdownRendersSelectChangeInstructions(t *testing.T) {
 }
 
 func TestResolveBlockedStatusJSONUsesEmptyArraysForPathFields(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	mkdir(t, filepath.Join(root, "openspec", "changes"))
 
@@ -221,6 +225,7 @@ func TestResolveBlockedStatusJSONUsesEmptyArraysForPathFields(t *testing.T) {
 }
 
 func TestResolveStatusJSONUsesEmptyBlockedReasonsArray(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-auth", "- [ ] 1.1 Work\n")
 
@@ -244,6 +249,7 @@ func TestResolveStatusJSONUsesEmptyBlockedReasonsArray(t *testing.T) {
 }
 
 func TestBlockerReasonsForRoute(t *testing.T) {
+	t.Parallel()
 	expected := []string{
 		"proposal.md is missing or partial.",
 		"openspec/changes/thin/specs/<domain>/spec.md is missing or partial.",
@@ -328,6 +334,7 @@ func TestResolvePlanningRoutesOmitExpectedBlockersForBothStores(t *testing.T) {
 }
 
 func TestResolveMissingProposalStillRecommendsPropose(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedPlanningRoute(t, root, "legacy-change", "propose")
 
@@ -347,6 +354,7 @@ func TestResolveMissingProposalStillRecommendsPropose(t *testing.T) {
 }
 
 func TestResolveTaskIntegrityBlockerSurvivesPlanningAndResolveBlockersRoutes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		seed     func(t *testing.T, root string)
@@ -412,6 +420,7 @@ func TestResolveEngramPlanningRouteRetainsGenuineBlocker(t *testing.T) {
 }
 
 func TestResolveArtifactStatesAndTaskProgress(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := seedReadyChange(t, root, "add-auth", strings.Join([]string{
 		"# Tasks",
@@ -447,6 +456,7 @@ func TestResolveArtifactStatesAndTaskProgress(t *testing.T) {
 // and never read openspec/changes/<change>/state.yaml, the file the OpenSpec
 // convention names as the change's DAG state.
 func TestResolveProjectsOpenSpecStateDependsOn(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name  string
 		state string
@@ -481,6 +491,7 @@ func TestResolveProjectsOpenSpecStateDependsOn(t *testing.T) {
 }
 
 func TestResolveNextRecommendedPlanningRouting(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		seed     func(t *testing.T, root string)
@@ -566,6 +577,7 @@ func TestResolveNextRecommendedPlanningRouting(t *testing.T) {
 }
 
 func TestResolveNextRecommendedUsesStableTokenForCoreArtifactBlockers(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "thin", "tasks.md"), "- [ ] 1.1 Work\n")
 
@@ -589,6 +601,7 @@ func TestResolveNextRecommendedUsesStableTokenForCoreArtifactBlockers(t *testing
 }
 
 func TestResolveIncludesInstructionsWhenRequested(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-auth", "- [x] 1.1 Work\n")
 
@@ -613,6 +626,7 @@ func TestResolveIncludesInstructionsWhenRequested(t *testing.T) {
 }
 
 func TestResolveRejectsNonexistentCWD(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join(t.TempDir(), "missing")
 
 	if _, err := Resolve(ResolveOptions{CWD: root}); err == nil {
@@ -621,6 +635,7 @@ func TestResolveRejectsNonexistentCWD(t *testing.T) {
 }
 
 func TestResolveExistingCWDWithoutOpenSpecChangesBlocks(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 
 	status, err := Resolve(ResolveOptions{CWD: root})
@@ -637,6 +652,7 @@ func TestResolveExistingCWDWithoutOpenSpecChangesBlocks(t *testing.T) {
 }
 
 func TestRenderMarkdownIncludesFencedJSON(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-auth", "- [ ] 1.1 Work\n")
 
@@ -660,6 +676,7 @@ func TestRenderMarkdownIncludesFencedJSON(t *testing.T) {
 }
 
 func TestRenderDispatcherMarkdownIncludesRoutingContext(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	seedReadyChange(t, root, "add-auth", "- [ ] 1.1 Work\n")
 
@@ -686,6 +703,7 @@ func TestRenderDispatcherMarkdownIncludesRoutingContext(t *testing.T) {
 }
 
 func TestRenderDispatcherMarkdownIncludesBlockedReasonsSeparately(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "thin", "tasks.md"), "- [ ] 1.1 Work\n")
 
@@ -711,6 +729,7 @@ func TestRenderDispatcherMarkdownIncludesBlockedReasonsSeparately(t *testing.T) 
 }
 
 func TestRenderNativePhasePromptIncludesAuthorityInstructionsJSONAndBlockedGuidance(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "thin", "tasks.md"), "- [ ] 1.1 Work\n")
 
@@ -742,6 +761,7 @@ func TestRenderNativePhasePromptIncludesAuthorityInstructionsJSONAndBlockedGuida
 }
 
 func TestPlanningRouteRenderersOmitExpectedBlockersAndRetainGenuineBlockers(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, filepath.Join(root, "openspec", "changes", "thin", "tasks.md"), "not a checklist\n")
 
@@ -769,6 +789,7 @@ func TestPlanningRouteRenderersOmitExpectedBlockersAndRetainGenuineBlockers(t *t
 }
 
 func TestParseCommandArgs(t *testing.T) {
+	t.Parallel()
 	got, err := ParseCommandArgs([]string{"add-auth", "--json", "--instructions", "--cwd", "/tmp/repo"})
 	if err != nil {
 		t.Fatalf("ParseCommandArgs() error = %v", err)
@@ -780,6 +801,7 @@ func TestParseCommandArgs(t *testing.T) {
 }
 
 func TestParseCommandArgsRejectsInvalidInput(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name string
 		args []string
@@ -840,6 +862,7 @@ func equalStringPtr(left *string, right *string) bool {
 // blockers, so the reporter saw an empty blockedReasons forever. The layout
 // guidance is a genuine reason so it survives the spec route.
 func TestResolveFlatSpecsLayoutNamesNestedLayoutOnSpecRoute(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := filepath.Join(root, "openspec", "changes", "flat-specs")
 	write(t, filepath.Join(changeRoot, "proposal.md"), "# Proposal\n")
@@ -862,6 +885,7 @@ func TestResolveFlatSpecsLayoutNamesNestedLayoutOnSpecRoute(t *testing.T) {
 }
 
 func TestResolveNestedSpecsLayoutReportsDoneWithoutLayoutGuidance(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeRoot := filepath.Join(root, "openspec", "changes", "nested-specs")
 	write(t, filepath.Join(changeRoot, "proposal.md"), "# Proposal\n")
@@ -885,6 +909,7 @@ func TestResolveNestedSpecsLayoutReportsDoneWithoutLayoutGuidance(t *testing.T) 
 }
 
 func TestArtifactBlockedReasonsNamesChangeLocalSpecPath(t *testing.T) {
+	t.Parallel()
 	artifacts := map[string]ArtifactState{"proposal": ArtifactDone, "specs": ArtifactMissing, "design": ArtifactDone, "tasks": ArtifactDone}
 	reasons := artifactBlockedReasons(artifacts, TaskProgress{Total: 1, Pending: 1}, "thin", nil)
 	want := []string{"openspec/changes/thin/specs/<domain>/spec.md is missing or partial."}
@@ -972,6 +997,7 @@ func sealFullstackKickoff(t *testing.T, changeRoot, changeName string, style kic
 // any integration-gate decision, so archive is doubly ungrounded here, not
 // merely "not yet checked".
 func TestResolveRoutesToAwaitGateWhenABlockReviewGateIsPending(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-pending"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -998,6 +1024,7 @@ func TestResolveRoutesToAwaitGateWhenABlockReviewGateIsPending(t *testing.T) {
 // (D-09) and surfaces the EXACT registered rejection reason, not a
 // paraphrase of it.
 func TestResolveRoutesRejectedGateToOwningPhaseWithExactReason(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-rejected"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -1033,6 +1060,7 @@ func TestResolveRoutesRejectedGateToOwningPhaseWithExactReason(t *testing.T) {
 // named error, never degrade in silence to "no governance" (which would be
 // indistinguishable from a change that never sealed one at all).
 func TestResolveReturnsErrorForCorruptKickoffNeverSilentlyUnsealed(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-corrupt"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -1048,6 +1076,7 @@ func TestResolveReturnsErrorForCorruptKickoffNeverSilentlyUnsealed(t *testing.T)
 // seal projects the roster but never a gate, and routing stays exactly what
 // it would be without any seal at all.
 func TestResolveContinuousExecutionStyleProjectsRosterNeverGates(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-continuous"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -1094,6 +1123,7 @@ func writeFavorableVerifyReport(t *testing.T, changeRoot string) {
 // approved -- naming the missing precondition and the exact invocation that
 // satisfies it (REQ-21.16, second scenario).
 func TestArchiveDependencyBlockedWithoutApprovedIntegrationGate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-archive-pending"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -1120,6 +1150,7 @@ func TestArchiveDependencyBlockedWithoutApprovedIntegrationGate(t *testing.T) {
 // second case: once the "integration" gate is approved, dependencies.Archive
 // becomes ready (REQ-21.16, first scenario).
 func TestArchiveDependencyReadyWithApprovedIntegrationGate(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-archive-approved"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -1148,6 +1179,7 @@ func TestArchiveDependencyReadyWithApprovedIntegrationGate(t *testing.T) {
 // computation exactly as it was before this increment (D-13's own
 // documented zero-cost boundary).
 func TestArchiveDependencyUnsealedChangeUnaffectedByGovernance(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "unsealed-archive"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -1171,6 +1203,7 @@ func TestArchiveDependencyUnsealedChangeUnaffectedByGovernance(t *testing.T) {
 // tree, still untouched by Resolve itself, projects dependencies.Archive
 // ready (REQ-21.16, first scenario).
 func TestArchivePreconditionIntegrationEndToEnd(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-archive-e2e"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")

@@ -14,6 +14,7 @@ import (
 )
 
 func TestReadChangeInstanceMarkerRetriesTransientWindowsSharingViolation(t *testing.T) {
+	t.Parallel()
 	path := writeChangeInstanceMarkerFixture(t)
 	lock := zeroShareChangeInstanceMarkerHandle(t, path)
 	locked := true
@@ -68,6 +69,7 @@ func TestReadChangeInstanceMarkerRetriesTransientWindowsSharingViolation(t *test
 }
 
 func TestReadChangeInstanceMarkerBoundsPersistentWindowsSharingViolation(t *testing.T) {
+	t.Parallel()
 	path := writeChangeInstanceMarkerFixture(t)
 	lock := zeroShareChangeInstanceMarkerHandle(t, path)
 	defer windows.CloseHandle(lock)
@@ -91,6 +93,7 @@ func TestReadChangeInstanceMarkerBoundsPersistentWindowsSharingViolation(t *test
 }
 
 func TestReadChangeInstanceMarkerStopsAfterNonSharingReadFailure(t *testing.T) {
+	t.Parallel()
 	path := writeChangeInstanceMarkerFixture(t)
 	lock := zeroShareChangeInstanceMarkerHandle(t, path)
 	locked := true

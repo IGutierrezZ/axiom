@@ -22,6 +22,7 @@ func gateAnswers(result SDDGovernanceGateResult) []string {
 // REQ-26.1 / REQ-26.2: a planning gate offers iterate, approve-push-and-stop
 // and approve-and-continue, in that order, as one verb with shared selectors.
 func TestGateQuestionOffersThreeExitsInOrder(t *testing.T) {
+	t.Parallel()
 	for _, store := range []ArtifactStore{ArtifactStoreOpenSpec, ArtifactStoreHybrid} {
 		for _, gate := range []kickoff.GateState{
 			{Key: kickoff.GateSpec},
@@ -58,6 +59,7 @@ func TestGateQuestionOffersThreeExitsInOrder(t *testing.T) {
 // REQ-26.6: a store without files keeps iterate and continue and says why the
 // third exit is missing.
 func TestGateQuestionWithoutFilesDeclaresHandOffUnavailable(t *testing.T) {
+	t.Parallel()
 	for _, store := range []ArtifactStore{ArtifactStoreNone, ArtifactStoreEngram} {
 		result, err := newGovernanceGateQuestion("inc-1", "/repo", kickoff.GateState{Key: kickoff.GateSpec}, ArtifactPaths{}, store)
 		if err != nil {
@@ -82,6 +84,7 @@ func TestGateQuestionWithoutFilesDeclaresHandOffUnavailable(t *testing.T) {
 
 // REQ-26.2: integration keeps its two-way choice whatever the store.
 func TestGateQuestionIntegrationKeepsItsTwoChoices(t *testing.T) {
+	t.Parallel()
 	for _, store := range []ArtifactStore{ArtifactStoreOpenSpec, ArtifactStoreHybrid, ArtifactStoreNone} {
 		result, err := newGovernanceGateQuestion("inc-1", "/repo", kickoff.GateState{Key: kickoff.GateIntegration}, ArtifactPaths{}, store)
 		if err != nil {
@@ -97,6 +100,7 @@ func TestGateQuestionIntegrationKeepsItsTwoChoices(t *testing.T) {
 }
 
 func TestGateQuestionValidateRejectsMalformedThreeExitShapes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		mutate func(*SDDGovernanceGateResult)
@@ -146,6 +150,7 @@ func TestGateQuestionValidateRejectsMalformedThreeExitShapes(t *testing.T) {
 }
 
 func TestGateQuestionValidateAcceptsTwoExitsWithHandOffUnavailable(t *testing.T) {
+	t.Parallel()
 	result := validGovernanceGateResult()
 	result.Choices = []consentenvelope.Choice{result.Choices[0], result.Choices[2]}
 	result.HandOffUnavailable = "none"
@@ -157,6 +162,7 @@ func TestGateQuestionValidateAcceptsTwoExitsWithHandOffUnavailable(t *testing.T)
 // REQ-26.2 (second scenario) and design R-4: widening the shared validator
 // must never let the edit-authority envelope grow a third choice.
 func TestEditAuthorityConsentStillRejectsThreeChoices(t *testing.T) {
+	t.Parallel()
 	consent := newEditAuthorityConsent("inc-1", "/workspace", []string{"/workspace/service-a"}, "sdd-b2f4c0a1d8e64953a7c15b9d3e0f2a68", "")
 	if err := consent.Validate(); err != nil {
 		t.Fatalf("fixture precondition: %v", err)
@@ -171,6 +177,7 @@ func TestEditAuthorityConsentStillRejectsThreeChoices(t *testing.T) {
 }
 
 func TestGateQuestionStorePrefersTheDeclaredStore(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	if got := gateQuestionStore(root, ArtifactStoreOpenSpec); got != ArtifactStoreOpenSpec {
 		t.Fatalf("no declaration: store = %q, want the resolved openspec", got)
@@ -184,6 +191,7 @@ func TestGateQuestionStorePrefersTheDeclaredStore(t *testing.T) {
 // End to end through Resolve: the pending gate of a governed change carries
 // three exits, or two plus handOffUnavailable under a declared `none`.
 func TestResolveGateQuestionCarriesTheThreeExits(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-three-exits"
 	changeRoot := seedReadyChange(t, root, changeName, "- [ ] 1.1 Wire routes\n")
@@ -260,6 +268,7 @@ func gateV2ByKey(t *testing.T, projection StatusV2Projection, key kickoff.GateKe
 }
 
 func TestStatusShowsTheHandOffOfSpecWithoutChangingTheRoute(t *testing.T) {
+	t.Parallel()
 	normal, _ := handedOffFixture(t, false)
 	status, projection := handedOffFixture(t, true)
 
@@ -287,6 +296,7 @@ func TestStatusShowsTheHandOffOfSpecWithoutChangingTheRoute(t *testing.T) {
 }
 
 func TestStatusProjectsNoHandOffForExits1And3(t *testing.T) {
+	t.Parallel()
 	status, projection := handedOffFixture(t, false)
 	spec := gateV2ByKey(t, projection, kickoff.GateSpec)
 	if spec.HandedOff || spec.HandedOffTo != "" {
@@ -306,6 +316,7 @@ func TestStatusProjectsNoHandOffForExits1And3(t *testing.T) {
 
 // REQ-26.7 (last scenario): the mark is the one of the FIRST approved record.
 func TestStatusHandOffMarkIsTheOneOfTheRecordThatClosedTheGate(t *testing.T) {
+	t.Parallel()
 	_, withMarkFirst := handedOffFixture(t, true, false)
 	if gate := gateV2ByKey(t, withMarkFirst, kickoff.GateSpec); !gate.HandedOff || gate.HandedOffTo != "design" {
 		t.Fatalf("mark then plain approval: gate = %+v, want the hand-off kept", gate)
@@ -335,6 +346,7 @@ func twoRoleGovernance(coreApproved, webApproved, coreHandedOff, webHandedOff bo
 }
 
 func TestHandedOffToNamesTheNextRoleOrVerify(t *testing.T) {
+	t.Parallel()
 	pendingWeb := twoRoleGovernance(true, false, true, false)
 	if got := governanceHandedOffTo(pendingWeb, pendingWeb.Gates[0]); got != "apply:web" {
 		t.Fatalf("core handed off with web pending: handedOffTo = %q, want apply:web", got)
@@ -359,6 +371,7 @@ func TestHandedOffToNamesTheNextRoleOrVerify(t *testing.T) {
 // handed off apply:web while web was pending; web was approved afterwards without
 // a mark, and the roster is now closed, but core still says apply:web.
 func TestHandedOffToKeepsThePhaseHandedOverAtRecordingTime(t *testing.T) {
+	t.Parallel()
 	closed := twoRoleGovernance(true, true, true, false)
 	closed.Gates[0].HandedOffTo = "apply:web"
 	if got := governanceHandedOffTo(closed, closed.Gates[0]); got != "apply:web" {
@@ -373,6 +386,7 @@ func TestHandedOffToKeepsThePhaseHandedOverAtRecordingTime(t *testing.T) {
 // A record written before handed_off_to existed has no persisted phase: it is
 // still resolved by calculation against the current roster.
 func TestHandedOffToFallsBackToTheCalculationWithoutAPersistedPhase(t *testing.T) {
+	t.Parallel()
 	closed := twoRoleGovernance(true, true, true, false)
 	if closed.Gates[0].HandedOffTo != "" {
 		t.Fatalf("fixture carries a persisted phase: %+v", closed.Gates[0])
@@ -385,6 +399,7 @@ func TestHandedOffToFallsBackToTheCalculationWithoutAPersistedPhase(t *testing.T
 // End to end through the ledger: the persisted phase survives a later approval
 // of the other role.
 func TestStatusProjectsThePersistedPhaseAfterTheRosterCloses(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	changeName := "governed-persisted-handoff"
 	changeRoot := seedReadyChange(t, root, changeName, "- [x] 1.1 Wire routes\n")
@@ -409,6 +424,7 @@ func TestStatusProjectsThePersistedPhaseAfterTheRosterCloses(t *testing.T) {
 }
 
 func TestHandedOffNotesAreEmptyWithoutGatesOrMarks(t *testing.T) {
+	t.Parallel()
 	if got := handedOffNotes(nil); got != nil {
 		t.Fatalf("nil governance: notes = %v", got)
 	}

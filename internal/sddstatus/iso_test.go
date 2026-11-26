@@ -37,6 +37,7 @@ func reasonsWith(reasons []string, needle string) []string {
 // declarado; una declaración incompleta lo deja `missing` con un motivo por cada
 // falta; con delta las secciones no se analizan; vale en un proyecto no ISO.
 func TestISOBugProfile(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name          string
 		proposal      string
@@ -130,6 +131,7 @@ func TestISOBugProfile(t *testing.T) {
 // existentes (kickoff_absence_regression_test.go, status_v2_clean_break_test.go)
 // siguen sin editarse.
 func TestISOStatusContinuity(t *testing.T) {
+	t.Parallel()
 	builds := map[string]func(t *testing.T) (root, change string){
 		"sin axiom.yaml": func(t *testing.T) (string, string) {
 			root := t.TempDir()

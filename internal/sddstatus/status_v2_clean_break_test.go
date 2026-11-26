@@ -331,6 +331,7 @@ func mustReadStatusGolden(t *testing.T, name string) string {
 }
 
 func TestConsentPreparationRefusesMalformedOrEscapedMarker(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []string{"empty", "partial", "escaped-change", "escaped-planning", "marker-symlink"} {
 		t.Run(scenario, func(t *testing.T) {
 			repo := initRuntimeLedgerRepo(t)
@@ -379,6 +380,7 @@ func TestConsentPreparationRefusesMalformedOrEscapedMarker(t *testing.T) {
 }
 
 func TestConsentPreparationConcurrentWinnerAndReadOnlySnapshots(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	outside := t.TempDir()
 	root := seedReadyChange(t, repo, "winner", "- [ ] Update `"+outside+"/main.go`\n")
@@ -509,6 +511,7 @@ func TestConsentPublicationFailuresEmitNoIdentity(t *testing.T) {
 }
 
 func TestConsentPreparationUnwritableAndUnreadable(t *testing.T) {
+	t.Parallel()
 	for _, unreadable := range []bool{false, true} {
 		t.Run(fmt.Sprint(unreadable), func(t *testing.T) {
 			if runtime.GOOS == "windows" {

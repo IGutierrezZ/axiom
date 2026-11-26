@@ -63,6 +63,7 @@ func embeddedWithDeclaration(t *testing.T, blocks string) workspacetest.Workspac
 // REQ-24.19 y R1: sin declaración no aparece ninguna clave nueva, ni con un
 // proyecto solo de openspec/ ni con un axiom.yaml que no declara los bloques.
 func TestDeclarationsStatusWithoutDeclarationHasNoNewKeys(t *testing.T) {
+	t.Parallel()
 	bare := t.TempDir()
 	seedReadyChange(t, bare, "demo", planningHomeTasks)
 	reference := statusJSON(t, resolveFrom(t, bare, "demo"))
@@ -104,6 +105,7 @@ func TestDeclarationsStatusWithoutDeclarationHasNoNewKeys(t *testing.T) {
 
 // REQ-24.28: proyección del contexto técnico con rutas absolutas.
 func TestDeclarationsStatusProjectsTechnicalContextWithAbsolutePaths(t *testing.T) {
+	t.Parallel()
 	ws := embeddedWithDeclaration(t, declBothModes)
 	for name, resolve := range map[string]func() Status{
 		"desde el directorio": func() Status { return resolveFrom(t, ws.Master, "demo") },
@@ -141,6 +143,7 @@ func TestDeclarationsStatusProjectsTechnicalContextWithAbsolutePaths(t *testing.
 
 // Un modo no declarado no aparece, y `entry` solo aparece si se declaró.
 func TestDeclarationsStatusProjectsOnlyTheDeclaredMode(t *testing.T) {
+	t.Parallel()
 	ws := embeddedWithDeclaration(t, "technical_context:\n  reference:\n    paths: [00_Glosario.md]\n")
 	fields := statusJSON(t, resolveFrom(t, ws.Master, "demo"))
 	if _, present := fields["baseline"]; present {
@@ -165,6 +168,7 @@ func TestDeclarationsStatusProjectsOnlyTheDeclaredMode(t *testing.T) {
 // REQ-24.18: un bloque inválido no se proyecta, ni parcial ni por defecto, y un
 // `baseline:` residual no arrastra al contexto técnico.
 func TestDeclarationsStatusNeverProjectsAnInvalidBlock(t *testing.T) {
+	t.Parallel()
 	t.Run("baseline residual con contexto válido", func(t *testing.T) {
 		ws := embeddedWithDeclaration(t, declResidualBaseline+declBothModes)
 		fields := statusJSON(t, resolveFrom(t, ws.Master, "demo"))
@@ -206,6 +210,7 @@ func TestDeclarationsStatusNeverProjectsAnInvalidBlock(t *testing.T) {
 
 // REQ-24.19: la proyección existe con o sin cambio seleccionado.
 func TestDeclarationsStatusProjectsWithoutASelectedChange(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase+declBothModes)
 	status := resolveFrom(t, ws.Master, "")
@@ -223,6 +228,7 @@ func TestDeclarationsStatusProjectsWithoutASelectedChange(t *testing.T) {
 
 // REQ-24.20: planningHome y los localizadores de artefactos no cambian con la declaración.
 func TestDeclarationsStatusDoesNotAlterPlanningHomeOrArtifacts(t *testing.T) {
+	t.Parallel()
 	plain := workspacetest.Embedded(t, ".")
 	seedReadyChange(t, plain.Master, "demo", planningHomeTasks)
 	declared := embeddedWithDeclaration(t, declBothModes)
@@ -260,6 +266,7 @@ func TestDeclarationsStatusDoesNotAlterPlanningHomeOrArtifacts(t *testing.T) {
 
 // REQ-24.21: una clave baseline en openspec/config.yaml no tiene efecto.
 func TestDeclarationsStatusIgnoresADeclarationInOpenSpecConfig(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	workspacetest.WriteFile(t, filepath.Join(ws.Master, "axiom.yaml"), declEmbeddedBase)
 	workspacetest.WriteFile(t, filepath.Join(ws.Home, "config.yaml"), "baseline:\n  documents:\n    - domain: a\n      path: a.md\ntechnical_context:\n  reference:\n    paths: [a.md]\n")
@@ -275,6 +282,7 @@ func TestDeclarationsStatusIgnoresADeclarationInOpenSpecConfig(t *testing.T) {
 // Espacio canónico: las rutas del contexto son absolutas y pueden subir a un
 // repositorio hermano.
 func TestDeclarationsStatusInTheCanonicalWorkspace(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t)
 	workspacetest.WriteFile(t, filepath.Join(ws.Specs, "axiom.yaml"), declCanonicalBase+"technical_context:\n  maintained:\n    paths: [../repo-backend/docs/]\n")
 	seedReadyChange(t, ws.Specs, "inc-demo", planningHomeTasks)

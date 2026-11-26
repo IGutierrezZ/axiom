@@ -24,6 +24,7 @@ import (
 // consumers: an empty note set must project as `[]`, never as a missing key or a
 // JSON null a consumer would have to special-case.
 func TestStatusNotesIsAlwaysASerializedArray(t *testing.T) {
+	t.Parallel()
 	status := baseStatus(ArtifactStoreOpenSpec, "/repo", nil, nil, nil, "apply", nil)
 	if status.Notes == nil {
 		t.Fatal("baseStatus left Notes nil, want an empty array")
@@ -53,6 +54,7 @@ func TestStatusNotesIsAlwaysASerializedArray(t *testing.T) {
 // honest: a reader must see the note, and must not read it under a heading that
 // says blocked.
 func TestRenderersReportNotesOutsideBlockedReasons(t *testing.T) {
+	t.Parallel()
 	status := baseStatus(ArtifactStoreOpenSpec, "/repo", nil, nil, nil, "apply", nil)
 	status.Notes = []string{"note(future_edit_roots): a later work unit targets /elsewhere"}
 

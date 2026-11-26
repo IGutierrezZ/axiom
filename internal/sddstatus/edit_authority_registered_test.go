@@ -71,6 +71,7 @@ func hasRoot(roots []string, want string) bool {
 // D-14: con `rebase` identidad y una única fuente `tasks.md`, los dos detectores reproducen el
 // comportamiento de antes del incremento, y la identidad y nil son lo mismo.
 func TestEditAuthorityDetectorsKeepTodayWithIdentityRebase(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")
@@ -102,6 +103,7 @@ func TestEditAuthorityDetectorsKeepTodayWithIdentityRebase(t *testing.T) {
 // D-14: la reubicación se aplica a la ruta ya resuelta y antes de reducirla a su raíz git, en los dos
 // detectores; lo que no reubica sigue exigiendo autorización.
 func TestEditAuthorityDetectorsApplyTheRebaseToEveryResolvedPath(t *testing.T) {
+	t.Parallel()
 	workspace := realPath(t, t.TempDir())
 	planning := filepath.Join(workspace, "planning")
 	main := filepath.Join(workspace, "service-a")
@@ -131,6 +133,7 @@ func TestEditAuthorityDetectorsApplyTheRebaseToEveryResolvedPath(t *testing.T) {
 // el cambio en un worktree registrado. Sin registro, un worktree fuera del workspace exige concesión;
 // con el registro entra en `allowedEditRoots` y deja de bloquear.
 func TestEditAuthorityTasksOfAChangeInARegisteredWorktreeNeedNoGrant(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	switchTo(t, ws.Master, "feat/x")
 	worktree := linkedWorktreeDir(t)
@@ -166,6 +169,7 @@ func TestEditAuthorityTasksOfAChangeInARegisteredWorktreeNeedNoGrant(t *testing.
 // se resuelve contra el worktree de la rama de rol; un rol sin worktree propio y `tasks.md` contra el
 // del cambio. La raíz del worktree del rol figura en `allowedEditRoots`.
 func TestEditAuthorityRoleTasksResolveAgainstTheRoleWorktree(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	switchTo(t, ws.Master, "feat/x")
 	changeRoot := seedMultiRoleChange(t, ws.Master, branchChange, kickoff.ExecutionContinuous, map[string]string{
@@ -205,6 +209,7 @@ func TestEditAuthorityRoleTasksResolveAgainstTheRoleWorktree(t *testing.T) {
 
 // Sin worktree del cambio (`in_place`) la base de las fuentes sigue siendo el workspace.
 func TestEditAuthorityPlanBasesFallBackToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	switchTo(t, ws.Master, "feat/x")
 	changeRoot := seedReadyChange(t, ws.Master, branchChange, branchPlan)
@@ -224,6 +229,7 @@ func TestEditAuthorityPlanBasesFallBackToTheWorkspace(t *testing.T) {
 // raíces», «Una ruta del checkout principal de un repositorio registrado se reescribe» y «Un
 // repositorio no registrado exige concesión».
 func TestEditAuthorityRegisteredCodeRepositoryRebasesAndUnregisteredStillNeedsAGrant(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t)
 	for _, repo := range []string{ws.Specs, ws.Backend, ws.Frontend} {
 		switchTo(t, repo, "main")
@@ -274,6 +280,7 @@ func TestEditAuthorityRegisteredCodeRepositoryRebasesAndUnregisteredStillNeedsAG
 // REQ-25.43, escenario «Un repositorio de código registrado por `ensure` entra en las raíces»: entra
 // aunque ninguna tarea lo nombre.
 func TestEditAuthorityRegisteredCodeRepositoryEntersTheRootsWithoutTasksNamingIt(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t)
 	switchTo(t, ws.Specs, "main")
 	switchTo(t, ws.Backend, "main")
@@ -294,6 +301,7 @@ func TestEditAuthorityRegisteredCodeRepositoryEntersTheRootsWithoutTasksNamingIt
 // D-14: las raíces registradas incluyen el worktree de archivado y, en `in_place`, la raíz del propio
 // repositorio de código; un worktree que ya no existe se omite.
 func TestEditAuthorityRegisteredRootsCoverArchiveInPlaceAndSkipMissingWorktrees(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Canonical(t)
 	switchTo(t, ws.Specs, "main")
 	switchTo(t, ws.Backend, "main")
@@ -324,6 +332,7 @@ func TestEditAuthorityRegisteredRootsCoverArchiveInPlaceAndSkipMissingWorktrees(
 // ilegible, `allowedEditRoots` es el workspace más las concesiones; el registro ilegible deja un
 // aviso en `notes` y no bloquea.
 func TestEditAuthorityWithoutARegistryKeepsTheRootsOfBeforeTheIncrement(t *testing.T) {
+	t.Parallel()
 	ws := workspacetest.Embedded(t, ".")
 	switchTo(t, ws.Master, "feat/x")
 	seedReadyChange(t, ws.Master, branchChange, "- [ ] 1.1 Editar `internal/api/handler.go`\n")

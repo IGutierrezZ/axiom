@@ -18,6 +18,7 @@ import (
 const boundaryOpenspecConfig = "schema: spec-driven\ntechnical_context:\n  maintained:\n    paths: [context/]\n"
 
 func TestTechnicalContextBoundaryOpenspecConfigDoesNotDeclareIt(t *testing.T) {
+	t.Parallel()
 	for name, axiomYAML := range map[string]string{
 		"axiom.yaml sin technical_context": declEmbeddedBase,
 		"sin axiom.yaml":                   "",
@@ -50,6 +51,7 @@ func TestTechnicalContextBoundaryOpenspecConfigDoesNotDeclareIt(t *testing.T) {
 }
 
 func TestTechnicalContextBoundaryGovernanceContextCoexistsWithTheDeclaration(t *testing.T) {
+	t.Parallel()
 	ws := embeddedWithDeclaration(t, "governance:\n  context: docs/contexto.md\n"+declBothModes)
 	workspacetest.WriteFile(t, filepath.Join(ws.Home, "config.yaml"), boundaryOpenspecConfig)
 

@@ -24,6 +24,7 @@ func isoProjectWith(t *testing.T, sddBlock string) workspacetest.Workspace {
 // REQ-29.3, REQ-29.4 y REQ-44.5: con `sdd.id_pattern: "RF-<DOM>-<NN>"` un cambio ISO
 // con identificadores del patrón no tiene motivos de identificador ni de cobertura.
 func TestISOWithDeclaredPatternHasNoIdentifierOrCoverageReasons(t *testing.T) {
+	t.Parallel()
 	ws := isoProjectWith(t, "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"usuarios": rfDeltaOK}, rfTasks, "")
 	status := resolveFrom(t, ws.Master, "demo")
@@ -35,6 +36,7 @@ func TestISOWithDeclaredPatternHasNoIdentifierOrCoverageReasons(t *testing.T) {
 
 // REQ-29.3: un nombre sin identificador del patrón bloquea nombrando el patrón efectivo.
 func TestISOWithDeclaredPatternNamesThePatternInReasons(t *testing.T) {
+	t.Parallel()
 	ws := isoProjectWith(t, "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
 	delta := strings.Replace(rfDeltaOK, " (RF-USU-02)", " (REQ-30.1)", 1)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"usuarios": delta}, rfTasks, "")
@@ -49,6 +51,7 @@ func TestISOWithDeclaredPatternNamesThePatternInReasons(t *testing.T) {
 // REQ-44.1 (lectura en vivo, D-04): un cambio ya sellado cuyo axiom.yaml cambia de patrón se
 // evalúa con el patrón nuevo y el motivo lo nombra.
 func TestISOEvaluatesWithTheLivePattern(t *testing.T) {
+	t.Parallel()
 	ws := isoProjectWith(t, "sdd:\n  iso: true\n  id_pattern: \"RF-<DOM>-<NN>\"\n")
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"usuarios": rfDeltaOK}, rfTasks, "")
 	wantTokens(t, resolveFrom(t, ws.Master, "demo"))
@@ -65,6 +68,7 @@ func TestISOEvaluatesWithTheLivePattern(t *testing.T) {
 // `iso_declaration_invalid` en lugar de las reglas de identificador, `tasks` no se evalúa y
 // no hay `iso.matrix`.
 func TestISOWithInaccessiblePattern(t *testing.T) {
+	t.Parallel()
 	for name, block := range map[string]string{
 		"patrón inválido":        "sdd:\n  iso: true\n  id_pattern: \"<m><m>\"\n",
 		"clave desconocida":      "sdd:\n  iso: true\n  id_patern: \"RF-<m>\"\n",
@@ -99,6 +103,7 @@ func TestISOWithInaccessiblePattern(t *testing.T) {
 // REQ-29.3: sin declaración los textos del motivo y de su continuación son idénticos byte a
 // byte a los de antes (`REQ-<n>.<m>`).
 func TestISODefaultPatternReasonTextsAreUnchanged(t *testing.T) {
+	t.Parallel()
 	ws := isoProject(t)
 	seedISOChange(t, ws, "demo", "# Propuesta\n", map[string]string{"pagos": deltaAddedNoID}, tasksPlain, "")
 	status := resolveFrom(t, ws.Master, "demo")

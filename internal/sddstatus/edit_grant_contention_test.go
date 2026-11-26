@@ -18,6 +18,7 @@ import (
 // caller can only report an unknown mutation outcome, which tells it retry is
 // unsafe for an operation that provably never started.
 func TestEditGrantLockContentionPreservesTheNonMutationProof(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	store, err := OpenRuntimeStore(context.Background(), repo, "contention-change")
 	if err != nil {
@@ -53,6 +54,7 @@ func TestEditGrantLockContentionPreservesTheNonMutationProof(t *testing.T) {
 // re-wrap fires and duplicates the sentinel prefix, so it is removed with the
 // flattening rather than after it.
 func TestEditGrantMutationContentionIsNotDoubleWrapped(t *testing.T) {
+	t.Parallel()
 	store, request := grantTestStore(t)
 	if err := store.ensureDirectories(); err != nil {
 		t.Fatal(err)

@@ -28,6 +28,7 @@ import (
 // fixes the whole family at the source.
 
 func TestExtractEditAuthorityTargetTokensExcludesNonPathProseAndKeepsRealPaths(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	mkdir(t, filepath.Join(workspace, "internal", "sddstatus"))
 	mkdir(t, filepath.Join(workspace, "Repos EMT", "api"))
@@ -159,6 +160,7 @@ func TestExtractEditAuthorityTargetTokensExcludesNonPathProseAndKeepsRealPaths(t
 // still be caught, not swallowed by the route-ish exclusion meant only for
 // URL literals like bare `/` or `/api/health`.
 func TestExistingAbsoluteExtensionlessDirectoryOutsideRootsIsStillFlagged(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	external := filepath.Join(workspace, "external-app", "deploy")
@@ -178,6 +180,7 @@ func TestExistingAbsoluteExtensionlessDirectoryOutsideRootsIsStillFlagged(t *tes
 // explicit Files:/Edit:/Touch: declaration is a genuine authorization
 // question, not prose to silently ignore.
 func TestExplicitlyDeclaredWildcardTargetIsStillFlagged(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	shared := filepath.Join(workspace, "shared")
@@ -198,6 +201,7 @@ func TestExplicitlyDeclaredWildcardTargetIsStillFlagged(t *testing.T) {
 // authorized root was never detected. The path is flagged as one root, and the
 // blocked reason prints it quoted so the exits stay copy-pasteable.
 func TestSpacedAbsolutePathOutsideRootsIsFlaggedWithQuotedReason(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	external := filepath.Join(workspace, "Repos EMT", "otro repo")
@@ -224,6 +228,7 @@ func TestSpacedAbsolutePathOutsideRootsIsFlaggedWithQuotedReason(t *testing.T) {
 // form of the same defect: native status for a tasks.md whose only target is a
 // spaced path outside the authorized roots must block apply.
 func TestSpacedExternalPathBlocksApplyWithEditAuthorityMissing(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	external := filepath.Join(workspace, "Repos EMT", "otro repo")
@@ -253,6 +258,7 @@ func TestSpacedExternalPathBlocksApplyWithEditAuthorityMissing(t *testing.T) {
 // fixture: #4096's oxlint import glob, #4192's canonical route literal, and
 // gp#598's backticked HTTP method and route.
 func TestReportedFalsePositiveProseDoesNotBlockEditAuthorityApply(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	seedReadyChange(t, repo, "false-positive-prose", strings.Join([]string{
 		"- [x] 1.1 Add the header check",
@@ -283,6 +289,7 @@ func TestReportedFalsePositiveProseDoesNotBlockEditAuthorityApply(t *testing.T) 
 // report of that root must travel on `notes` — never on the gated
 // `blockedReasons` a consumer contract reads as "stop".
 func TestFutureWorkUnitEditAuthorityRootIsInformationalNotBlocking(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	// deploy is deliberately NOT a Git repository: this test isolates the
@@ -360,6 +367,7 @@ func TestFutureWorkUnitEditAuthorityRootIsInformationalNotBlocking(t *testing.T)
 // block, a later work unit's targets are reported as future only, and an
 // already-completed task's target stays in scope regardless of its number.
 func TestDetectUnauthorizedEditAuthorityRootsForCurrentWorkUnitScopesToCurrentUnit(t *testing.T) {
+	t.Parallel()
 	workspace := t.TempDir()
 	planning := filepath.Join(workspace, "planning")
 	serviceA := filepath.Join(workspace, "service-a")

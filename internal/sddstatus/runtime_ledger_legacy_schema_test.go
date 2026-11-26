@@ -46,6 +46,7 @@ func writeLegacyGrantRecord(t *testing.T, store RuntimeStore, root, instance str
 // sigue vigente y una escritura nueva lleva el esquema axiom encadenada tras el
 // registro viejo.
 func TestRuntimeLedgerReadsGrantWrittenWithLegacySchemaAndAppendsAxiomSchema(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "legacy-schema-grant")
 	if err != nil {
@@ -103,6 +104,7 @@ func TestRuntimeLedgerReadsGrantWrittenWithLegacySchemaAndAppendsAxiomSchema(t *
 // revés) no valida: cada registro se comprueba con el dominio con el que se
 // escribió.
 func TestRuntimeLedgerLegacySchemaRecordRejectsAxiomDomainDigest(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	opened, err := OpenRuntimeStore(context.Background(), repo, "legacy-schema-mismatch")
 	if err != nil {
@@ -151,6 +153,7 @@ func TestRuntimeLedgerLegacySchemaRecordRejectsAxiomDomainDigest(t *testing.T) {
 // identidad en la ruta. Con el dominio heredado en disco, abrir el almacén lo
 // mueve a la ruta axiom y la autoridad concedida sigue vigente.
 func TestOpenRuntimeStoreMigratesLegacyChangeIdentityDirectory(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	const change = "Cambio con Mayusculas"
 	probe, err := OpenRuntimeStore(context.Background(), repo, change)

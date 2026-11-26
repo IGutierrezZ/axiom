@@ -23,6 +23,7 @@ import (
 // there is no false positive to weigh.
 
 func TestResolveWorkspaceRootRefusesAFilesystemRoot(t *testing.T) {
+	t.Parallel()
 	root := filepath.VolumeName(mustAbs(t, string(filepath.Separator))) + string(filepath.Separator)
 
 	_, err := resolveWorkspaceRoot(ResolveOptions{CWD: root})
@@ -39,6 +40,7 @@ func TestResolveWorkspaceRootRefusesAFilesystemRoot(t *testing.T) {
 }
 
 func TestResolveWorkspaceRootRefusesAFilesystemRootAsExplicitWorkspace(t *testing.T) {
+	t.Parallel()
 	root := filepath.VolumeName(mustAbs(t, string(filepath.Separator))) + string(filepath.Separator)
 
 	if _, err := resolveWorkspaceRoot(ResolveOptions{WorkspaceRoot: root}); err == nil {
@@ -51,6 +53,7 @@ func TestResolveWorkspaceRootRefusesAFilesystemRootAsExplicitWorkspace(t *testin
 // unpromising": a temp dir with no openspec tree is a perfectly ordinary
 // starting point and every existing caller depends on it resolving.
 func TestResolveWorkspaceRootStillAcceptsOrdinaryDirectories(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	resolved, err := resolveWorkspaceRoot(ResolveOptions{CWD: dir})
 	if err != nil {

@@ -25,6 +25,7 @@ The system MUST expire widgets after 30 days.
 `
 
 func TestComposeOpenSpecCanonicalSpecWrapperDelegatesToTheLeafPackage(t *testing.T) {
+	t.Parallel()
 	delta := "## ADDED Requirements\n\n### Requirement: Widget Tagging\n\nThe system MUST tag widgets.\n"
 
 	plain, err := ComposeOpenSpecCanonicalSpec(composeWrapperCanonical, delta)
@@ -46,6 +47,7 @@ func TestComposeOpenSpecCanonicalSpecWrapperDelegatesToTheLeafPackage(t *testing
 }
 
 func TestComposeOpenSpecCanonicalSpecWrapperKeepsTheUnappliedDeltaErrorType(t *testing.T) {
+	t.Parallel()
 	_, err := ComposeOpenSpecCanonicalSpec(composeWrapperCanonical, "## MODIFIED Requirements\n\n### Requirement: Missing\n\nBody.\n")
 	var unapplied *UnappliedDeltaError
 	if !errors.As(err, &unapplied) {
@@ -57,6 +59,7 @@ func TestComposeOpenSpecCanonicalSpecWrapperKeepsTheUnappliedDeltaErrorType(t *t
 }
 
 func TestComposeOpenSpecCanonicalSpecWrapperSupersedesRemovedRequirements(t *testing.T) {
+	t.Parallel()
 	delta := "## REMOVED Requirements\n\n### Requirement: Widget Expiration\n\n(Reason: replaced)\n"
 	composed, err := ComposeOpenSpecCanonicalSpecWithOptions(composeWrapperCanonical, delta, ComposeOptions{SupersedeRemoved: true})
 	if err != nil {

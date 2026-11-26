@@ -10,6 +10,7 @@ import (
 // odd` el status no asume el carril odd, sino que pregunta (ask / invalid); un
 // error ordinario de `sdd:` no cambia el carril del proyecto.
 func TestProjectWorkflowISOContradiction(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name       string
 		blocks     string

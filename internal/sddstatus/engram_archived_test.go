@@ -27,6 +27,7 @@ func engramArtifact(project, title string) engramObservation {
 }
 
 func TestCollectEngramChangesExcludesArchivedChanges(t *testing.T) {
+	t.Parallel()
 	observations := []engramObservation{
 		engramArtifact("demo", "sdd/in-flight/proposal"),
 		engramArtifact("demo", "sdd/in-flight/tasks"),
@@ -50,6 +51,7 @@ func TestCollectEngramChangesExcludesArchivedChanges(t *testing.T) {
 // change" are different questions, and an archived change must still answer the
 // second one — its artifacts are the audit trail.
 func TestArchivedEngramChangeStillResolvesWhenNamed(t *testing.T) {
+	t.Parallel()
 	observations := []engramObservation{
 		engramArtifact("demo", "sdd/wave-one/proposal"),
 		engramArtifact("demo", "sdd/wave-one/tasks"),
@@ -66,6 +68,7 @@ func TestArchivedEngramChangeStillResolvesWhenNamed(t *testing.T) {
 // change known only by its archive report is finished by definition and was
 // never active, so it must not appear because the pattern learned a new title.
 func TestArchiveReportAloneDoesNotCreateAChange(t *testing.T) {
+	t.Parallel()
 	changes := collectEngramChanges([]engramObservation{
 		engramArtifact("demo", "sdd/only-archived/archive-report"),
 	}, "demo")

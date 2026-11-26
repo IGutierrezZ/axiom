@@ -20,6 +20,7 @@ func writeLegacyRuntimeFile(t *testing.T, base, content string) string {
 }
 
 func TestOpenRuntimeStoreMigratesLegacyContainer(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	commonDir := commonDirOracle(t, repo)
 	writeLegacyRuntimeFile(t, filepath.Join(commonDir, "gentle-ai"), "viejo")
@@ -45,6 +46,7 @@ func TestOpenRuntimeStoreMigratesLegacyContainer(t *testing.T) {
 }
 
 func TestOpenRuntimeStoreKeepsExistingAxiomContainer(t *testing.T) {
+	t.Parallel()
 	repo := initRuntimeLedgerRepo(t)
 	commonDir := commonDirOracle(t, repo)
 	legacy := writeLegacyRuntimeFile(t, filepath.Join(commonDir, "gentle-ai"), "viejo")
