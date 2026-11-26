@@ -57,6 +57,12 @@
 - Tests: `acceptance_tests_test.go` (DTO igual al compartido, hallazgos y texto hostil literal, no activada, activa sin fichero con aviso en multirepo, archivado omitido, error de `Locate`), `TestAcceptanceTestsTab` y pines de pestañas/router/assets.
 - Verificación: `go test ./internal/dashboard -run 'IncrementDetail|AcceptanceTests|Tabs|Router|Canary|AssetsAreServed|ExplainerTab' -count=1` ok; `go vet ./internal/dashboard`; `go build ./...` ok.
 
+## T9 completada: doctrina de `sdd-tasks`
+
+- Nuevo `_shared/sdd-acceptance-tests.md` (condición SDD y `acceptanceTests.active`, ODD nunca, nueve columnas con ejemplo, cuatro capas en orden, `axiom sdd tests check`, devolución en `artifacts`, ausencia, refinado de `sdd-apply` solo en `Pasos`); «Step 3b» en la skill `sdd-tasks`; sección `## Acceptance Tests` en los agentes claude, cursor y copilot; pines en `internal/assets/acceptance_tests_doctrine_test.go`; golden `sdd-claude-agent-sdd-tasks` regenerado.
+- No se tocaron `sdd-orchestrator-sections.md` ni la skill `sdd-apply`. Riesgo anotado: la frase de la parada `tasks` del orquestador (RF-GAT-32) queda fuera; se cumple vía skill y status.
+- Verificación: `go test ./internal/assets -run 'AcceptanceTestsDoctrine|TestOrchestratorSectionDriftDoesNotGrow|Explainer'` ok; goldens con y sin `-update` ok; `go vet ./internal/assets` ok.
+
 ## Pendientes
 
-T9 y T10.
+T10.

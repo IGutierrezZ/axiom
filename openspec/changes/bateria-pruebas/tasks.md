@@ -121,7 +121,7 @@ Orden: T1, T2 independientes entre sí; T3 tras T2; T4 tras T3; T5 tras T1, T3 y
   - Verificación: `go test ./internal/dashboard -run 'IncrementDetail|AcceptanceTests|Tabs|Router|Canary' -count=1`; `go vet ./internal/dashboard`.
   - Commit: `feat(dashboard): mostrar la batería de pruebas en el detalle del incremento`.
 
-- [ ] T9 Doctrina de `sdd-tasks`: compartido, skill, agentes, pines y golden.
+- [x] T9 Doctrina de `sdd-tasks`: compartido, skill, agentes, pines y golden.
   - Crear `internal/assets/skills/_shared/sdd-acceptance-tests.md`: condición (solo SDD con `acceptanceTests.active: true`, nunca ODD), formato de la tabla con ejemplo y nueve columnas, minimización en cuatro capas en su orden, comprobación con `axiom sdd tests check --cwd <workspaceRoot> --change <c>`, regla de refinado de `sdd-apply` (solo rutas o URL de `Pasos`), y presentación (RF-GAT-32): la skill devuelve `pruebas.md` en `artifacts` con el resultado de `axiom sdd tests check` en el resumen, y declara su ausencia cuando la función está activa y no lo escribió.
   - `internal/assets/skills/sdd-tasks/SKILL.md`: «Step 3b: Acceptance test battery» que remite a `../_shared/sdd-acceptance-tests.md`.
   - Secciones `## Acceptance Tests` (2 o 3 líneas) en `internal/assets/claude/agents/sdd-tasks.md`, `internal/assets/cursor/agents/sdd-tasks.md` y `internal/assets/copilot/agents/sdd-tasks.agent.md`.
