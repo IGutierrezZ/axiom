@@ -42,6 +42,7 @@ func revisionOf(data []byte) string {
 type document struct {
 	data     []byte
 	revision string
+	top      *yaml.Node // nodo documento; es lo que se serializa
 	root     *yaml.Node // mapeo de primer nivel; nil si el documento no es un mapeo
 	blocked  string     // motivo por el que no se puede reescribir; "" si se puede
 }
@@ -78,6 +79,7 @@ func parseDocument(data []byte) *document {
 		doc.blocked = "el documento no es un mapeo de claves"
 		return doc
 	}
+	doc.top = &first
 	doc.root = first.Content[0]
 	doc.blocked = unsupportedConstruct(doc.root)
 	return doc
