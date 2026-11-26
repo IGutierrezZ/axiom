@@ -49,10 +49,13 @@ const (
 	WarnUnclassifiedMention  = "unclassified_mention"
 	WarnTraceInvalid         = "trace_invalid"
 	WarnProvisionalAmbiguous = "provisional_ambiguous"
-	WarnODDNotIntegrated     = "odd_not_integrated"
-	WarnODDRepoUnavailable   = "odd_repository_unavailable"
-	WarnUnsafeName           = "unsafe_name"
-	WarnUnreadable           = "unreadable"
+	// WarnLegacyAmbiguous avisa de un ID heredado con varios IDs nuevos (consulta) o que no se
+	// puede acotar a una capacidad (clasificación).
+	WarnLegacyAmbiguous    = "legacy_ambiguous"
+	WarnODDNotIntegrated   = "odd_not_integrated"
+	WarnODDRepoUnavailable = "odd_repository_unavailable"
+	WarnUnsafeName         = "unsafe_name"
+	WarnUnreadable         = "unreadable"
 )
 
 // Commit es un commit de la línea `--first-parent`, o la constancia de que no se encontró.

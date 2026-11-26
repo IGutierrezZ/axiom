@@ -20,7 +20,7 @@ func (m mapAliases) Aliases(id string) []string { return m[id] }
 
 func resolveIDs(t *testing.T, raw string, traces []traceSet, aliases AliasResolver) (equivalence, []Warning) {
 	t.Helper()
-	q, err := ParseID(raw, reqid.Default())
+	q, err := ParseID(raw, reqid.Default(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

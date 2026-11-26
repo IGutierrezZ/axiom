@@ -14,6 +14,8 @@ type Input struct {
 	Ref     string
 	// Aliases es el punto de extensión de equivalentes; nil equivale a NoAliases.
 	Aliases AliasResolver
+	// Legacy es el resolutor de IDs heredados (el mapa versionado); nil sin mapa.
+	Legacy LegacyResolver
 	// SDD tiene la raíz en el planning home (`changes/archive/...`).
 	SDD Source
 	// ODD tiene la raíz en `odd/tasks`; con Files y sin History se omiten sus documentos.
@@ -54,7 +56,7 @@ func Collect(ctx context.Context, in Input) (Result, error) {
 		traces = append(traces, oddTraces...)
 	}
 
-	eq, w := resolveEquivalents(in.Query, in.Pattern, traces, in.Aliases)
+	eq, w := resolveEquivalentsLegacy(in.Query, in.Pattern, traces, in.Aliases, in.Legacy)
 	warnings = append(warnings, w...)
 
 	var cands []candidate

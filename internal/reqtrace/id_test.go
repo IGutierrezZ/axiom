@@ -32,7 +32,7 @@ func TestRequirementTraceParseID(t *testing.T) {
 		{"vacío", "", def, Query{}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := ParseID(tc.raw, tc.pattern)
+			got, err := ParseID(tc.raw, tc.pattern, nil)
 			if tc.wantErr {
 				var idErr *IDError
 				if !errors.As(err, &idErr) {

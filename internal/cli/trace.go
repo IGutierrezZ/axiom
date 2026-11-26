@@ -12,6 +12,7 @@ import (
 
 	"github.com/IGutierrezZ/axiom/v3/internal/gitcommon"
 	"github.com/IGutierrezZ/axiom/v3/internal/gitref"
+	"github.com/IGutierrezZ/axiom/v3/internal/legacyid"
 	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqid"
 	"github.com/IGutierrezZ/axiom/v3/internal/reqtrace"
@@ -83,7 +84,24 @@ func RunTrace(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	query, err := reqtrace.ParseID(id, pattern)
+	// El mapa de IDs heredados se carga antes de ParseID y de cualquier git: un mapa que existe
+	// y no es válido falla con su error tipado aunque el ID de consulta también lo sea
+	// (RF-TRC-17); sin mapa no hay alias ni aviso.
+	legacyMap, err := legacyid.Load(os.DirFS(loc.PlanningHome), legacyid.FileName, pattern)
+	if err != nil {
+		var mapErr *legacyid.MapError
+		if errors.As(err, &mapErr) {
+			mapErr.Path = filepath.Join(loc.PlanningHome, legacyid.FileName)
+		}
+		return fmt.Errorf("trace: %w", err)
+	}
+	// Sin interfaz con puntero nulo: un *Map nil no se asigna a las interfaces.
+	var legacy reqtrace.LegacyResolver
+	var aliases reqtrace.AliasResolver = reqtrace.NoAliases{}
+	if legacyMap != nil {
+		legacy, aliases = legacyMap, legacyMap
+	}
+	query, err := reqtrace.ParseID(id, pattern, legacy)
 	if err != nil {
 		return fmt.Errorf("trace: %w; escribe un ID con la forma %s o un provisional con la forma %s; ejecuta `axiom trace --help`",
 			err, pattern.Template(), reqid.ProvisionalText("<serie>", "<n>"))
@@ -105,7 +123,7 @@ func RunTrace(args []string, stdout io.Writer) error {
 	}
 
 	result, err := reqtrace.Collect(ctx, reqtrace.Input{
-		Query: query, Pattern: pattern, Ref: ref, Aliases: reqtrace.NoAliases{}, SDD: sdd, ODD: odd,
+		Query: query, Pattern: pattern, Ref: ref, Aliases: aliases, Legacy: legacy, SDD: sdd, ODD: odd,
 	})
 	var refErr *reqtrace.RefError
 	if errors.As(err, &refErr) {

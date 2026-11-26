@@ -100,15 +100,100 @@ func sortedTasks(tasks []Task) []Task {
 	return out
 }
 
-// idTokens devuelve los identificadores del texto (válidos y provisionales) que coinciden
-// exactamente con el conjunto: `REQ-1.1` nunca casa con `REQ-1.10` ni con `REQ-11.1`.
-func idTokens(text string, p reqid.Pattern, match map[string]bool) []string {
-	valid, provisional, _ := isoevidence.RequirementKeys(text, p)
+// matcher decide qué tokens del texto de una fuente citan el ID consultado. Los IDs del
+// conjunto de coincidencia casan siempre; los IDs heredados del mapa casan acotados por
+// capacidad (RF-TRC-04, regla 3).
+type matcher struct {
+	p   reqid.Pattern
+	set map[string]bool
+	eq  equivalence
+	// ambig son los IDs heredados que no se pudieron acotar a una capacidad, con sus
+	// capacidades candidatas.
+	ambig map[string][]string
+}
+
+func newMatcher(p reqid.Pattern, eq equivalence, key string) *matcher {
+	return &matcher{p: p, set: eq.matchSet(key), eq: eq, ambig: map[string][]string{}}
+}
+
+// idTokens devuelve los identificadores del texto (válidos, provisionales y heredados) que
+// coinciden exactamente con el conjunto: `REQ-1.1` nunca casa con `REQ-1.10` ni con
+// `REQ-11.1`. ctx son las capacidades del contexto del texto: la de su delta, las del cambio
+// o las del documento ODD; puede ser vacío.
+func (m *matcher) idTokens(text string, ctx []string) []string {
+	valid, provisional, _ := isoevidence.RequirementKeys(text, m.p)
 	var out []string
+	seen := map[string]bool{}
 	for _, token := range append(valid, provisional...) {
-		if match[token] {
+		if m.set[token] && !seen[token] {
+			seen[token] = true
 			out = append(out, token)
 		}
+	}
+	if m.eq.legacy == nil {
+		return out
+	}
+	legacyValid, legacyMalformed := reqid.Default().Scan(text)
+	for _, token := range append(legacyValid, legacyMalformed...) {
+		if seen[token] || !m.eq.legacy.Legacy(token) || !m.legacyMatches(token, ctx) {
+			continue
+		}
+		seen[token] = true
+		out = append(out, token)
+	}
+	return out
+}
+
+// legacyMatches dice si el ID heredado token, citado en un contexto de capacidades ctx, es un
+// requisito del cierre. Con un contexto que nombra una capacidad del mapa para ese token,
+// cuenta el ID nuevo de ese par; sin contexto útil, el token de una sola capacidad cuenta
+// como esa, el propio ID consultado casa, y el resto no casa y queda anotado como ambiguo.
+func (m *matcher) legacyMatches(token string, ctx []string) bool {
+	useful := false
+	for _, c := range ctx {
+		if n := m.eq.legacy.InCapability(c, token); n != "" {
+			useful = true
+			if m.eq.closure[n] {
+				return true
+			}
+		}
+	}
+	if useful {
+		return false
+	}
+	caps := m.eq.legacy.Capabilities(token)
+	if len(caps) == 1 {
+		return m.eq.closure[m.eq.legacy.InCapability(caps[0], token)]
+	}
+	if token == m.eq.query.ID {
+		return true
+	}
+	for _, c := range caps {
+		if m.eq.closure[m.eq.legacy.InCapability(c, token)] {
+			m.ambig[token] = caps
+			break
+		}
+	}
+	return false
+}
+
+// warnings devuelve un legacy_ambiguous por ID heredado que no se pudo acotar, en orden estable.
+func (m *matcher) warnings(path string) []Warning {
+	var out []Warning
+	for _, token := range sortedKeys(keysOf(m.ambig)) {
+		out = append(out, Warning{
+			Code: WarnLegacyAmbiguous, Path: path,
+			Message: fmt.Sprintf("%s cita el identificador heredado %s sin un contexto de capacidad que lo acote (capacidades candidatas: %s); no cuenta como incremento del identificador nuevo: consulta por %s para verlo",
+				path, token, strings.Join(m.ambig[token], ", "), token),
+		})
+	}
+	return out
+}
+
+func keysOf(m map[string][]string) map[string]bool {
+	out := make(map[string]bool, len(m))
+	for k := range m {
+		out[k] = true
 	}
 	return out
 }
@@ -116,7 +201,11 @@ func idTokens(text string, p reqid.Pattern, match map[string]bool) []string {
 // classifyDelta anota en h los requisitos de la delta de una capacidad que citan el ID: un
 // título ADDED es created; MODIFIED, REMOVED y RENAMED, sus roles (en RENAMED, tanto el
 // nombre origen como el destino). Devuelve si hubo alguna aparición.
-func classifyDelta(h hits, capability string, d openspecdoc.Delta, p reqid.Pattern, match map[string]bool) bool {
+func classifyDelta(h hits, capability string, d openspecdoc.Delta, m *matcher) bool {
+	var ctx []string
+	if capability != "" {
+		ctx = []string{capability}
+	}
 	found := false
 	apply := func(role Role, reqs []openspecdoc.Requirement) {
 		for _, r := range reqs {
@@ -128,7 +217,7 @@ func classifyDelta(h hits, capability string, d openspecdoc.Delta, p reqid.Patte
 				}
 			}
 			for _, name := range names {
-				ids = append(ids, idTokens(name, p, match)...)
+				ids = append(ids, m.idTokens(name, ctx)...)
 			}
 			if len(ids) > 0 {
 				h.record(role, ids, capability)
@@ -143,12 +232,13 @@ func classifyDelta(h hits, capability string, d openspecdoc.Delta, p reqid.Patte
 	return found
 }
 
-// classifyCubre anota en h las líneas `Cubre:` de un texto que citan el ID.
-func classifyCubre(h hits, file, text string, p reqid.Pattern, match map[string]bool) {
+// classifyCubre anota en h las líneas `Cubre:` de un texto que citan el ID. ctx son las
+// capacidades del cambio o del documento que acotan los IDs heredados.
+func classifyCubre(h hits, file, text string, m *matcher, ctx []string) {
 	for _, line := range isoevidence.ParseCubre(file, text) {
 		var ids []string
 		for _, raw := range line.IDs {
-			ids = append(ids, idTokens(raw, p, match)...)
+			ids = append(ids, m.idTokens(raw, ctx)...)
 		}
 		if len(ids) > 0 {
 			h.addTask(RoleCovered, ids, Task{File: line.File, Line: line.Line})
@@ -161,11 +251,12 @@ func classifyCubre(h hits, file, text string, p reqid.Pattern, match map[string]
 // sin aparición en la delta, y el tipo por la declaración de bug de su proposal.md. Un
 // fichero ausente cuenta como vacío; uno ilegible se informa y la búsqueda sigue.
 func classifySDD(src Source, p reqid.Pattern, eq equivalence, f sddFolder) ([]candidate, []Warning) {
-	match := eq.matchSet(f.Path)
+	m := newMatcher(p, eq, f.Path)
 	h := hits{}
 	var warnings []Warning
 
 	deltaFound := false
+	var changeCaps []string
 	specsDir := joinPath(f.Dir, "specs")
 	capabilities, w := readDirOrEmpty(src.Files, specsDir, joinPath(f.Path, "specs"))
 	warnings = append(warnings, w...)
@@ -182,8 +273,9 @@ func classifySDD(src Source, p reqid.Pattern, eq equivalence, f sddFolder) ([]ca
 			warnings = append(warnings, unreadable(specGit, err))
 			continue
 		}
+		changeCaps = append(changeCaps, capDir.Name())
 		delta, _ := openspecdoc.ParseChangeSpec(string(data))
-		if classifyDelta(h, capDir.Name(), delta, p, match) {
+		if classifyDelta(h, capDir.Name(), delta, m) {
 			deltaFound = true
 		}
 	}
@@ -200,8 +292,9 @@ func classifySDD(src Source, p reqid.Pattern, eq equivalence, f sddFolder) ([]ca
 			warnings = append(warnings, unreadable(fileGit, err))
 			continue
 		}
-		classifyCubre(h, fileGit, string(data), p, match)
+		classifyCubre(h, fileGit, string(data), m, changeCaps)
 	}
+	warnings = append(warnings, m.warnings(f.Path)...)
 
 	if !deltaFound {
 		for _, entry := range eq.touched[f.Path] {
@@ -228,7 +321,7 @@ func classifySDD(src Source, p reqid.Pattern, eq equivalence, f sddFolder) ([]ca
 // traza sin aparición en la delta; el tipo es bug con `Tipo: bug`. Si el parseo estricto
 // falla y el documento cita el ID, añade odd_unparseable y busca en el texto.
 func classifyODD(p reqid.Pattern, eq equivalence, d oddDoc) ([]candidate, []Warning) {
-	match := eq.matchSet(d.Path)
+	m := newMatcher(p, eq, d.Path)
 	h := hits{}
 	var warnings []Warning
 	kind := KindIncrement
@@ -239,21 +332,23 @@ func classifyODD(p reqid.Pattern, eq equivalence, d oddDoc) ([]candidate, []Warn
 		if doc.Kind == livespec.KindBug {
 			kind = KindBug
 		}
+		var caps []string
 		for _, c := range doc.Capabilities {
-			if classifyDelta(h, c.Name, c.Delta, p, match) {
+			caps = append(caps, c.Name)
+			if classifyDelta(h, c.Name, c.Delta, m) {
 				deltaFound = true
 			}
 		}
-		classifyCubre(h, d.Path, d.Text, p, match)
+		classifyCubre(h, d.Path, d.Text, m, caps)
 	} else {
-		mentioned := len(idTokens(d.Text, p, match)) > 0
+		mentioned := len(m.idTokens(d.Text, oddCapabilityNames(d.Text))) > 0
 		if mentioned {
 			warnings = append(warnings, Warning{
 				Code: WarnODDUnparseable, Path: d.Path,
 				Message: fmt.Sprintf("el documento %s no cumple el formato de feature (%s); se busca el ID en su texto: corrígelo para una traza fiable", d.Path, firstLine(err.Error())),
 			})
 		}
-		kind, deltaFound = tolerantODD(h, d, p, match)
+		kind, deltaFound = tolerantODD(h, d, m)
 		if mentioned && len(h) == 0 && len(eq.touched[d.Path]) == 0 {
 			warnings = append(warnings, Warning{
 				Code: WarnUnclassifiedMention, Path: d.Path,
@@ -261,6 +356,7 @@ func classifyODD(p reqid.Pattern, eq equivalence, d oddDoc) ([]candidate, []Warn
 			})
 		}
 	}
+	warnings = append(warnings, m.warnings(d.Path)...)
 	if !deltaFound {
 		for _, entry := range eq.touched[d.Path] {
 			h.record(RoleCreated, []string{entry.Definitive}, entry.Capability)
@@ -290,7 +386,7 @@ var (
 // cada bloque vallado `openspec` (o el texto entero si no hay bloques), las líneas `Cubre:` y
 // el tipo por una línea `Tipo: bug` antes del primer `## `. Devuelve el tipo y si hubo
 // aparición en una delta.
-func tolerantODD(h hits, d oddDoc, p reqid.Pattern, match map[string]bool) (Kind, bool) {
+func tolerantODD(h hits, d oddDoc, m *matcher) (Kind, bool) {
 	type block struct {
 		capability string
 		text       string
@@ -337,10 +433,22 @@ func tolerantODD(h hits, d oddDoc, p reqid.Pattern, match map[string]bool) (Kind
 	}
 	deltaFound := false
 	for _, b := range blocks {
-		if classifyDelta(h, b.capability, openspecdoc.ParseDelta(b.text), p, match) {
+		if classifyDelta(h, b.capability, openspecdoc.ParseDelta(b.text), m) {
 			deltaFound = true
 		}
 	}
-	classifyCubre(h, d.Path, d.Text, p, match)
+	classifyCubre(h, d.Path, d.Text, m, oddCapabilityNames(d.Text))
 	return kind, deltaFound
+}
+
+// oddCapabilityNames son las capacidades que nombran las cabeceras `### Capacidad:` de un
+// documento ODD, sin repetidos y en orden de bytes.
+func oddCapabilityNames(text string) []string {
+	names := map[string]bool{}
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if m := oddCapabilityLine.FindStringSubmatch(line); m != nil {
+			names[m[1]] = true
+		}
+	}
+	return sortedKeys(names)
 }
