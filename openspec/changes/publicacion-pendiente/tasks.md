@@ -138,10 +138,10 @@ Depende de: U4. Paquetes: `internal/assets`, `internal/components`, `testdata/go
 
 Depende de: U1 a U5. Sin commit propio salvo corrección de lo que falle.
 
-- [ ] 6.1 Ejecutar, paquete a paquete y sin la batería completa: `go test ./internal/docpaths/... ./internal/branch/... ./internal/sddpublish/... ./internal/sddstatus/...` y `go vet` de los mismos; anotar cada resultado observado en `verify-report.md`.
+- [x] 6.1 Ejecutar, paquete a paquete y sin la batería completa: `go test ./internal/docpaths/... ./internal/branch/... ./internal/sddpublish/... ./internal/sddstatus/...` y `go vet` de los mismos; anotar cada resultado observado en `verify-report.md`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/docpaths/... ./internal/branch/... ./internal/sddpublish/... ./internal/sddstatus/...`
-- [ ] 6.2 Ejecutar los paquetes grandes solo con `-run`: `go test ./internal/cli -run 'TestPublishIsolation'`, `go test ./internal/assets/...` y `go test ./internal/components -run TestGolden`. La suite completa (`go test ./...`) la pasa la CI, no se ejecuta en local.
+- [x] 6.2 Ejecutar los paquetes grandes solo con `-run`: `go test ./internal/cli -run 'TestPublishIsolation'`, `go test ./internal/assets/...` y `go test ./internal/components -run TestGolden`. La suite completa (`go test ./...`) la pasa la CI, no se ejecuta en local.
   Cubre: REQ-27.18, REQ-27.19
   Verificación: los comandos citados en esta misma tarea
 
