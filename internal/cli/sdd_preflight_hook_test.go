@@ -890,3 +890,58 @@ func TestSDDPreflightHookDenialNamesTheCause(t *testing.T) {
 		}
 	})
 }
+
+// La pregunta propia del HTML explicativo (C-06-b) empieza por el marcador `Axiom SDD kickoff explainer:` y no por el
+// prefijo del pre-vuelo: el hook no la reconoce ni altera la autoridad ya corroborada. Se cubren el texto de la
+// pregunta y la cabecera con el marcador.
+func TestSDDPreflightHookIgnoresExplainerQuestion(t *testing.T) {
+	dir := t.TempDir()
+	sessionID := "sess-explainer"
+	transcript := writeSDDPreflightTranscript(t, dir, sessionID, []struct {
+		toolUseID  string
+		sidechain  bool
+		sessionID  string
+		answersRaw string
+		isError    bool
+	}{
+		{toolUseID: "toolu-1", answersRaw: testSDDPreflightAnswersAutomatic},
+	})
+
+	question := "Axiom SDD kickoff explainer: generate the explanatory HTML for this change?"
+	questions := `[{"question":"` + question + `","header":"Axiom SDD kickoff explainer:","options":[{"label":"Yes","description":"Write the HTML."},{"label":"No","description":"Only the md."}],"multiSelect":false}]`
+	answers := `{"` + question + `":"Yes"}`
+	assistant := `{"type":"assistant","isSidechain":false,"sessionId":"` + sessionID + `","uuid":"assistant-toolu-2","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu-2","name":"AskUserQuestion","input":{"questions":` + questions + `}}]}}`
+	user := `{"type":"user","isSidechain":false,"sessionId":"` + sessionID + `","uuid":"user-toolu-2","message":{"role":"user","content":[{"tool_use_id":"toolu-2","type":"tool_result","content":"The user answered the questions."}]},"toolUseResult":{"questions":` + questions + `,"answers":` + answers + `,"annotations":{}}}`
+	f, err := os.OpenFile(transcript, os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(assistant + "\n" + user + "\n"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := runSDDPreflightHookTest(t, preToolUseAgentPayload(sessionID, transcript, "sdd-explore", "Explore the request", ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("decode output %q: %v", out, err)
+	}
+	specific := got["hookSpecificOutput"].(map[string]any)
+	if specific["permissionDecision"] != "allow" {
+		t.Fatalf("decision = %#v", specific)
+	}
+	prompt := specific["updatedInput"].(map[string]any)["prompt"].(string)
+	for _, want := range []string{"- Pace: auto", "- Artifact store: hybrid", "- Delivery strategy: single-pr"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("la autoridad del pre-vuelo cambió: falta %q en %s", want, prompt)
+		}
+	}
+	if strings.Contains(prompt, "explainer") {
+		t.Fatalf("la pregunta del HTML explicativo no debe entrar en el bloque del pre-vuelo: %s", prompt)
+	}
+}

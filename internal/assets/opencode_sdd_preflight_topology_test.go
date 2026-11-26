@@ -210,3 +210,42 @@ func TestOpenCodeSDDPreflightTopologyContract(t *testing.T) {
 		})
 	}
 }
+
+// La pregunta propia del HTML explicativo (C-06-b) no empieza por el prefijo del pre-vuelo: las dos generaciones
+// del plugin la dejan fuera sin tocarla y sin alterar el bloque derivado.
+const sddExplainerQuestionAssertions = `
+{const E='Axiom SDD kickoff explainer:';
+ const eq=()=>ask(E,['Yes','No']);
+ const r=await run(mono,[ask(N+'pace:',PACE),eq()],[['Automatic'],['Yes']]);
+ same(r.prompt,block('auto','hybrid','single-pr')+'\n\nImplement','explainer question must not alter the block');
+ if(!r.questions[1].question.startsWith(E)||JSON.stringify(r.questions[1].options)!=='[{"label":"Yes"},{"label":"No"}]')throw Error('explainer question was touched');
+ await reject(()=>run(mono,[eq()],[['Yes']]),'explainer question alone created authority','preflight is missing')}
+`
+
+func TestOpenCodePluginIgnoresExplainerQuestion(t *testing.T) {
+	const marker = "Axiom SDD kickoff explainer:"
+	generations := []struct {
+		name    string
+		path    string
+		adapter string
+		prepare func(string) string
+	}{
+		{"v1", "opencode/plugins/sdd-task-result-artifacts.ts", sddTopologyV1Adapter, func(source string) string { return source }},
+		{"v2", "opencode/plugins-v2/sdd-task-result-artifacts.ts", sddTopologyV2Adapter, func(source string) string {
+			return strings.Replace(source, `import { Plugin } from "@opencode/plugin"`, `const Plugin = { define: (value: any) => value }`, 1)
+		}},
+	}
+	for _, generation := range generations {
+		t.Run(generation.name, func(t *testing.T) {
+			raw := MustRead(generation.path)
+			if !strings.Contains(raw, `const SDD_PREFLIGHT_ACCEPTED_PREFIXES = [SDD_PREFLIGHT_QUESTION_PREFIX]`) ||
+				!strings.Contains(raw, `const SDD_PREFLIGHT_QUESTION_PREFIX = "Axiom SDD preflight "`) {
+				t.Fatalf("%s: el plugin debe aceptar solo el prefijo del pre-vuelo", generation.path)
+			}
+			if strings.HasPrefix(marker, "Axiom SDD preflight ") || strings.Contains(raw, marker) {
+				t.Fatalf("%s: el marcador del HTML explicativo no debe reconocerse en el plugin", generation.path)
+			}
+			runSDDPluginHarness(t, generation.prepare(raw), generation.adapter+sddTopologyScenarios+sddExplainerQuestionAssertions)
+		})
+	}
+}
