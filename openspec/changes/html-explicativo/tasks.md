@@ -28,7 +28,7 @@ Rol único `fullstack`. Cada tarea es una unidad de trabajo con su código, test
 
 ## Fase 1: Contrato del HTML
 
-- [ ] T1 Crear `internal/explainer/explainer.go` y `explainer_test.go` (tipos `Kind`, `State`, `FileName`, `MaxBytes`, `ReadFile`, `SourceDigest`, `FormatDigest`, `CitedIDs`, `Validate`, errores y expresiones del diseño; decisión 1).
+- [x] T1 Crear `internal/explainer/explainer.go` y `explainer_test.go` (tipos `Kind`, `State`, `FileName`, `MaxBytes`, `ReadFile`, `SourceDigest`, `FormatDigest`, `CitedIDs`, `Validate`, errores y expresiones del diseño; decisión 1).
   - Cubre: prov:GAT:1, prov:GAT:2, prov:GAT:4, prov:WEB:1
   - Ficheros: `internal/explainer/explainer.go`, `internal/explainer/explainer_test.go`
   - Pruebas (RED primero): `Validate` (`<SCRIPT>` en mayúsculas, `src="https://"`, `href='//x'`, `xlink:href`, `srcset`, `url(//x)`, `@import`, `data:` admitido, meta ausente/vacía/mal formada, aviso ausente, sin `data-axiom-ref`); `SourceDigest` (orden de atributos, comillas, mayúsculas, varias etiquetas meta; absorbe hueco spec #10); `CitedIDs` (orden, sin repetidos); `ReadFile` (inexistente `fs.ErrNotExist`, enlace simbólico → `ErrNotRegular` omitido si la plataforma no lo permite, exactamente `MaxBytes` admitido, `MaxBytes+1` → `ErrTooLarge` sin contenido).
