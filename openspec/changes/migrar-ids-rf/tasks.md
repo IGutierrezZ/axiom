@@ -143,16 +143,18 @@ Ruta de ejecución por tarea (design, delegación solo por motivo nombrado): a, 
 
 ## Fase 7: Documentación (commit f)
 
-- [ ] 7.1 Actualizar a mano `docs/openspec-config.md` y `docs/manual-de-inicio.md`: el `sdd.id_pattern` de Axiom, el fichero `openspec/id-map.yaml` y la consulta de IDs antiguos con `axiom trace`. Declarar en `residues.yaml` los ejemplos del patrón por defecto que dichos documentos conserven (solo con `tokens`, nunca por fichero entero).
+- [x] 7.1 Actualizar a mano `docs/openspec-config.md` y `docs/manual-de-inicio.md`: el `sdd.id_pattern` de Axiom, el fichero `openspec/id-map.yaml` y la consulta de IDs antiguos con `axiom trace`. Declarar en `residues.yaml` los ejemplos del patrón por defecto que dichos documentos conserven (solo con `tokens`, nunca por fichero entero).
   - Verificación: `go test ./internal/idmigration -run TestRepositoryLegacyIDResidues -count=1`.
+  - Evidencia: `docs/openspec-config.md` gana la sección «Requirement identifiers of this repository» (patrón `RF-<DOM>-<NN>`, `openspec/id-map.yaml`, `axiom trace REQ-n.m`, residuos) y `docs/manual-de-inicio.md` una viñeta en `sdd.id_pattern` y la viñeta «IDs heredados» en `axiom trace`; ninguna escribe un token heredado con dígitos, así que no hizo falta ninguna entrada nueva en `residues.yaml`. `go test ./internal/idmigration -run 'TestRepositoryLegacyIDResidues|TestIDMap' -count=1` ok, `./internal/workspace -run 'Docs|Contract'` ok y `./internal/app -run Documented` ok.
   - Commit: `docs: patrón RF de Axiom y consulta de IDs antiguos`.
   - Cubre: prov:TRC:1, prov:RID:1
 
 ## Fase 8: Comprobación final
 
-- [ ] 8.1 Comprobar con `rg 'REQ-[0-9]+\.[0-9]+'` fuera de `openspec/changes/archive/` que toda aparición restante figura en la lista de residuos (`residues.yaml`) y que no queda ninguna en literales de Go de producción ni en `internal/assets/skills/**` salvo el ejemplo declarado; confirmar que `TestRepositoryLegacyIDResidues` pasa y que la revisión de d3 es reproducible (`git checkout <d2>`, `AXIOM_IDMIGRATION=write ...`, `-update` de goldens, `git diff <d3>` solo difiere en la línea de fecha de `INDEX.md`).
+- [x] 8.1 Comprobar con `rg 'REQ-[0-9]+\.[0-9]+'` fuera de `openspec/changes/archive/` que toda aparición restante figura en la lista de residuos (`residues.yaml`) y que no queda ninguna en literales de Go de producción ni en `internal/assets/skills/**` salvo el ejemplo declarado; confirmar que `TestRepositoryLegacyIDResidues` pasa y que la revisión de d3 es reproducible (`git checkout <d2>`, `AXIOM_IDMIGRATION=write ...`, `-update` de goldens, `git diff <d3>` solo difiere en la línea de fecha de `INDEX.md`).
   - Verificación: `go test ./internal/idmigration ./internal/legacyid ./internal/openspecdoc ./internal/livespec ./internal/reqid ./internal/reqtrace -count=1`, `go vet` de los mismos y `go test ./internal/cli -run 'TestTrace' -count=1`.
   - Cubre: prov:RID:1, prov:TRC:1, prov:TRC:2, RF-TRC-02, RF-TRC-04
+  - Evidencia: `git grep -nE 'REQ-[0-9]+\.[0-9]+' -- ':!openspec/changes/archive'` da 2387 apariciones en 184 ficheros (sin `rg`), todas cubiertas por `residues.yaml` o por las exenciones de obligación (mapa, ficheros de entrada de la herramienta, archivo): lo garantiza `TestRepositoryLegacyIDResidues`, que pasa; ninguna en `internal/assets/skills/**` (`git grep` vacío) ni en literales de Go de producción (la prueba los veta). Reproducibilidad de d3 (sin árbol temporal, por decisión del orquestador): `AXIOM_IDMIGRATION=plan` sobre HEAD informa 1977 ficheros analizados, 0 reescritos, 0 sustituciones, 0 ambiguos, 0 fallos y 0 candidatos a residuo. Verificación: `go test ./internal/idmigration ./internal/legacyid ./internal/openspecdoc ./internal/livespec ./internal/reqid ./internal/reqtrace -count=1` ok, `go vet` de los mismos ok y `go test ./internal/cli -run 'Trace' -count=1` ok (157 s; con `-run TestTrace` no casa ninguna prueba, los nombres son `TestAxiomTrace*`).
 
 ## Orden y dependencias
 

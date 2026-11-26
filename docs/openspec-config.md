@@ -173,3 +173,21 @@ To check the declaration: `axiom workspace validate --path <master folder>`.
 - `technical_context` lives in `axiom.yaml` and nowhere else. The `baseline` block is retired: the only living spec is OpenSpec (`openspec/specs/`), and a project with its own requirement documents migrates them with `axiom archive adopt scan` and `axiom archive adopt check`.
 - `rules.<phase>`, `strict_tdd` and `artifact_store` stay in `openspec/config.yaml`; none of them moves to `axiom.yaml`.
 - The technical context is checked and integrated with `axiom archive context check|prepare|verify|show`, and the living spec of an ODD feature with `axiom archive integrate --odd <feature>`.
+
+### Requirement identifiers of this repository (`sdd.id_pattern` and `openspec/id-map.yaml`)
+
+Axiom's own living specs number their requirements with its own pattern, declared in `axiom.yaml`:
+
+```yaml
+sdd:
+  id_pattern: "RF-<DOM>-<NN>"
+```
+
+Every `### Requirement:` title in `openspec/specs/` ends with an identifier of that form, for example `RF-TRC-02`. Projects that declare no `sdd.id_pattern` keep the default `REQ-<n>.<m>`; the default is unchanged and is what other projects see.
+
+The identifiers that Axiom used before the migration (`REQ-<n>.<m>`) are not lost:
+
+- `openspec/id-map.yaml` (schema `axiom.id-map/v1`) maps each requirement to its new identifier, its old identifier or identifiers, and the capability that owns it. A legacy number is only unique inside a capability, so the same old identifier can map to several new ones. The file is generated once, never edited by hand, and a permanent test pins its fingerprint.
+- `axiom trace REQ-n.m` accepts an old identifier that appears in the map and answers with the new identifier of each capability that used it; when it maps to more than one, it reports a `legacy_ambiguous` warning and resolves all of them, so query the new identifier to narrow the answer. Without the map the command behaves as before, and an invalid map fails with a typed error before git runs.
+- Archived changes under `openspec/changes/archive/` keep their original identifiers: history is not rewritten.
+- Remaining mentions of an old identifier outside the archive are declared, with their reason, in `internal/idmigration/residues.yaml`; a test fails on any undeclared one.
