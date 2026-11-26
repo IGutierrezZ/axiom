@@ -126,8 +126,12 @@ func (e *Engine) autofetchCycle(ctx context.Context, r AutofetchRequest, result 
 	result.Repository = project.Checkout
 
 	e.autofetchFetch(ctx, project, result)
-	// T5: cambio actual y avisos de relevancia (D-07), calculados antes del avance.
-	// T6: avance por fast-forward estricto y avisos de no avance (D-08).
+	// Relevancia (D-07), calculada antes del avance: primero los avisos de la integración y,
+	// tras los de no avance de T6 (D-08), los de las ramas del cambio.
+	relevance := e.autofetchRelevance(ctx, project, result)
+	result.Notices = append(result.Notices, relevance.incoming...)
+	// T6: avance por fast-forward estricto y avisos de no avance (D-08), aquí.
+	result.Notices = append(result.Notices, relevance.branches...)
 }
 
 // autofetchFetch trae `origin` del repositorio de specs respetando el intervalo mínimo (D-06).

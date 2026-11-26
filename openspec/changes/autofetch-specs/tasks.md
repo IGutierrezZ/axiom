@@ -58,11 +58,12 @@ Orden y dependencias: T1 y T2 independientes; T3 depende de T1+T2; T4 depende de
   - Verificación: `go test ./internal/branch/engine -run "AutofetchCycle|AutofetchStamp|AutofetchProject|AutofetchBudget"`.
   - Evidencia: `go test ./internal/branch/engine -run "AutofetchCycle|AutofetchStamp|AutofetchProject|AutofetchBudget"`: ok; `go test ./internal/branch -run Autofetch`: ok; `go test ./internal/gitcommon -run TestArchitecture`: ok; `go test ./internal/sddpublish -run TestIsolation`: ok; `go vet ./internal/branch/...`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline. Puntos de extensión de T5 y T6 marcados en `autofetchCycle`.
 
-- [ ] T5 Relevancia y avisos (a)/(b) (~400 líneas; depende de T4)
+- [x] T5 Relevancia y avisos (a)/(b) (~400 líneas; depende de T4)
   - Ficheros: `internal/branch/engine/autofetch_relevance.go`, ampliación de `autofetch_test.go` (o `autofetch_relevance_test.go`).
   - Cubre: RF-BRA-39 (relevancia: cambio, spec, ODD, nada relevante; rama del cambio nunca se mueve), huecos 5 y 9 parcial.
   - Pruebas: cambio actual por `HEAD`; único activo; cesión sin registro ni rama local (aviso `change_branch_not_adopted` con orden `axiom branch ensure --change <c> --cwd "<maestra>"`, tope 50 referencias); dos candidatas o varios activos sin coincidencia = sin (a) ni (b); aviso (a) calculado antes del avance con `CommitFiles` por prefijos SDD/ODD, fusiones ignoradas, orden `git log --oneline <sha previo>..origin/<int> -- <prefijos>`; (b) con `AheadBehind` y orden ff-only o log según divergencia; rama del cambio con SHA intacto; sin nada relevante = cero avisos; ordenación determinista; repositorios de código solo lecturas locales.
   - Verificación: `go test ./internal/branch/engine -run AutofetchRelevance`.
+  - Evidencia: `go test ./internal/branch/engine -run AutofetchRelevance`: ok; `go test ./internal/branch/engine -run "AutofetchCycle|AutofetchStamp|AutofetchProject|AutofetchBudget"`: ok; `go vet ./internal/branch/...`: sin salida; `gofmt -l internal/branch`: vacío. Ruta: inline. La relevancia se calcula en `autofetchRelevance` antes del punto de avance; `autofetchCycle` añade los avisos (a), deja el hueco de T6 y añade los (b).
 
 - [ ] T6 Avance ff-only y tabla D-08 (~350 líneas; depende de T4)
   - Ficheros: `internal/branch/engine/autofetch_advance.go`, ampliación de las pruebas del motor.
