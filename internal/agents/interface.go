@@ -110,11 +110,20 @@ type WorkspaceContextFileProvider interface {
 
 // WorkspaceUserConfigFilesProvider es una capacidad opcional de los adaptadores cuyo
 // agente lee en el proyecto ficheros de configuración del usuario que Axiom fusiona
-// (VS Code Copilot, .vscode/mcp.json): son del equipo, normalmente versionados, y si
+// (VS Code Copilot, .mcp.json): son del equipo, normalmente versionados, y si
 // no se pueden leer no se sustituyen por un documento vacío. Devuelve los de la raíz
 // del proyecto dir, o nada fuera de ella.
 type WorkspaceUserConfigFilesProvider interface {
 	WorkspaceUserConfigFiles(dir string) []string
+}
+
+// LegacyWorkspaceMCPConfigProvider es una capacidad opcional de los adaptadores ligados
+// a la raíz de un proyecto cuyos servidores MCP iban antes a otro fichero (VS Code
+// Copilot: .vscode/mcp.json, con la clave `servers`, antes de pasar a .mcp.json).
+// Devuelve ese fichero en la raíz del proyecto dir, o "" fuera de ella. Sirve para
+// retirar las entradas que escribió Axiom: las del usuario se conservan.
+type LegacyWorkspaceMCPConfigProvider interface {
+	LegacyWorkspaceMCPConfigPath(dir string) string
 }
 
 // WorkspaceScopedProvider es una capacidad opcional de los adaptadores ligados a la

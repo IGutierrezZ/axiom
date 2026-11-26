@@ -2233,6 +2233,9 @@ func backupTargets(homeDir, workspaceDir string, scope InstallScope, selection m
 				paths[path] = struct{}{}
 			}
 		}
+		for _, path := range legacyWorkspaceMCPConfigPaths(homeDir, workspaceDir, scope, adapters, component) {
+			paths[path] = struct{}{}
+		}
 		if component == model.ComponentEngram {
 			// Injection migrates the standalone Claude Engram file of earlier
 			// installs (home or workspace) into the registry Claude Code reads,
@@ -2398,6 +2401,28 @@ func claudeMCPSettingsCleanupPaths(homeDir, workspaceDir string, scope InstallSc
 		}
 		targetDir := componentPathDirScoped(homeDir, workspaceDir, scope, adapter, model.ComponentContext7)
 		if path := adapter.SettingsPath(targetDir); path != "" {
+			paths = append(paths, path)
+		}
+	}
+	return paths
+}
+
+// legacyWorkspaceMCPConfigPaths declara los ficheros MCP de instalaciones anteriores
+// de los que la inyección de Engram y Context7 retira las entradas de Axiom
+// (.vscode/mcp.json de VS Code Copilot en el proyecto). Van en la copia de
+// seguridad para poder restaurarlos, pero no se verifican: la retirada es
+// condicional y el fichero puede no existir.
+func legacyWorkspaceMCPConfigPaths(homeDir, workspaceDir string, scope InstallScope, adapters []agents.Adapter, component model.ComponentID) []string {
+	if component != model.ComponentEngram && component != model.ComponentContext7 {
+		return nil
+	}
+	paths := []string{}
+	for _, adapter := range adapters {
+		provider, ok := adapter.(agents.LegacyWorkspaceMCPConfigProvider)
+		if !ok {
+			continue
+		}
+		if path := provider.LegacyWorkspaceMCPConfigPath(componentPathDirScoped(homeDir, workspaceDir, scope, adapter, component)); path != "" {
 			paths = append(paths, path)
 		}
 	}

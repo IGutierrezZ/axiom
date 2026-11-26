@@ -16,7 +16,8 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 		"SystemPromptFile": {a.SystemPromptFile(root), filepath.Join(root, ".github", "instructions", "axiom.instructions.md")},
 		"SkillsDir":        {a.SkillsDir(root), filepath.Join(root, ".agents", "skills")},
 		"SubAgentsDir":     {a.SubAgentsDir(root), filepath.Join(root, ".github", "agents")},
-		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".vscode", "mcp.json")},
+		"MCPConfigPath":    {a.MCPConfigPath(root, "engram"), filepath.Join(root, ".mcp.json")},
+		"LegacyMCPConfig":  {a.LegacyWorkspaceMCPConfigPath(root), filepath.Join(root, ".vscode", "mcp.json")},
 		"SettingsPath":     {a.SettingsPath(root), filepath.Join(root, ".vscode", "settings.json")},
 		"GlobalConfigDir":  {a.GlobalConfigDir(root), filepath.Join(root, ".github")},
 	} {
@@ -27,8 +28,8 @@ func TestWithWorkspaceUsesProjectLayout(t *testing.T) {
 	if files := a.LegacySystemPromptFiles(root); len(files) != 0 {
 		t.Errorf("en un proyecto no hay nombres antiguos que retirar: %v", files)
 	}
-	if got := a.WorkspaceUserConfigFiles(root); len(got) != 1 || got[0] != filepath.Join(root, ".vscode", "mcp.json") {
-		t.Errorf("WorkspaceUserConfigFiles(root) = %v, quiero .vscode/mcp.json", got)
+	if got := a.WorkspaceUserConfigFiles(root); len(got) != 1 || got[0] != filepath.Join(root, ".mcp.json") {
+		t.Errorf("WorkspaceUserConfigFiles(root) = %v, quiero .mcp.json", got)
 	}
 	if !a.InWorkspace(root) {
 		t.Errorf("InWorkspace(root) debe ser verdadero")
@@ -60,6 +61,9 @@ func TestWithWorkspaceKeepsGlobalLayoutElsewhere(t *testing.T) {
 	if files := a.WorkspaceUserConfigFiles(home); len(files) != 0 {
 		t.Errorf("WorkspaceUserConfigFiles(home) = %v, quiero ninguno", files)
 	}
+	if legacy := a.LegacyWorkspaceMCPConfigPath(home); legacy != "" {
+		t.Errorf("LegacyWorkspaceMCPConfigPath(home) = %q, quiero vacío: el perfil de usuario no cambia", legacy)
+	}
 	if a.InWorkspace(home) {
 		t.Errorf("InWorkspace(home) debe ser falso")
 	}
@@ -73,6 +77,9 @@ func TestGlobalAdapterHasNoWorkspaceCapabilities(t *testing.T) {
 	}
 	if _, ok := global.(interface{ InWorkspace(string) bool }); ok {
 		t.Errorf("el adaptador global no está ligado a ningún proyecto")
+	}
+	if _, ok := global.(interface{ LegacyWorkspaceMCPConfigPath(string) string }); ok {
+		t.Errorf("el adaptador global no tiene MCP de proyecto que migrar")
 	}
 	var bound any = NewAdapter().WithWorkspace(t.TempDir())
 	if _, ok := bound.(interface{ WorkspaceUserConfigFiles(string) []string }); !ok {

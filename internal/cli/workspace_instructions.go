@@ -311,8 +311,8 @@ func workspaceInstructionsSettingsPaths(workspaceDir string, scope InstallScope,
 // que el ámbito workspace no hace): se lo pide Codex al usuario la primera vez.
 //
 // VS Code Copilot hereda Workspace Trust: en un espacio de trabajo restringido no
-// arranca los servidores MCP de .vscode/mcp.json (ni cargaría agentes o hooks de
-// .github/, que Axiom no instala). La confianza la concede el usuario en VS Code.
+// arranca los servidores MCP de .mcp.json (ni los de .vscode/mcp.json). La confianza
+// la concede el usuario en VS Code.
 func workspaceTrustNotes(scope InstallScope, agentIDs []model.AgentID) []string {
 	if scope != ScopeWorkspace {
 		return nil
@@ -322,7 +322,7 @@ func workspaceTrustNotes(scope InstallScope, agentIDs []model.AgentID) []string 
 		notes = append(notes, "Codex solo carga la configuración de .codex/ (instrucciones, MCP y hooks) si el proyecto es de confianza: te lo pedirá Codex la primera vez que lo abras, y Axiom no escribe esa confianza en ~/.codex/config.toml. Además, Codex te pide aprobar cada hook de .codex/hooks.json por su hash.")
 	}
 	if containsAgent(agentIDs, model.AgentVSCodeCopilot) {
-		notes = append(notes, "VS Code solo arranca los servidores MCP de .vscode/mcp.json (los que Axiom declara, como Context7 y Engram) si el espacio de trabajo es de confianza (Workspace Trust): en modo restringido no se cargan. Axiom no concede esa confianza; la concedes tú en VS Code al abrir la carpeta.")
+		notes = append(notes, "VS Code solo arranca los servidores MCP de .mcp.json (los que Axiom declara, como Context7 y Engram) si el espacio de trabajo es de confianza (Workspace Trust): en modo restringido no se cargan. Axiom no concede esa confianza; la concedes tú en VS Code al abrir la carpeta.")
 	}
 	return notes
 }
@@ -413,7 +413,7 @@ func checkWorkspaceConfigReadable(settingsPath string) error {
 
 // workspaceUserConfigFiles devuelve los ficheros de configuración del usuario, en la
 // raíz del proyecto, que un adaptador fusiona sin registrarlos como instrucciones
-// (.vscode/mcp.json de VS Code Copilot).
+// (.mcp.json de VS Code Copilot).
 func workspaceUserConfigFiles(adapter agents.Adapter, workspaceDir string) []string {
 	provider, ok := adapter.(agents.WorkspaceUserConfigFilesProvider)
 	if !ok {
@@ -424,7 +424,7 @@ func workspaceUserConfigFiles(adapter agents.Adapter, workspaceDir string) []str
 
 // needsWorkspaceSettingsPreflight indica si alguno de los agentes seleccionados tiene
 // en el proyecto una configuración del usuario que no se puede sobrescribir si es
-// ilegible: la de los que registran instrucciones y .vscode/mcp.json de VS Code Copilot.
+// ilegible: la de los que registran instrucciones y .mcp.json de VS Code Copilot.
 func needsWorkspaceSettingsPreflight(agentIDs []model.AgentID) bool {
 	return registersWorkspaceInstructions(agentIDs) || containsAgent(agentIDs, model.AgentVSCodeCopilot)
 }

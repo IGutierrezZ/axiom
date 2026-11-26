@@ -15,8 +15,12 @@ import (
 //   - .github/skills/<nombre>/SKILL.md: skills de proyecto. Las sesiones locales (la
 //     vista de chat) leen además .claude/skills y .agents/skills; Axiom escribe la
 //     copia compartida en .agents/skills y no en .github/skills.
-//   - .vscode/mcp.json: servidores MCP, con la clave raíz `servers` (no `mcpServers`).
-//     Hereda la confianza del espacio de trabajo (Workspace Trust).
+//   - .mcp.json en la raíz: servidores MCP del arnés de Copilot, con la clave raíz
+//     `mcpServers` (code.visualstudio.com/docs/agents/reference/mcp-configuration). Es
+//     el mismo fichero que lee Claude Code. .vscode/mcp.json (`servers`) es el formato
+//     del arnés Local, deprecado y que se retira en febrero de 2027: el arnés de Copilot
+//     no lo lee, y Axiom solo retira de él las entradas que escribió. Los dos heredan
+//     la confianza del espacio de trabajo (Workspace Trust).
 //   - .github/agents/*.agent.md: agentes personalizados. Axiom escribe uno por fase
 //     SDD, con el modelo y el esfuerzo elegidos, y es el mismo fichero que lee
 //     Copilot CLI desde ~/.copilot/agents. VS Code lee además .claude/agents, así que
@@ -43,7 +47,7 @@ const (
 
 // WorkspaceAdapter es el adaptador de VS Code Copilot ligado a la raíz de un
 // proyecto. Para esa raíz sitúa instrucciones y MCP en la distribución de proyecto
-// (.github/ y .vscode/) y las skills en .agents/skills; para cualquier otra carpeta (la de usuario) da las
+// (.github/ y .mcp.json) y las skills en .agents/skills; para cualquier otra carpeta (la de usuario) da las
 // rutas globales de siempre. Es un tipo aparte del adaptador global para que las
 // capacidades que solo tienen sentido en el proyecto no existan en la instalación
 // global.
@@ -145,18 +149,28 @@ func (a *WorkspaceAdapter) SettingsPath(dir string) string {
 }
 
 // MCPConfigPath es el mcp.json del perfil de usuario en la carpeta de usuario y
-// .vscode/mcp.json en el proyecto.
+// <proyecto>/.mcp.json (clave `mcpServers`) en el proyecto.
 func (a *WorkspaceAdapter) MCPConfigPath(dir string, serverName string) string {
 	if a.InWorkspace(dir) {
-		return filepath.Join(dir, vscodeDirName, "mcp.json")
+		return filepath.Join(dir, ".mcp.json")
 	}
 	return a.Adapter.MCPConfigPath(dir, serverName)
 }
 
+// LegacyWorkspaceMCPConfigPath es .vscode/mcp.json en el proyecto, donde las
+// instalaciones anteriores declaraban los servidores MCP con la clave `servers`.
+// Fuera del proyecto no devuelve nada: el perfil de usuario no cambia.
+func (a *WorkspaceAdapter) LegacyWorkspaceMCPConfigPath(dir string) string {
+	if !a.InWorkspace(dir) {
+		return ""
+	}
+	return filepath.Join(dir, vscodeDirName, "mcp.json")
+}
+
 // WorkspaceUserConfigFiles lista los ficheros de configuración de proyecto del usuario
-// que Axiom fusiona: .vscode/mcp.json, versionado y a menudo con comentarios. Si uno
-// no se puede leer, se rechaza la operación antes de escribir en lugar de sustituirlo
-// por un documento vacío. Fuera del proyecto no devuelve nada.
+// que Axiom fusiona: .mcp.json, versionado y compartido con Claude Code. Si no se
+// puede leer, se rechaza la operación antes de escribir en lugar de sustituirlo por
+// un documento vacío. Fuera del proyecto no devuelve nada.
 func (a *WorkspaceAdapter) WorkspaceUserConfigFiles(dir string) []string {
 	if !a.InWorkspace(dir) {
 		return nil

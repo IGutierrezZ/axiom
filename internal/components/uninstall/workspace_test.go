@@ -400,6 +400,68 @@ func TestSkillsDirStaysInUseWhileAnotherAgentOfTheProjectUsesIt(t *testing.T) {
 	}
 }
 
+// VS Code Copilot y Claude Code comparten <proyecto>/.mcp.json. Al desinstalar VS Code
+// con Claude instalado, las entradas de Axiom de .mcp.json se quedan para Claude; las
+// de .vscode/mcp.json, de instalaciones anteriores, se retiran igualmente. Sin otro
+// agente que lo use, .mcp.json también se limpia.
+func TestWorkspaceVSCodeUninstallKeepsProjectMCPJSONWhileClaudeUsesIt(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		installed string
+		wantKept  bool
+	}{
+		{name: "con Claude instalado", installed: `["vscode-copilot","claude-code"]`, wantKept: true},
+		{name: "solo VS Code", installed: `["vscode-copilot"]`, wantKept: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			workspace := t.TempDir()
+			statePath := filepath.Join(workspace, ".axiom", "state.json")
+			if err := os.MkdirAll(filepath.Dir(statePath), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(statePath, []byte(`{"installed_agents":`+tc.installed+`}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			projectMCP := filepath.Join(workspace, ".mcp.json")
+			if err := os.WriteFile(projectMCP, []byte(`{"mcpServers":{"engram":{"type":"stdio","command":"engram","args":["mcp","--tools=agent"],"tools":["*"]}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			legacyMCP := filepath.Join(workspace, ".vscode", "mcp.json")
+			if err := os.MkdirAll(filepath.Dir(legacyMCP), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(legacyMCP, []byte(`{"servers":{"engram":{"command":"engram","args":["mcp","--tools=agent"]},"mio":{"command":"node"}}}`), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			svc, err := NewScopedService(t.TempDir(), workspace, "dev", Options{Scope: ScopeWorkspace})
+			if err != nil {
+				t.Fatal(err)
+			}
+			svc.removing = []model.AgentID{model.AgentVSCodeCopilot}
+			adapter, _ := svc.adapter(model.AgentVSCodeCopilot)
+
+			_, ops := svc.managedMCPOperations(adapter, "engram")
+			for _, op := range ops {
+				if _, _, err := op.apply(op.path); err != nil {
+					t.Fatalf("operation on %q error = %v", op.path, err)
+				}
+			}
+
+			legacyServers := readJSONFileForTest(t, legacyMCP)["servers"].(map[string]any)
+			if _, gone := legacyServers["engram"]; gone {
+				t.Errorf("el engram de Axiom de .vscode/mcp.json debe retirarse: %#v", legacyServers)
+			}
+			if _, kept := legacyServers["mio"]; !kept {
+				t.Errorf("el servidor del usuario debe conservarse: %#v", legacyServers)
+			}
+			_, statErr := os.Stat(projectMCP)
+			if kept := statErr == nil; kept != tc.wantKept {
+				t.Errorf(".mcp.json conservado = %v, want %v (stat: %v)", kept, tc.wantKept, statErr)
+			}
+		})
+	}
+}
+
 // Los agentes de Axiom ya no llevan `__managed_by`: se retiran por nombre y forma,
 // con los perfiles incluidos. Un agente del usuario con otro nombre, o con nombre de
 // Axiom pero sin la forma del overlay, se conserva.
