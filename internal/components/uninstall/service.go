@@ -1496,6 +1496,7 @@ func removeSkillRegistryHook(raw []byte, branchGuardCommand string) ([]byte, boo
 					strings.Contains(cmd, "gentle-ai review stop-hook") ||
 					strings.Contains(cmd, "axiom sdd-preflight-hook") ||
 					strings.Contains(cmd, "gentle-ai sdd-preflight-hook") ||
+					strings.Contains(cmd, "axiom autofetch run") ||
 					cmd == branchGuardCommand) {
 					changed = true
 					continue

@@ -1410,7 +1410,11 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 		if err != nil {
 			return InjectionResult{}, fmt.Errorf("install Codex branch guard hook: %w", err)
 		}
-		return InjectionResult{Changed: changed || branchGuardChanged, Files: []string{hooksPath}}, nil
+		autofetchChanged, err := ensureCodexAutofetchHook(hooksPath, adapter.Agent())
+		if err != nil {
+			return InjectionResult{}, fmt.Errorf("install Codex autofetch hook: %w", err)
+		}
+		return InjectionResult{Changed: changed || branchGuardChanged || autofetchChanged, Files: []string{hooksPath}}, nil
 	}
 	if provider, ok := adapter.(agents.BranchGuardHooksFileProvider); ok {
 		hooksPath := provider.BranchGuardHooksFile(homeDir)
@@ -1442,7 +1446,11 @@ func installSkillRegistryAutomation(homeDir string, adapter agents.Adapter) (Inj
 	if err != nil {
 		return InjectionResult{}, fmt.Errorf("install Claude branch guard hook: %w", err)
 	}
-	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged, Files: []string{settingsPath}}, nil
+	autofetchChanged, err := ensureClaudeAutofetchHook(settingsPath, adapter.Agent())
+	if err != nil {
+		return InjectionResult{}, fmt.Errorf("install Claude autofetch hook: %w", err)
+	}
+	return InjectionResult{Changed: changed || preflightHookChanged || branchGuardChanged || autofetchChanged, Files: []string{settingsPath}}, nil
 }
 
 func ensureCodexSkillRegistryHook(hooksPath string) (bool, error) {
@@ -1917,6 +1925,163 @@ func ensureBranchGuardHookEntries(path, label, matcher, command string) (bool, e
 		return false, err
 	}
 	return wr.Changed, nil
+}
+
+// El hook de inicio de sesión de `axiom autofetch run` (RF-BRA-40, design D-10). La orden es la
+// identidad de la entrada y Codex liga la confianza del hook al hash de su entrada, así que la
+// orden, el matcher y el timeout son constantes estables. El timeout (10 s) coincide con el
+// presupuesto de `run`: es solo el respaldo exterior del runtime.
+const (
+	autofetchHookMarker  = "axiom autofetch run"
+	autofetchHookMatcher = "startup|resume"
+	autofetchHookTimeout = 10
+)
+
+// AutofetchHookCommand es la orden exacta del hook SessionStart de `axiom autofetch run` para el
+// runtime y el sistema operativo indicados. Termina siempre con 0 (`|| true` en POSIX,
+// `; exit 0` en PowerShell): un `axiom` ausente o anterior, sin el verbo, nunca bloquea ni
+// ensucia el arranque de la sesión (fail-open). La desinstalación retira por subcadena.
+func AutofetchHookCommand(agent model.AgentID, goos string) string {
+	command := fmt.Sprintf("%s --agent %s", autofetchHookMarker, agent)
+	if agent == model.AgentClaudeCode && goos == "windows" {
+		return fmt.Sprintf("powershell -NoProfile -Command '%s; exit 0'", command)
+	}
+	return command + " || true"
+}
+
+// ensureClaudeAutofetchHook instala el hook SessionStart de autofetch en settings.json de Claude Code.
+func ensureClaudeAutofetchHook(settingsPath string, agentID model.AgentID) (bool, error) {
+	return ensureAutofetchHookEntries(settingsPath, "Claude settings", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS))
+}
+
+// ensureCodexAutofetchHook instala el mismo hook en el hooks.json de Codex.
+func ensureCodexAutofetchHook(hooksPath string, agentID model.AgentID) (bool, error) {
+	return ensureAutofetchHookEntries(hooksPath, "Codex hooks", autofetchHookMatcher, AutofetchHookCommand(agentID, runtime.GOOS))
+}
+
+// ensureAutofetchHookEntries generaliza ensureBranchGuardHookEntries a un solo evento
+// (`SessionStart`): primero poda las órdenes de `axiom autofetch run` que ya no son la canónica,
+// después añade la canónica si falta, y escribe solo si algo cambió. Una forma inesperada es un
+// error que deja el fichero intacto.
+func ensureAutofetchHookEntries(path, label, matcher, command string) (bool, error) {
+	root := map[string]any{}
+	if data, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(data))) > 0 {
+		if err := json.Unmarshal(data, &root); err != nil {
+			return false, fmt.Errorf("parse %s %q: %w", label, path, err)
+		}
+	} else if err != nil && !os.IsNotExist(err) {
+		return false, err
+	}
+
+	hooksRaw, hasHooks := root["hooks"]
+	hooksMap, _ := hooksRaw.(map[string]any)
+	if hasHooks && hooksMap == nil {
+		return false, fmt.Errorf("%s %q has unsupported hooks shape: want object", label, path)
+	}
+	if hooksMap == nil {
+		hooksMap = map[string]any{}
+	}
+	raw, has := hooksMap["SessionStart"]
+	if _, isArray := raw.([]any); has && !isArray {
+		return false, fmt.Errorf("%s %q has unsupported hooks.SessionStart shape: want array", label, path)
+	}
+
+	changed := pruneStaleAutofetchHooks(hooksMap, matcher, command)
+	entries, _ := hooksMap["SessionStart"].([]any)
+	if !claudeHookListContains(entries, command) {
+		hooksMap["SessionStart"] = append(entries, map[string]any{
+			"matcher": matcher,
+			"hooks":   []any{map[string]any{"type": "command", "command": command, "timeout": autofetchHookTimeout}},
+		})
+		changed = true
+	}
+	if !changed {
+		return false, nil
+	}
+
+	root["hooks"] = hooksMap
+	out, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return false, err
+	}
+	out = append(out, '\n')
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false, err
+	}
+	wr, err := filemerge.WriteFileAtomic(path, out, 0o644)
+	if err != nil {
+		return false, err
+	}
+	return wr.Changed, nil
+}
+
+// pruneStaleAutofetchHooks retira, en cualquier evento, toda orden que contenga
+// `axiom autofetch run` y no sea exactamente la canónica bajo `SessionStart` con el matcher
+// canónico (forma anterior, evento antiguo, forma de otro sistema operativo o duplicado), y borra
+// las entradas y eventos que queden vacíos. Con `canonical == ""` retira todas. Sigue el
+// precedente de pruneLegacyClaudeHook. Lo que no tiene la forma esperada no se toca. Devuelve
+// true si modificó algo.
+func pruneStaleAutofetchHooks(hooksMap map[string]any, matcher, canonical string) (changed bool) {
+	keptCanonical := false
+	for event, raw := range hooksMap {
+		entries, ok := raw.([]any)
+		if !ok {
+			continue
+		}
+		keptEntries := make([]any, 0, len(entries))
+		eventChanged := false
+		for _, item := range entries {
+			itemMap, ok := item.(map[string]any)
+			if !ok {
+				keptEntries = append(keptEntries, item)
+				continue
+			}
+			inner, ok := itemMap["hooks"].([]any)
+			if !ok {
+				keptEntries = append(keptEntries, item)
+				continue
+			}
+			entryMatcher, _ := itemMap["matcher"].(string)
+			keptHooks := make([]any, 0, len(inner))
+			for _, h := range inner {
+				hMap, ok := h.(map[string]any)
+				cmd, _ := hMap["command"].(string)
+				if ok && strings.Contains(cmd, autofetchHookMarker) {
+					isCanonical := canonical != "" && event == "SessionStart" && cmd == canonical && entryMatcher == matcher
+					if isCanonical && !keptCanonical {
+						keptCanonical = true
+					} else {
+						eventChanged = true
+						continue
+					}
+				}
+				keptHooks = append(keptHooks, h)
+			}
+			if len(keptHooks) == len(inner) {
+				keptEntries = append(keptEntries, item)
+				continue
+			}
+			if len(keptHooks) == 0 {
+				continue
+			}
+			copyMap := make(map[string]any, len(itemMap))
+			for k, v := range itemMap {
+				copyMap[k] = v
+			}
+			copyMap["hooks"] = keptHooks
+			keptEntries = append(keptEntries, copyMap)
+		}
+		if !eventChanged {
+			continue
+		}
+		changed = true
+		if len(keptEntries) == 0 {
+			delete(hooksMap, event)
+		} else {
+			hooksMap[event] = keptEntries
+		}
+	}
+	return changed
 }
 
 // appendClaudeHookEntry appends entry to hooksMap[hookKey] unless
