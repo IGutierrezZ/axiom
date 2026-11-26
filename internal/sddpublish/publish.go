@@ -58,6 +58,10 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 			"comprueba que git funciona en el repositorio del cambio y repite la orden", nil))
 	}
 
+	if refusal := validateOnly(req); refusal != nil {
+		return refused(refusal)
+	}
+
 	// 1. Almacén: solo un almacén con ficheros se publica. Sin declaración cuenta como `openspec`.
 	location, err := workspace.Locate(req.CWD)
 	if err != nil {
@@ -94,6 +98,11 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 	result.Repository = &RepositoryRef{Name: target.Repository, GitRoot: target.GitRoot}
 	result.Branch, result.InPlace = target.Branch, target.InPlace
 	dir := target.GitRoot
+	if len(req.Only) > 0 && !target.InPlace {
+		return refused(refuse(CodeOnlyRequiresInPlace,
+			"la publicación acotada solo se admite en el repositorio de specs de un multirepo, que se trabaja in situ; no se ha escrito nada",
+			"publica con `axiom sdd publish --change "+req.Change+"`, que sí admite este repositorio", nil))
+	}
 
 	set, err := target.DocPaths(location.Declarations, req.Change)
 	if err != nil {
@@ -155,6 +164,14 @@ func (p *Publisher) Run(ctx context.Context, req Request) Result {
 				fmt.Sprintf("trae la integración con `git -C %s fetch origin` o crea la rama %s, y repite la orden", pathquote.Quote(dir), target.IntegrationBranch), nil))
 		}
 		exclude = append(exclude, localIntegration)
+	}
+
+	if len(req.Only) > 0 {
+		return p.runOnly(ctx, onlyRun{
+			req: req, result: result, target: target, set: set, dir: dir, exclude: exclude,
+			remoteBranchExists: remoteBranchExists,
+			rangeBase:          strings.TrimPrefix(strings.TrimPrefix(exclude[0], "refs/remotes/"), "refs/heads/"),
+		})
 	}
 
 	// 6. Conjunto de documentación sucio: lo que la lista cerrada acepta, sin el estado local.

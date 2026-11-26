@@ -1771,10 +1771,17 @@ func (s componentApplyStep) Run() error {
 		}
 		return nil
 	case model.ComponentContext7:
+		adoOrganization := azureDevOpsMCPOrganization(s.scope, s.workspaceDir)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			if _, err := mcp.Inject(s.homeDir, targetDir, adapter); err != nil {
 				return fmt.Errorf("inject context7 for %q: %w", adapter.Agent(), err)
+			}
+			if adoOrganization == "" {
+				continue
+			}
+			if _, err := mcp.InjectAzureDevOps(s.homeDir, targetDir, adapter, adoOrganization); err != nil {
+				return fmt.Errorf("inject azure-devops mcp for %q: %w", adapter.Agent(), err)
 			}
 		}
 		return nil

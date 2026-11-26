@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"github.com/IGutierrezZ/axiom/v3/internal/acceptancetests/marks"
 	"github.com/IGutierrezZ/axiom/v3/internal/hub"
 )
 
@@ -180,6 +181,67 @@ type IncrementAcceptanceTestsDTO struct {
 	Requirements AcceptanceCoverageDTO  `json:"requirements"`
 	CaseCount    int                    `json:"case_count"`
 	Findings     []AcceptanceFindingDTO `json:"findings"`
+	// Marks son las marcas de ejecución por entorno de pruebas.md (C-06-d, RF-WEB-17). Se omite
+	// cuando no se pudo localizar el workspace.
+	Marks *AcceptanceMarksDTO `json:"marks,omitempty"`
+}
+
+// MarksRefusalDTO es un rechazo tipado: código estable, mensaje en castellano y continuación.
+type MarksRefusalDTO struct {
+	Code         string `json:"code"`
+	Error        string `json:"error"`
+	Continuation string `json:"continuation"`
+}
+
+// AcceptanceMarksDTO es la proyección de las marcas para la pestaña «Pruebas». Con Available
+// falso solo lleva Unavailable (la pestaña queda de solo lectura); con Available verdadero lleva
+// la matriz, el resumen que calcula `axiom sdd status` (el mismo texto) y las pendientes de publicar.
+type AcceptanceMarksDTO struct {
+	Available   bool             `json:"available"`
+	Unavailable *MarksRefusalDTO `json:"unavailable,omitempty"`
+	// Environments son los entornos declarados, en su orden.
+	Environments []string `json:"environments,omitempty"`
+	// Cells son los pares aplicables (caso, entorno) con su marca vigente.
+	Cells []MarkCellDTO `json:"cells,omitempty"`
+	// Summary y SummaryText son el resumen por entorno de sddstatus.AcceptanceMarksFor.
+	Summary     []marks.EnvSummary `json:"summary,omitempty"`
+	SummaryText string             `json:"summaryText,omitempty"`
+	Orphans     int                `json:"orphans"`
+	Invalid     int                `json:"invalid"`
+	// Pending son las marcas locales ausentes de la versión publicada; PendingUnavailable el
+	// rechazo tipado cuando no se pudo leer (entonces Pending va vacío).
+	Pending            []MarkEntryDTO   `json:"pending"`
+	PendingUnavailable *MarksRefusalDTO `json:"pendingUnavailable,omitempty"`
+	// Remote y Branch son el remoto y la rama de la publicación.
+	Remote string `json:"remote,omitempty"`
+	Branch string `json:"branch,omitempty"`
+	// NoteMax y CommitMax son los límites (en caracteres) que valida el servidor.
+	NoteMax   int `json:"noteMax"`
+	CommitMax int `json:"commitMax"`
+	// Error es un fichero de marcas o una batería ilegible: sin matriz ni recuentos.
+	Error string `json:"error,omitempty"`
+}
+
+// MarkEntryDTO es una marca de ejecución.
+type MarkEntryDTO struct {
+	Case        string `json:"case"`
+	Environment string `json:"environment"`
+	Result      string `json:"result"`
+	By          string `json:"by"`
+	At          string `json:"at"`
+	Commit      string `json:"commit"`
+	PlanDigest  string `json:"plan_digest"`
+	Note        string `json:"note"`
+}
+
+// MarkCellDTO es el estado de un par aplicable. State es el resultado vigente (ok, ko, blocked,
+// n/a), `stale` o `unmarked`; Current es la marca vigente y Stale la última caducada.
+type MarkCellDTO struct {
+	Case        string        `json:"case"`
+	Environment string        `json:"environment"`
+	State       string        `json:"state"`
+	Current     *MarkEntryDTO `json:"current,omitempty"`
+	Stale       *MarkEntryDTO `json:"stale,omitempty"`
 }
 
 // AcceptanceCoverageDTO es un recuento cubiertos sobre total.

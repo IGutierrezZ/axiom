@@ -18,3 +18,8 @@ const OpenCode = "1.18.10"
 
 // renovate: datasource=npm depName=@upstash/context7-mcp
 const Context7MCP = "2.2.5"
+
+// AzureDevOpsMCP fija el servidor MCP oficial de Azure DevOps que Axiom inyecta
+// en los agentes de un proyecto con el plugin azure-devops activo (C-07-g).
+// renovate: datasource=npm depName=@azure-devops/mcp
+const AzureDevOpsMCP = "2.11.0"

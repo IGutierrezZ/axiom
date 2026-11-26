@@ -215,6 +215,15 @@ Applies only when the sealed style is `continuous`, a work-item plugin with Task
 - Every note of `.tracker-notes.yaml` with no later `done` note for the same verb and role is a pending event: list it with its code and its `continuation` command.
 - Without `integrations.yaml`, omit the section. Never retype it from memory and never invent a value.
 
+### Step 2c: Acceptance Marks Summary (BEFORE the move)
+
+Read `acceptanceTests.marks` from `axiom sdd status` now, before Step 3 moves the folder, and keep it for the archive report of Step 5 as `## Marcas de pruebas`. The key exists only in a `multirepo` change with acceptance tests active, a `pruebas.md` and a `pruebas-estado.yaml`:
+
+- With `summary` (the file holds valid entries): copy the `summary` text verbatim, never retyped or recomputed. With `pending > 0`, add a warning that those marks are not published to the integration branch yet (informational). With `pendingUnavailable`, state its code instead of a count.
+- With `error` (unreadable file): write a warning that the marks file could not be read, with no counts.
+- Without the `marks` key, omit the section.
+- It never blocks the archive and never changes a gate: `pruebas-estado.yaml` moves intact with the rest of the change folder.
+
 ### Step 3: Move to Archive
 
 **IF mode is `engram`:** Skip — there are no `openspec/` directories to move. The archive report in Engram serves as the audit trail.
@@ -372,6 +381,9 @@ En proyectos gobernados por Axiom, el informe `archive-report.md` (o en Engram) 
 - `design.md`
 - `tasks.md`
 - `verify-report.md`
+
+## Marcas de pruebas
+*(Solo con `acceptanceTests.marks.summary`: el texto literal del resumen leído en el paso 2c, más el aviso de marcas sin publicar si `pending > 0` o el aviso de fichero ilegible si hay `error`. Sin la clave `marks`, omitir la sección.)*
 
 ## Seguimiento en el tracker
 *(Solo con tracker activo. En `continuous`, la sección compuesta en el paso 2b; en `checkpointed`, el resultado de `summary push`. Si el cambio no usó tracker, omitir la sección.)*

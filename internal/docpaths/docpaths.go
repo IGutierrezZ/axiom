@@ -276,3 +276,13 @@ func fromWorkspace(wsRel, declared string) (string, bool) {
 	}
 	return joined, true
 }
+
+// exactAllowedName es el único nombre que el modo acotado de la publicación (`Only`) acepta: el
+// fichero de marcas de ejecución de `pruebas.md`, relativo a la carpeta del cambio.
+const exactAllowedName = "pruebas-estado.yaml"
+
+// ExactAllowed dice si name es una ruta que el modo acotado de la publicación puede confirmar.
+// name es relativo a la carpeta del cambio y solo se acepta el nombre exacto de
+// `pruebas-estado.yaml`: ni otros documentos, ni código, ni rutas con separadores, `..` o
+// absolutas. La comparación es pura (sin git ni disco) y distingue mayúsculas, como git.
+func ExactAllowed(name string) bool { return name == exactAllowedName }

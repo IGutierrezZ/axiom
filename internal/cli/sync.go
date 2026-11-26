@@ -1259,6 +1259,7 @@ func (s componentSyncStep) Run() error {
 		return nil
 
 	case model.ComponentContext7:
+		adoOrganization := azureDevOpsMCPOrganization(s.scope, s.workspaceDir)
 		for _, adapter := range adapters {
 			targetDir := componentInjectionDirScoped(s.homeDir, s.workspaceDir, s.scope, adapter)
 			res, err := mcp.Inject(s.homeDir, targetDir, adapter)
@@ -1266,6 +1267,14 @@ func (s componentSyncStep) Run() error {
 				return fmt.Errorf("sync context7 for %q: %w", adapter.Agent(), err)
 			}
 			s.countChanged(boolToInt(res.Changed), res.Files...)
+			if adoOrganization == "" {
+				continue
+			}
+			adoRes, err := mcp.InjectAzureDevOps(s.homeDir, targetDir, adapter, adoOrganization)
+			if err != nil {
+				return fmt.Errorf("sync azure-devops mcp for %q: %w", adapter.Agent(), err)
+			}
+			s.countChanged(boolToInt(adoRes.Changed), adoRes.Files...)
 		}
 		return nil
 
