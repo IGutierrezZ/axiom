@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-26 04:57:12 UTC
-> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2293
+> **Última Sincronización:** 2026-11-26 05:10:25 UTC
+> **Total Dominios:** 49 | **Total Requerimientos:** 513 | **Total Escenarios BDD:** 2295
 
 ---
 
@@ -41,7 +41,7 @@
 | `persona-behavior-contract` | persona-behavior-contract Specification | 9 | 11 | [Ver Spec](specs/persona-behavior-contract/spec.md) |
 | `planning-home-resolution` | Especificación de Requerimientos: Resolución del Planning Home desde Cualquier Directorio (INC-24) | 13 | 58 | [Ver Spec](specs/planning-home-resolution/spec.md) |
 | `project-technical-context` | Especificación de Requerimientos: Contexto Técnico del Proyecto: Declaración, Lectura y Mantenimiento (INC-24) | 21 | 82 | [Ver Spec](specs/project-technical-context/spec.md) |
-| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 123 | [Ver Spec](specs/requirement-identifiers/spec.md) |
+| `requirement-identifiers` | Especificación de requirement-identifiers | 15 | 125 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 15 | 36 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 15 | 114 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
 | `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 26 | 126 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
@@ -1882,7 +1882,9 @@ Puerto único de identificadores de requisito (C-03-a): el proyecto declara en e
   - *Escenario BDD:* Una asignación inválida no escribe ningún destino
   - *Escenario BDD:* Sin provisionales no se reescribe nada
   - *Escenario BDD:* La matriz de verificación se reescribe al archivar
-  - *Escenario BDD:* La prosa de las tareas se valida pero no se reescribe
+  - *Escenario BDD:* La prosa de las tareas no se valida ni se reescribe
+  - *Escenario BDD:* Un ejemplo en código de la delta no es un provisional
+  - *Escenario BDD:* Un provisional sin declarar en la prosa de la delta se rechaza
   - *Escenario BDD:* La prosa de diseño no se valida
   - *Escenario BDD:* Un fallo al restaurar se nombra
 - **[REQ-47.5]** Detección de Identificadores Duplicados entre Capacidades de la Spec Viva

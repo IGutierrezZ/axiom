@@ -116,6 +116,127 @@ func ScanProvisional(text string) []Span {
 	return spans
 }
 
+// ScanProvisionalRefs devuelve, como ScanProvisional, los tokens provisionales de un texto
+// Markdown, salvo los que están dentro de código: un bloque vallado (``` o ~~~) o un tramo
+// de código en línea. Un token dentro de código es un ejemplo de la forma, no una
+// referencia a un requisito, y no se valida.
+func ScanProvisionalRefs(text string) []Span {
+	spans := ScanProvisional(text)
+	if len(spans) == 0 {
+		return nil
+	}
+	code := codeRanges(text)
+	var out []Span
+	for _, s := range spans {
+		if !insideRanges(code, s.Start) {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// codeRanges devuelve los tramos [inicio, fin) en bytes de un texto Markdown que son
+// código: las líneas de un bloque vallado, incluidas su apertura y su cierre, y los tramos
+// de código en línea de las demás líneas. Una valla se abre con al menos tres comillas invertidas o `~`
+// (con hasta tres espacios delante) y se cierra con el mismo carácter, una tirada al menos
+// igual de larga y sin texto detrás; sin cierre abarca hasta el final. Un tramo de código en
+// línea se abre con una tirada de comillas invertidas y se cierra con otra de la misma
+// longitud en la misma línea; una tirada sin cierre es literal.
+func codeRanges(text string) [][2]int {
+	var ranges [][2]int
+	inFence, fenceChar, fenceLen := false, byte(0), 0
+	for pos := 0; pos < len(text); {
+		end := strings.IndexByte(text[pos:], '\n')
+		next := len(text)
+		if end < 0 {
+			end = len(text)
+		} else {
+			end += pos
+			next = end + 1
+		}
+		line := strings.TrimSuffix(text[pos:end], "\r")
+		ch, n, hasInfo, ok := fenceMarker(line)
+		switch {
+		case inFence:
+			ranges = append(ranges, [2]int{pos, next})
+			if ok && ch == fenceChar && n >= fenceLen && !hasInfo {
+				inFence = false
+			}
+		case ok:
+			inFence, fenceChar, fenceLen = true, ch, n
+			ranges = append(ranges, [2]int{pos, next})
+		default:
+			ranges = append(ranges, inlineCode(line, pos)...)
+		}
+		pos = next
+	}
+	return ranges
+}
+
+// fenceMarker dice si la línea abre o cierra una valla: el carácter, la longitud de la
+// tirada y si lleva texto detrás (una apertura puede llevar información; un cierre no).
+func fenceMarker(line string) (ch byte, length int, hasInfo, ok bool) {
+	trimmed := strings.TrimLeft(line, " ")
+	if len(line)-len(trimmed) > 3 || trimmed == "" || (trimmed[0] != '`' && trimmed[0] != '~') {
+		return 0, 0, false, false
+	}
+	ch = trimmed[0]
+	for length < len(trimmed) && trimmed[length] == ch {
+		length++
+	}
+	if length < 3 {
+		return 0, 0, false, false
+	}
+	return ch, length, strings.TrimSpace(trimmed[length:]) != "", true
+}
+
+// inlineCode devuelve los tramos de código en línea de una línea, desplazados por offset.
+func inlineCode(line string, offset int) [][2]int {
+	var ranges [][2]int
+	runAt := func(i int) int {
+		n := 0
+		for i+n < len(line) && line[i+n] == '`' {
+			n++
+		}
+		return n
+	}
+	for i := 0; i < len(line); {
+		if line[i] != '`' {
+			i++
+			continue
+		}
+		open := runAt(i)
+		closed := false
+		for j := i + open; j < len(line); {
+			if line[j] != '`' {
+				j++
+				continue
+			}
+			n := runAt(j)
+			if n == open {
+				ranges = append(ranges, [2]int{offset + i, offset + j + n})
+				i, closed = j+n, true
+				break
+			}
+			j += n
+		}
+		if !closed {
+			i += open
+		}
+	}
+	return ranges
+}
+
+// insideRanges dice si pos cae en alguno de los tramos [inicio, fin).
+func insideRanges(ranges [][2]int, pos int) bool {
+	for _, r := range ranges {
+		if pos >= r[0] && pos < r[1] {
+			return true
+		}
+	}
+	return false
+}
+
 // generalGrammar comprueba la gramática de D1 sin patrón.
 func generalGrammar(token string) bool {
 	m := provisionalForm.FindStringSubmatch(token)

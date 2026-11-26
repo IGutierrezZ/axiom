@@ -108,8 +108,21 @@ func TestODDDocRewriteLeavesADocumentWithoutProvisionalsUntouched(t *testing.T) 
 	}
 }
 
-func TestODDDocRewriteRejectsAnUndeclaredProvisionalCitedInTheRestOfTheDocument(t *testing.T) {
-	doc := oddIDDoc("prov:31:1", "Nota de abono", "Cuerpo.") + "\n## Notas\n\nVéase prov:31:7.\n"
+func TestODDDocIgnoresProvisionalExamplesOutsideIdentifierPositions(t *testing.T) {
+	doc := oddIDDoc("prov:31:1", "Nota de abono", "Cuerpo con el ejemplo `prov:40:1`.") +
+		"\n## Notas\n\nVéase prov:31:7 y `prov::1`.\n\n```text\nCubre: prov:40:2\n```\n"
+	loc, docPath := oddIDProject(t, doc)
+	plan, err := oddIDPlan(t, loc, docPath)
+	if err != nil {
+		t.Fatalf("los ejemplos fuera de posiciones de identificador no se validan: %v", err)
+	}
+	if len(plan.Assignments) != 1 || plan.Assignments[0].Definitive != "REQ-31.2" {
+		t.Fatalf("assignments = %+v", plan.Assignments)
+	}
+}
+
+func TestODDDocRewriteRejectsAnUndeclaredProvisionalInACubreLine(t *testing.T) {
+	doc := oddIDDoc("prov:31:1", "Nota de abono", "Cuerpo.") + "\n## Notas\n\n- [ ] 2.1 Otra\n  Cubre: prov:31:7\n"
 	loc, docPath := oddIDProject(t, doc)
 	_, err := oddIDPlan(t, loc, docPath)
 	var planErr *IDPlanError

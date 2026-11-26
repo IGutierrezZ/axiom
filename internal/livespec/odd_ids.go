@@ -41,25 +41,41 @@ func capabilityFenceLines(doc FeatureDoc) map[int]bool {
 	return fenced
 }
 
-// docCitations son los provisionales que el documento cita fuera de las vallas de sus
-// capacidades (que valida el plan por su cuenta) y fuera de la sección de traza: el resto del
-// documento se valida aunque no se reescriba (D6).
+// docCitations son los provisionales que el documento cita en sus líneas `Cubre:` fuera de
+// vallas y fuera de la sección de traza, las mismas que reescribe la integración. Las vallas
+// de las capacidades las valida el plan por su cuenta; el resto del documento no se valida,
+// de modo que puede mostrar provisionales de ejemplo (REQ-47.4).
 func docCitations(doc FeatureDoc, file string) ([]Citation, error) {
 	lines, start, end, found, err := oddTraceSection(doc.text, file)
 	if err != nil {
 		return nil, err
 	}
-	fenced := capabilityFenceLines(doc)
-	var out []Citation
-	for i, l := range lines {
-		if fenced[l.n] || (found && i >= start && i < end) {
-			continue
+	excluded := capabilityFenceLines(doc)
+	if found {
+		for _, l := range lines[start:end] {
+			excluded[l.n] = true
 		}
-		for _, span := range reqid.ScanProvisional(l.text) {
-			out = append(out, Citation{File: file, Line: l.n, Token: span.Token})
+	}
+	var out []Citation
+	for _, c := range cubreCitations(file, doc.text) {
+		if !excluded[c.Line] {
+			out = append(out, c)
 		}
 	}
 	return out, nil
+}
+
+// cubreCitations son los provisionales de las líneas `Cubre:` de un texto, fuera de vallas.
+func cubreCitations(file, text string) []Citation {
+	var out []Citation
+	for _, line := range isoevidence.ParseCubre(file, text) {
+		for _, id := range line.IDs {
+			for _, span := range reqid.ScanProvisional(id) {
+				out = append(out, Citation{File: file, Line: line.Line, Token: span.Token})
+			}
+		}
+	}
+	return out
 }
 
 // rewriteODDDoc devuelve el documento con los identificadores asignados: sustituye el mapa

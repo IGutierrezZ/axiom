@@ -190,10 +190,11 @@ func PlanIDs(in IDPlanInput) (IDPlan, error) {
 		return IDPlan{}, err
 	}
 
-	// b. Los tokens provisionales de los textos validados: gramática y patrón.
+	// b. Los tokens provisionales de los textos validados: gramática y patrón. Un token
+	// dentro de código de la delta es un ejemplo y no cuenta (REQ-47.4).
 	var refs []tokenRef
 	for _, c := range caps {
-		for _, span := range reqid.ScanProvisional(c.Text) {
+		for _, span := range reqid.ScanProvisionalRefs(c.Text) {
 			line := c.LineBase + lineAt(c.Text, span.Start)
 			if err := checkToken(p, span.Token, c.Name, c.File, line); err != nil {
 				return IDPlan{}, err
@@ -397,44 +398,53 @@ func checkKnownIDs(c CapabilitySource, item classified, p reqid.Pattern) error {
 
 // checkDefinitiveAdded comprueba los ADDED pendientes con identificador definitivo y sin
 // entrada en la traza: no existen en el registro ni se repiten en el propio cambio (A2,
-// REQ-30.4). Los que la traza ya conoce los trata la reintegración (D5).
+// REQ-30.4). Los que la traza ya conoce los trata la reintegración (D5). Se compara por
+// identidad (serie y número), no por cadena: con un patrón de ancho libre (`<m>`), `RF-1` y
+// `RF-001` son el mismo identificador.
 func checkDefinitiveAdded(in IDPlanInput, items []classified) error {
 	reg, p := in.Registry, in.Pattern
-	traced := map[string]bool{}
-	for _, e := range in.Trace.Assignments {
-		traced[e.Capability+"\x00"+e.Definitive] = true
+	type tracedKey struct {
+		capability string
+		key        identityKey
 	}
-	taken := map[string]bool{}
+	traced := map[tracedKey]bool{}
+	for _, e := range in.Trace.Assignments {
+		if k, ok := reg.keyOf(e.Definitive); ok {
+			traced[tracedKey{e.Capability, k}] = true
+		}
+	}
+	taken := map[identityKey]bool{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
 			if _, prov := reqid.ProvisionalInTitle(r.Name); !prov {
-				if id := p.InTitle(r.Name); id != "" {
-					taken[id] = true
+				if k, ok := reg.keyOf(p.InTitle(r.Name)); ok {
+					taken[k] = true
 				}
 			}
 		}
 	}
-	firstSeen := map[string]string{}
+	firstSeen := map[identityKey]string{}
 	for _, item := range items {
 		for _, r := range item.pending.Added {
 			if _, prov := reqid.ProvisionalInTitle(r.Name); prov {
 				continue
 			}
 			id := p.InTitle(r.Name)
-			if id == "" || traced[item.cap.Name+"\x00"+id] {
+			k, ok := reg.keyOf(id)
+			if !ok || traced[tracedKey{item.cap.Name, k}] {
 				continue
 			}
-			if found := reg.Lookup(id); len(found) > 0 {
+			if found := reg.LookupIdentity(id); len(found) > 0 {
 				return &CollisionError{ID: id, Where: found[0].Where(), NextFree: nextFree(reg, id, taken)}
 			}
-			if other, dup := firstSeen[id]; dup {
+			if other, dup := firstSeen[k]; dup {
 				return &CollisionError{
 					ID:       id,
 					Where:    fmt.Sprintf("el propio cambio o documento, en las capacidades %s y %s", other, item.cap.Name),
 					NextFree: nextFree(reg, id, taken),
 				}
 			}
-			firstSeen[id] = item.cap.Name
+			firstSeen[k] = item.cap.Name
 		}
 	}
 	return nil
@@ -651,7 +661,7 @@ func labelOf(p reqid.Pattern, provisional string) (string, bool) {
 
 // resolveTraced decide el estado de un ADDED con entrada en la traza (tabla de D5).
 func resolveTraced(it *addedItem, e TraceEntry, item classified, reg *Registry, traceMap reqid.IDMap, p reqid.Pattern) error {
-	refs := reg.Lookup(e.Definitive)
+	refs := reg.LookupIdentity(e.Definitive)
 	want := openspecdoc.NormalizeBody(afterHeading(traceMap.Substitute(it.req.Body)))
 	var own *openspecdoc.Requirement
 	bodyEqual := false
