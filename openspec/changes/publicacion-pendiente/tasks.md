@@ -47,16 +47,16 @@ Previsión de revisión: lectura por commit. Las dos piezas separables, si hicie
 
 Depende de: nada. Paquetes: `internal/docpaths`, `internal/branch`, `internal/sddpublish`.
 
-- [ ] 1.1 RED: en `internal/docpaths/docpaths_test.go`, tabla de `FromWorkspace(planningRel, change, maintained, reference)`: `planningRel` vacío, `openspec` y `sub/openspec`; rutas declaradas fuera de la raíz se descartan; el `Set` resultante coincide con el que producía el `composeSet` anterior (mismos `Candidates`, `Contains` y `Root`).
+- [x] 1.1 RED: en `internal/docpaths/docpaths_test.go`, tabla de `FromWorkspace(planningRel, change, maintained, reference)`: `planningRel` vacío, `openspec` y `sub/openspec`; rutas declaradas fuera de la raíz se descartan; el `Set` resultante coincide con el que producía el `composeSet` anterior (mismos `Candidates`, `Contains` y `Root`).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/docpaths -run 'FromWorkspace'`
-- [ ] 1.2 GREEN: mover `workspaceRelative` y `fromWorkspace` desde `internal/sddpublish/publish.go` a `internal/docpaths/docpaths.go` como `FromWorkspace` (pura, sin importar `workspace`).
+- [x] 1.2 GREEN: mover `workspaceRelative` y `fromWorkspace` desde `internal/sddpublish/publish.go` a `internal/docpaths/docpaths.go` como `FromWorkspace` (pura, sin importar `workspace`).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/docpaths/...`
-- [ ] 1.3 RED y GREEN: en `internal/branch/publication.go`, `PublicationTarget.DocPaths(declarations, change)` desempaqueta `technical_context` y llama a `docpaths.FromWorkspace`; `sddpublish.composeSet` pasa a delegar en `target.DocPaths(location.Declarations, change)` y se eliminan los dos helpers movidos. Prueba de paridad: `DocPaths` da el mismo `Set` que el cálculo previo para monorepo y multirepo. `PublicationTarget` conserva destino, negativas y orden (sin cambio de semántica).
+- [x] 1.3 RED y GREEN: en `internal/branch/publication.go`, `PublicationTarget.DocPaths(declarations, change)` desempaqueta `technical_context` y llama a `docpaths.FromWorkspace`; `sddpublish.composeSet` pasa a delegar en `target.DocPaths(location.Declarations, change)` y se eliminan los dos helpers movidos. Prueba de paridad: `DocPaths` da el mismo `Set` que el cálculo previo para monorepo y multirepo. `PublicationTarget` conserva destino, negativas y orden (sin cambio de semántica).
   Cubre: REQ-27.18
   Verificación: `go test ./internal/branch/ -run 'Publish\|Publication'` y `go test ./internal/sddpublish/...`
-- [ ] 1.4 Cierre de U1: `go vet ./internal/docpaths/... ./internal/branch/ ./internal/sddpublish/...` y commit `refactor(docpaths): componer la lista cerrada de publicación en un único punto`.
+- [x] 1.4 Cierre de U1: `go vet ./internal/docpaths/... ./internal/branch/ ./internal/sddpublish/...` y commit `refactor(docpaths): componer la lista cerrada de publicación en un único punto`.
   Cubre: REQ-27.18
   Verificación: `go test ./internal/docpaths/... ./internal/sddpublish/...`
 

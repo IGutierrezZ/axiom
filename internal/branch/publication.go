@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/docpaths"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace"
 )
 
@@ -82,4 +83,21 @@ func PublicationWrongBranch(change, master string, repo RepoPlan, current string
 		Continuation: continuation,
 		Details:      map[string]string{"change": change, "repository": repo.GitRoot, "current": current, "expected": strings.Join(expected, ", ")},
 	}
+}
+
+// DocPaths compone la lista cerrada de documentación del cambio (REQ-27.5) en el repositorio del
+// destino: desempaqueta `technical_context` de las declaraciones de axiom.yaml, cuyas rutas son
+// relativas al workspaceRoot, y delega en `docpaths.FromWorkspace`. Es el único punto de
+// composición, compartido por `axiom sdd publish` y por el estado de publicación del status.
+func (t PublicationTarget) DocPaths(declarations workspace.Declarations, change string) (docpaths.Set, error) {
+	var maintained, reference []string
+	if technical := declarations.TechnicalContext; technical != nil {
+		if technical.Maintained != nil {
+			maintained = technical.Maintained.Paths
+		}
+		if technical.Reference != nil {
+			reference = technical.Reference.Paths
+		}
+	}
+	return docpaths.FromWorkspace(t.PlanningRel, change, maintained, reference)
 }
