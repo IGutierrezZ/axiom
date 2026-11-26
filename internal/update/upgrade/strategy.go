@@ -574,10 +574,25 @@ func goInstallUpgrade(ctx context.Context, r update.UpdateResult, profile system
 	if betaSelf {
 		target = tool.GoImportPath + "@main"
 	}
+	var env []string
+	if betaSelf {
+		env = goProxyBypassEnv(nil, selfToolModulePath(tool))
+	}
+
+	// The Windows self-install never lets `go install` write over the running
+	// binary: it stages the build and swaps it in (prov:UPD:3).
+	if profile.OS == "windows" && update.IsSelfTool(tool) && destDir != "" {
+		if err := goInstallSelfWindows(tool, target, env, destDir); err != nil {
+			return err
+		}
+		warnGoInstallDestination(tool.Name, detectOS(), destDir, destErr)
+		return nil
+	}
+
 	cmd := execCommand("go", "install", target)
 	cmd.Stdin = nil
 	if betaSelf {
-		cmd.Env = goProxyBypassEnv(cmd.Env, selfToolModulePath(tool))
+		cmd.Env = env
 	}
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("go install %s: %w (output: %s)", target, err, string(out))
