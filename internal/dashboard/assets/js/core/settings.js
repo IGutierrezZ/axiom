@@ -109,23 +109,27 @@ export function controlHtml(entry, id = settingId(entry.key), { disabled = false
 // editorHref construye el enlace «Abrir en el editor» (VS Code) de una ruta absoluta del
 // sistema operativo: esquema fijo, `\` pasa a `/`, se quita la `/` inicial y cada segmento
 // se codifica por separado, de modo que `#`, `?`, `&`, los espacios y los acentos no
-// truncan ni alteran el enlace. La unidad de Windows (`C:`) se conserva tal cual.
-export function editorHref(configPath) {
+// truncan ni alteran el enlace. La unidad de Windows (`C:`) se conserva tal cual. Con una
+// línea (entero positivo) el editor abre el fichero en ella: `…/axiom.yaml:16`.
+export function editorHref(configPath, line) {
   if (!configPath || typeof configPath !== 'string') return '';
   const segments = configPath.replace(/\\/g, '/').replace(/^\/+/, '').split('/');
   const encoded = segments.map((segment, i) => (i === 0 && /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)));
-  return `vscode://file/${encoded.join('/')}`;
+  const at = Number.isInteger(line) && line > 0 ? `:${line}` : '';
+  return `vscode://file/${encoded.join('/')}${at}`;
 }
 
-// pathActionsHtml: el enlace «Abrir en el editor» y el botón «Copiar ruta» de una ruta.
-export function pathActionsHtml(configPath) {
-  const href = editorHref(configPath);
+// pathActionsHtml: el enlace «Abrir en el editor» (en la línea, si se conoce) y el botón
+// «Copiar ruta» de una ruta.
+export function pathActionsHtml(configPath, line) {
+  const href = editorHref(configPath, line);
   if (!href) return '';
   return `<span class="settings-path-actions"><a class="link-btn" href="${escapeHtml(href)}">Abrir en el editor</a> <button type="button" class="link-btn" data-copy-path="${escapeHtml(configPath)}">Copiar ruta</button></span>`;
 }
 
 // readOnlyHtml devuelve una clave de solo lectura con su valor, el motivo y cómo editarla
-// a mano: el enlace al editor y el botón para copiar la ruta de axiom.yaml.
+// a mano: el enlace al editor, en la línea de la clave si está declarada, y el botón para
+// copiar la ruta de axiom.yaml.
 export function readOnlyHtml(entry, configPath) {
   const v = entry.value;
   let shown;
@@ -134,7 +138,7 @@ export function readOnlyHtml(entry, configPath) {
   else if (Array.isArray(v)) shown = v.length ? `<code>${escapeHtml(v.join(', '))}</code>` : '<span class="dim">vacío</span>';
   else shown = `<code>${escapeHtml(String(v))}</code>`;
   const reason = entry.readOnlyReason ? `<span>${escapeHtml(entry.readOnlyReason)}</span>` : '';
-  return `<div class="field settings-field settings-readonly"><span class="field-label">${escapeHtml(entry.label || entry.key)} <code class="settings-key">${escapeHtml(entry.key)}</code></span><div>${shown}</div><p class="field-hint">${reason} ${pathActionsHtml(configPath)}</p></div>`;
+  return `<div class="field settings-field settings-readonly"><span class="field-label">${escapeHtml(entry.label || entry.key)} <code class="settings-key">${escapeHtml(entry.key)}</code></span><div>${shown}</div><p class="field-hint">${reason} ${pathActionsHtml(configPath, entry.line)}</p></div>`;
 }
 
 // collectChanges compara lo que muestran los controles (values: clave → texto) con lo que

@@ -176,6 +176,21 @@ func pathValue(m *yaml.Node, dotted string) *yaml.Node {
 	return node
 }
 
+// pathKeyLine devuelve la línea del nodo clave de la ruta `a.b` desde el mapeo m, o 0 si falta.
+func pathKeyLine(m *yaml.Node, dotted string) int {
+	parts := strings.Split(dotted, ".")
+	node := m
+	for _, part := range parts[:len(parts)-1] {
+		if node, _ = mapValue(node, part); node == nil {
+			return 0
+		}
+	}
+	if _, key := mapValue(node, parts[len(parts)-1]); key != nil {
+		return key.Line
+	}
+	return 0
+}
+
 func isNullNode(n *yaml.Node) bool {
 	return n == nil || (n.Kind == yaml.ScalarNode && n.Tag == "!!null")
 }
@@ -384,7 +399,9 @@ func (d *document) entries(topology workspace.TopologyType, iso bool) []Entry {
 
 	// Claves de solo lectura de workspace, antes de las editables.
 	for _, spec := range readOnlySpecs[:4] {
-		out = append(out, build(spec, spec.key, pathValue(d.root, spec.key), false))
+		entry := build(spec, spec.key, pathValue(d.root, spec.key), false)
+		entry.Line = pathKeyLine(d.root, spec.key)
+		out = append(out, entry)
 	}
 	for _, spec := range editableSpecs {
 		if spec.multirepoOnly && !multi {
@@ -423,14 +440,18 @@ func (d *document) entries(topology workspace.TopologyType, iso bool) []Entry {
 		}
 	}
 	tc, _ := mapValue(d.root, "technical_context")
-	out = append(out, build(readOnlySpecs[4], readOnlySpecs[4].key, tc, false))
+	tcEntry := build(readOnlySpecs[4], readOnlySpecs[4].key, tc, false)
+	tcEntry.Line = pathKeyLine(d.root, readOnlySpecs[4].key)
+	out = append(out, tcEntry)
 	if gov, _ := mapValue(d.root, "governance"); gov != nil && gov.Kind == yaml.MappingNode {
 		for i := 0; i+1 < len(gov.Content); i += 2 {
 			spec := governanceSpec(gov.Content[i].Value)
 			if v := gov.Content[i+1]; v.Kind != yaml.ScalarNode {
 				spec.typ = TypeYAML
 			}
-			out = append(out, build(spec, spec.key, gov.Content[i+1], false))
+			entry := build(spec, spec.key, gov.Content[i+1], false)
+			entry.Line = gov.Content[i].Line
+			out = append(out, entry)
 		}
 	}
 	return out

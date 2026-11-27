@@ -1018,6 +1018,9 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-models-table td { vertical-align: middle; }
 .eco-agents { min-width: 40rem; }
 .eco-agents td, .eco-agents th { vertical-align: middle; }
+/* La celda del agente es la cabecera de su fila: sin las mayúsculas ni el no-salto de las
+   cabeceras de columna, para que la tabla quepa en su caja con ventanas de unos 1024 px. */
+.eco-agents th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
 .eco-models-table select, .eco-models-table input[type="text"] { width: 100%; min-width: 12rem; }
 
 .eco-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

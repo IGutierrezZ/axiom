@@ -570,11 +570,11 @@ El dashboard DEBE ofrecer una pantalla «Ajustes del proyecto» con ruta por *ha
 
 La pantalla DEBE mostrar de forma visible el aviso «Editar solo afecta a cambios nuevos» y comunicar que los cambios ya sellados conservan su instantánea de `kickoff.yaml`; ninguna acción de la pantalla DEBE modificar un `kickoff.yaml` existente. Al guardar, DEBE enviar la revisión leída, mostrar el error del validador (castellano) sin perder lo tecleado cuando se rechaza, y pedir recargar cuando la revisión está obsoleta. Retirar un valor DEBE enviarse como `null`. La pantalla DEBE enviar todos los cambios pendientes en una sola petición (lote atómico, RF-WEB-19). Junto a la ruta del fichero DEBE indicar que lo guardado queda sin confirmar en git, en el árbol de trabajo del repositorio que contiene `axiom.yaml` (en `multirepo`, el de specs), y que confirmarlo es decisión de la persona. Cuando el servidor informa `writable: false` (documento con anclas, alias, `<<` o varios documentos YAML), DEBE deshabilitar los controles de edición y mostrar el motivo.
 
-Las claves con `editable: false` (`technical_context`, `workspace.root`, `skill_roots`, `governance.*`, `workspace.topology`, `workspace.specs_repository`) DEBEN mostrarse sin control de edición, con su valor y la acción «Abrir en el editor»: un enlace `vscode://file/<ruta absoluta de axiom.yaml>` etiquetado «Abrir en el editor», más un botón «Copiar ruta» que copia esa ruta absoluta. El servidor NO DEBE lanzar ningún proceso para abrir el editor.
+Las claves con `editable: false` (`technical_context`, `workspace.root`, `skill_roots`, `governance.*`, `workspace.topology`, `workspace.specs_repository`) DEBEN mostrarse sin control de edición, con su valor y la acción «Abrir en el editor»: un enlace `vscode://file/<ruta absoluta de axiom.yaml>:<línea>` etiquetado «Abrir en el editor», que abre el fichero en la línea de la clave cuando está declarada (sin `:<línea>` cuando no lo está), más un botón «Copiar ruta» que copia esa ruta absoluta, sin línea. Las claves conocidas de `governance` DEBEN mostrarse con nombre legible (`language`: «Idioma»; `shared_memory`: «Memoria compartida»); una clave desconocida se muestra con su ruta. El servidor NO DEBE lanzar ningún proceso para abrir el editor.
 
 La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch (RF-WEB-20) y `worktree_mode` y `worktree_root` (estos dos sobre `worktree-prefs`, RF-WEB-10), identificado como personal y no versionado. En `monorepo-embedded` la pantalla NO DEBE mostrar `roles`, `gate_policy`, `repositories` ni `acceptance_tests`; en `multirepo` DEBE mostrar `repositories[]`, `acceptance_tests` y `roles[].gate_policy` con `optional` entre sus opciones. En un proyecto ISO, `workflow.lane` NO DEBE ofrecer `odd`. La pantalla NO DEBE incluir ningún control de RDD (global, por proyecto o por clon), ni `commit_review`, ni `docs_publication`. Tampoco DEBE pintar el bloque `integrations`: DEBE enlazar a «Integraciones» (RF-WEB-33), que es donde se consulta y edita.
 
-(Previously: la pantalla excluía `integrations.*` sin ofrecer enlace a ningún sitio donde editarlo.)
+(Previously: el enlace «Abrir en el editor» era `vscode://file/<ruta absoluta de axiom.yaml>`, sin línea, y las claves de `governance` se etiquetaban con su ruta.)
 
 #### Scenario: La pantalla se genera desde el catálogo
 - **DADO** un catálogo con una entrada de vocabulario cerrado
@@ -604,8 +604,14 @@ La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch 
 - **DADO** la pantalla abierta
 - **CUANDO** se inspecciona `workspace.topology`, `technical_context` o `governance.*`
 - **ENTONCES** se muestran sin control de edición
-- **Y** aparece un enlace «Abrir en el editor» con destino `vscode://file/<ruta absoluta de axiom.yaml>` y un botón «Copiar ruta»
+- **Y** aparece un enlace «Abrir en el editor» con destino `vscode://file/<ruta absoluta de axiom.yaml>:<línea de la clave>` y un botón «Copiar ruta» que copia la ruta sin línea
+- **Y** `governance.language` y `governance.shared_memory` se etiquetan «Idioma» y «Memoria compartida»
 - **Y** el servidor no lanza ningún proceso
+
+#### Scenario: Clave de solo lectura sin declarar abre el fichero sin línea
+- **DADO** un `axiom.yaml` sin `technical_context`
+- **CUANDO** se inspecciona `technical_context`
+- **ENTONCES** el enlace «Abrir en el editor» apunta a `vscode://file/<ruta absoluta de axiom.yaml>`, sin `:<línea>`
 
 #### Scenario: Bloque «Preferencias personales»
 - **DADO** un proyecto registrado y activo

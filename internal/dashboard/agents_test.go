@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -228,6 +229,13 @@ func TestEcosystemAgentsBlock(t *testing.T) {
 		if !strings.Contains(load, col) {
 			t.Errorf("la tabla de agentes no tiene la columna %s", col)
 		}
+	}
+	// La cabecera de fila (el agente) no hereda las mayúsculas ni el no-salto de las de columna:
+	// con ellas la tabla desbordaba su caja a unos 1024 px.
+	css := readAsset(t, "style.css")
+	rowHead := regexp.MustCompile(`\.eco-agents th\[scope="row"\] \{[^}]*text-transform: none;[^}]*white-space: normal;`)
+	if !rowHead.MatchString(css) {
+		t.Errorf("style.css debe quitar mayúsculas y no-salto a la cabecera de fila de .eco-agents")
 	}
 	// Sin modo workspace (o no admitido): el motivo, antes y en lugar del botón.
 	action := functionBody(t, js, "function agentAction(")
