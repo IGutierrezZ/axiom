@@ -420,6 +420,12 @@ func TestUsesBetaMainHeadCheck(t *testing.T) {
 			want:           true,
 		},
 		{
+			name:           "dirty pseudo-version uses main head without channel",
+			tool:           Tools[0],
+			currentVersion: "v1.40.3-0.20260614211459-b6872c69e3e4+dirty",
+			want:           true,
+		},
+		{
 			name:           "stable semver without channel uses latest release",
 			tool:           Tools[0],
 			currentVersion: "1.40.3",
@@ -702,6 +708,43 @@ func TestCheckSingleToolAxiomBetaOlderLocalPseudoVersionStillOffered(t *testing.
 	}
 	if !strings.Contains(result.ReleaseURL, "/compare/6eff4a1ba110...aaaabbbbcccc") {
 		t.Fatalf("ReleaseURL = %q, want compare URL with local and remote commits", result.ReleaseURL)
+	}
+}
+
+func TestCheckSingleToolAxiomDirtyPseudoVersionStillComparesMainHead(t *testing.T) {
+	// `go install` from a working tree with uncommitted changes stamps the build
+	// metadata `+dirty` after the commit. The commit is still known, so the
+	// main-head check must compare it instead of reporting VersionUnknown, which
+	// made the upgrade skip with "version could not be determined".
+	unsetUpdateChannelEnv(t)
+
+	origClient := httpClient
+	t.Cleanup(func() { httpClient = origClient })
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/repos/Gentleman-Programming/gentle-ai/releases/latest":
+			json.NewEncoder(w).Encode(githubRelease{TagName: "v1.40.3", HTMLURL: "https://github.com/Gentleman-Programming/gentle-ai/releases/tag/v1.40.3"})
+		case "/repos/Gentleman-Programming/gentle-ai/commits/main":
+			fmt.Fprint(w, `{"sha":"aaaabbbbcccc0123456789abcdef0123456789ab","html_url":"https://github.com/Gentleman-Programming/gentle-ai/commit/aaaabbbbcccc0123456789abcdef0123456789ab","commit":{"committer":{"date":"2026-08-01T00:00:00Z"}}}`)
+		default:
+			// Stray or misdirected request: reply 404 and let the test's
+			// main-goroutine assertions decide (see simulateStrayForeignRequest).
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+	httpClient = server.Client()
+	httpClient.Transport = &testTransport{server: server}
+
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "v1.40.3-0.20260614151827-6eff4a1ba110+dirty", system.PlatformProfile{})
+
+	if result.Status != UpdateAvailable {
+		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
+	}
+	if !strings.Contains(result.ReleaseURL, "/compare/6eff4a1ba110...aaaabbbbcccc") {
+		t.Fatalf("ReleaseURL = %q, want compare URL with the local commit without +dirty", result.ReleaseURL)
 	}
 }
 

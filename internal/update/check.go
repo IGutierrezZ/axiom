@@ -267,7 +267,10 @@ func pseudoVersionTime(version string) (time.Time, bool) {
 }
 
 func localBuildCommit(version string) string {
-	parts := strings.Split(strings.TrimSpace(version), "-")
+	// `go install` from a working tree with uncommitted changes stamps build
+	// metadata (`+dirty`) after the commit; the commit itself is still valid.
+	version, _, _ = strings.Cut(strings.TrimSpace(version), "+")
+	parts := strings.Split(version, "-")
 	if len(parts) == 0 {
 		return ""
 	}
