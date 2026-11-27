@@ -43,9 +43,10 @@ Que `axiom branch done --change <x>-archive` no pueda dejar huérfano el registr
   - `branch.ArchiveBranchNameAsChange` en `done_refusal.go` y `Engine.archiveBranchNameRefusal` en `done.go`, tras reunir los hechos y antes de planificar.
   - Pruebas en `done_test.go`: `TestDoneRefusesTheArchiveBranchNameOfARegisteredChange` (rechazo `invalid_name` sin escrituras de git, continuación `done --change x`, registro de `x` intacto, sin registro de `x-archive`; después `done --change x` elimina la rama y borra el registro) y `TestDoneProcessesARegisteredChangeWhoseNameEndsInArchive`.
   - Línea de guía en `CLAUDE.md`, `AGENTS.md` y `GEMINI.md`.
-  - Evidencia: `go vet ./internal/branch/engine ./internal/branch` limpio; `go test ./internal/branch/engine -run 'TestDone|TestBranchDone'` ok (182 s); `go test ./internal/branch -run 'Done|Refusal|Archive'` ok; `gofmt -l internal/branch` vacío.
-- [ ] **T2 · Integración de la spec viva y cierre** — ruta: inline.
-  - `axiom archive integrate --odd done-rechaza-archive` en el commit que cierra la feature.
+  - Evidencia: `go vet ./internal/branch/engine ./internal/branch` limpio; `go test ./internal/branch/engine -run 'TestDone|TestBranchDone'` ok (182 s); `go test ./internal/branch -run 'Done|Refusal|Archive'` ok; `gofmt -l internal/branch` vacío. Commit `ff985bbc7`.
+- [x] **T2 · Integración de la spec viva y cierre** — ruta: inline.
+  - `axiom archive integrate --odd done-rechaza-archive`: `prov:BRA:1` → `RF-BRA-47`, compuesto en `openspec/specs/change-branch-lifecycle/spec.md` y en `openspec/INDEX.md` (634 requisitos).
+  - Las pruebas de T1 citan ya `RF-BRA-47`.
 
 ## Criterios de aceptación
 
@@ -60,7 +61,7 @@ Que `axiom branch done --change <x>-archive` no pueda dejar huérfano el registr
 ```openspec
 ## ADDED Requirements
 
-### Requirement: `done` no acepta el nombre de la rama de archivado como cambio (prov:BRA:1)
+### Requirement: `done` no acepta el nombre de la rama de archivado como cambio (RF-BRA-47)
 
 En el carril SDD y fuera de la topología `multirepo`, `axiom branch done --change <x>-archive` DEBE rechazarse con `invalid_name` cuando el registro local guarda el cambio `<x>` y no guarda ningún cambio `<x>-archive`: ese nombre es el de la rama de archivado de `<x>`, que `done --change <x>` procesa junto a las demás ramas del cambio (RF-BRA-18). El rechazo NO DEBE eliminar ningún worktree ni ninguna rama, NO DEBE escribir el registro local y su continuación DEBE ser la orden `axiom branch done --change <x>` con la misma carpeta de partida. Un cambio cuyo nombre termina en `-archive` y tiene su propio registro DEBE procesarse como cualquier otro.
 
@@ -81,8 +82,21 @@ En el carril SDD y fuera de la topología `multirepo`, `axiom branch done --chan
 
 - 2026-11-27: documento creado; worktree preparado con `scripts/axiom-worktree.ps1 new done-rechaza-archive -Lane odd -Prefix fix`.
 
-- 2026-11-27: T1 hecha y verificada.
+- 2026-11-27: T1 hecha y verificada (`ff985bbc7`).
+- 2026-11-27: T2 hecha: spec viva integrada como RF-BRA-47.
 
 ## Siguiente paso
 
-T2.
+PR con `scripts/axiom-worktree.ps1 pr done-rechaza-archive -Lane odd -Label bug`, a decisión de la persona; tras el merge, `scripts/axiom-worktree.ps1 done done-rechaza-archive -Lane odd`.
+
+## Identificadores asignados
+
+```yaml
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:BRA:1
+    definitive: RF-BRA-47
+    capability: change-branch-lifecycle
+    requirement: '`done` no acepta el nombre de la rama de archivado como cambio (RF-BRA-47)'
+```

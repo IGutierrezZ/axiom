@@ -622,8 +622,8 @@ func TestDoneRefusesAnInvalidChangeNameAndAnUnusableDirectory(t *testing.T) {
 	}
 }
 
-// Spec viva de odd/tasks/done-rechaza-archive.md (escenario «El nombre de la rama de archivado se
-// rechaza y se indica el del cambio»): con el registro de `x` y sin el de `x-archive`,
+// RF-BRA-47 (escenario «El nombre de la rama de archivado se rechaza y se indica el del cambio»):
+// con el registro de `x` y sin el de `x-archive`,
 // `done --change x-archive` se rechaza con `invalid_name` sin tocar la rama ni el registro, y la
 // continuación es `done --change x`, que sí la procesa y borra el registro.
 func TestDoneRefusesTheArchiveBranchNameOfARegisteredChange(t *testing.T) {
@@ -662,8 +662,8 @@ func TestDoneRefusesTheArchiveBranchNameOfARegisteredChange(t *testing.T) {
 	wantNoRegistryFile(t, repo, "x")
 }
 
-// Spec viva de odd/tasks/done-rechaza-archive.md (escenario «Un cambio con nombre terminado en
-// `-archive` y registro propio se procesa»): el rechazo solo aplica sin registro propio, de modo que
+// RF-BRA-47 (escenario «Un cambio con nombre terminado en `-archive` y registro propio se
+// procesa»): el rechazo solo aplica sin registro propio, de modo que
 // un cambio `y-archive` registrado se procesa aunque también exista el registro de `y`.
 func TestDoneProcessesARegisteredChangeWhoseNameEndsInArchive(t *testing.T) {
 	repo := embeddedCoreProject(t)

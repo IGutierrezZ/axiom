@@ -3074,6 +3074,22 @@ Una rama cuya plantilla efectiva usa `{task_ref}` DEBE estar **pendiente** hasta
 - **ENTONCES** ambas invocaciones producen el mismo plan, las mismas ramas y el mismo JSON
 - **Y** el JSON no lista ramas pendientes
 
+### Requirement: `done` no acepta el nombre de la rama de archivado como cambio (RF-BRA-47)
+
+En el carril SDD y fuera de la topología `multirepo`, `axiom branch done --change <x>-archive` DEBE rechazarse con `invalid_name` cuando el registro local guarda el cambio `<x>` y no guarda ningún cambio `<x>-archive`: ese nombre es el de la rama de archivado de `<x>`, que `done --change <x>` procesa junto a las demás ramas del cambio (RF-BRA-18). El rechazo NO DEBE eliminar ningún worktree ni ninguna rama, NO DEBE escribir el registro local y su continuación DEBE ser la orden `axiom branch done --change <x>` con la misma carpeta de partida. Un cambio cuyo nombre termina en `-archive` y tiene su propio registro DEBE procesarse como cualquier otro.
+
+#### Scenario: El nombre de la rama de archivado se rechaza y se indica el del cambio
+- **DADO** un registro local del cambio `x` que guarda la rama de archivado `feat/x-archive`, sin registro de `x-archive`
+- **CUANDO** se ejecuta `axiom branch done --change x-archive`
+- **ENTONCES** se rechaza con `invalid_name` y código de salida 1
+- **Y** la continuación es `axiom branch done --change x` con la misma carpeta de partida
+- **Y** la rama `feat/x-archive`, su worktree y el registro de `x` permanecen intactos
+
+#### Scenario: Un cambio con nombre terminado en `-archive` y registro propio se procesa
+- **DADO** un cambio `y-archive` con su propio registro local y su rama fusionada
+- **CUANDO** se ejecuta `axiom branch done --change y-archive`
+- **ENTONCES** `done` procesa sus ramas como las de cualquier otro cambio
+
 ## Supuestos confirmados en la compuerta de spec (2026-10-15)
 
 Los supuestos son decisiones mínimas tomadas para que los requerimientos sean comprobables. El usuario los confirmó en la compuerta de spec del 2026-10-15; S-6 se corrigió según D3. Q1, Q2 y Q6 de la propuesta pertenecen a `sdd-design` y se citan como dependencias.

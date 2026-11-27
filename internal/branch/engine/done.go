@@ -147,10 +147,10 @@ func (e *Engine) Done(ctx context.Context, r DoneRequest) branch.Result {
 }
 
 // archiveBranchNameRefusal rechaza `done --change <x>-archive` cuando el registro local guarda el
-// cambio `<x>` y no uno llamado `<x>-archive`: ese nombre es el de la rama de archivado de `<x>`, y
-// procesarla como un cambio aparte dejaría huérfano el registro de `<x>`. Solo aplica en el carril
-// SDD fuera de `multirepo`, los únicos con rama de archivado. Un registro de `<x>` que no se puede
-// leer no rechaza nada: el nombre se procesa como hasta ahora.
+// cambio `<x>` y no uno llamado `<x>-archive` (RF-BRA-47): ese nombre es el de la rama de archivado
+// de `<x>`, y procesarla como un cambio aparte dejaría huérfano el registro de `<x>`. Solo aplica en
+// el carril SDD fuera de `multirepo`, los únicos con rama de archivado. Un registro de `<x>` que no
+// se puede leer no rechaza nada: el nombre se procesa como hasta ahora.
 func (e *Engine) archiveBranchNameRefusal(r DoneRequest, facts changeFacts) *branch.Refusal {
 	if facts.record != nil || r.Lane != branch.LaneSDD || facts.input.Topology == workspace.TopologyMultirepo {
 		return nil
