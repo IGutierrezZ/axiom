@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:ddf1d2bd5344adbc4b84bf3575328bdac9ce35d7f751aa9f2d673140d4cfe7ab">
+<title>Resumen de la spec: decidir puertas desde el dashboard</title>
+<style>
+body { font-family: sans-serif; max-width: 48rem; margin: 2rem auto; line-height: 1.5; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.5rem; }
+.aviso { background: #fffbea; padding: 0.75rem; }
+</style>
+</head>
+<body>
+<h1>Decidir las puertas de revisión desde el dashboard</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+<h2>Qué cambia y para quién</h2>
+<p>Hoy, para aprobar o rechazar una parada de revisión hay que volver a la terminal o al agente. Con este cambio, la persona que revisa puede decidir desde el detalle del incremento, con las mismas reglas que la línea de comandos.</p>
+<section data-axiom-ref="prov:WEB:1">
+<h2>prov:WEB:1 Ver la parada actual</h2>
+<p>El detalle muestra una sola parada a la vez, la que indica el estado del cambio, con sus opciones y su rama de publicación. Si no hay parada, lo dice.</p>
+</section>
+<section data-axiom-ref="prov:WEB:2">
+<h2>prov:WEB:2 Registrar la decisión</h2>
+<p>Registrar exige confirmación, motivo al iterar y comprobar que la puerta sigue pendiente; si otra persona ya la decidió, se rechaza sin escribir nada.</p>
+</section>
+<section data-axiom-ref="prov:WEB:3">
+<h2>prov:WEB:3 Publicar los documentos</h2>
+<p>Publicar sube solo los documentos del cambio y solo la rama del cambio, sin forzar, y solo si la persona lo confirma.</p>
+</section>
+<section data-axiom-ref="prov:WEB:4">
+<h2>prov:WEB:4 Las salidas</h2>
+<p>Tres salidas en las paradas normales (iterar, aprobar y parar, aprobar y continuar) y dos en integración. En cambios sin paradas no aparece ninguna decisión.</p>
+</section>
+<section data-axiom-ref="prov:WEB:5">
+<h2>prov:WEB:5 Revisión por commit</h2>
+<p>Al aprobar las tareas se elige cómo revisar los commits (aviso por defecto, parar, o parar antes de cada commit).</p>
+</section>
+<section data-axiom-ref="prov:WEB:6">
+<h2>prov:WEB:6 Un solo aviso de operación remota</h2>
+<p>Un único diálogo avisa del remoto y la rama; solo tras el clic se registra y se publica.</p>
+</section>
+<section data-axiom-ref="prov:WEB:7">
+<h2>prov:WEB:7 Aprobada sin publicar</h2>
+<p>Si la publicación falla, la aprobación se conserva y se ofrece reintentar solo la publicación.</p>
+</section>
+<section data-axiom-ref="prov:WEB:8">
+<h2>prov:WEB:8 Seguridad de las rutas</h2>
+<p>Las rutas nuevas se vigilan en el canario de secretos y no usan estilos ni scripts en línea.</p>
+</section>
+<section data-axiom-ref="prov:GAT:1">
+<h2>prov:GAT:1 Mismo resultado que la línea de comandos</h2>
+<p>Decidir desde el dashboard deja exactamente el mismo registro que la CLI, con el mismo aviso de integración una sola vez y la misma guarda de rama.</p>
+</section>
+<svg width="520" height="60" role="img" aria-label="Flujo: ver parada, confirmar, registrar, publicar">
+<rect x="5" y="10" width="110" height="40" fill="#bee3f8"/>
+<text x="15" y="35">Ver parada</text>
+<rect x="140" y="10" width="110" height="40" fill="#fefcbf"/>
+<text x="150" y="35">Confirmar</text>
+<rect x="275" y="10" width="110" height="40" fill="#c6f6d5"/>
+<text x="285" y="35">Registrar</text>
+<rect x="410" y="10" width="105" height="40" fill="#e9d8fd"/>
+<text x="420" y="35">Publicar</text>
+<line x1="115" y1="30" x2="140" y2="30" stroke="#333"/>
+<line x1="250" y1="30" x2="275" y2="30" stroke="#333"/>
+<line x1="385" y1="30" x2="410" y2="30" stroke="#333"/>
+</svg>
+<h2>Glosario</h2>
+<dl>
+<dt>Puerta o parada</dt><dd>Punto en que una persona revisa y decide antes de seguir.</dd>
+<dt>Publicar</dt><dd>Subir los documentos del cambio a la rama remota del cambio.</dd>
+<dt>Digest</dt><dd>Huella del documento revisado, para detectar que cambió.</dd>
+</dl>
+</body>
+</html>

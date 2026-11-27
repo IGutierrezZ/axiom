@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="axiom-source-digest" content="sha256:7b69f403041f3716fccdb9a0e836b6014494b07442a9b5d84f70a887b418f07d">
+<title>Resumen del diseño: decidir las puertas desde el dashboard</title>
+<style>
+body { font-family: system-ui, sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1a202c; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.2rem; margin-top: 2rem; }
+section { border-left: 4px solid #2b6cb0; padding-left: 1rem; margin-bottom: 1.25rem; }
+.ref { font-size: 0.8rem; color: #4a5568; font-family: monospace; }
+.aviso { background: #fffbea; border: 1px solid #ecc94b; padding: 0.75rem; }
+.antes { border-left-color: #c53030; }
+.despues { border-left-color: #2f855a; }
+dt { font-weight: 600; margin-top: 0.5rem; }
+svg text { font-family: system-ui, sans-serif; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Decidir las puertas de revisión desde el dashboard (C-06-f)</h1>
+<p class="aviso">Este resumen no sustituye al documento: lo que se aprueba es el md.</p>
+
+<h2>Qué cambia</h2>
+<section data-axiom-ref="D1">
+<p class="ref">D1</p>
+<p>La lógica que hoy registra una decisión de puerta en la terminal se separa en una pieza única y reutilizable. La terminal y el dashboard usan exactamente esa misma pieza, con las mismas comprobaciones, así que no hay dos versiones de las reglas.</p>
+</section>
+<section data-axiom-ref="prov:GAT:1">
+<p class="ref">prov:GAT:1</p>
+<p>Una decisión tomada desde el dashboard queda escrita igual que si se hubiera tomado en la terminal y avisa una sola vez a las integraciones (por ejemplo, Azure DevOps).</p>
+</section>
+<section data-axiom-ref="D5">
+<p class="ref">D5</p>
+<p>El aviso a las integraciones sale de un único sitio, para que nunca se envíe dos veces. Si falla, la decisión no se deshace: se muestra cómo reintentarlo.</p>
+</section>
+
+<h2>Para quién</h2>
+<section data-axiom-ref="prov:WEB:1">
+<p class="ref">prov:WEB:1</p>
+<p>Para la persona que revisa un cambio con paradas de revisión. En el detalle del incremento verá la parada pendiente, la que indica Axiom, y una sola a la vez. Si el cambio no tiene paradas, no verá ningún botón de decisión.</p>
+</section>
+
+<h2>Flujo antes y después</h2>
+<section class="antes" data-axiom-ref="prov:WEB:4">
+<p class="ref">prov:WEB:4 — antes</p>
+<p>La persona leía el resumen y las pruebas en el dashboard, pero para decidir tenía que volver a la terminal o al agente.</p>
+</section>
+<section class="despues" data-axiom-ref="D10">
+<p class="ref">D10 — después</p>
+<p>En el mismo detalle aparecen las salidas de la parada, con sus textos de siempre: iterar (con motivo obligatorio), aprobar, publicar y parar, y aprobar, publicar y continuar. La puerta final de integración solo tiene dos salidas: aprobar, aportando la prueba de la fusión, o rechazar. Al aprobar la lista de tareas se elige además cómo se revisará cada commit.</p>
+</section>
+<section data-axiom-ref="prov:WEB:5">
+<p class="ref">prov:WEB:5</p>
+<p>La elección de revisión por commit solo aparece al aprobar la puerta de tareas, con «avisar» marcada por defecto.</p>
+</section>
+<section data-axiom-ref="prov:WEB:6">
+<p class="ref">prov:WEB:6</p>
+<p>Publicar sube documentos al repositorio remoto. Por eso, antes de aprobar y publicar, un único cuadro de confirmación dice qué remoto y qué rama se van a usar. Sin ese clic no se envía nada. El dashboard nunca descarga cambios del remoto, ni sube código, ni abre ni fusiona peticiones de cambio.</p>
+</section>
+<section data-axiom-ref="prov:WEB:7">
+<p class="ref">prov:WEB:7 · D9</p>
+<p>Si la publicación falla, la aprobación se mantiene. El detalle muestra «aprobada sin publicar», con el motivo y el siguiente paso, y un botón para reintentar solo la publicación. Esta información se reconstruye a partir del estado guardado, así que sobrevive a una recarga de la página.</p>
+</section>
+
+<svg width="720" height="150" role="img" aria-label="Flujo: detalle del incremento, confirmación, registro de la decisión y publicación">
+<rect x="5" y="40" width="140" height="56" rx="6" fill="#bee3f8"/>
+<text x="15" y="64">Detalle del</text>
+<text x="15" y="80">incremento</text>
+<rect x="190" y="40" width="140" height="56" rx="6" fill="#fefcbf"/>
+<text x="200" y="64">Confirmación</text>
+<text x="200" y="80">(remoto y rama)</text>
+<rect x="375" y="40" width="140" height="56" rx="6" fill="#c6f6d5"/>
+<text x="385" y="64">Registrar</text>
+<text x="385" y="80">(misma pieza)</text>
+<rect x="560" y="40" width="150" height="56" rx="6" fill="#e9d8fd"/>
+<text x="570" y="64">Publicar</text>
+<text x="570" y="80">documentos</text>
+<line x1="145" y1="68" x2="190" y2="68" stroke="#2d3748" stroke-width="2"/>
+<line x1="330" y1="68" x2="375" y2="68" stroke="#2d3748" stroke-width="2"/>
+<line x1="515" y1="68" x2="560" y2="68" stroke="#2d3748" stroke-width="2"/>
+<text x="560" y="125">Si falla: «aprobada sin publicar» + reintento</text>
+</svg>
+
+<h2>Protecciones</h2>
+<section data-axiom-ref="prov:WEB:2">
+<p class="ref">prov:WEB:2 · D4 · D8</p>
+<p>La petición de registro solo se acepta desde el propio equipo, en formato JSON, con un tamaño limitado y con confirmación explícita. Además, lleva la puerta y la versión del documento que la persona vio. Si mientras tanto otra persona decidió esa puerta o el documento cambió, se rechaza sin escribir nada y se pide volver a mirar la parada. Dos peticiones a la vez sobre el mismo cambio no se mezclan: la segunda recibe «ocupado».</p>
+</section>
+<section data-axiom-ref="prov:WEB:3">
+<p class="ref">prov:WEB:3 · D6</p>
+<p>La publicación usa la misma lógica que la orden de terminal. Solo sube los documentos del cambio y solo a la rama mostrada, sin forzar. Si la rama no coincide, o si hay código sin subir, no publica y lo explica. El código lo sube siempre la persona.</p>
+</section>
+<section data-axiom-ref="D7">
+<p class="ref">D7</p>
+<p>El dashboard decide en la misma carpeta y con la misma identidad que usaría la terminal, de modo que nadie puede distinguir por quién se registró la decisión. Para la puerta final de integración se usa la copia de trabajo de archivado, igual que en la terminal.</p>
+</section>
+<section data-axiom-ref="prov:WEB:8">
+<p class="ref">prov:WEB:8 · D12</p>
+<p>Las rutas nuevas se revisan con la prueba que vigila que nunca se devuelva un secreto. Las pantallas no usan estilos ni código en línea. La nueva pieza que escribe decisiones queda en el inventario de escritores protegidos.</p>
+</section>
+<section data-axiom-ref="D13">
+<p class="ref">D13</p>
+<p>Quedan fuera: lanzar revisiones o verificaciones desde la pantalla, las anotaciones en el gestor de tareas, descargar o subir código, y abrir o fusionar peticiones de cambio.</p>
+</section>
+
+<h2>Glosario</h2>
+<dl>
+<dt>Puerta o parada</dt><dd>Punto en el que el trabajo se detiene hasta que una persona revisa y decide.</dd>
+<dt>Iterar</dt><dd>Rechazar con un motivo para que el documento se corrija y se vuelva a presentar.</dd>
+<dt>Publicar</dt><dd>Guardar los documentos del cambio en el historial y subirlos al repositorio compartido.</dd>
+<dt>Ceder</dt><dd>Aprobar y dejar la fase siguiente a otra persona.</dd>
+<dt>Dashboard</dt><dd>La aplicación web local de Axiom que se abre en el propio equipo.</dd>
+</dl>
+</body>
+</html>
