@@ -19,11 +19,12 @@ El dashboard es instalable desde Edge o Chrome:
 | Pieza | Ubicación |
 |---|---|
 | Manifiesto (`display: standalone`, `start_url: /`) | `internal/dashboard/assets/manifest.webmanifest` (MIME `application/manifest+json`) |
-| Service worker, solo red (sin caché, para no servir assets obsoletos tras actualizar) | `internal/dashboard/assets/sw.js`, servido en la raíz |
+| Service worker, red primero: solo guarda la página sin conexión y sus recursos (`OFFLINE_ASSETS`), para no servir assets obsoletos tras actualizar | `internal/dashboard/assets/sw.js`, servido en la raíz |
+| Página sin conexión: se muestra cuando falla una navegación, explica cómo arrancar el servidor y recarga sola al responder `/api/health` | `internal/dashboard/assets/offline.html`, `offline.css`, `offline.js` |
 | Registro del SW y botón "Instalar aplicación" (`beforeinstallprompt`) | `internal/dashboard/assets/js/core/pwa.js` |
 | Iconos PNG 192/512 y maskable, generados en Go a partir del logo | `internal/dashboard/pwa_icons.go` (rutas `/icons/*.png`) |
 
-Una PWA instalada queda ligada a su origen exacto, por eso el puerto es fijo. Tampoco arranca procesos: el servidor debe estar activo.
+Una PWA instalada queda ligada a su origen exacto, por eso el puerto es fijo. Tampoco arranca procesos: el servidor debe estar activo. Si no lo está, la página sin conexión dice cómo arrancarlo; al cambiarla, sube la versión de `OFFLINE_CACHE` en `sw.js` para que el navegador la vuelva a guardar.
 
 ## Arranque desacoplado
 
