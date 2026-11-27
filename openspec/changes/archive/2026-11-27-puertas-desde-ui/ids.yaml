@@ -1,0 +1,39 @@
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:WEB:1
+    definitive: RF-WEB-38
+    capability: local-web-dashboard
+    requirement: Consulta de la Parada Actual del Cambio desde el Detalle del Incremento (RF-WEB-38)
+  - provisional: prov:WEB:2
+    definitive: RF-WEB-39
+    capability: local-web-dashboard
+    requirement: Ruta POST de Registro de Puerta con las Protecciones de las Rutas Mutantes (RF-WEB-39)
+  - provisional: prov:WEB:3
+    definitive: RF-WEB-40
+    capability: local-web-dashboard
+    requirement: Ruta POST de Publicación de Documentos del Cambio con Aviso Remoto Confirmado (RF-WEB-40)
+  - provisional: prov:WEB:4
+    definitive: RF-WEB-41
+    capability: local-web-dashboard
+    requirement: 'Presentación de las Salidas de la Parada: Tres Salidas y Dos en `integration` (RF-WEB-41)'
+  - provisional: prov:WEB:5
+    definitive: RF-WEB-42
+    capability: local-web-dashboard
+    requirement: Modo de Revisión por Commit al Aprobar `tasks` (RF-WEB-42)
+  - provisional: prov:WEB:6
+    definitive: RF-WEB-43
+    capability: local-web-dashboard
+    requirement: Un Único Clic de Confirmación con Aviso de Operación Remota Encadena Registrar y Publicar (RF-WEB-43)
+  - provisional: prov:WEB:7
+    definitive: RF-WEB-44
+    capability: local-web-dashboard
+    requirement: Fallo de Publicación como «Aprobada sin Publicar» con Reintento (RF-WEB-44)
+  - provisional: prov:WEB:8
+    definitive: RF-WEB-45
+    capability: local-web-dashboard
+    requirement: Rutas de Puertas Clasificadas en el Canario de Secretos y sin Estilos ni Scripts en Línea (RF-WEB-45)
+  - provisional: prov:GAT:1
+    definitive: RF-GAT-34
+    capability: sdd-block-review-gates
+    requirement: El Dashboard Local es un Canal Humano Equivalente a `axiom sdd gate record` (RF-GAT-34)

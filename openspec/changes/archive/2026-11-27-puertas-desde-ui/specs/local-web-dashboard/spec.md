@@ -2,7 +2,7 @@
 
 ## ADDED Requirements
 
-### Requirement: Consulta de la Parada Actual del Cambio desde el Detalle del Incremento (prov:WEB:1)
+### Requirement: Consulta de la Parada Actual del Cambio desde el Detalle del Incremento (RF-WEB-38)
 
 El dashboard DEBE ofrecer una ruta de solo lectura que devuelva la parada que proyecta el status nativo (`nextRecommended == await-gate` y su `gateQuestion`) para un cambio `checkpointed`: puerta, criterios, evidencia, las opciones con sus etiquetas, efectos y tokens tal como las proyecta la `GateQuestion` (fuente única, sin recalcular `nextRecommended` ni reordenar), el digest visto y `publication{remote, branch, prTarget, invocation, state}`. DEBE presentar una sola parada a la vez, incluidas las `role-apply:<rol>` de cada rol, sin imponer un orden propio. Cuando no hay parada proyectada, DEBE responder «sin parada».
 
@@ -24,9 +24,9 @@ El dashboard DEBE ofrecer una ruta de solo lectura que devuelva la parada que pr
 - **CUANDO** se consulta la parada
 - **ENTONCES** la respuesta indica «sin parada» y no contiene opciones
 
-### Requirement: Ruta POST de Registro de Puerta con las Protecciones de las Rutas Mutantes (prov:WEB:2)
+### Requirement: Ruta POST de Registro de Puerta con las Protecciones de las Rutas Mutantes (RF-WEB-39)
 
-El dashboard DEBE exponer `POST /api/increments/gate` para registrar la decisión de la parada con la misma lógica que `axiom sdd gate record` (prov:GAT:1). La ruta DEBE aplicar el mismo preflight que las rutas de marcas: método distinto de `POST` responde 405; `Host` u `Origin` no locales, 403; `Content-Type` distinto de `application/json`, 415; cuerpo superior a 16 KiB o con campos desconocidos, rechazo sin efecto. DEBE exigir `confirm` verdadero (422 antes de cualquier efecto), serializar con un cerrojo (`busy` si está tomado) y, bajo ese cerrojo, comprobar que la puerta y el digest que la persona vio siguen siendo los pendientes: si la puerta ya se decidió o el digest cambió, DEBE responder 409 tipado sin escribir. Iterar DEBE exigir motivo no vacío y, sin él, rechazar sin escribir.
+El dashboard DEBE exponer `POST /api/increments/gate` para registrar la decisión de la parada con la misma lógica que `axiom sdd gate record` (RF-GAT-34). La ruta DEBE aplicar el mismo preflight que las rutas de marcas: método distinto de `POST` responde 405; `Host` u `Origin` no locales, 403; `Content-Type` distinto de `application/json`, 415; cuerpo superior a 16 KiB o con campos desconocidos, rechazo sin efecto. DEBE exigir `confirm` verdadero (422 antes de cualquier efecto), serializar con un cerrojo (`busy` si está tomado) y, bajo ese cerrojo, comprobar que la puerta y el digest que la persona vio siguen siendo los pendientes: si la puerta ya se decidió o el digest cambió, DEBE responder 409 tipado sin escribir. Iterar DEBE exigir motivo no vacío y, sin él, rechazar sin escribir.
 
 #### Scenario: Aprobación válida
 
@@ -70,9 +70,9 @@ El dashboard DEBE exponer `POST /api/increments/gate` para registrar la decisió
 - **CUANDO** llega una segunda petición
 - **ENTONCES** recibe `busy` sin escribir
 
-### Requirement: Ruta POST de Publicación de Documentos del Cambio con Aviso Remoto Confirmado (prov:WEB:3)
+### Requirement: Ruta POST de Publicación de Documentos del Cambio con Aviso Remoto Confirmado (RF-WEB-40)
 
-El dashboard DEBE exponer `POST /api/increments/gate/publish`, con el mismo preflight, `confirm` obligatorio y cerrojo que prov:WEB:2, que publique con la lógica de `axiom sdd publish` solo los documentos del cambio y solo la rama del cambio a `origin`, con `--branch` atado a la rama que la UI mostró, sin fetch, sin forzar y sin `Only` ni `Replay`. DEBE rechazar con 409 tipado si la rama pedida no es la proyectada. Con almacén `engram` o `none` DEBE respetar `publishUnavailable` y no publicar nada.
+El dashboard DEBE exponer `POST /api/increments/gate/publish`, con el mismo preflight, `confirm` obligatorio y cerrojo que RF-WEB-39, que publique con la lógica de `axiom sdd publish` solo los documentos del cambio y solo la rama del cambio a `origin`, con `--branch` atado a la rama que la UI mostró, sin fetch, sin forzar y sin `Only` ni `Replay`. DEBE rechazar con 409 tipado si la rama pedida no es la proyectada. Con almacén `engram` o `none` DEBE respetar `publishUnavailable` y no publicar nada.
 
 #### Scenario: Publicación correcta
 
@@ -92,7 +92,7 @@ El dashboard DEBE exponer `POST /api/increments/gate/publish`, con el mismo pref
 - **CUANDO** llega la petición de publicación
 - **ENTONCES** no se publica nada y la respuesta nombra el código `publishUnavailable`
 
-### Requirement: Presentación de las Salidas de la Parada: Tres Salidas y Dos en `integration` (prov:WEB:4)
+### Requirement: Presentación de las Salidas de la Parada: Tres Salidas y Dos en `integration` (RF-WEB-41)
 
 El detalle del incremento DEBE mostrar las salidas que proyecta la `GateQuestion`, en su orden. Para `spec`, `design`, `tasks` y `role-apply:<rol>`: Iterar (rechazo con motivo obligatorio), Aprobar, publicar y parar (aprobación con cesión más publicación) y Aprobar, publicar y continuar (aprobación más publicación). Si la `GateQuestion` no ofrece la salida 2 (almacén `engram` o `none`), la UI NO DEBE ofrecerla ni la publicación. Para `integration` DEBE ofrecer solo dos salidas: aprobar con la evidencia de merge que exige la CLI (validada con las reglas de la CLI) o rechazar con motivo; NO DEBE publicar. Sin `gateQuestion`, o en un cambio `continuous`, la UI NO DEBE ofrecer ninguna decisión.
 
@@ -126,7 +126,7 @@ El detalle del incremento DEBE mostrar las salidas que proyecta la `GateQuestion
 - **CUANDO** se abre el detalle
 - **ENTONCES** no aparece ningún control de decisión
 
-### Requirement: Modo de Revisión por Commit al Aprobar `tasks` (prov:WEB:5)
+### Requirement: Modo de Revisión por Commit al Aprobar `tasks` (RF-WEB-42)
 
 Al aprobar la puerta `tasks` en un cambio `checkpointed`, la UI DEBE ofrecer una interacción propia con el modo de revisión por commit (`notify` por defecto, `stop`, `stop-before-commit`) y DEBE registrarlo en la misma llamada de aprobación, como `--commit-review` en la CLI, con su validación. NO DEBE ofrecerlo al iterar ni en otras puertas.
 
@@ -148,7 +148,7 @@ Al aprobar la puerta `tasks` en un cambio `checkpointed`, la UI DEBE ofrecer una
 - **CUANDO** se muestra el formulario
 - **ENTONCES** no aparece la elección de modo
 
-### Requirement: Un Único Clic de Confirmación con Aviso de Operación Remota Encadena Registrar y Publicar (prov:WEB:6)
+### Requirement: Un Único Clic de Confirmación con Aviso de Operación Remota Encadena Registrar y Publicar (RF-WEB-43)
 
 En las salidas 2 y 3, la UI DEBE mostrar un único diálogo de confirmación que avise de que publicar es una operación remota (commit de los documentos del cambio y push de la rama del cambio a `origin`, sin forzar) nombrando el remoto y la rama, y solo tras el clic de la persona DEBE encadenar el registro y la publicación. NO DEBE publicar sin ese clic ni ejecutar `fetch`, push de código, PR ni merge.
 
@@ -164,7 +164,7 @@ En las salidas 2 y 3, la UI DEBE mostrar un único diálogo de confirmación que
 - **CUANDO** la persona cancela
 - **ENTONCES** no se registra ni se publica nada
 
-### Requirement: Fallo de Publicación como «Aprobada sin Publicar» con Reintento (prov:WEB:7)
+### Requirement: Fallo de Publicación como «Aprobada sin Publicar» con Reintento (RF-WEB-44)
 
 Un fallo de publicación NO DEBE deshacer la aprobación registrada. La UI DEBE mostrar «aprobada sin publicar» con el fallo tipado y su continuación o `pushCommand` (por ejemplo `code_commits_unpublished`), y DEBE ofrecer un botón de reintento mientras el status proyecte `publication.state: pending`, que repite solo la publicación, sin volver a registrar.
 
@@ -186,7 +186,7 @@ Un fallo de publicación NO DEBE deshacer la aprobación registrada. La UI DEBE 
 - **CUANDO** se muestra la puerta
 - **ENTONCES** no hay botón de reintento
 
-### Requirement: Rutas de Puertas Clasificadas en el Canario de Secretos y sin Estilos ni Scripts en Línea (prov:WEB:8)
+### Requirement: Rutas de Puertas Clasificadas en el Canario de Secretos y sin Estilos ni Scripts en Línea (RF-WEB-45)
 
 Las rutas nuevas de puertas (consulta, registro y publicación) DEBEN registrarse en el canario de secretos, y sus respuestas NO DEBEN contener secretos. Los assets nuevos NO DEBEN usar estilos ni scripts en línea (CSP `style-src 'self'`). El escritor nuevo DEBE constar en el inventario de escritores.
 

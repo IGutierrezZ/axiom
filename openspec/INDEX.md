@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-27 09:59:50 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 634 | **Total Escenarios BDD:** 3188
+> **Última Sincronización:** 2026-11-27 11:16:08 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 643 | **Total Escenarios BDD:** 3220
 
 ---
 
@@ -28,7 +28,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 34 | 194 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 37 | 204 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 45 | 232 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -45,7 +45,7 @@
 | `requirement-identifiers` | Especificación de requirement-identifiers | 16 | 130 | [Ver Spec](specs/requirement-identifiers/spec.md) |
 | `requirement-trace` | Especificación de requirement-trace | 17 | 51 | [Ver Spec](specs/requirement-trace/spec.md) |
 | `sdd-archive-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de Archive, Integración Formal y Sellado Inmutable (INC-21) | 18 | 129 | [Ver Spec](specs/sdd-archive-lifecycle/spec.md) |
-| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 33 | 156 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
+| `sdd-block-review-gates` | Especificación de Requerimientos: Compuertas de Revisión por Bloque (spec, design, tasks, apply) (INC-21) | 34 | 160 | [Ver Spec](specs/sdd-block-review-gates/spec.md) |
 | `sdd-docs-publication` | Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs) | 14 | 101 | [Ver Spec](specs/sdd-docs-publication/spec.md) |
 | `sdd-independent-review` | Especificación de Requerimientos: Revisión Independiente en SDD (verify técnico por rol, juicio opcional y revisión de cobertura) | 12 | 80 | [Ver Spec](specs/sdd-independent-review/spec.md) |
 | `sdd-iso-evidence` | Especificación: Evidencias ISO Opcionales del SDD (carril-sdd-versatil) | 10 | 122 | [Ver Spec](specs/sdd-iso-evidence/spec.md) |
@@ -1802,6 +1802,42 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Las rutas nuevas están clasificadas
   - *Escenario BDD:* Una ruta de integraciones sin clasificar falla
   - *Escenario BDD:* El canario no encuentra el centinela
+- **[RF-WEB-38]** Consulta de la Parada Actual del Cambio desde el Detalle del Incremento
+  - *Escenario BDD:* Parada `spec` pendiente
+  - *Escenario BDD:* Una parada a la vez en multirepo
+  - *Escenario BDD:* Sin parada proyectada
+- **[RF-WEB-39]** Ruta POST de Registro de Puerta con las Protecciones de las Rutas Mutantes
+  - *Escenario BDD:* Aprobación válida
+  - *Escenario BDD:* Iterar sin motivo
+  - *Escenario BDD:* Puerta ya decidida por otro canal
+  - *Escenario BDD:* Digest cambiado
+  - *Escenario BDD:* Sin confirmación
+  - *Escenario BDD:* Preflight local
+  - *Escenario BDD:* Cerrojo tomado
+- **[RF-WEB-40]** Ruta POST de Publicación de Documentos del Cambio con Aviso Remoto Confirmado
+  - *Escenario BDD:* Publicación correcta
+  - *Escenario BDD:* Rama distinta de la mostrada
+  - *Escenario BDD:* Almacén engram
+- **[RF-WEB-41]** Presentación de las Salidas de la Parada: Tres Salidas y Dos en `integration`
+  - *Escenario BDD:* Tres salidas
+  - *Escenario BDD:* Almacén engram
+  - *Escenario BDD:* `integration` con evidencia
+  - *Escenario BDD:* `integration` no publica
+  - *Escenario BDD:* Cambio `continuous`
+- **[RF-WEB-42]** Modo de Revisión por Commit al Aprobar `tasks`
+  - *Escenario BDD:* Valor por defecto
+  - *Escenario BDD:* Modo inválido
+  - *Escenario BDD:* Otras puertas y rechazo
+- **[RF-WEB-43]** Un Único Clic de Confirmación con Aviso de Operación Remota Encadena Registrar y Publicar
+  - *Escenario BDD:* Confirmación
+  - *Escenario BDD:* Cancelar
+- **[RF-WEB-44]** Fallo de Publicación como «Aprobada sin Publicar» con Reintento
+  - *Escenario BDD:* Fallo tras aprobar
+  - *Escenario BDD:* Reintento
+  - *Escenario BDD:* Ya publicada
+- **[RF-WEB-45]** Rutas de Puertas Clasificadas en el Canario de Secretos y sin Estilos ni Scripts en Línea
+  - *Escenario BDD:* Canario
+  - *Escenario BDD:* CSP
 
 ### Dominio: `multi-project-hub` — Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08)
 
@@ -3018,6 +3054,11 @@ Trazabilidad de un requisito de punta a punta (C-03-d). La consulta de solo lect
   - *Escenario BDD:* Marcas pendientes o fallidas se declaran tal cual
   - *Escenario BDD:* Sin marcas no se menciona
   - *Escenario BDD:* No condiciona las salidas
+- **[RF-GAT-34]** El Dashboard Local es un Canal Humano Equivalente a `axiom sdd gate record`
+  - *Escenario BDD:* Registros indistinguibles
+  - *Escenario BDD:* Evento de integración único
+  - *Escenario BDD:* Misma guarda de rama
+  - *Escenario BDD:* Contrato de la CLI intacto
 
 ### Dominio: `sdd-docs-publication` — Especificación de Publicación Ligera de Documentación SDD (carril-proyecto-publicacion-docs)
 
