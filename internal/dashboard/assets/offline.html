@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axiom — servidor detenido</title>
+  <!-- Página que muestra el service worker cuando el servidor local no responde.
+       Solo usa recursos que el service worker guarda al instalarse (OFFLINE_ASSETS). -->
+  <script src="/js/theme-init.js"></script>
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/offline.css">
+</head>
+<body>
+  <main class="offline">
+    <img class="offline-logo" src="/icons/icon.svg" alt="" width="40" height="40">
+    <h1>El servidor de Axiom no está en marcha</h1>
+    <p>
+      Esta ventana muestra el panel que sirve <code>axiom</code> en este equipo
+      (<code id="offline-origin">http://127.0.0.1:47700</code>). La aplicación instalada
+      no puede arrancarlo por sí misma: hazlo de una de estas formas.
+    </p>
+
+    <ol class="offline-steps">
+      <li>
+        <p>Abre el acceso directo <strong>Axiom</strong> del menú Inicio, o ejecuta en una consola:</p>
+        <pre><code data-command>axiom ui --detach</code></pre>
+      </li>
+      <li>
+        <p>En Windows, si instalaste Axiom con su instalador, relanza la tarea que lo arranca al iniciar sesión:</p>
+        <pre><code>Start-ScheduledTask -TaskName Axiom</code></pre>
+      </li>
+    </ol>
+
+    <p class="offline-note">
+      No uses <code>axiom ui</code> sin <code>--detach</code>: el servidor quedaría atado a esa
+      consola y se detendría al cerrarla.
+    </p>
+
+    <div class="offline-status">
+      <p id="offline-status" role="status">Comprobando el servidor cada pocos segundos. La página se recargará sola cuando responda.</p>
+      <button type="button" id="offline-retry">Reintentar ahora</button>
+    </div>
+  </main>
+  <script src="/offline.js"></script>
+</body>
+</html>

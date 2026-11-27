@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"image/png"
 	"net/http"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -124,8 +126,89 @@ func TestServiceWorkerIsServedAtRoot(t *testing.T) {
 		}
 	}
 	src := strings.Join(code, "\n")
-	if strings.Contains(src, "caches.") || strings.Contains(src, "respondWith(") {
-		t.Error("sw.js debe ser solo red: sin caché ni respondWith")
+	// Red primero: la caché solo responde cuando la red falla, y nunca guarda respuestas
+	// en tiempo de ejecución (una copia obsoleta del dashboard sería peor que un fallo).
+	if !strings.Contains(src, "fetch(request).catch(") {
+		t.Error("sw.js debe pedir primero a la red y usar la caché solo si la red falla")
+	}
+	if strings.Contains(src, ".put(") {
+		t.Error("sw.js no debe guardar respuestas en tiempo de ejecución")
+	}
+	if !strings.Contains(src, "request.mode === 'navigate'") {
+		t.Error("sw.js debe limitar la página sin conexión a las navegaciones")
+	}
+}
+
+var offlineAssetsPattern = regexp.MustCompile(`(?s)const OFFLINE_ASSETS = \[(.*?)\];`)
+var quotedPathPattern = regexp.MustCompile(`'(/[^']*)'`)
+
+// offlineAssets devuelve las rutas que sw.js guarda al instalarse.
+func offlineAssets(t *testing.T) []string {
+	t.Helper()
+	m := offlineAssetsPattern.FindStringSubmatch(readAsset(t, "sw.js"))
+	if m == nil {
+		t.Fatal("sw.js no declara OFFLINE_ASSETS")
+	}
+	var paths []string
+	for _, p := range quotedPathPattern.FindAllStringSubmatch(m[1], -1) {
+		paths = append(paths, p[1])
+	}
+	return paths
+}
+
+// El service worker solo guarda la página sin conexión y sus recursos: nada de la API
+// ni del dashboard, y todo lo que guarda existe (addAll falla entero ante un 404).
+func TestServiceWorkerCachesOnlyTheOfflinePage(t *testing.T) {
+	t.Parallel()
+	h := assetServer(t)
+	paths := offlineAssets(t)
+	if !slices.Contains(paths, "/offline.html") {
+		t.Fatalf("OFFLINE_ASSETS = %v, debe incluir /offline.html", paths)
+	}
+	for _, p := range paths {
+		if strings.HasPrefix(p, "/api/") || p == "/" || p == "/index.html" || p == "/js/main.js" {
+			t.Errorf("OFFLINE_ASSETS incluye %s: solo se guarda la página sin conexión", p)
+		}
+		if rr := getAsset(t, h, p); rr.Code != http.StatusOK {
+			t.Errorf("GET %s = %d: el service worker no podría guardarlo", p, rr.Code)
+		}
+	}
+}
+
+var localRefPattern = regexp.MustCompile(`(?:href|src)="(/[^"#]*)"`)
+
+// La página sin conexión explica cómo arrancar el servidor y no depende de nada que el
+// service worker no haya guardado.
+func TestOfflinePageExplainsHowToStartTheServer(t *testing.T) {
+	t.Parallel()
+	rr := getAsset(t, assetServer(t), "/offline.html")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("GET /offline.html = %d", rr.Code)
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/html") {
+		t.Errorf("Content-Type = %q", got)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{"axiom ui --detach", "Start-ScheduledTask -TaskName Axiom", `id="offline-retry"`} {
+		if !strings.Contains(body, marker) {
+			t.Errorf("offline.html no contiene %q", marker)
+		}
+	}
+	cached := offlineAssets(t)
+	refs := localRefPattern.FindAllStringSubmatch(body, -1)
+	if len(refs) == 0 {
+		t.Fatal("offline.html no referencia ningún recurso")
+	}
+	for _, ref := range refs {
+		if !slices.Contains(cached, ref[1]) {
+			t.Errorf("offline.html usa %s, que el service worker no guarda", ref[1])
+		}
+	}
+	script := readAsset(t, "offline.js")
+	for _, marker := range []string{"/api/health", "location.reload()"} {
+		if !strings.Contains(script, marker) {
+			t.Errorf("offline.js no contiene %q: debe recargar sola cuando el servidor responda", marker)
+		}
 	}
 }
 

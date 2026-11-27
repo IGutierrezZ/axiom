@@ -445,6 +445,7 @@ El flujo recomendado es instalar el panel como aplicación (PWA) desde el navega
 4. **Servidor con Windows.** El instalador registra la tarea programada de usuario `Axiom` (al iniciar sesión, con 30 s de retraso, sin elevación) que ejecuta `axiom ui --detach --no-browser`, y la arranca una vez al instalar. Con `-NoAutostart` no se registra; entonces, arranca el servidor con `axiom ui --detach` o con el acceso directo. Para quitarla: `Unregister-ScheduledTask -TaskName Axiom -Confirm:$false`. No hay desinstalador del acceso directo: bórralo a mano del menú Inicio.
 5. **Origen exacto.** La instalación queda ligada a `http://127.0.0.1:47700`: `localhost` u otro puerto serían otra aplicación distinta, con su propia instalación.
 6. **Registro y parada.** `--detach` escribe el registro en `%LOCALAPPDATA%\axiom\ui.log`. No hay comando de apagado, por seguridad: el servidor vive hasta cerrar sesión; para pararlo antes, termina el proceso `axiom.exe` desde el Administrador de tareas (la tarea `Axiom` no lo relanza hasta el próximo inicio de sesión, salvo que falle).
+7. **Si el servidor no está en marcha.** La aplicación instalada no puede arrancarlo: muestra una página que explica cómo hacerlo (el acceso directo `Axiom`, `axiom ui --detach` o `Start-ScheduledTask -TaskName Axiom`) y se recarga sola cuando el servidor responde. La aplicación guarda esa página la primera vez que la abres con un servidor que ya la incluye.
 
 ---
 
