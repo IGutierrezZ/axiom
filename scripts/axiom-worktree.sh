@@ -6,7 +6,9 @@
 # decisión de la persona):
 #
 #   new  <slug> [prefijo] [--lane l]  axiom branch ensure --cwd <checkout principal> --change <slug> --lane l [--prefix p] --json
-#   pr   <slug> [--lane l]            push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json
+#   pr   <slug> [--lane l]            push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json.
+#                          Antes de subir la rama ejecuta el scripts/pre-pr-check.sh del worktree (gofmt,
+#                          guardas transversales y deadcode); si falla, no sube la rama ni crea la PR
 #   done <slug> [--lane l] [--force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l --fetch y,
 #                          después, el avance rápido de main. `--fetch` trae origin antes de confirmar
 #                          la fusión: sin él, un squash recién fusionado no se ve y da merge_not_confirmed. La rama sale del registro local que escribe
@@ -170,6 +172,19 @@ case "$VERB" in
             echo "ERROR: El worktree tiene cambios sin commitear. Haz commit de todo antes de crear el PR:" >&2
             echo "$DIRTY" >&2
             exit 1
+        fi
+
+        # Comprobación previa: lo que la CI vigila sobre todo el repositorio y las pruebas
+        # localizadas no ejecutan. Si falla, no se sube la rama ni se crea el PR.
+        PRE_CHECK="$WT_PATH/scripts/pre-pr-check.sh"
+        if [ -f "$PRE_CHECK" ]; then
+            echo "[INFO] Comprobación previa a la PR (gofmt, guardas transversales y deadcode)..."
+            if ! "$BASH" "$PRE_CHECK"; then
+                echo "ERROR: La comprobación previa falló: no se ha subido la rama ni creado el PR. Corrige lo anterior, haz commit y repite: scripts/axiom-worktree.sh pr $SLUG --lane $LANE" >&2
+                exit 1
+            fi
+        else
+            echo "[AVISO] La rama no trae scripts/pre-pr-check.sh: se omite la comprobación previa."
         fi
 
         echo "[INFO] Subiendo $BRANCH a origin..."

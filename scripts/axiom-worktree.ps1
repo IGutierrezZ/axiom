@@ -12,7 +12,10 @@
     pr   <slug> -Label t [-Lane l]  push de la rama del cambio y PR hacia el prTarget de axiom branch status --lane l --json,
                              creada ya con la etiqueta `type:t`. El check `Check PR Has type:* Label`
                              (.github/workflows/pr-check.yml) se lanza al abrirse la PR: etiquetarla
-                             después hace que esa primera ejecución falle y GitHub avise por correo
+                             después hace que esa primera ejecución falle y GitHub avise por correo.
+                             Antes de subir la rama ejecuta con Git Bash el scripts/pre-pr-check.sh
+                             del worktree (gofmt, guardas transversales y deadcode); si falla, no sube
+                             la rama ni crea la PR
     done <slug> [-Lane l] [-Force]  axiom branch done --cwd <checkout principal> --change <slug> --lane l --fetch y,
                              después, el avance rápido de main. `--fetch` trae origin antes de confirmar
                              la fusión: sin él, un squash recién fusionado no se ve y da merge_not_confirmed. La rama sale del registro local que escribe
@@ -85,6 +88,23 @@ function Info { param($msg) Write-Host $msg -ForegroundColor Cyan }
 function Ok   { param($msg) Write-Host $msg -ForegroundColor Green }
 function Warn { param($msg) Write-Host "AVISO: $msg" -ForegroundColor Yellow }
 function Fail { param($msg) Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
+
+# Git Bash ejecuta scripts/pre-pr-check.sh. En Windows se toma el de Git for Windows, junto a
+# `git --exec-path`, y nunca el `bash.exe` de WSL que puede resolver el PATH.
+function Find-GitBash {
+    if ($env:OS -eq 'Windows_NT') {
+        $execPath = git --exec-path 2>$null
+        if ($LASTEXITCODE -eq 0 -and $execPath) {
+            $gitRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent ([string]$execPath).Trim()))
+            $candidate = Join-Path $gitRoot 'bin\bash.exe'
+            if (Test-Path -LiteralPath $candidate) { return $candidate }
+        }
+        return $null
+    }
+    $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
+    if ($bashCmd) { return $bashCmd.Source }
+    return $null
+}
 
 # --- Validaciones comunes ---
 if ($Slug -notmatch '^[a-z0-9]+(-[a-z0-9]+)*$') {
@@ -182,6 +202,24 @@ switch ($Verb) {
         $dirty = git -C $wtPath status --porcelain
         if ($dirty) {
             Fail "El worktree tiene cambios sin commitear. Haz commit de todo antes de crear el PR:`n$dirty"
+        }
+
+        # Comprobación previa: lo que la CI vigila sobre todo el repositorio y las pruebas
+        # localizadas no ejecutan. Si falla, no se sube la rama ni se crea el PR.
+        $preCheck = Join-Path $wtPath 'scripts\pre-pr-check.sh'
+        if (Test-Path -LiteralPath $preCheck) {
+            $bash = Find-GitBash
+            if (-not $bash) {
+                Fail "No encuentro Git Bash para ejecutar scripts/pre-pr-check.sh. Instala Git for Windows o ejecútalo a mano antes de crear el PR."
+            }
+            Info "Comprobación previa a la PR (gofmt, guardas transversales y deadcode)..."
+            & $bash ($preCheck -replace '\\', '/')
+            if ($LASTEXITCODE -ne 0) {
+                Fail "La comprobación previa falló: no se ha subido la rama ni creado el PR. Corrige lo anterior, haz commit y repite: scripts/axiom-worktree.ps1 pr $Slug -Label $Label -Lane $Lane"
+            }
+        }
+        else {
+            Warn "La rama no trae scripts/pre-pr-check.sh: se omite la comprobación previa."
         }
 
         Info "Subiendo $branch a origin..."

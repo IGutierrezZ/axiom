@@ -46,7 +46,9 @@ Fuera de alcance: los fallos de plataforma (Linux frente a Windows), el job de l
 - [x] **T2 · Script de comprobación previa y lista de guardas** — ruta: inline.
   - `scripts/pre-pr-guards.txt`: las 8 guardas transversales que fallaron en la CI y siguen existiendo (`TestManualDeInicio…` ya no existe). `scripts/pre-pr-check.sh`: gofmt con la selección de `internal/gofmtcheck`, las guardas por nombre (cada una debe salir `--- PASS`) y el ratchet; ejecuta los tres pasos aunque falle uno. Al fallar, solo muestra la salida de las guardas que fallan o se omiten, los errores de compilación y la línea `FAIL` del paquete.
   - Evidencia: en el worktree sale con 0 en 53 s. Con un `.go` sin formato, una guarda inexistente, una que falla, una omitida y otra que no compila, sale con 1 y nombra cada una con su salida.
-- [ ] **T3 · `pr` ejecuta la comprobación antes de subir la rama** — ruta: inline.
+- [x] **T3 · `pr` ejecuta la comprobación antes de subir la rama** — ruta: inline.
+  - `axiom-worktree.ps1 pr` lanza el `scripts/pre-pr-check.sh` del worktree con el Git Bash de Git for Windows (`Find-GitBash`, junto a `git --exec-path`, nunca el `bash.exe` de WSL); `axiom-worktree.sh pr`, con `$BASH`. Si falla, ni `git push` ni `gh pr create`; sin el script en la rama, avisa y sigue.
+  - Evidencia: `go test ./internal/workspace -run TestScriptsAxiomWorktree -count=1` en verde (81 s), con los casos nuevos rojo y verde en sh y en PowerShell, y el aviso cuando la rama no trae el script.
 - [ ] **T4 · Reglas contra el código muerto para los agentes** — ruta: inline.
 
 ## Criterios de aceptación

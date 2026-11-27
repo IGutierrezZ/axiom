@@ -331,6 +331,9 @@ func TestScriptsAxiomWorktreeShellPrTakesTheBaseFromPrTarget(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
 		}
+		if !strings.Contains(stdout, "se omite la comprobación previa") {
+			t.Errorf("pr no avisó de que la rama no trae scripts/pre-pr-check.sh:\n%s", stdout)
+		}
 		log := f.logText(t)
 		if !strings.Contains(log, "axiom branch status --cwd") || !strings.Contains(log, "--change demo --lane sdd --json") {
 			t.Errorf("pr no consultó `axiom branch status --cwd ... --change demo --lane sdd --json`:\n%s", log)
@@ -342,6 +345,63 @@ func TestScriptsAxiomWorktreeShellPrTakesTheBaseFromPrTarget(t *testing.T) {
 			t.Errorf("pr no publicó la rama en origin:\n%s", got)
 		}
 	})
+
+	t.Run("comprobación previa en rojo: ni sube la rama ni abre el PR", func(t *testing.T) {
+		f.commitPrePRCheck(t, worktree, prePRCheckRed)
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := f.run(t, bash, "scripts/axiom-worktree.sh", "pr", "demo")
+		if code == 0 || !strings.Contains(stderr, "PRECHECK-ROJO") || !strings.Contains(stderr, "La comprobación previa falló") {
+			t.Fatalf("pr debía parar con la comprobación previa en rojo, salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+		}
+		if strings.Contains(f.logText(t), "gh pr create") {
+			t.Error("pr abrió un PR con la comprobación previa en rojo")
+		}
+		if f.git(t, f.remote, "rev-parse", "inc/demo") == f.git(t, worktree, "rev-parse", "HEAD") {
+			t.Error("pr subió la rama con la comprobación previa en rojo")
+		}
+	})
+
+	t.Run("comprobación previa en verde: se ejecuta antes de subir la rama", func(t *testing.T) {
+		f.commitPrePRCheck(t, worktree, prePRCheckGreen)
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := f.run(t, bash, "scripts/axiom-worktree.sh", "pr", "demo")
+		if code != 0 {
+			t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+		}
+		log := f.logText(t)
+		if check, create := strings.Index(log, "pre-pr-check"), strings.Index(log, "gh pr create"); check < 0 || create < check {
+			t.Errorf("pr no ejecutó la comprobación previa antes de crear el PR:\n%s", log)
+		}
+		if f.git(t, f.remote, "rev-parse", "inc/demo") != f.git(t, worktree, "rev-parse", "HEAD") {
+			t.Error("pr no subió la rama con la comprobación previa en verde")
+		}
+	})
+}
+
+// Cuerpos de scripts/pre-pr-check.sh para las pruebas de `pr`: el rojo falla con
+// una marca reconocible y el verde deja constancia en el registro de resguardos.
+const (
+	prePRCheckRed   = "echo PRECHECK-ROJO >&2\nexit 1\n"
+	prePRCheckGreen = "echo pre-pr-check >> \"$AXIOM_STUB_LOG\"\n"
+)
+
+// commitPrePRCheck deja en el worktree un scripts/pre-pr-check.sh con body y lo
+// confirma: `pr` rechaza un worktree con cambios sin confirmar.
+func (f *wrapperFixture) commitPrePRCheck(t *testing.T, worktree, body string) {
+	t.Helper()
+	dir := filepath.Join(worktree, "scripts")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "pre-pr-check.sh"), []byte("#!/usr/bin/env bash\n"+body), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	f.git(t, worktree, "add", "scripts/pre-pr-check.sh")
+	f.git(t, worktree, "commit", "-q", "-m", "pre-pr-check")
 }
 
 func TestScriptsAxiomWorktreeShellDoneRunsAxiomBranchDone(t *testing.T) {
@@ -563,6 +623,46 @@ func TestScriptsAxiomWorktreePowerShellDrivesAxiomBranch(t *testing.T) {
 		}
 		if got := f.git(t, f.remote, "branch", "--list", "inc/demo"); !strings.Contains(got, "inc/demo") {
 			t.Errorf("pr no publicó la rama en origin:\n%s", got)
+		}
+		if !strings.Contains(stdout, "se omite la comprobación previa") {
+			t.Errorf("pr no avisó de que la rama no trae scripts/pre-pr-check.sh:\n%s", stdout)
+		}
+	})
+
+	// La comprobación previa se ejecuta con el Git Bash de Git for Windows: la marca
+	// del script en la salida prueba que se encontró y se lanzó.
+	t.Run("pr con la comprobación previa en rojo", func(t *testing.T) {
+		f.commitPrePRCheck(t, worktree, prePRCheckRed)
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, "pr", "demo", "-Label", "chore")...)
+		if code == 0 || !strings.Contains(stdout+stderr, "PRECHECK-ROJO") || !strings.Contains(stdout, "La comprobación previa falló") {
+			t.Fatalf("pr debía parar con la comprobación previa en rojo, salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+		}
+		if strings.Contains(f.logText(t), "gh pr create") {
+			t.Error("pr abrió un PR con la comprobación previa en rojo")
+		}
+		if f.git(t, f.remote, "rev-parse", "inc/demo") == f.git(t, worktree, "rev-parse", "HEAD") {
+			t.Error("pr subió la rama con la comprobación previa en rojo")
+		}
+	})
+
+	t.Run("pr con la comprobación previa en verde", func(t *testing.T) {
+		f.commitPrePRCheck(t, worktree, prePRCheckGreen)
+		if err := os.Remove(f.log); err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		stdout, stderr, code := f.run(t, powershell, powerShellArgs(script, "pr", "demo", "-Label", "chore")...)
+		if code != 0 {
+			t.Fatalf("pr salió con %d\nstdout: %s\nstderr: %s", code, stdout, stderr)
+		}
+		log := f.logText(t)
+		if check, create := strings.Index(log, "pre-pr-check"), strings.Index(log, "gh pr create"); check < 0 || create < check {
+			t.Errorf("pr no ejecutó la comprobación previa antes de crear el PR:\n%s", log)
+		}
+		if f.git(t, f.remote, "rev-parse", "inc/demo") != f.git(t, worktree, "rev-parse", "HEAD") {
+			t.Error("pr no subió la rama con la comprobación previa en verde")
 		}
 	})
 
