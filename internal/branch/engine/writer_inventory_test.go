@@ -78,13 +78,14 @@ var osWritePrimitives = map[string]bool{
 
 // guardCalls son las llamadas que cuentan como guarda A en el cuerpo de una función guardada.
 var guardCalls = map[string]bool{
-	"guardChangeWriter":      true, // internal/cli, contexto de la tabla del diseño §2.11
-	"GuardChangeWriter":      true, // exportada para cmd/axiom y el dashboard
-	"guardComposeDelta":      true, // archive-compose con delta bajo changes/<c>/
-	"guardComposeLooseDelta": true,
-	"guardIncrementFolder":   true, // dashboard: carpeta de un cambio existente
-	"RequireChangeBranch":    true, // el motor, directamente
-	"applySealBranchPolicy":  true, // kickoff seal: guarda y después instantánea
+	"guardChangeWriter":        true, // internal/cli, contexto de la tabla del diseño §2.11
+	"guardChangeWriterCollect": true, // internal/cli, variante con recolector de avisos (RecordGate)
+	"GuardChangeWriter":        true, // exportada para cmd/axiom y el dashboard
+	"guardComposeDelta":        true, // archive-compose con delta bajo changes/<c>/
+	"guardComposeLooseDelta":   true,
+	"guardIncrementFolder":     true, // dashboard: carpeta de un cambio existente
+	"RequireChangeBranch":      true, // el motor, directamente
+	"applySealBranchPolicy":    true, // kickoff seal: guarda y después instantánea
 }
 
 type writerStatus string
@@ -110,7 +111,7 @@ type writerEntry struct {
 var guardedWriters = map[string]writerEntry{
 	// --- CLI: la guarda A con el contexto de la tabla del diseño §2.11 (S8-c1 y S8-c3) ---
 	"internal/cli.runSDDKickoffSeal":              {status: statusGuarded, reason: "kickoff seal: guarda A y después la instantánea (applySealBranchPolicy); `--infer` y el kickoff sin instantánea quedan exentos dentro de la guarda (R15)"},
-	"internal/cli.runSDDGateRecord":               {status: statusGuarded, reason: "gate record: contexto ordinary, archive con --gate integration (G-10); cubre AppendGate"},
+	"internal/cli.RecordGate":                     {status: statusGuarded, reason: "gate record: contexto ordinary, archive con --gate integration (G-10); cubre AppendGate"},
 	"internal/cli.RunSDDContinue":                 {status: statusGuarded, reason: "marcador de instancia: guarda solo si el marcador se va a escribir (ChangeInstanceMarkerPending)"},
 	"internal/cli.runArchiveContextPrepare":       {status: statusGuarded, reason: "archive context prepare: integration.yaml, contexto archive"},
 	"internal/cli.runArchiveContextVerify":        {status: statusGuarded, reason: "archive context verify: integration.yaml, contexto archive"},

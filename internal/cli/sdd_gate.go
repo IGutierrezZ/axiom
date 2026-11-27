@@ -1,16 +1,14 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"strings"
-	"time"
 
-	"github.com/IGutierrezZ/axiom/v3/internal/branch"
 	"github.com/IGutierrezZ/axiom/v3/internal/kickoff"
 	"github.com/IGutierrezZ/axiom/v3/internal/multirole"
-	"github.com/IGutierrezZ/axiom/v3/internal/pathquote"
 )
 
 // lastRoleNoticeMarker is the stable phrase RunSDDGate's last-role notice
@@ -62,172 +60,60 @@ func runSDDGateRecord(args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := validateCommitReviewShape(parsed, commitReview); err != nil {
-		return err
-	}
-	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
+	outcome, err := RecordGate(context.Background(), GateRecordInput{
+		CWD: parsed.CWD, Change: parsed.Change, Gate: parsed.Gate, Decision: parsed.Decision,
+		Reason: parsed.Reason, Actor: parsed.Actor, HandOff: parsed.HandOff, CommitReview: commitReview,
+		EvidenceKind: parsed.EvidenceKind, Commit: parsed.Commit, BaseRef: parsed.BaseRef, Evidence: parsed.Evidence,
+	})
+	// Los avisos salen antes de cualquier stdout y también cuando el registro falla.
+	flushGateNotices(outcome.Notices)
 	if err != nil {
 		return err
-	}
-	workspaceRoot := loc.WorkspaceRoot
-	parsed = completeGateBaseRef(parsed, loc)
-	// Guarda A (RF-BRA-20): una sola consulta cubre AppendGate de esta invocación; la compuerta
-	// de integración se registra en la rama de archivado (G-10).
-	writerContext := branch.ContextOrdinary
-	if parsed.Gate == kickoff.GateIntegration {
-		writerContext = branch.ContextArchive
-	}
-	if err := guardChangeWriter(changeRoot, parsed.Change, "sdd gate record", writerContext); err != nil {
-		return err
-	}
-
-	sealed, err := kickoff.Load(changeRoot)
-	if err != nil {
-		return err
-	}
-	if parsed.HandOff {
-		if err := requireHandOffStops(parsed, sealed, workspaceRoot); err != nil {
-			return err
-		}
-	}
-	if commitReview != "" {
-		if err := requireCommitReviewStops(parsed, sealed, workspaceRoot); err != nil {
-			return err
-		}
-		// Sin cesión, prepareHandOff no corre: la puerta aún pendiente se comprueba aquí antes de
-		// calcular nada más y otra vez bajo el cerrojo (RF-GAT-20).
-		if !parsed.HandOff {
-			ledger, err := kickoff.LoadGates(changeRoot)
-			if err != nil {
-				return err
-			}
-			if err := gateStillPendingCheck(parsed, workspaceRoot)(ledger); err != nil {
-				return err
-			}
-		}
-	}
-
-	var roster []multirole.RoleAssignment
-	if sealed != nil {
-		roster = rosterFromKickoff(*sealed)
-	}
-	isRoleApply := isRoleApplyGate(parsed.Gate)
-	if isRoleApply {
-		if sealed == nil {
-			return fmt.Errorf("no se puede registrar %q: el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero, por ejemplo con `axiom sdd kickoff seal --cwd %s --change %s --execution-style checkpointed`",
-				parsed.Gate, parsed.Change, pathquote.Quote(workspaceRoot), pathquote.Quote(parsed.Change))
-		}
-		if !gateKeyInRoster(parsed.Gate, roster) {
-			// refusal:by-design operator-knowledge: only the operator knows which sealed role they meant to target; the message already lists the complete valid roster, and no runnable command can pick a role for them -- the roster is fixed at kickoff time and this verb never re-seals it
-			return fmt.Errorf("%q no pertenece al roster sellado de %q (roster: %s)", parsed.Gate, parsed.Change, strings.Join(rosterRoleNames(roster), ", "))
-		}
-	}
-
-	// Sin --actor, el actor es la identidad git de la raíz del workspace; sin identidad
-	// completa se conserva "cli" y el aviso se emite solo si el registro llega a escribirse.
-	actor, actorWarning := parsed.Actor, ""
-	if actor == "" {
-		actor, actorWarning = defaultActor(workspaceRoot, gateActorTarget)
-	}
-	digest, err := gateArtifactDigest(changeRoot, parsed.Gate, sealed)
-	if err != nil {
-		return err
-	}
-	// Exit 2 of a stop: every check is a read and runs BEFORE gates.yaml is written (DD-02).
-	var handOff *handOffPrepared
-	if parsed.HandOff {
-		handOff, err = prepareHandOff(parsed, loc, changeRoot, roster, digest)
-		if err != nil {
-			return err
-		}
-	}
-	record := kickoff.GateRecord{
-		Gate:           parsed.Gate,
-		Decision:       parsed.Decision,
-		Reason:         parsed.Reason,
-		ArtifactDigest: digest,
-		HandedOff:      handOff != nil,
-		CommitReview:   commitReview,
-		Actor:          actor,
-		RecordedAt:     time.Now().UTC(),
-	}
-	if handOff != nil {
-		// The phase handed over is persisted as computed NOW: the roster moves on afterwards.
-		record.HandedOffTo = handOff.handedOffTo
-	}
-	// Evidence verification runs, and can refuse, BEFORE kickoff.AppendGate:
-	// an unconfirmed pr_merged ancestor must append nothing to gates.yaml
-	// (task 21.1's second case), which is only guaranteed by checking first.
-	if parsed.EvidenceKind != "" {
-		evidence, evidenceErr := verifyGateEvidence(workspaceRoot, parsed)
-		if evidenceErr != nil {
-			return evidenceErr
-		}
-		record.EvidenceKind = evidence.Kind
-		record.EvidenceRef = evidence.Ref
-		record.EvidenceBaseRef = evidence.BaseRef
-		record.Verified = evidence.Verified
-	}
-	if handOff != nil || commitReview != "" {
-		// The "still pending" check is repeated under the ledger lock: two recorders (exit 2 and
-		// exit 3, or two approvals with a commit review mode) racing on the same pending gate must
-		// leave a single approved record.
-		err = kickoff.AppendGateChecked(changeRoot, record, gateStillPendingCheck(parsed, workspaceRoot))
-	} else {
-		err = kickoff.AppendGate(changeRoot, record)
-	}
-	if err != nil {
-		return err
-	}
-	emitActorIdentityWarning(actorWarning)
-	emitGateIntegrationEvent(loc, changeRoot, record)
-
-	// RF-GAT-15: aprobar publica, pero `gate record` solo registra. Calcula (sin ejecutar) la orden de
-	// `axiom sdd publish` que sigue al registro, para que el orquestador la ejecute una vez.
-	publish := resolveGatePublish(parsed, workspaceRoot, handOff)
-
-	if !parsed.JSON {
-		if err := writeGateRecordHeader(stdout, parsed, commitReview, handOff); err != nil {
-			return err
-		}
-		if handOff != nil {
-			if err := writeHandOffDelivery(stdout, handOff); err != nil {
-				return err
-			}
-		} else if err := writePublishNext(stdout, publish); err != nil {
-			return err
-		}
-	}
-
-	var lastRoleClosed *bool
-	var pendingNonBlocking []kickoff.PendingRole
-	if isRoleApply && sealed != nil {
-		closedValue := false
-		lastRoleClosed = &closedValue
-		if parsed.Decision == kickoff.DecisionApproved {
-			closed, pending, evalErr := lastBlockingRoleJustClosed(changeRoot, roster, parsed.Gate)
-			if evalErr != nil {
-				return evalErr
-			}
-			closedValue = closed
-			pendingNonBlocking = pending
-			// The notice is the only thing the approval of the last blocking role adds
-			// (RF-RCL-01): no handoff.md is written any more, the ledger already says every
-			// blocking role closed and `status` opens verify from it (RF-RCL-03). It
-			// accompanies exit 2 and exit 3 alike, names the deferred and optional roles
-			// still open, and is not repeated when one of them closes later.
-			if closed && !parsed.JSON {
-				if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (RF-RCL-01, RF-RCL-03).%s\n", lastRoleNoticeMarker, parsed.Change, pendingNonBlockingNotice(pending)); err != nil {
-					return err
-				}
-			}
-		}
 	}
 
 	if parsed.JSON {
-		return writeGateRecordJSON(stdout, parsed, commitReview, handOff, publish, lastRoleClosed, pendingNonBlocking)
+		return writeGateRecordJSON(stdout, gateRecordDocument(outcome))
+	}
+	var handOff *handOffPrepared
+	if outcome.Delivery != nil {
+		handOff = &handOffPrepared{handedOffTo: outcome.HandedOffTo, plan: *outcome.Delivery}
+	}
+	if err := writeGateRecordHeader(stdout, parsed, commitReview, handOff); err != nil {
+		return err
+	}
+	if handOff != nil {
+		if err := writeHandOffDelivery(stdout, handOff); err != nil {
+			return err
+		}
+	} else if err := writePublishNext(stdout, gatePublish{target: outcome.Publish, unavailable: outcome.PublishUnavailable}); err != nil {
+		return err
+	}
+	// The notice is the only thing the approval of the last blocking role adds
+	// (RF-RCL-01): no handoff.md is written any more, the ledger already says every
+	// blocking role closed and `status` opens verify from it (RF-RCL-03). It
+	// accompanies exit 2 and exit 3 alike, names the deferred and optional roles
+	// still open, and is not repeated when one of them closes later.
+	if outcome.LastRoleClosed != nil && *outcome.LastRoleClosed {
+		if _, err := fmt.Fprintf(stdout, "Aviso: se ha concluido la implementacion del %s del cambio %q; queda abierta la verificacion global de la solucion (RF-RCL-01, RF-RCL-03).%s\n", lastRoleNoticeMarker, parsed.Change, pendingNonBlockingNotice(outcome.PendingNonBlocking)); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+// flushGateNotices vuelca cada aviso recogido por RecordGate en su sumidero de siempre y con el
+// mismo prefijo, en el orden en que se produjeron.
+func flushGateNotices(notices []GateNotice) {
+	for _, n := range notices {
+		switch n.Source {
+		case gateNoticeBranchGuard:
+			_, _ = fmt.Fprintln(writerBranchWarnings, "Aviso: "+n.Text)
+		case gateNoticeActorIdentity:
+			emitActorIdentityWarning(n.Text)
+		case gateNoticeIntegrationDispatch:
+			_, _ = fmt.Fprintln(integrationWarnings, "Aviso: "+n.Text)
+		}
+	}
 }
 
 // pendingNonBlockingNotice is the sentence the last-role notice appends when roles
