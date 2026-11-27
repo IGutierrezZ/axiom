@@ -187,6 +187,9 @@ out.outcome = [
   eco.operationOutcome('upgrade', { success: true, phases: { upgrade: { restart_required: true } } }, false),
   eco.operationOutcome('upgrade', {}, true),
   eco.operationOutcome('backup', { name: 'x' }, false),
+  eco.operationOutcome('upgrade', { success: true, phases: { upgrade: { status: 'skipped', manual_hint: 'go install …' }, sync: { executed: true, success: true } } }, false),
+  eco.operationOutcome('upgrade', { success: false, phases: { upgrade: { status: 'skipped' }, sync: { executed: true, success: false } } }, false),
+  eco.operationOutcome('upgrade', { success: true, phases: { upgrade: { status: 'succeeded' }, sync: { executed: true, success: true } } }, false),
 ];
 out.labels = eco.OPERATION_LABEL;
 console.log(JSON.stringify(out));
@@ -319,8 +322,13 @@ console.log(JSON.stringify(out));
 		t.Errorf("motivo de omisión desconocido: %q", res.UnknownSkip)
 	}
 
-	// Estado de «Última operación».
-	wantOutcome := []outcome{{"ok", "correcta"}, {"bad", "con errores"}, {"warn", "reinicio pendiente"}, {"bad", "con errores"}, {"ok", "correcta"}}
+	// Estado de «Última operación». Un upgrade «skipped» no reemplazó axiom: nunca es
+	// «correcta»; si además falló sync, manda el error.
+	wantOutcome := []outcome{{"ok", "correcta"}, {"bad", "con errores"}, {"warn", "reinicio pendiente"}, {"bad", "con errores"}, {"ok", "correcta"},
+		{"warn", "axiom sin actualizar"}, {"bad", "con errores"}, {"ok", "correcta"}}
+	if len(res.Outcome) != len(wantOutcome) {
+		t.Fatalf("operationOutcome devolvió %d resultados, se esperaban %d", len(res.Outcome), len(wantOutcome))
+	}
 	for i, w := range wantOutcome {
 		if res.Outcome[i] != w {
 			t.Errorf("operationOutcome #%d = %+v, se esperaba %+v", i, res.Outcome[i], w)

@@ -136,12 +136,13 @@ export function formatEcosystemUpgradeSequence(data) {
 export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración', install: 'install' };
 
 // operationOutcome decide el estado visible de una operación terminada. Un upgrade que
-// dejó el binario reemplazado acabó bien, pero queda pendiente reiniciar axiom.
+// dejó el binario reemplazado acabó bien, pero queda pendiente reiniciar axiom. Uno cuya
+// fase upgrade quedó «skipped» no reemplazó axiom (relevo manual): nunca es «correcta».
 export function operationOutcome(kind, data, failed) {
   if (failed) return { tone: 'bad', text: 'con errores' };
-  if (kind === 'upgrade' && data && data.phases && data.phases.upgrade && data.phases.upgrade.restart_required) {
-    return { tone: 'warn', text: 'reinicio pendiente' };
-  }
+  const upgrade = kind === 'upgrade' && data && data.phases && data.phases.upgrade;
+  if (upgrade && upgrade.restart_required) return { tone: 'warn', text: 'reinicio pendiente' };
   if (data && data.success === false) return { tone: 'bad', text: 'con errores' };
+  if (upgrade && upgrade.status === 'skipped') return { tone: 'warn', text: 'axiom sin actualizar' };
   return { tone: 'ok', text: 'correcta' };
 }
