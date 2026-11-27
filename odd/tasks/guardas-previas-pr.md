@@ -43,7 +43,9 @@ Fuera de alcance: los fallos de plataforma (Linux frente a Windows), el job de l
 - [x] **T1 · El ratchet reutiliza el deadcode instalado** — ruta: inline.
   - `installed_deadcode` busca `deadcode` en GOBIN o en el primer GOPATH/bin y comprueba con `go version -m` que es `golang.org/x/tools` v0.49.0. Sin él: en la CI (`CI` definido) se compila en temporal como antes; fuera, falla con `go install golang.org/x/tools/cmd/deadcode@v0.49.0`.
   - Evidencia: sin instalar, sale con 1 y la orden de instalación; instalado en `%USERPROFILE%\go\bin`, `bash scripts/deadcode-ratchet.sh` sale con 0 en 8 s («no new unreachable functions») y el binario sigue en su sitio después.
-- [ ] **T2 · Script de comprobación previa y lista de guardas** — ruta: inline.
+- [x] **T2 · Script de comprobación previa y lista de guardas** — ruta: inline.
+  - `scripts/pre-pr-guards.txt`: las 8 guardas transversales que fallaron en la CI y siguen existiendo (`TestManualDeInicio…` ya no existe). `scripts/pre-pr-check.sh`: gofmt con la selección de `internal/gofmtcheck`, las guardas por nombre (cada una debe salir `--- PASS`) y el ratchet; ejecuta los tres pasos aunque falle uno. Al fallar, solo muestra la salida de las guardas que fallan o se omiten, los errores de compilación y la línea `FAIL` del paquete.
+  - Evidencia: en el worktree sale con 0 en 53 s. Con un `.go` sin formato, una guarda inexistente, una que falla, una omitida y otra que no compila, sale con 1 y nombra cada una con su salida.
 - [ ] **T3 · `pr` ejecuta la comprobación antes de subir la rama** — ruta: inline.
 - [ ] **T4 · Reglas contra el código muerto para los agentes** — ruta: inline.
 
