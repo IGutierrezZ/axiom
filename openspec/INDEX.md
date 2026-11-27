@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-27 11:16:08 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 643 | **Total Escenarios BDD:** 3220
+> **Última Sincronización:** 2026-11-27 21:58:58 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 645 | **Total Escenarios BDD:** 3224
 
 ---
 
@@ -17,7 +17,7 @@
 | `axiom-sdd-cli-integration` | Especificación de Requerimientos: Integración de Comandos SDD en la CLI axiom (INC-13) | 14 | 83 | [Ver Spec](specs/axiom-sdd-cli-integration/spec.md) |
 | `axiom-skills-index-governance` | Especificación Viva: Gobernanza del Índice Unificado de Skills | 7 | 14 | [Ver Spec](specs/axiom-skills-index-governance/spec.md) |
 | `axiom-tui-branding` | Especificación de Requerimientos: Arranque de axiom, Comandos de Ecosistema en CLI axiom y Pasarela de gentle-ai (INC-14) | 3 | 7 | [Ver Spec](specs/axiom-tui-branding/spec.md) |
-| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 11 | 15 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
+| `axiom-updater-resilience` | Especificación Viva: Resiliencia y Gobernanza del Actualizador Autónomo de Axiom | 13 | 19 | [Ver Spec](specs/axiom-updater-resilience/spec.md) |
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 27 | 140 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
@@ -322,6 +322,7 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
   - *Escenario BDD:* Verificación de binario en ejecución
 - **[RF-UPD-04]** Endpoint Web UI encadena upgrade ➔ sync con reporte consolidado
   - *Escenario BDD:* Secuencia completada en el Dashboard
+  - *Escenario BDD:* Axiom sustituido durante la secuencia
 - **[RF-UPD-05]** No-regresión del verbo CLI axiom upgrade
   - *Escenario BDD:* Ejecución de axiom upgrade desde consola
 - **[RF-UPD-06]** Identidad visible del fork en vistas de actualización
@@ -340,6 +341,11 @@ Estrategias y salvaguardas de actualización del binario `axiom` para entornos W
 - **[RF-UPD-11]** Instalación propia en Windows independiente del nombre apartado
   - *Escenario BDD:* Nombre apartado ocupado por un dashboard anterior
   - *Escenario BDD:* Falla la sustitución
+- **[RF-UPD-12]** Aviso de versión nueva solo con releases
+  - *Escenario BDD:* Binario de main sin release nueva
+  - *Escenario BDD:* Release que alcanza al binario de main
+- **[RF-UPD-13]** Comprobación de main bajo demanda
+  - *Escenario BDD:* Main por delante del binario instalado
 
 ### Dominio: `axiom-user-state-and-env` — Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12)
 

@@ -22,7 +22,8 @@ El servidor HTTP local DEBE exponer el endpoint `GET /api/ecosystem/doctor` que 
 - **Y** el cuerpo JSON contiene la lista de diagnósticos con campos `name`, `status` (`ok`, `warning`, `error`), `details` y `recommendation`
 
 ### Requirement: Sincronización y Actualización Reactiva de Herramientas en Web UI (RF-UIP-02)
-El servidor HTTP local DEBE exponer los endpoints `POST /api/ecosystem/sync` y `POST /api/ecosystem/upgrade`. El endpoint `POST /api/ecosystem/upgrade` DEBE ejecutar secuencialmente la cadena `upgrade` ➔ `sync` con reporte estructurado por fases (`phases.upgrade`, `phases.sync`), omitiendo `sync` de forma segura si `upgrade` exige reinicio del proceso (`restart_required: true`). El frontend web DEBE ofrecer botones de acción interactiva en la pestaña `⚙️ Ecosistema & Herramientas` y mostrar un registro de salida con los resultados detallados de la operación.
+
+El servidor HTTP local DEBE exponer los endpoints `POST /api/ecosystem/sync` y `POST /api/ecosystem/upgrade`. El endpoint `POST /api/ecosystem/upgrade` DEBE ejecutar secuencialmente la cadena `upgrade` ➔ `sync` en segundo plano, con reporte estructurado por fases (`phases.upgrade`, `phases.sync`) disponible en el estado del trabajo, omitiendo `sync` de forma segura si `upgrade` exige reinicio del proceso (`restart_required: true`). El frontend web DEBE ofrecer botones de acción interactiva en la pestaña `⚙️ Ecosistema & Herramientas`, seguir el avance del trabajo y mostrar un registro de salida con los resultados detallados de la operación.
 
 #### Scenario: Ejecución de sincronización de configuraciones
 - **DADO** la pestaña de Ecosistema en el Dashboard Web
@@ -35,10 +36,8 @@ El servidor HTTP local DEBE exponer los endpoints `POST /api/ecosystem/sync` y `
 - **DADO** la pestaña de Ecosistema en el Dashboard Web
 - **CUANDO** el usuario pulsa el botón "Actualizar Herramientas"
 - **Y** se envía una petición `POST /api/ecosystem/upgrade`
-- **ENTONCES** el servidor comprueba versiones, actualiza binarios y encadena la sincronización de agentes si no se requiere reinicio
-- **Y** retorna el informe consolidado por fases en formato JSON
-
----
+- **ENTONCES** el servidor responde `202 Accepted` y, en segundo plano, comprueba versiones, actualiza binarios y encadena la sincronización de agentes si no se requiere reinicio
+- **Y** la interfaz muestra el informe consolidado por fases cuando el trabajo termina
 
 ### Requirement: Gestión Visual de Respaldos en Web UI (RF-UIP-03)
 El servidor HTTP local DEBE exponer los endpoints `GET /api/ecosystem/backups`, `POST /api/ecosystem/backups/create` y `POST /api/ecosystem/backups/restore` integrados con el paquete `internal/backup`. El frontend web DEBE presentar la lista cronológica de snapshots en `~/.axiom/backups/`, permitir la creación de un nuevo respaldo bajo demanda con nombre descriptivo opcional y permitir restaurar un respaldo seleccionado con confirmación previa.

@@ -200,6 +200,14 @@ const failedJob = (job) => { try { eco.upgradeJobResult(job); return null; } cat
 out.jobFailedPhased = failedJob({ phase: 'failed', message: 'sin red', manual_hint: 'go install …@main', result: { success: false, phases: { upgrade: { status: 'failed', error: 'sin red', manual_hint: '' }, sync: { executed: false, skipped_reason: 'upgrade-failed' } } } });
 out.jobFailedSameHint = failedJob({ phase: 'failed', message: 'x', manual_hint: 'descarga', result: { success: false, phases: { upgrade: { status: 'skipped', manual_hint: 'descarga' }, sync: { executed: true, success: false } } } });
 out.jobFailedBare = failedJob({ phase: 'failed', message: 'Se perdió la conexión', manual_hint: '' });
+out.mainView = [
+  eco.mainCheckView({ status: 'update_available', installed: 'v3.9.1-0.x-aaa', latest: 'main@bbb' }),
+  eco.mainCheckView({ status: 'up_to_date', current: 'v3.9.1-0.x-bbb', latest: 'main@bbb' }),
+  eco.mainCheckView({ status: 'dev_build', current: 'dev' }),
+  eco.mainCheckView({ status: 'check_failed', current: 'v3.9.0', latest: 'main@bbb' }),
+  eco.mainCheckView({ status: 'check_failed', current: 'v3.9.0' }),
+  eco.mainCheckView(null),
+].map(v => v.tone + '|' + v.text);
 console.log(JSON.stringify(out));
 `
 	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
@@ -258,6 +266,7 @@ console.log(JSON.stringify(out));
 		JobFailedPhased   *failedJobView `json:"jobFailedPhased"`
 		JobFailedSameHint *failedJobView `json:"jobFailedSameHint"`
 		JobFailedBare     *failedJobView `json:"jobFailedBare"`
+		MainView          []string       `json:"mainView"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
 		t.Fatalf("salida de node ilegible: %v\n%s", err, raw)
@@ -372,6 +381,24 @@ console.log(JSON.stringify(out));
 	}
 	if v := res.JobFailedBare; v == nil || v.Phases || v.Present != "Se perdió la conexión" {
 		t.Errorf("trabajo fallido sin fases: %+v", v)
+	}
+
+	// «Buscar en main»: por delante, al día, sin comparar (desarrollo o release) y sin respuesta.
+	wantMain := []string{
+		"warn|main va por delante: v3.9.1-0.x-aaa → main@bbb. Para instalarlo, elige el canal Main y pulsa Actualizar.",
+		"ok|Tu Axiom ya está en la cabeza de main (main@bbb).",
+		"neutral|Es una compilación de desarrollo: no se compara con main.",
+		"neutral|La cabeza de main es main@bbb. Tu Axiom (v3.9.0) no se compiló desde main y no se puede comparar.",
+		"bad|No se pudo consultar main. Inténtalo más tarde.",
+		"bad|No se pudo consultar main. Inténtalo más tarde.",
+	}
+	if len(res.MainView) != len(wantMain) {
+		t.Fatalf("mainCheckView devolvió %d resultados, se esperaban %d", len(res.MainView), len(wantMain))
+	}
+	for i, w := range wantMain {
+		if res.MainView[i] != w {
+			t.Errorf("mainCheckView #%d = %q, se esperaba %q", i, res.MainView[i], w)
+		}
 	}
 }
 

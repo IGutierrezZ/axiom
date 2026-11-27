@@ -144,6 +144,7 @@ func (s *Server) registerRoutes() {
 	s.mux.HandleFunc("/api/ecosystem/backups/restore", s.handleEcosystemBackupRestore)
 	s.mux.HandleFunc("/api/ecosystem/models", s.handleEcosystemModels)
 	s.mux.HandleFunc("/api/system/version", s.handleSystemVersion)
+	s.mux.HandleFunc("/api/system/version/main", s.handleSystemVersionMain)
 	s.mux.HandleFunc("/api/system/update", s.handleSystemUpdate)
 	s.mux.HandleFunc("/api/system/update/status", s.handleSystemUpdateStatus)
 	s.mux.HandleFunc("/api/system/restart", s.handleSystemRestart)

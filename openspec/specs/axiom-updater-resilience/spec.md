@@ -49,15 +49,20 @@ Todas las salvaguardas de comprobación previa de binarios en ejecución, renomb
 
 ### Requirement: Endpoint Web UI encadena upgrade ➔ sync con reporte consolidado (RF-UPD-04)
 
-El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuencialmente la fase de actualización de binarios (`upgrade`) seguida de la fase de sincronización de reglas y configuraciones (`sync`), retornando un DTO consolidado con el desglose por fases (`phases.upgrade`, `phases.sync`). Si la fase `upgrade` requiere reinicio del proceso (`restart_required: true`), la fase `sync` DEBE omitirse limpiamente (`skipped_reason: "restart-required"`).
+El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuencialmente la fase de actualización de binarios (`upgrade`) seguida de la fase de sincronización de reglas y configuraciones (`sync`) en el trabajo de actualización en segundo plano del proceso, con el canal indicado en la petición, y DEBE responder `202 Accepted` con el estado del trabajo sin esperar a que termine. Al terminar, `GET /api/system/update/status` DEBE incluir en `result` el DTO consolidado con el desglose por fases (`phases.upgrade`, `phases.sync`). Si la fase `upgrade` requiere reinicio del proceso (`restart_required: true`), la fase `sync` DEBE omitirse limpiamente (`skipped_reason: "restart-required"`) y el dashboard DEBE relanzarse con el binario nuevo. Si ya hay un trabajo en curso, DEBE devolver su estado y no lanzar otro.
 
 #### Scenario: Secuencia completada en el Dashboard
 - **DADO** una petición `POST /api/ecosystem/upgrade` desde la Web UI
 - **CUANDO** no se requiere reinicio inmediato del servidor
-- **ENTONCES** se ejecuta `upgrade` y posteriormente `sync`
-- **Y** la respuesta 200 OK contiene el reporte de ambas fases
+- **ENTONCES** la respuesta es `202 Accepted` con el estado del trabajo
+- **Y** se ejecuta `upgrade` y posteriormente `sync`
+- **Y** el estado terminado del trabajo contiene en `result` el reporte de ambas fases
 
----
+#### Scenario: Axiom sustituido durante la secuencia
+- **DADO** una petición `POST /api/ecosystem/upgrade` que actualiza el propio binario de Axiom
+- **CUANDO** la fase `upgrade` termina con `restart_required: true`
+- **ENTONCES** `sync` queda omitida con `skipped_reason: "restart-required"`
+- **Y** el dashboard se relanza con el binario nuevo, que sincroniza el workspace al arrancar
 
 ### Requirement: No-regresión del verbo CLI axiom upgrade (RF-UPD-05)
 
@@ -154,4 +159,28 @@ En Windows, la actualización del propio binario con `go install` DEBE compilar 
 - **DADO** una compilación correcta en el directorio temporal
 - **CUANDO** no se puede mover el binario nuevo a su ruta
 - **ENTONCES** el binario anterior vuelve a su ruta y la actualización informa del fallo
+
+### Requirement: Aviso de versión nueva solo con releases (RF-UPD-12)
+
+La comprobación automática de versión del dashboard (`GET /api/system/version`) y el trabajo que lanzan el aviso y «Reiniciar con la última versión» DEBEN comparar el binario instalado solo con la última release publicada, aunque el binario sea una pseudo-versión compilada desde `main`. Con las mismas cifras `X.Y.Z`, una versión con sufijo de prerrelease DEBE considerarse anterior a la release. Un canal estable explícito DEBE comparar con releases; solo un canal beta explícito (`beta`, `main` o `nightly`) consulta la cabeza de `main`.
+
+#### Scenario: Binario de main sin release nueva
+- **DADO** un binario instalado `v3.9.1-0.<fecha>-<sha>` y la última release `v3.9.0`
+- **CUANDO** se consulta `GET /api/system/version`
+- **ENTONCES** el estado es `up_to_date`, aunque `main` tenga commits posteriores
+
+#### Scenario: Release que alcanza al binario de main
+- **DADO** un binario instalado `v3.9.1-0.<fecha>-<sha>` y la última release `v3.9.1`
+- **CUANDO** se consulta `GET /api/system/version`
+- **ENTONCES** el estado es `update_available` con `latest: 3.9.1`
+
+### Requirement: Comprobación de main bajo demanda (RF-UPD-13)
+
+El dashboard DEBE exponer `GET /api/system/version/main`, que compara el binario instalado con la cabeza de `main` sin caché, y la pantalla Ecosistema DEBE ofrecer «Buscar en main» en la tarjeta «Actualizar herramientas» para mostrar si hay un commit más reciente. La comprobación de `main` NO DEBE ejecutarse de forma automática.
+
+#### Scenario: Main por delante del binario instalado
+- **DADO** un binario instalado compilado desde un commit anterior a la cabeza de `main`
+- **CUANDO** el usuario pulsa «Buscar en main»
+- **ENTONCES** la tarjeta muestra `main@<sha>` como versión disponible
+- **Y** para instalarla basta con elegir el canal Main y pulsar «Actualizar»
 

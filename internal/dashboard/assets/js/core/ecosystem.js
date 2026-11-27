@@ -158,6 +158,27 @@ export function presentUpgradeError(err) {
   return lines.filter(Boolean).join('\n');
 }
 
+// mainCheckView presenta «Buscar en main» (GET /api/system/version/main): si la cabeza
+// de main va por delante del Axiom instalado. Un binario de release no lleva commit
+// y no se puede comparar; aun así se dice cuál es la cabeza de main.
+export function mainCheckView(info) {
+  const mine = (info && (info.installed || info.current)) || '';
+  const latest = (info && info.latest) || '';
+  switch (info && info.status) {
+    case 'update_available':
+      return { tone: 'warn', label: 'commits nuevos', text: `main va por delante: ${mine} → ${latest}. Para instalarlo, elige el canal Main y pulsa Actualizar.` };
+    case 'up_to_date':
+      return { tone: 'ok', label: 'al día', text: `Tu Axiom ya está en la cabeza de main (${latest}).` };
+    case 'dev_build':
+      return { tone: 'neutral', label: 'sin comparar', text: 'Es una compilación de desarrollo: no se compara con main.' };
+    default:
+      if (latest.startsWith('main@')) {
+        return { tone: 'neutral', label: 'sin comparar', text: `La cabeza de main es ${latest}. Tu Axiom (${mine}) no se compiló desde main y no se puede comparar.` };
+      }
+      return { tone: 'bad', label: 'sin respuesta', text: 'No se pudo consultar main. Inténtalo más tarde.' };
+  }
+}
+
 // ---- Última operación ------------------------------------------------------------------
 
 export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración', install: 'install' };

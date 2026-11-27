@@ -18,8 +18,8 @@
 import { api, escapeHtml } from '../core/api.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
-  OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, presentUpgradeError,
-  sortChecks, statusView, upgradeJobResult
+  OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, mainCheckView, operationOutcome,
+  presentUpgradeError, sortChecks, statusView, upgradeJobResult
 } from '../core/ecosystem.js';
 import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
@@ -364,6 +364,25 @@ function runUpgrade(button) {
   });
 }
 
+// checkMain responde a «Buscar en main»: la cabeza de main solo se consulta aquí, bajo
+// demanda; el aviso de versión nueva solo anuncia releases.
+async function checkMain(button) {
+  const box = $('#eco-main-status');
+  const restore = setBusy(button, 'Buscando…');
+  try {
+    const info = await api('/api/system/version/main');
+    const view = mainCheckView(info);
+    const compare = view.tone === 'warn' && typeof info.release_url === 'string' && /^https:\/\//i.test(info.release_url)
+      ? ` <a class="link-btn" href="${escapeHtml(info.release_url)}" target="_blank" rel="noopener noreferrer">Ver los cambios</a>`
+      : '';
+    box.innerHTML = `${statusPill(view.tone, view.label)} ${escapeHtml(view.text)}${compare}`;
+  } catch (err) {
+    box.innerHTML = `${statusPill('bad', 'sin respuesta')} ${escapeHtml(`No se pudo consultar main: ${err.message}`)}`;
+  } finally {
+    restore();
+  }
+}
+
 async function runBackup(button) {
   if (busy) return;
   const description = await promptDialog({
@@ -408,6 +427,7 @@ async function restoreBackup(button) {
 export function initEcosystem() {
   $('#btn-eco-sync').addEventListener('click', event => runSync(event.currentTarget));
   $('#btn-eco-upgrade').addEventListener('click', event => runUpgrade(event.currentTarget));
+  $('#btn-eco-check-main').addEventListener('click', event => checkMain(event.currentTarget));
   $('#btn-eco-create-backup').addEventListener('click', event => runBackup(event.currentTarget));
   bindModelsEditor($('#eco-models-body'));
   $('#eco-agents-body').addEventListener('click', event => {

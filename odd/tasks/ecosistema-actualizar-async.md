@@ -37,14 +37,15 @@ Sin configuración de TDD en el proyecto ni en la sesión: comprobaciones funcio
 ## Tareas
 
 - [x] T1 · Canal explícito en la comprobación: `CheckOptions{Channel}` y `CheckFilteredWithOptions`; el canal estable explícito ignora la pseudo-versión; prerrelease por detrás de la release para la herramienta propia; el aviso del dashboard y el trabajo lateral usan el canal estable; pruebas. Ruta: inline (unidad pequeña, sin decisiones abiertas). Evidencia: `gofmt` limpio; `go vet ./internal/update/ ./internal/dashboard/` limpio; `go test ./internal/update/ -run 'UsesBetaMainHead|IsBetaUpdateChannel|PseudoVersionStable|HasPrerelease|CheckSingleTool|CheckFiltered|CheckAll|Homebrew'` ok; `go test ./internal/dashboard/ -run 'Version|Update|Restart|Upgrade|Sequence'` ok. `isBetaUpdateChannel` se sustituye por `effectiveChannel` + `isBetaChannel` (sin código huérfano).
-  Cubre: prov:UPD:1
+  Cubre: RF-UPD-12
 - [x] T2 · Ecosistema por el trabajo en segundo plano: `POST /api/ecosystem/upgrade` arranca el trabajo con canal y responde `202`; `result` con el informe consolidado; relanzamiento si Axiom se sustituye; la tarjeta sigue el estado y pinta el resultado; pruebas. Ruta: inline. Evidencia: `go vet ./internal/dashboard/` limpio; `node --check` de `update.js`, `screens/ecosystem.js` y `core/ecosystem.js` (como `.mjs`) ok; `go test ./internal/dashboard/ -run 'EcosystemUpgrade|ManualHintForChannel|UpdateJob|Update|Restart|Version|Sequence|EcosystemEndpoints|EcosystemLogic|Platform|Asset|Canary|Secret'` ok, con `TestEcosystemLogicRuntime` ejecutado en Node (no omitido). Nuevas: `ecosystem_upgrade_job_test.go` (202 y cadena en segundo plano, relanzamiento, fallo con orden del canal, trabajo único) y `TestEcosystemUpgradeUIFollowsTheBackgroundJob`. El estado del trabajo gana `kind` (`update`, `restart`, `ecosystem`) para que el aviso superior no repita lo que pinta la tarjeta. `docs/usage.md` actualizado (aviso solo de releases y Ecosistema en segundo plano).
   Cubre: RF-UPD-04, RF-UIP-02
-- [ ] T3 · «Buscar en main» bajo demanda: `GET /api/system/version/main` sin caché y botón en la tarjeta de Ecosistema; pruebas e integración de la spec viva. Ruta: inline.
+- [x] T3 · «Buscar en main» bajo demanda: `GET /api/system/version/main` sin caché y botón en la tarjeta de Ecosistema; pruebas e integración de la spec viva. Ruta: inline. Evidencia: `go vet ./internal/dashboard/` limpio; `node --check` de `screens/ecosystem.js` y `core/ecosystem.js` (como `.mjs`) ok; `go test ./internal/dashboard/ -run 'CheckMain|EcosystemLogicRuntime|EcosystemUpgrade|Version|Update|Restart|Canary|Secret|Route|Asset'` ok. Nuevas: `main_check_test.go` (sin caché, base = versión instalada, no consulta releases, 405 en POST; botón cableado y `update.js` sin consultas a main) y casos de `mainCheckView` en `TestEcosystemLogicRuntime`. La ruta nueva figura en el inventario de `secrets_canary_test.go`. `docs/usage.md` actualizado.
+  Cubre: RF-UPD-13
 
 ## Progreso
 
-T1 hecha en `6e6900ef9`; T2 hecha. Siguiente paso: T3.
+T1 hecha en `6e6900ef9`; T2 en `09df4d530`; T3 hecha, con la integración de la spec viva en el mismo commit. Siguiente paso: comprobación previa (`scripts/pre-pr-check.sh`) y PR, que decide la persona.
 
 ## Criterio de terminado
 
@@ -79,7 +80,7 @@ El endpoint `POST /api/ecosystem/upgrade` del Dashboard Web DEBE ejecutar secuen
 
 ## ADDED Requirements
 
-### Requirement: Aviso de versión nueva solo con releases (prov:UPD:1)
+### Requirement: Aviso de versión nueva solo con releases (RF-UPD-12)
 
 La comprobación automática de versión del dashboard (`GET /api/system/version`) y el trabajo que lanzan el aviso y «Reiniciar con la última versión» DEBEN comparar el binario instalado solo con la última release publicada, aunque el binario sea una pseudo-versión compilada desde `main`. Con las mismas cifras `X.Y.Z`, una versión con sufijo de prerrelease DEBE considerarse anterior a la release. Un canal estable explícito DEBE comparar con releases; solo un canal beta explícito (`beta`, `main` o `nightly`) consulta la cabeza de `main`.
 
@@ -93,7 +94,7 @@ La comprobación automática de versión del dashboard (`GET /api/system/version
 - **CUANDO** se consulta `GET /api/system/version`
 - **ENTONCES** el estado es `update_available` con `latest: 3.9.1`
 
-### Requirement: Comprobación de main bajo demanda (prov:UPD:2)
+### Requirement: Comprobación de main bajo demanda (RF-UPD-13)
 
 El dashboard DEBE exponer `GET /api/system/version/main`, que compara el binario instalado con la cabeza de `main` sin caché, y la pantalla Ecosistema DEBE ofrecer «Buscar en main» en la tarjeta «Actualizar herramientas» para mostrar si hay un commit más reciente. La comprobación de `main` NO DEBE ejecutarse de forma automática.
 
@@ -126,4 +127,20 @@ El servidor HTTP local DEBE exponer los endpoints `POST /api/ecosystem/sync` y `
 - **Y** se envía una petición `POST /api/ecosystem/upgrade`
 - **ENTONCES** el servidor responde `202 Accepted` y, en segundo plano, comprueba versiones, actualiza binarios y encadena la sincronización de agentes si no se requiere reinicio
 - **Y** la interfaz muestra el informe consolidado por fases cuando el trabajo termina
+```
+
+## Identificadores asignados
+
+```yaml
+schema: axiom.requirement-ids/v1
+pattern: RF-<DOM>-<NN>
+assignments:
+  - provisional: prov:UPD:1
+    definitive: RF-UPD-12
+    capability: axiom-updater-resilience
+    requirement: Aviso de versión nueva solo con releases (RF-UPD-12)
+  - provisional: prov:UPD:2
+    definitive: RF-UPD-13
+    capability: axiom-updater-resilience
+    requirement: Comprobación de main bajo demanda (RF-UPD-13)
 ```
