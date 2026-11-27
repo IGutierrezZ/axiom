@@ -1,0 +1,16 @@
+# Pruebas que vigilan todo el repositorio desde un paquete concreto. La regla de
+# pruebas localizadas (solo los paquetes tocados) no las ejecuta, así que sin
+# esta lista su primer fallo llega en la CI. scripts/pre-pr-check.sh las lanza
+# por nombre y exige que cada una pase: un nombre que ya no existe o una prueba
+# omitida hacen fallar la comprobación.
+#
+# Formato: <paquete> <prueba>. Cuando la CI falle por una guarda transversal que
+# no esté aquí, añádela en la misma PR que la arregla.
+./internal/cli TestEveryProductionRefusalNamesResolutionOrDeclaresByDesign
+./internal/branch/engine TestWriterInventoryEveryWriterIsGuardedOrExempt
+./internal/integrations TestImportsDirection
+./internal/idmigration TestRepositoryLegacyIDResidues
+./internal/dashboard TestEveryDashboardRouteIsClassifiedForTheSecretsCanary
+./internal/dashboard TestHomeStylesUseTokensAndKeepStatesVisible
+./internal/dashboard TestIncrementStylesDefineTheirComponentsWithTokens
+./internal/assets TestToolchainMetaTestsRunInExactlyOneJob

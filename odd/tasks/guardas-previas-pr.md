@@ -1,0 +1,80 @@
+# ODD: comprobación previa a la PR
+
+> **Documento vivo ODD.** Fichero autoritativo: `odd/tasks/guardas-previas-pr.md`.
+> Espejo de recuperación en Engram: topic `odd/guardas-previas-pr/tasks`, proyecto `axiom`.
+> Rama `inc/guardas-previas-pr`, worktree `C:\repos\axiom-wt\guardas-previas-pr\axiom`.
+
+## Objetivo
+
+Que las PRs dejen de fallar en la CI por guardas que nadie ejecuta en local: comprobarlas antes de abrir la PR, desde `scripts/axiom-worktree.{ps1,sh} pr`, y evitar desde el origen el código muerto que caza el deadcode ratchet.
+
+## Problema
+
+Entre el 25-nov a las 22:14 y el 27-nov hubo 99 ejecuciones de CI en PRs y 18 fallos (16 de 70 ramas). Unos 13 tienen la misma causa: guardas transversales que no corren en local, porque la regla de pruebas localizadas solo ejecuta los paquetes tocados.
+
+- **Deadcode Ratchet (5):** funciones de producción que el producto no llama. Tres patrones: solo las llaman pruebas (#347, #350, #353), una variante `XForEvent` deja sin llamantes a la original (#323) y una retirada deja huérfanos (#318).
+- **Meta-tests que vigilan todo el repositorio desde otro paquete (7):** el trinquete de rechazos de `internal/cli` (4), `TestRepositoryLegacyIDResidues` (2), `TestWriterInventory…`, `TestImportsDirection`, el canario y los estilos del dashboard y `TestToolchainMetaTestsRunInExactlyOneJob`.
+- **gofmt (1).**
+
+El deadcode ratchet no se puede ejecutar tal cual en este equipo: compila `deadcode.exe` en un directorio temporal en cada ejecución, y el EDR corporativo marca los ejecutables recién compilados en `%TEMP%`. `axiom.exe`, instalado con `go install` en `%USERPROFILE%\go\bin`, se ejecuta a diario sin problema.
+
+## Por qué
+
+Cada fallo se arregla con un commit pequeño, pero llega tarde: correo de fallo, nueva ronda de CI y otra revisión.
+
+## Alcance
+
+- `scripts/deadcode-ratchet.sh`: reutilizar un `deadcode` v0.49.0 ya instalado en `GOBIN` o `GOPATH/bin`; fuera de la CI, no compilarlo nunca en un directorio temporal.
+- `scripts/pre-pr-check.sh` y `scripts/pre-pr-guards.txt`: gofmt de todo el repositorio, los meta-tests transversales por nombre y el deadcode ratchet.
+- `scripts/axiom-worktree.ps1` y `scripts/axiom-worktree.sh`: `pr` ejecuta la comprobación del worktree del cambio antes de subir la rama; con fallo, ni sube la rama ni crea la PR.
+- `internal/workspace/scripts_axiom_worktree_test.go`: pruebas del enganche.
+- `AGENTS.md` y `CLAUDE.md`: reglas contra el código muerto y la comprobación previa.
+
+Fuera de alcance: los fallos de plataforma (Linux frente a Windows), el job de la CI (no cambia) y la ejecución duplicada y cancelada de `PR Validation`.
+
+## Restricciones
+
+- Sin compilar binarios sueltos: solo `go test` de los paquetes tocados y `-run`; la batería completa, en la CI.
+- TDD: desactivado (sin configuración de proyecto ni de sesión); se ejecutan las comprobaciones funcionales de cada tarea.
+- Entrega `single-pr`, un commit por tarea. Previsión: unas 250 líneas.
+
+## Tareas
+
+- [x] **T1 · El ratchet reutiliza el deadcode instalado** — ruta: inline.
+  - `installed_deadcode` busca `deadcode` en GOBIN o en el primer GOPATH/bin y comprueba con `go version -m` que es `golang.org/x/tools` v0.49.0. Sin él: en la CI (`CI` definido) se compila en temporal como antes; fuera, falla con `go install golang.org/x/tools/cmd/deadcode@v0.49.0`.
+  - Evidencia: sin instalar, sale con 1 y la orden de instalación; instalado en `%USERPROFILE%\go\bin`, `bash scripts/deadcode-ratchet.sh` sale con 0 en 8 s («no new unreachable functions») y el binario sigue en su sitio después.
+- [x] **T2 · Script de comprobación previa y lista de guardas** — ruta: inline.
+  - `scripts/pre-pr-guards.txt`: las 8 guardas transversales que fallaron en la CI y siguen existiendo (`TestManualDeInicio…` ya no existe). `scripts/pre-pr-check.sh`: gofmt con la selección de `internal/gofmtcheck`, las guardas por nombre (cada una debe salir `--- PASS`) y el ratchet; ejecuta los tres pasos aunque falle uno. Al fallar, solo muestra la salida de las guardas que fallan o se omiten, los errores de compilación y la línea `FAIL` del paquete.
+  - Evidencia: en el worktree sale con 0 en 53 s. Con un `.go` sin formato, una guarda inexistente, una que falla, una omitida y otra que no compila, sale con 1 y nombra cada una con su salida.
+- [x] **T3 · `pr` ejecuta la comprobación antes de subir la rama** — ruta: inline.
+  - `axiom-worktree.ps1 pr` lanza el `scripts/pre-pr-check.sh` del worktree con el Git Bash de Git for Windows (`Find-GitBash`, junto a `git --exec-path`, nunca el `bash.exe` de WSL); `axiom-worktree.sh pr`, con `$BASH`. Si falla, ni `git push` ni `gh pr create`; sin el script en la rama, avisa y sigue.
+  - Evidencia: `go test ./internal/workspace -run TestScriptsAxiomWorktree -count=1` en verde (81 s), con los casos nuevos rojo y verde en sh y en PowerShell, y el aviso cuando la rama no trae el script.
+- [x] **T4 · Reglas contra el código muerto para los agentes** — ruta: inline.
+  - `AGENTS.md`: la apertura de PR (ODD-5) incluye la comprobación previa; nueva regla «Código muerto y guardas transversales» con los tres patrones (llamante de producción en el mismo commit y lo de pruebas en `_test.go`; sin variantes `XForY`; borrar lo que queda huérfano), la instalación única de `deadcode` y cómo ampliar `scripts/pre-pr-guards.txt`. `CLAUDE.md`: resumen de ambas cosas.
+  - Evidencia: `go test ./internal/assets -run '^(TestIssueCreationAuthorityBoundary|TestSkillsIndexRowPathsAcceptsEveryPathFormat)$'` (lee el `AGENTS.md` del repositorio) en verde; sin nuevas invocaciones `axiom …` en los documentos.
+
+## Criterios de aceptación
+
+- `scripts/deadcode-ratchet.sh` en local usa el `deadcode` instalado y, si falta o es de otra versión, falla con la orden exacta de instalación; en la CI se comporta como antes.
+- `scripts/pre-pr-check.sh` sale con 0 en `main` y con distinto de 0 si falla gofmt, un meta-test de la lista (o no se ejecuta) o el ratchet.
+- `pr` no sube la rama ni crea la PR cuando la comprobación falla; sin `scripts/pre-pr-check.sh` en la rama, avisa y sigue.
+- `AGENTS.md` recoge las tres reglas contra el código muerto y `CLAUDE.md` la instalación única de `deadcode`.
+
+## Comprobaciones
+
+- `go test ./internal/workspace -run TestScriptsAxiomWorktree -count=1`
+- `bash scripts/pre-pr-check.sh` en el worktree.
+- `bash -n` de los scripts tocados.
+
+## Commits
+
+- T1: `e55b034f1` build(deadcode): reutilizar el deadcode instalado y no compilarlo en temporal fuera de la CI
+- T2: `5fc0346b5` build(scripts): comprobación previa a la PR con gofmt, guardas transversales y deadcode
+- T3: `9655ab80f` build(scripts): ejecutar la comprobación previa en axiom-worktree pr antes de subir la rama
+- T4: `e121c2867` docs(agents): reglas contra el código muerto y comprobación previa a la PR
+
+## Progreso
+
+Las cuatro tareas están hechas. `bash scripts/pre-pr-check.sh` sobre la rama terminada sale en verde (7 s con la caché de compilación caliente; 53 s la primera vez). `deadcode` v0.49.0 está instalado en `%USERPROFILE%\go\bin`.
+
+Pendiente: abrir la PR (`scripts/axiom-worktree.ps1 pr guardas-previas-pr -Label chore -Lane odd`), que es decisión de la persona. Sin verificar: el camino de la CI del ratchet (compilación temporal con `CI` definido) no se ha ejecutado en local para no compilar en `%TEMP%`; es el mismo código de antes y lo ejecutará el job `Deadcode Ratchet` de la PR.
