@@ -45,6 +45,8 @@ target="${DEADCODE_TARGET:-./cmd/axiom}"
 # x/tools whose go.mod still accepts the go directive of this repository
 # (v0.50.0 requires go 1.26), and it yields the same baseline on both.
 tool="golang.org/x/tools/cmd/deadcode@v0.49.0"
+tool_path="${tool%@*}"
+tool_version="${tool##*@}"
 
 cd "${repo_root}"
 
@@ -57,19 +59,57 @@ cd "${repo_root}"
 analysis_goos="linux"
 analysis_goarch="amd64"
 
-# Build the pinned tool for the host first, in its own step, so a failure here
-# (no network for the module download, a toolchain problem) is reported as
-# exactly that instead of looking like "no dead code" or like a baseline drift.
 tool_dir="$(mktemp -d)"
 trap 'rm -rf "${tool_dir}"' EXIT
-if ! GOBIN="${tool_dir}" go install "${tool}" 2>"${tool_dir}/install.log"; then
-  printf 'deadcode-ratchet: could not install %s:\n' "${tool}" >&2
-  sed 's/^/  /' "${tool_dir}/install.log" >&2
-  exit 1
-fi
-deadcode_bin="$(find "${tool_dir}" -maxdepth 1 -type f \( -name deadcode -o -name deadcode.exe \) | head -n 1)"
-if [[ -z "${deadcode_bin}" ]]; then
-  printf 'deadcode-ratchet: go install %s produced no deadcode binary in %s\n' "${tool}" "${tool_dir}" >&2
+
+# Un deadcode instalado una vez con `go install` (en GOBIN o en el primer
+# GOPATH/bin, donde también queda axiom) se reutiliza si es exactamente la
+# versión fijada. `go version -m` lee la información de compilación del binario
+# sin ejecutarlo.
+installed_deadcode() {
+  local bin_dir separator candidate info
+  bin_dir="$(go env GOBIN)"
+  if [[ -z "${bin_dir}" ]]; then
+    separator=":"
+    [[ "$(go env GOHOSTOS)" == "windows" ]] && separator=";"
+    bin_dir="$(go env GOPATH)"
+    bin_dir="${bin_dir%%"${separator}"*}/bin"
+  fi
+  for candidate in "${bin_dir}/deadcode" "${bin_dir}/deadcode.exe"; do
+    [[ -f "${candidate}" ]] || continue
+    info="$(go version -m "${candidate}" 2>/dev/null)" || continue
+    if grep -Eq "^[[:space:]]+path[[:space:]]+${tool_path}[[:space:]]*\$" <<<"${info}" \
+      && grep -Eq "^[[:space:]]+mod[[:space:]]+golang\.org/x/tools[[:space:]]+${tool_version}([[:space:]]|\$)" <<<"${info}"; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+if deadcode_bin="$(installed_deadcode)"; then
+  :
+elif [[ -n "${CI:-}" ]]; then
+  # En la CI (GitHub Actions define CI=true) se compila la herramienta en un
+  # directorio temporal, en su propio paso, para que un fallo aquí (sin red para
+  # descargar el módulo, un problema del toolchain) se informe como tal y no
+  # parezca «sin código muerto» ni una deriva de la línea base.
+  if ! GOBIN="${tool_dir}" go install "${tool}" 2>"${tool_dir}/install.log"; then
+    printf 'deadcode-ratchet: could not install %s:\n' "${tool}" >&2
+    sed 's/^/  /' "${tool_dir}/install.log" >&2
+    exit 1
+  fi
+  deadcode_bin="$(find "${tool_dir}" -maxdepth 1 -type f \( -name deadcode -o -name deadcode.exe \) | head -n 1)"
+  if [[ -z "${deadcode_bin}" ]]; then
+    printf 'deadcode-ratchet: go install %s produced no deadcode binary in %s\n' "${tool}" "${tool_dir}" >&2
+    exit 1
+  fi
+else
+  # Fuera de la CI nunca se compila en un directorio temporal: un ejecutable
+  # recién compilado en %TEMP% en cada ejecución es lo que marca el EDR
+  # corporativo, y el instalado en GOPATH/bin, como axiom, no.
+  printf 'deadcode-ratchet: no hay un deadcode %s instalado en GOBIN ni en GOPATH/bin.\n' "${tool_version}" >&2
+  printf 'Instálalo una sola vez con:\n  go install %s\n' "${tool}" >&2
   exit 1
 fi
 
