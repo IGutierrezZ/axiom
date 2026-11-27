@@ -12,6 +12,7 @@ import { barrierSummary, renderRoles } from './detalle-roles.js';
 import { initHandoff, renderHandoff } from './detalle-handoff.js';
 import { renderExplainer } from './detalle-explicacion.js';
 import { renderAcceptanceTests } from './detalle-pruebas.js';
+import { renderGate } from './detalle-puerta.js';
 import { renderChangeIntegrations } from './detalle-integraciones.js';
 
 // Estado de la vista abierta. token invalida respuestas tardías al cambiar de ruta.
@@ -195,6 +196,9 @@ function paintDetail() {
   renderStepper(detail);
   renderTabPill(detail);
   renderArtifacts();
+  const change = ctx.change;
+  const token = ctx.token;
+  void renderGate($('#inc-gate'), { change, onChanged: reloadDetail, isCurrent: () => token === ctx.token && ctx.change === change });
 }
 
 async function renderTabContent() {
@@ -241,6 +245,7 @@ function showLoading(change) {
   $('#inc-meta').innerHTML = '';
   $('#inc-desc').hidden = true;
   $('#inc-stepper').innerHTML = stateLoading('Cargando el incremento…');
+  $('#inc-gate').hidden = true;
   $('#inc-tab-roles-pill').hidden = true;
   $('#inc-panel-artefactos').innerHTML = stateLoading('Cargando artefactos…');
 }

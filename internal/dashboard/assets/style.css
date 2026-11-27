@@ -1075,3 +1075,14 @@ a.popover-item { color: inherit; text-decoration: none; }
 .int-scope { list-style: none; margin: 6px 0; padding-left: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
 .int-discovery { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 .int-discovery summary { cursor: pointer; font-weight: 600; }
+
+/* Panel de puerta del detalle del incremento (C-06-f) */
+.gate-panel { margin: 12px 0; padding: 14px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-lg); background: var(--surface); }
+.gate-title { margin: 0 0 6px; font-size: 1.05rem; }
+.gate-list { margin: 6px 0; padding-left: 18px; }
+.gate-choices { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gate-choice-effect { color: var(--text-3); font-size: 0.9em; }
+.gate-form { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 6px; }
+.gate-form label { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gate-radio { display: flex; gap: 8px; align-items: center; }
+.gate-unpublished { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius-md); }
