@@ -159,9 +159,10 @@ func TestSettingsRuntimeControlsAndChanges(t *testing.T) {
 			"  cleared: collectChanges([{ key: 'k', type: 'enum', allowed: ['x'], editable: true, declared: true, value: 'x' }], { k: '' }),\n"+
 			"  groups: groupBySection([{ section: 'sdd', key: 'a' }, { section: 'workspace', key: 'b' }, { section: 'sdd', key: 'c' }, { section: 'otra', key: 'd' }]).map(g => [g.section, g.label, g.entries.map(e => e.key)]),\n"+
 			"  ids: [settingId('repositories[a/b].promotion'), settingId('roles[web].gate_policy')],\n"+
-			"  hrefs: ['C:\\\\repos\\\\x\\\\axiom.yaml', '/home/u/x/axiom.yaml', 'C:\\\\repos\\\\a b#c?d&e\\\\ñ\\\\axiom.yaml', '', null, undefined].map(editorHref),\n"+
+			"  hrefs: ['C:\\\\repos\\\\x\\\\axiom.yaml', '/home/u/x/axiom.yaml', 'C:\\\\repos\\\\a b#c?d&e\\\\ñ\\\\axiom.yaml', '', null, undefined].map(p => editorHref(p)),\n"+
+			"  lineHrefs: [16, 0, -1, '7', 1.5, undefined].map(n => editorHref('C:\\\\repos\\\\x\\\\axiom.yaml', n)),\n"+
 			"  actions: pathActionsHtml('C:\\\\repos\\\\\"x\\\\axiom.yaml'),\n"+
-			"  readonly: readOnlyHtml({ key: 'workspace.topology', label: 'Topología', type: 'string', editable: false, value: '<b>mono</b>', readOnlyReason: 'Solo lectura.' }, 'C:\\\\repos\\\\x\\\\axiom.yaml'),\n"+
+			"  readonly: readOnlyHtml({ key: 'workspace.topology', label: 'Topología', type: 'string', editable: false, value: '<b>mono</b>', readOnlyReason: 'Solo lectura.', line: 3 }, 'C:\\\\repos\\\\x\\\\axiom.yaml'),\n"+
 			"  readonlyEmpty: readOnlyHtml({ key: 'technical_context', label: 'Contexto', type: 'yaml', editable: false, value: 'entry: <x>' }, ''),\n"+
 			"  mismatch: errorView({ message: 'El fichero cambió <ya>', status: 409, data: { code: 'revision_mismatch', error: 'x' } }),\n"+
 			"  invalid: errorView({ message: 'No es válido', status: 422, data: { code: 'validation_failed', violations: ['línea 1: <mal>', 'línea 2'] } }),\n"+
@@ -177,6 +178,7 @@ func TestSettingsRuntimeControlsAndChanges(t *testing.T) {
 		Groups        [][]any        `json:"groups"`
 		IDs           []string       `json:"ids"`
 		Hrefs         []string       `json:"hrefs"`
+		LineHrefs     []string       `json:"lineHrefs"`
 		Actions       string         `json:"actions"`
 		Readonly      string         `json:"readonly"`
 		ReadonlyEmpty string         `json:"readonlyEmpty"`
@@ -266,6 +268,18 @@ func TestSettingsRuntimeControlsAndChanges(t *testing.T) {
 	}
 	if !strings.Contains(res.Readonly, "Abrir en el editor") || !strings.Contains(res.Readonly, "Copiar ruta") {
 		t.Errorf("cada fila de solo lectura ofrece el editor y copiar la ruta: %s", res.Readonly)
+	}
+	// Con la línea de la clave el editor abre en ella; solo un entero positivo cuenta, y copiar
+	// la ruta sigue dando la ruta sin línea.
+	wantLineHrefs := []string{"vscode://file/C:/repos/x/axiom.yaml:16"}
+	for range 5 {
+		wantLineHrefs = append(wantLineHrefs, "vscode://file/C:/repos/x/axiom.yaml")
+	}
+	if !slices.Equal(res.LineHrefs, wantLineHrefs) {
+		t.Errorf("editorHref con línea = %q, quiero %q", res.LineHrefs, wantLineHrefs)
+	}
+	if !strings.Contains(res.Readonly, `href="vscode://file/C:/repos/x/axiom.yaml:3"`) || !strings.Contains(res.Readonly, `data-copy-path="C:\repos\x\axiom.yaml"`) {
+		t.Errorf("la fila de solo lectura abre el editor en la línea de su clave: %s", res.Readonly)
 	}
 	// errorView: recarga solo con revision_mismatch; las violaciones se listan.
 	if !strings.Contains(res.Mismatch, "data-settings-reload") || !strings.Contains(res.Mismatch, "Recargar") {

@@ -47,6 +47,7 @@ type SettingDTO struct {
 	Format         string   `json:"format,omitempty"`
 	Min            *int     `json:"min,omitempty"`
 	Max            *int     `json:"max,omitempty"`
+	Line           int      `json:"line,omitempty"`
 }
 
 // SettingsDTO es la respuesta de `GET /api/settings`: el catálogo expandido para el axiom.yaml
