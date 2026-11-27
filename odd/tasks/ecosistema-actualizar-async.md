@@ -45,7 +45,9 @@ Sin configuración de TDD en el proyecto ni en la sesión: comprobaciones funcio
 
 ## Progreso
 
-T1 hecha en `6e6900ef9`; T2 en `09df4d530`; T3 hecha, con la integración de la spec viva en el mismo commit. Siguiente paso: comprobación previa (`scripts/pre-pr-check.sh`) y PR, que decide la persona.
+T1 hecha en `6e6900ef9`; T2 en `09df4d530`; T3 en `0bec01581`, que también integra la spec viva (RF-UPD-04 y RF-UIP-02 modificados; RF-UPD-12 y RF-UPD-13 nuevos; `archive integrate --check` sin cambios). `scripts/pre-pr-check.sh` en verde (gofmt, guardas transversales y deadcode ratchet sin funciones nuevas inalcanzables).
+
+Sin verificar todavía: la prueba manual en el dashboard real (pulsar «Actualizar» en Ecosistema con una actualización que tarde más de 15 s y con una que sustituya Axiom) y la CI. Siguiente paso: PR con `type:bug`, que decide la persona.
 
 ## Criterio de terminado
 
