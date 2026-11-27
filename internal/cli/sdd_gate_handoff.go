@@ -31,8 +31,8 @@ func requireHandOffStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kickoff,
 	if sealed != nil && sealed.Config.ExecutionStyle == kickoff.ExecutionCheckpointed {
 		return nil
 	}
-	return fmt.Errorf("el cambio %q no tiene paradas: `--hand-off` solo existe en un cambio sellado con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin cederla con `%s`",
-		parsed.Change, gateApprovedInvocation(parsed, workspaceRoot))
+	return gateCoded(GateCodeNoStops, fmt.Errorf("el cambio %q no tiene paradas: `--hand-off` solo existe en un cambio sellado con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin cederla con `%s`",
+		parsed.Change, gateApprovedInvocation(parsed, workspaceRoot)))
 }
 
 // handOffPrepared es lo que las comprobaciones de la salida 2 dejan listo para escribir y
@@ -51,14 +51,14 @@ func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, chang
 	// Sin declaración cuenta como `openspec`: la carpeta del cambio existe en disco, que es la
 	// condición de resolveGovernanceChangeRoot.
 	if store, declared := workspace.DeclaredArtifactStore(workspaceRoot); declared && (store == "engram" || store == "none") {
-		return nil, fmt.Errorf("`--hand-off` no está disponible con el almacén de artefactos %q: el cambio no vive en ficheros que otra persona pueda recibir; las salidas disponibles son iterar con `%s` y aprobar y seguir con `%s`",
-			store, gateRejectedInvocation(parsed, workspaceRoot), gateApprovedInvocation(parsed, workspaceRoot))
+		return nil, gateCoded(GateCodeHandOffNA, fmt.Errorf("`--hand-off` no está disponible con el almacén de artefactos %q: el cambio no vive en ficheros que otra persona pueda recibir; las salidas disponibles son iterar con `%s` y aprobar y seguir con `%s`",
+			store, gateRejectedInvocation(parsed, workspaceRoot), gateApprovedInvocation(parsed, workspaceRoot)))
 	}
 
 	// No se cede una fase cuyo artefacto no existe o está vacío.
 	if digest == "" {
-		return nil, fmt.Errorf("no se puede ceder la fase siguiente de la compuerta %q del cambio %q: su artefacto no existe o está vacío; produce el artefacto (`axiom sdd status %s --cwd %s` indica qué falta) y repite la orden",
-			parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))
+		return nil, gateCoded(GateCodeArtifactMissing, fmt.Errorf("no se puede ceder la fase siguiente de la compuerta %q del cambio %q: su artefacto no existe o está vacío; produce el artefacto (`axiom sdd status %s --cwd %s` indica qué falta) y repite la orden",
+			parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot)))
 	}
 
 	// Una aprobación posterior a la primera quedaría oculta tras ella: la marca de cesión sería
@@ -129,8 +129,8 @@ func handedOffToFor(gate kickoff.GateKey, roster []multirole.RoleAssignment, led
 }
 
 func gateAlreadyResolved(parsed kickoff.GateRecordArgs, workspaceRoot string) error {
-	return fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión o con modo de revisión por commit sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
-		parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))
+	return gateCoded(GateCodeAlreadyResolved, fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión o con modo de revisión por commit sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
+		parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot)))
 }
 
 // gateApprovedInvocation y gateRejectedInvocation son las órdenes de las salidas 3 y 1 de la parada
@@ -145,11 +145,11 @@ func gateRejectedInvocation(parsed kickoff.GateRecordArgs, workspaceRoot string)
 		pathquote.Quote(workspaceRoot), pathquote.ShellWord(parsed.Change), pathquote.ShellWord(string(parsed.Gate)))
 }
 
-// gatePublishJSON es el destino de la publicación de los documentos que `gate record` calcula y no
+// GatePublishTarget es el destino de la publicación de los documentos que `gate record` calcula y no
 // ejecuta (RF-GAT-15, DD-11): la misma forma que `gateQuestion.publication`. Invocation es la orden
 // de `axiom sdd publish` atada a la rama con `--branch`, que el orquestador ejecuta una vez tras el
 // registro. PRTarget es informativo y se omite en la integración in situ de un multirepo.
-type gatePublishJSON struct {
+type GatePublishTarget struct {
 	Remote     string `json:"remote"`
 	Branch     string `json:"branch"`
 	PRTarget   string `json:"prTarget,omitempty"`
@@ -160,7 +160,7 @@ type gatePublishJSON struct {
 // destino, o el código de la negativa del motor de ramas cuando no se puede calcular. Ambos vacíos
 // significan que la decisión no publica (rechazo, integración o almacén sin ficheros).
 type gatePublish struct {
-	target      *gatePublishJSON
+	target      *GatePublishTarget
 	unavailable string
 }
 
@@ -174,7 +174,7 @@ func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, han
 	}
 	if handOff != nil {
 		publish := handOff.plan.Publish
-		return gatePublish{target: &gatePublishJSON{Remote: publish.Remote, Branch: publish.Branch, PRTarget: publish.PRTarget, Invocation: publish.Invocation}}
+		return gatePublish{target: &GatePublishTarget{Remote: publish.Remote, Branch: publish.Branch, PRTarget: publish.PRTarget, Invocation: publish.Invocation}}
 	}
 	if store, declared := workspace.DeclaredArtifactStore(workspaceRoot); declared && (store == "engram" || store == "none") {
 		return gatePublish{}
@@ -183,7 +183,7 @@ func resolveGatePublish(parsed kickoff.GateRecordArgs, workspaceRoot string, han
 	if refusal != nil {
 		return gatePublish{unavailable: string(refusal.Code)}
 	}
-	return gatePublish{target: &gatePublishJSON{
+	return gatePublish{target: &GatePublishTarget{
 		Remote:     branch.PublishRemote,
 		Branch:     target.Branch,
 		PRTarget:   target.PRTarget,
@@ -205,7 +205,7 @@ type gateRecordJSON struct {
 	CommitReview       string              `json:"commitReview,omitempty"`
 	LastRoleClosed     *bool               `json:"lastRoleClosed,omitempty"`
 	PendingNonBlocking []pendingRoleJSON   `json:"pendingNonBlockingRoles,omitempty"`
-	Publish            *gatePublishJSON    `json:"publish,omitempty"`
+	Publish            *GatePublishTarget  `json:"publish,omitempty"`
 	PublishUnavailable string              `json:"publishUnavailable,omitempty"`
 	Delivery           *branch.HandOffPlan `json:"delivery,omitempty"`
 }
@@ -232,27 +232,28 @@ func pendingRolesJSON(pending []kickoff.PendingRole) []pendingRoleJSON {
 	return out
 }
 
-// writeGateRecordJSON emite el `--json` de una compuerta registrada. lastRoleClosed es nil fuera de
-// una compuerta de rol; con la aprobación que cierra el último rol blocking es true (el aviso de
-// RF-RCL-01 en forma de campo) y pendingNonBlocking lista los roles no bloqueantes aún abiertos.
-func writeGateRecordJSON(stdout io.Writer, parsed kickoff.GateRecordArgs, mode kickoff.CommitReviewMode, handOff *handOffPrepared, publish gatePublish, lastRoleClosed *bool, pendingNonBlocking []kickoff.PendingRole) error {
-	document := gateRecordJSON{
+// gateRecordDocument construye el documento `axiom.sdd-gate-record/v1` de un registro. LastRoleClosed
+// es nil fuera de una compuerta de rol; con la aprobación que cierra el último rol blocking es true
+// (el aviso de RF-RCL-01 en forma de campo) y PendingNonBlocking lista los roles no bloqueantes abiertos.
+func gateRecordDocument(outcome GateRecordOutcome) gateRecordJSON {
+	return gateRecordJSON{
 		Schema:             gateRecordSchema,
-		Change:             parsed.Change,
-		Gate:               string(parsed.Gate),
-		Decision:           string(parsed.Decision),
-		CommitReview:       string(mode),
-		LastRoleClosed:     lastRoleClosed,
-		PendingNonBlocking: pendingRolesJSON(pendingNonBlocking),
-		Publish:            publish.target,
-		PublishUnavailable: publish.unavailable,
+		Change:             outcome.Change,
+		Gate:               string(outcome.Record.Gate),
+		Decision:           string(outcome.Record.Decision),
+		HandedOff:          outcome.Delivery != nil,
+		HandedOffTo:        outcome.HandedOffTo,
+		CommitReview:       string(outcome.CommitReview),
+		LastRoleClosed:     outcome.LastRoleClosed,
+		PendingNonBlocking: pendingRolesJSON(outcome.PendingNonBlocking),
+		Publish:            outcome.Publish,
+		PublishUnavailable: outcome.PublishUnavailable,
+		Delivery:           outcome.Delivery,
 	}
-	if handOff != nil {
-		document.HandedOff = true
-		document.HandedOffTo = handOff.handedOffTo
-		plan := handOff.plan
-		document.Delivery = &plan
-	}
+}
+
+// writeGateRecordJSON emite el `--json` de una compuerta registrada.
+func writeGateRecordJSON(stdout io.Writer, document gateRecordJSON) error {
 	encoder := json.NewEncoder(stdout)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")

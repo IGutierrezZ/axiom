@@ -45,21 +45,26 @@ func splitCommitReviewFlag(args []string) (kickoff.CommitReviewMode, []string, e
 		if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
 			return "", nil, fmt.Errorf("`%s` requiere un valor; repite `axiom sdd gate record` con uno de: %s", commitReviewFlag, commitReviewVocabulary())
 		}
-		value := kickoff.CommitReviewMode(args[i+1])
-		valid := false
-		for _, candidate := range kickoff.CommitReviewModes() {
-			if value == candidate {
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			return "", nil, fmt.Errorf("`%s` desconocido %q; repite `axiom sdd gate record` con uno de: %s", commitReviewFlag, args[i+1], commitReviewVocabulary())
+		value, err := parseCommitReviewMode(args[i+1])
+		if err != nil {
+			return "", nil, err
 		}
 		mode = value
 		i++
 	}
 	return mode, rest, nil
+}
+
+// parseCommitReviewMode valida un valor de `--commit-review` contra el vocabulario cerrado
+// (RF-GAT-19) con el mismo mensaje que la CLI; la comparten la CLI y el dashboard.
+func parseCommitReviewMode(value string) (kickoff.CommitReviewMode, error) {
+	mode := kickoff.CommitReviewMode(value)
+	for _, candidate := range kickoff.CommitReviewModes() {
+		if mode == candidate {
+			return mode, nil
+		}
+	}
+	return "", fmt.Errorf("`%s` desconocido %q; repite `axiom sdd gate record` con uno de: %s", commitReviewFlag, value, commitReviewVocabulary())
 }
 
 // validateCommitReviewShape es la comprobación de forma de `--commit-review` (RF-GAT-20, D3), antes
@@ -91,6 +96,6 @@ func requireCommitReviewStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kic
 	if sealed != nil && sealed.Config.ExecutionStyle == kickoff.ExecutionCheckpointed {
 		return nil
 	}
-	return fmt.Errorf("el cambio %q no tiene paradas: `%s` solo existe en cambios sellados con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin la bandera con `%s`",
-		parsed.Change, commitReviewFlag, gateApprovedInvocation(parsed, workspaceRoot))
+	return gateCoded(GateCodeNoStops, fmt.Errorf("el cambio %q no tiene paradas: `%s` solo existe en cambios sellados con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin la bandera con `%s`",
+		parsed.Change, commitReviewFlag, gateApprovedInvocation(parsed, workspaceRoot)))
 }

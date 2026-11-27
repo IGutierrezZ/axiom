@@ -85,26 +85,12 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 		return err
 	}
 
-	// Guarda A (RF-BRA-20): publicar escribe en la carpeta del cambio, ordinaria o archivada.
-	writerContext := branch.ContextOrdinary
-	if *archive {
-		writerContext = branch.ContextArchive
-	}
-	if changeRoot, found := publishChangeRoot(loc, *change); found {
-		if err := guardChangeWriter(changeRoot, *change, "sdd publish", writerContext); err != nil {
-			// Sin `--archive`, la rama de archivado es la equivocada para el contexto ordinario: lo que
-			// falta es el flag, y la negativa lo nombra.
-			if !*archive && guardChangeWriter(changeRoot, *change, "sdd publish", branch.ContextArchive) == nil {
-				return fmt.Errorf("%w; la rama actual es la de archivado: repite la orden con `--archive`", err)
-			}
-			return err
-		}
-	}
-
-	publisher := &sddpublish.Publisher{Git: sddpublish.NewGit(), Targets: engine.Default()}
-	result := publisher.Run(context.Background(), sddpublish.Request{
-		CWD: loc.WorkspaceRoot, Change: *change, Archive: *archive, Branch: *branchName,
+	result, err := publishChangeAt(context.Background(), loc, *change, *archive, *branchName, func(text string) {
+		_, _ = fmt.Fprintln(writerBranchWarnings, "Aviso: "+text)
 	})
+	if err != nil {
+		return err
+	}
 
 	if *asJSON {
 		data, err := json.MarshalIndent(result, "", "  ")
@@ -126,6 +112,91 @@ func RunSDDPublish(args []string, stdout io.Writer) error {
 		return fmt.Errorf("%w: %s (%s)", errPublishRefused, result.Refusal.Label, result.Refusal.Code)
 	}
 	return nil
+}
+
+// publishChangeAt es el cuerpo compartido de `axiom sdd publish` y de PublishChange (design D6):
+// aplica la guarda A (RF-BRA-20, publicar escribe en la carpeta del cambio, ordinaria o archivada;
+// los avisos de la guarda van a warn) y publica con sddpublish. Una negativa de la guarda vuelve
+// como error, sin publicar nada; las de sddpublish viajan tipadas en el resultado.
+func publishChangeAt(ctx context.Context, loc workspace.Location, change string, archive bool, branchName string, warn func(string)) (sddpublish.Result, error) {
+	writerContext := branch.ContextOrdinary
+	if archive {
+		writerContext = branch.ContextArchive
+	}
+	if changeRoot, found := publishChangeRoot(loc, change); found {
+		if err := guardChangeWriterCollect(changeRoot, change, "sdd publish", writerContext, warn); err != nil {
+			// Sin `--archive`, la rama de archivado es la equivocada para el contexto ordinario: lo que
+			// falta es el flag, y la negativa lo nombra.
+			if !archive && guardChangeWriterCollect(changeRoot, change, "sdd publish", branch.ContextArchive, warn) == nil {
+				return sddpublish.Result{}, fmt.Errorf("%w; la rama actual es la de archivado: repite la orden con `--archive`", err)
+			}
+			return sddpublish.Result{}, err
+		}
+	}
+	publisher := &sddpublish.Publisher{Git: sddpublish.NewGit(), Targets: engine.Default()}
+	return publisher.Run(ctx, sddpublish.Request{
+		CWD: loc.WorkspaceRoot, Change: change, Archive: archive, Branch: branchName,
+	}), nil
+}
+
+// ChangePublishRequest es la petición del dashboard para publicar los documentos de un cambio tras
+// aprobar una puerta (C-06-f): CWD es la raíz del espacio de trabajo y Branch la rama que la persona
+// vio en pantalla, que siempre se ata.
+type ChangePublishRequest struct{ CWD, Change, Branch string }
+
+// ChangePublishRefusal es una negativa tipada de sddpublish, con su código, etiqueta, mensaje y
+// continuación.
+type ChangePublishRefusal struct {
+	Code, Label, Message, Continuation string
+	Details                            map[string]any
+}
+
+// ChangePublishResult es el resultado de publicar un cambio. Status es `published`, `up_to_date` o
+// `refused`; con Refusal, Status es `refused`. Commit es el SHA del commit de documentos y PushedSHA
+// el SHA subido. Notices lleva los avisos de la guarda.
+type ChangePublishResult struct {
+	Status, Remote, Branch, GitRoot, Commit, PushedSHA string
+	UncommittedDocs                                    []string
+	Resume                                             []string
+	Refusal                                            *ChangePublishRefusal
+	Notices                                            []GateNotice
+}
+
+// PublishChange publica los documentos del cambio en su contexto ordinario con la misma guarda A y el
+// mismo sddpublish que `axiom sdd publish`: sin `Only` ni `Replay`, sin fetch y sin forzar, y con la
+// rama siempre atada. La negativa de la guarda vuelve como *branch.RefusalError en el error.
+func PublishChange(ctx context.Context, req ChangePublishRequest) (ChangePublishResult, error) {
+	loc, err := workspace.Locate(req.CWD)
+	if err != nil {
+		return ChangePublishResult{}, err
+	}
+	var notices []GateNotice
+	result, err := publishChangeAt(ctx, loc, req.Change, false, req.Branch, func(text string) {
+		notices = append(notices, GateNotice{Source: "branch_guard", Text: text})
+	})
+	if err != nil {
+		return ChangePublishResult{Notices: notices}, err
+	}
+	out := ChangePublishResult{
+		Status: string(result.Status), Remote: result.Remote, Branch: result.Branch,
+		UncommittedDocs: result.UncommittedDocs, Resume: result.Resume, Notices: notices,
+	}
+	if result.Repository != nil {
+		out.GitRoot = result.Repository.GitRoot
+	}
+	if result.Commit != nil {
+		out.Commit = result.Commit.SHA
+	}
+	if result.Push != nil {
+		out.PushedSHA = result.Push.SHA
+	}
+	if refusal := result.Refusal; refusal != nil {
+		out.Refusal = &ChangePublishRefusal{
+			Code: string(refusal.Code), Label: refusal.Label, Message: refusal.Message,
+			Continuation: refusal.Continuation, Details: refusal.Details,
+		}
+	}
+	return out, nil
 }
 
 // publishChangeRoot es la carpeta del cambio sobre la que se aplica la guarda: la del planning

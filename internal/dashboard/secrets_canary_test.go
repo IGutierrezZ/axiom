@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IGutierrezZ/axiom/v3/internal/cli"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/integrationstest"
 	"github.com/IGutierrezZ/axiom/v3/internal/integrations/secrets"
 	"github.com/IGutierrezZ/axiom/v3/internal/workspace/workspacetest"
@@ -23,20 +24,21 @@ const dashboardCanary = "s3cr3t-CANARIO-9f8e7d"
 // Rutas de solo lectura que el canario recorre. Cada una se pide con GET y su cuerpo no puede
 // contener el valor de ningún secreto de integración (RF-INT-16).
 var coveredRoutes = map[string]string{
-	"/api/health":              "/api/health",
-	"/api/projects":            "/api/projects",
-	"/api/workspace":           "/api/workspace",
-	"/api/settings":            "/api/settings",
-	"/api/settings/personal":   "/api/settings/personal",
-	"/api/integrations":        "/api/integrations",
-	"/api/integrations/change": "/api/integrations/change?name=x",
-	"/api/increments":          "/api/increments",
-	"/api/increments/":         "/api/increments/x",
-	"/api/roles":               "/api/roles",
-	"/api/handoffs":            "/api/handoffs",
-	"/api/skills":              "/api/skills",
-	"/api/archive/specs":       "/api/archive/specs",
-	"/api/agents":              "/api/agents",
+	"/api/health":               "/api/health",
+	"/api/projects":             "/api/projects",
+	"/api/workspace":            "/api/workspace",
+	"/api/settings":             "/api/settings",
+	"/api/settings/personal":    "/api/settings/personal",
+	"/api/integrations":         "/api/integrations",
+	"/api/integrations/change":  "/api/integrations/change?name=x",
+	"/api/increments":           "/api/increments",
+	"/api/increments/":          "/api/increments/x",
+	"/api/increments/gate/stop": "/api/increments/gate/stop?change=x",
+	"/api/roles":                "/api/roles",
+	"/api/handoffs":             "/api/handoffs",
+	"/api/skills":               "/api/skills",
+	"/api/archive/specs":        "/api/archive/specs",
+	"/api/agents":               "/api/agents",
 }
 
 // Rutas registradas que el canario no recorre, cada una con su motivo. Ninguna lee el bloque
@@ -62,6 +64,8 @@ var excludedRoutes = map[string]string{
 	"/api/increments/verify":              "mutación (POST): lanza la verificación",
 	"/api/increments/marks":               "mutación (POST): añade una marca de ejecución a pruebas-estado.yaml",
 	"/api/increments/marks/publish":       "mutación (POST): publica las marcas de pruebas al remoto de specs",
+	"/api/increments/gate":                "mutación (POST): registra la decisión de una puerta; los avisos del despacho de integración salen redactados (TestGateRoutesNeverEchoTheSecret lo ejercita con centinela)",
+	"/api/increments/gate/publish":        "mutación (POST): publica los documentos del cambio en su rama atada; no lee secretos (TestGateRoutesNeverEchoTheSecret lo ejercita con centinela)",
 	"/api/increments/migrate-cumulative":  "mutación (POST): migra el sumidero acumulativo",
 	"/api/skills/inbox":                   "buzón de skills propuestas; no lee integraciones",
 	"/api/skills/scan":                    "mutación (POST): escanea tecnologías",
@@ -165,7 +169,9 @@ func TestNoReadOnlyDashboardRouteReturnsAnIntegrationSecret(t *testing.T) {
 	t.Setenv("AXIOM_INTEGRATION_FAKE_TOKEN", dashboardCanary)
 
 	// Cadena completa de seguridad (handler()) con Host local: la que sirve el proceso real.
-	handler := NewServer(NewService(ws.Master)).handler()
+	svc := NewService(ws.Master)
+	svc.SetGatesGateway(cli.NewGatesGateway())
+	handler := NewServer(svc).handler()
 	paths := make([]string, 0, len(coveredRoutes))
 	for _, path := range coveredRoutes {
 		paths = append(paths, path)

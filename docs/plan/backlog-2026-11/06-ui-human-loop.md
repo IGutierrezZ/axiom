@@ -290,12 +290,12 @@ Durante el análisis apareció además un bug previo. El detalle de un cambio en
   - Riesgo de pisar a mano un fichero que otra persona esté editando a la vez: conviene comparar la revisión antes de escribir.
   - El catálogo debe ser la única fuente; no duplicar las listas de claves cerradas de los decodificadores.
 
-### C-06-f · Registrar decisiones de puerta desde la UI (propuesta del análisis, sin confirmar)
+### C-06-f · Registrar decisiones de puerta desde la UI (confirmado por el usuario el 2026-11-17, P3)
 
 - **Objetivo.** Hoy la UI solo lee `gates.yaml`, para los roles pendientes (`internal/dashboard/service.go:403`, `kickoff.LoadGates`). No se puede aprobar ni rechazar una puerta desde la UI. Si el humano revisa el HTML (C-06-b) o la batería (C-06-c) en la UI, lo natural es decidir allí mismo, con motivo obligatorio al rechazar.
 - **Decisiones.**
   - (Análisis, 2026-11-11) Propuesto como complemento del tema 1 («aporta más contra saltarse la revisión»).
-  - **El usuario no lo ha confirmado ni descartado.** La sesión padre debe preguntárselo antes de planificarlo.
+  - ~~**El usuario no lo ha confirmado ni descartado.** La sesión padre debe preguntárselo antes de planificarlo.~~ Sustituido: **el usuario lo confirmó (P3, 2026-11-17)** y se implementa como el cambio SDD `puertas-desde-ui`.
   - (Análisis) Si se hace, la escritura pasa por `kickoff.AppendGateChecked` o por `axiom sdd gate record`, con las tres salidas de las paradas: iterar, aprobar, publicar y parar, y aprobar y continuar. La puerta `integration` conserva sus dos salidas.
 - **Fuera de alcance.** Cambiar la semántica de las puertas.
 - **Carril propuesto.** SDD.
@@ -304,7 +304,7 @@ Durante el análisis apareció además un bug previo. El detalle de un cambio en
 - **Ficheros y paquetes que toca.**
   - `internal/cli/sdd_gate.go:70` (`guardChangeWriter`), `internal/kickoff/ledger.go:91` (`AppendGateChecked`) y `internal/kickoff/machine.go:250`.
   - Dashboard: `server.go`, `service.go` y `assets/js/screens/detalle.js`.
-- **Criterio de terminado.** Por definir cuando el usuario lo confirme.
+- **Criterio de terminado.** ~~Por definir cuando el usuario lo confirme.~~ Definido al confirmarlo el usuario: desde el detalle de un incremento se aprueba o rechaza la puerta pendiente de un cambio `checkpointed` con las tres salidas (dos en `integration`), con el mismo núcleo que `axiom sdd gate record` y `axiom sdd publish`; rechazo con motivo obligatorio, digest del artefacto visto, modo de revisión por commit en `tasks`, aviso de operación remota antes de publicar, «aprobada sin publicar» con reintento, y cerrojo por cambio. En `continuous` no hay decisiones y la UI no lanza los verbos del tracker. Documentado en `docs/usage.md` y `docs/codebase/dashboard.md`.
 - **Riesgos y avisos.** «Aprobar, publicar y parar» implica commit y push; el mismo aviso de operación remota que C-06-d.
 
 ### C-06-g · Agentes del proyecto en la UI: disponibles, instalados e instalación con un clic
@@ -359,7 +359,7 @@ Añadido el 2026-11-25 a petición del usuario. Rutas verificadas contra `main` 
 La entrada de Engram `analisis-backlog/consolidacion` se actualizó en esta sesión el 2026-11-13 con la línea de UI revisada. Quedan dos matices:
 
 - La primera versión decía «Configuración acotada más aprobar puertas desde la UI». La versión actual ya no menciona las puertas.
-  - Aprobar puertas desde la UI no está decidido por el usuario: queda como C-06-f, pendiente de confirmar.
+  - ~~Aprobar puertas desde la UI no está decidido por el usuario: queda como C-06-f, pendiente de confirmar.~~ Sustituido: el usuario confirmó C-06-f el 2026-11-17 (P3).
 - La consolidación dice «Bug: el detalle no lee specs/<dom>/spec.md ni tasks.<rol>.md (internal/dashboard/service.go:539)».
   - En `main` `5f6b05b4` las líneas son `internal/dashboard/service.go:544` y `:555`.
   - Su lote es el 1, no el 6.

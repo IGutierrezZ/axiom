@@ -41,14 +41,14 @@ func resolveGovernanceChangeRoot(cwd, change string) (workspace.Location, string
 	if !isDirectory(changeRoot) {
 		archived, ok := kickoff.ArchivedChangeRoot(loc.WorkspaceRoot, change)
 		if !ok {
-			return workspace.Location{}, "", fmt.Errorf("el cambio %q no existe en %q ni en %q; estos verbos escriben dentro de un cambio ya creado, nunca crean uno nuevo; ejecuta `axiom sdd status --cwd %s` para ver los cambios activos",
-				change, changeRoot, filepath.Join(loc.WorkspaceRoot, "openspec", "changes", "archive", change), pathquote.Quote(loc.WorkspaceRoot))
+			return workspace.Location{}, "", gateCoded(GateCodeChangeNotFound, fmt.Errorf("el cambio %q no existe en %q ni en %q; estos verbos escriben dentro de un cambio ya creado, nunca crean uno nuevo; ejecuta `axiom sdd status --cwd %s` para ver los cambios activos",
+				change, changeRoot, filepath.Join(loc.WorkspaceRoot, "openspec", "changes", "archive", change), pathquote.Quote(loc.WorkspaceRoot)))
 		}
 		changeRoot = archived
 	}
 
 	if err := kickoff.RefuseArchivedRoot(loc.WorkspaceRoot, changeRoot); err != nil {
-		return workspace.Location{}, "", err
+		return workspace.Location{}, "", gateCoded(GateCodeChangeArchived, err)
 	}
 	return loc, changeRoot, nil
 }

@@ -415,6 +415,26 @@ La pantalla **Integraciones** (`#/integraciones`) se genera del manifiesto de ca
 
 Seguridad local: además de la guarda de Host y Origin descrita arriba, el servidor envía una CSP sin estilos ni scripts en línea (`style-src 'self'`), no emite CORS y todas las rutas `/api/integrations*` responden con `Cache-Control: no-store`.
 
+#### Decidir las puertas desde el dashboard
+
+El detalle de un incremento (`#/incrementos/<cambio>`) muestra la parada que espera tu decisión y permite registrarla sin pasar por `axiom sdd gate record`. El panel no recalcula nada: consulta la misma proyección que `axiom sdd status` y registra con el mismo núcleo que `axiom sdd gate record` y `axiom sdd publish`.
+
+- **Solo con paradas de revisión.** Un cambio sellado como `continuous` no tiene decisiones: el detalle lo indica y no ofrece botones. Un cambio sin sellar, bloqueado, archivado o una feature ODD tampoco tienen parada.
+- **Tres salidas.** En `spec`, `design`, `tasks` y `role-apply:<rol>` se ofrecen iterar (rechazar con motivo obligatorio), aprobar, publicar y parar, y aprobar, publicar y continuar. La puerta `integration` conserva solo dos: aprobar con la evidencia que exige (`pr_merged`, `deployment` o `attestation`) o rechazar. El formulario siempre pide el tipo de evidencia y el núcleo valida el resto igual que la CLI.
+- **Modo de revisión por commit.** Al aprobar `tasks` el formulario ofrece `notify` (por defecto), `stop` o `stop-before-commit`.
+- **Aviso de operación remota.** Aprobar, publicar y parar, y aprobar, publicar y continuar implican un commit y un `push` solo de los documentos del cambio a su rama. Antes de enviar nada, el diálogo nombra el remoto y la rama y exige confirmar; cancelarlo no envía nada. El panel nunca ejecuta `pushCommand`: si hay commits de código sin subir, te lo muestra para que lo ejecutes tú.
+- **«Aprobada sin publicar» y reintento.** La aprobación se registra primero y la publicación va después. Si la publicación se rechaza (sin remoto, rama distinta, commits de código sin subir…), la aprobación sigue vigente y el detalle muestra «aprobada sin publicar» con el motivo y un botón para reintentar la publicación. El estado se reconstruye de la proyección `publication`, así que sobrevive a recargar la página.
+- **Qué no hace.** Las decisiones de puerta son la única escritura de este panel sobre `gates.yaml`. No sella `kickoff.yaml`, no lanza los verbos del tracker (`axiom integrations tasks`, `summary` o `time`) y no empuja código ni abre PR. Los agentes siguen usando solo `axiom sdd gate record`; su doctrina no cambia.
+
+**Endpoints**
+
+- `GET /api/increments/gate/stop?change=<cambio>`: la parada vigente (o su ausencia con el motivo), con el estilo de ejecución, la publicación y el último registro.
+- `POST /api/increments/gate`: registra la decisión. Exige `application/json`, el `digest` del artefacto que viste y `confirm: true`; el actor nunca viaja, lo resuelve el núcleo con la identidad git. Responde `201`.
+- `POST /api/increments/gate/publish`: publica los documentos en la rama que mostró la pantalla (`branch`), con `confirm: true`. Responde `200` (`published`, `up_to_date` o `nothing_to_publish`).
+- Las negativas son `409` o `422` con `code`, mensaje y continuación, y no escriben nada. Entre ellas: `gate_busy` (otra decisión o publicación en curso sobre el mismo cambio), `gate_not_pending` (la puerta que viste ya no es la vigente), `gate_digest_changed` (el artefacto cambió tras mostrarse), `gate_confirm_missing`, `gate_not_checkpointed` y `publication_branch_mismatch`. Sin pasarela de puertas responde `503`.
+
+Como el resto de rutas de escritura, solo aceptan peticiones locales (`403` con un `Origin` o `Host` ajenos).
+
 #### Usar `axiom ui` como aplicación de escritorio
 
 El flujo recomendado es instalar el panel como aplicación (PWA) desde el navegador y anclar ese icono; el servidor arranca solo con Windows.

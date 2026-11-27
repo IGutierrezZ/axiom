@@ -33,6 +33,14 @@ var writerBranchWarnings io.Writer = os.Stderr
 // guardChangeWriter aplica la guarda A al escritor op de la carpeta changeRoot del cambio change,
 // en el contexto ctx. Falla en cerrado ante un fallo interno de la consulta (`config_invalid`).
 func guardChangeWriter(changeRoot, change, op string, ctx branch.Context) error {
+	return guardChangeWriterCollect(changeRoot, change, op, ctx, func(text string) {
+		_, _ = fmt.Fprintln(writerBranchWarnings, "Aviso: "+text)
+	})
+}
+
+// guardChangeWriterCollect es guardChangeWriter con el aviso de la guarda entregado a warn (sin el
+// prefijo «Aviso: ») en lugar de escrito: RecordGate lo devuelve como dato.
+func guardChangeWriterCollect(changeRoot, change, op string, ctx branch.Context, warn func(string)) error {
 	warning, err := engine.Default().RequireChangeBranch(context.Background(), engine.WriteTarget{
 		ChangeRoot: changeRoot,
 		Change:     change,
@@ -41,7 +49,7 @@ func guardChangeWriter(changeRoot, change, op string, ctx branch.Context) error 
 		Op:         op,
 	})
 	if warning != "" {
-		_, _ = fmt.Fprintln(writerBranchWarnings, "Aviso: "+warning)
+		warn(warning)
 	}
 	return err
 }

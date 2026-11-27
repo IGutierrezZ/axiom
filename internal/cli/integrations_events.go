@@ -24,8 +24,12 @@ import (
 var integrationWarnings io.Writer = os.Stderr
 
 func integrationWarn(format string, args ...any) {
-	text := strings.Join(strings.Fields(fmt.Sprintf(format, args...)), " ")
-	_, _ = fmt.Fprintln(integrationWarnings, "Aviso: "+text)
+	_, _ = fmt.Fprintln(integrationWarnings, "Aviso: "+integrationWarningText(format, args...))
+}
+
+// integrationWarningText compone el texto de un aviso del despacho, en una sola línea y sin prefijo.
+func integrationWarningText(format string, args ...any) string {
+	return strings.Join(strings.Fields(fmt.Sprintf(format, args...)), " ")
 }
 
 // newIntegrationDispatcher compone el despachador con el bloque, el registro cerrado, el almacén de
@@ -83,6 +87,13 @@ func storedIdentities() integrations.IdentityLookup {
 //  3. La guarda A y el despacho los hace el Dispatcher; lo que no se entrega queda en la cola con
 //     un aviso que nombra su ruta y `axiom integrations sync`.
 func dispatchIntegrationEvent(loc workspace.Location, changeRoot string, eventType manifest.EventType, build func() integrations.Event) {
+	dispatchIntegrationEventCollect(loc, changeRoot, eventType, build, func(text string) { integrationWarn("%s", text) })
+}
+
+// dispatchIntegrationEventCollect es dispatchIntegrationEvent con los avisos entregados a sink (texto
+// sin el prefijo «Aviso: ») en lugar de escritos: RecordGate los devuelve como datos.
+func dispatchIntegrationEventCollect(loc workspace.Location, changeRoot string, eventType manifest.EventType, build func() integrations.Event, sink func(string)) {
+	integrationWarn := func(format string, args ...any) { sink(integrationWarningText(format, args...)) }
 	change := filepath.Base(changeRoot)
 	if loc.Declarations.IntegrationsErr != nil {
 		integrationWarn("el bloque `integrations:` de axiom.yaml no es válido (%v); no se despacha el evento %s del cambio %s. Corrígelo con `axiom workspace validate` y emite el evento a mano con `axiom integrations emit --cwd %s --change %s --event %s`.",
@@ -102,11 +113,11 @@ func dispatchIntegrationEvent(loc workspace.Location, changeRoot string, eventTy
 		Durable:        true,
 		PersistOutcome: integrations.PolicyFor(eventType).PersistOutcome,
 	})
-	reportDispatch(loc, report, eventType)
+	reportDispatch(loc, report, eventType, integrationWarn)
 }
 
-// reportDispatch convierte el resultado de un despacho en avisos.
-func reportDispatch(loc workspace.Location, report integrations.Report, eventType manifest.EventType) {
+// reportDispatch convierte el resultado de un despacho en avisos entregados a integrationWarn.
+func reportDispatch(loc workspace.Location, report integrations.Report, eventType manifest.EventType, integrationWarn func(format string, args ...any)) {
 	if report.Err != nil {
 		integrationWarn("no se ha podido despachar el evento %s del cambio %s a las integraciones: %v. Reintenta con `axiom integrations emit --cwd %s --change %s --event %s`.",
 			eventType, report.Change, report.Err, loc.WorkspaceRoot, report.Change, eventType)
@@ -187,7 +198,8 @@ func gateIntegrationEvent(changeRoot string, eventType manifest.EventType, role 
 
 // emitGateIntegrationEvent despacha gate.spec.approved, gate.design.approved o role.apply.approved
 // tras registrar una aprobación. Las decisiones rejected, tasks e integration no emiten.
-func emitGateIntegrationEvent(loc workspace.Location, changeRoot string, record kickoff.GateRecord) {
+// Los avisos del despacho van a sink (RecordGate los recoge; es el único llamador).
+func emitGateIntegrationEvent(loc workspace.Location, changeRoot string, record kickoff.GateRecord, sink func(string)) {
 	if record.Decision != kickoff.DecisionApproved {
 		return
 	}
@@ -195,9 +207,9 @@ func emitGateIntegrationEvent(loc workspace.Location, changeRoot string, record 
 	if !ok {
 		return
 	}
-	dispatchIntegrationEvent(loc, changeRoot, eventType, func() integrations.Event {
+	dispatchIntegrationEventCollect(loc, changeRoot, eventType, func() integrations.Event {
 		return gateIntegrationEvent(changeRoot, eventType, role, record)
-	})
+	}, sink)
 }
 
 // emitRoleStartEvent despacha role.start con la clave role.start/<cambio>/<rol>.

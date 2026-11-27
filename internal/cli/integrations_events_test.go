@@ -263,7 +263,7 @@ func TestEmitGateIntegrationEventBuildsTheD09Key(t *testing.T) {
 		if err := kickoff.AppendGate(changeRoot, record); err != nil {
 			t.Fatal(err)
 		}
-		emitGateIntegrationEvent(locateIntegrations(t, root), changeRoot, record)
+		emitGateIntegrationEvent(locateIntegrations(t, root), changeRoot, record, func(text string) { integrationWarn("%s", text) })
 	}
 
 	want := []string{
@@ -286,7 +286,7 @@ func TestEmitGateIntegrationEventIgnoresRejectedTasksAndIntegration(t *testing.T
 	rejected := approvedRecord(kickoff.GateSpec, "abc")
 	rejected.Decision = kickoff.DecisionRejected
 	for _, record := range []kickoff.GateRecord{rejected, approvedRecord(kickoff.GateTasks, "abc"), approvedRecord(kickoff.GateIntegration, "")} {
-		emitGateIntegrationEvent(locateIntegrations(t, root), changeRoot, record)
+		emitGateIntegrationEvent(locateIntegrations(t, root), changeRoot, record, func(text string) { integrationWarn("%s", text) })
 	}
 	if fake.Calls() != 0 {
 		t.Fatalf("rejected, tasks e integration no emiten (llamadas %d)", fake.Calls())

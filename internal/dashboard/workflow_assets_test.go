@@ -22,7 +22,7 @@ func TestWorkflowAssetsAreServed(t *testing.T) {
 	for _, target := range []string{
 		"/js/core/markdown.js", "/js/core/increment.js",
 		"/js/screens/incrementos.js", "/js/screens/detalle.js",
-		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js", "/js/screens/detalle-explicacion.js", "/js/screens/detalle-pruebas.js",
+		"/js/screens/detalle-roles.js", "/js/screens/detalle-handoff.js", "/js/screens/detalle-explicacion.js", "/js/screens/detalle-pruebas.js", "/js/screens/detalle-puerta.js",
 	} {
 		rr := getAsset(t, h, target)
 		if rr.Code != 200 {

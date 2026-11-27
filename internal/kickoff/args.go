@@ -556,32 +556,59 @@ func ParseGateRecordArgs(args []string) (GateRecordArgs, error) {
 		}
 	}
 
+	if err := ValidateGateRecordArgs(parsed); err != nil {
+		return GateRecordArgs{}, err
+	}
+	return parsed, nil
+}
+
+// ValidateGateRecordArgs is the shared typed validation of a `gate record` order: the same checks
+// and messages the CLI applies after parsing its flags, so another caller (the dashboard) that
+// builds a GateRecordArgs directly is refused exactly as the CLI would. It only checks shape and
+// vocabulary; stateful checks (kickoff, roster, ledger) stay with the recorder.
+func ValidateGateRecordArgs(parsed GateRecordArgs) error {
+	if parsed.Change != "" {
+		if err := validateChangeName(parsed.Change); err != nil {
+			return err
+		}
+	}
+	if parsed.Gate != "" {
+		if _, err := validateGateKey(string(parsed.Gate)); err != nil {
+			return err
+		}
+	}
+	if parsed.Decision != "" && !validGateDecisions[parsed.Decision] {
+		return fmt.Errorf("--decision desconocida %q; opciones: approved, rejected", string(parsed.Decision))
+	}
+	if parsed.EvidenceKind != "" && !validEvidenceKinds[parsed.EvidenceKind] {
+		return fmt.Errorf("--evidence-kind desconocido %q; opciones: pr_merged, deployment, attestation", string(parsed.EvidenceKind))
+	}
+
 	if parsed.Change == "" {
-		return GateRecordArgs{}, fmt.Errorf("gate record requiere --change")
+		return fmt.Errorf("gate record requiere --change")
 	}
 	if parsed.Gate == "" {
-		return GateRecordArgs{}, fmt.Errorf("gate record requiere --gate")
+		return fmt.Errorf("gate record requiere --gate")
 	}
 	if parsed.Decision == "" {
-		return GateRecordArgs{}, fmt.Errorf("gate record requiere --decision")
+		return fmt.Errorf("gate record requiere --decision")
 	}
 	if parsed.HandOff {
 		if err := validateHandOffShape(parsed); err != nil {
-			return GateRecordArgs{}, err
+			return err
 		}
 	}
 	if parsed.Decision == DecisionRejected && strings.TrimSpace(parsed.Reason) == "" {
-		return GateRecordArgs{}, fmt.Errorf("gate record --decision rejected requiere --reason (RF-GAT-06 exige registrar el motivo)")
+		return fmt.Errorf("gate record --decision rejected requiere --reason (RF-GAT-06 exige registrar el motivo)")
 	}
 	if parsed.EvidenceKind == EvidencePRMerged {
 		if strings.TrimSpace(parsed.Commit) == "" {
-			return GateRecordArgs{}, fmt.Errorf("gate record --evidence-kind pr_merged requiere --commit")
+			return fmt.Errorf("gate record --evidence-kind pr_merged requiere --commit")
 		}
 		// Sin --base-ref el campo queda vacío: la rama de integración depende del repositorio y la
 		// completa quien lo conoce (design D-22; cli.completeGateBaseRef).
 	}
-
-	return parsed, nil
+	return nil
 }
 
 // validateHandOffShape is the pure, shape-only validation of --hand-off (DD-01): it runs before
