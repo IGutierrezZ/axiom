@@ -29,6 +29,21 @@ func DoneInvocation(change, cwd string, lane Lane, flags ...string) string {
 	return command
 }
 
+// ArchiveBranchNameAsChange es el rechazo `invalid_name` de `done --change <cambio>-archive` cuando
+// el registro local guarda el cambio base y no uno llamado así: el nombre es el de la rama de
+// archivado del cambio base, que `done --change <base>` procesa junto a las demás (RF-BRA-18).
+// Procesarla con este nombre retiraría su worktree y su rama y dejaría huérfano el registro del
+// cambio base. No se ha tocado nada; la continuación repite con el nombre del cambio.
+func ArchiveBranchNameAsChange(change, base, cwd string, lane Lane) *Refusal {
+	return &Refusal{
+		Code: CodeInvalidName,
+		Message: fmt.Sprintf("«%s» es el nombre de la rama de archivado del cambio %s, no el de un cambio: `done` la procesa con el nombre del cambio y, con este, dejaría huérfano su registro local; no se ha eliminado ninguna rama ni ningún worktree",
+			change, base),
+		Continuation: fmt.Sprintf("repite con el nombre del cambio: `%s`", DoneInvocation(base, cwd, lane)),
+		Details:      map[string]string{"field": "--change", "value": change, "change": base},
+	}
+}
+
 // MergeNotConfirmed es el rechazo `merge_not_confirmed` de una rama cuya fusión ninguna capa
 // confirma (RF-BRA-17): no se elimina ni su worktree ni su rama. targets son las referencias en
 // las que se buscó (vacías si el destino no existe) y repo, el repositorio de la rama; la

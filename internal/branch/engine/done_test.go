@@ -622,6 +622,71 @@ func TestDoneRefusesAnInvalidChangeNameAndAnUnusableDirectory(t *testing.T) {
 	}
 }
 
+// RF-BRA-47 (escenario «El nombre de la rama de archivado se rechaza y se indica el del cambio»):
+// con el registro de `x` y sin el de `x-archive`,
+// `done --change x-archive` se rechaza con `invalid_name` sin tocar la rama ni el registro, y la
+// continuación es `done --change x`, que sí la procesa y borra el registro.
+func TestDoneRefusesTheArchiveBranchNameOfARegisteredChange(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	runGit(t, repo, "branch", "feat/x-archive", "main")
+	record := registeredRecord(repo, branch.RecordBranch{Name: "feat/x-archive", Kind: branch.KindArchive})
+	if err := registry.New().Save(commonDir(repo), record); err != nil {
+		t.Fatal(err)
+	}
+	seen := observe(t)
+
+	refused := doneOf(t, DoneRequest{CWD: repo, Change: "x-archive", Lane: branch.LaneSDD})
+
+	wantRefusal(t, refused, branch.CodeInvalidName, branch.StatusRefused)
+	if want := branch.DoneInvocation("x", repo, branch.LaneSDD); !strings.Contains(refused.Continuation, want) {
+		t.Errorf("continuación %q; debía proponer `%s`", refused.Continuation, want)
+	}
+	if !strings.Contains(refused.Message, "x-archive") || !strings.Contains(refused.Message, "rama de archivado") {
+		t.Errorf("el mensaje %q debe nombrar la rama de archivado", refused.Message)
+	}
+	if writes := doneWrites(*seen); len(writes) != 0 || !branchExists(t, repo, "feat/x-archive") {
+		t.Errorf("el rechazo no elimina nada: %v", writes)
+	}
+	if _, err := os.Stat(recordFile(commonDir(repo), "sdd", "x")); err != nil {
+		t.Errorf("el registro de x debía seguir intacto: %v", err)
+	}
+	wantNoRegistryFile(t, repo, "x-archive")
+
+	done := doneOf(t, doneRequest(repo))
+
+	wantReady(t, done)
+	wantOutcome(t, branchByName(t, onlyRepository(t, done), "feat/x-archive"), branch.OutcomeRemoved, branch.LayerAncestry, "")
+	if branchExists(t, repo, "feat/x-archive") {
+		t.Error("`done --change x` debía eliminar la rama de archivado")
+	}
+	wantNoRegistryFile(t, repo, "x")
+}
+
+// RF-BRA-47 (escenario «Un cambio con nombre terminado en `-archive` y registro propio se
+// procesa»): el rechazo solo aplica sin registro propio, de modo que
+// un cambio `y-archive` registrado se procesa aunque también exista el registro de `y`.
+func TestDoneProcessesARegisteredChangeWhoseNameEndsInArchive(t *testing.T) {
+	repo := embeddedCoreProject(t)
+	runGit(t, repo, "branch", "feat/y-archive", "main")
+	own := registeredRecord(repo, branch.RecordBranch{Name: "feat/y-archive", Kind: branch.KindChange})
+	own.Change = "y-archive"
+	base := registeredRecord(repo, branch.RecordBranch{Name: "feat/y", Kind: branch.KindChange})
+	base.Change = "y"
+	for _, record := range []branch.Record{own, base} {
+		if err := registry.New().Save(commonDir(repo), record); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result := doneOf(t, DoneRequest{CWD: repo, Change: "y-archive", Lane: branch.LaneSDD})
+
+	wantReady(t, result)
+	wantOutcome(t, branchByName(t, onlyRepository(t, result), "feat/y-archive"), branch.OutcomeRemoved, branch.LayerAncestry, "")
+	if branchExists(t, repo, "feat/y-archive") {
+		t.Error("la rama del cambio y-archive debía eliminarse")
+	}
+}
+
 // design D-09 (Windows): un worktree que es el directorio actual de algún proceso no se puede borrar.
 // La rama se conserva, el resultado es `git_failed` sin pérdida de lo demás y la continuación pide
 // repetir con `--cwd` sobre el checkout principal desde otro directorio.

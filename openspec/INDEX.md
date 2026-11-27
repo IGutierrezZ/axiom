@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-27 09:18:39 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 633 | **Total Escenarios BDD:** 3186
+> **Última Sincronización:** 2026-11-27 09:59:50 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 634 | **Total Escenarios BDD:** 3188
 
 ---
 
@@ -21,7 +21,7 @@
 | `axiom-user-state-and-env` | Especificación de Requerimientos: Unificación de Estado en ~/.axiom y Variables AXIOM_* (INC-12) | 5 | 10 | [Ver Spec](specs/axiom-user-state-and-env/spec.md) |
 | `azure-devops-adapter` | Especificación de azure-devops-adapter | 27 | 140 | [Ver Spec](specs/azure-devops-adapter/spec.md) |
 | `change-actor-identity` | Especificación Viva: Identidad Git como Actor de los Artefactos Versionados (RF-ACT-01 a RF-ACT-09) | 9 | 33 | [Ver Spec](specs/change-actor-identity/spec.md) |
-| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 46 | 442 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
+| `change-branch-lifecycle` | Especificación de Requerimientos: Ciclo de Vida de las Ramas y Worktrees de un Cambio por Topología (INC-25) | 47 | 444 | [Ver Spec](specs/change-branch-lifecycle/spec.md) |
 | `change-start-from-work-item` | Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19) | 19 | 112 | [Ver Spec](specs/change-start-from-work-item/spec.md) |
 | `dashboard-sdd-orchestration` | Especificación de Requerimientos: Orquestación Interactiva SDD y Creación de Cambios en Dashboard Web y CLI (INC-15) | 4 | 8 | [Ver Spec](specs/dashboard-sdd-orchestration/spec.md) |
 | `engram-protocol-injection` | Engram protocol injection Specification | 6 | 13 | [Ver Spec](specs/engram-protocol-injection/spec.md) |
@@ -1080,6 +1080,9 @@ Definir cómo crea, consulta, cierra y protege Axiom las ramas (y, opcionalmente
   - *Escenario BDD:* `status` con `integrations.yaml` ilegible informa el código sin fallar
   - *Escenario BDD:* La promoción `ask` de una rama diferida se resuelve al crearla
   - *Escenario BDD:* Sin `{task_ref}` nada se difiere
+- **[RF-BRA-47]** `done` no acepta el nombre de la rama de archivado como cambio
+  - *Escenario BDD:* El nombre de la rama de archivado se rechaza y se indica el del cambio
+  - *Escenario BDD:* Un cambio con nombre terminado en `-archive` y registro propio se procesa
 
 ### Dominio: `change-start-from-work-item` — Especificación Viva: Arranque de un Cambio desde un Work Item (RF-ARR-01 a RF-ARR-19)
 
