@@ -12,9 +12,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.p
 
 - Ejecuta `axiom branch ensure --cwd <checkout principal> --change <slug> --mode worktree --json` y muestra la ruta del worktree: `C:\repos\axiom-wt\<slug>\axiom`, sobre la rama `<prefijo>/<slug>` (el prefijo sale de `git.branch_prefix` en `axiom.yaml`, `inc`, salvo `-Prefix`) desde `origin/main`, sin red.
 - Los cambios ODD (su documento está en `odd/tasks/`) usan `-Lane odd` en `new`, `pr` y `done`; sin él el registro cae en el carril `sdd` y la guarda espera el prefijo de `axiom.yaml` en lugar del indicado con `-Prefix`.
-- PR: `... scripts/axiom-worktree.ps1 pr <slug> -Label bug|feature|refactor|docs|chore|breaking-change` (la base sale de `prTarget` en `axiom branch status --json`). La PR nace con su etiqueta `type:*`: no la añadas después, o la primera ejecución de `pr-check.yml` falla y avisa por correo.
+- PR: `... scripts/axiom-worktree.ps1 pr <slug> -Label bug|feature|refactor|docs|chore|breaking-change` (la base sale de `prTarget` en `axiom branch status --json`). La PR nace con su etiqueta `type:*`: no la añadas después, o la primera ejecución de `pr-check.yml` falla y avisa por correo. Antes de subir la rama, `pr` ejecuta `scripts/pre-pr-check.sh` (gofmt, las guardas transversales de `scripts/pre-pr-guards.txt` y el deadcode ratchet) y, si falla, no sube nada.
+- Código muerto: una función de producción nueva entra con un llamante de producción; lo que solo usan las pruebas va en `_test.go`; no se añaden variantes `XForY` que dejen sin llamantes a la original; al quitar un llamante se borra lo que queda huérfano (detalle en `AGENTS.md`).
 - Tras el merge: `... scripts/axiom-worktree.ps1 done <slug>` (`axiom branch done` y avance rápido de `main`). Tras la PR de archivo de un cambio SDD se repite con el mismo `<slug>`, nunca con `<slug>-archive`: `done` procesa la rama de archivado que guarda el registro.
-- Necesita un `axiom` con `axiom branch` en el `PATH` (`go install ./cmd/axiom`).
+- Necesita un `axiom` con `axiom branch` en el `PATH` (`go install ./cmd/axiom`) y, para la comprobación previa, un `deadcode` instalado una sola vez (`go install golang.org/x/tools/cmd/deadcode@v0.49.0`), nunca compilado en un directorio temporal.
 
 ## Checkout principal `C:\repos\axiom`
 

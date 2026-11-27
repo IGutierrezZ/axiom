@@ -49,7 +49,9 @@ Fuera de alcance: los fallos de plataforma (Linux frente a Windows), el job de l
 - [x] **T3 · `pr` ejecuta la comprobación antes de subir la rama** — ruta: inline.
   - `axiom-worktree.ps1 pr` lanza el `scripts/pre-pr-check.sh` del worktree con el Git Bash de Git for Windows (`Find-GitBash`, junto a `git --exec-path`, nunca el `bash.exe` de WSL); `axiom-worktree.sh pr`, con `$BASH`. Si falla, ni `git push` ni `gh pr create`; sin el script en la rama, avisa y sigue.
   - Evidencia: `go test ./internal/workspace -run TestScriptsAxiomWorktree -count=1` en verde (81 s), con los casos nuevos rojo y verde en sh y en PowerShell, y el aviso cuando la rama no trae el script.
-- [ ] **T4 · Reglas contra el código muerto para los agentes** — ruta: inline.
+- [x] **T4 · Reglas contra el código muerto para los agentes** — ruta: inline.
+  - `AGENTS.md`: la apertura de PR (ODD-5) incluye la comprobación previa; nueva regla «Código muerto y guardas transversales» con los tres patrones (llamante de producción en el mismo commit y lo de pruebas en `_test.go`; sin variantes `XForY`; borrar lo que queda huérfano), la instalación única de `deadcode` y cómo ampliar `scripts/pre-pr-guards.txt`. `CLAUDE.md`: resumen de ambas cosas.
+  - Evidencia: `go test ./internal/assets -run '^(TestIssueCreationAuthorityBoundary|TestSkillsIndexRowPathsAcceptsEveryPathFormat)$'` (lee el `AGENTS.md` del repositorio) en verde; sin nuevas invocaciones `axiom …` en los documentos.
 
 ## Criterios de aceptación
 
