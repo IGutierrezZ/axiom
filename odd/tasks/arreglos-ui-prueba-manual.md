@@ -167,3 +167,11 @@ La pantalla DEBE incluir un bloque «Preferencias personales» con el autofetch 
 
 | Tarea | Commit |
 |---|---|
+| T1 | `7f8248ad` |
+| T2 | `05b47231` |
+| T3 | `c36d6319` |
+| T4 | `982637f5` (integra la `## Spec viva`) |
+
+## Siguiente paso
+
+Abrir la PR con `scripts/axiom-worktree.ps1 pr arreglos-ui-prueba-manual -Lane odd -Label bug`; tras el merge, `done`.
