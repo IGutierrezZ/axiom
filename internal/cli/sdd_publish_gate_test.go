@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -259,4 +260,134 @@ func TestSDDPublishGateOnlyPublishRunsCommitAndPush(t *testing.T) {
 	if !pushed || !committed {
 		t.Errorf("publish debe confirmar y subir (commit=%v push=%v)", committed, pushed)
 	}
+}
+
+// publishChangeRequest es la petición de PublishChange sobre el proyecto de publishGateProject.
+func publishChangeRequest(ws workspacetest.Workspace, branch string) ChangePublishRequest {
+	return ChangePublishRequest{CWD: ws.Master, Change: "x", Branch: branch}
+}
+
+// C-06-f (design D6): PublishChange comparte el núcleo de `axiom sdd publish` y se prueba con un
+// remoto desnudo local, sin red ni push real.
+func TestPublishChange(t *testing.T) {
+	t.Run("publica solo los documentos del cambio y el primer push crea la rama", func(t *testing.T) {
+		ws, bare := publishGateProject(t)
+		// Código preparado en el índice y gates.yaml sucio: el commit lleva solo documentos.
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "internal", "core.go"), "package core\n")
+		integrateGit(t, ws.Master, "add", "--", "internal/core.go")
+		gates := filepath.Join(guardChangeRoot(ws), "gates.yaml")
+		file, err := os.OpenFile(gates, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := file.WriteString("# cambio sin confirmar\n"); err != nil {
+			t.Fatal(err)
+		}
+		if err := file.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		result, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/x"))
+		if err != nil {
+			t.Fatalf("PublishChange: %v", err)
+		}
+		if result.Status != "published" || result.Branch != "feat/x" || result.Remote != "origin" || result.Refusal != nil {
+			t.Fatalf("resultado = %+v", result)
+		}
+		if result.Commit == "" || result.PushedSHA == "" || result.GitRoot == "" || len(result.Resume) == 0 {
+			t.Errorf("faltan commit, SHA subido, repositorio o continuación: %+v", result)
+		}
+		files := strings.Fields(publishGitOutput(t, ws.Master, "show", "--name-only", "--format=", result.Commit))
+		if len(files) == 0 {
+			t.Fatal("el commit no lleva ficheros")
+		}
+		for _, path := range files {
+			if !strings.HasPrefix(path, "openspec/changes/x/") {
+				t.Errorf("el commit solo lleva documentos del cambio, y lleva %q", path)
+			}
+		}
+		if got := strings.TrimSpace(publishGitOutput(t, bare, "rev-parse", "refs/heads/feat/x")); got != result.PushedSHA {
+			t.Errorf("la rama creada en el remoto = %s, se esperaba %s", got, result.PushedSHA)
+		}
+		if staged := strings.TrimSpace(publishGitOutput(t, ws.Master, "diff", "--cached", "--name-only")); !strings.Contains(staged, "internal/core.go") {
+			t.Errorf("el código preparado debe seguir en el índice: %q", staged)
+		}
+	})
+
+	t.Run("sin cambios devuelve up_to_date sin commit", func(t *testing.T) {
+		ws, _ := publishGateProject(t)
+		first, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/x"))
+		if err != nil || first.Status != "published" {
+			t.Fatalf("primera publicación = %+v, %v", first, err)
+		}
+		head := publishGitOutput(t, ws.Master, "rev-parse", "HEAD")
+		second, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/x"))
+		if err != nil {
+			t.Fatalf("PublishChange: %v", err)
+		}
+		if second.Status != "up_to_date" || second.Commit != "" || second.Refusal != nil {
+			t.Fatalf("resultado = %+v", second)
+		}
+		if got := publishGitOutput(t, ws.Master, "rev-parse", "HEAD"); got != head {
+			t.Errorf("no debe haber commit nuevo: %s -> %s", head, got)
+		}
+	})
+
+	t.Run("rama distinta se niega con wrong_branch sin subir nada", func(t *testing.T) {
+		ws, bare := publishGateProject(t)
+		result, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/otra"))
+		if err != nil {
+			t.Fatalf("PublishChange: %v", err)
+		}
+		if result.Status != "refused" || result.Refusal == nil || result.Refusal.Code != "wrong_branch" || result.Refusal.Continuation == "" {
+			t.Fatalf("resultado = %+v", result)
+		}
+		if out, err := publishGitOutputIn(bare, "rev-parse", "--verify", "--quiet", "refs/heads/feat/x"); err == nil {
+			t.Errorf("la negativa no sube nada: %s", out)
+		}
+	})
+
+	t.Run("commits de código sin subir se niegan con code_commits_unpublished", func(t *testing.T) {
+		ws, bare := publishGateProject(t)
+		workspacetest.WriteFile(t, filepath.Join(ws.Master, "internal", "core.go"), "package core\n")
+		integrateCommit(t, ws.Master, "feat(core): trabajo del rol")
+
+		result, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/x"))
+		if err != nil {
+			t.Fatalf("PublishChange: %v", err)
+		}
+		if result.Status != "refused" || result.Refusal == nil || result.Refusal.Code != "code_commits_unpublished" {
+			t.Fatalf("resultado = %+v", result)
+		}
+		if !strings.Contains(result.Refusal.Continuation, "push origin feat/x:feat/x") {
+			t.Errorf("la continuación es el push de código para la persona: %q", result.Refusal.Continuation)
+		}
+		if out, err := publishGitOutputIn(bare, "rev-parse", "--verify", "--quiet", "refs/heads/feat/x"); err == nil {
+			t.Errorf("la negativa previa al push no sube nada: %s", out)
+		}
+	})
+
+	t.Run("un remoto que rechaza por no fast-forward da una negativa tipada", func(t *testing.T) {
+		ws, bare := publishGateProject(t)
+		// Otra copia publica antes una rama feat/x divergente; PublishChange nunca hace fetch ni fuerza.
+		other := filepath.Join(t.TempDir(), "otra")
+		integrateGit(t, filepath.Dir(other), "clone", "-q", bare, other)
+		integrateGit(t, other, "switch", "-q", "-c", "feat/x")
+		workspacetest.WriteFile(t, filepath.Join(other, "ajeno.txt"), "otra persona\n")
+		integrateGit(t, other, "add", "--", "ajeno.txt")
+		integrateGit(t, other, "-c", "user.name=Otra", "-c", "user.email=otra@example.test", "commit", "-q", "-m", "docs: ajeno")
+		integrateGit(t, other, "push", "-q", "origin", "feat/x")
+		remoteHead := strings.TrimSpace(publishGitOutput(t, bare, "rev-parse", "refs/heads/feat/x"))
+
+		result, err := PublishChange(context.Background(), publishChangeRequest(ws, "feat/x"))
+		if err != nil {
+			t.Fatalf("PublishChange: %v", err)
+		}
+		if result.Status != "refused" || result.Refusal == nil || result.Refusal.Code != "push_non_fast_forward" || result.Refusal.Continuation == "" {
+			t.Fatalf("resultado = %+v", result)
+		}
+		if got := strings.TrimSpace(publishGitOutput(t, bare, "rev-parse", "refs/heads/feat/x")); got != remoteHead {
+			t.Errorf("el remoto no debe cambiar: %s -> %s", remoteHead, got)
+		}
+	})
 }
