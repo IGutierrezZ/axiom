@@ -8,13 +8,24 @@ import (
 	"net/http"
 )
 
-// maxMarksBody es el tamaño máximo del cuerpo de las rutas de marcas (D13).
+// maxMarksBody es el tamaño máximo del cuerpo de las rutas de marcas y de puertas (D13).
 const maxMarksBody = 16 << 10
 
-// marksPreflight aplica el orden de D13 hasta el cuerpo: método (405), petición local (403),
-// Content-Type JSON (415) y cuerpo de hasta 16 KiB con campos conocidos (400). Devuelve false si
-// ya respondió.
+// preflightCodes son los códigos que el preflight local de JSON usa en sus dos rechazos propios:
+// el de Content-Type y el de cuerpo inválido. Cada familia de rutas conserva los suyos.
+type preflightCodes struct{ contentType, bodyInvalid string }
+
+var marksPreflightCodes = preflightCodes{contentType: codeMarksContentType, bodyInvalid: codeMarksBodyInvalid}
+
+// marksPreflight aplica el preflight local a las rutas de marcas con sus códigos.
 func (s *Server) marksPreflight(w http.ResponseWriter, r *http.Request, into any) bool {
+	return s.localJSONPreflight(w, r, into, marksPreflightCodes)
+}
+
+// localJSONPreflight aplica el orden de D13 hasta el cuerpo: método (405), petición local (403),
+// Content-Type JSON (415) y cuerpo de hasta 16 KiB con campos conocidos y un único objeto (400).
+// Devuelve false si ya respondió.
+func (s *Server) localJSONPreflight(w http.ResponseWriter, r *http.Request, into any, codes preflightCodes) bool {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
 		return false
@@ -27,7 +38,7 @@ func (s *Server) marksPreflight(w http.ResponseWriter, r *http.Request, into any
 	}
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		s.respondMarksRefusal(w, marksRefuse(http.StatusUnsupportedMediaType, codeMarksContentType,
+		s.respondMarksRefusal(w, marksRefuse(http.StatusUnsupportedMediaType, codes.contentType,
 			"el cuerpo debe enviarse como application/json",
 			"envía un JSON con Content-Type: application/json"))
 		return false
@@ -35,11 +46,11 @@ func (s *Server) marksPreflight(w http.ResponseWriter, r *http.Request, into any
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxMarksBody))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(into); err != nil {
-		s.respondMarksRefusal(w, marksBodyInvalid("JSON inválido o demasiado grande: "+err.Error()))
+		s.respondMarksRefusal(w, jsonBodyInvalid(codes.bodyInvalid, "JSON inválido o demasiado grande: "+err.Error()))
 		return false
 	}
 	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-		s.respondMarksRefusal(w, marksBodyInvalid("el cuerpo debe ser un único objeto JSON"))
+		s.respondMarksRefusal(w, jsonBodyInvalid(codes.bodyInvalid, "el cuerpo debe ser un único objeto JSON"))
 		return false
 	}
 	return true

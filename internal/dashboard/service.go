@@ -77,9 +77,11 @@ type Service struct {
 	marksLocks sync.Map
 	marksClock marksClockState
 
-	// gatesMu protege gatesGW, la pasarela inyectada de puertas (gates_port.go).
-	gatesMu sync.Mutex
-	gatesGW GatesGateway
+	// gatesMu protege gatesGW, la pasarela inyectada de puertas (gates_port.go); gatesLocks es el
+	// cerrojo por cambio compartido entre registrar y publicar una puerta (service_gates.go).
+	gatesMu    sync.Mutex
+	gatesGW    GatesGateway
+	gatesLocks sync.Map
 
 	// integrationsMu protege integrationsGW, la pasarela inyectada de integraciones (integrations_port.go).
 	integrationsMu sync.Mutex

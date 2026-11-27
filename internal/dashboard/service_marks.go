@@ -177,7 +177,12 @@ func validMarksChange(change string) bool {
 }
 
 func marksBodyInvalid(message string) *MarksRefusal {
-	return marksRefuse(http.StatusBadRequest, codeMarksBodyInvalid, message,
+	return jsonBodyInvalid(codeMarksBodyInvalid, message)
+}
+
+// jsonBodyInvalid es el rechazo 400 de un cuerpo inválido con el código de su familia de rutas.
+func jsonBodyInvalid(code, message string) *MarksRefusal {
+	return marksRefuse(http.StatusBadRequest, code, message,
 		`envía un JSON con los campos documentados y "change" con el nombre de un cambio, sin rutas`)
 }
 
@@ -238,25 +243,50 @@ func (s *Service) marksAvailabilityAt(loc workspace.Location, change string) (ma
 	return marksContext{loc: loc, change: change, changeRoot: changeRoot, tests: tests}, nil
 }
 
-// marksMissingChange explica por qué el cambio no está en el repositorio de specs in situ: es
-// una feature ODD, está archivado o no existe (404).
-func (s *Service) marksMissingChange(loc workspace.Location, change string) *MarksRefusal {
+// missingKind es el motivo por el que un cambio no está en el repositorio de specs in situ.
+type missingKind int
+
+const (
+	missingAbsent   missingKind = iota // no existe (404)
+	missingODD                         // es una feature ODD
+	missingArchived                    // está archivado
+)
+
+// classifyMissingChange explica por qué el cambio no está activo: es una feature ODD, está
+// archivado o no existe.
+func (s *Service) classifyMissingChange(loc workspace.Location, change string) missingKind {
 	odd, _ := oddIncrements(loc)
 	for _, feature := range odd {
 		if feature.Name == change {
-			return marksUnavailable(codeMarksNotSDD,
-				"«"+change+"» es una feature ODD, no un cambio SDD con pruebas.md",
-				"las marcas solo existen en cambios SDD de openspec/changes")
+			return missingODD
 		}
 	}
 	if found, err := s.locateIncrement(change); err == nil && found.kind == "archived" {
+		return missingArchived
+	}
+	return missingAbsent
+}
+
+// changeNotFound es el 404 de un cambio que no existe, común a marcas y puertas.
+func changeNotFound(change string) *MarksRefusal {
+	return marksRefuse(http.StatusNotFound, codeChangeNotFound,
+		"el cambio «"+change+"» no existe en el repositorio de specs de este proyecto",
+		"comprueba el nombre con `axiom sdd status` o prepáralo con `axiom branch ensure --change "+change+"`")
+}
+
+// marksMissingChange proyecta classifyMissingChange con los códigos de marcas.
+func (s *Service) marksMissingChange(loc workspace.Location, change string) *MarksRefusal {
+	switch s.classifyMissingChange(loc, change) {
+	case missingODD:
+		return marksUnavailable(codeMarksNotSDD,
+			"«"+change+"» es una feature ODD, no un cambio SDD con pruebas.md",
+			"las marcas solo existen en cambios SDD de openspec/changes")
+	case missingArchived:
 		return marksUnavailable(codeMarksArchived,
 			"el cambio «"+change+"» está archivado y ya no admite marcas",
 			"las marcas se registran antes de archivar el cambio")
 	}
-	return marksRefuse(http.StatusNotFound, codeChangeNotFound,
-		"el cambio «"+change+"» no existe en el repositorio de specs de este proyecto",
-		"comprueba el nombre con `axiom sdd status` o prepáralo con `axiom branch ensure --change "+change+"`")
+	return changeNotFound(change)
 }
 
 // marksSnapshot es la lectura única de las marcas de un cambio: la de sddstatus
