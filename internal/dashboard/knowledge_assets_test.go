@@ -253,7 +253,9 @@ func TestSpecParserAndRouterRuntime(t *testing.T) {
 		"  route: [parseHash('#/specs'), parseHash('#/specs/auth'), parseHash('#/specs/a%20b'), parseHash('#/specs/x/extra'), parseHash('#/specs/%E0%A4%A')],\n" +
 		"  hrefs: [hrefFor('specs'), hrefFor('specs', { domain: 'a b/c' })],\n" +
 		"  declared: parseSpec(['### Requirement: Funcional (RF-TRC-02)', '### Requirement: Historia (HU-001)',\n" +
-		"    '### Requirement: Paréntesis normal (opcional)', '### Requirement: Heredado (Requisito 7)'].join('\\n'))\n" +
+		"    '### Requirement: Paréntesis normal (opcional)', '### Requirement: Heredado (Requisito 7)',\n" +
+		"    '### Requirement: Retirado (RF-DIS-06) — RETIRADO', '### Requirement: Sustituido (RF-TOP-05) [SUPERSEDED / DEPRECADO]',\n" +
+		"    '### Requirement: Opcional (nota) — aparte'].join('\\n'))\n" +
 		"    .filter(b => b.type === 'requirement').map(r => r.id + '|' + r.title),\n" +
 		"}));\n"
 	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
@@ -289,8 +291,10 @@ func TestSpecParserAndRouterRuntime(t *testing.T) {
 	}
 
 	// El ID del título sigue el patrón declarado del proyecto (RF-<DOM>-<NN>, HU-<NNN>…), no solo
-	// REQ; un paréntesis que no es un ID se queda en el título.
-	wantDeclared := "RF-TRC-02|Funcional,HU-001|Historia,|Paréntesis normal (opcional),Requisito 7|Heredado"
+	// REQ; un paréntesis que no es un ID se queda en el título. Un sufijo de estado tras el ID
+	// (retirado o sustituido) no impide reconocerlo y se queda en el título.
+	wantDeclared := "RF-TRC-02|Funcional,HU-001|Historia,|Paréntesis normal (opcional),Requisito 7|Heredado," +
+		"RF-DIS-06|Retirado — RETIRADO,RF-TOP-05|Sustituido [SUPERSEDED / DEPRECADO],|Opcional (nota) — aparte"
 	if got := strings.Join(res.Declared, ","); got != wantDeclared {
 		t.Errorf("ids declarados = %s, se esperaba %s", got, wantDeclared)
 	}
