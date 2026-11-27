@@ -66,6 +66,15 @@ Fuera de alcance: los fallos de plataforma (Linux frente a Windows), el job de l
 - `bash scripts/pre-pr-check.sh` en el worktree.
 - `bash -n` de los scripts tocados.
 
+## Commits
+
+- T1: `e55b034f1` build(deadcode): reutilizar el deadcode instalado y no compilarlo en temporal fuera de la CI
+- T2: `5fc0346b5` build(scripts): comprobación previa a la PR con gofmt, guardas transversales y deadcode
+- T3: `9655ab80f` build(scripts): ejecutar la comprobación previa en axiom-worktree pr antes de subir la rama
+- T4: `e121c2867` docs(agents): reglas contra el código muerto y comprobación previa a la PR
+
 ## Progreso
 
-Documento creado. Siguiente paso: T1.
+Las cuatro tareas están hechas. `bash scripts/pre-pr-check.sh` sobre la rama terminada sale en verde (7 s con la caché de compilación caliente; 53 s la primera vez). `deadcode` v0.49.0 está instalado en `%USERPROFILE%\go\bin`.
+
+Pendiente: abrir la PR (`scripts/axiom-worktree.ps1 pr guardas-previas-pr -Label chore -Lane odd`), que es decisión de la persona. Sin verificar: el camino de la CI del ratchet (compilación temporal con `CI` definido) no se ha ejecutado en local para no compilar en `%TEMP%`; es el mismo código de antes y lo ejecutará el job `Deadcode Ratchet` de la PR.
