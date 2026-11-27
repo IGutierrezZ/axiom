@@ -96,6 +96,6 @@ func requireCommitReviewStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kic
 	if sealed != nil && sealed.Config.ExecutionStyle == kickoff.ExecutionCheckpointed {
 		return nil
 	}
-	return fmt.Errorf("el cambio %q no tiene paradas: `%s` solo existe en cambios sellados con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin la bandera con `%s`",
-		parsed.Change, commitReviewFlag, gateApprovedInvocation(parsed, workspaceRoot))
+	return gateCoded(GateCodeNoStops, fmt.Errorf("el cambio %q no tiene paradas: `%s` solo existe en cambios sellados con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin la bandera con `%s`",
+		parsed.Change, commitReviewFlag, gateApprovedInvocation(parsed, workspaceRoot)))
 }

@@ -31,8 +31,8 @@ func requireHandOffStops(parsed kickoff.GateRecordArgs, sealed *kickoff.Kickoff,
 	if sealed != nil && sealed.Config.ExecutionStyle == kickoff.ExecutionCheckpointed {
 		return nil
 	}
-	return fmt.Errorf("el cambio %q no tiene paradas: `--hand-off` solo existe en un cambio sellado con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin cederla con `%s`",
-		parsed.Change, gateApprovedInvocation(parsed, workspaceRoot))
+	return gateCoded(GateCodeNoStops, fmt.Errorf("el cambio %q no tiene paradas: `--hand-off` solo existe en un cambio sellado con `--execution-style checkpointed`, y este es continuo o no está sellado; registra la decisión sin cederla con `%s`",
+		parsed.Change, gateApprovedInvocation(parsed, workspaceRoot)))
 }
 
 // handOffPrepared es lo que las comprobaciones de la salida 2 dejan listo para escribir y
@@ -51,14 +51,14 @@ func prepareHandOff(parsed kickoff.GateRecordArgs, loc workspace.Location, chang
 	// Sin declaración cuenta como `openspec`: la carpeta del cambio existe en disco, que es la
 	// condición de resolveGovernanceChangeRoot.
 	if store, declared := workspace.DeclaredArtifactStore(workspaceRoot); declared && (store == "engram" || store == "none") {
-		return nil, fmt.Errorf("`--hand-off` no está disponible con el almacén de artefactos %q: el cambio no vive en ficheros que otra persona pueda recibir; las salidas disponibles son iterar con `%s` y aprobar y seguir con `%s`",
-			store, gateRejectedInvocation(parsed, workspaceRoot), gateApprovedInvocation(parsed, workspaceRoot))
+		return nil, gateCoded(GateCodeHandOffNA, fmt.Errorf("`--hand-off` no está disponible con el almacén de artefactos %q: el cambio no vive en ficheros que otra persona pueda recibir; las salidas disponibles son iterar con `%s` y aprobar y seguir con `%s`",
+			store, gateRejectedInvocation(parsed, workspaceRoot), gateApprovedInvocation(parsed, workspaceRoot)))
 	}
 
 	// No se cede una fase cuyo artefacto no existe o está vacío.
 	if digest == "" {
-		return nil, fmt.Errorf("no se puede ceder la fase siguiente de la compuerta %q del cambio %q: su artefacto no existe o está vacío; produce el artefacto (`axiom sdd status %s --cwd %s` indica qué falta) y repite la orden",
-			parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))
+		return nil, gateCoded(GateCodeArtifactMissing, fmt.Errorf("no se puede ceder la fase siguiente de la compuerta %q del cambio %q: su artefacto no existe o está vacío; produce el artefacto (`axiom sdd status %s --cwd %s` indica qué falta) y repite la orden",
+			parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot)))
 	}
 
 	// Una aprobación posterior a la primera quedaría oculta tras ella: la marca de cesión sería
@@ -129,8 +129,8 @@ func handedOffToFor(gate kickoff.GateKey, roster []multirole.RoleAssignment, led
 }
 
 func gateAlreadyResolved(parsed kickoff.GateRecordArgs, workspaceRoot string) error {
-	return fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión o con modo de revisión por commit sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
-		parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))
+	return gateCoded(GateCodeAlreadyResolved, fmt.Errorf("la compuerta %q del cambio %q ya está resuelta (approved): no se puede registrar otra aprobación con cesión o con modo de revisión por commit sobre ella; consulta su estado con `axiom sdd status %s --cwd %s`",
+		parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot)))
 }
 
 // gateApprovedInvocation y gateRejectedInvocation son las órdenes de las salidas 3 y 1 de la parada

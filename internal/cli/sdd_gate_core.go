@@ -35,6 +35,43 @@ type GateRecordInput struct {
 	Commit       string
 	BaseRef      string
 	Evidence     string
+	// ExpectedDigest es el digest del artefacto que la persona vio al decidir (solo lo rellena el
+	// dashboard). Con valor, un digest recalculado distinto se rechaza como gate_digest_changed y el
+	// registro se anexa siempre bajo el cerrojo del ledger, negando una puerta ya aprobada. La CLI
+	// lo deja vacío y conserva su comportamiento.
+	ExpectedDigest string
+}
+
+// Códigos de GateRecordError (D3 del diseño de puertas-desde-ui).
+const (
+	GateCodeArgsInvalid     = "gate_args_invalid"
+	GateCodeChangeNotFound  = "change_not_found"
+	GateCodeChangeArchived  = "change_archived"
+	GateCodeNoStops         = "gate_no_stops"
+	GateCodeKickoffMissing  = "gate_kickoff_missing"
+	GateCodeRoleNotInRoster = "gate_role_not_in_roster"
+	GateCodeHandOffNA       = "hand_off_unavailable"
+	GateCodeArtifactMissing = "gate_artifact_missing"
+	GateCodeAlreadyResolved = "gate_already_resolved"
+	GateCodeDigestChanged   = "gate_digest_changed"
+	GateCodeEvidenceRefused = "gate_evidence_refused"
+)
+
+// GateRecordError es una negativa de RecordGate con su código estable. Error() devuelve exactamente
+// el mensaje de la CLI, de modo que el envoltorio es transparente.
+type GateRecordError struct {
+	Code string
+	Err  error
+}
+
+func (e *GateRecordError) Error() string { return e.Err.Error() }
+func (e *GateRecordError) Unwrap() error { return e.Err }
+
+func gateCoded(code string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &GateRecordError{Code: code, Err: err}
 }
 
 // GateNotice es un aviso del registro que la CLI vuelca a su sumidero de siempre y el dashboard
@@ -77,16 +114,16 @@ func RecordGate(ctx context.Context, in GateRecordInput) (GateRecordOutcome, err
 		BaseRef: in.BaseRef, Evidence: in.Evidence,
 	}
 	if err := kickoff.ValidateGateRecordArgs(parsed); err != nil {
-		return fail(err)
+		return fail(gateCoded(GateCodeArgsInvalid, err))
 	}
 	commitReview := in.CommitReview
 	if commitReview != "" {
 		if _, err := parseCommitReviewMode(string(commitReview)); err != nil {
-			return fail(err)
+			return fail(gateCoded(GateCodeArgsInvalid, err))
 		}
 	}
 	if err := validateCommitReviewShape(parsed, commitReview); err != nil {
-		return fail(err)
+		return fail(gateCoded(GateCodeArgsInvalid, err))
 	}
 	loc, changeRoot, err := resolveGovernanceChangeRoot(parsed.CWD, parsed.Change)
 	if err != nil {
@@ -138,12 +175,12 @@ func RecordGate(ctx context.Context, in GateRecordInput) (GateRecordOutcome, err
 	isRoleApply := isRoleApplyGate(parsed.Gate)
 	if isRoleApply {
 		if sealed == nil {
-			return fail(fmt.Errorf("no se puede registrar %q: el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero, por ejemplo con `axiom sdd kickoff seal --cwd %s --change %s --execution-style checkpointed`",
-				parsed.Gate, parsed.Change, pathquote.Quote(workspaceRoot), pathquote.Quote(parsed.Change)))
+			return fail(gateCoded(GateCodeKickoffMissing, fmt.Errorf("no se puede registrar %q: el cambio %q no tiene un kickoff sellado con roster de roles; sella el kickoff primero, por ejemplo con `axiom sdd kickoff seal --cwd %s --change %s --execution-style checkpointed`",
+				parsed.Gate, parsed.Change, pathquote.Quote(workspaceRoot), pathquote.Quote(parsed.Change))))
 		}
 		if !gateKeyInRoster(parsed.Gate, roster) {
 			// refusal:by-design operator-knowledge: only the operator knows which sealed role they meant to target; the message already lists the complete valid roster, and no runnable command can pick a role for them -- the roster is fixed at kickoff time and this verb never re-seals it
-			return fail(fmt.Errorf("%q no pertenece al roster sellado de %q (roster: %s)", parsed.Gate, parsed.Change, strings.Join(rosterRoleNames(roster), ", ")))
+			return fail(gateCoded(GateCodeRoleNotInRoster, fmt.Errorf("%q no pertenece al roster sellado de %q (roster: %s)", parsed.Gate, parsed.Change, strings.Join(rosterRoleNames(roster), ", "))))
 		}
 	}
 
@@ -156,6 +193,10 @@ func RecordGate(ctx context.Context, in GateRecordInput) (GateRecordOutcome, err
 	digest, err := gateArtifactDigest(changeRoot, parsed.Gate, sealed)
 	if err != nil {
 		return fail(err)
+	}
+	if in.ExpectedDigest != "" && digest != in.ExpectedDigest {
+		return fail(gateCoded(GateCodeDigestChanged, fmt.Errorf("el artefacto de la compuerta %q del cambio %q cambió desde que lo viste; vuelve a abrir el detalle o consulta `axiom sdd status %s --cwd %s` y decide sobre la versión actual",
+			parsed.Gate, parsed.Change, pathquote.ShellWord(parsed.Change), pathquote.Quote(workspaceRoot))))
 	}
 	// Exit 2 of a stop: every check is a read and runs BEFORE gates.yaml is written (DD-02).
 	var handOff *handOffPrepared
@@ -185,16 +226,16 @@ func RecordGate(ctx context.Context, in GateRecordInput) (GateRecordOutcome, err
 	if parsed.EvidenceKind != "" {
 		evidence, evidenceErr := verifyGateEvidence(workspaceRoot, parsed)
 		if evidenceErr != nil {
-			return fail(evidenceErr)
+			return fail(gateCoded(GateCodeEvidenceRefused, evidenceErr))
 		}
 		record.EvidenceKind = evidence.Kind
 		record.EvidenceRef = evidence.Ref
 		record.EvidenceBaseRef = evidence.BaseRef
 		record.Verified = evidence.Verified
 	}
-	if handOff != nil || commitReview != "" {
+	if handOff != nil || commitReview != "" || in.ExpectedDigest != "" {
 		// The "still pending" check is repeated under the ledger lock: two recorders (exit 2 and
-		// exit 3, or two approvals with a commit review mode) racing on the same pending gate must
+		// exit 3, two approvals with a commit review mode, or the dashboard with a seen digest) racing on the same pending gate must
 		// leave a single approved record.
 		err = kickoff.AppendGateChecked(changeRoot, record, gateStillPendingCheck(parsed, workspaceRoot))
 	} else {
