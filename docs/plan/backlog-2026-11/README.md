@@ -470,7 +470,7 @@ Para la sesión padre que coordine el plan.
 
 ### Seguimiento
 
-Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con las PR fusionadas en GitHub. Junto a cada PR va el commit de fusión corto. La columna «Sesión» queda vacía: las sesiones son locales y su registro está en Engram.
+Estado a 2026-11-27, contrastado con Engram (`plan-backlog/seguimiento`) y con las PR fusionadas en GitHub. Todos los cambios del catálogo están fusionados: el plan está completo. Junto a cada PR va el commit de fusión corto. La columna «Sesión» queda vacía: las sesiones son locales y su registro está en Engram.
 
 | Id | Estado | Sesión | Rama | PR |
 |---|---|---|---|---|
@@ -502,16 +502,16 @@ Estado a 2026-11-26, contrastado con Engram (`plan-backlog/seguimiento`) y con l
 | C-06-c | fusionado | | `inc/bateria-pruebas` | #356 (`da433c3a`); archive #357 (`804fa42b`) |
 | C-06-d | fusionado | | `inc/marcas-pruebas` | #369 (`f7da2e59`); archive #370 (`dc5e4ec7`) |
 | C-06-e | fusionado | | `inc/ajustes-proyecto` | #361 (`3c406805`); archive #362 (`7a7f8ee9`) |
-| C-06-f | pendiente | | | |
+| C-06-f | fusionado | | `inc/puertas-desde-ui` | #381 (`9c86b86e`); archive #383 (`39b9ad94`) |
 | C-06-g | fusionado | | `inc/agentes-ui` | #336 (`da5762ba`) |
 | C-07-a | fusionado | | `inc/identidad-git-actor` | #276 (`bddd7ee9`); archive #278 (`cb92574f`) |
 | C-07-b | fusionado | | `inc/marco-integraciones` | #285 (`c0de4c0f`); archive #287 (`0d6852a2`) |
 | C-07-c | fusionado | | `inc/adaptador-ado` | #291 (`b1ba7246`); archive #292 (`d580368d`) |
 | C-07-d | fusionado | | `inc/arranque-desde-wi` | #359 (`64fd72a0`); archive #360 (`e365e538`) |
-| C-07-e | en curso | | `inc/eventos-ado` | |
+| C-07-e | fusionado | | `inc/eventos-ado` | #366 (`fa076cc3`); archive #367 (`63eaaab0`) |
 | C-07-f | fusionado | | `inc/plantilla-ramas` | #371 (`aed635e7`); archive #372 (`aa3f8525`) |
 | C-07-g | fusionado | | `inc/mcp-ado` | #368 (`711807e6`); remate #373 (`67ce26e1`) |
-| C-07-h | pendiente | | | |
+| C-07-h | fusionado | | `inc/ui-integraciones` | #376 (`ba0e5bbd`); archive #377 (`5bfede0c`) |
 | C-08-a | fusionado | | `inc/paquetes-huerfanos` | #298 (`7abf7590`) |
 | C-08-b | fusionado | | `inc/suite-local-windows` | #301 (`3c520778`) |
 | C-08-c | fusionado | | `refactor/primitivas-fichero` | #300 (`3417cbbf`) |
