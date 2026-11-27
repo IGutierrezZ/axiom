@@ -209,6 +209,26 @@ integrations:
 			t.Errorf("%s debe ser de solo lectura con motivo: %+v", key, e)
 		}
 	}
+	// Cada clave de solo lectura declarada lleva la línea de su clave, para que «Abrir en el
+	// editor» lleve a ella.
+	wantLines := map[string]int{"workspace.topology": 3, "workspace.specs_repository": 4, "workspace.root": 5, "workspace.skill_roots": 6, "technical_context": 13, "governance.language": 16, "governance.shared_memory": 17}
+	for key, want := range wantLines {
+		if got := mustEntry(t, snap, key).Line; got != want {
+			t.Errorf("%s: línea %d, quiero %d", key, got, want)
+		}
+	}
+	if got := mustEntry(t, readSnapshot(t, monoDoc), "technical_context").Line; got != 0 {
+		t.Errorf("una clave sin declarar no tiene línea: %d", got)
+	}
+	// Las claves conocidas de governance tienen nombre legible; las demás muestran la clave.
+	for key, want := range map[string]string{"governance.language": "Idioma", "governance.shared_memory": "Memoria compartida"} {
+		if got := mustEntry(t, snap, key).Label; got != want {
+			t.Errorf("%s: etiqueta %q, quiero %q", key, got, want)
+		}
+	}
+	if got := mustEntry(t, readSnapshot(t, monoDoc+"governance:\n  otra: x\n"), "governance.otra").Label; got != "governance.otra" {
+		t.Errorf("una clave desconocida de governance se etiqueta con la clave: %q", got)
+	}
 	for _, e := range snap.Entries {
 		for _, banned := range []string{"artifact_store", "rdd", "commit_review", "docs_publication"} {
 			if strings.Contains(e.Key, banned) {

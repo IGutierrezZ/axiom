@@ -44,6 +44,7 @@ type Entry struct {
 	Format         string    // formato declarado por el manifiesto (string y string_list)
 	Min            *int      // cota inferior inclusiva de un entero del manifiesto
 	Max            *int      // cota superior inclusiva de un entero del manifiesto
+	Line           int       // línea de la clave en axiom.yaml (solo lectura declarada); 0 si no se conoce
 }
 
 // onlyNewChanges es el aviso común de toda clave editable: ajustar el proyecto no
@@ -142,9 +143,20 @@ var readOnlySpecs = []keySpec{
 
 const readOnlyReason = "Esta clave no se edita desde Ajustes: edítala a mano en axiom.yaml."
 
+// governanceLabels da nombre legible a las claves conocidas del bloque `governance`; una
+// clave desconocida se muestra con su ruta.
+var governanceLabels = map[string]string{
+	"language":      "Idioma",
+	"shared_memory": "Memoria compartida",
+}
+
 // governanceSpec describe una clave declarada del bloque `governance`.
 func governanceSpec(name string) keySpec {
-	return keySpec{key: "governance." + name, section: "governance", label: "governance." + name, description: "Gobierno transversal del proyecto.", typ: TypeString}
+	label := governanceLabels[name]
+	if label == "" {
+		label = "governance." + name
+	}
+	return keySpec{key: "governance." + name, section: "governance", label: label, description: "Gobierno transversal del proyecto.", typ: TypeString}
 }
 
 // normalizeRepoPath compara rutas de repositorio como el motor: `\` pasa a `/` y se

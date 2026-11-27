@@ -29,6 +29,10 @@ const STEP_PLAIN = /^\s*[-*+]\s+(DADO|CUANDO|ENTONCES|GIVEN|WHEN|THEN)(?::|\s)\s
 // mayúsculas, cifras, «.», «_» o «-» (RF-TRC-02, HU-001). Un paréntesis normal no es un ID.
 const REQ_ID_LEGACY = /^(.*?)\s*\(((?:REQ|REQUISITO)[^)]*)\)\s*$/i;
 const REQ_ID_DECLARED = /^(.*?)\s*\(([A-Z][A-Z0-9]*[-._][A-Z0-9][A-Z0-9._-]*)\)\s*$/;
+// Un requisito retirado o sustituido lleva un sufijo de estado tras el ID («— RETIRADO»,
+// «[SUPERSEDED / DEPRECADO]»): empieza por raya, guion con espacio o corchete y no tiene
+// paréntesis. El ID se reconoce igual y el sufijo se queda en el título.
+const STATUS_SUFFIX = /^(.*\))\s*((?:[—–]|-\s|\[)[^()]*)$/;
 const MODAL = /\b(NO DEBEN?|DEBEN?|MUST NOT|MUST|SHALL NOT|SHALL)\b/g;
 
 const KIND = { DADO: 'given', GIVEN: 'given', CUANDO: 'when', WHEN: 'when', ENTONCES: 'then', THEN: 'then', Y: 'and', AND: 'and', PERO: 'and', BUT: 'and' };
@@ -39,6 +43,16 @@ function stepOf(line) {
   if (!m) return null;
   const kw = m[1].toUpperCase();
   return { kw, kind: KIND[kw], text: m[2].trim() };
+}
+
+// splitRequirementId separa el ID del título de un requisito: {id, title}; id vacío si no hay.
+function splitRequirementId(title) {
+  const direct = REQ_ID_LEGACY.exec(title) || REQ_ID_DECLARED.exec(title);
+  if (direct) return { id: direct[2].trim(), title: direct[1].trim() };
+  const tail = STATUS_SUFFIX.exec(title);
+  const m = tail && (REQ_ID_LEGACY.exec(tail[1]) || REQ_ID_DECLARED.exec(tail[1]));
+  if (m) return { id: m[2].trim(), title: `${m[1].trim()} ${tail[2].trim()}` };
+  return { id: '', title: title.trim() };
 }
 
 // parseSpec devuelve una lista de bloques:
@@ -70,8 +84,8 @@ export function parseSpec(src) {
   const openReq = (title) => {
     flushMd();
     closeReq();
-    const m = REQ_ID_LEGACY.exec(title) || REQ_ID_DECLARED.exec(title);
-    req = { type: 'requirement', id: m ? m[2].trim() : '', title: (m ? m[1] : title).trim(), bodyLines: [], scenarios: [] };
+    const head = splitRequirementId(title);
+    req = { type: 'requirement', id: head.id, title: head.title, bodyLines: [], scenarios: [] };
   };
 
   for (const line of lines) {

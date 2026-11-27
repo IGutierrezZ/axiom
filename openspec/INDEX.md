@@ -1,8 +1,8 @@
 # Catálogo Maestro de Especificaciones Vivas — Axiom
 
 > **Proyecto:** Axiom (Spec-Driven Development Platform)
-> **Última Sincronización:** 2026-11-27 08:13:18 UTC
-> **Total Dominios:** 50 | **Total Requerimientos:** 634 | **Total Escenarios BDD:** 3187
+> **Última Sincronización:** 2026-11-27 09:59:50 UTC
+> **Total Dominios:** 50 | **Total Requerimientos:** 634 | **Total Escenarios BDD:** 3188
 
 ---
 
@@ -28,7 +28,7 @@
 | `integration-plugins` | Especificación de integration-plugins | 34 | 194 | [Ver Spec](specs/integration-plugins/spec.md) |
 | `knowledge-profile-init` | Especificación de Requerimientos: Perfil de Inicialización Knowledge (INC-23) | 6 | 9 | [Ver Spec](specs/knowledge-profile-init/spec.md) |
 | `living-documentation` | Especificación Viva: Motor de Documentación Viva y Adopción Orgánica en Archive (INC-07) | 11 | 15 | [Ver Spec](specs/living-documentation/spec.md) |
-| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 37 | 203 | [Ver Spec](specs/local-web-dashboard/spec.md) |
+| `local-web-dashboard` | Especificación Viva: Servidor HTTP Local Embebido y Dashboard Web | 37 | 204 | [Ver Spec](specs/local-web-dashboard/spec.md) |
 | `multi-project-hub` | Especificación Viva: Hub Multi-Proyecto, Selector Dinámico en Dashboard Web y CLI axiom init (INC-08) | 13 | 57 | [Ver Spec](specs/multi-project-hub/spec.md) |
 | `multi-role-fan-out` | Especificación Viva: Despliegue Multi-Rol y Barrera de Sincronización en SDD | 8 | 13 | [Ver Spec](specs/multi-role-fan-out/spec.md) |
 | `odd-cli-commands` | Especificación de Requerimientos: Comandos CLI para ODD (INC-19) | 4 | 0 | [Ver Spec](specs/odd-cli-commands/spec.md) |
@@ -1657,6 +1657,7 @@ Definir de forma rigurosa, ejecutable y verificable los requerimientos funcional
   - *Escenario BDD:* Cambiar el carril conserva comentarios y orden
   - *Escenario BDD:* Valor inválido o revisión obsoleta no pierde lo tecleado
   - *Escenario BDD:* Claves de solo lectura con «Abrir en el editor» y «Copiar ruta»
+  - *Escenario BDD:* Clave de solo lectura sin declarar abre el fichero sin línea
   - *Escenario BDD:* Bloque «Preferencias personales»
   - *Escenario BDD:* Monorepo sin claves de multirepo
   - *Escenario BDD:* Multirepo con `gate_policy` incluido `optional`

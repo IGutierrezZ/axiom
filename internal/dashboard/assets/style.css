@@ -172,7 +172,7 @@ dialog :focus-visible { outline-offset: 1px; }
 .topbar-spacer { flex: 1; }
 .topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.main { padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; max-width: 1280px; width: 100%; }
+.main { padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 24px; width: 100%; }
 .main:focus { outline: none; }
 .view { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .view > [tabindex="-1"]:focus { outline: none; }
@@ -668,6 +668,8 @@ button.dt-doc:hover { background: var(--hover); color: var(--text); }
 
 /* Markdown renderizado */
 .md { display: flex; flex-direction: column; gap: 12px; max-width: 78ch; line-height: 1.6; color: var(--text); }
+/* En los visores de documentos el texto ocupa el ancho del panel. */
+.dt-viewer-body .md, .kn-viewer-body .md { max-width: none; }
 .md p { margin: 0; }
 .md-h { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 8px; font-weight: 650; line-height: 1.3; }
 h3.md-h { font-size: 17px; }
@@ -1016,6 +1018,9 @@ h5.md-h, h6.md-h { font-size: 13px; }
 .eco-models-table td { vertical-align: middle; }
 .eco-agents { min-width: 40rem; }
 .eco-agents td, .eco-agents th { vertical-align: middle; }
+/* La celda del agente es la cabecera de su fila: sin las mayúsculas ni el no-salto de las
+   cabeceras de columna, para que la tabla quepa en su caja con ventanas de unos 1024 px. */
+.eco-agents th[scope="row"] { font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); background: transparent; white-space: normal; }
 .eco-models-table select, .eco-models-table input[type="text"] { width: 100%; min-width: 12rem; }
 
 .eco-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }

@@ -50,8 +50,10 @@ func Run() error {
 	return RunArgs(os.Args[1:], os.Stdout)
 }
 
-// nonInteractiveStartError: `axiom` sin argumentos abre la UI y necesita terminal.
-const nonInteractiveStartError = "axiom requires both stdin and stdout to be terminals (TTYs); use --version, axiom update, or --help for non-interactive use"
+// nonInteractiveStartError: `axiom` sin argumentos abre la UI y necesita terminal. Sin
+// ella, la vía al dashboard es `axiom ui`; para uso no interactivo, `--version`, `axiom update`
+// o `--help` (RF-TUI-01).
+const nonInteractiveStartError = "axiom sin argumentos abre el dashboard y necesita que stdin y stdout sean una terminal (TTY); sin terminal, usa «axiom ui» para abrir el dashboard y, para uso no interactivo, «axiom --version», «axiom update» o «axiom --help»"
 
 // clearPendingSyncAfterDeferredSync clears PendingSync under the canonical
 // install-state lock. It re-reads the latest state inside the lock so changes
