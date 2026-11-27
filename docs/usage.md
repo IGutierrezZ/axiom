@@ -205,13 +205,15 @@ Si GitHub limita las comprobaciones de actualización, define `GITHUB_TOKEN` o `
 
 #### Actualizar desde el dashboard
 
-Al abrirse, `axiom ui` comprueba si hay una versión publicada más nueva. Guarda el resultado unas 6 horas y ofrece un botón para volver a comprobar. Si la hay, muestra un aviso con la versión actual, la nueva y el botón **Actualizar**, que hace lo siguiente:
+Al abrirse, `axiom ui` comprueba si hay una versión publicada más nueva. Solo compara con releases, también cuando el binario instalado se compiló desde `main` (una pseudo-versión como `v3.9.1-0.<fecha>-<sha>`, que va por detrás de la release `v3.9.1`); los commits de `main` no generan aviso. Guarda el resultado unas 6 horas y ofrece un botón para volver a comprobar. Si la hay, muestra un aviso con la versión actual, la nueva y el botón **Actualizar**, que hace lo siguiente:
 
 1. Actualiza Axiom. Muestra en el aviso cada fase (comprobación, actualización, reinicio, sincronización).
 2. Relanza el dashboard con el binario nuevo, sin consola y en el mismo puerto (el fijo `47700`, o el que hayas pasado con `--port`), de modo que la URL y la aplicación instalada (PWA) siguen siendo las mismas. La página se recarga sola cuando responde la versión nueva. Lo que escriba el proceso relanzado queda en `ui.log` (`%LOCALAPPDATA%\axiom\ui.log` en Windows; el directorio de caché del usuario en otros sistemas).
 3. El binario nuevo sincroniza el workspace abierto (`axiom sync --scope workspace`). El proceso viejo nunca sincroniza, porque lo haría con los recursos de la versión anterior. Si la carpeta abierta no tiene `axiom.yaml`, no se sincroniza.
 
 Si falla alguna fase, o si el proceso nuevo muere nada más arrancar, el dashboard viejo sigue funcionando y el aviso muestra el comando para hacerlo a mano (`axiom ui --path "<carpeta>"`) y, en el segundo caso, la ruta de `ui.log`. En Windows la actualización usa `go install`. Para que funcione, Go tiene que estar instalado y el `axiom` del `PATH` tiene que ser el de `GOBIN`. Si no es así, el aviso muestra el comando manual.
+
+En **Ecosistema**, la tarjeta «Actualizar herramientas» actualiza Axiom y las demás herramientas en el canal que elijas (Estable o Main) y después sincroniza el workspace. Corre en el mismo trabajo en segundo plano que el aviso, así que no depende de que la petición termine a tiempo: la tarjeta muestra el resultado por fases al acabar y, si Axiom se ha sustituido, el dashboard se relanza y la página se recarga sola. Si ya hay una actualización en curso, no se lanza otra.
 
 El acceso directo del menú Inicio y la tarea programada `Axiom` (`axiom ui --detach`) apuntan al ejecutable que instaló `install.ps1`. La actualización en Windows exige que ese sea el `axiom` del `PATH` donde se escribe la versión nueva, así que siguen funcionando tras actualizar.
 

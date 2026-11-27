@@ -50,8 +50,18 @@ type UpdateSyncSummary struct {
 	Error         string   `json:"error,omitempty"`
 }
 
+// Tipos del trabajo de actualización: qué acción lo lanzó.
+const (
+	updateJobKindUpdate    = "update"    // aviso de versión nueva (POST /api/system/update)
+	updateJobKindRestart   = "restart"   // «Reiniciar con la última versión» (POST /api/system/restart)
+	updateJobKindEcosystem = "ecosystem" // «Actualizar» de Ecosistema (POST /api/ecosystem/upgrade)
+)
+
 // UpdateJobStatus es la respuesta de GET /api/system/update/status.
 type UpdateJobStatus struct {
+	// Kind dice qué acción lanzó el trabajo; vacío en la sincronización posterior al
+	// relanzamiento.
+	Kind       string `json:"kind"`
 	Phase      string `json:"phase"`
 	Running    bool   `json:"running"`
 	Message    string `json:"message"`
@@ -60,6 +70,9 @@ type UpdateJobStatus struct {
 	// espera a que el servidor responda con otra distinta para recargar.
 	FromVersion string             `json:"from_version"`
 	Sync        *UpdateSyncSummary `json:"sync"`
+	// Result es el informe consolidado de la cadena upgrade -> sync (RF-UPD-04) de un
+	// trabajo de Ecosistema; no cambia una vez guardado.
+	Result *EcosystemActionResponse `json:"result,omitempty"`
 }
 
 // updateJobState guarda el único trabajo de actualización del proceso. Vive en el
@@ -113,6 +126,13 @@ func (j *updateJobState) setRestarting(message, manualHint string) {
 	j.status.ManualHint = manualHint
 }
 
+// setResult guarda el informe consolidado de la cadena upgrade -> sync.
+func (j *updateJobState) setResult(resp *EcosystemActionResponse) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.status.Result = resp
+}
+
 // finish cierra el trabajo: fase terminal (done o failed) y fin de «en curso».
 func (j *updateJobState) finish(phase, message, manualHint string, sync *UpdateSyncSummary) {
 	j.mu.Lock()
@@ -145,6 +165,31 @@ func (s *Service) StartRestart() (UpdateJobStatus, bool) {
 }
 
 func (s *Service) startUpdateJob(force bool) (UpdateJobStatus, bool) {
+	kind := updateJobKindUpdate
+	if force {
+		kind = updateJobKindRestart
+	}
+	initial := UpdateJobStatus{Kind: kind, Phase: updatePhaseChecking, Message: "Comprobando la última versión de Axiom…"}
+	return s.startJob(initial, func() { s.runUpdateJob(force) })
+}
+
+// StartEcosystemUpgrade arranca la cadena upgrade -> sync de Ecosistema (RF-UPD-04)
+// en el canal pedido, en el mismo trabajo único que StartUpdate: no depende de la
+// petición HTTP ni de su WriteTimeout. Si ya hay un trabajo en curso devuelve su
+// estado y no lanza otro.
+func (s *Service) StartEcosystemUpgrade(channel string) (UpdateJobStatus, bool) {
+	channel = strings.TrimSpace(channel)
+	msg := "Comprobando y actualizando herramientas…"
+	if channel != "" {
+		msg = fmt.Sprintf("Comprobando y actualizando herramientas en el canal %s…", channel)
+	}
+	initial := UpdateJobStatus{Kind: updateJobKindEcosystem, Phase: updatePhaseUpgrading, Message: msg}
+	return s.startJob(initial, func() { s.runEcosystemUpgradeJob(channel) })
+}
+
+// startJob lanza run como el único trabajo del proceso, con initial como estado de
+// partida. Devuelve el estado y si se ha lanzado un trabajo nuevo.
+func (s *Service) startJob(initial UpdateJobStatus, run func()) (UpdateJobStatus, bool) {
 	j := &s.update
 	j.mu.Lock()
 	if j.running {
@@ -154,11 +199,12 @@ func (s *Service) startUpdateJob(force bool) (UpdateJobStatus, bool) {
 	}
 	j.running = true
 	j.done = make(chan struct{})
-	j.status = UpdateJobStatus{Phase: updatePhaseChecking, Message: "Comprobando la última versión de Axiom…", FromVersion: s.versions.current()}
+	initial.FromVersion = s.versions.current()
+	j.status = initial
 	st := j.snapshotLocked()
 	j.mu.Unlock()
 
-	go s.runUpdateJob(force)
+	go run()
 	return st, true
 }
 
@@ -249,6 +295,60 @@ func (s *Service) runUpdateJob(force bool) {
 		return
 	}
 	j.finish(updatePhaseDone, resp.Message, "", sync)
+}
+
+// runEcosystemUpgradeJob es el cuerpo del trabajo de Ecosistema: la cadena upgrade
+// -> sync completa en el canal pedido, con el informe consolidado en Result. Si
+// Axiom se ha sustituido, relanza el dashboard como el reinicio de la barra lateral
+// y el proceso nuevo sincroniza el workspace al arrancar.
+func (s *Service) runEcosystemUpgradeJob(channel string) {
+	j := &s.update
+	defer func() {
+		if r := recover(); r != nil {
+			j.finish(updatePhaseFailed, fmt.Sprintf("La actualización se interrumpió: %v", r), manualHintForChannel(channel), nil)
+		}
+	}()
+
+	resp, err := s.RunUpgradeSequence(channel)
+	j.setResult(resp)
+	if resp == nil || resp.Phases == nil {
+		msg := "La actualización no produjo resultado."
+		if err != nil {
+			msg = err.Error()
+		}
+		j.finish(updatePhaseFailed, msg, manualHintForChannel(channel), nil)
+		return
+	}
+	upgrade := resp.Phases.Upgrade
+	sync := summarizeUpdateSync(resp.Phases.Sync)
+	if upgrade.RestartRequired {
+		j.setRestarting("Axiom se ha actualizado. Reiniciando el dashboard con la versión nueva…", manualRelaunchHint(s.getRootPath()))
+		s.afterSelfUpgrade(sync)
+		return
+	}
+	if !resp.Success {
+		msg := resp.Error
+		if msg == "" {
+			msg = resp.Message
+		}
+		hint := upgrade.ManualHint
+		if hint == "" {
+			hint = manualHintForChannel(channel)
+		}
+		j.finish(updatePhaseFailed, msg, hint, sync)
+		return
+	}
+	j.finish(updatePhaseDone, resp.Message, upgrade.ManualHint, sync)
+}
+
+// manualHintForChannel es la orden manual del canal pedido en Ecosistema.
+func manualHintForChannel(channel string) string {
+	switch strings.ToLower(strings.TrimSpace(channel)) {
+	case "main", "beta", "nightly":
+		return manualBetaUpdateHint
+	default:
+		return manualUpdateHint
+	}
 }
 
 // afterSelfUpgrade se ejecuta cuando el binario propio ya se ha reemplazado. El

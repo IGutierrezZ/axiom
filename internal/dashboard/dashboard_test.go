@@ -879,9 +879,11 @@ func TestEcosystemEndpoints(t *testing.T) {
 	req7 := httptest.NewRequest(http.MethodPost, "/api/ecosystem/upgrade", nil)
 	rr7 := httptest.NewRecorder()
 	router.ServeHTTP(rr7, req7)
-	if rr7.Code != http.StatusOK && rr7.Code != http.StatusInternalServerError {
+	if rr7.Code != http.StatusAccepted {
 		t.Errorf("código inesperado para upgrade: %d", rr7.Code)
 	}
+	// La cadena corre en el trabajo en segundo plano.
+	waitUpdateFinished(t, svc)
 
 	// The sync phase of upgrade->sync adds one more invocation. Every one of them
 	// must have run with the project as working directory, never the checkout.

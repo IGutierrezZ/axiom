@@ -131,6 +131,33 @@ export function formatEcosystemUpgradeSequence(data) {
   return lines.join('\n');
 }
 
+// upgradeJobResult traduce el estado final del trabajo de «Actualizar» (GET
+// /api/system/update/status) al DTO de la cadena upgrade->sync que presenta la
+// tarjeta (job.result). Un trabajo fallido lanza un error con ese DTO en err.data y
+// la orden manual en err.manualHint.
+export function upgradeJobResult(job) {
+  const data = (job && job.result) || { success: !!job && job.phase !== 'failed', message: (job && job.message) || '', output: [] };
+  if (!job || job.phase === 'failed') {
+    const err = new Error((job && job.message) || 'La actualización ha fallado.');
+    err.data = data;
+    err.manualHint = (job && job.manual_hint) || '';
+    throw err;
+  }
+  return data;
+}
+
+// presentUpgradeError presenta un «Actualizar» fallido: las fases si las hay (o el
+// mensaje) y la orden manual, salvo que las fases ya la nombren.
+export function presentUpgradeError(err) {
+  const phases = err && err.data && err.data.phases;
+  const lines = [phases ? formatEcosystemUpgradeSequence(err.data) : (err && err.message) || ''];
+  const hint = err && err.manualHint;
+  if (hint && !(phases && phases.upgrade && phases.upgrade.manual_hint === hint)) {
+    lines.push('Puedes actualizar a mano con: ' + hint);
+  }
+  return lines.filter(Boolean).join('\n');
+}
+
 // ---- Última operación ------------------------------------------------------------------
 
 export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración', install: 'install' };

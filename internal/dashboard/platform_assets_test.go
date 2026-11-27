@@ -192,6 +192,14 @@ out.outcome = [
   eco.operationOutcome('upgrade', { success: true, phases: { upgrade: { status: 'succeeded' }, sync: { executed: true, success: true } } }, false),
 ];
 out.labels = eco.OPERATION_LABEL;
+const phased = { success: true, phases: { upgrade: { status: 'succeeded' }, sync: { executed: true, success: true } } };
+out.jobDone = eco.upgradeJobResult({ phase: 'done', running: false, result: phased }) === phased;
+out.jobRestarting = eco.upgradeJobResult({ phase: 'restarting', running: true, result: phased }) === phased;
+out.jobNoResult = eco.upgradeJobResult({ phase: 'done', message: 'hecho' });
+const failedJob = (job) => { try { eco.upgradeJobResult(job); return null; } catch (err) { return { message: err.message, hint: err.manualHint, phases: !!(err.data && err.data.phases), present: eco.presentUpgradeError(err) }; } };
+out.jobFailedPhased = failedJob({ phase: 'failed', message: 'sin red', manual_hint: 'go install …@main', result: { success: false, phases: { upgrade: { status: 'failed', error: 'sin red', manual_hint: '' }, sync: { executed: false, skipped_reason: 'upgrade-failed' } } } });
+out.jobFailedSameHint = failedJob({ phase: 'failed', message: 'x', manual_hint: 'descarga', result: { success: false, phases: { upgrade: { status: 'skipped', manual_hint: 'descarga' }, sync: { executed: true, success: false } } } });
+out.jobFailedBare = failedJob({ phase: 'failed', message: 'Se perdió la conexión', manual_hint: '' });
 console.log(JSON.stringify(out));
 `
 	if err := os.WriteFile(filepath.Join(dir, "run.mjs"), []byte(script), 0o600); err != nil {
@@ -241,6 +249,15 @@ console.log(JSON.stringify(out));
 		UnknownSkip      string            `json:"unknownSkip"`
 		Outcome          []outcome         `json:"outcome"`
 		Labels           map[string]string `json:"labels"`
+		JobDone          bool              `json:"jobDone"`
+		JobRestarting    bool              `json:"jobRestarting"`
+		JobNoResult      struct {
+			Success bool   `json:"success"`
+			Message string `json:"message"`
+		} `json:"jobNoResult"`
+		JobFailedPhased   *failedJobView `json:"jobFailedPhased"`
+		JobFailedSameHint *failedJobView `json:"jobFailedSameHint"`
+		JobFailedBare     *failedJobView `json:"jobFailedBare"`
 	}
 	if err := json.Unmarshal(raw, &res); err != nil {
 		t.Fatalf("salida de node ilegible: %v\n%s", err, raw)
@@ -337,4 +354,31 @@ console.log(JSON.stringify(out));
 	if res.Labels["upgrade"] != "upgrade → sync" {
 		t.Errorf("la etiqueta del upgrade debe mostrar la cadena upgrade → sync: %q", res.Labels["upgrade"])
 	}
+
+	// «Actualizar» en segundo plano: el resultado sale de job.result; un trabajo
+	// fallido conserva las fases y la orden manual, sin repetirla si ya la nombran.
+	if !res.JobDone || !res.JobRestarting {
+		t.Errorf("upgradeJobResult debe devolver job.result al terminar o al reiniciar: done=%v restarting=%v", res.JobDone, res.JobRestarting)
+	}
+	if !res.JobNoResult.Success || res.JobNoResult.Message != "hecho" {
+		t.Errorf("sin result, upgradeJobResult debe construir el DTO con el mensaje: %+v", res.JobNoResult)
+	}
+	if v := res.JobFailedPhased; v == nil || !v.Phases || v.Hint != "go install …@main" ||
+		!strings.Contains(v.Present, "Error de upgrade: sin red") || !strings.Contains(v.Present, "Puedes actualizar a mano con: go install …@main") {
+		t.Errorf("trabajo fallido con fases: %+v", v)
+	}
+	if v := res.JobFailedSameHint; v == nil || strings.Contains(v.Present, "Puedes actualizar a mano") {
+		t.Errorf("la orden manual que ya nombran las fases no se repite: %+v", v)
+	}
+	if v := res.JobFailedBare; v == nil || v.Phases || v.Present != "Se perdió la conexión" {
+		t.Errorf("trabajo fallido sin fases: %+v", v)
+	}
+}
+
+// failedJobView es lo que devuelve el arnés de Node para un trabajo de «Actualizar» fallido.
+type failedJobView struct {
+	Message string `json:"message"`
+	Hint    string `json:"hint"`
+	Phases  bool   `json:"phases"`
+	Present string `json:"present"`
 }

@@ -38,12 +38,13 @@ Sin configuración de TDD en el proyecto ni en la sesión: comprobaciones funcio
 
 - [x] T1 · Canal explícito en la comprobación: `CheckOptions{Channel}` y `CheckFilteredWithOptions`; el canal estable explícito ignora la pseudo-versión; prerrelease por detrás de la release para la herramienta propia; el aviso del dashboard y el trabajo lateral usan el canal estable; pruebas. Ruta: inline (unidad pequeña, sin decisiones abiertas). Evidencia: `gofmt` limpio; `go vet ./internal/update/ ./internal/dashboard/` limpio; `go test ./internal/update/ -run 'UsesBetaMainHead|IsBetaUpdateChannel|PseudoVersionStable|HasPrerelease|CheckSingleTool|CheckFiltered|CheckAll|Homebrew'` ok; `go test ./internal/dashboard/ -run 'Version|Update|Restart|Upgrade|Sequence'` ok. `isBetaUpdateChannel` se sustituye por `effectiveChannel` + `isBetaChannel` (sin código huérfano).
   Cubre: prov:UPD:1
-- [ ] T2 · Ecosistema por el trabajo en segundo plano: `POST /api/ecosystem/upgrade` arranca el trabajo con canal y responde `202`; `result` con el informe consolidado; relanzamiento si Axiom se sustituye; la tarjeta sigue el estado y pinta el resultado; pruebas. Ruta: inline.
+- [x] T2 · Ecosistema por el trabajo en segundo plano: `POST /api/ecosystem/upgrade` arranca el trabajo con canal y responde `202`; `result` con el informe consolidado; relanzamiento si Axiom se sustituye; la tarjeta sigue el estado y pinta el resultado; pruebas. Ruta: inline. Evidencia: `go vet ./internal/dashboard/` limpio; `node --check` de `update.js`, `screens/ecosystem.js` y `core/ecosystem.js` (como `.mjs`) ok; `go test ./internal/dashboard/ -run 'EcosystemUpgrade|ManualHintForChannel|UpdateJob|Update|Restart|Version|Sequence|EcosystemEndpoints|EcosystemLogic|Platform|Asset|Canary|Secret'` ok, con `TestEcosystemLogicRuntime` ejecutado en Node (no omitido). Nuevas: `ecosystem_upgrade_job_test.go` (202 y cadena en segundo plano, relanzamiento, fallo con orden del canal, trabajo único) y `TestEcosystemUpgradeUIFollowsTheBackgroundJob`. El estado del trabajo gana `kind` (`update`, `restart`, `ecosystem`) para que el aviso superior no repita lo que pinta la tarjeta. `docs/usage.md` actualizado (aviso solo de releases y Ecosistema en segundo plano).
+  Cubre: RF-UPD-04, RF-UIP-02
 - [ ] T3 · «Buscar en main» bajo demanda: `GET /api/system/version/main` sin caché y botón en la tarjeta de Ecosistema; pruebas e integración de la spec viva. Ruta: inline.
 
 ## Progreso
 
-T1 hecha. Siguiente paso: T2.
+T1 hecha en `6e6900ef9`; T2 hecha. Siguiente paso: T3.
 
 ## Criterio de terminado
 

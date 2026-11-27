@@ -34,6 +34,25 @@ const PHASE_LABEL = {
 let pollTimer = null;
 let pollErrors = 0;
 
+// «Actualizar» de Ecosistema usa el mismo trabajo (kind «ecosystem»). Si lo lanzó
+// esta página, su avance y su resultado se pintan en la tarjeta de Ecosistema y el
+// aviso superior no los repite, salvo durante el reinicio. ecosystemWaiter resuelve
+// la promesa de startEcosystemUpgrade cuando el trabajo termina o entra en reinicio.
+let ecosystemOwned = false;
+let ecosystemWaiter = null;
+
+function settleEcosystemWaiter(job) {
+  if (!ecosystemWaiter || !job) return;
+  if (job.running && job.phase !== 'restarting') return;
+  const resolve = ecosystemWaiter;
+  ecosystemWaiter = null;
+  resolve(job);
+}
+
+function ownedByEcosystem(job) {
+  return ecosystemOwned && job.kind === 'ecosystem' && job.phase !== 'restarting';
+}
+
 // Solo se enlazan releases https: la URL viene de la API, no se inserta a ciegas.
 function safeReleaseUrl(url) {
   return typeof url === 'string' && /^https:\/\//i.test(url) ? url : '';
@@ -103,7 +122,7 @@ export function renderUpdateBanner() {
   const banner = $('#update-banner');
   if (!banner) return;
   const job = state.updateJob;
-  if (job && job.phase && job.phase !== 'idle' && (job.running || !isDismissed(job))) {
+  if (job && job.phase && job.phase !== 'idle' && !ownedByEcosystem(job) && (job.running || !isDismissed(job))) {
     banner.hidden = false;
     renderJob(banner, job);
     return;
@@ -295,6 +314,7 @@ async function launchJob(btn, url, busyLabel, failure) {
   try {
     const job = await api(url, { method: 'POST' });
     pollErrors = 0;
+    ecosystemOwned = false;
     trackUpdate(job);
     set('updateJob', job);
     if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
@@ -303,6 +323,24 @@ async function launchJob(btn, url, busyLabel, failure) {
   } finally {
     restore();
   }
+}
+
+// startEcosystemUpgrade lanza «Actualizar» de Ecosistema (POST /api/ecosystem/upgrade)
+// en el trabajo en segundo plano y devuelve una promesa con su estado cuando termina
+// o cuando empieza el reinicio, que este módulo sigue hasta recargar la página. Si ya
+// había otro trabajo en curso, lo sigue el aviso superior y la promesa se rechaza.
+export async function startEcosystemUpgrade(channel) {
+  const job = await api('/api/ecosystem/upgrade', { body: { channel } });
+  pollErrors = 0;
+  stopPolling();
+  trackUpdate(job);
+  const own = job.kind === 'ecosystem';
+  ecosystemOwned = own;
+  const finished = own ? new Promise(resolve => { ecosystemWaiter = resolve; }) : null;
+  set('updateJob', job);
+  if (job.running) pollTimer = setTimeout(pollUpdate, POLL_MS);
+  if (!own) throw new Error('Ya hay otra actualización de Axiom en curso: espera a que termine.');
+  return finished;
 }
 
 function startUpdate(btn) {
@@ -347,6 +385,7 @@ export function initUpdate() {
   on('version', renderUpdateBanner);
   on('version', renderRunningVersion);
   on('updateJob', renderUpdateBanner);
+  on('updateJob', settleEcosystemWaiter);
   const restartButton = $('#btn-axiom-restart');
   if (restartButton) restartButton.addEventListener('click', () => startRestart(restartButton));
   const banner = $('#update-banner');

@@ -18,13 +18,15 @@
 import { api, escapeHtml } from '../core/api.js';
 import { $, badge, confirmDialog, promptDialog, setBusy, stateEmpty, stateError, stateLoading, statusPill, tableWrap, toast } from '../core/components.js';
 import {
-  OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, sortChecks, statusView
+  OPERATION_LABEL, doctorSections, formatBytes, formatEcosystemUpgradeSequence, healthSummary, operationOutcome, presentUpgradeError,
+  sortChecks, statusView, upgradeJobResult
 } from '../core/ecosystem.js';
 import { formatDateTime, plural } from '../core/format.js';
 import { icon } from '../core/icons.js';
 import { bindModelsEditor, modelsHtml } from './ecosystem-models.js';
 import { refreshOverview } from '../core/overview.js';
 import { on, state } from '../core/state.js';
+import { startEcosystemUpgrade } from '../update.js';
 
 let busy = false;        // una operación (o restauración) en curso: bloquea las demás
 let diagnosing = false;  // «Volver a diagnosticar» en curso
@@ -351,10 +353,13 @@ function runUpgrade(button) {
   const channel = $('#select-eco-channel').value || 'stable';
   return runOperation({
     kind: 'upgrade', button, busyLabel: 'Actualizando…', progress: `Comprobando y actualizando herramientas en el canal ${channel}…`,
-    run: () => api('/api/ecosystem/upgrade', { body: { channel } }),
+    // La cadena corre en el trabajo en segundo plano del servidor, como «Reiniciar con
+    // la última versión»: la petición no espera a que termine. Si Axiom se sustituye,
+    // el dashboard se relanza y la página se recarga sola.
+    run: () => startEcosystemUpgrade(channel).then(upgradeJobResult),
     present: data => formatEcosystemUpgradeSequence(data),
-    // El upgrade puede responder 500 con las fases en el cuerpo: se presentan igualmente.
-    presentError: err => (err.data && err.data.phases ? formatEcosystemUpgradeSequence(err.data) : err.message),
+    // Un trabajo fallido conserva las fases en err.data: se presentan igualmente.
+    presentError: presentUpgradeError,
     refresh: refreshAfterChange
   });
 }

@@ -894,6 +894,12 @@ func (s *Server) handleEcosystemSync(w http.ResponseWriter, r *http.Request) {
 	s.respondJSON(w, http.StatusOK, resp)
 }
 
+// handleEcosystemUpgrade responde POST /api/ecosystem/upgrade: arranca la cadena
+// upgrade -> sync en el trabajo en segundo plano del proceso, con el canal pedido,
+// y contesta enseguida (202) con su estado, como POST /api/system/update. El
+// informe por fases llega en `result` de GET /api/system/update/status. Ejecutarla
+// dentro de la petición superaba el WriteTimeout (15 s): el navegador perdía la
+// respuesta y nadie relanzaba el dashboard si Axiom se sustituía.
 func (s *Server) handleEcosystemUpgrade(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
@@ -903,12 +909,8 @@ func (s *Server) handleEcosystemUpgrade(w http.ResponseWriter, r *http.Request) 
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
-	resp, err := s.service.RunUpgradeSequence(req.Channel)
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, resp)
-		return
-	}
-	s.respondJSON(w, http.StatusOK, resp)
+	st, _ := s.service.StartEcosystemUpgrade(req.Channel)
+	s.respondJSON(w, http.StatusAccepted, st)
 }
 
 func (s *Server) handleEcosystemBackups(w http.ResponseWriter, r *http.Request) {
