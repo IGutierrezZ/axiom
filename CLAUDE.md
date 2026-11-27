@@ -13,7 +13,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/axiom-worktree.p
 - Ejecuta `axiom branch ensure --cwd <checkout principal> --change <slug> --mode worktree --json` y muestra la ruta del worktree: `C:\repos\axiom-wt\<slug>\axiom`, sobre la rama `<prefijo>/<slug>` (el prefijo sale de `git.branch_prefix` en `axiom.yaml`, `inc`, salvo `-Prefix`) desde `origin/main`, sin red.
 - Los cambios ODD (su documento está en `odd/tasks/`) usan `-Lane odd` en `new`, `pr` y `done`; sin él el registro cae en el carril `sdd` y la guarda espera el prefijo de `axiom.yaml` en lugar del indicado con `-Prefix`.
 - PR: `... scripts/axiom-worktree.ps1 pr <slug> -Label bug|feature|refactor|docs|chore|breaking-change` (la base sale de `prTarget` en `axiom branch status --json`). La PR nace con su etiqueta `type:*`: no la añadas después, o la primera ejecución de `pr-check.yml` falla y avisa por correo.
-- Tras el merge: `... scripts/axiom-worktree.ps1 done <slug>` (`axiom branch done` y avance rápido de `main`).
+- Tras el merge: `... scripts/axiom-worktree.ps1 done <slug>` (`axiom branch done` y avance rápido de `main`). Tras la PR de archivo de un cambio SDD se repite con el mismo `<slug>`, nunca con `<slug>-archive`: `done` procesa la rama de archivado que guarda el registro.
 - Necesita un `axiom` con `axiom branch` en el `PATH` (`go install ./cmd/axiom`).
 
 ## Checkout principal `C:\repos\axiom`
