@@ -309,7 +309,7 @@ func TestCheckSingleToolOpenCodePluginRegisteredNotMaterialized(t *testing.T) {
 		NpmPackage:    "opencode-sdd-engram-manage",
 	}
 
-	result := checkSingleTool(context.Background(), tool, "dev", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), tool, "dev", system.PlatformProfile{}, "")
 	if result.Status != RegisteredNotMaterialized {
 		t.Fatalf("status = %q, want %q", result.Status, RegisteredNotMaterialized)
 	}
@@ -347,7 +347,7 @@ func TestCheckSingleToolAxiomBetaComparesMainHead(t *testing.T) {
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{}, "")
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -383,7 +383,7 @@ func TestCheckSingleToolAxiomPseudoVersionComparesMainHeadWithoutChannel(t *test
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614211459-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614211459-6eff4a1ba110", system.PlatformProfile{}, "")
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -401,6 +401,7 @@ func TestUsesBetaMainHeadCheck(t *testing.T) {
 		name           string
 		channel        string
 		channelSet     bool
+		explicit       string // CheckOptions.Channel
 		tool           ToolInfo
 		currentVersion string
 		want           bool
@@ -449,6 +450,37 @@ func TestUsesBetaMainHeadCheck(t *testing.T) {
 			currentVersion: "1.40.3-0.20260614211459-b6872c69e3e4",
 			want:           false,
 		},
+		{
+			name:           "explicit stable env ignores pseudo-version",
+			channel:        "stable",
+			channelSet:     true,
+			tool:           Tools[0],
+			currentVersion: "1.40.3-0.20260614211459-b6872c69e3e4",
+			want:           false,
+		},
+		{
+			name:           "explicit stable option ignores pseudo-version",
+			explicit:       "stable",
+			tool:           Tools[0],
+			currentVersion: "v1.40.3-0.20260614211459-b6872c69e3e4+dirty",
+			want:           false,
+		},
+		{
+			name:           "explicit stable option wins over beta env",
+			channel:        "beta",
+			channelSet:     true,
+			explicit:       "stable",
+			tool:           Tools[0],
+			currentVersion: "1.40.3-0.20260614211459-b6872c69e3e4",
+			want:           false,
+		},
+		{
+			name:           "explicit main option uses main head for stable version",
+			explicit:       "main",
+			tool:           Tools[0],
+			currentVersion: "1.40.3",
+			want:           true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -459,7 +491,7 @@ func TestUsesBetaMainHeadCheck(t *testing.T) {
 				unsetUpdateChannelEnv(t)
 			}
 
-			got := usesBetaMainHeadCheck(tt.tool, tt.currentVersion)
+			got := usesBetaMainHeadCheck(tt.tool, tt.currentVersion, tt.explicit)
 			if got != tt.want {
 				t.Fatalf("usesBetaMainHeadCheck() = %v, want %v", got, tt.want)
 			}
@@ -496,7 +528,7 @@ func TestCheckSingleToolAxiomStableVersionWithoutChannelComparesLatestRelease(t 
 
 	simulateStrayForeignRequest(t, server)
 
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3", system.PlatformProfile{}, "")
 
 	if mainHeadRequested.Load() {
 		t.Fatal("stable channel must not request main HEAD")
@@ -509,6 +541,79 @@ func TestCheckSingleToolAxiomStableVersionWithoutChannelComparesLatestRelease(t 
 	}
 	if result.ReleaseURL != "https://github.com/Gentleman-Programming/gentle-ai/releases/tag/v1.40.4" {
 		t.Fatalf("ReleaseURL = %q, want latest release URL", result.ReleaseURL)
+	}
+}
+
+// TestCheckSingleToolAxiomPseudoVersionStableChannelComparesReleases fija el aviso
+// solo de releases: con el canal estable explícito, un binario compilado desde
+// main no consulta la cabeza de main, y la release con las mismas cifras es
+// posterior a su pseudo-versión.
+func TestCheckSingleToolAxiomPseudoVersionStableChannelComparesReleases(t *testing.T) {
+	tests := []struct {
+		name   string
+		tag    string
+		local  string
+		want   UpdateStatus
+		latest string
+	}{
+		{name: "release behind the main build", tag: "v1.40.2", local: "1.40.3-0.20260614151827-6eff4a1ba110", want: UpToDate, latest: "1.40.2"},
+		{name: "release with the same numbers", tag: "v1.40.3", local: "1.40.3-0.20260614151827-6eff4a1ba110", want: UpdateAvailable, latest: "1.40.3"},
+		{name: "dirty main build and same release", tag: "v1.40.3", local: "v1.40.3-0.20260614151827-6eff4a1ba110+dirty", want: UpdateAvailable, latest: "1.40.3"},
+		{name: "newer release", tag: "v1.41.0", local: "1.40.3-0.20260614151827-6eff4a1ba110", want: UpdateAvailable, latest: "1.41.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("AXIOM_CHANNEL", "beta") // la opción explícita manda sobre el entorno
+
+			origClient := httpClient
+			t.Cleanup(func() { httpClient = origClient })
+
+			var mainHeadRequested atomic.Bool
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch r.URL.Path {
+				case "/repos/Gentleman-Programming/gentle-ai/releases/latest":
+					json.NewEncoder(w).Encode(githubRelease{TagName: tt.tag, HTMLURL: "https://github.com/Gentleman-Programming/gentle-ai/releases/tag/" + tt.tag})
+				case "/repos/Gentleman-Programming/gentle-ai/commits/main":
+					mainHeadRequested.Store(true)
+					http.NotFound(w, r)
+				default:
+					http.NotFound(w, r)
+				}
+			}))
+			defer server.Close()
+			httpClient = server.Client()
+			httpClient.Transport = &testTransport{server: server}
+
+			result := checkSingleTool(context.Background(), upstreamSourceTool, tt.local, system.PlatformProfile{}, ChannelStable)
+
+			if mainHeadRequested.Load() {
+				t.Fatal("stable channel must not request main HEAD")
+			}
+			if result.Status != tt.want {
+				t.Fatalf("status = %q, want %q", result.Status, tt.want)
+			}
+			if result.LatestVersion != tt.latest {
+				t.Fatalf("LatestVersion = %q, want %q", result.LatestVersion, tt.latest)
+			}
+		})
+	}
+}
+
+func TestHasPrereleaseSuffix(t *testing.T) {
+	cases := map[string]bool{
+		"v3.9.1":                               false,
+		"3.9.1+dirty":                          false,
+		"v3.9.1-0.20261127100000-47e94862e0ab": true,
+		"v3.9.1-0.20261127100000-47e94862e0ab+dirty": true,
+		"3.9.1-rc.1": true,
+		"dev":        false,
+		"":           false,
+	}
+	for in, want := range cases {
+		if got := hasPrereleaseSuffix(in); got != want {
+			t.Errorf("hasPrereleaseSuffix(%q) = %v, want %v", in, got, want)
+		}
 	}
 }
 
@@ -535,7 +640,7 @@ func TestCheckSingleToolAxiomBetaAcceptsLocalCommitPrefix(t *testing.T) {
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{}, "")
 
 	if result.Status != UpToDate {
 		t.Fatalf("status = %q, want %q", result.Status, UpToDate)
@@ -578,7 +683,7 @@ func TestCheckSingleToolSelfToolIgnoresHomebrewOwnership(t *testing.T) {
 	httpClient.Transport = &testTransport{server: server}
 
 	profile := system.PlatformProfile{OS: "darwin", PackageManager: "brew"}
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3", profile)
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3", profile, "")
 
 	if probed.Load() {
 		t.Fatal("homebrewOwnershipDetector must not be called for the self tool")
@@ -618,7 +723,7 @@ func TestCheckSingleToolAxiomBetaHintNamesAdvertisedTarget(t *testing.T) {
 	httpClient.Transport = &testTransport{server: server}
 
 	profile := system.PlatformProfile{OS: "linux", PackageManager: "apt"}
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", profile)
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", profile, "")
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -665,7 +770,7 @@ func TestCheckSingleToolAxiomBetaNewerLocalPseudoVersionIsNotOffered(t *testing.
 
 	// Local pseudo-version timestamp 2026-08-01 15:26:09 UTC is newer than the
 	// remote commit date 2026-07-25.
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260801152609-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260801152609-6eff4a1ba110", system.PlatformProfile{}, "")
 
 	if result.Status != UpToDate {
 		t.Fatalf("status = %q, want %q: local build is newer than remote main HEAD", result.Status, UpToDate)
@@ -698,7 +803,7 @@ func TestCheckSingleToolAxiomBetaOlderLocalPseudoVersionStillOffered(t *testing.
 	httpClient.Transport = &testTransport{server: server}
 
 	// Local pseudo-version timestamp 2026-06-14 predates the remote commit.
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "1.40.3-0.20260614151827-6eff4a1ba110", system.PlatformProfile{}, "")
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -738,7 +843,7 @@ func TestCheckSingleToolAxiomDirtyPseudoVersionStillComparesMainHead(t *testing.
 	httpClient = server.Client()
 	httpClient.Transport = &testTransport{server: server}
 
-	result := checkSingleTool(context.Background(), upstreamSourceTool, "v1.40.3-0.20260614151827-6eff4a1ba110+dirty", system.PlatformProfile{})
+	result := checkSingleTool(context.Background(), upstreamSourceTool, "v1.40.3-0.20260614151827-6eff4a1ba110+dirty", system.PlatformProfile{}, "")
 
 	if result.Status != UpdateAvailable {
 		t.Fatalf("status = %q, want %q", result.Status, UpdateAvailable)
@@ -1118,7 +1223,7 @@ func TestCheckSingleTool_EngramUsesBinaryReleaseChannel(t *testing.T) {
 		return mockCmd("false")
 	}
 
-	result := checkSingleTool(context.Background(), Tools[1], "dev", system.PlatformProfile{OS: "darwin", PackageManager: "brew", Supported: true})
+	result := checkSingleTool(context.Background(), Tools[1], "dev", system.PlatformProfile{OS: "darwin", PackageManager: "brew", Supported: true}, "")
 	assertResult(t, result, "engram", UpToDate, "1.15.13", "1.15.13")
 	if result.ReleaseURL != "https://github.com/Gentleman-Programming/engram/releases/tag/v1.15.13" {
 		t.Fatalf("ReleaseURL = %q, want binary channel release", result.ReleaseURL)
@@ -2146,8 +2251,8 @@ func TestIsBetaUpdateChannelPrecedence(t *testing.T) {
 				t.Setenv("GENTLE_AI_CHANNEL", tt.legacy)
 			}
 
-			if got := isBetaUpdateChannel(); got != tt.wantBeta {
-				t.Fatalf("isBetaUpdateChannel() = %v, want %v", got, tt.wantBeta)
+			if got := isBetaChannel(effectiveChannel("")); got != tt.wantBeta {
+				t.Fatalf("isBetaChannel(effectiveChannel(\"\")) = %v, want %v", got, tt.wantBeta)
 			}
 		})
 	}

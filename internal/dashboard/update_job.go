@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/IGutierrezZ/axiom/v3/internal/app"
+	"github.com/IGutierrezZ/axiom/v3/internal/update"
 )
 
 // Fases del trabajo de actualización que expone GET /api/system/update/status.
@@ -202,13 +203,14 @@ func (s *Service) runUpdateJob(force bool) {
 		return
 	}
 
-	// 2. Actualizar con la misma cadena que el botón de Ecosistema (upgrade -> sync).
+	// 2. Actualizar con la misma cadena que el botón de Ecosistema (upgrade -> sync),
+	// en el canal estable: el aviso anuncia releases y esto instala lo anunciado.
 	from := info.Current
 	if info.Installed != "" {
 		from = info.Installed
 	}
 	j.setPhase(updatePhaseUpgrading, fmt.Sprintf("Actualizando Axiom de %s a %s…", from, info.Latest))
-	resp, err := s.RunUpgradeSequence()
+	resp, err := s.RunUpgradeSequence(update.ChannelStable)
 	if err != nil || resp == nil || resp.Phases == nil {
 		msg := "La actualización no produjo resultado."
 		if err != nil {

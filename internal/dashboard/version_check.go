@@ -193,6 +193,10 @@ func parseVersionOutput(out string) (string, error) {
 // checkLatestAxiomVersion es el comprobador real: pregunta por la última release
 // de Axiom. No usa CheckAllWithCooldown, que devuelve nil con su propia caché
 // vigente y dejaría al aviso sin datos.
+//
+// El aviso solo anuncia releases: el canal estable explícito evita que un binario
+// compilado desde main (pseudo-versión) se compare con la cabeza de main. La
+// cabeza de main se consulta solo bajo demanda desde Ecosistema.
 func checkLatestAxiomVersion(ctx context.Context, current string) VersionInfo {
 	ctx, cancel := context.WithTimeout(ctx, versionCheckTimeout)
 	defer cancel()
@@ -203,7 +207,7 @@ func checkLatestAxiomVersion(ctx context.Context, current string) VersionInfo {
 	}
 	// El registro de herramientas llama "axiom" a la herramienta propia; en las
 	// pruebas del paquete conserva su nombre original.
-	results := update.CheckFiltered(ctx, current, detection.System.Profile, []string{update.SelfToolName})
+	results := update.CheckFilteredWithOptions(ctx, current, detection.System.Profile, []string{update.SelfToolName}, update.CheckOptions{Channel: update.ChannelStable})
 	for _, r := range results {
 		if !update.IsSelfTool(r.Tool) {
 			continue
