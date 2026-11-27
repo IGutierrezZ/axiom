@@ -37,7 +37,8 @@ Fuera de alcance: que el enlace del editor fije VS Code (decisión de diseño de
   - `splitRequirementId` en `core/spec.js`: si el título no acaba en el ID, separa un sufijo de estado (raya, guion con espacio o corchete, sin paréntesis) y lo devuelve al título.
 - [x] **T2 · Tabla de agentes sin desbordar** — ruta: inline.
   - Causa: la celda del agente es `th[scope="row"]` y heredaba las mayúsculas y el `nowrap` de las cabeceras de columna (275 px). Se le aplica el mismo estilo de fila que a `.eco-doctor` y `.eco-repo-policy`.
-- [ ] **T3 · Mensaje de `axiom` sin TTY** — ruta: inline.
+- [x] **T3 · Mensaje de `axiom` sin TTY** — ruta: inline.
+  - Mensaje en castellano que explica que `axiom` abre el dashboard y ofrece `axiom ui`. Conserva `--version`, `axiom update` y `--help`, que exige RF-TUI-01 (`axiom-tui-branding`), así que no hay delta de spec.
 - [ ] **T4 · Línea en «Abrir en el editor» y etiquetas de `governance.*`** — ruta: inline.
 
 ## Criterios de aceptación
@@ -57,6 +58,7 @@ Motivo: corrige la presentación de requisitos y ajustes ya especificados; no ca
 - Worktree creado con `scripts/axiom-worktree.ps1 new arreglos-ui-prueba-manual -Lane odd -Prefix fix`.
 - T1: `go test ./internal/dashboard -run 'TestSpecParserAndRouterRuntime|TestEmbeddedModulesParse'` → ok (casos nuevos: retirado, sustituido y paréntesis normal con sufijo). El parser sobre `openspec/specs/` da 633 requisitos, todos con ID; los cuatro retirados, con insignia y el sufijo en el título.
 - T2: medido en el navegador a 1024×800 con la regla inyectada: la tabla pasa de 711 px a 695 px (cabe en su caja) y la columna Agente, de 275 px a 146 px. `go test ./internal/dashboard -run 'TestEcosystemAgentsBlock|TestEcosystem|Platform'` → ok.
+- T3: la prueba que exige `axiom ui` falló con el mensaje antiguo y pasa con el nuevo: `go test ./internal/app -run 'TestRunArgsNoArgument|TestRunArgsExplicitCommandsBypassTTYBoundary'` → ok; `go vet` y `gofmt -l` limpios. `TestBuiltBinaryClosedStdinRefusesBeforeUI` se omite en Windows (compila un binario); lo cubre la CI en Linux.
 
 ## Commits
 
