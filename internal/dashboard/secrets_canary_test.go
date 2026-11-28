@@ -82,6 +82,7 @@ var excludedRoutes = map[string]string{
 	"/api/ecosystem/backups/restore":      "mutación (POST): restaura una copia",
 	"/api/ecosystem/models":               "catálogo de modelos de agentes",
 	"/api/system/version":                 "versión del binario",
+	"/api/system/version/main":            "versión del binario frente a la cabeza de main; no lee integraciones",
 	"/api/system/update":                  "mutación (POST): actualiza Axiom",
 	"/api/system/update/status":           "estado de una actualización en curso",
 	"/api/system/restart":                 "mutación (POST): reinicia el dashboard con la última versión",

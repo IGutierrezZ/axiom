@@ -24,10 +24,31 @@ func CheckAll(ctx context.Context, currentVersion string, profile system.Platfor
 	return CheckFiltered(ctx, currentVersion, profile, nil)
 }
 
+// Canales explícitos de la herramienta propia para CheckOptions.Channel.
+const (
+	// ChannelStable compara solo con la última release, también cuando la versión
+	// local es una pseudo-versión compilada desde main.
+	ChannelStable = "stable"
+	// ChannelBeta compara con la cabeza de main.
+	ChannelBeta = "beta"
+)
+
+// CheckOptions afina una comprobación. Channel fija el canal de la herramienta
+// propia sin depender de AXIOM_CHANNEL, que es del proceso entero; vacío conserva
+// la regla de siempre (AXIOM_CHANNEL y, sin él, la pseudo-versión).
+type CheckOptions struct {
+	Channel string
+}
+
 // CheckFiltered runs update checks for a subset of tools identified by name.
 // If toolNames is nil or empty, it behaves identically to CheckAll (all tools).
 // Unknown tool names in toolNames are silently ignored.
 func CheckFiltered(ctx context.Context, currentVersion string, profile system.PlatformProfile, toolNames []string) []UpdateResult {
+	return CheckFilteredWithOptions(ctx, currentVersion, profile, toolNames, CheckOptions{})
+}
+
+// CheckFilteredWithOptions es CheckFiltered con opciones explícitas.
+func CheckFilteredWithOptions(ctx context.Context, currentVersion string, profile system.PlatformProfile, toolNames []string, opts CheckOptions) []UpdateResult {
 	// Build the target slice: all tools when filter is empty, otherwise only matching ones.
 	var targets []ToolInfo
 	if len(toolNames) == 0 {
@@ -51,7 +72,7 @@ func CheckFiltered(ctx context.Context, currentVersion string, profile system.Pl
 		wg.Add(1)
 		go func(idx int, t ToolInfo) {
 			defer wg.Done()
-			results[idx] = checkSingleTool(ctx, t, currentVersion, profile)
+			results[idx] = checkSingleTool(ctx, t, currentVersion, profile, opts.Channel)
 		}(i, tool)
 	}
 
@@ -60,7 +81,8 @@ func CheckFiltered(ctx context.Context, currentVersion string, profile system.Pl
 }
 
 // checkSingleTool checks a single tool: detects local version, fetches remote, compares.
-func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion string, profile system.PlatformProfile) UpdateResult {
+// channel is the explicit channel of the self-tool ("" falls back to AXIOM_CHANNEL).
+func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion string, profile system.PlatformProfile, channel string) UpdateResult {
 	result := UpdateResult{Tool: tool}
 	homebrewOwnership := HomebrewNone
 	// Axiom itself has no Homebrew formula: never probe ownership for it, so no
@@ -80,7 +102,7 @@ func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion str
 	// main-head beta target is advertised only when Homebrew does not own the
 	// tool (issue #2323: checker advertised main@sha while the instruction
 	// installed stable).
-	betaMainHead := usesBetaMainHeadCheck(tool, currentBuildVersion) && homebrewOwnership == HomebrewNone
+	betaMainHead := usesBetaMainHeadCheck(tool, currentBuildVersion, channel) && homebrewOwnership == HomebrewNone
 
 	// Run local detection and remote fetch concurrently.
 	var wg sync.WaitGroup
@@ -169,11 +191,42 @@ func checkSingleTool(ctx context.Context, tool ToolInfo, currentBuildVersion str
 
 	// Compare versions.
 	result.Status = compareVersions(normalizedLocal, result.LatestVersion)
+	// Una prerrelease de la herramienta propia (la pseudo-versión de un binario
+	// compilado desde main, v3.9.1-0.<fecha>-<sha>) va por detrás de la release con
+	// las mismas cifras: compareVersions solo mira X.Y.Z y las daría por iguales.
+	if result.Status == UpToDate && isSelfToolRepo(tool) && hasPrereleaseSuffix(localVersion) &&
+		!hasPrereleaseSuffix(release.TagName) &&
+		parseVersionParts(normalizedLocal) == parseVersionParts(result.LatestVersion) {
+		result.Status = UpdateAvailable
+	}
 	return result
 }
 
-func usesBetaMainHeadCheck(tool ToolInfo, currentVersion string) bool {
-	return isSelfToolRepo(tool) && (isBetaUpdateChannel() || isGoPseudoVersionWithCommit(currentVersion))
+// hasPrereleaseSuffix dice si la versión lleva sufijo de prerrelease tras X.Y.Z
+// (`-…`); los metadatos de compilación (`+dirty`) no cuentan.
+func hasPrereleaseSuffix(raw string) bool {
+	raw = strings.TrimPrefix(strings.TrimSpace(raw), "v")
+	raw, _, _ = strings.Cut(raw, "+")
+	loc := versionRegexp.FindStringIndex(raw)
+	return loc != nil && loc[0] == 0 && loc[1] < len(raw) && raw[loc[1]] == '-'
+}
+
+// usesBetaMainHeadCheck decide si la herramienta propia se compara con la cabeza
+// de main. Un canal explícito manda: beta sí y estable no, aunque la versión local
+// sea una pseudo-versión. Sin canal, la pseudo-versión lleva a main.
+func usesBetaMainHeadCheck(tool ToolInfo, currentVersion, channel string) bool {
+	if !isSelfToolRepo(tool) {
+		return false
+	}
+	ch := effectiveChannel(channel)
+	switch {
+	case isBetaChannel(ch):
+		return true
+	case isStableChannel(ch):
+		return false
+	default:
+		return isGoPseudoVersionWithCommit(currentVersion)
+	}
 }
 
 // isSelfToolRepo reports whether tool is the primary CLI product. It delegates
@@ -183,14 +236,25 @@ func isSelfToolRepo(tool ToolInfo) bool {
 	return IsSelfTool(tool)
 }
 
-func isBetaUpdateChannel() bool {
-	channel := strings.TrimSpace(updateChannelEnv())
-	switch strings.ToLower(channel) {
-	case "beta", "nightly", "main":
+// effectiveChannel devuelve el canal explícito o, sin él, AXIOM_CHANNEL.
+func effectiveChannel(explicit string) string {
+	if ch := strings.TrimSpace(explicit); ch != "" {
+		return ch
+	}
+	return strings.TrimSpace(updateChannelEnv())
+}
+
+func isBetaChannel(channel string) bool {
+	switch strings.ToLower(strings.TrimSpace(channel)) {
+	case ChannelBeta, "nightly", "main":
 		return true
 	default:
 		return false
 	}
+}
+
+func isStableChannel(channel string) bool {
+	return strings.EqualFold(strings.TrimSpace(channel), ChannelStable)
 }
 
 func applyBetaMainHeadStatus(result UpdateResult, localVersion string, commit githubCommit) UpdateResult {

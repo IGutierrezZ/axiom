@@ -209,19 +209,27 @@ func TestEcosystemUpgradeHTTPMethods(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/ecosystem/upgrade", nil)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("POST /api/ecosystem/upgrade = %d, want 200", rr.Code)
+	if rr.Code != http.StatusAccepted {
+		t.Fatalf("POST /api/ecosystem/upgrade = %d, want 202", rr.Code)
 	}
 
-	var decoded EcosystemActionResponse
+	// The chain runs in the background job; the consolidated DTO travels in the
+	// job status.
+	waitUpdateFinished(t, svc)
+	rr = httptest.NewRecorder()
+	router.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/api/system/update/status", nil))
+	var decoded UpdateJobStatus
 	if err := json.Unmarshal(rr.Body.Bytes(), &decoded); err != nil {
-		t.Fatalf("decode response: %v", err)
+		t.Fatalf("decode status: %v", err)
 	}
-	if decoded.Sequence != "upgrade->sync" {
-		t.Errorf("sequence = %q, want upgrade->sync", decoded.Sequence)
+	if decoded.Result == nil {
+		t.Fatal("result = nil in the job status")
 	}
-	if decoded.Phases == nil {
-		t.Fatal("phases = nil in JSON response")
+	if decoded.Result.Sequence != "upgrade->sync" {
+		t.Errorf("sequence = %q, want upgrade->sync", decoded.Result.Sequence)
+	}
+	if decoded.Result.Phases == nil {
+		t.Fatal("phases = nil in the job result")
 	}
 }
 
@@ -341,9 +349,10 @@ func TestEcosystemEndpointsAcceptOptionalPayloads(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/ecosystem/upgrade", body)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK && rr.Code != http.StatusInternalServerError {
-		t.Fatalf("POST /api/ecosystem/upgrade with channel = %d, want 200 or 500", rr.Code)
+	if rr.Code != http.StatusAccepted {
+		t.Fatalf("POST /api/ecosystem/upgrade with channel = %d, want 202", rr.Code)
 	}
+	waitUpdateFinished(t, svc)
 	if len(rec.channels) != 1 || rec.channels[0] != "main" {
 		t.Errorf("el canal del payload debía llegar al upgrade, registrado: %q", rec.channels)
 	}

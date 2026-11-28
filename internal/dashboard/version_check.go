@@ -80,11 +80,13 @@ var installedVersionFn = readInstalledAxiomVersion
 // versionChecker comprueba la versión con una caché en memoria con TTL. El reloj, el
 // comprobador y la lectura de la versión instalada son inyectables.
 type versionChecker struct {
-	mu        sync.Mutex
-	ttl       time.Duration
-	now       func() time.Time
-	current   func() string
-	check     versionCheckFn
+	mu      sync.Mutex
+	ttl     time.Duration
+	now     func() time.Time
+	current func() string
+	check   versionCheckFn
+	// checkMain compara con la cabeza de main; solo bajo demanda (Main).
+	checkMain versionCheckFn
 	installed func(ctx context.Context) (string, error)
 
 	cached    VersionInfo
@@ -99,8 +101,26 @@ func newVersionChecker() *versionChecker {
 		now:       time.Now,
 		current:   func() string { return app.Version },
 		check:     checkLatestAxiomVersion,
+		checkMain: checkMainHeadAxiomVersion,
 		installed: func(ctx context.Context) (string, error) { return installedVersionFn(ctx) },
 	}
+}
+
+// Main compara el binario que arrancaría un reinicio con la cabeza de main, sin
+// caché ni efecto en el aviso: solo se consulta bajo demanda («Buscar en main» de
+// Ecosistema). Sin versión instalada legible, compara con la del proceso.
+func (c *versionChecker) Main(ctx context.Context) VersionInfo {
+	current := c.current()
+	installed := c.installedVersion(ctx)
+	base := current
+	if installed != "" {
+		base = installed
+	}
+	info := c.checkMain(ctx, base)
+	info.Current = current
+	info.Installed = installed
+	info.RestartRequired = installed != "" && installed != current
+	return info
 }
 
 // Get devuelve la información de versión. Con refresh omite la caché. Solo se
@@ -193,7 +213,21 @@ func parseVersionOutput(out string) (string, error) {
 // checkLatestAxiomVersion es el comprobador real: pregunta por la última release
 // de Axiom. No usa CheckAllWithCooldown, que devuelve nil con su propia caché
 // vigente y dejaría al aviso sin datos.
+//
+// El aviso solo anuncia releases: el canal estable explícito evita que un binario
+// compilado desde main (pseudo-versión) se compare con la cabeza de main. La
+// cabeza de main se consulta solo bajo demanda desde Ecosistema.
 func checkLatestAxiomVersion(ctx context.Context, current string) VersionInfo {
+	return checkAxiomVersion(ctx, current, update.ChannelStable)
+}
+
+// checkMainHeadAxiomVersion compara con la cabeza de main (canal beta): la anuncia
+// como `main@<sha>`.
+func checkMainHeadAxiomVersion(ctx context.Context, current string) VersionInfo {
+	return checkAxiomVersion(ctx, current, update.ChannelBeta)
+}
+
+func checkAxiomVersion(ctx context.Context, current, channel string) VersionInfo {
 	ctx, cancel := context.WithTimeout(ctx, versionCheckTimeout)
 	defer cancel()
 
@@ -203,7 +237,7 @@ func checkLatestAxiomVersion(ctx context.Context, current string) VersionInfo {
 	}
 	// El registro de herramientas llama "axiom" a la herramienta propia; en las
 	// pruebas del paquete conserva su nombre original.
-	results := update.CheckFiltered(ctx, current, detection.System.Profile, []string{update.SelfToolName})
+	results := update.CheckFilteredWithOptions(ctx, current, detection.System.Profile, []string{update.SelfToolName}, update.CheckOptions{Channel: channel})
 	for _, r := range results {
 		if !update.IsSelfTool(r.Tool) {
 			continue
@@ -237,6 +271,24 @@ func (s *Service) CheckVersion(ctx context.Context, refresh bool) VersionInfo {
 	info := s.versions.Get(ctx, refresh)
 	info.Instance = s.instance
 	return info
+}
+
+// CheckMainVersion compara el Axiom instalado con la cabeza de main, sin caché.
+func (s *Service) CheckMainVersion(ctx context.Context) VersionInfo {
+	info := s.versions.Main(ctx)
+	info.Instance = s.instance
+	return info
+}
+
+// handleSystemVersionMain responde GET /api/system/version/main («Buscar en main» de
+// Ecosistema). Como GET /api/system/version, un fallo de red se informa con
+// status "check_failed", no con un error HTTP.
+func (s *Server) handleSystemVersionMain(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+	s.respondJSON(w, http.StatusOK, s.service.CheckMainVersion(r.Context()))
 }
 
 // handleSystemVersion responde GET /api/system/version. Un fallo de red no es un

@@ -131,6 +131,54 @@ export function formatEcosystemUpgradeSequence(data) {
   return lines.join('\n');
 }
 
+// upgradeJobResult traduce el estado final del trabajo de «Actualizar» (GET
+// /api/system/update/status) al DTO de la cadena upgrade->sync que presenta la
+// tarjeta (job.result). Un trabajo fallido lanza un error con ese DTO en err.data y
+// la orden manual en err.manualHint.
+export function upgradeJobResult(job) {
+  const data = (job && job.result) || { success: !!job && job.phase !== 'failed', message: (job && job.message) || '', output: [] };
+  if (!job || job.phase === 'failed') {
+    const err = new Error((job && job.message) || 'La actualización ha fallado.');
+    err.data = data;
+    err.manualHint = (job && job.manual_hint) || '';
+    throw err;
+  }
+  return data;
+}
+
+// presentUpgradeError presenta un «Actualizar» fallido: las fases si las hay (o el
+// mensaje) y la orden manual, salvo que las fases ya la nombren.
+export function presentUpgradeError(err) {
+  const phases = err && err.data && err.data.phases;
+  const lines = [phases ? formatEcosystemUpgradeSequence(err.data) : (err && err.message) || ''];
+  const hint = err && err.manualHint;
+  if (hint && !(phases && phases.upgrade && phases.upgrade.manual_hint === hint)) {
+    lines.push('Puedes actualizar a mano con: ' + hint);
+  }
+  return lines.filter(Boolean).join('\n');
+}
+
+// mainCheckView presenta «Buscar en main» (GET /api/system/version/main): si la cabeza
+// de main va por delante del Axiom instalado. Un binario de release no lleva commit
+// y no se puede comparar; aun así se dice cuál es la cabeza de main.
+export function mainCheckView(info) {
+  const mine = (info && (info.installed || info.current)) || '';
+  const latest = (info && info.latest) || '';
+  switch (info && info.status) {
+    case 'update_available':
+      return { tone: 'warn', label: 'commits nuevos', text: `main va por delante: ${mine} → ${latest}. Para instalarlo, elige el canal Main y pulsa Actualizar.` };
+    case 'up_to_date':
+      return { tone: 'ok', label: 'al día', text: `Tu Axiom ya está en la cabeza de main (${latest}).` };
+    case 'dev_build':
+      return { tone: 'neutral', label: 'sin comparar', text: 'Es una compilación de desarrollo: no se compara con main.' };
+    default:
+      if (latest.startsWith('main@')) {
+        return { tone: 'neutral', label: 'sin comparar', text: `La cabeza de main es ${latest}. Tu Axiom (${mine}) no se compiló desde main y no se puede comparar.` };
+      }
+      return { tone: 'bad', label: 'sin respuesta', text: 'No se pudo consultar main. Inténtalo más tarde.' };
+  }
+}
+
 // ---- Última operación ------------------------------------------------------------------
 
 export const OPERATION_LABEL = { sync: 'sync', upgrade: 'upgrade → sync', backup: 'respaldo', restore: 'restauración', install: 'install' };

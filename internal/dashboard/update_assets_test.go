@@ -109,6 +109,36 @@ func TestRestartLatestButtonIsWired(t *testing.T) {
 	}
 }
 
+// «Actualizar» de Ecosistema sigue el mismo trabajo en segundo plano que el aviso y el
+// reinicio: la tarjeta espera su final (o el reinicio) y el aviso superior no repite
+// lo que la tarjeta ya pinta.
+func TestEcosystemUpgradeUIFollowsTheBackgroundJob(t *testing.T) {
+	t.Parallel()
+	update := readAsset(t, "js/update.js")
+	for _, marker := range []string{
+		"export async function startEcosystemUpgrade(channel)",
+		"api('/api/ecosystem/upgrade', { body: { channel } })",
+		"on('updateJob', settleEcosystemWaiter)",
+		"!ownedByEcosystem(job)",
+	} {
+		if !strings.Contains(update, marker) {
+			t.Errorf("js/update.js no contiene %q", marker)
+		}
+	}
+	screen := readAsset(t, "js/screens/ecosystem.js")
+	for _, marker := range []string{
+		"startEcosystemUpgrade(channel).then(upgradeJobResult)",
+		"presentError: presentUpgradeError",
+	} {
+		if !strings.Contains(screen, marker) {
+			t.Errorf("js/screens/ecosystem.js no contiene %q", marker)
+		}
+	}
+	if strings.Contains(screen, "api('/api/ecosystem/upgrade'") {
+		t.Error("la pantalla no debe llamar al upgrade esperando la respuesta: lo lanza startEcosystemUpgrade")
+	}
+}
+
 // El botón «Actualizar» lanza un trabajo asíncrono y la UI consulta su estado: la
 // petición no depende del tiempo de espera del servidor y cada fase se ve.
 func TestUpdateJobUIPollsStatusAndShowsEveryPhase(t *testing.T) {
