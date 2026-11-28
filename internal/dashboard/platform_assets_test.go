@@ -80,8 +80,10 @@ func TestEcosystemUsesTheSharedDoctorCache(t *testing.T) {
 			t.Errorf("ecosystem.js no contiene %q", marker)
 		}
 	}
-	// Las rutas de los demás bloques y de las operaciones siguen siendo las del servidor.
-	for _, route := range []string{"/api/workspace", "/api/ecosystem/models", "/api/ecosystem/backups", "/api/ecosystem/sync", "/api/ecosystem/upgrade", "/api/ecosystem/backups/create", "/api/ecosystem/backups/restore"} {
+	// Las rutas de los demás bloques y de las operaciones siguen siendo las del servidor. La de
+	// actualizar la lanza startEcosystemUpgrade de update.js, dueño del trabajo en segundo plano
+	// (TestEcosystemUpgradeUIFollowsTheBackgroundJob).
+	for _, route := range []string{"/api/workspace", "/api/ecosystem/models", "/api/ecosystem/backups", "/api/ecosystem/sync", "/api/ecosystem/backups/create", "/api/ecosystem/backups/restore"} {
 		if !strings.Contains(js, "'"+route+"'") {
 			t.Errorf("ecosystem.js no usa %s", route)
 		}
